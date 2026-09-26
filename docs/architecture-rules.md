@@ -18,7 +18,8 @@ Top‑level feature and shared packages:
   - `org.litvin.ui.tabs.{projects,points,scoring,adjustments,crop,export}` — tab UIs per feature (plus `test`, a diagnostics tab wired in only when the test flag is enabled).
   - `org.litvin.ui.commons` — shared UI widgets/components/styles with no tab dependency.
   - `org.litvin.ui.help` — help catalog and dialog.
-  - `org.litvin.ui.privacy` — analytics consent and privacy dialogs.
+  - `org.litvin.ui.privacy` — analytics consent dialog and the Privacy page of the More window.
+  - `org.litvin.ui.more` — the More window and its Settings and About pages.
 
 Subpackage conventions inside a tab (`org.litvin.ui.tabs.<feature>`):
 - `.presenter` — the presenter and its UI contracts (see MVP below).
@@ -31,7 +32,7 @@ Allowed directions:
 - `app` → `ui`, `projects`, feature packages, `analytics`, `shared.util`, `media`.
 - `ui.tabs.*` → the corresponding feature package(s), `projects`, `export`, `media`, `shared.util`, and `ui.commons`.
 - `ui.commons` → `shared.util` only (must not depend on any specific tab or feature).
-- `ui.privacy` → `analytics` (the consent/privacy dialogs are the only UI allowed to touch it); `ui.help` → `shared.util` and `ui.commons`.
+- `ui.privacy` → `analytics` (the consent/privacy dialogs are the only UI allowed to touch it); `ui.help` → `shared.util` and `ui.commons`; `ui.more` → `ui.commons` only (`app` gives it the pages of other packages as `MoreSection` items).
 - Feature packages may depend on `shared.util` and other leaf services (`media`) but not on `ui` or `app`.
 - `media` → `adjustments` is allowed and deliberate: the libmpv preview must apply the same crop/rotate/color transforms the FFmpeg export does, so it consumes the adjustments domain (`GeometryPlan`, `CropRect`, `AdjustmentsV1`) instead of duplicating the math.
 - `analytics` must not depend on any other `org.litvin` package — it is a leaf service reached from `app` and `ui.privacy`.

@@ -60,6 +60,9 @@ class PointsCardsView(
     private var lastState: PointsViewState? = null
     private var renderedEvents: List<TimelineEventDto> = emptyList()
 
+    /** Hides the buttons of the card under the pointer. Null when no card shows its buttons. */
+    private var hideHoveredCard: (() -> Unit)? = null
+
     init {
         isOpaque = true
         background = UiStyles.DARK_BG
@@ -114,6 +117,7 @@ class PointsCardsView(
         listPanel.removeAll()
         pendingContainer.removeAll()
         cardComponents.clear()
+        hideHoveredCard = null
         renderedEvents = ordered
 
         ordered.forEachIndexed { visualIndex, event ->
@@ -203,7 +207,7 @@ class PointsCardsView(
         actionsPanel.add(Box.createHorizontalStrut(8))
         actionsPanel.add(delete)
         add(actionsPanel, BorderLayout.EAST)
-        installHoverActions(this, actionsPanel, listOf(favorite, edit, delete), point.favorite)
+        installHoverActions(this, listOf(favorite, edit, delete), point.favorite)
         installSelectAndSeek(this, visualIndex, point.startMs)
         applyCardSelectionStyle(this, visualIndex == lastState?.selectedVisualIndex)
     }
@@ -281,7 +285,7 @@ class PointsCardsView(
         // Children need the same tooltip, because Swing reads it from the component under the pointer.
         val tooltip = tooltipFor(comment)
         forEachNonButtonComponent(this) { (it as? JComponent)?.toolTipText = tooltip }
-        installHoverActions(this, actionsPanel, listOf(edit, delete), false)
+        installHoverActions(this, listOf(edit, delete), false)
         installSelectAndSeek(this, visualIndex, comment.startMs)
     }
 
@@ -308,12 +312,19 @@ class PointsCardsView(
         if (root is Container) root.components.forEach { forEachNonButtonComponent(it, action) }
     }
 
-    private fun installHoverActions(card: JComponent, panel: JPanel, buttons: List<JButton>, favoriteInitiallyVisible: Boolean) {
+    private fun installHoverActions(card: JComponent, buttons: List<JButton>, favoriteInitiallyVisible: Boolean) {
         // The star of a favorite point belongs to the card at rest, not only while the pointer is over it.
         fun restVisibility() = buttons.forEachIndexed { index, button -> button.isVisible = index == 0 && favoriteInitiallyVisible }
         restVisibility()
+        val hide = {
+            restVisibility()
+            card.revalidate(); card.repaint()
+        }
         val toggle = object : MouseAdapter() {
             private fun show() {
+                // Only one card shows its buttons, even when an exit event is lost.
+                if (hideHoveredCard !== hide) hideHoveredCard?.invoke()
+                hideHoveredCard = hide
                 buttons.forEach { it.isVisible = true }
                 card.revalidate(); card.repaint()
             }
@@ -324,17 +335,22 @@ class PointsCardsView(
                         java.awt.Rectangle(card.locationOnScreen, card.size).contains(pointer)
                     }.getOrDefault(false)
                     if (!inside) {
-                        restVisibility()
-                        card.revalidate(); card.repaint()
+                        hide()
+                        if (hideHoveredCard === hide) hideHoveredCard = null
                     }
                 }
             }
             override fun mouseEntered(event: MouseEvent) = show()
             override fun mouseExited(event: MouseEvent) = hideIfOutside()
         }
-        card.addMouseListener(toggle)
-        panel.addMouseListener(toggle)
-        buttons.forEach { it.addMouseListener(toggle) }
+        // Children with mouse listeners take the events from the card, and the pointer can leave
+        // the card from any child. Bind every child, so that the card always gets the exit.
+        forEachComponent(card) { it.addMouseListener(toggle) }
+    }
+
+    private fun forEachComponent(root: Component, action: (Component) -> Unit) {
+        action(root)
+        if (root is Container) root.components.forEach { forEachComponent(it, action) }
     }
 
     private fun colorStripe(color: Color): JComponent = object : JComponent() {

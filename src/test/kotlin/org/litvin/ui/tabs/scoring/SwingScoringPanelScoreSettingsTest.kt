@@ -238,6 +238,9 @@ class SwingScoringPanelScoreSettingsTest {
         override fun dismiss() {
             dismissed = true
         }
+        override fun reset() {
+            dismissed = false
+        }
     }
 
     private class FixedDefaults(private val style: ScoreboardSettingsV1) : ScoreboardStyleDefaults {

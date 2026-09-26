@@ -10,4 +10,9 @@ object HelpPreferences {
         preferences.putBoolean(OVERVIEW_SHOWN_KEY, true)
         return true
     }
+
+    /** Makes the Overview help open again at the next start of the app. */
+    fun resetFirstLaunchOverview(preferences: Preferences) {
+        preferences.remove(OVERVIEW_SHOWN_KEY)
+    }
 }

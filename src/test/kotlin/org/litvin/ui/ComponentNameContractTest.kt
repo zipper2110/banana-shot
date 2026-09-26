@@ -219,6 +219,7 @@ class ComponentNameContractTest {
             "nav-stats",
             "nav-export",
             "nav-help",
+            "nav-more",
             "projects-import-match",
             "projects-current-name",
             "projects-open-$PROJECT_ID",

@@ -1,6 +1,7 @@
 package org.litvin.app
 
 import org.litvin.AppInfo
+import org.litvin.ApplicationLayout
 import org.litvin.SwingMainApp
 import org.litvin.WindowsGpuPreference
 import org.litvin.media.MediaScreen
@@ -26,13 +27,24 @@ import org.litvin.ui.tabs.test.SwingTestPanel
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.ui.privacy.AnalyticsConsentDialog
-import org.litvin.ui.privacy.PrivacySettingsDialog
+import org.litvin.ui.more.AboutDocument
+import org.litvin.ui.more.AboutInfo
+import org.litvin.ui.more.AboutPage
+import org.litvin.ui.more.ContactPage
+import org.litvin.ui.more.MoreDialog
+import org.litvin.ui.more.MoreSection
+import org.litvin.ui.more.SettingsPage
+import org.litvin.ui.privacy.PrivacyLinkOpener
+import org.litvin.ui.privacy.PrivacyPage
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Desktop
 import java.awt.Dimension
 import java.awt.EventQueue
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.io.File
+import java.net.URI
 import javax.swing.AbstractAction
 import javax.swing.Box
 import javax.swing.JComponent
@@ -50,12 +62,38 @@ object SwingApplicationFactory {
     private const val CARD_ADJ_COLORS = "adjustments"
     private const val CARD_ADJ_CROP_ROTATE = "adjustments-crop-rotate"
     private const val CARD_TEST = "test"
+    private const val SIDEBAR_BUTTON_GAP = 6
+    private const val SIDEBAR_GROUP_GAP = 28
+    private const val CONTACT_EMAIL = "leetvin@gmail.com"
+    private val CONTACT = URI("mailto:$CONTACT_EMAIL")
 
     internal fun shouldShowGpuRestartNotification(
         show: Boolean,
         testEnabled: Boolean,
         gpuPreferenceChanged: Boolean,
     ): Boolean = show && !testEnabled && gpuPreferenceChanged
+
+    private fun openWithDesktop(file: File): Boolean = runCatching { Desktop.getDesktop().open(file) }.isSuccess
+
+    private fun aboutInfo(): AboutInfo {
+        val layout = ApplicationLayout.current()
+        fun document(title: String, vararg candidates: String) =
+            AboutDocument(title, candidates.map { File(layout.appHome, it) }.firstOrNull { it.isFile } ?: File(layout.appHome, candidates.first()))
+        return AboutInfo(
+            appName = AppInfo.NAME,
+            version = AppInfo.version,
+            documents = listOf(
+                document("License", "legal/LICENSE.txt", "LICENSE"),
+                document("License notice", "legal/LICENSE-NOTICE.txt", "LICENSE-NOTICE"),
+                document("Third-party notices", "legal/THIRD-PARTY-NOTICES.txt", "distribution/THIRD-PARTY-NOTICES.txt"),
+            ),
+            components = listOf(
+                "Java" to "${System.getProperty("java.version")} (${System.getProperty("java.vendor")})",
+                "libmpv" to (layout.mpvDirectory?.path ?: "Not found"),
+                "FFmpeg" to layout.ffmpegExecutable,
+            ),
+        )
+    }
 
     fun create(
         services: AppServices,
@@ -90,14 +128,23 @@ object SwingApplicationFactory {
             lateinit var btnStats: UiStyles.SidebarButton
             lateinit var btnExport: UiStyles.SidebarButton
             lateinit var btnCropRotate: UiStyles.SidebarButton
-            var btnPrivacy: UiStyles.SidebarButton? = null
             var btnTest: UiStyles.SidebarButton? = null
 
-            fun addItem(button: UiStyles.SidebarButton) {
+            // Match tabs go in order. Video tabs are settings for the image that the user can change at any time.
+            val groupMatch = UiStyles.SidebarGroup("Match").apply { name = "nav-group-match" }
+            val groupVideo = UiStyles.SidebarGroup("Video").apply { name = "nav-group-video" }
+            val projectGroups = listOf(groupMatch, groupVideo)
+
+            fun addItem(button: UiStyles.SidebarButton, container: JPanel = sidebar) {
                 button.alignmentX = 0f
                 button.maximumSize = Dimension(Int.MAX_VALUE, 64)
-                sidebar.add(button)
-                sidebar.add(Box.createRigidArea(Dimension(0, 6)))
+                if (container.componentCount > 0) container.add(Box.createRigidArea(Dimension(0, SIDEBAR_BUTTON_GAP)))
+                container.add(button)
+            }
+
+            fun addGroup(group: JPanel) {
+                sidebar.add(Box.createRigidArea(Dimension(0, SIDEBAR_GROUP_GAP)))
+                sidebar.add(group)
             }
 
             val cards = JPanel(CardLayout())
@@ -126,12 +173,13 @@ object SwingApplicationFactory {
             closeActions += cropRotatePanel::dispose
 
             val scoringPreferences = services.preferences.node(PreferencesProvider.SCORING)
+            val scoreSettingsHint = PreferencesScoreSettingsHint(scoringPreferences)
             val scoringPanel = SwingScoringPanel(
                 services.mediaPlayers.create(MediaScreen.SCORING),
                 services.adjustments,
                 services.dialogs,
                 PreferencesScoreboardStyleDefaults(scoringPreferences),
-                scoreSettingsHint = PreferencesScoreSettingsHint(scoringPreferences),
+                scoreSettingsHint = scoreSettingsHint,
             )
             closeActions += scoringPanel::close
 
@@ -245,6 +293,7 @@ object SwingApplicationFactory {
                     btnStats.isVisible = true
                     btnExport.isVisible = true
                     btnTest?.isVisible = true
+                    projectGroups.forEach { it.isVisible = true }
                     sidebar.revalidate()
                     sidebar.repaint()
                     showTitle("Points")
@@ -270,31 +319,35 @@ object SwingApplicationFactory {
                 goTo(CARD_PROJECTS)
             }.apply { name = "nav-projects" }
             addItem(btnProjects)
-            btnColors = UiStyles.sidebarButton("Colors", UiStyles.colorsIcon()) {
-                showTitle("Color")
-                goTo(CARD_ADJ_COLORS)
-            }.apply { name = "nav-colors" }
-            addItem(btnColors)
-            btnCropRotate = UiStyles.sidebarButton("Transform", UiStyles.cropRotateIcon()) {
-                showTitle("Transform")
-                goTo(CARD_ADJ_CROP_ROTATE)
-            }.apply { name = "nav-crop" }
-            addItem(btnCropRotate)
+            addGroup(groupMatch)
             btnPoints = UiStyles.sidebarButton("Points", UiStyles.pointsIcon()) {
                 showTitle("Points")
                 goTo(CARD_POINTS)
             }.apply { name = "nav-points" }
-            addItem(btnPoints)
+            addItem(btnPoints, groupMatch)
             btnScoring = UiStyles.sidebarButton("Scoring", UiStyles.targetIcon()) {
                 showTitle("Scoring")
                 goTo(CARD_SCORING)
             }.apply { name = "nav-scoring" }
-            addItem(btnScoring)
+            addItem(btnScoring, groupMatch)
             btnStats = UiStyles.sidebarButton("Stats", UiStyles.statsIcon()) {
                 showTitle("Statistics")
                 goTo(CARD_STATS)
             }.apply { name = "nav-stats" }
-            addItem(btnStats)
+            addItem(btnStats, groupMatch)
+            addGroup(groupVideo)
+            btnColors = UiStyles.sidebarButton("Colors", UiStyles.colorsIcon()) {
+                showTitle("Color")
+                goTo(CARD_ADJ_COLORS)
+            }.apply { name = "nav-colors" }
+            addItem(btnColors, groupVideo)
+            btnCropRotate = UiStyles.sidebarButton("Transform", UiStyles.cropRotateIcon()) {
+                showTitle("Transform")
+                goTo(CARD_ADJ_CROP_ROTATE)
+            }.apply { name = "nav-crop" }
+            addItem(btnCropRotate, groupVideo)
+            // addItem adds the usual button gap before Export. Together they make the same gap as between the groups.
+            sidebar.add(Box.createRigidArea(Dimension(0, SIDEBAR_GROUP_GAP - SIDEBAR_BUTTON_GAP)))
             btnExport = UiStyles.sidebarButton("Export", UiStyles.exportIcon()) {
                 showTitle("Export")
                 goTo(CARD_EXPORT)
@@ -302,12 +355,6 @@ object SwingApplicationFactory {
             addItem(btnExport)
             val analytics = services.analyticsController
             val analyticsConfig = services.analyticsConfig as? AnalyticsBuildConfig.Enabled
-            if (analytics != null && analyticsConfig != null && services.analyticsPreferences != null) {
-                btnPrivacy = UiStyles.sidebarButton("Privacy", UiStyles.targetIcon()) {
-                    PrivacySettingsDialog.show(frame, analytics, services.analyticsPreferences, analyticsConfig.privacyUrl)
-                }.apply { name = "nav-privacy" }
-                addItem(btnPrivacy!!)
-            }
             if (testEnabled) {
                 btnTest = UiStyles.sidebarButton("Test", UiStyles.targetIcon()) {
                     showTitle("Test")
@@ -324,6 +371,47 @@ object SwingApplicationFactory {
                 alignmentX = 0f
                 maximumSize = Dimension(Int.MAX_VALUE, 64)
             })
+            sidebar.add(Box.createRigidArea(Dimension(0, 6)))
+            val moreDialog = lazy {
+                val privacyPage = if (analytics != null && analyticsConfig != null && services.analyticsPreferences != null) {
+                    PrivacyPage.withAnalytics(analytics, services.analyticsPreferences, analyticsConfig.privacyUrl, CONTACT)
+                } else {
+                    PrivacyPage.withoutAnalytics()
+                }
+                MoreDialog(
+                    frame,
+                    listOf(
+                        MoreSection(
+                            SettingsPage.TITLE,
+                            SettingsPage(
+                                services.paths.root,
+                                onShowHintsAgain = {
+                                    scoreSettingsHint.reset()
+                                    HelpPreferences.resetFirstLaunchOverview(applicationPreferences)
+                                },
+                                onOpenFolder = ::openWithDesktop,
+                            ),
+                        ),
+                        MoreSection(PrivacyPage.TITLE, privacyPage),
+                        MoreSection(
+                            AboutPage.TITLE,
+                            AboutPage(aboutInfo(), onOpenFile = ::openWithDesktop),
+                        ),
+                        MoreSection(
+                            ContactPage.TITLE,
+                            ContactPage(CONTACT_EMAIL, AppInfo.version, onOpenLink = PrivacyLinkOpener.DesktopBrowser::open),
+                        ),
+                    ),
+                )
+            }
+            sidebar.add(UiStyles.sidebarButton("More", UiStyles.moreIcon()) {
+                moreDialog.value.open()
+            }.apply {
+                name = "nav-more"
+                toolTipText = "Settings, privacy, and information about the app"
+                alignmentX = 0f
+                maximumSize = Dimension(Int.MAX_VALUE, 64)
+            })
 
             btnPoints.isVisible = false
             btnColors.isVisible = false
@@ -331,6 +419,7 @@ object SwingApplicationFactory {
             btnScoring.isVisible = false
             btnStats.isVisible = false
             btnExport.isVisible = false
+            projectGroups.forEach { it.isVisible = false }
 
             frame.add(sidebar, BorderLayout.WEST)
             frame.add(cards, BorderLayout.CENTER)

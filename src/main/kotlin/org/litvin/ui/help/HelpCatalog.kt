@@ -6,11 +6,11 @@ import org.litvin.ui.commons.AppShortcuts
 enum class HelpPage(val title: String) {
     OVERVIEW("Overview"),
     PROJECTS("Projects"),
-    COLORS("Colors"),
-    CROP("Transform"),
     POINTS("Points"),
     SCORING("Scoring"),
     STATISTICS("Statistics"),
+    COLORS("Colors"),
+    CROP("Transform"),
     EXPORT("Export"),
 }
 
@@ -35,15 +35,16 @@ object HelpCatalog {
             summary = "Turn a full tennis recording into a compact, scored video without changing the source file.",
             workflow = listOf(
                 "Import a source video or open a recent project.",
-                "Optionally tune the color and frame the video with Transform.",
                 "Mark the start and end of each point, and add comments where necessary.",
                 "Assign each marked point to a player or mark it as no point.",
                 "Review the match statistics, and select the statistics for the video.",
+                "Optionally tune the color and frame the video with Transform. You can do this at any time.",
                 "Choose export settings and export the finished video.",
             ),
             actions = listOf(
                 "Press F1 on a tab to open the help for that tab.",
                 "Select a page in the list on the left to read the help for a different tab.",
+                "In the sidebar, the Match tabs go in order. Each Match tab uses the data of the tab above it. The Video tabs change the image, and you can use them at any time.",
             ),
             goodToKnow = listOf(
                 "Projects, point marks, comments, adjustments, and scoring are saved in project files.",

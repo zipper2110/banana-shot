@@ -106,6 +106,10 @@ internal abstract class UserFlowScreen(
     protected val context: UiFlowContext get() = application.context
 
     protected fun open(navigationName: String, visibleComponentName: String) {
+        // The project tabs show only after a project opens, and the project opens after the click on Open Project.
+        application.eventually("$navigationName to become visible") {
+            context.driver.requireShowing(navigationName)
+        }
         context.driver.click(navigationName)
         application.eventually("$visibleComponentName to become visible") {
             context.driver.requireShowing(visibleComponentName)

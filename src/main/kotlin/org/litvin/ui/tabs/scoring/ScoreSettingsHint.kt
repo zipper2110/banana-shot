@@ -12,11 +12,15 @@ interface ScoreSettingsHint {
 
     fun dismiss()
 
+    /** Makes the hint show again. */
+    fun reset()
+
     companion object {
         /** Never shows the hint. Tests and the standalone panel use it. */
         val NONE: ScoreSettingsHint = object : ScoreSettingsHint {
             override fun isDismissed() = true
             override fun dismiss() = Unit
+            override fun reset() = Unit
         }
     }
 }
@@ -27,6 +31,10 @@ class PreferencesScoreSettingsHint(private val preferences: Preferences) : Score
 
     override fun dismiss() {
         preferences.putBoolean(KEY_DISMISSED, true)
+    }
+
+    override fun reset() {
+        preferences.remove(KEY_DISMISSED)
     }
 
     private companion object {

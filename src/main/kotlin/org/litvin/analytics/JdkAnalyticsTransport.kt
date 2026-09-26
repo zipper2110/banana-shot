@@ -27,13 +27,16 @@ class JdkAnalyticsTransport(
         runCatching {
             executor.execute {
                 if (!open) return@execute
-                val request = HttpRequest.newBuilder(endpoint)
-                    .timeout(Duration.ofSeconds(5))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(payload))
-                    .build()
-                client.sendAsync(request, HttpResponse.BodyHandlers.discarding())
-                    .exceptionally { null }
+                // close() can shut the executor down after the check above; sendAsync then rejects its work.
+                runCatching {
+                    val request = HttpRequest.newBuilder(endpoint)
+                        .timeout(Duration.ofSeconds(5))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(payload))
+                        .build()
+                    client.sendAsync(request, HttpResponse.BodyHandlers.discarding())
+                        .exceptionally { null }
+                }
             }
         }
     }

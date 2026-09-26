@@ -149,6 +149,7 @@ object UiStyles {
     val SIDEBAR_BG: Color = Color(0x12, 0x12, 0x12)
     val SIDEBAR_FG: Color = Color(0xD8, 0xD8, 0xD8)
     val SIDEBAR_FG_MUTED: Color = Color(0x9A, 0x9A, 0x9A)
+    val SIDEBAR_GROUP_OUTLINE: Color = Color(0x33, 0x33, 0x33)
     val SIDEBAR_HOVER_BG: Color = Color(0x2C, 0x2C, 0x2C)
     val SIDEBAR_ACTIVE_BG: Color = Color(0x18, 0x18, 0x18)
     val LIME: Color = Color(0xA1, 0xFE, 0x00)
@@ -236,6 +237,50 @@ object UiStyles {
         panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
     }
 
+    /**
+     * A group of sidebar buttons. A thin rounded outline goes around the buttons, and the [title] is set into the top line
+     * of the outline. The outline and the small spaced caption make the title different from the button labels.
+     */
+    class SidebarGroup(title: String) : JPanel() {
+        private val caption = title.uppercase()
+        private val captionFont: Font = font.deriveFont(Font.BOLD, 9f)
+            .deriveFont(mapOf(java.awt.font.TextAttribute.TRACKING to 0.15))
+
+        init {
+            isOpaque = false
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            val captionHeight = getFontMetrics(captionFont).height
+            border = BorderFactory.createEmptyBorder(captionHeight + 2, 3, 4, 3)
+            alignmentX = 0f
+        }
+
+        // The group keeps its height. The extra height of the sidebar goes to the space above Help.
+        override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
+
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            val g2 = g.create() as Graphics2D
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+                g2.font = captionFont
+                val metrics = g2.fontMetrics
+                val lineY = metrics.height / 2
+                g2.color = SIDEBAR_GROUP_OUTLINE
+                g2.drawRoundRect(0, lineY, width - 1, height - lineY - 1, 12, 12)
+                val textWidth = metrics.stringWidth(caption)
+                val textX = (width - textWidth) / 2
+                // Clear the outline behind the caption, so that the caption interrupts the top line.
+                g2.color = SIDEBAR_BG
+                g2.fillRect(textX - 4, 0, textWidth + 8, metrics.height)
+                g2.color = SIDEBAR_FG_MUTED
+                g2.drawString(caption, textX, metrics.ascent)
+            } finally {
+                g2.dispose()
+            }
+        }
+    }
+
     /** Sidebar button with custom hover/active styling and an icon. */
     fun sidebarButton(text: String, icon: Icon, onClick: () -> Unit): SidebarButton = SidebarButton(text, icon).apply {
         addActionListener { onClick() }
@@ -304,6 +349,8 @@ object UiStyles {
     fun statsIcon(size: Int = 20): Icon = ikon(Material2AL.BAR_CHART, size, LIME)
 
     fun helpIcon(size: Int = 20): Icon = ikon(Material2AL.HELP_OUTLINE, size, LIME)
+
+    fun moreIcon(size: Int = 20): Icon = ikon(Material2MZ.MORE_HORIZ, size, LIME)
 
     fun infoIcon(size: Int = 14, color: Color = FG_SECONDARY): Icon = ikon(Material2AL.INFO, size, color)
 

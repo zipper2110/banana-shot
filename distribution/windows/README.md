@@ -40,6 +40,11 @@ release. It lists the checks and the open items for the next release.
   settings exist. Without them, it builds unsigned files and shows a warning.
 - The release workflow creates a draft release. Check it on the GitHub
   releases page, then click "Publish release".
+- To test the release workflow without a release, start it by hand: open the
+  Actions tab, select "Windows release", click "Run workflow", and type a
+  version. This dry run builds, tests and checks everything. It uploads the
+  files as the workflow artifact `tennis-record-v<version>-dry-run-windows-x64`
+  and does not create a tag or a release.
 - Tennis Record uses the Elastic License 2.0. Bundle only an LGPL build of
   libmpv (`-Dgpl=false`), because the app loads libmpv into its own process.
   `Validate-Release.ps1` checks this.

@@ -16,6 +16,12 @@ interface SwingMediaPlayer : AutoCloseable {
     fun play()
     fun pause()
     fun seek(ms: Long)
+
+    /**
+     * Seeks fast for a drag on a timeline. The shown frame can be near [ms], not at [ms].
+     * Call [seek] when the drag stops to show the exact frame.
+     */
+    fun scrub(ms: Long) = seek(ms)
     fun setRate(rate: Float)
     fun status(): PlayerStatus
     fun currentTimeMs(): Long

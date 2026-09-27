@@ -217,6 +217,7 @@ class SwingPointsPanel(
         },
         commentsProvider = { commentDispatcher.state().comments },
         onCommentSelected = { id -> EventQueue.invokeLater { scrollToEvent("comment:$id") } },
+        onScrubRequested = { t -> player.scrub(t); updateTimeUI(t) },
     ).apply { name = "points-seek" }
 
     // Autosave controller (debounced, off-EDT persistence)
@@ -776,7 +777,8 @@ class SwingPointsPanel(
     }
 
     private fun updateTimeUI(ms: Long) {
-        transport.setTimeText(Timecode.format(max(0, ms)))
+        // During a drag, keyframe seeks report times near the drag position. Show the drag position.
+        transport.setTimeText(Timecode.format(max(0, timeline.scrubTimeMs ?: ms)))
     }
 
     private fun refreshUiAtCurrentTime() {

@@ -41,6 +41,8 @@ class SwingTimelineComponent(
     private val onSeekRequested: (Long) -> Unit,
     private val commentsProvider: () -> List<CommentV1> = { emptyList() },
     private val onCommentSelected: (Int) -> Unit = {},
+    /** Called for each drag step. It must be fast. The release calls [onSeekRequested] for the exact frame. */
+    private val onScrubRequested: (Long) -> Unit = onSeekRequested,
 ) : JComponent() {
 
     private val bg = Color(0x16, 0x16, 0x16)
@@ -53,17 +55,24 @@ class SwingTimelineComponent(
     private val playheadColor = Color(0xFF, 0x55, 0x55)
     private val fontSmall = Font("Dialog", Font.PLAIN, 11)
     private var lastKnownLaneCount = -1
+    private var pressPoint: Point? = null
+
+    /** The drag position while the user drags the playhead. Null when no drag occurs. */
+    var scrubTimeMs: Long? = null
+        private set
 
     init {
         isOpaque = true
         background = bg
         ToolTipManager.sharedInstance().registerComponent(this)
         addMouseListener(object : MouseAdapter() {
-            override fun mousePressed(event: MouseEvent) = handleClick(event)
+            override fun mousePressed(event: MouseEvent) = handlePress(event)
+            override fun mouseReleased(event: MouseEvent) = handleRelease()
             override fun mouseExited(event: MouseEvent) = updateCursor(null)
         })
         addMouseMotionListener(object : MouseMotionAdapter() {
             override fun mouseMoved(event: MouseEvent) = updateCursor(event.point)
+            override fun mouseDragged(event: MouseEvent) = handleDrag(event)
         })
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(event: ComponentEvent) {
@@ -85,8 +94,8 @@ class SwingTimelineComponent(
         return Html.wrappedTooltip(header + "\n" + comment.text)
     }
 
-    private fun handleClick(event: MouseEvent) {
-        val total = max(1L, durationProvider())
+    private fun handlePress(event: MouseEvent) {
+        pressPoint = event.point
         val comment = commentMarkerAt(event.point)
         if (comment != null) {
             onCommentSelected(comment.id)
@@ -99,7 +108,35 @@ class SwingTimelineComponent(
             onSeekRequested(mark.startMs.toLong())
             return
         }
-        onSeekRequested(((event.x.toDouble() / width.coerceAtLeast(1).toDouble()) * total).toLong().coerceIn(0L, total))
+        scrubTo(event.x)
+    }
+
+    /** A drag moves the playhead. A drag that starts on a comment or a mark starts after a small movement. */
+    private fun handleDrag(event: MouseEvent) {
+        val start = pressPoint ?: return
+        if (scrubTimeMs == null && start.distance(event.point) < DRAG_THRESHOLD_PX) return
+        scrubTo(event.x)
+    }
+
+    private fun handleRelease() {
+        pressPoint = null
+        val target = scrubTimeMs ?: return
+        scrubTimeMs = null
+        onSeekRequested(target)
+        repaint()
+    }
+
+    private fun scrubTo(x: Int) {
+        val target = timeAtX(x)
+        if (target == scrubTimeMs) return
+        scrubTimeMs = target
+        onScrubRequested(target)
+        repaint()
+    }
+
+    private fun timeAtX(x: Int): Long {
+        val total = max(1L, durationProvider())
+        return ((x.toDouble() / width.coerceAtLeast(1).toDouble()) * total).toLong().coerceIn(0L, total)
     }
 
     private fun commentMarkerAt(point: Point): CommentMarkerLayout? =
@@ -185,7 +222,7 @@ class SwingTimelineComponent(
             g.drawString("#${layout.id}", layout.boxBounds.x + 5, layout.boxBounds.y + layout.boxBounds.height - 5)
         }
 
-        val current = timeProvider().coerceIn(0L, total)
+        val current = (scrubTimeMs ?: timeProvider()).coerceIn(0L, total)
         val x = (current * pxPerMs).toInt()
         g.color = playheadColor
         g.drawLine(x, 0, x, height)
@@ -289,5 +326,9 @@ class SwingTimelineComponent(
     override fun getPreferredSize(): Dimension {
         val laneCount = commentLaneCountFor(width.takeIf { it > 0 } ?: 400)
         return Dimension(400, commentsTrackTop() + commentTrackHeight(laneCount))
+    }
+
+    private companion object {
+        const val DRAG_THRESHOLD_PX = 3.0
     }
 }

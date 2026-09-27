@@ -4,6 +4,14 @@ on:
   push:
     tags:
       - "v*.*.*"
+  # A manual run is a dry run. It builds and checks everything and uploads the
+  # files as a workflow artifact. It does not create a release.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "App version for the dry run (MAJOR.MINOR.PATCH)"
+        required: true
+        default: "0.0.1"
 
 permissions:
   contents: write
@@ -31,10 +39,24 @@ jobs:
 
       - name: Validate release gates
         shell: pwsh
+        env:
+          DRY_RUN_VERSION: ${{ inputs.version }}
         run: |
-          if ("${{ github.ref_name }}" -notmatch '^v\d+\.\d+\.\d+$') {
-            throw "Release tag must use vMAJOR.MINOR.PATCH."
+          if ("${{ github.event_name }}" -eq "push") {
+            $releaseName = "${{ github.ref_name }}"
+            if ($releaseName -notmatch '^v\d+\.\d+\.\d+$') {
+              throw "Release tag must use vMAJOR.MINOR.PATCH."
+            }
+            $version = $releaseName.TrimStart("v")
+          } else {
+            $version = $env:DRY_RUN_VERSION
+            if ($version -notmatch '^\d+\.\d+\.\d+$') {
+              throw "The dry-run version must use MAJOR.MINOR.PATCH."
+            }
+            $releaseName = "v$version-dry-run"
           }
+          "APP_VERSION=$version" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "RELEASE_NAME=$releaseName" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           ./distribution/windows/Validate-Release.ps1
 
       - name: Check native sources in the natives release
@@ -71,9 +93,7 @@ jobs:
 
       - name: Build application image
         shell: pwsh
-        run: |
-          $version = "${{ github.ref_name }}".TrimStart("v")
-          ./distribution/windows/Build-AppImage.ps1 -Version $version
+        run: ./distribution/windows/Build-AppImage.ps1 -Version $env:APP_VERSION
 
       - name: Run packaged diagnostics
         shell: pwsh
@@ -105,9 +125,7 @@ jobs:
 
       - name: Build EXE installer
         shell: pwsh
-        run: |
-          $version = "${{ github.ref_name }}".TrimStart("v")
-          ./distribution/windows/Build-Installer.ps1 -Version $version
+        run: ./distribution/windows/Build-Installer.ps1 -Version $env:APP_VERSION
 
       - name: Sign EXE installer
         if: env.SIGNING_ENABLED == 'true'
@@ -148,8 +166,8 @@ jobs:
           Copy-Item LICENSE-NOTICE -Destination (Join-Path $releaseDir "LICENSE-NOTICE.txt")
           Copy-Item distribution/windows/native-dependencies.json -Destination $releaseDir
           Copy-Item target/tennis-record-sbom.json -Destination $releaseDir
-          $sourceArchive = Join-Path $releaseDir "tennis-record-${{ github.ref_name }}-source.zip"
-          git archive --format=zip --output=$sourceArchive "${{ github.ref_name }}"
+          $sourceArchive = Join-Path $releaseDir "tennis-record-$($env:RELEASE_NAME)-source.zip"
+          git archive --format=zip --output=$sourceArchive HEAD
           if ($LASTEXITCODE -ne 0) { throw "Source archive creation failed." }
           $publishedInstaller = Join-Path $releaseDir $installer.Name
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $publishedInstaller).Hash.ToLowerInvariant()
@@ -158,11 +176,12 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          name: tennis-record-${{ github.ref_name }}-windows-x64
+          name: tennis-record-${{ env.RELEASE_NAME }}-windows-x64
           path: target/release/*
           if-no-files-found: error
 
       - name: Create draft GitHub release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v3
         with:
           # A maintainer checks the draft and publishes it on the GitHub releases page.

@@ -62,7 +62,14 @@ class OptionCard(
         border = BorderFactory.createEmptyBorder(8, 0, 0, 0)
         isVisible = false
     }
+    private val fixed = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        alignmentX = 0f
+        border = BorderFactory.createEmptyBorder(6, 0, 0, 0)
+        isVisible = false
+    }
     private var hasExpandable = false
+    private var secondarySubtitle = false
     private val detailLabels = mutableListOf<JLabel>()
 
     init {
@@ -93,6 +100,7 @@ class OptionCard(
             add(header)
             add(lines)
             add(noteRow)
+            add(fixed)
             add(expandable)
         }
         // A row of cards gives all cards the same height. NORTH keeps the content at the top of a taller card.
@@ -133,8 +141,10 @@ class OptionCard(
     /**
      * A second header line under the title. It is brighter and larger than the detail lines.
      * A card with a subtitle also gets a larger title, so that the two header levels are clear.
+     * A [secondary] subtitle is grey, so that it takes less attention than the title.
      */
-    fun setSubtitle(text: String?) {
+    fun setSubtitle(text: String?, secondary: Boolean = false) {
+        secondarySubtitle = secondary
         if (!subtitleLabel.isVisible && !text.isNullOrEmpty()) {
             titleLabel.font = titleLabel.font.deriveFont(titleLabel.font.size2D + 2f)
             stretch(titleLabel)
@@ -142,6 +152,15 @@ class OptionCard(
         subtitleLabel.text = text.orEmpty()
         subtitleLabel.isVisible = !text.isNullOrEmpty()
         stretch(subtitleLabel)
+        updateColors()
+        revalidate()
+    }
+
+    /** Details under the header that always show. The caller sets the colors of the content. */
+    fun setFixedContent(content: JComponent) {
+        fixed.removeAll()
+        fixed.add(content, BorderLayout.CENTER)
+        fixed.isVisible = true
         revalidate()
     }
 
@@ -203,7 +222,11 @@ class OptionCard(
 
     private fun updateColors() {
         titleLabel.foreground = if (isEnabled) UiStyles.FG_PRIMARY else UiStyles.FG_DISABLED
-        subtitleLabel.foreground = if (isEnabled) UiStyles.FG_PRIMARY else UiStyles.FG_DISABLED
+        subtitleLabel.foreground = when {
+            !isEnabled -> UiStyles.FG_DISABLED
+            secondarySubtitle -> UiStyles.FG_SECONDARY
+            else -> UiStyles.FG_PRIMARY
+        }
         detailLabels.forEach { it.foreground = if (isEnabled) UiStyles.FG_SECONDARY else UiStyles.FG_DISABLED }
         noteTag.isEnabled = isEnabled
     }

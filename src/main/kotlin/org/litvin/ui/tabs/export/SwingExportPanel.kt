@@ -91,18 +91,15 @@ class SwingExportPanel(
     private var sourceInfo = ExportSourceInfo.UNKNOWN
 
     // Left controls: content of the video
-    private val fullVideoRadio = JRadioButton("Full video").apply {
-        name = "export-content-full"
+    private val contentCards = ExportContentCards()
+    private val fullVideoCard = contentCards.fullVideo.apply {
         toolTipText = "Export the complete source video, with the time between points."
     }
-    private val pointsRadio = JRadioButton("Only points", true).apply {
-        name = "export-content-points"
+    private val pointsCard = contentCards.points.apply {
         toolTipText = "Export only the marked points. The time between points is cut."
     }
-    private val favoritesRadio = JRadioButton("Only favorites").apply {
-        name = "export-content-favorites"
-    }
-    private var lastContentRadio: JRadioButton = pointsRadio
+    private val favoritesCard = contentCards.favorites
+    private var lastContentCard: OptionCard = pointsCard
     private val scoreboardCheck = JCheckBox("Include scoreboard", false).apply {
         name = "export-scoreboard"
         toolTipText = "Burn in a scoreboard overlay that updates after each point. Uses the data of the Scoring tab."
@@ -121,7 +118,6 @@ class SwingExportPanel(
         toolTipText = "Add a card with the statistics of each set after the last point of the set. Select the statistics in the Stats tab."
     }
     private val setSummariesLabel = JLabel().apply { name = "export-set-summaries-note" }
-    private val contentTable = ExportContentTable(fullVideoRadio, pointsRadio, favoritesRadio)
     private val scoredLabel = JLabel().apply { name = "export-scoreboard-scored" }
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
     private val initButton = UiStyles.primaryButton(START_EXPORT) { onInitializeRender() }.apply {
@@ -253,22 +249,22 @@ class SwingExportPanel(
         updatePointsSummary()
         updateFavoriteOnlyAvailability()
 
-        listOf(fullVideoRadio, pointsRadio).forEach { radio ->
-            radio.addActionListener {
-                lastContentRadio = radio
+        listOf(fullVideoCard, pointsCard).forEach { card ->
+            card.addActionListener {
+                lastContentCard = card
                 onContentChanged()
             }
         }
-        favoritesRadio.addActionListener {
+        favoritesCard.addActionListener {
             if (validFavoriteCount() <= 0) {
-                lastContentRadio.isSelected = true
+                lastContentCard.isSelected = true
                 dialogs.showInfo(
                     this,
                     "Only favorites needs at least one valid favorite point. Mark a point with a star on the Points tab.",
                     "Favorite export unavailable",
                 )
             } else {
-                lastContentRadio = favoritesRadio
+                lastContentCard = favoritesCard
             }
             onContentChanged()
         }
@@ -384,14 +380,8 @@ class SwingExportPanel(
         panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
         panel.isOpaque = false
         panel.alignmentX = 0f
-        val group = ButtonGroup()
-        listOf(fullVideoRadio, pointsRadio, favoritesRadio).forEach { radio ->
-            UiStyles.styleRadioButton(radio)
-            group.add(radio)
-        }
-        contentTable.maximumSize = Dimension(Int.MAX_VALUE, contentTable.preferredSize.height)
-        panel.add(contentTable)
-        panel.add(Box.createRigidArea(Dimension(0, 8)))
+        panel.add(contentCards)
+        panel.add(Box.createRigidArea(Dimension(0, 10)))
         listOf(scoreboardCheck, commentsCheck, statsCardCheck, setSummariesCheck).forEach(UiStyles::styleCheckBox)
         UiStyles.styleHelper(scoredLabel)
         UiStyles.styleHelper(statsCardLabel)
@@ -449,9 +439,9 @@ class SwingExportPanel(
         return panel
     }
 
-    private fun idleTrimSelected(): Boolean = !fullVideoRadio.isSelected
+    private fun idleTrimSelected(): Boolean = !fullVideoCard.isSelected
 
-    private fun favoriteOnlySelected(): Boolean = favoritesRadio.isSelected
+    private fun favoriteOnlySelected(): Boolean = favoritesCard.isSelected
 
     private fun onContentChanged() {
         updateSetSummariesState()
@@ -634,12 +624,12 @@ class SwingExportPanel(
 
     private fun updateFavoriteOnlyAvailability() {
         val available = manifestPath != null
-        favoritesRadio.isEnabled = available
-        if (!available && favoritesRadio.isSelected) {
-            pointsRadio.isSelected = true
-            lastContentRadio = pointsRadio
+        favoritesCard.isEnabled = available
+        if (!available && favoritesCard.isSelected) {
+            pointsCard.isSelected = true
+            lastContentCard = pointsCard
         }
-        favoritesRadio.toolTipText = when {
+        favoritesCard.toolTipText = when {
             !available -> "Requires an open project."
             validFavoriteCount() > 0 -> "Export only the points that are marked with a star."
             else -> "No valid favorite points are available. Mark a point with a star on the Points tab."
@@ -799,7 +789,7 @@ class SwingExportPanel(
         } catch (_: Throwable) {
             null
         }
-        contentTable.show(summary, sourceInfo.durationMs.takeIf { manifestPath != null })
+        contentCards.show(summary, sourceInfo.durationMs.takeIf { manifestPath != null })
         showScoredCount(summary)
         updateFavoriteOnlyAvailability()
         updateOutputDuration()

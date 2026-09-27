@@ -309,6 +309,15 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
         seekExact(target)
     }
 
+    /** Keyframe seeks decode few frames, so a drag stays responsive. mpv keeps only the newest queued seek. */
+    override fun scrub(ms: Long) {
+        val target = ms.coerceAtLeast(0L)
+        frameStepCursorMs = null
+        lastKnownTimeMs = target
+        if (!fileLoaded) return
+        core?.command("seek", String.format(Locale.US, "%.3f", target / 1000.0), "absolute+keyframes")
+    }
+
     private fun seekExact(targetMs: Long) {
         lastKnownTimeMs = targetMs
         if (!fileLoaded) return

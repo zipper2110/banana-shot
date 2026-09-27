@@ -248,7 +248,7 @@ object HelpCatalog {
             page = HelpPage.EXPORT,
             summary = "Configure and export the final video, then monitor it through completion.",
             workflow = listOf(
-                "In Content, select Full video, Only points, or Only favorites. The table shows the length of each exported video and the number of points in it.",
+                "In Content, select the Full video, Only points or Only favorites card. Each card shows the length of the exported video and the number of points in it.",
                 "Select Include scoreboard and Include comments if necessary. The text next to Include scoreboard shows how many points are scored.",
                 "Select Include statistics card to add the match statistics at the end of the video. The Stats tab sets which statistics the card shows. The text next to the checkbox shows how long the card is.",
                 "Select Include set summaries to add the statistics of each set after the last point of the set. Set summaries are available only for Only points and Only favorites. A set without an exported point has no summary.",

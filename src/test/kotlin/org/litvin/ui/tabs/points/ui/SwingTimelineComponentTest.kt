@@ -83,11 +83,67 @@ class SwingTimelineComponentTest {
         }
     }
 
+    @Test
+    fun draggingOnTheScrubbableAreaScrubsFastAndSeeksExactlyOnRelease() {
+        SwingUtilities.invokeAndWait {
+            val seeks = mutableListOf<Long>()
+            val scrubs = mutableListOf<Long>()
+            val timeline = timelineWithComments(
+                comments = emptyList(),
+                onSeek = { seeks += it },
+                onScrub = { scrubs += it },
+            )
+            timeline.setSize(200, timeline.preferredSize.height)
+            val y = timeline.videoTrackTopForTest() + 2
+
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_PRESSED, 20, y))
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_DRAGGED, 100, y))
+            assertEquals(5_000L, timeline.scrubTimeMs)
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_DRAGGED, 150, y))
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_RELEASED, 150, y))
+
+            assertEquals(listOf(1_000L, 5_000L, 7_500L), scrubs)
+            assertEquals(listOf(7_500L), seeks)
+            assertEquals(null, timeline.scrubTimeMs)
+        }
+    }
+
+    @Test
+    fun draggingFromAMarkSeeksToTheMarkThenScrubsAfterASmallMovement() {
+        SwingUtilities.invokeAndWait {
+            val seeks = mutableListOf<Long>()
+            val scrubs = mutableListOf<Long>()
+            val timeline = timelineWithComments(
+                comments = emptyList(),
+                points = listOf(PointV1("p1", 1_000, 2_000)),
+                onSeek = { seeks += it },
+                onScrub = { scrubs += it },
+            )
+            timeline.setSize(200, timeline.preferredSize.height)
+            val y = timeline.marksTrackCenterYForTest()
+
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_PRESSED, 30, y))
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_DRAGGED, 31, y))
+            assertEquals(emptyList(), scrubs)
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_DRAGGED, 60, y))
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_RELEASED, 60, y))
+
+            assertEquals(listOf(3_000L), scrubs)
+            assertEquals(listOf(1_000L, 3_000L), seeks)
+        }
+    }
+
+    private fun mouse(timeline: SwingTimelineComponent, id: Int, x: Int, y: Int): MouseEvent {
+        val modifiers = if (id == MouseEvent.MOUSE_RELEASED) 0 else MouseEvent.BUTTON1_DOWN_MASK
+        return MouseEvent(timeline, id, 0, modifiers, x, y, 1, false, MouseEvent.BUTTON1)
+    }
+
     private fun timelineWithComments(
         comments: List<CommentV1>,
         points: List<PointV1> = emptyList(),
         onCommentSelected: (Int) -> Unit = {},
         onSeek: (Long) -> Unit = {},
+        onScrub: (Long) -> Unit = onSeek,
     ) = SwingTimelineComponent(
         timeProvider = { 0L },
         durationProvider = { 10_000L },
@@ -95,5 +151,6 @@ class SwingTimelineComponentTest {
         onSeekRequested = onSeek,
         commentsProvider = { comments },
         onCommentSelected = onCommentSelected,
+        onScrubRequested = onScrub,
     )
 }

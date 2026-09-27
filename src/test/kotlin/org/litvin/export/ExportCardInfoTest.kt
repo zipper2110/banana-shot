@@ -30,8 +30,8 @@ class ExportCardInfoTest {
 
         assertEquals("D:/exports/final.mp4", info.outputPath)
         assertEquals("Club final", info.projectName)
-        assertEquals("Only points (2 points)  ·  Scoreboard: on  ·  Comments: off", info.content)
-        assertEquals("Fast export  ·  1080p  ·  30 FPS  ·  6.0 Mbit/s  ·  H.264 (NVENC)", info.video)
+        assertEquals("Only points (2 points) · Scoreboard: on · Comments: off", info.content)
+        assertEquals("Fast export · 1080p · 30 FPS · 6.0 Mbit/s · H.264 (NVENC)", info.video)
         assertEquals("120.50 MB / ~480.00 MB", info.size)
     }
 
@@ -51,8 +51,8 @@ class ExportCardInfoTest {
         val info = ExportCardInfo.of(item)
 
         assertNull(info.projectName)
-        assertEquals("Full video  ·  Scoreboard: off  ·  Comments: off", info.content)
-        assertEquals("4K  ·  Original FPS  ·  H.264 (libx264)", info.video)
+        assertEquals("Full video · Scoreboard: off · Comments: off", info.content)
+        assertEquals("4K · Original FPS · H.264 (libx264)", info.video)
         assertEquals("2.00 GB", info.size)
     }
 }

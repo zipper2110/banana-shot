@@ -182,7 +182,7 @@ class SwingApplicationFactoryTest {
             }
             handle = opened
 
-            val encoderCards = findComponents(opened.frame, org.litvin.ui.tabs.export.OptionCard::class.java)
+            val encoderCards = findComponents(opened.frame, org.litvin.ui.tabs.export.SegmentButton::class.java)
                 .mapNotNull { it.name }
                 .filter { it.startsWith("export-encoder-") }
             assertEquals(listOf("export-encoder-h264_nvenc", "export-encoder-libx264"), encoderCards)

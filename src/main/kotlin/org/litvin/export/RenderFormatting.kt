@@ -23,7 +23,7 @@ object RenderFormatting {
         else -> "Only points"
     }
 
-    /** The content settings of an export, for example "Only points (12 points)  ·  Scoreboard: on  ·  Comments: off". */
+    /** The content settings of an export, for example "Only points (12 points) · Scoreboard: on · Comments: off". */
     fun formatContent(
         idleTrim: Boolean,
         favoriteOnly: Boolean,
@@ -41,7 +41,7 @@ object RenderFormatting {
 
     /**
      * The video settings of an export, for example
-     * "Balanced  ·  1080p (1920×1080)  ·  60 FPS  ·  12 Mbit/s  ·  H.264 (NVENC)".
+     * "Balanced · 1080p (1920×1080) · 60 FPS · 12 Mbit/s · H.264 (NVENC)".
      * A job without a frame rate keeps the source rate. Old entries without a bitrate do not show one.
      */
     fun formatVideo(
@@ -82,7 +82,7 @@ object RenderFormatting {
 
     private fun onOff(value: Boolean): String = if (value) "on" else "off"
 
-    private const val SEPARATOR = "  ·  "
+    private const val SEPARATOR = " · "
 
     /** Output frame rate for display, e.g. "60 FPS" or "29.97 FPS"; null when the job kept the source rate. */
     fun formatFrameRate(rawRate: String?): String? = rawRate

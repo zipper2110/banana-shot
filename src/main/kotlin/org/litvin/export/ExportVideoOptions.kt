@@ -11,7 +11,7 @@ enum class ExportQualityLevel(val label: String) {
     HIGH("high"),
 }
 
-/** One resolution card on the Advanced tab. */
+/** One resolution button of the Advanced mode. */
 data class ExportResolutionChoice(
     val title: String,
     val resolution: ExportResolution,
@@ -20,7 +20,7 @@ data class ExportResolutionChoice(
     val available: Boolean,
 )
 
-/** One frame rate card on the Advanced tab. */
+/** One frame rate button of the Advanced mode. */
 data class ExportFrameRateChoice(
     val title: String,
     val frameRate: ExportFrameRate,
@@ -37,7 +37,7 @@ data class ExportBitrateRange(
     val estimated: Boolean,
 )
 
-/** The three quality choices on the Simple tab. */
+/** The three quality choices of the Simple mode. */
 enum class ExportSimplePreset(
     val id: String,
     val title: String,
@@ -189,7 +189,7 @@ object ExportVideoOptions {
         return if ((framesPerSecond ?: 30.0) > 31.0) base * 3 / 2 else base
     }
 
-    /** Converts a Simple tab choice into the video settings for the export. */
+    /** Converts a Simple mode choice into the video settings for the export. */
     fun simpleTarget(preset: ExportSimplePreset, source: ExportSourceInfo): ExportVideoTarget {
         val sourceResolution = source.resolution ?: fallbackResolution
         val resolution = if (preset == ExportSimplePreset.FAST && sourceResolution.height > 1080) {

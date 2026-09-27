@@ -187,15 +187,15 @@ class ExportPlannerTest {
     @Test
     fun renderFormattingDescribesTheContentSettings() {
         assertEquals(
-            "Only points (12 points)  ·  Scoreboard: on  ·  Comments: off",
+            "Only points (12 points) · Scoreboard: on · Comments: off",
             RenderFormatting.formatContent(idleTrim = true, favoriteOnly = false, pointCount = 12, includeScoreboard = true, includeComments = false),
         )
         assertEquals(
-            "Only favorites (1 point)  ·  Scoreboard: off  ·  Comments: on",
+            "Only favorites (1 point) · Scoreboard: off · Comments: on",
             RenderFormatting.formatContent(idleTrim = true, favoriteOnly = true, pointCount = 1, includeScoreboard = false, includeComments = true),
         )
         assertEquals(
-            "Full video  ·  Scoreboard: off  ·  Comments: off",
+            "Full video · Scoreboard: off · Comments: off",
             RenderFormatting.formatContent(idleTrim = false, favoriteOnly = false, pointCount = 0, includeScoreboard = false, includeComments = false),
         )
     }
@@ -203,21 +203,21 @@ class ExportPlannerTest {
     @Test
     fun renderFormattingDescribesTheVideoSettings() {
         assertEquals(
-            "Balanced  ·  1080p  ·  60 FPS  ·  12 Mbit/s  ·  H.264 (NVENC)",
+            "Balanced · 1080p · 60 FPS · 12 Mbit/s · H.264 (NVENC)",
             RenderFormatting.formatVideo("balanced", 1920, 1080, "60", 12_000, "H.264 (NVENC)"),
         )
         // A job that keeps the source rate has no frame rate. Old entries have no bitrate and can have an old preset id.
         assertEquals(
-            "Original quality  ·  2704×1520  ·  Original FPS  ·  H.264 (libx264)",
+            "Original quality · 2704×1520 · Original FPS · H.264 (libx264)",
             RenderFormatting.formatVideo("maximum", 2704, 1520, null, null, "H.264 (libx264)"),
         )
         assertEquals(
-            "4K  ·  30 FPS  ·  8.5 Mbit/s  ·  H.264 (QSV)",
+            "4K · 30 FPS · 8.5 Mbit/s · H.264 (QSV)",
             RenderFormatting.formatVideo("unknown-preset", 3840, 2160, "30", 8_500, "H.264 (QSV)"),
         )
         // A size near a standard size keeps its pixels, so the user sees that it is not exactly 1080p.
         assertEquals(
-            "1080p (1920×1088)  ·  30 FPS  ·  H.264 (QSV)",
+            "1080p (1920×1088) · 30 FPS · H.264 (QSV)",
             RenderFormatting.formatVideo(null, 1920, 1088, "30", null, "H.264 (QSV)"),
         )
     }

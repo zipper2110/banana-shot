@@ -2,7 +2,6 @@ package org.litvin.ui.tabs.export
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.ApplicationLayout
 import org.litvin.ExportPresetsIO
-import org.litvin.RenderJob
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.export.ProductionCompletedRendersRepository
 import org.litvin.export.CompletedRendersRepository
@@ -29,12 +28,11 @@ import org.litvin.stats.SetSummaryCard
 import org.litvin.stats.StatsCardVideo
 import org.litvin.stats.StatsIO
 import org.litvin.stats.StatsSettingsV1
-import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.SwingFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
-import org.litvin.export.ExportCardInfo
+import org.litvin.ui.commons.applyDarkScrollbar
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.awt.*
@@ -47,8 +45,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Phase 4 — Export pipeline (Swing)
  *
- * The left column has three blocks: the project summary, the content of the video, and the quality.
- * The right column shows the active export, the queue and the completed exports.
+ * The left column has three numbered steps: the content of the video, the parts to include, and the quality.
+ * Its footer shows the estimated file size and the start button.
+ * The right side is one table with the active export, the export queue and the completed exports.
  */
 class SwingExportPanel(
     private val settingsPreferences: ExportSettingsPreferences,
@@ -99,152 +98,74 @@ class SwingExportPanel(
         toolTipText = "Export only the marked points. The time between points is cut."
     }
     private val favoritesCard = contentCards.favorites
-    private var lastContentCard: OptionCard = pointsCard
-    private val scoreboardCheck = JCheckBox("Include scoreboard", false).apply {
-        name = "export-scoreboard"
+    private var lastContentCard: ChoiceCard = pointsCard
+    private val scoreboardCheck = IncludeTile("export-scoreboard", "Scoreboard").apply {
         toolTipText = "Burn in a scoreboard overlay that updates after each point. Uses the data of the Scoring tab."
     }
-    private val commentsCheck = JCheckBox("Include comments", false).apply {
-        name = "export-comments"
+    private val commentsCheck = IncludeTile("export-comments", "Comments").apply {
         toolTipText = "Burn the comments from the Points tab into the video as centered lower-third text."
     }
-    private val statsCardCheck = JCheckBox("Include statistics card", false).apply {
-        name = "export-stats-card"
+    private val statsCardCheck = IncludeTile("export-stats-card", "Statistics card").apply {
         toolTipText = "Add a card with the match statistics after the last point. Select the statistics in the Stats tab."
     }
-    private val statsCardLabel = JLabel().apply { name = "export-stats-card-note" }
-    private val setSummariesCheck = JCheckBox("Include set summaries", false).apply {
-        name = "export-set-summaries"
+    private val setSummariesCheck = IncludeTile("export-set-summaries", "Set summaries").apply {
         toolTipText = "Add a card with the statistics of each set after the last point of the set. Select the statistics in the Stats tab."
     }
-    private val setSummariesLabel = JLabel().apply { name = "export-set-summaries-note" }
-    private val scoredLabel = JLabel().apply { name = "export-scoreboard-scored" }
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
-    private val initButton = UiStyles.primaryButton(START_EXPORT) { onInitializeRender() }.apply {
+    private val initButton = StartExportButton(START_EXPORT).apply {
         name = "export-initialize"
+        addActionListener { onInitializeRender() }
     }
+    private val footer = ExportFooter(initButton)
 
-    // Right side — the active export, the queue and the completed exports
-    private var activeOutputPath: String? = null
-    private val activeCard = ExportJobCard(
-        componentPrefix = "export-active",
-        onOpenFolder = { activeOutputPath?.let { ExportJobCard.openFolder(it, this, dialogs) } },
-        onCancel = { cancelActiveExport() },
-        showProgress = true,
-    ).apply {
-        // The UI tests find the progress bar and the cancel button of the active export by these names.
-        progressBar.name = "export-progress"
-        cancelButton?.name = "export-cancel"
-    }
+    // Right side: one table with the active export, the queue and the completed exports
+    private val exportsTable = ExportsTable(renderService, completedRepository, dialogs, onCancelActive = { cancelActiveExport() })
     private var lastFailureNotifiedJobId: String? = null
 
-    private val exportQueue = ExportQueueList(renderService, dialogs)
-    private val completed = CompletedExportsList(completedRepository, dialogs)
-
-    // Theming — reuse UiStyles palette
-    private val DARK_BG = UiStyles.DARK_BG
-    private val CARD_BG = UiStyles.CARD_BG
-    private val CARD_BORDER = UiStyles.CARD_BORDER
-    private val FG_PRIMARY = UiStyles.FG_PRIMARY
-    private val FG_SECONDARY = UiStyles.FG_SECONDARY
-
     init {
-        border = EmptyBorder(10, 10, 10, 10)
-        background = DARK_BG
+        background = ExportUi.BG
 
-        // Left configuration column (fixed width, dark theme)
-        val left = JPanel(BorderLayout())
-        left.border = EmptyBorder(12, 12, 12, 4)
-        left.background = CARD_BG
-        left.preferredSize = Dimension(LEFT_WIDTH, 10)
-        left.minimumSize = Dimension(360, 10)
-
-        val blocks = object : JPanel(), Scrollable {
-            // Follow the width of the scroll pane, so that only a vertical scroll bar can show.
-            override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
-            override fun getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = 16
-            override fun getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = visibleRect.height
-            override fun getScrollableTracksViewportWidth() = true
-            override fun getScrollableTracksViewportHeight() = false
+        // Left configuration column: the steps scroll, the footer stays at the bottom.
+        val checks = GridRows(2, 6, 6).apply {
+            add(scoreboardCheck)
+            add(commentsCheck)
+            add(statsCardCheck)
+            add(setSummariesCheck)
         }
-        blocks.layout = BoxLayout(blocks, BoxLayout.Y_AXIS)
-        blocks.background = CARD_BG
-        blocks.border = EmptyBorder(0, 0, 0, 12)
-
-        blocks.add(block("Content", contentControls()))
-        blocks.add(Box.createRigidArea(Dimension(0, 32)))
-        blocks.add(block("Quality and file size", qualityPanel))
-
-        val scroll = JScrollPane(blocks).apply {
+        val steps = ScrollableStack(0).apply {
+            border = EmptyBorder(18, 20, 20, 20)
+            add(StepHeader(1, "Content"))
+            add(VGap(10))
+            add(contentCards)
+            add(VGap(22))
+            add(StepHeader(2, "Include in the video"))
+            add(VGap(10))
+            add(checks)
+            add(VGap(22))
+            add(StepHeader(3, "Quality and file size", qualityPanel.modeControl))
+            add(VGap(10))
+            add(qualityPanel)
+        }
+        val scroll = JScrollPane(steps).apply {
             border = BorderFactory.createEmptyBorder()
-            viewport.background = CARD_BG
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-            verticalScrollBar.unitIncrement = 16
+            applyDarkScrollbar(this, ExportUi.CARD)
         }
-        left.add(scroll, BorderLayout.CENTER)
-
-        // Primary action (neon green). It fills the width of the column; the button centers its icon and text.
-        left.add(JPanel(BorderLayout()).apply {
-            isOpaque = false
-            border = EmptyBorder(12, 0, 0, 12)
-            add(initButton, BorderLayout.CENTER)
-        }, BorderLayout.SOUTH)
-
-        // Right column with Active + Completed
-        val right = JPanel(BorderLayout())
-        right.background = DARK_BG
-        right.foreground = FG_PRIMARY
-
-        // Active card: a placeholder while no export runs, else the card of the running export.
-        val placeholder = JLabel("No active exports").apply {
-            foreground = FG_SECONDARY
-            alignmentX = 0f
-        }
-        val activeBody = JPanel()
-        activeBody.layout = BoxLayout(activeBody, BoxLayout.Y_AXIS)
-        activeBody.background = CARD_BG
-        activeBody.border = EmptyBorder(8, 0, 0, 0)
-        activeCard.alignmentX = 0f
-        activeBody.add(placeholder)
-        activeBody.add(activeCard)
-        activeCard.isVisible = false
-
-        val activeCardPanel = UiStyles.card("Active Exports", activeBody)
-
-        val exportQueueCardPanel = UiStyles.card("Export Queue", exportQueue.component()).apply {
-            isVisible = false
+        val left = JPanel(BorderLayout()).apply {
+            background = ExportUi.CARD
+            border = BorderFactory.createMatteBorder(0, 0, 0, 1, ExportUi.LINE)
+            preferredSize = Dimension(LEFT_WIDTH, 10)
+            minimumSize = Dimension(LEFT_WIDTH, 10)
+            add(scroll, BorderLayout.CENTER)
+            add(footer, BorderLayout.SOUTH)
         }
 
-        // The active card and the queue follow the width of the column, so that long text wraps.
-        val rightTop = JPanel(GridBagLayout())
-        rightTop.background = DARK_BG
-        rightTop.add(activeCardPanel, GridBagConstraints().apply {
-            gridy = 0
-            weightx = 1.0
-            fill = GridBagConstraints.HORIZONTAL
-            insets = Insets(0, 0, 10, 0)
-        })
-        rightTop.add(exportQueueCardPanel, GridBagConstraints().apply {
-            gridy = 1
-            weightx = 1.0
-            fill = GridBagConstraints.HORIZONTAL
-            insets = Insets(0, 0, 10, 0)
-        })
-        right.add(rightTop, BorderLayout.NORTH)
-
-        // The completed card takes the rest of the height.
-        val completedCardPanel = UiStyles.card("Completed Exports", completed.component())
-        right.add(completedCardPanel, BorderLayout.CENTER)
+        add(left, BorderLayout.WEST)
+        add(exportsTable, BorderLayout.CENTER)
 
         // Load the saved completed exports.
         refreshCompletedFromStore()
-
-        val center = JPanel(BorderLayout())
-        center.background = DARK_BG
-        center.add(right, BorderLayout.CENTER)
-
-        add(left, BorderLayout.WEST)
-        add(center, BorderLayout.CENTER)
+        qualityPanel.onChange = { updateFooter() }
 
         updatePointsSummary()
         updateFavoriteOnlyAvailability()
@@ -312,51 +233,16 @@ class SwingExportPanel(
             SwingUtilities.invokeLater {
                 lastSnapshot = snap
                 updateStartButtonText(snap)
+                exportsTable.showSnapshot(snap)
                 val cur = snap.current
-                placeholder.isVisible = cur == null
-                activeCard.isVisible = cur != null
-                activeOutputPath = cur?.outputPath
-                if (cur != null) showActiveExport(cur)
-                val q = snap.queued.size
-                exportQueue.setJobs(snap.queued)
-                exportQueueCardPanel.isVisible = q > 0
-                activeCardPanel.toolTipText = if (q > 0) "Exports in the queue: $q" else null
-                rightTop.revalidate()
-                rightTop.repaint()
-            }
-        }
-    }
-
-    /** Shows the settings, the size and the progress of the running export on the active card. */
-    private fun showActiveExport(job: RenderJob) {
-        val percent = (job.progress * 100).toInt()
-        // The card is in the Active Exports section, so a running export needs no badge.
-        // A badge shows only the states that are not a normal running export.
-        val status = when (job.status) {
-            RenderStatus.QUEUED -> "Starting"
-            RenderStatus.RUNNING, RenderStatus.COMPLETED -> null
-            RenderStatus.FAILED -> "Failed"
-            RenderStatus.CANCELED -> "Canceled"
-        }
-        activeCard.update(ExportCardInfo.of(job), status)
-        activeCard.setProgress(percent)
-        activeCard.cancelButton?.isEnabled = job.status == RenderStatus.RUNNING || job.status == RenderStatus.QUEUED
-        when (job.status) {
-            RenderStatus.FAILED -> {
-                val reason = job.failureReason ?: "Unknown error"
-                activeCard.setExtraRow("Error", reason)
-                if (lastFailureNotifiedJobId != job.id) {
-                    lastFailureNotifiedJobId = job.id
-                    dialogs.showError(this, reason, "Export failed")
+                if (cur?.status == RenderStatus.COMPLETED) refreshCompletedFromStore()
+                if (cur?.status == RenderStatus.FAILED && lastFailureNotifiedJobId != cur.id) {
+                    lastFailureNotifiedJobId = cur.id
+                    dialogs.showError(this, cur.failureReason ?: "Unknown error", "Export failed")
                 }
             }
-            RenderStatus.COMPLETED -> {
-                activeCard.setExtraRow(null, null)
-                refreshCompletedFromStore()
-            }
-            RenderStatus.CANCELED -> activeCard.setExtraRow(null, null)
-            else -> activeCard.setExtraRow("Time left", job.etaSeconds?.let(::formatEta) ?: "calculating…")
         }
+        updateFooter()
     }
 
     private fun cancelActiveExport() {
@@ -375,70 +261,6 @@ class SwingExportPanel(
         updateCommentsDefault()
     }
 
-    private fun contentControls(): JComponent {
-        val panel = JPanel()
-        panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        panel.isOpaque = false
-        panel.alignmentX = 0f
-        panel.add(contentCards)
-        panel.add(Box.createRigidArea(Dimension(0, 10)))
-        listOf(scoreboardCheck, commentsCheck, statsCardCheck, setSummariesCheck).forEach(UiStyles::styleCheckBox)
-        UiStyles.styleHelper(scoredLabel)
-        UiStyles.styleHelper(statsCardLabel)
-        UiStyles.styleHelper(setSummariesLabel)
-        // The scored count is next to the scoreboard option, because the scoreboard uses it.
-        // CENTER gives the note the rest of the width, so that its last characters are not cut off.
-        val scoreboardRow = JPanel(BorderLayout(8, 0)).apply {
-            isOpaque = false
-            alignmentX = 0f
-            add(scoreboardCheck, BorderLayout.WEST)
-            add(scoredLabel, BorderLayout.CENTER)
-        }
-        scoreboardRow.maximumSize = Dimension(Int.MAX_VALUE, scoreboardRow.preferredSize.height)
-        panel.add(scoreboardRow)
-        commentsCheck.alignmentX = 0f
-        panel.add(commentsCheck)
-        val statsCardRow = JPanel(BorderLayout(8, 0)).apply {
-            isOpaque = false
-            alignmentX = 0f
-            add(statsCardCheck, BorderLayout.WEST)
-            add(statsCardLabel, BorderLayout.CENTER)
-        }
-        statsCardRow.maximumSize = Dimension(Int.MAX_VALUE, statsCardRow.preferredSize.height)
-        panel.add(statsCardRow)
-        val setSummariesRow = JPanel(BorderLayout(8, 0)).apply {
-            isOpaque = false
-            alignmentX = 0f
-            add(setSummariesCheck, BorderLayout.WEST)
-            add(setSummariesLabel, BorderLayout.CENTER)
-        }
-        setSummariesRow.maximumSize = Dimension(Int.MAX_VALUE, setSummariesRow.preferredSize.height)
-        panel.add(setSummariesRow)
-        return panel
-    }
-
-    /** A block of the left column: a bold title, a thin line, and the content. */
-    private fun block(title: String, content: JComponent): JComponent {
-        val panel = JPanel()
-        panel.layout = BoxLayout(panel, BoxLayout.Y_AXIS)
-        panel.isOpaque = false
-        panel.alignmentX = 0f
-        panel.add(JLabel(title).apply {
-            font = font.deriveFont(Font.BOLD, font.size2D + 1f)
-            foreground = FG_PRIMARY
-            alignmentX = 0f
-        })
-        panel.add(Box.createRigidArea(Dimension(0, 4)))
-        panel.add(JSeparator().apply {
-            alignmentX = 0f
-            maximumSize = Dimension(Int.MAX_VALUE, 2)
-        })
-        panel.add(Box.createRigidArea(Dimension(0, 8)))
-        content.alignmentX = 0f
-        panel.add(content)
-        return panel
-    }
-
     private fun idleTrimSelected(): Boolean = !fullVideoCard.isSelected
 
     private fun favoriteOnlySelected(): Boolean = favoritesCard.isSelected
@@ -447,6 +269,13 @@ class SwingExportPanel(
         updateSetSummariesState()
         updateOutputDuration()
         updateInitButtonState()
+        updateFooter()
+    }
+
+    /** The footer shows the estimated file size, the content and the video settings of the next export. */
+    private fun updateFooter() {
+        val content = RenderFormatting.formatCutMode(idleTrim = idleTrimSelected(), favoriteOnly = favoriteOnlySelected())
+        footer.show(qualityPanel.selectedSize(), listOf(content, qualityPanel.selectedVideoSummary()).filter { it.isNotEmpty() }.joinToString(" · "))
     }
 
     private fun onInitializeRender() {
@@ -604,14 +433,7 @@ class SwingExportPanel(
     }
 
     private fun refreshCompletedFromStore() {
-        completed.refreshFromStore()
-    }
-
-    private fun formatEta(secs: Long): String {
-        val h = secs / 3600
-        val m = (secs % 3600) / 60
-        val s = secs % 60
-        return String.format("%d:%02d:%02d", h, m, s)
+        exportsTable.refreshCompletedFromStore()
     }
 
     private fun validFavoriteCount(): Int {
@@ -660,11 +482,13 @@ class SwingExportPanel(
      */
     private fun updateStatsCardDefault() {
         val card = currentStatsCard()
-        statsCardLabel.text = when {
-            card != null -> "${card.durationMs / 1000} s, " + if (card.pages.size == 1) "1 page" else "${card.pages.size} pages"
-            hasAnyScoredPoints() -> "No selected statistics"
-            else -> "No scored points"
-        }
+        statsCardCheck.setNote(
+            when {
+                card != null -> "${card.durationMs / 1000} s, " + if (card.pages.size == 1) "1 page" else "${card.pages.size} pages"
+                hasAnyScoredPoints() -> "No selected statistics"
+                else -> "No scored points"
+            },
+        )
         val saved = currentProjectDir()?.let(settingsPreferences::loadIncludeStatsCard)
         statsCardCheck.isSelected = card != null && (saved ?: true)
         updateOutputDuration()
@@ -693,16 +517,18 @@ class SwingExportPanel(
     private fun updateSetSummariesState() {
         val summaries = currentSetSummaries()
         setSummariesCheck.isEnabled = summaries.isNotEmpty()
-        setSummariesLabel.text = when {
-            !idleTrimSelected() -> "Only for Only points and Only favorites"
-            summaries.isNotEmpty() -> {
-                val seconds = summaries.sumOf { it.card.durationMs } / 1000
-                (if (summaries.size == 1) "1 set" else "${summaries.size} sets") + ", $seconds s"
-            }
-            !hasAnyScoredPoints() -> "No scored points"
-            currentStatsCard() == null -> "No selected statistics"
-            else -> "No completed set in the video"
-        }
+        setSummariesCheck.setNote(
+            when {
+                !idleTrimSelected() -> "Only for Only points and Only favorites"
+                summaries.isNotEmpty() -> {
+                    val seconds = summaries.sumOf { it.card.durationMs } / 1000
+                    (if (summaries.size == 1) "1 set" else "${summaries.size} sets") + ", $seconds s"
+                }
+                !hasAnyScoredPoints() -> "No scored points"
+                currentStatsCard() == null -> "No selected statistics"
+                else -> "No completed set in the video"
+            },
+        )
     }
 
     /** The set cards of the selected content at 1080p. A full video export has no set cards. */
@@ -775,12 +601,14 @@ class SwingExportPanel(
     }
 
     private fun showScoredCount(summary: ExportPointSummary?) {
-        scoredLabel.text = when {
-            summary == null -> ""
-            summary.pointCount == 0 -> "(no points)"
-            else -> "(${summary.scoredCount}/${summary.pointCount} points scored)"
-        }
-        scoredLabel.foreground = if (summary?.allScored == true) UiStyles.GREEN else UiStyles.FG_SECONDARY
+        scoreboardCheck.setNote(
+            when {
+                summary == null -> ""
+                summary.pointCount == 0 -> "No points"
+                else -> "${summary.scoredCount}/${summary.pointCount} points scored"
+            },
+            ok = summary?.allScored == true,
+        )
     }
 
     private fun updatePointsSummary() {
@@ -793,6 +621,7 @@ class SwingExportPanel(
         showScoredCount(summary)
         updateFavoriteOnlyAvailability()
         updateOutputDuration()
+        updateFooter()
     }
 
     // Task 3.15 — Read project context and prerequisites for the start button
@@ -829,7 +658,6 @@ class SwingExportPanel(
         val text = if (hasActiveExports(snapshot)) ENQUEUE_EXPORT else START_EXPORT
         if (initButton.text != text) {
             initButton.text = text
-            initButton.revalidate()
             initButton.repaint()
         }
     }
@@ -847,5 +675,71 @@ class SwingExportPanel(
         const val ENQUEUE_EXPORT = "Enqueue export"
         const val INIT_BUTTON_TOOLTIP = "Choose an output file and start the export."
         const val INIT_BLOCKED_TITLE = "Cannot start export"
+    }
+}
+
+/** The bottom of the left column: the estimated file size and the settings on the left, the start button on the right. */
+private class ExportFooter(private val button: StartExportButton) : JPanel(null) {
+    private val sizeText = WrapText("", ExportUi.font(16f, ExportUi.Weight.BOLD), ExportUi.FG, lineHeight = 1.45f).apply {
+        name = "export-footer-size"
+    }
+    private val detailText = WrapText("", ExportUi.font(12f), ExportUi.FG_2, lineHeight = 1.45f).apply {
+        name = "export-footer-summary"
+    }
+    private val summary = Stack(0).apply {
+        add(sizeText)
+        add(detailText)
+    }
+
+    init {
+        isOpaque = true
+        background = BACKGROUND
+        add(summary)
+        add(button)
+    }
+
+    /** Shows the size, for example "~9.72 GB", and the settings, for example "Only points · 4K · 60 fps". */
+    fun show(size: String, details: String) {
+        sizeText.setText(if (size == "unknown") "Size unknown" else size, ExportUi.font(16f, ExportUi.Weight.BOLD), ExportUi.FG)
+        detailText.setText(details, ExportUi.font(12f), ExportUi.FG_2)
+        revalidate()
+        repaint()
+    }
+
+    private fun summaryWidth() = (width - PAD_X * 2 - GAP - BUTTON_WIDTH).coerceAtLeast(0)
+
+    override fun getPreferredSize(): Dimension {
+        val summaryHeight = summary.heightForWidth(if (width > 0) summaryWidth() else 176)
+        return Dimension(440, PAD_TOP + maxOf(summaryHeight, button.preferredSize.height) + PAD_BOTTOM)
+    }
+
+    override fun doLayout() {
+        val inner = height - PAD_TOP - PAD_BOTTOM
+        val w = summaryWidth()
+        val summaryHeight = summary.heightForWidth(w)
+        summary.setBounds(PAD_X, PAD_TOP + (inner - summaryHeight) / 2, w, summaryHeight)
+        val buttonHeight = button.preferredSize.height
+        button.setBounds(width - PAD_X - BUTTON_WIDTH, PAD_TOP + (inner - buttonHeight) / 2, BUTTON_WIDTH, buttonHeight)
+    }
+
+    override fun paintComponent(g: Graphics) {
+        super.paintComponent(g)
+        val g2 = ExportUi.smooth(g)
+        try {
+            g2.color = ExportUi.LINE
+            g2.fillRect(0, 0, width, 1)
+            StartExportButton.paintGlow(g2, button.x, button.y, button.width, button.height)
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    private companion object {
+        const val PAD_X = 20
+        const val PAD_TOP = 12
+        const val PAD_BOTTOM = 14
+        const val GAP = 14
+        const val BUTTON_WIDTH = 210
+        val BACKGROUND = Color(0x17, 0x17, 0x17)
     }
 }

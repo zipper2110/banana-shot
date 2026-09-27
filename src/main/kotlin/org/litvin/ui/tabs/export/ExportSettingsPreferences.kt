@@ -6,7 +6,7 @@ import java.util.prefs.Preferences
 
 /**
  * The quality choices that the export keeps between sessions. The resolution, frame rate and bitrate
- * of the Advanced tab are not kept: they start from the source video of each project.
+ * of the Advanced mode are not kept: they start from the source video of each project.
  */
 data class ExportVideoSettings(
     val simplePresetId: String?,
@@ -42,7 +42,7 @@ class ExportSettingsPreferences(
         preferences.putBoolean(KEY_ADVANCED_MODE, advanced)
     }
 
-    /** The encoder that the user selected on the Advanced tab. */
+    /** The encoder that the user selected in the Advanced mode. */
     fun saveEncoder(id: String) {
         preferences.put(KEY_ENCODER, id)
     }

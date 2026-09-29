@@ -15,6 +15,7 @@ import org.litvin.app.SwingApplicationHandle
 import org.litvin.app.TrackedExecutorProvider
 import org.litvin.export.FileCompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
+import org.litvin.export.ProductionRenderService
 import org.litvin.projects.FileProjectsRepository
 import org.litvin.ui.flow.driver.RobotSwingDriver
 import org.litvin.ui.flow.driver.SwingUiDriver
@@ -29,6 +30,7 @@ import java.awt.Window
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
@@ -36,10 +38,20 @@ import java.util.concurrent.locks.LockSupport
 import javax.swing.JComponent
 import javax.swing.RepaintManager
 
+/** The media services of a UI flow. */
+enum class UiFlowMedia {
+    /** Fake media players and a fake render service. The flow does not need native libraries. */
+    FAKE,
+
+    /** The libmpv preview players, the FFmpeg render service, and the encoder detection of the app. */
+    NATIVE,
+}
+
 class SwingUiFlowExtension(
     private val workspaceParent: Path = Path.of("target", "ui-test-workspaces"),
     private val artifactsRoot: Path = Path.of("target", "ui-test-artifacts"),
     private val driverFactory: () -> SwingUiDriver = ::RobotSwingDriver,
+    private val media: UiFlowMedia = UiFlowMedia.FAKE,
 ) : BeforeEachCallback, AfterTestExecutionCallback, AfterEachCallback, ParameterResolver {
     private var current: UiFlowContext? = null
     private var testFailure: Throwable? = null
@@ -159,23 +171,30 @@ class SwingUiFlowExtension(
         Files.createDirectories(paths.temporary.toPath())
         val threadPrefix = "$threadPrefixBase-lifecycle-${++lifecycleOrdinal}"
         val executors = TrackedExecutorProvider(threadPrefix, Duration.ofSeconds(3))
-        val mediaPlayers = FakeMediaPlayerFactory()
-        val renderService = FakeRenderService()
+        val native = media == UiFlowMedia.NATIVE
+        val fakeMediaPlayers = if (native) null else FakeMediaPlayerFactory()
+        val nativeMediaPlayers = if (native) NativeMediaPlayers() else null
+        val fakeRenderService = if (native) null else FakeRenderService()
         val filePicker = ScriptedFilePicker()
         val dialogs = ScriptedDialogService()
         val adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"), 25L)
+        val completedRenders = FileCompletedRendersRepository(paths.completedRenders)
         val services = AppServices(
             paths = paths,
             preferences = preferences,
             executors = executors,
-            mediaPlayers = mediaPlayers,
-            renderService = renderService,
+            mediaPlayers = fakeMediaPlayers ?: checkNotNull(nativeMediaPlayers),
+            renderService = fakeRenderService ?: ProductionRenderService(adjustments, completedRenders),
             filePicker = filePicker,
             dialogs = dialogs,
             projectsRepository = FileProjectsRepository(paths.projects),
-            completedRenders = FileCompletedRendersRepository(paths.completedRenders),
+            completedRenders = completedRenders,
             adjustments = adjustments,
-            encoderCapabilities = java.util.concurrent.CompletableFuture.completedFuture(EncoderCapabilities.NONE),
+            encoderCapabilities = if (native) {
+                CompletableFuture.supplyAsync(EncoderCapabilities::production)
+            } else {
+                CompletableFuture.completedFuture(EncoderCapabilities.NONE)
+            },
         )
 
         var application: SwingApplicationHandle? = null
@@ -190,8 +209,9 @@ class SwingUiFlowExtension(
                 artifactDirectory = artifactDirectory,
                 paths = paths,
                 preferences = preferences,
-                mediaPlayers = mediaPlayers,
-                renderService = renderService,
+                fakeMediaPlayers = fakeMediaPlayers,
+                fakeRenderService = fakeRenderService,
+                nativeMediaPlayers = nativeMediaPlayers,
                 filePicker = filePicker,
                 dialogs = dialogs,
                 fixtures = UiFlowFixtureBuilder(paths.projects.toPath()),

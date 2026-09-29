@@ -405,7 +405,13 @@ object SwingApplicationFactory {
                         ),
                         MoreSection(
                             ContactPage.TITLE,
-                            ContactPage(CONTACT_EMAIL, AppInfo.version, onOpenLink = PrivacyLinkOpener.DesktopBrowser::open),
+                            ContactPage(
+                                CONTACT_EMAIL,
+                                AppInfo.version,
+                                services.paths.logs,
+                                onOpenLink = PrivacyLinkOpener.DesktopBrowser::open,
+                                onOpenFolder = ::openWithDesktop,
+                            ),
                         ),
                     ),
                 )

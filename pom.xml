@@ -222,6 +222,54 @@
             </build>
         </profile>
         <profile>
+            <!-- The native checks of the packaged smoke test: real libmpv preview and real FFmpeg export.
+                 qa/windows/Run-UiSmoke.ps1 sets the ui.smoke.* paths to the natives of the packaged app.
+                 Without them, the app finds the natives as in a development run. -->
+            <id>ui-smoke</id>
+            <properties>
+                <ui.smoke.appDir />
+                <ui.smoke.mpvPath />
+                <ui.smoke.ffmpegPath />
+                <ui.smoke.ffprobePath />
+                <ui.smoke.resultsDir>${project.build.directory}/ui-smoke/native</ui.smoke.resultsDir>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>2.22.2</version>
+                        <executions>
+                            <execution>
+                                <id>ui-smoke</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                    <goal>verify</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>**/*NativeSmokeIT.*</include>
+                                    </includes>
+                                    <forkCount>1</forkCount>
+                                    <reuseForks>true</reuseForks>
+                                    <parallel>none</parallel>
+                                    <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
+                                    <systemPropertyVariables>
+                                        <tennis.record.uiFlow>true</tennis.record.uiFlow>
+                                        <tennis.record.appDir>${ui.smoke.appDir}</tennis.record.appDir>
+                                        <tennis.record.appDataDir>${ui.smoke.resultsDir}/app-data</tennis.record.appDataDir>
+                                        <tennis.record.nativeSmoke.resultsDir>${ui.smoke.resultsDir}</tennis.record.nativeSmoke.resultsDir>
+                                        <tr.mpv.path>${ui.smoke.mpvPath}</tr.mpv.path>
+                                        <tr.ffmpeg.path>${ui.smoke.ffmpegPath}</tr.ffmpeg.path>
+                                        <tr.ffprobe.path>${ui.smoke.ffprobePath}</tr.ffprobe.path>
+                                    </systemPropertyVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>swing</id>
             <properties>
                 <exec.mainClass>${app.mainClass}</exec.mainClass>

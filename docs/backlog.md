@@ -10,39 +10,6 @@ to a different section.
 
 Do these items before the first public release.
 
-### B-1 Log files for bug reports
-
-- Problem: the app writes logs only to the console (`src/main/resources/logback.xml`
-  has only a `ConsoleAppender`). A packaged app has no console, so a user
-  cannot send logs with a bug report. `AppDataPaths.logs` exists, but no code
-  uses it.
-- Add a rolling file appender that writes to the `logs` folder in the app
-  data folder. Limit the size and the number of files.
-- Add an "Open log folder" button to More → Contact, under "Report a
-  problem". Change the text so that it asks for the log files.
-- Make sure that the logs do not contain more than necessary. They can contain
-  file paths. Tell the user this on the Contact page.
-- Done when: a packaged build writes log files, and the Contact page opens
-  their folder.
-
-### B-2 Automate the native checks
-
-- The packaged smoke test does not yet do a real FFmpeg export or check the
-  adjustment controls (see `README.md`, "Testing UI flows"). Until it does,
-  the release checklist has these checks as manual steps.
-- Add these checks to the smoke test. Then remove the manual steps from the
-  release checklist.
-
-### B-3 Unstable UI-flow tests
-
-- On Windows, the Robot sometimes loses the first click on the Projects tab
-  (Import Match or Open Project). Then a test fails, for example with "Timed
-  out waiting for new-project-create to be visible". A different test fails
-  in each run. The same test passes when you run it again.
-- Find the cause (for example, focus or window activation before the first
-  click), and make the driver wait or click again.
-- Done when: `mvn -B -Pui-flow verify` passes three times in sequence.
-
 ### B-4 License restriction
 
 - `docs/licensing/elv2-migration-plan.md` has the open license items
@@ -75,7 +42,7 @@ Do these items before the first public release.
 ### B-8 Requests for bug reports and features
 
 - Ask users to send bug reports and feature requests.
-- B-1 also changes the Contact page.
+- The Contact page already asks for the log files with a bug report.
 
 ### B-9 Analytics
 

@@ -76,10 +76,11 @@ prints its isolated app-data directory, report, and artifacts paths under
 `target/ui-smoke`; these outputs are intentionally ignored by Git.
 
 For the exact packaged-smoke checklist and report requirements, see
-[qa/windows/ui-smoke.md](qa/windows/ui-smoke.md). The first native run has
-validated import, real video playback, marking, scoring, and recents. Real
-FFmpeg export and adjustment controls remain a manual/package-smoke follow-up
-while the desktop-control helper's high-DPI targeting issue is resolved.
+[qa/windows/ui-smoke.md](qa/windows/ui-smoke.md). The runner first runs
+`NativeSmokeIT` (Maven profile `ui-smoke`) with the natives of the packaged
+app. This test does a real FFmpeg export and checks that the adjustment
+controls change the mpv preview and the exported video. Then you do the
+manual checklist in the packaged app.
 
 ### Run (temporary)
 A proper desktop entrypoint (Compose Desktop) will be added with dependencies and packaging. For now, the skeleton app is minimal and only for verifying the toolchain.

@@ -19,6 +19,10 @@ object SwingMainApp {
         if (args.contains("--diagnostics")) {
             kotlin.system.exitProcess(DistributionDiagnostics.run())
         }
+        logger.info {
+            "${AppInfo.NAME} ${AppInfo.version} started on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, " +
+                "Java ${System.getProperty("java.version")}."
+        }
         try {
             UIManager.setLookAndFeel(FlatDarkLaf())
             UIManager.put("defaultFont", Font("Segoe UI", Font.PLAIN, 14))

@@ -122,3 +122,111 @@ Describe "UI smoke isolated run lifecycle" {
         $session.ReportPath | Should Exist
     }
 }
+
+Describe "UI smoke log file check" {
+    It "accepts an app-data directory with a log file" {
+        $appData = Join-Path $TestDrive "with-log"
+        New-Item -ItemType Directory -Path (Join-Path $appData "logs") | Out-Null
+        Set-Content -LiteralPath (Join-Path $appData "logs\tennis-record.log") -Value "started" -Encoding utf8
+
+        Assert-UiSmokeLogFile -AppDataDirectory $appData
+    }
+
+    It "rejects an app-data directory without a log file" {
+        $appData = Join-Path $TestDrive "without-log"
+        New-Item -ItemType Directory -Path $appData | Out-Null
+
+        $failure = $null
+        try { Assert-UiSmokeLogFile -AppDataDirectory $appData } catch { $failure = $_ }
+        if (-not $failure) { throw "Expected the log file check to fail." }
+        $failure.Exception.Message | Should Match "did not write a log file"
+    }
+}
+
+Describe "UI smoke native checks" {
+    function New-FakeAppDirectory([string]$Name) {
+        $appDirectory = Join-Path $TestDrive $Name
+        $nativeRoot = Join-Path $appDirectory "natives\windows-x64"
+        New-Item -ItemType Directory -Path (Join-Path $nativeRoot "mpv") -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $nativeRoot "ffmpeg\bin") -Force | Out-Null
+        foreach ($file in @("mpv\libmpv-2.dll", "ffmpeg\bin\ffmpeg.exe", "ffmpeg\bin\ffprobe.exe")) {
+            Set-Content -LiteralPath (Join-Path $nativeRoot $file) -Value "placeholder"
+        }
+        return $appDirectory
+    }
+
+    It "returns the natives of the packaged app" {
+        $appDirectory = New-FakeAppDirectory "Tennis Record"
+
+        $paths = Get-UiSmokeNativePaths -AppDirectory $appDirectory
+
+        $paths.AppDirectory | Should Be ([IO.Path]::GetFullPath($appDirectory))
+        $paths.MpvDirectory | Should Be (Join-Path $appDirectory "natives\windows-x64\mpv")
+        $paths.FfmpegExecutable | Should Be (Join-Path $appDirectory "natives\windows-x64\ffmpeg\bin\ffmpeg.exe")
+        $paths.FfprobeExecutable | Should Be (Join-Path $appDirectory "natives\windows-x64\ffmpeg\bin\ffprobe.exe")
+    }
+
+    It "rejects a packaged app without FFmpeg" {
+        $appDirectory = New-FakeAppDirectory "without-ffmpeg"
+        Remove-Item -LiteralPath (Join-Path $appDirectory "natives\windows-x64\ffmpeg\bin\ffmpeg.exe")
+
+        $failure = $null
+        try { Get-UiSmokeNativePaths -AppDirectory $appDirectory } catch { $failure = $_ }
+        if (-not $failure) { throw "Expected the native path check to fail." }
+        $failure.Exception.Message | Should Match "does not contain the native file"
+    }
+
+    It "runs only the native smoke execution with the packaged natives" {
+        $paths = Get-UiSmokeNativePaths -AppDirectory (New-FakeAppDirectory "arguments")
+        $results = Join-Path $TestDrive "results"
+
+        $arguments = Get-UiSmokeNativeMavenArguments -NativePaths $paths -ResultsDirectory $results
+
+        $arguments -contains "-Pui-smoke" | Should Be $true
+        $arguments -contains "failsafe:integration-test@ui-smoke" | Should Be $true
+        $arguments -contains "failsafe:verify@ui-smoke" | Should Be $true
+        $arguments -contains "verify" | Should Be $false
+        $arguments -contains "-Dui.smoke.mpvPath=$($paths.MpvDirectory)" | Should Be $true
+        $arguments -contains "-Dui.smoke.ffmpegPath=$($paths.FfmpegExecutable)" | Should Be $true
+        $arguments -contains "-Dui.smoke.ffprobePath=$($paths.FfprobeExecutable)" | Should Be $true
+        $arguments -contains "-Dui.smoke.resultsDir=$results" | Should Be $true
+    }
+
+    It "reads the measured values of the native test" {
+        $results = Join-Path $TestDrive "measured"
+        New-Item -ItemType Directory -Path $results | Out-Null
+        Set-Content -LiteralPath (Join-Path $results "native-results.txt") -Encoding utf8 -Value @(
+            "export.encoder=H.264 (libx264)",
+            "export.stream={codec_name=h264, width=720}"
+        )
+
+        $values = Read-UiSmokeNativeResults -ResultsDirectory $results
+
+        $values["export.encoder"] | Should Be "H.264 (libx264)"
+        $values["export.stream"] | Should Be "{codec_name=h264, width=720}"
+    }
+
+    It "writes the result of an automated step into its report row" {
+        $session = New-UiSmokeSession `
+            -RunsRoot (Join-Path $TestDrive "report-runs") `
+            -ReportsRoot (Join-Path $TestDrive "report-reports")
+
+        Set-UiSmokeReportRow -ReportPath $session.ReportPath -Step "FFmpeg export" -Status "Pass" `
+            -Screenshot "C:\shots" -Expected "Export completes" -Actual "a | b"
+
+        $report = Get-Content -LiteralPath $session.ReportPath -Raw
+        $report | Should Match ([regex]::Escape("| FFmpeg export | Pass | C:\shots | Export completes | a / b |"))
+        $report | Should Match ([regex]::Escape("| Adjustment controls | Pending |"))
+    }
+
+    It "rejects a step without a pending report row" {
+        $session = New-UiSmokeSession `
+            -RunsRoot (Join-Path $TestDrive "unknown-runs") `
+            -ReportsRoot (Join-Path $TestDrive "unknown-reports")
+
+        $failure = $null
+        try { Set-UiSmokeReportRow -ReportPath $session.ReportPath -Step "Unknown step" -Status "Pass" } catch { $failure = $_ }
+        if (-not $failure) { throw "Expected the report row update to fail." }
+        $failure.Exception.Message | Should Match "no pending row"
+    }
+}

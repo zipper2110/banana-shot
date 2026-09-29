@@ -47,14 +47,14 @@ Install the app from the installer of the dry run.
 
 - [ ] `Tennis Record Diagnostics.cmd` in the app folder passes.
 - [ ] Run the packaged smoke test and complete its report. See
-      `qa/windows/ui-smoke.md`.
-- [ ] Do a real FFmpeg export and check the adjustment controls by hand. The
-      smoke test does not do these checks yet (backlog item B-2).
+      `qa/windows/ui-smoke.md`. The smoke test does a real FFmpeg export and
+      checks the adjustment controls.
 - [ ] First start with empty app data: the analytics consent dialog (when the
       build has analytics) and the Overview help open.
 - [ ] More → About: the version is correct. The License, License notice, and
       Third-party notices buttons open the files from `legal/`.
-- [ ] More → Contact: "Write an email" opens the email app.
+- [ ] More → Contact: "Write an email" opens the email app. "Open log folder"
+      opens the folder that contains `tennis-record.log`.
 - [ ] More → Settings: "Open folder" opens the app data folder.
 - [ ] First-time hints: each hint shows at its trigger. A closed hint does not
       show again. "Show all hints again" shows the hints again.

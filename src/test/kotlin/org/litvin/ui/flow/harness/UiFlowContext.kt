@@ -18,8 +18,9 @@ class UiFlowContext internal constructor(
     val artifactDirectory: Path,
     val paths: AppDataPaths,
     val preferences: InMemoryPreferencesProvider,
-    val mediaPlayers: FakeMediaPlayerFactory,
-    val renderService: FakeRenderService,
+    internal val fakeMediaPlayers: FakeMediaPlayerFactory?,
+    internal val fakeRenderService: FakeRenderService?,
+    internal val nativeMediaPlayers: NativeMediaPlayers?,
     val filePicker: ScriptedFilePicker,
     val dialogs: ScriptedDialogService,
     val fixtures: UiFlowFixtureBuilder,
@@ -29,6 +30,15 @@ class UiFlowContext internal constructor(
     internal val threadPrefix: String,
     internal val asynchronousFailures: CopyOnWriteArrayList<Throwable>,
 ) {
+    val mediaPlayers: FakeMediaPlayerFactory
+        get() = checkNotNull(fakeMediaPlayers) { "This UI flow uses the native media players" }
+
+    val renderService: FakeRenderService
+        get() = checkNotNull(fakeRenderService) { "This UI flow uses the production render service" }
+
+    val nativePlayers: NativeMediaPlayers
+        get() = checkNotNull(nativeMediaPlayers) { "This UI flow uses the fake media players" }
+
     private var restartAction: (() -> UiFlowContext)? = null
 
     fun restartApplication(): UiFlowContext =

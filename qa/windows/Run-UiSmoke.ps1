@@ -3,7 +3,8 @@ param(
     [string]$ExecutablePath,
     [switch]$KeepArtifacts,
     [string]$ReportPath,
-    [switch]$ValidateOnly
+    [switch]$ValidateOnly,
+    [switch]$SkipNativeChecks
 )
 
 $ErrorActionPreference = "Stop"
@@ -153,6 +154,7 @@ Started: $(Get-Date -Format o)
 | Import fixture | Pending |  |  |  |
 | Video playback | Pending |  |  |  |
 | Editing and scoring | Pending |  |  |  |
+| Adjustment controls | Pending |  |  |  |
 | FFmpeg export | Pending |  |  |  |
 | Relaunch and recents | Pending |  |  |  |
 
@@ -194,6 +196,142 @@ function Start-UiSmokeChildProcess {
     }
     $process.WaitForExit()
     return $process.ExitCode
+}
+
+function Assert-UiSmokeLogFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$AppDataDirectory
+    )
+
+    $logFile = Join-Path $AppDataDirectory "logs\tennis-record.log"
+    if (-not (Test-Path -LiteralPath $logFile -PathType Leaf) -or (Get-Item -LiteralPath $logFile).Length -eq 0) {
+        throw "Packaged application did not write a log file: $logFile"
+    }
+}
+
+function Get-UiSmokeNativePaths {
+    param([Parameter(Mandatory = $true)][string]$AppDirectory)
+
+    $resolvedAppDirectory = Resolve-UiSmokeLiteralPath -Path $AppDirectory
+    $nativeRoot = Join-Path $resolvedAppDirectory "natives\windows-x64"
+    $paths = [pscustomobject]@{
+        AppDirectory = $resolvedAppDirectory
+        MpvDirectory = Join-Path $nativeRoot "mpv"
+        FfmpegExecutable = Join-Path $nativeRoot "ffmpeg\bin\ffmpeg.exe"
+        FfprobeExecutable = Join-Path $nativeRoot "ffmpeg\bin\ffprobe.exe"
+    }
+    foreach ($required in @(
+            (Join-Path $paths.MpvDirectory "libmpv-2.dll"),
+            $paths.FfmpegExecutable,
+            $paths.FfprobeExecutable
+        )) {
+        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+            throw "The packaged app does not contain the native file: $required"
+        }
+    }
+    return $paths
+}
+
+function Get-UiSmokeNativeMavenArguments {
+    param(
+        [Parameter(Mandatory = $true)]$NativePaths,
+        [Parameter(Mandatory = $true)][string]$ResultsDirectory
+    )
+
+    # The release checklist runs the unit tests before the smoke test, so only the NativeSmokeIT execution runs here.
+    return @(
+        "-B",
+        "-Pui-smoke",
+        "test-compile",
+        "failsafe:integration-test@ui-smoke",
+        "failsafe:verify@ui-smoke",
+        "-Dui.smoke.appDir=$($NativePaths.AppDirectory)",
+        "-Dui.smoke.mpvPath=$($NativePaths.MpvDirectory)",
+        "-Dui.smoke.ffmpegPath=$($NativePaths.FfmpegExecutable)",
+        "-Dui.smoke.ffprobePath=$($NativePaths.FfprobeExecutable)",
+        "-Dui.smoke.resultsDir=$ResultsDirectory"
+    )
+}
+
+function Read-UiSmokeNativeResults {
+    param([Parameter(Mandatory = $true)][string]$ResultsDirectory)
+
+    $results = [ordered]@{}
+    $resultsFile = Join-Path $ResultsDirectory "native-results.txt"
+    if (Test-Path -LiteralPath $resultsFile -PathType Leaf) {
+        foreach ($line in Get-Content -LiteralPath $resultsFile -Encoding utf8) {
+            $separator = $line.IndexOf("=")
+            if ($separator -gt 0) {
+                $results[$line.Substring(0, $separator)] = $line.Substring($separator + 1)
+            }
+        }
+    }
+    return $results
+}
+
+function Set-UiSmokeReportRow {
+    param(
+        [Parameter(Mandatory = $true)][string]$ReportPath,
+        [Parameter(Mandatory = $true)][string]$Step,
+        [Parameter(Mandatory = $true)][string]$Status,
+        [string]$Screenshot = "",
+        [string]$Expected = "",
+        [string]$Actual = ""
+    )
+
+    $prefix = "| $Step | Pending |"
+    $lines = @(Get-Content -LiteralPath $ReportPath -Encoding utf8)
+    $index = [Array]::FindIndex([string[]]$lines, [Predicate[string]] { param($line) $line.StartsWith($prefix) })
+    if ($index -lt 0) {
+        throw "The UI smoke report has no pending row for the step '$Step'."
+    }
+    $cells = @($Step, $Status, $Screenshot, $Expected, $Actual) | ForEach-Object { ([string]$_).Replace("|", "/") }
+    $lines[$index] = "| " + ($cells -join " | ") + " |"
+    $lines | Set-Content -LiteralPath $ReportPath -Encoding utf8
+}
+
+function Invoke-UiSmokeNativeChecks {
+    param(
+        [Parameter(Mandatory = $true)][string]$RepoRoot,
+        [Parameter(Mandatory = $true)][string]$AppDirectory,
+        [Parameter(Mandatory = $true)][string]$ResultsDirectory,
+        [Parameter(Mandatory = $true)][string]$ReportPath
+    )
+
+    $nativePaths = Get-UiSmokeNativePaths -AppDirectory $AppDirectory
+    if (-not (Get-Command mvn -ErrorAction SilentlyContinue)) {
+        throw "Maven (mvn) was not found. The native checks run with Maven."
+    }
+    New-Item -ItemType Directory -Path $ResultsDirectory -Force | Out-Null
+    $arguments = Get-UiSmokeNativeMavenArguments -NativePaths $nativePaths -ResultsDirectory $ResultsDirectory
+
+    Write-Host "UI smoke native checks: the test moves the mouse. Do not use the mouse or the keyboard until the checks finish."
+    Push-Location -LiteralPath $RepoRoot
+    try {
+        & mvn @arguments
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        Pop-Location
+    }
+
+    $results = Read-UiSmokeNativeResults -ResultsDirectory $ResultsDirectory
+    $passed = $exitCode -eq 0
+    $status = if ($passed) { "Pass" } else { "Fail" }
+    $failureNote = "Failed. See target\failsafe-reports and target\ui-smoke-artifacts."
+    $adjustments = "brightness lift $($results['preview.brightness.lift']), preview luma $($results['preview.brightness.lumaBefore']) -> $($results['preview.brightness.lumaAfter']); rotation $($results['preview.rotation.degrees']) degrees, correlation with the unrotated preview $($results['preview.rotation.correlationWithUnrotated'])"
+    $export = "encoder $($results['export.encoder']), $($results['export.stream']); correlation with the expected geometry $($results['export.rotation.correlationWithExpected']), with the unrotated source $($results['export.rotation.correlationWithUnrotated']); luma change $($results['export.brightness.lumaChange']) (lift $($results['export.brightness.expectedLift']))"
+
+    Set-UiSmokeReportRow -ReportPath $ReportPath -Step "Adjustment controls" -Status $status -Screenshot $ResultsDirectory `
+        -Expected "Brightness 20 and rotation 15 degrees change the mpv preview and are saved in the project." `
+        -Actual $(if ($passed) { $adjustments } else { "$failureNote $adjustments" })
+    Set-UiSmokeReportRow -ReportPath $ReportPath -Step "FFmpeg export" -Status $status -Screenshot $ResultsDirectory `
+        -Expected "The export completes with the source size and duration, and shows the brightness and the rotation." `
+        -Actual $(if ($passed) { $export } else { "$failureNote $export" })
+
+    if (-not $passed) {
+        throw "The native checks failed (Maven exit code $exitCode)."
+    }
 }
 
 function Complete-UiSmokeSession {
@@ -262,10 +400,21 @@ function Invoke-UiSmokeRunner {
     }
 
     try {
+        if ($SkipNativeChecks) {
+            Write-Host "UI smoke native checks: skipped."
+        }
+        else {
+            Invoke-UiSmokeNativeChecks `
+                -RepoRoot $repoRoot `
+                -AppDirectory (Split-Path -Parent $resolvedExecutable) `
+                -ResultsDirectory (Join-Path $session.ArtifactDirectory "native") `
+                -ReportPath $session.ReportPath
+        }
         $exitCode = Start-UiSmokeChildProcess -ExecutablePath $resolvedExecutable -AppDataDirectory $session.AppDataDirectory
         if ($exitCode -ne 0) {
             throw "Packaged application exited with code $exitCode."
         }
+        Assert-UiSmokeLogFile -AppDataDirectory $session.AppDataDirectory
         Write-UiSmokeReportStatus -ReportPath $session.ReportPath -Status "Process exited" -Detail "Complete the checklist before declaring the smoke scenario passed."
         Complete-UiSmokeSession -Session $session -Succeeded $true -KeepArtifacts:$KeepArtifacts
     }

@@ -78,8 +78,8 @@ internal class ApplicationScreen(
     }
 
     private fun fakeServiceCalls(): String = buildString {
-        appendLine("mediaPlayers=${context.mediaPlayers.calls}")
-        appendLine("renderService=${context.renderService.calls}")
+        appendLine("mediaPlayers=${context.fakeMediaPlayers?.calls ?: "native"}")
+        appendLine("renderService=${context.fakeRenderService?.calls ?: "production"}")
         appendLine("filePicker=${context.filePicker.calls}")
         append("dialogs=${context.dialogs.calls}")
     }

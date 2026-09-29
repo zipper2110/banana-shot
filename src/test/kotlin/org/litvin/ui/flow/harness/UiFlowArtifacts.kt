@@ -13,9 +13,9 @@ object UiFlowArtifacts {
             artifactDir.resolve("fake-calls.txt"),
             buildString {
                 appendLine("media:")
-                context.mediaPlayers.calls.forEach { appendLine(it) }
+                context.fakeMediaPlayers?.calls?.forEach { appendLine(it) }
                 appendLine("render:")
-                context.renderService.calls.forEach { appendLine(it) }
+                context.fakeRenderService?.calls?.forEach { appendLine(it) }
                 appendLine("picker:")
                 context.filePicker.calls.forEach { appendLine(it) }
                 appendLine("dialogs:")

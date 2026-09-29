@@ -234,6 +234,14 @@ object FFmpegCommandBuilder {
             geometryFilter(adj, p.sourceWidth, p.sourceHeight, p.outWidth, p.outHeight)
 
         val geometry = buildGeometryFilter(p.adjustments)
+        // After a crop, "-2" keeps the aspect of the crop rectangle. The crop snaps to even source pixels,
+        // so that height can be some pixels different from the output height. Thus scale to the exact
+        // output size after a crop. The crop has the frame aspect, so the aspect changes very little.
+        val scale = if (geometry != null && p.outHeight > 0 && p.outHeight % 2 == 0) {
+            "scale=${p.outWidth}:${p.outHeight}"
+        } else {
+            "scale=${p.outWidth}:-2"
+        }
 
         if (freeze != null) {
             // Repeat the last frame of the window (tpad), then cut the window away, so that only copies of the
@@ -249,7 +257,7 @@ object FFmpegCommandBuilder {
                 "trim=duration=$duration",
             )
             geometry?.let { video += it }
-            video += "scale=${p.outWidth}:-2"
+            video += scale
             buildColorFilter(p.adjustments)?.let { video += it }
             p.subtitlesAssPath?.let { video += "subtitles='${escapeForFilterPath(it)}'" }
             // The source audio keeps its sample rate and channels, so the AAC settings match the other passes.
@@ -271,9 +279,8 @@ object FFmpegCommandBuilder {
             }
             // Concat and scale after concat
             parts += vLabels.joinToString(separator = "") + "concat=n=" + p.keeps.size + ":v=1:a=0[vcat]"
-            val scaleStr = "scale=${p.outWidth}:-2"
             // Output scaled video into an intermediate label; we may append subtitles next
-            parts += "[vcat]" + listOfNotNull(geometry, scaleStr).joinToString(",") + "[vsc]"
+            parts += "[vcat]" + listOfNotNull(geometry, scale).joinToString(",") + "[vsc]"
             parts += aLabels.joinToString(separator = "") + "concat=n=${p.keeps.size}:v=0:a=1" + aMap
             // Apply color adjustments after scale to match preview, before subtitles
             val color = buildColorFilter(p.adjustments)
@@ -365,7 +372,7 @@ object FFmpegCommandBuilder {
             val color = buildColorFilter(p.adjustments)
             val filters = mutableListOf<String>()
             if (geometry != null) filters += geometry
-            filters += "scale=${p.outWidth}:-2"
+            filters += scale
             if (color != null) filters += color
             if (sub != null) {
                 val esc = escapeForFilterPath(sub)

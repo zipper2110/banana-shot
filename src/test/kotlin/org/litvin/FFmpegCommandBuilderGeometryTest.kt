@@ -54,7 +54,7 @@ class FFmpegCommandBuilderGeometryTest {
     fun `zoom and pan add only a crop in even source pixels`() {
         val filter = vf(build(AdjustmentsV1(zoom = 2.0f, panX = 1.0f, panY = 1.0f)))
 
-        assertEquals("crop=1920:1080:1920:0,scale=1920:-2", filter)
+        assertEquals("crop=1920:1080:1920:0,scale=1920:1080", filter)
     }
 
     @Test
@@ -71,7 +71,32 @@ class FFmpegCommandBuilderGeometryTest {
             )
         ).args
 
-        assertEquals("crop=w=iw*0.500000:h=ih*0.500000:x=iw*0.500000:y=ih*0.000000,scale=1920:-2", vf(args))
+        assertEquals("crop=w=iw*0.500000:h=ih*0.500000:x=iw*0.500000:y=ih*0.000000,scale=1920:1080", vf(args))
+    }
+
+    @Test
+    fun `a crop scales to the exact output size`() {
+        // 15 degrees on 720x486 crops 532x360. With "scale=720:-2" the height was 488, not 486.
+        val args = FFmpegCommandBuilder.build(
+            FFmpegCommandBuilder.BuildParams(
+                sourcePath = "input.mp4",
+                outputPath = "out.mp4",
+                preset = preset,
+                outWidth = 720,
+                outHeight = 486,
+                idleTrim = false,
+                adjustments = AdjustmentsV1(rotationDeg = 15.0f),
+                sourceWidth = 720,
+                sourceHeight = 486,
+            )
+        ).args
+
+        assertTrue(vf(args).contains(",crop=532:360:94:62,scale=720:486"), vf(args))
+    }
+
+    @Test
+    fun `without geometry the scale keeps the source aspect`() {
+        assertTrue(vf(build(AdjustmentsV1())).startsWith("scale=1920:-2"), vf(build(AdjustmentsV1())))
     }
 
     @Test
@@ -90,7 +115,7 @@ class FFmpegCommandBuilderGeometryTest {
         val args = build(AdjustmentsV1(zoom = 1.5f), idleTrim = true)
         val graph = args[args.indexOf("-filter_complex") + 1]
 
-        assertTrue(graph.contains("[vcat]crop=2560:1440:640:360,scale=1920:-2[vsc]"), graph)
+        assertTrue(graph.contains("[vcat]crop=2560:1440:640:360,scale=1920:1080[vsc]"), graph)
     }
 
     @Test

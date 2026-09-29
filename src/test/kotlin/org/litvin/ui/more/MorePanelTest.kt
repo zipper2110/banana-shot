@@ -75,10 +75,29 @@ class MorePanelTest {
         val opened = mutableListOf<java.net.URI>()
 
         SwingUtilities.invokeAndWait {
-            val page = ContactPage("someone@example.com", "1.2.3", onOpenLink = { opened += it; true })
+            val page = ContactPage("someone@example.com", "1.2.3", File("logs"), onOpenLink = { opened += it; true }, onOpenFolder = { true })
             checkNotNull(findButton(page, "more-contact-write")).doClick()
         }
 
         assertEquals(listOf(java.net.URI("mailto:someone@example.com")), opened)
+    }
+
+    @Test
+    fun `Open log folder makes the folder and opens it`() {
+        System.setProperty("java.awt.headless", "true")
+        val logFolder = kotlin.io.path.createTempDirectory("contact-logs").toFile().resolve("logs")
+        val opened = mutableListOf<File>()
+
+        try {
+            SwingUtilities.invokeAndWait {
+                val page = ContactPage("someone@example.com", "1.2.3", logFolder, onOpenLink = { true }, onOpenFolder = { opened += it; true })
+                checkNotNull(findButton(page, "more-contact-open-log-folder")).doClick()
+            }
+
+            assertEquals(listOf(logFolder), opened)
+            assertTrue(logFolder.isDirectory)
+        } finally {
+            logFolder.parentFile.deleteRecursively()
+        }
     }
 }

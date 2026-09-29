@@ -2,7 +2,6 @@ package org.litvin.ui.more
 
 import org.litvin.ui.commons.SectionPage
 import java.io.File
-import javax.swing.JTextArea
 
 /** A file that the About section can open, for example the license. */
 data class AboutDocument(val title: String, val file: File)
@@ -16,7 +15,7 @@ data class AboutInfo(
 )
 
 /** The About section of the More window. */
-class AboutPage(
+internal class AboutPage(
     info: AboutInfo,
     private val onOpenFile: (File) -> Boolean,
 ) : SectionPage(TITLE) {
@@ -31,7 +30,7 @@ class AboutPage(
                 "The app includes libmpv and FFmpeg. The third-party notices give their licenses.",
         )
         val documents = info.documents.filter { it.file.isFile }
-        lateinit var status: JTextArea
+        lateinit var status: StatusLine
         if (documents.isNotEmpty()) {
             buttonRow(*documents.map { document ->
                 secondaryButton(document.title) {

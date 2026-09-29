@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Points Tab Redesign</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 740px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  ol.problems, ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; color: var(--fg); }
+  ol.problems li, ul.plain li { margin-bottom: 4px; }
+  .muted { font-size: 12.5px; }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: block; margin-bottom: 4px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+
+  .options { display: grid; gap: 12px; }
+  .option {
+    display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit;
+  }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td { color: var(--fg-2); }
+  .yes { color: var(--green); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  .confirm { border: 1px dashed var(--yellow); border-radius: 8px; padding: 12px 16px; background: rgba(242, 214, 75, .05); }
+  .confirm b.warn { display: block; margin-bottom: 6px; }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Points tab — redesign proposals</h1>
+  <p class="lede">
+    This folder has one main proposal and two alternatives for the Points tab.
+    Each mockup is an HTML page with the app sidebar, a frame of the sample video and the points from the reference screenshot.
+    The mockups work: press Space, C, V, A, Delete and the arrow keys, click the list and the timeline, and open the dialogs.
+    Use the switches at the top of each page to see a pending point and the comments.
+  </p>
+  <div class="scope">✓ Cosmetic changes only. No feature is added or removed.</div>
+
+  <a class="option main" href="final.html" style="margin-top:24px">
+    <div>
+      <div class="option-head"><h3>Final design</h3><span class="badge">Selected</span></div>
+      <p>The final design uses option B as the base, with these changes from the review:</p>
+      <ul>
+        <li>Add comment moves from the mark panel to the right end of the playback bar.</li>
+        <li>The seek buttons show their keys as key chips, the same as Point start and Point end. Each key has its own chip, so Shift+Left shows two chips.</li>
+        <li>The play button shows "SPACE" as small text under the icon, as in the first Points design (<code>design/points.html</code>).</li>
+        <li>The seek buttons are one step brighter than the secondary buttons: lighter fill and border, white labels and a lime direction icon.</li>
+        <li>A seek hotkey (Left, Right, Shift+Left, Shift+Right) briefly gives its button a lime border.</li>
+        <li>The current time on the playback bar uses regular weight and a smaller size.</li>
+        <li>The "Points &amp; events" header and the counts come from option C.</li>
+        <li>Each point row in the table is 45 px high.</li>
+      </ul>
+      <span class="open">Open the final design →</span>
+    </div>
+    <dl class="side">
+      <dt>Swing effort</dt><dd>Medium. A new mark panel component, table rows with fixed column widths, and a key chip label for the playback buttons.</dd>
+    </dl>
+  </a>
+
+  <h2>Problems in the current tab</h2>
+  <ol class="problems">
+    <li><b>The "−5s" button is hidden.</b> On the screenshot, the left button group covers "−5s [shift+←]". Only "]" is visible, so the bar shows "Add comment -]". The three zones of the bar have fixed widths and overlap on smaller windows.</li>
+    <li><b>The bar has no order.</b> Point Start, Point End, Add comment and the four seek buttons have the same style. The lime play button is the strongest control, but the main task of this tab is to mark points.</li>
+    <li><b>The pending point is easy to miss.</b> After Point Start, only a "Pending…" card at the bottom of the list shows the state. The buttons and the timeline do not change.</li>
+    <li><b>The list uses much space.</b> A point card is 44 px high with a 10 px gap, so the screen shows 13 of 128 points. The start and end times have no column captions.</li>
+    <li><b>Repeated key text.</b> Each favorite card shows "[A]" next to the star. The seek buttons use long labels such as "+5s [shift+→]".</li>
+    <li><b>The counts are hard to read.</b> "128 Marked", "43 Fav" and "0 Comments" are small pills with an abbreviation.</li>
+    <li><b>The timeline labels cover the tracks.</b> "VIDEO", "MARKS" and "COMMENTS" are painted on the start of each track. The selected point is not visible on the timeline.</li>
+    <li><b>The current time is far from the timeline.</b> "Current time:" is at the right end of the bar, in small text.</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="principles">
+    <div class="principle"><b>Marking first</b><span>Point start and Point end are one group. The next step of the flow has the lime outline: first Point start, then Point end.</span></div>
+    <div class="principle"><b>One state, three places</b><span>A pending point shows in the mark buttons, in the list and on the timeline at the same time.</span></div>
+    <div class="principle"><b>Key chips, not key text</b><span>Keys show as small chips. The tooltips keep the full text. Long labels such as "[shift+→]" go away.</span></div>
+    <div class="principle"><b>Dense list</b><span>A point uses one row with column captions. The screen shows about twice as many points.</span></div>
+    <div class="principle"><b>Labels outside the tracks</b><span>The timeline gets a label column with the track names and counts. The tracks start after it.</span></div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="options">
+    <a class="option main" href="option-a.html">
+      <div>
+        <div class="option-head"><h3>A · Clean toolbar</h3><span class="badge">Recommended</span></div>
+        <p>The structure of the tab stays the same: video, bar, timeline and the list on the right. The bar has three zones: Mark, Playback and Time. The list has one row for each point.</p>
+        <ul>
+          <li>Point start and Point end are one joined button group with the key chips C and V. The next step has the lime outline.</li>
+          <li>The seek buttons are short ("« 5s", "‹ 1s"). The key chips show only when the bar is wide. The zones cannot overlap.</li>
+          <li>The current time is large, at the right end of the bar, with the video length below it.</li>
+          <li>Three count tiles replace the pills: Marked, Favorites, Comments.</li>
+          <li>Point rows are 34 px high with the columns #, Start – End and Length. The star, Edit and Delete show on hover. The star of a favorite stays visible.</li>
+          <li>The pending point is a lime dashed card below the list, in the same place as now.</li>
+          <li>The timeline has a label column. Favorites are yellow, the selected point has an outline, and the pending point is a hatched range.</li>
+        </ul>
+        <span class="open">Open option A →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>A clear marking flow with the smallest change to the current structure.</dd>
+        <dt>Swing effort</dt><dd>Low. Change <code>TransportControls</code> layout, <code>PointsCardsView</code> row height and <code>SwingTimelineComponent</code> painting. New part: a key chip label.</dd>
+        <dt>Risk</dt><dd>Low. The component names of the UI tests can stay the same.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-b.html">
+      <div>
+        <div class="option-head"><h3>B · Mark panel and table</h3><span class="badge alt">Alternative</span></div>
+        <p>A "Mark a point" panel at the top of the side column holds Point start, Point end and Add comment. The bar under the video has only playback. The list is a table.</p>
+        <ul>
+          <li>Point start and Point end are two numbered step tiles. Each tile shows its time. While a point is pending, the End tile shows the playhead time.</li>
+          <li>A hint line below the tiles tells the next key to press.</li>
+          <li>The table has the columns #, Start, End, Length and ★. Comments are one-line rows with a color bar.</li>
+          <li>The play bar shows the time on the left and the transport in the center.</li>
+        </ul>
+        <span class="open">Open option B →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>New users. The mark flow is visible as two steps.</dd>
+        <dt>Swing effort</dt><dd>Medium. A new mark panel component, and table rows with fixed column widths.</dd>
+        <dt>Risk</dt><dd>Medium. The mark buttons are far from the video. The list is shorter because the panel uses about 190 px.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-c.html">
+      <div>
+        <div class="option-head"><h3>C · Editor stack</h3><span class="badge alt">Alternative</span></div>
+        <p>The left column is a stack: status strip, video, timeline and controls. The timeline is directly below the video. The list uses the full height of the window.</p>
+        <ul>
+          <li>The status strip shows the state: "Press C at the start of a point", "Playhead in point #4" or "Pending point from … 4.5 s so far".</li>
+          <li>The status strip also shows the keys Space, A and Delete.</li>
+          <li>The timeline shows the current time in its corner cell.</li>
+          <li>The controls have Point start and Point end on the left, the transport in the center, and Add comment on the right.</li>
+          <li>The list has 10-minute groups with sticky headers and the point count. Each point is a two-line card.</li>
+        </ul>
+        <span class="open">Open option C →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users who look at the video and the timeline together.</dd>
+        <dt>Swing effort</dt><dd>High. The timeline moves into the left column. Sticky group headers need custom painting in the scroll pane.</dd>
+        <dt>Risk</dt><dd>Medium. Two-line cards show fewer points than option A. The timeline is narrower.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Feature check</h2>
+  <p class="lede" style="margin-bottom:12px">All options keep each feature of the current tab. The table shows where each feature is.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature</th><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody>
+        <tr><td>Video preview with the Colors and Transform adjustments</td><td class="yes">Same</td><td class="yes">Same</td><td class="yes">Same</td></tr>
+        <tr><td>Point Start [C] and Point End [V] at the playhead</td><td class="yes">Joined buttons</td><td class="yes">Step tiles</td><td class="yes">Buttons with key chips</td></tr>
+        <tr><td>Add comment at the playhead</td><td class="yes">Bar, left</td><td class="yes">Mark panel</td><td class="yes">Controls, right</td></tr>
+        <tr><td>Play / Pause [Space], −5s, −1s, +1s, +5s with the keys</td><td class="yes">Bar, center</td><td class="yes">Play bar</td><td class="yes">Controls, center</td></tr>
+        <tr><td>Current time</td><td class="yes">Bar, right</td><td class="yes">Play bar, left</td><td class="yes">Timeline corner</td></tr>
+        <tr><td>Counts: marked points, favorites, comments</td><td class="yes">Count tiles</td><td class="yes">Icon chips</td><td class="yes">Text line</td></tr>
+        <tr><td>One list of points and comments in time order</td><td class="yes">Rows</td><td class="yes">Table</td><td class="yes">Cards in groups</td></tr>
+        <tr><td>Point number, start time, end time</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Favorite [A], star visible on favorite points</td><td class="yes">✓</td><td class="yes">★ column</td><td class="yes">✓</td></tr>
+        <tr><td>Edit point dialog: Start, End, Label, Delete with confirmation</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Delete point: button on hover and the Delete key</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Comment: number, color, start, duration, text, full text in the tooltip, Edit, Delete</td><td class="yes">Two-line row</td><td class="yes">One-line row</td><td class="yes">Card</td></tr>
+        <tr><td>Comment dialog: text, start, duration, color, error line</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Pending point with its start time</td><td class="yes">Card below the list</td><td class="yes">Mark panel</td><td class="yes">Card below the list + status strip</td></tr>
+        <tr><td>The selection follows the playhead. A click on a row selects it and seeks.</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Timeline: ruler, VIDEO, MARKS, COMMENTS lanes, click to seek, drag to scrub, click a mark or a comment tag, tooltips</td><td class="yes">Label column</td><td class="yes">Label column</td><td class="yes">Label column + time</td></tr>
+        <tr><td>Hint dialogs, for example "Set a Start first (press C) before setting End"</td><td class="yes">Same text</td><td class="yes">Same text</td><td class="yes">Same text</td></tr>
+        <tr><td>Autosave</td><td class="yes">Unchanged</td><td class="yes">Unchanged</td><td class="yes">Unchanged</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Please confirm</h2>
+  <div class="confirm">
+    <b class="warn">These changes show more of the current data. They add no function, but you can remove them.</b>
+    <ul class="plain">
+      <li>The list shows the length of each point. The app calculates it from the start and the end.</li>
+      <li>The MARKS track paints favorite points yellow and draws an outline around the selected point.</li>
+      <li>The MARKS track shows a pending point as a hatched range from its start to the playhead.</li>
+      <li>Option B: the End tile shows the playhead time while a point is pending.</li>
+      <li>Option C: the status strip shows the point under the playhead, the pending length and the key legend. The list shows the point count of each 10-minute group.</li>
+    </ul>
+  </div>
+
+  <h2>Text changes</h2>
+  <ul class="plain">
+    <li>"Point Start [C]" becomes "Point start" with a key chip "C". "Point End [V]" becomes "Point end" with a key chip "V".</li>
+    <li>"Pending…" becomes "Pending point". The current tooltip already uses this term.</li>
+    <li>"43 Fav" becomes "43 Favorites".</li>
+    <li>The "[A]" text next to the star goes away. The tooltip "Favorite [A]" stays.</li>
+    <li>"−5s [shift+←]" and the other seek labels become short labels. The tooltips give the keys: "Seek back 5 seconds [Shift+Left]".</li>
+    <li>"Current time:" goes away. Option A adds "of 01:36:01.0" below the time.</li>
+    <li>In the Edit point dialog, "OK" becomes "Save". "Delete" moves to the left side and gets the red style.</li>
+    <li>The dialogs use the dark style of the app. The texts of the fields and the errors stay the same.</li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li>The colors come from <code>UiStyles</code> and <code>SwingTimelineComponent</code>: <code>DARK_BG</code>, <code>CARD_BG</code>, <code>LIME</code>, <code>YELLOW</code>, the mark green and the playhead red.</li>
+    <li><code>frame.jpg</code> is one frame of <code>PXL_20260913_070045619.mp4</code> at 00:18:12. The 13 first points are from the screenshot. The other points are generated.</li>
+    <li>The mockups use the Material Symbols font from Google Fonts for the icons. Without internet access, the icons show as words.</li>
+    <li>Add <code>#mark=pending&amp;comments=none</code> to a page URL to open it in a given state. Add <code>dialog=edit</code>, <code>dialog=comment</code>, <code>dialog=add</code> or <code>dialog=hint</code> to open a dialog.</li>
+    <li>The mpv video is a native window in Swing. For this reason, no option puts controls or text on top of the video.</li>
+  </ul>
+</div>
+</body>
+</html>

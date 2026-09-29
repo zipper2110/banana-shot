@@ -8,6 +8,9 @@ import org.litvin.media.MediaScreen
 import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.AppIcon
 import org.litvin.ui.commons.AppShortcuts
+import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.MessageDialog
+import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.help.HelpDialog
 import org.litvin.ui.help.HelpPage
 import org.litvin.ui.help.HelpPreferences
@@ -49,7 +52,6 @@ import javax.swing.AbstractAction
 import javax.swing.Box
 import javax.swing.JComponent
 import javax.swing.JFrame
-import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.KeyStroke
 
@@ -113,7 +115,7 @@ object SwingApplicationFactory {
 
         try {
             val helpDialog = lazy { HelpDialog(frame) }
-            fun showHelp(page: HelpPage) = helpDialog.value.open(page)
+            fun showHelp(page: HelpPage, tab: HelpPage? = page) = helpDialog.value.open(page, tab)
 
             val sidebar = JPanel().apply {
                 UiStyles.styleSidebarContainer(this)
@@ -467,16 +469,18 @@ object SwingApplicationFactory {
             }
 
             if (shouldShowGpuRestartNotification(show, testEnabled, WindowsGpuPreference.wasChangeApplied())) {
-                JOptionPane.showMessageDialog(
+                MessageDialog.show(
                     frame,
-                    "We set a Windows preference for this app to use the dedicated/external GPU on future launches.\n\n" +
-                        "Please restart the application now. If it still uses the integrated GPU, open Windows Graphics Settings → Graphics performance preference, or NVIDIA/AMD control panel, and force the high‑performance GPU for javaw.exe (or your packaged EXE).",
+                    MessageKind.INFO,
                     "GPU preference set",
-                    JOptionPane.INFORMATION_MESSAGE,
+                    "We set a Windows preference for this app to use the dedicated/external GPU on future launches.\n\n" +
+                        "**Please restart the application now.**\n\n" +
+                        "If it still uses the integrated GPU, open Windows Graphics Settings → Graphics performance preference, or NVIDIA/AMD control panel, and force the high‑performance GPU for javaw.exe (or your packaged EXE).",
+                    DialogKit.WIDE,
                 )
             }
             if (show && HelpPreferences.claimFirstLaunchOverview(applicationPreferences)) {
-                showHelp(HelpPage.OVERVIEW)
+                showHelp(HelpPage.OVERVIEW, currentHelpPage())
             }
 
             return handle

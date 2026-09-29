@@ -41,7 +41,10 @@ data class ServeStats(
 
 /** Statistics from the start and end times of the points. */
 data class TimeStats(
-    /** From the start of the first point to the end of the last point. */
+    /**
+     * The match duration: from the start of the first point with a winner to the end of the last point with a winner.
+     * It is not the length of the video. It is 0 when no point has a winner.
+     */
     val durationMs: Long,
     /** The sum of the point durations. */
     val playingMs: Long,
@@ -81,8 +84,6 @@ data class MatchStats(
     val pointsWon: PerPlayer<Int>,
     val gamesWon: PerPlayer<Int>,
     val setsWon: PerPlayer<Int>,
-    /** Set tiebreaks and match tiebreaks. Only matches with sets have them. */
-    val tiebreaksWon: PerPlayer<Int>,
     /** Null when the user did not mark a server. */
     val serve: ServeStats?,
     /** The points that win a set (match points too) that the player won, of the set points that the player had. */
@@ -122,10 +123,6 @@ data class MatchStats(
                 pointsWon = count(scored) { winners[it] },
                 gamesWon = count(indices) { timeline.statesAfterPoint[it].lastGameWonBy },
                 setsWon = count(indices) { timeline.statesAfterPoint[it].lastSetWonBy },
-                tiebreaksWon = count(indices.filter { rules.structure == MatchStructure.SETS && timeline.stateBefore(it).isTiebreak }) {
-                    val after = timeline.statesAfterPoint[it]
-                    after.lastSetWonBy ?: after.lastGameWonBy
-                },
                 serve = serveStats(indices, scored, winners, timeline),
                 setPointsWon = chances(scored, winners, timeline, Stake.SET),
                 matchPointsWon = chances(scored, winners, timeline, Stake.MATCH),
@@ -312,10 +309,12 @@ data class MatchStats(
         private fun timeStats(points: List<PointV1>, winners: List<Int?>): TimeStats {
             val durations = points.map { (it.endMs - it.startMs).coerceAtLeast(0).toLong() }
             val gaps = points.zipWithNext { a, b -> (b.startMs - a.endMs).toLong() }.filter { it >= 0 }
+            val first = points.indices.firstOrNull { winners[it] != null }?.let(points::get)
+            val last = points.indices.lastOrNull { winners[it] != null }?.let(points::get)
             fun averageWonBy(player: Int): Long? =
                 durations.filterIndexed { index, _ -> winners[index] == player }.averageOrNull()
             return TimeStats(
-                durationMs = if (points.isEmpty()) 0 else (points.last().endMs - points.first().startMs).coerceAtLeast(0).toLong(),
+                durationMs = if (first == null || last == null) 0 else (last.endMs - first.startMs).coerceAtLeast(0).toLong(),
                 playingMs = durations.sum(),
                 averagePointMs = durations.averageOrNull(),
                 longestPoint = points.indices.maxByOrNull { durations[it] }?.let(points::get),

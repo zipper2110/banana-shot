@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transform Tab Redesign</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 720px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  ol.problems, ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; color: var(--fg); }
+  ol.problems li, ul.plain li { margin-bottom: 4px; }
+  ul.plain .muted { font-size: 12.5px; }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: block; margin-bottom: 4px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+
+  .options { display: grid; gap: 12px; }
+  .option {
+    display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit;
+  }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td { color: var(--fg-2); }
+  .yes { color: var(--green); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Transform tab — redesign proposals</h1>
+  <p class="lede">
+    This folder has one main proposal and two alternatives for the Transform tab.
+    Each mockup is an HTML page with the app sidebar, the real texts and a frame of the reference video.
+    The crop editor on the video works: drag the rectangle, the square handles and the round handle, or click the video and use the arrow keys.
+    The sliders and the value fields work too. Use the switch at the top of each page to see adjusted values.
+  </p>
+  <div class="scope">✓ Cosmetic changes only. No feature is added or removed.</div>
+
+  <h2>Problems in the current tab</h2>
+  <ol class="problems">
+    <li><b>Too much empty space.</b> Each slider row is 92 px high, with a gap of 42 px under the slider. Five sliders use about 460 px of the panel, and the rest of the panel is empty.</li>
+    <li><b>No groups.</b> The five sliders are one list with the same weight. Zoom, Pan X and Pan Y set the crop rectangle. Rotation and Fine Rotation set the angle. The list does not show this.</li>
+    <li><b>The default is not visible.</b> Each slider fills from its left end. The default of Pan and Rotation is the center, and the default of Zoom (100%) is at 23% of the track. No slider has a mark at the default, so the user cannot see at one look which values are changed.</li>
+    <li><b>The angle is in two parts.</b> Rotation and Fine Rotation each show their own value. The angle that the video uses is the sum of the two values, but the tab does not show it.</li>
+    <li><b>Units and directions are not clear.</b> "deg" is a separate label after the field. Pan X and Pan Y have no unit and no direction: the user cannot know that a positive Pan Y moves the crop up. A changed value and a default value have the same color.</li>
+    <li><b>The editor on the video is hidden.</b> Move, resize, rotate, the Shift snap and the arrow keys are only in the Help. The arrow keys work only after a click on the video, and the tab does not show when the video has the keyboard focus.</li>
+    <li><b>The playback controls use two rows.</b> The play button is alone on a centered row above the seek bar. The Colors tab now has a one-row playback bar, so the two Video tabs are different.</li>
+    <li><b>Reset does not tell its scope.</b> "Reset" is a default button. Its text does not tell that it resets all transform values.</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="principles">
+    <div class="principle"><b>The default is the reference</b><span>Each slider fills from its default: 100% for Zoom, 0 for the others. A tick marks the default. A changed slider has a lime thumb and a lime value.</span></div>
+    <div class="principle"><b>Groups by purpose</b><span>Crop: Zoom, Pan X, Pan Y. Rotation: Rotation, Fine rotation, and the total angle.</span></div>
+    <div class="principle"><b>One angle</b><span>The Rotation group shows the angle that the video uses: Rotation + Fine rotation.</span></div>
+    <div class="principle"><b>The editor tells its rules</b><span>The mouse and key hints from the Help are visible next to the video. A chip shows when the arrow keys move the crop.</span></div>
+    <div class="principle"><b>Same as Colors</b><span>The header, the Reset all button, the group cards and the playback bar are the same as in the Colors tab.</span></div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="options">
+    <a class="option main" href="option-a.html">
+      <div>
+        <div class="option-head"><h3>A · Grouped panel</h3><span class="badge">Recommended</span></div>
+        <p>The layout stays the same: the video on the left and a 400 px panel on the right. The panel has a header with the changed count and "Reset all", two group cards, and a card with the mouse and key hints. It is the same structure as the new Colors tab.</p>
+        <ul>
+          <li>The rows are 80 px high, not 92 px, and have no empty gap. All five sliders and the hints fit without a scroll bar.</li>
+          <li>Each row shows the label, a value field with the unit inside, the slider with a default tick, and the end labels (Left / Center / Right, Down / Center / Up).</li>
+          <li>The Rotation caption shows the total angle, for example "Angle +2.3°". The Rotation slider has small ticks at −90° and +90°.</li>
+          <li>A lime bar at the left edge marks each changed row.</li>
+          <li>A chip on the video tells the user to click the video for the arrow keys. After the click, the chip shows the keys, and the video gets a lime frame.</li>
+          <li>The playback bar is the same as in the Colors tab: the play button with SPACE, the current time, the seek bar and the video length.</li>
+        </ul>
+        <span class="open">Open option A →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>A clear structure with the smallest change, and the same look as the Colors tab.</dd>
+        <dt>Swing effort</dt><dd>Low. <code>ColorSliderUI</code>, <code>ColorsPlaybackBar</code> and <code>ResetAllButton</code> can be used again. The slider UI must fill from a default value that is not the center (Zoom). The chip needs a text shape in <code>OverlayShape</code>.</dd>
+        <dt>Risk</dt><dd>Low. The component names <code>crop-*</code> can stay the same, so the UI tests do not change.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-b.html">
+      <div>
+        <div class="option-head"><h3>B · Narrow panel with video labels</h3><span class="badge alt">Alternative</span></div>
+        <p>The panel is 320 px wide, not 400 px, so the video gets more width. The rows are compact, and the groups are plain captions, not cards. The video shows more information: a value label under the crop rectangle and a hint strip at the bottom.</p>
+        <ul>
+          <li>The video is about 7% wider than in option A (1200 px, not 1120 px, in a 1600 px window). A wider video makes the crop more precise.</li>
+          <li>The label under the crop rectangle shows the zoom and the angle, for example "140% · +2.3°". Its border turns lime while the user drags.</li>
+          <li>The Rotation group starts with the total angle in large text.</li>
+          <li>Each row has an icon. The icon is lime when the value is changed.</li>
+        </ul>
+        <span class="open">Open option B →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Smaller screens, and users who work mostly on the video with the mouse.</dd>
+        <dt>Swing effort</dt><dd>Low to medium. The label and the hint strip are drawn on the video, so <code>OverlayShape</code> needs text and rounded rectangles.</dd>
+        <dt>Risk</dt><dd>Low to medium. The hint strip covers a part of the video. The panel width is different from the Colors tab (400 px).</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-c.html">
+      <div>
+        <div class="option-head"><h3>C · Dial and ruler</h3><span class="badge alt">Alternative</span></div>
+        <p>The layout stays the same. The crop sliders are one-line rows. Rotation is a dial, and Fine rotation is a ruler that moves under a center mark, as in the straighten tool of photo editors.</p>
+        <ul>
+          <li>The dial shows the angle as an angle: the knob points in the direction of the rotation. Marks show 0°, ±90° and 180°, the snap angles of the round handle.</li>
+          <li>The ruler shows ±5° with a tick for each 0.1°. The user drags the ruler to the left for larger values.</li>
+          <li>Both controls keep the value field, the range, the steps (0.5° and 0.1°) and the slider keys: the arrow keys, Page Up, Page Down, Home and End.</li>
+          <li>The total angle is next to the dial.</li>
+        </ul>
+        <span class="open">Open option C →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users who often straighten a tilted camera.</dd>
+        <dt>Swing effort</dt><dd>Medium to high. The dial and the ruler are custom <code>JComponent</code>s with their own paint, mouse and key code, and their own accessible names.</dd>
+        <dt>Risk</dt><dd>Medium. The UI tests find <code>crop-rotation</code> and <code>crop-rotation-fine</code> as <code>JSlider</code>s. The tests must change, or the new controls must keep a <code>JSlider</code> model.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Feature check</h2>
+  <p class="lede" style="margin-bottom:12px">All options keep each feature of the current tab. The table shows where each feature is.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature</th><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody>
+        <tr><td>Video preview of the full rotated frame, with the crop rectangle, the dim mask, 8 square handles and the round rotation handle</td><td class="yes">Left, as today</td><td class="yes">Left, wider</td><td class="yes">Left, as today</td></tr>
+        <tr><td>Drag inside to move, drag a square handle to resize (aspect ratio and center stay), drag the round handle to rotate</td><td class="yes">No change + hints</td><td class="yes">No change + hint strip</td><td class="yes">No change + hints</td></tr>
+        <tr><td>Rotation snap to 0°, ±90° and 180° within 2°, and Shift to snap to 90°</td><td class="yes">No change</td><td class="yes">No change</td><td class="yes">No change</td></tr>
+        <tr><td>Lime editor lines while the mouse is on the editor or drags</td><td class="yes">No change</td><td class="yes">No change</td><td class="yes">No change</td></tr>
+        <tr><td>Arrow keys move the crop 1 px, Shift + arrow keys 10 px, after a click on the video</td><td class="yes">Same + chip</td><td class="yes">Same + focus frame</td><td class="yes">Same + chip</td></tr>
+        <tr><td>Play / Pause button, SPACE shortcut, tooltip "SPACE - Play"</td><td class="yes">Playback bar</td><td class="yes">Playback bar</td><td class="yes">Playback bar</td></tr>
+        <tr><td>Seek bar</td><td class="yes">Playback bar + times</td><td class="yes">Playback bar + times</td><td class="yes">Playback bar + times</td></tr>
+        <tr><td>Zoom 10–400%, Pan X and Pan Y −100 to +100</td><td class="yes">Sliders</td><td class="yes">Compact sliders</td><td class="yes">One-line sliders</td></tr>
+        <tr><td>Rotation −180° to +180° in steps of 0.5°, Fine rotation −5° to +5° in steps of 0.1°</td><td class="yes">Sliders</td><td class="yes">Compact sliders</td><td class="yes">Dial and ruler</td></tr>
+        <tr><td>Editable value field for each control</td><td class="yes">Unit inside</td><td class="yes">Unit inside</td><td class="yes">Unit inside</td></tr>
+        <tr><td>Slider tooltips</td><td class="yes">Same text</td><td class="yes">Same text</td><td class="yes">Same text</td></tr>
+        <tr><td>Reset of all transform values, with the tooltip "Reset Transform"</td><td class="yes">Panel header</td><td class="yes">Panel header</td><td class="yes">Panel header</td></tr>
+        <tr><td>Warning dialog when the project cannot be read or the source video is missing</td><td class="yes">No change</td><td class="yes">No change</td><td class="yes">No change</td></tr>
+        <tr><td>Values saved to the project and used by Export</td><td class="yes">No change</td><td class="yes">No change</td><td class="yes">No change</td></tr>
+        <tr><td>F1 opens the Transform help</td><td class="yes">No change</td><td class="yes">No change</td><td class="yes">No change</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Text changes</h2>
+  <ul class="plain">
+    <li>"Fine Rotation" becomes "Fine rotation" (sentence case, as the other labels). <span class="muted">The tooltip "Fine Rotation" can stay.</span></li>
+    <li>"deg" becomes "°". The units "%" and "°" move into the value field.</li>
+    <li>"Reset" becomes "Reset all". The tooltip "Reset Transform" stays. <span class="muted">The Help text "Use Reset to restore the transform controls." must use the new name.</span></li>
+    <li>New status text in the header: "All at default" or "2 of 4 changed". <span class="muted">The four values are zoom, pan X, pan Y and the angle.</span></li>
+    <li>New group captions: "Crop" and "Rotation". New angle text: "Angle +2.3°". <span class="muted">B and C add "Rotation + Fine rotation".</span></li>
+    <li>New end labels: 10% / 400%, Left / Center / Right, Down / Center / Up, −180° / 0° / +180°, −5° / 0° / +5°.</li>
+    <li>New hints: "Drag inside the rectangle to move it.", "Drag a square handle to resize. The aspect ratio and the center stay.", "Drag the round handle to rotate. Hold Shift to snap to 90°.", "Click the video, then ← ↑ → ↓ move 1 px. Shift moves 10 px." <span class="muted">It is the same information as the Transform help.</span></li>
+    <li>New chip on the video (A and C): "Click the video to move the crop with the arrow keys". After the click: "← ↑ → ↓ move 1 px · Shift 10 px".</li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li>The colors come from <code>UiStyles</code>: <code>DARK_BG</code>, <code>CARD_BG</code>, <code>LIME</code>, <code>GREEN</code> and <code>ACCENT_TEXT</code>.</li>
+    <li>The crop editor in the mockups is a port of <code>CropEditorOverlay</code> and <code>CropGeometryMath</code>. The frame turns with CSS. It is not the mpv preview.</li>
+    <li>The mockups use the Material Symbols font from Google Fonts for the icons. Without internet access, the icons show as words.</li>
+    <li>Add <code>#preset=adjusted</code> to a page URL to open it with adjusted values.</li>
+  </ul>
+</div>
+</body>
+</html>

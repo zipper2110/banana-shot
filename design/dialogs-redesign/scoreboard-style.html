@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scoreboard Style Dialog</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Scoreboard style (ScoreboardSettingsDialog). Opened from the Scoring tab.
+     The layout is the same as the video tabs: the preview on the left, a side panel with groups on the right.
+     The style gallery is under the preview, so the preview and the styles are visible at the same time. */
+  .sbs .modal-body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; padding-bottom: 16px; }
+  .left { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-height: 0; }
+  /* The stage is black, and the 16:9 frame fits in it, like the video area of the tabs. */
+  .stage { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; background: #000; box-shadow: 0 0 0 1px var(--line); overflow: hidden; }
+  .preview { position: absolute; overflow: hidden; }
+  .preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .preview .sbd { position: absolute; }
+  .preview .tag { position: absolute; right: 8px; bottom: 8px; font-size: 11px; color: rgba(255,255,255,.75); background: rgba(0,0,0,.55); border-radius: 4px; padding: 2px 7px; }
+
+  .styles { display: flex; flex-direction: column; min-height: 0; }
+  .styles .gallery { flex: 1; min-height: 0; padding: 4px 12px 12px; align-content: start; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  /* The name of the selected style, next to the caption. */
+  .style-name { margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--line-2); text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 600; color: var(--fg-2); }
+  .style-card {
+    display: flex; flex-direction: column; gap: 6px; padding: 6px 6px 7px; border-radius: 6px; cursor: pointer;
+    background: #141414; border: 1px solid var(--line); color: var(--fg-2); font-size: 12px; font-weight: 600; text-align: center;
+  }
+  .style-card:hover { background: #1e1e1e; color: var(--fg); }
+  .style-card.is-selected { border-color: var(--lime); box-shadow: inset 0 0 0 1px var(--lime); background: #1c2215; color: var(--fg); }
+  .thumb { height: 46px; border-radius: 4px; background: linear-gradient(#2f5f3c, #1d3f28); display: grid; place-items: center; overflow: hidden; }
+
+  .opts { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 2px; }
+  .opts .g-row { grid-template-columns: 92px minmax(0, 1fr); }
+  .opts .g-row.wide { grid-template-columns: minmax(0, 1fr); }
+  .sub-field { padding: 0 14px 10px 54px; margin-top: -4px; }
+  .slider-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .slider-row .ends { grid-column: 1; display: flex; justify-content: space-between; font-size: 10.5px; color: var(--fg-3); margin-top: -3px; }
+  /* A 16:9 frame with the four corners. The name of the selected corner is in the middle. */
+  .corners { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 5px; background: #111; border: 1px solid var(--line-2); }
+  .corners button {
+    position: absolute; width: 36%; height: 30%; border-radius: 4px; border: 1px dashed #4a4a4a; background: transparent; cursor: pointer; padding: 0;
+  }
+  .corners button:hover { border-color: var(--fg-2); background: #1f1f1f; }
+  .corners button.is-selected { border: 0; background: var(--lime); }
+  .corners [data-p="TOP_LEFT"] { left: 6px; top: 6px; }
+  .corners [data-p="TOP_RIGHT"] { right: 6px; top: 6px; }
+  .corners [data-p="BOTTOM_LEFT"] { left: 6px; bottom: 6px; }
+  .corners [data-p="BOTTOM_RIGHT"] { right: 6px; bottom: 6px; }
+  .corner-name { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12.5px; color: var(--fg-2); pointer-events: none; }
+  .accent-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .from-style { font-size: 11.5px; color: var(--fg-3); padding: 0 14px 10px; margin-top: -4px; }
+
+  /* ----- Scoreboard drawings. They only suggest the styles; the app draws the real ones (ScoreboardLayouts). ----- */
+  .sbd {
+    --op: .84; --bgc: 8, 8, 8;
+    display: inline-block; min-width: 15em; color: #fff; line-height: 1; font-family: var(--font);
+    background: rgba(var(--bgc), var(--op)); border: 1px solid rgba(255,255,255,.1); border-radius: .4em; overflow: hidden;
+    box-shadow: 0 .4em 1.2em rgba(0,0,0,.4); text-align: left;
+  }
+  .sbd .t { display: flex; align-items: center; gap: .55em; padding: .7em .9em; font-size: .72em; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--ac); }
+  .sbd .t::before { content: ""; width: .6em; height: .6em; border-radius: 50%; background: var(--ac); }
+  .sbd .r { display: flex; align-items: stretch; border-top: 1px solid rgba(255,255,255,.07); }
+  .sbd .n { flex: 1; display: flex; align-items: center; gap: .5em; padding: .6em .9em; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; }
+  .sbd .n i { width: .62em; height: .62em; border-radius: .12em; background: var(--pc); flex: none; }
+  .sbd .ball { width: .45em; height: .45em; border-radius: 50%; background: #d8f23a; }
+  .sbd .c { width: 2.1em; display: grid; place-items: center; color: rgba(255,255,255,.45); font-variant-numeric: tabular-nums; }
+  .sbd .c.g { color: rgba(255,255,255,.9); }
+  .sbd .p { width: 2.7em; display: grid; place-items: center; font-size: 1.2em; font-weight: 800; color: var(--ac); background: rgba(255,255,255,.05); }
+  .sbd .cr { padding: .4em .9em .45em; font-size: .56em; color: rgba(255,255,255,.45); letter-spacing: .06em; border-top: 1px solid rgba(255,255,255,.07); }
+  .sbd.k-classic .t { color: #fff; background: rgba(255,255,255,.08); }
+  .sbd.k-classic .t::before { display: none; }
+  .sbd.k-classic .p { background: #f2f2f2; color: #111; }
+  .sbd.k-serif { font-family: Georgia, "Times New Roman", serif; }
+  .sbd.k-serif .n { text-transform: none; letter-spacing: 0; }
+  .sbd.k-compact { min-width: 12em; }
+  .sbd.k-compact .t { padding: .45em .7em; font-size: .6em; }
+  .sbd.k-compact .n { padding: .4em .7em; }
+  .sbd.k-compact .p { font-size: 1em; }
+  .sbd.k-night { box-shadow: 0 0 1.2em rgba(47,230,255,.35); border-color: rgba(47,230,255,.4); }
+  .sbd.k-night .p { text-shadow: 0 0 .6em var(--ac); }
+  .sbd.k-led { font-family: var(--mono); border-color: #333; }
+  .sbd.k-led .n, .sbd.k-led .c.g, .sbd.k-led .p { color: var(--ac); text-shadow: 0 0 .5em var(--ac); }
+  .sbd.k-led .c { color: rgba(255,176,0,.5); }
+  .sbd.k-led .p { background: none; }
+  .sbd.k-minimal { border: 0; box-shadow: none; }
+  .sbd.k-minimal .r, .sbd.k-minimal .cr { border: 0; }
+  .sbd.k-minimal .n { font-weight: 600; text-transform: none; }
+  .sbd.k-minimal .p { background: none; }
+  .sbd.k-tiles { background: none; border: 0; box-shadow: none; }
+  .sbd.k-tiles .t, .sbd.k-tiles .n, .sbd.k-tiles .c, .sbd.k-tiles .p, .sbd.k-tiles .cr { background: rgba(var(--bgc), var(--op)); border-radius: .25em; margin: .1em; }
+  .sbd.k-tiles .r { border: 0; }
+  .sbd.k-tiles .p { background: var(--ac); color: #111; }
+  .sbd.k-ticker { display: inline-flex; align-items: stretch; min-width: 0; border-radius: .25em; }
+  .sbd.k-ticker .t { background: var(--ac); color: #111; }
+  .sbd.k-ticker .t::before { background: #111; }
+  .sbd.k-ticker .r { border: 0; border-left: 1px solid rgba(255,255,255,.1); }
+  .sbd.k-ticker .cr { border: 0; border-left: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; }
+  .sbd.k-retro { font-family: Georgia, serif; border: .18em double var(--ac); border-radius: .6em; }
+  .sbd.k-retro .t { justify-content: center; }
+  .sbd.k-retro .t::before { display: none; }
+  .sbd.k-bold { border: 0; border-radius: .15em; }
+  .sbd.k-bold .t { background: #111; }
+  .sbd.k-bold .n { background: var(--ac); color: #111; }
+  .sbd.k-bold .r { border-color: rgba(0,0,0,.4); }
+  .sbd.k-bold .p { background: #111; color: var(--ac); }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main id="tab"></main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Scoreboard style.</b> Same settings as today. The preview is large and on the left, like the video in the tabs.
+  The style gallery is under it. The side panel has three groups: what the board shows, where it is, and the accent color.
+  The drawings only suggest the 14 styles. The app draws the real styles.
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const { esc, icon } = Mock;
+
+  const STYLES = [
+    ['BROADCAST', 'Broadcast', '#C4FF4D', 84, '8,8,8', ''],
+    ['CLASSIC', 'Classic', '#C4FF4D', 69, '34,38,46', 'k-classic'],
+    ['CENTER_COURT', 'Center Court', '#D7FF3F', 96, '18,48,34', ''],
+    ['COMPACT', 'Compact', '#C4FF4D', 72, '12,12,12', 'k-compact'],
+    ['GRASS_COURT', 'Grass Court', '#D9C27A', 92, '26,60,34', 'k-serif'],
+    ['CLAY_COURT', 'Clay Court', '#FFE0A3', 94, '138,60,30', 'k-serif'],
+    ['HARD_COURT', 'Hard Court', '#E9F24A', 92, '24,56,112', ''],
+    ['NIGHT_SESSION', 'Night Session', '#2FE6FF', 88, '8,12,40', 'k-night'],
+    ['LED_BOARD', 'LED Board', '#FFB000', 95, '0,0,0', 'k-led'],
+    ['MINIMAL', 'Minimal', '#C4FF4D', 30, '0,0,0', 'k-minimal'],
+    ['TILES', 'Tiles', '#C4FF4D', 88, '14,14,14', 'k-tiles'],
+    ['TICKER', 'Ticker', '#C4FF4D', 88, '10,10,10', 'k-ticker'],
+    ['RETRO', 'Retro', '#F2C14E', 94, '52,36,22', 'k-retro'],
+    ['BOLD_BLOCK', 'Bold Block', '#FFD000', 97, '20,20,20', 'k-bold'],
+  ].map(([id, title, accent, opacity, bgc, kind]) => ({ id, title, accent, opacity, bgc, kind }));
+  const styleOf = (id) => STYLES.find((s) => s.id === id);
+  const POSITIONS = [['TOP_LEFT', 'Top left'], ['TOP_RIGHT', 'Top right'], ['BOTTOM_LEFT', 'Bottom left'], ['BOTTOM_RIGHT', 'Bottom right']];
+  const DEFAULTS = { style: 'BROADCAST', title: 'Your tournament or club', showTitle: true, showAppCredit: true, showPlayerColors: true, showServe: true, position: 'TOP_LEFT', sizePercent: 100, opacity: null, accent: null };
+  const PLAYERS = [{ name: 'Alex', color: '#4DA3FF' }, { name: 'Sam', color: '#FF6B6B' }];
+  const SAMPLE = { sets: [[6, 4]], games: [3, 2], points: ['30', '15'], server: 1 };
+
+  /** Draws a scoreboard for [st]. */
+  function board(st) {
+    const s = styleOf(st.style);
+    const accent = st.accent || s.accent;
+    const op = (st.opacity ?? s.opacity) / 100;
+    const title = st.showTitle && st.title.trim() ? `<div class="t">${esc(st.title.trim())}</div>` : '';
+    const credit = st.showAppCredit ? '<div class="cr">BananaShot app</div>' : '';
+    const row = (i) => `<div class="r"><div class="n">${st.showPlayerColors ? `<i style="--pc:${PLAYERS[i].color}"></i>` : ''}${esc(PLAYERS[i].name)}${st.showServe && SAMPLE.server === i + 1 ? '<span class="ball"></span>' : ''}</div>` +
+      SAMPLE.sets.map((x) => `<div class="c">${x[i]}</div>`).join('') + `<div class="c g">${SAMPLE.games[i]}</div><div class="p">${SAMPLE.points[i]}</div></div>`;
+    return `<div class="sbd ${s.kind}" style="--ac:${accent};--op:${op};--bgc:${s.bgc}">${title}${row(0)}${row(1)}${credit}</div>`;
+  }
+
+  let saved = { ...DEFAULTS, title: 'Sunday club match' };
+
+  Mock.shell('scoreboard', {
+    tab: 'Scoring', tabTitle: 'Scoring',
+    states: [{ label: 'Saved style', group: 'saved', options: [['broadcast', 'Broadcast'], ['led', 'LED Board, bottom right'], ['custom', 'Own accent, no title']] }],
+  });
+  Mock.behind(document.getElementById('tab'),
+    `<button class="btn" id="bSettings">${icon('tune')}Scoring settings</button><button class="btn" id="bStyle">${icon('scoreboard')}Scoreboard style</button>`);
+  document.getElementById('bSettings').onclick = () => { location.href = 'scoring-settings.html'; };
+  document.getElementById('bStyle').onclick = open;
+
+  function slider(id, min, max) {
+    return `<div class="slider-row"><input type="range" id="${id}" min="${min}" max="${max}"><label class="vfield"><input id="${id}V" inputmode="numeric"><span>%</span></label>
+      <div class="ends"><span>${min} %</span><span>${max} %</span></div></div>`;
+  }
+
+  function open() {
+    let st = { ...saved };
+    const m = Mock.modal(`
+      <div class="modal lg sbs" role="dialog" aria-label="Scoreboard style">
+        <div class="modal-head"><h3>Scoreboard style</h3><span class="sub">The video shows each change at once. Cancel restores the saved style.</span></div>
+        <div class="modal-body">
+          <div class="left">
+            <div class="stage"><div class="preview"><img src="frame.jpg" alt=""><div id="pv"></div></div></div>
+            <section class="group styles">
+              <div class="g-cap">${icon('style')}Style<span class="style-name" id="styleName"></span></div>
+              <div class="gallery scroll" id="gallery">${STYLES.map((s) => `
+                <button class="style-card" data-style="${s.id}"><div class="thumb" data-thumb="${s.id}"></div>${esc(s.title)}</button>`).join('')}
+              </div>
+            </section>
+          </div>
+
+          <div class="opts scroll">
+            <section class="group">
+              <div class="g-cap">${icon('text_fields')}On the board</div>
+              <div class="g-row wide"><label class="switch-row"><input type="checkbox" class="check-input" id="showTitle"><span class="switch"></span><span class="t">Title</span></label></div>
+              <div class="sub-field"><input class="inp" id="title" maxlength="40" data-tip="The text in the title bar of the scoreboard" aria-label="Title"></div>
+              <div class="g-row wide"><label class="switch-row" data-tip="Show the color of each player next to the name"><input type="checkbox" class="check-input" id="showPlayerColors"><span class="switch"></span><span class="t">Player colors</span></label></div>
+              <div class="g-row wide"><label class="switch-row" data-tip="Show a ball next to the player who serves. Mark the server on the Scoring tab"><input type="checkbox" class="check-input" id="showServe"><span class="switch"></span><span class="t">Serve indicator</span></label></div>
+              <div class="g-row wide"><label class="switch-row" data-tip="Show a line with the app name at the bottom of the scoreboard"><input type="checkbox" class="check-input" id="showAppCredit"><span class="switch"></span><span class="t">“BananaShot app” line</span></label></div>
+            </section>
+
+            <section class="group">
+              <div class="g-cap">${icon('picture_in_picture')}Place and size</div>
+              <div class="g-row"><span class="lbl">Position</span>
+                <div class="corners">${POSITIONS.map(([p, t]) => `<button data-p="${p}" data-tip="${t}" aria-label="${t}"></button>`).join('')}<span class="corner-name" id="cornerName"></span></div>
+              </div>
+              <div class="g-row"><label for="size">Size</label>${slider('size', 50, 200)}</div>
+              <div class="g-row"><label for="opacity">Background</label>${slider('opacity', 10, 100)}</div>
+            </section>
+
+            <section class="group">
+              <div class="g-cap">${icon('palette')}Accent color</div>
+              <div class="g-row wide"><div class="accent-row">
+                <button class="btn swatch-btn" id="accent"><span class="swatch"></span><span class="hex"></span>Change…</button>
+                <button class="btn btn-quiet" id="accentDefault">Reset to default</button>
+              </div></div>
+              <div class="from-style" id="accentNote"></div>
+            </section>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span class="grow"></span>
+          <button class="btn btn-quiet" id="reset" style="margin-right:16px" data-tip="Use the default style, title, position, size and colors">${icon('restart_alt')}Reset to defaults</button>
+          <button class="btn" data-cancel>Cancel</button>
+          <button class="btn btn-lime" data-primary>Save</button>
+        </div>
+      </div>`);
+    const r = m.root;
+    const q = (s) => r.querySelector(s);
+    const pv = q('#pv');
+
+    function place() {
+      const stage = q('.stage');
+      const fw = Math.min(stage.clientWidth, stage.clientHeight * 16 / 9), fh = fw * 9 / 16;
+      Object.assign(q('.preview').style, { width: fw + 'px', height: fh + 'px', left: (stage.clientWidth - fw) / 2 + 'px', top: (stage.clientHeight - fh) / 2 + 'px' });
+      const w = fw;
+      pv.innerHTML = board(st);
+      const el = pv.firstElementChild;
+      el.style.fontSize = (w * 0.0135 * st.sizePercent / 100) + 'px';
+      const mx = w * 0.03 + 'px', my = w * 0.03 * 9 / 16 + 'px';
+      el.style.left = st.position.endsWith('LEFT') ? mx : '';
+      el.style.right = st.position.endsWith('RIGHT') ? mx : '';
+      el.style.top = st.position.startsWith('TOP') ? my : '';
+      el.style.bottom = st.position.startsWith('BOTTOM') ? my : '';
+    }
+    function setFill(input) { input.style.setProperty('--fill', ((input.value - input.min) / (input.max - input.min)) * 100 + '%'); }
+    function sync() {
+      const s = styleOf(st.style);
+      r.querySelectorAll('.style-card').forEach((b) => b.classList.toggle('is-selected', b.dataset.style === st.style));
+      r.querySelectorAll('[data-thumb]').forEach((t) => {
+        // A style card shows that style with the other current settings, at full size and the style background.
+        t.innerHTML = board({ ...st, style: t.dataset.thumb, opacity: null, sizePercent: 100 });
+        t.firstElementChild.style.fontSize = t.dataset.thumb === 'TICKER' ? '3.4px' : '5px';
+      });
+      q('#styleName').textContent = s.title;
+      ['showTitle', 'showPlayerColors', 'showServe', 'showAppCredit'].forEach((k) => { q('#' + k).checked = st[k]; });
+      if (document.activeElement !== q('#title')) q('#title').value = st.title;
+      q('#title').disabled = !st.showTitle;
+      r.querySelectorAll('.corners button').forEach((b) => b.classList.toggle('is-selected', b.dataset.p === st.position));
+      q('#cornerName').textContent = POSITIONS.find(([p]) => p === st.position)[1];
+      const opacity = st.opacity ?? s.opacity;
+      [['size', st.sizePercent], ['opacity', opacity]].forEach(([id, v]) => {
+        q('#' + id).value = v; setFill(q('#' + id));
+        if (document.activeElement !== q('#' + id + 'V')) q('#' + id + 'V').value = v;
+      });
+      const accent = st.accent || s.accent;
+      q('#accent .swatch').style.background = accent;
+      q('#accent .hex').textContent = accent;
+      q('#accentDefault').disabled = !st.accent;
+      q('#accentNote').textContent = st.accent ? `Own color. The ${s.title} style color is ${s.accent}.` : `The color of the ${s.title} style.`;
+      place();
+    }
+    function update(change) { st = { ...st, ...change }; sync(); }
+
+    r.querySelectorAll('.style-card').forEach((b) => b.addEventListener('click', () => update({ style: b.dataset.style })));
+    ['showTitle', 'showPlayerColors', 'showServe', 'showAppCredit'].forEach((k) => q('#' + k).addEventListener('change', (e) => update({ [k]: e.target.checked })));
+    q('#title').addEventListener('input', (e) => update({ title: e.target.value }));
+    r.querySelectorAll('.corners button').forEach((b) => b.addEventListener('click', () => update({ position: b.dataset.p })));
+    q('#size').addEventListener('input', (e) => update({ sizePercent: Number(e.target.value) }));
+    q('#opacity').addEventListener('input', (e) => update({ opacity: Number(e.target.value) }));
+    [['sizeV', 'sizePercent', 50, 200], ['opacityV', 'opacity', 10, 100]].forEach(([id, key, min, max]) => {
+      const el = q('#' + id);
+      const commit = () => { const n = parseInt(el.value, 10); if (!isNaN(n)) update({ [key]: Math.max(min, Math.min(max, n)) }); el.value = key === 'opacity' ? (st.opacity ?? styleOf(st.style).opacity) : st.sizePercent; };
+      el.addEventListener('change', commit);
+      el.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        const cur = key === 'opacity' ? (st.opacity ?? styleOf(st.style).opacity) : st.sizePercent;
+        update({ [key]: Math.max(min, Math.min(max, cur + (e.key === 'ArrowUp' ? 1 : -1))) });
+        el.value = key === 'opacity' ? st.opacity : st.sizePercent;
+      });
+    });
+    q('#accent').addEventListener('click', () => Mock.colorPicker({
+      title: 'Choose accent color', color: st.accent || styleOf(st.style).accent, onOk: (hex) => update({ accent: hex }),
+    }));
+    q('#accentDefault').addEventListener('click', () => update({ accent: null }));
+    q('#reset').addEventListener('click', () => update({ ...DEFAULTS }));
+    q('[data-cancel]').addEventListener('click', () => { m.close(); Mock.toast('Closed. The video shows the saved style again.'); });
+    q('[data-primary]').addEventListener('click', () => { saved = st; m.close(); Mock.toast(`Saved: ${styleOf(st.style).title}, ${POSITIONS.find(([p]) => p === st.position)[1].toLowerCase()}, ${st.sizePercent} %.`); });
+    new ResizeObserver(place).observe(q('.stage'));
+    sync();
+    setTimeout(() => {
+      const sel = q('.style-card.is-selected');
+      if (sel) sel.scrollIntoView({ block: 'nearest' });
+      q('[data-primary]').focus();
+    }, 0);
+  }
+
+  const SAVED = {
+    broadcast: { ...DEFAULTS, title: 'Sunday club match' },
+    led: { ...DEFAULTS, style: 'LED_BOARD', title: 'Sunday club match', position: 'BOTTOM_RIGHT', sizePercent: 120 },
+    custom: { ...DEFAULTS, style: 'TILES', showTitle: false, accent: '#FF8A3D', opacity: 70 },
+  };
+  Mock.onState((group, value) => {
+    saved = { ...SAVED[value] };
+    document.querySelectorAll('.modal-back').forEach((b) => b.remove());
+    open();
+  });
+  Mock.setState('saved', Mock.hash.get('saved') || 'broadcast');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects Option A</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Option A: the current structure (header, current project, recent projects) with a clear order,
+     one primary button, a real table with column captions, and the pager at the bottom of the table. */
+  .tab {
+    display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: 18px;
+    padding: 20px 24px 20px; min-height: 0; background: var(--bg);
+  }
+
+  /* ----- Header ----- */
+  .head { display: flex; align-items: center; justify-content: space-between; }
+
+  /* ----- Current project ----- */
+  .cur {
+    display: grid; grid-template-columns: 4px 44px minmax(0, 1fr) auto; align-items: center; column-gap: 14px;
+    padding: 12px 14px 12px 0; border-radius: 8px; background: var(--card); border: 1px solid var(--line); overflow: hidden;
+  }
+  .cur .rail { align-self: stretch; margin: -12px 0; background: var(--lime); }
+  .cur .ico {
+    width: 44px; height: 44px; border-radius: 8px; display: grid; place-items: center;
+    background: rgba(161,254,0,.1); color: var(--lime);
+  }
+  .cur .ico .material-symbols-outlined { font-size: 24px; }
+  .cur-name { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; margin: 1px 0 3px; min-width: 0; }
+  .cur-name span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cur .path { font-size: 12.5px; }
+  .cur.none { border-style: dashed; background: transparent; grid-template-columns: 0 44px 1fr; }
+  .cur.none .rail { background: transparent; }
+  .cur.none .ico { background: #1a1a1a; color: var(--fg-3); }
+  .cur.none .cur-name { color: var(--fg-2); font-size: 15px; }
+
+  /* ----- Recent projects ----- */
+  .recent { display: flex; flex-direction: column; min-height: 0; }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; }
+  .sec-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .sec-head .hint { font-size: 12px; color: var(--fg-3); }
+
+  .table { display: flex; flex-direction: column; min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .cols, .row { display: grid; grid-template-columns: minmax(0, 1fr) 84px 92px 116px 88px 172px; align-items: center; column-gap: 14px; }
+  .cols {
+    height: 32px; padding: 0 14px 0 18px; background: #141414; border-bottom: 1px solid var(--line);
+    font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); font-weight: 600;
+  }
+  .r { text-align: right; justify-self: end; }
+  .rows { flex: 1; min-height: 0; }
+  .row { position: relative; min-height: 56px; padding: 8px 14px 8px 18px; border-bottom: 1px solid #202020; cursor: default; }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: #1f1f1f; }
+  .row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: transparent; }
+  .row.is-current { background: linear-gradient(90deg, rgba(161,254,0,.06), rgba(161,254,0,0) 40%); }
+  .row.is-current::before { background: var(--lime); }
+  .row.is-missing::before { background: rgba(255,115,81,.7); }
+
+  .name { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; font-size: 13.5px; margin-bottom: 3px; }
+  .name .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell-num { font-size: 13px; color: var(--fg); }
+  .cell-num.dash { color: var(--fg-3); }
+  .scored { display: grid; gap: 5px; justify-items: end; }
+  .scored .bar { width: 100%; }
+  .fav { display: inline-flex; align-items: center; gap: 4px; }
+  .fav .material-symbols-outlined { font-size: 15px; color: var(--yellow); }
+  .fav.zero .material-symbols-outlined { color: var(--fg-3); }
+  .acts { display: flex; justify-content: flex-end; align-items: center; gap: 2px; }
+  .acts .btn-ghost { color: var(--fg-3); }
+  .row:hover .acts .btn-ghost { color: var(--fg-2); }
+  .acts .btn-ghost:hover { color: var(--fg); }
+  .acts .btn-open { margin-left: 8px; min-width: 78px; }
+
+  .foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; height: 44px; padding: 0 12px; border-top: 1px solid var(--line); background: #141414; }
+
+  /* ----- Empty list (first start) ----- */
+  .empty { flex: 1; display: grid; place-items: center; padding: 32px; }
+  .empty-in { max-width: 560px; text-align: center; }
+  .empty-in > .material-symbols-outlined { font-size: 40px; color: var(--fg-3); }
+  .empty h3 { margin: 10px 0 4px; font-size: 16px; }
+  .empty p { margin: 0 0 22px; color: var(--fg-2); }
+  .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: left; }
+  .how div { background: #151515; border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-size: 12.5px; color: var(--fg-2); line-height: 1.45; }
+  .how b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #262626; color: var(--fg); font-size: 12px; margin-bottom: 8px; }
+  .how div:first-child b { background: var(--lime); color: #142000; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+
+    <main class="tab">
+      <header class="head">
+        <div class="brand">
+          <div class="brand-mark"><span class="material-symbols-outlined fill">sports_tennis</span></div>
+          <div><div class="brand-title">TENNIS RECORD</div><div class="brand-sub">TENNIS VIDEO EDITING SUITE</div></div>
+        </div>
+        <button class="btn btn-lime" data-act="import" title="Select a match video and create a new project">
+          <span class="material-symbols-outlined">add</span>Import new match
+        </button>
+      </header>
+
+      <section id="current"></section>
+
+      <section class="recent">
+        <div class="sec-head"><h2>Recent projects</h2><span class="hint">Double-click a row to open the project</span></div>
+        <div class="table" id="table"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="note-callout" id="note">
+  <button onclick="this.parentElement.hidden = true" aria-label="Close">✕</button>
+  <b>Option A · Focused list.</b> Only "Import new match" is lime. "Open" is a secondary button.
+  The open project has a lime bar in the list. Point to a missing-video row or a disabled button to see the tooltip.
+  Try Open, Rename, Delete, Import and the pages.
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { esc, pathHtml, fig, scoredBar, TIPS } = Mock;
+  Mock.shell('a');
+
+  function currentHtml(p) {
+    if (!p) {
+      return `<div class="cur none"><span class="rail"></span><div class="ico"><span class="material-symbols-outlined">folder_open</span></div>
+        <div><div class="caption">Current project</div><div class="cur-name">No open project</div>
+        <div class="faint">Import a new match, or open a project from the list below.</div></div></div>`;
+    }
+    return `<div class="cur"><span class="rail"></span><div class="ico"><span class="material-symbols-outlined fill">sports_tennis</span></div>
+      <div style="min-width:0"><div class="caption">Current project</div>
+        <div class="cur-name"><span class="t">${esc(p.name)}</span></div>${pathHtml(p)}</div>
+      <button class="btn btn-ghost" data-act="rename" data-id="${p.id}" title="${TIPS.rename}"><span class="material-symbols-outlined">edit</span>Rename</button></div>`;
+  }
+
+  function rowHtml(p) {
+    const cur = Mock.isCurrent(p);
+    const cls = ['row', cur ? 'is-current' : '', p.missing ? 'is-missing' : ''].join(' ');
+    const dash = (v) => (v === '—' ? ' dash' : '');
+    const favZero = p.fav === 0 ? ' zero' : '';
+    return `<div class="${cls}" data-row="${p.id}">
+      <div style="min-width:0">
+        <div class="name"><span class="t">${esc(p.name)}</span>${cur ? '<span class="tag">OPEN</span>' : ''}</div>
+        ${pathHtml(p)}
+      </div>
+      <div class="r cell-num num${dash(p.duration)}">${fig(p, 'duration', 46)}</div>
+      <div class="r cell-num num${dash(p.size)}">${fig(p, 'size', 56)}</div>
+      <div class="scored"><span class="cell-num num">${fig(p, 'scored', 44)}</span>${scoredBar(p)}</div>
+      <div class="r cell-num num"><span class="fav${favZero}"><span class="material-symbols-outlined fill">star</span>${fig(p, 'fav', 18)}</span></div>
+      <div class="acts">
+        <button class="btn btn-ghost btn-icon btn-sm" data-act="rename" data-id="${p.id}" title="${TIPS.rename}"><span class="material-symbols-outlined">edit</span></button>
+        <button class="btn btn-ghost btn-icon btn-sm" data-act="delete" data-id="${p.id}" ${cur ? 'disabled' : ''} title="${cur ? TIPS.delDisabled : TIPS.del}"><span class="material-symbols-outlined">delete</span></button>
+        <button class="btn btn-sm btn-open" data-act="open" data-id="${p.id}" title="${TIPS.open}">Open<span class="material-symbols-outlined">arrow_forward</span></button>
+      </div>
+    </div>`;
+  }
+
+  Mock.on((s) => {
+    document.getElementById('current').innerHTML = currentHtml(Mock.current());
+    const table = document.getElementById('table');
+    const list = Mock.visible();
+    document.querySelector('.sec-head .hint').hidden = list.length === 0;
+    if (list.length === 0) {
+      table.innerHTML = `<div class="empty"><div class="empty-in">
+        <span class="material-symbols-outlined">video_library</span>
+        <h3>No projects yet</h3>
+        <p>Click "Import new match" to create one.</p>
+        <div class="how">
+          <div><b>1</b>Import a match video. Use the button at the top right.</div>
+          <div><b>2</b>Check the project name and the video. Then create the project.</div>
+          <div><b>3</b>The project opens in the Points tab. Mark the points there.</div>
+        </div></div></div>`;
+      return;
+    }
+    const pages = Mock.totalPages();
+    table.innerHTML =
+      `<div class="cols"><span>Project</span><span class="r">Duration</span><span class="r">Size</span><span class="r">Scored</span><span class="r">Favorites</span><span></span></div>
+       <div class="rows scroll">${list.map(rowHtml).join('')}</div>` +
+      (pages > 1
+        ? `<div class="foot"><div class="pager">
+            <button class="btn btn-sm" data-act="prev" ${s.page <= 1 ? 'disabled' : ''}><span class="material-symbols-outlined">chevron_left</span>Prev</button>
+            <span class="lbl num">Page ${s.page} / ${pages}</span>
+            <button class="btn btn-sm" data-act="next" ${s.page >= pages ? 'disabled' : ''}>Next<span class="material-symbols-outlined">chevron_right</span></button>
+          </div></div>`
+        : '');
+  });
+  Mock.start();
+</script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scoring Tab Redesign</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 740px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  ol.problems, ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; color: var(--fg); }
+  ol.problems li, ul.plain li { margin-bottom: 4px; }
+
+  .flow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 14px; font-size: 13px; }
+  .flow .st { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); }
+  .flow .st b { color: var(--lime); }
+  .flow .arrow { color: var(--fg-3); }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: block; margin-bottom: 4px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+
+  .options { display: grid; gap: 12px; }
+  .option {
+    display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit;
+  }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+  /* Small layout sketches of each option */
+  .sketch { display: grid; gap: 3px; height: 92px; margin: 2px 0 12px; max-width: 300px; font-size: 9px; color: var(--fg-3); }
+  .sketch div { border-radius: 3px; background: #262626; display: grid; place-items: center; text-align: center; line-height: 1.2; }
+  .sketch .v { background: #1d2b36; color: #8fb5d4; }
+  .sketch .k { background: #2d3320; color: var(--lime); }
+  .sketch.a { grid-template-columns: 1fr 70px; grid-template-rows: 1fr 12px 28px; }
+  .sketch.a .l { grid-row: 1 / 4; grid-column: 2; }
+  .sketch.b { grid-template-columns: 70px 1fr; grid-template-rows: 1fr 12px 28px; }
+  .sketch.b .l { grid-row: 1 / 4; grid-column: 1; }
+  .sketch.b .d { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 3px; background: none; }
+  .sketch.c { grid-template-columns: 1fr 76px; grid-template-rows: 1fr 12px; }
+  .sketch.c .l { grid-row: 1 / 3; grid-column: 2; display: grid; grid-template-rows: 40px 1fr; gap: 3px; background: none; }
+  .sketch.b .d, .sketch.c .l { place-items: stretch; }
+  .sketch.b .d > div, .sketch.c .l > div { display: grid; place-items: center; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td { color: var(--fg-2); }
+  .yes { color: var(--green); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  .confirm { border: 1px dashed var(--yellow); border-radius: 8px; padding: 12px 16px; background: rgba(242, 214, 75, .05); }
+  .confirm b.warn { display: block; margin-bottom: 6px; }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Scoring tab — redesign proposals</h1>
+  <p class="lede">
+    This folder has one main proposal and two alternatives for the Scoring tab.
+    Each mockup is an HTML page with the app sidebar, a frame of the sample video with the scoreboard preview, and 128 points.
+    The first 44 points have a score. The mockups work: use the keys Q, W, E, R, Shift+R, A, S, F, Space, the arrow keys, and click the buttons and the list.
+    Use the switches at the top of each page to see manual scoring, the serve marks and the first-visit balloon.
+  </p>
+  <div class="scope">✓ Cosmetic changes only. No feature is added or removed.</div>
+
+  <a class="option main" href="final.html" style="margin-top:24px">
+    <div>
+      <div class="option-head"><h3>Final design</h3><span class="badge">Selected</span></div>
+      <div class="sketch c"><div class="v">video</div><div>playback bar</div><div class="l"><div class="k">score panel</div><div>list</div></div></div>
+      <p>The final design uses option C as the base, with these changes from the review:</p>
+      <ul>
+        <li>Playback bar: the current time goes away. The scrub times count from the point start ("0:00.0" to "0:07.6").</li>
+        <li>Playback bar: the speed is at the left end. The frame step toggle stays at the right end.</li>
+        <li>Score panel: the top row is "Previous [⇧R]", "Point x / y" with the star, and "Next [R]". Next is lime when the point has a score.</li>
+        <li>Score panel: the Next point button at the bottom goes away. The hint labels for the S and A keys go away. The tooltips keep the keys.</li>
+        <li>Manual scoring: sets and games have a "+" toggle button instead of the icon tags. Points also get a "+" button. It records the point for that player, the same as Q and E.</li>
+        <li>The score column caption "Pts" becomes "Points".</li>
+        <li>Points list: rows are 40 px high. The "Won by" column goes away; the color strip shows the winner. A "Go to point" button (icon only) shows on hover, to the left of the star. It opens the Points tab and selects that point there. In the mockup, it opens the Points final mockup at that point.</li>
+      </ul>
+      <span class="open">Open the final design →</span>
+    </div>
+    <dl class="side">
+      <dt>Swing effort</dt><dd>Medium. A new score panel component in the side column. The bottom panel goes away. <code>VideoSyncPanel</code> splits into the speed part and the frame step toggle. "Go to point" needs a call that opens the Points tab at a point, like <code>SwingScoringPanel.selectPoint</code> that the Stats tab uses.</dd>
+    </dl>
+  </a>
+
+  <h2>The scoring flow</h2>
+  <div class="flow">
+    <span class="st"><b>1</b> Watch the point <kbd>Space</kbd></span><span class="arrow">→</span>
+    <span class="st"><b>2</b> Choose who won <kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd></span><span class="arrow">→</span>
+    <span class="st"><b>3</b> Go to the next point <kbd>R</kbd></span>
+    <span class="st faint">Sometimes: mark the server <kbd>S</kbd>, favorite <kbd>A</kbd></span>
+  </div>
+  <p class="lede">All three options put steps 2 and 3 next to each other. The next step has the lime outline, as in the Points final design.</p>
+
+  <h2>Problems in the current tab</h2>
+  <ol class="problems">
+    <li><b>The flow is split over the screen.</b> "Point for Player 1" is at the bottom left, "No point" is in the center, "Point for Player 2" is at the bottom right. "Next Point" is at the bottom of the list, in the other corner of the window.</li>
+    <li><b>The score is split.</b> The POINTS values are in the header rows. GAMES and SETS are two cards for each player, at the left and at the right edge. To read "5–1, 15–0" you must look at four places.</li>
+    <li><b>Two scores without captions.</b> The scoreboard on the video shows the score before the point. The bottom panel shows the score after the point. Nothing tells the user about this difference.</li>
+    <li><b>Markers look like buttons.</b> In automatic scoring, "Game Won" and "Set Won" look like buttons, but a click does nothing. Only the cursor and the tooltip show the difference from manual scoring.</li>
+    <li><b>The serve button is hard to find.</b> It is a small racket icon without text next to the point button. Its three states differ only by the color and a lime border.</li>
+    <li><b>The list rows are busy.</b> A row has the outcome strip, a check or an empty ring, a serve racket, a GAME or SET badge and a star. The check repeats the strip. The row does not say who won.</li>
+    <li><b>The footer mixes two kinds of actions.</b> Next Point, Previous Point, Scoring Settings and Scoreboard Style are four full-width buttons with the same style.</li>
+    <li><b>Long key text.</b> "Point for Player 1 [Q]", "Previous Point [Shift+R]", "-5s [shift+←]", "Seek frame-by-frame [F]" and the "Up / Down speed" label use text for the keys.</li>
+    <li><b>Small captions.</b> "Point segment" is 9 px. "0 Total", "0 Scored" and "0 Fav" are small pills with abbreviations.</li>
+    <li><b>Different from the Points tab.</b> The Points final design has the list on the right and the key chips on the buttons. The Scoring tab has the list on the left and no key chips.</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="principles">
+    <div class="principle"><b>One score, one place</b><span>Sets, games and points of both players are in one table, with a caption that says "after the point".</span></div>
+    <div class="principle"><b>Decide, then go on</b><span>Who won and Next point are next to each other. Unscored point: the outcome buttons have the lime outline. Scored point: Next point is lime.</span></div>
+    <div class="principle"><b>States look like states</b><span>In automatic scoring, "Game" and "Set" are tags that show only when this point won them. In manual scoring, they are dashed toggle buttons.</span></div>
+    <div class="principle"><b>Serve in words</b><span>The serve button says "Serves" for the server. A pin shows a mark on this point.</span></div>
+    <div class="principle"><b>Same parts as Points</b><span>Key chips, the playback bar with SPACE under the play button, the list header and the count line come from the Points final design.</span></div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="options">
+    <a class="option main" href="option-a.html">
+      <div>
+        <div class="option-head"><h3>A · Score desk</h3><span class="badge">Recommended</span></div>
+        <div class="sketch a"><div class="v">video</div><div>point bar</div><div class="k">score · who won · next</div><div class="l">list</div></div>
+        <p>The list moves to the right, as in the Points final design. Under the video are the point bar and the score desk. The desk reads from left to right: the score, who won, the next point.</p>
+        <ul>
+          <li>The score table has one row for each player: color, name, serve button, sets, games and points.</li>
+          <li>The outcome buttons are in line with the player rows: Alex [Q] in the Alex row, Sam [E] in the Sam row, No point [W] below them.</li>
+          <li>Next point [R] is a tall button at the right. Previous [Shift+R] is a small button below it.</li>
+          <li>The point bar has the scrub bar with "Point start" and "Point end", the current time, the transport, the speed and the frame step toggle.</li>
+          <li>The current point ("Point 45 of 128") and its star are in the desk header.</li>
+          <li>The list has the columns #, Start, Length, Won by, marks and ★. Scoring settings and Scoreboard style are two buttons at the bottom of the list.</li>
+        </ul>
+        <span class="open">Open option A →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>A fast keyboard flow. The eyes stay under the video.</dd>
+        <dt>Swing effort</dt><dd>Medium. A new desk layout replaces <code>ScoringControlsPanel</code>. <code>LeftListPanel</code> moves to the east side and loses Next and Previous. <code>PointsListPanel</code> gets fixed columns.</dd>
+        <dt>Risk</dt><dd>Low. The point bar and the desk are a little higher than the current scrub bar and bottom panel, so the video is a little smaller. The component names of the UI tests can stay.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-b.html">
+      <div>
+        <div class="option-head"><h3>B · Player sides</h3><span class="badge alt">Alternative</span></div>
+        <div class="sketch b"><div class="l">list</div><div class="v">video</div><div>point bar</div><div class="d"><div class="k">player 1</div><div class="k">next</div><div class="k">player 2</div></div></div>
+        <p>The structure of the current tab stays: the list on the left, player 1 on the left and player 2 on the right. Each player gets one card.</p>
+        <ul>
+          <li>A player card has the name, the serve button, three tiles (Sets, Games, Points) and a large "Point for …" button.</li>
+          <li>The keys match the sides: Q on the left, W in the center, E on the right.</li>
+          <li>The center column has the current point, No point [W], Next point [R] and Previous [Shift+R].</li>
+          <li>The transport, the speed and the frame step toggle move from the bottom panel to the point bar.</li>
+        </ul>
+        <span class="open">Open option B →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users of the current tab. Mouse users.</dd>
+        <dt>Swing effort</dt><dd>Low. <code>PlayerControls</code> puts the header and the stats in one card. <code>VideoSyncPanel</code> moves up to the scrub bar.</dd>
+        <dt>Risk</dt><dd>Medium. The score of the two players is still far apart. The list is narrower (330 px).</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-c.html">
+      <div>
+        <div class="option-head"><h3>C · Score panel</h3><span class="badge alt">Alternative</span></div>
+        <div class="sketch c"><div class="v">video</div><div>playback bar</div><div class="l"><div class="k">score panel</div><div>list</div></div></div>
+        <p>The same structure as the Points final design. A "Point N of 128" panel at the top of the side column holds all scoring controls. Under the video is only the playback bar.</p>
+        <ul>
+          <li>The panel has Previous and Next arrows with key chips, the point time and length, and the star.</li>
+          <li>A small score table shows the two players with the serve button, sets, games and points.</li>
+          <li>Three outcome buttons in one row: Alex [Q], No point [W], Sam [E]. A full-width Next point [R] is below them.</li>
+          <li>The video uses all the height above the playback bar.</li>
+        </ul>
+        <span class="open">Open option C →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>The same layout in the Points and the Scoring tabs. A large video.</dd>
+        <dt>Swing effort</dt><dd>Medium. A new panel component in the side column. The bottom panel goes away.</dd>
+        <dt>Risk</dt><dd>Medium. The panel uses about 300 px of the side column, so the list shows fewer rows. The score values are smaller.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Feature check</h2>
+  <p class="lede" style="margin-bottom:12px">All options keep each feature of the current tab. The table shows where each feature is.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature</th><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody>
+        <tr><td>Video preview with the Colors and Transform adjustments</td><td class="yes">Same</td><td class="yes">Same</td><td class="yes">Same</td></tr>
+        <tr><td>Scoreboard preview on the video (score before the point), live preview from the Scoreboard style dialog</td><td class="yes">Same</td><td class="yes">Same</td><td class="yes">Same</td></tr>
+        <tr><td>Scrub bar inside the point: start and end time, click and drag to seek, seek pauses</td><td class="yes">Point bar</td><td class="yes">Point bar</td><td class="yes">Playback bar</td></tr>
+        <tr><td>Playback stays inside the point, pauses at the end, Play at the end restarts the point</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Play / Pause [Space], −5s, −1s, +1s, +5s with the keys</td><td class="yes">Point bar, center</td><td class="yes">Point bar, center</td><td class="yes">Playback bar, center</td></tr>
+        <tr><td>Speed 2×, 1.5×, 1.25×, 1×, 0.5× with Up and Down</td><td class="yes">Point bar, right</td><td class="yes">Point bar, right</td><td class="yes">Playback bar, right</td></tr>
+        <tr><td>Seek frame-by-frame [F]</td><td class="yes">Toggle button</td><td class="yes">Toggle button</td><td class="yes">Toggle button</td></tr>
+        <tr><td>Point for player 1 [Q], No point [W], Point for player 2 [E]; the recorded outcome in the player color</td><td class="yes">Column next to the score</td><td class="yes">Player cards + center</td><td class="yes">One row in the panel</td></tr>
+        <tr><td>Points (0, 15, 30, 40, Ad, tiebreak numbers), games and sets of each player</td><td class="yes">Score table</td><td class="yes">Tiles in the cards</td><td class="yes">Small score table</td></tr>
+        <tr><td>Game won and Set won markers; toggle buttons in manual scoring</td><td class="yes">Tags next to the values</td><td class="yes">Tags in the tiles</td><td class="yes">Icon tags</td></tr>
+        <tr><td>Serve button of each player: not serving, serves, serves and marked; switch the server [S]</td><td class="yes">"Serves" pill</td><td class="yes">"Serves" pill</td><td class="yes">Icon pill</td></tr>
+        <tr><td>Current point "Point N / total" with the favorite button [A]</td><td class="yes">Desk header</td><td class="yes">Center column</td><td class="yes">Panel header</td></tr>
+        <tr><td>Next point [R] with autoplay; Previous point [Shift+R]; disabled at the ends</td><td class="yes">Desk, right</td><td class="yes">Center column</td><td class="yes">Panel</td></tr>
+        <tr><td>Counts: total, scored, favorites</td><td class="yes">Count line + bar</td><td class="yes">Count line + bar</td><td class="yes">Count line + bar</td></tr>
+        <tr><td>Points list: number, label, start, length, outcome color, serve mark, GAME and SET badges with tooltips, favorite star</td><td class="yes">Table</td><td class="yes">Table</td><td class="yes">Table</td></tr>
+        <tr><td>Scored and unscored state of each row, with the tooltip "Not scored. Choose who won this point"</td><td class="yes">Won by: name or "—"</td><td class="yes">Won by: name or "—"</td><td class="yes">Won by: name or "—"</td></tr>
+        <tr><td>A click on a row selects the point. The list follows Next and Previous.</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Empty list text "No points yet. Open the Points tab and add point markers."</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Scoring settings dialog, opened on the first visit, and the balloon at its button</td><td class="yes">List footer</td><td class="yes">List footer</td><td class="yes">List footer</td></tr>
+        <tr><td>Scoreboard style dialog</td><td class="yes">List footer</td><td class="yes">List footer</td><td class="yes">List footer</td></tr>
+        <tr><td>Autosave</td><td class="yes">Unchanged</td><td class="yes">Unchanged</td><td class="yes">Unchanged</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Please confirm</h2>
+  <div class="confirm">
+    <b class="warn">These changes show more of the current data. They add no function, but you can remove them.</b>
+    <ul class="plain">
+      <li>The point bar shows the current time and the position in the point ("0:04.2 of 0:07.3 in the point"). Now the scrub bar shows only the start and the end.</li>
+      <li>The list shows the winner name in a "Won by" column. Now only the color strip shows it.</li>
+      <li>The list shows the length with one decimal ("7.3 s"). Now it shows whole seconds ("7s").</li>
+      <li>A thin bar shows the scored points of all points. The app calculates it from the current counts.</li>
+      <li>The desk caption says "Score after this point". Option C also shows the start time and the length of the point in the panel header.</li>
+      <li>The leading player's points value is lime.</li>
+    </ul>
+  </div>
+
+  <h2>Text changes</h2>
+  <ul class="plain">
+    <li>"Played Points" becomes "Points". "0 Total", "0 Scored", "0 Fav" become "44 of 128 scored" and "43 favorites".</li>
+    <li>"Point for Player 1 [Q]" becomes the player name with a key chip "Q" (A, C) or "Point for Alex" with a key chip (B). The tooltip "Q — Point for Alex" stays.</li>
+    <li>"No point [W]" becomes "No point" with a key chip "W".</li>
+    <li>"Next Point [R]" becomes "Next point" with a key chip "R". "Previous Point [Shift+R]" becomes "Previous" with the key chips "⇧" and "R".</li>
+    <li>"Game Won" and "Set Won" become "Game" and "Set" (A), "Game won" and "Set won" (B), or icons (C).</li>
+    <li>The serve button gets the text "Serves" for the server. The tooltips stay the same.</li>
+    <li>"Point segment" goes away. The scrub bar gets the captions "Point start" and "Point end".</li>
+    <li>"-5s [shift+←]" and the other seek labels become "−5s" with key chips. "Seek frame-by-frame [F]" becomes "Frame step" with a key chip. "Up / Down speed" becomes "Speed" with the key chips ↑ and ↓. The tooltips stay the same.</li>
+    <li>"Scoring Settings" and "Scoreboard Style" become "Scoring settings" and "Scoreboard style".</li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li>The colors come from <code>UiStyles</code> and <code>PlayerControls</code>: <code>DARK_BG</code>, <code>CARD_BG</code>, <code>LIME</code>, <code>YELLOW</code>, the default player colors <code>#4DA3FF</code> and <code>#FF6B6B</code>, and <code>SERVE_BUTTON_COLOR</code>.</li>
+    <li>The score comes from a port of <code>ScoringEngine.timeline</code> with the default rules: best of 3 sets, 6 games, tiebreak at 6–6 to 7 points, advantage. The serve logic and the manual marks follow the same rules.</li>
+    <li>The scoreboard on the video is a simple drawing of the Broadcast style. The mpv player paints the real scoreboard. It is the export preview, not a Swing control.</li>
+    <li>The Scoring settings and Scoreboard style buttons open a stub. The dialogs are not part of this proposal.</li>
+    <li><code>frame.jpg</code> is the same frame as in <code>design/points-redesign</code>. The points are the same as in the Points mockups. The outcomes are generated.</li>
+    <li>The mockups use the Material Symbols font from Google Fonts for the icons. Without internet access, the icons show as words.</li>
+    <li>Add <code>#scoring=manual&amp;serve=marked&amp;hint=on&amp;point=31</code> to a page URL to open it in a given state. Add <code>points=none</code> to see the empty list.</li>
+  </ul>
+</div>
+</body>
+</html>

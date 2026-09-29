@@ -66,7 +66,7 @@ internal class ExportScreen(application: ApplicationScreen) : UserFlowScreen(app
         context.dialogs.script(DialogOutcome.RealModal)
         context.driver.click("export-initialize")
         application.eventually("render initialized dialog to be dismissed") {
-            context.driver.dismissDialog("Info", "OK")
+            context.driver.dismissDialog("Export started", "OK")
         }
     }
 

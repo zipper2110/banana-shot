@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects Tab Redesign</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 740px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  ol.problems, ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; color: var(--fg); }
+  ol.problems li, ul.plain li { margin-bottom: 4px; }
+  .muted { font-size: 12.5px; }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: block; margin-bottom: 4px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+
+  .options { display: grid; gap: 12px; }
+  .option {
+    display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit;
+  }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td { color: var(--fg-2); }
+  .yes { color: var(--green); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  .confirm { border: 1px dashed var(--yellow); border-radius: 8px; padding: 12px 16px; background: rgba(242, 214, 75, .05); line-height: 1.6; }
+  .confirm b.warn { display: block; margin-bottom: 6px; color: var(--yellow); }
+  .links a { color: var(--sage); }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Projects tab — redesign proposals</h1>
+  <p class="lede">
+    This folder has one main proposal and two alternatives for the Projects tab.
+    Each mockup is an HTML page with the app sidebar, the real texts and 23 sample projects on three pages.
+    The mockups work: open, rename and delete projects, import a new match, and go to the next page.
+    Use the "Mockup state" switch at the top of each page to see an open project, no open project, the first start and the loading figures.
+  </p>
+  <div class="scope">✓ Cosmetic changes only. No feature is added or removed.</div>
+
+  <a class="option main" href="final.html" style="margin-top:24px">
+    <div>
+      <div class="option-head"><h3>Final design</h3><span class="badge">Selected</span></div>
+      <p>The final design uses option C as the base, with these changes from the review:</p>
+      <ul>
+        <li>The New project block shows the full workflow from the Overview help page in short steps: Import a match video, Mark the points, Score each point, Review the statistics, Export the video. The optional step "Tune the image at any time" is last. Each step shows the tab where the user does it.</li>
+        <li>The save note at the bottom says: "The app saves all changes automatically across all tabs. No need to save anything manually."</li>
+        <li>The logo is the current app mark. The mockup uses <code>design/app-icon/app-mark.svg</code>. The app keeps <code>AnimatedAppMark</code>.</li>
+        <li>The Video column shows one label with the absolute path, folder first. A long path loses the start of the folder, so the file name stays visible. The tooltip shows the full path.</li>
+        <li>The current project card also shows the absolute path as one label, on as many lines as necessary.</li>
+      </ul>
+      <span class="open">Open the final design →</span>
+    </div>
+    <dl class="side">
+      <dt>Swing effort</dt><dd>Medium. A new left panel with <code>ProjectsHeader</code>, the current project card and the workflow list. The path cell needs a label that paints "…" and the end of the text.</dd>
+      <dt>Other texts for the save note</dt>
+      <dd>1. "The app saves all changes automatically in all tabs. You do not need to save."</dd>
+      <dd>2. "All changes save automatically. The app never changes the source video."</dd>
+      <dd>3. "Autosave is on in all tabs. The source video stays unchanged."</dd>
+    </dl>
+  </a>
+
+  <h2>Problems in the current tab</h2>
+  <ol class="problems">
+    <li><b>Too many primary buttons.</b> Each row has a lime "Open Project" button. A full page shows ten lime buttons, and they compete with "IMPORT NEW MATCH".</li>
+    <li><b>The open project has no mark in the list.</b> The open project shows in the "Current Project" card and again as a normal row in the list. Only the disabled delete button tells which row it is.</li>
+    <li><b>Much empty space above the list.</b> Two 30 px gaps and two large green section labels push the list down. The screen shows fewer rows than it can.</li>
+    <li><b>The file name is at the end of a long path.</b> The second line of a row is the full video path. On a narrow window, the file name is cut first.</li>
+    <li><b>The figures are hard to scan.</b> The figure columns are centered. "Scored" shows "96/128" without a sign that it is a progress value.</li>
+    <li><b>A missing video is easy to miss.</b> Only a small red icon with a tooltip shows it. The row has the same lime "Open Project" button as the other rows.</li>
+    <li><b>The pager is far from the list.</b> "Prev", "Page 1 / 3" and "Next" are at the bottom left, below the scroll area.</li>
+    <li><b>Weak empty states and mixed names.</b> "No open project" and "No projects yet" are single gray lines. The text says "open from Existing Projects", but the section name is "Recent Match Projects". The buttons mix "IMPORT NEW MATCH" and "Open Project".</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="principles">
+    <div class="principle"><b>One primary action</b><span>Only "Import new match" has the lime fill. "Open" is a secondary button with a lime arrow.</span></div>
+    <div class="principle"><b>Show what is open</b><span>The open project has a lime mark in the current project area and in the list at the same time.</span></div>
+    <div class="principle"><b>File name first</b><span>The path shows the file name in green and the folder in gray, as on the Export tab. The tooltip keeps the full path.</span></div>
+    <div class="principle"><b>Numbers right-aligned</b><span>The figures use tabular digits and align on the right. "Scored" gets a thin progress bar.</span></div>
+    <div class="principle"><b>Problems visible</b><span>A missing video shows "Video not found" in red and a red row mark. The tooltip text stays the same.</span></div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="options">
+    <a class="option main" href="option-a.html">
+      <div>
+        <div class="option-head"><h3>A · Focused list</h3><span class="badge">Recommended</span></div>
+        <p>The structure stays the same: header, current project, recent projects. The gaps are smaller, the current project is a clear card, and the list is a real table with the pager at its bottom.</p>
+        <ul>
+          <li>The header is one row: the logo and the title on the left, "Import new match" on the right.</li>
+          <li>The current project card has a lime rail, a "CURRENT PROJECT" caption, the name, the file and the folder, and a "Rename" button.</li>
+          <li>The table has the columns Project, Duration, Size, Scored and Favorites. The figures align on the right.</li>
+          <li>Each row has two lines: the name, and the file with its folder. The open project has a lime bar and an "OPEN" tag.</li>
+          <li>Rename and Delete are gray icon buttons. They get brighter on hover. "Open" is a secondary button.</li>
+          <li>The pager is in the table footer. It shows only when the list has more than one page.</li>
+          <li>The first start shows three short steps: import, check the name, mark the points.</li>
+        </ul>
+        <span class="open">Open option A →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>A clear tab with the smallest change to the current structure.</dd>
+        <dt>Swing effort</dt><dd>Low. Change <code>ProjectCard</code> (two-line name cell, secondary Open button), the alignment in <code>ProjectsTableColumns</code>, and the gaps in <code>SwingProjectsPanel</code>. New parts: a scored bar and a table footer for <code>ProjectsPaginationBar</code>.</dd>
+        <dt>Risk</dt><dd>Low. The component names of the UI tests can stay the same.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-b.html">
+      <div>
+        <div class="option-head"><h3>B · Project tiles</h3><span class="badge alt">Alternative</span></div>
+        <p>The recent projects are tiles in a grid. A page of ten projects is two rows of five tiles. The current project is a slim bar below the header.</p>
+        <ul>
+          <li>Each tile shows the name, the file name and a 2 × 2 block of figures with captions.</li>
+          <li>Rename and Delete are icons at the top right of the tile. "Open project" is a full-width button at the bottom.</li>
+          <li>The tile of the open project has a lime border and an "OPEN" tag. A missing video gives the tile a red top edge.</li>
+          <li>The pager is at the right of the "Recent projects" heading.</li>
+        </ul>
+        <span class="open">Open option B →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users with few projects who look for a project by its name.</dd>
+        <dt>Swing effort</dt><dd>Medium. A new tile component and a grid that changes the column count with the window width.</dd>
+        <dt>Risk</dt><dd>Medium. It is harder to compare the figures of many projects. The tiles show only the file name; the folder is in the tooltip. The UI tests of the table header must change.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-c.html">
+      <div>
+        <div class="option-head"><h3>C · Start panel and list</h3><span class="badge alt">Alternative</span></div>
+        <p>A fixed panel on the left holds the logo, the current project and a "New project" block with "Import new match". The right side is a dense list with one line for each project.</p>
+        <ul>
+          <li>The "New project" block shows the three steps of the flow above the button.</li>
+          <li>The current project card shows the full path on two lines, so no text is cut.</li>
+          <li>The list rows are 44 px high. A full page of ten projects fits without a scroll bar.</li>
+          <li>A status icon starts each row: the open project, a missing video, or a normal video.</li>
+          <li>The pager is at the right of the "Recent projects" heading, with arrow buttons.</li>
+        </ul>
+        <span class="open">Open option C →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users with many projects. The list has the most rows and the most space.</dd>
+        <dt>Swing effort</dt><dd>Medium. <code>ProjectsHeader</code> moves into a new left panel. The row becomes one line with a path label that cuts text at the end.</dd>
+        <dt>Risk</dt><dd>Medium. The left panel uses 320 px on each window size. The Import button is lower on the screen than now.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Feature check</h2>
+  <p class="lede" style="margin-bottom:12px">All options keep each feature of the current tab. The table shows where each feature is.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature</th><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody>
+        <tr><td>App logo, "TENNIS RECORD", "TENNIS VIDEO EDITING SUITE"</td><td class="yes">Header</td><td class="yes">Header</td><td class="yes">Left panel</td></tr>
+        <tr><td>Import new match: file picker, then the New project dialog</td><td class="yes">Header, right</td><td class="yes">Header, right</td><td class="yes">New project block</td></tr>
+        <tr><td>New project dialog: name, video, Browse…, errors, Create disabled for wrong values, the name follows a new video</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Current project: name, video path, Rename</td><td class="yes">Card</td><td class="yes">Slim bar</td><td class="yes">Card</td></tr>
+        <tr><td>No open project message</td><td class="yes">Dashed card</td><td class="yes">Dashed bar</td><td class="yes">Dashed card</td></tr>
+        <tr><td>Recent projects: name and video path (or the project file when the project has no video)</td><td class="yes">Two-line row</td><td class="yes">Tile</td><td class="yes">One-line row</td></tr>
+        <tr><td>Duration, Size, Scored (scored / all), Favorites; empty while the figures load</td><td class="yes">Columns</td><td class="yes">2 × 2 block</td><td class="yes">Columns</td></tr>
+        <tr><td>Missing video: red icon with the tooltip</td><td class="yes">Path line + row mark</td><td class="yes">Path line + tile edge</td><td class="yes">Status icon + path line</td></tr>
+        <tr><td>Open project button, and double-click to open</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Rename project (pencil) with the Rename dialog</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Delete project (trash) with the confirmation; disabled for the open project, with the reason</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Pages of ten projects: Prev, "Page 1 / 3", Next; only with more than one page</td><td class="yes">Table footer</td><td class="yes">Heading</td><td class="yes">Heading</td></tr>
+        <tr><td>No projects message</td><td class="yes">Empty state + steps</td><td class="yes">Empty state</td><td class="yes">Empty state</td></tr>
+        <tr><td>Project without a video: the picker "Select Source Video for Project: …"</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Error messages, for example "Cannot open project"</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Open project: Points tab opens, the Match and Video groups and Export show in the sidebar</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Text changes</h2>
+  <ul class="plain">
+    <li>"IMPORT NEW MATCH" becomes "Import new match". <span class="muted">The other main buttons use the same case: "Create project", "Start export".</span></li>
+    <li>"Open Project" becomes "Open" (A, C) or "Open project" (B).</li>
+    <li>"Recent Match Projects" becomes "Recent projects". "Current Project" becomes a small "CURRENT PROJECT" caption.</li>
+    <li>The empty current project text "Use "IMPORT NEW MATCH" or open from Existing Projects" becomes "Import a new match, or open a project from the list below."</li>
+    <li>The empty list text becomes "No projects yet" and "Click "Import new match" to create one." Option A adds three short steps. Option B adds one sentence. Option C adds an arrow text to the New project block.</li>
+    <li>A missing video adds the red text "Video not found". The tooltip "The video is not on the disk anymore." stays.</li>
+    <li>A gray hint next to the heading: "Double-click a row to open the project". <span class="muted">The same text is in the help now.</span></li>
+    <li>The New project dialog gets a step line: "Select the video", "Check the name", "Mark the points".</li>
+    <li>The scored bar has the tooltip "96 of 128 points have a score".</li>
+  </ul>
+
+  <div class="confirm" style="margin-top:20px">
+    <b class="warn">Decision needed: the Delete confirmation</b>
+    The mockups show "Cancel" and a red "Delete project" button. The app now uses the shared <code>SwingUserDialogService.confirm</code> with Yes and No.
+    To get the new buttons, the Projects tab needs its own confirmation dialog, or the shared service needs button labels.
+    If you prefer no change here, the dialog stays with Yes and No.
+  </div>
+
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li>The colors come from <code>UiStyles</code>: <code>DARK_BG</code>, <code>CARD_BG</code>, <code>CARD_BORDER</code>, <code>LIME</code>, <code>GREEN</code> and <code>ACCENT_TEXT</code>.</li>
+    <li>Options A, B and C use a green square with a racket as a stand-in logo. The final design uses the current app mark. The app keeps <code>AnimatedAppMark</code> in all cases.</li>
+    <li>The file picker in the mockups is a fake system dialog. It shows only the order of the steps.</li>
+    <li>After Open, the mockup stays on the Projects tab and shows a note. The app opens the Points tab.</li>
+    <li>The mockups use the Material Symbols font from Google Fonts for the icons. Without internet access, the icons show as words.</li>
+    <li>Add <code>#scenario=none</code>, <code>#scenario=empty</code>, <code>#scenario=loading</code>, <code>#page=2</code> or <code>#dialog=new|rename|delete|error</code> to a page URL to open it in a given state.</li>
+    <li class="links">Earlier designs of this tab: <a href="../projects.html">design/projects.html</a>. Other redesigns: <a href="../export-redesign/final.html">Export</a>, <a href="../points-redesign/final.html">Points</a>.</li>
+  </ul>
+</div>
+</body>
+</html>

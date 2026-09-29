@@ -1,7 +1,7 @@
 package org.litvin.ui.tabs.projects
 
 import org.litvin.ui.commons.FilePicker
-import org.litvin.ui.commons.SwingFilePicker
+import org.litvin.ui.commons.SystemFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.applyDarkScrollbar
@@ -50,7 +50,7 @@ import javax.swing.Scrollable
  */
 class SwingProjectsPanel(
     private val presenter: ProjectsPresenter = DefaultProjectsPresenter(),
-    private val filePicker: FilePicker = SwingFilePicker(),
+    private val filePicker: FilePicker = SystemFilePicker(),
     private val dialogs: UserDialogService = SwingUserDialogService(),
     private val newProjectEditor: NewProjectEditor = NewProjectDialog,
     private val projectNameEditor: ProjectNameEditor = RenameProjectDialog,
@@ -148,7 +148,9 @@ class SwingProjectsPanel(
                 }
             }
             is ProjectsViewEffect.ProjectOpened -> onProjectOpened?.invoke(effect.manifestPath)
-            is ProjectsViewEffect.ShowError -> dialogs.showError(this, effect.message, effect.title)
+            is ProjectsViewEffect.ShowError ->
+                if (effect.warning) dialogs.showWarning(this, effect.message, effect.title)
+                else dialogs.showError(this, effect.message, effect.title)
         }
     }
 

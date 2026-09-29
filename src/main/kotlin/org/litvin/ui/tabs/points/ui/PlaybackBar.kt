@@ -15,6 +15,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import kotlin.math.max
 import org.litvin.ui.commons.PlayButton
+import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SeekButton
 import org.litvin.ui.commons.SpeedControl
@@ -73,7 +74,7 @@ internal class PlaybackBar(
         playButton.alignmentY = CENTER_ALIGNMENT
     }
     val speed = SpeedControl("points-speed", onSpeedIndex)
-    private val commentButton = PointsButton("Add comment", Material2AL.ADD_COMMENT, buttonHeight = 40).apply {
+    private val commentButton = UiButton("Add comment", Material2AL.ADD_COMMENT, buttonHeight = 40).apply {
         name = "points-add-comment"
         toolTipText = "Add a comment at the playhead"
         // Space must stay the play hotkey, so the bar buttons never keep the focus.

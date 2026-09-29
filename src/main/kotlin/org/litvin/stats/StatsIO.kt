@@ -17,15 +17,12 @@ data class StatsSettingsV1(
     val version: Int = 1,
     /** The [MatchStat.key] values of the rows that the video shows. The app ignores unknown keys. */
     val videoStats: List<String> = MatchStat.defaultVideoKeys,
-    /**
-     * A short point lasts this time or less. The default is about 4 shots: the ATP "first strike" range (0-4 shots).
-     * The marks of a 1-shot point last about 3 s, and each more shot adds about 1.5 s.
-     */
+    /** A short point lasts this time or less, from the start mark to the end mark. */
     val shortPointMaxSeconds: Int = DEFAULT_SHORT_POINT_MAX_SECONDS,
-    /** A long point lasts this time or more. The default is about 9 shots: the ATP "extended rally" range (9+ shots). */
+    /** A long point lasts this time or more, from the start mark to the end mark. */
     val longPointMinSeconds: Int = DEFAULT_LONG_POINT_MIN_SECONDS,
-    /** True when the card has a page with the momentum chart. */
-    val videoMomentum: Boolean = true,
+    /** True when the card has a page with the momentum chart. The default card has no chart page. */
+    val videoMomentum: Boolean = false,
     /** How much of the video shows through the card panel, in percent. 0 is a solid panel. */
     val cardTransparencyPercent: Int = DEFAULT_CARD_TRANSPARENCY_PERCENT,
 ) {
@@ -52,8 +49,8 @@ data class StatsSettingsV1(
     }
 
     companion object {
-        const val DEFAULT_SHORT_POINT_MAX_SECONDS = 7
-        const val DEFAULT_LONG_POINT_MIN_SECONDS = 15
+        const val DEFAULT_SHORT_POINT_MAX_SECONDS = 10
+        const val DEFAULT_LONG_POINT_MIN_SECONDS = 13
         const val MIN_POINT_LIMIT_SECONDS = 1
         const val MAX_POINT_LIMIT_SECONDS = 120
         const val DEFAULT_CARD_TRANSPARENCY_PERCENT = 18

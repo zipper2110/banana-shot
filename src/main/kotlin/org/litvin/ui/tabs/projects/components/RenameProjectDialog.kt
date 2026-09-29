@@ -1,15 +1,13 @@
 package org.litvin.ui.tabs.projects.components
 
 import org.litvin.projects.NewProjectRules
+import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.UiButton
 import java.awt.Component
 import java.awt.Dialog
 import java.awt.Window
-import java.awt.event.ActionEvent
-import javax.swing.AbstractAction
-import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JTextField
-import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -41,8 +39,8 @@ class RenameProjectDialog private constructor(
     private var result: String? = null
 
     private val nameField = JTextField(currentName, 36).apply { name = "rename-project-name" }
-    private val nameError = ProjectsDialogKit.errorLine("rename-project-name-error")
-    private val renameButton = ProjectsButton("Rename", kind = ProjectsButton.Kind.LIME, buttonHeight = 30, fontSize = 12.5f).apply {
+    private val nameError = DialogKit.errorLine("rename-project-name-error")
+    private val renameButton = UiButton("Rename", kind = UiButton.Kind.LIME).apply {
         name = "rename-project-save"
         addActionListener { rename() }
     }
@@ -51,25 +49,23 @@ class RenameProjectDialog private constructor(
         name = "rename-project-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
-        val cancelButton = ProjectsButton("Cancel").apply {
+        val cancelButton = UiButton("Cancel").apply {
             name = "rename-project-cancel"
             addActionListener { dispose() }
         }
 
-        contentPane = ProjectsDialogKit.content(
-            ProjectsDialogKit.NARROW,
-            ProjectsDialogKit.head("Rename project"),
-            ProjectsDialogKit.form(
-                ProjectsDialogKit.field("Project name", ProjectsDialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
+        contentPane = DialogKit.content(
+            DialogKit.SMALL,
+            DialogKit.head("Rename project"),
+            DialogKit.form(
+                DialogKit.field("Project name", DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
                 nameError,
+                gap = 6,
             ),
-            ProjectsDialogKit.footer(cancelButton, renameButton),
+            DialogKit.footer(right = listOf(cancelButton, renameButton)),
         )
         rootPane.defaultButton = renameButton
-        rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "rename-project-cancel")
-        rootPane.actionMap.put("rename-project-cancel", object : AbstractAction() {
-            override fun actionPerformed(event: ActionEvent?) = dispose()
-        })
+        DialogKit.onEscape(this) { dispose() }
 
         nameField.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent?) { validateName() }

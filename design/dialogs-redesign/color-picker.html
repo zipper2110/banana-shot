@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Picker Dialog</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .opener { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 10; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main id="tab" style="position:relative"></main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Color picker.</b> One dark dialog in place of the Swing JColorChooser. Three buttons open it:
+  the player colors (Scoring settings), the accent color (Scoreboard style) and the comment color (Points).
+  It keeps all parts of JColorChooser: the swatches, the recent colors, the HSV, HSL, RGB and CMYK values, the hex code,
+  the preview of the current and the new color, and Reset. Click "Current" to use the current color again.
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const { icon } = Mock;
+  const OPENERS = {
+    player: { tab: 'Scoring', title: 'Player 1 color', color: '#4DA3FF' },
+    accent: { tab: 'Scoring', title: 'Choose accent color', color: '#C4FF4D' },
+    comment: { tab: 'Points', title: 'Choose comment color', color: '#FFC107' },
+  };
+  Mock.shell('color', {
+    tab: 'Scoring',
+    states: [
+      { label: 'Opened from', group: 'from', options: [['player', 'Player color'], ['accent', 'Accent color'], ['comment', 'Comment color']] },
+      { label: 'View', group: 'view', options: [['swatches', 'Swatches'], ['custom', 'Custom']] },
+    ],
+  });
+  Mock.behind(document.getElementById('tab'));
+  const opener = document.createElement('button');
+  opener.className = 'btn opener';
+  document.getElementById('tab').appendChild(opener);
+
+  function open() {
+    document.querySelectorAll('.modal-back').forEach((b) => b.remove());
+    const o = OPENERS[Mock.state.from || 'player'];
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('active', n.dataset.nav === o.tab));
+    opener.innerHTML = `<span class="swatch" style="background:${o.color}"></span>${o.title}…`;
+    Mock.colorPicker({ title: o.title, color: o.color, tab: Mock.state.view || 'swatches', onOk: (hex) => { o.color = hex; opener.innerHTML = `<span class="swatch" style="background:${hex}"></span>${o.title}…`; Mock.toast(`New color: ${hex}`); } });
+  }
+  opener.onclick = open;
+  Mock.onState(open);
+  Mock.state.from = Mock.hash.get('from') || 'player';
+  Mock.setState('view', Mock.hash.get('view') || 'swatches');
+  document.querySelectorAll('.mock-states[data-group="from"] button').forEach((b) => b.classList.toggle('is-selected', b.dataset.v === Mock.state.from));
+})();
+</script>
+</body>
+</html>

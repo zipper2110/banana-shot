@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.stats
 import org.litvin.export.scoreboard.ScoreboardScene
 import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.ScoreboardSceneImage
+import org.litvin.ui.commons.UiKit
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Dimension
@@ -71,6 +72,9 @@ class StatsCardPreview : JComponent() {
             } else {
                 ScoreboardSceneImage.draw(g, scene, x, y, frameHeight / scene.height)
             }
+            g.color = UiKit.LINE
+            g.stroke = BasicStroke(1f)
+            g.draw(java.awt.geom.RoundRectangle2D.Double(x + 0.5, y + 0.5, frameWidth - 1, frameHeight - 1, 8.0, 8.0))
         } finally {
             g.dispose()
         }

@@ -97,7 +97,7 @@ class StatsCardTest {
 
     @Test
     fun thePagesShareTheRowsEqually() {
-        val keys = listOf("points_won", "games_won", "sets_won", "tiebreaks_won", "longest_point_run", "largest_point_lead", "duration", "average_point")
+        val keys = listOf("points_won", "games_won", "sets_won", "deuce_points_won", "longest_point_run", "largest_point_lead", "duration", "average_point")
         val content = StatsCard.content(report("1111" + "2222"), StatsSettingsV1(videoMomentum = false, videoStats = keys))
 
         val rowsOnPages = StatsCard.pages(content).map { page -> page.labels().count { it in keys.map { key -> MatchStat.ofKey(key)!!.label } } }
@@ -117,12 +117,12 @@ class StatsCardTest {
 
     @Test
     fun theRowsShareEquallyWhenTheGroupsDoNotFitOnThePages() {
-        // 4 + 4 + 5 rows. Each split between the groups gives a page with more than 7 rows.
-        val rows = rowsOf(StatGroup.OVERVIEW, 4) + rowsOf(StatGroup.SERVE, 4) + rowsOf(StatGroup.PRESSURE, 5)
+        // 4 + 5 + 3 rows. Each split between the groups gives a page with more than 7 rows.
+        val rows = rowsOf(StatGroup.SERVE, 4) + rowsOf(StatGroup.PRESSURE, 5) + rowsOf(StatGroup.POINT_LENGTH, 3)
 
         val pages = StatsCard.splitRows(rows, 2)
 
-        assertEquals(listOf(7, 6), pages.map { it.size })
+        assertEquals(listOf(6, 6), pages.map { it.size })
     }
 
     private fun rowsOf(group: StatGroup, count: Int): List<StatRow> =
@@ -172,7 +172,7 @@ class StatsCardTest {
 
     @Test
     fun theMomentumChartIsTheLastPage() {
-        val content = StatsCard.content(report("11" + "2222"), StatsSettingsV1())
+        val content = StatsCard.content(report("11" + "2222"), StatsSettingsV1(videoMomentum = true))
 
         val pages = StatsCard.pages(content)
 
@@ -186,7 +186,7 @@ class StatsCardTest {
 
     @Test
     fun aCardWithOnlyTheChartHasOnePageWithTheHeightOfFourRows() {
-        val content = StatsCard.content(report("1122"), StatsSettingsV1(videoStats = emptyList()))
+        val content = StatsCard.content(report("1122"), StatsSettingsV1(videoStats = emptyList(), videoMomentum = true))
 
         val page = StatsCard.pages(content).single()
 
@@ -198,7 +198,7 @@ class StatsCardTest {
     fun theChartMarksTheStartOfEachSet() {
         // Sets to 1 game without a tiebreak: set 2 starts at point 9.
         val rules = MatchRulesV1(gamesPerSet = 1, setTiebreak = false)
-        val content = StatsCard.content(report("11111111" + "2222", ScoreV1(player1Name = "Alex", player2Name = "Sam", rules = rules)), StatsSettingsV1(videoStats = emptyList()))
+        val content = StatsCard.content(report("11111111" + "2222", ScoreV1(player1Name = "Alex", player2Name = "Sam", rules = rules)), StatsSettingsV1(videoStats = emptyList(), videoMomentum = true))
 
         val chart = StatsCard.pages(content).single()
 

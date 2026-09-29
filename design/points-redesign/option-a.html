@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Points Option A</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Option A: the current structure with a clean toolbar in three zones,
+     a dense list with columns, and a timeline with a label column. */
+  .tab {
+    display: grid; grid-template-columns: 1fr 340px; grid-template-rows: 1fr auto auto;
+    min-height: 0; background: var(--panel);
+  }
+  .video { grid-column: 1; grid-row: 1; }
+  .side { grid-column: 2; grid-row: 1 / 3; }
+  .toolbar { grid-column: 1; grid-row: 2; }
+  #tl { grid-column: 1 / -1; grid-row: 3; border-top: 1px solid var(--line); }
+
+  /* ----- Toolbar: Mark | Playback | Time ----- */
+  .toolbar {
+    container-type: inline-size; display: flex; align-items: center; gap: 16px;
+    padding: 10px 14px; background: #1c1c1c; border-top: 1px solid var(--line);
+  }
+  .zone { display: flex; align-items: center; gap: 8px; }
+  .zone-mark { flex: 1 1 0; min-width: max-content; }
+  .zone-play { flex: none; }
+  .zone-time { flex: 1 1 0; min-width: max-content; justify-content: flex-end; }
+
+  .joined { display: flex; }
+  .joined .btn:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .joined .btn:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-left: -1px; }
+  .mk { height: 38px; font-weight: 600; position: relative; }
+  .mk .material-symbols-outlined { color: var(--fg-2); }
+  /* The next step of the mark flow has the lime outline. */
+  .mk.next { border-color: var(--lime-line); color: var(--fg); z-index: 1; box-shadow: inset 0 0 0 1px rgba(161,254,0,.25); }
+  .mk.next .material-symbols-outlined { color: var(--lime); }
+  .mk.done { background: linear-gradient(var(--lime-tint), var(--lime-tint)), var(--raised); }
+  .mk.done .material-symbols-outlined { color: var(--lime); }
+  .btn-comment { height: 38px; }
+  .btn-comment .material-symbols-outlined { color: var(--fg-2); }
+
+  .seek { height: 38px; padding: 0 10px; min-width: 58px; color: var(--fg-2); }
+  .seek:hover { color: var(--fg); }
+  .seek .material-symbols-outlined { font-size: 18px; }
+  .seek kbd { display: none; }
+
+  .clock { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+  .clock .now { font-size: 20px; font-weight: 600; color: var(--fg); }
+  .clock .total { font-size: 11px; color: var(--fg-3); }
+
+  /* Wide toolbar: show the key chips on the seek buttons. */
+  @container (min-width: 1040px) { .seek kbd { display: inline-flex; } }
+  /* Narrow toolbar: hide the key chips on the mark buttons and the comment label. */
+  @container (max-width: 800px) {
+    .mk kbd { display: none; }
+    .btn-comment .lbl { display: none; }
+    .clock .total { display: none; }
+  }
+
+  /* ----- Side list ----- */
+  .side { display: flex; flex-direction: column; min-height: 0; background: var(--bg); border-left: 1px solid var(--line); }
+  .side-head { padding: 14px 14px 10px; }
+  .side-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 9px; }
+  .stat b { display: block; font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .stat span { font-size: 11px; color: var(--fg-2); display: flex; align-items: center; gap: 4px; }
+  .stat .material-symbols-outlined { font-size: 13px; }
+  .stat.p .material-symbols-outlined { color: var(--lime); }
+  .stat.f .material-symbols-outlined { color: var(--yellow); }
+  .stat.c .material-symbols-outlined { color: var(--fg-2); }
+
+  .cols, .row.pt { display: grid; grid-template-columns: 42px 1fr 50px 84px; align-items: center; column-gap: 6px; }
+  .cols {
+    padding: 0 10px 0 17px; height: 26px; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-3);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #121212;
+  }
+  .cols .r, .row .r { text-align: right; }
+  .list { flex: 1; min-height: 0; padding: 4px 0 8px; }
+
+  .row { position: relative; margin: 0 6px; border-radius: var(--radius-sm); cursor: pointer; }
+  .row::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 3px; border-radius: 2px; background: transparent; }
+  .row:hover { background: #181818; }
+  .row.pt { height: 34px; padding: 0 4px 0 11px; }
+  .row.pt .n { font-weight: 700; color: var(--fg-2); }
+  .row.pt .range { color: var(--fg); font-size: 12.5px; white-space: nowrap; }
+  .row.pt .range i { font-style: normal; color: var(--fg-3); padding: 0 3px; }
+  .row.pt .len { color: var(--fg-3); font-size: 12px; }
+  .row.sel { background: #242424; }
+  .row.sel::before { background: var(--lime); }
+  .row.sel .n { color: var(--lime); }
+
+  .acts { display: flex; justify-content: flex-end; gap: 2px; }
+  .acts .btn-icon { visibility: hidden; }
+  .row:hover .acts .btn-icon, .acts .fav.on { visibility: visible; }
+
+  .row.cm { padding: 7px 4px 8px 13px; margin-top: 2px; margin-bottom: 2px; background: #151515; border: 1px solid #202020; }
+  .row.cm::before { background: var(--c); top: 6px; bottom: 6px; }
+  .row.cm:hover { background: #1a1a1a; }
+  .cm-head { display: flex; align-items: center; gap: 8px; height: 22px; }
+  .cm-id { font-weight: 700; font-size: 11.5px; color: var(--c); display: flex; align-items: center; gap: 4px; }
+  .cm-id .material-symbols-outlined { font-size: 14px; }
+  .cm-meta { font-size: 11.5px; color: var(--fg-3); }
+  .cm-head .acts { margin-left: auto; }
+  .cm-text { font-size: 12.5px; line-height: 1.4; color: var(--fg); padding-right: 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .empty { padding: 28px 18px; text-align: center; color: var(--fg-3); line-height: 1.6; }
+
+  /* Pending point, pinned below the list (same place as now). */
+  .pending {
+    margin: 0 10px 10px; padding: 10px 12px; border-radius: var(--radius); cursor: default;
+    border: 1px dashed var(--lime-line); background: linear-gradient(var(--lime-tint), var(--lime-tint)), #151515;
+    display: grid; grid-template-columns: 12px 1fr auto; column-gap: 10px; row-gap: 2px; align-items: center;
+  }
+  .pending .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 0 4px rgba(161,254,0,.15); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(161,254,0,0); } }
+  .pending b { font-size: 13px; }
+  .pending .tc { color: var(--lime); font-size: 12.5px; text-align: right; }
+  .pending .sub { grid-column: 2 / -1; font-size: 11.5px; color: var(--fg-2); display: flex; align-items: center; gap: 5px; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+
+    <main class="tab">
+      <div class="video"><img src="frame.jpg" alt="Video preview"></div>
+
+      <!-- Toolbar: Mark | Playback | Time -->
+      <div class="toolbar">
+        <div class="zone zone-mark">
+          <div class="joined" role="group" aria-label="Mark a point">
+            <button class="btn mk" id="bStart" title="Set point start at the playhead [C]">
+              <span class="material-symbols-outlined">line_start_diamond</span>Point start<kbd>C</kbd></button>
+            <button class="btn mk" id="bEnd" title="Set point end at the playhead [V]">
+              <span class="material-symbols-outlined">line_end_diamond</span>Point end<kbd>V</kbd></button>
+          </div>
+          <button class="btn btn-comment" id="bComment" title="Add a comment at the playhead">
+            <span class="material-symbols-outlined">add_comment</span><span class="lbl">Add comment</span></button>
+        </div>
+
+        <div class="zone zone-play" role="group" aria-label="Playback">
+          <button class="btn seek" data-nudge="-5000" title="Seek back 5 seconds [Shift+Left]"><span class="material-symbols-outlined">keyboard_double_arrow_left</span>5s<kbd>⇧←</kbd></button>
+          <button class="btn seek" data-nudge="-1000" title="Seek back 1 second [Left]"><span class="material-symbols-outlined">chevron_left</span>1s<kbd>←</kbd></button>
+          <button class="play" id="bPlay" title="SPACE — Play"><span class="material-symbols-outlined fill">play_arrow</span></button>
+          <button class="btn seek" data-nudge="1000" title="Seek forward 1 second [Right]">1s<span class="material-symbols-outlined">chevron_right</span><kbd>→</kbd></button>
+          <button class="btn seek" data-nudge="5000" title="Seek forward 5 seconds [Shift+Right]">5s<span class="material-symbols-outlined">keyboard_double_arrow_right</span><kbd>⇧→</kbd></button>
+        </div>
+
+        <div class="zone zone-time">
+          <div class="clock" title="Current time">
+            <span class="now tc" id="now"></span>
+            <span class="total tc">of 01:36:01.0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Side: Points & events -->
+      <aside class="side">
+        <div class="side-head">
+          <h2>Points &amp; events</h2>
+          <div class="stats num">
+            <div class="stat p" title="Marked points"><b id="sP"></b><span><span class="material-symbols-outlined fill">flag</span>Marked</span></div>
+            <div class="stat f" title="Favorite points"><b id="sF"></b><span><span class="material-symbols-outlined fill">star</span>Favorites</span></div>
+            <div class="stat c" title="Comments"><b id="sC"></b><span><span class="material-symbols-outlined">chat_bubble</span>Comments</span></div>
+          </div>
+        </div>
+        <div class="cols"><span>#</span><span>Start – End</span><span class="r">Length</span><span></span></div>
+        <div class="list scroll" id="list"></div>
+        <div id="pending"></div>
+      </aside>
+
+      <div id="tl"></div>
+    </main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Option A · Clean toolbar.</b> The mockup works: press <b>Space</b>, <b>C</b>, <b>V</b>, <b>A</b>, <b>Delete</b>, the arrow keys,
+  click the rows and the timeline, or point at a row to see its buttons.
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { state, actions, fmt, fmtSec, escapeHtml: e } = Mock;
+  Mock.shell('a');
+  Mock.timeline(document.getElementById('tl'), { gutter: 124 });
+
+  const list = document.getElementById('list');
+  const icon = (name, cls = '') => `<span class="material-symbols-outlined ${cls}">${name}</span>`;
+
+  function renderList() {
+    const evs = Mock.events();
+    list.innerHTML = evs.length ? evs.map((ev) => ev.kind === 'point' ? `
+      <div class="row pt ${state.selected === ev.key ? 'sel' : ''}" data-key="${ev.key}">
+        <span class="n num">#${ev.n}</span>
+        <span class="range tc">${fmt(ev.start)}<i>–</i>${fmt(ev.end)}</span>
+        <span class="len tc r">${fmtSec(ev.end - ev.start)}</span>
+        <span class="acts">
+          <button class="btn-icon fav ${ev.fav ? 'on' : ''}" data-fav="${ev.id}" title="Favorite [A]">${icon('star', ev.fav ? 'fill' : '')}</button>
+          <button class="btn-icon" data-edit="${ev.id}" title="Edit times/label">${icon('edit')}</button>
+          <button class="btn-icon danger" data-del="${ev.id}" title="Delete point">${icon('close')}</button>
+        </span>
+      </div>` : `
+      <div class="row cm" data-key="${ev.key}" style="--c:${ev.color}" title="${e(ev.text)}">
+        <div class="cm-head">
+          <span class="cm-id">${icon('chat_bubble', 'fill')}Comment #${ev.id}</span>
+          <span class="cm-meta tc">${fmt(ev.start)} · ${fmtSec(ev.dur)}</span>
+          <span class="acts">
+            <button class="btn-icon" data-cedit="${ev.id}" title="Edit comment">${icon('edit')}</button>
+            <button class="btn-icon danger" data-cdel="${ev.id}" title="Delete comment">${icon('close')}</button>
+          </span>
+        </div>
+        <div class="cm-text">${e(ev.text)}</div>
+      </div>`).join('')
+      : '<div class="empty">No marked points yet.<br>Press <kbd>C</kbd> at the start of a point.</div>';
+    const c = Mock.counts();
+    document.getElementById('sP').textContent = c.points;
+    document.getElementById('sF').textContent = c.favs;
+    document.getElementById('sC').textContent = c.comments;
+  }
+
+  function renderPending() {
+    const el = document.getElementById('pending');
+    el.innerHTML = state.pending == null ? '' : `
+      <div class="pending" title="Pending point — press V to set End">
+        <span class="dot"></span><b>Pending point</b><span class="tc">${fmt(state.pending)}</span>
+        <span class="sub">Press <kbd>V</kbd> at the end of the point to set End.</span>
+      </div>`;
+  }
+
+  function renderToolbar() {
+    document.getElementById('now').textContent = fmt(state.t);
+    const pending = state.pending != null;
+    document.getElementById('bStart').className = 'btn mk ' + (pending ? 'done' : 'next');
+    document.getElementById('bEnd').className = 'btn mk ' + (pending ? 'next' : '');
+    const play = document.getElementById('bPlay');
+    play.innerHTML = icon(state.playing ? 'pause' : 'play_arrow', 'fill');
+    play.title = state.playing ? 'SPACE — Pause' : 'SPACE — Play';
+  }
+
+  function applySelection(scroll) {
+    list.querySelectorAll('.row.sel').forEach((r) => r.classList.remove('sel'));
+    const row = state.selected && list.querySelector(`[data-key="${state.selected}"]`);
+    if (row) { row.classList.add('sel'); if (scroll) row.scrollIntoView({ block: 'nearest' }); }
+  }
+
+  Mock.on((reason, x) => {
+    if (reason === 'data') { renderList(); renderPending(); renderToolbar(); }
+    if (reason === 'time' || reason === 'play') renderToolbar();
+    if (reason === 'select') applySelection(x.scroll);
+    if (reason === 'scroll') list.querySelector(`[data-key="${x.key}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  });
+
+  document.getElementById('bStart').onclick = () => actions.start();
+  document.getElementById('bEnd').onclick = () => actions.end();
+  document.getElementById('bComment').onclick = () => actions.addComment();
+  document.getElementById('bPlay').onclick = () => actions.togglePlay();
+  document.querySelectorAll('[data-nudge]').forEach((b) => { b.onclick = () => actions.nudge(+b.dataset.nudge); });
+  document.querySelectorAll('.toolbar button').forEach((b) => b.addEventListener('mouseup', () => b.blur()));
+
+  list.addEventListener('click', (ev) => {
+    const b = ev.target.closest('button');
+    if (b) {
+      if (b.dataset.fav) actions.toggleFav(b.dataset.fav);
+      else if (b.dataset.edit) actions.editPoint(b.dataset.edit);
+      else if (b.dataset.del) actions.deletePoint(b.dataset.del);
+      else if (b.dataset.cedit) actions.editComment(+b.dataset.cedit);
+      else if (b.dataset.cdel) actions.deleteComment(+b.dataset.cdel);
+      return;
+    }
+    const row = ev.target.closest('[data-key]');
+    if (row) actions.clickEvent(row.dataset.key);
+  });
+
+  Mock.start();
+</script>
+</body>
+</html>

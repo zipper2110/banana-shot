@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects Option B</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Option B: the recent projects are tiles in a grid. Each tile shows its figures in a 2 × 2 block.
+     The current project is a slim bar above the grid, and its tile has a lime border. */
+  .tab { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; background: var(--bg); }
+
+  /* ----- Header band with the current project ----- */
+  .band { padding: 20px 24px 16px; background: linear-gradient(180deg, #151515, var(--bg)); border-bottom: 1px solid var(--line); }
+  .head { display: flex; align-items: center; justify-content: space-between; }
+  .curbar {
+    margin-top: 16px; display: flex; align-items: center; gap: 12px; min-width: 0;
+    height: 44px; padding: 0 8px 0 14px; border-radius: 8px; background: var(--card); border: 1px solid var(--line);
+    box-shadow: inset 3px 0 0 var(--lime);
+  }
+  .curbar .caption { flex: none; }
+  .curbar .nm { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+  .curbar .path { flex: 1; }
+  .curbar.none { box-shadow: none; border-style: dashed; background: transparent; }
+  .curbar.none .nm { color: var(--fg-2); font-weight: 500; }
+
+  /* ----- Grid ----- */
+  .body { display: flex; flex-direction: column; min-height: 0; padding: 16px 24px 16px; }
+  .sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .sec-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .sec-head .hint { font-size: 12px; color: var(--fg-3); }
+  .sec-head .pager { margin-left: auto; }
+  .gridwrap { flex: 1; min-height: 0; padding-right: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 16px 12px; padding-top: 10px; }
+
+  .tile {
+    position: relative; display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; cursor: default;
+    transition: border-color .12s, background .12s;
+  }
+  .tile:hover { border-color: #3a3a3a; background: #1d1d1d; }
+  .tile.is-current { border-color: var(--lime-line); background: linear-gradient(180deg, rgba(161,254,0,.06), rgba(161,254,0,0) 60%), var(--card); }
+  .tile.is-missing { border-top: 2px solid rgba(255,115,81,.75); padding-top: 13px; }
+  .t-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: start; }
+  .t-name { font-weight: 600; font-size: 14px; line-height: 1.3; min-height: 36px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+  .t-tools { display: flex; gap: 0; margin: -4px -6px 0 0; opacity: .55; }
+  .tile:hover .t-tools { opacity: 1; }
+  .tile .tag { position: absolute; top: -9px; left: 12px; background: #1d2b06; border: 1px solid var(--lime-line); }
+
+  .figs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .figs > div { background: #151515; padding: 6px 9px 7px; min-height: 44px; }
+  .figs dt { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); font-weight: 600; margin-bottom: 2px; }
+  .figs dd { margin: 0; font-size: 13.5px; font-weight: 600; }
+  .figs dd.dash { color: var(--fg-3); font-weight: 400; }
+  .figs .bar { margin-top: 5px; }
+  .figs .star { font-size: 14px; color: var(--yellow); margin: -2px 3px 0 0; }
+  .figs .star.zero { color: var(--fg-3); }
+
+  .t-open { width: 100%; height: 30px; }
+  .tile.is-current .t-open { border-color: var(--lime-line); }
+
+  /* ----- Empty list (first start) ----- */
+  .empty { flex: 1; display: grid; place-items: center; border: 1px dashed var(--line-2); border-radius: 12px; }
+  .empty-in { text-align: center; max-width: 440px; }
+  .empty-in > .material-symbols-outlined { font-size: 44px; color: var(--fg-3); }
+  .empty h3 { margin: 10px 0 6px; font-size: 16px; }
+  .empty p { margin: 0; color: var(--fg-2); line-height: 1.6; }
+  .ghost-tiles { display: grid; grid-template-columns: repeat(3, 72px); gap: 8px; justify-content: center; margin: 0 0 18px; }
+  .ghost-tiles i { height: 52px; border-radius: 8px; border: 1px dashed #333; }
+  .ghost-tiles i:first-child { border-color: var(--lime-line); background: var(--lime-tint); }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+
+    <main class="tab">
+      <div class="band">
+        <header class="head">
+          <div class="brand">
+            <div class="brand-mark"><span class="material-symbols-outlined fill">sports_tennis</span></div>
+            <div><div class="brand-title">TENNIS RECORD</div><div class="brand-sub">TENNIS VIDEO EDITING SUITE</div></div>
+          </div>
+          <button class="btn btn-lime" data-act="import" title="Select a match video and create a new project">
+            <span class="material-symbols-outlined">add</span>Import new match
+          </button>
+        </header>
+        <div id="current"></div>
+      </div>
+      <section class="body">
+        <div class="sec-head"><h2>Recent projects</h2><span class="hint" id="hint">Double-click a tile to open the project</span><span id="pager" class="pager"></span></div>
+        <div class="gridwrap scroll" id="gridwrap"><div class="grid" id="grid"></div></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="note-callout" id="note">
+  <button onclick="this.parentElement.hidden = true" aria-label="Close">✕</button>
+  <b>Option B · Project tiles.</b> One page of ten projects fits on the screen as two rows of tiles.
+  The figures have captions on each tile. The current project is a slim bar at the top, and its tile has a lime border.
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { esc, pathHtml, fig, scoredBar, TIPS } = Mock;
+  Mock.shell('b');
+
+  function currentHtml(p) {
+    if (!p) {
+      return `<div class="curbar none"><span class="caption">Current project</span>
+        <span class="nm">No open project</span><span class="faint">· Import a new match, or open a project below.</span></div>`;
+    }
+    return `<div class="curbar"><span class="caption">Current project</span><span class="nm">${esc(p.name)}</span>${pathHtml(p)}
+      <button class="btn btn-ghost btn-sm" data-act="rename" data-id="${p.id}" title="${TIPS.rename}"><span class="material-symbols-outlined">edit</span>Rename</button></div>`;
+  }
+
+  function tileHtml(p) {
+    const cur = Mock.isCurrent(p);
+    const dash = (v) => (v === '—' ? ' class="dash num"' : ' class="num"');
+    return `<article class="tile ${cur ? 'is-current' : ''} ${p.missing ? 'is-missing' : ''}" data-row="${p.id}">
+      ${cur ? '<span class="tag">OPEN</span>' : ''}
+      <div class="t-head">
+        <div class="t-name" title="${esc(p.name)}">${esc(p.name)}</div>
+        <div class="t-tools">
+          <button class="btn btn-ghost btn-icon btn-sm" data-act="rename" data-id="${p.id}" title="${TIPS.rename}"><span class="material-symbols-outlined">edit</span></button>
+          <button class="btn btn-ghost btn-icon btn-sm" data-act="delete" data-id="${p.id}" ${cur ? 'disabled' : ''} title="${cur ? TIPS.delDisabled : TIPS.del}"><span class="material-symbols-outlined">delete</span></button>
+        </div>
+      </div>
+      ${pathHtml(p, { noDir: true })}
+      <dl class="figs">
+        <div><dt>Duration</dt><dd${dash(p.duration)}>${fig(p, 'duration', 50)}</dd></div>
+        <div><dt>Size</dt><dd${dash(p.size)}>${fig(p, 'size', 58)}</dd></div>
+        <div><dt>Scored</dt><dd class="num">${fig(p, 'scored', 44)}</dd>${scoredBar(p)}</div>
+        <div><dt>Favorites</dt><dd class="num"><span class="material-symbols-outlined fill star ${p.fav === 0 ? 'zero' : ''}">star</span>${fig(p, 'fav', 20)}</dd></div>
+      </dl>
+      <button class="btn btn-sm btn-open t-open" data-act="open" data-id="${p.id}" title="${TIPS.open}">Open project<span class="material-symbols-outlined">arrow_forward</span></button>
+    </article>`;
+  }
+
+  Mock.on((s) => {
+    document.getElementById('current').innerHTML = currentHtml(Mock.current());
+    const list = Mock.visible();
+    const pages = Mock.totalPages();
+    const wrap = document.getElementById('gridwrap');
+    document.getElementById('hint').hidden = list.length === 0;
+    document.getElementById('pager').innerHTML = pages > 1
+      ? `<button class="btn btn-sm" data-act="prev" ${s.page <= 1 ? 'disabled' : ''}><span class="material-symbols-outlined">chevron_left</span>Prev</button>
+         <span class="lbl num">Page ${s.page} / ${pages}</span>
+         <button class="btn btn-sm" data-act="next" ${s.page >= pages ? 'disabled' : ''}>Next<span class="material-symbols-outlined">chevron_right</span></button>`
+      : '';
+    if (list.length === 0) {
+      wrap.classList.remove('scroll');
+      wrap.style.display = 'flex';
+      wrap.innerHTML = `<div class="empty"><div class="empty-in">
+        <div class="ghost-tiles"><i></i><i></i><i></i></div>
+        <h3>No projects yet</h3>
+        <p>Click "Import new match" to create one.<br>Each project is one match video with its points, scores and settings.</p>
+      </div></div>`;
+      return;
+    }
+    wrap.classList.add('scroll');
+    wrap.style.display = '';
+    wrap.innerHTML = `<div class="grid">${list.map(tileHtml).join('')}</div>`;
+  });
+  Mock.start();
+</script>
+</body>
+</html>

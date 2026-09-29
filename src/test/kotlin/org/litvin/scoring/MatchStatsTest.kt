@@ -49,7 +49,6 @@ class MatchStatsTest {
         val rules = MatchRulesV1(gamesPerSet = 1)
         val stats = stats("1111" + "2222" + "1111111", rules, serverMarks = mapOf("p1" to Outcome.P1))
 
-        assertEquals(PerPlayer(1, 0), stats.tiebreaksWon)
         assertEquals(PerPlayer(2, 1), stats.gamesWon)
         assertEquals(PerPlayer(1, 0), stats.setsWon)
         assertEquals(PerPlayer(Ratio(1, 1), Ratio(1, 1)), stats.serve!!.serviceGamesWon)
@@ -176,6 +175,23 @@ class MatchStatsTest {
         assertEquals("p3", time.longestPoint?.id)
         assertEquals(PerPlayer<Long?>(6_500, 3_000), time.averagePointMsWon)
         assertEquals(2_000L, time.averageGapMs)
+    }
+
+    @Test
+    fun theMatchDurationUsesOnlyThePointsWithAWinnerAtTheStartAndAtTheEnd() {
+        val points = listOf(
+            PointV1(id = "p1", startMs = 0, endMs = 5_000),
+            PointV1(id = "p2", startMs = 7_000, endMs = 10_000),
+            PointV1(id = "p3", startMs = 12_000, endMs = 20_000),
+            PointV1(id = "p4", startMs = 30_000, endMs = 35_000),
+        )
+        // The first point and the last point have no winner.
+        val outcomes = outcomes(points, ".12.")
+        val timeline = ScoringEngine.timeline(points, outcomes)
+
+        val time = MatchStats.compute(points, outcomes, timeline, MatchRulesV1()).time
+
+        assertEquals(13_000L, time.durationMs)
     }
 
     @Test

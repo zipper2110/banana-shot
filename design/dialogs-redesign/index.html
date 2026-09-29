@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dialogs Redesign</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 760px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .principle b .material-symbols-outlined { color: var(--lime); font-size: 18px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.55; }
+
+  /* Anatomy of the dialog frame */
+  .anatomy { display: grid; grid-template-columns: 440px 1fr; gap: 24px; align-items: center; }
+  .anatomy .modal { width: 100%; }
+  .anatomy .modal .g-row { grid-template-columns: 110px 1fr; }
+  .callouts { display: grid; gap: 10px; font-size: 12.5px; color: var(--fg-2); line-height: 1.55; }
+  .callouts div { display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+  .callouts i { font-style: normal; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: #142000; font-weight: 700; font-size: 11px; }
+  .callouts b { color: var(--fg); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+  .card { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit; }
+  .card:hover { border-color: var(--lime-line); }
+  .card-head { display: flex; align-items: center; gap: 8px; }
+  .card-head .material-symbols-outlined { color: var(--lime); }
+  .card h3 { margin: 0; font-size: 15px; }
+  .card .from { font-size: 11.5px; color: var(--fg-3); }
+  .card ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; color: var(--fg-2); }
+  .card .open { margin-top: auto; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td { color: var(--fg-2); }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td a { color: var(--lime); text-decoration: none; }
+  td a:hover { text-decoration: underline; }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: var(--mono); font-size: 12px; color: var(--sage); }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 9px; white-space: nowrap; }
+  .tag.new { background: var(--lime); color: #142000; }
+  .tag.done { background: #26331a; color: var(--sage); }
+  .tag.keep { background: #2a2a2a; color: var(--fg-2); }
+  .question { margin-top: 12px; padding: 12px 14px; border: 1px solid rgba(255,213,74,.35); background: var(--yellow-tint); border-radius: 8px; color: #f3e2a4; font-size: 13px; line-height: 1.55; display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+  .question .material-symbols-outlined { color: var(--yellow); }
+  ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; }
+  @media (max-width: 860px) { .anatomy { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Dialogs and windows — redesign</h1>
+  <p class="lede">
+    This folder has the new design for all modal dialogs and the two tool windows (Help and More).
+    They use the same colors, cards, switches, segmented controls and sliders as the redesigned tabs.
+    Each page is a working mockup over a still copy of its tab: change the values, open the color picker, and use the "Mockup state" switches at the top.
+  </p>
+  <div class="scope">✓ No feature is added or removed. The changes are to the layout, the order, the control types and the button labels.</div>
+
+  <h2>Pages</h2>
+  <div class="cards">
+    <a class="card" href="scoring-settings.html">
+      <div class="card-head"><span class="material-symbols-outlined">tune</span><h3>Scoring settings</h3></div>
+      <div class="from">Scoring tab · ScoreSettingsDialog</div>
+      <ul>
+        <li>Three group cards in the same order as today: Players, Match format, Manual scoring.</li>
+        <li>Segmented controls in place of the six combo boxes. Each option shows its full meaning, for example "No-ad · deciding point at 40–40".</li>
+        <li>The player color is a round swatch in front of the name, in place of a separate "Color…" button.</li>
+      </ul>
+      <span class="open">Open →</span>
+    </a>
+    <a class="card" href="scoreboard-style.html">
+      <div class="card-head"><span class="material-symbols-outlined">scoreboard</span><h3>Scoreboard style</h3></div>
+      <div class="from">Scoring tab · ScoreboardSettingsDialog</div>
+      <ul>
+        <li>The layout of the video tabs: the preview on the left, a side panel with groups on the right.</li>
+        <li>All 14 styles show at the same time under the preview. No scroll list.</li>
+        <li>Groups: On the board (switches), Place and size (corner picker, sliders with value fields), Accent color.</li>
+        <li>Short switch labels ("Title", "Serve indicator"). "Reset to defaults" is on the right side, left of Cancel, with a gap. The accent color has its own "Reset to default".</li>
+      </ul>
+      <span class="open">Open →</span>
+    </a>
+    <a class="card" href="color-picker.html">
+      <div class="card-head"><span class="material-symbols-outlined">palette</span><h3>Color picker</h3></div>
+      <div class="from">Player colors, accent color, comment color · JColorChooser</div>
+      <ul>
+        <li>One dark dialog in place of the light Swing color chooser.</li>
+        <li>Current and new color side by side. Swatches with recent colors, or a custom picker.</li>
+        <li>The HSV, HSL, RGB and CMYK values and the hex code stay. Reset stays.</li>
+      </ul>
+      <span class="open">Open →</span>
+    </a>
+    <a class="card" href="messages.html">
+      <div class="card-head"><span class="material-symbols-outlined">forum</span><h3>Messages</h3></div>
+      <div class="from">All tabs · JOptionPane, AnalyticsConsentDialog</div>
+      <ul>
+        <li>One message box for all 29 messages: info, hint, warning, error, question, delete or cancel.</li>
+        <li>The buttons tell the action ("Overwrite", "Keep exporting"), in place of Yes and No.</li>
+        <li>For a destructive action, the safe button has the focus.</li>
+        <li>The analytics consent uses the same box.</li>
+      </ul>
+      <span class="open">Open →</span>
+    </a>
+    <a class="card" href="help.html">
+      <div class="card-head"><span class="material-symbols-outlined">help</span><h3>Help window</h3></div>
+      <div class="from">F1 and the Help button · HelpDialog</div>
+      <ul>
+        <li>The page list has the icons and the groups of the sidebar. "This tab" marks the page of the current tab.</li>
+        <li>The workflow is a numbered list. The shortcuts show as keys.</li>
+        <li>The window stays modeless.</li>
+      </ul>
+      <span class="open">Open →</span>
+    </a>
+    <a class="card" href="more.html">
+      <div class="card-head"><span class="material-symbols-outlined">more_horiz</span><h3>More window</h3></div>
+      <div class="from">The More button · MoreDialog</div>
+      <ul>
+        <li>The same frame as the Help window.</li>
+        <li>Each subheading becomes a card. Paths use a monospace font.</li>
+        <li>Settings, Privacy, About and Contact keep all their texts and buttons.</li>
+      </ul>
+      <span class="open">Open →</span>
+    </a>
+  </div>
+
+  <h2>One dialog frame</h2>
+  <div class="anatomy">
+    <div class="modal" style="position:relative">
+      <div class="modal-head"><h3>Dialog title</h3><span class="sub end">optional value</span></div>
+      <div class="modal-body">
+        <section class="group">
+          <div class="g-cap"><span class="material-symbols-outlined">group</span>Group caption</div>
+          <div class="g-row"><label>Choice</label><div class="seg"><button class="is-selected">One</button><button>Two</button><button>Three</button></div></div>
+          <div class="g-row wide"><label class="switch-row"><input type="checkbox" class="check-input" checked><span class="switch"></span><span class="t">On or off</span></label></div>
+        </section>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-quiet"><span class="material-symbols-outlined">restart_alt</span>Reset</button>
+        <span class="grow"></span>
+        <button class="btn">Cancel</button><button class="btn btn-lime">Save</button>
+      </div>
+    </div>
+    <div class="callouts">
+      <div><i>1</i><span><b>Head.</b> The title of the dialog. A short value can go on the right, for example the length of a point.</span></div>
+      <div><i>2</i><span><b>Body.</b> Group cards with an uppercase caption, the same as the side panels of Colors and Transform. Switches for on and off, segmented controls for two or three choices, sliders with an editable value.</span></div>
+      <div><i>3</i><span><b>Foot, left.</b> Reset or Delete. These actions are apart from the main action.</span></div>
+      <div><i>4</i><span><b>Foot, right.</b> Cancel, then the main action in lime. A destructive action is red, and Cancel has the focus.</span></div>
+      <div><i>5</i><span><b>Keys.</b> Enter does the main action, Esc cancels. In a message about a destructive action, Enter clicks the focused safe button.</span></div>
+    </div>
+  </div>
+
+  <h2>All modal windows of the app</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Window</th><th>Opened from</th><th>Code</th><th>Mockup</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Scoring settings</td><td>Scoring tab, and on the first visit</td><td><code>ScoreSettingsDialog</code></td><td><a href="scoring-settings.html">scoring-settings.html</a></td><td><span class="tag new">New design</span></td></tr>
+        <tr><td>Scoreboard style</td><td>Scoring tab</td><td><code>ScoreboardSettingsDialog</code></td><td><a href="scoreboard-style.html">scoreboard-style.html</a></td><td><span class="tag new">New design</span></td></tr>
+        <tr><td>Color picker</td><td>Scoring settings, Scoreboard style, comment dialog</td><td><code>JColorChooser</code></td><td><a href="color-picker.html">color-picker.html</a></td><td><span class="tag new">New design</span></td></tr>
+        <tr><td>Info, error and confirm messages (29)</td><td>All tabs</td><td><code>UserDialogService</code>, <code>Dialogs</code>, <code>JOptionPane</code></td><td><a href="messages.html">messages.html</a></td><td><span class="tag new">New design</span></td></tr>
+        <tr><td>Optional usage analytics</td><td>First start</td><td><code>AnalyticsConsentDialog</code></td><td><a href="messages.html#id=consent">messages.html</a></td><td><span class="tag new">New design</span></td></tr>
+        <tr><td>Help</td><td>F1, Help button</td><td><code>HelpDialog</code></td><td><a href="help.html">help.html</a></td><td><span class="tag new">New design</span></td></tr>
+        <tr><td>More (Settings, Privacy, About, Contact)</td><td>More button</td><td><code>MoreDialog</code> and its pages</td><td><a href="more.html">more.html</a></td><td><span class="tag new">New design</span></td></tr>
+        <tr><td>New project, Rename project, Delete project</td><td>Projects tab</td><td><code>NewProjectDialog</code>, <code>RenameProjectDialog</code>, <code>DeleteProjectDialog</code></td><td><a href="../projects-redesign/final.html#dialog=new">projects-redesign</a></td><td><span class="tag done">Done in the Projects redesign</span></td></tr>
+        <tr><td>Edit point, Add comment, Edit comment</td><td>Points tab</td><td><code>EditPointDialog</code>, <code>EditCommentDialog</code></td><td><a href="../points-redesign/final.html#dialog=edit">points-redesign</a></td><td><span class="tag done">Done in the Points redesign</span></td></tr>
+        <tr><td>Select Source Video, export file</td><td>Projects tab, Export tab</td><td><code>SwingFilePicker</code> (<code>JFileChooser</code>)</td><td>—</td><td><span class="tag keep">Not changed, see the question below</span></td></tr>
+        <tr><td>Icon Browser</td><td>No button opens it</td><td><code>IconBrowserDialog</code></td><td>—</td><td><span class="tag keep">Developer tool, not changed</span></td></tr>
+        <tr><td>Test tab file chooser</td><td>Test tab (test builds only)</td><td><code>SwingTestPanel</code></td><td>—</td><td><span class="tag keep">Test only, not changed</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="question"><span class="material-symbols-outlined">help</span><span><b>Question:</b> the file pickers use the Swing <code>JFileChooser</code>. The Projects redesign keeps them as they are. Do you want the native Windows file dialog in their place? It has the same function, but it looks like Windows and not like the app.</span></div>
+
+  <h2>Changes to texts and buttons</h2>
+  <ul class="plain">
+    <li>Yes/No and OK/Cancel buttons become action labels: "Overwrite", "Export full video", "Cancel export", "Keep exporting", "Clear list", "Delete".</li>
+    <li>The general titles "Confirm", "Info" and "Transform" become specific titles, for example "Cancel queued export" and "Export started".</li>
+    <li>"Source video missing" (Points and Export): the title and the text change places, so the title names the problem.</li>
+    <li>Scoring settings: when manual scoring is on, the match format caption says "Not used in manual scoring".</li>
+    <li>Scoreboard style: a short line under the title tells that the video shows each change at once, and that Cancel restores the saved style. The accent color shows its hex code.</li>
+    <li>Analytics consent: a new line tells that the user can change the choice later in More → Privacy.</li>
+    <li>Help: "This tab" marks the page of the current tab.</li>
+  </ul>
+
+  <h2>Use the mockups</h2>
+  <ul class="plain">
+    <li>Open the files from the disk. They do not need a web server.</li>
+    <li>Add a hash to a page URL to open a state: <code>scoring-settings.html#rules=manual</code>, <code>scoreboard-style.html#saved=led</code>, <code>color-picker.html#from=comment&amp;view=custom</code>, <code>messages.html#id=ex-overwrite</code>, <code>help.html#tab=Export</code>, <code>more.html#section=About&amp;open=fail</code>.</li>
+    <li>The scoreboard drawings only suggest the 14 styles. The app draws the real styles with <code>ScoreboardLayouts</code>.</li>
+  </ul>
+</div>
+</body>
+</html>

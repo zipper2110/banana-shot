@@ -39,11 +39,12 @@ class StatRowsTest {
         // The points last 3 s, 7 s, 10 s and 20 s.
         val report = report("1122", durationsSeconds = listOf(3, 7, 10, 20))
 
+        // By default, a short point lasts 10 s or less, and a long point lasts 13 s or more.
         val defaults = StatRows.build(report.match, report.score.rules)
-        assertEquals(PerPlayer(StatValue("100%", "2/2"), StatValue("0%", "0/2")), defaults.of(MatchStat.SHORT_POINTS_WON).values)
+        assertEquals(PerPlayer(StatValue("67%", "2/3"), StatValue("33%", "1/3")), defaults.of(MatchStat.SHORT_POINTS_WON).values)
         assertEquals(PerPlayer(StatValue("0%", "0/1"), StatValue("100%", "1/1")), defaults.of(MatchStat.LONG_POINTS_WON).values)
-        assertEquals("Short points won (\u2264 7 s)", defaults.of(MatchStat.SHORT_POINTS_WON).label)
-        assertEquals("Long points won (\u2265 15 s)", defaults.of(MatchStat.LONG_POINTS_WON).label)
+        assertEquals("Short points won (\u2264 10 s)", defaults.of(MatchStat.SHORT_POINTS_WON).label)
+        assertEquals("Long points won (\u2265 13 s)", defaults.of(MatchStat.LONG_POINTS_WON).label)
 
         val custom = StatRows.build(report.match, report.score.rules, StatsSettingsV1(shortPointMaxSeconds = 3, longPointMinSeconds = 10))
         assertEquals(PerPlayer(StatValue("100%", "1/1"), StatValue("0%", "0/1")), custom.of(MatchStat.SHORT_POINTS_WON).values)

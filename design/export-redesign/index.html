@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export Tab Redesign</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 720px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  ol.problems, ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; color: var(--fg); }
+  ol.problems li, ul.plain li { margin-bottom: 4px; }
+  ol.problems .muted, ul.plain .muted { font-size: 12.5px; }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: block; margin-bottom: 4px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+
+  .options { display: grid; gap: 12px; }
+  .option {
+    display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit;
+  }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td { color: var(--fg-2); }
+  .yes { color: var(--green); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Export tab — redesign proposals</h1>
+  <p class="lede">
+    This folder has one main proposal and two alternatives for the Export tab.
+    Each mockup is an HTML page with the app sidebar, the real texts and the values from the reference screenshot.
+    Use the "Mockup state" switch at the top of each page to see the idle, running, queued and failed states.
+  </p>
+  <div class="scope">✓ Cosmetic changes only. No feature is added or removed.</div>
+
+  <a class="option main" href="final.html" style="margin-top:24px">
+    <div>
+      <div class="option-head"><h3>Final design</h3><span class="badge">Selected</span></div>
+      <p>The final design combines options A and B.</p>
+      <ul>
+        <li>Left, from A: the numbered step captions, the Simple / Advanced control in the step header, and the content radio cards.</li>
+        <li>Left, from B: the include tiles, the quality tiles with the details table, the Advanced controls, and the footer with the summary and the button.</li>
+        <li>Right, from B: one exports table with the groups Active, Export queue and Completed.</li>
+      </ul>
+      <span class="open">Open the final design →</span>
+    </div>
+    <dl class="side">
+      <dt>Swing effort</dt><dd>Medium. The exports table needs a custom <code>JTable</code> renderer or a grid list with fixed columns.</dd>
+    </dl>
+  </a>
+
+  <h2>Problems in the current tab</h2>
+  <ol class="problems">
+    <li><b>Too many primary buttons.</b> Each completed export has a lime "Open folder" button. On the screenshot, seven lime buttons compete with "Start export".</li>
+    <li><b>The completed list uses too much space.</b> Each card is about 120 px high, so the screen shows only six exports. The labels Project, Content and Video repeat on each card.</li>
+    <li><b>The result is far from the action.</b> The file size and the resolution are in the expanded quality card. The user must scroll up from "Start export" to see them.</li>
+    <li><b>The settings have no clear order.</b> The content cards, the checkboxes and the quality block have the same visual weight. There is no sign of the order in which the user makes the choices.</li>
+    <li><b>Technical text is always visible.</b> The GPU list and the selected encoder use five lines in the Simple tab. Most users do not need this text for each export.</li>
+    <li><b>Weak states.</b> "No active exports" takes a full card. A failed export and a running export look almost the same.</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="principles">
+    <div class="principle"><b>One primary action</b><span>Only "Start export" has the lime fill. "Open folder" becomes a secondary button or an icon button.</span></div>
+    <div class="principle"><b>Read in order</b><span>Content → Include → Quality → Start. The layout shows this order.</span></div>
+    <div class="principle"><b>Result next to the action</b><span>A short summary and the file size stay next to "Start export". They update with each choice.</span></div>
+    <div class="principle"><b>Details on request</b><span>The GPU list and the long descriptions stay available, but they have less visual weight.</span></div>
+    <div class="principle"><b>Dense history</b><span>A completed export uses three lines or fewer. The file name stays the most visible text.</span></div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="options">
+    <a class="option main" href="option-a.html">
+      <div>
+        <div class="option-head"><h3>A · Guided steps</h3><span class="badge">Recommended</span></div>
+        <p>The left column shows three numbered steps. A fixed footer shows the output summary, the file size and "Start export". The right side keeps three panels: active export, queue and completed exports.</p>
+        <ul>
+          <li>Content cards show the length and the point count on the right, so the cards are shorter.</li>
+          <li>The four checkboxes are one grouped list with the notes on the right.</li>
+          <li>Simple and Advanced are a segmented control in the step header.</li>
+          <li>Each quality preset shows its file size when it is closed. The selected preset opens its details.</li>
+          <li>The encoder and the GPU list are one line that the user can expand.</li>
+          <li>The running export has a large progress bar. A failed export has a red bar and a red error box.</li>
+          <li>Completed exports use three lines and a secondary "Open folder" button.</li>
+        </ul>
+        <span class="open">Open option A →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Clear flow with the smallest change to the current structure.</dd>
+        <dt>Swing effort</dt><dd>Low. It reuses <code>OptionCard</code>, <code>ExportJobCard</code> and <code>UiStyles</code>. New parts: step header, footer summary label, compact job row.</dd>
+        <dt>Risk</dt><dd>Low. The UI test names of the components can stay the same.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-b.html">
+      <div>
+        <div class="option-head"><h3>B · Compact tiles and one table</h3><span class="badge alt">Alternative</span></div>
+        <p>The choices are tiles side by side, so the full settings column fits on one screen in Simple mode. The right side is one table. Active, queued and completed exports are row groups with the same columns.</p>
+        <ul>
+          <li>Content and quality presets are three tiles in a row. The description of the selected content shows below the tiles.</li>
+          <li>The four checkboxes are a 2 × 2 grid.</li>
+          <li>The selected preset shows its details in one fixed table.</li>
+          <li>In Advanced mode, the encoder is a segmented control. The description of the selected encoder shows below it.</li>
+          <li>The table has the columns Status, File, Content, Video, Size and Time. The row buttons are icons with tooltips.</li>
+        </ul>
+        <span class="open">Open option B →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users with many exports who compare them.</dd>
+        <dt>Swing effort</dt><dd>Medium. The table needs a custom <code>JTable</code> renderer or a grid list with fixed columns.</dd>
+        <dt>Risk</dt><dd>Medium. Icon buttons are less clear than text buttons. Tiles are narrow at small window widths.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-c.html">
+      <div>
+        <div class="option-head"><h3>C · Accordion and history by day</h3><span class="badge alt">Alternative</span></div>
+        <p>The settings are an accordion. One section is open at a time. Each closed section shows its current choice, so the user sees all choices without a scroll bar. The completed exports are grouped by day on a timeline.</p>
+        <ul>
+          <li>The section headers show "Only points · 19min 41sec · 128 points" and similar summaries.</li>
+          <li>The four options are switches.</li>
+          <li>The selected preset shows its values as small value boxes.</li>
+          <li>"Start export" shows the file size and the encoder on a second line.</li>
+          <li>The running export has a progress ring with the percent in the center.</li>
+          <li>The completed exports have the groups Today, Yesterday and a date.</li>
+        </ul>
+        <span class="open">Open option C →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users who export often with the same settings.</dd>
+        <dt>Swing effort</dt><dd>High. The accordion, the switches and the progress ring need custom painting.</dd>
+        <dt>Risk</dt><dd>Medium. A closed section can hide a wrong choice. The user must open the sections one by one.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Feature check</h2>
+  <p class="lede" style="margin-bottom:12px">All options keep each feature of the current tab. The table shows where each feature is.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature</th><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody>
+        <tr><td>Content: Full video, Only points, Only favorites, with length and point count</td><td class="yes">Radio cards</td><td class="yes">Tiles + description</td><td class="yes">Radio rows</td></tr>
+        <tr><td>Scoreboard, with the scored count</td><td class="yes">Checkbox list</td><td class="yes">Checkbox tile</td><td class="yes">Switch</td></tr>
+        <tr><td>Comments</td><td class="yes">Checkbox list</td><td class="yes">Checkbox tile</td><td class="yes">Switch</td></tr>
+        <tr><td>Statistics card, with length and page count</td><td class="yes">Checkbox list</td><td class="yes">Checkbox tile</td><td class="yes">Switch</td></tr>
+        <tr><td>Set summaries, disabled for Full video, with the reason</td><td class="yes">Checkbox list</td><td class="yes">Checkbox tile</td><td class="yes">Switch</td></tr>
+        <tr><td>Simple / Advanced mode</td><td class="yes">Segmented control</td><td class="yes">Segmented control</td><td class="yes">Segmented control</td></tr>
+        <tr><td>Presets with resolution, FPS, variable frame rate note, bitrate, file size, export time, "original" tags</td><td class="yes">Expanding card</td><td class="yes">Tiles + fixed table</td><td class="yes">Rows + value boxes</td></tr>
+        <tr><td>Resolution and frame rate choices with levels and "original" tags</td><td class="yes">Segmented</td><td class="yes">Segmented</td><td class="yes">Segmented</td></tr>
+        <tr><td>Bitrate slider with value, file size, end labels and note</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Encoder choice with description and "Best for this PC"</td><td class="yes">Radio cards</td><td class="yes">Segmented + description</td><td class="yes">Radio rows</td></tr>
+        <tr><td>Detected GPUs and selected encoder</td><td class="yes">Expandable line</td><td class="yes">Two lines</td><td class="yes">Two lines</td></tr>
+        <tr><td>Start export / Enqueue export</td><td class="yes">Footer + summary</td><td class="yes">Footer + summary</td><td class="yes">Footer, two lines</td></tr>
+        <tr><td>Active export: path, status, progress, size, time left, error, Open folder, Cancel export</td><td class="yes">Panel</td><td class="yes">Table row</td><td class="yes">Card with ring</td></tr>
+        <tr><td>Export queue with Open folder and Cancel export (visible only when not empty)</td><td class="yes">Panel</td><td class="yes">Row group</td><td class="yes">Card</td></tr>
+        <tr><td>Completed exports: path, project, content, video, size, finish time, Open folder</td><td class="yes">List</td><td class="yes">Row group</td><td class="yes">Timeline by day</td></tr>
+        <tr><td>Clear list</td><td class="yes">Panel header</td><td class="yes">Group header</td><td class="yes">Card header</td></tr>
+        <tr><td>Tooltips of the current controls</td><td class="yes">Same text</td><td class="yes">Same text</td><td class="yes">Same text</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Text changes</h2>
+  <ul class="plain">
+    <li>The checkbox labels lose the word "Include". The group heading "Include in the video" gives this word once. <span class="muted">Example: "Include scoreboard" → "Scoreboard".</span></li>
+    <li>"Active Exports" becomes "Active export", because only one export runs at a time.</li>
+    <li>The written size of a completed export shows "7.44 GB / ~7.55 GB" (A) or "7.44 GB of ~7.55 GB" (B, C). The expected size has less visual weight.</li>
+    <li>Option A adds one hint under "Enqueue export": "The new export waits in the queue until the current exports end." The current confirmation dialog gives the same information.</li>
+    <li>Option C adds one hint in the idle state: "Choose the settings on the left and start an export."</li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li>The colors come from <code>UiStyles</code>: <code>DARK_BG</code>, <code>CARD_BG</code>, <code>LIME</code>, <code>GREEN</code> and <code>ACCENT_TEXT</code>.</li>
+    <li>The mockups use the Material Symbols font from Google Fonts for the icons. Without internet access, the icons show as words.</li>
+    <li>The file sizes in the mockups change with the content, the cards and the bitrate. The formula is an estimate for the mockup only.</li>
+    <li>Add <code>#state=queue&amp;quality=advanced</code> to a page URL to open it in a given state.</li>
+  </ul>
+</div>
+</body>
+</html>

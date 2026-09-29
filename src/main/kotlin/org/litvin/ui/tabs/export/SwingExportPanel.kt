@@ -29,7 +29,7 @@ import org.litvin.stats.StatsCardVideo
 import org.litvin.stats.StatsIO
 import org.litvin.stats.StatsSettingsV1
 import org.litvin.ui.commons.FilePicker
-import org.litvin.ui.commons.SwingFilePicker
+import org.litvin.ui.commons.SystemFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.applyDarkScrollbar
@@ -61,7 +61,7 @@ class SwingExportPanel(
         ExportSettingsPreferences(),
         ProductionRenderService(AdjustmentsStore.legacySession(), ProductionCompletedRendersRepository),
         ProductionCompletedRendersRepository,
-        SwingFilePicker(),
+        SystemFilePicker(),
         SwingUserDialogService(),
         CompletableFuture.supplyAsync(EncoderCapabilities::production),
     )
@@ -179,7 +179,7 @@ class SwingExportPanel(
         favoritesCard.addActionListener {
             if (validFavoriteCount() <= 0) {
                 lastContentCard.isSelected = true
-                dialogs.showInfo(
+                dialogs.showWarning(
                     this,
                     "Only favorites needs at least one valid favorite point. Mark a point with a star on the Points tab.",
                     "Favorite export unavailable",
@@ -193,7 +193,7 @@ class SwingExportPanel(
             // If user tries to enable scoreboard with no scored points, prevent and explain
             if (scoreboardCheck.isSelected && !hasAnyScoredPoints()) {
                 scoreboardCheck.isSelected = false
-                dialogs.showInfo(this, "Cannot include scoreboard: there are no scored points in the current project.", "Scoreboard unavailable")
+                dialogs.showWarning(this, "Cannot include scoreboard: there are no scored points in the current project.", "Scoreboard unavailable")
             }
         }
         commentsCheck.addActionListener {
@@ -203,7 +203,7 @@ class SwingExportPanel(
         statsCardCheck.addActionListener {
             if (statsCardCheck.isSelected && currentStatsCard() == null) {
                 statsCardCheck.isSelected = false
-                dialogs.showInfo(
+                dialogs.showWarning(
                     this,
                     "Cannot include the statistics card: no selected statistic has a value. Select the statistics in the Stats tab.",
                     "Statistics card unavailable",
@@ -246,7 +246,15 @@ class SwingExportPanel(
     }
 
     private fun cancelActiveExport() {
-        if (dialogs.confirm(this, "Cancel the current export? The partly written file is deleted.", "Confirm")) {
+        if (dialogs.confirm(
+                this,
+                "Cancel the current export? The partly written file is deleted.",
+                "Cancel export",
+                confirmLabel = "Cancel export",
+                cancelLabel = "Keep exporting",
+                destructive = true,
+            )
+        ) {
             renderService.cancelCurrent()
         }
     }
@@ -281,7 +289,7 @@ class SwingExportPanel(
     private fun onInitializeRender() {
         val readiness = initializationReadiness()
         if (!readiness.enabled) {
-            dialogs.showInfo(
+            dialogs.showWarning(
                 this,
                 readiness.disabledReason ?: "Export cannot start right now.",
                 INIT_BLOCKED_TITLE,
@@ -301,7 +309,7 @@ class SwingExportPanel(
         }
         val source = manifest?.sourceVideo
         if (source.isNullOrBlank() || !File(source).exists()) {
-            dialogs.showError(this, "Source video missing", "Select source video")
+            dialogs.showError(this, "Select source video", "Source video missing")
             return
         }
 
@@ -316,13 +324,13 @@ class SwingExportPanel(
             favoriteOnly = favoriteOnly,
         )
         if (favoriteOnly && keeps.isEmpty()) {
-            dialogs.showInfo(this, "Cannot export only favorite points: no valid favorite points are available.", "Favorite export unavailable")
+            dialogs.showWarning(this, "Cannot export only favorite points: no valid favorite points are available.", "Favorite export unavailable")
             updateFavoriteOnlyAvailability()
             updateInitButtonState()
             return
         }
         if (idleTrim && keeps.isEmpty()) {
-            if (!dialogs.confirm(this, "The project has no valid points. Export the full video?", "No points")) return
+            if (!dialogs.confirm(this, "The project has no valid points. Export the full video?", "No points", confirmLabel = "Export full video")) return
         }
         val quality = qualityPanel.selection()
         val target = quality.target
@@ -341,19 +349,20 @@ class SwingExportPanel(
                 resolutionLabel = target.resolution.label,
             )
         )
-        var out = filePicker.chooseExportDestination(
+        val chosen = filePicker.chooseExportDestination(
             parent = this,
             title = "Save Export As…",
             initialDirectory = initialDir,
             suggestedFile = suggestedFile,
         ) ?: return
-        settingsPreferences.saveOutputDirectory(out)
+        settingsPreferences.saveOutputDirectory(chosen)
         // Ensure extension if user omitted
         val defaultExt = selPreset.container?.format?.lowercase()?.let { if (it.startsWith(".")) it.drop(1) else it } ?: "mp4"
-        out = ExportPlanner.ensureExtension(out, defaultExt)
+        val out = ExportPlanner.ensureExtension(chosen, defaultExt)
 
-        if (out.exists()) {
-            if (!dialogs.confirm(this, "File exists. Overwrite?", "Confirm overwrite")) return
+        // The file dialog asked to replace the file that the user selected. Ask here only for a name that the app changed.
+        if (out != chosen && out.exists()) {
+            if (!dialogs.confirm(this, "File exists. Overwrite?\n\n${out.path}", "Confirm overwrite", confirmLabel = "Overwrite", destructive = true)) return
         }
 
         val score = try {
@@ -389,6 +398,7 @@ class SwingExportPanel(
         dialogs.showInfo(
             this,
             if (queued) "Export queued: ${out.name}. It starts when the current exports end." else "Export started: ${out.name}",
+            if (queued) "Export queued" else "Export started",
         )
     }
 

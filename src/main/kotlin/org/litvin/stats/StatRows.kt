@@ -26,10 +26,9 @@ enum class MatchStat(val key: String, val group: StatGroup, val label: String, v
     POINTS_WON("points_won", StatGroup.OVERVIEW, "Points won", inVideoByDefault = true),
     GAMES_WON("games_won", StatGroup.OVERVIEW, "Games won"),
     SETS_WON("sets_won", StatGroup.OVERVIEW, "Sets won"),
-    TIEBREAKS_WON("tiebreaks_won", StatGroup.OVERVIEW, "Tiebreaks won"),
     SERVICE_POINTS_WON("service_points_won", StatGroup.SERVE, "Points won on serve", inVideoByDefault = true),
-    RETURN_POINTS_WON("return_points_won", StatGroup.SERVE, "Points won on return", inVideoByDefault = true),
-    SERVICE_GAMES_WON("service_games_won", StatGroup.SERVE, "Service games won"),
+    RETURN_POINTS_WON("return_points_won", StatGroup.SERVE, "Points won on return"),
+    SERVICE_GAMES_WON("service_games_won", StatGroup.SERVE, "Service games won", inVideoByDefault = true),
     RETURN_GAMES_WON("return_games_won", StatGroup.SERVE, "Return games won"),
     BREAK_POINTS_WON("break_points_won", StatGroup.PRESSURE, "Break points won", inVideoByDefault = true),
     BREAK_POINTS_SAVED("break_points_saved", StatGroup.PRESSURE, "Break points saved"),
@@ -37,12 +36,12 @@ enum class MatchStat(val key: String, val group: StatGroup, val label: String, v
     MATCH_POINTS_WON("match_points_won", StatGroup.PRESSURE, "Match points won"),
     DEUCE_POINTS_WON("deuce_points_won", StatGroup.PRESSURE, "Deuce points won"),
     AVERAGE_POINT_WON("average_point_won", StatGroup.POINT_LENGTH, "Average point won"),
-    SHORT_POINTS_WON("short_points_won", StatGroup.POINT_LENGTH, "Short points won"),
-    LONG_POINTS_WON("long_points_won", StatGroup.POINT_LENGTH, "Long points won"),
-    LONGEST_POINT_RUN("longest_point_run", StatGroup.MOMENTUM, "Most points in a row", inVideoByDefault = true),
+    SHORT_POINTS_WON("short_points_won", StatGroup.POINT_LENGTH, "Short points won", inVideoByDefault = true),
+    LONG_POINTS_WON("long_points_won", StatGroup.POINT_LENGTH, "Long points won", inVideoByDefault = true),
+    LONGEST_POINT_RUN("longest_point_run", StatGroup.MOMENTUM, "Most points in a row"),
     LONGEST_GAME_RUN("longest_game_run", StatGroup.MOMENTUM, "Most games in a row"),
     LARGEST_POINT_LEAD("largest_point_lead", StatGroup.MOMENTUM, "Largest point lead"),
-    DURATION("duration", StatGroup.TIME, "Duration", inVideoByDefault = true),
+    DURATION("duration", StatGroup.TIME, "Match duration", inVideoByDefault = true),
     PLAYING_TIME("playing_time", StatGroup.TIME, "Playing time"),
     AVERAGE_POINT("average_point", StatGroup.TIME, "Average point"),
     LONGEST_POINT("longest_point", StatGroup.TIME, "Longest point"),
@@ -140,7 +139,6 @@ object StatRows {
                 )
             }
             MatchStat.SETS_WON -> if (!hasSets) unavailable(NO_SETS) else counts(stats.setsWon)
-            MatchStat.TIEBREAKS_WON -> if (!hasSets) unavailable(NO_SETS) else counts(stats.tiebreaksWon)
             MatchStat.SERVICE_POINTS_WON -> if (serve == null) unavailable(NEEDS_SERVER) else shares(serve.servicePointsWon)
             MatchStat.RETURN_POINTS_WON -> if (serve == null) unavailable(NEEDS_SERVER) else shares(serve.returnPointsWon)
             MatchStat.SERVICE_GAMES_WON -> when {
@@ -183,7 +181,7 @@ object StatRows {
             MatchStat.LONGEST_POINT_RUN -> counts(stats.longestPointRun).copy(pointIds = stats.keyPoints.longestPointRunStart)
             MatchStat.LONGEST_GAME_RUN -> if (!hasGames) unavailable(NO_GAMES) else counts(stats.longestGameRun)
             MatchStat.LARGEST_POINT_LEAD -> counts(stats.largestPointLead).copy(pointIds = stats.keyPoints.largestPointLeadAt)
-            MatchStat.DURATION -> shared(time.durationMs.takeIf { stats.points > 0 }?.let { StatValue(clock(it)) })
+            MatchStat.DURATION -> shared(time.durationMs.takeIf { stats.scoredPoints > 0 }?.let { StatValue(clock(it)) })
             MatchStat.PLAYING_TIME -> shared(time.playingMs.takeIf { stats.points > 0 }?.let { StatValue(clock(it)) })
             MatchStat.AVERAGE_POINT -> shared(time.averagePointMs?.let { StatValue(seconds(it)) })
             MatchStat.LONGEST_POINT -> shared(time.longestPoint?.let { StatValue(seconds((it.endMs - it.startMs).toLong())) })

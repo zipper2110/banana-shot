@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stats Final Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Final design. Base: option B (mirrored rows like the video card, card column at the right).
+     Changes from the review:
+       - the Match / Set control with the set scores comes from option C. It is under the table header,
+         above the momentum chart, and it uses the full width of the left side. The tab has no header row.
+         A one-set match has no Match / Set control,
+       - the "In video" column comes from option A: the last column of the table, with a light lime
+         background from the table header to the last row, a checkbox in each row and in the momentum row,
+         and the count of selected rows ("2 of 4") in each group title,
+       - the default rows in the video: Points won, Points won on serve, Service games won, Break points won,
+         Short points won, Long points won and Match duration. "In video" for the momentum chart is off by default,
+       - the default point length limits: a short point lasts 10 s or less, a long point lasts 13 s or more,
+       - "Duration" is now "Match duration": the time from the start of the first point with a winner
+         to the end of the last point with a winner,
+       - the left side and the card column have the same width. The table columns grow and shrink
+         with the window, and the chart draws again at the new width. */
+  .tab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; min-width: 0; }
+  #empty { grid-column: 1 / -1; }
+
+  /* ----- Match / Set control (option C): the full width of the left side ----- */
+  .scope { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); }
+  .scope .seg { display: flex; }
+  .scope .seg > button { flex: 1; }
+
+  /* ----- Left side: half of the tab. The value columns and the label column grow with the window. ----- */
+  .left { min-height: 0; overflow-y: auto; scrollbar-gutter: stable; padding: 0 0 24px 16px; }
+  .grid { --cols: minmax(100px, 1fr) minmax(228px, 2.2fr) minmax(100px, 1fr) 88px; }
+  .notes { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; }
+  .grow { display: grid; grid-template-columns: var(--cols); align-items: center; }
+
+  /* The "In video" column (option A) */
+  .lane { align-self: stretch; display: grid; place-items: center; background: rgba(161, 254, 0, .035); border-left: 1px solid rgba(161, 254, 0, .14); }
+  .row .lane .check-label { padding: 4px; }
+  .row.inv .lane { background: rgba(161, 254, 0, .08); }
+
+  /* Table header */
+  .thead { position: sticky; top: 0; z-index: 3; height: 42px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .thead .n1, .thead .n2 { display: flex; align-items: center; gap: 7px; font-weight: 700; font-size: 13.5px; }
+  .thead .n1 { padding-left: 12px; color: var(--p1); }
+  .thead .n2 { padding-right: 12px; justify-content: flex-end; color: var(--p2); }
+  .thead .th-stat { text-align: center; font-size: 15px; color: var(--fg); }
+  .thead .lane { display: flex; gap: 4px; justify-content: center; align-items: center; white-space: nowrap; font-size: 11px; color: var(--sage); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .thead .lane .material-symbols-outlined { font-size: 15px; }
+
+  /* Momentum row */
+  .mo { border-bottom: 1px solid var(--line); }
+  .mo-main { grid-column: 1 / 4; padding: 12px 12px 8px; min-width: 0; }
+  .mo-title { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px; }
+  .mo-title b { font-size: 13px; color: var(--sage); }
+  .mo-title span { font-size: 11.5px; color: var(--fg-2); }
+  .mo .lane { place-items: start center; padding-top: 10px; }
+
+  /* Group titles (option B line, option A count) */
+  .gtitle { grid-column: 1 / 4; display: flex; align-items: center; gap: 12px; padding: 18px 12px 6px; color: var(--sage); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+  .gtitle::before, .gtitle::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }
+  .gtitle::before { max-width: 64px; }
+  .ghead .lane { place-items: end center; padding-bottom: 6px; font-size: 11px; color: var(--fg-3); }
+  .ghead .lane.has { color: var(--green); }
+
+  .limits-row > div:first-child { grid-column: 1 / 4; padding: 0 12px 6px; }
+  .limits { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 7px 12px; font-size: 12px; color: var(--fg-2); background: var(--card); border: 1px dashed var(--line-2); border-radius: var(--radius); }
+  .limits .material-symbols-outlined { font-size: 16px; color: var(--sage); }
+  .limits .pair { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* Mirrored rows (option B) */
+  .row { min-height: 52px; border-bottom: 1px solid #1b1b1b; }
+  .row:hover { background: #151515; }
+  .side { padding: 5px 0 5px 12px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .side.p2 { padding: 5px 12px 5px 0; text-align: right; }
+  .side .v-main { font-size: 19px; font-weight: 700; color: var(--fg-2); }
+  .side.lead .v-main { color: #fff; }
+  .side .v-detail { display: block; font-size: 11.5px; color: var(--fg-3); }
+  .side.p2 .point-link { flex-direction: row-reverse; }
+  .mid { text-align: center; min-width: 0; padding: 5px 10px; }
+  .mid .label { font-size: 12.5px; color: var(--fg); display: inline-flex; align-items: center; gap: 5px; }
+  .mid .label .material-symbols-outlined { font-size: 14px; color: var(--fg-3); }
+  .bar { display: flex; gap: 4px; height: 6px; margin-top: 6px; }
+  .bar i { border-radius: 3px; }
+  .bar.dim i { opacity: .3; }
+  .shared-val .v-main { display: block; font-size: 18px; font-weight: 700; color: #fff; margin-top: 1px; }
+  .shared-val .point-link { justify-content: center; }
+  .row.off .label { color: var(--fg-3); }
+  .row.off .side .v-main { color: #444; }
+  .reason { margin-top: 4px; font-size: 11.5px; color: var(--fg-3); font-style: italic; }
+
+  /* ----- Card column (option B): all the remaining width ----- */
+  .card-col { min-height: 0; overflow-y: auto; border-left: 1px solid var(--line); background: var(--card); }
+  /* The preview grows with the column, but it stays short enough to show the controls under it. */
+  .card-inner { padding: 16px 20px 20px; margin: 0 auto; max-width: max(460px, calc((100vh - 370px) * 16 / 9 + 40px)); display: flex; flex-direction: column; gap: 12px; }
+  .card-head h2 { margin: 0; font-size: 15px; }
+  .card-head .sub { font-size: 12px; color: var(--fg-2); margin-top: 2px; }
+  .pager { display: flex; align-items: center; gap: 8px; }
+  .pager .label { font-size: 12.5px; color: var(--fg-2); flex: 1; text-align: center; }
+  .field-head { display: flex; align-items: baseline; font-size: 12.5px; margin-bottom: 4px; }
+  .field-head .value { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-3); }
+  .about { border-top: 1px solid var(--line); padding-top: 10px; }
+  .about summary { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--fg-2); }
+  .about summary:hover { color: var(--fg); }
+  .about summary .material-symbols-outlined { font-size: 17px; }
+  .about p { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--fg-2); }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main class="tab" id="tab">
+      <div id="empty" hidden></div>
+
+      <section class="left scroll" id="left" data-keep-scroll="left">
+        <div class="notes" id="notes"></div>
+        <div class="grid">
+          <div class="grow thead" id="thead"></div>
+          <div class="scope" id="scope"></div>
+          <div class="grow mo">
+            <div class="mo-main">
+              <div class="mo-title"><b>Momentum</b><span>Click the chart to open a point in the Scoring tab.</span></div>
+              <div id="chart"></div>
+            </div>
+            <div class="lane" id="mo-lane"></div>
+          </div>
+          <div id="table"></div>
+        </div>
+      </section>
+
+      <aside class="card-col scroll" id="card-col">
+        <div class="card-inner">
+          <div class="card-head"><h2>In the video</h2><div class="sub" id="card-sub"></div></div>
+          <div class="preview" id="preview"></div>
+          <div class="pager" id="pager"></div>
+          <div>
+            <div class="field-head"><span data-tip="How much of the video shows through the card. The exported video uses the same value.">Card transparency</span><span class="value" data-transparency-value></span></div>
+            <input type="range" min="0" max="80" id="transparency" data-transparency data-tip="How much of the video shows through the card. The exported video uses the same value.">
+            <div class="scale"><span>Solid card</span><span>More video</span></div>
+          </div>
+          <details class="about" open></details>
+        </div>
+      </aside>
+    </main>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { state, icon, esc, PLAYERS } = Mock;
+  Mock.shell('final');
+  // The rows that the statistics card shows by default. The card does not show the momentum chart by default.
+  state.inVideo = new Set(['points_won', 'service_points_won', 'service_games_won', 'break_points_won',
+    'short_points_won', 'long_points_won', 'duration']);
+  state.momentum = false;
+  // The default point length limits.
+  state.shortMax = 10;
+  state.longMin = 13;
+  const pc = (i) => `--pc:${PLAYERS[i].color}`;
+  const $ = (id) => document.getElementById(id);
+  const chart = Mock.mountChart($('chart'), 160);
+
+  document.querySelector('.about').innerHTML =
+    `<summary>${icon('info')}How the card works${icon('expand_more', 'chev')}</summary>` +
+    Mock.HELP.map((t) => `<p>${esc(t)}</p>`).join('');
+
+  function renderPreview() { $('preview').innerHTML = Mock.cardSvg(); }
+  Mock.onPreview(renderPreview);
+
+  function check(attr, checked, tip) {
+    return `<label class="check-label" data-tip="${esc(tip)}"><input type="checkbox" class="check-input" ${attr} ${checked ? 'checked' : ''}><span class="check"></span></label>`;
+  }
+
+  Mock.onRender(() => {
+    const empty = Mock.emptyHtml();
+    ['left', 'card-col'].forEach((id) => { $(id).hidden = !!empty; });
+    $('empty').hidden = !empty;
+    if (empty) { $('empty').innerHTML = empty; return; }
+
+    // Match / Set control (option C), under the table header. A one-set match has no scope.
+    const scopes = Mock.scopes();
+    $('scope').hidden = !scopes.length;
+    $('scope').innerHTML = `<div class="seg">${scopes.map((s) =>
+      `<button data-scope="${s.index}" class="${s.index === state.scope ? 'is-selected' : ''}">${s.title}<small>${s.index ? s.score : 'All sets'}</small></button>`).join('')}</div>`;
+    $('notes').innerHTML = Mock.notesHtml();
+    $('notes').hidden = !Mock.coverage().length;
+
+    // Table header and the momentum row.
+    $('thead').innerHTML =
+      PLAYERS.map((p, i) => `<div class="n${i + 1}"><span class="pdot" style="${pc(i)}"></span>${p.name}</div>`).join('<div class="th-stat">Statistic</div>') +
+      `<div class="lane">${icon('movie')}In video</div>`;
+    $('mo-lane').innerHTML = check('data-momentum', state.momentum, 'Add a page with this chart to the statistics card of the exported video.');
+    chart.draw();
+
+    // Groups and mirrored rows.
+    const limits = Mock.limitsHtml();
+    $('table').innerHTML = Mock.groups().map((g) => {
+      const selected = g.rows.filter((r) => r.inVideo).length;
+      let html = `<div class="grow ghead"><div class="gtitle">${g.title}</div><div class="lane ${selected ? 'has' : ''}">${selected} of ${g.rows.length}</div></div>`;
+      if (g.title === 'Point length') {
+        html += `<div class="grow limits-row"><div><div class="limits" data-tip="Set the limits for your marks. Some marks start before the serve or end after the point.">${icon('tune')}` +
+          `<span class="pair">Short point: up to ${limits.short} s</span><span class="pair">Long point: ${limits.long} s or more</span></div></div><div class="lane"></div></div>`;
+      }
+      return html + g.rows.map(rowHtml).join('');
+    }).join('');
+
+    // Card column.
+    const card = Mock.card();
+    const count = card.pages.length;
+    $('card-sub').textContent = `${card.title} · ${card.rowCount} ${card.rowCount === 1 ? 'row' : 'rows'}${state.momentum ? ' and the momentum chart' : ''}`;
+    renderPreview();
+    $('pager').hidden = count < 2;
+    $('pager').innerHTML =
+      `<button class="btn btn-sm" data-page-step="-1" ${state.page === 0 ? 'disabled' : ''}>${icon('chevron_left')}Previous page</button>` +
+      `<span class="label">Page ${state.page + 1} of ${count}</span>` +
+      `<button class="btn btn-sm" data-page-step="1" ${state.page >= count - 1 ? 'disabled' : ''}>Next page${icon('chevron_right')}</button>`;
+    $('transparency').value = state.transparency;
+    document.querySelectorAll('[data-transparency-value]').forEach((el) => { el.textContent = `${state.transparency} %`; });
+  });
+
+  function rowHtml(row) {
+    const tip = esc(Mock.rowTip(row));
+    const label = `<span class="label" ${tip ? `data-tip="${tip}"` : ''}>${esc(row.label)}${!row.available ? icon('info') : row.description ? icon('help') : ''}</span>`;
+    let sides, mid, lead = 0;
+    if (!row.available) {
+      sides = ['<b class="v-main">—</b>', '<b class="v-main">—</b>'];
+      mid = `${label}<div class="reason">${esc(row.reason)}</div>`;
+    } else if (row.shared) {
+      sides = ['', ''];
+      mid = `${label}<div class="shared-val">${Mock.valueHtml(row.shared, row.sharedPointId)}</div>`;
+    } else {
+      lead = Mock.leader(row);
+      sides = row.values.map((v, i) => Mock.valueHtml(v, row.pointIds && row.pointIds[i]));
+      let bar = '';
+      if (row.bar) {
+        const total = row.bar[0] + row.bar[1];
+        const part = total > 0 ? row.bar[0] / total : 0.5;
+        bar = `<div class="bar ${total > 0 ? '' : 'dim'}"><i style="flex:${part};background:${PLAYERS[0].color}"></i><i style="flex:${1 - part};background:${PLAYERS[1].color}"></i></div>`;
+      }
+      mid = label + bar;
+    }
+    return `<div class="grow row ${row.available ? '' : 'off'} ${row.inVideo ? 'inv' : ''}">` +
+      `<div class="side p1 ${lead === 1 ? 'lead' : ''}">${sides[0]}</div>` +
+      `<div class="mid">${mid}</div>` +
+      `<div class="side p2 ${lead === 2 ? 'lead' : ''}">${sides[1]}</div>` +
+      `<div class="lane">${check(`data-video="${row.key}"`, row.inVideo, Mock.checkTip(row))}</div></div>`;
+  }
+
+  Mock.render();
+</script>
+</body>
+</html>

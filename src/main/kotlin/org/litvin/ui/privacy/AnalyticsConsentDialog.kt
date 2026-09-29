@@ -1,38 +1,93 @@
 package org.litvin.ui.privacy
 
+import org.kordamp.ikonli.material2.Material2AL
+import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.AppInfo
 import org.litvin.analytics.AnalyticsController
-import java.awt.BorderLayout
+import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.LeadRow
+import org.litvin.ui.commons.MessageDialog
+import org.litvin.ui.commons.MessageKind
+import org.litvin.ui.commons.PathBox
+import org.litvin.ui.commons.Stack
+import org.litvin.ui.commons.UiButton
+import org.litvin.ui.commons.UiKit
+import org.litvin.ui.commons.WrapText
 import java.awt.Dialog
-import java.awt.FlowLayout
+import java.awt.Dimension
 import java.awt.Window
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import java.net.URI
-import javax.swing.JButton
 import javax.swing.JDialog
 import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JTextArea
-import javax.swing.WindowConstants
 
+/**
+ * The question about the optional usage analytics at the app start. It does not block the app.
+ * The look comes from design/dialogs-redesign/messages.html ("consent"). Closing the window means "No thanks".
+ */
 object AnalyticsConsentDialog {
+    private const val WIDTH = DialogKit.MEDIUM
+    private const val TEXT_WIDTH = WIDTH - 84
+
     fun show(owner: Window, controller: AnalyticsController, privacyUrl: URI, linkOpener: PrivacyLinkOpener = PrivacyLinkOpener.DesktopBrowser) {
-        JDialog(owner, "Optional usage analytics", Dialog.ModalityType.MODELESS).apply {
-            defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
-            layout = BorderLayout(12, 12)
-            add(JTextArea("Help improve ${AppInfo.NAME} by sending optional, anonymous product events. We never collect video, project names, paths, scores, or personal details.").apply {
-                isEditable = false; isOpaque = false; lineWrap = true; wrapStyleWord = true
-            }, BorderLayout.CENTER)
-            val actions = JPanel(FlowLayout(FlowLayout.RIGHT))
-            val read = JButton("Read privacy notice")
-            read.addActionListener {
-                if (!linkOpener.open(privacyUrl)) add(JLabel("Copy this URL: $privacyUrl"), BorderLayout.NORTH)
-            }
-            actions.add(read)
-            actions.add(JButton("No thanks").apply { addActionListener { controller.disable(); dispose() } })
-            actions.add(JButton("Enable analytics").apply { addActionListener { controller.enable(); dispose() } })
-            add(actions, BorderLayout.SOUTH)
-            addWindowListener(object : java.awt.event.WindowAdapter() { override fun windowClosing(e: java.awt.event.WindowEvent) { controller.disable() } })
-            setSize(460, 220); setLocationRelativeTo(owner); isVisible = true
+        val dialog = build(owner, controller, privacyUrl, linkOpener)
+        dialog.setLocationRelativeTo(owner)
+        dialog.isVisible = true
+    }
+
+    /** Builds the packed window without showing it. */
+    internal fun build(owner: Window?, controller: AnalyticsController, privacyUrl: URI, linkOpener: PrivacyLinkOpener): JDialog {
+        val dialog = DialogKit.modal(owner, "Optional usage analytics", Dialog.ModalityType.MODELESS)
+        dialog.name = "analytics-consent"
+        fun decline() {
+            controller.disable()
+            dialog.dispose()
         }
+        DialogKit.onEscape(dialog) { decline() }
+        dialog.addWindowListener(object : WindowAdapter() {
+            override fun windowClosing(e: WindowEvent) = controller.disable()
+        })
+
+        val fact = LeadRow(
+            JLabel(UiKit.icon(Material2AL.BLOCK, 16, UiKit.RED)).apply { preferredSize = Dimension(18, 19) },
+            WrapText("We never collect video, project names, paths, scores, or personal details.", UiKit.font(12.5f), UiKit.FG_2, 1.5f, TEXT_WIDTH),
+            18,
+            8,
+        )
+        // The address shows only when the app cannot open the browser, so the user can copy it.
+        val copyLine = Stack(gap = 4).apply {
+            add(WrapText("Copy this URL:", UiKit.font(12f), UiKit.FG_3, 1.4f, TEXT_WIDTH))
+            add(PathBox(privacyUrl.toString()))
+            isVisible = false
+        }
+        val later = WrapText("You can change this later in More → Privacy.", UiKit.font(12f), UiKit.FG_3, 1.45f, TEXT_WIDTH)
+        val parts = listOf(
+            MessageDialog.paragraph("Help improve ${AppInfo.NAME} by sending optional, anonymous product events.", WIDTH),
+            fact,
+            copyLine,
+            later,
+        )
+
+        val read = UiButton("Read privacy notice", Material2MZ.OPEN_IN_NEW, UiButton.Kind.GHOST).apply {
+            addActionListener {
+                if (!linkOpener.open(privacyUrl) && !copyLine.isVisible) {
+                    copyLine.isVisible = true
+                    dialog.pack()
+                }
+            }
+        }
+        val noThanks = UiButton("No thanks").apply { addActionListener { decline() } }
+        val enable = UiButton("Enable analytics", kind = UiButton.Kind.LIME).apply {
+            addActionListener {
+                controller.enable()
+                dialog.dispose()
+            }
+        }
+        val footer = DialogKit.footer(left = listOf(read), right = listOf(noThanks, enable))
+        dialog.contentPane = MessageDialog.content(MessageKind.INFO, "Optional usage analytics", parts, footer, WIDTH, Material2AL.INSIGHTS)
+        dialog.isResizable = false
+        dialog.pack()
+        return dialog
     }
 }

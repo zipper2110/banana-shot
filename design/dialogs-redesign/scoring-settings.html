@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scoring Settings Dialog</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Scoring settings (ScoreSettingsDialog). Opened from the Scoring tab.
+     Changes: group cards like the side panels, segmented controls in place of the combo boxes,
+     a switch for manual scoring at the bottom (the same place as today), and the player color next to the name. */
+  .modal.ss { width: 560px; max-height: 100%; }
+  .ss .modal-body { gap: 12px; }
+  .player { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; }
+  .color-btn { width: 34px; height: 32px; padding: 0; display: grid; place-items: center; }
+  .color-btn .swatch { width: 18px; height: 18px; border-radius: 50%; }
+  .seg.two > button { height: auto; min-height: 30px; padding: 5px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1.25; }
+  .seg.two > button small { font-size: 11px; font-weight: 400; color: var(--fg-3); }
+  .seg.two > button.is-selected small { color: var(--fg-2); }
+  .g-row.format { border-bottom: 1px solid #202020; }
+  .rules-cap { padding: 10px 14px 2px; font-size: 11.5px; color: var(--fg-3); }
+  .count { font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; flex: none; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main id="tab"></main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Scoring settings.</b> Same values as today. The groups keep the order of today:
+  who plays, the match rules, and manual scoring.
+  Change a rule to see the format change to the matching preset or to "Custom".
+  The unused rules of a format stay visible, but dim, so the dialog does not change its height.
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const { esc, icon } = Mock;
+
+  // ---------- Rules (the same logic as MatchRulesV1 and MatchFormatPreset) ----------
+  const DEFAULTS = { manualScoring: false, structure: 'SETS', bestOfSets: 3, gamesPerSet: 6, setTiebreak: true, tiebreakPoints: 7, finalSet: 'FULL_SET', deuce: 'ADVANTAGE' };
+  const PRESETS = [
+    ['BEST_OF_3', 'Best of 3 sets', 'Standard match. Sets to 6 games, tiebreak at 6–6.', {}],
+    ['BEST_OF_3_MATCH_TIEBREAK', 'Best of 3 sets, match tiebreak', 'Sets to 6 games. At one set all, a 10-point match tiebreak decides the match.', { finalSet: 'MATCH_TIEBREAK' }],
+    ['BEST_OF_5', 'Best of 5 sets', 'Grand Slam format. Sets to 6 games, tiebreak at 6–6.', { bestOfSets: 5 }],
+    ['ONE_SET', 'One set', 'One set to 6 games, tiebreak at 6–6.', { bestOfSets: 1 }],
+    ['PRO_SET', 'Pro set (8 games)', 'One set to 8 games, tiebreak at 8–8.', { bestOfSets: 1, gamesPerSet: 8 }],
+    ['SHORT_SETS', 'Short sets (4 games)', 'Best of 3 sets to 4 games, tiebreak at 4–4.', { gamesPerSet: 4 }],
+    ['GAMES_ONLY', 'Games only', 'Count games without sets. Use it for practice games.', { structure: 'GAMES_ONLY' }],
+    ['TIEBREAK', 'Tiebreak (7 points)', 'One tiebreak to 7 points with a two-point lead.', { structure: 'SINGLE_TIEBREAK', tiebreakPoints: 7 }],
+    ['MATCH_TIEBREAK', 'Match tiebreak (10 points)', 'One tiebreak to 10 points with a two-point lead.', { structure: 'SINGLE_TIEBREAK', tiebreakPoints: 10 }],
+    ['PLAIN_POINTS', 'Plain points (endless tiebreak)', 'Count points 1, 2, 3 like in a tiebreak, without a points limit. The match has no end.', { structure: 'PLAIN_POINTS' }],
+    ['CUSTOM', 'Custom', 'Your own combination of the rules below.', null],
+  ].map(([id, title, description, rules]) => ({ id, title, description, rules: rules && { ...DEFAULTS, ...rules } }));
+
+  function canonical(r) {
+    const d = DEFAULTS;
+    if (r.structure === 'SETS') return { ...r, tiebreakPoints: r.setTiebreak ? r.tiebreakPoints : d.tiebreakPoints, finalSet: r.bestOfSets > 1 ? r.finalSet : d.finalSet };
+    if (r.structure === 'GAMES_ONLY') return { ...d, manualScoring: r.manualScoring, structure: r.structure, deuce: r.deuce };
+    if (r.structure === 'SINGLE_TIEBREAK') return { ...d, manualScoring: r.manualScoring, structure: r.structure, tiebreakPoints: r.tiebreakPoints };
+    return { ...d, manualScoring: r.manualScoring, structure: r.structure };
+  }
+  const applyTo = (p, cur) => (p.rules ? { ...p.rules, manualScoring: cur.manualScoring, deuce: cur.deuce } : cur);
+  const same = (a, b) => JSON.stringify(Object.keys(DEFAULTS).map((k) => a[k])) === JSON.stringify(Object.keys(DEFAULTS).map((k) => b[k]));
+  function presetOf(r) {
+    const t = canonical(r);
+    return PRESETS.find((p) => p.rules && same(canonical(applyTo(p, t)), t)) || PRESETS[PRESETS.length - 1];
+  }
+
+  // ---------- Saved values (what the project has) ----------
+  const START = {
+    standard: { ...DEFAULTS },
+    decider: { ...DEFAULTS, finalSet: 'MATCH_TIEBREAK', deuce: 'NO_AD' },
+    tiebreak: { ...DEFAULTS, structure: 'SINGLE_TIEBREAK', tiebreakPoints: 10 },
+    custom: { ...DEFAULTS, gamesPerSet: 8, setTiebreak: false },
+    manual: { ...DEFAULTS, manualScoring: true },
+  };
+  let saved = { p1: 'Alex', p2: 'Sam', c1: '#4DA3FF', c2: '#FF6B6B', rules: { ...START.standard } };
+
+  Mock.shell('scoring', {
+    tab: 'Scoring', tabTitle: 'Scoring',
+    states: [{ label: 'Saved rules', group: 'rules', options: [['standard', 'Best of 3'], ['decider', 'Match tiebreak decider'], ['tiebreak', 'Tiebreak only'], ['custom', 'Custom'], ['manual', 'Manual scoring']] }],
+  });
+  Mock.behind(document.getElementById('tab'),
+    `<button class="btn" id="bSettings">${icon('tune')}Scoring settings</button><button class="btn" id="bStyle" title="The Scoreboard style page shows this dialog">${icon('scoreboard')}Scoreboard style</button>`);
+  document.getElementById('bSettings').onclick = open;
+  document.getElementById('bStyle').onclick = () => { location.href = 'scoreboard-style.html'; };
+
+  // ---------- Dialog ----------
+  function seg(key, options, two) {
+    return `<div class="seg ${two ? 'two' : ''}" data-rule="${key}">${options.map(([v, t, small]) =>
+      `<button data-v="${v}">${esc(t)}${small ? `<small>${esc(small)}</small>` : ''}</button>`).join('')}</div>`;
+  }
+
+  function open() {
+    let rules = { ...saved.rules };
+    let c1 = saved.c1, c2 = saved.c2;
+    const m = Mock.modal(`
+      <div class="modal ss" role="dialog" aria-label="Scoring settings">
+        <div class="modal-head"><h3>Scoring settings</h3></div>
+        <div class="modal-body scroll">
+
+          <section class="group">
+            <div class="g-cap">${icon('group')}Players</div>
+            ${[1, 2].map((n) => `
+            <div class="g-row">
+              <label for="p${n}">Player ${n}</label>
+              <div class="player">
+                <button class="btn color-btn" data-color="${n}" data-tip="Pick the Player ${n} color for the buttons and the scoreboard" aria-label="Player ${n} color"><span class="swatch"></span></button>
+                <div class="ctl"><input class="inp" id="p${n}" maxlength="24" value="${esc(n === 1 ? saved.p1 : saved.p2)}" ${n === 1 ? 'data-focus' : ''}><span class="count" data-count="${n}"></span></div>
+              </div>
+            </div>`).join('')}
+          </section>
+
+          <section class="group" id="formatGroup">
+            <div class="g-cap">${icon('rule')}Match format<span class="aside" id="formatAside"></span></div>
+            <div class="g-row format">
+              <label for="format">Format</label>
+              <select class="inp" id="format">${PRESETS.map((p) => `<option value="${p.id}">${esc(p.title)}</option>`).join('')}</select>
+            </div>
+            <div class="g-desc" id="formatDesc" style="padding-top:8px"></div>
+            <div class="g-row" data-row="bestOfSets"><label>Sets</label>${seg('bestOfSets', [[1, 'One set'], [3, 'Best of 3'], [5, 'Best of 5']])}</div>
+            <div class="g-row" data-row="gamesPerSet"><label>Games in a set</label>${seg('gamesPerSet', [[4, '4 games'], [6, '6 games'], [8, '8 games']])}</div>
+            <div class="g-row" data-row="setTiebreak"><label>Set tiebreak</label><div data-slot="setTiebreak"></div></div>
+            <div class="g-row" data-row="tiebreakPoints"><label>Tiebreak to</label>${seg('tiebreakPoints', [[7, '7 points'], [10, '10 points']])}</div>
+            <div class="g-row" data-row="finalSet"><label>Deciding set</label>${seg('finalSet', [['FULL_SET', 'Full set'], ['MATCH_TIEBREAK', 'Match tiebreak', '10 points']], true)}</div>
+            <div class="g-row" data-row="deuce"><label>Deuce</label>${seg('deuce', [['ADVANTAGE', 'Advantage', 'win by 2 points'], ['NO_AD', 'No-ad', 'deciding point at 40–40']], true)}</div>
+          </section>
+
+          <section class="group">
+            <div class="g-cap">${icon('touch_app')}Manual scoring</div>
+            <div class="g-row wide">
+              <label class="switch-row" data-tip="The app counts points only. You mark each game and set win.">
+                <input type="checkbox" class="check-input" id="manual"><span class="switch"></span><span class="t">Fully manual scoring</span>
+              </label>
+            </div>
+            <div class="g-text" id="manualHint">The app counts points only. Use the + buttons in the score panel to mark each game and set win.</div>
+          </section>
+
+        </div>
+        <div class="modal-foot">
+          <span class="keys"><kbd>Enter</kbd> save · <kbd>Esc</kbd> cancel</span>
+          <span class="grow"></span>
+          <button class="btn" data-cancel>Cancel</button>
+          <button class="btn btn-lime" data-primary>Save</button>
+        </div>
+      </div>`);
+    const r = m.root;
+    const q = (s) => r.querySelector(s);
+
+    function sync() {
+      const g = rules.gamesPerSet;
+      q('[data-slot="setTiebreak"]').innerHTML = seg('setTiebreak', [['true', `Tiebreak at ${g}–${g}`], ['false', 'No tiebreak', 'win by 2 games']], true);
+      q('[data-slot="setTiebreak"] .seg').addEventListener('click', onSeg);
+      const preset = presetOf(rules);
+      q('#format').value = preset.id;
+      q('#formatDesc').textContent = preset.description;
+      const auto = !rules.manualScoring;
+      const sets = rules.structure === 'SETS';
+      const enabled = {
+        bestOfSets: auto && sets,
+        gamesPerSet: auto && sets,
+        setTiebreak: auto && sets,
+        tiebreakPoints: auto && (rules.structure === 'SINGLE_TIEBREAK' || (sets && rules.setTiebreak)),
+        finalSet: auto && sets && rules.bestOfSets > 1,
+        deuce: auto && (sets || rules.structure === 'GAMES_ONLY'),
+      };
+      Object.entries(enabled).forEach(([k, on]) => {
+        const row = q(`[data-row="${k}"]`);
+        row.classList.toggle('is-disabled', !on);
+        row.querySelector('.seg').classList.toggle('is-disabled', !on);
+        row.querySelectorAll('.seg button').forEach((b) => {
+          b.disabled = !on;
+          b.classList.toggle('is-selected', b.dataset.v === String(rules[k]));
+        });
+      });
+      q('#format').disabled = !auto;
+      q('#formatGroup').classList.toggle('is-disabled', !auto);
+      q('#formatDesc').style.color = auto ? '' : 'var(--fg-3)';
+      q('#formatAside').textContent = auto ? '' : 'Not used in manual scoring';
+      q('#manual').checked = rules.manualScoring;
+      q('#manualHint').classList.toggle('is-dim', !rules.manualScoring);
+      q('[data-color="1"] .swatch').style.background = c1;
+      q('[data-color="2"] .swatch').style.background = c2;
+      [1, 2].forEach((n) => { const v = q('#p' + n).value.length; q(`[data-count="${n}"]`).textContent = v >= 20 ? `${v}/24` : ''; });
+    }
+    function onSeg(e) {
+      const b = e.target.closest('button');
+      if (!b || b.disabled) return;
+      const key = b.parentElement.dataset.rule;
+      const raw = b.dataset.v;
+      const value = raw === 'true' ? true : raw === 'false' ? false : /^\d+$/.test(raw) ? Number(raw) : raw;
+      rules = { ...rules, [key]: value };
+      sync();
+    }
+    r.querySelectorAll('.seg[data-rule]').forEach((s) => s.addEventListener('click', onSeg));
+    q('#format').addEventListener('change', () => {
+      const p = PRESETS.find((x) => x.id === q('#format').value);
+      rules = applyTo(p, rules);
+      sync();
+    });
+    q('#manual').addEventListener('change', () => { rules = { ...rules, manualScoring: q('#manual').checked }; sync(); });
+    [1, 2].forEach((n) => {
+      q('#p' + n).addEventListener('input', sync);
+      q(`[data-color="${n}"]`).addEventListener('click', () => Mock.colorPicker({
+        title: `Player ${n} color`, color: n === 1 ? c1 : c2,
+        onOk: (hex) => { if (n === 1) c1 = hex; else c2 = hex; sync(); },
+      }));
+    });
+    q('[data-cancel]').addEventListener('click', () => { m.close(); Mock.toast('Closed without changes.'); });
+    q('[data-primary]').addEventListener('click', () => {
+      saved = { p1: q('#p1').value.trim(), p2: q('#p2').value.trim(), c1, c2, rules };
+      m.close();
+      Mock.toast(`Saved: ${saved.p1 || 'Player 1'} vs ${saved.p2 || 'Player 2'} · ${rules.manualScoring ? 'Fully manual scoring' : presetOf(rules).title}.`);
+    });
+    sync();
+  }
+
+  Mock.onState((group, value) => {
+    if (group !== 'rules') return;
+    saved.rules = { ...START[value] };
+    document.querySelectorAll('.modal-back').forEach((b) => b.remove());
+    open();
+  });
+  Mock.setState('rules', Mock.hash.get('rules') || 'standard');
+})();
+</script>
+</body>
+</html>

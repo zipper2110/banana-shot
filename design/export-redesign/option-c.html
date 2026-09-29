@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export Redesign C</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Option C — Accordion settings and a history grouped by day.
+     Each settings section shows its current choice in the header, so a closed section still gives the full picture.
+     The right side shows the running export with a progress ring, the queue, and the completed exports by day. */
+  .tab { display: grid; grid-template-columns: 440px 1fr; min-height: 0; }
+
+  /* ----- Left ----- */
+  .config { display: flex; flex-direction: column; min-height: 0; background: var(--card); border-right: 1px solid var(--line); }
+  .config-scroll { flex: 1; }
+  .config-title { padding: 16px 20px 10px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); }
+  .acc { border-top: 1px solid var(--line); }
+  .acc:last-child { border-bottom: 1px solid var(--line); }
+  .acc-head {
+    width: 100%; display: grid; grid-template-columns: 30px 1fr 20px; gap: 12px; align-items: center;
+    padding: 13px 20px; background: none; border: 0; text-align: left; cursor: pointer;
+  }
+  .acc-head:hover { background: #1e1e1e; }
+  .acc-icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: #242424; color: var(--fg-2); }
+  .acc-head.is-selected .acc-icon { background: rgba(161, 254, 0, .12); color: var(--lime); }
+  .acc-title { display: block; font-weight: 600; font-size: 13.5px; }
+  .acc-sum { display: block; font-size: 12px; color: var(--fg-2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acc-head.is-selected .acc-sum { color: var(--sage); }
+  .acc-chev { color: var(--fg-3); transition: transform .15s; }
+  .acc-head.is-selected .acc-chev { transform: rotate(180deg); }
+  .acc-body { padding: 2px 20px 18px 62px; }
+
+  .rows { display: flex; flex-direction: column; }
+  .row {
+    display: grid; grid-template-columns: 16px 1fr auto; gap: 10px; align-items: center; text-align: left;
+    padding: 9px 10px; margin: 0 -10px; background: none; border: 0; border-radius: var(--radius); cursor: pointer;
+  }
+  .row:hover { background: #222; }
+  .row.is-selected { background: var(--lime-tint); }
+  .row-title { display: block; font-weight: 600; font-size: 13px; }
+  .row-sub { display: block; font-size: 11.5px; color: var(--fg-2); }
+  .row-meta { text-align: right; font-size: 11.5px; color: var(--fg-2); white-space: nowrap; }
+  .row-meta b { display: block; font-size: 12.5px; color: var(--fg); font-weight: 600; }
+
+  .switch-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 8px 0; cursor: pointer; position: relative; }
+  .switch-row + .switch-row { border-top: 1px solid var(--line); }
+  .switch-label { font-size: 13px; }
+  .switch-note { grid-column: 1; font-size: 11.5px; color: var(--fg-2); }
+  .switch-note.ok { color: var(--green); }
+  .switch { grid-column: 2; grid-row: 1 / span 2; width: 34px; height: 20px; border-radius: 10px; background: #3a3a3a; position: relative; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #bbb; transition: transform .15s, background .15s; }
+  .check-input:checked + .switch { background: var(--lime); }
+  .check-input:checked + .switch::after { transform: translateX(14px); background: #142000; }
+  .check-input:focus-visible + .switch { outline: 2px solid var(--lime); outline-offset: 2px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 4px; }
+  .stat { background: #202020; border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 9px; }
+  .stat-k { font-size: 10.5px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .06em; }
+  .stat-v { font-size: 13px; font-weight: 600; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+  .stat-v .tag { height: 15px; font-size: 10px; padding: 0 4px; }
+  .small-note { font-size: 11.5px; color: var(--fg-3); margin-top: 4px; }
+  .enc-note { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--fg-2); line-height: 1.6; }
+  .enc-note b { color: var(--fg); font-weight: 600; }
+
+  .field + .field { margin-top: 14px; }
+  .field-head { display: flex; align-items: baseline; margin-bottom: 6px; font-size: 12.5px; }
+  .field-head .label { font-weight: 600; }
+  .field-head .value { margin-left: auto; }
+  .scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-3); }
+
+  .config-foot { padding: 14px 20px 16px; border-top: 1px solid var(--line); background: #171717; }
+  .config-foot .btn-primary { height: 52px; flex-direction: column; gap: 0; }
+  .btn-main { display: flex; align-items: center; gap: 6px; }
+  .btn-sub { font-size: 11.5px; font-weight: 500; opacity: .75; }
+
+  /* ----- Right ----- */
+  .activity { display: flex; flex-direction: column; gap: 12px; padding: 16px; min-height: 0; min-width: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  .card-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 8px; }
+  .card-title { font-weight: 600; font-size: 13.5px; }
+  .count { font-size: 11px; color: var(--fg-2); background: #262626; border-radius: 9px; padding: 1px 7px; }
+  .card-head .right { margin-left: auto; }
+
+  .idle { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px dashed #333; border-radius: 8px; color: var(--fg-3); }
+  .idle .material-symbols-outlined { font-size: 22px; }
+  .idle b { color: var(--fg-2); font-weight: 600; display: block; }
+
+  .now { display: grid; grid-template-columns: 76px 1fr auto; gap: 18px; align-items: center; padding: 16px; }
+  .ring {
+    width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center;
+    background: conic-gradient(var(--lime) calc(var(--p) * 1%), #2c2c2c 0);
+    position: relative;
+  }
+  .ring::before { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--card); }
+  .ring span { position: relative; font-size: 17px; font-weight: 700; }
+  .ring.failed { background: conic-gradient(var(--red) calc(var(--p) * 1%), #2c2c2c 0); }
+  .ring.failed span { color: var(--red); }
+  .now-main { min-width: 0; }
+  .now-kicker { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--lime); }
+  .now-kicker.failed { color: var(--red); }
+  .now-file { font-size: 15px; margin-top: 2px; overflow-wrap: anywhere; }
+  .now-meta { font-size: 12px; color: var(--fg-2); margin-top: 3px; }
+  .now-facts { display: flex; gap: 20px; font-size: 12.5px; margin-top: 8px; }
+  .now-facts em { font-style: normal; color: var(--fg-2); margin-right: 6px; }
+  .now-actions { display: flex; flex-direction: column; gap: 6px; align-self: start; }
+  .now-error { grid-column: 2 / -1; display: flex; gap: 8px; padding: 8px 12px; border-radius: var(--radius); background: var(--red-tint); border: 1px solid rgba(255, 115, 81, .35); color: #ffc2b3; font-size: 12.5px; }
+  .now-error .material-symbols-outlined { color: var(--red); }
+
+  .qline { display: grid; grid-template-columns: 22px 1fr auto auto; gap: 12px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--line); font-size: 12px; }
+  .qnum { width: 22px; height: 22px; border-radius: 50%; background: #262626; display: grid; place-items: center; font-weight: 700; font-size: 11px; color: var(--fg-2); }
+  .qmain { min-width: 0; }
+  .qmain .path-file { font-size: 12.5px; }
+  .qmain .meta { color: var(--fg-2); overflow-wrap: anywhere; }
+  .qactions { display: flex; gap: 4px; }
+
+  .history { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .history .list { flex: 1; min-height: 0; padding-bottom: 8px; }
+  .day {
+    position: sticky; top: 0; z-index: 1; background: var(--card);
+    padding: 10px 16px 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3);
+  }
+  .day span { font-weight: 500; letter-spacing: 0; text-transform: none; margin-left: 6px; }
+  .event { display: grid; grid-template-columns: 44px 14px 1fr auto auto; gap: 10px; align-items: start; padding: 6px 16px; }
+  .event:hover { background: #1e1e1e; }
+  .event .time { font-size: 12px; color: var(--fg-2); text-align: right; padding-top: 1px; }
+  .dotline { position: relative; align-self: stretch; }
+  .dotline::before { content: ""; position: absolute; left: 6px; top: 0; bottom: -6px; width: 1px; background: #3a3a3a; }
+  .dotline::after { content: ""; position: absolute; left: 2px; top: 5px; width: 9px; height: 9px; border-radius: 50%; background: var(--card); border: 2px solid var(--sage); box-sizing: border-box; }
+  .event:last-child .dotline::before { bottom: 50%; }
+  .emain { min-width: 0; }
+  .emain .path-file { font-size: 13px; }
+  .emain .meta { font-size: 12px; color: var(--fg-2); overflow-wrap: anywhere; }
+  .emain .meta.v { color: var(--fg-3); }
+  .esize { font-size: 12.5px; font-weight: 600; text-align: right; white-space: nowrap; }
+  .esize .faint { font-weight: 400; display: block; font-size: 11px; }
+  .btn-icon.danger { color: var(--red); }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+
+    <main class="tab">
+      <!-- ================= Left: accordion ================= -->
+      <section class="config">
+        <div class="config-scroll scroll">
+          <div class="config-title">Export settings</div>
+
+          <section class="acc">
+            <button class="acc-head" data-set="open:content">
+              <span class="acc-icon"><span class="material-symbols-outlined">content_cut</span></span>
+              <span><span class="acc-title">Content</span><span class="acc-sum" data-text="content:summary"></span></span>
+              <span class="material-symbols-outlined acc-chev">expand_more</span>
+            </button>
+            <div class="acc-body" data-when="open:content">
+              <div class="rows" role="radiogroup" aria-label="Content">
+                <button class="row" data-set="content:full" title="Export the complete source video, with the time between points.">
+                  <span class="radio"></span>
+                  <span><span class="row-title">Full video</span><span class="row-sub">The complete video, with the time between points</span></span>
+                  <span class="row-meta num"><b>1h 36min 1sec</b></span>
+                </button>
+                <button class="row" data-set="content:points" title="Export only the marked points. The time between points is cut.">
+                  <span class="radio"></span>
+                  <span><span class="row-title">Only points</span><span class="row-sub">The marked points, without the time between them</span></span>
+                  <span class="row-meta num"><b>19min 41sec</b>128 points</span>
+                </button>
+                <button class="row" data-set="content:favorites" title="Export only the points that are marked with a star.">
+                  <span class="radio"></span>
+                  <span><span class="row-title">Only favorites</span><span class="row-sub">Only the points that are marked with a star</span></span>
+                  <span class="row-meta num"><b>8min 43sec</b>43 points</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="acc">
+            <button class="acc-head" data-set="open:include">
+              <span class="acc-icon"><span class="material-symbols-outlined">layers</span></span>
+              <span><span class="acc-title">Include in the video</span><span class="acc-sum" data-text="include:summary"></span></span>
+              <span class="material-symbols-outlined acc-chev">expand_more</span>
+            </button>
+            <div class="acc-body" data-when="open:include">
+              <label class="switch-row" title="Burn in a scoreboard overlay that updates after each point. Uses the data of the Scoring tab.">
+                <span class="switch-label">Scoreboard</span>
+                <input class="check-input" type="checkbox" data-bool="scoreboard"><span class="switch"></span>
+                <span class="switch-note ok num">128/128 points scored</span>
+              </label>
+              <label class="switch-row" title="Burn the comments from the Points tab into the video as centered lower-third text.">
+                <span class="switch-label">Comments</span>
+                <input class="check-input" type="checkbox" data-bool="comments"><span class="switch"></span>
+              </label>
+              <label class="switch-row" title="Add a card with the match statistics after the last point. Select the statistics in the Stats tab.">
+                <span class="switch-label">Statistics card</span>
+                <input class="check-input" type="checkbox" data-bool="stats"><span class="switch"></span>
+                <span class="switch-note num">12 s, 2 pages</span>
+              </label>
+              <label class="switch-row" data-disable-when="content:full" title="Add a card with the statistics of each set after the last point of the set. Select the statistics in the Stats tab.">
+                <span class="switch-label">Set summaries</span>
+                <input class="check-input" type="checkbox" data-bool="sets"><span class="switch"></span>
+                <span class="switch-note num" data-when="!content:full">2 sets, 24 s</span>
+                <span class="switch-note" data-when="content:full">Only for Only points and Only favorites</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="acc">
+            <button class="acc-head" data-set="open:quality">
+              <span class="acc-icon"><span class="material-symbols-outlined">high_quality</span></span>
+              <span><span class="acc-title">Quality and file size</span><span class="acc-sum num" data-text="quality:summary"></span></span>
+              <span class="material-symbols-outlined acc-chev">expand_more</span>
+            </button>
+            <div class="acc-body" data-when="open:quality">
+              <div class="seg" role="tablist" style="margin-bottom:8px">
+                <button data-set="quality:simple" role="tab">Simple</button>
+                <button data-set="quality:advanced" role="tab">Advanced</button>
+              </div>
+
+              <div data-when="quality:simple">
+                <div class="rows" role="radiogroup" aria-label="Quality">
+                  <button class="row" data-set="preset:best">
+                    <span class="radio"></span>
+                    <span><span class="row-title">Original quality</span><span class="row-sub">Largest file, slowest export</span></span>
+                    <span class="row-meta num"><b data-text="size:best"></b></span>
+                  </button>
+                  <button class="row" data-set="preset:balanced">
+                    <span class="radio"></span>
+                    <span><span class="row-title">Balanced</span><span class="row-sub">Good quality, smaller file</span></span>
+                    <span class="row-meta num"><b data-text="size:balanced"></b></span>
+                  </button>
+                  <button class="row" data-set="preset:fast">
+                    <span class="radio"></span>
+                    <span><span class="row-title">Fast export</span><span class="row-sub">Lower quality, smallest file</span></span>
+                    <span class="row-meta num"><b data-text="size:fast"></b></span>
+                  </button>
+                </div>
+                <div class="stats-grid num">
+                  <div class="stat"><div class="stat-k">Resolution</div>
+                    <div class="stat-v" data-when="!preset:fast">4K <span class="tag">original</span></div>
+                    <div class="stat-v" data-when="preset:fast">1080p</div></div>
+                  <div class="stat"><div class="stat-k">FPS</div><div class="stat-v">60 <span class="tag">original</span></div></div>
+                  <div class="stat"><div class="stat-k">Bitrate</div>
+                    <div class="stat-v" data-when="preset:best">65 Mbit/s <span class="tag">original</span></div>
+                    <div class="stat-v" data-when="preset:balanced"><span data-text="bitrate:balanced"></span><span class="tag tag-muted">75%</span></div>
+                    <div class="stat-v" data-when="preset:fast"><span data-text="bitrate:fast"></span><span class="tag tag-muted">50%</span></div></div>
+                  <div class="stat"><div class="stat-k">File size</div><div class="stat-v" data-text="size:current"></div></div>
+                  <div class="stat"><div class="stat-k">Export time</div>
+                    <div class="stat-v" data-when="preset:best">slow</div><div class="stat-v" data-when="preset:balanced">medium</div><div class="stat-v" data-when="preset:fast">fast</div></div>
+                </div>
+                <div class="small-note">The original frame rate is variable: 36.90 fps on average.</div>
+                <div class="enc-note"><b>Selected encoder:</b> NVIDIA NVENC<br><b>Detected GPUs:</b> NVIDIA GeForce RTX 3060 Laptop GPU, Intel UHD Graphics</div>
+              </div>
+
+              <div data-when="quality:advanced">
+                <div class="field">
+                  <div class="field-head"><span class="label">Resolution</span></div>
+                  <div class="seg">
+                    <button data-set="res:720p">720p<small>low</small></button>
+                    <button data-set="res:1080p">1080p<small>medium</small></button>
+                    <button data-set="res:4k">4K<small>high · <span class="ok">original</span></small></button>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="field-head"><span class="label">Frame rate</span></div>
+                  <div class="seg">
+                    <button data-set="fps:24">24 fps<small>low</small></button>
+                    <button data-set="fps:30">30 fps<small>medium</small></button>
+                    <button data-set="fps:60">60 fps<small>high · <span class="ok">original, variable</span></small></button>
+                  </div>
+                </div>
+                <div class="field">
+                  <div class="field-head"><span class="label">Bitrate</span><span class="value num"><b data-text="bitrate"></b> · <b data-text="size:slider"></b></span></div>
+                  <input type="range" min="13000" max="65000" step="250" data-num="bitrate" aria-label="Bitrate">
+                  <div class="scale"><span>Worst quality</span><span>Best quality</span></div>
+                  <div class="small-note">The maximum is the bitrate of the original video.</div>
+                </div>
+                <div class="field">
+                  <div class="field-head"><span class="label">Encoder</span></div>
+                  <div class="rows">
+                    <button class="row" data-set="encoder:nvenc">
+                      <span class="radio"></span>
+                      <span><span class="row-title">NVIDIA NVENC</span><span class="row-sub">For PCs with an NVIDIA GeForce or RTX graphics card. Fast: the graphics card encodes the video.</span></span>
+                      <span class="row-meta"><span class="tag">Best for this PC</span></span>
+                    </button>
+                    <button class="row" data-set="encoder:qsv">
+                      <span class="radio"></span>
+                      <span><span class="row-title">Intel Quick Sync</span><span class="row-sub">For PCs with Intel graphics. Fast: the graphics part of the Intel processor encodes the video.</span></span>
+                      <span></span>
+                    </button>
+                    <button class="row" data-set="encoder:x264">
+                      <span class="radio"></span>
+                      <span><span class="row-title">Software (x264)</span><span class="row-sub">Works on all PCs. Only the processor encodes the video, so it is the slowest, but the most reliable.</span></span>
+                      <span></span>
+                    </button>
+                  </div>
+                  <div class="enc-note"><b>Detected GPUs:</b> NVIDIA GeForce RTX 3060 Laptop GPU, Intel UHD Graphics</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <footer class="config-foot">
+          <button class="btn btn-primary" title="Choose an output file and start the export.">
+            <span class="btn-main"><span class="material-symbols-outlined">play_circle</span><span data-text="start"></span></span>
+            <span class="btn-sub num"><span data-text="size:current"></span> · <span data-text="encoder:current"></span></span>
+          </button>
+        </footer>
+      </section>
+
+      <!-- ================= Right ================= -->
+      <section class="activity">
+        <div class="idle" data-when="state:idle">
+          <span class="material-symbols-outlined">hourglass_empty</span>
+          <span><b>No active exports</b>Choose the settings on the left and start an export.</span>
+        </div>
+        <section class="card" id="now" data-when="!state:idle"></section>
+
+        <section class="card" data-when="state:queue">
+          <div class="card-head"><span class="card-title">Export queue</span><span class="count">2</span></div>
+          <div id="queue"></div>
+        </section>
+
+        <section class="card history">
+          <div class="card-head">
+            <span class="card-title">Completed exports</span><span class="count">7</span>
+            <span class="right"><button class="btn btn-ghost btn-sm" title="Remove all entries from this list. The exported files stay on the disk.">
+              <span class="material-symbols-outlined">delete_sweep</span>Clear list</button></span>
+          </div>
+          <div class="list scroll" id="completed"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Option C — Accordion and history by day.</b> One settings section is open at a time.
+  The closed sections show their current choice, so the user sees the full export without a scroll bar.
+  The completed exports are grouped by day, with the time on a timeline.
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { JOBS, escapeHtml: e } = Mock;
+  Mock.shell('c');
+
+  const folderIcon = '<button class="btn btn-icon btn-sm" title="Open folder" aria-label="Open folder"><span class="material-symbols-outlined">folder_open</span></button>';
+
+  function nowHtml(failed) {
+    const j = JOBS.active;
+    return `<div class="now">
+      <div class="ring ${failed ? 'failed' : ''}" style="--p:${j.progress}"><span class="num">${failed ? '!' : j.progress + '%'}</span></div>
+      <div class="now-main">
+        <div class="now-kicker ${failed ? 'failed' : ''}">${failed ? 'Export failed' : 'Exporting now'}</div>
+        <div class="now-file"><span class="path-file">${e(j.file)}</span> <span class="path-dir">${e(j.dir)}</span></div>
+        <div class="now-meta">${e(j.project)} · ${e(j.content)}</div>
+        <div class="now-meta">${e(j.video)}</div>
+        <div class="now-facts num"><span><em>Size</em>${e(j.size)}</span>${failed ? '' : `<span><em>Time left</em>${j.timeLeft}</span>`}</div>
+      </div>
+      <div class="now-actions">
+        <button class="btn btn-sm"><span class="material-symbols-outlined">folder_open</span>Open folder</button>
+        <button class="btn btn-sm btn-danger" ${failed ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}>Cancel export</button>
+      </div>
+      ${failed ? `<div class="now-error"><span class="material-symbols-outlined">error</span><span><b>Error:</b> ${e(j.error)}</span></div>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('queue').innerHTML = JOBS.queued.map((j, i) => `
+    <div class="qline">
+      <span class="qnum">${i + 1}</span>
+      <div class="qmain"><span class="path-file">${e(j.file)}</span> <span class="path-dir">${e(j.dir)}</span>
+        <div class="meta">${e(j.project)} · ${e(j.content)} · ${e(j.video)}</div></div>
+      <span class="num">${e(j.size)}</span>
+      <div class="qactions">${folderIcon}<button class="btn btn-icon btn-sm danger" title="Cancel export" aria-label="Cancel export"><span class="material-symbols-outlined">close</span></button></div>
+    </div>`).join('');
+
+  const days = [];
+  JOBS.completed.forEach((j) => {
+    let d = days.find((x) => x.day === j.day);
+    if (!d) days.push(d = { day: j.day, date: j.date, items: [] });
+    d.items.push(j);
+  });
+  document.getElementById('completed').innerHTML = days.map((d) => `
+    <div class="day">${e(d.day)}${d.day !== d.date ? `<span>${e(d.date)}</span>` : ''}</div>
+    <div>${d.items.map((j) => `
+      <div class="event">
+        <span class="time num">${e(j.time)}</span>
+        <span class="dotline"></span>
+        <div class="emain">
+          <div><span class="path-file">${e(j.file)}</span> <span class="path-dir">${e(j.dir)}</span></div>
+          <div class="meta">${e(j.project)} · ${e(j.content)}</div>
+          <div class="meta v">${e(j.video)}</div>
+        </div>
+        <div class="esize num">${e(j.size)}${j.expected ? `<span class="faint">of ${e(j.expected)}</span>` : ''}</div>
+        ${folderIcon}
+      </div>`).join('')}</div>`).join('');
+
+  window.onMockApply = (s) => {
+    const el = document.getElementById('now');
+    if (el.dataset.for !== s.state) {
+      el.dataset.for = s.state;
+      el.innerHTML = s.state === 'idle' ? '' : nowHtml(s.state === 'failed');
+    }
+  };
+  Mock.apply();
+</script>
+</body>
+</html>

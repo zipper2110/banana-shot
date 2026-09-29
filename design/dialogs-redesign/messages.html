@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Message Dialogs</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Every JOptionPane message and confirmation of the app, in one message box design. */
+  .window { width: calc(100vw - 340px); min-width: 1000px; }
+  .catalog {
+    position: fixed; top: 44px; right: 0; bottom: 0; width: 340px; z-index: 60; overflow-y: auto;
+    background: #070707; border-left: 1px dashed #333; padding: 14px 12px 24px; font-size: 12.5px;
+  }
+  .catalog h2 { margin: 0 0 4px; font-size: 13px; color: var(--fg); }
+  .catalog > p { margin: 0 0 12px; color: var(--fg-3); font-size: 11.5px; line-height: 1.5; }
+  .legend { display: grid; grid-template-columns: repeat(3, auto); gap: 4px 10px; justify-content: start; margin-bottom: 12px; font-size: 11px; color: var(--fg-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .cat-group { margin-top: 14px; }
+  .cat-cap { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-3); padding: 0 6px 4px; }
+  .cat-item {
+    display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start; width: 100%; text-align: left;
+    padding: 6px; border: 0; border-radius: 5px; background: transparent; cursor: pointer; color: var(--fg-2);
+  }
+  .cat-item:hover { background: #151515; color: var(--fg); }
+  .cat-item.is-selected { background: #1c1c1c; color: var(--fg); box-shadow: inset 2px 0 0 var(--lime); }
+  .cat-item .material-symbols-outlined { font-size: 16px; margin-top: 1px; }
+  .cat-item small { display: block; color: var(--fg-3); font-size: 11px; margin-top: 1px; }
+  .k-info { color: var(--blue); } .k-hint { color: var(--lime); } .k-warn { color: var(--yellow); }
+  .k-error, .k-danger { color: var(--red); } .k-ask { color: var(--fg); }
+  .was { margin: 0 0 4px; padding: 8px 10px; border: 1px dashed #333; border-radius: 6px; color: var(--fg-3); font-size: 11.5px; line-height: 1.5; }
+  .was b { color: var(--fg-2); }
+
+  /* Analytics consent */
+  .consent .msg { padding-bottom: 8px; }
+  .consent .facts { display: grid; gap: 6px; margin: 4px 0 2px; }
+  .consent .fact { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: 12.5px; color: var(--fg-2); }
+  .consent .fact .material-symbols-outlined { font-size: 16px; margin-top: 1px; }
+  .consent .later { font-size: 12px; color: var(--fg-3); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main id="tab"></main>
+  </div>
+</div>
+<aside class="catalog" id="catalog"></aside>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const { esc, icon } = Mock;
+  const p = (t) => `<p>${t}</p>`;
+  const path = (t) => `<code class="path">${esc(t)}</code>`;
+  const OK = [{ label: 'OK', kind: 'lime', primary: true, cancel: true }];
+  // For a destructive action, the safe button has the focus, so Enter does not delete (the same as Delete project).
+  const danger = (safe, act) => [{ label: safe, cancel: true, focus: true }, { label: act, kind: 'danger' }];
+  const ask = (act) => [{ label: 'Cancel', cancel: true }, { label: act, kind: 'lime', primary: true }];
+
+  /** Every message box of the app. "was" tells what changes from the current JOptionPane. */
+  const MESSAGES = [
+    { tab: 'Projects', group: 'App start', id: 'consent', kind: 'info', title: 'Optional usage analytics', special: 'consent',
+      was: 'Plain JDialog with a text area and three buttons. Now the same text in the message design, with the two facts as a short list. <b>New line:</b> where to change the choice later (More → Privacy). Closing the window still means "No thanks".' },
+    { tab: 'Projects', group: 'App start', id: 'gpu', kind: 'info', title: 'GPU preference set', width: 'md',
+      body: p('We set a Windows preference for this app to use the dedicated/external GPU on future launches.') +
+        p('<b>Please restart the application now.</b>') +
+        p('If it still uses the integrated GPU, open Windows Graphics Settings → Graphics performance preference, or NVIDIA/AMD control panel, and force the high‑performance GPU for javaw.exe (or your packaged EXE).'),
+      was: 'Same text. The restart request is a separate bold line, so the user sees the action first.' },
+    { tab: 'Projects', group: 'App start', id: 'startup', kind: 'error', title: 'Startup error', body: p('Cannot open the app data folder.') + '<p class="faint">Example text. The app shows the message of the failure.</p>' },
+    { tab: 'Projects', group: 'App start', id: 'unexpected', kind: 'error', title: 'Unexpected error', body: p('java.lang.IllegalStateException: Player is closed') + '<p class="faint">Example text. The app shows the message of the failure.</p>' },
+
+    { tab: 'Projects', group: 'Projects', id: 'p-open', kind: 'error', title: 'Cannot open project',
+      body: p('The video of the project is not on the disk anymore:') + path('D:\\video\\PXL_20260906_081512004.mp4') + p('Put the video back at this location to open the project.'),
+      was: 'Same text. The path is in its own box, so a long path wraps and is easy to read.' },
+    { tab: 'Projects', group: 'Projects', id: 'p-del', kind: 'warn', title: 'Cannot delete project', body: p('You cannot delete the open project.'), was: 'Error icon becomes a warning icon: the user did nothing wrong with the data.' },
+    { tab: 'Projects', group: 'Projects', id: 'p-create', kind: 'error', title: 'Failed to create project', body: p('The project folder already exists.') + '<p class="faint">Example text.</p>' },
+    { tab: 'Projects', group: 'Projects', id: 'p-rename', kind: 'error', title: 'Failed to rename project', body: p('Access is denied.') + '<p class="faint">Example text.</p>' },
+
+    { tab: 'Points', group: 'Points', id: 'pt-del', kind: 'danger', title: 'Delete point', body: p('Delete marked point <b>00:12:03.120 - 00:12:15.480</b>?'),
+      buttons: danger('Cancel', 'Delete'), was: 'Title "Confirm delete", buttons OK and Cancel. Now "Delete" in red, and Cancel has the focus.' },
+    { tab: 'Points', group: 'Points', id: 'pt-hint', kind: 'hint', title: 'Hint', body: p('Set a Start first (press <kbd>C</kbd>) before setting End'),
+      was: 'Same title and text. Key names show as keys. The other hints use the same box:', list: [
+        'Cannot place Start at 734120 ms: it\'s inside an existing point interval',
+        'Invalid point: End must be > Start and duration ≥ 200 ms',
+        'Overlap blocked for [734120, 741500). Adjust boundaries to avoid overlaps.',
+        'Invalid edit: ensure 0 ≤ start < end and duration ≥ 200 ms',
+        'Edit blocked: overlaps with another point. Adjust boundaries.',
+        'Point not found: 42', 'Comment #3 was not found', 'Comment color must use #RRGGBB format',
+        'Comment start time cannot be negative', 'Comment duration must be greater than zero', 'Comment text cannot be blank'] },
+    { tab: 'Points', group: 'Points', id: 'pt-comment', kind: 'warn', title: 'Invalid comment', body: p('Comment times must fit within the supported video timeline.') },
+    { tab: 'Points', group: 'Points', id: 'pt-missing', kind: 'error', title: 'Source video missing', body: p('Select source video for project: <b>PXL_20260913_070045619</b>'),
+      was: 'Today the title and the text are the wrong way around (title "Select source video for project: …", text "Source video missing"). Now the title names the problem.' },
+    { tab: 'Points', group: 'Points', id: 'pt-load', kind: 'error', title: 'Failed to load project', body: p('points.edl: line 12: bad time value') + '<p class="faint">Example text. The same box shows "Autosave failed" and "Failed to refresh points and events".</p>' },
+
+    { tab: 'Scoring', group: 'Scoring and Stats', id: 'sc-fav', kind: 'error', title: 'Failed to save favorite', body: p('score.json: Access is denied.') + '<p class="faint">Example text. The same box shows "Failed to load project" and "Autosave failed".</p>' },
+    { tab: 'Stats', group: 'Scoring and Stats', id: 'st-save', kind: 'error', title: 'Cannot save the statistics setup', body: p('stats.json: Access is denied.') + '<p class="faint">Example text.</p>' },
+
+    { tab: 'Transform', group: 'Transform', id: 'tr-missing', kind: 'warn', title: 'Project source video is missing.', body: '',
+      was: 'Title "Transform", text "Project source video is missing." Now the text is the title, and the Transform tab behind the box tells where it comes from. The same box shows "Could not read the project."' },
+
+    { tab: 'Export', group: 'Export', id: 'ex-overwrite', kind: 'danger', glyph: 'warning', title: 'Confirm overwrite', body: p('File exists. Overwrite?') + path('D:\\exports\\PXL_20260913_070045619 highlights.mp4'),
+      buttons: danger('Cancel', 'Overwrite'), was: 'Buttons Yes and No. Now "Overwrite" in red, and Cancel has the focus. The file path shows under the question.' },
+    { tab: 'Export', group: 'Export', id: 'ex-nopoints', kind: 'ask', title: 'No points', body: p('The project has no valid points. Export the full video?'),
+      buttons: ask('Export full video'), was: 'Buttons Yes and No. Now the buttons tell the action.' },
+    { tab: 'Export', group: 'Export', id: 'ex-cancel', kind: 'danger', glyph: 'cancel', title: 'Cancel export', body: p('Cancel the current export? The partly written file is deleted.'),
+      buttons: danger('Keep exporting', 'Cancel export'), was: 'Title "Confirm", buttons Yes and No. Now "Keep exporting" and "Cancel export", so "Cancel" has one meaning only.' },
+    { tab: 'Export', group: 'Export', id: 'ex-cancelq', kind: 'danger', glyph: 'cancel', title: 'Cancel queued export', body: p('Cancel the queued export?'),
+      buttons: danger('Keep export', 'Cancel export'), was: 'Title "Confirm", buttons Yes and No.' },
+    { tab: 'Export', group: 'Export', id: 'ex-clear', kind: 'danger', title: 'Clear completed exports', body: p('Clear the list of completed exports? The exported files stay on the disk.'),
+      buttons: danger('Cancel', 'Clear list'), was: 'Title "Confirm", buttons Yes and No.' },
+    { tab: 'Export', group: 'Export', id: 'ex-started', kind: 'info', title: 'Export started', body: p('Export started: <b>PXL_20260913_070045619 highlights.mp4</b>'),
+      was: 'Title "Info". Now the title tells what happened. The queued case has the title "Export queued" and the text "Export queued: … It starts when the current exports end."' },
+    { tab: 'Export', group: 'Export', id: 'ex-blocked', kind: 'warn', title: 'Cannot start export', body: p('Export cannot start right now.') + '<p class="faint">The app shows the reason from the export check.</p>' },
+    { tab: 'Export', group: 'Export', id: 'ex-fav', kind: 'warn', title: 'Favorite export unavailable', body: p('Only favorites needs at least one valid favorite point. Mark a point with a star on the Points tab.'),
+      was: 'Info icon becomes a warning icon, the same as the other "unavailable" messages. The second text is "Cannot export only favorite points: no valid favorite points are available."' },
+    { tab: 'Export', group: 'Export', id: 'ex-sb', kind: 'warn', title: 'Scoreboard unavailable', body: p('Cannot include scoreboard: there are no scored points in the current project.') },
+    { tab: 'Export', group: 'Export', id: 'ex-stats', kind: 'warn', title: 'Statistics card unavailable', body: p('Cannot include the statistics card: no selected statistic has a value. Select the statistics in the Stats tab.') },
+    { tab: 'Export', group: 'Export', id: 'ex-failed', kind: 'error', title: 'Export failed', body: p('ffmpeg exited with code 1') + '<p class="faint">Example text. The app shows the failure reason, or "Unknown error".</p>' },
+    { tab: 'Export', group: 'Export', id: 'ex-source', kind: 'error', title: 'Source video missing', body: p('Select source video'),
+      was: 'Title "Select source video", text "Source video missing". The same swap as on the Points tab.' },
+    { tab: 'Export', group: 'Export', id: 'ex-manifest', kind: 'error', title: 'Failed to read manifest', body: p('project.json: unexpected end of file') + '<p class="faint">Example text.</p>' },
+    { tab: 'Export', group: 'Export', id: 'ex-folder', kind: 'error', title: 'Failed to open folder', body: p('The folder does not exist.') + '<p class="faint">Example text.</p>' },
+  ];
+  const ICON = { info: 'info', hint: 'lightbulb', warn: 'warning', error: 'error', ask: 'help', danger: 'delete' };
+
+  Mock.shell('messages', {
+    tab: 'Projects',
+    states: [{ label: 'Consent', group: 'link', options: [['ok', 'Browser opens'], ['fail', 'Browser does not open']] }],
+  });
+  Mock.behind(document.getElementById('tab'));
+  Mock.setState('link', Mock.hash.get('link') || 'ok');
+
+  // ---------- Catalog (mockup only) ----------
+  const cat = document.getElementById('catalog');
+  const groups = [...new Set(MESSAGES.map((m) => m.group))];
+  cat.innerHTML = `<h2>All message boxes</h2>
+    <p>Select a message to open it over its tab. The texts come from the app code. The icon tells the kind of message:</p>
+    <div class="legend">${[['info', 'Information'], ['hint', 'Hint'], ['warn', 'Warning'], ['error', 'Error'], ['ask', 'Question'], ['danger', 'Delete or cancel']].map(([k, t]) =>
+      `<span>${icon(ICON[k], 'fill k-' + k)}${t}</span>`).join('')}</div><div class="was" id="was"></div>` +
+    groups.map((g) => `<div class="cat-group"><div class="cat-cap">${g}</div>${MESSAGES.filter((m) => m.group === g).map((m) =>
+      `<button class="cat-item" data-id="${m.id}">${icon(m.glyph || ICON[m.kind], 'fill k-' + m.kind)}<span>${esc(m.title)}<small>${m.tab} tab</small></span></button>`).join('')}</div>`).join('') +
+    '';
+
+  function show(id) {
+    const m = MESSAGES.find((x) => x.id === id);
+    document.querySelectorAll('.modal-back').forEach((b) => b.remove());
+    cat.querySelectorAll('.cat-item').forEach((b) => b.classList.toggle('is-selected', b.dataset.id === id));
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('active', n.dataset.nav === m.tab));
+    document.querySelector('.titlebar').innerHTML = document.querySelector('.titlebar').innerHTML.replace(/— [A-Za-z]+ —/, `— ${m.tab} —`);
+    const was = document.getElementById('was');
+    was.innerHTML = m.was ? `<b>Change:</b> ${m.was}` + (m.list ? `<ul style="margin:6px 0 0;padding-left:16px">${m.list.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '') : '<b>Change:</b> the message design only. The text stays the same.';
+    const after = (label) => () => Mock.toast(`${label}. The next message opens with a click in the list.`);
+    if (m.special === 'consent') return consent();
+    Mock.message({
+      kind: m.kind, glyph: m.glyph, title: m.title, body: m.body, width: m.width,
+      buttons: (m.buttons || OK).map((b) => ({ ...b, onClick: after(`"${b.label}" clicked`) })),
+    });
+  }
+
+  function consent() {
+    const url = 'https://example.com/bananashot/privacy';
+    const m = Mock.modal(`
+      <div class="modal md consent" role="dialog" aria-label="Optional usage analytics">
+        <div class="msg info">
+          <div class="msg-icon">${icon('insights', 'fill')}</div>
+          <div>
+            <h3>Optional usage analytics</h3>
+            <p>Help improve BananaShot by sending optional, anonymous product events.</p>
+            <div class="facts">
+              <div class="fact">${icon('block', 'k-error')}<span>We never collect video, project names, paths, scores, or personal details.</span></div>
+            </div>
+            <div class="copy-line" id="copyLine" hidden><span class="faint" style="white-space:nowrap">Copy this URL:</span><input class="inp" readonly value="${url}"></div>
+            <div class="later">You can change this later in More → Privacy.</div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" id="read">${icon('open_in_new')}Read privacy notice</button>
+          <span class="grow"></span>
+          <button class="btn" data-cancel>No thanks</button>
+          <button class="btn btn-lime" data-primary>Enable analytics</button>
+        </div>
+      </div>`);
+    m.root.querySelector('#read').onclick = () => {
+      if (Mock.state.link === 'fail') { m.root.querySelector('#copyLine').hidden = false; m.root.querySelector('#copyLine input').select(); }
+      else Mock.toast('The browser opens the privacy notice. The dialog stays open.');
+    };
+    m.root.querySelector('[data-cancel]').onclick = () => { m.close(); Mock.toast('Analytics off.'); };
+    m.root.querySelector('[data-primary]').onclick = () => { m.close(); Mock.toast('Analytics on.'); };
+  }
+
+  cat.addEventListener('click', (e) => { const b = e.target.closest('.cat-item'); if (b) show(b.dataset.id); });
+  Mock.onState(() => show('consent'));
+  show(Mock.hash.get('id') || 'consent');
+})();
+</script>
+</body>
+</html>

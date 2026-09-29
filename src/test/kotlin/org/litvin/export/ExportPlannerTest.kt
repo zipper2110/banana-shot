@@ -280,11 +280,11 @@ class ExportPlannerTest {
 
         val job = plan(includeStatsCard = true, scored)
 
-        // The default rows fit on one page. The momentum chart is on a second page.
-        assertEquals(2, job.statsCard?.pages?.size)
+        // The default rows fit on one page. By default, the card has no page with the momentum chart.
+        assertEquals(1, job.statsCard?.pages?.size)
         assertEquals(1920.0, job.statsCard?.pages?.first()?.width)
-        // 20 s of points and 12 s of card at 8,000 + 192 kbit/s.
-        assertEquals(32_768_000L, job.expectedBytes)
+        // 20 s of points and 6 s of card at 8,000 + 192 kbit/s.
+        assertEquals(26_624_000L, job.expectedBytes)
         assertNull(plan(includeStatsCard = false, scored).statsCard)
         assertNull(plan(includeStatsCard = true, ScoreV1()).statsCard, "Without scored points the export has no card")
     }
@@ -319,8 +319,8 @@ class ExportPlannerTest {
 
         val all = job(idleTrim = true, favoriteOnly = false)
         assertEquals(listOf(1, 2), all.setSummaries.map { it.setNumber })
-        // 100 s of points and two cards of 12 s (rows and chart) at 8,000 + 192 kbit/s.
-        assertEquals(126_976_000L, all.expectedBytes)
+        // 100 s of points and two cards of 6 s (one page of rows) at 8,000 + 192 kbit/s.
+        assertEquals(114_688_000L, all.expectedBytes)
         // The favorites start in set 2, so the video does not show set 1.
         assertEquals(listOf(2), job(idleTrim = true, favoriteOnly = true).setSummaries.map { it.setNumber })
         assertEquals(emptyList(), job(idleTrim = false, favoriteOnly = false).setSummaries)

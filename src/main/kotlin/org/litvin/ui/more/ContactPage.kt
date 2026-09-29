@@ -1,11 +1,11 @@
 package org.litvin.ui.more
 
+import org.kordamp.ikonli.material2.Material2AL
 import org.litvin.ui.commons.SectionPage
 import java.net.URI
-import javax.swing.JTextArea
 
 /** The Contact section of the More window. */
-class ContactPage(
+internal class ContactPage(
     email: String,
     version: String,
     private val onOpenLink: (URI) -> Boolean,
@@ -14,8 +14,8 @@ class ContactPage(
         name = "more-contact"
         paragraph("Send questions, problems, and ideas by email.")
         valueRow("Email", email).name = "more-contact-email"
-        lateinit var emailStatus: JTextArea
-        buttonRow(secondaryButton("Write an email") {
+        lateinit var emailStatus: StatusLine
+        buttonRow(secondaryButton("Write an email", Material2AL.EDIT) {
             emailStatus.text = if (onOpenLink(URI("mailto:$email"))) "" else "The app cannot open your email app. Copy the address above."
         }.apply { name = "more-contact-write" })
         emailStatus = statusLine()

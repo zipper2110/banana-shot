@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stats Tab Redesign</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 720px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  ol.problems, ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; color: var(--fg); }
+  ol.problems li, ul.plain li { margin-bottom: 4px; }
+  ul.plain .muted { font-size: 12.5px; }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: block; margin-bottom: 4px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+
+  .options { display: grid; gap: 12px; }
+  .option { display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit; }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td { color: var(--fg-2); }
+  .yes { color: var(--green); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Stats tab — redesign proposals</h1>
+  <p class="lede">
+    This folder has one main proposal and two alternatives for the Stats tab.
+    Each mockup is an HTML page with the app sidebar, a frame of the sample video and a simulated three-set match.
+    The mockups work: select a set, select the rows for the video, change the point length limits and the card transparency, and move the pointer on the chart.
+    Use the "Mockup state" switch at the top of each page to see the gray rows, the coverage note, a one-set match and the empty states.
+  </p>
+  <div class="scope">✓ Cosmetic changes only. No feature is added or removed.</div>
+
+  <a class="option main" href="final.html" style="margin-top:24px">
+    <div>
+      <div class="option-head"><h3>Final design</h3><span class="badge">Selected</span></div>
+      <p>The final design uses option B as the base, with these changes from the review:</p>
+      <ul>
+        <li>The Match / Set control comes from option C, with the set score under each set name. It is under the table header with the player names, above the momentum chart, and it uses the full width of the left side. The tab has no header row. A one-set match has no Match / Set control.</li>
+        <li>The "In video" column comes from option A. It is the last column of the table, next to the card column. It has a light lime background from the table header to the last row, and a selected row has a stronger background.</li>
+        <li>Each row and the momentum chart have a checkbox in the "In video" column, in place of the chips of option B.</li>
+        <li>Each group title shows the count of selected rows in the "In video" column, for example "2 of 4" (option A).</li>
+        <li>The left side and the card column have the same width. The table columns grow and shrink with the window, and the chart draws again at the new width.</li>
+        <li>"In video" for the momentum chart is off by default. The card does not show the chart until the user selects it.</li>
+        <li>The default rows in the video are Points won, Points won on serve, Service games won, Break points won, Short points won, Long points won and Match duration. The card shows the 7 rows on one page.</li>
+        <li>The default point length limits change: a short point lasts 10 s or less (now 7 s), and a long point lasts 13 s or more (now 15 s). The row tooltips do not name the ATP shot ranges any more, because the new limits do not match them.</li>
+        <li>"Duration" is now "Match duration". It is the time from the start of the first point with a winner to the end of the last point with a winner. It is not the length of the video, and points without a winner at the start or at the end do not count. The row has a help icon with this text.</li>
+        <li>The hint "Select Match or a set above the score" of option B is removed. The segmented control does not need it.</li>
+      </ul>
+      <span class="open">Open the final design →</span>
+    </div>
+    <dl class="side">
+      <dt>Swing effort</dt><dd>Medium. Each row is a custom panel with a painted bar and a fixed column layout. The lane background is a painted column behind the last cell of each row. The header uses the segmented control of the other tabs.</dd>
+    </dl>
+  </a>
+
+  <h2>Problems in the current tab</h2>
+  <ol class="problems">
+    <li><b>The scope control looks local.</b> The names, the score and the Match / Set buttons are above the left column only. But the scope also changes the chart and the card preview on the right. The buttons use the default Swing toggle look, not the segmented control of the other tabs.</li>
+    <li><b>Two jobs mix in one table.</b> The tab has two jobs: read the statistics, and select the rows for the video. The "In video" checkboxes are the first column, before the labels, with a small caption. The table reads as a check list first. The momentum chart has its own "In video" checkbox in a different place.</li>
+    <li><b>The table does not compare.</b> The two value columns have the same weight. The user must read each pair of numbers to see who leads. The video card shows bars for this, but the tab does not.</li>
+    <li><b>Gray rows hide the reason.</b> A gray row shows "—" in both columns. The reason is only in the tooltip of a small info icon.</li>
+    <li><b>Controls look like data.</b> The point length limits are a line between the group title and the rows. They look like one more row.</li>
+    <li><b>The coverage note is easy to miss.</b> It is plain yellow text under the scope buttons.</li>
+    <li><b>The card column is text-heavy.</b> The help is one paragraph of four sentences. The page count shows only in the pager, and a card with one page shows no count.</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="principles">
+    <div class="principle"><b>Scope on top</b><span>The Match / Set control is above everything that it changes: the table, the chart and the card.</span></div>
+    <div class="principle"><b>Read first, then select</b><span>The label and the values come first. The "In video" control has one fixed place and one look, for the rows and for the chart.</span></div>
+    <div class="principle"><b>See who leads</b><span>The value of the leading player is brighter. The mockups use the same numbers as the bars of the video card. There is no new calculation.</span></div>
+    <div class="principle"><b>Say why</b><span>A gray row shows its reason. The text is the text of the current tooltip.</span></div>
+    <div class="principle"><b>Controls look like controls</b><span>The point length limits are a tool bar with steppers, not a table row.</span></div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="options">
+    <a class="option main" href="option-a.html">
+      <div>
+        <div class="option-head"><h3>A · Scope bar and card panel</h3><span class="badge">Recommended</span></div>
+        <p>A header strip across the full tab shows the players, the set scores and the scope control. Under it are two panels: "Statistics" on the left and "In the video" on the right. The "In video" column is the last column of the table, so it is next to the card panel.</p>
+        <ul>
+          <li>The scope is a segmented control with the caption "Show the statistics of". It is hidden for a one-set match, as now.</li>
+          <li>The "In video" column has a light lime background from the header to the last row. The momentum checkbox is in the same column.</li>
+          <li>Each group title shows how many rows of the group are in the video, for example "2 of 4".</li>
+          <li>The main value ends at the middle of its column and the detail starts there, so the numbers align. The leading value is white and has an underline in the player color.</li>
+          <li>A gray row shows its reason in place of the two "—" values.</li>
+          <li>The point length limits are a tool bar with steppers under the group title.</li>
+          <li>The card panel shows chips with the card title and "6 rows · 2 pages". The pager has page dots. The help is three short lines with icons.</li>
+        </ul>
+        <span class="open">Open option A →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>A clear flow with the smallest change to the current structure: scope → read → select → check the card.</dd>
+        <dt>Swing effort</dt><dd>Low. The header moves from the left column to the top of the view. The <code>GridBagLayout</code> table stays, with the checkbox in the last column. New parts: the lane background, the group count label, the underline border and the reason label that spans two columns.</dd>
+        <dt>Risk</dt><dd>Low. The component names can stay the same. In a narrow window, the preview is smaller because the table needs about 600 px.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-b.html">
+      <div>
+        <div class="option-head"><h3>B · Rows like the card</h3><span class="badge alt">Alternative</span></div>
+        <p>Each row uses the layout of the video card: the value of player 1 on the left, the label and the bar in the middle, the value of player 2 on the right. The score is a small scoreboard, and its column buttons select the scope.</p>
+        <ul>
+          <li>"Match" is a wide button above the set buttons. The selected set columns of the score get a lime frame.</li>
+          <li>The "In video" control is a chip with a film icon at the start of each row. A selected row has a lime edge and a dark green background.</li>
+          <li>The bar in each row uses the same numbers as the bar on the card. The leading value is white.</li>
+          <li>A gray row shows its reason in the place of the bar.</li>
+          <li>The pager buttons show the text "Previous page" and "Next page". The help is in a "How the card works" section that the user can close.</li>
+        </ul>
+        <span class="open">Open option B →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users who think in terms of the video card. The table shows what the card shows.</dd>
+        <dt>Swing effort</dt><dd>Medium to high. Each row is a custom panel with a painted bar. The score header is a custom grid of toggle buttons. The chip needs a custom <code>JToggleButton</code> painter.</dd>
+        <dt>Risk</dt><dd>Medium. The rows are about 52 px high, not 30 px, so the table needs more scrolling. A column of numbers is faster to scan than numbers at the two sides.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-c.html">
+      <div>
+        <div class="option-head"><h3>C · Wide chart and page strip</h3><span class="badge alt">Alternative</span></div>
+        <p>The momentum chart uses the full width of the tab, so each point has more space. Under the chart, the groups are cards in two columns, and the card preview stays at the right. Page thumbnails replace the page buttons.</p>
+        <ul>
+          <li>The scope control shows the set score under each set name.</li>
+          <li>The "In video" controls are switches: at the start of each row, and in the chart header.</li>
+          <li>Each group card has its own player columns and the count of rows in the video.</li>
+          <li>The point length limits are a tool bar at the top of the Point length card.</li>
+          <li>The page thumbnails show each page of the card. The chart page has the label "Chart". A click shows the page in the large preview.</li>
+          <li>Gray rows stay as now: a gray label, an info icon with the reason in the tooltip, and "—".</li>
+        </ul>
+        <span class="open">Open option C →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users who study the course of the match. The chart gets about twice the width.</dd>
+        <dt>Swing effort</dt><dd>Medium. The chart moves to the top of the view. The group cards need a two-column wrap layout. The thumbnails reuse <code>StatsCardPreview</code> at a small size. The switch needs a custom checkbox icon.</dd>
+        <dt>Risk</dt><dd>Medium. The first rows start about 440 px from the top. In two columns, the reading order of the groups is less clear.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Feature check</h2>
+  <p class="lede" style="margin-bottom:12px">All options keep each feature of the current tab. The table shows where each feature is.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature</th><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody>
+        <tr><td>Player names and set scores</td><td class="yes">Header strip, score chips</td><td class="yes">Scoreboard</td><td class="yes">Header line</td></tr>
+        <tr><td>Match / Set scope, only for two sets or more</td><td class="yes">Segmented control</td><td class="yes">Scoreboard column buttons</td><td class="yes">Segmented control with scores</td></tr>
+        <tr><td>Coverage lines: points without a winner, points after the match end</td><td class="yes">Note box</td><td class="yes">Note box</td><td class="yes">Note box</td></tr>
+        <tr><td>Momentum chart: set lines, lead labels, hover text, click opens the point</td><td class="yes">Top of the table</td><td class="yes">Card above the rows</td><td class="yes">Full width</td></tr>
+        <tr><td>Momentum "In video"</td><td class="yes">Checkbox in the In video column</td><td class="yes">Chip</td><td class="yes">Switch</td></tr>
+        <tr><td>Six groups and 24 rows in the current order</td><td class="yes">Table</td><td class="yes">Mirrored rows</td><td class="yes">Group cards</td></tr>
+        <tr><td>"In video" for each row, with the current tooltips</td><td class="yes">Last column</td><td class="yes">Chip, first column</td><td class="yes">Switch, first column</td></tr>
+        <tr><td>Gray rows with the reason</td><td class="yes">Reason in the row + tooltip</td><td class="yes">Reason in the row + tooltip</td><td class="yes">Tooltip</td></tr>
+        <tr><td>Row descriptions (short points, long points, return games)</td><td class="yes">Tooltip, help icon</td><td class="yes">Tooltip, help icon</td><td class="yes">Tooltip, help icon</td></tr>
+        <tr><td>Value and detail, for example "64%" and "32/50"</td><td class="yes">Side by side, aligned</td><td class="yes">Detail under the value</td><td class="yes">Detail under the value</td></tr>
+        <tr><td>Values that open a point (most points in a row, largest lead, longest point)</td><td class="yes">Link with play icon</td><td class="yes">Link with play icon</td><td class="yes">Link with play icon</td></tr>
+        <tr><td>Short and long point limits (1–120 s, long is always longer), with the tooltip</td><td class="yes">Tool bar, steppers</td><td class="yes">Tool bar, steppers</td><td class="yes">Tool bar, steppers</td></tr>
+        <tr><td>Card preview on the video frame</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Pages: previous, next, "Page 1 of 2", hidden for one page</td><td class="yes">Arrows + dots</td><td class="yes">Text buttons</td><td class="yes">Thumbnails</td></tr>
+        <tr><td>Card transparency 0–80 % with the value, preview updates while dragging</td><td class="yes">✓</td><td class="yes">✓ + end labels</td><td class="yes">✓</td></tr>
+        <tr><td>Help text of the card</td><td class="yes">Three lines with icons</td><td class="yes">Section that can close</td><td class="yes">Paragraph</td></tr>
+        <tr><td>Empty states: No project, Cannot read the statistics, No scored points + Open Scoring</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td>Error dialog when stats.json cannot be saved</td><td class="yes">Same</td><td class="yes">Same</td><td class="yes">Same</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Text changes</h2>
+  <ul class="plain">
+    <li>All options: a gray row can show its reason as visible text. The text is the same as the current tooltip. <span class="muted">Example: "Mark the server of one point in the Scoring tab."</span></li>
+    <li>All options: the group title shows the count of rows in the video, for example "2 of 4" (A) or "2 of 4 in video" (B, C).</li>
+    <li>A adds the caption "Show the statistics of" before the scope control, the pane title "Statistics · Full match", and the hint "Select In video for the rows that the card shows."</li>
+    <li>A adds the chips "Match statistics" and "6 rows · 2 pages" to the card panel. The card title is the same text that the card shows.</li>
+    <li>B adds the hint "Select Match or a set above the score. The table, the chart and the card show the selected part of the match." The page buttons show their tooltip text as the label. The slider has the end labels "Solid card" and "More video".</li>
+    <li>C shows "All sets" under "Match" and the set score under each set name. The thumbnails have the hint "Click a page to see it."</li>
+    <li>The help text of the card stays the same in all options. A and B split it into lines.</li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li>The colors come from <code>UiStyles</code>: <code>DARK_BG</code>, <code>CARD_BG</code>, <code>LIME</code>, <code>GREEN</code>, <code>ACCENT_TEXT</code> and <code>YELLOW</code>. The player colors are the colors of the Scoring mockups.</li>
+    <li>The card preview uses the sizes and the page split of <code>StatsCard</code>: 7 rows on each page, a group stays on one page when possible, and the chart is the last page.</li>
+    <li>The match is simulated: 6-4 3-6 7-6 with a tiebreak. The statistics come from the simulated points. They are not from a real project.</li>
+    <li>The mockups use the Material Symbols font from Google Fonts for the icons. Without internet access, the icons show as words.</li>
+    <li>The actions that open the Scoring tab show a short message in the mockup.</li>
+    <li>Add <code>#mode=gray&amp;scope=2</code> to a page URL to open it in a given state. The modes are <code>normal</code>, <code>gray</code>, <code>coverage</code>, <code>oneset</code>, <code>noscore</code>, <code>noproject</code> and <code>error</code>.</li>
+  </ul>
+</div>
+</body>
+</html>

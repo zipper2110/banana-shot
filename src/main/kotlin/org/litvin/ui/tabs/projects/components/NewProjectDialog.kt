@@ -2,18 +2,17 @@ package org.litvin.ui.tabs.projects.components
 
 import org.kordamp.ikonli.material2.Material2AL
 import org.litvin.projects.NewProjectRules
+import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.UiButton
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dialog
 import java.awt.Window
-import java.awt.event.ActionEvent
-import javax.swing.AbstractAction
 import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTextField
-import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
@@ -66,15 +65,15 @@ class NewProjectDialog private constructor(
     private var suggestedName = initial.name
 
     private val nameField = JTextField(initial.name, 36).apply { name = "new-project-name" }
-    private val nameError = ProjectsDialogKit.errorLine("new-project-name-error")
+    private val nameError = DialogKit.errorLine("new-project-name-error")
     private val videoField = JTextField(initial.sourceVideoPath, 36).apply { name = "new-project-video" }
-    private val videoError = ProjectsDialogKit.errorLine("new-project-video-error")
-    private val browseButton = ProjectsButton("Browse…", buttonHeight = 34).apply {
+    private val videoError = DialogKit.errorLine("new-project-video-error")
+    private val browseButton = UiButton("Browse…", buttonHeight = 34).apply {
         name = "new-project-browse"
         toolTipText = "Select a different match video"
         addActionListener { browse() }
     }
-    private val createButton = ProjectsButton("Create project", Material2AL.ADD, ProjectsButton.Kind.LIME, 30, 12.5f).apply {
+    private val createButton = UiButton("Create project", Material2AL.ADD, UiButton.Kind.LIME).apply {
         name = "new-project-create"
         addActionListener { create() }
     }
@@ -83,22 +82,19 @@ class NewProjectDialog private constructor(
         name = "new-project-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
-        val cancelButton = ProjectsButton("Cancel").apply {
+        val cancelButton = UiButton("Cancel").apply {
             name = "new-project-cancel"
             addActionListener { dispose() }
         }
 
-        contentPane = ProjectsDialogKit.content(
-            ProjectsDialogKit.WIDE,
-            ProjectsDialogKit.head("New project"),
+        contentPane = DialogKit.content(
+            DialogKit.MEDIUM,
+            DialogKit.head("New project"),
             form(),
-            ProjectsDialogKit.footer(cancelButton, createButton),
+            DialogKit.footer(right = listOf(cancelButton, createButton)),
         )
         rootPane.defaultButton = createButton
-        rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "new-project-cancel")
-        rootPane.actionMap.put("new-project-cancel", object : AbstractAction() {
-            override fun actionPerformed(event: ActionEvent?) = dispose()
-        })
+        DialogKit.onEscape(this) { dispose() }
 
         val revalidate = object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent?) { validateFields() }
@@ -117,14 +113,15 @@ class NewProjectDialog private constructor(
     private fun form(): JComponent {
         val videoRow = JPanel(BorderLayout(8, 0)).apply {
             isOpaque = false
-            add(ProjectsDialogKit.inputBox(videoField) { videoError.text.isNotBlank() }, BorderLayout.CENTER)
+            add(DialogKit.inputBox(videoField) { videoError.text.isNotBlank() }, BorderLayout.CENTER)
             add(browseButton, BorderLayout.EAST)
         }
-        return ProjectsDialogKit.form(
-            ProjectsDialogKit.field("Project name", ProjectsDialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
+        return DialogKit.form(
+            DialogKit.field("Project name", DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
             nameError,
-            ProjectsDialogKit.field("Match video", videoRow),
+            DialogKit.field("Match video", videoRow),
             videoError,
+            gap = 6,
         )
     }
 

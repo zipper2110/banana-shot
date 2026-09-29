@@ -437,8 +437,8 @@ class SwingPointsPanel(
             if (src.isNullOrBlank() || !File(src).exists()) {
                 dialogs.showError(
                     this,
+                    "Select source video for project: **${manifest.name}**",
                     "Source video missing",
-                    "Select source video for project: ${manifest.name}"
                 )
                 return
             }
@@ -616,7 +616,7 @@ class SwingPointsPanel(
     private fun Long.toCommentIntOrNull(): Int? = takeIf { it in 0..Int.MAX_VALUE.toLong() }?.toInt()
 
     private fun showCommentRangeError() {
-        dialogs.showInfo(this, "Comment times must fit within the supported video timeline.", "Invalid comment")
+        dialogs.showWarning(this, "Comment times must fit within the supported video timeline.", "Invalid comment")
     }
 
     private fun jumpToSelected() {
@@ -731,12 +731,12 @@ class SwingPointsPanel(
 
     private fun maybeShowDispatcherHint() {
         val m = dispatcher.consumeUserMessage() ?: return
-        dialogs.showInfo(this, m, "Hint")
+        dialogs.showHint(this, m)
     }
 
     private fun maybeShowCommentHint() {
         val message = commentDispatcher.consumeUserMessage() ?: return
-        dialogs.showInfo(this, message, "Hint")
+        dialogs.showHint(this, message)
     }
 
     private fun scheduleAutosave() {

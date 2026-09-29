@@ -165,7 +165,14 @@ internal class ExportsTable(
     }
 
     private fun clearCompleted() {
-        if (dialogs.confirm(this, "Clear the list of completed exports? The exported files stay on the disk.", "Confirm")) {
+        if (dialogs.confirm(
+                this,
+                "Clear the list of completed exports? The exported files stay on the disk.",
+                "Clear completed exports",
+                confirmLabel = "Clear list",
+                destructive = true,
+            )
+        ) {
             try { repository.clear() } catch (_: Throwable) { }
             showCompleted(emptyList())
         }
@@ -190,7 +197,17 @@ internal class ExportsTable(
                     IconButton(Material2OutlinedAL.CLOSE, CANCEL_EXPORT, danger = true).apply {
                         name = "$prefix-cancel"
                         addActionListener {
-                            if (dialogs.confirm(this@ExportsTable, "Cancel the queued export?", "Confirm")) renderService.cancelQueued(job.id)
+                            if (dialogs.confirm(
+                                    this@ExportsTable,
+                                    "Cancel the queued export?",
+                                    "Cancel queued export",
+                                    confirmLabel = "Cancel export",
+                                    cancelLabel = "Keep export",
+                                    destructive = true,
+                                )
+                            ) {
+                                renderService.cancelQueued(job.id)
+                            }
                         }
                     },
                 ),

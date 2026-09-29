@@ -148,12 +148,12 @@
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
-            <version>3.6</version>
+            <version>3.7.2</version>
         </dependency>
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf-extras</artifactId>
-            <version>3.6</version>
+            <version>3.7.2</version>
         </dependency>
         <!-- JNA binds libmpv (the preview engine) and a few Win32 calls -->
         <dependency>

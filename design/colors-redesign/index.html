@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colors Tab Redesign</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 720px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+
+  ol.problems, ul.plain { margin: 0; padding-left: 20px; line-height: 1.7; color: var(--fg); }
+  ol.problems li, ul.plain li { margin-bottom: 4px; }
+  ul.plain .muted { font-size: 12.5px; }
+
+  .principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .principle { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+  .principle b { display: block; margin-bottom: 4px; }
+  .principle span { color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+
+  .options { display: grid; gap: 12px; }
+  .option {
+    display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit;
+  }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td:first-child { color: var(--fg); font-weight: 500; }
+  td { color: var(--fg-2); }
+  .yes { color: var(--green); }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Colors tab — redesign proposals</h1>
+  <p class="lede">
+    This folder has one main proposal and two alternatives for the Colors tab.
+    Each mockup is an HTML page with the app sidebar, the real texts and a frame of the reference video.
+    The sliders work, and the frame shows an estimate of the color change.
+    Use the switches at the top of each page to see adjusted values and a system without live color preview.
+  </p>
+  <div class="scope">✓ Cosmetic changes only. No feature is added or removed.</div>
+
+  <h2>Problems in the current tab</h2>
+  <ol class="problems">
+    <li><b>Too much empty space.</b> Each slider row is 100 px high, with a gap of 60 px under the slider. Six values use about 650 px of the panel.</li>
+    <li><b>No groups.</b> The six sliders are one list with the same weight. The light controls and the color controls are mixed: Saturation is between Contrast and Shadows.</li>
+    <li><b>The default is not visible.</b> The default value 0 is the center of each slider, but the fill starts at the left end. The slider has no mark at 0. The user cannot see at one look which sliders are changed, or in which direction.</li>
+    <li><b>Weak values.</b> The value shows without a sign ("24", not "−24" or "+24"). A changed value and a default value have the same color.</li>
+    <li><b>The meaning is only in the tooltips.</b> The effect of Shadows and Highlights and the range of each slider are in tooltips only. The label "WB Temp" is an abbreviation.</li>
+    <li><b>A hidden warning.</b> When the system cannot show a live color preview, the tab adds this information only to the slider tooltips. The user can think that the sliders do not work.</li>
+    <li><b>The playback controls use two rows.</b> The play button is alone on a centered row above the seek bar. The time labels are 10 px monospace text.</li>
+    <li><b>Reset does not tell its scope.</b> "Reset" is a default button. Its text does not tell that it resets all six values.</li>
+  </ol>
+
+  <h2>Design principles</h2>
+  <div class="principles">
+    <div class="principle"><b>Zero is the reference</b><span>Each slider fills from the center. A tick marks 0. A changed slider has a lime thumb and a lime value.</span></div>
+    <div class="principle"><b>Groups by purpose</b><span>Light: Brightness, Contrast, Shadows, Highlights. Color: Saturation, Temperature.</span></div>
+    <div class="principle"><b>Direction in words</b><span>Small end labels such as "Cooler" and "Warmer" tell the effect before the user moves the slider.</span></div>
+    <div class="principle"><b>State at one look</b><span>The header shows "2 of 6 changed" or "All at default". Reset is quiet when there is nothing to reset.</span></div>
+    <div class="principle"><b>Visible limits</b><span>When live preview is not available, the panel and the video show a yellow notice.</span></div>
+  </div>
+
+  <h2>Options</h2>
+  <div class="options">
+    <a class="option main" href="option-a.html">
+      <div>
+        <div class="option-head"><h3>A · Grouped panel</h3><span class="badge">Recommended</span></div>
+        <p>The layout stays the same: the video on the left and a 400 px panel on the right. The panel has a header with the changed count and "Reset all", two group cards, and a short footer. The playback bar is one row under the video.</p>
+        <ul>
+          <li>The rows are 70 px high, not 100 px. All six sliders fit without a scroll bar.</li>
+          <li>Each row shows the label, the signed value, the center-fill slider and two end labels.</li>
+          <li>A lime bar at the left edge marks each changed row.</li>
+          <li>The footer tells that the values are saved to the project and used for export (text from the Colors help).</li>
+          <li>The playback bar is the same as in the Points final design: the play button with SPACE, the current time, the seek bar and the video length.</li>
+        </ul>
+        <span class="open">Open option A →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>A clear structure with the smallest change to the current layout.</dd>
+        <dt>Swing effort</dt><dd>Low. A custom <code>FlatSliderUI</code> paints the center fill and the 0 tick (as <code>ExportSliderUI</code>). The rows are <code>JPanel</code>s in two cards.</dd>
+        <dt>Risk</dt><dd>Low. The component names <code>colors-*</code> can stay the same, so the UI tests do not change.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-b.html">
+      <div>
+        <div class="option-head"><h3>B · Narrow panel with gradient tracks</h3><span class="badge alt">Alternative</span></div>
+        <p>The panel is 320 px wide, not 400 px, so the video gets more width. The rows are compact, and the groups are plain captions, not cards. Each slider track shows its effect as a gradient.</p>
+        <ul>
+          <li>The video is about 7% wider than in option A (1200 px, not 1120 px, in a 1600 px window).</li>
+          <li>The gradients show the effect: dark to light, flat to strong, gray to vivid, blue to orange.</li>
+          <li>Each slider has an icon. The icon is lime when the value is changed.</li>
+          <li>The gradient tells the direction, so the rows have no end labels. The rows are 56 px high.</li>
+        </ul>
+        <span class="open">Open option B →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Smaller screens, and users who judge the colors on a large video.</dd>
+        <dt>Swing effort</dt><dd>Low to medium. The gradient tracks need a custom slider UI. The layout is the same as today with a smaller panel width.</dd>
+        <dt>Risk</dt><dd>Low. A gradient is a weaker sign of a changed value than a lime fill. The Transform tab keeps a 400 px panel, so the two video tabs have different panel widths.</dd>
+      </dl>
+    </a>
+
+    <a class="option" href="option-c.html">
+      <div>
+        <div class="option-head"><h3>C · Faders</h3><span class="badge alt">Alternative</span></div>
+        <p>The layout stays the same. The six sliders are vertical faders side by side, as on a mixing desk. The user compares all six values at one look. A details box under the faders shows the tooltip text of the active fader.</p>
+        <ul>
+          <li>Each fader has the signed value on top, a scale with a long 0 mark, and an icon with the label below.</li>
+          <li>The fill goes up or down from the 0 mark.</li>
+          <li>The details box shows the name, the value, the description, the range and a gradient with the end labels.</li>
+          <li>The keys are the same as for a <code>JSlider</code>: the arrow keys, Page Up, Page Down, Home and End.</li>
+        </ul>
+        <span class="open">Open option C →</span>
+      </div>
+      <dl class="side">
+        <dt>Best for</dt><dd>Users who change many values and compare them.</dd>
+        <dt>Swing effort</dt><dd>Medium to high. Vertical <code>JSlider</code>s need a custom UI for the cap and the scale. The details box follows the hover and the focus.</dd>
+        <dt>Risk</dt><dd>Medium. A 230 px fader for 200 steps is less precise than a horizontal slider. The labels are narrow.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Feature check</h2>
+  <p class="lede" style="margin-bottom:12px">All options keep each feature of the current tab. The table shows where each feature is.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Feature</th><th>A</th><th>B</th><th>C</th></tr></thead>
+      <tbody>
+        <tr><td>Video preview with live color adjustments</td><td class="yes">Left, as today</td><td class="yes">Left, wider</td><td class="yes">Left, as today</td></tr>
+        <tr><td>Play / Pause button, SPACE shortcut, tooltip "SPACE - Play"</td><td class="yes">Playback bar</td><td class="yes">Playback bar</td><td class="yes">Playback bar</td></tr>
+        <tr><td>Seek bar with the current time and the video length</td><td class="yes">Playback bar</td><td class="yes">Playback bar</td><td class="yes">Playback bar</td></tr>
+        <tr><td>Brightness, Contrast, Saturation, Shadows, Highlights, Temperature: −100 to +100, default 0</td><td class="yes">Horizontal sliders</td><td class="yes">Gradient sliders</td><td class="yes">Vertical faders</td></tr>
+        <tr><td>Value label of each slider</td><td class="yes">Signed value</td><td class="yes">Signed value</td><td class="yes">Value pill</td></tr>
+        <tr><td>Slider tooltips (range and description)</td><td class="yes">Same text</td><td class="yes">Same text</td><td class="yes">Same text + details box</td></tr>
+        <tr><td>Reset of all color values to the defaults, with its tooltip</td><td class="yes">Panel header</td><td class="yes">Panel header</td><td class="yes">Panel header</td></tr>
+        <tr><td>Tooltip note when live preview is not supported</td><td class="yes">Same + notice</td><td class="yes">Same + notice</td><td class="yes">Same + notice</td></tr>
+        <tr><td>Values saved to the project and shared with other previews</td><td class="yes">No change</td><td class="yes">No change</td><td class="yes">No change</td></tr>
+        <tr><td>F1 opens the Colors help</td><td class="yes">No change</td><td class="yes">No change</td><td class="yes">No change</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Text changes</h2>
+  <ul class="plain">
+    <li>"WB Temp" becomes "Temperature". <span class="muted">The tooltip already uses "Temperature".</span></li>
+    <li>"Color Grade" becomes "Color grade" (sentence case, as the other tab headers).</li>
+    <li>"Reset" becomes "Reset all". The tooltip "Reset Color Grade to defaults" stays.</li>
+    <li>New status text in the header: "All at default" or "2 of 6 changed".</li>
+    <li>New end labels: Darker / Brighter, Flatter / Stronger, Deeper / Lifted, Darker / Brighter, Gray / Vivid, Cooler / Warmer.</li>
+    <li>New notice when live preview is not supported: "Live preview may not be available on this system. The values are still saved for export." <span class="muted">It is the same information as the current tooltip note.</span></li>
+    <li>New footer: "Saved to the project. Export uses these values." <span class="muted">It is the same information as the Colors help.</span></li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul class="plain">
+    <li>The colors come from <code>UiStyles</code>: <code>DARK_BG</code>, <code>CARD_BG</code>, <code>LIME</code>, <code>GREEN</code> and <code>ACCENT_TEXT</code>.</li>
+    <li>The live preview in the mockups is an SVG filter on a still frame. It is an estimate only. It is not the mpv filter chain.</li>
+    <li>The mockups use the Material Symbols font from Google Fonts for the icons. Without internet access, the icons show as words.</li>
+    <li>Add <code>#preset=adjusted&amp;support=none</code> to a page URL to open it in a given state.</li>
+  </ul>
+</div>
+</body>
+</html>

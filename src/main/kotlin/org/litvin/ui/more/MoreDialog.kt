@@ -1,23 +1,23 @@
 package org.litvin.ui.more
 
-import org.litvin.ui.UiStyles
+import org.kordamp.ikonli.Ikon
+import org.kordamp.ikonli.material2.Material2AL
+import org.kordamp.ikonli.material2.Material2MZ
+import org.litvin.ui.commons.ToolNav
+import org.litvin.ui.commons.ToolNavItem
+import org.litvin.ui.commons.ToolPage
+import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.applyDarkScrollbar
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.awt.Component
 import java.awt.Dimension
 import java.awt.Window
 import javax.swing.BorderFactory
-import javax.swing.DefaultListCellRenderer
 import javax.swing.JComponent
 import javax.swing.JDialog
-import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.JScrollPane
-import javax.swing.JSplitPane
-import javax.swing.ListSelectionModel
 import javax.swing.WindowConstants
-import javax.swing.border.EmptyBorder
 
 /** One section of the More window. The list on the left shows [title]. The right side shows [content]. */
 data class MoreSection(val title: String, val content: JComponent)
@@ -46,8 +46,9 @@ class MoreDialog(owner: Window?, sections: List<MoreSection>) : JDialog(owner, "
     }
 }
 
+/** The section list on the left and the selected section on the right: design/dialogs-redesign/more.html. */
 class MorePanel(private val sections: List<MoreSection>) : JPanel(BorderLayout()) {
-    private val navigation = JList(sections.toTypedArray())
+    private val navigation: ToolNav<String>
     private val cardLayout = CardLayout()
     private val content = JPanel(cardLayout)
 
@@ -56,73 +57,46 @@ class MorePanel(private val sections: List<MoreSection>) : JPanel(BorderLayout()
 
     init {
         require(sections.isNotEmpty()) { "The More window needs at least one section" }
-        background = UiStyles.DARK_BG
-        border = EmptyBorder(12, 12, 12, 12)
-
-        navigation.name = "more-navigation"
-        navigation.selectionMode = ListSelectionModel.SINGLE_SELECTION
-        navigation.background = UiStyles.CARD_BG
-        navigation.foreground = UiStyles.FG_PRIMARY
-        navigation.fixedCellHeight = 42
-        navigation.cellRenderer = object : DefaultListCellRenderer() {
-            override fun getListCellRendererComponent(
-                list: JList<*>?,
-                value: Any?,
-                index: Int,
-                isSelected: Boolean,
-                cellHasFocus: Boolean,
-            ): Component {
-                val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-                text = (value as? MoreSection)?.title.orEmpty()
-                border = EmptyBorder(0, 12, 0, 12)
-                background = if (isSelected) UiStyles.SURFACE_HIGH else UiStyles.CARD_BG
-                foreground = if (isSelected) UiStyles.LIME else UiStyles.FG_PRIMARY
-                return label
-            }
-        }
-        navigation.addListSelectionListener {
-            if (!it.valueIsAdjusting) navigation.selectedValue?.let(::showSection)
-        }
-
-        val navigationScroll = JScrollPane(navigation).apply {
-            border = BorderFactory.createLineBorder(UiStyles.CARD_BORDER)
-            preferredSize = Dimension(180, 0)
-            applyDarkScrollbar(this, UiStyles.CARD_BG)
-        }
+        background = UiKit.BG
+        navigation = ToolNav("more-navigation", sections.map { ToolNavItem(it.title, it.title, iconOf(it.title)) }) { showSection(it) }
 
         content.name = "more-content"
-        content.background = UiStyles.CARD_BG
-        sections.forEach { section ->
-            val scroll = JScrollPane(section.content).apply {
-                border = BorderFactory.createLineBorder(UiStyles.CARD_BORDER)
-                horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
-                viewport.background = UiStyles.CARD_BG
-                applyDarkScrollbar(this, UiStyles.CARD_BG)
-            }
-            content.add(scroll, section.title)
-        }
+        content.background = UiKit.PANEL
+        sections.forEach { section -> content.add(scrollOf(section.content), section.title) }
 
-        add(JSplitPane(JSplitPane.HORIZONTAL_SPLIT, navigationScroll, content).apply {
-            dividerLocation = 180
-            dividerSize = 8
-            isContinuousLayout = true
-            resizeWeight = 0.0
-            border = BorderFactory.createEmptyBorder()
-            background = UiStyles.DARK_BG
-        }, BorderLayout.CENTER)
-
-        navigation.selectedIndex = 0
+        add(navigation, BorderLayout.WEST)
+        add(content, BorderLayout.CENTER)
+        selectSection(sections.first().title)
     }
 
     fun sectionTitles(): List<String> = sections.map { it.title }
 
     fun selectSection(title: String) {
-        val section = sections.firstOrNull { it.title == title } ?: return
-        navigation.setSelectedValue(section, true)
+        if (sections.none { it.title == title }) return
+        navigation.selected = title
+        showSection(title)
     }
 
-    private fun showSection(section: MoreSection) {
-        selectedTitle = section.title
-        cardLayout.show(content, section.title)
+    private fun showSection(title: String) {
+        selectedTitle = title
+        cardLayout.show(content, title)
+    }
+
+    private fun scrollOf(component: JComponent): JScrollPane =
+        (component as? ToolPage)?.inScrollPane() ?: JScrollPane(component).apply {
+            border = BorderFactory.createEmptyBorder()
+            horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+            viewport.background = UiKit.PANEL
+            applyDarkScrollbar(this, UiKit.PANEL)
+        }
+
+    private companion object {
+        fun iconOf(title: String): Ikon = when (title) {
+            SettingsPage.TITLE -> Material2MZ.SETTINGS
+            "Privacy" -> Material2MZ.SECURITY
+            AboutPage.TITLE -> Material2AL.INFO
+            ContactPage.TITLE -> Material2MZ.MAIL_OUTLINE
+            else -> Material2AL.ARTICLE
+        }
     }
 }

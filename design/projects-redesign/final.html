@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects Final</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Final design: option C with the review changes.
+     - The start panel shows the full workflow of the app, from the Overview help page, in short steps.
+     - The save note at the bottom has the new text.
+     - The logo is the current app mark (AnimatedAppMark in the app).
+     - The Video column shows one absolute path, folder first. */
+  .tab { display: grid; grid-template-columns: 320px minmax(0, 1fr); min-height: 0; background: var(--bg); }
+
+  /* ----- Start panel ----- */
+  .start { display: flex; flex-direction: column; gap: 22px; padding: 22px 20px 18px; background: var(--panel); border-right: 1px solid var(--line); min-height: 0; overflow-y: auto; }
+  .app-mark { width: 44px; height: 44px; flex: none; }
+  .block .caption { display: block; margin-bottom: 8px; }
+
+  .cur { padding: 14px; border-radius: 8px; background: var(--card); border: 1px solid var(--lime-line); box-shadow: 0 0 0 3px rgba(161,254,0,.05); }
+  .cur-top { display: flex; align-items: flex-start; gap: 8px; }
+  .cur-name { flex: 1; font-size: 16px; font-weight: 600; line-height: 1.3; word-break: break-word; }
+  .cur .tag { margin-top: 2px; }
+  .cur .file { margin-top: 10px; display: grid; grid-template-columns: 18px 1fr; gap: 6px; font-size: 12px; color: var(--fg-2); }
+  .cur .file .material-symbols-outlined { font-size: 15px; color: var(--fg-3); margin-top: 1px; }
+  .cur .file span:last-child { word-break: break-all; }
+  .cur-foot { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; }
+  .cur.none { border: 1px dashed var(--line-2); box-shadow: none; background: transparent; }
+  .cur.none .cur-name { color: var(--fg-2); font-size: 14px; }
+  .cur.none p { margin: 6px 0 0; color: var(--fg-3); font-size: 12px; line-height: 1.5; }
+
+  /* Workflow: the steps of the Overview help page, one line each, with the tab of each step. */
+  .newp { padding: 14px; border-radius: 8px; background: #121212; border: 1px solid var(--line); }
+  .newp .wf-title { font-size: 12px; color: var(--fg-2); margin: 0 0 10px; }
+  .wf { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 0; position: relative; }
+  .wf li { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; min-height: 30px; font-size: 12.5px; color: var(--fg); position: relative; }
+  /* The line that joins the step numbers */
+  .wf li:not(:last-child)::after { content: ""; position: absolute; left: 10px; top: 22px; bottom: -8px; width: 1px; background: #2e2e2e; }
+  .wf .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #262626; color: var(--fg); font-size: 11px; font-weight: 700; position: relative; z-index: 1; }
+  .wf li.here .n { background: var(--lime); color: #142000; }
+  .wf li.opt { color: var(--fg-2); margin-top: 4px; grid-template-columns: 22px 1fr; row-gap: 5px; }
+  .wf li.opt .chips { grid-column: 2; }
+  .wf li.opt .n { background: transparent; border: 1px dashed #4a4a4a; color: var(--fg-3); }
+  .wf li.opt .n .material-symbols-outlined { font-size: 13px; }
+  .chips { display: flex; gap: 4px; }
+  .chip { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px; border-radius: 4px; background: #1c1c1c; border: 1px solid #2c2c2c; color: var(--fg-2); font-size: 10.5px; white-space: nowrap; }
+  .chip .material-symbols-outlined { font-size: 13px; color: var(--lime); }
+  .wf li.here .chip { border-color: var(--lime-line); color: var(--fg); }
+  .newp .btn-lime { width: 100%; }
+
+  .save-note { margin-top: auto; font-size: 13px; color: var(--fg-2); line-height: 1.5; display: flex; align-items: flex-start; gap: 10px; }
+  /* A laptop with a check mark: the changes are saved on this computer */
+  .save-note .material-symbols-outlined { flex: none; font-size: 24px; color: var(--sage); margin-top: 1px;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+  /* ----- List ----- */
+  .list { display: flex; flex-direction: column; min-height: 0; padding: 22px 24px 16px; }
+  .sec-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .sec-head h2 { margin: 0; font-size: 18px; font-weight: 600; }
+  .sec-head .hint { font-size: 12px; color: var(--fg-3); }
+  .sec-head .pager { margin-left: auto; }
+
+  .cols, .row {
+    display: grid; align-items: center; column-gap: 14px;
+    grid-template-columns: 20px minmax(140px, 1fr) minmax(0, 1.6fr) 64px 76px 104px 48px 112px;
+  }
+  .cols { height: 30px; padding: 0 10px; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); font-weight: 600; border-bottom: 1px solid var(--line-2); }
+  .r { text-align: right; justify-self: end; }
+  .rows { flex: 1; min-height: 0; }
+  .row { height: 44px; padding: 0 10px; border-bottom: 1px solid #1d1d1d; cursor: default; position: relative; }
+  .row:hover { background: #171717; }
+  .row.is-current { background: rgba(161,254,0,.05); }
+  .row.is-current::after { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--lime); }
+  .st .material-symbols-outlined { font-size: 17px; color: var(--fg-3); }
+  .row.is-current .st .material-symbols-outlined { color: var(--lime); }
+  .row.is-missing .st .material-symbols-outlined { color: var(--red); }
+  .nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* One absolute path, folder first. A long path loses the start of the folder, so the file name stays visible.
+     In Swing: a label that paints "…" + the end of the text. The tooltip shows the full path. */
+  .vpath { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; color: var(--fg-2); }
+  .vpath .p { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; direction: rtl; text-align: left; }
+  .vpath .p bdi { direction: ltr; unicode-bidi: isolate; }
+  .vpath .miss { flex: none; color: var(--red); font-weight: 600; }
+  .vpath.missing .p { color: var(--fg-3); }
+  .n { font-size: 12.5px; }
+  .n.dash { color: var(--fg-3); }
+  .sc { display: grid; grid-template-columns: 1fr 44px; gap: 8px; align-items: center; }
+  .sc .n { text-align: right; }
+  .fav { display: inline-flex; gap: 3px; align-items: center; }
+  .fav .material-symbols-outlined { font-size: 14px; color: var(--yellow); }
+  .fav.zero .material-symbols-outlined { color: var(--fg-3); }
+  .acts { display: flex; justify-content: flex-end; gap: 0; }
+  .acts .btn-ghost { color: var(--fg-3); }
+  .row:hover .acts .btn-ghost { color: var(--fg-2); }
+  .acts .btn-open { margin-left: 6px; }
+
+  .empty { flex: 1; display: grid; place-items: center; color: var(--fg-2); text-align: center; }
+  .empty .material-symbols-outlined { font-size: 40px; color: var(--fg-3); }
+  .empty h3 { margin: 10px 0 4px; color: var(--fg); font-size: 16px; }
+  .empty p { margin: 0; }
+  .empty .arrow { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; color: var(--lime); font-size: 12.5px; }
+  .empty .arrow .material-symbols-outlined { font-size: 18px; color: var(--lime); }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+
+    <main class="tab">
+      <aside class="start">
+        <div class="brand" title="In the app: the current AnimatedAppMark (it spins from time to time)">
+          <img class="app-mark" src="../app-icon/app-mark.svg" alt="">
+          <div><div class="brand-title">TENNIS RECORD</div><div class="brand-sub">TENNIS VIDEO EDITING SUITE</div></div>
+        </div>
+
+        <div class="block"><span class="caption">Current project</span><div id="current"></div></div>
+
+        <div class="block">
+          <span class="caption">New project</span>
+          <div class="newp">
+            <p class="wf-title">From a match video to a finished video:</p>
+            <ol class="wf">
+              <li class="here"><span class="n">1</span><span>Import a match video</span>
+                <span class="chips"><span class="chip"><span class="material-symbols-outlined">folder_open</span>Projects</span></span></li>
+              <li><span class="n">2</span><span>Mark the points</span>
+                <span class="chips"><span class="chip"><span class="material-symbols-outlined">sports_tennis</span>Points</span></span></li>
+              <li><span class="n">3</span><span>Score each point</span>
+                <span class="chips"><span class="chip"><span class="material-symbols-outlined">scoreboard</span>Scoring</span></span></li>
+              <li><span class="n">4</span><span>Review the statistics</span>
+                <span class="chips"><span class="chip"><span class="material-symbols-outlined">bar_chart</span>Stats</span></span></li>
+              <li><span class="n">5</span><span>Export the video</span>
+                <span class="chips"><span class="chip"><span class="material-symbols-outlined">movie</span>Export</span></span></li>
+              <li class="opt" title="Optionally tune the color and frame the video with Transform. You can do this at any time.">
+                <span class="n"><span class="material-symbols-outlined">schedule</span></span><span>Tune the image at any time <span class="faint">(optional)</span></span>
+                <span class="chips"><span class="chip"><span class="material-symbols-outlined">palette</span>Colors</span><span class="chip"><span class="material-symbols-outlined">crop_rotate</span>Transform</span></span></li>
+            </ol>
+            <button class="btn btn-lime" data-act="import" title="Select a match video and create a new project">
+              <span class="material-symbols-outlined">add</span>Import new match
+            </button>
+          </div>
+        </div>
+
+        <div class="save-note"><span class="material-symbols-outlined">sync_saved_locally</span>
+          <span>The app saves all changes automatically across all tabs. No need to save anything manually.</span></div>
+      </aside>
+
+      <section class="list">
+        <div class="sec-head"><h2>Recent projects</h2><span class="hint" id="hint">Double-click a row to open the project</span><span class="pager" id="pager"></span></div>
+        <div id="table" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="note-callout" id="note">
+  <button onclick="this.parentElement.hidden = true" aria-label="Close">✕</button>
+  <b>Final design.</b> Option C with the review changes: the full workflow in the start panel, the new save note,
+  the current app mark, and one absolute path (folder first) in the Video column. Point to a path to see all of it.
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { esc, fig, TIPS } = Mock;
+  Mock.shell('final');
+
+  function currentHtml(p) {
+    if (!p) {
+      return `<div class="cur none"><div class="cur-name">No open project</div>
+        <p>Import a new match below, or open a project from the list.</p></div>`;
+    }
+    const path = Mock.secondary(p);
+    return `<div class="cur">
+      <div class="cur-top"><div class="cur-name">${esc(p.name)}</div><span class="tag">OPEN</span></div>
+      <div class="file" title="${esc(path)}"><span class="material-symbols-outlined">movie</span><span>${esc(path)}</span></div>
+      <div class="cur-foot"><button class="btn btn-ghost btn-sm" data-act="rename" data-id="${p.id}" title="${TIPS.rename}" style="margin-left:-8px"><span class="material-symbols-outlined">edit</span>Rename</button></div>
+    </div>`;
+  }
+
+  function pathCell(p) {
+    const path = Mock.secondary(p);
+    if (p.missing) {
+      return `<span class="vpath missing" title="${esc(TIPS.missing)}&#10;${esc(path)}"><span class="miss">Video not found</span>` +
+        `<span class="p"><bdi>${esc(path)}</bdi></span></span>`;
+    }
+    return `<span class="vpath" title="${esc(path)}"><span class="p"><bdi>${esc(path)}</bdi></span></span>`;
+  }
+
+  function rowHtml(p) {
+    const cur = Mock.isCurrent(p);
+    const icon = cur ? 'play_circle' : p.missing ? 'videocam_off' : p.noVideo ? 'description' : 'movie';
+    const dash = (v) => (v === '—' ? ' dash' : '');
+    const stTip = cur ? 'Open project' : p.missing ? TIPS.missing : '';
+    return `<div class="row ${cur ? 'is-current' : ''} ${p.missing ? 'is-missing' : ''}" data-row="${p.id}">
+      <span class="st" title="${esc(stTip)}"><span class="material-symbols-outlined ${cur ? 'fill' : ''}">${icon}</span></span>
+      <span class="nm" title="${esc(p.name)}">${esc(p.name)}</span>
+      ${pathCell(p)}
+      <span class="r n num${dash(p.duration)}">${fig(p, 'duration', 44)}</span>
+      <span class="r n num${dash(p.size)}">${fig(p, 'size', 56)}</span>
+      <span class="sc"><span class="n num">${fig(p, 'scored', 40)}</span>${Mock.scoredBar(p)}</span>
+      <span class="r n num"><span class="fav ${p.fav === 0 ? 'zero' : ''}"><span class="material-symbols-outlined fill">star</span>${fig(p, 'fav', 16)}</span></span>
+      <span class="acts">
+        <button class="btn btn-ghost btn-icon btn-sm" data-act="rename" data-id="${p.id}" title="${TIPS.rename}"><span class="material-symbols-outlined">edit</span></button>
+        <button class="btn btn-ghost btn-icon btn-sm" data-act="delete" data-id="${p.id}" ${cur ? 'disabled' : ''} title="${cur ? TIPS.delDisabled : TIPS.del}"><span class="material-symbols-outlined">delete</span></button>
+        <button class="btn btn-sm btn-open" data-act="open" data-id="${p.id}" title="${TIPS.open}">Open</button>
+      </span>
+    </div>`;
+  }
+
+  Mock.on((s) => {
+    document.getElementById('current').innerHTML = currentHtml(Mock.current());
+    const list = Mock.visible();
+    const pages = Mock.totalPages();
+    document.getElementById('hint').hidden = list.length === 0;
+    document.getElementById('pager').innerHTML = pages > 1
+      ? `<button class="btn btn-sm btn-icon" data-act="prev" title="Previous page" ${s.page <= 1 ? 'disabled' : ''}><span class="material-symbols-outlined">chevron_left</span></button>
+         <span class="lbl num">Page ${s.page} / ${pages}</span>
+         <button class="btn btn-sm btn-icon" data-act="next" title="Next page" ${s.page >= pages ? 'disabled' : ''}><span class="material-symbols-outlined">chevron_right</span></button>`
+      : '';
+    const table = document.getElementById('table');
+    if (list.length === 0) {
+      table.innerHTML = `<div class="empty"><div>
+        <span class="material-symbols-outlined">video_library</span>
+        <h3>No projects yet</h3>
+        <p>Click "Import new match" to create one.</p>
+        <span class="arrow"><span class="material-symbols-outlined">west</span>"Import new match" is in the New project panel</span>
+      </div></div>`;
+      return;
+    }
+    table.innerHTML =
+      `<div class="cols"><span></span><span>Project</span><span>Video</span><span class="r">Duration</span><span class="r">Size</span><span class="r" style="padding-right:52px">Scored</span><span class="r">Fav.</span><span></span></div>
+       <div class="rows scroll">${list.map(rowHtml).join('')}</div>`;
+  });
+  Mock.start();
+</script>
+</body>
+</html>

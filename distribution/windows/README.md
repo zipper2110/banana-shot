@@ -32,7 +32,8 @@ After you change the SVG, run this command to generate the ICO again:
 ## Release requirements
 
 Use [docs/release-checklist.md](../../docs/release-checklist.md) for each
-release. It lists the checks and the open items for the next release.
+release. It gives the release steps in sequence. The open work is in
+[docs/backlog.md](../../docs/backlog.md).
 
 - Build on Windows x64 with Eclipse Temurin JDK 17 and WiX Toolset 3.
 - Code signing is optional. The release workflow signs only when the repository

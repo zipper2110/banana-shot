@@ -31,6 +31,8 @@ import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
+import org.litvin.ui.commons.VideoFrameLoader
+import org.litvin.ui.commons.VideoFrameRequest
 import org.litvin.ui.commons.uiSafe
 import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.tabs.scoring.ui.PointsListData
@@ -52,6 +54,7 @@ import java.awt.EventQueue
 import java.awt.GridLayout
 import java.awt.KeyboardFocusManager
 import java.awt.event.ActionEvent
+import java.awt.image.BufferedImage
 import java.io.File
 import javax.swing.AbstractAction
 import javax.swing.BorderFactory
@@ -75,6 +78,7 @@ class SwingScoringPanel(
     private val styleDefaults: ScoreboardStyleDefaults = ScoreboardStyleDefaults.NONE,
     private val scoreSettingsEditor: ScoreSettingsEditor = ScoreSettingsDialog,
     private val scoreSettingsHint: ScoreSettingsHint = ScoreSettingsHint.NONE,
+    private val frameLoader: VideoFrameLoader = VideoFrameLoader(),
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
         MpvSwingMediaPlayerAdapter(),
@@ -899,8 +903,13 @@ class SwingScoringPanel(
                 completedSets = listOf(6 to 4),
             ),
         )
+        // The preview of the window shows the video frame at the playhead, with the color and crop of the project.
+        val frameRequest = pendingMediaFile?.let { VideoFrameRequest(it.absolutePath, player.currentTimeMs(), adjustments.get()) }
+        val loadFrame: ((BufferedImage?) -> Unit) -> Unit = { onLoaded ->
+            if (frameRequest != null) frameLoader.load(frameRequest, onLoaded)
+        }
         val result = try {
-            ScoreboardSettingsDialog.show(this, scoreboardSettings, sample) { preview ->
+            ScoreboardSettingsDialog.show(this, scoreboardSettings, sample, loadFrame) { preview ->
                 scoreboardPreviewSettings = preview
                 refreshVideoScoreboardOverlay()
             }

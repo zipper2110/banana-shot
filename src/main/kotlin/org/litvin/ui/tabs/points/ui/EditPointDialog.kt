@@ -2,6 +2,9 @@ package org.litvin.ui.tabs.points.ui
 
 import org.kordamp.ikonli.material2.Material2AL
 import org.litvin.shared.util.Timecode
+import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.MessageDialog
+import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.formatSeconds
 import org.litvin.ui.tabs.points.PointDto
 import org.litvin.ui.tabs.points.PointPatch
@@ -10,7 +13,6 @@ import java.awt.Component
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import javax.swing.JDialog
-import javax.swing.JOptionPane
 import javax.swing.JTextField
 
 /**
@@ -38,15 +40,15 @@ object EditPointDialog {
 
     /** Builds the packed dialog without showing it. */
     internal fun build(parent: Component, point: PointDto, number: Int, actions: PointsActions): JDialog {
-        val dialog = PointsDialogKit.dialog(parent, "Edit point #$number")
+        val dialog = DialogKit.modal(parent, "Edit point #$number")
         val start = JTextField(Timecode.format(point.startMs)).apply { name = "points-edit-start" }
         val end = JTextField(point.endMs?.let { Timecode.format(it) } ?: "").apply { name = "points-edit-end" }
         val label = JTextField(point.label ?: "").apply { name = "points-edit-label" }
-        val error = PointsDialogKit.errorLine()
+        val error = DialogKit.errorLine()
 
-        val save = PointsButton("Save", kind = PointsButton.Kind.LIME).apply { name = "points-edit-save" }
-        val cancel = PointsButton("Cancel")
-        val delete = PointsButton("Delete", Material2AL.DELETE, PointsButton.Kind.DANGER).apply { name = "points-edit-delete" }
+        val save = UiButton("Save", kind = UiButton.Kind.LIME).apply { name = "points-edit-save" }
+        val cancel = UiButton("Cancel")
+        val delete = UiButton("Delete", Material2AL.DELETE, UiButton.Kind.DANGER).apply { name = "points-edit-delete" }
 
         save.addActionListener {
             try {
@@ -62,28 +64,29 @@ object EditPointDialog {
         delete.addActionListener {
             dialog.dispose()
             val name = Timecode.format(point.startMs) + " - " + (point.endMs?.let { Timecode.format(it) } ?: "?")
-            val confirm = JOptionPane.showConfirmDialog(
+            val confirmed = MessageDialog.confirm(
                 parent,
-                "Delete marked point $name?",
-                "Confirm delete",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.WARNING_MESSAGE,
+                "Delete point",
+                "Delete marked point **$name**?",
+                confirmLabel = "Delete",
+                destructive = true,
             )
-            if (confirm == JOptionPane.OK_OPTION) actions.deletePoint(point.id)
+            if (confirmed) actions.deletePoint(point.id)
         }
 
         val length = point.endMs?.let { formatSeconds(it - point.startMs) }
-        dialog.contentPane = PointsDialogKit.content(
-            PointsDialogKit.head("Edit point #$number", length),
-            PointsDialogKit.form(
-                PointsDialogKit.pair(
-                    PointsDialogKit.field("Start", PointsDialogKit.inputBox(start)),
-                    PointsDialogKit.field("End", PointsDialogKit.inputBox(end)),
+        dialog.contentPane = DialogKit.content(
+            DialogKit.SMALL,
+            DialogKit.head("Edit point #$number", length),
+            DialogKit.form(
+                DialogKit.pair(
+                    DialogKit.field("Start", DialogKit.inputBox(start)),
+                    DialogKit.field("End", DialogKit.inputBox(end)),
                 ),
-                PointsDialogKit.field("Label", PointsDialogKit.inputBox(label), note = "optional"),
+                DialogKit.field("Label", DialogKit.inputBox(label), note = "optional"),
                 error,
             ),
-            PointsDialogKit.footer(left = listOf(delete), right = listOf(cancel, save)),
+            DialogKit.footer(left = listOf(delete), right = listOf(cancel, save)),
         )
         // Enter in any field saves.
         dialog.rootPane.defaultButton = save

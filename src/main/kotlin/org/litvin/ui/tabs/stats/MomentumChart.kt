@@ -2,7 +2,7 @@ package org.litvin.ui.tabs.stats
 
 import org.litvin.scoring.PerPlayer
 import org.litvin.stats.Momentum
-import org.litvin.ui.UiStyles
+import org.litvin.ui.commons.UiKit
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Cursor
@@ -35,7 +35,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             repaint()
         }
     var names: PerPlayer<String> = PerPlayer("Player 1", "Player 2")
-    var colors: PerPlayer<Color> = PerPlayer(UiStyles.FG_PRIMARY, UiStyles.FG_SECONDARY)
+    var colors: PerPlayer<Color> = PerPlayer(UiKit.FG, UiKit.FG_2)
 
     /** The position in [Momentum.points] under the mouse, or -1. */
     private var hover = -1
@@ -43,6 +43,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
     init {
         name = "stats-momentum"
         isOpaque = false
+        font = UiKit.font(12f)
         preferredSize = Dimension(PREFERRED_WIDTH, PREFERRED_HEIGHT)
         minimumSize = Dimension(200, PREFERRED_HEIGHT)
         ToolTipManager.sharedInstance().registerComponent(this)
@@ -86,14 +87,14 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             val middle = plot.y + above * plot.height / (above + below)
 
             // The labels show the largest lead of each player.
-            g.font = font.deriveFont(font.size2D - 1f)
+            g.font = font
             val metrics = g.fontMetrics
             g.color = colors.p1
             g.drawString("${names.p1} +${lead.p1}", plot.x.toFloat(), (plot.y - 6).toFloat())
             g.color = colors.p2
             g.drawString("${names.p2} +${lead.p2}", plot.x.toFloat(), (plot.maxY + metrics.ascent + 4).toFloat())
 
-            g.color = UiStyles.CARD_BORDER
+            g.color = StatsColors.CHART_AXIS
             g.draw(Line2D.Double(plot.x, middle, plot.maxX, middle))
             if (points.isEmpty()) return
 
@@ -104,10 +105,10 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             g.stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, floatArrayOf(4f, 4f), 0f)
             for (start in momentum.setStarts) {
                 val lineX = x(start)
-                g.color = UiStyles.FG_DISABLED
+                g.color = UiKit.FG_3
                 g.draw(Line2D.Double(lineX, plot.y, lineX, plot.maxY))
                 val label = "Set ${points[start].set}"
-                g.color = UiStyles.FG_SECONDARY
+                g.color = UiKit.FG_2
                 g.drawString(label, (lineX - metrics.stringWidth(label) / 2).toFloat(), (plot.y - 6).toFloat())
             }
 
@@ -123,14 +124,14 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             fill(g, area, Rectangle2D.Double(plot.x, plot.y - 1, plot.width, middle - plot.y + 1), colors.p1)
             fill(g, area, Rectangle2D.Double(plot.x, middle, plot.width, plot.maxY - middle + 1), colors.p2)
             g.stroke = BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g.color = UiStyles.FG_PRIMARY
+            g.color = StatsColors.CHART_LINE
             g.draw(line)
 
             if (hover in points.indices) {
                 val hoverX = x(hover + 1)
                 val hoverY = y(points[hover].difference)
                 g.stroke = BasicStroke(1f)
-                g.color = UiStyles.FG_SECONDARY
+                g.color = UiKit.FG_2
                 g.draw(Line2D.Double(hoverX, plot.y, hoverX, plot.maxY))
                 g.color = if (points[hover].winner == 1) colors.p1 else colors.p2
                 g.fill(Ellipse2D.Double(hoverX - 5, hoverY - 5, 10.0, 10.0))
@@ -177,8 +178,9 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
     private fun points(count: Int) = if (abs(count) == 1) "1 point" else "$count points"
 
     private companion object {
-        const val PREFERRED_WIDTH = 560
-        const val PREFERRED_HEIGHT = 170
+        // The chart gets the width of the table, so its preferred width is small.
+        const val PREFERRED_WIDTH = 200
+        const val PREFERRED_HEIGHT = 160
         const val PADDING = 4.0
         const val AREA_ALPHA = 90
     }

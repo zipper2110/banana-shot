@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help Window</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main id="tab"></main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Help window.</b> Same pages and texts as today (from HelpCatalog). The list has the icons and the groups of the sidebar,
+  and "This tab" marks the page that F1 opens. The workflow is a numbered list, and the shortcuts show as keys.
+  The window does not block the app. Close it and press <kbd>F1</kbd> or click Help in the sidebar to open it again.
+</div>
+
+<script src="help-content.js"></script>
+<script src="shared.js"></script>
+<script>
+(function () {
+  const { esc, icon } = Mock;
+  const PAGE_ICON = { OVERVIEW: 'home', PROJECTS: 'folder_open', POINTS: 'sports_tennis', SCORING: 'scoreboard', STATISTICS: 'bar_chart', COLORS: 'palette', CROP: 'crop_rotate', EXPORT: 'movie' };
+  const TAB_PAGE = { Projects: 'PROJECTS', Points: 'POINTS', Scoring: 'SCORING', Stats: 'STATISTICS', Colors: 'COLORS', Transform: 'CROP', Export: 'EXPORT' };
+  const GROUPS = [[null, ['OVERVIEW', 'PROJECTS']], ['Match', ['POINTS', 'SCORING', 'STATISTICS']], ['Video', ['COLORS', 'CROP']], [null, ['EXPORT']]];
+
+  Mock.shell('help', {
+    tab: 'Scoring', tabTitle: 'Scoring',
+    states: [{ label: 'Current tab', group: 'tab', options: [['Projects', 'Projects'], ['Points', 'Points'], ['Scoring', 'Scoring'], ['Export', 'Export']] }],
+  });
+  Mock.behind(document.getElementById('tab'));
+
+  const keys = (k) => k.split('+').map((x) => `<kbd>${esc(x)}</kbd>`).join('');
+  function pageHtml(h) {
+    return `<div class="tool-page-inner">
+      <h1>${esc(h.title)}</h1>
+      <p class="lede">${esc(h.summary)}</p>
+      <h2>${icon('route')}Main workflow</h2>
+      <ol class="steps">${h.workflow.map((t) => `<li><span>${esc(t)}</span></li>`).join('')}</ol>
+      <h2>${icon('touch_app')}Available actions</h2>
+      <ul class="bullets">${h.actions.map((t) => `<li>${icon('chevron_right')}<span>${esc(t)}</span></li>`).join('')}</ul>
+      <h2>${icon('lightbulb')}Good to know</h2>
+      <ul class="bullets good">${h.goodToKnow.map((t) => `<li>${icon('info')}<span>${esc(t)}</span></li>`).join('')}</ul>
+      <h2>${icon('keyboard')}Keyboard shortcuts</h2>
+      <table class="keys-table">${h.shortcuts.map(([k, a]) => `<tr><td>${keys(k)}</td><td>${esc(a)}</td></tr>`).join('')}</table>
+    </div>`;
+  }
+
+  let win = null;
+  let current = 'OVERVIEW';
+  function open(pageId) {
+    current = pageId || current;
+    if (!win) {
+      win = document.createElement('div');
+      win.className = 'tool-back';
+      win.innerHTML = `
+        <div class="tool" role="dialog" aria-label="BananaShot Help">
+          <div class="tool-title"><span class="logo"></span>BananaShot Help<span class="win-buttons"><span>—</span><span>☐</span><span data-x>✕</span></span></div>
+          <div class="tool-main">
+            <div class="tool-nav" id="helpNav"></div>
+            <div class="tool-page" id="helpPage"></div>
+          </div>
+        </div>`;
+      document.querySelector('.window').appendChild(win);
+      win.querySelector('[data-x]').onclick = () => { win.remove(); win = null; Mock.toast('Help closed. Press F1 or click Help in the sidebar.'); };
+      win.querySelector('#helpNav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) open(b.dataset.page); });
+    }
+    const here = TAB_PAGE[Mock.state.tab];
+    win.querySelector('#helpNav').innerHTML = GROUPS.map(([cap, ids]) => (cap ? `<div class="cap">${cap}</div>` : '') + ids.map((id) => {
+      const h = HELP.find((x) => x.id === id);
+      return `<button data-page="${id}" class="${id === current ? 'is-selected' : ''}">${icon(PAGE_ICON[id])}${esc(h.title)}${id === here ? '<span class="here">This tab</span>' : ''}</button>`;
+    }).join('')).join('');
+    const page = win.querySelector('#helpPage');
+    page.innerHTML = pageHtml(HELP.find((x) => x.id === current));
+    page.scrollTop = 0;
+  }
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'F1') { e.preventDefault(); open(TAB_PAGE[Mock.state.tab]); } });
+  document.getElementById('nav').addEventListener('click', (e) => {
+    const n = e.target.closest('.nav-item');
+    if (!n) return;
+    if (n.dataset.nav === 'Help') open(TAB_PAGE[Mock.state.tab]);
+    else if (TAB_PAGE[n.dataset.nav]) Mock.setState('tab', n.dataset.nav);
+  });
+  Mock.onState((g, v) => {
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.toggle('active', n.dataset.nav === v));
+    document.querySelector('.titlebar').innerHTML = document.querySelector('.titlebar').innerHTML.replace(/— [A-Za-z]+ —/, `— ${v} —`);
+    open(TAB_PAGE[v]);
+  });
+  Mock.setState('tab', Mock.hash.get('tab') || 'Scoring');
+})();
+</script>
+</body>
+</html>

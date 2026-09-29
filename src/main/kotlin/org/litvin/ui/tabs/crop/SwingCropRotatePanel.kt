@@ -3,6 +3,8 @@ package org.litvin.ui.tabs.crop
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
 import org.litvin.ui.commons.AppShortcuts
+import org.litvin.ui.commons.MessageDialog
+import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.VideoPlaybackBar
 import org.litvin.ui.tabs.crop.presenter.CropRotateIntent
@@ -25,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.AbstractAction
 import javax.swing.BorderFactory
 import javax.swing.JComponent
-import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.JSplitPane
 import javax.swing.KeyStroke
@@ -184,12 +185,8 @@ class SwingCropRotatePanel(
 
     override fun renderEffect(effect: CropRotateViewEffect) {
         when (effect) {
-            is CropRotateViewEffect.ShowError -> JOptionPane.showMessageDialog(
-                this,
-                effect.message,
-                "Transform",
-                JOptionPane.WARNING_MESSAGE,
-            )
+            // The message is short, so it is the title. The Transform tab behind the box tells where it comes from.
+            is CropRotateViewEffect.ShowError -> MessageDialog.show(this, MessageKind.WARNING, effect.message, "")
         }
     }
 

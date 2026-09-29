@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>More Window</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  .tool { width: 820px; height: 560px; }
+  .switch-row.big { font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main id="tab"></main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>More window.</b> Same four sections and texts as today. It uses the same frame as the Help window.
+  Each subheading of a section becomes a card, and the status line of a button is directly under the button.
+  Use the switches at the top to see a build without analytics and the messages when the app cannot open a file, a folder or a link.
+</div>
+
+<script src="shared.js"></script>
+<script>
+(function () {
+  const { esc, icon } = Mock;
+  const SECTIONS = [['Settings', 'settings'], ['Privacy', 'shield'], ['About', 'info'], ['Contact', 'mail']];
+  const DATA = 'C:\\Users\\leetv\\AppData\\Roaming\\BananaShot';
+  const APP_HOME = 'C:\\Program Files\\BananaShot';
+
+  Mock.shell('more', {
+    tab: 'Projects', tabTitle: 'Projects',
+    states: [
+      { label: 'Build', group: 'build', options: [['analytics', 'With analytics'], ['plain', 'Without analytics']] },
+      { label: 'Open file or link', group: 'open', options: [['ok', 'Works'], ['fail', 'Fails']] },
+    ],
+  });
+  Mock.behind(document.getElementById('tab'));
+
+  const vrow = (k, v, mono) => `<div class="vrow"><span class="k">${esc(k)}</span><span class="v ${mono ? 'mono' : ''}">${esc(v)}</span></div>`;
+  const btn = (id, label, ic) => `<button class="btn btn-sm" data-act="${id}">${ic ? icon(ic) : ''}${esc(label)}</button>`;
+  const status = (id) => `<div class="status" data-status="${id}"></div>`;
+
+  const PAGES = {
+    Settings: () => `
+      <div class="sec"><h3>Hints and help</h3>
+        <p>The app shows some hints only one time. Show the hints again, and the Overview help at the next start of the app.</p>
+        <div class="btn-row">${btn('hints', 'Show all hints again', 'restart_alt')}</div>${status('hints')}
+      </div>
+      <div class="sec"><h3>App data</h3>
+        <p>The app keeps your projects, the export history, and the logs in this folder. The videos stay where they are.</p>
+        ${vrow('Folder', DATA, true)}
+        <div class="btn-row">${btn('folder', 'Open folder', 'folder_open')}</div>${status('folder')}
+      </div>`,
+    Privacy: () => Mock.state.build === 'plain' ? `
+      <div class="sec"><h3>Usage analytics</h3>
+        <p>This version of the app does not send usage analytics. Your videos and projects stay on this computer.</p>
+      </div>` : `
+      <div class="sec"><h3>Usage analytics</h3>
+        <label class="switch-row big"><input type="checkbox" class="check-input" id="analytics" checked><span class="switch"></span><span class="t">Send optional usage analytics</span></label>
+        <p>Collected: approved product action categories only.</p>
+        <p class="secondary">Excluded: video, audio, filenames, paths, project data, scores, player data, identifiers, and diagnostics.</p>
+        <div class="btn-row">${btn('notice', 'Privacy notice', 'open_in_new')}${btn('contact', 'Contact', 'mail')}</div>
+      </div>`,
+    About: () => `
+      <div class="sec">
+        ${vrow('App', 'BananaShot')}
+        ${vrow('Version', '1.4.0')}
+      </div>
+      <div class="sec"><h3>License</h3>
+        <p>BananaShot is source-available software under the Elastic License 2.0 (ELv2). The app includes libmpv and FFmpeg. The third-party notices give their licenses.</p>
+        <div class="btn-row">${btn('lic', 'License')}${btn('licn', 'License notice')}${btn('tpn', 'Third-party notices')}</div>${status('lic')}
+      </div>
+      <div class="sec"><h3>Runtime</h3>
+        ${vrow('Java', '21.0.4 (Eclipse Adoptium)')}
+        ${vrow('libmpv', APP_HOME + '\\mpv', true)}
+        ${vrow('FFmpeg', APP_HOME + '\\ffmpeg\\ffmpeg.exe', true)}
+      </div>`,
+    Contact: () => `
+      <div class="sec">
+        <p>Send questions, problems, and ideas by email.</p>
+        ${vrow('Email', 'leetvin@gmail.com')}
+        <div class="btn-row">${btn('mail', 'Write an email', 'edit')}</div>${status('mail')}
+      </div>
+      <div class="sec"><h3>Report a problem</h3>
+        <p>Tell what you did, what happened, and what you expected. Add the app version and the version of Windows.</p>
+        ${vrow('Version', '1.4.0')}
+      </div>`,
+  };
+
+  function act(id, page) {
+    const fail = Mock.state.open === 'fail';
+    const set = (key, text, cls) => { const el = page.querySelector(`[data-status="${key}"]`); el.textContent = text; el.className = 'status ' + (cls || ''); };
+    if (id === 'hints') set('hints', 'The hints show again when you get to them.', 'ok');
+    if (id === 'folder') fail ? set('folder', 'The app cannot open the folder.', 'bad') : (set('folder', ''), Mock.toast('The file manager opens the folder.'));
+    if (['lic', 'licn', 'tpn'].includes(id)) {
+      const file = { lic: 'LICENSE.txt', licn: 'LICENSE-NOTICE.txt', tpn: 'THIRD-PARTY-NOTICES.txt' }[id];
+      fail ? set('lic', `The app cannot open ${file}.`, 'bad') : (set('lic', ''), Mock.toast(`Windows opens ${file}.`));
+    }
+    if (id === 'mail') fail ? set('mail', 'The app cannot open your email app. Copy the address above.', 'bad') : (set('mail', ''), Mock.toast('The email app opens a new email.'));
+    if (id === 'notice' || id === 'contact') Mock.toast(id === 'notice' ? 'The browser opens the privacy notice.' : 'The email app opens a new email.');
+  }
+
+  let win = null;
+  let current = 'Settings';
+  function open(section) {
+    current = section || current;
+    if (!win) {
+      win = document.createElement('div');
+      win.className = 'tool-back';
+      win.innerHTML = `
+        <div class="tool" role="dialog" aria-label="More">
+          <div class="tool-title"><span class="logo"></span>More<span class="win-buttons"><span>—</span><span>☐</span><span data-x>✕</span></span></div>
+          <div class="tool-main">
+            <div class="tool-nav" id="moreNav"></div>
+            <div class="tool-page" id="morePage"></div>
+          </div>
+        </div>`;
+      document.querySelector('.window').appendChild(win);
+      win.querySelector('[data-x]').onclick = () => { win.remove(); win = null; Mock.toast('More closed. Click More in the sidebar to open it again.'); };
+      win.querySelector('#moreNav').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) open(b.dataset.s); });
+      win.querySelector('#morePage').addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (b) act(b.dataset.act, win.querySelector('#morePage')); });
+      win.querySelector('#morePage').addEventListener('change', (e) => { if (e.target.id === 'analytics') Mock.toast(e.target.checked ? 'Analytics on.' : 'Analytics off.'); });
+    }
+    win.querySelector('#moreNav').innerHTML = SECTIONS.map(([t, ic]) => `<button data-s="${t}" class="${t === current ? 'is-selected' : ''}">${icon(ic)}${t}</button>`).join('');
+    win.querySelector('#morePage').innerHTML = `<div class="tool-page-inner"><h1>${current}</h1><div style="height:10px"></div>${PAGES[current]()}</div>`;
+  }
+
+  document.getElementById('nav').addEventListener('click', (e) => { const n = e.target.closest('.nav-item'); if (n && n.dataset.nav === 'More') open(); });
+  Mock.onState(() => open());
+  Mock.state.open = Mock.hash.get('open') || 'ok';
+  document.querySelectorAll('.mock-states[data-group="open"] button').forEach((b) => b.classList.toggle('is-selected', b.dataset.v === Mock.state.open));
+  current = Mock.hash.get('section') || 'Settings';
+  Mock.setState('build', Mock.hash.get('build') || 'analytics');
+})();
+</script>
+</body>
+</html>

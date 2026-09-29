@@ -74,5 +74,6 @@ sealed class ProjectsViewEffect {
     ) : ProjectsViewEffect()
 
     data class ProjectOpened(val manifestPath: String) : ProjectsViewEffect()
-    data class ShowError(val title: String, val message: String) : ProjectsViewEffect()
+    /** A message box. [warning] is true for an action that the app cannot do now, when nothing failed. */
+    data class ShowError(val title: String, val message: String, val warning: Boolean = false) : ProjectsViewEffect()
 }

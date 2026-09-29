@@ -1,0 +1,245 @@
+/*
+ * Shared tokens and components for the Transform tab redesign mockups.
+ * The colors come from org.litvin.ui.UiStyles, so the mockups look like the app.
+ * The base is the same as design/colors-redesign/shared.css.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #0e0e0e;          /* DARK_BG */
+  --panel: #161616;
+  --card: #1a1a1a;        /* CARD_BG */
+  --raised: #202020;
+  --raised-2: #2a2a2a;
+  --line: #262626;        /* CARD_BORDER */
+  --line-2: #363636;
+  --fg: #e4e4e4;
+  --fg-2: #adaaaa;        /* FG_SECONDARY */
+  --fg-3: #6a6a6a;        /* FG_DISABLED */
+  --lime: #a1fe00;        /* LIME */
+  --green: #aff625;       /* GREEN */
+  --sage: #a3c586;        /* ACCENT_TEXT */
+  --lime-tint: rgba(161, 254, 0, 0.07);
+  --lime-line: rgba(161, 254, 0, 0.6);
+  --yellow: #f2d64b;
+  --yellow-tint: rgba(242, 214, 75, 0.08);
+  --red: #ff7351;
+  --track: #333;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --font: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.4 var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.tc { font-variant-numeric: tabular-nums; }
+.muted { color: var(--fg-2); }
+.faint { color: var(--fg-3); }
+
+.material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+  vertical-align: middle;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+.material-symbols-outlined.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+
+/* ---------- Mockup bar (not part of the app UI) ---------- */
+.mock-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  background: #050505;
+  border-bottom: 1px dashed #333;
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.mock-bar a { color: var(--fg-2); text-decoration: none; padding: 4px 8px; border-radius: 4px; }
+.mock-bar a:hover { color: var(--fg); background: #1a1a1a; }
+.mock-bar a.current { color: #111; background: #d8d8d8; font-weight: 600; }
+.mock-bar .spacer { flex: 1; }
+.mock-bar .mock-label { text-transform: uppercase; letter-spacing: .08em; font-size: 10px; color: #777; }
+.mock-states { display: flex; gap: 2px; background: #151515; padding: 2px; border-radius: 6px; border: 1px solid #2a2a2a; }
+.mock-states button {
+  border: 0; background: transparent; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: var(--fg-2);
+}
+.mock-states button.is-selected { background: #d8d8d8; color: #111; font-weight: 600; }
+
+/* ---------- Window and app shell ---------- */
+.window { height: calc(100vh - 44px); display: grid; grid-template-rows: 30px 1fr; min-width: 1180px; }
+.titlebar {
+  display: flex; align-items: center; gap: 10px; padding: 0 12px;
+  background: #1f1f1f; color: var(--fg-2); font-size: 12px;
+}
+.titlebar .logo { width: 14px; height: 14px; border-radius: 3px; background: var(--lime); }
+.titlebar .win-buttons { margin-left: auto; display: flex; gap: 22px; color: var(--fg-3); }
+.app { display: grid; grid-template-columns: 80px 1fr; min-height: 0; }
+
+.nav {
+  display: flex; flex-direction: column; align-items: stretch;
+  background: var(--bg); border-right: 1px solid var(--line); padding: 8px 6px;
+}
+.nav-group { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-radius: 6px; }
+.nav-group + .nav-group { margin-top: 8px; }
+.nav-caption { font-size: 9px; letter-spacing: .14em; color: var(--fg-3); text-align: center; padding: 2px 0 4px; }
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 0; border-radius: 6px; color: var(--fg-2); font-size: 12px; text-decoration: none; position: relative;
+}
+.nav-item .material-symbols-outlined { font-size: 20px; color: var(--lime); }
+.nav-item.active { background: #1c1c1c; color: var(--fg); }
+.nav-item.active::before {
+  content: ""; position: absolute; left: -6px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--lime);
+}
+.nav .push { margin-top: auto; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 30px; padding: 0 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line-2); background: var(--raised); color: var(--fg);
+  cursor: pointer; white-space: nowrap; font-size: 12.5px;
+}
+.btn:hover { background: var(--raised-2); border-color: #444; }
+.btn .material-symbols-outlined { font-size: 16px; }
+.btn-sm { height: 26px; padding: 0 10px; font-size: 12px; }
+/* Reset looks quiet when all values are at the default. It stays enabled, as in the current tab. */
+.btn-reset.is-quiet { background: transparent; border-color: var(--line); color: var(--fg-3); }
+.btn-reset.is-quiet:hover { color: var(--fg); border-color: var(--line-2); }
+
+/* The play button: the one lime control of the tab. Same as design/points-redesign/final.html. */
+.play {
+  width: 48px; height: 48px; border-radius: 8px; border: 0; cursor: pointer; flex: none;
+  background: var(--lime); color: #142000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  box-shadow: 0 0 0 1px rgba(161, 254, 0, .25), 0 6px 18px rgba(161, 254, 0, .14);
+}
+.play:hover { background: #b4ff33; }
+.play .material-symbols-outlined { font-size: 26px; }
+.play-key { font-size: 8px; font-weight: 800; letter-spacing: .06em; line-height: 1; margin-top: -2px; color: #4d6b16; }
+
+/* Keyboard key chip */
+kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 4px; border: 1px solid #454545; border-bottom-width: 2px; background: #161616;
+  color: var(--fg-2); font: 600 10.5px/1 var(--font);
+}
+
+/* ---------- Video and playback bar ---------- */
+.video { position: relative; background: #000; min-height: 0; min-width: 0; overflow: hidden; }
+.video img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+
+.playbar {
+  display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 14px;
+  padding: 10px 16px; background: #1c1c1c; border-top: 1px solid var(--line);
+}
+.playbar .time { font-size: 13px; color: var(--fg); min-width: 62px; }
+.playbar .time.total { color: var(--fg-3); text-align: right; }
+
+/* Seek bar (ScrubBar) */
+.scrub { position: relative; height: 20px; cursor: pointer; }
+.scrub::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--lime) var(--pos, 0%), #3a3a3a var(--pos, 0%));
+}
+.scrub .knob {
+  position: absolute; top: 3px; left: var(--pos, 0%); width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
+  background: var(--lime); border: 3px solid #1c1c1c; box-shadow: 0 0 0 1px var(--lime);
+}
+
+
+/* ---------- Transform sliders (horizontal) ----------
+ * The fill starts at the default value (--def) and goes to the value.
+ * --def, --lo and --hi are percent of the track. shared.js sets them. */
+.tslider { position: relative; height: 22px; }
+.tslider input[type=range] {
+  -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 22px;
+  margin: 0; background: transparent; cursor: pointer; z-index: 1;
+}
+.tslider input[type=range]:focus-visible { outline: none; }
+.tslider input[type=range]::-webkit-slider-runnable-track { height: 22px; background: transparent; }
+.tslider input[type=range]::-moz-range-track { height: 22px; background: transparent; }
+.tslider input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; margin-top: 3px; border-radius: 50%;
+  background: #d9d9d9; border: 3px solid #101010; box-shadow: 0 0 0 1px #d9d9d9;
+}
+.tslider input[type=range]::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: #d9d9d9; border: 3px solid #101010; }
+.tslider.is-changed input[type=range]::-webkit-slider-thumb { background: var(--lime); box-shadow: 0 0 0 1px var(--lime); }
+.tslider.is-changed input[type=range]::-moz-range-thumb { background: var(--lime); }
+.tslider input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--lime), 0 0 0 4px rgba(161, 254, 0, .25); }
+.tslider .track { position: absolute; left: 8px; right: 8px; top: 9px; height: 4px; border-radius: 2px; background: var(--track); }
+.tslider .track .fill { position: absolute; top: 0; bottom: 0; left: var(--lo, 50%); right: calc(100% - var(--hi, 50%)); background: var(--lime); border-radius: 2px; }
+/* The default tick marks the default value. Minor ticks mark the snap angles. */
+.tslider .track .tick { position: absolute; top: -4px; width: 2px; height: 12px; margin-left: -1px; border-radius: 1px; background: #5a5a5a; }
+.tslider .track .tick.minor { top: -2px; height: 8px; width: 1px; margin-left: 0; background: #474747; }
+.tslider.sm { height: 18px; }
+.tslider.sm input[type=range] { height: 18px; }
+.tslider.sm input[type=range]::-webkit-slider-runnable-track { height: 18px; }
+.tslider.sm input[type=range]::-webkit-slider-thumb { width: 14px; height: 14px; margin-top: 2px; }
+.tslider.sm .track { top: 7px; }
+
+/* Editable value field with the unit inside (the current JTextField readout). */
+.vfield {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 7px; gap: 2px; width: 78px;
+  background: var(--raised); border: 1px solid var(--line-2); border-radius: var(--radius-sm);
+}
+.vfield:focus-within { border-color: var(--lime-line); box-shadow: 0 0 0 2px rgba(161, 254, 0, .12); }
+.vfield input {
+  width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; text-align: right;
+  font: 600 13px/1 var(--font); font-variant-numeric: tabular-nums; color: var(--fg-2); padding: 0;
+}
+.vfield.is-changed input { color: var(--lime); }
+.vfield .unit { color: var(--fg-3); font-size: 12px; min-width: 10px; }
+
+/* Signed value text */
+.val { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--fg-3); }
+.val.is-changed { color: var(--lime); }
+
+/* ---------- Video stage with the crop editor ----------
+ * .frame-box is the video area (the content box). The image turns inside it, and the SVG draws the editor. */
+.video { outline: none; }
+.video .frame-box { position: absolute; overflow: hidden; }
+.video .frame-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; transform-origin: 50% 50%; }
+.video svg.editor { position: absolute; inset: 0; width: 100%; height: 100%; }
+.video.has-focus { box-shadow: inset 0 0 0 2px rgba(161, 254, 0, .55); }
+
+/* The focus chip on the video tells if the arrow keys move the crop rectangle. */
+.focus-chip {
+  position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px 5px 8px;
+  border-radius: 14px; background: rgba(0, 0, 0, .72); border: 1px solid #3a3a3a; color: var(--fg-2); font-size: 11.5px;
+  pointer-events: none;
+}
+.focus-chip .material-symbols-outlined { font-size: 16px; }
+.focus-chip kbd { height: 16px; min-width: 16px; font-size: 10px; }
+.video.has-focus .focus-chip { border-color: rgba(161, 254, 0, .5); color: var(--fg); }
+.video.has-focus .focus-chip .material-symbols-outlined { color: var(--lime); }
+
+/* Mouse and key hints */
+.hint-list { display: flex; flex-direction: column; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.hint-list li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; font-size: 12px; color: var(--fg-2); line-height: 1.4; }
+.hint-list li b { color: var(--fg); font-weight: 600; }
+.hint-list .material-symbols-outlined { font-size: 17px; color: var(--fg-3); margin-top: -1px; }
+.hint-list kbd { height: 16px; min-width: 16px; font-size: 10px; margin: 0 1px; }
+
+/* Scroll bars */
+.scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent; }
+.scroll::-webkit-scrollbar { width: 8px; }
+.scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
+
+/* Note for the mockup only. It sits over the video, so it does not cover the controls. */
+.note-callout {
+  position: fixed; left: 100px; bottom: 90px; max-width: 330px; z-index: 10;
+  background: #0a0a0a; border: 1px dashed #444; border-radius: 6px; padding: 10px 12px;
+  color: var(--fg-2); font-size: 11.5px; line-height: 1.5;
+}
+.note-callout b { color: var(--fg); }
+.note-callout button { position: absolute; top: 4px; right: 6px; border: 0; background: none; color: var(--fg-3); cursor: pointer; }

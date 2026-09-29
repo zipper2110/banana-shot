@@ -2,13 +2,13 @@ package org.litvin.ui.privacy
 
 import org.litvin.analytics.AnalyticsController
 import org.litvin.analytics.AnalyticsPreferences
-import org.litvin.ui.UiStyles
+import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.ui.commons.SectionPage
+import org.litvin.ui.commons.SwitchBox
 import java.net.URI
-import javax.swing.JCheckBox
 
 /** The Privacy section of the More window. */
-class PrivacyPage private constructor() : SectionPage(TITLE) {
+internal class PrivacyPage private constructor() : SectionPage(TITLE) {
     init {
         name = "more-privacy"
     }
@@ -25,20 +25,20 @@ class PrivacyPage private constructor() : SectionPage(TITLE) {
             linkOpener: PrivacyLinkOpener = PrivacyLinkOpener.DesktopBrowser,
         ): PrivacyPage = PrivacyPage().apply {
             subheading("Usage analytics")
-            val toggle = JCheckBox("Send optional usage analytics", preferences.resolve().isEnabled).apply {
+            val toggle = SwitchBox("Send optional usage analytics").apply {
+                isSelected = preferences.resolve().isEnabled
                 name = "more-privacy-analytics"
-                UiStyles.styleCheckBox(this)
                 addActionListener { if (isSelected) controller.enable() else controller.disable() }
             }
-            addItem(toggle, gapAfter = 8)
+            addItem(toggle)
             paragraph("Collected: approved product action categories only.")
             paragraph(
                 "Excluded: video, audio, filenames, paths, project data, scores, player data, identifiers, and diagnostics.",
                 secondary = true,
             )
             buttonRow(
-                secondaryButton("Privacy notice") { linkOpener.open(privacyUrl) },
-                secondaryButton("Contact") { linkOpener.open(contact) },
+                secondaryButton("Privacy notice", Material2MZ.OPEN_IN_NEW) { linkOpener.open(privacyUrl) },
+                secondaryButton("Contact", Material2MZ.MAIL_OUTLINE) { linkOpener.open(contact) },
             )
         }
 

@@ -157,7 +157,7 @@ class DefaultProjectsPresenter(
         if (manifestPath.isBlank()) return
         runIo("Failed to delete project") {
             if (synchronized(stateLock) { currentProject?.path == manifestPath }) {
-                emitEffect(ProjectsViewEffect.ShowError("Cannot delete project", "You cannot delete the open project."))
+                emitEffect(ProjectsViewEffect.ShowError("Cannot delete project", "You cannot delete the open project.", warning = true))
                 return@runIo
             }
             repository.deleteProject(manifestPath)

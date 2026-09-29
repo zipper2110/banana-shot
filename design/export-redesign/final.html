@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Export Redesign Final</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Final design. Left column:
+       - numbered step captions and the Simple / Advanced control in the step header (option A),
+       - content radio cards (option A),
+       - include tiles and quality tiles (option B),
+       - footer with the summary and the button (option B).
+     Right side: one exports table (option B). */
+  .tab { display: grid; grid-template-columns: 440px 1fr; min-height: 0; }
+
+  /* ----- Left: settings ----- */
+  .config { display: flex; flex-direction: column; min-height: 0; background: var(--card); border-right: 1px solid var(--line); }
+  .config-scroll { flex: 1; padding: 18px 20px 20px; }
+
+  /* Step captions (A) */
+  .step + .step { margin-top: 22px; }
+  .step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; min-height: 30px; }
+  .step-num {
+    flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+    border: 1px solid var(--lime-line); color: var(--lime); font-size: 11px; font-weight: 700;
+  }
+  .step-title { font-size: 14px; font-weight: 600; margin: 0; }
+  .step-head .seg { margin-left: auto; width: 190px; }
+  .step-head .seg > button { padding: 4px 10px; }
+
+  /* Content radio cards (A) */
+  .choices { display: flex; flex-direction: column; gap: 6px; }
+  .choice {
+    display: grid; grid-template-columns: 16px 1fr auto; column-gap: 12px; align-items: center;
+    width: 100%; padding: 10px 12px; text-align: left; cursor: pointer;
+    background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .choice:hover { border-color: #3c3c3c; }
+  .choice.is-selected { border-color: var(--lime-line); background: linear-gradient(var(--lime-tint), var(--lime-tint)), var(--raised); }
+  .choice-title { display: block; font-weight: 600; font-size: 13.5px; }
+  .choice-sub { display: block; color: var(--fg-2); font-size: 12px; margin-top: 1px; }
+  .choice-meta { text-align: right; font-size: 12px; color: var(--fg-2); white-space: nowrap; }
+  .choice-meta b { display: block; color: var(--fg); font-weight: 600; font-size: 12.5px; }
+
+  /* Include tiles (B) */
+  .checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .ctile {
+    display: grid; grid-template-columns: 16px 1fr; column-gap: 9px; row-gap: 1px; align-items: center;
+    padding: 9px 10px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--raised); cursor: pointer; position: relative;
+  }
+  .ctile:hover { border-color: #3c3c3c; }
+  .ctile:has(.check-input:checked) { border-color: #3d4a2a; }
+  .ctile-label { font-size: 12.5px; font-weight: 500; }
+  .ctile-note { grid-column: 2; font-size: 11px; color: var(--fg-2); line-height: 1.3; }
+  .ctile-note.ok { color: var(--green); }
+
+  /* Quality tiles and details (B) */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tile {
+    position: relative; text-align: left; padding: 10px 10px 9px; cursor: pointer;
+    background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius);
+    display: flex; flex-direction: column; gap: 2px; min-height: 72px;
+  }
+  .tile:hover { border-color: #3c3c3c; }
+  .tile.is-selected { border-color: var(--lime-line); background: linear-gradient(var(--lime-tint), var(--lime-tint)), var(--raised); }
+  .tile .radio { position: absolute; top: 10px; right: 10px; width: 14px; height: 14px; }
+  .tile-title { font-weight: 600; font-size: 13px; padding-right: 18px; }
+  .tile-sub { font-size: 11px; color: var(--fg-2); line-height: 1.3; }
+  .tile-value { margin-top: auto; padding-top: 6px; font-size: 12.5px; font-weight: 600; }
+
+  .spec { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-size: 12px; }
+  .spec-row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 6px 12px; align-items: center; }
+  .spec-row + .spec-row { border-top: 1px solid var(--line); }
+  .spec-row dt { color: var(--fg-2); }
+  .spec-row dd { margin: 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .spec-row .sub { flex-basis: 100%; color: var(--fg-3); font-size: 11px; }
+
+  .enc-line { margin-top: 8px; font-size: 11.5px; color: var(--fg-2); line-height: 1.6; }
+  .enc-line b { color: var(--fg); font-weight: 600; }
+
+  .field + .field { margin-top: 14px; }
+  .field-head { display: flex; align-items: baseline; margin-bottom: 6px; font-size: 12.5px; }
+  .field-head .label { font-weight: 600; }
+  .field-head .value { margin-left: auto; }
+  .scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--fg-3); }
+  .fnote { font-size: 11px; color: var(--fg-3); margin-top: 3px; }
+  .enc-desc { font-size: 11.5px; color: var(--fg-2); margin-top: 6px; }
+
+  /* Footer (B) */
+  .config-foot { display: grid; grid-template-columns: 1fr 210px; gap: 14px; align-items: center; padding: 12px 20px 14px; border-top: 1px solid var(--line); background: #171717; }
+  .foot-sum { font-size: 12px; color: var(--fg-2); line-height: 1.45; }
+  .foot-sum b { display: block; font-size: 16px; color: var(--fg); }
+  .config-foot .btn-primary { height: 46px; }
+
+  /* ----- Right: one table (B) ----- */
+  .exports { min-width: 0; margin: 16px; display: flex; flex-direction: column; min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  .exports-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .exports-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+  .exports-head .stats { margin-left: auto; font-size: 12px; color: var(--fg-2); display: flex; gap: 14px; }
+  .exports-head .stats b { color: var(--fg); font-weight: 600; }
+
+  .tbody { flex: 1; min-height: 0; overflow-x: hidden; }
+  .trow {
+    display: grid; grid-template-columns: 84px minmax(170px, 1.3fr) minmax(160px, 1.2fr) minmax(140px, 1fr) 104px 86px 64px;
+    column-gap: 12px; align-items: center; padding: 0 16px;
+  }
+  .thead { position: sticky; top: 0; z-index: 2; background: #1c1c1c; height: 32px; font-size: 11px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--line); }
+  .thead .r, .cell.r { text-align: right; }
+  .group {
+    position: sticky; top: 32px; z-index: 1; display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px 6px; background: #151515; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--fg-2);
+  }
+  .group .count { font-size: 11px; background: #262626; border-radius: 9px; padding: 0 7px; font-weight: 500; }
+  .group .btn { margin-left: auto; }
+  .data { padding-top: 9px; padding-bottom: 9px; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .data:hover { background: #1e1e1e; }
+  .cell { min-width: 0; overflow-wrap: anywhere; }
+  .cell .path-file { display: block; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell .sub { color: var(--fg-3); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cell.muted { color: var(--fg-2); }
+  .actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .btn-icon.danger { color: var(--red); }
+  .btn-icon.danger:hover { background: var(--red-tint); border-color: rgba(255, 115, 81, .4); }
+  .row-extra { grid-column: 2 / -1; display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+  .row-extra .progress { flex: 1; height: 6px; }
+  .row-extra .pct { font-weight: 700; width: 38px; text-align: right; }
+  .row-extra.error { color: #ffc2b3; background: var(--red-tint); border: 1px solid rgba(255, 115, 81, .35); border-radius: 4px; padding: 6px 10px; }
+  .row-extra.error .material-symbols-outlined { color: var(--red); }
+  .data.live { background: #1d2116; }
+  .data.live:hover { background: #20251a; }
+  .data.failed { background: #221613; }
+  .empty-row { padding: 12px 16px; color: var(--fg-3); font-size: 12.5px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+
+    <main class="tab">
+      <!-- ================= Left: settings ================= -->
+      <section class="config">
+        <div class="config-scroll scroll">
+
+          <!-- Step 1: content (A) -->
+          <section class="step">
+            <div class="step-head"><span class="step-num">1</span><h2 class="step-title">Content</h2></div>
+            <div class="choices" role="radiogroup" aria-label="Content">
+              <button class="choice" data-set="content:full" role="radio" title="Export the complete source video, with the time between points.">
+                <span class="radio"></span>
+                <span><span class="choice-title">Full video</span><span class="choice-sub">The complete video, with the time between points</span></span>
+                <span class="choice-meta num"><b>1h 36min 1sec</b>&nbsp;</span>
+              </button>
+              <button class="choice" data-set="content:points" role="radio" title="Export only the marked points. The time between points is cut.">
+                <span class="radio"></span>
+                <span><span class="choice-title">Only points</span><span class="choice-sub">The marked points, without the time between them</span></span>
+                <span class="choice-meta num"><b>19min 41sec</b>128 points</span>
+              </button>
+              <button class="choice" data-set="content:favorites" role="radio" title="Export only the points that are marked with a star.">
+                <span class="radio"></span>
+                <span><span class="choice-title">Only favorites</span><span class="choice-sub">Only the points that are marked with a star</span></span>
+                <span class="choice-meta num"><b>8min 43sec</b>43 points</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Step 2: include (B tiles) -->
+          <section class="step">
+            <div class="step-head"><span class="step-num">2</span><h2 class="step-title">Include in the video</h2></div>
+            <div class="checks">
+              <label class="ctile" title="Burn in a scoreboard overlay that updates after each point. Uses the data of the Scoring tab.">
+                <input class="check-input" type="checkbox" data-bool="scoreboard"><span class="check"></span>
+                <span class="ctile-label">Scoreboard</span><span class="ctile-note ok num">128/128 points scored</span>
+              </label>
+              <label class="ctile" title="Burn the comments from the Points tab into the video as centered lower-third text.">
+                <input class="check-input" type="checkbox" data-bool="comments"><span class="check"></span>
+                <span class="ctile-label">Comments</span><span class="ctile-note">&nbsp;</span>
+              </label>
+              <label class="ctile" title="Add a card with the match statistics after the last point. Select the statistics in the Stats tab.">
+                <input class="check-input" type="checkbox" data-bool="stats"><span class="check"></span>
+                <span class="ctile-label">Statistics card</span><span class="ctile-note num">12 s, 2 pages</span>
+              </label>
+              <label class="ctile" data-disable-when="content:full" title="Add a card with the statistics of each set after the last point of the set. Select the statistics in the Stats tab.">
+                <input class="check-input" type="checkbox" data-bool="sets"><span class="check"></span>
+                <span class="ctile-label">Set summaries</span>
+                <span class="ctile-note num" data-when="!content:full">2 sets, 24 s</span>
+                <span class="ctile-note" data-when="content:full">Only for Only points and Only favorites</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- Step 3: quality (A header, B content) -->
+          <section class="step">
+            <div class="step-head">
+              <span class="step-num">3</span><h2 class="step-title">Quality and file size</h2>
+              <div class="seg" role="tablist">
+                <button data-set="quality:simple" role="tab">Simple</button>
+                <button data-set="quality:advanced" role="tab">Advanced</button>
+              </div>
+            </div>
+
+            <div data-when="quality:simple">
+              <div class="tiles" role="radiogroup" aria-label="Quality">
+                <button class="tile" data-set="preset:best" role="radio">
+                  <span class="radio"></span><span class="tile-title">Original quality</span>
+                  <span class="tile-sub">Largest file, slowest export</span>
+                  <span class="tile-value num" data-text="size:best"></span>
+                </button>
+                <button class="tile" data-set="preset:balanced" role="radio">
+                  <span class="radio"></span><span class="tile-title">Balanced</span>
+                  <span class="tile-sub">Good quality, smaller file</span>
+                  <span class="tile-value num" data-text="size:balanced"></span>
+                </button>
+                <button class="tile" data-set="preset:fast" role="radio">
+                  <span class="radio"></span><span class="tile-title">Fast export</span>
+                  <span class="tile-sub">Lower quality, smallest file</span>
+                  <span class="tile-value num" data-text="size:fast"></span>
+                </button>
+              </div>
+              <dl class="spec num">
+                <div class="spec-row"><dt>Resolution</dt>
+                  <dd data-when="!preset:fast">4K <span class="tag">original</span></dd>
+                  <dd data-when="preset:fast">1080p</dd></div>
+                <div class="spec-row"><dt>FPS</dt><dd>60 <span class="tag">original</span><span class="sub">The original frame rate is variable: 36.90 fps on average.</span></dd></div>
+                <div class="spec-row"><dt>Bitrate</dt>
+                  <dd data-when="preset:best">65 Mbit/s <span class="tag">original</span></dd>
+                  <dd data-when="preset:balanced"><span data-text="bitrate:balanced"></span> <span class="tag tag-muted">75% of original</span></dd>
+                  <dd data-when="preset:fast"><span data-text="bitrate:fast"></span> <span class="tag tag-muted">50% of original</span></dd></div>
+                <div class="spec-row"><dt>File size</dt><dd data-text="size:current"></dd></div>
+                <div class="spec-row"><dt>Export time</dt>
+                  <dd data-when="preset:best">slow</dd><dd data-when="preset:balanced">medium</dd><dd data-when="preset:fast">fast</dd></div>
+              </dl>
+              <div class="enc-line">
+                <b>Selected encoder:</b> NVIDIA NVENC<br>
+                <b>Detected GPUs:</b> NVIDIA GeForce RTX 3060 Laptop GPU, Intel UHD Graphics
+              </div>
+            </div>
+
+            <div data-when="quality:advanced">
+              <div class="field">
+                <div class="field-head"><span class="label">Resolution</span></div>
+                <div class="seg">
+                  <button data-set="res:720p">720p<small>low</small></button>
+                  <button data-set="res:1080p">1080p<small>medium</small></button>
+                  <button data-set="res:4k">4K<small>high · <span class="ok">original</span></small></button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="field-head"><span class="label">Frame rate</span></div>
+                <div class="seg">
+                  <button data-set="fps:24">24 fps<small>low</small></button>
+                  <button data-set="fps:30">30 fps<small>medium</small></button>
+                  <button data-set="fps:60">60 fps<small>high · <span class="ok">original, variable</span></small></button>
+                </div>
+              </div>
+              <div class="field">
+                <div class="field-head"><span class="label">Bitrate</span><span class="value num"><b data-text="bitrate"></b> · file size <b data-text="size:slider"></b></span></div>
+                <input type="range" min="13000" max="65000" step="250" data-num="bitrate" aria-label="Bitrate">
+                <div class="scale"><span>Worst quality</span><span>Best quality</span></div>
+                <div class="fnote">The maximum is the bitrate of the original video.</div>
+              </div>
+              <div class="field">
+                <div class="field-head"><span class="label">Encoder</span></div>
+                <div class="seg">
+                  <button data-set="encoder:nvenc">NVIDIA NVENC<small class="ok">Best for this PC</small></button>
+                  <button data-set="encoder:qsv">Intel Quick Sync<small>&nbsp;</small></button>
+                  <button data-set="encoder:x264">Software (x264)<small>&nbsp;</small></button>
+                </div>
+                <div class="enc-desc" data-when="encoder:nvenc">For PCs with an NVIDIA GeForce or RTX graphics card. Fast: the graphics card encodes the video.</div>
+                <div class="enc-desc" data-when="encoder:qsv">For PCs with Intel graphics. Fast: the graphics part of the Intel processor encodes the video.</div>
+                <div class="enc-desc" data-when="encoder:x264">Works on all PCs. Only the processor encodes the video, so it is the slowest, but the most reliable.</div>
+                <div class="enc-line"><b>Detected GPUs:</b> NVIDIA GeForce RTX 3060 Laptop GPU, Intel UHD Graphics</div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Footer (B) -->
+        <footer class="config-foot">
+          <div class="foot-sum num"><b data-text="size:current"></b><span data-text="output:summary"></span></div>
+          <button class="btn btn-primary" title="Choose an output file and start the export.">
+            <span class="material-symbols-outlined">play_circle</span><span data-text="start"></span>
+          </button>
+        </footer>
+      </section>
+
+      <!-- ================= Right: one table (B) ================= -->
+      <section class="exports">
+        <div class="exports-head">
+          <h2>Exports</h2>
+          <div class="stats num">
+            <span data-when="state:running,queue"><b>1</b> running</span>
+            <span data-when="state:failed"><b class="warn">1</b> failed</span>
+            <span data-when="state:queue"><b>2</b> in the queue</span>
+            <span><b>7</b> completed</span>
+          </div>
+        </div>
+        <div class="tbody scroll">
+          <div class="trow thead"><span>Status</span><span>File</span><span>Content</span><span>Video</span><span class="r">Size</span><span class="r">Time</span><span></span></div>
+          <div class="group">Active</div>
+          <div class="empty-row" data-when="state:idle"><span class="material-symbols-outlined">hourglass_empty</span>No active exports</div>
+          <div id="active" data-when="!state:idle"></div>
+          <div data-when="state:queue">
+            <div class="group">Export queue <span class="count">2</span></div>
+            <div id="queue"></div>
+          </div>
+          <div class="group">Completed <span class="count">7</span>
+            <button class="btn btn-ghost btn-sm" title="Remove all entries from this list. The exported files stay on the disk.">
+              <span class="material-symbols-outlined">delete_sweep</span>Clear list</button>
+          </div>
+          <div id="completed"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Final design.</b> Left: the step captions, the Simple / Advanced control and the content cards come from option A.
+  The include tiles, the quality tiles and the footer come from option B. Right: the exports table from option B.
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { JOBS, escapeHtml: e } = Mock;
+  Mock.shell('final');
+
+  const folder = '<button class="btn btn-icon btn-sm" title="Open folder" aria-label="Open folder"><span class="material-symbols-outlined">folder_open</span></button>';
+  const cancel = (off) => `<button class="btn btn-icon btn-sm danger" title="Cancel export" aria-label="Cancel export" ${off ? 'disabled style="opacity:.35;cursor:not-allowed"' : ''}><span class="material-symbols-outlined">close</span></button>`;
+  const fileCell = (j) => `<div class="cell"><span class="path-file" title="${e(j.dir + j.file)}">${e(j.file)}</span><div class="sub">${e(j.dir)} · ${e(j.project)}</div></div>`;
+
+  function activeHtml(failed) {
+    const j = JOBS.active;
+    return `<div class="trow data ${failed ? 'failed' : 'live'}">
+      <span>${failed ? '<span class="status-pill status-failed">Failed</span>' : '<span class="status-pill status-running">Running</span>'}</span>
+      ${fileCell(j)}
+      <div class="cell">${e(j.content)}</div>
+      <div class="cell muted">${e(j.video)}</div>
+      <div class="cell r num">${e(j.size)}</div>
+      <div class="cell r num">${failed ? '—' : `${j.timeLeft}<div class="sub">left</div>`}</div>
+      <div class="actions">${folder}${cancel(failed)}</div>
+      ${failed
+        ? `<div class="row-extra error"><span class="material-symbols-outlined">error</span><span><b>Error:</b> ${e(j.error)}</span></div>`
+        : `<div class="row-extra"><div class="progress"><div style="width:${j.progress}%"></div></div><span class="pct num">${j.progress}%</span></div>`}
+    </div>`;
+  }
+
+  document.getElementById('queue').innerHTML = JOBS.queued.map((j, i) => `
+    <div class="trow data">
+      <span><span class="status-pill status-queued">Queued · ${i + 1}</span></span>
+      ${fileCell(j)}
+      <div class="cell">${e(j.content)}</div>
+      <div class="cell muted">${e(j.video)}</div>
+      <div class="cell r num">${e(j.size)}</div>
+      <div class="cell r faint">Waiting</div>
+      <div class="actions">${folder}${cancel(false)}</div>
+    </div>`).join('');
+
+  document.getElementById('completed').innerHTML = JOBS.completed.map((j) => `
+    <div class="trow data">
+      <span><span class="status-pill status-done">Done</span></span>
+      ${fileCell(j)}
+      <div class="cell">${e(j.content)}</div>
+      <div class="cell muted">${e(j.video)}</div>
+      <div class="cell r num">${e(j.size)}${j.expected ? `<div class="sub">of ${e(j.expected)}</div>` : ''}</div>
+      <div class="cell r num">${e(j.time)}<div class="sub">${e(j.date)}</div></div>
+      <div class="actions">${folder}</div>
+    </div>`).join('');
+
+  window.onMockApply = (s) => {
+    const el = document.getElementById('active');
+    if (el.dataset.for !== s.state) {
+      el.dataset.for = s.state;
+      el.innerHTML = s.state === 'idle' ? '' : activeHtml(s.state === 'failed');
+    }
+  };
+  Mock.apply();
+</script>
+</body>
+</html>

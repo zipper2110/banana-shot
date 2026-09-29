@@ -29,7 +29,7 @@ class SetSummaryCardTest {
     fun aSetCardHasTheChartOfItsSet() {
         val (edl, score) = project("11111111" + "22222222" + "1111", shortSets)
 
-        val card = StatsCardVideo.setSummaries(edl, score, StatsSettingsV1(), 1920, 1080)[1].card
+        val card = StatsCardVideo.setSummaries(edl, score, StatsSettingsV1(videoMomentum = true), 1920, 1080)[1].card
 
         assertEquals(2, card.pages.size)
         val line = card.pages.last().items.filterIsInstance<org.litvin.export.scoreboard.SceneItem.Polyline>().single()

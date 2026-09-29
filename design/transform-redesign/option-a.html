@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transform Option A</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Option A: the same split as the current tab (video left, 400 px panel right).
+     The panel has a header with Reset, two groups (Crop, Rotation) and a card with the mouse and key hints.
+     The layout is the same as design/colors-redesign/option-a.html, so the two Video tabs match. */
+  .tab { display: grid; grid-template-columns: 1fr 400px; min-height: 0; }
+  .left { display: grid; grid-template-rows: 1fr auto; min-width: 0; min-height: 0; }
+
+  .panel { display: flex; flex-direction: column; min-height: 0; background: var(--bg); border-left: 1px solid var(--line); }
+  .p-head { display: flex; align-items: center; gap: 10px; padding: 16px 16px 12px; }
+  .p-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .p-head .sub { font-size: 12px; color: var(--fg-3); }
+  .p-head .sub.is-changed { color: var(--sage); }
+  .p-head .btn { margin-left: auto; }
+  .p-body { flex: 1; min-height: 0; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 12px; }
+
+  .group { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 0 4px; }
+  .g-cap {
+    display: flex; align-items: center; gap: 6px; padding: 4px 14px 2px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3);
+  }
+  .g-cap .material-symbols-outlined { font-size: 14px; color: var(--fg-3); }
+  /* The Rotation caption shows the angle that the two sliders make together. */
+  .g-cap .total { margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 12px; font-weight: 500; color: var(--fg-3); }
+  .g-cap .total .val { font-size: 13px; margin-left: 4px; }
+
+  .row { padding: 8px 14px 6px; position: relative; }
+  .row + .row { border-top: 1px solid #202020; }
+  .row-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+  .row-top .name { font-size: 13px; color: var(--fg); }
+  .row-top .vfield { margin-left: auto; }
+  /* A lime bar on the left marks a changed control. */
+  .row.is-changed::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; border-radius: 0 2px 2px 0; background: var(--lime); }
+  .ends { display: flex; justify-content: space-between; padding: 0 2px; font-size: 10.5px; color: var(--fg-3); margin-top: -1px; }
+  .ends .mid { color: #555; }
+
+  .hints { background: transparent; border: 1px dashed #2c2c2c; border-radius: 8px; padding: 10px 14px 12px; }
+  .hints .g-cap { padding: 0 0 8px; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+
+    <main class="tab">
+      <div class="left">
+        <div class="video" id="stage"></div>
+        <div id="transport"></div>
+      </div>
+
+      <aside class="panel">
+        <div class="p-head">
+          <div>
+            <h2>Transform</h2>
+            <div class="sub" data-changed></div>
+          </div>
+          <button class="btn btn-sm btn-reset" data-reset title="Reset Transform">
+            <span class="material-symbols-outlined">restart_alt</span>Reset all</button>
+        </div>
+
+        <div class="p-body scroll">
+          <div id="groups" style="display:flex;flex-direction:column;gap:12px"></div>
+          <section class="hints">
+            <div class="g-cap"><span class="material-symbols-outlined">mouse</span>On the video</div>
+            <div id="hints"></div>
+          </section>
+        </div>
+      </aside>
+    </main>
+  </div>
+</div>
+
+<div class="note-callout">
+  <button onclick="this.parentElement.remove()" aria-label="Close">✕</button>
+  <b>Option A · Grouped panel.</b> Same split as today and as the Colors option A. The five sliders are in two groups.
+  Each slider fills from its default (100% or 0) and has a value field with the unit inside.
+  The Rotation group shows the total angle. The crop editor on the video works: drag the rectangle, the handles or the round handle.
+</div>
+
+<script src="shared.js"></script>
+<script>
+  const { CONTROLS, GROUPS } = Mock;
+  Mock.shell('a');
+  Mock.stage(document.getElementById('stage'));
+  Mock.transport(document.getElementById('transport'));
+
+  const mid = { zoom: '100%', panX: 'Center', panY: 'Center', rotation: '0°', fine: '0°' };
+  document.getElementById('groups').innerHTML = GROUPS.map((g) => `
+    <section class="group">
+      <div class="g-cap"><span class="material-symbols-outlined">${g.icon}</span>${g.title}
+        ${g.id === 'rotation' ? '<span class="total">Angle<span class="val" data-angle></span></span>' : ''}</div>
+      ${g.ids.map((id) => `
+        <div class="row" data-row="${id}">
+          <div class="row-top"><span class="name">${CONTROLS[id].label}</span>${Mock.field(id)}</div>
+          ${Mock.slider(id)}
+          <div class="ends"><span>${CONTROLS[id].low}</span>${id === 'zoom' ? '' : `<span class="mid">${mid[id]}</span>`}<span>${CONTROLS[id].high}</span></div>
+        </div>`).join('')}
+    </section>`).join('');
+  document.getElementById('hints').innerHTML = Mock.hintList();
+
+  Mock.start();
+</script>
+</body>
+</html>

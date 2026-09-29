@@ -8,8 +8,10 @@ import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.stats.MatchStat
+import org.litvin.stats.StatRows
 import org.litvin.stats.StatsIO
 import org.litvin.stats.StatsSettingsV1
+import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.UserDialogService
 import java.awt.Component
 import java.awt.Container
@@ -22,7 +24,6 @@ import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JSlider
-import javax.swing.JSpinner
 import javax.swing.SwingUtilities
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -47,10 +48,11 @@ class SwingStatsPanelTest {
         onEdt {
             val panel = openPanel()
 
-            assertEquals("Alex  vs  Sam", panel.label("stats-title").text)
+            assertEquals("Alex", panel.label("stats-player-1").text)
+            assertEquals("Sam", panel.label("stats-player-2").text)
             assertEquals("8", panel.label("stats-value-points_won-p1-text").text)
             assertEquals("4", panel.label("stats-value-points_won-p2-text").text)
-            assertFalse(panel.label("stats-coverage").isVisible)
+            assertFalse(panel.find<CoverageNote>("stats-coverage")!!.isVisible)
         }
     }
 
@@ -90,14 +92,75 @@ class SwingStatsPanelTest {
         onEdt {
             val panel = openPanel()
             val preview = panel.find<StatsCardPreview>("stats-preview")!!
-            // A page of rows and a page with the momentum chart.
-            assertEquals(2, preview.pages.size)
+            // The default rows fit on one page. The card has no momentum chart by default.
+            assertEquals(1, preview.pages.size)
+            // Without a server mark, the serve rows have no value. No point lasts 13 s or more.
+            assertEquals("Match statistics · 3 rows", panel.label("stats-card-summary").text)
+            assertFalse(panel.find<AbstractButton>("stats-preview-next")!!.isVisible)
 
             MatchStat.defaultVideoKeys.forEach { key -> panel.find<JCheckBox>("stats-in-video-$key")!!.doClick() }
-            assertEquals(1, preview.pages.size)
+            assertEquals(0, preview.pages.size)
 
             panel.find<JCheckBox>("stats-in-video-momentum")!!.doClick()
-            assertEquals(0, preview.pages.size)
+            assertEquals(1, preview.pages.size)
+            assertEquals("Match statistics · 0 rows and the momentum chart", panel.label("stats-card-summary").text)
+        }
+
+        assertTrue(StatsIO.readForProjectDir(projectDir.path).videoMomentum)
+    }
+
+    @Test
+    fun eachGroupTitleCountsItsRowsInTheVideo() {
+        writeProject("1111")
+
+        onEdt {
+            val panel = openPanel()
+            val overview = panel.find<GroupHeaderRow>("stats-group-overview")!!
+            assertEquals("1 of 3", overview.countText)
+            assertEquals("0 of 3", panel.find<GroupHeaderRow>("stats-group-momentum")!!.countText)
+
+            panel.find<JCheckBox>("stats-in-video-${MatchStat.GAMES_WON.key}")!!.doClick()
+
+            assertEquals("2 of 3", overview.countText)
+        }
+    }
+
+    @Test
+    fun theValueOfTheLeadingPlayerIsBrighter() {
+        writeProject("1111" + "2222" + "1111")
+
+        onEdt {
+            val panel = openPanel()
+
+            assertEquals(StatsColors.LEAD, panel.label("stats-value-points_won-p1-text").foreground)
+            assertEquals(UiKit.FG_2, panel.label("stats-value-points_won-p2-text").foreground)
+        }
+    }
+
+    @Test
+    fun aRowWithoutAValueShowsTheReasonUnderItsLabel() {
+        writeProject("1111")
+
+        onEdt {
+            val panel = openPanel()
+            val reason = panel.find<WrapText>("stats-reason-${MatchStat.SERVICE_POINTS_WON.key}")!!
+
+            assertTrue(reason.isVisible)
+            assertEquals(StatRows.NEEDS_SERVER, reason.text)
+            assertEquals("—", panel.label("stats-value-${MatchStat.SERVICE_POINTS_WON.key}-p1-text").text)
+            assertFalse(panel.find<WrapText>("stats-reason-${MatchStat.POINTS_WON.key}")!!.isVisible)
+        }
+    }
+
+    @Test
+    fun theMatchDurationHasItsExplanationInTheTooltip() {
+        writeProject("1111")
+
+        onEdt {
+            val label = openPanel().label("stats-label-${MatchStat.DURATION.key}")
+
+            assertEquals("Match duration", label.text)
+            assertTrue(label.toolTipText.startsWith("The time from the start of the first point with a winner"))
         }
     }
 
@@ -109,6 +172,10 @@ class SwingStatsPanelTest {
         onEdt {
             val panel = openPanel()
             assertEquals("8", panel.label("stats-value-points_won-p1-text").text)
+
+            // The control stays at the top: it is not in the scrolled table.
+            val table = panel.find<StatsTable>("stats-table")!!
+            assertFalse(SwingUtilities.isDescendingFrom(panel.find<AbstractButton>("stats-scope-2"), table))
 
             panel.find<AbstractButton>("stats-scope-2")!!.doClick()
 
@@ -131,10 +198,10 @@ class SwingStatsPanelTest {
         writeProject("11.1")
 
         onEdt {
-            val coverage = openPanel().label("stats-coverage")
+            val coverage = openPanel().find<CoverageNote>("stats-coverage")!!
 
             assertTrue(coverage.isVisible)
-            assertEquals("Based on 3 of 4 points. The other points have no winner.", coverage.text)
+            assertEquals(listOf("Based on 3 of 4 points. The other points have no winner."), coverage.lines)
         }
     }
 
@@ -174,18 +241,32 @@ class SwingStatsPanelTest {
     @Test
     fun theLongPointLimitSavesTheSettingAndChangesTheLabel() {
         writeProject("1111")
-        lateinit var panel: SwingStatsPanel
 
         onEdt {
-            panel = openPanel()
-            panel.find<JSpinner>("stats-long-point-limit")!!.value = 20
-        }
-        // The table is made again after the spinner event.
-        onEdt {
+            val panel = openPanel()
+            val row = panel.find<StatRowView>("stats-row-${MatchStat.LONG_POINTS_WON.key}")!!
+            panel.find<LimitStepper>("stats-long-point-limit")!!.value = 20
+
             assertEquals("Long points won (\u2265 20 s)", panel.label("stats-label-${MatchStat.LONG_POINTS_WON.key}").text)
+            // The rows change in place, so the stepper keeps the focus.
+            assertTrue(row === panel.find<StatRowView>("stats-row-${MatchStat.LONG_POINTS_WON.key}"))
         }
 
         assertEquals(20, StatsIO.readForProjectDir(projectDir.path).longPointMinSeconds)
+    }
+
+    @Test
+    fun aShortPointLimitAtTheLongPointLimitMovesTheLongPointLimit() {
+        writeProject("1111")
+
+        onEdt {
+            val panel = openPanel()
+            panel.find<LimitStepper>("stats-short-point-limit")!!.value = 13
+
+            assertEquals(14, panel.find<LimitStepper>("stats-long-point-limit")!!.value)
+        }
+
+        assertEquals(14, StatsIO.readForProjectDir(projectDir.path).longPointMinSeconds)
     }
 
     @Test

@@ -226,8 +226,8 @@ internal open class SliderValueRow(
     tooltip: String,
     min: Int,
     max: Int,
-    private val default: Int,
-    minorTicks: List<Int>,
+    default: Int,
+    private val minorTicks: List<Int>,
     private val low: String,
     private val mid: String?,
     private val high: String,
@@ -242,6 +242,19 @@ internal open class SliderValueRow(
     val valueField = SliderValueField(componentName, label, tooltip, format.unit)
 
     private val nameFont = UiKit.font(13f)
+
+    /**
+     * The default value. The slider fills from it, and a value that is not the default marks the row as changed.
+     * A caller can change it, for example when the default depends on another setting.
+     */
+    var default: Int = default
+        set(value) {
+            if (field == value) return
+            field = value
+            slider.setUI(DefaultFillSliderUI(value, minorTicks))
+            valueField.changed = isChanged
+            repaint()
+        }
 
     val isChanged: Boolean get() = slider.value != default
 

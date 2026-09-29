@@ -1,6 +1,9 @@
 package org.litvin.ui.tabs.points.ui
 
 import org.litvin.shared.util.Timecode
+import org.litvin.ui.commons.ColorPickerDialog
+import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.formatSeconds
 import org.litvin.ui.tabs.points.CommentDto
 import org.litvin.ui.tabs.points.CommentPatch
@@ -13,7 +16,6 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.math.BigDecimal
 import java.math.RoundingMode
-import javax.swing.JColorChooser
 import javax.swing.JDialog
 import javax.swing.JPanel
 import javax.swing.JTextArea
@@ -64,7 +66,7 @@ object EditCommentDialog {
         initialColor: String,
         save: (Long, Long, String, String) -> Unit,
     ): JDialog {
-        val dialog = PointsDialogKit.dialog(parent, title)
+        val dialog = DialogKit.modal(parent, title)
         val text = JTextArea(initialText).apply {
             name = "points-comment-text"
             lineWrap = true
@@ -79,17 +81,17 @@ object EditCommentDialog {
             toolTipText = "How long the comment stays on screen, in seconds"
         }
         var colorHex = initialColor
-        val color = PointsButton("Change…").apply {
+        val color = UiButton("Change…").apply {
             name = "points-comment-color"
             swatch = colorFor(colorHex)
             toolTipText = colorHex
         }
-        val error = PointsDialogKit.errorLine()
-        val saveButton = PointsButton("Save", kind = PointsButton.Kind.LIME).apply { name = "points-comment-save" }
-        val cancelButton = PointsButton("Cancel")
+        val error = DialogKit.errorLine()
+        val saveButton = UiButton("Save", kind = UiButton.Kind.LIME).apply { name = "points-comment-save" }
+        val cancelButton = UiButton("Cancel")
 
         color.addActionListener {
-            JColorChooser.showDialog(dialog, "Choose comment color", colorFor(colorHex))?.let { chosen ->
+            ColorPickerDialog.pick(dialog, "Choose comment color", colorFor(colorHex))?.let { chosen ->
                 colorHex = "#%06X".format(chosen.rgb and 0xFFFFFF)
                 color.swatch = chosen
                 color.toolTipText = colorHex
@@ -113,25 +115,26 @@ object EditCommentDialog {
         saveButton.addActionListener { doSave() }
         cancelButton.addActionListener { dialog.dispose() }
 
-        val textBox = PointsDialogKit.inputBox(text, boxHeight = null, padding = 8).apply {
+        val textBox = DialogKit.inputBox(text, boxHeight = null, padding = 8).apply {
             preferredSize = Dimension(preferredSize.width, TEXT_HEIGHT)
         }
         val colorRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false
             add(color)
         }
-        dialog.contentPane = PointsDialogKit.content(
-            PointsDialogKit.head(title),
-            PointsDialogKit.form(
-                PointsDialogKit.field("Text", textBox),
-                PointsDialogKit.pair(
-                    PointsDialogKit.field("Start", PointsDialogKit.inputBox(start)),
-                    PointsDialogKit.field("Duration", PointsDialogKit.inputBox(duration), note = "seconds"),
+        dialog.contentPane = DialogKit.content(
+            DialogKit.SMALL,
+            DialogKit.head(title),
+            DialogKit.form(
+                DialogKit.field("Text", textBox),
+                DialogKit.pair(
+                    DialogKit.field("Start", DialogKit.inputBox(start)),
+                    DialogKit.field("Duration", DialogKit.inputBox(duration), note = "seconds"),
                 ),
-                PointsDialogKit.field("Text color", colorRow),
+                DialogKit.field("Text color", colorRow),
                 error,
             ),
-            PointsDialogKit.footer(left = emptyList(), right = listOf(cancelButton, saveButton)),
+            DialogKit.footer(left = emptyList(), right = listOf(cancelButton, saveButton)),
         )
         // Enter saves from the single-line fields; the text area keeps Enter for new lines.
         dialog.rootPane.defaultButton = saveButton

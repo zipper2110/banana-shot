@@ -1,5 +1,6 @@
 package org.litvin.ui.privacy
 
+import org.litvin.AppInfo
 import org.litvin.analytics.AnalyticsController
 import java.awt.BorderLayout
 import java.awt.Dialog
@@ -18,7 +19,7 @@ object AnalyticsConsentDialog {
         JDialog(owner, "Optional usage analytics", Dialog.ModalityType.MODELESS).apply {
             defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
             layout = BorderLayout(12, 12)
-            add(JTextArea("Help improve Tennis Record by sending optional, anonymous product events. We never collect video, project names, paths, scores, or personal details.").apply {
+            add(JTextArea("Help improve ${AppInfo.NAME} by sending optional, anonymous product events. We never collect video, project names, paths, scores, or personal details.").apply {
                 isEditable = false; isOpaque = false; lineWrap = true; wrapStyleWord = true
             }, BorderLayout.CENTER)
             val actions = JPanel(FlowLayout(FlowLayout.RIGHT))

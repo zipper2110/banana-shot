@@ -3,9 +3,12 @@ package org.litvin.ui.tabs.stats
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.ApplicationLayout
 import org.litvin.FFmpegCommandBuilder
+import org.litvin.FfmpegColorAdjustmentStrategy
+import org.litvin.ToneRange
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.GeometryPlan
 import org.litvin.export.ExportResolutionProbe
+import org.litvin.export.SourceToneRangeProbe
 import java.awt.image.BufferedImage
 import java.io.File
 import java.util.concurrent.ExecutorService
@@ -67,6 +70,10 @@ class StatsFrameLoader(
             val sourceSize = request.adjustments
                 .takeIf { !GeometryPlan.of(it, FRAME_WIDTH, FRAME_WIDTH * 9 / 16).isIdentity }
                 ?.let { ExportResolutionProbe.probe(request.sourcePath, layout.ffprobeExecutable) }
+            val toneRange = request.adjustments
+                .takeIf { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
+                ?.let { SourceToneRangeProbe.probe(request.sourcePath, layout.ffprobeExecutable) }
+                ?: ToneRange.LIMITED
             val output = File.createTempFile("stats-frame", ".png")
             try {
                 val args = listOf(layout.ffmpegExecutable) + FFmpegCommandBuilder.stillFrameArgs(
@@ -77,6 +84,7 @@ class StatsFrameLoader(
                     adjustments = request.adjustments,
                     sourceWidth = sourceSize?.width,
                     sourceHeight = sourceSize?.height,
+                    toneRange = toneRange,
                 )
                 val process = ProcessBuilder(args)
                     .redirectErrorStream(true)

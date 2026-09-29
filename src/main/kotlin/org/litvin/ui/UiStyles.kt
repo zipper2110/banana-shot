@@ -13,7 +13,6 @@ import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.font.FontRenderContext
 import java.awt.geom.Path2D
-import java.awt.image.BufferedImage
 import javax.swing.AbstractButton
 import javax.swing.BorderFactory
 import javax.swing.BoxLayout
@@ -22,10 +21,6 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.JComboBox
-import javax.swing.JList
-import javax.swing.DefaultListCellRenderer
-import javax.swing.UIManager
 import javax.swing.JCheckBox
 import javax.swing.JRadioButton
 // Ikonli (icon packs)
@@ -35,11 +30,8 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.kordamp.ikonli.material2.Material2RoundMZ
 import org.kordamp.ikonli.swing.FontIcon
-import kotlin.math.PI
 import kotlin.math.ceil
-import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.sin
 
 /**
  * Shared Swing UI styles to match the mock (projects.html):
@@ -77,39 +69,6 @@ object UiStyles {
                 g2.color = FG_SECONDARY
                 g2.stroke = BasicStroke(1f)
                 g2.drawRoundRect(x + inset, y + inset, side, side, 4, 4)
-            } finally {
-                g2.dispose()
-            }
-        }
-    }
-
-    fun favoriteIcon(size: Int = 18, selected: Boolean = true): Icon = object : Icon {
-        override fun getIconWidth(): Int = size
-        override fun getIconHeight(): Int = size
-        override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) {
-            val g2 = (g as? Graphics2D)?.create() as? Graphics2D ?: return
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                val cx = x + size / 2.0
-                val cy = y + size / 2.0
-                val outer = size * 0.46
-                val inner = size * 0.20
-                val path = Path2D.Double()
-                for (i in 0 until 10) {
-                    val radius = if (i % 2 == 0) outer else inner
-                    val angle = -PI / 2.0 + i * PI / 5.0
-                    val px = cx + cos(angle) * radius
-                    val py = cy + sin(angle) * radius
-                    if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
-                }
-                path.closePath()
-                if (selected) {
-                    g2.color = YELLOW
-                    g2.fill(path)
-                }
-                g2.color = if (selected) YELLOW else FG_SECONDARY
-                g2.stroke = BasicStroke((size / 9f).coerceAtLeast(1.2f))
-                g2.draw(path)
             } finally {
                 g2.dispose()
             }
@@ -357,16 +316,6 @@ object UiStyles {
     /** Marks a value that opens its point in the Scoring tab. */
     fun openPointIcon(size: Int = 14, color: Color = ACCENT_TEXT): Icon = ikon(Material2MZ.PLAY_CIRCLE_OUTLINE, size, color)
 
-    // Scoring "Game Won" / "Set Won" markers (design/scoring.html: flag, emoji_events)
-    fun flagIcon(size: Int = 14, color: Color = FG_PRIMARY): Icon = ikon(Material2AL.FLAG, size, color)
-
-    fun trophyIcon(size: Int = 14, color: Color = FG_PRIMARY): Icon = ikon(Material2AL.EMOJI_EVENTS, size, color)
-
-    // Scoring footer buttons: "Scoring Settings" and "Scoreboard Style"
-    fun scoreSettingsIcon(size: Int = 18): Icon = ikon(Material2MZ.TUNE, size, LIME)
-
-    fun scoreboardStyleIcon(size: Int = 18): Icon = ikon(Material2AL.BRUSH, size, LIME)
-
     // Close button of a hint balloon
     fun closeIcon(size: Int = 14, color: Color = FG_SECONDARY): Icon = ikon(Material2AL.CLOSE, size, color)
 
@@ -515,103 +464,6 @@ object UiStyles {
         } catch (_: Throwable) { }
     }
 
-    /** Apply dark theme styling for JComboBox controls (editor + popup items). */
-    fun <T> styleComboBox(cb: JComboBox<T>) {
-        try {
-            cb.isOpaque = true
-            cb.background = SURFACE_HIGH
-            cb.foreground = FG_PRIMARY
-            cb.border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(CARD_BORDER, 1, true),
-                BorderFactory.createEmptyBorder(2, 8, 2, 8)
-            )
-            cb.isFocusable = true
-
-            // Dark arrow/button area on the right
-            try {
-                cb.ui = object : javax.swing.plaf.basic.BasicComboBoxUI() {
-                    override fun createArrowButton(): JButton {
-                        val icon = object : Icon {
-                            override fun getIconWidth() = 10
-                            override fun getIconHeight() = 6
-                            override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) {
-                                val g2 = g as Graphics2D
-                                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                                g2.color = FG_SECONDARY
-                                val w = iconWidth; val h = iconHeight
-                                val px = intArrayOf(x, x + w / 2, x + w)
-                                val py = intArrayOf(y, y + h, y)
-                                g2.fillPolygon(px, py, 3)
-                            }
-                        }
-                        return object : JButton(icon) {
-                            init {
-                                isContentAreaFilled = false
-                                isOpaque = true
-                                background = SURFACE_HIGH
-                                foreground = FG_PRIMARY
-                                border = BorderFactory.createMatteBorder(0, 1, 0, 0, CARD_BORDER)
-                                isFocusPainted = false
-                                isBorderPainted = true
-                                cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                            }
-                            override fun paintComponent(g: Graphics) {
-                                val g2 = g as Graphics2D
-                                g2.color = SURFACE_HIGH
-                                g2.fillRect(0, 0, width, height)
-                                super.paintComponent(g)
-                            }
-                        }
-                    }
-                }
-            } catch (_: Throwable) { }
-
-            // Renderer for both the selected value (index == -1) and dropdown items
-            cb.renderer = object : DefaultListCellRenderer() {
-                override fun getListCellRendererComponent(
-                    list: JList<*>?, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
-                ): Component {
-                    val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
-                    // Apply list-level colors too (helps popup background)
-                    try {
-                        list?.background = CARD_BG
-                        list?.foreground = FG_PRIMARY
-                        list?.selectionBackground = SIDEBAR_HOVER_BG
-                        list?.selectionForeground = FG_PRIMARY
-                    } catch (_: Throwable) { }
-                    c.isOpaque = true
-                    c.background = if (isSelected) SIDEBAR_HOVER_BG else CARD_BG
-                    c.foreground = FG_PRIMARY
-                    c.border = BorderFactory.createEmptyBorder(4, 8, 4, 8)
-                    return c
-                }
-            }
-
-            // Ensure the popup menu itself is dark and has dark border — best-effort via UIManager keys
-            // (Listener approach is avoided for cross‑LAF reliability.)
-
-            // Hint UI defaults to keep popup consistent when LAF reads UIManager
-            try {
-                UIManager.put("ComboBox.background", SURFACE_HIGH)
-                UIManager.put("ComboBox.foreground", FG_PRIMARY)
-                UIManager.put("ComboBox.selectionBackground", SIDEBAR_HOVER_BG)
-                UIManager.put("ComboBox.selectionForeground", FG_PRIMARY)
-                UIManager.put("ComboBox.border", BorderFactory.createLineBorder(CARD_BORDER))
-                UIManager.put("ComboBox.popupBackground", CARD_BG)
-                UIManager.put("ComboBox.disabledForeground", FG_SECONDARY)
-                UIManager.put("ComboBox.buttonBackground", SURFACE_HIGH)
-                UIManager.put("ComboBox.buttonHoverBackground", SURFACE_HIGH)
-                UIManager.put("ComboBox.buttonPressedBackground", SURFACE_HIGH)
-                UIManager.put("ComboBox.buttonArrowColor", FG_SECONDARY)
-                UIManager.put("ComboBox.borderColor", CARD_BORDER)
-                // Popup menu fallbacks (some LAFs read these keys for combo popups)
-                UIManager.put("PopupMenu.background", CARD_BG)
-                UIManager.put("PopupMenu.foreground", FG_PRIMARY)
-                UIManager.put("PopupMenu.border", BorderFactory.createLineBorder(CARD_BORDER, 1, true))
-            } catch (_: Throwable) { }
-        } catch (_: Throwable) { }
-    }
-
     /**
      * Simple card container with title header and body.
      * - Background: CARD_BG, Foreground: FG_PRIMARY
@@ -632,15 +484,6 @@ object UiStyles {
         container.add(header, BorderLayout.NORTH)
         container.add(body, BorderLayout.CENTER)
         return container
-    }
-
-    /** Small badge label with custom background/foreground and compact padding. */
-    fun smallBadge(text: String, bg: Color, fg: Color): JLabel = JLabel(text).apply {
-        isOpaque = true
-        background = bg
-        foreground = fg
-        border = BorderFactory.createEmptyBorder(2, 6, 2, 6)
-        font = font.deriveFont(10f)
     }
 
     /** Apply dark theme styling to JCheckBox with custom minimalist box and checkmark. */
@@ -732,169 +575,4 @@ object UiStyles {
         rb.iconTextGap = 8
     }
 
-    /** Green circle with white checkmark icon for scored points. */
-    fun scoredIcon(size: Int = 18): Icon = object : Icon {
-        override fun getIconWidth(): Int = size
-        override fun getIconHeight(): Int = size
-        override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) {
-            val g2 = g as Graphics2D
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            val d = size
-            val green = Color(0x71, 0xB4, 0x00)
-            // Draw filled green circle
-            g2.color = green
-            g2.fillOval(x, y, d, d)
-            // Draw white checkmark
-            val s = d.toDouble()
-            val p = java.awt.geom.Path2D.Double()
-            p.moveTo(x + 0.28 * s, y + 0.55 * s)
-            p.lineTo(x + 0.45 * s, y + 0.72 * s)
-            p.lineTo(x + 0.75 * s, y + 0.35 * s)
-            g2.color = Color.WHITE
-            g2.stroke = BasicStroke((d * 0.12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g2.draw(p)
-        }
-    }
-
-    /** Empty gray ring for points that are not scored; it holds the place of [scoredIcon]. */
-    fun unscoredIcon(size: Int = 18): Icon = object : Icon {
-        override fun getIconWidth(): Int = size
-        override fun getIconHeight(): Int = size
-        override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) {
-            val g2 = (g as? Graphics2D)?.create() as? Graphics2D ?: return
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                val stroke = (size * 0.1f).coerceAtLeast(1.2f)
-                val inset = stroke / 2.0
-                g2.color = Color(0x5A, 0x5A, 0x5A)
-                g2.stroke = BasicStroke(stroke)
-                g2.draw(java.awt.geom.Ellipse2D.Double(x + inset, y + inset, size - stroke.toDouble(), size - stroke.toDouble()))
-            } finally {
-                g2.dispose()
-            }
-        }
-    }
-
-    /** Tennis ball color of the serve markers. */
-    val BALL = Color(0xD7, 0xF3, 0x4A)
-
-    /**
-     * Tennis racket at 45 degrees, head at the top right: the serve marker.
-     * With [active] true, the racket is in [color] and the head has a light tint: the player serves.
-     * With [active] false, the racket is gray: the player does not serve.
-     */
-    fun serveRacketIcon(size: Int = 16, active: Boolean = true, color: Color = BALL): Icon = object : Icon {
-        override fun getIconWidth(): Int = size
-        override fun getIconHeight(): Int = size
-        override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) {
-            val g2 = (g as? Graphics2D)?.create() as? Graphics2D ?: return
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
-                val s = size.toDouble()
-                val main = if (active) color else Color(0x6A, 0x6A, 0x6A)
-                val frameWidth = maxOf(1.4, s * 0.1)
-                val handleWidth = maxOf(1.8, s * 0.13)
-                // Unit frame along the racket: the head tip is at y = -0.5, the handle end is at y = 0.46.
-                val headRx = 0.2
-                val headRy = 0.28
-                val headCy = -0.22
-                val handleEnd = 0.46
-                // Reach of the head and of the handle along the screen axes, for one unit of racket length
-                val diag = Math.sqrt(0.5)
-                val headReach = -headCy * diag + Math.sqrt((headRx * headRx + headRy * headRy) / 2)
-                val handleReach = handleEnd * diag
-                // Fit the racket, with its strokes, in the box and keep 0.5 px free on each side for antialiasing
-                val len = (s - 1 - frameWidth / 2 - handleWidth / 2) / (headReach + handleReach)
-                val shift = ((headReach - handleReach) * len + (frameWidth - handleWidth) / 2) / 2
-                g2.translate(x + s / 2 - shift, y + s / 2 + shift)
-                g2.rotate(Math.toRadians(45.0))
-                g2.scale(len, len)
-                val head = java.awt.geom.Ellipse2D.Double(-headRx, headCy - headRy, headRx * 2, headRy * 2)
-                if (active) {
-                    g2.color = Color(color.red, color.green, color.blue, 0x40)
-                    g2.fill(head)
-                }
-                // Strings: two main strings and three cross strings.
-                val outerClip = g2.clip
-                g2.clip(head)
-                g2.color = if (active) Color(color.red, color.green, color.blue, 0xC0) else main
-                g2.stroke = BasicStroke((maxOf(0.8, s * 0.05) / len).toFloat())
-                for (sx in doubleArrayOf(-0.07, 0.07)) g2.draw(java.awt.geom.Line2D.Double(sx, -0.6, sx, 0.1))
-                for (sy in doubleArrayOf(-0.33, -0.2, -0.07)) g2.draw(java.awt.geom.Line2D.Double(-0.3, sy, 0.3, sy))
-                g2.clip = outerClip
-                g2.color = main
-                g2.stroke = BasicStroke((frameWidth / len).toFloat())
-                g2.draw(head)
-                g2.stroke = BasicStroke((handleWidth / len).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-                g2.draw(java.awt.geom.Line2D.Double(0.0, headCy + headRy + 0.01, 0.0, handleEnd))
-            } finally {
-                g2.dispose()
-            }
-        }
-    }
-
-    /**
-     * Black or white, whichever has the higher WCAG contrast ratio against [bg].
-     * Keeps a letter legible on a player color the user is free to pick.
-     */
-    fun contrastingTextColor(bg: Color): Color {
-        fun channel(v: Int): Double {
-            val c = v / 255.0
-            return if (c <= 0.03928) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4)
-        }
-        val luminance = 0.2126 * channel(bg.red) + 0.7152 * channel(bg.green) + 0.0722 * channel(bg.blue)
-        val againstWhite = 1.05 / (luminance + 0.05)
-        val againstBlack = (luminance + 0.05) / 0.05
-        return if (againstBlack >= againstWhite) Color.BLACK else Color.WHITE
-    }
-
-    /** Off-screen surface used only to measure badge text before an icon is painted. */
-    private val textMeasureGraphics: Graphics2D by lazy {
-        BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics()
-    }
-
-    /**
-     * Rounded badge holding a short centered word, used for point milestones.
-     * The icon sizes itself to the text, so callers can vary the wording freely.
-     * Passing [borderColor] outlines the badge, for a lighter-weight variant.
-     */
-    fun textBadgeIcon(
-        text: String,
-        height: Int = 16,
-        bg: Color = BLUE,
-        fg: Color = contrastingTextColor(bg),
-        borderColor: Color? = null,
-    ): Icon {
-        val font = Font(Font.SANS_SERIF, Font.BOLD, (height * 0.62f).toInt().coerceAtLeast(8))
-        val padding = (height * 0.34f).toInt().coerceAtLeast(3)
-        val width = textMeasureGraphics.getFontMetrics(font).stringWidth(text) + padding * 2
-        return object : Icon {
-            override fun getIconWidth(): Int = width
-            override fun getIconHeight(): Int = height
-            override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) {
-                val g2 = (g as? Graphics2D)?.create() as? Graphics2D ?: return
-                try {
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-                    val arc = (height * 0.45f).toInt().coerceAtLeast(3)
-                    g2.color = bg
-                    g2.fillRoundRect(x, y, width, height, arc, arc)
-                    if (borderColor != null) {
-                        g2.color = borderColor
-                        g2.stroke = BasicStroke(1f)
-                        g2.drawRoundRect(x, y, width - 1, height - 1, arc, arc)
-                    }
-                    g2.font = font
-                    val fm = g2.fontMetrics
-                    val tx = x + (width - fm.stringWidth(text)) / 2f
-                    val ty = y + (height - fm.height) / 2f + fm.ascent
-                    g2.color = fg
-                    g2.drawString(text, tx, ty)
-                } finally {
-                    g2.dispose()
-                }
-            }
-        }
-    }
 }

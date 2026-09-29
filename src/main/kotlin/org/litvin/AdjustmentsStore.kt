@@ -110,7 +110,7 @@ class AdjustmentsSession(
             shadows = m.shadows.coerceIn(-1.0f, 1.0f),
             highlights = m.highlights.coerceIn(-1.0f, 1.0f),
             whiteBalance = WhiteBalanceV1(temperature = wb.temperature.coerceIn(-1.0f, 1.0f)),
-            zoom = m.zoom.coerceIn(0.1f, 4.0f),
+            zoom = m.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM),
             panX = m.panX.coerceIn(-1.0f, 1.0f),
             panY = m.panY.coerceIn(-1.0f, 1.0f),
             rotationDeg = m.rotationDeg.coerceIn(-180.0f, 180.0f)

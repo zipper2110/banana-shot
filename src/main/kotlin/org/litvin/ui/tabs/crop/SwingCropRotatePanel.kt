@@ -2,9 +2,9 @@ package org.litvin.ui.tabs.crop
 
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
-import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.AppShortcuts
-import org.litvin.ui.commons.ScrubBar
+import org.litvin.ui.commons.UiKit
+import org.litvin.ui.commons.VideoPlaybackBar
 import org.litvin.ui.tabs.crop.presenter.CropRotateIntent
 import org.litvin.ui.tabs.crop.presenter.CropRotatePresenter
 import org.litvin.ui.tabs.crop.presenter.CropRotateView
@@ -15,15 +15,15 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.EventQueue
-import java.awt.FlowLayout
 import java.awt.event.ActionEvent
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.AbstractAction
 import javax.swing.BorderFactory
-import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JOptionPane
 import javax.swing.JPanel
@@ -35,13 +35,15 @@ import javax.swing.SwingUtilities
  * Transform tab with a live video preview, like the Colors tab.
  *
  * The player shows the rotated full frame. [CropEditorOverlay] draws the crop rectangle and the handles
- * over the video. The right panel keeps the numeric transform controls.
+ * over the video. The playback bar is under the video. The right panel keeps the numeric transform controls.
+ * The layout comes from design/transform-redesign/option-a.html.
+ * Component IDs: adj-cr-root, adj-cr-left, adj-cr-right, adj-cr-viewport, adj-cr-transport
  */
 class SwingCropRotatePanel(
     private val player: SwingMediaPlayer,
     private val presenter: CropRotatePresenter = DefaultCropRotatePresenter(),
 ) : JPanel(BorderLayout()), CropRotateView {
-    private val rightPanelWidth = 400
+    private val rightPanelWidth = CropTransformControls.PANEL_WIDTH
     private val closed = AtomicBoolean(false)
     private var pendingMediaFile: File? = null
     private var loadedMediaFile: File? = null
@@ -55,16 +57,11 @@ class SwingCropRotatePanel(
         onResetTransform = { presenter.onIntent(CropRotateIntent.ResetTransform) },
     )
 
-    private val playPauseBtn: JButton = UiStyles.squarePrimaryButton(UiStyles.playIcon(28)) { togglePlayPause() }.apply {
-        name = "crop-play-pause"
-        accessibleContext.accessibleName = "Play or Pause"
-        toolTipText = "SPACE - Play"
-    }
-
-    private val scrubBar = ScrubBar(
-        onUserScrub = { target -> player.seek(target) },
-        tooltip = "Seek",
-        sliderComponentName = "crop-seek",
+    private val playbackBar = VideoPlaybackBar(
+        namePrefix = "crop",
+        barName = "adj-cr-transport",
+        onTogglePlay = { togglePlayPause() },
+        onSeek = { target -> player.seek(target) },
     )
 
     private val viewportPanel = JPanel(BorderLayout()).apply {
@@ -79,7 +76,7 @@ class SwingCropRotatePanel(
         name = "adj-cr-left"
         minimumSize = Dimension(640, 360)
         isOpaque = true
-        background = UiStyles.DARK_BG
+        background = UiKit.BG
     }
 
     private val rightPanel = JPanel(BorderLayout()).apply {
@@ -88,7 +85,7 @@ class SwingCropRotatePanel(
         preferredSize = Dimension(rightPanelWidth, 600)
         maximumSize = Dimension(rightPanelWidth, Int.MAX_VALUE)
         isOpaque = true
-        background = UiStyles.DARK_BG
+        background = UiKit.BG
         add(transformControls, BorderLayout.CENTER)
     }
 
@@ -98,15 +95,26 @@ class SwingCropRotatePanel(
         isContinuousLayout = true
         isEnabled = false
         dividerSize = 0
-        background = UiStyles.DARK_BG
+        border = BorderFactory.createEmptyBorder()
+        background = UiKit.BG
     }
 
     init {
         leftPanel.add(viewportPanel, BorderLayout.CENTER)
-        leftPanel.add(buildTransport(), BorderLayout.SOUTH)
+        leftPanel.add(playbackBar, BorderLayout.SOUTH)
         add(split, BorderLayout.CENTER)
 
         player.setCropEditing(true)
+        // The chip on the video shows if the arrow keys move the crop rectangle.
+        player.component.addFocusListener(object : FocusAdapter() {
+            override fun focusGained(e: FocusEvent) {
+                editor.videoFocused = true
+            }
+
+            override fun focusLost(e: FocusEvent) {
+                editor.videoFocused = false
+            }
+        })
         installPlayerCallbacks()
         installKeyBindings()
 
@@ -204,12 +212,11 @@ class SwingCropRotatePanel(
                 if (duration > 0) {
                     val now = System.currentTimeMillis()
                     if (now - lastTimeUiUpdateAt >= 80L) {
-                        scrubBar.setRange(0L, duration)
-                        scrubBar.setPosition(ms)
+                        playbackBar.setTime(ms, duration)
                         lastTimeUiUpdateAt = now
                     }
                 } else {
-                    scrubBar.reset()
+                    playbackBar.reset()
                 }
                 updatePlayPauseUi()
             }
@@ -218,10 +225,7 @@ class SwingCropRotatePanel(
         player.onReady = {
             EventQueue.invokeLater {
                 val duration = player.totalDurationMs()
-                if (duration > 0) {
-                    scrubBar.setRange(0L, duration)
-                    scrubBar.setPosition(player.currentTimeMs())
-                }
+                if (duration > 0) playbackBar.setTime(player.currentTimeMs(), duration)
                 updatePlayPauseUi()
             }
         }
@@ -234,9 +238,7 @@ class SwingCropRotatePanel(
     }
 
     private fun updatePlayPauseUi() {
-        val playing = player.status() == PlayerStatus.PLAYING
-        playPauseBtn.icon = if (playing) UiStyles.pauseIcon(28) else UiStyles.playIcon(28)
-        playPauseBtn.toolTipText = if (playing) "SPACE - Pause" else "SPACE - Play"
+        playbackBar.setPlaying(player.status() == PlayerStatus.PLAYING)
     }
 
     private fun installKeyBindings() {
@@ -262,29 +264,6 @@ class SwingCropRotatePanel(
         bind(video, AppShortcuts.SHIFT_RIGHT.keyStroke, "cropNudgeRightFast", focused) { editor.nudge(10, 0) }
         bind(video, AppShortcuts.SHIFT_UP.keyStroke, "cropNudgeUpFast", focused) { editor.nudge(0, -10) }
         bind(video, AppShortcuts.SHIFT_DOWN.keyStroke, "cropNudgeDownFast", focused) { editor.nudge(0, 10) }
-    }
-
-
-    private fun buildTransport(): JPanel {
-        val playRow = JPanel(FlowLayout(FlowLayout.CENTER, 0, 6)).apply {
-            isOpaque = true
-            background = UiStyles.SURFACE_HIGH
-            add(playPauseBtn)
-        }
-        val scrubRow = JPanel(BorderLayout()).apply {
-            isOpaque = true
-            background = Color(0x11, 0x11, 0x11)
-            border = BorderFactory.createEmptyBorder(8, 16, 8, 16)
-            scrubBar.setBarBackground(background)
-            add(scrubBar, BorderLayout.CENTER)
-        }
-        return JPanel(BorderLayout()).apply {
-            name = "adj-cr-transport"
-            isOpaque = true
-            background = UiStyles.DARK_BG
-            add(playRow, BorderLayout.NORTH)
-            add(scrubRow, BorderLayout.CENTER)
-        }
     }
 
     private fun fixDivider() {

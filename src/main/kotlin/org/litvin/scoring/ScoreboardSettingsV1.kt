@@ -60,7 +60,7 @@ data class ScoreboardSettingsV1(
 
     companion object {
         const val DEFAULT_TITLE = "Your tournament or club"
-        const val APP_CREDIT = "TennisRecord app"
+        const val APP_CREDIT = "BananaShot app"
         const val MAX_TITLE_LENGTH = 40
         const val MIN_SIZE_PERCENT = 50
         const val MAX_SIZE_PERCENT = 200

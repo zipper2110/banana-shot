@@ -31,9 +31,9 @@ internal class PointsScreen(application: ApplicationScreen) : UserFlowScreen(app
 
     fun assertPointCount(marked: Int, favorites: Int = 0, comments: Int = 0) {
         application.eventually("points point count to become $marked marked / $favorites favorite / $comments comments") {
-            context.driver.requireText("points-point-count", "$marked Marked")
-            context.driver.requireText("points-favorite-count", "$favorites Fav")
-            context.driver.requireText("points-comment-count", "$comments Comments")
+            context.driver.requireText("points-point-count", "$marked marked")
+            context.driver.requireText("points-favorite-count", "$favorites favorites")
+            context.driver.requireText("points-comment-count", "$comments comments")
         }
     }
 

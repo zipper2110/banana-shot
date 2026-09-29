@@ -1,6 +1,7 @@
 package org.litvin.media.mpv
 
 import org.litvin.FfmpegColorAdjustmentStrategy
+import org.litvin.ToneRange
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.GeometryPlan
 import org.litvin.adjustments.CropRect
@@ -30,30 +31,32 @@ internal object MpvShaderParams {
      * [cropEditing] true keeps the full rotated frame (no crop), for the Crop/Rotate editor.
      */
     fun build(adjustments: AdjustmentsV1, video: MpvVideoInfo?, cropEditing: Boolean = false): String {
-        val color = FfmpegColorAdjustmentStrategy.map(adjustments)
-        val brightness = if (color.hasEqualizerAdjustments) round4(color.brightness) else 0.0
+        val fullRange = video?.colorLevels.equals("full", ignoreCase = true)
+        val color = FfmpegColorAdjustmentStrategy.map(adjustments, if (fullRange) ToneRange.FULL else ToneRange.LIMITED)
         val contrast = if (color.hasEqualizerAdjustments) round4(color.contrast) else 1.0
         val saturation = if (color.hasEqualizerAdjustments) round4(color.saturation) else 1.0
-        val hue = if (color.hasHueAdjustments) round4(color.hueDegrees) else 0.0
+        val brightnessLift = if (color.hasToneAdjustments) round4(color.brightnessLift) else 0.0
         val shadowsLift = if (color.hasToneAdjustments) round4(color.shadowsLift) else 0.0
         val highlightsLift = if (color.hasToneAdjustments) round4(color.highlightsLift) else 0.0
+        val cbShift = if (color.hasTemperatureAdjustments) round4(color.cbShift) else 0.0
+        val crShift = if (color.hasTemperatureAdjustments) round4(color.crShift) else 0.0
 
         val plan = GeometryPlan.of(adjustments, video?.width ?: 0, video?.height ?: 0)
         val rotation = plan.rotationDeg
         val crop = if (cropEditing) GeometryPlan.FULL_FRAME else plan.crop
         val geometryActive = plan.hasRotation || crop != GeometryPlan.FULL_FRAME
-        val colorActive = color.hasEqualizerAdjustments || color.hasHueAdjustments || color.hasToneAdjustments
+        val colorActive = color.hasEqualizerAdjustments || color.hasToneAdjustments || color.hasTemperatureAdjustments
         val (kr, kb) = matrixCoefficients(video?.colorMatrix)
-        val fullRange = video?.colorLevels.equals("full", ignoreCase = true)
 
         val values = linkedMapOf(
             "tr_active" to if (geometryActive || colorActive) "1" else "0",
-            "tr_brightness" to fmt(brightness),
             "tr_contrast" to fmt(contrast),
             "tr_saturation" to fmt(saturation),
+            "tr_brightness_lift" to fmt(brightnessLift),
             "tr_shadows_lift" to fmt(shadowsLift),
             "tr_highlights_lift" to fmt(highlightsLift),
-            "tr_hue_deg" to fmt(hue),
+            "tr_cb_shift" to fmt(cbShift),
+            "tr_cr_shift" to fmt(crShift),
             "tr_rotation_deg" to fmt(rotation),
             "tr_crop_x" to fmt(crop.x),
             "tr_crop_y" to fmt(crop.y),

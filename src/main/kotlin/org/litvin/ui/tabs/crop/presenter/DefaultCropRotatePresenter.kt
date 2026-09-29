@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.crop.presenter
 
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.AdjustmentsStore
+import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.projects.ManifestIO
 import java.awt.EventQueue
 import java.io.File
@@ -49,7 +50,7 @@ class DefaultCropRotatePresenter(
             is CropRotateIntent.LoadProject -> loadProject(intent.manifestPath)
             is CropRotateIntent.ChangeTransform -> {
                 val incoming = intent.adjustments
-                val zoom = incoming.zoom.coerceIn(0.1f, 4.0f)
+                val zoom = incoming.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM)
                 val panX = incoming.panX.coerceIn(-1.0f, 1.0f)
                 val panY = incoming.panY.coerceIn(-1.0f, 1.0f)
                 val rotationDeg = incoming.rotationDeg.coerceIn(-180.0f, 180.0f)

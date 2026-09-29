@@ -31,6 +31,8 @@ object FFmpegCommandBuilder {
         // Source frame size for the crop/rotate geometry. When unknown, the output size gives the aspect.
         val sourceWidth: Int? = null,
         val sourceHeight: Int? = null,
+        // Black and white luma codes of the source, for the shadows/highlights curve.
+        val toneRange: ToneRange = ToneRange.LIMITED,
         // Output time at which this command's first kept segment starts. Non-zero only when the
         // export is split into chunks: the scoreboard ASS is written once on the whole output
         // timeline, so a chunk has to shift its frames into that timeline before the burn-in.
@@ -58,32 +60,49 @@ object FFmpegCommandBuilder {
         val preview: String,
     )
 
-    private fun colorFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? {
+    private fun colorFilter(adj: org.litvin.adjustments.AdjustmentsV1?, toneRange: ToneRange): String? {
         if (adj == null) return null
-        val values = FfmpegColorAdjustmentStrategy.map(adj)
-        if (!values.hasEqualizerAdjustments && !values.hasHueAdjustments && !values.hasToneAdjustments) return null
+        val values = FfmpegColorAdjustmentStrategy.map(adj, toneRange)
+        if (!values.hasEqualizerAdjustments && !values.hasToneAdjustments && !values.hasTemperatureAdjustments) return null
         // Use Locale.US formatting to ensure dot decimal
         fun fmt(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.4f", d)
         val filters = mutableListOf<String>()
         if (values.hasEqualizerAdjustments) {
-            filters += "eq=brightness=${fmt(values.brightness)}:contrast=${fmt(values.contrast)}:saturation=${fmt(values.saturation)}"
+            filters += "eq=contrast=${fmt(values.contrast)}:saturation=${fmt(values.saturation)}"
         }
-        if (values.hasHueAdjustments) {
-            filters += "hue=h=${fmt(values.hueDegrees)}"
-        }
-        if (values.hasToneAdjustments) {
-            // Shadows/highlights as a luma lookup table. The cubes are written out as products
-            // because a comma inside pow() would end the filter in the filtergraph syntax, and
-            // u/v are passed through because lutyuv otherwise clips chroma to the legal range.
-            val range = FfmpegColorAdjustmentStrategy.TONE_CODE_RANGE.toInt()
-            val dark = "(($range-val)/$range)"
-            val light = "(val/$range)"
-            filters += "lutyuv=y=val" +
-                "+${fmt(values.shadowsLift)}*$dark*$dark*$dark" +
-                "+${fmt(values.highlightsLift)}*$light*$light*$light" +
-                ":u=val:v=val"
+        if (values.hasToneAdjustments || values.hasTemperatureAdjustments) {
+            filters += lutFilter(values)
         }
         return filters.joinToString(",")
+    }
+
+    /**
+     * Brightness, shadows/highlights and temperature as lookup tables: the luma table is
+     * [FfmpegColorAdjustmentStrategy.toneCurve], and the chroma tables are [FfmpegColorAdjustmentStrategy.chromaCurve].
+     * Each tone weight is `s*s*(3-2*s)` of a position that clip() keeps in 0..1. round() gives the nearest code;
+     * without it, lutyuv truncates, and a very small change moves a code one full step. The expressions are in single quotes,
+     * because a comma inside clip() would otherwise end the filter in the filtergraph syntax.
+     * An unchanged plane is `val`, because the lutyuv default clips the plane to the legal range.
+     */
+    internal fun lutFilter(values: FfmpegColorAdjustments): String {
+        fun fmt(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.4f", d)
+        fun smooth(position: String): String {
+            val s = "clip($position,0,1)"
+            return "$s*$s*(3-2*$s)"
+        }
+        fun shifted(shift: Double): String = if (shift == 0.0) "val" else "'round(val+${fmt(shift)})'"
+        val range = values.toneRange
+        val zone = fmt(FfmpegColorAdjustmentStrategy.toneZone(range))
+        val shadowsEnd = fmt(FfmpegColorAdjustmentStrategy.shadowsEnd(range))
+        val highlightsStart = fmt(FfmpegColorAdjustmentStrategy.highlightsStart(range))
+        val y = if (!values.hasToneAdjustments) "val" else buildString {
+            append("'round(val")
+            if (values.brightnessLift != 0.0) append("+${fmt(values.brightnessLift)}")
+            if (values.shadowsLift != 0.0) append("+${fmt(values.shadowsLift)}*${smooth("($shadowsEnd-val)/$zone")}")
+            if (values.highlightsLift != 0.0) append("+${fmt(values.highlightsLift)}*${smooth("(val-$highlightsStart)/$zone")}")
+            append(")'")
+        }
+        return "lutyuv=y=$y:u=${shifted(values.cbShift)}:v=${shifted(values.crShift)}"
     }
 
     // Rotate (clockwise, same frame size, black corners) and crop, before the scale filter.
@@ -132,12 +151,13 @@ object FFmpegCommandBuilder {
         adjustments: org.litvin.adjustments.AdjustmentsV1? = null,
         sourceWidth: Int? = null,
         sourceHeight: Int? = null,
+        toneRange: ToneRange = ToneRange.LIMITED,
     ): List<String> {
         val height = width * 9 / 16
         val filters = listOfNotNull(
             geometryFilter(adjustments, sourceWidth, sourceHeight, width, height),
             "scale=$width:-2",
-            colorFilter(adjustments),
+            colorFilter(adjustments, toneRange),
         )
         val seekSecs = ((atMs - STILL_FRAME_OFFSET_MS).coerceAtLeast(0) / 1000.0).formatSecs()
         return listOf(
@@ -209,7 +229,7 @@ object FFmpegCommandBuilder {
         var vMap = "[vout]"
         var aMap = "[aout]"
 
-        fun buildColorFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? = colorFilter(adj)
+        fun buildColorFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? = colorFilter(adj, p.toneRange)
         fun buildGeometryFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? =
             geometryFilter(adj, p.sourceWidth, p.sourceHeight, p.outWidth, p.outHeight)
 

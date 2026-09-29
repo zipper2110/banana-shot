@@ -125,7 +125,7 @@ class ScoreSettingsDialog private constructor(
     }
     private val manualHint = JLabel(
         "<html><body style='width: ${TEXT_WIDTH_PX}px'>The app counts points only. " +
-            "Use the Game Won and Set Won buttons under the video to mark each win.</body></html>",
+            "Use the + buttons in the score panel to mark each game and set win.</body></html>",
     ).apply { foreground = UiStyles.FG_SECONDARY }
 
     /** Rule rows: the label and the control, so that a disabled rule also dims its label. */

@@ -21,7 +21,7 @@ data class ProjectsViewState(
     val canGoPrevious: Boolean = false,
     val canGoNext: Boolean = false,
     val isPaginationVisible: Boolean = false,
-    val emptyListMessage: String = "No projects yet. Click \"IMPORT NEW MATCH\" to create one.",
+    val emptyListMessage: String = "Click \"Import new match\" to create one.",
 )
 
 data class ProjectCardState(
@@ -31,7 +31,10 @@ data class ProjectCardState(
     val id: String = path,
     /** Null until the presenter loads the figures of the project. */
     val stats: ProjectStatsState? = null,
-)
+) {
+    /** False when the project has no video yet. Then [secondary] is the path of the project file. */
+    val hasVideo: Boolean get() = secondary != path
+}
 
 /** Display text for the columns of the projects table. */
 data class ProjectStatsState(
@@ -41,6 +44,9 @@ data class ProjectStatsState(
     val favoritePoints: String,
     /** A message for the user when the video file is not on the disk. Null when the video is available. */
     val videoMissingMessage: String? = null,
+    /** The numbers of [scoredPoints], for the progress bar of the Scored column. */
+    val scoredCount: Int = 0,
+    val pointCount: Int = 0,
 )
 
 sealed class ProjectsIntent {

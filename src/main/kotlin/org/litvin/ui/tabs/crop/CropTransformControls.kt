@@ -2,115 +2,89 @@ package org.litvin.ui.tabs.crop
 
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.CropGeometryMath
-import org.litvin.ui.UiStyles
+import org.litvin.ui.commons.CardColumn
+import org.litvin.ui.commons.ResetAllButton
+import org.litvin.ui.commons.SIDE_PANEL_WIDTH
+import org.litvin.ui.commons.SidePanelHeader
+import org.litvin.ui.commons.UiKit
 import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import javax.swing.BorderFactory
-import javax.swing.Box
-import javax.swing.BoxLayout
-import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.JScrollPane
 import javax.swing.JSlider
-import javax.swing.JTextField
-import javax.swing.Scrollable
-import javax.swing.SwingConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/**
+ * The right panel of the Transform tab: a header with the changed count and "Reset all",
+ * the Crop and Rotation cards with the five sliders, and a card with the mouse and key hints.
+ * The layout comes from design/transform-redesign/option-a.html.
+ *
+ * Each slider has a value field. A valid number in the field moves the slider at once.
+ * Rotation is split across a coarse slider (0.5° steps) and a fine one (0.1° steps). Their sum is the angle.
+ */
 class CropTransformControls(
     private val onChanged: (AdjustmentsV1) -> Unit,
     private val onResetTransform: () -> Unit,
 ) : JPanel(BorderLayout()) {
-    private val zoomSlider = JSlider(10, 400, 100).apply {
-        name = "crop-zoom"
-        toolTipText = "Zoom"
+    internal val rows: Map<TransformControl, TransformRow> = TransformControl.entries.associateWith { control ->
+        TransformRow(control, first = TransformControl.entries.first { it.group == control.group } == control)
     }
-    private val panXSlider = JSlider(-100, 100, 0).apply {
-        name = "crop-pan-x"
-        toolTipText = "Pan X"
+
+    private val cards: Map<TransformGroup, TransformGroupCard> = TransformGroup.entries.associateWith { group ->
+        TransformGroupCard(group, rows.values.filter { it.control.group == group })
     }
-    private val panYSlider = JSlider(-100, 100, 0).apply {
-        name = "crop-pan-y"
-        toolTipText = "Pan Y"
-    }
-    private val rotationSlider = JSlider(-360, 360, 0).apply {
-        name = "crop-rotation"
-        toolTipText = "Rotation"
-    }
-    private val fineRotationSlider = JSlider(-50, 50, 0).apply {
-        name = "crop-rotation-fine"
-        toolTipText = "Fine Rotation"
-    }
+
+    internal val resetButton = ResetAllButton("crop-reset", "Reset Transform").apply { addActionListener { onResetTransform() } }
+
+    private val statusLabel = JLabel().apply { name = "crop-status" }
+    private val header = SidePanelHeader("Transform", statusLabel, resetButton)
+
+    private val zoomSlider = slider(TransformControl.ZOOM)
+    private val panXSlider = slider(TransformControl.PAN_X)
+    private val panYSlider = slider(TransformControl.PAN_Y)
+    private val rotationSlider = slider(TransformControl.ROTATION)
+    private val fineRotationSlider = slider(TransformControl.FINE_ROTATION)
 
     private var updating = false
     private var current = AdjustmentsV1()
     private var lastEmittedRotation: Float? = null
 
+    internal fun slider(control: TransformControl): JSlider = rows.getValue(control).slider
+
+    /** The header status: "All at default" or "2 of 4 changed". */
+    internal val statusText: String get() = statusLabel.text
+
+    /** The total angle in the Rotation caption, for example "+2.3°". */
+    internal val angleText: String get() = cards.getValue(TransformGroup.ROTATION).angleText
+
     init {
+        name = "crop-transform-panel"
         isOpaque = true
-        background = UiStyles.DARK_BG
+        background = UiKit.BG
+        border = BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE)
 
-        val content = object : JPanel(), Scrollable {
-            override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
-            override fun getScrollableUnitIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) = 24
-            override fun getScrollableBlockIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) =
-                visibleRect.height - 24
-            override fun getScrollableTracksViewportWidth() = true
-            override fun getScrollableTracksViewportHeight() = false
-        }.apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            isOpaque = true
-            background = UiStyles.DARK_BG
-            border = BorderFactory.createEmptyBorder(15, 15, 15, 15)
+        rows.values.forEach { row -> bindRow(row) }
+
+        val column = CardColumn().apply {
+            TransformGroup.entries.forEach { add(cards.getValue(it)) }
+            add(TransformHints())
         }
 
-        val header = JPanel(BorderLayout()).apply {
-            isOpaque = false
-            border = BorderFactory.createEmptyBorder(0, 0, 18, 0)
-            maximumSize = Dimension(Int.MAX_VALUE, 64)
-            val title = JLabel("Transform").apply {
-                foreground = UiStyles.FG_PRIMARY
-                font = font.deriveFont(font.style, font.size2D + 3.0f)
-            }
-            val reset = JButton("Reset").apply {
-                name = "crop-reset"
-                toolTipText = "Reset Transform"
-                addActionListener { onResetTransform() }
-            }
-            val actions = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 4)).apply {
-                isOpaque = false
-                add(reset)
-            }
-            add(title, BorderLayout.WEST)
-            add(actions, BorderLayout.EAST)
-        }
-        content.add(header)
-        content.add(sliderRow("Zoom", zoomSlider, "%", ::zoomSliderToModel, ::modelZoomToSlider))
-        content.add(sliderRow("Pan X", panXSlider, "", { it / 100.0f }, { (it.panX * 100.0f).toInt() }))
-        content.add(sliderRow("Pan Y", panYSlider, "", { it / 100.0f }, { (it.panY * 100.0f).toInt() }))
-        content.add(sliderRow("Rotation", rotationSlider, "deg", { it / 2.0f }, { (it.rotationDeg * 2.0f).toInt() }))
-        content.add(sliderRow("Fine Rotation", fineRotationSlider, "deg", { it / 10.0f }, { fineRotationSlider.value }))
-        content.add(Box.createVerticalGlue())
-
-        val scroll = JScrollPane(content).apply {
-            border = BorderFactory.createEmptyBorder()
-            background = UiStyles.DARK_BG
-            viewport.background = UiStyles.DARK_BG
-        }
-        add(scroll, BorderLayout.CENTER)
+        add(header, BorderLayout.NORTH)
+        add(column.inScrollPane(), BorderLayout.CENTER)
+        refreshStatus()
     }
 
     fun render(adjustments: AdjustmentsV1) {
         updating = true
         try {
-            current = adjustments
+            // An older project can have a zoom below 1.0. Keep the value that it renders with.
+            current = adjustments.copy(zoom = adjustments.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM))
             zoomSlider.value = modelZoomToSlider(adjustments).coerceIn(zoomSlider.minimum, zoomSlider.maximum)
             panXSlider.value = (adjustments.panX * 100.0f).toInt().coerceIn(-100, 100)
             panYSlider.value = (adjustments.panY * 100.0f).toInt().coerceIn(-100, 100)
@@ -118,109 +92,71 @@ class CropTransformControls(
         } finally {
             updating = false
         }
+        refreshStatus()
     }
 
-    private fun sliderRow(
-        title: String,
-        slider: JSlider,
-        suffix: String,
-        sliderToValue: (Int) -> Float,
-        modelToSlider: (AdjustmentsV1) -> Int,
-    ): JPanel {
-        slider.putClientProperty("JSlider.isFilled", true)
-        val label = JLabel(title).apply { UiStyles.styleHelper(this) }
-        val readout = JTextField(6).apply {
-            horizontalAlignment = SwingConstants.RIGHT
-            foreground = UiStyles.FG_PRIMARY
-            background = UiStyles.SURFACE_HIGH
-            border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(UiStyles.CARD_BORDER),
-                BorderFactory.createEmptyBorder(2, 6, 2, 6),
-            )
-        }
+    private fun bindRow(row: TransformRow) {
+        val control = row.control
+        val slider = row.slider
+        val field = row.valueField.textField
 
-        fun displayValue(): String {
-            val value = sliderToValue(slider.value)
-            return when (slider) {
-                rotationSlider, fineRotationSlider -> String.format(java.util.Locale.US, "%.1f", value)
-                zoomSlider -> slider.value.toString()
-                else -> slider.value.toString()
-            }
-        }
-
-        fun syncReadoutFromSlider() {
-            val value = displayValue()
-            if (readout.text != value) {
-                readout.text = value
-            }
-        }
-
-        fun publishFromSlider() {
-            if (updating) return
-            current = when (slider) {
-                zoomSlider -> current.copy(zoom = zoomSliderToModel(slider.value))
-                panXSlider -> current.copy(panX = sliderToValue(slider.value).coerceIn(-1.0f, 1.0f))
-                panYSlider -> current.copy(panY = sliderToValue(slider.value).coerceIn(-1.0f, 1.0f))
-                rotationSlider, fineRotationSlider -> current.copy(rotationDeg = emitRotation())
-                else -> current
-            }
-            onChanged(current)
+        fun syncFieldFromSlider() {
+            val text = control.toText(slider.value)
+            if (field.text != text) field.text = text
         }
 
         slider.addChangeListener {
-            if (!readout.hasFocus()) {
-                syncReadoutFromSlider()
-            }
-            publishFromSlider()
+            if (!field.hasFocus()) syncFieldFromSlider()
+            publishFromSlider(control)
+            refreshStatus()
         }
-        syncReadoutFromSlider()
-        readout.addFocusListener(object : FocusAdapter() {
-            override fun focusLost(e: FocusEvent) {
-                syncReadoutFromSlider()
-            }
+        syncFieldFromSlider()
+        row.valueField.changed = row.isChanged
+
+        field.addFocusListener(object : FocusAdapter() {
+            override fun focusGained(e: FocusEvent) = field.selectAll()
+            override fun focusLost(e: FocusEvent) = syncFieldFromSlider()
         })
-        readout.document.addDocumentListener(object : DocumentListener {
+        // Enter confirms the value: the focus goes to the slider, and the field shows the value in its format.
+        field.addActionListener { slider.requestFocusInWindow() }
+        field.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent) = updateFromText()
             override fun removeUpdate(e: DocumentEvent) = updateFromText()
             override fun changedUpdate(e: DocumentEvent) = updateFromText()
 
             private fun updateFromText() {
-                if (updating || !readout.hasFocus()) return
-                val parsed = readout.text.trim().toFloatOrNull() ?: return
-                val sliderValue = when (slider) {
-                    zoomSlider -> parsed.toInt()
-                    rotationSlider -> (parsed * 2.0f).toInt()
-                    fineRotationSlider -> (parsed * 10.0f).toInt()
-                    panXSlider, panYSlider -> parsed.toInt()
-                    else -> modelToSlider(current)
-                }.coerceIn(slider.minimum, slider.maximum)
-                slider.value = sliderValue
+                if (updating || !field.hasFocus()) return
+                val value = control.fromText(field.text) ?: return
+                slider.value = value.coerceIn(slider.minimum, slider.maximum)
             }
         })
-
-        return JPanel(BorderLayout()).apply {
-            isOpaque = false
-            border = BorderFactory.createEmptyBorder(0, 0, 42, 0)
-            maximumSize = Dimension(Int.MAX_VALUE, 92)
-            add(JPanel(BorderLayout()).apply {
-                isOpaque = false
-                add(label, BorderLayout.WEST)
-                add(JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
-                    isOpaque = false
-                    add(readout)
-                    if (suffix.isNotBlank()) {
-                        add(JLabel(suffix).apply { UiStyles.styleHelper(this) })
-                    }
-                }, BorderLayout.EAST)
-            }, BorderLayout.NORTH)
-            add(slider, BorderLayout.CENTER)
-        }
     }
 
-    /**
-     * Rotation is split across a coarse slider and a fine one that nudges it by tenths of a degree.
-     * Their sum is the angle the rest of the app sees.
-     */
+    private fun publishFromSlider(control: TransformControl) {
+        if (updating) return
+        current = when (control) {
+            TransformControl.ZOOM -> current.copy(zoom = zoomSliderToModel(zoomSlider.value))
+            TransformControl.PAN_X -> current.copy(panX = (panXSlider.value / 100.0f).coerceIn(-1.0f, 1.0f))
+            TransformControl.PAN_Y -> current.copy(panY = (panYSlider.value / 100.0f).coerceIn(-1.0f, 1.0f))
+            TransformControl.ROTATION, TransformControl.FINE_ROTATION -> current.copy(rotationDeg = emitRotation())
+        }
+        onChanged(current)
+    }
+
+    /** Updates the header status, the Reset all style and the angle of the Rotation card. */
+    private fun refreshStatus() {
+        val angle = rotationFromSliders()
+        cards.getValue(TransformGroup.ROTATION).angle = angle
+        val changed = listOf(
+            abs(current.zoom - 1.0f) > CHANGE_EPSILON,
+            abs(current.panX) > CHANGE_EPSILON,
+            abs(current.panY) > CHANGE_EPSILON,
+            (angle * 10).roundToInt() != 0,
+        ).count { it }
+        header.showChanged(changed, TRANSFORM_VALUES)
+    }
+
+    /** The angle of the two rotation sliders together. */
     private fun rotationFromSliders(): Float =
         (rotationSlider.value / 2.0f + fineRotationSlider.value / 10.0f)
             .coerceIn(-ROTATION_LIMIT_DEG, ROTATION_LIMIT_DEG)
@@ -241,16 +177,18 @@ class CropTransformControls(
         fineRotationSlider.value = fine
     }
 
-    private fun zoomSliderToModel(value: Int): Float {
-        return (value / 100.0f).coerceIn(0.1f, 4.0f)
-    }
+    private fun zoomSliderToModel(value: Int): Float = (value / 100.0f).coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM)
 
-    private fun modelZoomToSlider(adjustments: AdjustmentsV1): Int {
-        return (adjustments.zoom.coerceIn(0.1f, 4.0f) * 100.0f).toInt()
-    }
+    private fun modelZoomToSlider(adjustments: AdjustmentsV1): Int =
+        (adjustments.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM) * 100.0f).roundToInt()
 
-    private companion object {
-        const val ROTATION_LIMIT_DEG = 180.0f
-        const val ROTATION_EPSILON_DEG = 0.0001f
+    companion object {
+        const val PANEL_WIDTH = SIDE_PANEL_WIDTH
+
+        /** The status counts four values: zoom, pan X, pan Y and the angle. */
+        private const val TRANSFORM_VALUES = 4
+        private const val CHANGE_EPSILON = 0.0005f
+        private const val ROTATION_LIMIT_DEG = 180.0f
+        private const val ROTATION_EPSILON_DEG = 0.0001f
     }
 }

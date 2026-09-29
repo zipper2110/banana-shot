@@ -39,12 +39,12 @@ class ApplicationShellUiFlowIT {
         application.assertProjectsOnlyNavigation()
         application.projects.importMatch(projectName = "Club final")
         application.points.assertReady()
-        application.assertTitle("Tennis Record — Points — Club final")
+        application.assertTitle("BananaShot — Points — Club final")
 
         application.projects.open()
             .renameCurrent("Semi final")
             .assertCurrentProject("Semi final")
-        application.assertTitle("Tennis Record — Projects — Semi final")
+        application.assertTitle("BananaShot — Projects — Semi final")
         assertEquals("Semi final", context.fixtures.onlyProject().manifest.name)
     }
 

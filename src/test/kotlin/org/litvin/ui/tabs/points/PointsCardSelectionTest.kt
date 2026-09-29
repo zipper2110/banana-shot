@@ -10,7 +10,7 @@ import org.litvin.projects.ManifestIO
 import org.litvin.projects.ProjectManifestV1
 import org.litvin.ui.flow.fakes.FakeMediaPlayer
 import org.litvin.ui.flow.fakes.ScriptedDialogService
-import org.litvin.ui.tabs.points.ui.PointsCardsView
+import org.litvin.ui.tabs.points.ui.PointsTableView
 import java.awt.Component
 import java.awt.Container
 import java.awt.EventQueue
@@ -106,11 +106,11 @@ class PointsCardSelectionTest {
         EventQueue.invokeAndWait { }
     }
 
-    private fun findCardsView(root: Component): PointsCardsView =
-        findCardsViewOrNull(root) ?: error("PointsCardsView not found")
+    private fun findCardsView(root: Component): PointsTableView =
+        findCardsViewOrNull(root) ?: error("PointsTableView not found")
 
-    private fun findCardsViewOrNull(root: Component): PointsCardsView? {
-        if (root is PointsCardsView) return root
+    private fun findCardsViewOrNull(root: Component): PointsTableView? {
+        if (root is PointsTableView) return root
         if (root is Container) {
             root.components.forEach { child ->
                 findCardsViewOrNull(child)?.let { return it }

@@ -1,63 +1,67 @@
 package org.litvin.ui.tabs.projects.components
 
-import org.litvin.ui.UiStyles
+import org.litvin.AppInfo
 import org.litvin.ui.commons.AnimatedAppMark
-import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Graphics
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JComponent
-import javax.swing.JLabel
 import javax.swing.JPanel
+import kotlin.math.ceil
 
-class ProjectsHeader(
-    onImportNewMatch: () -> Unit,
-) : JPanel(BorderLayout()) {
+/** The brand at the top of the start panel: the app mark, the app name and the tagline. */
+class ProjectsHeader : JPanel() {
     init {
         isOpaque = false
+        layout = BoxLayout(this, BoxLayout.X_AXIS)
         val titleText = Box.createVerticalBox().apply {
-            add(headerTitle("TENNIS RECORD"))
-            add(Box.createVerticalStrut(2))
-            add(headerSubtitle("TENNIS VIDEO EDITING SUITE"))
+            add(BrandText(AppInfo.NAME.uppercase(), ProjectsUi.trackedFont(20f, 0.06, ProjectsUi.Weight.BOLD), 24, true))
+            add(BrandText(AppInfo.TAGLINE.uppercase(), ProjectsUi.trackedFont(11f, 0.12), 15, false))
+            alignmentY = Component.CENTER_ALIGNMENT
         }
-        val titleBox = Box.createHorizontalBox().apply {
-            add(AnimatedAppMark(LOGO_SIZE).apply {
-                name = "projects-app-logo"
-                alignmentY = Component.CENTER_ALIGNMENT
-            })
-            add(Box.createHorizontalStrut(12))
-            add(titleText.apply { alignmentY = Component.CENTER_ALIGNMENT })
-        }
-        val actions = JPanel().apply {
-            isOpaque = false
-            layout = BoxLayout(this, BoxLayout.X_AXIS)
-            add(UiStyles.primaryButton("IMPORT NEW MATCH") { onImportNewMatch() }.apply {
-                name = "projects-import-match"
-            })
-        }
-        add(titleBox, BorderLayout.WEST)
-        add(actions, BorderLayout.EAST)
+        add(AnimatedAppMark(LOGO_SIZE).apply {
+            name = "projects-app-logo"
+            alignmentY = Component.CENTER_ALIGNMENT
+        })
+        add(Box.createHorizontalStrut(12))
+        add(titleText)
+        add(Box.createHorizontalGlue())
+        alignmentX = Component.LEFT_ALIGNMENT
     }
+
+    override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
 
     private companion object {
         const val LOGO_SIZE = 44
     }
 
-    private fun headerTitle(text: String): JComponent = WideTextLabel(text).apply {
-        font = font.deriveFont(Font.BOLD, 22f)
-        foreground = UiStyles.FG_PRIMARY
-    }
+    /** One line of the brand. It paints its own text, so the text never gets "...". */
+    private class BrandText(
+        private val text: String,
+        private val textFont: Font,
+        private val lineHeight: Int,
+        private val primary: Boolean,
+    ) : JComponent() {
+        init {
+            alignmentX = Component.LEFT_ALIGNMENT
+        }
 
-    private fun headerSubtitle(text: String): JComponent = WideTextLabel(text).apply {
-        font = font.deriveFont(font.size2D - 1f)
-        foreground = UiStyles.FG_SECONDARY
-    }
+        override fun getPreferredSize() = Dimension(ceil(ProjectsUi.textWidth(text, textFont)).toInt() + 4, lineHeight)
+        override fun getMinimumSize() = preferredSize
+        override fun getMaximumSize() = preferredSize
 
-    /** A label with more width than Swing measures, so that the painted text does not get "...". */
-    private class WideTextLabel(text: String) : JLabel(text) {
-        override fun getPreferredSize(): Dimension = UiStyles.widenForText(this, super.getPreferredSize(), text)
-        override fun getMaximumSize(): Dimension = preferredSize
+        override fun paintComponent(g: Graphics) {
+            val g2 = ProjectsUi.smooth(g)
+            try {
+                ProjectsUi.drawText(
+                    g2, text, textFont, if (primary) ProjectsUi.FG else ProjectsUi.FG_2, 0f, 0f, height.toFloat(),
+                )
+            } finally {
+                g2.dispose()
+            }
+        }
     }
 }

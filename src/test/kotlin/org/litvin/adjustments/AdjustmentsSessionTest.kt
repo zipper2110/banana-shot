@@ -29,6 +29,24 @@ class AdjustmentsSessionTest {
     }
 
     @Test
+    fun aSavedZoomBelowOneLoadsAsOne() {
+        val projectDir = kotlin.io.path.createTempDirectory("adjustments-session-").toFile()
+        val executors = TrackedExecutorProvider("adjustments-session-test", Duration.ofSeconds(5))
+        try {
+            AdjustmentsIO.write(AdjustmentsIO.adjustmentsFilePath(projectDir.absolutePath), AdjustmentsV1(zoom = 0.4f))
+            val session = AdjustmentsSession(executors.createScheduledExecutor("zoom"), 60_000)
+            session.load(projectDir.absolutePath)
+            assertEquals(AdjustmentsV1.MIN_ZOOM, session.get().zoom)
+            session.set { it.copy(zoom = 0.2f) }
+            assertEquals(AdjustmentsV1.MIN_ZOOM, session.get().zoom)
+            session.close()
+        } finally {
+            executors.close()
+            projectDir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun closingOneSubscriptionRemovesOnlyThatListener() {
         val executors = TrackedExecutorProvider("adjustments-listener-test", Duration.ofSeconds(5))
         try {

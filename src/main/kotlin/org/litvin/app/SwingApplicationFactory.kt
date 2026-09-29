@@ -182,6 +182,10 @@ object SwingApplicationFactory {
                 scoreSettingsHint = scoreSettingsHint,
             )
             closeActions += scoringPanel::close
+            scoringPanel.onGoToPoint = { pointId ->
+                btnPoints.doClick()
+                pointsPanel.selectPoint(pointId)
+            }
 
             val statsPanel = SwingStatsPanel(
                 services.dialogs,
@@ -210,7 +214,7 @@ object SwingApplicationFactory {
             var tabTitle = "Projects"
             var projectName: String? = null
             fun updateTitle() {
-                frame.title = listOfNotNull("Tennis Record", tabTitle, projectName?.takeIf { it.isNotBlank() })
+                frame.title = listOfNotNull(AppInfo.NAME, tabTitle, projectName?.takeIf { it.isNotBlank() })
                     .joinToString(" — ")
             }
             fun showTitle(tab: String) {

@@ -8,7 +8,7 @@ import javax.swing.*
  * Installs and uninstalls keyboard shortcuts for the Points tab.
  *
  * Responsibilities:
- * - Bind Space/C/V/Delete and Left/Right (with Shift for big step) to provided actions
+ * - Bind Space/C/V/Delete, Left/Right (with Shift for big step), and Up/Down (speed) to provided actions
  * - Respect text-editing focus to avoid hijacking typing
  * - Cleanly uninstall all registered key strokes and actions
  */
@@ -53,6 +53,9 @@ class Keybindings(
         bind(AppShortcuts.RIGHT.keyStroke, "points.seekRight") { actions.nudge(+1_000) }
         bind(AppShortcuts.SHIFT_LEFT.keyStroke, "points.seekLeftBig") { actions.nudge(-5_000) }
         bind(AppShortcuts.SHIFT_RIGHT.keyStroke, "points.seekRightBig") { actions.nudge(+5_000) }
+        // Speed
+        bind(AppShortcuts.UP.keyStroke, "points.speedUp") { actions.speedUp() }
+        bind(AppShortcuts.DOWN.keyStroke, "points.speedDown") { actions.speedDown() }
     }
 
     fun uninstall() {
@@ -78,4 +81,6 @@ interface PointsKeyActions {
     fun toggleFavoriteSelected()
     fun deleteSelected()
     fun nudge(deltaMs: Long)
+    fun speedUp()
+    fun speedDown()
 }

@@ -27,6 +27,7 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToLong
 
@@ -75,6 +76,15 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
     @Volatile private var paused = true
     @Volatile private var durationMs = 0L
     @Volatile private var lastKnownTimeMs = 0L
+
+    /** The start position of the last `loadfile` command. */
+    @Volatile private var loadStartMs = 0L
+
+    /**
+     * The target of a seek that came while the file was loading, and that the adapter sent when the file loaded.
+     * While it is set, time updates far from the target come from the old start position, and the adapter ignores them.
+     */
+    @Volatile private var pendingSeekMs: Long? = null
     @Volatile private var frameDurationMs = 40L
     @Volatile private var frameStepCursorMs: Long? = null
     @Volatile private var playbackRate = 1.0f
@@ -176,6 +186,9 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
             add("vo" to "gpu-next")
             add("gpu-api" to "d3d11")
             add("hwdec" to "d3d11va,auto-safe")
+            // HDR sources: no per-frame peak detection. With it, the tone mapping brightens the whole frame
+            // when the Highlights control darkens the brightest areas, so the preview shows the opposite change.
+            add("hdr-compute-peak" to "no")
             add("hr-seek" to "yes")
             add("hr-seek-framedrop" to "no")
             add("background-color" to "#000000")
@@ -269,7 +282,9 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
         val file = mediaFile ?: return
         val mpv = ensureCore() ?: return
         claimActive()
-        val startSeconds = String.format(Locale.US, "%.3f", lastKnownTimeMs / 1000.0)
+        loadStartMs = lastKnownTimeMs
+        pendingSeekMs = null
+        val startSeconds = String.format(Locale.US, "%.3f", loadStartMs / 1000.0)
         logger.info { "Loading into mpv preview #$playerId: ${file.absolutePath} at ${startSeconds}s ($reason)" }
         mpv.setProperty("pause", "yes")
         mpv.setProperty("speed", String.format(Locale.US, "%.3f", playbackRate))
@@ -315,12 +330,14 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
         frameStepCursorMs = null
         lastKnownTimeMs = target
         if (!fileLoaded) return
+        pendingSeekMs = null
         core?.command("seek", String.format(Locale.US, "%.3f", target / 1000.0), "absolute+keyframes")
     }
 
     private fun seekExact(targetMs: Long) {
         lastKnownTimeMs = targetMs
         if (!fileLoaded) return
+        pendingSeekMs = null
         core?.command("seek", String.format(Locale.US, "%.3f", targetMs / 1000.0), "absolute+exact")
     }
 
@@ -511,6 +528,13 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
                 fileLoaded = true
                 // The duration property change can arrive after this event. Read it now for onReady.
                 core?.getProperty("duration")?.toDoubleOrNull()?.let { durationMs = (it * 1000.0).roundToLong() }
+                // A seek while the file loaded only set lastKnownTimeMs, because mpv had no file. Send it now.
+                // Example: "Go to point" in the Scoring tab opens the Points tab and seeks while the video loads.
+                val target = lastKnownTimeMs
+                if (target != loadStartMs) {
+                    pendingSeekMs = target
+                    core?.command("seek", String.format(Locale.US, "%.3f", target / 1000.0), "absolute+exact")
+                }
                 logger.info { "mpv preview #$playerId file loaded: durationMs=$durationMs" }
                 SwingUtilities.invokeLater {
                     applyEditorMargins()
@@ -523,7 +547,9 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
                 setStatus(PlayerStatus.READY)
                 setStatus(if (paused) PlayerStatus.PAUSED else PlayerStatus.PLAYING)
             }
+            LibMpv.EVENT_PLAYBACK_RESTART -> pendingSeekMs = null
             LibMpv.EVENT_END_FILE -> {
+                pendingSeekMs = null
                 if (event.endFileReason() == LibMpv.END_FILE_REASON_ERROR) {
                     logger.warn { "mpv preview #$playerId end-file error ${event.endFileError()}" }
                     setStatus(PlayerStatus.ERROR)
@@ -548,6 +574,10 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
         when (name) {
             "time-pos" -> if (format == LibMpv.FORMAT_DOUBLE && fileLoaded) {
                 val ms = ((event.propertyDouble() ?: return) * 1000.0).roundToLong().coerceAtLeast(0L)
+                pendingSeekMs?.let { target ->
+                    if (abs(ms - target) > frameDurationMs) return
+                    pendingSeekMs = null
+                }
                 lastKnownTimeMs = ms
                 onTimeChanged?.invoke(ms)
             }

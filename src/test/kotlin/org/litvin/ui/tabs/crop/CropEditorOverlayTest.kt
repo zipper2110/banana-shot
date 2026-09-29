@@ -31,10 +31,43 @@ class CropEditorOverlayTest {
         CropEditorOverlay(player) { }.render(AdjustmentsV1())
 
         val shapes = assertNotNull(player.shapes)
-        val box = shapes.filterIsInstance<OverlayShape.Rect>().single { it.stroke != null && it.width > 100.0 }
+        val editorRects = shapes.filterIsInstance<OverlayShape.Rect>().filter { it.radius == 0.0 }
+        val box = editorRects.single { it.stroke != null && it.width > 100.0 }
         assertEquals(Rectangle2D.Double(100.0, 50.0, 1600.0, 900.0), Rectangle2D.Double(box.x, box.y, box.width, box.height))
-        assertEquals(8, shapes.filterIsInstance<OverlayShape.Rect>().count { it.width == 10.0 })
+        assertEquals(8, editorRects.count { it.width == 10.0 })
         assertEquals(1, shapes.filterIsInstance<OverlayShape.Circle>().size)
+    }
+
+    @Test
+    fun `the chip asks for a click on the video until the video has the focus`() {
+        val player = OverlayPlayer(Rectangle2D.Double(0.0, 50.0, 1600.0, 900.0))
+        player.component.setSize(1600, 1000)
+        val editor = CropEditorOverlay(player) { }
+        editor.render(AdjustmentsV1())
+
+        val idle = assertNotNull(player.shapes)
+        assertEquals(listOf(VideoFocusChip.HINT), idle.filterIsInstance<OverlayShape.Text>().map { it.text })
+        assertTrue(idle.none { it is OverlayShape.Rect && it.width > 1500.0 && it.y < 5.0 }, "No focus frame without the focus")
+
+        editor.videoFocused = true
+
+        val focused = assertNotNull(player.shapes)
+        val texts = focused.filterIsInstance<OverlayShape.Text>().map { it.text }
+        assertEquals(VideoFocusChip.ARROWS + listOf(VideoFocusChip.MOVE_TEXT, VideoFocusChip.SHIFT_KEY, VideoFocusChip.FAST_TEXT), texts)
+        val frame = focused.filterIsInstance<OverlayShape.Rect>().single { it.stroke != null && it.x < 5.0 && it.y < 5.0 }
+        assertEquals(1598.0, frame.width, 0.001)
+        assertEquals(998.0, frame.height, 0.001)
+    }
+
+    @Test
+    fun `the chip is drawn under the editor, so it never hides a handle`() {
+        val player = OverlayPlayer(Rectangle2D.Double(0.0, 0.0, 1600.0, 900.0))
+        CropEditorOverlay(player) { }.render(AdjustmentsV1())
+
+        val shapes = assertNotNull(player.shapes)
+        val lastChipPart = shapes.indexOfLast { it is OverlayShape.Text }
+        val firstHandle = shapes.indexOfFirst { it is OverlayShape.Rect && it.width == 10.0 && it.radius == 0.0 }
+        assertTrue(lastChipPart < firstHandle, "chip=$lastChipPart handle=$firstHandle")
     }
 
     @Test

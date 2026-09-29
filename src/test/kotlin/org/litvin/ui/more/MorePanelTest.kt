@@ -49,7 +49,7 @@ class MorePanelTest {
         SwingUtilities.invokeAndWait {
             val page = AboutPage(
                 AboutInfo(
-                    appName = "Tennis Record",
+                    appName = "BananaShot",
                     version = "1.2.3",
                     documents = listOf(AboutDocument("License", existing), AboutDocument("Missing", File("no-such-file.txt"))),
                     components = listOf("Java" to "17"),

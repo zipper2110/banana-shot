@@ -21,6 +21,7 @@ import kotlin.math.atan2
  *
  * The player shows the rotated full frame (crop editing mode). This class draws the crop rectangle,
  * the dim mask, the resize handles, and the rotation handle through [SwingMediaPlayer.setEditorOverlay].
+ * It also draws the [VideoFocusChip], which tells if the arrow keys move the crop rectangle.
  * It reads the mouse on [SwingMediaPlayer.component]. All coordinates are component pixels, and the
  * content box is the video area that [SwingMediaPlayer.videoBounds] gives.
  */
@@ -80,6 +81,14 @@ class CropEditorOverlay(
         target.addMouseMotionListener(adapter)
         player.onVideoBoundsChanged = { redraw() }
     }
+
+    /** True while the video has the keyboard focus, so the arrow keys move the crop rectangle. */
+    var videoFocused: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            redraw()
+        }
 
     fun render(next: AdjustmentsV1) {
         adjustments = next
@@ -175,6 +184,9 @@ class CropEditorOverlay(
         val active = hoverTarget != HitTarget.NONE || dragTarget != HitTarget.NONE
         val stroke = if (active) UiStyles.LIME else Color.WHITE
         val shapes = mutableListOf<OverlayShape>()
+
+        // The chip is under the editor, so it never hides a handle.
+        shapes += VideoFocusChip.shapes(videoFocused, target.width.toDouble(), target.height.toDouble())
 
         // Dim mask: four bands of the content box around the crop rectangle.
         val right = overlay.x + overlay.width

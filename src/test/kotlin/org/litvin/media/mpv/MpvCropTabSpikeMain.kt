@@ -35,8 +35,10 @@ fun main(args: Array<String>) {
     val presenter = DefaultCropRotatePresenter(adjustments)
     lateinit var frame: JFrame
     lateinit var panel: SwingCropRotatePanel
+    lateinit var player: MpvSwingMediaPlayerAdapter
     SwingUtilities.invokeAndWait {
-        panel = SwingCropRotatePanel(MpvSwingMediaPlayerAdapter(), presenter)
+        player = MpvSwingMediaPlayerAdapter()
+        panel = SwingCropRotatePanel(player, presenter)
         frame = JFrame("Crop tab spike").apply {
             contentPane.add(panel)
             setSize(1500, 860)
@@ -65,9 +67,14 @@ fun main(args: Array<String>) {
     Thread.sleep(1200)
     shot("2-rotated-zoomed")
 
+    // The chip on the video shows the arrow keys, and a lime frame goes around the video.
+    SwingUtilities.invokeAndWait { player.component.requestFocusInWindow() }
+    Thread.sleep(800)
+    shot("3-video-focused")
+
     SwingUtilities.invokeAndWait { frame.setSize(1100, 900) }
     Thread.sleep(1500)
-    shot("3-after-resize")
+    shot("4-after-resize")
 
     SwingUtilities.invokeAndWait {
         panel.dispose()

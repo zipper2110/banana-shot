@@ -27,10 +27,11 @@ internal object MpvAssOverlay {
             if (w <= 0 || h <= 0) {
                 null
             } else {
+                val radius = shape.radius * scale
                 drawing(
                     x = shape.x * scale,
                     y = shape.y * scale,
-                    path = "m 0 0 l $w 0 $w $h 0 $h",
+                    path = if (radius > 0.0) roundedPath(w.toDouble(), h.toDouble(), radius) else "m 0 0 l $w 0 $w $h 0 $h",
                     fill = shape.fill,
                     stroke = shape.stroke,
                     strokeWidth = shape.strokeWidth * scale,
@@ -82,7 +83,33 @@ internal object MpvAssOverlay {
                 drawing(minX, minY, path, fill = shape.color, stroke = null, strokeWidth = 0.0)
             }
         }
+        is OverlayShape.Text -> {
+            if (shape.text.isEmpty() || shape.size <= 0.0) {
+                null
+            } else {
+                "{\\an7\\pos(${fmt(shape.x * scale)},${fmt(shape.y * scale)})\\q2" +
+                    "\\fn${shape.font}\\fs${fmt(shape.size * scale)}\\b${if (shape.bold) 1 else 0}\\i0\\u0\\s0" +
+                    "\\fsp0\\fscx100\\fscy100\\frz0\\bord0\\shad0\\blur0" +
+                    "\\1c${assColor(shape.color)}\\1a${assAlpha(shape.color)}}" + escape(shape.text)
+            }
+        }
     }
+
+    /** A closed path with round corners. The path starts at (0, 0) of its bounds. */
+    private fun roundedPath(w: Double, h: Double, radius: Double): String {
+        val r = radius.coerceAtMost(minOf(w, h) / 2.0)
+        val c = r * (1.0 - CIRCLE_K)
+        return "m ${fmt(r)} 0 l ${fmt(w - r)} 0 b ${fmt(w - c)} 0 ${fmt(w)} ${fmt(c)} ${fmt(w)} ${fmt(r)} " +
+            "l ${fmt(w)} ${fmt(h - r)} b ${fmt(w)} ${fmt(h - c)} ${fmt(w - c)} ${fmt(h)} ${fmt(w - r)} ${fmt(h)} " +
+            "l ${fmt(r)} ${fmt(h)} b ${fmt(c)} ${fmt(h)} 0 ${fmt(h - c)} 0 ${fmt(h - r)} " +
+            "l 0 ${fmt(r)} b 0 ${fmt(c)} ${fmt(c)} 0 ${fmt(r)} 0"
+    }
+
+    /** Text in ASS must not open an override block or start an escape sequence. */
+    private fun escape(text: String): String = text
+        .replace("\\", "\\\\")
+        .replace("{", "\\{")
+        .replace("}", "\\}")
 
     private fun drawing(x: Double, y: Double, path: String, fill: Color?, stroke: Color?, strokeWidth: Double): String {
         val tags = buildString {

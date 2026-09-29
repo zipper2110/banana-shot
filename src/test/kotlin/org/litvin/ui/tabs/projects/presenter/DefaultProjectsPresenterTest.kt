@@ -70,7 +70,7 @@ class DefaultProjectsPresenterTest {
         drainEdt()
 
         val projects = view.states.last().visibleProjects
-        assertEquals(ProjectStatsState("1:23:45", "2.50 GB", "12/40", "3"), projects.first().stats)
+        assertEquals(ProjectStatsState("1:23:45", "2.50 GB", "12/40", "3", scoredCount = 12, pointCount = 40), projects.first().stats)
         assertEquals(ProjectStatsState("—", "—", "0/0", "0"), projects[1].stats)
         assertEquals((1..10).map { "project-$it.trproj" }, repository.statsRequests)
 

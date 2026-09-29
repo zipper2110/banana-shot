@@ -20,12 +20,13 @@ class MpvShaderParamsTest {
 
         assertEquals("0", values["tr_active"])
         assertEquals("1.000000", values["tr_contrast"])
-        assertEquals("0.000000", values["tr_brightness"])
+        assertEquals("0.000000", values["tr_brightness_lift"])
+        assertEquals("0.000000", values["tr_cb_shift"])
         assertEquals("1.000000", values["tr_crop_w"])
     }
 
     @Test
-    fun `color values are the same values that the export eq filter receives`() {
+    fun `color values are the same values that the export eq and lutyuv filters receive`() {
         val adjustments = AdjustmentsV1(
             brightness = 1.3f,
             contrast = 1.45f,
@@ -47,18 +48,18 @@ class MpvShaderParamsTest {
             )
         ).args
         val vf = export[export.indexOf("-vf") + 1]
-        val eq = Regex("eq=brightness=([-0-9.]+):contrast=([-0-9.]+):saturation=([-0-9.]+)")
+        val eq = Regex("eq=contrast=([-0-9.]+):saturation=([-0-9.]+)").find(vf)!!.groupValues
+        val lut = Regex("""lutyuv=y='round\(val\+([-0-9.]+)\+([-0-9.]+)\*.*\+([-0-9.]+)\*.*':u='round\(val\+([-0-9.]+)\)':v='round\(val\+([-0-9.]+)\)'""")
             .find(vf)!!.groupValues
-        val hue = Regex("hue=h=([-0-9.]+)").find(vf)!!.groupValues[1]
-        val lut = Regex("""lutyuv=y=val\+([-0-9.]+)\*.*\+([-0-9.]+)\*""").find(vf)!!.groupValues
 
         assertEquals("1", values["tr_active"])
-        assertEquals(eq[1].toDouble(), values.getValue("tr_brightness").toDouble(), 1e-9)
-        assertEquals(eq[2].toDouble(), values.getValue("tr_contrast").toDouble(), 1e-9)
-        assertEquals(eq[3].toDouble(), values.getValue("tr_saturation").toDouble(), 1e-9)
-        assertEquals(hue.toDouble(), values.getValue("tr_hue_deg").toDouble(), 1e-9)
-        assertEquals(lut[1].toDouble(), values.getValue("tr_shadows_lift").toDouble(), 1e-9)
-        assertEquals(lut[2].toDouble(), values.getValue("tr_highlights_lift").toDouble(), 1e-9)
+        assertEquals(eq[1].toDouble(), values.getValue("tr_contrast").toDouble(), 1e-9)
+        assertEquals(eq[2].toDouble(), values.getValue("tr_saturation").toDouble(), 1e-9)
+        assertEquals(lut[1].toDouble(), values.getValue("tr_brightness_lift").toDouble(), 1e-9)
+        assertEquals(lut[2].toDouble(), values.getValue("tr_shadows_lift").toDouble(), 1e-9)
+        assertEquals(lut[3].toDouble(), values.getValue("tr_highlights_lift").toDouble(), 1e-9)
+        assertEquals(lut[4].toDouble(), values.getValue("tr_cb_shift").toDouble(), 1e-9)
+        assertEquals(lut[5].toDouble(), values.getValue("tr_cr_shift").toDouble(), 1e-9)
     }
 
     @Test

@@ -9,9 +9,9 @@ import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.app.PreferencesProvider
-import org.litvin.ui.UiStyles
-import org.litvin.ui.commons.ScrubBar
 import org.litvin.ui.commons.AppShortcuts
+import org.litvin.ui.commons.UiKit
+import org.litvin.ui.commons.VideoPlaybackBar
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Dimension
@@ -21,16 +21,11 @@ import java.io.File
 import java.util.prefs.Preferences
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.*
-import org.litvin.ui.commons.applyDarkScrollbar
 
 /**
- * Adjustments: Color Tab — T3 (Player integration and transport wiring)
- *
- * Implements split layout per spec v0.3.0 T1/T2 and wires the preview player per T3:
- * - Left: player stack container (min 640x360)
- * - Right: controls container (min 280px width)
- * - Play/Pause button, seek slider, time labels, and SPACE key toggle
- * Component IDs: adj-color-root, adj-color-left, adj-color-right, adj-color-viewport, adj-color-transport, adj-color-left-header
+ * The Colors tab: the video preview with the playback bar on the left, and the Color grade panel on the right.
+ * The layout comes from design/colors-redesign/option-a.html.
+ * Component IDs: adj-color-root, adj-color-left, adj-color-right, adj-color-viewport, adj-color-transport
  */
 class SwingColorAdjustmentsPanel(
     private val player: SwingMediaPlayer,
@@ -46,206 +41,57 @@ class SwingColorAdjustmentsPanel(
     private var projectManifestPath: String? = null
     private val closed = AtomicBoolean(false)
 
-    // Adjustments store subscription and feedback guard (T6)
+    // Adjustments store subscription and feedback guard
     private var unsubscribeStore: (() -> Unit)? = null
     private var updatingFromModel: Boolean = false
-
-    private val dividerPrefKey = "adj.color.split.divider"
 
     // Media player and media loading state
     private var pendingMediaFile: File? = null
     private var isMediaLoaded: Boolean = false
 
-    // Transport UI refs
-    private var playPauseBtn: JButton
-    private var scrubBar: ScrubBar
-
     private val viewportPanel = JPanel(BorderLayout()).apply {
         name = "adj-color-viewport"
         isOpaque = true
-        background = java.awt.Color.BLACK
+        background = Color.BLACK
         minimumSize = Dimension(640, 360)
     }
     private val geometryViewport = GeometryViewportPanel(player.component)
-    private val transportPanel = JPanel(java.awt.BorderLayout()).apply {
-        name = "adj-color-transport"
-        isOpaque = true
-        background = UiStyles.DARK_BG
-    }
+
+    private val playbackBar = VideoPlaybackBar(
+        namePrefix = "colors",
+        barName = "adj-color-transport",
+        onTogglePlay = { togglePlayPause() },
+        onSeek = { target -> player.seek(target) },
+    )
 
     private val leftPanel = JPanel(BorderLayout()).apply {
         name = "adj-color-left"
         minimumSize = Dimension(640, 360)
         isOpaque = true
-        background = UiStyles.DARK_BG
-        // Compose left stack: header (NORTH), viewport (CENTER), transport (SOUTH)
+        background = UiKit.BG
         add(viewportPanel, BorderLayout.CENTER)
-        add(transportPanel, BorderLayout.SOUTH)
+        add(playbackBar, BorderLayout.SOUTH)
     }
 
-    // Right controls panel (T4)
-    private var brightnessSlider: JSlider
-    private var contrastSlider: JSlider
-    private var saturationSlider: JSlider
-    private var shadowsSlider: JSlider
-    private var highlightsSlider: JSlider
-    private var tempSlider: JSlider
-    private var colorResetBtn: JButton
-
-    private val RIGHT_PANEL_WIDTH = 400
-
-    private val rightPanel = JPanel(BorderLayout()).apply {
-        name = "adj-color-right"
-        minimumSize = Dimension(RIGHT_PANEL_WIDTH, 360)
-        preferredSize = Dimension(RIGHT_PANEL_WIDTH, 600)
-        maximumSize = Dimension(RIGHT_PANEL_WIDTH, Int.MAX_VALUE)
-        isOpaque = true
-        background = UiStyles.DARK_BG
-    }
-
-    private val split = JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightPanel).apply {
-        name = "adj-color-root"
-        resizeWeight = 1.0
-        setContinuousLayout(true)
-        isEnabled = false
-        dividerSize = 0
-        background = UiStyles.DARK_BG
-    }
-
-    init {
-        // Embed the video component through the shared geometry viewport.
-        viewportPanel.add(geometryViewport, BorderLayout.CENTER)
-
-        // Populate transport: play/pause, time labels, seek slider
-        playPauseBtn = UiStyles.squarePrimaryButton(UiStyles.playIcon(28)) { togglePlayPause() }.apply {
-            name = "colors-play-pause"
-            accessibleContext.accessibleName = "Play or Pause"
-            toolTipText = "SPACE - Play"
-        }
-        scrubBar = ScrubBar(
-            onUserScrub = { target -> player.seek(target) },
-            tooltip = "Seek",
-            sliderComponentName = "colors-seek",
-        )
-        val playRow = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 0, 6)).apply {
-            isOpaque = true
-            background = UiStyles.SURFACE_HIGH
-        }
-        playRow.add(playPauseBtn)
-        val scrubRow = JPanel(BorderLayout()).apply {
-            isOpaque = true
-            background = Color(0x11, 0x11, 0x11)
-            border = BorderFactory.createEmptyBorder(8, 16, 8, 16)
-            scrubBar.setBarBackground(background)
-            add(scrubBar, BorderLayout.CENTER)
-        }
-        transportPanel.add(playRow, BorderLayout.NORTH)
-        transportPanel.add(scrubRow, BorderLayout.CENTER)
-
-        val content = object : JPanel(), Scrollable {
-            override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
-            override fun getScrollableUnitIncrement(
-                visibleRect: java.awt.Rectangle,
-                orientation: Int,
-                direction: Int
-            ): Int = 24
-            override fun getScrollableBlockIncrement(
-                visibleRect: java.awt.Rectangle,
-                orientation: Int,
-                direction: Int
-            ): Int = visibleRect.height - 24
-            override fun getScrollableTracksViewportWidth(): Boolean = true
-            override fun getScrollableTracksViewportHeight(): Boolean = false
-        }.apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            background = UiStyles.DARK_BG
-            isOpaque = true
-            border = BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        }
-        val sectionHeader = JPanel(BorderLayout()).apply { isOpaque = false }
-        val sectionTitle = JLabel("Color Grade").apply {
-            foreground = UiStyles.FG_PRIMARY
-            font = font.deriveFont(font.style, font.size2D + 3.0f)
-        }
-        colorResetBtn =
-            JButton("Reset").apply { name = "colors-reset"; toolTipText = "Reset Color Grade to defaults" }
-        colorResetBtn.addActionListener {
-            adjustments.set { prev -> mergeColorInto(prev, AdjustmentsUiConverter.DEFAULTS) }
-        }
-        val headerRight2 = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 8, 4)).apply {
-            isOpaque = true
-            background = UiStyles.DARK_BG
-        }
-        headerRight2.add(colorResetBtn)
-        sectionHeader.add(sectionTitle, BorderLayout.WEST)
-        sectionHeader.add(headerRight2, BorderLayout.EAST)
-        sectionHeader.border = BorderFactory.createEmptyBorder(0, 0, 18, 0)
-        sectionHeader.alignmentX = LEFT_ALIGNMENT
-        content.add(sectionHeader)
-
-        // Sliders
-        brightnessSlider = JSlider()
-        contrastSlider = JSlider()
-        saturationSlider = JSlider()
-        shadowsSlider = JSlider()
-        highlightsSlider = JSlider()
-        tempSlider = JSlider()
-        content.add(
-            labeledSliderRow(
-                "Brightness",
-                brightnessSlider,
-                "colors-brightness",
-                "Brightness [-100..+100], default 0"
-            )
-        )
-        content.add(labeledSliderRow("Contrast", contrastSlider, "colors-contrast", "Contrast [-100..+100], default 0"))
-        content.add(
-            labeledSliderRow(
-                "Saturation",
-                saturationSlider,
-                "colors-saturation",
-                "Saturation [-100..+100], default 0"
-            )
-        )
-        content.add(
-            labeledSliderRow(
-                "Shadows",
-                shadowsSlider,
-                "colors-shadows",
-                "Shadows [-100..+100], default 0. Positive lifts dark areas, negative deepens them."
-            )
-        )
-        content.add(
-            labeledSliderRow(
-                "Highlights",
-                highlightsSlider,
-                "colors-highlights",
-                "Highlights [-100..+100], default 0. Negative pulls bright areas down, positive brightens them."
-            )
-        )
-        content.add(labeledSliderRow("WB Temp", tempSlider, "colors-temperature", "Temperature [-100..+100], default 0"))
-        val scroll = JScrollPane(content).apply {
-            background = UiStyles.DARK_BG
-            viewport.background = UiStyles.DARK_BG
-            border = BorderFactory.createEmptyBorder()
-        }
-        try { applyDarkScrollbar(scroll, UiStyles.DARK_BG) } catch (_: Throwable) { }
-        rightPanel.add(scroll, BorderLayout.CENTER)
-
-        val adjustSupported = try {
+    private val gradePanel = ColorGradePanel(
+        liveSupported = try {
             player.isAdjustSupported()
         } catch (_: Throwable) {
             false
+        },
+    )
+
+    init {
+        name = "adj-color-root"
+        isOpaque = true
+        background = UiKit.BG
+        viewportPanel.add(geometryViewport, BorderLayout.CENTER)
+
+        gradePanel.resetButton.addActionListener {
+            adjustments.set { prev -> mergeColorInto(prev, AdjustmentsUiConverter.DEFAULTS) }
         }
-        val unsupportedTip =
-            "Live preview for this control may not be available on this system; values will still be saved for export."
-        val sliders =
-            arrayOf(brightnessSlider, contrastSlider, saturationSlider, shadowsSlider, highlightsSlider, tempSlider)
-        if (!adjustSupported) {
-            sliders.forEach { sld -> sld.toolTipText = (sld.toolTipText?.let { it + "\n" } ?: "") + unsupportedTip }
-        }
-        sliders.forEach { slider ->
-            slider.addChangeListener {
+        ColorControl.entries.forEach { control ->
+            gradePanel.slider(control).addChangeListener {
                 if (!updatingFromModel) {
                     val color = uiToModel()
                     val nextAdjustments = mergeColorInto(adjustments.get(), color)
@@ -255,36 +101,22 @@ class SwingColorAdjustmentsPanel(
             }
         }
 
-        // Wire controls
         installKeyBindings()
         installPlayerCallbacks()
 
-        add(split, BorderLayout.CENTER)
-
-        // Keep right panel fixed width on first show and on resize
-        val fixDivider: () -> Unit = {
-            val total = split.size.width
-            if (total > 0) {
-                split.setDividerLocation((total - RIGHT_PANEL_WIDTH).coerceAtLeast(0))
-            }
-        }
-        SwingUtilities.invokeLater { fixDivider() }
-        this.addComponentListener(object : java.awt.event.ComponentAdapter() {
-            override fun componentResized(e: java.awt.event.ComponentEvent) {
-                fixDivider()
-            }
-        })
+        add(leftPanel, BorderLayout.CENTER)
+        add(gradePanel, BorderLayout.EAST)
     }
 
-    // T5 — Live preview wiring
     fun uiToModel(): AdjustmentsV1 {
+        fun value(control: ColorControl) = gradePanel.slider(control).value
         return AdjustmentsUiConverter.slidersToModel(
-            brightnessSlider.value,
-            contrastSlider.value,
-            saturationSlider.value,
-            shadowsSlider.value,
-            highlightsSlider.value,
-            tempSlider.value
+            value(ColorControl.BRIGHTNESS),
+            value(ColorControl.CONTRAST),
+            value(ColorControl.SATURATION),
+            value(ColorControl.SHADOWS),
+            value(ColorControl.HIGHLIGHTS),
+            value(ColorControl.TEMPERATURE),
         )
     }
 
@@ -293,47 +125,16 @@ class SwingColorAdjustmentsPanel(
         geometryViewport.refreshGeometry()
     }
 
-    // Build right controls for T4
-    fun labeledSliderRow(title: String, slider: JSlider, id: String, tip: String): JPanel {
-        slider.minimum = -100
-        slider.maximum = 100
-        slider.value = 0
-        slider.name = id
-        slider.toolTipText = tip
-        slider.putClientProperty("JSlider.isFilled", true)
-        val lbl = JLabel(title).apply { UiStyles.styleHelper(this) }
-        val valueLbl = JLabel("0").apply { foreground = UiStyles.FG_PRIMARY }
-        val left = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 2)).apply { isOpaque = false; add(lbl) }
-        val center = JPanel(BorderLayout()).apply { isOpaque = false; add(slider, BorderLayout.CENTER) }
-        val right =
-            JPanel(java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 6, 2)).apply { isOpaque = false; add(valueLbl) }
-        val row = JPanel(BorderLayout()).apply {
-            isOpaque = false
-            border = BorderFactory.createEmptyBorder(0, 0, 60, 0)
-            alignmentX = LEFT_ALIGNMENT
-            add(JPanel(BorderLayout()).apply {
-                isOpaque = false
-                add(left, BorderLayout.WEST)
-                add(right, BorderLayout.EAST)
-            }, BorderLayout.NORTH)
-            add(center, BorderLayout.CENTER)
-        }
-        row.maximumSize = Dimension(Int.MAX_VALUE, 100)
-        row.preferredSize = Dimension(0, 100)
-        slider.addChangeListener { valueLbl.text = slider.value.toString() }
-        return row
-    }
-
     private fun modelToUi(adjustments: AdjustmentsV1) {
         updatingFromModel = true
         try {
             val sliderValues = AdjustmentsUiConverter.modelToSliderValues(adjustments)
-            brightnessSlider.value = sliderValues.brightness
-            contrastSlider.value = sliderValues.contrast
-            saturationSlider.value = sliderValues.saturation
-            shadowsSlider.value = sliderValues.shadows
-            highlightsSlider.value = sliderValues.highlights
-            tempSlider.value = sliderValues.temperature
+            gradePanel.slider(ColorControl.BRIGHTNESS).value = sliderValues.brightness
+            gradePanel.slider(ColorControl.CONTRAST).value = sliderValues.contrast
+            gradePanel.slider(ColorControl.SATURATION).value = sliderValues.saturation
+            gradePanel.slider(ColorControl.SHADOWS).value = sliderValues.shadows
+            gradePanel.slider(ColorControl.HIGHLIGHTS).value = sliderValues.highlights
+            gradePanel.slider(ColorControl.TEMPERATURE).value = sliderValues.temperature
             // Also update live preview, preserving geometry from the shared model.
             applyPreview(adjustments)
         } finally {
@@ -372,12 +173,11 @@ class SwingColorAdjustmentsPanel(
                 if (dur > 0) {
                     val now = System.currentTimeMillis()
                     if ((now - lastTimeUiUpdateAt) >= timeUiCadenceMs) {
-                        scrubBar.setRange(0L, dur)
-                        scrubBar.setPosition(ms)
+                        playbackBar.setTime(ms, dur)
                         lastTimeUiUpdateAt = now
                     }
                 } else {
-                    scrubBar.reset()
+                    playbackBar.reset()
                 }
                 updatePlayPauseUi()
             }
@@ -386,10 +186,7 @@ class SwingColorAdjustmentsPanel(
         player.onReady = {
             EventQueue.invokeLater {
                 val dur = player.totalDurationMs()
-                if (dur > 0) {
-                    scrubBar.setRange(0L, dur)
-                    scrubBar.setPosition(player.currentTimeMs())
-                }
+                if (dur > 0) playbackBar.setTime(player.currentTimeMs(), dur)
                 applyPreview(adjustments.get())
                 updatePlayPauseUi()
             }
@@ -404,10 +201,7 @@ class SwingColorAdjustmentsPanel(
     }
 
     private fun updatePlayPauseUi() {
-        val playing = player.status() == PlayerStatus.PLAYING
-        playPauseBtn.icon = if (playing) UiStyles.pauseIcon(28) else UiStyles.playIcon(28)
-        playPauseBtn.toolTipText = if (playing) "SPACE - Pause" else "SPACE - Play"
-        playPauseBtn.repaint()
+        playbackBar.setPlaying(player.status() == PlayerStatus.PLAYING)
     }
 
     private fun installKeyBindings() {
@@ -457,7 +251,7 @@ class SwingColorAdjustmentsPanel(
     fun onActivated() {
         ensurePlayerLoaded()
         player.activatePreview("color adjustments activated")
-        // Subscribe to adjustments changes to reflect external updates and live-apply preview (T6)
+        // Subscribe to adjustments changes to reflect external updates and live-apply preview
         unsubscribeStore?.invoke()
         unsubscribeStore = adjustments.subscribe { adj ->
             EventQueue.invokeLater { modelToUi(adj) }

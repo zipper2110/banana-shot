@@ -3,7 +3,7 @@ package org.litvin.ui.tabs.scoring
 import java.util.prefs.Preferences
 
 /**
- * The hint that points at the Scoring Settings button after the automatic score settings dialog closes.
+ * The hint that points at the Scoring settings button after the automatic score settings dialog closes.
  * The hint shows again after each automatic dialog until the user closes the hint. Then it never shows again.
  */
 interface ScoreSettingsHint {

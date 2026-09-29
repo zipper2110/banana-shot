@@ -76,6 +76,7 @@ fun interface VideoOverlay {
 
 /** A vector shape that a player draws over the video. The coordinates are component pixels. */
 sealed interface OverlayShape {
+    /** A rectangle. A [radius] above 0 gives it round corners. */
     data class Rect(
         val x: Double,
         val y: Double,
@@ -84,6 +85,21 @@ sealed interface OverlayShape {
         val fill: Color? = null,
         val stroke: Color? = null,
         val strokeWidth: Double = 0.0,
+        val radius: Double = 0.0,
+    ) : OverlayShape
+
+    /**
+     * One line of text. ([x], [y]) is the top-left corner of the line box.
+     * [size] is the height of the line box (ascent + descent), as libass uses it.
+     */
+    data class Text(
+        val x: Double,
+        val y: Double,
+        val text: String,
+        val size: Double,
+        val color: Color,
+        val font: String,
+        val bold: Boolean = false,
     ) : OverlayShape
 
     data class Circle(

@@ -63,6 +63,17 @@ class CropGeometryMathTest {
     }
 
     @Test
+    fun zoomBelowOneGivesTheFullFrame() {
+        val full = CropGeometryMath.overlayFromModel(1600.0, 900.0, AdjustmentsV1(zoom = 1.0f))
+        val small = CropGeometryMath.overlayFromModel(1600.0, 900.0, AdjustmentsV1(zoom = 0.3f, panX = 0.5f))
+        assertEquals(full, small)
+        assertEquals(CropRect(0.0, 0.0, 1600.0, 900.0), full)
+
+        val model = CropGeometryMath.modelFromOverlay(1600.0, 900.0, full, AdjustmentsV1())
+        assertEquals(AdjustmentsV1.MIN_ZOOM, model.zoom)
+    }
+
+    @Test
     fun rotationSnapsNearCardinalAngles() {
         assertEquals(90.0f, CropGeometryMath.snapRotation(88.5f, forceSnap = false))
         assertEquals(90.0f, CropGeometryMath.snapRotation(74.0f, forceSnap = true))

@@ -18,7 +18,7 @@ internal class CropScreen(application: ApplicationScreen) : UserFlowScreen(appli
     }
 
     fun setZoomPercent(value: Int): CropScreen = apply {
-        require(value in 10..400) { "zoom must be between 10 and 400 percent: $value" }
+        require(value in 100..250) { "zoom must be between 100 and 250 percent: $value" }
         application.eventually("zoom slider to become $value percent") {
             context.driver.setSlider("crop-zoom", value)
         }

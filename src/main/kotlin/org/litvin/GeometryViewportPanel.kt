@@ -42,7 +42,7 @@ class GeometryViewportPanel(private val content: Component) : JPanel(null /* abs
 
     fun applyGeometry(adj: AdjustmentsV1) {
         // Clamp to safe ranges per spec
-        val z = adj.zoom.coerceIn(0.1f, 4.0f)
+        val z = adj.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM)
         val px = adj.panX.coerceIn(-1.0f, 1.0f)
         val py = adj.panY.coerceIn(-1.0f, 1.0f)
         var changed = false

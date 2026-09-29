@@ -281,6 +281,11 @@ object RenderQueueManager {
                 val sourceSize = jobAdjustments
                     ?.takeIf { !org.litvin.adjustments.GeometryPlan.of(it, job.outWidth, job.outHeight).isIdentity }
                     ?.let { org.litvin.export.ExportResolutionProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable) }
+                // The brightness and shadows/highlights curve needs the black and white codes of the source. Probe them only when the curve is used.
+                val toneRange = jobAdjustments
+                    ?.takeIf { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
+                    ?.let { org.litvin.export.SourceToneRangeProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable) }
+                    ?: ToneRange.LIMITED
 
                 // Build command(s). Idle trim gives every kept segment its own seeked input, and
                 // ffmpeg allocates a decoder for each input up front, so a long match is encoded in
@@ -331,6 +336,7 @@ object RenderQueueManager {
                         adjustments = jobAdjustments,
                         sourceWidth = sourceSize?.width,
                         sourceHeight = sourceSize?.height,
+                        toneRange = toneRange,
                         outputTimeOffsetMs = outputOffsetMs,
                         chunkOutput = chunkOutput,
                         videoBitrateK = job.videoBitrateK,
@@ -558,7 +564,7 @@ object RenderQueueManager {
         val job = request.job
         logger.error(cause) { "Failed to start ffmpeg" }
         job.status = RenderStatus.FAILED
-        job.failureReason = "Failed to start FFmpeg: ${cause.javaClass.simpleName}: ${cause.message}. Run Tennis Record distribution diagnostics for details."
+        job.failureReason = "Failed to start FFmpeg: ${cause.javaClass.simpleName}: ${cause.message}. Run ${AppInfo.NAME} distribution diagnostics for details."
         job.stderrTail = null
         job.updatedAtEpochMs = System.currentTimeMillis()
         notifyObservers()

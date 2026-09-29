@@ -91,7 +91,7 @@ class FFmpegCommandBuilderFreezeTest {
 
         assertEquals("124.960", args.valueOf("-ss"))
         assertEquals("1", args.valueOf("-frames:v"))
-        assertTrue(args.valueOf("-vf").startsWith("scale=1280:-2,eq="), args.valueOf("-vf"))
+        assertTrue(args.valueOf("-vf").startsWith("scale=1280:-2,lutyuv=y='round(val+10.9500)'"), args.valueOf("-vf"))
         assertEquals("frame.png", args.last())
     }
 }

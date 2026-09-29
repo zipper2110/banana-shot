@@ -1,12 +1,12 @@
-// Tennis Record preview adjustments for mpv (vo=gpu-next, libplacebo).
+// BananaShot preview adjustments for mpv (vo=gpu-next, libplacebo).
 //
 // This shader copies the FFmpeg export filters, so the preview matches the export:
 //   geometry: rotate (clockwise, about the frame center) -> crop -> scale to frame
-//   color:    eq (brightness, contrast, saturation) -> hue (h) -> lutyuv (shadows/highlights)
+//   color:    eq (contrast, saturation) -> lutyuv (brightness, shadows/highlights, temperature)
 //
 // The MAIN texture is R'G'B' in the source color space, before linearization.
 // The shader converts each pixel back to the Y'CbCr code values of the source.
-// It then applies the vf_eq.c, vf_hue.c and vf_lut.c math to the code values, and converts
+// It then applies the vf_eq.c and vf_lut.c math to the code values, and converts
 // the result back to R'G'B'. The math does not depend on the plane layout
 // (NV12 from hardware decoding or planar YUV from software decoding).
 //
@@ -18,13 +18,6 @@
 //!MINIMUM 0
 //!MAXIMUM 1
 0
-
-//!PARAM tr_brightness
-//!DESC FFmpeg eq brightness.
-//!TYPE DYNAMIC float
-//!MINIMUM -1.0
-//!MAXIMUM 1.0
-0.0
 
 //!PARAM tr_contrast
 //!DESC FFmpeg eq contrast.
@@ -40,23 +33,39 @@
 //!MAXIMUM 3.0
 1.0
 
+//!PARAM tr_brightness_lift
+//!DESC Luma change at every tone, in 8-bit code values.
+//!TYPE DYNAMIC float
+//!MINIMUM -255.0
+//!MAXIMUM 255.0
+0.0
+
 //!PARAM tr_shadows_lift
-//!DESC Luma lift at code value 0, in 8-bit code values.
+//!DESC Luma change at black, in 8-bit code values. It falls smoothly to 0 at 35% of the black-to-white range.
 //!TYPE DYNAMIC float
 //!MINIMUM -255.0
 //!MAXIMUM 255.0
 0.0
 
 //!PARAM tr_highlights_lift
-//!DESC Luma lift at code value 255, in 8-bit code values.
+//!DESC Luma change at white, in 8-bit code values. It falls smoothly to 0 at 65% of the black-to-white range.
 //!TYPE DYNAMIC float
 //!MINIMUM -255.0
 //!MAXIMUM 255.0
 0.0
 
-//!PARAM tr_hue_deg
-//!DESC FFmpeg hue h, in degrees.
+//!PARAM tr_cb_shift
+//!DESC Cb change for the temperature, in 8-bit code values.
 //!TYPE DYNAMIC float
+//!MINIMUM -255.0
+//!MAXIMUM 255.0
+0.0
+
+//!PARAM tr_cr_shift
+//!DESC Cr change for the temperature, in 8-bit code values.
+//!TYPE DYNAMIC float
+//!MINIMUM -255.0
+//!MAXIMUM 255.0
 0.0
 
 //!PARAM tr_rotation_deg
@@ -104,7 +113,7 @@
 //!HOOK MAIN
 //!BIND HOOKED
 //!WHEN tr_active
-//!DESC tennis-record adjust (ffmpeg rotate/crop/eq/hue/lutyuv parity)
+//!DESC tennis-record adjust (ffmpeg rotate/crop/eq/lutyuv parity)
 
 vec3 rgb_to_codes(vec3 rgb, float kr, float kb) {
     float kg = 1.0 - kr - kb;
@@ -148,15 +157,28 @@ float eq_plane(float src, float contrast, float brightness) {
     return clamp(floor(src * cfix / 4096.0) + bfix, 0.0, 255.0);
 }
 
-// Shadows/highlights, as the luma lookup table that vf_lut.c builds for the export `lutyuv` filter.
-// vf_lut.c truncates the expression to an int and clips it to the 8-bit range.
+// The weight of a tone control: smoothstep of a position that is clamped to 0..1, s*s*(3-2*s).
+float tone_weight(float position) {
+    float s = clamp(position, 0.0, 1.0);
+    return s * s * (3.0 - 2.0 * s);
+}
+
+// Brightness and shadows/highlights, as the luma lookup table that vf_lut.c builds for the export `lutyuv` filter
+// (FfmpegColorAdjustmentStrategy.toneCurve). Brightness changes every tone by the same amount.
+// The shadows weight is 1 at black and falls to 0 at 35% of the black-to-white range. The highlights weight is 0
+// up to 65% of the range and rises to 1 at white. So neither control changes the mid tones.
+// The export expression rounds to the nearest code (round()), and vf_lut.c clips it to the 8-bit range.
+// floor(v + 0.5) gives the same codes as round() after the clip.
 float tone_curve(float src) {
-    if (tr_shadows_lift == 0.0 && tr_highlights_lift == 0.0)
+    if (tr_brightness_lift == 0.0 && tr_shadows_lift == 0.0 && tr_highlights_lift == 0.0)
         return src;
-    float dark = (255.0 - src) / 255.0;
-    float light = src / 255.0;
-    float v = src + tr_shadows_lift * dark * dark * dark + tr_highlights_lift * light * light * light;
-    return clamp(trunc(v), 0.0, 255.0);
+    float black = tr_full_range == 1 ? 0.0 : 16.0;
+    float span = tr_full_range == 1 ? 255.0 : 219.0;
+    float zone = 0.35 * span;
+    float v = src + tr_brightness_lift
+        + tr_shadows_lift * tone_weight((black + zone - src) / zone)
+        + tr_highlights_lift * tone_weight((src - (black + span - zone)) / zone);
+    return clamp(floor(v + 0.5), 0.0, 255.0);
 }
 
 vec4 hook() {
@@ -178,23 +200,16 @@ vec4 hook() {
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
         color = vec4(black, 1.0);
 
-    // Color. Same integer math as vf_eq.c, vf_hue.c and vf_lut.c, on 8-bit code values.
+    // Color. Same integer math as vf_eq.c and vf_lut.c, on 8-bit code values.
     vec3 codes = clamp(floor(rgb_to_codes(color.rgb, tr_kr, tr_kb) * 255.0 + 0.5), 0.0, 255.0);
 
-    codes.x = eq_plane(codes.x, tr_contrast, tr_brightness);
+    codes.x = eq_plane(codes.x, tr_contrast, 0.0);
     codes.y = eq_plane(codes.y, tr_saturation, 0.0);
     codes.z = eq_plane(codes.z, tr_saturation, 0.0);
 
-    if (tr_hue_deg != 0.0) {
-        // vf_hue.c: lrint(sin/cos * 2^16), then (c*u - s*v + 2^15 + (128 << 16)) >> 16.
-        float h = radians(tr_hue_deg);
-        float hc = round(cos(h) * 65536.0) / 65536.0;
-        float hs = round(sin(h) * 65536.0) / 65536.0;
-        vec2 uv0 = codes.yz - 128.0;
-        codes.yz = clamp(floor(vec2(hc * uv0.x - hs * uv0.y, hs * uv0.x + hc * uv0.y) + 128.5), 0.0, 255.0);
-    }
-
     codes.x = tone_curve(codes.x);
+    // Temperature (FfmpegColorAdjustmentStrategy.chromaCurve): the same shift at every chroma code, rounded and clipped.
+    codes.yz = clamp(floor(codes.yz + vec2(tr_cb_shift, tr_cr_shift) + 0.5), 0.0, 255.0);
 
     color.rgb = codes_to_rgb(codes / 255.0, tr_kr, tr_kb);
     return color;

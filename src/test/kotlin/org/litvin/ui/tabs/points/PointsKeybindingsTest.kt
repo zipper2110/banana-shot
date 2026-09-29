@@ -20,6 +20,8 @@ class PointsKeybindingsTest {
             override fun toggleFavoriteSelected() { favoriteToggles++ }
             override fun deleteSelected() {}
             override fun nudge(deltaMs: Long) {}
+            override fun speedUp() {}
+            override fun speedDown() {}
         })
 
         val action = panel.actionMap.get("points.toggleFavorite")
@@ -41,6 +43,8 @@ class PointsKeybindingsTest {
             override fun toggleFavoriteSelected() {}
             override fun deleteSelected() {}
             override fun nudge(deltaMs: Long) { nudges += deltaMs }
+            override fun speedUp() {}
+            override fun speedDown() {}
         })
 
         panel.actionMap.get("points.seekLeftBig")
@@ -49,6 +53,30 @@ class PointsKeybindingsTest {
             .actionPerformed(ActionEvent(panel, ActionEvent.ACTION_PERFORMED, "test"))
 
         assertEquals(listOf(-5_000L, 5_000L), nudges)
+        bindings.uninstall()
+    }
+
+    @Test
+    fun upAndDownChangeTheSpeed() {
+        val panel = JPanel()
+        val calls = mutableListOf<String>()
+        val bindings = Keybindings(panel, { false }, object : PointsKeyActions {
+            override fun toggle() {}
+            override fun startAtPlayhead() {}
+            override fun endAtPlayhead() {}
+            override fun toggleFavoriteSelected() {}
+            override fun deleteSelected() {}
+            override fun nudge(deltaMs: Long) {}
+            override fun speedUp() { calls += "up" }
+            override fun speedDown() { calls += "down" }
+        })
+
+        panel.actionMap.get("points.speedUp")
+            .actionPerformed(ActionEvent(panel, ActionEvent.ACTION_PERFORMED, "test"))
+        panel.actionMap.get("points.speedDown")
+            .actionPerformed(ActionEvent(panel, ActionEvent.ACTION_PERFORMED, "test"))
+
+        assertEquals(listOf("up", "down"), calls)
         bindings.uninstall()
     }
 }

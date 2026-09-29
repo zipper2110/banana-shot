@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.points
 
 import org.litvin.GeometryViewportPanel
+import org.litvin.SessionSettings
 import org.litvin.projects.ManifestIO
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
@@ -14,16 +15,17 @@ import org.litvin.points.components.PointsDispatcher
 import org.litvin.media.PlayerStatus
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
-import org.litvin.shared.util.Timecode
-import org.litvin.ui.UiStyles
+import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.tabs.points.ui.SwingTimelineComponent
 import org.litvin.ui.tabs.points.ui.EditCommentDialog
 import org.litvin.ui.tabs.points.components.Keybindings
 import org.litvin.ui.tabs.points.components.PointsKeyActions
-import org.litvin.ui.tabs.points.ui.PointsCardsView
-import org.litvin.ui.tabs.points.ui.TransportControls
+import org.litvin.ui.tabs.points.ui.EventsHeader
+import org.litvin.ui.tabs.points.ui.MarkPanel
+import org.litvin.ui.tabs.points.ui.PlaybackBar
+import org.litvin.ui.tabs.points.ui.PointsTableView
 import java.awt.*
 import java.io.File
 import java.util.concurrent.ExecutorService
@@ -33,15 +35,15 @@ import javax.swing.*
 import kotlin.math.max
 
 /**
- * Phase 3 — Swing Points editor panel.
+ * Swing Points editor panel. The layout comes from design/points-redesign/final.html:
+ * - the video with the playback bar under it on the left,
+ * - the side column on the right: the "Mark a point" panel, the counts and the points table,
+ * - the timeline with its label column along the full width at the bottom.
  *
- * Features implemented to meet Phase 3 acceptance:
- * - Custom timeline component drawing VIDEO and MARKS tracks, with playhead bound to media time
- * - Bind timeline to media time via the Swing player adapter callbacks; smooth playhead updates
- * - EDL interactions via PointsDispatcher: Start(C)/End(V) auto-create, delete, inline edit via table
- * - Keyboard mappings: Space, C, V, Delete, Left/Right and Shift+Arrows; context menu on table rows
- * - Basic autosave of EDL (edl.json) with 300 ms debounce
- *
+ * Behavior:
+ * - EDL interactions via PointsDispatcher: Start(C)/End(V) auto-create, delete, edit in a dialog
+ * - Keyboard mappings: Space, C, V, A, Delete, Left/Right, Shift+Left/Right, and Up/Down for the speed
+ * - Autosave of the EDL (edl.json) with a 300 ms debounce
  */
 class SwingPointsPanel(
     private val player: SwingMediaPlayer,
@@ -78,25 +80,23 @@ class SwingPointsPanel(
     private var projectDir: String? = null
 
     // UI controls
-    private var transport: TransportControls
+    private var playbackBar: PlaybackBar
+    private var markPanel: MarkPanel
+    private val eventsHeader = EventsHeader()
 
-    private val markedBadge = UiStyles.smallBadge("0 Marked", UiStyles.CARD_BORDER, UiStyles.LIME)
-        .apply { name = "points-point-count" }
-    private val favoriteBadge = UiStyles.smallBadge("0 Fav", UiStyles.CARD_BORDER, UiStyles.YELLOW)
-        .apply { name = "points-favorite-count" }
-    private val commentBadge = UiStyles.smallBadge("0 Comments", UiStyles.CARD_BORDER, UiStyles.FG_SECONDARY)
-        .apply { name = "points-comment-count" }
+    // The playback speed of this tab: an index into SessionSettings.speedPresets. The Scoring tab has its own speed.
+    private var speedIndex = SessionSettings.speedPresets.indexOfFirst { it == 1.0f }
 
-    // Cards view (replaces legacy inline cards list)
-    private var cardsView: PointsCardsView
+    // The points table of the side column
+    private var cardsView: PointsTableView
     private var selectedVisualIndex: Int = -1 // visual index within composed list (pending at 0 when present)
     private var reloadingProjectFromDisk: Boolean = false
 
     // Consolidated keybindings helper
     private var keybindings: Keybindings? = null
 
-    // Fixed sizing constants (right panel/cards)
-    private val RIGHT_PANEL_WIDTH = 340
+    // The width of the side column
+    private val SIDE_COLUMN_WIDTH = 360
 
     // Idle UI refresher to keep time label and timeline handle in sync when paused/seeking
     private val idleUiTimer = Timer(100) { _ ->
@@ -118,6 +118,17 @@ class SwingPointsPanel(
         }
     }
 
+    /**
+     * Selects the point with [pointId], brings its row into view and seeks to its start,
+     * for example after "Go to point" in the Scoring tab. Call it after [onActivated], because the activation reads the points again.
+     */
+    fun selectPoint(pointId: String) {
+        val index = buildEvents().indexOfFirst { it is PointEventDto && it.point.id == pointId }
+        if (index < 0) return
+        setSelectedVisualAndScroll(index)
+        jumpToSelected()
+    }
+
     fun onDeactivated() {
         saveNow()
         player.pause()
@@ -134,6 +145,7 @@ class SwingPointsPanel(
             player.load(f)
             player.pause()
             isMediaLoaded = true
+            applySpeed()
             // Re-apply current adjustments after media is loaded so the player picks them up
             try {
                 val current = adjustments.get()
@@ -218,6 +230,8 @@ class SwingPointsPanel(
         commentsProvider = { commentDispatcher.state().comments },
         onCommentSelected = { id -> EventQueue.invokeLater { scrollToEvent("comment:$id") } },
         onScrubRequested = { t -> player.scrub(t); updateTimeUI(t) },
+        selectedPointIdProvider = { (selectedEvent() as? PointEventDto)?.point?.id },
+        pendingStartProvider = { dispatcher.getPendingStart()?.toLong() },
     ).apply { name = "points-seek" }
 
     // Autosave controller (debounced, off-EDT persistence)
@@ -243,6 +257,29 @@ class SwingPointsPanel(
         })
 
 
+    /** The actions of the leaf components: the points table and the dialogs. */
+    private val panelActions: PointsActions = object : PointsActions {
+        override fun togglePlayPause() = this@SwingPointsPanel.togglePlayPause()
+        override fun seekTo(ms: Long) {
+            player.seek(ms)
+            EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
+        }
+        override fun jumpToSelected() = this@SwingPointsPanel.jumpToSelected()
+        override fun setStartAtPlayhead() = this@SwingPointsPanel.onStartAtPlayhead()
+        override fun setEndAtPlayhead() = this@SwingPointsPanel.onEndAtPlayhead()
+        override fun createPointAt(ms: Long) = dispatcher.onPointStart(ms)
+        override fun editPoint(id: String, patch: PointPatch) = this@SwingPointsPanel.editPoint(id, patch)
+        override fun deletePoint(id: String) = this@SwingPointsPanel.deletePoint(id)
+        override fun toggleFavorite(id: String) = this@SwingPointsPanel.toggleFavorite(id)
+        override fun selectByVisualIndex(index: Int) = this@SwingPointsPanel.setSelectedVisualAndScroll(index)
+        override fun saveNow() = this@SwingPointsPanel.saveNow()
+        override fun addCommentAtPlayhead() = this@SwingPointsPanel.addCommentAtPlayhead()
+        override fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) =
+            this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex)
+        override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
+        override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
+    }
+
     override fun addNotify() {
         super.addNotify()
         // Keybindings are installed in init via helper; no global KeyEventDispatcher needed anymore
@@ -257,89 +294,27 @@ class SwingPointsPanel(
 
     init {
         isOpaque = true
-        background = Color(0x16, 0x16, 0x16)
-        border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        background = UiKit.PANEL
 
-        // Bottom area: transport/mark controls above the timeline
-        // New TransportControls component: encapsulates Start/End/Jump + TransportBar
-        val transportActions = object : PointsActions {
-            override fun togglePlayPause() {
-                this@SwingPointsPanel.togglePlayPause()
-            }
+        playbackBar = PlaybackBar(
+            onTogglePlay = { togglePlayPause() },
+            onNudge = { delta -> nudge(delta) },
+            onAddComment = { addCommentAtPlayhead() },
+            onSpeedIndex = { index -> setSpeedIndex(index); player.component.requestFocusInWindow() },
+        )
+        playbackBar.speed.setSpeedIndex(speedIndex)
+        markPanel = MarkPanel(onStart = { onStartAtPlayhead() }, onEnd = { onEndAtPlayhead() })
 
-            override fun seekTo(ms: Long) {
-                player.seek(ms); EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
-            }
-
-            override fun jumpToSelected() {
-                this@SwingPointsPanel.jumpToSelected()
-            }
-
-            override fun setStartAtPlayhead() {
-                this@SwingPointsPanel.onStartAtPlayhead()
-            }
-
-            override fun setEndAtPlayhead() {
-                this@SwingPointsPanel.onEndAtPlayhead()
-            }
-
-            override fun createPointAt(ms: Long) {
-                dispatcher.onPointStart(ms)
-            }
-
-            override fun editPoint(id: String, patch: PointPatch) {
-                this@SwingPointsPanel.editPoint(id, patch)
-            }
-
-            override fun deletePoint(id: String) {
-                this@SwingPointsPanel.deletePoint(id)
-            }
-
-            override fun toggleFavorite(id: String) {
-                this@SwingPointsPanel.toggleFavorite(id)
-            }
-
-            override fun addCommentAtPlayhead() = this@SwingPointsPanel.addCommentAtPlayhead()
-            override fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) =
-                this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex)
-            override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
-            override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
-
-            override fun selectByVisualIndex(index: Int) {
-                this@SwingPointsPanel.setSelectedVisualAndScroll(index)
-            }
-
-            override fun saveNow() {
-                this@SwingPointsPanel.saveNow()
-            }
-        }
-        transport = TransportControls(
-            actions = transportActions, onNudge = { delta ->
-                val newTime = max(0L, player.currentTimeMs() + delta)
-                player.seek(newTime)
-                EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
-            })
-
-        val bottom = JPanel(BorderLayout())
-        bottom.isOpaque = false
-        bottom.add(transport, BorderLayout.NORTH)
-
-        // Center: video and points list side-by-side
-        val center = JSplitPane(JSplitPane.HORIZONTAL_SPLIT)
-        center.isOneTouchExpandable = false
-        center.setContinuousLayout(true)
-        center.isEnabled = false
-        center.dividerSize = 0
-        center.resizeWeight = 1.0
+        // Left column: the video with the playback bar under it
         val leftColumn = JPanel(BorderLayout())
-        leftColumn.isOpaque = false
+        leftColumn.isOpaque = true
+        leftColumn.background = Color.BLACK
         // Wrap the video component with the geometry viewport for live zoom/pan (Task 5.4)
         geometryViewport = GeometryViewportPanel(player.component)
         geometryViewport.name = "points-video"
         leftColumn.add(geometryViewport, BorderLayout.CENTER)
-        leftColumn.add(bottom, BorderLayout.SOUTH)
+        leftColumn.add(playbackBar, BorderLayout.SOUTH)
         leftColumn.minimumSize = Dimension(320, 0)
-        center.leftComponent = leftColumn
         // Subscribe to central adjustments store to live-apply color and geometry
         unsubscribeAdjustments = adjustments.subscribe { adj ->
             player.applyPreviewAdjustments(adj)
@@ -350,121 +325,10 @@ class SwingPointsPanel(
         player.applyPreviewAdjustments(currentAdjustments)
         geometryViewport.refreshGeometry()
 
-        val rightPanel = JPanel(BorderLayout())
-        rightPanel.minimumSize = Dimension(RIGHT_PANEL_WIDTH, 0)
-        rightPanel.preferredSize = Dimension(RIGHT_PANEL_WIDTH, 0)
-        rightPanel.maximumSize = Dimension(RIGHT_PANEL_WIDTH, Int.MAX_VALUE)
-        rightPanel.isOpaque = true
-        rightPanel.background = UiStyles.DARK_BG
-        // Header: title on the first line, count badge on the second
-        val headerTitleRow = JPanel(BorderLayout())
-        headerTitleRow.isOpaque = false
-        headerTitleRow.add(JLabel("Points & events").apply {
-            foreground = UiStyles.FG_PRIMARY
-            font = font.deriveFont(font.style, font.size2D + 3.0f)
-        }, BorderLayout.WEST)
-
-        val headerBadgeRow = JPanel()
-        headerBadgeRow.layout = BoxLayout(headerBadgeRow, BoxLayout.X_AXIS)
-        headerBadgeRow.isOpaque = false
-        headerBadgeRow.border = BorderFactory.createEmptyBorder(6, 0, 0, 0)
-        listOf(markedBadge, favoriteBadge, commentBadge).forEachIndexed { index, badge ->
-            if (index > 0) headerBadgeRow.add(Box.createHorizontalStrut(6))
-            badge.alignmentY = Component.CENTER_ALIGNMENT
-            headerBadgeRow.add(badge)
-        }
-        headerBadgeRow.add(Box.createHorizontalGlue())
-
-        val header = JPanel(BorderLayout())
-        header.isOpaque = false
-        header.border = BorderFactory.createEmptyBorder(
-            PointsCardsView.CARD_H_MARGIN,
-            PointsCardsView.CARD_H_MARGIN,
-            PointsCardsView.CARD_H_MARGIN,
-            PointsCardsView.CARD_H_MARGIN,
-        )
-        header.add(headerTitleRow, BorderLayout.NORTH)
-        header.add(headerBadgeRow, BorderLayout.CENTER)
-        rightPanel.add(header, BorderLayout.NORTH)
-
-        // Compose right panel content using extracted components
-        val cardsActions = object : PointsActions {
-            override fun togglePlayPause() {
-                this@SwingPointsPanel.togglePlayPause()
-            }
-
-            override fun seekTo(ms: Long) {
-                player.seek(ms); EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
-            }
-
-            override fun jumpToSelected() {
-                this@SwingPointsPanel.jumpToSelected()
-            }
-
-            override fun setStartAtPlayhead() {
-                onStartAtPlayhead()
-            }
-
-            override fun setEndAtPlayhead() {
-                onEndAtPlayhead()
-            }
-
-            override fun createPointAt(ms: Long) {
-                dispatcher.onPointStart(ms)
-            }
-
-            override fun editPoint(id: String, patch: PointPatch) {
-                this@SwingPointsPanel.editPoint(id, patch)
-            }
-
-            override fun deletePoint(id: String) {
-                this@SwingPointsPanel.deletePoint(id)
-            }
-
-            override fun toggleFavorite(id: String) {
-                this@SwingPointsPanel.toggleFavorite(id)
-            }
-
-            override fun addCommentAtPlayhead() = this@SwingPointsPanel.addCommentAtPlayhead()
-            override fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) =
-                this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex)
-            override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
-            override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
-
-            override fun selectByVisualIndex(index: Int) {
-                setSelectedVisualAndScroll(index)
-            }
-
-            override fun saveNow() {
-                this@SwingPointsPanel.saveNow()
-            }
-        }
-        cardsView = PointsCardsView(cardsActions)
-        // Place cards view directly without a table/tab
-        rightPanel.add(cardsView, BorderLayout.CENTER)
+        cardsView = PointsTableView(panelActions)
+        add(buildMainArea(leftColumn, buildSideColumn()), BorderLayout.CENTER)
         // Push initial state to views
         pushCardsState()
-        center.rightComponent = rightPanel
-        center.resizeWeight = 1.0
-        // Add bottom controls and center split
-        add(center, BorderLayout.CENTER)
-        // Keep right panel fixed width on first show and on resize
-        val fixDivider: () -> Unit = {
-            val sp = (this.layout as BorderLayout).getLayoutComponent(BorderLayout.CENTER)
-            if (sp is JSplitPane) {
-                val total = sp.size.width
-                if (total > 0) {
-                    sp.setDividerLocation((total - RIGHT_PANEL_WIDTH).coerceAtLeast(0))
-                }
-            }
-        }
-
-        SwingUtilities.invokeLater { fixDivider() }
-        this.addComponentListener(object : java.awt.event.ComponentAdapter() {
-            override fun componentResized(e: java.awt.event.ComponentEvent) {
-                fixDivider()
-            }
-        })
 
         // Timeline spans full width at the bottom
         add(timeline, BorderLayout.SOUTH)
@@ -502,18 +366,62 @@ class SwingPointsPanel(
             }
 
             override fun nudge(deltaMs: Long) {
-                val newTime = max(0L, player.currentTimeMs() + deltaMs)
-                player.seek(newTime)
-                EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
-
+                playbackBar.flashSeek(deltaMs)
+                this@SwingPointsPanel.nudge(deltaMs)
             }
 
             override fun toggleFavoriteSelected() {
                 toggleFavoriteSelectedPoint()
             }
+
+            // Presets go from high to low, so Up goes to a lower index.
+            override fun speedUp() {
+                if (isPlayerAreaFocus()) changeSpeedBy(-1)
+            }
+
+            override fun speedDown() {
+                if (isPlayerAreaFocus()) changeSpeedBy(1)
+            }
         })
 
         rebuildCards()
+    }
+
+    /** The video column on the left and the side column on the right, with a fixed width. */
+    private fun buildMainArea(leftColumn: JComponent, side: JComponent): JComponent = JPanel(BorderLayout()).apply {
+        isOpaque = false
+        add(leftColumn, BorderLayout.CENTER)
+        add(side, BorderLayout.EAST)
+    }
+
+    /** The side column: the mark panel, the "Points & events" header, and the points table. */
+    private fun buildSideColumn(): JComponent {
+        val top = JPanel().apply {
+            isOpaque = false
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                border = BorderFactory.createEmptyBorder(12, 12, 0, 12)
+                add(markPanel, BorderLayout.CENTER)
+            })
+            add(eventsHeader)
+        }
+        return JPanel(BorderLayout()).apply {
+            name = "points-side-column"
+            isOpaque = true
+            background = UiKit.BG
+            border = BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE)
+            preferredSize = Dimension(SIDE_COLUMN_WIDTH, 0)
+            minimumSize = Dimension(SIDE_COLUMN_WIDTH, 0)
+            add(top, BorderLayout.NORTH)
+            add(cardsView, BorderLayout.CENTER)
+        }
+    }
+
+    private fun nudge(deltaMs: Long) {
+        val newTime = max(0L, player.currentTimeMs() + deltaMs)
+        player.seek(newTime)
+        EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
     }
 
     fun setProjectManifest(path: String) {
@@ -555,10 +463,12 @@ class SwingPointsPanel(
     }
 
     private fun updateCountBadge(points: List<PointV1>) {
-        val comments = commentDispatcher.state().comments.size
-        markedBadge.text = "${points.size} Marked"
-        favoriteBadge.text = "${points.count { it.favorite }} Fav"
-        commentBadge.text = "$comments Comments"
+        eventsHeader.setCounts(
+            marked = points.size,
+            favorites = points.count { it.favorite },
+            comments = commentDispatcher.state().comments.size,
+        )
+        markPanel.setState(dispatcher.getPendingStart()?.toLong(), player.currentTimeMs())
     }
 
     private fun refreshPointsFromProject() {
@@ -588,6 +498,7 @@ class SwingPointsPanel(
 
 
     private fun setSelectedVisual(visualIndex: Int) {
+        if (selectedVisualIndex != visualIndex) timeline.repaint()
         selectedVisualIndex = visualIndex
         cardsView.updateSelection(visualIndex)
     }
@@ -647,27 +558,8 @@ class SwingPointsPanel(
             parent = this,
             initialStartMs = player.currentTimeMs(),
             defaultColor = commentDispatcher.state().defaults.colorHex,
-            actions = commentActions,
+            actions = panelActions,
         )
-    }
-
-    private val commentActions: PointsActions = object : PointsActions {
-        override fun togglePlayPause() = this@SwingPointsPanel.togglePlayPause()
-        override fun seekTo(ms: Long) = player.seek(ms)
-        override fun jumpToSelected() = this@SwingPointsPanel.jumpToSelected()
-        override fun setStartAtPlayhead() = this@SwingPointsPanel.onStartAtPlayhead()
-        override fun setEndAtPlayhead() = this@SwingPointsPanel.onEndAtPlayhead()
-        override fun createPointAt(ms: Long) = dispatcher.onPointStart(ms)
-        override fun editPoint(id: String, patch: PointPatch) = this@SwingPointsPanel.editPoint(id, patch)
-        override fun deletePoint(id: String) = this@SwingPointsPanel.deletePoint(id)
-        override fun toggleFavorite(id: String) = this@SwingPointsPanel.toggleFavorite(id)
-        override fun selectByVisualIndex(index: Int) = this@SwingPointsPanel.setSelectedVisualAndScroll(index)
-        override fun saveNow() = this@SwingPointsPanel.saveNow()
-        override fun addCommentAtPlayhead() = this@SwingPointsPanel.addCommentAtPlayhead()
-        override fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) =
-            this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex)
-        override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
-        override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
     }
 
     private fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) {
@@ -769,16 +661,31 @@ class SwingPointsPanel(
         }
     }
 
+    private fun setSpeedIndex(index: Int) {
+        speedIndex = SessionSettings.clampIndex(index)
+        applySpeed()
+    }
+
+    private fun changeSpeedBy(delta: Int) {
+        val next = SessionSettings.clampIndex(speedIndex + delta)
+        if (next != speedIndex) setSpeedIndex(next)
+    }
+
+    /** Gives the speed of this tab to the player and to the speed list. */
+    private fun applySpeed() {
+        player.setRate(SessionSettings.toRate(speedIndex))
+        playbackBar.speed.setSpeedIndex(speedIndex)
+    }
+
     private fun updatePlayPauseButton() {
-
-        val playing = player.status() == PlayerStatus.PLAYING
-        transport.setPlaying(playing)
-
+        playbackBar.setPlaying(player.status() == PlayerStatus.PLAYING)
     }
 
     private fun updateTimeUI(ms: Long) {
         // During a drag, keyframe seeks report times near the drag position. Show the drag position.
-        transport.setTimeText(Timecode.format(max(0, timeline.scrubTimeMs ?: ms)))
+        val shown = max(0, timeline.scrubTimeMs ?: ms)
+        playbackBar.setTime(shown, player.totalDurationMs())
+        markPanel.setState(dispatcher.getPendingStart()?.toLong(), shown)
     }
 
     private fun refreshUiAtCurrentTime() {
@@ -844,6 +751,13 @@ class SwingPointsPanel(
     private fun isTextEditingFocus(): Boolean {
         val fo = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner
         return (fo is javax.swing.text.JTextComponent) && fo.isEnabled && fo.isVisible && fo.isEditable
+    }
+
+    /** Up and Down change the speed only in the video area, as in the Scoring tab. */
+    private fun isPlayerAreaFocus(): Boolean {
+        val fo = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner ?: return false
+        val comp = player.component
+        return fo === comp || SwingUtilities.isDescendingFrom(fo, comp)
     }
 
     // Expose manual save for File -> Save All integration

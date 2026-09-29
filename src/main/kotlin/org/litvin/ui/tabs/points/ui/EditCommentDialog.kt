@@ -1,59 +1,61 @@
 package org.litvin.ui.tabs.points.ui
 
 import org.litvin.shared.util.Timecode
-import org.litvin.ui.UiStyles
+import org.litvin.ui.commons.formatSeconds
 import org.litvin.ui.tabs.points.CommentDto
 import org.litvin.ui.tabs.points.CommentPatch
 import org.litvin.ui.tabs.points.PointsActions
-import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
-import java.awt.Dialog
+import java.awt.Dimension
 import java.awt.FlowLayout
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
-import java.awt.Insets
-import java.awt.Window
-import java.awt.event.ActionEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.math.BigDecimal
 import java.math.RoundingMode
-import javax.swing.AbstractAction
-import javax.swing.BorderFactory
-import javax.swing.JButton
 import javax.swing.JColorChooser
-import javax.swing.JComponent
 import javax.swing.JDialog
-import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.JScrollPane
 import javax.swing.JTextArea
 import javax.swing.JTextField
-import javax.swing.KeyStroke
-import javax.swing.SwingUtilities
 
 /** Modal editor for creating or changing a source-time-pinned point comment. */
 object EditCommentDialog {
     /** How long a new comment stays on screen until the user changes it. */
     private const val DEFAULT_DURATION_MS = 5_000L
 
+    /** The height of the text box, about five lines. */
+    private const val TEXT_HEIGHT = 96
+
     fun showCreate(parent: Component, initialStartMs: Long, defaultColor: String, actions: PointsActions) {
-        show(parent, "Add comment", initialStartMs, DEFAULT_DURATION_MS, "", defaultColor) { startMs, durationMs, text, color ->
-            actions.createComment(startMs, durationMs, text, color)
-        }
+        buildCreate(parent, initialStartMs, defaultColor, actions).showOver(parent)
     }
 
     fun showEdit(parent: Component, comment: CommentDto, actions: PointsActions) {
-        show(parent, "Edit comment", comment.startMs, comment.durationMs, comment.text, comment.colorHex) { startMs, durationMs, text, color ->
+        buildEdit(parent, comment, actions).showOver(parent)
+    }
+
+    /** Builds the packed "Add comment" dialog without showing it. */
+    internal fun buildCreate(parent: Component, initialStartMs: Long, defaultColor: String, actions: PointsActions): JDialog =
+        build(parent, "Add comment", initialStartMs, DEFAULT_DURATION_MS, "", defaultColor) { startMs, durationMs, text, color ->
+            actions.createComment(startMs, durationMs, text, color)
+        }
+
+    /** Builds the packed "Edit comment" dialog without showing it. */
+    internal fun buildEdit(parent: Component, comment: CommentDto, actions: PointsActions): JDialog =
+        build(parent, "Edit comment #${comment.id}", comment.startMs, comment.durationMs, comment.text, comment.colorHex) { startMs, durationMs, text, color ->
             actions.editComment(
                 comment.id,
                 CommentPatch(startMs = startMs, durationMs = durationMs, text = text, colorHex = color),
             )
         }
+
+    private fun JDialog.showOver(parent: Component) {
+        setLocationRelativeTo(parent)
+        isVisible = true
     }
 
-    private fun show(
+    private fun build(
         parent: Component,
         title: String,
         initialStartMs: Long,
@@ -61,53 +63,38 @@ object EditCommentDialog {
         initialText: String,
         initialColor: String,
         save: (Long, Long, String, String) -> Unit,
-    ) {
-        val owner = SwingUtilities.getWindowAncestor(parent)
-        val dialog = JDialog(owner as? Window, title, Dialog.ModalityType.APPLICATION_MODAL)
-        val text = JTextArea(initialText, 5, 30).apply {
+    ): JDialog {
+        val dialog = PointsDialogKit.dialog(parent, title)
+        val text = JTextArea(initialText).apply {
             name = "points-comment-text"
             lineWrap = true
             wrapStyleWord = true
         }
-        val start = JTextField(formatTimestamp(initialStartMs), 14).apply { name = "points-comment-start" }
-        val duration = JTextField(formatSeconds(initialDurationMs), 8).apply { name = "points-comment-duration" }
+        val start = JTextField(formatTimestamp(initialStartMs)).apply {
+            name = "points-comment-start"
+            toolTipText = "hh:mm:ss.mmm, mm:ss.mmm, or seconds"
+        }
+        val duration = JTextField(formatSeconds(initialDurationMs)).apply {
+            name = "points-comment-duration"
+            toolTipText = "How long the comment stays on screen, in seconds"
+        }
         var colorHex = initialColor
-        val color = JButton("Change…").apply {
+        val color = PointsButton("Change…").apply {
             name = "points-comment-color"
-            icon = UiStyles.colorSwatchIcon(colorFor(colorHex))
+            swatch = colorFor(colorHex)
             toolTipText = colorHex
         }
-        val error = JLabel(" ").apply { foreground = Color(0xFF, 0x6B, 0x6B) }
-        val saveButton = JButton("Save").apply { name = "points-comment-save" }
-        val cancelButton = JButton("Cancel")
+        val error = PointsDialogKit.errorLine()
+        val saveButton = PointsButton("Save", kind = PointsButton.Kind.LIME).apply { name = "points-comment-save" }
+        val cancelButton = PointsButton("Cancel")
 
         color.addActionListener {
             JColorChooser.showDialog(dialog, "Choose comment color", colorFor(colorHex))?.let { chosen ->
                 colorHex = "#%06X".format(chosen.rgb and 0xFFFFFF)
-                color.icon = UiStyles.colorSwatchIcon(chosen)
+                color.swatch = chosen
                 color.toolTipText = colorHex
             }
         }
-
-        val form = JPanel(GridBagLayout())
-        val constraints = GridBagConstraints().apply {
-            insets = Insets(5, 5, 5, 5)
-            anchor = GridBagConstraints.WEST
-        }
-        fun addRow(row: Int, label: String, component: Component, fill: Int = GridBagConstraints.NONE) {
-            constraints.gridx = 0; constraints.gridy = row; constraints.weightx = 0.0; constraints.fill = GridBagConstraints.NONE
-            form.add(JLabel(label), constraints)
-            constraints.gridx = 1; constraints.weightx = 1.0; constraints.fill = fill
-            form.add(component, constraints)
-        }
-        start.toolTipText = "hh:mm:ss.mmm, mm:ss.mmm, or seconds"
-        duration.toolTipText = "How long the comment stays on screen, in seconds"
-
-        addRow(0, "Text:", JScrollPane(text), GridBagConstraints.BOTH)
-        addRow(1, "Start:", start)
-        addRow(2, "Duration (seconds):", duration)
-        addRow(3, "Text color:", color)
-        addRow(4, "", error, GridBagConstraints.HORIZONTAL)
 
         val doSave = {
             val problem = firstProblem(start.text, duration.text, text.text)
@@ -126,22 +113,28 @@ object EditCommentDialog {
         saveButton.addActionListener { doSave() }
         cancelButton.addActionListener { dialog.dispose() }
 
-        dialog.contentPane = JPanel(BorderLayout(10, 10)).apply {
-            border = BorderFactory.createEmptyBorder(12, 12, 12, 12)
-            add(form, BorderLayout.CENTER)
-            add(JPanel(FlowLayout(FlowLayout.RIGHT)).apply {
-                add(cancelButton)
-                add(saveButton)
-            }, BorderLayout.SOUTH)
+        val textBox = PointsDialogKit.inputBox(text, boxHeight = null, padding = 8).apply {
+            preferredSize = Dimension(preferredSize.width, TEXT_HEIGHT)
         }
-        dialog.defaultCloseOperation = JDialog.DISPOSE_ON_CLOSE
+        val colorRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+            isOpaque = false
+            add(color)
+        }
+        dialog.contentPane = PointsDialogKit.content(
+            PointsDialogKit.head(title),
+            PointsDialogKit.form(
+                PointsDialogKit.field("Text", textBox),
+                PointsDialogKit.pair(
+                    PointsDialogKit.field("Start", PointsDialogKit.inputBox(start)),
+                    PointsDialogKit.field("Duration", PointsDialogKit.inputBox(duration), note = "seconds"),
+                ),
+                PointsDialogKit.field("Text color", colorRow),
+                error,
+            ),
+            PointsDialogKit.footer(left = emptyList(), right = listOf(cancelButton, saveButton)),
+        )
         // Enter saves from the single-line fields; the text area keeps Enter for new lines.
         dialog.rootPane.defaultButton = saveButton
-        dialog.rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
-            .put(KeyStroke.getKeyStroke("ESCAPE"), "points-comment-cancel")
-        dialog.rootPane.actionMap.put("points-comment-cancel", object : AbstractAction() {
-            override fun actionPerformed(event: ActionEvent?) = dialog.dispose()
-        })
         dialog.addWindowListener(object : WindowAdapter() {
             override fun windowOpened(event: WindowEvent?) {
                 text.requestFocusInWindow()
@@ -149,8 +142,8 @@ object EditCommentDialog {
             }
         })
         dialog.pack()
-        dialog.setLocationRelativeTo(parent)
-        dialog.isVisible = true
+        dialog.isResizable = false
+        return dialog
     }
 
     /** Returns a message for the first invalid field, or null when every field is usable. */

@@ -1,20 +1,13 @@
 package org.litvin.ui.tabs.projects.components
 
+import org.kordamp.ikonli.material2.Material2AL
 import org.litvin.projects.NewProjectRules
-import org.litvin.ui.UiStyles
 import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.Component
 import java.awt.Dialog
-import java.awt.FlowLayout
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
-import java.awt.Insets
 import java.awt.Window
 import java.awt.event.ActionEvent
 import javax.swing.AbstractAction
-import javax.swing.BorderFactory
-import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JLabel
@@ -55,8 +48,6 @@ class NewProjectDialog private constructor(
 ) : JDialog(owner, "New project", Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : NewProjectEditor {
-        private val ERROR_FG = Color(0xFF, 0x7A, 0x7A)
-
         override fun edit(
             parent: Component,
             initial: NewProjectRequest,
@@ -75,38 +66,34 @@ class NewProjectDialog private constructor(
     private var suggestedName = initial.name
 
     private val nameField = JTextField(initial.name, 36).apply { name = "new-project-name" }
-    private val nameError = errorLabel("new-project-name-error")
+    private val nameError = ProjectsDialogKit.errorLine("new-project-name-error")
     private val videoField = JTextField(initial.sourceVideoPath, 36).apply { name = "new-project-video" }
-    private val videoError = errorLabel("new-project-video-error")
-    private val browseButton = JButton("Browse…").apply {
+    private val videoError = ProjectsDialogKit.errorLine("new-project-video-error")
+    private val browseButton = ProjectsButton("Browse…", buttonHeight = 34).apply {
         name = "new-project-browse"
-        isFocusPainted = false
         toolTipText = "Select a different match video"
         addActionListener { browse() }
     }
-    private val createButton = UiStyles.primarySmallButton("Create project") { create() }.apply {
+    private val createButton = ProjectsButton("Create project", Material2AL.ADD, ProjectsButton.Kind.LIME, 30, 12.5f).apply {
         name = "new-project-create"
+        addActionListener { create() }
     }
 
     init {
         name = "new-project-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
-        val cancelButton = JButton("Cancel").apply {
+        val cancelButton = ProjectsButton("Cancel").apply {
             name = "new-project-cancel"
             addActionListener { dispose() }
         }
-        val buttons = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
-            isOpaque = false
-            add(cancelButton)
-            add(createButton)
-        }
 
-        contentPane = JPanel(BorderLayout(0, 16)).apply {
-            border = BorderFactory.createEmptyBorder(16, 20, 16, 20)
-            add(form(), BorderLayout.CENTER)
-            add(buttons, BorderLayout.SOUTH)
-        }
+        contentPane = ProjectsDialogKit.content(
+            ProjectsDialogKit.WIDE,
+            ProjectsDialogKit.head("New project"),
+            form(),
+            ProjectsDialogKit.footer(cancelButton, createButton),
+        )
         rootPane.defaultButton = createButton
         rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "new-project-cancel")
         rootPane.actionMap.put("new-project-cancel", object : AbstractAction() {
@@ -127,31 +114,18 @@ class NewProjectDialog private constructor(
         nameField.selectAll()
     }
 
-    private fun form(): JPanel {
-        val form = JPanel(GridBagLayout()).apply { isOpaque = false }
-        val c = GridBagConstraints().apply { anchor = GridBagConstraints.WEST }
-        var row = 0
-        fun addRow(label: String, component: JComponent, error: JLabel) {
-            c.gridx = 0; c.gridy = row; c.weightx = 0.0; c.fill = GridBagConstraints.NONE
-            c.insets = Insets(4, 0, 0, 14)
-            form.add(JLabel(label).apply { foreground = UiStyles.FG_SECONDARY }, c)
-            c.gridx = 1; c.weightx = 1.0; c.fill = GridBagConstraints.HORIZONTAL
-            c.insets = Insets(4, 0, 0, 0)
-            form.add(component, c)
-            row++
-            c.gridy = row
-            c.insets = Insets(2, 0, 6, 0)
-            form.add(error, c)
-            row++
-        }
-
-        addRow("Project name", nameField, nameError)
-        addRow("Match video", JPanel(BorderLayout(8, 0)).apply {
+    private fun form(): JComponent {
+        val videoRow = JPanel(BorderLayout(8, 0)).apply {
             isOpaque = false
-            add(videoField, BorderLayout.CENTER)
+            add(ProjectsDialogKit.inputBox(videoField) { videoError.text.isNotBlank() }, BorderLayout.CENTER)
             add(browseButton, BorderLayout.EAST)
-        }, videoError)
-        return form
+        }
+        return ProjectsDialogKit.form(
+            ProjectsDialogKit.field("Project name", ProjectsDialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
+            nameError,
+            ProjectsDialogKit.field("Match video", videoRow),
+            videoError,
+        )
     }
 
     /** Shows the error messages and enables "Create project" only for correct values. Returns true for correct values. */
@@ -162,7 +136,8 @@ class NewProjectDialog private constructor(
         showError(videoError, videoMessage)
         val valid = nameMessage == null && videoMessage == null
         createButton.isEnabled = valid
-        createButton.background = if (valid) UiStyles.GREEN else UiStyles.FG_DISABLED
+        // The input boxes paint a red border for an error.
+        contentPane?.repaint()
         return valid
     }
 
@@ -185,11 +160,5 @@ class NewProjectDialog private constructor(
     private fun showError(label: JLabel, message: String?) {
         // A space keeps the height of the row, so the dialog does not change size.
         label.text = message ?: " "
-    }
-
-    private fun errorLabel(componentName: String) = JLabel(" ").apply {
-        name = componentName
-        foreground = ERROR_FG
-        font = font.deriveFont(font.size2D - 1f)
     }
 }

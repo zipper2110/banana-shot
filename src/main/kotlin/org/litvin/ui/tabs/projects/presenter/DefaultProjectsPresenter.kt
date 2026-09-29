@@ -252,6 +252,8 @@ class DefaultProjectsPresenter(
             scoredPoints = "$scoredCount/$pointCount",
             favoritePoints = favoriteCount.toString(),
             videoMissingMessage = if (videoMissing) "The video is not on the disk anymore." else null,
+            scoredCount = scoredCount,
+            pointCount = pointCount,
         )
     }
 

@@ -1,5 +1,6 @@
 package org.litvin.ui.help
 
+import org.litvin.AppInfo
 import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.applyDarkScrollbar
 import java.awt.BorderLayout
@@ -19,7 +20,7 @@ import javax.swing.ListSelectionModel
 import javax.swing.WindowConstants
 import javax.swing.border.EmptyBorder
 
-class HelpDialog(owner: Window?) : JDialog(owner, "Tennis Record Help", ModalityType.MODELESS) {
+class HelpDialog(owner: Window?) : JDialog(owner, "${AppInfo.NAME} Help", ModalityType.MODELESS) {
     private val helpPanel = HelpPanel()
 
     init {

@@ -1,7 +1,8 @@
 package org.litvin
 
 object AppInfo {
-    const val NAME = "Tennis Record"
+    const val NAME = "BananaShot"
+    const val TAGLINE = "Tennis Video Editor"
 
     val version: String by lazy {
         System.getProperty("tennis.record.version")?.takeIf { it.isNotBlank() }

@@ -88,7 +88,7 @@ class SwingApplicationFactoryTest {
             GuiActionRunner.execute {
                 checkNotNull(findComponent<AbstractButton>(opened.frame) { it.name == "nav-projects" }).doClick()
             }
-            assertEquals("Tennis Record — Projects — source", opened.frame.title)
+            assertEquals("BananaShot — Projects — source", opened.frame.title)
             assertTrue(checkNotNull(findComponent(opened.frame) { it.name == "projects-import-match" }).isShowing)
             assertEquals(
                 projectFixture.project.name,
@@ -118,14 +118,14 @@ class SwingApplicationFactoryTest {
             }
 
             assertEquals(HelpPage.PROJECTS, clickHelp().selectedPage)
-            assertEquals("Tennis Record — Projects", opened.frame.title)
+            assertEquals("BananaShot — Projects", opened.frame.title)
 
             GuiActionRunner.execute {
                 checkNotNull(findComponent<AbstractButton>(opened.frame) { it.name == "projects-open-${projectFixture.project.id}" })
                     .doClick()
             }
             assertEquals(HelpPage.POINTS, clickHelp().selectedPage)
-            assertEquals("Tennis Record — Points — source", opened.frame.title)
+            assertEquals("BananaShot — Points — source", opened.frame.title)
         } finally {
             handle?.close()
             Window.getWindows().filterNot(windowsBefore::contains).forEach(Window::dispose)
@@ -207,7 +207,7 @@ class SwingApplicationFactoryTest {
 
         assertFalse(handle.frame.isVisible)
         assertEquals(JFrame.DISPOSE_ON_CLOSE, handle.frame.defaultCloseOperation)
-        assertEquals("Tennis Record — Projects", handle.frame.title)
+        assertEquals("BananaShot — Projects", handle.frame.title)
         assertNotNull(findComponent<SwingProjectsPanel>(handle.frame))
 
         handle.close()

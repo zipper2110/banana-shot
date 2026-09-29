@@ -44,62 +44,24 @@ class FFmpegCommandBuilderAdjustmentsScaleTest {
         }.toMap()
     }
 
-    private fun parseHueMap(vf: String): Map<String, String>? {
-        val hueStart = vf.indexOf("hue=")
-        if (hueStart < 0) return null
-        val after = vf.substring(hueStart + 4)
-        val endIdx = after.indexOfAny(charArrayOf(',', ';'))
-        val hueBody = if (endIdx >= 0) after.substring(0, endIdx) else after
-        val parts = hueBody.split(":")
-        return parts.mapNotNull {
-            val kv = it.split("=")
-            if (kv.size == 2) kv[0] to kv[1] else null
-        }.toMap()
-    }
-
     @Test
-    fun identity_model_values_emit_no_eq_filter() {
-        // Treat identity as brightness=1.0, contrast=1.0, saturation=1.0, wb=0/0 per UI mapping
+    fun identity_model_values_emit_no_color_filter() {
         val vf = buildVf(AdjustmentsV1(brightness = 1.0f, contrast = 1.0f, saturation = 1.0f, whiteBalance = WhiteBalanceV1(0f)))
-        // We accept either no eq at all or eq with identity values — prefer no extra filter when possible
-        if (vf.contains("eq=")) {
-            val eq = parseEqMap(vf)!!
-            val b = eq["brightness"]?.toDoubleOrNull() ?: 999.0
-            val c = eq["contrast"]?.toDoubleOrNull() ?: -1.0
-            val s = eq["saturation"]?.toDoubleOrNull() ?: -1.0
-            assertTrue(kotlin.math.abs(b) < 1e-3, "brightness should be ~0.0, was $b")
-            assertTrue(kotlin.math.abs(c - 1.0) < 1e-3, "contrast should be ~1.0, was $c")
-            assertTrue(kotlin.math.abs(s - 1.0) < 1e-3, "saturation should be ~1.0, was $s")
-        }
+
+        assertNull(parseEqMap(vf), "Identity values must not add an eq filter, vf=$vf")
+        assertFalse(vf.contains("lutyuv"), "Identity values must not add a lutyuv filter, vf=$vf")
     }
 
     @Test
-    fun brightness_model_1_0_maps_to_eq_0_0() {
-        val vf = buildVf(AdjustmentsV1(brightness = 1.0f, contrast = 1.0f, saturation = 1.0f, whiteBalance = WhiteBalanceV1(0f)))
-        val eq = parseEqMap(vf)
-        // If all identity, eq may be omitted entirely. Accept both: omitted or present with 0/1 values.
-        if (eq == null) return
-        val b = eq["brightness"]?.toDoubleOrNull()
-        val c = eq["contrast"]?.toDoubleOrNull()
-        val s = eq["saturation"]?.toDoubleOrNull()
-        assertTrue(b != null && kotlin.math.abs(b!!) < 1e-3, "brightness should be ~0.0, was $b")
-        assertTrue(c != null && kotlin.math.abs(c!! - 1.0) < 1e-3, "contrast should be ~1.0, was $c")
-        assertTrue(s != null && kotlin.math.abs(s!! - 1.0) < 1e-3, "saturation should be ~1.0, was $s")
-    }
-
-    @Test
-    fun brightness_extremes_span_the_whole_eq_brightness_range() {
-        // Low end: slider -100 -> model 0.0 -> eq -1.0, the lowest value the eq filter accepts.
+    fun brightness_adds_a_constant_luma_change_and_no_eq_filter() {
+        // Slider -100 -> model 0.0 -> a quarter of the 16..235 range darker.
         var vf = buildVf(AdjustmentsV1(brightness = 0.0f, contrast = 1.0f, saturation = 1.0f, whiteBalance = WhiteBalanceV1(0f)))
-        var eq = parseEqMap(vf)!!
-        val bLow = eq["brightness"]!!.toDouble()
-        assertTrue(kotlin.math.abs(bLow + 1.0) < 1e-3, "Expected -1.0, was $bLow (vf=$vf)")
+        assertTrue(vf.contains("lutyuv=y='round(val+-54.7500)':u=val:v=val"), "Expected -54.75 codes, was: $vf")
+        assertNull(parseEqMap(vf), "Brightness must not add an eq filter, vf=$vf")
 
-        // High end: slider +100 -> model 2.0 -> eq +1.0
+        // Slider +100 -> model 2.0 -> the same change, brighter.
         vf = buildVf(AdjustmentsV1(brightness = 2.0f, contrast = 1.0f, saturation = 1.0f, whiteBalance = WhiteBalanceV1(0f)))
-        eq = parseEqMap(vf)!!
-        val bHigh = eq["brightness"]!!.toDouble()
-        assertTrue(kotlin.math.abs(bHigh - 1.0) < 1e-3, "Expected +1.0, was $bHigh (vf=$vf)")
+        assertTrue(vf.contains("lutyuv=y='round(val+54.7500)':u=val:v=val"), "Expected +54.75 codes, was: $vf")
     }
 
     @Test
@@ -138,14 +100,13 @@ class FFmpegCommandBuilderAdjustmentsScaleTest {
     }
 
     @Test
-    fun white_balance_temperature_adds_a_hue_filter_and_leaves_the_eq_values_alone() {
+    fun white_balance_temperature_shifts_the_chroma_and_leaves_the_luma_alone() {
         val vf = buildVf(AdjustmentsV1(brightness = 1.0f, contrast = 1.0f, saturation = 1.0f, whiteBalance = WhiteBalanceV1(0.5f)))
-        val hue = parseHueMap(vf)!!
 
-        assertTrue(vf.contains("hue="), "Expected hue filter, was: $vf")
-        // Temperature is a hue rotation only, so the identity eq filter is left out of the command.
+        // Warmer: less blue (Cb down) and more red (Cr up). The luma plane passes through.
+        assertTrue(vf.contains("lutyuv=y=val:u='round(val+-7.0000)':v='round(val+3.5000)'"), "Expected a chroma shift, was: $vf")
         assertNull(parseEqMap(vf), "WB temperature must not add an eq filter, vf=$vf")
-        assertTrue(kotlin.math.abs(hue["h"]!!.toDouble() - 10.0) < 1e-3, "Expected WB temp hue 10 degrees, vf=$vf")
+        assertFalse(vf.contains("hue="), "WB temperature must not rotate the hue, vf=$vf")
     }
 
     @Test
@@ -163,15 +124,15 @@ class FFmpegCommandBuilderAdjustmentsScaleTest {
 
         // The tone curve is a luma lookup table only, so the identity eq filter is left out.
         assertNull(parseEqMap(vf), "Shadows/highlights must not add an eq filter, vf=$vf")
-        assertTrue(vf.contains("lutyuv=y=val+31.8750*"), "Expected the shadows lift, was: $vf")
-        assertTrue(vf.contains("+-31.8750*"), "Expected the highlights lift, was: $vf")
+        assertTrue(vf.contains("lutyuv=y='round(val+21.9000*clip((92.6500-val)/76.6500,0,1)"), "Expected the shadows lift, was: $vf")
+        assertTrue(vf.contains("+-21.9000*clip((val-158.3500)/76.6500,0,1)"), "Expected the highlights lift, was: $vf")
         // lutyuv clips chroma to the legal range unless u and v pass the input through unchanged.
         assertTrue(vf.contains(":u=val:v=val"), "Expected chroma passthrough, was: $vf")
     }
 
     @Test
     fun identity_tone_sliders_add_no_lut_filter() {
-        val vf = buildVf(AdjustmentsV1(brightness = 1.2f, contrast = 1.0f, saturation = 1.0f))
+        val vf = buildVf(AdjustmentsV1(brightness = 1.0f, contrast = 1.2f, saturation = 1.0f))
 
         assertTrue(!vf.contains("lutyuv"), "Expected no lutyuv filter, was: $vf")
     }

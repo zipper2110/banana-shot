@@ -7,7 +7,7 @@
     <groupId>org.litvin</groupId>
     <artifactId>tennisrecord</artifactId>
     <version>${revision}</version>
-    <name>Tennis Record</name>
+    <name>BananaShot</name>
     <description>Turn tennis match recordings into compact scored videos.</description>
     <licenses>
         <license>
@@ -84,8 +84,8 @@
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                         <manifestEntries>
-                            <Implementation-Title>Tennis Record</Implementation-Title>
-                            <Implementation-Vendor>Tennis Record</Implementation-Vendor>
+                            <Implementation-Title>BananaShot</Implementation-Title>
+                            <Implementation-Vendor>BananaShot</Implementation-Vendor>
                         </manifestEntries>
                     </archive>
                 </configuration>

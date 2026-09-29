@@ -154,7 +154,7 @@ object ScoreboardLayouts {
         return ScoreboardScene(width, height, items)
     }
 
-    /** Classic: the original TennisRecord scoreboard with Arial text and neon points. */
+    /** Classic: the original BananaShot scoreboard with Arial text and neon points. */
     private fun classic(display: ScoreboardDisplay, look: Look): ScoreboardScene {
         val rows = rows(display, look)
         val title = look.title

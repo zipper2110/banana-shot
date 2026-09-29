@@ -1,22 +1,23 @@
 package org.litvin.ui.tabs.projects
 
-import org.litvin.ui.UiStyles
-import org.litvin.ui.UiStyles.GREEN
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.SwingFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.applyDarkScrollbar
+import org.litvin.ui.tabs.projects.components.DeleteProjectDialog
 import org.litvin.ui.tabs.projects.components.NewProjectDialog
 import org.litvin.ui.tabs.projects.components.NewProjectEditor
 import org.litvin.ui.tabs.projects.components.NewProjectRequest
-import org.litvin.ui.tabs.projects.components.ProjectCard
-import org.litvin.ui.tabs.projects.components.ProjectsEmptyListCard
-import org.litvin.ui.tabs.projects.components.ProjectsHeader
+import org.litvin.ui.tabs.projects.components.ProjectDeleteConfirmer
 import org.litvin.ui.tabs.projects.components.ProjectNameEditor
+import org.litvin.ui.tabs.projects.components.ProjectRow
+import org.litvin.ui.tabs.projects.components.ProjectsEmptyListCard
 import org.litvin.ui.tabs.projects.components.ProjectsPaginationBar
 import org.litvin.ui.tabs.projects.components.ProjectsTableColumns
+import org.litvin.ui.tabs.projects.components.ProjectsUi
 import org.litvin.ui.tabs.projects.components.RenameProjectDialog
+import org.litvin.ui.tabs.projects.components.StartPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
 import org.litvin.ui.tabs.projects.presenter.ProjectCardState
 import org.litvin.ui.tabs.projects.presenter.ProjectsIntent
@@ -25,10 +26,11 @@ import org.litvin.ui.tabs.projects.presenter.ProjectsView
 import org.litvin.ui.tabs.projects.presenter.ProjectsViewEffect
 import org.litvin.ui.tabs.projects.presenter.ProjectsViewState
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
-import java.awt.Font
+import java.awt.Rectangle
 import java.io.File
 import javax.swing.BorderFactory
 import javax.swing.Box
@@ -37,6 +39,8 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
+import javax.swing.ScrollPaneConstants
+import javax.swing.Scrollable
 
 /**
  * Passive Swing view for the Projects tab.
@@ -50,24 +54,24 @@ class SwingProjectsPanel(
     private val dialogs: UserDialogService = SwingUserDialogService(),
     private val newProjectEditor: NewProjectEditor = NewProjectDialog,
     private val projectNameEditor: ProjectNameEditor = RenameProjectDialog,
+    private val deleteConfirmer: ProjectDeleteConfirmer = DeleteProjectDialog,
 ) : JPanel(BorderLayout()), ProjectsView {
-    private val currentProjectContainer = JPanel(BorderLayout()).apply {
-        isOpaque = false
-        alignmentX = 0f
-        minimumSize = Dimension(200, 48)
-        maximumSize = Dimension(Int.MAX_VALUE, Int.MAX_VALUE)
+    private val startPanel = StartPanel(onImportNewMatch = { presenter.onIntent(ProjectsIntent.ImportNewMatch) })
+    private val rows = RowsPanel()
+    private val listCards = CardLayout()
+    private val listArea = JPanel(listCards).apply { isOpaque = false }
+    private val emptyListSlot = JPanel(BorderLayout()).apply { isOpaque = false }
+    private val hint = JLabel("Click a row to open the project").apply {
+        name = "projects-list-hint"
+        font = ProjectsUi.font(12f)
+        foreground = ProjectsUi.FG_3
     }
-    private val listContainer = JPanel().apply {
-        layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        isOpaque = false
-        alignmentX = 0f
-    }
-    private val tableHeader = ProjectsTableColumns.header(ProjectCard.rowActionsWidth())
     private val paginationBar = ProjectsPaginationBar(
         onPrevious = { presenter.onIntent(ProjectsIntent.GoToPage(lastState.currentPage - 1)) },
         onNext = { presenter.onIntent(ProjectsIntent.GoToPage(lastState.currentPage + 1)) },
     )
     private var lastState = ProjectsViewState()
+    private var shownCurrentProject: ProjectCardState? = null
 
     var onProjectOpened: ((String) -> Unit)? = null
 
@@ -76,14 +80,11 @@ class SwingProjectsPanel(
 
     init {
         isOpaque = true
-        background = UiStyles.DARK_BG
-        border = BorderFactory.createEmptyBorder(16, 16, 16, 16)
+        background = ProjectsUi.BG
 
-        add(
-            ProjectsHeader(onImportNewMatch = { presenter.onIntent(ProjectsIntent.ImportNewMatch) }),
-            BorderLayout.NORTH,
-        )
-        add(buildCenterPanel(), BorderLayout.CENTER)
+        add(startPanel, BorderLayout.WEST)
+        add(buildListSection(), BorderLayout.CENTER)
+        startPanel.showCurrentProject(name = null, videoPath = null, onRename = null)
     }
 
     override fun addNotify() {
@@ -151,70 +152,81 @@ class SwingProjectsPanel(
         }
     }
 
-    private fun buildCenterPanel(): JComponent {
-        val topPanel = JPanel().apply {
+    private fun buildListSection(): JComponent {
+        val title = JLabel("Recent projects").apply {
+            font = ProjectsUi.font(18f, ProjectsUi.Weight.SEMIBOLD)
+            foreground = ProjectsUi.FG
+        }
+        val head = JPanel().apply {
             isOpaque = false
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = BorderFactory.createEmptyBorder(12, 0, 0, 0)
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            border = BorderFactory.createEmptyBorder(0, 0, 10, 0)
+            add(title)
+            add(Box.createHorizontalStrut(10))
+            add(hint)
+            add(Box.createHorizontalGlue())
+            add(paginationBar)
             add(Box.createVerticalStrut(30))
-            add(sectionLabel("Current Project"))
-            add(Box.createVerticalStrut(16))
-            add(currentProjectContainer)
-            add(Box.createVerticalStrut(30))
-            add(sectionLabel("Recent Match Projects"))
-            add(Box.createVerticalStrut(16))
         }
 
-        val listScroll = JScrollPane(listContainer).apply {
+        val listScroll = JScrollPane(rows).apply {
             border = BorderFactory.createEmptyBorder()
             isOpaque = false
             viewport.isOpaque = false
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             // The column header stays above the rows and has the same width as the viewport, also with a scroll bar.
-            setColumnHeaderView(tableHeader)
+            setColumnHeaderView(ProjectsTableColumns.header())
             columnHeader.isOpaque = false
             verticalScrollBar.unitIncrement = 18
-            applyDarkScrollbar(this, background)
+            applyDarkScrollbar(this, ProjectsUi.BG)
         }
+        listArea.add(listScroll, CARD_TABLE)
+        listArea.add(emptyListSlot, CARD_EMPTY)
 
         return JPanel(BorderLayout()).apply {
-            isOpaque = false
-            add(topPanel, BorderLayout.NORTH)
-            add(listScroll, BorderLayout.CENTER)
-            add(paginationBar, BorderLayout.SOUTH)
+            isOpaque = true
+            background = ProjectsUi.BG
+            border = BorderFactory.createEmptyBorder(22, 24, 16, 24)
+            add(head, BorderLayout.NORTH)
+            add(listArea, BorderLayout.CENTER)
         }
     }
 
     private fun renderCurrentProject(project: ProjectCardState?) {
-        currentProjectContainer.removeAll()
-        currentProjectContainer.add(
-            if (project == null) {
-                emptyCurrentProjectCard()
-            } else {
-                ProjectCard(
-                    project.name,
-                    project.secondary,
-                    titleComponentName = "projects-current-name",
-                    renameButtonComponentName = "projects-current-rename",
-                    onRename = { renameProject(project) },
-                )
-            },
-            BorderLayout.CENTER,
+        // The figures do not show in the card, so a new card is necessary only for a new name or path.
+        val shown = project?.copy(stats = null)
+        if (shown == shownCurrentProject) return
+        shownCurrentProject = shown
+        startPanel.showCurrentProject(
+            name = project?.name,
+            videoPath = project?.secondary,
+            onRename = project?.let { { renameProject(it) } },
         )
-        refresh(currentProjectContainer)
     }
 
     private fun renderProjectList(state: ProjectsViewState) {
-        listContainer.removeAll()
-        tableHeader.isVisible = state.visibleProjects.isNotEmpty()
-        if (state.visibleProjects.isEmpty()) {
-            listContainer.add(ProjectsEmptyListCard(state.emptyListMessage))
+        val empty = state.visibleProjects.isEmpty()
+        hint.isVisible = !empty
+        if (empty) {
+            rows.removeAll()
+            emptyListSlot.removeAll()
+            emptyListSlot.add(ProjectsEmptyListCard(state.emptyListMessage), BorderLayout.CENTER)
+            listCards.show(listArea, CARD_EMPTY)
         } else {
-            state.visibleProjects.forEach { project ->
-                listContainer.add(buildProjectCard(project))
-                listContainer.add(Box.createVerticalStrut(8))
+            val shown = rows.components.filterIsInstance<ProjectRow>()
+            val sameRows = shown.size == state.visibleProjects.size &&
+                shown.zip(state.visibleProjects).all { (row, project) -> row.shows(project, isCurrent(project)) }
+            if (sameRows) {
+                // Only the figures changed. The rows stay, so a button under the pointer does not disappear.
+                shown.zip(state.visibleProjects).forEach { (row, project) -> row.showStats(project) }
+            } else {
+                rows.removeAll()
+                state.visibleProjects.forEach { project -> rows.add(buildProjectRow(project)) }
             }
+            listCards.show(listArea, CARD_TABLE)
         }
-        refresh(listContainer)
+        refresh(listArea)
+        refresh(rows)
     }
 
     private fun renderPagination(state: ProjectsViewState) {
@@ -228,49 +240,25 @@ class SwingProjectsPanel(
         refresh(paginationBar)
     }
 
-    private fun buildProjectCard(project: ProjectCardState): JComponent {
-        val isOpen = project.path == lastState.currentProject?.path
-        return ProjectCard(
-            project.name,
-            project.secondary,
-            openButtonComponentName = "projects-open-${project.id}",
-            renameButtonComponentName = "projects-rename-${project.id}",
-            deleteButtonComponentName = "projects-delete-${project.id}",
-            videoMissingTooltip = project.stats?.videoMissingMessage,
-            videoMissingComponentName = "projects-video-missing-${project.id}",
-            deleteDisabledReason = if (isOpen) "You cannot delete the open project." else null,
-            figures = project.stats?.let { listOf(it.duration, it.fileSize, it.scoredPoints, it.favoritePoints) }
-                ?: List(ProjectsTableColumns.FIGURE_COLUMNS.size) { "" },
-            figureComponentNames = FIGURE_NAME_PREFIXES.map { "projects-$it-${project.id}" },
+    private fun buildProjectRow(project: ProjectCardState): JComponent {
+        return ProjectRow(
+            project,
+            isCurrent = isCurrent(project),
             onRename = { renameProject(project) },
             onDelete = { deleteProject(project) },
-        ) {
-            presenter.onIntent(ProjectsIntent.OpenProject(project.path))
-        }
+            onOpen = { presenter.onIntent(ProjectsIntent.OpenProject(project.path)) },
+        )
     }
 
+    private fun isCurrent(project: ProjectCardState): Boolean = project.path == lastState.currentProject?.path
+
     private fun deleteProject(project: ProjectCardState) {
-        val confirmed = dialogs.confirm(
-            this,
-            "Delete the project \"${project.name}\"?\n\n" +
-                "The app removes the points, the scores, and the settings of the project.\n" +
-                "The video file stays on the disk.",
-            "Delete project",
-        )
-        if (confirmed) presenter.onIntent(ProjectsIntent.DeleteProject(project.path))
+        if (deleteConfirmer.confirm(this, project.name)) presenter.onIntent(ProjectsIntent.DeleteProject(project.path))
     }
 
     private fun renameProject(project: ProjectCardState) {
         val name = projectNameEditor.edit(this, project.name) ?: return
         if (name != project.name) presenter.onIntent(ProjectsIntent.RenameProject(project.path, name))
-    }
-
-    private fun emptyCurrentProjectCard(): JComponent {
-        return ProjectCard(
-            "No open project",
-            "Use \"IMPORT NEW MATCH\" or open from Existing Projects",
-            titleComponentName = "projects-current-name",
-        )
     }
 
     private fun chooseSourceVideo(
@@ -286,18 +274,27 @@ class SwingProjectsPanel(
             suggestedFile = suggestedFile?.takeIf { it.isFile },
         )?.absolutePath
 
-    private fun sectionLabel(text: String): JComponent = JLabel(text).apply {
-        font = font.deriveFont(Font.BOLD, font.size2D + 2f)
-        foreground = GREEN
-        alignmentX = 0f
-    }
-
     private fun refresh(container: Container) {
         container.revalidate()
         container.repaint()
     }
 
+    /** The rows of the table, one under the other. The rows are as wide as the viewport. */
+    private class RowsPanel : JPanel(), Scrollable {
+        init {
+            isOpaque = false
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
+
+        override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+        override fun getScrollableUnitIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = 18
+        override fun getScrollableBlockIncrement(visibleRect: Rectangle, orientation: Int, direction: Int) = visibleRect.height
+        override fun getScrollableTracksViewportWidth() = true
+        override fun getScrollableTracksViewportHeight() = false
+    }
+
     private companion object {
-        private val FIGURE_NAME_PREFIXES = listOf("duration", "size", "scored", "favorites")
+        const val CARD_TABLE = "table"
+        const val CARD_EMPTY = "empty"
     }
 }

@@ -54,4 +54,35 @@ class MpvAssOverlayTest {
         assertTrue(events.lines()[0].startsWith("""{\an7\pos(45,45)"""), events)
         assertTrue(events.lines()[1].startsWith("""{\an7\pos(-1,0)"""), events)
     }
+
+    @Test
+    fun `rounded rectangle has curves at the corners`() {
+        val event = MpvAssOverlay.events(
+            listOf(OverlayShape.Rect(10.0, 20.0, 100.0, 28.0, fill = Color.BLACK, radius = 14.0)),
+            scale = 1.0,
+        )
+
+        assertTrue(event.startsWith("""{\an7\pos(10,20)"""), event)
+        assertTrue(event.contains("""\p1}m 14 0 l 86 0 b """), event)
+        assertEquals(4, Regex(" b ").findAll(event).count(), event)
+    }
+
+    @Test
+    fun `text is placed at its top-left corner with the font, the size and the color`() {
+        val event = MpvAssOverlay.events(
+            listOf(OverlayShape.Text(12.0, 16.0, "Click {here}", 15.0, Color(0xE4, 0xE4, 0xE4), "Segoe UI")),
+            scale = 2.0,
+        )
+
+        assertTrue(event.startsWith("""{\an7\pos(24,32)"""), event)
+        assertTrue(event.contains("""\fnSegoe UI\fs30\b0"""), event)
+        assertTrue(event.contains("""\bord0\shad0"""), event)
+        assertTrue(event.contains("""\1c&HE4E4E4&\1a&H00&}"""), event)
+        assertTrue(event.endsWith("""Click \{here\}"""), event)
+    }
+
+    @Test
+    fun `empty text is skipped`() {
+        assertEquals("", MpvAssOverlay.events(listOf(OverlayShape.Text(0.0, 0.0, "", 15.0, Color.WHITE, "Segoe UI")), 1.0))
+    }
 }

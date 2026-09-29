@@ -39,7 +39,7 @@ data class AdjustmentsV1(
     val whiteBalance: WhiteBalanceV1? = null, // optional; default identity
 
     // Geometry
-    val zoom: Float = 1.0f,        // multiplier; clamp [0.1, 4.0] at sinks
+    val zoom: Float = 1.0f,        // multiplier; clamp [MIN_ZOOM, MAX_ZOOM] at sinks
     val panX: Float = 0.0f,        // normalized [-1.0, +1.0]
     val panY: Float = 0.0f,        // normalized [-1.0, +1.0]
     val rotationDeg: Float = 0.0f, // [-180.0, +180.0]
@@ -62,6 +62,15 @@ data class AdjustmentsV1(
 
     @JsonAnyGetter
     fun getUnknowns(): Map<String, Any?> = unknowns
+
+    companion object {
+        /**
+         * The smallest zoom. The crop cannot be larger than the frame, so a zoom below 1.0 would render
+         * the same as 1.0. Older projects can have a smaller saved value; it loads as 1.0.
+         */
+        const val MIN_ZOOM = 1.0f
+        const val MAX_ZOOM = 2.5f
+    }
 }
 
 object AdjustmentsIO {

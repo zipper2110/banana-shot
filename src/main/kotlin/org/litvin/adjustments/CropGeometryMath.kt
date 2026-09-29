@@ -20,7 +20,7 @@ object CropGeometryMath {
     fun overlayFromModel(outputWidth: Double, outputHeight: Double, adjustments: AdjustmentsV1): CropRect {
         if (outputWidth <= 0.0 || outputHeight <= 0.0) return CropRect(0.0, 0.0, 0.0, 0.0)
 
-        val zoom = adjustments.zoom.coerceIn(0.1f, 4.0f).toDouble().coerceAtLeast(0.0001)
+        val zoom = adjustments.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM).toDouble()
         val cropWidth = (outputWidth / zoom).coerceIn(MIN_OVERLAY_SIZE.coerceAtMost(outputWidth), outputWidth)
         val cropHeight = (outputHeight / zoom).coerceIn(MIN_OVERLAY_SIZE.coerceAtMost(outputHeight), outputHeight)
         val travelX = (outputWidth - cropWidth).coerceAtLeast(0.0)
@@ -51,7 +51,7 @@ object CropGeometryMath {
             CropRect(0.0, 0.0, outputWidth, outputHeight),
             outputWidth / outputHeight,
         )
-        val zoom = (outputWidth / clamped.width).coerceIn(0.1, 4.0).toFloat()
+        val zoom = (outputWidth / clamped.width).toFloat().coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM)
         val panX = if (clamped.width < outputWidth - 0.5) {
             ((2.0 * clamped.x + clamped.width - outputWidth) / (outputWidth - clamped.width))
                 .coerceIn(-1.0, 1.0)

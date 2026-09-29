@@ -20,6 +20,12 @@
   --sage: #a3c586;        /* ACCENT_TEXT */
   --lime-tint: rgba(161, 254, 0, 0.07);
   --lime-line: rgba(161, 254, 0, 0.6);
+  /* Shades of the accent. accent.html computes them from one color. */
+  --lime-hover: #b4ff33;
+  --lime-glow: rgba(161, 254, 0, 0.25);
+  --lime-shadow: rgba(161, 254, 0, 0.14);
+  --on-lime: #142000;     /* text and icons on the accent */
+  --on-lime-2: #4d6b16;   /* small secondary text on the accent */
   --yellow: #f2d64b;
   --yellow-tint: rgba(242, 214, 75, 0.08);
   --red: #ff7351;
@@ -120,12 +126,12 @@ button { font: inherit; color: inherit; }
 /* The play button: the one lime control of the tab. Same as design/points-redesign/final.html. */
 .play {
   width: 48px; height: 48px; border-radius: 8px; border: 0; cursor: pointer; flex: none;
-  background: var(--lime); color: #142000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  box-shadow: 0 0 0 1px rgba(161, 254, 0, .25), 0 6px 18px rgba(161, 254, 0, .14);
+  background: var(--lime); color: var(--on-lime); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  box-shadow: 0 0 0 1px var(--lime-glow), 0 6px 18px var(--lime-shadow);
 }
-.play:hover { background: #b4ff33; }
+.play:hover { background: var(--lime-hover); }
 .play .material-symbols-outlined { font-size: 26px; }
-.play-key { font-size: 8px; font-weight: 800; letter-spacing: .06em; line-height: 1; margin-top: -2px; color: #4d6b16; }
+.play-key { font-size: 8px; font-weight: 800; letter-spacing: .06em; line-height: 1; margin-top: -2px; color: var(--on-lime-2); }
 
 /* Keyboard key chip */
 kbd {
@@ -174,7 +180,7 @@ kbd {
 .cslider input[type=range]::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: #d9d9d9; border: 3px solid #101010; }
 .cslider.is-changed input[type=range]::-webkit-slider-thumb { background: var(--lime); box-shadow: 0 0 0 1px var(--lime); }
 .cslider.is-changed input[type=range]::-moz-range-thumb { background: var(--lime); }
-.cslider input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--lime), 0 0 0 4px rgba(161, 254, 0, .25); }
+.cslider input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--lime), 0 0 0 4px var(--lime-glow); }
 .cslider .track {
   position: absolute; left: 8px; right: 8px; top: 9px; height: 4px; border-radius: 2px; background: var(--track);
 }

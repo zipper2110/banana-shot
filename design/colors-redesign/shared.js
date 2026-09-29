@@ -246,6 +246,7 @@
     { href: 'option-a.html', id: 'a', label: 'A · Grouped panel (main)' },
     { href: 'option-b.html', id: 'b', label: 'B · Narrow panel + gradients' },
     { href: 'option-c.html', id: 'c', label: 'C · Faders' },
+    { href: 'accent.html', id: 'accent', label: 'Accent color test' },
   ];
 
   function shell(optionId) {

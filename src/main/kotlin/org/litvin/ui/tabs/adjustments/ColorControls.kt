@@ -2,14 +2,10 @@ package org.litvin.ui.tabs.adjustments
 
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
-import org.litvin.ui.commons.DefaultFillSliderUI
 import org.litvin.ui.commons.GroupCard
-import org.litvin.ui.commons.SliderRows
+import org.litvin.ui.commons.SliderValueFormat
+import org.litvin.ui.commons.SliderValueRow
 import org.litvin.ui.commons.UiKit
-import java.awt.Dimension
-import java.awt.Graphics
-import javax.swing.JPanel
-import javax.swing.JSlider
 
 /** The two groups of the Color grade panel. */
 internal enum class ColorGroup(val title: String, val ikon: Ikon) {
@@ -44,68 +40,27 @@ internal enum class ColorControl(
 }
 
 /**
- * One row of a group card: the label and the signed value, the slider, and the two end labels.
- * A lime bar at the left edge marks a changed value. Each row after the first has a line at the top.
- * The row paints its texts, so that the measurement and the painting use the same metrics.
+ * One row of a group card: the label and the signed value field, the slider, and the two end labels.
  * The slider fills from the center (the default 0).
  */
-internal class ColorRow(val control: ColorControl, private val first: Boolean) : JPanel(null) {
-    val slider: JSlider = DefaultFillSliderUI.slider(-100, 100, 0).apply {
-        name = control.componentName
-        toolTipText = control.tooltip
-        getAccessibleContext().accessibleName = control.label
-    }
-
-    private val nameFont = UiKit.font(13f)
-    private val valueFont = UiKit.font(13f, UiKit.Weight.SEMIBOLD)
-
-    val isChanged: Boolean get() = slider.value != 0
-
+internal class ColorRow(val control: ColorControl, first: Boolean) : SliderValueRow(
+    control.componentName, control.label, control.tooltip, MIN, MAX, 0, emptyList(),
+    control.low, null, control.high, VALUE_FORMAT, first,
+) {
     /** The value text, for example "+24" or "−24". */
     val valueText: String get() = UiKit.signed(slider.value)
 
-    init {
-        name = "${control.componentName}-row"
-        isOpaque = false
-        add(slider)
-        slider.addChangeListener { repaint() }
-    }
-
-    override fun getPreferredSize() = Dimension(MIN_WIDTH, ROW_HEIGHT)
-    override fun getMinimumSize() = preferredSize
-    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, ROW_HEIGHT)
-
-    override fun doLayout() {
-        slider.setBounds(SliderRows.PAD_X, SLIDER_Y, width - SliderRows.PAD_X * 2, SLIDER_HEIGHT)
-    }
-
-    override fun paintComponent(g: Graphics) {
-        val g2 = UiKit.smooth(g)
-        try {
-            SliderRows.paintFrame(g2, width, height, first, isChanged)
-            val right = (width - SliderRows.PAD_X).toFloat()
-            val value = valueText
-            val valueX = right - UiKit.textWidth(value, valueFont)
-            UiKit.drawText(g2, value, valueFont, if (isChanged) UiKit.LIME else UiKit.FG_3, valueX, PAD_TOP.toFloat(), LINE.toFloat())
-            val name = UiKit.ellipsize(control.label, nameFont, valueX - VALUE_GAP - SliderRows.PAD_X)
-            UiKit.drawText(g2, name, nameFont, UiKit.FG, SliderRows.PAD_X.toFloat(), PAD_TOP.toFloat(), LINE.toFloat())
-            SliderRows.paintEnds(g2, width, (SLIDER_Y + SLIDER_HEIGHT - 1).toFloat(), control.low, control.high)
-        } finally {
-            g2.dispose()
-        }
-    }
-
     companion object {
-        const val ROW_HEIGHT = 70
-        private const val MIN_WIDTH = 200
-        private const val PAD_TOP = 8
-        private const val LINE = 18
-        private const val VALUE_GAP = 8
-        private const val SLIDER_Y = PAD_TOP + LINE + 2
-        private const val SLIDER_HEIGHT = 22
+        private const val MIN = -100
+        private const val MAX = 100
+
+        /** A signed whole number, for example "+24" or "−24". Up and Down change it by 1. */
+        private val VALUE_FORMAT = SliderValueFormat("", 1, UiKit::signed) { text ->
+            SliderValueFormat.parse(text, "")?.toInt()
+        }
     }
 }
 
 /** A card with a caption ("LIGHT" or "COLOR") and the rows of its controls. */
 internal class ColorGroupCard(val group: ColorGroup, val rows: List<ColorRow>) :
-    GroupCard("colors-group-${group.name.lowercase()}", group.title, group.ikon, rows, ColorRow.ROW_HEIGHT)
+    GroupCard("colors-group-${group.name.lowercase()}", group.title, group.ikon, rows, SliderValueRow.ROW_HEIGHT)

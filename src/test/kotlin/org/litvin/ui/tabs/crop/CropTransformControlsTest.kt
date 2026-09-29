@@ -151,6 +151,72 @@ class CropTransformControlsTest {
     }
 
     @Test
+    fun upAndDownStepOneUnitAndFineRotationStepsATenthOfADegree() {
+        headless()
+
+        SwingUtilities.invokeAndWait {
+            val changes = mutableListOf<AdjustmentsV1>()
+            val controls = CropTransformControls(onChanged = { changes.add(it) }, onResetTransform = {})
+            fun field(control: TransformControl) = controls.rows.getValue(control).valueField.textField
+
+            field(TransformControl.ZOOM).pressKey("UP")
+            field(TransformControl.ZOOM).releaseKey("UP")
+            assertEquals(101, controls.slider("crop-zoom").value)
+            assertEquals("101", field(TransformControl.ZOOM).text)
+
+            field(TransformControl.PAN_X).pressKey("DOWN")
+            field(TransformControl.PAN_X).releaseKey("DOWN")
+            assertEquals(-1, controls.slider("crop-pan-x").value)
+
+            field(TransformControl.ROTATION).pressKey("UP")
+            field(TransformControl.ROTATION).releaseKey("UP")
+            assertEquals("+1.0", field(TransformControl.ROTATION).text)
+
+            field(TransformControl.FINE_ROTATION).pressKey("DOWN")
+            field(TransformControl.FINE_ROTATION).releaseKey("DOWN")
+            assertEquals("-0.1", field(TransformControl.FINE_ROTATION).text)
+            assertClose(0.9f, changes.last().rotationDeg)
+
+            // The value stays in the slider range.
+            field(TransformControl.ZOOM).pressKey("DOWN")
+            field(TransformControl.ZOOM).releaseKey("DOWN")
+            field(TransformControl.ZOOM).pressKey("DOWN")
+            field(TransformControl.ZOOM).releaseKey("DOWN")
+            assertEquals(100, controls.slider("crop-zoom").value)
+        }
+    }
+
+    @Test
+    fun heldStepKeyRepeatsAfterTheHoldDelayAndStopsOnRelease() {
+        headless()
+
+        lateinit var controls: CropTransformControls
+        lateinit var field: JTextField
+        SwingUtilities.invokeAndWait {
+            controls = CropTransformControls(onChanged = {}, onResetTransform = {})
+            field = controls.rows.getValue(TransformControl.PAN_Y).valueField.textField
+            field.pressKey("UP")
+            // The key repeat of the system sends more presses. They do not add steps.
+            field.pressKey("UP")
+            field.pressKey("UP")
+        }
+        fun value(): Int {
+            var value = 0
+            SwingUtilities.invokeAndWait { value = controls.slider("crop-pan-y").value }
+            return value
+        }
+        assertEquals(1, value())
+        Thread.sleep(1_300)
+        val held = value()
+        assertTrue(held > 2, "The held key must repeat the step, but the value is $held")
+
+        SwingUtilities.invokeAndWait { field.releaseKey("UP") }
+        val released = value()
+        Thread.sleep(300)
+        assertEquals(released, value(), "The step must stop when the key is released")
+    }
+
+    @Test
     fun zoomDoesNotGoBelowOneHundredPercent() {
         headless()
 
@@ -240,5 +306,15 @@ class CropTransformControlsTest {
             emptyList()
         }
         return own + childMatches
+    }
+
+    private fun JTextField.pressKey(key: String) = keyAction("pressed $key")
+
+    private fun JTextField.releaseKey(key: String) = keyAction("released $key")
+
+    private fun JTextField.keyAction(stroke: String) {
+        val binding = getInputMap(javax.swing.JComponent.WHEN_FOCUSED)[javax.swing.KeyStroke.getKeyStroke(stroke)]
+            ?: throw AssertionError("$name has no binding for $stroke")
+        actionMap[binding].actionPerformed(java.awt.event.ActionEvent(this, java.awt.event.ActionEvent.ACTION_PERFORMED, stroke))
     }
 }

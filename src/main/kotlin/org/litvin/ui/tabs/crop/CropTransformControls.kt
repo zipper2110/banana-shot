@@ -8,14 +8,10 @@ import org.litvin.ui.commons.SIDE_PANEL_WIDTH
 import org.litvin.ui.commons.SidePanelHeader
 import org.litvin.ui.commons.UiKit
 import java.awt.BorderLayout
-import java.awt.event.FocusAdapter
-import java.awt.event.FocusEvent
 import javax.swing.BorderFactory
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSlider
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -25,6 +21,7 @@ import kotlin.math.roundToInt
  * The layout comes from design/transform-redesign/option-a.html.
  *
  * Each slider has a value field. A valid number in the field moves the slider at once.
+ * Up and Down in the field change the value by one step.
  * Rotation is split across a coarse slider (0.5° steps) and a fine one (0.1° steps). Their sum is the angle.
  */
 class CropTransformControls(
@@ -96,40 +93,10 @@ class CropTransformControls(
     }
 
     private fun bindRow(row: TransformRow) {
-        val control = row.control
-        val slider = row.slider
-        val field = row.valueField.textField
-
-        fun syncFieldFromSlider() {
-            val text = control.toText(slider.value)
-            if (field.text != text) field.text = text
-        }
-
-        slider.addChangeListener {
-            if (!field.hasFocus()) syncFieldFromSlider()
-            publishFromSlider(control)
+        row.slider.addChangeListener {
+            publishFromSlider(row.control)
             refreshStatus()
         }
-        syncFieldFromSlider()
-        row.valueField.changed = row.isChanged
-
-        field.addFocusListener(object : FocusAdapter() {
-            override fun focusGained(e: FocusEvent) = field.selectAll()
-            override fun focusLost(e: FocusEvent) = syncFieldFromSlider()
-        })
-        // Enter confirms the value: the focus goes to the slider, and the field shows the value in its format.
-        field.addActionListener { slider.requestFocusInWindow() }
-        field.document.addDocumentListener(object : DocumentListener {
-            override fun insertUpdate(e: DocumentEvent) = updateFromText()
-            override fun removeUpdate(e: DocumentEvent) = updateFromText()
-            override fun changedUpdate(e: DocumentEvent) = updateFromText()
-
-            private fun updateFromText() {
-                if (updating || !field.hasFocus()) return
-                val value = control.fromText(field.text) ?: return
-                slider.value = value.coerceIn(slider.minimum, slider.maximum)
-            }
-        })
     }
 
     private fun publishFromSlider(control: TransformControl) {

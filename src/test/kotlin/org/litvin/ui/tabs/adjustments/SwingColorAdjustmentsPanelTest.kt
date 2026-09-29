@@ -11,12 +11,16 @@ import org.litvin.ui.commons.ResetAllButton
 import org.litvin.ui.commons.VideoPlaybackBar
 import java.awt.Component
 import java.awt.Container
+import java.awt.event.ActionEvent
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.prefs.AbstractPreferences
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSlider
+import javax.swing.JTextField
+import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -72,6 +76,28 @@ class SwingColorAdjustmentsPanelTest {
             assertEquals("0", (panel.find("colors-contrast-row") as ColorRow).valueText)
             assertEquals("2 of 6 changed", status.text)
             assertFalse(reset.quiet)
+            panel.close()
+        }
+    }
+
+    @Test
+    fun valueFieldsShowTheValueAndStepWithUpAndDown() {
+        onEdt {
+            val panel = panel()
+            val slider = panel.find("colors-contrast") as JSlider
+            val field = panel.find("colors-contrast-value") as JTextField
+            assertEquals("0", field.text)
+
+            slider.value = -24
+            assertEquals("−24", field.text)
+
+            val up = field.getInputMap(JComponent.WHEN_FOCUSED)[KeyStroke.getKeyStroke("pressed UP")]
+            val release = field.getInputMap(JComponent.WHEN_FOCUSED)[KeyStroke.getKeyStroke("released UP")]
+            field.actionMap[up].actionPerformed(ActionEvent(field, ActionEvent.ACTION_PERFORMED, "up"))
+            field.actionMap[release].actionPerformed(ActionEvent(field, ActionEvent.ACTION_PERFORMED, "up"))
+            assertEquals(-23, slider.value)
+            assertEquals("−23", field.text)
+            ColorControl.entries.forEach { control -> assertTrue(panel.find("${control.componentName}-value") is JTextField) }
             panel.close()
         }
     }

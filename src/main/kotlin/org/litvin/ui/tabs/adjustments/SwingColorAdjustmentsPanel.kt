@@ -10,6 +10,7 @@ import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.app.PreferencesProvider
 import org.litvin.ui.commons.AppShortcuts
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.VideoPlaybackBar
 import java.awt.BorderLayout
@@ -52,7 +53,7 @@ class SwingColorAdjustmentsPanel(
     private val viewportPanel = JPanel(BorderLayout()).apply {
         name = "adj-color-viewport"
         isOpaque = true
-        background = Color.BLACK
+        background = Palette.VIDEO_BG
         minimumSize = Dimension(640, 360)
     }
     private val geometryViewport = GeometryViewportPanel(player.component)
@@ -68,7 +69,7 @@ class SwingColorAdjustmentsPanel(
         name = "adj-color-left"
         minimumSize = Dimension(640, 360)
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(viewportPanel, BorderLayout.CENTER)
         add(playbackBar, BorderLayout.SOUTH)
     }
@@ -84,7 +85,7 @@ class SwingColorAdjustmentsPanel(
     init {
         name = "adj-color-root"
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         viewportPanel.add(geometryViewport, BorderLayout.CENTER)
 
         gradePanel.resetButton.addActionListener {

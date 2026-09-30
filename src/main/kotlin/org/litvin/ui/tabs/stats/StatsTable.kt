@@ -10,6 +10,7 @@ import org.litvin.stats.StatRow
 import org.litvin.stats.StatValue
 import org.litvin.stats.StatsSettingsV1
 import org.litvin.ui.commons.HeightForWidth
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.AWTEvent
 import java.awt.BasicStroke
@@ -66,9 +67,9 @@ internal data class StatsColumns(val mid: Int, val p2: Int, val lane: Int, val e
 
 /** Paints the "In video" column of a row: a light lime background with a line on its left. */
 internal fun paintLane(g: Graphics, x: Int, width: Int, height: Int, selected: Boolean = false) {
-    g.color = if (selected) StatsColors.LANE_SELECTED else StatsColors.LANE
+    g.color = if (selected) Palette.LIME_TINT else Palette.LIME_WASH
     g.fillRect(x, 0, width - x, height)
-    g.color = StatsColors.LANE_LINE
+    g.color = Palette.LIME_EDGE
     g.fillRect(x, 0, 1, height)
 }
 
@@ -81,12 +82,12 @@ internal typealias PlayerColors = PerPlayer<Color>
  */
 internal class StatsTableHeader : JPanel(null) {
     private val names = PerPlayer(nameLabel("stats-player-1"), nameLabel("stats-player-2"))
-    private var colors: PlayerColors = PerPlayer(UiKit.FG, UiKit.FG)
-    private val laneIcon = UiKit.icon(Material2OutlinedMZ.MOVIE, 15, UiKit.SAGE)
+    private var colors: PlayerColors = PerPlayer(Palette.FG, Palette.FG)
+    private val laneIcon = UiKit.icon(Material2OutlinedMZ.MOVIE, 15, Palette.SAGE)
 
     init {
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(names.p1)
         add(names.p2)
     }
@@ -139,7 +140,7 @@ internal class StatsTableHeader : JPanel(null) {
             val statistic = "Statistic"
             val statisticFont = UiKit.font(15f)
             UiKit.drawText(
-                g2, statistic, statisticFont, UiKit.FG,
+                g2, statistic, statisticFont, Palette.FG,
                 left + cols.mid + (cols.midWidth - UiKit.textWidth(statistic, statisticFont)) / 2f, 0f, height - 1f,
             )
             g2.translate(left, 0)
@@ -148,9 +149,9 @@ internal class StatsTableHeader : JPanel(null) {
             val captionWidth = laneIcon.iconWidth + 4 + UiKit.textWidth(caption, CAPTION_FONT)
             val x = cols.lane + (StatsColumns.LANE - captionWidth) / 2f
             laneIcon.paintIcon(this, g2, x.toInt(), (height - 1 - laneIcon.iconHeight) / 2)
-            UiKit.drawText(g2, caption, CAPTION_FONT, UiKit.SAGE, x + laneIcon.iconWidth + 4, 0f, height - 1f)
+            UiKit.drawText(g2, caption, CAPTION_FONT, Palette.SAGE, x + laneIcon.iconWidth + 4, 0f, height - 1f)
             g2.translate(-left, 0)
-            g2.color = UiKit.LINE
+            g2.color = Palette.LINE
             g2.fillRect(0, height - 1, width, 1)
         } finally {
             g2.dispose()
@@ -173,7 +174,7 @@ internal class StatsTableHeader : JPanel(null) {
 internal class StatsTableTop(private val header: StatsTableHeader, private val scopeRow: ScopeRow) : JPanel(null) {
     init {
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(header)
         add(scopeRow)
     }
@@ -208,7 +209,7 @@ internal class ScopeRow(private val control: ScopeControl) : JPanel(null), Heigh
     }
 
     override fun paintComponent(g: Graphics) {
-        g.color = UiKit.LINE
+        g.color = Palette.LINE
         g.fillRect(0, height - 1, width, 1)
     }
 
@@ -247,14 +248,14 @@ internal class MomentumRow(private val chart: MomentumChart, private val check: 
             val title = "Momentum"
             val baseline = UiKit.baseline(titleFont, PAD_TOP.toFloat(), TITLE.toFloat())
             g2.font = titleFont
-            g2.color = UiKit.SAGE
+            g2.color = Palette.SAGE
             g2.drawString(title, PAD_X.toFloat(), baseline)
             val helpX = PAD_X + UiKit.textWidth(title, titleFont) + 10
             val help = UiKit.ellipsize(HELP, helpFont, cols.lane - PAD_X - helpX)
             g2.font = helpFont
-            g2.color = UiKit.FG_2
+            g2.color = Palette.FG_2
             g2.drawString(help, helpX, baseline)
-            g2.color = UiKit.LINE
+            g2.color = Palette.LINE
             g2.fillRect(0, height - 1, width, 1)
         } finally {
             g2.dispose()
@@ -308,16 +309,16 @@ internal class GroupHeaderRow(val group: StatGroup) : JPanel(null), HeightForWid
             val free = (cols.lane - PAD_X * 2 - titleWidth - GAP * 2).coerceAtLeast(0f)
             val before = min(BEFORE_MAX, free / 2)
             val lineY = (lineTop + LINE / 2).toInt()
-            g2.color = UiKit.LINE_2
+            g2.color = Palette.LINE_2
             g2.fillRect(PAD_X, lineY, before.toInt(), 1)
             val titleX = PAD_X + before + GAP
-            UiKit.drawText(g2, title, TITLE_FONT, UiKit.SAGE, titleX, lineTop, LINE.toFloat())
+            UiKit.drawText(g2, title, TITLE_FONT, Palette.SAGE, titleX, lineTop, LINE.toFloat())
             val afterX = (titleX + titleWidth + GAP).toInt()
-            g2.color = UiKit.LINE_2
+            g2.color = Palette.LINE_2
             g2.fillRect(afterX, lineY, (cols.lane - PAD_X - afterX).coerceAtLeast(0), 1)
             val countWidth = UiKit.textWidth(countText, COUNT_FONT)
             UiKit.drawText(
-                g2, countText, COUNT_FONT, if (hasSelected) StatsColors.GREEN else UiKit.FG_3,
+                g2, countText, COUNT_FONT, if (hasSelected) Palette.LIME else Palette.FG_3,
                 cols.lane + (StatsColumns.LANE - countWidth) / 2f, (height - PAD_BOTTOM - LINE).toFloat(), LINE.toFloat(),
             )
         } finally {
@@ -344,7 +345,7 @@ internal class GroupHeaderRow(val group: StatGroup) : JPanel(null), HeightForWid
  */
 internal class LimitsBox(shortLimit: LimitStepper, longLimit: LimitStepper) : JPanel(null) {
     private val items: List<List<JComponent>> = listOf(
-        listOf(JLabel(UiKit.icon(Material2MZ.TUNE, 16, UiKit.SAGE))),
+        listOf(JLabel(UiKit.icon(Material2MZ.TUNE, 16, Palette.SAGE))),
         listOf(text("Short point: up to"), shortLimit, text("s")),
         listOf(text("Long point:"), longLimit, text("s or more")),
     )
@@ -357,7 +358,7 @@ internal class LimitsBox(shortLimit: LimitStepper, longLimit: LimitStepper) : JP
 
     private fun text(value: String) = JLabel(value).apply {
         font = UiKit.font(12f)
-        foreground = UiKit.FG_2
+        foreground = Palette.FG_2
     }
 
     private fun itemWidth(item: List<JComponent>) = item.sumOf { it.preferredSize.width } + PAIR_GAP * (item.size - 1)
@@ -412,9 +413,9 @@ internal class LimitsBox(shortLimit: LimitStepper, longLimit: LimitStepper) : JP
         val g2 = UiKit.smooth(g)
         try {
             val shape = RoundRectangle2D.Double(0.5, 0.5, width - 1.0, height - 1.0, 11.0, 11.0)
-            g2.color = UiKit.CARD
+            g2.color = Palette.CARD
             g2.fill(shape)
-            g2.color = UiKit.LINE_2
+            g2.color = Palette.LINE_2
             g2.stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, floatArrayOf(3f, 3f), 0f)
             g2.draw(shape)
         } finally {
@@ -478,10 +479,10 @@ internal class ValueCell(
     val detail = JLabel().apply {
         name = "$componentName-detail"
         font = UiKit.font(11.5f)
-        foreground = UiKit.FG_3
+        foreground = Palette.FG_3
     }
     private var pointId: String? = null
-    private var color: Color = UiKit.FG_2
+    private var color: Color = Palette.FG_2
     private var hover = false
     private val mouse = object : MouseAdapter() {
         override fun mouseClicked(e: MouseEvent) {
@@ -516,7 +517,7 @@ internal class ValueCell(
             toolTipText = if (pointId != null) "Open this point in the Scoring tab." else null
             cursor = Cursor.getPredefinedCursor(if (pointId != null) Cursor.HAND_CURSOR else Cursor.DEFAULT_CURSOR)
         }
-        main.foreground = if (hover) StatsColors.LEAD else color
+        main.foreground = if (hover) Palette.FG_STRONG else color
         revalidate()
         repaint()
     }
@@ -524,7 +525,7 @@ internal class ValueCell(
     private fun setHover(value: Boolean) {
         if (hover == value) return
         hover = value
-        main.foreground = if (hover) StatsColors.LEAD else color
+        main.foreground = if (hover) Palette.FG_STRONG else color
         repaint()
     }
 
@@ -554,7 +555,7 @@ internal class ValueCell(
         val g2 = UiKit.smooth(g)
         try {
             val b = main.bounds
-            UiKit.paintBox(g2, b.x - 2, b.y + 2, b.width + 4, b.height - 4, 3, StatsColors.LINK_HOVER, null)
+            UiKit.paintBox(g2, b.x - 2, b.y + 2, b.width + 4, b.height - 4, 3, Palette.LIME_TINT_2, null)
         } finally {
             g2.dispose()
         }
@@ -563,7 +564,7 @@ internal class ValueCell(
     private companion object {
         /** The two lines are closer than the label heights, like a line height of 1.2. */
         const val DETAIL_OVERLAP = 3
-        val PLAY_ICON = UiKit.icon(Material2MZ.PLAY_CIRCLE_FILLED, 15, UiKit.LIME)
+        val PLAY_ICON = UiKit.icon(Material2MZ.PLAY_CIRCLE_FILLED, 15, Palette.LIME)
     }
 }
 
@@ -586,7 +587,7 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
         iconTextGap = 5
     }
     private val bar = CompareBar()
-    val reason = WrapText("", UiKit.font(11.5f).deriveFont(Font.ITALIC), UiKit.FG_3, SwingConstants.CENTER, lineSpacing = 1.3f).apply {
+    val reason = WrapText("", UiKit.font(11.5f).deriveFont(Font.ITALIC), Palette.FG_3, SwingConstants.CENTER, lineSpacing = 1.3f).apply {
         name = "stats-reason-$key"
     }
     val check = InVideoCheck("stats-in-video-$key").apply {
@@ -610,7 +611,7 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
     /** Shows [row]. [description] is the longer explanation of the row, or null. */
     fun show(row: StatRow, description: String?, inVideo: Boolean, colors: PlayerColors) {
         label.text = row.label
-        label.foreground = if (row.available) UiKit.FG else UiKit.FG_3
+        label.foreground = if (row.available) Palette.FG else Palette.FG_3
         label.icon = when {
             !row.available -> INFO_ICON
             description != null -> HELP_ICON
@@ -621,19 +622,19 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
         val sharedValue = row.shared
         when {
             !row.available -> {
-                p1.show(StatValue("—"), StatsColors.OFF_VALUE, null)
-                p2.show(StatValue("—"), StatsColors.OFF_VALUE, null)
+                p1.show(StatValue("—"), Palette.HOVER_LINE, null)
+                p2.show(StatValue("—"), Palette.HOVER_LINE, null)
                 reason.text = row.unavailableReason.orEmpty()
                 setParts(sides = true, bar = false, reason = true, shared = false)
             }
             sharedValue != null -> {
-                shared.show(sharedValue, StatsColors.LEAD, row.sharedPointId)
+                shared.show(sharedValue, Palette.FG_STRONG, row.sharedPointId)
                 setParts(sides = false, bar = false, reason = false, shared = true)
             }
             values != null -> {
                 val lead = leader(row.bar)
-                p1.show(values.p1, if (lead == 1) StatsColors.LEAD else UiKit.FG_2, row.pointIds?.p1)
-                p2.show(values.p2, if (lead == 2) StatsColors.LEAD else UiKit.FG_2, row.pointIds?.p2)
+                p1.show(values.p1, if (lead == 1) Palette.FG_STRONG else Palette.FG_2, row.pointIds?.p1)
+                p2.show(values.p2, if (lead == 2) Palette.FG_STRONG else Palette.FG_2, row.pointIds?.p2)
                 bar.values = row.bar
                 bar.colors = colors
                 setParts(sides = true, bar = row.bar != null, reason = false, shared = false)
@@ -715,11 +716,11 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
     override fun paintComponent(g: Graphics) {
         val cols = StatsColumns.of(width)
         if (hovered) {
-            g.color = StatsColors.ROW_HOVER
+            g.color = Palette.ROW_HOVER
             g.fillRect(0, 0, width, height)
         }
         paintLane(g, cols.lane, width, height, selected)
-        g.color = StatsColors.ROW_LINE
+        g.color = Palette.ROW_LINE
         g.fillRect(0, height - 1, width, 1)
     }
 
@@ -731,8 +732,8 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
         private const val BAR_TOP = 6
         private const val REASON_TOP = 3
         private const val SHARED_OVERLAP = 2
-        private val INFO_ICON = UiKit.icon(Material2OutlinedAL.INFO, 14, UiKit.FG_3)
-        private val HELP_ICON = UiKit.icon(Material2OutlinedAL.HELP_OUTLINE, 14, UiKit.FG_3)
+        private val INFO_ICON = UiKit.icon(Material2OutlinedAL.INFO, 14, Palette.FG_3)
+        private val HELP_ICON = UiKit.icon(Material2OutlinedAL.HELP_OUTLINE, 14, Palette.FG_3)
 
         /** The player that leads the row: 1, 2, or 0 for equal values and for rows without a bar. */
         fun leader(bar: PerPlayer<Double>?): Int = when {
@@ -780,7 +781,7 @@ internal class StatsTable(
     init {
         name = "stats-table"
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(MomentumRow(chart, momentumCheck))
         for (group in StatGroup.entries) {
             val groupRows = MatchStat.entries.filter { it.group == group }

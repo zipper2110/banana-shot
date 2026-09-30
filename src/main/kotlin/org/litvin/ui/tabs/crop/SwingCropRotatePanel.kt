@@ -5,6 +5,7 @@ import org.litvin.media.SwingMediaPlayer
 import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.VideoPlaybackBar
 import org.litvin.ui.tabs.crop.presenter.CropRotateIntent
@@ -68,7 +69,7 @@ class SwingCropRotatePanel(
     private val viewportPanel = JPanel(BorderLayout()).apply {
         name = "adj-cr-viewport"
         isOpaque = true
-        background = Color.BLACK
+        background = Palette.VIDEO_BG
         minimumSize = Dimension(640, 360)
         add(player.component, BorderLayout.CENTER)
     }
@@ -77,7 +78,7 @@ class SwingCropRotatePanel(
         name = "adj-cr-left"
         minimumSize = Dimension(640, 360)
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
     }
 
     private val rightPanel = JPanel(BorderLayout()).apply {
@@ -86,7 +87,7 @@ class SwingCropRotatePanel(
         preferredSize = Dimension(rightPanelWidth, 600)
         maximumSize = Dimension(rightPanelWidth, Int.MAX_VALUE)
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(transformControls, BorderLayout.CENTER)
     }
 
@@ -97,7 +98,7 @@ class SwingCropRotatePanel(
         isEnabled = false
         dividerSize = 0
         border = BorderFactory.createEmptyBorder()
-        background = UiKit.BG
+        background = Palette.BG
     }
 
     init {

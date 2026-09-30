@@ -10,6 +10,7 @@ import org.litvin.export.ExportSourceInfo
 import org.litvin.export.ExportVideoOptions
 import org.litvin.export.ExportVideoTarget
 import org.litvin.export.RenderFormatting
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.tabs.export.ExportUi.Weight
 import java.awt.Dimension
 import javax.swing.ButtonGroup
@@ -62,11 +63,11 @@ internal class ExportQualityPanel(
     private var frameRateButtons: List<Pair<ExportFrameRateChoice, SegmentButton>> = emptyList()
     private val bitrateSlider = ExportSliderUI.slider("export-bitrate")
     private val bitrateValueText = WrapText(emptyList(), align = WrapText.Align.RIGHT).apply { name = "export-bitrate-value" }
-    private val bitrateNoteText = WrapText("", ExportUi.font(11f), ExportUi.FG_3).apply { name = "export-bitrate-note" }
+    private val bitrateNoteText = WrapText("", ExportUi.font(11f), Palette.FG_3).apply { name = "export-bitrate-note" }
     private val encoderControl = SegmentedControl()
     private var encoderButtons: List<Pair<ExportEncoder, SegmentButton>> = emptyList()
     private var chosenEncoderId: String? = saved.encoderId
-    private val encoderDescriptionText = WrapText("", ExportUi.font(11.5f), ExportUi.FG_2)
+    private val encoderDescriptionText = WrapText("", ExportUi.font(11.5f), Palette.FG_2)
     private val advancedGpuText = encoderLine("export-advanced-gpu")
     private val advancedPanel = Stack(0)
 
@@ -100,8 +101,8 @@ internal class ExportQualityPanel(
         advancedPanel.add(field("Frame rate", frameRateControl))
         advancedPanel.add(VGap(14))
         val scale = GridRows(2, 0, 0).apply {
-            add(WrapText("Worst quality", ExportUi.font(11f), ExportUi.FG_3).apply { name = "export-bitrate-worst" })
-            add(WrapText("Best quality", ExportUi.font(11f), ExportUi.FG_3, align = WrapText.Align.RIGHT).apply { name = "export-bitrate-best" })
+            add(WrapText("Worst quality", ExportUi.font(11f), Palette.FG_3).apply { name = "export-bitrate-worst" })
+            add(WrapText("Best quality", ExportUi.font(11f), Palette.FG_3, align = WrapText.Align.RIGHT).apply { name = "export-bitrate-best" })
         }
         advancedPanel.add(Stack(0).apply {
             add(FieldHead("Bitrate", bitrateValueText))
@@ -247,7 +248,7 @@ internal class ExportQualityPanel(
                 "The maximum is the bitrate of the original video."
             },
             ExportUi.font(11f),
-            ExportUi.FG_3,
+            Palette.FG_3,
         )
         updateSimpleDetails()
         updateBitrateLabels()
@@ -297,9 +298,9 @@ internal class ExportQualityPanel(
         val bold = ExportUi.font(12.5f, Weight.BOLD)
         val regular = ExportUi.font(12.5f)
         bitrateValueText.runs = listOf(
-            TextRun(ExportVideoOptions.formatBitrate(bitrateSlider.value), bold, ExportUi.FG),
-            TextRun(" · file size ", regular, ExportUi.FG),
-            TextRun(estimatedSize(bitrateSlider.value), bold, ExportUi.FG),
+            TextRun(ExportVideoOptions.formatBitrate(bitrateSlider.value), bold, Palette.FG),
+            TextRun(" · file size ", regular, Palette.FG),
+            TextRun(estimatedSize(bitrateSlider.value), bold, Palette.FG),
         )
     }
 
@@ -308,9 +309,9 @@ internal class ExportQualityPanel(
         encoderControl.removeSegments()
         if (capabilities == null) {
             simpleEncoderText.runs = listOf(
-                TextRun("Detecting GPUs and encoders…\nUntil the detection ends, the export uses the software encoder.", ENCODER_FONT, ExportUi.FG_2),
+                TextRun("Detecting GPUs and encoders…\nUntil the detection ends, the export uses the software encoder.", ENCODER_FONT, Palette.FG_2),
             )
-            advancedGpuText.runs = listOf(TextRun("Detecting GPUs and encoders…", ENCODER_FONT, ExportUi.FG_2))
+            advancedGpuText.runs = listOf(TextRun("Detecting GPUs and encoders…", ENCODER_FONT, Palette.FG_2))
             encoderButtons = emptyList()
             encoderControl.isVisible = false
             encoderDescriptionText.isVisible = false
@@ -321,11 +322,11 @@ internal class ExportQualityPanel(
         val gpus = gpuRuns(capabilities.gpuNames)
         advancedGpuText.runs = gpus
         simpleEncoderText.runs = listOf(
-            TextRun("Selected encoder:", ENCODER_BOLD_FONT, ExportUi.FG),
-            TextRun(" ${best.title}", ENCODER_FONT, ExportUi.FG_2),
+            TextRun("Selected encoder:", ENCODER_BOLD_FONT, Palette.FG),
+            TextRun(" ${best.title}", ENCODER_FONT, Palette.FG_2),
         ) + (if (best.hardware) emptyList() else listOf(
-            TextRun("\nNo hardware encoder works on this PC, so the processor encodes the video.", ENCODER_FONT, ExportUi.FG_2),
-        )) + TextRun("\n", ENCODER_FONT, ExportUi.FG_2) + gpus
+            TextRun("\nNo hardware encoder works on this PC, so the processor encodes the video.", ENCODER_FONT, Palette.FG_2),
+        )) + TextRun("\n", ENCODER_FONT, Palette.FG_2) + gpus
 
         val selected = capabilities.options.firstOrNull { it.id == chosenEncoderId } ?: best
         encoderButtons = capabilities.options.map { encoder ->
@@ -352,15 +353,15 @@ internal class ExportQualityPanel(
 
     private fun showEncoderDescription() {
         val encoder = encoderButtons.firstOrNull { it.second.isSelected }?.first ?: return
-        encoderDescriptionText.setText(encoder.description, ExportUi.font(11.5f), ExportUi.FG_2)
+        encoderDescriptionText.setText(encoder.description, ExportUi.font(11.5f), Palette.FG_2)
     }
 
     /** "Detected GPUs:" and the GPU names in one line. */
     private fun gpuRuns(gpuNames: List<String>): List<TextRun> {
         val heading = if (gpuNames.size == 1) "Detected GPU:" else "Detected GPUs:"
         return listOf(
-            TextRun(heading, ENCODER_BOLD_FONT, ExportUi.FG),
-            TextRun(" " + gpuNames.ifEmpty { listOf("none") }.joinToString(", "), ENCODER_FONT, ExportUi.FG_2),
+            TextRun(heading, ENCODER_BOLD_FONT, Palette.FG),
+            TextRun(" " + gpuNames.ifEmpty { listOf("none") }.joinToString(", "), ENCODER_FONT, Palette.FG_2),
         )
     }
 
@@ -388,7 +389,7 @@ internal class ExportQualityPanel(
 
     /** The head of a field: a bold label on the left and an optional value on the right. */
     private class FieldHead(label: String, private val value: WrapText? = null) : JPanel(null), HeightForWidth {
-        private val labelText = WrapText(label, ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.FG)
+        private val labelText = WrapText(label, ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.FG)
 
         init {
             isOpaque = false

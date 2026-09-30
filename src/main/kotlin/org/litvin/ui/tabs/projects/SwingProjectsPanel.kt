@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.projects
 
 import org.litvin.ui.commons.FilePicker
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SystemFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
@@ -64,7 +65,7 @@ class SwingProjectsPanel(
     private val hint = JLabel("Click a row to open the project").apply {
         name = "projects-list-hint"
         font = ProjectsUi.font(12f)
-        foreground = ProjectsUi.FG_3
+        foreground = Palette.FG_3
     }
     private val paginationBar = ProjectsPaginationBar(
         onPrevious = { presenter.onIntent(ProjectsIntent.GoToPage(lastState.currentPage - 1)) },
@@ -80,7 +81,7 @@ class SwingProjectsPanel(
 
     init {
         isOpaque = true
-        background = ProjectsUi.BG
+        background = Palette.BG
 
         add(startPanel, BorderLayout.WEST)
         add(buildListSection(), BorderLayout.CENTER)
@@ -157,7 +158,7 @@ class SwingProjectsPanel(
     private fun buildListSection(): JComponent {
         val title = JLabel("Recent projects").apply {
             font = ProjectsUi.font(18f, ProjectsUi.Weight.SEMIBOLD)
-            foreground = ProjectsUi.FG
+            foreground = Palette.FG
         }
         val head = JPanel().apply {
             isOpaque = false
@@ -180,14 +181,14 @@ class SwingProjectsPanel(
             setColumnHeaderView(ProjectsTableColumns.header())
             columnHeader.isOpaque = false
             verticalScrollBar.unitIncrement = 18
-            applyDarkScrollbar(this, ProjectsUi.BG)
+            applyDarkScrollbar(this, Palette.BG)
         }
         listArea.add(listScroll, CARD_TABLE)
         listArea.add(emptyListSlot, CARD_EMPTY)
 
         return JPanel(BorderLayout()).apply {
             isOpaque = true
-            background = ProjectsUi.BG
+            background = Palette.BG
             border = BorderFactory.createEmptyBorder(22, 24, 16, 24)
             add(head, BorderLayout.NORTH)
             add(listArea, BorderLayout.CENTER)

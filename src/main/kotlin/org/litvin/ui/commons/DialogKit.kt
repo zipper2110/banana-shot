@@ -45,10 +45,6 @@ import kotlin.math.min
  * the head with the title, the body, and the foot. The foot has Reset or Delete on the left, then Cancel and the main action on the right.
  */
 internal object DialogKit {
-    val DIALOG_BG = Color(0x1C1C1C)
-    val FOOTER_BG = Color(0x181818)
-    val INPUT_BG = Color(0x121212)
-
     /** The width of a small dialog, for example a message or Rename project. */
     const val SMALL = 420
 
@@ -84,7 +80,7 @@ internal object DialogKit {
 
     /** The content of a dialog of [width] pixels: the head, the body, and the foot, on the dark dialog background. */
     fun content(width: Int, head: JComponent?, body: JComponent, footer: JComponent?): JPanel =
-        Stack(background = DIALOG_BG, fixedWidth = width).apply {
+        Stack(background = Palette.OVERLAY, fixedWidth = width).apply {
             head?.let { add(it) }
             add(body, fill = true)
             footer?.let { add(it) }
@@ -96,11 +92,11 @@ internal object DialogKit {
         border = BorderFactory.createEmptyBorder(16, PAD_X, 6, PAD_X)
         add(JLabel(title).apply {
             font = UiKit.font(15f, UiKit.Weight.SEMIBOLD)
-            foreground = UiKit.FG
+            foreground = Palette.FG
         }, BorderLayout.WEST)
         if (sub != null) add(JLabel(sub).apply {
             font = UiKit.font(12f)
-            foreground = UiKit.FG_3
+            foreground = Palette.FG_3
         }, BorderLayout.EAST)
     }
 
@@ -108,9 +104,9 @@ internal object DialogKit {
     fun head(title: String, line: String, dialogWidth: Int): JComponent = Stack(pad = Insets(16, PAD_X, 4, PAD_X), gap = 2).apply {
         add(JLabel(title).apply {
             font = UiKit.font(15f, UiKit.Weight.SEMIBOLD)
-            foreground = UiKit.FG
+            foreground = Palette.FG
         })
-        add(WrapText(line, UiKit.font(12f), UiKit.FG_3, 1.45f, dialogWidth - PAD_X * 2))
+        add(WrapText(line, UiKit.font(12f), Palette.FG_3, 1.45f, dialogWidth - PAD_X * 2))
     }
 
     /** The body: the rows one under the other with [gap] pixels between them. */
@@ -132,11 +128,11 @@ internal object DialogKit {
             (layout as FlowLayout).alignOnBaseline = true
             add(JLabel(caption).apply {
                 font = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
-                foreground = UiKit.FG_2
+                foreground = Palette.FG_2
             })
             if (note != null) add(JLabel("  $note").apply {
                 font = UiKit.font(11f)
-                foreground = UiKit.FG_3
+                foreground = Palette.FG_3
                 // Some slack, because the painted text can be a little wider than the measured text.
                 preferredSize = Dimension(preferredSize.width + 4, preferredSize.height)
             })
@@ -162,13 +158,13 @@ internal object DialogKit {
                 val g2 = UiKit.smooth(g)
                 try {
                     val border = when {
-                        hasError() -> ERROR_LINE
-                        input.isFocusOwner -> UiKit.LIME_LINE
-                        else -> UiKit.LINE_2
+                        hasError() -> Palette.RED_LINE_2
+                        input.isFocusOwner -> Palette.LIME_LINE
+                        else -> Palette.LINE_2
                     }
                     val alpha = if (input.isEnabled) 1f else 0.4f
                     g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha)
-                    UiKit.paintBox(g2, 0, 0, width, height, 4, INPUT_BG, border)
+                    UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.INSET, border)
                 } finally {
                     g2.dispose()
                 }
@@ -181,7 +177,7 @@ internal object DialogKit {
             box.add(JScrollPane(input).apply {
                 border = BorderFactory.createEmptyBorder()
                 horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-                runCatching { applyDarkScrollbar(this, INPUT_BG) }
+                runCatching { applyDarkScrollbar(this, Palette.INSET) }
             }, BorderLayout.CENTER)
         } else {
             box.add(input, BorderLayout.CENTER)
@@ -200,12 +196,12 @@ internal object DialogKit {
 
     /** The colors and the font of a text input on the dark field background. */
     fun styleInput(input: JTextComponent) {
-        input.background = INPUT_BG
-        input.foreground = UiKit.FG
-        input.caretColor = UiKit.FG
-        input.selectionColor = Color(161, 254, 0, 70)
-        input.selectedTextColor = UiKit.FG
-        input.disabledTextColor = UiKit.FG_3
+        input.background = Palette.INSET
+        input.foreground = Palette.FG
+        input.caretColor = Palette.FG
+        input.selectionColor = Palette.SELECTION
+        input.selectedTextColor = Palette.FG
+        input.disabledTextColor = Palette.FG_3
         input.font = UiKit.font(13f)
         input.isOpaque = false
     }
@@ -213,12 +209,12 @@ internal object DialogKit {
     /** A combo box with the look of a dark input: the `select.inp` element of the design. */
     fun <T> styleCombo(combo: JComboBox<T>) {
         combo.font = UiKit.font(13f)
-        combo.background = INPUT_BG
-        combo.foreground = UiKit.FG
+        combo.background = Palette.INSET
+        combo.foreground = Palette.FG
         combo.putClientProperty(
             "FlatLaf.style",
-            "borderColor: #363636; focusedBorderColor: #A1FE0099; arc: 8; buttonStyle: none;" +
-                " buttonArrowColor: #ADAAAA; popupBackground: #1C1C1C; padding: 4,10,4,6",
+            "borderColor: ${Palette.hex(Palette.LINE_2)}; focusedBorderColor: ${Palette.hex(Palette.LIME_LINE)}; arc: 8; buttonStyle: none;" +
+                " buttonArrowColor: ${Palette.hex(Palette.FG_2)}; popupBackground: ${Palette.hex(Palette.OVERLAY)}; padding: 4,10,4,6",
         )
         combo.preferredSize = Dimension(combo.preferredSize.width, INPUT_HEIGHT)
     }
@@ -227,7 +223,7 @@ internal object DialogKit {
     fun errorLine(componentName: String? = null): JLabel = JLabel(" ").apply {
         name = componentName
         font = UiKit.font(12f)
-        foreground = UiKit.ERROR
+        foreground = Palette.RED
         preferredSize = Dimension(0, 16)
         maximumSize = Dimension(Int.MAX_VALUE, 16)
     }
@@ -238,9 +234,9 @@ internal object DialogKit {
      */
     fun footer(left: List<JComponent> = emptyList(), right: List<JComponent>): JComponent = object : JPanel() {
         override fun paintComponent(g: Graphics) {
-            g.color = FOOTER_BG
+            g.color = Palette.ROW_HOVER
             g.fillRect(0, 0, width, height)
-            g.color = UiKit.LINE
+            g.color = Palette.LINE
             g.fillRect(0, 0, width, 1)
         }
     }.apply {
@@ -263,10 +259,10 @@ internal object DialogKit {
     /** The key help of the foot, for example "[Enter] save · [Esc] cancel". */
     fun keysHint(vararg keys: Pair<String, String>): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         isOpaque = false
-        val style = KeyChipStyle(fill = UiKit.RAISED_2, border = Color(0x3A3A3A), text = UiKit.FG_2, height = 18)
+        val style = KeyChipStyle(fill = Palette.RAISED_2, border = Palette.LINE_3, text = Palette.FG_2, height = 18)
         fun text(value: String) = JLabel(value).apply {
             font = UiKit.font(11f)
-            foreground = UiKit.FG_3
+            foreground = Palette.FG_3
             // Some slack, because the painted text can be a little wider than the measured text.
             preferredSize = Dimension(ceil(UiKit.textWidth(value, font)).toInt() + 4, preferredSize.height)
         }
@@ -279,7 +275,7 @@ internal object DialogKit {
     }
 
     /** Wraps [body] in a borderless scroll pane with a dark scroll bar, for a dialog that can be taller than the screen. */
-    fun scrollBody(body: JComponent, background: Color = DIALOG_BG): JScrollPane = JScrollPane(ScrollColumn(body)).apply {
+    fun scrollBody(body: JComponent, background: Color = Palette.OVERLAY): JScrollPane = JScrollPane(ScrollColumn(body)).apply {
         border = BorderFactory.createEmptyBorder()
         isOpaque = false
         viewport.isOpaque = true
@@ -301,7 +297,6 @@ internal object DialogKit {
     }
 
     const val INPUT_HEIGHT = 34
-    private val ERROR_LINE = Color(255, 115, 81, 179)
 }
 
 /**
@@ -393,25 +388,25 @@ internal class DialogGroup(
         isOpaque = false
         border = BorderFactory.createEmptyBorder(8, 14, 4, 14)
     }
-    private val captionLabel = object : JLabel(title.uppercase(), UiKit.icon(ikon, 14, UiKit.FG_3), LEFT) {
+    private val captionLabel = object : JLabel(title.uppercase(), UiKit.icon(ikon, 14, Palette.FG_3), LEFT) {
         // The label measures the text without the letter spacing, so it adds the width of the spacing.
         override fun getPreferredSize(): Dimension = super.getPreferredSize().let {
             Dimension(icon.iconWidth + iconTextGap + ceil(UiKit.textWidth(text, font)).toInt() + 4, it.height)
         }
     }.apply {
         font = UiKit.trackedFont(10.5f, 0.1, UiKit.Weight.BOLD)
-        foreground = UiKit.FG_3
+        foreground = Palette.FG_3
         iconTextGap = 6
     }
 
     /** A value next to the caption, after a short line, for example the name of the selected style. */
     val note = JLabel().apply {
         font = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
-        foreground = UiKit.FG_2
+        foreground = Palette.FG_2
         border = BorderFactory.createCompoundBorder(
             BorderFactory.createEmptyBorder(0, 4, 0, 0),
             BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE_2),
+                BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE_2),
                 BorderFactory.createEmptyBorder(0, 8, 0, 0),
             ),
         )
@@ -426,7 +421,7 @@ internal class DialogGroup(
         }
     }.apply {
         font = UiKit.font(11.5f)
-        foreground = UiKit.FG_3
+        foreground = Palette.FG_3
     }
 
     init {
@@ -453,7 +448,7 @@ internal class DialogGroup(
     fun row(label: String, control: JComponent, line: Boolean = lastWasRow): JLabel {
         val rowLabel = JLabel(label).apply {
             font = UiKit.font(12.5f)
-            foreground = UiKit.FG_2
+            foreground = Palette.FG_2
         }
         add(GroupRow(rowLabel, control, line, labelWidth))
         lastWasRow = true
@@ -493,7 +488,7 @@ internal class DialogGroup(
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 8, UiKit.CARD, UiKit.LINE)
+            UiKit.paintBox(g2, 0, 0, width, height, 8, Palette.CARD, Palette.LINE)
         } finally {
             g2.dispose()
         }
@@ -529,7 +524,7 @@ internal class DialogGroup(
 
         override fun paintComponent(g: Graphics) {
             if (!line) return
-            g.color = UiKit.CARD_ROW_LINE
+            g.color = Palette.CARD_ROW_LINE
             g.fillRect(0, 0, width, 1)
         }
     }
@@ -555,7 +550,7 @@ internal class DialogGroup(
 
         override fun paintComponent(g: Graphics) {
             if (!line) return
-            g.color = UiKit.CARD_ROW_LINE
+            g.color = Palette.CARD_ROW_LINE
             g.fillRect(0, 0, width, 1)
         }
     }

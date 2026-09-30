@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.points.ui
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.formatSeconds
 import org.litvin.ui.tabs.points.CommentDto
@@ -178,7 +179,7 @@ object EditCommentDialog {
         null
     }
 
-    private fun colorFor(hex: String): Color = runCatching { Color.decode(hex) }.getOrDefault(Color.WHITE)
+    private fun colorFor(hex: String): Color = runCatching { Color.decode(hex) }.getOrDefault(Palette.PURE_WHITE)
     private fun formatSeconds(durationMs: Long): String = BigDecimal(durationMs).movePointLeft(3).stripTrailingZeros().toPlainString()
     private fun formatTimestamp(totalMs: Long): String {
         val hours = totalMs / 3_600_000L

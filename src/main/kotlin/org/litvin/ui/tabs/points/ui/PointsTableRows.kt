@@ -4,6 +4,7 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.Html
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.formatSeconds
@@ -42,22 +43,22 @@ internal data class TableColumns(val width: Int) {
 /** The caption row of the points table. */
 internal class TableHeaderRow : JComponent() {
     private val captionFont = UiKit.trackedFont(10.5f, 0.07)
-    private val starIcon = UiKit.icon(Material2MZ.STAR, 11, UiKit.FG_3)
+    private val starIcon = UiKit.icon(Material2MZ.STAR, 11, Palette.FG_3)
 
     override fun getPreferredSize() = Dimension(0, HEIGHT)
 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            g2.color = UiKit.TABLE_HEAD
+            g2.color = Palette.INSET
             g2.fillRect(0, 0, width, height)
-            g2.color = UiKit.LINE
+            g2.color = Palette.LINE
             g2.fillRect(0, 0, width, 1)
             g2.fillRect(0, height - 1, width, 1)
             val columns = TableColumns(width - scrollBarWidth)
             val top = 1f
             val h = height - 2f
-            fun caption(text: String, x: Float) = UiKit.drawText(g2, text, captionFont, UiKit.FG_3, x, top, h)
+            fun caption(text: String, x: Float) = UiKit.drawText(g2, text, captionFont, Palette.FG_3, x, top, h)
             caption("#", columns.number.toFloat())
             caption("START", columns.start.toFloat())
             caption("END", columns.end.toFloat())
@@ -117,15 +118,15 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
 
     protected fun paintRowBackground(g2: Graphics2D, rest: Color?, bar: Color?) {
         val fill = when {
-            selected && selectable -> UiKit.ROW_SELECTED
-            hovered -> UiKit.ROW_HOVER
+            selected && selectable -> Palette.SELECTED
+            hovered -> Palette.ROW_HOVER
             else -> rest
         }
         if (fill != null) {
             g2.color = fill
             g2.fillRect(0, 0, width, height)
         }
-        g2.color = UiKit.ROW_LINE
+        g2.color = Palette.ROW_LINE
         g2.fillRect(0, height - 1, width, 1)
         if (bar != null) {
             g2.color = bar
@@ -166,7 +167,7 @@ internal class PointRow(
     val favoriteButton = RowIconButton(
         if (point.favorite) Material2MZ.STAR else Material2MZ.STAR_BORDER,
         "Favorite [A]",
-        color = if (point.favorite) UiKit.YELLOW else UiKit.FG_3,
+        color = if (point.favorite) Palette.YELLOW else Palette.FG_3,
         side = 22,
     ).apply { name = "favorite-point-${point.id}" }
     val editButton = RowIconButton(Material2AL.EDIT, "Edit times/label").apply { name = "edit-point-${point.id}" }
@@ -203,14 +204,14 @@ internal class PointRow(
         val g2 = UiKit.smooth(g)
         try {
             val showSelection = selected
-            paintRowBackground(g2, null, if (showSelection) UiKit.LIME else null)
+            paintRowBackground(g2, null, if (showSelection) Palette.LIME else null)
             val columns = TableColumns(width)
             val h = height - 1f
-            UiKit.drawText(g2, number.toString(), numberFont, if (showSelection) UiKit.LIME else UiKit.FG_2, columns.number.toFloat(), 0f, h)
-            UiKit.drawText(g2, Timecode.format(point.startMs), textFont, UiKit.FG, columns.start.toFloat(), 0f, h)
-            UiKit.drawText(g2, point.endMs?.let(Timecode::format) ?: "—", textFont, UiKit.FG, columns.end.toFloat(), 0f, h)
+            UiKit.drawText(g2, number.toString(), numberFont, if (showSelection) Palette.LIME else Palette.FG_2, columns.number.toFloat(), 0f, h)
+            UiKit.drawText(g2, Timecode.format(point.startMs), textFont, Palette.FG, columns.start.toFloat(), 0f, h)
+            UiKit.drawText(g2, point.endMs?.let(Timecode::format) ?: "—", textFont, Palette.FG, columns.end.toFloat(), 0f, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
-            UiKit.drawText(g2, length, textFont, UiKit.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), 0f, h)
+            UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), 0f, h)
         } finally {
             g2.dispose()
         }
@@ -228,7 +229,7 @@ internal class CommentRow(
     override val title = "Comment #${comment.id}"
     override val selectable = false
 
-    private val color: Color = runCatching { Color.decode(comment.colorHex) }.getOrDefault(UiKit.FG)
+    private val color: Color = runCatching { Color.decode(comment.colorHex) }.getOrDefault(Palette.FG)
     private val bubble = UiKit.icon(Material2AL.CHAT_BUBBLE, 14, color)
     val editButton = RowIconButton(Material2AL.EDIT, "Edit comment").apply { name = "edit-comment-${comment.id}" }
     val deleteButton = RowIconButton(Material2AL.CLOSE, "Delete comment", danger = true).apply { name = "delete-comment-${comment.id}" }
@@ -252,7 +253,7 @@ internal class CommentRow(
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            paintRowBackground(g2, UiKit.COMMENT_ROW, color)
+            paintRowBackground(g2, Palette.INSET, color)
             val columns = TableColumns(width)
             val left = TableColumns.PAD_LEFT.toFloat()
             val textRight = columns.actions - TableColumns.GAP
@@ -267,12 +268,12 @@ internal class CommentRow(
             x += UiKit.textWidth(title, titleFont) + 8
             val metaFont = UiKit.font(11.5f)
             val meta = UiKit.ellipsize("${Timecode.format(comment.startMs)} · ${formatSeconds(comment.durationMs)}", metaFont, textRight - x)
-            UiKit.drawText(g2, meta, metaFont, UiKit.FG_3, x, lineTop, lineHeight)
+            UiKit.drawText(g2, meta, metaFont, Palette.FG_3, x, lineTop, lineHeight)
 
             // Line 2: the comment text on one line.
             val textFont = UiKit.font(12.5f)
             val text = UiKit.ellipsize(comment.text.replace('\n', ' '), textFont, textRight - left)
-            UiKit.drawText(g2, text, textFont, UiKit.FG, left, lineTop + lineHeight, 18f)
+            UiKit.drawText(g2, text, textFont, Palette.FG, left, lineTop + lineHeight, 18f)
         } finally {
             g2.dispose()
         }

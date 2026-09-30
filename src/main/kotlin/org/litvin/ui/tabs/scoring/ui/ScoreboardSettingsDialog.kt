@@ -11,6 +11,7 @@ import org.litvin.scoring.ScoreboardStyleId
 import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DialogGroup
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ScoreboardSceneImage
 import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.SliderValueFormat
@@ -167,7 +168,7 @@ class ScoreboardSettingsDialog private constructor(
         name = "scoreboard-accent-default"
         toolTipText = "Use the color of the style"
     }
-    private val accentNote = WrapText("", UiKit.font(11.5f), UiKit.FG_3, 1.45f, SIDE_WIDTH - 28)
+    private val accentNote = WrapText("", UiKit.font(11.5f), Palette.FG_3, 1.45f, SIDE_WIDTH - 28)
     private val framePreview = FramePreview()
 
     init {
@@ -215,7 +216,7 @@ class ScoreboardSettingsDialog private constructor(
             add(sidePanel(), BorderLayout.EAST)
         }
         contentPane = JPanel(BorderLayout()).apply {
-            background = DialogKit.DIALOG_BG
+            background = Palette.OVERLAY
             add(head(), BorderLayout.NORTH)
             add(body, BorderLayout.CENTER)
             add(DialogKit.footer(right = listOf(resetButton, DialogKit.gap(16), cancelButton, saveButton)), BorderLayout.SOUTH)
@@ -285,11 +286,11 @@ class ScoreboardSettingsDialog private constructor(
         border = BorderFactory.createEmptyBorder(16, DialogKit.PAD_X, 6, DialogKit.PAD_X)
         add(JLabel("Scoreboard style").apply {
             font = UiKit.font(15f, UiKit.Weight.SEMIBOLD)
-            foreground = UiKit.FG
+            foreground = Palette.FG
         })
         add(JLabel("   The video shows each change at once. Cancel restores the saved style.").apply {
             font = UiKit.font(12f)
-            foreground = UiKit.FG_3
+            foreground = Palette.FG_3
         })
     }
 
@@ -324,7 +325,7 @@ class ScoreboardSettingsDialog private constructor(
         return DialogKit.scrollBody(column).apply {
             // The preferred height shows all groups. The dialog uses it when the screen is tall enough.
             preferredSize = Dimension(SIDE_WIDTH + 8, column.heightForWidth(SIDE_WIDTH + 8) + 2)
-            viewport.background = DialogKit.DIALOG_BG
+            viewport.background = Palette.OVERLAY
         }
     }
 
@@ -377,7 +378,7 @@ class ScoreboardSettingsDialog private constructor(
                     if (settings.normalized().accentColorHex != null) "Own color. The ${settings.style.title} style color is $styleHex."
                     else "The color of the ${settings.style.title} style.",
                     UiKit.font(11.5f),
-                    UiKit.FG_3,
+                    Palette.FG_3,
                 ),
             )
             styleCards.forEach { (style, card) ->
@@ -412,7 +413,7 @@ class ScoreboardSettingsDialog private constructor(
             viewport.isOpaque = false
             horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
             verticalScrollBar.unitIncrement = 24
-            runCatching { applyDarkScrollbar(this, UiKit.CARD) }
+            runCatching { applyDarkScrollbar(this, Palette.CARD) }
         }
 
         init {
@@ -450,7 +451,7 @@ class ScoreboardSettingsDialog private constructor(
         override fun paintComponent(g: Graphics) {
             val g2 = UiKit.smooth(g)
             try {
-                UiKit.paintBox(g2, 0, 0, width, height, 6, Color.BLACK, UiKit.LINE)
+                UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.VIDEO_BG, Palette.LINE)
             } finally {
                 g2.dispose()
             }
@@ -498,17 +499,17 @@ class ScoreboardSettingsDialog private constructor(
             try {
                 val hover = model.isRollover
                 val fill = when {
-                    isSelected -> Color(0x1C2215)
-                    hover -> Color(0x1E1E1E)
-                    else -> Color(0x141414)
+                    isSelected -> Palette.LIME_ROW
+                    hover -> Palette.OVERLAY
+                    else -> Palette.PANEL_DIM
                 }
-                UiKit.paintBox(g2, 0, 0, width, height, 6, fill, if (isSelected) UiKit.LIME else UiKit.LINE)
-                if (isSelected) UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 5, null, UiKit.LIME)
-                if (isFocusOwner && !isSelected) UiKit.paintBox(g2, 0, 0, width, height, 6, null, UiKit.LIME_LINE)
+                UiKit.paintBox(g2, 0, 0, width, height, 6, fill, if (isSelected) Palette.LIME else Palette.LINE)
+                if (isSelected) UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 5, null, Palette.LIME)
+                if (isFocusOwner && !isSelected) UiKit.paintBox(g2, 0, 0, width, height, 6, null, Palette.LIME_LINE)
                 val thumbX = 6
                 val thumbW = width - 12
                 val clip = RoundRectangle2D.Double(thumbX.toDouble(), 6.0, thumbW.toDouble(), THUMB_HEIGHT.toDouble(), 8.0, 8.0)
-                g2.paint = GradientPaint(0f, 6f, Color(0x2F5F3C), 0f, 6f + THUMB_HEIGHT, Color(0x1D3F28))
+                g2.paint = GradientPaint(0f, 6f, Palette.COURT_GRASS, 0f, 6f + THUMB_HEIGHT, Palette.COURT_GRASS_DARK)
                 g2.fill(clip)
                 val old = g2.clip
                 g2.clip(clip)
@@ -529,7 +530,7 @@ class ScoreboardSettingsDialog private constructor(
                 val font = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
                 val label = UiKit.ellipsize(style.title, font, width - 12f)
                 UiKit.drawText(
-                    g2, label, font, if (isSelected || hover) UiKit.FG else UiKit.FG_2,
+                    g2, label, font, if (isSelected || hover) Palette.FG else Palette.FG_2,
                     (width - UiKit.textWidth(label, font)) / 2f, 6f + THUMB_HEIGHT + 4f, 16f,
                 )
             } finally {
@@ -550,7 +551,7 @@ class ScoreboardSettingsDialog private constructor(
             val top = position.name.startsWith("TOP")
             val x = if (left) area.x + CORNER_INSET else area.x + area.width - CORNER_INSET - w
             val y = if (top) area.y + CORNER_INSET else area.y + area.height - CORNER_INSET - h
-            g2.color = if (selected) UiKit.LIME else color
+            g2.color = if (selected) Palette.LIME else color
             g2.fill(RoundRectangle2D.Double(x.toDouble(), y.toDouble(), w.toDouble(), h.toDouble(), 2.0, 2.0))
         }
     }
@@ -569,7 +570,7 @@ class ScoreboardSettingsDialog private constructor(
                 val image = frame
                 if (image != null) {
                     // The frame fits in the 16:9 area. The export also keeps the frame whole.
-                    g2.color = Color.BLACK
+                    g2.color = Palette.VIDEO_BG
                     g2.fillRect(0, 0, width, height)
                     g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
                     val scale = min(w / image.width, h / image.height)
@@ -591,16 +592,16 @@ class ScoreboardSettingsDialog private constructor(
 
         /** A green court with lines in perspective, so the area reads as a match video. */
         private fun paintCourt(g2: Graphics2D, w: Double, h: Double) {
-            g2.paint = GradientPaint(0f, 0f, Color(0x3A, 0x6E, 0x46), 0f, h.toFloat(), Color(0x1D, 0x3F, 0x28))
+            g2.paint = GradientPaint(0f, 0f, Palette.COURT_GRASS, 0f, h.toFloat(), Palette.COURT_GRASS_DARK)
             g2.fillRect(0, 0, width, height)
-            g2.color = Color(255, 255, 255, 70)
+            g2.color = Palette.COURT_LINE
             g2.stroke = BasicStroke(2f)
             g2.draw(Line2D.Double(w * 0.22, h * 0.95, w * 0.36, h * 0.30))
             g2.draw(Line2D.Double(w * 0.78, h * 0.95, w * 0.64, h * 0.30))
             g2.draw(Line2D.Double(w * 0.36, h * 0.30, w * 0.64, h * 0.30))
             g2.draw(Line2D.Double(w * 0.28, h * 0.70, w * 0.72, h * 0.70))
             g2.draw(Line2D.Double(w * 0.50, h * 0.70, w * 0.50, h * 0.30))
-            g2.color = Color(255, 255, 255, 110)
+            g2.color = Palette.COURT_LINE_2
             g2.stroke = BasicStroke(3f)
             g2.draw(Line2D.Double(w * 0.14, h * 0.52, w * 0.86, h * 0.52))
         }

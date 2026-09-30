@@ -17,43 +17,26 @@ import javax.swing.JButton
 import kotlin.math.ceil
 import org.litvin.ui.commons.KeyChipStyle
 import org.litvin.ui.commons.KeyChips
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 
 /**
- * Colors and helpers of the Scoring tab. The tab uses the colors, fonts and key chips of the Points tab
+ * Helpers of the Scoring tab. The tab uses the colors of [Palette] and the fonts and key chips of the Points tab
  * ([UiKit], [KeyChips]), because design/scoring-redesign/shared.css has the same base.
  */
 internal object ScoringUi {
-    /** The racket color of the serve button. */
-    val RACKET = Color(0xC2DB43)
-    val SERVE_FILL = Color(0x3A3F24)
-    val SERVE_LINE = Color(0x59622C)
-
-    /** The background of a player row in the score panel. */
-    val PLAYER_ROW = Color(0x141414)
-
-    /** The color of "No point" in the list and on the outcome button. */
-    val NO_POINT_LIST = Color(0xD6D6D6)
-    val NO_POINT = Color(0x8A8A8A)
-
-    /** The dark text on a light player color, as in the design. */
-    val ON_PLAYER = Color(0x111111)
-
     /** The opacity of a disabled control. */
     const val DISABLED_ALPHA = 0.4f
 
     /**
-     * The text color on a surface in the player color [bg]: [ON_PLAYER] or white, whichever has the higher WCAG contrast.
+     * The text color on a surface in the player color [bg]: [Palette.ON_LIGHT] or white, whichever has the higher WCAG contrast.
      * The user can select any player color, also a dark one.
      */
     fun onPlayer(bg: Color): Color =
-        if (contrast(bg, ON_PLAYER) >= contrast(bg, Color.WHITE)) ON_PLAYER else Color.WHITE
-
-    /** The light disc behind a serve racket in a dark player color. */
-    val RACKET_BADGE = Color(0xD6D6D6)
+        if (contrast(bg, Palette.ON_LIGHT) >= contrast(bg, Palette.PURE_WHITE)) Palette.ON_LIGHT else Palette.PURE_WHITE
 
     /** The lightest row background of the points list: the selected row. */
-    private val LIST_ROW = Color(0x242424)
+    private val LIST_ROW = Palette.SELECTED
 
     /**
      * True when a mark in the player [color] is not visible enough on a row of the points list.
@@ -78,10 +61,10 @@ internal object ScoringUi {
 
     /** The key chip on a surface in the player color [bg]. */
     fun onPlayerKeyStyle(bg: Color): KeyChipStyle =
-        if (onPlayer(bg) == ON_PLAYER) ON_LIGHT_KEY else ON_DARK_KEY
+        if (onPlayer(bg) == Palette.ON_LIGHT) ON_LIGHT_KEY else ON_DARK_KEY
 
-    private val ON_LIGHT_KEY = KeyChipStyle(fill = Color(0, 0, 0, 38), border = Color(0, 0, 0, 89), text = ON_PLAYER)
-    private val ON_DARK_KEY = KeyChipStyle(fill = Color(255, 255, 255, 31), border = Color(255, 255, 255, 77), text = Color.WHITE)
+    private val ON_LIGHT_KEY = KeyChipStyle(fill = Palette.SHADE, border = Palette.SHADE_2, text = Palette.ON_LIGHT)
+    private val ON_DARK_KEY = KeyChipStyle(fill = Palette.HIGHLIGHT_2, border = Palette.HIGHLIGHT_3, text = Palette.PURE_WHITE)
 
     /** "#4DA3FF" as a color, or [fallback] when the text is not a color. */
     fun parseColor(hex: String?, fallback: Color): Color {
@@ -283,23 +266,23 @@ internal class ScoringButton(
             val hover = model.isRollover && isEnabled
             val (fill, border, fg) = when (kind) {
                 Kind.SECONDARY -> Triple(
-                    if (hover) UiKit.RAISED_2 else UiKit.RAISED,
-                    if (hover) Color(0x444444) else UiKit.LINE_2,
-                    UiKit.FG,
+                    if (hover) Palette.RAISED_2 else Palette.RAISED,
+                    if (hover) Palette.HOVER_LINE else Palette.LINE_2,
+                    Palette.FG,
                 )
                 Kind.GHOST -> Triple(
-                    if (hover) UiKit.RAISED else null,
-                    if (hover) UiKit.LINE_2 else null,
-                    if (hover) UiKit.FG else UiKit.FG_2,
+                    if (hover) Palette.RAISED else null,
+                    if (hover) Palette.LINE_2 else null,
+                    if (hover) Palette.FG else Palette.FG_2,
                 )
-                Kind.LIME -> Triple(if (hover) UiKit.LIME_HOVER else UiKit.LIME, null, UiKit.ON_LIME)
+                Kind.LIME -> Triple(if (hover) Palette.LIME_HOVER else Palette.LIME, null, Palette.ON_LIME)
             }
             UiKit.paintBox(g2, 0, 0, width, height, 4, fill, border)
             var x = if (alignLeft) padding.toFloat() else (width - contentWidth()) / 2f
             if (iconMaker != null) {
                 val iconColor = when (kind) {
-                    Kind.LIME -> UiKit.ON_LIME
-                    else -> UiKit.FG_2
+                    Kind.LIME -> Palette.ON_LIME
+                    else -> Palette.FG_2
                 }
                 val icon = icons.getOrPut(iconColor) { iconMaker(ICON_SIZE, iconColor) }
                 icon.paintIcon(this, g2, x.toInt(), (height - icon.iconHeight) / 2)

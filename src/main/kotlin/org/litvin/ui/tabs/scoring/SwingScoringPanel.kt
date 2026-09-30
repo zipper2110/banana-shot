@@ -28,6 +28,7 @@ import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoringEngine
 import org.litvin.scoring.ScoringEngine.MatchState
 import org.litvin.ui.commons.HintBalloon
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
@@ -198,8 +199,8 @@ class SwingScoringPanel(
     private var scoreboardPreviewSettings: ScoreboardSettingsV1? = null
     private var lastScoreboardDisplay: ScoreboardDisplay? = null
 
-    private var player1ColorHex: String = "#4DA3FF"
-    private var player2ColorHex: String = "#FF6B6B"
+    private var player1ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER1_HEX
+    private var player2ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER2_HEX
 
     // Outcomes persistence (ScoreV1). "Scored" includes NONE.
     private val outcomesByPointId: MutableMap<String, Outcome> = LinkedHashMap()
@@ -216,8 +217,8 @@ class SwingScoringPanel(
     private fun players() = ScorePlayers(
         p1Name = displayNameP1(),
         p2Name = displayNameP2(),
-        p1Color = ScoringUi.parseColor(player1ColorHex, Color(0x4DA3FF)),
-        p2Color = ScoringUi.parseColor(player2ColorHex, Color(0xFF6B6B)),
+        p1Color = ScoringUi.parseColor(player1ColorHex, Color(ScoreboardComponent.DEFAULT_PLAYER1_RGB)),
+        p2Color = ScoringUi.parseColor(player2ColorHex, Color(ScoreboardComponent.DEFAULT_PLAYER2_RGB)),
     )
 
     // Current selected segment bounds [startMs, endMs)
@@ -357,14 +358,14 @@ class SwingScoringPanel(
     init {
         installKeyBindings()
         isOpaque = true
-        background = UiKit.PANEL
+        background = Palette.PANEL
 
         // Left column: the video, and the playback bar of the selected point under it
         geometryViewport = GeometryViewportPanel(player.component)
         geometryViewport.name = "video"
         val videoColumn = JPanel(BorderLayout()).apply {
             isOpaque = true
-            background = Color.BLACK
+            background = Palette.VIDEO_BG
             minimumSize = Dimension(320, 0)
             add(geometryViewport, BorderLayout.CENTER)
             add(playbackBar, BorderLayout.SOUTH)
@@ -373,9 +374,9 @@ class SwingScoringPanel(
         // Side column: the score panel, the points list, and the settings buttons
         val footer = JPanel(GridLayout(1, 2, 8, 0)).apply {
             isOpaque = true
-            background = UiKit.BG
+            background = Palette.BG
             border = BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, UiKit.LINE),
+                BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
                 BorderFactory.createEmptyBorder(10, 12, 12, 12),
             )
             add(scoreSettingsButton)
@@ -384,8 +385,8 @@ class SwingScoringPanel(
         val sideColumn = JPanel(BorderLayout()).apply {
             name = "scoring-side"
             isOpaque = true
-            background = UiKit.BG
-            border = BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE)
+            background = Palette.BG
+            border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
             preferredSize = Dimension(SIDE_COLUMN_WIDTH, 0)
             add(scorePanel, BorderLayout.NORTH)
             add(pointsList, BorderLayout.CENTER)

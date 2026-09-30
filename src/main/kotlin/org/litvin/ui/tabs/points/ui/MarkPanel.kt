@@ -14,6 +14,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import kotlin.math.ceil
 import org.litvin.ui.commons.KeyChips
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 
 /**
@@ -90,12 +91,12 @@ internal class MarkPanel(
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 8, UiKit.CARD, UiKit.LINE)
-            UiKit.drawText(g2, "Mark a point", titleFont, UiKit.FG, insets.left.toFloat(), insets.top.toFloat(), HEAD_HEIGHT.toFloat())
+            UiKit.paintBox(g2, 0, 0, width, height, 8, Palette.CARD, Palette.LINE)
+            UiKit.drawText(g2, "Mark a point", titleFont, Palette.FG, insets.left.toFloat(), insets.top.toFloat(), HEAD_HEIGHT.toFloat())
             if (stepOfText.isNotEmpty()) {
                 val font = UiKit.font(11.5f)
                 val x = width - insets.right - UiKit.textWidth(stepOfText, font)
-                UiKit.drawText(g2, stepOfText, font, UiKit.FG_3, x, insets.top.toFloat(), HEAD_HEIGHT.toFloat())
+                UiKit.drawText(g2, stepOfText, font, Palette.FG_3, x, insets.top.toFloat(), HEAD_HEIGHT.toFloat())
             }
         } finally {
             g2.dispose()
@@ -156,14 +157,14 @@ internal class StepTile(private val number: Int, private val title: String, priv
             val next = state == State.NEXT || state == State.LIVE
             val done = state == State.DONE
             val border = when {
-                next -> UiKit.LIME_LINE
-                model.isRollover -> Color(0x4A4A4A)
-                else -> UiKit.LINE_2
+                next -> Palette.LIME_LINE
+                model.isRollover -> Palette.HOVER_LINE
+                else -> Palette.LINE_2
             }
-            UiKit.paintBox(g2, 0, 0, width, height, 6, UiKit.RAISED, null)
-            if (done) UiKit.paintBox(g2, 0, 0, width, height, 6, UiKit.LIME_TINT, null)
+            UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.RAISED, null)
+            if (done) UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.LIME_TINT, null)
             UiKit.paintBox(g2, 0, 0, width, height, 6, null, border)
-            if (next) UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 5, null, Color(161, 254, 0, 51))
+            if (next) UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 5, null, Palette.LIME_EDGE)
 
             // Top row: number, title and key chip.
             val rowTop = PAD_TOP
@@ -171,19 +172,19 @@ internal class StepTile(private val number: Int, private val title: String, priv
             val circle = Ellipse2D.Double(PAD_X + 0.5, circleY + 0.5, CIRCLE - 1.0, CIRCLE - 1.0)
             val numberColor = when {
                 done -> {
-                    g2.color = UiKit.LIME
+                    g2.color = Palette.LIME
                     g2.fill(Ellipse2D.Double(PAD_X.toDouble(), circleY, CIRCLE.toDouble(), CIRCLE.toDouble()))
-                    UiKit.ON_LIME
+                    Palette.ON_LIME
                 }
                 next -> {
-                    g2.color = UiKit.LIME
+                    g2.color = Palette.LIME
                     g2.draw(circle)
-                    UiKit.LIME
+                    Palette.LIME
                 }
                 else -> {
-                    g2.color = UiKit.LINE_2
+                    g2.color = Palette.LINE_2
                     g2.draw(circle)
-                    UiKit.FG_2
+                    Palette.FG_2
                 }
             }
             val numberFont = UiKit.font(10.5f, UiKit.Weight.BOLD)
@@ -192,13 +193,13 @@ internal class StepTile(private val number: Int, private val title: String, priv
                 g2, numberText, numberFont, numberColor,
                 PAD_X + (CIRCLE - UiKit.textWidth(numberText, numberFont)) / 2f, circleY.toFloat(), CIRCLE.toFloat(),
             )
-            UiKit.drawText(g2, title, titleFont, UiKit.FG, (PAD_X + CIRCLE + 7).toFloat(), rowTop.toFloat(), TOP_ROW.toFloat())
+            UiKit.drawText(g2, title, titleFont, Palette.FG, (PAD_X + CIRCLE + 7).toFloat(), rowTop.toFloat(), TOP_ROW.toFloat())
             KeyChips.paint(g2, key, width - PAD_X - KeyChips.width(key), rowTop + (TOP_ROW - KeyChips.HEIGHT) / 2)
 
             val valueColor = when (state) {
-                State.DONE -> UiKit.LIME
-                State.LIVE -> UiKit.FG_2
-                else -> UiKit.FG_3
+                State.DONE -> Palette.LIME
+                State.LIVE -> Palette.FG_2
+                else -> Palette.FG_3
             }
             UiKit.drawText(g2, value, valueFont, valueColor, PAD_X.toFloat(), (rowTop + TOP_ROW + ROW_GAP).toFloat(), VALUE_ROW.toFloat())
         } finally {
@@ -219,7 +220,7 @@ internal class StepTile(private val number: Int, private val title: String, priv
 
 /** The hint line of the mark panel: an info icon and a sentence with one key chip. */
 internal class HintLine : JComponent() {
-    private val icon = UiKit.icon(Material2AL.INFO, 16, UiKit.FG_3)
+    private val icon = UiKit.icon(Material2AL.INFO, 16, Palette.FG_3)
     private var before = ""
     private var key = ""
     private var after = ""
@@ -244,11 +245,11 @@ internal class HintLine : JComponent() {
             icon.paintIcon(this, g2, 0, (height - icon.iconHeight) / 2)
             var x = icon.iconWidth + 6f
             val space = UiKit.textWidth(" ", textFont)
-            UiKit.drawText(g2, before, textFont, UiKit.FG_2, x, 0f, height.toFloat())
+            UiKit.drawText(g2, before, textFont, Palette.FG_2, x, 0f, height.toFloat())
             x += UiKit.textWidth(before, textFont) + space
             KeyChips.paint(g2, key, x.toInt(), (height - KeyChips.HEIGHT) / 2)
             x += KeyChips.width(key) + space
-            UiKit.drawText(g2, after, textFont, UiKit.FG_2, x, 0f, height.toFloat())
+            UiKit.drawText(g2, after, textFont, Palette.FG_2, x, 0f, height.toFloat())
         } finally {
             g2.dispose()
         }

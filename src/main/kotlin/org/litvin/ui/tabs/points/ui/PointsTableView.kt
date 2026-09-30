@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.applyDarkScrollbar
 import org.litvin.ui.tabs.points.CommentDto
@@ -71,10 +72,10 @@ class PointsTableView(
 
     init {
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(header, BorderLayout.NORTH)
         add(scroll, BorderLayout.CENTER)
-        runCatching { applyDarkScrollbar(scroll, UiKit.BG) }
+        runCatching { applyDarkScrollbar(scroll, Palette.BG) }
         scroll.verticalScrollBar.unitIncrement = TableRow.HEIGHT
         scroll.verticalScrollBar.addComponentListener(object : ComponentAdapter() {
             override fun componentShown(e: ComponentEvent) = syncHeader()
@@ -193,7 +194,7 @@ class PointsTableView(
     private inner class RowsPanel : JPanel(null), Scrollable {
         init {
             isOpaque = true
-            background = UiKit.BG
+            background = Palette.BG
         }
 
         override fun doLayout() {
@@ -215,7 +216,7 @@ class PointsTableView(
             val g2 = UiKit.smooth(g)
             try {
                 val font = UiKit.font(13f)
-                UiKit.drawText(g2, EMPTY_TEXT, font, UiKit.FG_3, (width - UiKit.textWidth(EMPTY_TEXT, font)) / 2f, 28f, 18f)
+                UiKit.drawText(g2, EMPTY_TEXT, font, Palette.FG_3, (width - UiKit.textWidth(EMPTY_TEXT, font)) / 2f, 28f, 18f)
             } finally {
                 g2.dispose()
             }

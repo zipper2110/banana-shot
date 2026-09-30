@@ -41,8 +41,8 @@ internal const val SIDE_PANEL_WIDTH = 400
  * It stays enabled in both styles.
  */
 internal class ResetAllButton(name: String, tooltip: String) : JButton("Reset all") {
-    private val iconNormal = UiKit.icon(Feather.ROTATE_CCW, 14, UiKit.FG)
-    private val iconQuiet = UiKit.icon(Feather.ROTATE_CCW, 14, UiKit.FG_3)
+    private val iconNormal = UiKit.icon(Feather.ROTATE_CCW, 14, Palette.FG)
+    private val iconQuiet = UiKit.icon(Feather.ROTATE_CCW, 14, Palette.FG_3)
 
     var quiet = true
         set(value) {
@@ -79,22 +79,22 @@ internal class ResetAllButton(name: String, tooltip: String) : JButton("Reset al
             val pressed = model.isArmed && model.isPressed
             val fill = when {
                 quiet -> null
-                pressed -> UiKit.RAISED
-                hover -> UiKit.RAISED_2
-                else -> UiKit.RAISED
+                pressed -> Palette.RAISED
+                hover -> Palette.RAISED_2
+                else -> Palette.RAISED
             }
             val line = when {
-                quiet && hover -> UiKit.LINE_2
-                quiet -> UiKit.LINE
-                hover -> UiKit.HOVER_LINE
-                else -> UiKit.LINE_2
+                quiet && hover -> Palette.LINE_2
+                quiet -> Palette.LINE
+                hover -> Palette.HOVER_LINE
+                else -> Palette.LINE_2
             }
             UiKit.paintBox(g2, 0, 0, width, height, 4, fill, line)
             val bright = !quiet || hover
             val icon = if (bright) iconNormal else iconQuiet
             icon.paintIcon(this, g2, PAD_X + (ICON - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
             UiKit.drawText(
-                g2, text.orEmpty(), font, if (bright) UiKit.FG else UiKit.FG_3,
+                g2, text.orEmpty(), font, if (bright) Palette.FG else Palette.FG_3,
                 (PAD_X + ICON + GAP).toFloat(), 0f, height.toFloat(),
             )
         } finally {
@@ -114,7 +114,7 @@ internal class ResetAllButton(name: String, tooltip: String) : JButton("Reset al
 internal class SidePanelHeader(title: String, private val status: JLabel, private val resetButton: JComponent) : JPanel(null) {
     private val titleLabel = JLabel(title).apply {
         font = UiKit.font(16f, UiKit.Weight.SEMIBOLD)
-        foreground = UiKit.FG
+        foreground = Palette.FG
     }
 
     init {
@@ -128,7 +128,7 @@ internal class SidePanelHeader(title: String, private val status: JLabel, privat
     /** Shows "All at default" or "N of M changed" in the status, and makes "Reset all" quiet when nothing changed. */
     fun showChanged(changed: Int, total: Int) {
         status.text = if (changed == 0) "All at default" else "$changed of $total changed"
-        status.foreground = if (changed == 0) UiKit.FG_3 else UiKit.SAGE
+        status.foreground = if (changed == 0) Palette.FG_3 else Palette.SAGE
         (resetButton as? ResetAllButton)?.quiet = changed == 0
     }
 
@@ -166,7 +166,7 @@ internal interface HeightForWidth {
 internal class CardColumn : JPanel(null), Scrollable {
     init {
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
     }
 
     private val shown get() = components.filter { it.isVisible }
@@ -205,10 +205,10 @@ internal class CardColumn : JPanel(null), Scrollable {
     /** A borderless scroll pane with a dark scroll bar and no horizontal scroll bar around this column. */
     fun inScrollPane(): JScrollPane = JScrollPane(this).apply {
         border = BorderFactory.createEmptyBorder()
-        background = UiKit.BG
-        viewport.background = UiKit.BG
+        background = Palette.BG
+        viewport.background = Palette.BG
         horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
-        try { applyDarkScrollbar(this, UiKit.BG) } catch (_: Throwable) { }
+        try { applyDarkScrollbar(this, Palette.BG) } catch (_: Throwable) { }
     }
 
     private companion object {
@@ -230,7 +230,7 @@ internal open class GroupCard(
     private val rowHeight: Int,
 ) : JPanel(null) {
     private val rowComponents = rows.toList()
-    private val captionIcon = UiKit.icon(ikon, 14, UiKit.FG_3)
+    private val captionIcon = UiKit.icon(ikon, 14, Palette.FG_3)
     private val captionFont = UiKit.trackedFont(10.5f, 0.1, UiKit.Weight.BOLD)
 
     init {
@@ -252,11 +252,11 @@ internal open class GroupCard(
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 8, UiKit.CARD, UiKit.LINE)
+            UiKit.paintBox(g2, 0, 0, width, height, 8, Palette.CARD, Palette.LINE)
             val lineTop = CAPTION_TOP + CAPTION_PAD_TOP
             captionIcon.paintIcon(this, g2, CAPTION_X, lineTop + (CAPTION_LINE - captionIcon.iconHeight) / 2)
             val textX = (CAPTION_X + captionIcon.iconWidth + CAPTION_GAP).toFloat()
-            UiKit.drawText(g2, title.uppercase(), captionFont, UiKit.FG_3, textX, lineTop.toFloat(), CAPTION_LINE.toFloat())
+            UiKit.drawText(g2, title.uppercase(), captionFont, Palette.FG_3, textX, lineTop.toFloat(), CAPTION_LINE.toFloat())
             paintCaptionEnd(g2, (width - CAPTION_X).toFloat(), lineTop.toFloat(), CAPTION_LINE.toFloat())
         } finally {
             g2.dispose()
@@ -292,11 +292,11 @@ internal object SliderRows {
     /** The line at the top of each row after the first, and the lime bar at the left edge of a changed row. */
     fun paintFrame(g2: Graphics2D, width: Int, height: Int, first: Boolean, changed: Boolean) {
         if (!first) {
-            g2.color = UiKit.CARD_ROW_LINE
+            g2.color = Palette.CARD_ROW_LINE
             g2.fillRect(0, 0, width, 1)
         }
         if (changed) {
-            g2.color = UiKit.LIME
+            g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(-2.0, MARK_INSET.toDouble(), 4.0, (height - MARK_INSET * 2).toDouble(), 4.0, 4.0))
         }
     }
@@ -306,16 +306,16 @@ internal object SliderRows {
      * [top] is the top of the label line.
      */
     fun paintEnds(g2: Graphics2D, width: Int, top: Float, low: String, high: String, mid: String? = null, midX: Float = 0f) {
-        UiKit.drawText(g2, low, endFont, UiKit.FG_3, (PAD_X + END_PAD).toFloat(), top, END_LINE)
+        UiKit.drawText(g2, low, endFont, Palette.FG_3, (PAD_X + END_PAD).toFloat(), top, END_LINE)
         val highX = width - PAD_X - END_PAD - UiKit.textWidth(high, endFont)
-        UiKit.drawText(g2, high, endFont, UiKit.FG_3, highX, top, END_LINE)
+        UiKit.drawText(g2, high, endFont, Palette.FG_3, highX, top, END_LINE)
         if (mid != null) {
             UiKit.drawText(g2, mid, endFont, MID_LABEL, midX - UiKit.textWidth(mid, endFont) / 2f, top, END_LINE)
         }
     }
 
     /** The middle label ("Center", "0°") is darker than the end labels. */
-    private val MID_LABEL = Color(0x555555)
+    private val MID_LABEL = Palette.LINE_5
 }
 
 /**
@@ -341,7 +341,7 @@ internal class DefaultFillSliderUI(private val default: Int, private val minorTi
             val from = min(defaultX, thumbX)
             val to = max(defaultX, thumbX)
             if (to - from >= 1) {
-                g2.color = UiKit.LIME
+                g2.color = Palette.LIME
                 g2.fill(RoundRectangle2D.Double(from, centerY - TRACK / 2, to - from, TRACK, TRACK, TRACK))
             }
             g2.color = MINOR_TICK
@@ -359,7 +359,7 @@ internal class DefaultFillSliderUI(private val default: Int, private val minorTi
     override fun paintThumb(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            val color = if (slider.value != default) UiKit.LIME else THUMB_IDLE
+            val color = if (slider.value != default) Palette.LIME else THUMB_IDLE
             val cx = thumbRect.x + thumbRect.width / 2.0
             val cy = thumbRect.y + thumbRect.height / 2.0
             fun circle(diameter: Double, fill: Color) {
@@ -381,12 +381,12 @@ internal class DefaultFillSliderUI(private val default: Int, private val minorTi
         private const val TRACK = 4.0
         private const val TICK_HEIGHT = 12.0
         private const val MINOR_TICK_HEIGHT = 8.0
-        private val TRACK_BG = Color(0x33, 0x33, 0x33)
-        private val TICK = Color(0x5A, 0x5A, 0x5A)
-        private val MINOR_TICK = Color(0x47, 0x47, 0x47)
-        private val THUMB_IDLE = Color(0xD9, 0xD9, 0xD9)
-        private val THUMB_RING = Color(0x10, 0x10, 0x10)
-        private val FOCUS_GLOW = Color(161, 254, 0, 64)
+        private val TRACK_BG = Palette.LINE_2
+        private val TICK = Palette.LINE_5
+        private val MINOR_TICK = Palette.HOVER_LINE
+        private val THUMB_IDLE = Palette.NEUTRAL_LIGHT
+        private val THUMB_RING = Palette.BG
+        private val FOCUS_GLOW = Palette.LIME_GLOW
 
         /** A slider with this UI, a hand cursor and the focus glow. */
         fun slider(min: Int, max: Int, default: Int, minorTicks: List<Int> = emptyList()): JSlider =

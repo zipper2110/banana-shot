@@ -27,8 +27,9 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
         isFocusable = false
         putClientProperty(
             FlatClientProperties.STYLE,
-            "arc: 8; background: #121212; foreground: #E4E4E4; borderColor: #363636; buttonBackground: #121212; " +
-                "buttonArrowColor: #ADAAAA; buttonStyle: none; padding: 0,6,0,4",
+            "arc: 8; background: ${Palette.hex(Palette.INSET)}; foreground: ${Palette.hex(Palette.FG)}; " +
+                "borderColor: ${Palette.hex(Palette.LINE_2)}; buttonBackground: ${Palette.hex(Palette.INSET)}; " +
+                "buttonArrowColor: ${Palette.hex(Palette.FG_2)}; buttonStyle: none; padding: 0,6,0,4",
         )
     }
     private val captionFont get() = UiKit.font(12f)
@@ -78,7 +79,7 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
         if (compact) return
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.drawText(g2, CAPTION, captionFont, UiKit.FG_2, 0f, 0f, height.toFloat())
+            UiKit.drawText(g2, CAPTION, captionFont, Palette.FG_2, 0f, 0f, height.toFloat())
             var x = captionWidth() + COMBO_WIDTH + GAP
             for (key in KEYS) {
                 KeyChips.paint(g2, key, x, (height - KeyChips.HEIGHT) / 2)

@@ -26,7 +26,7 @@ internal class SeekButton(
     componentName: String,
 ) : JButton() {
 
-    private val directionIcon: Icon = UiKit.icon(direction, 18, UiKit.LIME)
+    private val directionIcon: Icon = UiKit.icon(direction, 18, Palette.LIME)
     private val iconFirst = deltaMs < 0
     private var flashing = false
     private val flashTimer = Timer(FLASH_MS) { flashing = false; repaint() }.apply { isRepeats = false }
@@ -76,13 +76,13 @@ internal class SeekButton(
         try {
             val hover = model.isRollover
             val border = when {
-                flashing -> UiKit.LIME
-                hover -> Color(0x555555)
-                else -> Color(0x474747)
+                flashing -> Palette.LIME
+                hover -> Palette.LINE_5
+                else -> Palette.HOVER_LINE
             }
-            UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Color(0x313131) else Color(0x292929), border)
+            UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.CONTROL else Palette.RAISED_2, border)
             // The inset highlight at the top edge.
-            g2.color = Color(255, 255, 255, 13)
+            g2.color = Palette.HIGHLIGHT
             g2.fillRect(3, 1, width - 6, 1)
 
             var x = (width - contentWidth()) / 2f
@@ -91,7 +91,7 @@ internal class SeekButton(
                 x += iconWidth()
             }
             if (showDirection && iconFirst) paintIcon()
-            UiKit.drawText(g2, label, labelFont, UiKit.FG, x, 0f, height.toFloat())
+            UiKit.drawText(g2, label, labelFont, Palette.FG, x, 0f, height.toFloat())
             x += UiKit.textWidth(label, labelFont) + GAP
             if (showDirection && !iconFirst) paintIcon()
             x += KEYS_MARGIN
@@ -129,15 +129,15 @@ internal data class PlayButtonStyle(
     val pauseTooltip: String,
 ) {
     companion object {
-        val LARGE = PlayButtonStyle(56, 28, 8.5f, Color(0x607050), "SPACE — Play", "SPACE — Pause")
-        val COMPACT = PlayButtonStyle(48, 26, 8f, Color(0x4D6B16), "SPACE - Play", "SPACE - Pause")
+        val LARGE = PlayButtonStyle(56, 28, 8.5f, Palette.ON_LIME_MUTED, "SPACE — Play", "SPACE — Pause")
+        val COMPACT = PlayButtonStyle(48, 26, 8f, Palette.ON_LIME_MUTED, "SPACE - Play", "SPACE - Pause")
     }
 }
 
 /** The lime play button with the SPACE key as small text under the icon. */
 internal class PlayButton(private val style: PlayButtonStyle = PlayButtonStyle.LARGE) : JButton() {
-    private val playIcon = UiKit.icon(Material2RoundMZ.PLAY_ARROW, style.iconSize, UiKit.ON_LIME)
-    private val pauseIcon = UiKit.icon(Material2RoundMZ.PAUSE, style.iconSize, UiKit.ON_LIME)
+    private val playIcon = UiKit.icon(Material2RoundMZ.PLAY_ARROW, style.iconSize, Palette.ON_LIME)
+    private val pauseIcon = UiKit.icon(Material2RoundMZ.PAUSE, style.iconSize, Palette.ON_LIME)
     private val keyFont = UiKit.font(style.keyFontSize, UiKit.Weight.BOLD).deriveFont(mapOf(TextAttribute.TRACKING to 0.06))
 
     var playing = false
@@ -167,11 +167,11 @@ internal class PlayButton(private val style: PlayButtonStyle = PlayButtonStyle.L
         val g2 = UiKit.smooth(g)
         try {
             // The 1 px glow ring around the button.
-            UiKit.paintBox(g2, 0, 0, width, height, 9, null, GLOW)
+            UiKit.paintBox(g2, 0, 0, width, height, 9, null, Palette.LIME_GLOW)
             val fill = when {
-                model.isArmed && model.isPressed -> UiKit.LIME.darker()
-                model.isRollover -> UiKit.LIME_HOVER
-                else -> UiKit.LIME
+                model.isArmed && model.isPressed -> Palette.LIME_PRESSED
+                model.isRollover -> Palette.LIME_HOVER
+                else -> Palette.LIME
             }
             UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 8, fill, null)
             val icon = if (playing) pauseIcon else playIcon
@@ -190,6 +190,5 @@ internal class PlayButton(private val style: PlayButtonStyle = PlayButtonStyle.L
 
     private companion object {
         const val KEY = "SPACE"
-        val GLOW = Color(161, 254, 0, 64)
     }
 }

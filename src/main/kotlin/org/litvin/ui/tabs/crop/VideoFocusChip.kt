@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.crop
 
 import org.litvin.export.scoreboard.ScoreboardFonts
 import org.litvin.media.OverlayShape
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.Color
 import kotlin.math.max
@@ -34,12 +35,12 @@ internal object VideoFocusChip {
     private const val KEY_HEIGHT = 16.0
     private const val FRAME_WIDTH = 2.0
 
-    private val BACKGROUND = Color(0, 0, 0, 184)
-    private val BORDER = Color(0x3A, 0x3A, 0x3A)
-    private val BORDER_FOCUSED = Color(161, 254, 0, 128)
-    private val FRAME = Color(161, 254, 0, 140)
-    private val KEY_BG = Color(0x16, 0x16, 0x16)
-    private val KEY_LINE = Color(0x45, 0x45, 0x45)
+    private val BACKGROUND = Palette.SCRIM_2
+    private val BORDER = Palette.LINE_3
+    private val BORDER_FOCUSED = Palette.LIME_LINE
+    private val FRAME = Palette.LIME_LINE
+    private val KEY_BG = Palette.PANEL
+    private val KEY_LINE = Palette.HOVER_LINE
 
     /** A part of the chip content. */
     private sealed interface Item {
@@ -80,9 +81,9 @@ internal object VideoFocusChip {
             fill = BACKGROUND, stroke = if (focused) BORDER_FOCUSED else BORDER, strokeWidth = 1.0, radius = HEIGHT / 2,
         )
         var x = LEFT + PAD_LEFT
-        shapes += keyboardIcon(x, TOP + (HEIGHT - ICON) / 2, if (focused) UiKit.LIME else UiKit.FG_2)
+        shapes += keyboardIcon(x, TOP + (HEIGHT - ICON) / 2, if (focused) Palette.LIME else Palette.FG_2)
         x += ICON + GAP
-        val textColor = if (focused) UiKit.FG else UiKit.FG_2
+        val textColor = if (focused) Palette.FG else Palette.FG_2
         items.forEachIndexed { index, item ->
             when (item) {
                 is Item.Text -> shapes += OverlayShape.Text(x, TOP + (HEIGHT - textSize) / 2, item.text, textSize, textColor, FONT)
@@ -109,7 +110,7 @@ internal object VideoFocusChip {
         return listOf(
             OverlayShape.Rect(x, y, width, KEY_HEIGHT, fill = KEY_LINE, radius = 4.0),
             OverlayShape.Rect(x + 1, y + 1, width - 2, KEY_HEIGHT - 3, fill = KEY_BG, radius = 3.0),
-            OverlayShape.Text(x + (width - labelWidth) / 2, y + (KEY_HEIGHT - 1 - size) / 2, label, size, UiKit.FG_2, FONT, bold = true),
+            OverlayShape.Text(x + (width - labelWidth) / 2, y + (KEY_HEIGHT - 1 - size) / 2, label, size, Palette.FG_2, FONT, bold = true),
         )
     }
 

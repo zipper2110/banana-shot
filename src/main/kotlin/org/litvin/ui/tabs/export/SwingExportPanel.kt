@@ -29,6 +29,7 @@ import org.litvin.stats.StatsCardVideo
 import org.litvin.stats.StatsIO
 import org.litvin.stats.StatsSettingsV1
 import org.litvin.ui.commons.FilePicker
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SystemFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
@@ -123,7 +124,7 @@ class SwingExportPanel(
     private var lastFailureNotifiedJobId: String? = null
 
     init {
-        background = ExportUi.BG
+        background = Palette.BG
 
         // Left configuration column: the steps scroll, the footer stays at the bottom.
         val checks = GridRows(2, 6, 6).apply {
@@ -149,11 +150,11 @@ class SwingExportPanel(
         val scroll = JScrollPane(steps).apply {
             border = BorderFactory.createEmptyBorder()
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-            applyDarkScrollbar(this, ExportUi.CARD)
+            applyDarkScrollbar(this, Palette.CARD)
         }
         val left = JPanel(BorderLayout()).apply {
-            background = ExportUi.CARD
-            border = BorderFactory.createMatteBorder(0, 0, 0, 1, ExportUi.LINE)
+            background = Palette.CARD
+            border = BorderFactory.createMatteBorder(0, 0, 0, 1, Palette.LINE)
             preferredSize = Dimension(LEFT_WIDTH, 10)
             minimumSize = Dimension(LEFT_WIDTH, 10)
             add(scroll, BorderLayout.CENTER)
@@ -690,10 +691,10 @@ class SwingExportPanel(
 
 /** The bottom of the left column: the estimated file size and the settings on the left, the start button on the right. */
 private class ExportFooter(private val button: StartExportButton) : JPanel(null) {
-    private val sizeText = WrapText("", ExportUi.font(16f, ExportUi.Weight.BOLD), ExportUi.FG, lineHeight = 1.45f).apply {
+    private val sizeText = WrapText("", ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG, lineHeight = 1.45f).apply {
         name = "export-footer-size"
     }
-    private val detailText = WrapText("", ExportUi.font(12f), ExportUi.FG_2, lineHeight = 1.45f).apply {
+    private val detailText = WrapText("", ExportUi.font(12f), Palette.FG_2, lineHeight = 1.45f).apply {
         name = "export-footer-summary"
     }
     private val summary = Stack(0).apply {
@@ -710,8 +711,8 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
 
     /** Shows the size, for example "~9.72 GB", and the settings, for example "Only points · 4K · 60 fps". */
     fun show(size: String, details: String) {
-        sizeText.setText(if (size == "unknown") "Size unknown" else size, ExportUi.font(16f, ExportUi.Weight.BOLD), ExportUi.FG)
-        detailText.setText(details, ExportUi.font(12f), ExportUi.FG_2)
+        sizeText.setText(if (size == "unknown") "Size unknown" else size, ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG)
+        detailText.setText(details, ExportUi.font(12f), Palette.FG_2)
         revalidate()
         repaint()
     }
@@ -736,7 +737,7 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
         super.paintComponent(g)
         val g2 = ExportUi.smooth(g)
         try {
-            g2.color = ExportUi.LINE
+            g2.color = Palette.LINE
             g2.fillRect(0, 0, width, 1)
             StartExportButton.paintGlow(g2, button.x, button.y, button.width, button.height)
         } finally {
@@ -750,6 +751,6 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
         const val PAD_BOTTOM = 14
         const val GAP = 14
         const val BUTTON_WIDTH = 210
-        val BACKGROUND = Color(0x17, 0x17, 0x17)
+        val BACKGROUND = Palette.PANEL
     }
 }

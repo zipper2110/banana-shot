@@ -6,6 +6,7 @@ import org.kordamp.ikonli.material2.Material2MZ
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
 import org.litvin.ui.commons.Html
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.tabs.projects.presenter.ProjectCardState
 import java.awt.Color
 import java.awt.Component
@@ -76,7 +77,7 @@ internal class ProjectRow(
         add(JLabel(project.name).apply {
             name = "projects-name-${project.id}"
             font = ProjectsUi.font(13f, ProjectsUi.Weight.SEMIBOLD)
-            foreground = ProjectsUi.FG
+            foreground = Palette.FG
             toolTipText = project.name
         })
         add(actions(project, onRename, onDelete))
@@ -125,16 +126,16 @@ internal class ProjectRow(
         try {
             when {
                 isCurrent -> {
-                    g2.color = ProjectsUi.ROW_CURRENT
+                    g2.color = Palette.LIME_WASH
                     g2.fillRect(0, 0, width, height)
-                    ProjectsUi.paintBox(g2, -3, 8, 6, height - 16, 3, ProjectsUi.LIME, null)
+                    ProjectsUi.paintBox(g2, -3, 8, 6, height - 16, 3, Palette.LIME, null)
                 }
                 hovered -> {
-                    g2.color = ProjectsUi.ROW_HOVER
+                    g2.color = Palette.ROW_HOVER
                     g2.fillRect(0, 0, width, height)
                 }
             }
-            g2.color = ProjectsUi.ROW_LINE
+            g2.color = Palette.ROW_LINE
             g2.fillRect(0, height - 1, width, 1)
         } finally {
             g2.dispose()
@@ -144,10 +145,10 @@ internal class ProjectRow(
     private fun statusCell(): JComponent {
         val missingMessage = project.stats?.videoMissingMessage
         val (ikon: Ikon, color: Color, tip: String?) = when {
-            isCurrent -> Triple(Material2MZ.PLAY_CIRCLE_FILLED, ProjectsUi.LIME, "Open project")
-            missingMessage != null -> Triple(Material2OutlinedMZ.VIDEOCAM_OFF, ProjectsUi.RED, missingMessage)
-            !project.hasVideo -> Triple(Material2OutlinedAL.DESCRIPTION, ProjectsUi.FG_3, null)
-            else -> Triple(Material2OutlinedMZ.MOVIE, ProjectsUi.FG_3, null)
+            isCurrent -> Triple(Material2MZ.PLAY_CIRCLE_FILLED, Palette.LIME, "Open project")
+            missingMessage != null -> Triple(Material2OutlinedMZ.VIDEOCAM_OFF, Palette.RED, missingMessage)
+            !project.hasVideo -> Triple(Material2OutlinedAL.DESCRIPTION, Palette.FG_3, null)
+            else -> Triple(Material2OutlinedMZ.MOVIE, Palette.FG_3, null)
         }
         return JLabel(ProjectsUi.icon(ikon, 17, color)).apply {
             horizontalAlignment = SwingConstants.LEFT
@@ -157,7 +158,7 @@ internal class ProjectRow(
     }
 
     private fun actions(project: ProjectCardState, onRename: () -> Unit, onDelete: () -> Unit): JComponent {
-        val iconColor = { if (hovered) ProjectsUi.FG_2 else ProjectsUi.FG_3 }
+        val iconColor = { if (hovered) Palette.FG_2 else Palette.FG_3 }
         val rename = ProjectsIconButton(Material2AL.EDIT, "Rename project", restColor = iconColor).apply {
             name = "projects-rename-${project.id}"
             addActionListener { onRename() }
@@ -224,11 +225,11 @@ internal class PathCell(private val path: String, private val missingMessage: St
         try {
             var x = 0f
             if (missingMessage != null) {
-                ProjectsUi.drawText(g2, MISSING, missFont, ProjectsUi.RED, x, 0f, height.toFloat())
+                ProjectsUi.drawText(g2, MISSING, missFont, Palette.RED, x, 0f, height.toFloat())
                 x += ProjectsUi.textWidth(MISSING, missFont) + 6f
             }
             val shown = ProjectsUi.ellipsizeStart(path, pathFont, width - x - 1f)
-            val color = if (missingMessage != null) ProjectsUi.FG_3 else ProjectsUi.FG_2
+            val color = if (missingMessage != null) Palette.FG_3 else Palette.FG_2
             ProjectsUi.drawText(g2, shown, pathFont, color, x, 0f, height.toFloat())
         } finally {
             g2.dispose()
@@ -261,13 +262,13 @@ internal open class FigureCell(
         try {
             var right = width.toFloat()
             if (loading) {
-                ProjectsUi.paintBox(g2, width - skeletonWidth, (height - 10) / 2, skeletonWidth, 10, 3, ProjectsUi.SKELETON, null)
+                ProjectsUi.paintBox(g2, width - skeletonWidth, (height - 10) / 2, skeletonWidth, 10, 3, Palette.LINE, null)
                 right -= skeletonWidth + 3
             } else {
                 val value = text.orEmpty()
                 val textWidth = ProjectsUi.textWidth(value, figureFont)
                 right -= textWidth
-                val color = if (value == UNKNOWN) ProjectsUi.FG_3 else ProjectsUi.FG
+                val color = if (value == UNKNOWN) Palette.FG_3 else Palette.FG
                 ProjectsUi.drawText(g2, value, figureFont, color, right, 0f, height.toFloat())
                 right -= 3
             }
@@ -285,7 +286,7 @@ private const val UNKNOWN = "—"
 internal class FavoritesCell(text: String?) : FigureCell(
     text,
     skeletonWidth = 16,
-    figureIcon = ProjectsUi.icon(Material2MZ.STAR, 14, if (text == null || text == "0") ProjectsUi.FG_3 else ProjectsUi.YELLOW),
+    figureIcon = ProjectsUi.icon(Material2MZ.STAR, 14, if (text == null || text == "0") Palette.FG_3 else Palette.YELLOW),
 )
 
 /**
@@ -308,23 +309,23 @@ internal class ScoredCell(
         try {
             val barX = width - ProjectsTableColumns.SCORED_BAR
             val barY = (height - 4) / 2
-            ProjectsUi.paintBox(g2, barX, barY, ProjectsTableColumns.SCORED_BAR, 4, 2, ProjectsUi.BAR_TRACK, null)
+            ProjectsUi.paintBox(g2, barX, barY, ProjectsTableColumns.SCORED_BAR, 4, 2, Palette.TRACK, null)
             val numberRight = (barX - ProjectsTableColumns.SCORED_BAR_GAP).toFloat()
             if (scored == null || total == null) {
-                ProjectsUi.paintBox(g2, numberRight.toInt() - 40, (height - 10) / 2, 40, 10, 3, ProjectsUi.SKELETON, null)
+                ProjectsUi.paintBox(g2, numberRight.toInt() - 40, (height - 10) / 2, 40, 10, 3, Palette.LINE, null)
                 return
             }
             if (total > 0 && scored > 0) {
                 val fill = (ProjectsTableColumns.SCORED_BAR * scored.coerceAtMost(total) / total.toFloat()).toInt().coerceAtLeast(2)
-                val color = if (scored >= total) ProjectsUi.LIME else ProjectsUi.SAGE
+                val color = if (scored >= total) Palette.LIME else Palette.SAGE
                 ProjectsUi.paintBox(g2, barX, barY, fill, 4, 2, color, null)
             }
             val suffix = "/$total"
             val suffixWidth = ProjectsUi.textWidth(suffix, figureFont)
             val main = scored.toString()
             val mainWidth = ProjectsUi.textWidth(main, figureFont)
-            ProjectsUi.drawText(g2, suffix, figureFont, ProjectsUi.FG_3, numberRight - suffixWidth, 0f, height.toFloat())
-            ProjectsUi.drawText(g2, main, figureFont, ProjectsUi.FG, numberRight - suffixWidth - mainWidth, 0f, height.toFloat())
+            ProjectsUi.drawText(g2, suffix, figureFont, Palette.FG_3, numberRight - suffixWidth, 0f, height.toFloat())
+            ProjectsUi.drawText(g2, main, figureFont, Palette.FG, numberRight - suffixWidth - mainWidth, 0f, height.toFloat())
         } finally {
             g2.dispose()
         }

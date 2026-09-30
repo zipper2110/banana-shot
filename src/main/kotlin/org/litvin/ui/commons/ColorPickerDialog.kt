@@ -47,20 +47,32 @@ internal object ColorPickerDialog {
     private const val RECENT_MAX = 12
     private const val WIDTH = 404
 
-    /** Opens the picker and returns the new color, or null after Cancel. */
-    fun pick(parent: Component?, title: String, initial: Color): Color? {
+    /**
+     * Opens the picker and returns the new color, or null after Cancel.
+     * [onLiveChange] gets each color that the user selects before OK. After Cancel, it gets [initial] again.
+     */
+    fun pick(parent: Component?, title: String, initial: Color, onLiveChange: ((Color) -> Unit)? = null): Color? {
         var result: Color? = null
-        val dialog = build(parent, title, initial) { result = it }
+        val dialog = build(parent, title, initial, onLiveChange = onLiveChange) { result = it }
         dialog.setLocationRelativeTo(parent?.let { SwingUtilities.getWindowAncestor(it) ?: it })
         dialog.isVisible = true
+        if (result == null) onLiveChange?.invoke(initial)
         return result
     }
 
     /** Builds the packed picker without showing it. [onOk] gets the new color. [custom] opens the custom view. */
-    internal fun build(parent: Component?, title: String, initial: Color, custom: Boolean = false, onOk: (Color) -> Unit): JDialog {
+    internal fun build(
+        parent: Component?,
+        title: String,
+        initial: Color,
+        custom: Boolean = false,
+        onLiveChange: ((Color) -> Unit)? = null,
+        onOk: (Color) -> Unit,
+    ): JDialog {
         val dialog = DialogKit.modal(parent, title)
         dialog.name = "color-picker"
         val picker = Picker(Color(initial.rgb and 0xFFFFFF))
+        if (onLiveChange != null) picker.onChange = onLiveChange
         if (custom) picker.showCustom()
         val ok = UiButton("OK", kind = UiButton.Kind.LIME).apply {
             name = "color-picker-ok"
@@ -109,6 +121,9 @@ internal object ColorPickerDialog {
         private var syncing = false
         var onConfirm: () -> Unit = {}
 
+        /** Gets the color after each change. */
+        var onChange: (Color) -> Unit = {}
+
         val color: Color get() = Color(Color.HSBtoRGB(h / 360f, s, v) and 0xFFFFFF)
 
         private val compare = Compare()
@@ -133,7 +148,7 @@ internal object ColorPickerDialog {
             Stack(gap = 3).apply {
                 add(numberLabels[index].apply {
                     font = UiKit.font(11f)
-                    foreground = UiKit.FG_3
+                    foreground = Palette.FG_3
                 })
                 add(DialogKit.inputBox(numberFields[index], 28))
                 numberFields[index].horizontalAlignment = JTextField.RIGHT
@@ -153,11 +168,11 @@ internal object ColorPickerDialog {
 
             val recentCaption = JLabel("RECENT").apply {
                 font = UiKit.trackedFont(10.5f, 0.1, UiKit.Weight.BOLD)
-                foreground = UiKit.FG_3
+                foreground = Palette.FG_3
             }
             val recentEmpty = JLabel("The colors that you select show here.").apply {
                 font = UiKit.font(12f)
-                foreground = UiKit.FG_3
+                foreground = Palette.FG_3
                 preferredSize = Dimension(0, 26)
             }
             panes.add(Stack(gap = 0).apply {
@@ -170,7 +185,7 @@ internal object ColorPickerDialog {
                 isOpaque = false
                 val label = JLabel("Hex").apply {
                     font = UiKit.font(11f)
-                    foreground = UiKit.FG_3
+                    foreground = Palette.FG_3
                 }
                 val box = DialogKit.inputBox(hexField, 28)
                 add(label)
@@ -237,6 +252,7 @@ internal object ColorPickerDialog {
                 syncing = false
             }
             syncNumbers()
+            onChange(c)
         }
 
         /** The labels, the limits and the values of the number fields for the selected color model. */
@@ -343,7 +359,7 @@ internal object ColorPickerDialog {
                     chip(g2, 0, width / 2, initial, "CURRENT")
                     chip(g2, width / 2, width - width / 2, newColor, "NEW")
                     g2.clip = null
-                    UiKit.paintBox(g2, 0, 0, width, height, 6, null, UiKit.LINE_2)
+                    UiKit.paintBox(g2, 0, 0, width, height, 6, null, Palette.LINE_2)
                 } finally {
                     g2.dispose()
                 }
@@ -353,7 +369,7 @@ internal object ColorPickerDialog {
                 g2.color = color
                 g2.fillRect(x, 0, w, height)
                 val hsb = Color.RGBtoHSB(color.red, color.green, color.blue, null)
-                val text = if (hsb[2] > 0.6f && hsb[1] < 0.6f) Color(0x111111) else Color.WHITE
+                val text = if (hsb[2] > 0.6f && hsb[1] < 0.6f) Palette.ON_LIGHT else Palette.PURE_WHITE
                 UiKit.drawText(g2, label, UiKit.trackedFont(10.5f, 0.08, UiKit.Weight.BOLD), text, x + 10f, 7f, 15f)
                 UiKit.drawText(g2, hex(color), MonoFont.of(12.5f), text, x + 10f, height - 24f, 17f)
             }
@@ -385,19 +401,19 @@ internal object ColorPickerDialog {
                     val shape = RoundRectangle2D.Double(0.0, 0.0, width.toDouble(), height.toDouble(), 12.0, 12.0)
                     g2.color = Color(Color.HSBtoRGB(h / 360f, 1f, 1f))
                     g2.fill(shape)
-                    g2.paint = GradientPaint(0f, 0f, Color.WHITE, width.toFloat(), 0f, Color(255, 255, 255, 0))
+                    g2.paint = GradientPaint(0f, 0f, Palette.PURE_WHITE, width.toFloat(), 0f, Palette.withAlpha(Palette.PURE_WHITE, 0))
                     g2.fill(shape)
-                    g2.paint = GradientPaint(0f, 0f, Color(0, 0, 0, 0), 0f, height.toFloat(), Color.BLACK)
+                    g2.paint = GradientPaint(0f, 0f, Palette.CLEAR, 0f, height.toFloat(), Palette.PURE_BLACK)
                     g2.fill(shape)
-                    UiKit.paintBox(g2, 0, 0, width, height, 6, null, UiKit.LINE_2)
+                    UiKit.paintBox(g2, 0, 0, width, height, 6, null, Palette.LINE_2)
                     val x = s * (width - 1)
                     val y = (1 - v) * (height - 1)
                     g2.color = color
                     g2.fill(Ellipse2D.Double(x - 7.0, y - 7.0, 14.0, 14.0))
-                    g2.color = Color(0, 0, 0, 150)
+                    g2.color = Palette.SCRIM
                     g2.stroke = BasicStroke(1f)
                     g2.draw(Ellipse2D.Double(x - 8.0, y - 8.0, 16.0, 16.0))
-                    g2.color = Color.WHITE
+                    g2.color = Palette.PURE_WHITE
                     g2.stroke = BasicStroke(2f)
                     g2.draw(Ellipse2D.Double(x - 6.0, y - 6.0, 12.0, 12.0))
                 } finally {
@@ -452,18 +468,18 @@ internal object ColorPickerDialog {
                 try {
                     val top = (height - TRACK) / 2f
                     val fractions = floatArrayOf(0f, 1 / 6f, 2 / 6f, 3 / 6f, 4 / 6f, 5 / 6f, 1f)
-                    val colors = arrayOf(Color.RED, Color.YELLOW, Color.GREEN, Color.CYAN, Color.BLUE, Color.MAGENTA, Color.RED)
+                    val colors = Array(fractions.size) { Color(Color.HSBtoRGB(fractions[it], 1f, 1f)) }
                     g2.paint = LinearGradientPaint(THUMB / 2f, 0f, width - THUMB / 2f, 0f, fractions, colors)
                     g2.fill(RoundRectangle2D.Float(0f, top, width.toFloat(), TRACK.toFloat(), TRACK.toFloat(), TRACK.toFloat()))
                     val x = THUMB / 2f + (width - THUMB) * (h / 359f)
                     val cy = height / 2f
                     if (isFocusOwner) {
-                        g2.color = Color(161, 254, 0, 64)
+                        g2.color = Palette.LIME_GLOW
                         g2.fill(Ellipse2D.Float(x - THUMB / 2f - 2, cy - THUMB / 2f - 2, THUMB + 4f, THUMB + 4f))
                     }
-                    g2.color = Color.BLACK
+                    g2.color = Palette.PURE_BLACK
                     g2.fill(Ellipse2D.Float(x - THUMB / 2f, cy - THUMB / 2f, THUMB.toFloat(), THUMB.toFloat()))
-                    g2.color = Color.WHITE
+                    g2.color = Palette.PURE_WHITE
                     g2.fill(Ellipse2D.Float(x - THUMB / 2f + 1, cy - THUMB / 2f + 1, THUMB - 2f, THUMB - 2f))
                     g2.color = Color(Color.HSBtoRGB(h / 360f, 1f, 1f))
                     g2.fill(Ellipse2D.Float(x - 4f, cy - 4f, 8f, 8f))
@@ -538,14 +554,14 @@ internal object ColorPickerDialog {
                     val y = (index / COLUMNS) * (size + GAP)
                     val isSelected = selected?.rgb == color.rgb
                     if (isSelected) {
-                        g2.color = UiKit.LIME
+                        g2.color = Palette.LIME
                         g2.fill(RoundRectangle2D.Float(x - 2.5f, y - 2.5f, size + 5f, size + 5f, 8f, 8f))
-                        g2.color = DialogKit.DIALOG_BG
+                        g2.color = Palette.OVERLAY
                         g2.fill(RoundRectangle2D.Float(x - 1f, y - 1f, size + 2f, size + 2f, 6f, 6f))
                     }
                     g2.color = color
                     g2.fill(RoundRectangle2D.Float(x, y, size, size, 6f, 6f))
-                    g2.color = if (index == hover) Color.WHITE else Color(255, 255, 255, 31)
+                    g2.color = if (index == hover) Palette.FG_STRONG else Palette.HIGHLIGHT_2
                     g2.stroke = BasicStroke(1f)
                     g2.draw(RoundRectangle2D.Float(x + 0.5f, y + 0.5f, size - 1f, size - 1f, 5f, 5f))
                 }
@@ -569,7 +585,8 @@ internal object ColorPickerDialog {
         return (grays + rows).map { Color(it.rgb and 0xFFFFFF) }
     }
 
-    private fun parseHex(text: String): Color? {
+    /** Parses "#RRGGBB" or "RRGGBB". Returns null for other text. */
+    fun parseHex(text: String): Color? {
         val digits = text.trim().removePrefix("#")
         if (digits.length != 6) return null
         return digits.toIntOrNull(16)?.let { Color(it) }

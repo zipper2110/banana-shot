@@ -46,7 +46,7 @@ internal class SwitchBox(text: String, private val fontSize: Float = 13f) : JChe
             if (!isEnabled) g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.4f)
             paintSwitch(g2, 2, (height - TRACK_H) / 2, isSelected, isFocusOwner)
             if (!text.isNullOrEmpty()) {
-                UiKit.drawText(g2, text, font, UiKit.FG, (TRACK_W + 4 + GAP).toFloat(), 0f, height.toFloat())
+                UiKit.drawText(g2, text, font, Palette.FG, (TRACK_W + 4 + GAP).toFloat(), 0f, height.toFloat())
             }
         } finally {
             g2.dispose()
@@ -57,21 +57,21 @@ internal class SwitchBox(text: String, private val fontSize: Float = 13f) : JChe
         const val TRACK_W = 30
         const val TRACK_H = 17
         private const val GAP = 10
-        private val TRACK_OFF = Color(0x3A3A3A)
-        private val KNOB_OFF = Color(0x9A9A9A)
+        private val TRACK_OFF = Palette.LINE_3
+        private val KNOB_OFF = Palette.FG_2
 
         /** Paints the switch track and the knob with the top-left corner at [x], [y]. */
         fun paintSwitch(g2: Graphics2D, x: Int, y: Int, on: Boolean, focused: Boolean) {
             if (focused) {
-                g2.color = UiKit.LIME_LINE
+                g2.color = Palette.LIME_LINE
                 g2.stroke = BasicStroke(1.5f)
                 g2.draw(RoundRectangle2D.Double(x - 2.5, y - 2.5, TRACK_W + 5.0, TRACK_H + 5.0, TRACK_H + 5.0, TRACK_H + 5.0))
             }
-            g2.color = if (on) UiKit.LIME else TRACK_OFF
+            g2.color = if (on) Palette.LIME else TRACK_OFF
             g2.fill(RoundRectangle2D.Double(x.toDouble(), y.toDouble(), TRACK_W.toDouble(), TRACK_H.toDouble(), TRACK_H.toDouble(), TRACK_H.toDouble()))
             val knob = TRACK_H - 4.0
             val knobX = if (on) x + TRACK_W - 2.0 - knob else x + 2.0
-            g2.color = if (on) UiKit.ON_LIME else KNOB_OFF
+            g2.color = if (on) Palette.ON_LIME else KNOB_OFF
             g2.fill(Ellipse2D.Double(knobX, y + 2.0, knob, knob))
         }
     }
@@ -159,7 +159,7 @@ internal class SegmentedChoice<T>(private val componentName: String, options: Li
         val g2 = UiKit.smooth(g)
         try {
             if (!isEnabled) g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.4f)
-            UiKit.paintBox(g2, 0, 0, width, height, 6, DialogKit.INPUT_BG, UiKit.LINE_2)
+            UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.INSET, Palette.LINE_2)
         } finally {
             g2.dispose()
         }
@@ -200,11 +200,11 @@ internal class SegmentedChoice<T>(private val componentName: String, options: Li
                 val isSelected = selected == option.value
                 val hover = model.isRollover && isEnabled && !isSelected
                 when {
-                    isSelected -> UiKit.paintBox(g2, 0, 0, width, height, 4, UiKit.RAISED_2, if (isEnabled) UiKit.LIME_LINE else Color(0x555555))
-                    hover -> UiKit.paintBox(g2, 0, 0, width, height, 4, DialogKit.DIALOG_BG, null)
+                    isSelected -> UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED_2, if (isEnabled) Palette.LIME_LINE else Palette.LINE_5)
+                    hover -> UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.OVERLAY, null)
                 }
-                if (isFocusOwner) UiKit.paintBox(g2, 0, 0, width, height, 4, null, UiKit.LIME)
-                val fg = if (isSelected || hover) UiKit.FG else UiKit.FG_2
+                if (isFocusOwner) UiKit.paintBox(g2, 0, 0, width, height, 4, null, Palette.LIME)
+                val fg = if (isSelected || hover) Palette.FG else Palette.FG_2
                 val sub = option.sub
                 val glyph = option.glyph
                 if (glyph != null && option.label.isEmpty()) {
@@ -223,7 +223,7 @@ internal class SegmentedChoice<T>(private val componentName: String, options: Li
                     UiKit.drawText(g2, label, labelFont, fg, labelX, top, lineH)
                     val subText = UiKit.ellipsize(sub, subFont, width - 8f)
                     val subX = (width - UiKit.textWidth(subText, subFont)) / 2f
-                    UiKit.drawText(g2, subText, subFont, if (isSelected) UiKit.FG_2 else UiKit.FG_3, subX, top + lineH, lineH)
+                    UiKit.drawText(g2, subText, subFont, if (isSelected) Palette.FG_2 else Palette.FG_3, subX, top + lineH, lineH)
                 }
             } finally {
                 g2.dispose()
@@ -264,15 +264,15 @@ internal class SwatchButton(color: Color, private val size: Dimension = Dimensio
         try {
             val hover = model.isRollover && isEnabled
             UiKit.paintBox(
-                g2, 0, 0, width, height, 4, if (hover) UiKit.RAISED_2 else UiKit.RAISED,
-                if (isFocusOwner) UiKit.LIME_LINE else if (hover) UiKit.HOVER_LINE else UiKit.LINE_2,
+                g2, 0, 0, width, height, 4, if (hover) Palette.RAISED_2 else Palette.RAISED,
+                if (isFocusOwner) Palette.LIME_LINE else if (hover) Palette.HOVER_LINE else Palette.LINE_2,
             )
             val d = 18.0
             val x = (width - d) / 2
             val y = (height - d) / 2
             g2.color = color
             g2.fill(Ellipse2D.Double(x, y, d, d))
-            g2.color = Color(255, 255, 255, 64)
+            g2.color = Palette.HIGHLIGHT_3
             g2.draw(Ellipse2D.Double(x + 0.5, y + 0.5, d - 1, d - 1))
         } finally {
             g2.dispose()

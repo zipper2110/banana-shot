@@ -7,6 +7,7 @@ import javax.swing.BoxLayout
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingConstants
+import org.litvin.ui.commons.Palette
 
 /** The pager next to the "Recent projects" title: the previous page button, "Page 1 / 3", and the next page button. */
 class ProjectsPaginationBar(
@@ -22,7 +23,7 @@ class ProjectsPaginationBar(
     private val pageLabel = JLabel("Page 1 / 1", SwingConstants.CENTER).apply {
         name = "projects-page-label"
         font = ProjectsUi.font(12f)
-        foreground = ProjectsUi.FG_2
+        foreground = Palette.FG_2
     }
 
     init {

@@ -5,6 +5,7 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.scoring.PerPlayer
 import org.litvin.ui.commons.HeightForWidth
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
@@ -41,48 +42,9 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /*
- * Colors and small parts of the Stats tab. The values come from design/stats-redesign/final.html and its shared.css.
+ * Small parts of the Stats tab. The values come from design/stats-redesign/final.html and its shared.css.
+ * The colors are in [Palette].
  */
-
-internal object StatsColors {
-    /** The "In video" column: a light lime background, and a stronger background for a selected row. */
-    val LANE = Color(161, 254, 0, 9)
-    val LANE_SELECTED = Color(161, 254, 0, 20)
-    val LANE_LINE = Color(161, 254, 0, 36)
-
-    /** The line under each statistics row, and the background of the row under the mouse. */
-    val ROW_LINE = Color(0x1B1B1B)
-    val ROW_HOVER = Color(0x151515)
-
-    /** The main value of the player that leads the row. The other value is [UiKit.FG_2]. */
-    val LEAD = Color.WHITE
-
-    /** The "—" of a row without a value. */
-    val OFF_VALUE = Color(0x444444)
-
-    /** The count of selected rows in a group title, when the group has selected rows. */
-    val GREEN = Color(0xAFF625)
-
-    /** The checkbox border. */
-    val CHECK_LINE = Color(0x5A5A5A)
-    val CHECK_LINE_HOVER = Color(0x8A8A8A)
-
-    /** A value that opens a point: the background under the mouse. */
-    val LINK_HOVER = Color(161, 254, 0, 26)
-
-    /** The coverage note. */
-    val NOTE_BG = Color(255, 213, 74, 20)
-    val NOTE_LINE = Color(255, 213, 74, 77)
-    val NOTE_TEXT = Color(0xF3E2A4)
-    val NOTE_ICON = Color(0xFFD54A)
-
-    /** The text of a read error. */
-    val ERROR_TEXT = Color(0xFFC2B3)
-
-    /** The line of the momentum chart and its middle line. */
-    val CHART_LINE = Color(0xD8D8D8)
-    val CHART_AXIS = Color(0x3A3A3A)
-}
 
 /** Paints [paint] with the opacity of a disabled control when [enabled] is false. */
 internal inline fun paintFaded(g: Graphics, enabled: Boolean, paint: (Graphics) -> Unit) {
@@ -229,9 +191,9 @@ internal class InVideoCheck(componentName: String) : JCheckBox() {
             val g2 = UiKit.smooth(g)
             try {
                 if (checked) {
-                    g2.color = UiKit.LIME
+                    g2.color = Palette.LIME
                     g2.fill(RoundRectangle2D.Double(x.toDouble(), y.toDouble(), SIZE.toDouble(), SIZE.toDouble(), 6.0, 6.0))
-                    g2.color = UiKit.ON_LIME
+                    g2.color = Palette.ON_LIME
                     g2.stroke = BasicStroke(2f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER)
                     g2.draw(Path2D.Double().apply {
                         moveTo(x + 4.4, y + 8.0)
@@ -239,7 +201,7 @@ internal class InVideoCheck(componentName: String) : JCheckBox() {
                         lineTo(x + 11.8, y + 5.4)
                     })
                 } else {
-                    g2.color = if (hover) StatsColors.CHECK_LINE_HOVER else StatsColors.CHECK_LINE
+                    g2.color = if (hover) Palette.LINE_6 else Palette.LINE_5
                     g2.stroke = BasicStroke(1.5f)
                     g2.draw(RoundRectangle2D.Double(x + 0.75, y + 0.75, SIZE - 1.5, SIZE - 1.5, 5.0, 5.0))
                 }
@@ -291,11 +253,11 @@ internal class StatsButton(
             val hover = isEnabled && model.isRollover
             val textColor: Color
             if (lime) {
-                UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) UiKit.LIME_HOVER else UiKit.LIME, null)
-                textColor = UiKit.ON_LIME
+                UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.LIME_HOVER else Palette.LIME, null)
+                textColor = Palette.ON_LIME
             } else {
-                UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) UiKit.RAISED_2 else UiKit.RAISED, if (hover) UiKit.HOVER_LINE else UiKit.LINE_2)
-                textColor = UiKit.FG
+                UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.RAISED_2 else Palette.RAISED, if (hover) Palette.HOVER_LINE else Palette.LINE_2)
+                textColor = Palette.FG
             }
             val textWidth = UiKit.textWidth(text.orEmpty(), font)
             val icon = icon(textColor)
@@ -339,11 +301,11 @@ internal class ScopeButton(componentName: String, private val title: String, pri
         try {
             val hover = model.isRollover
             when {
-                isSelected -> UiKit.paintBox(g2, 0, 0, width, height, 4, UiKit.RAISED_2, UiKit.LIME_LINE)
+                isSelected -> UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED_2, Palette.LIME_LINE)
                 hover -> UiKit.paintBox(g2, 0, 0, width, height, 4, HOVER_BG, null)
             }
-            val titleColor = if (isSelected || hover) UiKit.FG else UiKit.FG_2
-            val smallColor = if (isSelected) UiKit.FG_2 else UiKit.FG_3
+            val titleColor = if (isSelected || hover) Palette.FG else Palette.FG_2
+            val smallColor = if (isSelected) Palette.FG_2 else Palette.FG_3
             val top = (height - TITLE_LINE - SMALL_LINE) / 2f
             val titleText = UiKit.ellipsize(title, TITLE_FONT, (width - PAD_X * 2).toFloat())
             val smallText = UiKit.ellipsize(small, SMALL_FONT, (width - PAD_X * 2).toFloat())
@@ -364,7 +326,7 @@ internal class ScopeButton(componentName: String, private val title: String, pri
         const val SMALL_LINE = 15f
         val TITLE_FONT = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
         val SMALL_FONT = UiKit.font(11f)
-        val HOVER_BG = Color(0x1C1C1C)
+        val HOVER_BG = Palette.OVERLAY
     }
 }
 
@@ -415,7 +377,7 @@ internal class ScopeControl(private val onSelect: (Int) -> Unit) : JPanel(null) 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 6, UiKit.BG, UiKit.LINE_2)
+            UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.BG, Palette.LINE_2)
         } finally {
             g2.dispose()
         }
@@ -444,8 +406,8 @@ internal class LimitStepper(
         name = "$componentName-field"
         horizontalAlignment = SwingConstants.CENTER
         font = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
-        foreground = UiKit.FG
-        caretColor = UiKit.FG
+        foreground = Palette.FG
+        caretColor = Palette.FG
         isOpaque = false
         border = BorderFactory.createEmptyBorder()
         addActionListener { commit() }
@@ -517,7 +479,7 @@ internal class LimitStepper(
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 4, UiKit.BG, null)
+            UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.BG, null)
         } finally {
             g2.dispose()
         }
@@ -534,7 +496,7 @@ internal class LimitStepper(
         }
         val border = UiKit.smooth(g)
         try {
-            UiKit.paintBox(border, 0, 0, width, height, 4, null, UiKit.LINE_2)
+            UiKit.paintBox(border, 0, 0, width, height, 4, null, Palette.LINE_2)
         } finally {
             border.dispose()
         }
@@ -542,8 +504,8 @@ internal class LimitStepper(
 
     /** A minus or plus button. A held button repeats its step. */
     private class StepButton(ikon: Ikon, label: String, private val onStep: () -> Unit) : JButton() {
-        private val iconIdle = UiKit.icon(ikon, 14, UiKit.FG_2)
-        private val iconHover = UiKit.icon(ikon, 14, UiKit.FG)
+        private val iconIdle = UiKit.icon(ikon, 14, Palette.FG_2)
+        private val iconHover = UiKit.icon(ikon, 14, Palette.FG)
         private val repeat = Timer(REPEAT_MS) { onStep() }.apply { initialDelay = HOLD_MS }
 
         init {
@@ -564,7 +526,7 @@ internal class LimitStepper(
 
         override fun paintComponent(g: Graphics) {
             val hover = model.isRollover
-            g.color = if (hover) UiKit.RAISED_2 else UiKit.RAISED
+            g.color = if (hover) Palette.RAISED_2 else Palette.RAISED
             g.fillRect(0, 0, width, height)
             val icon = if (hover) iconHover else iconIdle
             icon.paintIcon(this, g, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
@@ -593,7 +555,7 @@ internal class CompareBar : JComponent() {
             field = value
             repaint()
         }
-    var colors: PerPlayer<Color> = PerPlayer(UiKit.FG, UiKit.FG_2)
+    var colors: PerPlayer<Color> = PerPlayer(Palette.FG, Palette.FG_2)
         set(value) {
             field = value
             repaint()

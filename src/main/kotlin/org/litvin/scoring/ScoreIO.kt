@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import java.io.File
 import org.litvin.JsonFileIO
+import org.litvin.ScoreboardComponent
 
 /**
  * Score v1 schema and JSON read/write helpers for scoring outcomes (task 4.9).
@@ -24,8 +25,8 @@ data class ScoreV1(
     val version: Int = 1,
     val player1Name: String = "Player 1",
     val player2Name: String = "Player 2",
-    val player1ColorHex: String = "#4DA3FF",
-    val player2ColorHex: String = "#FF6B6B",
+    val player1ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER1_HEX,
+    val player2ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER2_HEX,
     val scoreboard: ScoreboardSettingsV1 = ScoreboardSettingsV1(),
     val rules: MatchRulesV1 = MatchRulesV1(),
     /** Game wins that the user marked by hand. The engine uses them only in manual scoring. */

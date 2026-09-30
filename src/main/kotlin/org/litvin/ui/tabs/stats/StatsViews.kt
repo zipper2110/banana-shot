@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.stats
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.litvin.ui.commons.HeightForWidth
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.Dimension
 import java.awt.Font
@@ -25,9 +26,9 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
     val title = JLabel("", SwingConstants.CENTER).apply {
         name = "stats-empty"
         font = UiKit.font(16f, UiKit.Weight.BOLD)
-        foreground = UiKit.FG
+        foreground = Palette.FG
     }
-    val text = WrapText("", UiKit.font(13f), UiKit.FG_2, SwingConstants.CENTER, lineSpacing = 1.5f).apply {
+    val text = WrapText("", UiKit.font(13f), Palette.FG_2, SwingConstants.CENTER, lineSpacing = 1.5f).apply {
         name = "stats-empty-text"
     }
     val openScoring = StatsButton("Open Scoring", Material2AL.ASSIGNMENT_TURNED_IN, lime = true).apply {
@@ -68,16 +69,16 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
                 val x = (width - ICON_BOX) / 2.0
                 val circle = Ellipse2D.Double(x, PAD.toDouble(), ICON_BOX.toDouble(), ICON_BOX.toDouble())
                 val error = kind == Kind.ERROR
-                g2.color = if (error) UiKit.RED_TINT else UiKit.RAISED
+                g2.color = if (error) Palette.RED_TINT else Palette.RAISED
                 g2.fill(circle)
-                g2.color = if (error) UiKit.RED_LINE else UiKit.LINE_2
+                g2.color = if (error) Palette.RED_LINE else Palette.LINE_2
                 g2.draw(Ellipse2D.Double(x + 0.5, PAD + 0.5, ICON_BOX - 1.0, ICON_BOX - 1.0))
                 val ikon = when (kind) {
                     Kind.NO_PROJECT -> Material2AL.FOLDER_OPEN
                     Kind.NO_SCORED_POINTS -> Material2AL.ASSIGNMENT_TURNED_IN
                     Kind.ERROR -> Material2OutlinedAL.ERROR_OUTLINE
                 }
-                val icon = UiKit.icon(ikon, 28, if (error) UiKit.RED else UiKit.FG_2)
+                val icon = UiKit.icon(ikon, 28, if (error) Palette.RED else Palette.FG_2)
                 icon.paintIcon(this, g2, (width - icon.iconWidth) / 2, PAD + (ICON_BOX - icon.iconHeight) / 2)
             } finally {
                 g2.dispose()
@@ -87,7 +88,7 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
 
     init {
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(box)
     }
 
@@ -97,7 +98,7 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
         text.text = message
         val error = kind == Kind.ERROR
         text.font = if (error) Font("Consolas", Font.PLAIN, 12) else UiKit.font(13f)
-        text.color = if (error) StatsColors.ERROR_TEXT else UiKit.FG_2
+        text.color = if (error) Palette.RED_TEXT else Palette.FG_2
         openScoring.isVisible = kind == Kind.NO_SCORED_POINTS
         box.revalidate()
         repaint()
@@ -115,8 +116,8 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
 
 /** A yellow note with an info icon, for example "Based on 180 of 186 points." Each line is a paragraph. */
 internal class CoverageNote : JPanel(null), HeightForWidth {
-    private val icon = UiKit.icon(Material2OutlinedAL.INFO, 17, StatsColors.NOTE_ICON)
-    private val body = WrapText("", UiKit.font(12.5f), StatsColors.NOTE_TEXT)
+    private val icon = UiKit.icon(Material2OutlinedAL.INFO, 17, Palette.YELLOW)
+    private val body = WrapText("", UiKit.font(12.5f), Palette.YELLOW_TEXT)
 
     /** The lines of the note. The note is hidden when it has no lines. */
     var lines: List<String> = emptyList()
@@ -149,7 +150,7 @@ internal class CoverageNote : JPanel(null), HeightForWidth {
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 6, StatsColors.NOTE_BG, StatsColors.NOTE_LINE)
+            UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.YELLOW_TINT, Palette.YELLOW_LINE)
             icon.paintIcon(this, g2, PAD_X, PAD_Y + 1)
         } finally {
             g2.dispose()

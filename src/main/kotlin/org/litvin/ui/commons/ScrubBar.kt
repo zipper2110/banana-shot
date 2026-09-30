@@ -37,11 +37,11 @@ class ScrubBar(
     private var isUpdatingFromExternal = false
 
     init {
-        background = Color(0x11, 0x11, 0x11)
+        background = Palette.INSET
 
         listOf(startLabel, endLabel).forEach { label ->
             label.font = Font(Font.MONOSPACED, Font.PLAIN, 10)
-            label.foreground = Color(0xAD, 0xAA, 0xAA)
+            label.foreground = Palette.FG_2
         }
 
         slider.name = sliderComponentName
@@ -51,8 +51,8 @@ class ScrubBar(
         slider.snapToTicks = false
         slider.ui = DualColorSliderUI(
             slider,
-            baseColor = Color(0x33, 0xAA, 0x55),
-            remainingColor = Color(0x88, 0x88, 0x88)
+            baseColor = Palette.GREEN,
+            remainingColor = Palette.LINE_6
         )
 
         val updateFromMouse: (MouseEvent) -> Unit = { e ->
@@ -191,7 +191,7 @@ class DualColorSliderUI(
             val size = min(r.width, r.height)
             val x = r.x + (r.width - size) / 2
             val y = r.y + (r.height - size) / 2
-            g2.color = UiStyles.GREEN
+            g2.color = Palette.LIME
             g2.fillOval(x, y, size, size)
         } finally {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, oldAA)

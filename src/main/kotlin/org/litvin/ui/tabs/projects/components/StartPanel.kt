@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.projects.components
 
 import org.kordamp.ikonli.material2.Material2OutlinedAL
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.applyDarkScrollbar
 import java.awt.BasicStroke
 import java.awt.BorderLayout
@@ -35,7 +36,7 @@ internal class StartPanel(onImportNewMatch: () -> Unit) : JPanel(BorderLayout())
 
     init {
         isOpaque = true
-        background = ProjectsUi.PANEL
+        background = Palette.PANEL
         name = "projects-start-panel"
         val blocks = JPanel().apply {
             isOpaque = false
@@ -65,7 +66,7 @@ internal class StartPanel(onImportNewMatch: () -> Unit) : JPanel(BorderLayout())
             viewport.isOpaque = false
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             verticalScrollBar.unitIncrement = 18
-            applyDarkScrollbar(this, ProjectsUi.PANEL)
+            applyDarkScrollbar(this, Palette.PANEL)
         }, BorderLayout.CENTER)
     }
 
@@ -83,7 +84,7 @@ internal class StartPanel(onImportNewMatch: () -> Unit) : JPanel(BorderLayout())
 
     override fun paintChildren(g: Graphics) {
         super.paintChildren(g)
-        g.color = ProjectsUi.LINE
+        g.color = Palette.LINE
         g.fillRect(width - 1, 0, 1, height)
     }
 
@@ -123,7 +124,7 @@ private class SaveNote(contentWidth: Int) : JPanel(BorderLayout(10, 0)) {
             WrapLabel(
                 "The app saves all changes automatically across all tabs. No need to save anything manually.",
                 ProjectsUi.font(13f),
-                ProjectsUi.FG_2,
+                Palette.FG_2,
                 contentWidth - 34,
                 1.5f,
             ),
@@ -145,7 +146,7 @@ private class SaveNote(contentWidth: Int) : JPanel(BorderLayout(10, 0)) {
 
     /** A laptop with a check mark on the screen, as the `sync_saved_locally` symbol of the design. */
     private class SavedLocallyIcon : Icon {
-        private val laptop = ProjectsUi.icon(Material2OutlinedAL.LAPTOP, SIZE, ProjectsUi.SAGE)
+        private val laptop = ProjectsUi.icon(Material2OutlinedAL.LAPTOP, SIZE, Palette.SAGE)
 
         override fun getIconWidth() = SIZE
         override fun getIconHeight() = SIZE
@@ -154,7 +155,7 @@ private class SaveNote(contentWidth: Int) : JPanel(BorderLayout(10, 0)) {
             laptop.paintIcon(c, g, x, y)
             val g2 = ProjectsUi.smooth(g)
             try {
-                g2.color = ProjectsUi.SAGE
+                g2.color = Palette.SAGE
                 g2.stroke = BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
                 g2.draw(Path2D.Double().apply {
                     moveTo(x + 9.0, y + 10.0)

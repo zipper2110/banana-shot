@@ -91,6 +91,40 @@ class ArchitectureDependencyHygieneTest {
         }
     }
 
+    /**
+     * All UI colors come from ui.commons.Palette, so that a theme can change them in one place.
+     * A color value in a different UI file (a hex or RGB literal, a named AWT color, a "#RRGGBB" string,
+     * or a darker() or brighter() variant) is a violation. Comment lines are not checked.
+     */
+    @Test
+    fun uiColorsComeFromPalette() {
+        val uiRoots = listOf(srcRoot.resolve("org/litvin/ui"), srcRoot.resolve("org/litvin/app"))
+        val palette = srcRoot.resolve("org/litvin/ui/commons/Palette.kt")
+        val colorValue = Regex(
+            """Color\(\s*(0x|\d)|Color\.(WHITE|BLACK|RED|GREEN|BLUE|GRAY|LIGHT_GRAY|DARK_GRAY|YELLOW|ORANGE|CYAN|MAGENTA|PINK|""" +
+                """white|black|red|green|blue|gray|lightGray|darkGray|yellow|orange|cyan|magenta|pink)\b|""" +
+                """"[^"]*#[0-9A-Fa-f]{6}|\.(darker|brighter)\(\)""",
+        )
+        val violations = uiRoots.filter { Files.exists(it) }.flatMap { root ->
+            Files.walk(root).use { stream ->
+                stream.asSequence()
+                    .filter { it.isRegularFile() && it.name.endsWith(".kt") && it != palette }
+                    .flatMap { file ->
+                        Files.readAllLines(file).withIndex()
+                            .filter { (_, line) -> line.trimStart().let { !it.startsWith("*") && !it.startsWith("/*") && !it.startsWith("//") } }
+                            .filter { (_, line) -> colorValue.containsMatchIn(line) }
+                            .map { (index, line) -> "[${srcRoot.relativize(file)}:${index + 1}] ${line.trim()}" }
+                    }
+                    .toList()
+            }
+        }
+        assertTrue(
+            violations.isEmpty(),
+            "Found ${violations.size} color value(s) outside Palette. Use a Palette token, or add one:\n" +
+                violations.joinToString("\n"),
+        )
+    }
+
     private fun extractPackage(text: String): String? {
         val regex = Regex("^\\s*package\\s+([a-zA-Z0-9_.]+)", RegexOption.MULTILINE)
         return regex.find(text)?.groupValues?.getOrNull(1)

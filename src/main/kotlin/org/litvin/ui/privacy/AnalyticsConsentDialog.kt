@@ -8,6 +8,7 @@ import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.LeadRow
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.PathBox
 import org.litvin.ui.commons.Stack
 import org.litvin.ui.commons.UiButton
@@ -50,18 +51,18 @@ object AnalyticsConsentDialog {
         })
 
         val fact = LeadRow(
-            JLabel(UiKit.icon(Material2AL.BLOCK, 16, UiKit.RED)).apply { preferredSize = Dimension(18, 19) },
-            WrapText("We never collect video, project names, paths, scores, or personal details.", UiKit.font(12.5f), UiKit.FG_2, 1.5f, TEXT_WIDTH),
+            JLabel(UiKit.icon(Material2AL.BLOCK, 16, Palette.RED)).apply { preferredSize = Dimension(18, 19) },
+            WrapText("We never collect video, project names, paths, scores, or personal details.", UiKit.font(12.5f), Palette.FG_2, 1.5f, TEXT_WIDTH),
             18,
             8,
         )
         // The address shows only when the app cannot open the browser, so the user can copy it.
         val copyLine = Stack(gap = 4).apply {
-            add(WrapText("Copy this URL:", UiKit.font(12f), UiKit.FG_3, 1.4f, TEXT_WIDTH))
+            add(WrapText("Copy this URL:", UiKit.font(12f), Palette.FG_3, 1.4f, TEXT_WIDTH))
             add(PathBox(privacyUrl.toString()))
             isVisible = false
         }
-        val later = WrapText("You can change this later in More → Privacy.", UiKit.font(12f), UiKit.FG_3, 1.45f, TEXT_WIDTH)
+        val later = WrapText("You can change this later in More → Privacy.", UiKit.font(12f), Palette.FG_3, 1.45f, TEXT_WIDTH)
         val parts = listOf(
             MessageDialog.paragraph("Help improve ${AppInfo.NAME} by sending optional, anonymous product events.", WIDTH),
             fact,

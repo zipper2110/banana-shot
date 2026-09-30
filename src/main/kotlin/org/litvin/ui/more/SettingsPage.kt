@@ -2,6 +2,7 @@ package org.litvin.ui.more
 
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SectionPage
 import org.litvin.ui.commons.UiKit
 import java.io.File
@@ -27,7 +28,7 @@ internal class SettingsPage(
             onShowHintsAgain()
             hintsStatus.text = "The hints show again when you get to them."
         }.apply { name = "more-settings-show-hints" })
-        hintsStatus = statusLine(UiKit.SAGE)
+        hintsStatus = statusLine(Palette.SAGE)
 
         subheading("App data")
         paragraph("The app keeps your projects, the export history, and the logs in this folder. The videos stay where they are.")

@@ -12,6 +12,7 @@ import org.litvin.stats.StatsCard
 import org.litvin.stats.StatsIO
 import org.litvin.stats.StatsReport
 import org.litvin.stats.StatsSettingsV1
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.VideoFrameLoader
@@ -77,8 +78,8 @@ class SwingStatsPanel(
     private val emptyView = StatsEmptyView { onOpenScoring() }
 
     init {
-        background = UiKit.BG
-        body.background = UiKit.BG
+        background = Palette.BG
+        body.background = Palette.BG
         body.add(statsView(), CARD_STATS)
         body.add(emptyView, CARD_EMPTY)
         add(body, BorderLayout.CENTER)
@@ -126,15 +127,15 @@ class SwingStatsPanel(
     private fun statsView(): JComponent {
         val scroll = JScrollPane(table).apply {
             border = BorderFactory.createEmptyBorder()
-            background = UiKit.BG
-            viewport.background = UiKit.BG
+            background = Palette.BG
+            viewport.background = Palette.BG
             // The header with the player names and the Match / Set control stay at the top while the table scrolls.
             setColumnHeaderView(StatsTableTop(header, table.scopeRow))
-            columnHeader.background = UiKit.BG
+            columnHeader.background = Palette.BG
             setCorner(ScrollPaneConstants.UPPER_RIGHT_CORNER, HeaderCorner())
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
             verticalScrollBar.unitIncrement = 16
-            try { applyDarkScrollbar(this, UiKit.BG) } catch (_: Throwable) { }
+            try { applyDarkScrollbar(this, Palette.BG) } catch (_: Throwable) { }
         }
         // The coverage note is above the table, so it stays visible.
         val notes = object : JPanel(BorderLayout()) {
@@ -150,21 +151,21 @@ class SwingStatsPanel(
             add(coverage, BorderLayout.CENTER)
         }
         val left = JPanel(BorderLayout()).apply {
-            background = UiKit.BG
+            background = Palette.BG
             add(notes, BorderLayout.NORTH)
             add(scroll, BorderLayout.CENTER)
         }
         val right = JScrollPane(cardColumn).apply {
-            border = BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE)
-            background = UiKit.CARD
-            viewport.background = UiKit.CARD
+            border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
+            background = Palette.CARD
+            viewport.background = Palette.CARD
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             verticalScrollBar.unitIncrement = 16
-            try { applyDarkScrollbar(this, UiKit.CARD) } catch (_: Throwable) { }
+            try { applyDarkScrollbar(this, Palette.CARD) } catch (_: Throwable) { }
         }
         // The two sides have the same width.
         return JPanel(GridLayout(1, 2)).apply {
-            background = UiKit.BG
+            background = Palette.BG
             add(left)
             add(right)
         }
@@ -173,9 +174,9 @@ class SwingStatsPanel(
     /** The corner above the vertical scroll bar, next to the table header. */
     private class HeaderCorner : JComponent() {
         override fun paintComponent(g: java.awt.Graphics) {
-            g.color = UiKit.BG
+            g.color = Palette.BG
             g.fillRect(0, 0, width, height)
-            g.color = UiKit.LINE
+            g.color = Palette.LINE
             g.fillRect(0, height - 1, width, 1)
         }
     }
@@ -224,7 +225,7 @@ class SwingStatsPanel(
     }
 
     private fun playerColors(): PerPlayer<Color> {
-        val score = report?.score ?: return PerPlayer(UiKit.FG, UiKit.FG)
+        val score = report?.score ?: return PerPlayer(Palette.FG, Palette.FG)
         return PerPlayer(parseColor(score.player1ColorHex), parseColor(score.player2ColorHex))
     }
 
@@ -368,7 +369,7 @@ class SwingStatsPanel(
 
     /** The player color, lighter when it is too dark for the dark tab. The card uses the same color. */
     private fun parseColor(hex: String): Color =
-        hex.removePrefix("#").toIntOrNull(16)?.let { Color(StatsCard.onPanel(it)) } ?: UiKit.FG
+        hex.removePrefix("#").toIntOrNull(16)?.let { Color(StatsCard.onPanel(it)) } ?: Palette.FG
 
     private companion object {
         const val CARD_STATS = "stats"

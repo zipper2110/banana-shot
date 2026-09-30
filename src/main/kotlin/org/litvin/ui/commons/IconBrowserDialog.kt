@@ -56,18 +56,18 @@ class IconBrowserDialog(owner: Window?) : JDialog(owner, "Icon Browser — Feath
     }
 
     private fun makeCard(name: String, ikon: Ikon, size: Int): JComponent {
-        val icon = try { FontIcon.of(ikon, size).also { it.iconColor = Color.WHITE } } catch (_: Throwable) { null }
+        val icon = try { FontIcon.of(ikon, size).also { it.iconColor = Palette.FG_STRONG } } catch (_: Throwable) { null }
         val panel = JPanel(BorderLayout())
         panel.border = BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color(0x33,0x33,0x33), 1, true),
+            BorderFactory.createLineBorder(Palette.LINE_2, 1, true),
             BorderFactory.createEmptyBorder(10, 12, 10, 12)
         )
-        panel.background = Color(0x1A,0x1A,0x1A)
+        panel.background = Palette.CARD
         val iconLabel = JLabel(icon)
         iconLabel.horizontalAlignment = SwingConstants.CENTER
         iconLabel.preferredSize = Dimension(72, 48)
         val nameLabel = JLabel(name)
-        nameLabel.foreground = Color(0xDD,0xDD,0xDD)
+        nameLabel.foreground = Palette.FG
         nameLabel.font = nameLabel.font.deriveFont(nameLabel.font.size2D - 1f)
         panel.add(iconLabel, BorderLayout.CENTER)
         panel.add(nameLabel, BorderLayout.SOUTH)

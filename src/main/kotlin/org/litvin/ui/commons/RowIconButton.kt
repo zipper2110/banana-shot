@@ -16,7 +16,7 @@ internal class RowIconButton(
     private val ikon: Ikon,
     tooltip: String,
     private val danger: Boolean = false,
-    private val color: Color = UiKit.FG_2,
+    private val color: Color = Palette.FG_2,
     private val side: Int = 26,
 ) : JButton() {
 
@@ -42,13 +42,13 @@ internal class RowIconButton(
         try {
             val hover = model.isRollover
             val iconColor = when {
-                hover && danger -> UiKit.RED
-                hover && color == UiKit.FG_2 -> UiKit.FG
+                hover && danger -> Palette.RED
+                hover && color == Palette.FG_2 -> Palette.FG
                 else -> color
             }
             if (hover) {
-                if (danger) UiKit.paintBox(g2, 0, 0, width, height, 4, UiKit.RED_TINT, UiKit.RED_LINE)
-                else UiKit.paintBox(g2, 0, 0, width, height, 4, UiKit.RAISED_2, UiKit.LINE_2)
+                if (danger) UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.RED_TINT, Palette.RED_LINE)
+                else UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED_2, Palette.LINE_2)
             }
             val icon = icons.getOrPut(ikon to iconColor) { UiKit.icon(ikon, ICON_SIZE, iconColor) }
             icon.paintIcon(this, g2, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)

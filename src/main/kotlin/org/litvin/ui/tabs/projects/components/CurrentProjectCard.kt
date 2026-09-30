@@ -14,6 +14,7 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 import kotlin.math.ceil
+import org.litvin.ui.commons.Palette
 
 /**
  * A label that shows its text on as many lines as necessary.
@@ -68,10 +69,10 @@ internal class OpenTag : JComponent() {
     override fun paintComponent(g: Graphics) {
         val g2 = ProjectsUi.smooth(g)
         try {
-            ProjectsUi.paintBox(g2, 0, 0, width, height, height / 2, Color(161, 254, 0, 31), null)
-            g2.color = ProjectsUi.LIME
+            ProjectsUi.paintBox(g2, 0, 0, width, height, height / 2, Palette.LIME_TINT_2, null)
+            g2.color = Palette.LIME
             g2.fillOval(7, (height - 6) / 2, 6, 6)
-            ProjectsUi.drawText(g2, text, tagFont, ProjectsUi.LIME, 17f, 0f, height.toFloat())
+            ProjectsUi.drawText(g2, text, tagFont, Palette.LIME, 17f, 0f, height.toFloat())
         } finally {
             g2.dispose()
         }
@@ -103,7 +104,7 @@ internal class CurrentProjectCard(
             val nameLabel = WrapLabel(
                 projectName,
                 ProjectsUi.font(16f, ProjectsUi.Weight.SEMIBOLD),
-                ProjectsUi.FG,
+                Palette.FG,
                 innerWidth - tag.preferredSize.width - 8,
                 1.3f,
             ).apply { name = "projects-current-name" }
@@ -118,7 +119,7 @@ internal class CurrentProjectCard(
             }))
             if (videoPath != null) {
                 add(Gap(0, 10).leftAligned())
-                val pathLabel = WrapLabel(videoPath, ProjectsUi.font(12f), ProjectsUi.FG_2, innerWidth - 24, 1.4f).apply {
+                val pathLabel = WrapLabel(videoPath, ProjectsUi.font(12f), Palette.FG_2, innerWidth - 24, 1.4f).apply {
                     name = "projects-current-video"
                     toolTipText = videoPath
                 }
@@ -128,7 +129,7 @@ internal class CurrentProjectCard(
                         isOpaque = false
                         border = BorderFactory.createEmptyBorder(1, 0, 0, 0)
                         preferredSize = Dimension(18, 16)
-                        add(JLabel(ProjectsUi.icon(Material2OutlinedMZ.MOVIE, 15, ProjectsUi.FG_3)), BorderLayout.NORTH)
+                        add(JLabel(ProjectsUi.icon(Material2OutlinedMZ.MOVIE, 15, Palette.FG_3)), BorderLayout.NORTH)
                     }, BorderLayout.WEST)
                     add(pathLabel, BorderLayout.CENTER)
                 }))
@@ -138,13 +139,13 @@ internal class CurrentProjectCard(
                 add(RenameFoot(onRename))
             }
         } else {
-            add(shifted(WrapLabel("No open project", ProjectsUi.font(14f, ProjectsUi.Weight.SEMIBOLD), ProjectsUi.FG_2, innerWidth, 1.3f)
+            add(shifted(WrapLabel("No open project", ProjectsUi.font(14f, ProjectsUi.Weight.SEMIBOLD), Palette.FG_2, innerWidth, 1.3f)
                 .apply { name = "projects-current-name" }))
             add(Gap(0, 6).leftAligned())
             add(shifted(WrapLabel(
                 "Import a new match below, or open a project from the list.",
                 ProjectsUi.font(12f),
-                ProjectsUi.FG_3,
+                Palette.FG_3,
                 innerWidth,
                 1.5f,
             )))
@@ -157,9 +158,9 @@ internal class CurrentProjectCard(
         val g2 = ProjectsUi.smooth(g)
         try {
             if (isOpen) {
-                ProjectsUi.paintBox(g2, 0, 0, width, height, 8, ProjectsUi.CARD, ProjectsUi.LIME_LINE)
+                ProjectsUi.paintBox(g2, 0, 0, width, height, 8, Palette.CARD, Palette.LIME_LINE)
             } else {
-                ProjectsUi.paintDashedBox(g2, 0, 0, width, height, 8, ProjectsUi.LINE_2)
+                ProjectsUi.paintDashedBox(g2, 0, 0, width, height, 8, Palette.LINE_2)
             }
         } finally {
             g2.dispose()
@@ -190,7 +191,7 @@ internal class CurrentProjectCard(
         }
 
         override fun paintComponent(g: Graphics) {
-            g.color = ProjectsUi.LINE
+            g.color = Palette.LINE
             g.fillRect(RENAME_SHIFT, 0, width - RENAME_SHIFT, 1)
         }
     }

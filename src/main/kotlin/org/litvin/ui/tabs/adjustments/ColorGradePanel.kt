@@ -4,6 +4,7 @@ import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
 import org.litvin.ui.commons.CardColumn
 import org.litvin.ui.commons.HeightForWidth
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ResetAllButton
 import org.litvin.ui.commons.SIDE_PANEL_WIDTH
 import org.litvin.ui.commons.SidePanelHeader
@@ -47,8 +48,8 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
     init {
         name = "adj-color-right"
         isOpaque = true
-        background = UiKit.BG
-        border = BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE)
+        background = Palette.BG
+        border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
         preferredSize = Dimension(PANEL_WIDTH, 600)
         minimumSize = Dimension(PANEL_WIDTH, 360)
 
@@ -75,7 +76,7 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
 
     /** "Saved to the project. Export uses these values." with a save icon, under a line. */
     private class Footer : JComponent() {
-        private val saveIcon = UiKit.icon(Material2OutlinedMZ.SAVE, 15, UiKit.FG_3)
+        private val saveIcon = UiKit.icon(Material2OutlinedMZ.SAVE, 15, Palette.FG_3)
         private val textFont = UiKit.font(11.5f)
 
         init {
@@ -88,12 +89,12 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
         override fun paintComponent(g: Graphics) {
             val g2 = UiKit.smooth(g)
             try {
-                g2.color = UiKit.LINE
+                g2.color = Palette.LINE
                 g2.fillRect(0, 0, width, 1)
                 val top = 1
                 val inner = height - top
                 saveIcon.paintIcon(this, g2, PAD_X, top + (inner - saveIcon.iconHeight) / 2)
-                UiKit.drawText(g2, FOOTER_TEXT, textFont, UiKit.FG_3, (PAD_X + saveIcon.iconWidth + 8).toFloat(), top.toFloat(), inner.toFloat())
+                UiKit.drawText(g2, FOOTER_TEXT, textFont, Palette.FG_3, (PAD_X + saveIcon.iconWidth + 8).toFloat(), top.toFloat(), inner.toFloat())
             } finally {
                 g2.dispose()
             }
@@ -116,7 +117,7 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
 
 /** The yellow notice for a system without a live color preview. The text wraps at the width of the panel. */
 internal class LivePreviewNotice : JComponent(), HeightForWidth {
-    private val infoIcon = UiKit.icon(Material2OutlinedAL.INFO, 17, UiKit.YELLOW)
+    private val infoIcon = UiKit.icon(Material2OutlinedAL.INFO, 17, Palette.YELLOW)
     private val textFont = UiKit.font(12f)
 
     init {
@@ -149,12 +150,12 @@ internal class LivePreviewNotice : JComponent(), HeightForWidth {
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, MARGIN_X, 0, width - MARGIN_X * 2, height, 6, UiKit.YELLOW_TINT, UiKit.YELLOW_LINE)
+            UiKit.paintBox(g2, MARGIN_X, 0, width - MARGIN_X * 2, height, 6, Palette.YELLOW_TINT, Palette.YELLOW_LINE)
             val iconX = MARGIN_X + PAD_X
             infoIcon.paintIcon(this, g2, iconX, PAD_Y)
             val textX = (iconX + infoIcon.iconWidth + GAP).toFloat()
             lines(textWidth(width)).forEachIndexed { index, line ->
-                UiKit.drawText(g2, line, textFont, UiKit.FG, textX, PAD_Y + index * LINE, LINE)
+                UiKit.drawText(g2, line, textFont, Palette.FG, textX, PAD_Y + index * LINE, LINE)
             }
         } finally {
             g2.dispose()

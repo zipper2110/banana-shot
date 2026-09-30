@@ -21,46 +21,13 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.math.ceil
+import org.litvin.ui.commons.Palette
 
 /**
- * Colors, fonts and small painted parts of the Projects tab.
+ * Fonts and small painted parts of the Projects tab. The colors are in [Palette].
  * The values come from design/projects-redesign/final.html and its shared.css.
  */
 internal object ProjectsUi {
-    val BG = Color(0x0E0E0E)
-    val PANEL = Color(0x161616)
-    val CARD = Color(0x1A1A1A)
-    val RAISED = Color(0x202020)
-    val RAISED_2 = Color(0x2A2A2A)
-    val LINE = Color(0x262626)
-    val LINE_2 = Color(0x363636)
-    val HOVER_LINE = Color(0x444444)
-    val FG = Color(0xE4E4E4)
-    val FG_2 = Color(0xADAAAA)
-    val FG_3 = Color(0x6A6A6A)
-    val LIME = Color(0xA1FE00)
-    val LIME_HOVER = Color(0xB4FF33)
-    val LIME_LINE = Color(161, 254, 0, 153)
-    val ON_LIME = Color(0x142000)
-    val SAGE = Color(0xA3C586)
-    val YELLOW = Color(0xF2D64B)
-    val RED = Color(0xFF7351)
-    val ERROR = Color(0xFF7A7A)
-
-    /** The background of the workflow card in the start panel. */
-    val WORKFLOW_BG = Color(0x121212)
-
-    /** The rows of the projects table. */
-    val ROW_LINE = Color(0x1D1D1D)
-    val ROW_HOVER = Color(0x171717)
-    val ROW_CURRENT = Color(161, 254, 0, 13)
-
-    /** The track of the scored bar. The fill is lime for all points scored, and sage for some points scored. */
-    val BAR_TRACK = Color(0x2C2C2C)
-
-    /** The placeholder of a figure that the presenter did not load yet. */
-    val SKELETON = Color(0x262626)
-
     enum class Weight { REGULAR, SEMIBOLD, BOLD }
 
     private val fonts = HashMap<Pair<Float, Weight>, Font>()
@@ -203,7 +170,7 @@ internal class Caption(text: String) : JComponent() {
     override fun paintComponent(g: Graphics) {
         val g2 = ProjectsUi.smooth(g)
         try {
-            ProjectsUi.drawText(g2, shown, captionFont, ProjectsUi.FG_3, 0f, 0f, height.toFloat())
+            ProjectsUi.drawText(g2, shown, captionFont, Palette.FG_3, 0f, 0f, height.toFloat())
         } finally {
             g2.dispose()
         }
@@ -268,29 +235,29 @@ internal class ProjectsButton(
                 Kind.SECONDARY -> {
                     ProjectsUi.paintBox(
                         g2, 0, 0, width, height, radius,
-                        if (hover) ProjectsUi.RAISED_2 else ProjectsUi.RAISED,
-                        if (!hover) ProjectsUi.LINE_2 else if (limeHover) ProjectsUi.LIME_LINE else ProjectsUi.HOVER_LINE,
+                        if (hover) Palette.RAISED_2 else Palette.RAISED,
+                        if (!hover) Palette.LINE_2 else if (limeHover) Palette.LIME_LINE else Palette.HOVER_LINE,
                     )
-                    fg = ProjectsUi.FG
-                    iconColor = ProjectsUi.LIME
+                    fg = Palette.FG
+                    iconColor = Palette.LIME
                 }
                 Kind.LIME -> {
                     ProjectsUi.paintBox(
                         g2, 0, 0, width, height, radius,
-                        if (!isEnabled) Color(0x3A3A3A) else if (hover) ProjectsUi.LIME_HOVER else ProjectsUi.LIME,
+                        if (!isEnabled) Palette.LINE_3 else if (hover) Palette.LIME_HOVER else Palette.LIME,
                         null,
                     )
-                    fg = if (isEnabled) ProjectsUi.ON_LIME else Color(0x777777)
+                    fg = if (isEnabled) Palette.ON_LIME else Palette.FG_3
                     iconColor = fg
                 }
                 Kind.DANGER -> {
-                    ProjectsUi.paintBox(g2, 0, 0, width, height, radius, if (hover) DANGER_HOVER else DANGER_FILL, null)
-                    fg = Color.WHITE
+                    ProjectsUi.paintBox(g2, 0, 0, width, height, radius, if (hover) Palette.RED_SOLID_HOVER else Palette.RED_SOLID, null)
+                    fg = Palette.FG_STRONG
                     iconColor = fg
                 }
                 Kind.GHOST -> {
-                    if (hover) ProjectsUi.paintBox(g2, 0, 0, width, height, radius, ProjectsUi.RAISED, ProjectsUi.LINE_2)
-                    fg = if (hover) ProjectsUi.FG else ProjectsUi.FG_2
+                    if (hover) ProjectsUi.paintBox(g2, 0, 0, width, height, radius, Palette.RAISED, Palette.LINE_2)
+                    fg = if (hover) Palette.FG else Palette.FG_2
                     iconColor = fg
                 }
             }
@@ -301,12 +268,12 @@ internal class ProjectsButton(
                 icon.paintIcon(this, g2, x.toInt(), (height - icon.iconHeight) / 2)
                 x += iconSize + GAP
             }
-            ProjectsUi.drawText(g2, text, textFont, if (isEnabled) fg else ProjectsUi.FG_3, x, 0f, height.toFloat())
+            ProjectsUi.drawText(g2, text, textFont, if (isEnabled) fg else Palette.FG_3, x, 0f, height.toFloat())
             if (isFocusOwner) {
                 val ring = when (kind) {
-                    Kind.LIME -> ProjectsUi.ON_LIME
-                    Kind.DANGER -> Color.WHITE
-                    else -> ProjectsUi.LIME_LINE
+                    Kind.LIME -> Palette.ON_LIME
+                    Kind.DANGER -> Palette.FG_STRONG
+                    else -> Palette.LIME_LINE
                 }
                 ProjectsUi.paintBox(g2, 0, 0, width, height, radius, null, ring)
             }
@@ -317,8 +284,6 @@ internal class ProjectsButton(
 
     private companion object {
         const val GAP = 6
-        val DANGER_FILL = Color(0xC93D1C)
-        val DANGER_HOVER = Color(0xE0492A)
     }
 }
 
@@ -333,7 +298,7 @@ internal class ProjectsIconButton(
     private val bordered: Boolean = false,
     private val side: Int = 26,
     private val iconSize: Int = 16,
-    private val restColor: () -> Color = { ProjectsUi.FG_2 },
+    private val restColor: () -> Color = { Palette.FG_2 },
 ) : JButton() {
     private val icons = HashMap<Color, Icon>()
 
@@ -358,20 +323,20 @@ internal class ProjectsIconButton(
             if (bordered) {
                 ProjectsUi.paintBox(
                     g2, 0, 0, width, height, 4,
-                    if (hover) ProjectsUi.RAISED_2 else ProjectsUi.RAISED,
-                    if (hover) ProjectsUi.HOVER_LINE else ProjectsUi.LINE_2,
+                    if (hover) Palette.RAISED_2 else Palette.RAISED,
+                    if (hover) Palette.HOVER_LINE else Palette.LINE_2,
                 )
             } else if (hover) {
-                ProjectsUi.paintBox(g2, 0, 0, width, height, 4, ProjectsUi.RAISED, ProjectsUi.LINE_2)
+                ProjectsUi.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED, Palette.LINE_2)
             }
             val color = when {
-                !isEnabled -> Color(0x3A3A3A)
-                hover || bordered -> ProjectsUi.FG
+                !isEnabled -> Palette.LINE_3
+                hover || bordered -> Palette.FG
                 else -> restColor()
             }
             val icon = icons.getOrPut(color) { ProjectsUi.icon(ikon, iconSize, color) }
             icon.paintIcon(this, g2, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
-            if (isFocusOwner) ProjectsUi.paintBox(g2, 0, 0, width, height, 4, null, ProjectsUi.LIME_LINE)
+            if (isFocusOwner) ProjectsUi.paintBox(g2, 0, 0, width, height, 4, null, Palette.LIME_LINE)
         } finally {
             g2.dispose()
         }

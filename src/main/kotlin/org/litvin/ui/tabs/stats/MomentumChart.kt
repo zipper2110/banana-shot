@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.stats
 
 import org.litvin.scoring.PerPlayer
 import org.litvin.stats.Momentum
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.BasicStroke
 import java.awt.Color
@@ -35,7 +36,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             repaint()
         }
     var names: PerPlayer<String> = PerPlayer("Player 1", "Player 2")
-    var colors: PerPlayer<Color> = PerPlayer(UiKit.FG, UiKit.FG_2)
+    var colors: PerPlayer<Color> = PerPlayer(Palette.FG, Palette.FG_2)
 
     /** The position in [Momentum.points] under the mouse, or -1. */
     private var hover = -1
@@ -94,7 +95,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             g.color = colors.p2
             g.drawString("${names.p2} +${lead.p2}", plot.x.toFloat(), (plot.maxY + metrics.ascent + 4).toFloat())
 
-            g.color = StatsColors.CHART_AXIS
+            g.color = Palette.LINE_3
             g.draw(Line2D.Double(plot.x, middle, plot.maxX, middle))
             if (points.isEmpty()) return
 
@@ -105,10 +106,10 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             g.stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, floatArrayOf(4f, 4f), 0f)
             for (start in momentum.setStarts) {
                 val lineX = x(start)
-                g.color = UiKit.FG_3
+                g.color = Palette.FG_3
                 g.draw(Line2D.Double(lineX, plot.y, lineX, plot.maxY))
                 val label = "Set ${points[start].set}"
-                g.color = UiKit.FG_2
+                g.color = Palette.FG_2
                 g.drawString(label, (lineX - metrics.stringWidth(label) / 2).toFloat(), (plot.y - 6).toFloat())
             }
 
@@ -124,14 +125,14 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             fill(g, area, Rectangle2D.Double(plot.x, plot.y - 1, plot.width, middle - plot.y + 1), colors.p1)
             fill(g, area, Rectangle2D.Double(plot.x, middle, plot.width, plot.maxY - middle + 1), colors.p2)
             g.stroke = BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
-            g.color = StatsColors.CHART_LINE
+            g.color = Palette.NEUTRAL_LIGHT
             g.draw(line)
 
             if (hover in points.indices) {
                 val hoverX = x(hover + 1)
                 val hoverY = y(points[hover].difference)
                 g.stroke = BasicStroke(1f)
-                g.color = UiKit.FG_2
+                g.color = Palette.FG_2
                 g.draw(Line2D.Double(hoverX, plot.y, hoverX, plot.maxY))
                 g.color = if (points[hover].winner == 1) colors.p1 else colors.p2
                 g.fill(Ellipse2D.Double(hoverX - 5, hoverY - 5, 10.0, 10.0))
@@ -144,7 +145,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
     private fun fill(g: Graphics2D, area: Shape, clip: Shape, color: Color) {
         val previous = g.clip
         g.clip(clip)
-        g.color = Color(color.red, color.green, color.blue, AREA_ALPHA)
+        g.color = Palette.withAlpha(color, AREA_ALPHA)
         g.fill(area)
         g.clip = previous
     }

@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.export
 import com.formdev.flatlaf.ui.FlatSliderUI
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.tabs.export.ExportUi.Weight
 import java.awt.BasicStroke
 import java.awt.Color
@@ -48,14 +49,14 @@ internal class StepHeader(number: Int, title: String, private val trailing: JCom
         override fun paintComponent(g: Graphics) {
             val g2 = ExportUi.smooth(g)
             try {
-                g2.color = ExportUi.LIME_LINE
+                g2.color = Palette.LIME_LINE
                 g2.stroke = BasicStroke(1f)
                 g2.draw(Ellipse2D.Double(0.5, 0.5, width - 1.0, height - 1.0))
                 val font = ExportUi.font(11f, Weight.BOLD)
                 val text = number.toString()
                 val metrics = font.getLineMetrics(text, ExportUi.frc)
                 g2.font = font
-                g2.color = ExportUi.LIME
+                g2.color = Palette.LIME
                 g2.drawString(
                     text,
                     (width - ExportUi.textWidth(text, font)) / 2f,
@@ -66,7 +67,7 @@ internal class StepHeader(number: Int, title: String, private val trailing: JCom
             }
         }
     }
-    private val titleText = WrapText(title, ExportUi.font(14f, Weight.SEMIBOLD), ExportUi.FG)
+    private val titleText = WrapText(title, ExportUi.font(14f, Weight.SEMIBOLD), Palette.FG)
 
     init {
         isOpaque = false
@@ -105,10 +106,10 @@ internal class StepHeader(number: Int, title: String, private val trailing: JCom
  * The card is a toggle button, so the keyboard, accessibility and the UI tests use it as one.
  */
 internal class ChoiceCard(componentName: String) : JToggleButton(), HeightForWidth {
-    val titleText = WrapText("", ExportUi.font(13.5f, Weight.SEMIBOLD), ExportUi.FG)
-    val subText = WrapText("", ExportUi.font(12f), ExportUi.FG_2)
-    val metaValue = WrapText("", ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.FG, align = WrapText.Align.RIGHT)
-    val metaUnit = WrapText("", ExportUi.font(12f), ExportUi.FG_2, align = WrapText.Align.RIGHT)
+    val titleText = WrapText("", ExportUi.font(13.5f, Weight.SEMIBOLD), Palette.FG)
+    val subText = WrapText("", ExportUi.font(12f), Palette.FG_2)
+    val metaValue = WrapText("", ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.FG, align = WrapText.Align.RIGHT)
+    val metaUnit = WrapText("", ExportUi.font(12f), Palette.FG_2, align = WrapText.Align.RIGHT)
 
     init {
         name = componentName
@@ -149,14 +150,14 @@ internal class ChoiceCard(componentName: String) : JToggleButton(), HeightForWid
     override fun paintComponent(g: Graphics) {
         val g2 = ExportUi.smooth(g)
         try {
-            ExportUi.paintBox(g2, 0, 0, width, height, 6, ExportUi.RAISED, null)
+            ExportUi.paintBox(g2, 0, 0, width, height, 6, Palette.RAISED, null)
             val border = when {
                 isSelected -> {
-                    ExportUi.paintBox(g2, 0, 0, width, height, 6, ExportUi.LIME_TINT, null)
-                    ExportUi.LIME_LINE
+                    ExportUi.paintBox(g2, 0, 0, width, height, 6, Palette.LIME_TINT, null)
+                    Palette.LIME_LINE
                 }
-                isEnabled && model.isRollover -> ExportUi.HOVER_LINE
-                else -> ExportUi.LINE
+                isEnabled && model.isRollover -> Palette.HOVER_LINE
+                else -> Palette.LINE
             }
             ExportUi.paintBox(g2, 0, 0, width, height, 6, null, border)
             ExportUi.paintRadio(g2, PAD_X, (height - RADIO) / 2, RADIO, isSelected)
@@ -180,8 +181,8 @@ internal class ChoiceCard(componentName: String) : JToggleButton(), HeightForWid
  * The tile is a check box, so the keyboard, accessibility and the UI tests use it as one.
  */
 internal class IncludeTile(componentName: String, label: String) : JCheckBox(), HeightForWidth {
-    private val labelText = WrapText(label, ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.FG)
-    private val noteText = WrapText(" ", ExportUi.font(11f), ExportUi.FG_2, lineHeight = 1.3f)
+    private val labelText = WrapText(label, ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.FG)
+    private val noteText = WrapText(" ", ExportUi.font(11f), Palette.FG_2, lineHeight = 1.3f)
 
     init {
         name = componentName
@@ -194,7 +195,7 @@ internal class IncludeTile(componentName: String, label: String) : JCheckBox(), 
 
     /** The note under the label. [ok] shows it in green, for example when all points are scored. */
     fun setNote(text: String, ok: Boolean = false) {
-        noteText.setText(text.ifEmpty { " " }, ExportUi.font(11f), if (ok) ExportUi.GREEN else ExportUi.FG_2)
+        noteText.setText(text.ifEmpty { " " }, ExportUi.font(11f), if (ok) Palette.LIME else Palette.FG_2)
         getAccessibleContext().accessibleDescription = text.ifBlank { null }
     }
 
@@ -225,10 +226,10 @@ internal class IncludeTile(componentName: String, label: String) : JCheckBox(), 
         try {
             val border = when {
                 isSelected -> CHECKED_BORDER
-                isEnabled && model.isRollover -> ExportUi.HOVER_LINE
-                else -> ExportUi.LINE
+                isEnabled && model.isRollover -> Palette.HOVER_LINE
+                else -> Palette.LINE
             }
-            ExportUi.paintBox(g2, 0, 0, width, height, 6, ExportUi.RAISED, border)
+            ExportUi.paintBox(g2, 0, 0, width, height, 6, Palette.RAISED, border)
             val top = (height - contentHeight(width)) / 2
             ExportUi.paintCheck(g2, PAD_X, top + (labelRowHeight(width) - CHECK) / 2, isSelected)
         } finally {
@@ -241,15 +242,15 @@ internal class IncludeTile(componentName: String, label: String) : JCheckBox(), 
         const val PAD_Y = 10
         const val CHECK = 16
         const val TEXT_X = PAD_X + CHECK + 9
-        val CHECKED_BORDER = Color(0x3D, 0x4A, 0x2A)
+        val CHECKED_BORDER = Palette.LIME_DIM_LINE
     }
 }
 
 /** A quality choice of the Simple mode: a title, a grey line, the file size at the bottom and a radio dot at the top right. */
 internal class QualityTile(componentName: String) : JToggleButton(), HeightForWidth {
-    private val titleText = WrapText("", ExportUi.font(13f, Weight.SEMIBOLD), ExportUi.FG)
-    private val subText = WrapText("", ExportUi.font(11f), ExportUi.FG_2, lineHeight = 1.3f)
-    private val valueText = WrapText("", ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.FG)
+    private val titleText = WrapText("", ExportUi.font(13f, Weight.SEMIBOLD), Palette.FG)
+    private val subText = WrapText("", ExportUi.font(11f), Palette.FG_2, lineHeight = 1.3f)
+    private val valueText = WrapText("", ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.FG)
 
     init {
         name = componentName
@@ -259,13 +260,13 @@ internal class QualityTile(componentName: String) : JToggleButton(), HeightForWi
     }
 
     fun setTexts(title: String, sub: String) {
-        titleText.setText(title, ExportUi.font(13f, Weight.SEMIBOLD), ExportUi.FG)
-        subText.setText(sub, ExportUi.font(11f), ExportUi.FG_2)
+        titleText.setText(title, ExportUi.font(13f, Weight.SEMIBOLD), Palette.FG)
+        subText.setText(sub, ExportUi.font(11f), Palette.FG_2)
         updateAccessibleName()
     }
 
     fun setValue(value: String) {
-        valueText.setText(value, ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.FG)
+        valueText.setText(value, ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.FG)
         updateAccessibleName()
     }
 
@@ -300,14 +301,14 @@ internal class QualityTile(componentName: String) : JToggleButton(), HeightForWi
     override fun paintComponent(g: Graphics) {
         val g2 = ExportUi.smooth(g)
         try {
-            ExportUi.paintBox(g2, 0, 0, width, height, 6, ExportUi.RAISED, null)
+            ExportUi.paintBox(g2, 0, 0, width, height, 6, Palette.RAISED, null)
             val border = when {
                 isSelected -> {
-                    ExportUi.paintBox(g2, 0, 0, width, height, 6, ExportUi.LIME_TINT, null)
-                    ExportUi.LIME_LINE
+                    ExportUi.paintBox(g2, 0, 0, width, height, 6, Palette.LIME_TINT, null)
+                    Palette.LIME_LINE
                 }
-                isEnabled && model.isRollover -> ExportUi.HOVER_LINE
-                else -> ExportUi.LINE
+                isEnabled && model.isRollover -> Palette.HOVER_LINE
+                else -> Palette.LINE
             }
             ExportUi.paintBox(g2, 0, 0, width, height, 6, null, border)
             ExportUi.paintRadio(g2, width - PAD_X - RADIO, PAD_TOP, RADIO, isSelected)
@@ -331,7 +332,7 @@ internal class QualityTile(componentName: String) : JToggleButton(), HeightForWi
  * Parts of the small line can be green, for example "original".
  */
 internal class SegmentButton(componentName: String, title: String, private val compact: Boolean = false) : JToggleButton(), HeightForWidth {
-    private val titleText = WrapText(title, ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.FG_2, align = WrapText.Align.CENTER)
+    private val titleText = WrapText(title, ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.FG_2, align = WrapText.Align.CENTER)
     private val smallText = WrapText(emptyList(), lineHeight = 1.3f, align = WrapText.Align.CENTER).apply { isVisible = false }
     private var smallParts: List<Pair<String, Boolean>> = emptyList()
 
@@ -358,11 +359,11 @@ internal class SegmentButton(componentName: String, title: String, private val c
 
     private fun updateColors() {
         val active = isSelected || isEnabled && model.isRollover
-        titleText.recolor { if (active) ExportUi.FG else ExportUi.FG_2 }
+        titleText.recolor { if (active) Palette.FG else Palette.FG_2 }
         smallText.runs = smallParts.map { (text, ok) ->
             when {
-                ok -> TextRun(text, ExportUi.font(10.5f, Weight.SEMIBOLD), ExportUi.GREEN)
-                else -> TextRun(text, ExportUi.font(10.5f), if (isSelected) ExportUi.FG_2 else ExportUi.FG_3)
+                ok -> TextRun(text, ExportUi.font(10.5f, Weight.SEMIBOLD), Palette.LIME)
+                else -> TextRun(text, ExportUi.font(10.5f), if (isSelected) Palette.FG_2 else Palette.FG_3)
             }
         }
         repaint()
@@ -400,7 +401,7 @@ internal class SegmentButton(componentName: String, title: String, private val c
         val g2 = ExportUi.smooth(g)
         try {
             when {
-                isSelected -> ExportUi.paintBox(g2, 0, 0, width, height, 4, ExportUi.RAISED_2, ExportUi.LIME_LINE)
+                isSelected -> ExportUi.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED_2, Palette.LIME_LINE)
                 isEnabled && model.isRollover -> ExportUi.paintBox(g2, 0, 0, width, height, 4, HOVER_BG, null)
             }
         } finally {
@@ -410,7 +411,7 @@ internal class SegmentButton(componentName: String, title: String, private val c
 
     private companion object {
         const val PAD_X = 10
-        val HOVER_BG = Color(0x1C, 0x1C, 0x1C)
+        val HOVER_BG = Palette.OVERLAY
     }
 }
 
@@ -463,7 +464,7 @@ internal class SegmentedControl : JPanel(null), HeightForWidth {
     override fun paintComponent(g: Graphics) {
         val g2 = ExportUi.smooth(g)
         try {
-            ExportUi.paintBox(g2, 0, 0, width, height, 6, ExportUi.BG, ExportUi.LINE_2)
+            ExportUi.paintBox(g2, 0, 0, width, height, 6, Palette.BG, Palette.LINE_2)
         } finally {
             g2.dispose()
         }
@@ -490,8 +491,8 @@ internal class SpecTable : Stack(0) {
     override fun paintComponent(g: Graphics) {
         val g2 = ExportUi.smooth(g)
         try {
-            ExportUi.paintBox(g2, 0, 0, width, height, 6, null, ExportUi.LINE)
-            g2.color = ExportUi.LINE
+            ExportUi.paintBox(g2, 0, 0, width, height, 6, null, Palette.LINE)
+            g2.color = Palette.LINE
             components.filter { it.isVisible }.drop(1).forEach { g2.fillRect(1, it.y, width - 2, 1) }
         } finally {
             g2.dispose()
@@ -501,10 +502,10 @@ internal class SpecTable : Stack(0) {
 
 /** One row of a [SpecTable]. The value and the tag are on one line. The note is under them. */
 internal class SpecRow(name: String) : JPanel(null), HeightForWidth {
-    private val nameText = WrapText(name, ExportUi.font(12f), ExportUi.FG_2)
-    private val valueText = WrapText("", ExportUi.font(12f), ExportUi.FG)
+    private val nameText = WrapText(name, ExportUi.font(12f), Palette.FG_2)
+    private val valueText = WrapText("", ExportUi.font(12f), Palette.FG)
     private val tag = Tag("").apply { isVisible = false }
-    private val noteText = WrapText("", ExportUi.font(11f), ExportUi.FG_3).apply { isVisible = false }
+    private val noteText = WrapText("", ExportUi.font(11f), Palette.FG_3).apply { isVisible = false }
 
     init {
         isOpaque = false
@@ -512,12 +513,12 @@ internal class SpecRow(name: String) : JPanel(null), HeightForWidth {
     }
 
     fun set(value: String, tag: String? = null, mutedTag: Boolean = false, note: String? = null) {
-        valueText.setText(value, ExportUi.font(12f), ExportUi.FG)
+        valueText.setText(value, ExportUi.font(12f), Palette.FG)
         this.tag.isVisible = !tag.isNullOrEmpty()
         this.tag.text = tag.orEmpty()
         this.tag.muted = mutedTag
         noteText.isVisible = !note.isNullOrEmpty()
-        noteText.setText(note.orEmpty(), ExportUi.font(11f), ExportUi.FG_3)
+        noteText.setText(note.orEmpty(), ExportUi.font(11f), Palette.FG_3)
         revalidate()
         repaint()
     }
@@ -594,7 +595,7 @@ internal class ExportSliderUI : FlatSliderUI() {
             val width = slider.width.toDouble()
             g2.color = TRACK_BG
             g2.fill(RoundRectangle2D.Double(0.0, y, width, TRACK, TRACK, TRACK))
-            g2.color = ExportUi.LIME
+            g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(0.0, y, fill, TRACK, TRACK, TRACK))
         } finally {
             g2.dispose()
@@ -606,11 +607,11 @@ internal class ExportSliderUI : FlatSliderUI() {
         try {
             val x = thumbRect.x.toDouble()
             val y = thumbRect.y + (thumbRect.height - THUMB) / 2.0
-            g2.color = ExportUi.LIME
+            g2.color = Palette.LIME
             g2.fill(Ellipse2D.Double(x, y, THUMB.toDouble(), THUMB.toDouble()))
             g2.color = THUMB_RING
             g2.fill(Ellipse2D.Double(x + 1, y + 1, THUMB - 2.0, THUMB - 2.0))
-            g2.color = ExportUi.LIME
+            g2.color = Palette.LIME
             g2.fill(Ellipse2D.Double(x + 4, y + 4, THUMB - 8.0, THUMB - 8.0))
         } finally {
             g2.dispose()
@@ -620,8 +621,8 @@ internal class ExportSliderUI : FlatSliderUI() {
     companion object {
         private const val THUMB = 18
         private const val TRACK = 4.0
-        private val TRACK_BG = Color(0x33, 0x33, 0x33)
-        private val THUMB_RING = Color(0x10, 0x10, 0x10)
+        private val TRACK_BG = Palette.LINE_2
+        private val THUMB_RING = Palette.BG
 
         fun slider(componentName: String): JSlider = JSlider().apply {
             name = componentName
@@ -635,12 +636,12 @@ internal class ExportSliderUI : FlatSliderUI() {
 
 /** The lime button at the bottom of the left column. It has a play icon and bold dark text. */
 internal class StartExportButton(text: String) : JButton(text) {
-    private val playIcon = ExportUi.icon(Material2OutlinedMZ.PLAY_CIRCLE_OUTLINE, 20, ExportUi.ON_LIME)
+    private val playIcon = ExportUi.icon(Material2OutlinedMZ.PLAY_CIRCLE_OUTLINE, 20, Palette.ON_LIME)
 
     init {
         plain()
         font = ExportUi.font(14f, Weight.BOLD)
-        foreground = ExportUi.ON_LIME
+        foreground = Palette.ON_LIME
     }
 
     override fun getPreferredSize() = Dimension(210, 46)
@@ -650,9 +651,9 @@ internal class StartExportButton(text: String) : JButton(text) {
         val g2 = ExportUi.smooth(g)
         try {
             val fill = when {
-                model.isArmed && model.isPressed -> ExportUi.LIME.darker()
-                model.isRollover -> ExportUi.LIME_HOVER
-                else -> ExportUi.LIME
+                model.isArmed && model.isPressed -> Palette.LIME_PRESSED
+                model.isRollover -> Palette.LIME_HOVER
+                else -> Palette.LIME
             }
             ExportUi.paintBox(g2, 0, 0, width, height, 6, fill, null)
             val label = text.orEmpty()
@@ -676,10 +677,10 @@ internal class StartExportButton(text: String) : JButton(text) {
         fun paintGlow(g2: Graphics2D, x: Int, y: Int, w: Int, h: Int) {
             for (step in 1..10) {
                 val spread = step * 2.0
-                g2.color = Color(161, 254, 0, (13 - step).coerceAtLeast(1))
+                g2.color = Palette.withAlpha(Palette.LIME, (13 - step).coerceAtLeast(1))
                 g2.fill(RoundRectangle2D.Double(x - spread / 2, y + 6 - spread / 2, w + spread, h + spread, 12 + spread, 12 + spread))
             }
-            g2.color = Color(161, 254, 0, 51)
+            g2.color = Palette.LIME_EDGE
             g2.stroke = BasicStroke(1f)
             g2.draw(RoundRectangle2D.Double(x - 0.5, y - 0.5, w + 1.0, h + 1.0, 13.0, 13.0))
         }
@@ -690,7 +691,7 @@ internal class StartExportButton(text: String) : JButton(text) {
 internal class IconButton(ikon: Ikon, tooltip: String, private val danger: Boolean = false) : JButton() {
     init {
         plain()
-        icon = ExportUi.icon(ikon, 16, if (danger) ExportUi.RED else ExportUi.FG)
+        icon = ExportUi.icon(ikon, 16, if (danger) Palette.RED else Palette.FG)
         toolTipText = tooltip
         getAccessibleContext().accessibleName = tooltip
     }
@@ -706,9 +707,9 @@ internal class IconButton(ikon: Ikon, tooltip: String, private val danger: Boole
         try {
             val hover = isEnabled && model.isRollover
             when {
-                hover && danger -> ExportUi.paintBox(g2, 0, 0, width, height, 4, ExportUi.RED_TINT, Color(255, 115, 81, 102))
-                hover -> ExportUi.paintBox(g2, 0, 0, width, height, 4, ExportUi.RAISED_2, Color(0x44, 0x44, 0x44))
-                else -> ExportUi.paintBox(g2, 0, 0, width, height, 4, ExportUi.RAISED, ExportUi.LINE_2)
+                hover && danger -> ExportUi.paintBox(g2, 0, 0, width, height, 4, Palette.RED_TINT, Palette.RED_LINE)
+                hover -> ExportUi.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED_2, Palette.HOVER_LINE)
+                else -> ExportUi.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED, Palette.LINE_2)
             }
             icon?.paintIcon(this, g2, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
         } finally {
@@ -723,8 +724,8 @@ internal class IconButton(ikon: Ikon, tooltip: String, private val danger: Boole
 
 /** A small button without a frame. A hover shows its frame and makes the text bright. */
 internal class GhostButton(text: String, ikon: Ikon) : JButton(text) {
-    private val normalIcon = ExportUi.icon(ikon, 16, ExportUi.FG_2)
-    private val hoverIcon = ExportUi.icon(ikon, 16, ExportUi.FG)
+    private val normalIcon = ExportUi.icon(ikon, 16, Palette.FG_2)
+    private val hoverIcon = ExportUi.icon(ikon, 16, Palette.FG)
 
     init {
         plain()
@@ -741,12 +742,12 @@ internal class GhostButton(text: String, ikon: Ikon) : JButton(text) {
         val g2 = ExportUi.smooth(g)
         try {
             val hover = isEnabled && model.isRollover
-            if (hover) ExportUi.paintBox(g2, 0, 0, width, height, 4, ExportUi.RAISED, ExportUi.LINE_2)
+            if (hover) ExportUi.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED, Palette.LINE_2)
             val icon = if (hover) hoverIcon else normalIcon
             icon.paintIcon(this, g2, PAD_X, (height - icon.iconHeight) / 2)
             val metrics = font.getLineMetrics(text, ExportUi.frc)
             g2.font = font
-            g2.color = if (hover) ExportUi.FG else ExportUi.FG_2
+            g2.color = if (hover) Palette.FG else Palette.FG_2
             g2.drawString(text, (PAD_X + icon.iconWidth + GAP).toFloat(), (height - metrics.ascent - metrics.descent) / 2f + metrics.ascent)
         } finally {
             g2.dispose()

@@ -60,14 +60,14 @@ internal class ToolNav<T>(
     init {
         name = componentName
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        background = UiKit.BG
+        background = Palette.BG
         isOpaque = true
         border = BorderFactory.createEmptyBorder(12, 8, 12, 8)
         items.forEachIndexed { index, item ->
             item.caption?.let { caption ->
                 add(JLabel(caption.uppercase()).apply {
                     font = UiKit.trackedFont(9.5f, 0.14)
-                    foreground = UiKit.FG_3
+                    foreground = Palette.FG_3
                     border = BorderFactory.createEmptyBorder(if (index == 0) 2 else 10, 10, 4, 10)
                     alignmentX = Component.LEFT_ALIGNMENT
                     maximumSize = Dimension(Int.MAX_VALUE, preferredSize.height)
@@ -85,13 +85,13 @@ internal class ToolNav<T>(
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
-        g.color = UiKit.LINE
+        g.color = Palette.LINE
         g.fillRect(width - 1, 0, 1, height)
         // The lime bar at the left edge of the list, like the sidebar of the main window.
         val button = selected?.let { buttons[it] } ?: return
         val g2 = UiKit.smooth(g)
         try {
-            g2.color = UiKit.LIME
+            g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(0.0, button.y + 8.0, 3.0, button.height - 16.0, 3.0, 3.0))
         } finally {
             g2.dispose()
@@ -99,8 +99,8 @@ internal class ToolNav<T>(
     }
 
     private inner class NavButton(private val item: ToolNavItem<T>) : JButton(item.title) {
-        private val iconIdle = UiKit.icon(item.icon, 18, UiKit.FG_3)
-        private val iconSelected = UiKit.icon(item.icon, 18, UiKit.LIME)
+        private val iconIdle = UiKit.icon(item.icon, 18, Palette.FG_3)
+        private val iconSelected = UiKit.icon(item.icon, 18, Palette.LIME)
 
         init {
             name = "$componentName-${item.id.toString().lowercase()}"
@@ -127,10 +127,10 @@ internal class ToolNav<T>(
             try {
                 val hover = model.isRollover
                 when {
-                    isSelected -> UiKit.paintBox(g2, 0, 0, width, height, 6, Color(0x1C1C1C), null)
-                    hover -> UiKit.paintBox(g2, 0, 0, width, height, 6, UiKit.PANEL, null)
+                    isSelected -> UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.OVERLAY, null)
+                    hover -> UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.PANEL, null)
                 }
-                if (isFocusOwner) UiKit.paintBox(g2, 0, 0, width, height, 6, null, UiKit.LIME_LINE)
+                if (isFocusOwner) UiKit.paintBox(g2, 0, 0, width, height, 6, null, Palette.LIME_LINE)
                 val icon = if (isSelected) iconSelected else iconIdle
                 icon.paintIcon(this, g2, 10, (height - icon.iconHeight) / 2)
                 val font = if (isSelected) UiKit.font(13f, UiKit.Weight.SEMIBOLD) else UiKit.font(13f)
@@ -139,9 +139,9 @@ internal class ToolNav<T>(
                 val markerWidth = if (marker.isEmpty()) 0f else UiKit.textWidth(marker, markerFont) + 8f
                 val textX = 10f + icon.iconWidth + 10f
                 val title = UiKit.ellipsize(item.title, font, width - textX - markerWidth - 8f)
-                UiKit.drawText(g2, title, font, if (isSelected || hover) UiKit.FG else UiKit.FG_2, textX, 0f, height.toFloat())
+                UiKit.drawText(g2, title, font, if (isSelected || hover) Palette.FG else Palette.FG_2, textX, 0f, height.toFloat())
                 if (marker.isNotEmpty()) {
-                    UiKit.drawText(g2, marker, markerFont, UiKit.SAGE, width - 10f - UiKit.textWidth(marker, markerFont), 0f, height.toFloat())
+                    UiKit.drawText(g2, marker, markerFont, Palette.SAGE, width - 10f - UiKit.textWidth(marker, markerFont), 0f, height.toFloat())
                 }
             } finally {
                 g2.dispose()
@@ -163,7 +163,7 @@ internal open class ToolPage : JPanel(null), Scrollable, HeightForWidth {
 
     init {
         isOpaque = true
-        background = UiKit.PANEL
+        background = Palette.PANEL
         add(column)
     }
 
@@ -191,9 +191,9 @@ internal open class ToolPage : JPanel(null), Scrollable, HeightForWidth {
     fun inScrollPane(): JScrollPane = JScrollPane(this).apply {
         border = BorderFactory.createEmptyBorder()
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        viewport.background = UiKit.PANEL
+        viewport.background = Palette.PANEL
         verticalScrollBar.unitIncrement = 16
-        runCatching { applyDarkScrollbar(this, UiKit.PANEL) }
+        runCatching { applyDarkScrollbar(this, Palette.PANEL) }
     }
 
     companion object {
@@ -203,16 +203,16 @@ internal open class ToolPage : JPanel(null), Scrollable, HeightForWidth {
         /** The page title. */
         fun title(text: String): JLabel = JLabel(text).apply {
             font = UiKit.font(22f, UiKit.Weight.SEMIBOLD)
-            foreground = UiKit.FG
+            foreground = Palette.FG
         }
 
         /** A section caption in capital letters with an icon: the `h2` element of the Help page. */
-        fun caption(text: String, ikon: Ikon): JComponent = object : JLabel(text.uppercase(), UiKit.icon(ikon, 15, UiKit.FG_3), LEFT) {
+        fun caption(text: String, ikon: Ikon): JComponent = object : JLabel(text.uppercase(), UiKit.icon(ikon, 15, Palette.FG_3), LEFT) {
             override fun getPreferredSize(): Dimension =
                 Dimension(icon.iconWidth + iconTextGap + ceil(UiKit.textWidth(text, font)).toInt() + 4, 18)
         }.apply {
             font = UiKit.trackedFont(10.5f, 0.1, UiKit.Weight.BOLD)
-            foreground = UiKit.FG_3
+            foreground = Palette.FG_3
             iconTextGap = 6
         }
     }
@@ -255,7 +255,7 @@ internal open class ToolCard(pad: Insets = Insets(14, 16, 14, 16), gap: Int = 10
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 8, UiKit.CARD, UiKit.LINE)
+            UiKit.paintBox(g2, 0, 0, width, height, 8, Palette.CARD, Palette.LINE)
         } finally {
             g2.dispose()
         }

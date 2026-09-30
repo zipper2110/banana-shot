@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.export
 import org.litvin.export.ExportPointSummary
 import org.litvin.export.RenderFormatting
 import javax.swing.ButtonGroup
+import org.litvin.ui.commons.Palette
 
 /**
  * The content choice as three radio cards. Each card shows the length of the exported video
@@ -26,8 +27,8 @@ internal class ExportContentCards : Stack(6) {
         val group = ButtonGroup()
         entries.forEach { entry ->
             group.add(entry.card)
-            entry.card.titleText.setText(entry.title, entry.card.titleText.runs.first().font, ExportUi.FG)
-            entry.card.subText.setText(entry.summary, entry.card.subText.runs.first().font, ExportUi.FG_2)
+            entry.card.titleText.setText(entry.title, entry.card.titleText.runs.first().font, Palette.FG)
+            entry.card.subText.setText(entry.summary, entry.card.subText.runs.first().font, Palette.FG_2)
             add(entry.card)
         }
         points.isSelected = true
@@ -48,14 +49,14 @@ internal class ExportContentCards : Stack(6) {
     /** Shows the length and "128 points" or "1 point". A null value shows a dash. A count of 0 is a warning. */
     private fun showValues(entry: Entry, length: String?, count: Int?) {
         val card = entry.card
-        card.metaValue.setText(length ?: DASH, card.metaValue.runs.first().font, ExportUi.FG)
+        card.metaValue.setText(length ?: DASH, card.metaValue.runs.first().font, Palette.FG)
         val unit = when {
             !entry.hasCount -> ""
             count == null -> DASH
             count == 1 -> "1 point"
             else -> "$count points"
         }
-        card.metaUnit.setText(unit, card.metaUnit.runs.first().font, if (count == 0) ExportUi.YELLOW else ExportUi.FG_2)
+        card.metaUnit.setText(unit, card.metaUnit.runs.first().font, if (count == 0) Palette.YELLOW else Palette.FG_2)
         card.getAccessibleContext().accessibleName = listOf(entry.title, entry.summary, length ?: DASH, unit)
             .filter { it.isNotEmpty() }
             .joinToString(", ")

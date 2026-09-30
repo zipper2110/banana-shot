@@ -58,7 +58,7 @@ class HintBalloon(
             Placement.ABOVE -> EmptyBorder(PADDING, PADDING + 2, ARROW_WIDTH + PADDING, PADDING)
         }
         val label = JLabel("<html><div style='width:${TEXT_WIDTH}px'>${Html.escapeHtml(message)}</div></html>")
-        label.foreground = UiStyles.FG_PRIMARY
+        label.foreground = Palette.FG
         add(label, BorderLayout.CENTER)
         val close = JButton(UiStyles.closeIcon()).apply {
             name = "hint-balloon-close"
@@ -169,7 +169,7 @@ class HintBalloon(
             val shape = Area(body).apply { add(Area(arrow)) }
             g2.color = BACKGROUND
             g2.fill(shape)
-            g2.color = UiStyles.LIME
+            g2.color = Palette.LIME
             g2.stroke = BasicStroke(1f)
             g2.draw(shape)
         } finally {
@@ -185,6 +185,6 @@ class HintBalloon(
         const val ARROW_HALF_HEIGHT = 8.0
         const val ARROW_OFFSET = 36
         const val ARC = 12f
-        val BACKGROUND = Color(0x26, 0x26, 0x26)
+        val BACKGROUND = Palette.LINE
     }
 }

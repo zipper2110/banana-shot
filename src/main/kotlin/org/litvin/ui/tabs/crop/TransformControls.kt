@@ -4,6 +4,7 @@ import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
 import org.litvin.ui.commons.GroupCard
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SliderValueFormat
 import org.litvin.ui.commons.SliderValueRow
 import org.litvin.ui.commons.UiKit
@@ -114,10 +115,10 @@ internal class TransformGroupCard(val group: TransformGroup, val rows: List<Tran
         if (group != TransformGroup.ROTATION) return
         val value = angleText
         val valueX = right - UiKit.textWidth(value, angleValueFont)
-        val valueColor = if (value != ZERO_ANGLE) UiKit.LIME else UiKit.FG_3
+        val valueColor = if (value != ZERO_ANGLE) Palette.LIME else Palette.FG_3
         UiKit.drawText(g2, value, angleValueFont, valueColor, valueX, top, height)
         val labelX = valueX - ANGLE_GAP - UiKit.textWidth(ANGLE_LABEL, angleLabelFont)
-        UiKit.drawText(g2, ANGLE_LABEL, angleLabelFont, UiKit.FG_3, labelX, top, height)
+        UiKit.drawText(g2, ANGLE_LABEL, angleLabelFont, Palette.FG_3, labelX, top, height)
     }
 
     private companion object {

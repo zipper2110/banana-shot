@@ -6,6 +6,7 @@ import org.litvin.points.PointV1
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoringEngine.MatchState
 import org.litvin.shared.util.Timecode
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.applyDarkScrollbar
@@ -92,7 +93,7 @@ internal class ScoringPointsList(
     init {
         name = "scoring-points-list"
         isOpaque = true
-        background = UiKit.BG
+        background = Palette.BG
         add(head, BorderLayout.NORTH)
         val table = JPanel(BorderLayout()).apply {
             isOpaque = false
@@ -100,7 +101,7 @@ internal class ScoringPointsList(
             add(scroll, BorderLayout.CENTER)
         }
         add(table, BorderLayout.CENTER)
-        runCatching { applyDarkScrollbar(scroll, UiKit.BG) }
+        runCatching { applyDarkScrollbar(scroll, Palette.BG) }
         scroll.verticalScrollBar.unitIncrement = ScoringPointRow.HEIGHT
         scroll.verticalScrollBar.addComponentListener(object : ComponentAdapter() {
             override fun componentShown(e: ComponentEvent) = syncCaptions()
@@ -194,7 +195,7 @@ internal class ScoringPointsList(
     private inner class RowsPanel : JPanel(null), Scrollable {
         init {
             isOpaque = true
-            background = UiKit.BG
+            background = Palette.BG
         }
 
         override fun doLayout() {
@@ -218,7 +219,7 @@ internal class ScoringPointsList(
                 val font = UiKit.font(13f)
                 val lines = listOf("No points yet. Open the Points tab", "and add point markers.")
                 lines.forEachIndexed { i, line ->
-                    UiKit.drawText(g2, line, font, UiKit.FG_3, (width - UiKit.textWidth(line, font)) / 2f, 28f + i * 20f, 20f)
+                    UiKit.drawText(g2, line, font, Palette.FG_3, (width - UiKit.textWidth(line, font)) / 2f, 28f + i * 20f, 20f)
                 }
             } finally {
                 g2.dispose()
@@ -249,8 +250,8 @@ internal class ListHead : JComponent() {
     private val titleFont get() = UiKit.font(15f, UiKit.Weight.SEMIBOLD)
     private val statFont get() = UiKit.font(12f)
     private val statBold get() = UiKit.font(12f, UiKit.Weight.BOLD)
-    private val checkIcon by lazy { UiKit.icon(Material2AL.CHECK_CIRCLE, 14, UiKit.LIME) }
-    private val starIcon by lazy { UiKit.icon(Material2MZ.STAR, 14, UiKit.YELLOW) }
+    private val checkIcon by lazy { UiKit.icon(Material2AL.CHECK_CIRCLE, 14, Palette.LIME) }
+    private val starIcon by lazy { UiKit.icon(Material2MZ.STAR, 14, Palette.YELLOW) }
 
     init {
         name = "scoring-points-head"
@@ -285,22 +286,22 @@ internal class ListHead : JComponent() {
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            g2.color = UiKit.BG
+            g2.color = Palette.BG
             g2.fillRect(0, 0, width, height)
             val top = TITLE_TOP.toFloat()
             val h = TITLE_HEIGHT.toFloat()
-            UiKit.drawText(g2, "Points", titleFont, UiKit.FG, PAD_X.toFloat(), top, h)
+            UiKit.drawText(g2, "Points", titleFont, Palette.FG, PAD_X.toFloat(), top, h)
 
             var x = scoredX()
             checkIcon.paintIcon(this, g2, x.toInt(), (top + (h - checkIcon.iconHeight) / 2f).toInt())
             x += checkIcon.iconWidth + 4
             for ((text, font) in scoredParts()) {
-                UiKit.drawText(g2, text, font, if (font == statBold) UiKit.FG else UiKit.FG_2, x, top, h)
+                UiKit.drawText(g2, text, font, if (font == statBold) Palette.FG else Palette.FG_2, x, top, h)
                 x += UiKit.textWidth(text, font)
             }
             x = favoritesX()
             starIcon.paintIcon(this, g2, x.toInt(), (top + (h - starIcon.iconHeight) / 2f).toInt())
-            UiKit.drawText(g2, favorites.toString(), statBold, UiKit.FG, x + starIcon.iconWidth + 4, top, h)
+            UiKit.drawText(g2, favorites.toString(), statBold, Palette.FG, x + starIcon.iconWidth + 4, top, h)
 
             // The scored progress.
             val barY = TITLE_TOP + TITLE_HEIGHT + 8
@@ -308,7 +309,7 @@ internal class ListHead : JComponent() {
             UiKit.paintBox(g2, PAD_X, barY, barWidth, 4, 2, PROGRESS_BG, null)
             if (total > 0 && scored > 0) {
                 val fill = ceil(barWidth * scored.toDouble() / total).toInt().coerceAtMost(barWidth)
-                UiKit.paintBox(g2, PAD_X, barY, fill, 4, 2, UiKit.LIME, null)
+                UiKit.paintBox(g2, PAD_X, barY, fill, 4, 2, Palette.LIME, null)
             }
         } finally {
             g2.dispose()
@@ -321,7 +322,7 @@ internal class ListHead : JComponent() {
         const val TITLE_HEIGHT = 20
         const val STAT_GAP = 14
         const val HEIGHT = TITLE_TOP + TITLE_HEIGHT + 8 + 4 + 10
-        val PROGRESS_BG = Color(0x2A2A2A)
+        val PROGRESS_BG = Palette.RAISED_2
     }
 }
 
@@ -350,7 +351,7 @@ internal data class ListColumns(val width: Int) {
 /** The caption row of the list: #, Start, Length and the star. */
 internal class ListCaptions : JComponent() {
     private val captionFont = UiKit.trackedFont(10.5f, 0.07)
-    private val starIcon = UiKit.icon(Material2MZ.STAR, 11, UiKit.FG_3)
+    private val starIcon = UiKit.icon(Material2MZ.STAR, 11, Palette.FG_3)
 
     /** The width of the list scroll bar. */
     var scrollBarWidth: Int = 0
@@ -365,13 +366,13 @@ internal class ListCaptions : JComponent() {
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            g2.color = UiKit.TABLE_HEAD
+            g2.color = Palette.INSET
             g2.fillRect(0, 0, width, height)
-            g2.color = UiKit.LINE
+            g2.color = Palette.LINE
             g2.fillRect(0, 0, width, 1)
             g2.fillRect(0, height - 1, width, 1)
             val columns = ListColumns(width - scrollBarWidth)
-            fun caption(text: String, x: Float) = UiKit.drawText(g2, text, captionFont, UiKit.FG_3, x, 1f, height - 2f)
+            fun caption(text: String, x: Float) = UiKit.drawText(g2, text, captionFont, Palette.FG_3, x, 1f, height - 2f)
             caption("#", columns.number.toFloat())
             caption("START", columns.start.toFloat())
             caption("LENGTH", columns.lengthRight - UiKit.textWidth("LENGTH", captionFont))
@@ -412,7 +413,7 @@ internal class ScoringPointRow(
         favorite = point.favorite
         toolTipText = "Favorite [A]"
     }
-    val goToButton = RowIconButton(Material2MZ.OPEN_IN_NEW, "Go to point ${index + 1} in the Points tab", color = UiKit.FG_2, side = 24).apply {
+    val goToButton = RowIconButton(Material2MZ.OPEN_IN_NEW, "Go to point ${index + 1} in the Points tab", color = Palette.FG_2, side = 24).apply {
         name = "scoring-go-to-point-${point.id}"
     }
 
@@ -486,21 +487,21 @@ internal class ScoringPointRow(
         try {
             val fill = when {
                 selected -> SELECTED
-                hovered -> UiKit.ROW_HOVER
+                hovered -> Palette.ROW_HOVER
                 else -> null
             }
             if (fill != null) {
                 g2.color = fill
                 g2.fillRect(0, 0, width, height)
             }
-            g2.color = UiKit.ROW_LINE
+            g2.color = Palette.ROW_LINE
             g2.fillRect(0, height - 1, width, 1)
-            if (selected) UiKit.paintBox(g2, 0, 0, width, height, 0, null, UiKit.LIME_LINE)
+            if (selected) UiKit.paintBox(g2, 0, 0, width, height, 0, null, Palette.LIME_LINE)
             // The winner strip: the player color, light gray for no point, nothing for a point without a score.
             val strip = when (outcome) {
                 Outcome.P1 -> data.players.p1Color
                 Outcome.P2 -> data.players.p2Color
-                Outcome.NONE -> ScoringUi.NO_POINT_LIST
+                Outcome.NONE -> Palette.NEUTRAL_LIGHT
                 null -> null
             }
             if (strip != null) {
@@ -512,18 +513,18 @@ internal class ScoringPointRow(
             val h = height - 1f
             val scored = outcome != null
             val numberColor = when {
-                selected -> UiKit.LIME
-                scored -> UiKit.FG
-                else -> UiKit.FG_2
+                selected -> Palette.LIME
+                scored -> Palette.FG
+                else -> Palette.FG_2
             }
             UiKit.drawText(g2, (index + 1).toString(), NUMBER_FONT, numberColor, columns.number.toFloat(), 0f, h)
             val start = Timecode.format(point.startMs.toLong()).substring(0, 8)
-            UiKit.drawText(g2, start, TEXT_FONT, if (scored) UiKit.FG else UiKit.FG_2, columns.start.toFloat(), 0f, h)
+            UiKit.drawText(g2, start, TEXT_FONT, if (scored) Palette.FG else Palette.FG_2, columns.start.toFloat(), 0f, h)
             val length = formatSeconds((point.endMs - point.startMs).toLong().coerceAtLeast(0))
-            UiKit.drawText(g2, length, TEXT_FONT, UiKit.FG_3, columns.lengthRight - UiKit.textWidth(length, TEXT_FONT), 0f, h)
+            UiKit.drawText(g2, length, TEXT_FONT, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, TEXT_FONT), 0f, h)
             point.label?.takeIf { it.isNotBlank() }?.let { label ->
                 val text = UiKit.ellipsize(label.replace('\n', ' '), TEXT_FONT, (columns.labelRight - columns.label).toFloat())
-                UiKit.drawText(g2, text, TEXT_FONT, UiKit.FG_3, columns.label.toFloat(), 0f, h)
+                UiKit.drawText(g2, text, TEXT_FONT, Palette.FG_3, columns.label.toFloat(), 0f, h)
             }
 
             var right = columns.marksRight
@@ -547,7 +548,7 @@ internal class ScoringPointRow(
                 val side = racketWidth()
                 val x = right - side
                 if (racketOnBadge) {
-                    g2.color = ScoringUi.RACKET_BADGE
+                    g2.color = Palette.NEUTRAL_LIGHT
                     g2.fillOval(x, (height - side) / 2, side, side)
                 }
                 icon.paintIcon(this, g2, x + (side - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
@@ -562,7 +563,7 @@ internal class ScoringPointRow(
         const val STRIP = 4
         const val BADGE_HEIGHT = 16
         const val RACKET_BADGE_SIDE = 21
-        val SELECTED = Color(0x242424)
+        val SELECTED = Palette.SELECTED
         private val NUMBER_FONT get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
         private val TEXT_FONT get() = UiKit.font(12.5f)
         private val BADGE_FONT get() = UiKit.trackedFont(9.5f, 0.05, UiKit.Weight.BOLD)

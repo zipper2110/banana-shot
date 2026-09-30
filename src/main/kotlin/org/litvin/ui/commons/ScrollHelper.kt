@@ -34,15 +34,15 @@ fun JComponent.scrollIntoView() = uiSafe {
 
 /**
  * Apply the app-wide dark scrollbar style to the given scroll pane.
- * - Track #202020, thumb #333, hover/drag #444
+ * - Track [Palette.RAISED], thumb [Palette.LINE_2], hover/drag [Palette.HOVER_LINE]
  * - Rounded thumb (8px), width 10
  * - No arrow buttons
  * - Non-opaque, unitIncrement=16
  */
 fun applyDarkScrollbar(scroll: JScrollPane, background: Color? = null) {
-    val trackClr = Color(0x20, 0x20, 0x20)
-    val thumbClr = Color(0x33, 0x33, 0x33)
-    val thumbHover = Color(0x44, 0x44, 0x44)
+    val trackClr = Palette.RAISED
+    val thumbClr = Palette.LINE_2
+    val thumbHover = Palette.HOVER_LINE
 
     // Transparency to blend with parents
     scroll.isOpaque = false

@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.scoring.ui
 
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
+import org.litvin.ScoreboardComponent
 import org.litvin.scoring.DeuceRule
 import org.litvin.scoring.FinalSetRule
 import org.litvin.scoring.MatchFormatPreset
@@ -10,6 +11,7 @@ import org.litvin.scoring.MatchStructure
 import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DialogGroup
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.Stack
 import org.litvin.ui.commons.SwatchButton
@@ -100,7 +102,7 @@ class ScoreSettingsDialog private constructor(
         MatchFormatPreset.entries.forEach { addItem(Choice(it, it.title)) }
         DialogKit.styleCombo(this)
     }
-    private val formatDescription = WrapText("", UiKit.font(12f), UiKit.FG_2, 1.5f, WIDTH).apply {
+    private val formatDescription = WrapText("", UiKit.font(12f), Palette.FG_2, 1.5f, WIDTH).apply {
         name = "score-settings-format-description"
     }
     private val bestOf = SegmentedChoice(
@@ -134,7 +136,7 @@ class ScoreSettingsDialog private constructor(
         name = "score-settings-manual"
         toolTipText = "The app counts points only. You mark each game and set win."
     }
-    private val manualHint = WrapText(MANUAL_HINT, UiKit.font(12f), UiKit.FG_2, 1.5f, WIDTH)
+    private val manualHint = WrapText(MANUAL_HINT, UiKit.font(12f), Palette.FG_2, 1.5f, WIDTH)
 
     private val formatGroup = DialogGroup("Match format", Material2MZ.RULE, "score-settings-format-group")
 
@@ -276,9 +278,9 @@ class ScoreSettingsDialog private constructor(
             setRuleEnabled(finalSet, automatic && sets && rules.bestOfSets > 1)
             // Tiebreak points have no deuce.
             setRuleEnabled(deuce, automatic && (sets || rules.structure == MatchStructure.GAMES_ONLY))
-            formatDescription.runs = listOf(TextRun(preset.description, UiKit.font(12f), if (automatic) UiKit.FG_2 else UiKit.FG_3))
+            formatDescription.runs = listOf(TextRun(preset.description, UiKit.font(12f), if (automatic) Palette.FG_2 else Palette.FG_3))
             formatGroup.aside.text = if (automatic) "" else "Not used in manual scoring"
-            manualHint.runs = listOf(TextRun(MANUAL_HINT, UiKit.font(12f), if (rules.manualScoring) UiKit.FG_2 else UiKit.FG_3))
+            manualHint.runs = listOf(TextRun(MANUAL_HINT, UiKit.font(12f), if (rules.manualScoring) Palette.FG_2 else Palette.FG_3))
 
             player1ColorButton.color = colorOf(player1Color)
             player2ColorButton.color = colorOf(player2Color)
@@ -289,7 +291,7 @@ class ScoreSettingsDialog private constructor(
 
     private fun setRuleEnabled(component: Component, enabled: Boolean) {
         component.isEnabled = enabled
-        ruleLabels[component]?.foreground = if (enabled) UiKit.FG_2 else UiKit.FG_3
+        ruleLabels[component]?.foreground = if (enabled) Palette.FG_2 else Palette.FG_3
     }
 
     private fun save() {
@@ -309,7 +311,7 @@ class ScoreSettingsDialog private constructor(
     }
 
     private fun colorOf(hex: String): Color =
-        Color(hex.trim().removePrefix("#").toIntOrNull(16) ?: 0x4DA3FF)
+        Color(hex.trim().removePrefix("#").toIntOrNull(16) ?: ScoreboardComponent.DEFAULT_PLAYER1_RGB)
 
     private fun nameField(componentName: String, text: String) = JTextField(text, 18).apply {
         name = componentName
@@ -318,7 +320,7 @@ class ScoreSettingsDialog private constructor(
 
     private fun countLabel() = JLabel().apply {
         font = UiKit.font(11f)
-        foreground = UiKit.FG_3
+        foreground = Palette.FG_3
     }
 
     private fun colorButton(componentName: String, player: String, hex: String) = SwatchButton(colorOf(hex)).apply {

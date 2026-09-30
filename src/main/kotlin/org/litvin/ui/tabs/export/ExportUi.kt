@@ -27,34 +27,13 @@ import javax.swing.Scrollable
 import javax.swing.UIManager
 import kotlin.math.ceil
 import kotlin.math.max
+import org.litvin.ui.commons.Palette
 
 /**
- * Colors, fonts and small painted parts of the Export tab.
+ * Fonts and small painted parts of the Export tab. The colors are in [Palette].
  * The values come from design/export-redesign/final.html and its shared.css.
  */
 internal object ExportUi {
-    val BG = Color(0x0E0E0E)
-    val CARD = Color(0x1A1A1A)
-    val RAISED = Color(0x202020)
-    val RAISED_2 = Color(0x2A2A2A)
-    val LINE = Color(0x262626)
-    val LINE_2 = Color(0x363636)
-    val HOVER_LINE = Color(0x3C3C3C)
-    val FG = Color(0xE4E4E4)
-    val FG_2 = Color(0xADAAAA)
-    val FG_3 = Color(0x6A6A6A)
-    val LIME = Color(0xA1FE00)
-    val LIME_HOVER = Color(0xB4FF33)
-    val GREEN = Color(0xAFF625)
-    val SAGE = Color(0xA3C586)
-    val YELLOW = Color(0xF2D64B)
-    val RED = Color(0xFF7351)
-    val ON_LIME = Color(0x142000)
-    val LIME_TINT = Color(161, 254, 0, 18)
-    val LIME_LINE = Color(161, 254, 0, 153)
-    val RED_TINT = Color(255, 115, 81, 26)
-    val RADIO_LINE = Color(0x5A5A5A)
-
     /** The opacity of a disabled tile or card. */
     const val DISABLED_ALPHA = 0.45f
 
@@ -124,7 +103,7 @@ internal object ExportUi {
     fun paintRadio(g2: Graphics2D, x: Int, y: Int, size: Int, selected: Boolean) {
         val stroke = 1.5
         g2.stroke = BasicStroke(stroke.toFloat())
-        g2.color = if (selected) LIME else RADIO_LINE
+        g2.color = if (selected) Palette.LIME else Palette.LINE_5
         g2.draw(Ellipse2D.Double(x + stroke / 2, y + stroke / 2, size - stroke, size - stroke))
         if (selected) {
             val inset = stroke + 3
@@ -136,9 +115,9 @@ internal object ExportUi {
     fun paintCheck(g2: Graphics2D, x: Int, y: Int, checked: Boolean) {
         val size = 16.0
         if (checked) {
-            g2.color = LIME
+            g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(x.toDouble(), y.toDouble(), size, size, 6.0, 6.0))
-            g2.color = ON_LIME
+            g2.color = Palette.ON_LIME
             g2.stroke = BasicStroke(2.2f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER)
             g2.draw(Path2D.Double().apply {
                 moveTo(x + 4.4, y + 8.0)
@@ -146,7 +125,7 @@ internal object ExportUi {
                 lineTo(x + 11.8, y + 5.4)
             })
         } else {
-            g2.color = RADIO_LINE
+            g2.color = Palette.LINE_5
             g2.stroke = BasicStroke(1.5f)
             g2.draw(RoundRectangle2D.Double(x + 0.75, y + 0.75, size - 1.5, size - 1.5, 4.5, 4.5))
         }
@@ -474,9 +453,9 @@ internal class Tag(text: String, muted: Boolean = false) : JComponent() {
     override fun paintComponent(g: Graphics) {
         val g2 = ExportUi.smooth(g)
         try {
-            ExportUi.paintBox(g2, 0, 0, width, height, 3, null, if (muted) ExportUi.LINE_2 else Color(161, 254, 0, 128))
+            ExportUi.paintBox(g2, 0, 0, width, height, 3, null, if (muted) Palette.LINE_2 else Palette.LIME_LINE)
             g2.font = tagFont
-            g2.color = if (muted) ExportUi.FG_2 else ExportUi.GREEN
+            g2.color = if (muted) Palette.FG_2 else Palette.LIME
             val metrics = tagFont.getLineMetrics(text, ExportUi.frc)
             g2.drawString(text, 7f, (height - metrics.ascent - metrics.descent) / 2f + metrics.ascent)
         } finally {

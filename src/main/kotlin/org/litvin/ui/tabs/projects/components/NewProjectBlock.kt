@@ -18,6 +18,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ToolTipManager
 import kotlin.math.ceil
+import org.litvin.ui.commons.Palette
 
 /**
  * The "New project" block of the start panel: the workflow of the app in short steps, and the "Import new match" button.
@@ -38,7 +39,7 @@ internal class NewProjectBlock(contentWidth: Int, onImportNewMatch: () -> Unit) 
         alignmentX = Component.LEFT_ALIGNMENT
         border = BorderFactory.createEmptyBorder(PADDING, PADDING, PADDING, PADDING)
         val innerWidth = contentWidth - 2 * PADDING
-        add(WrapLabel("From a match video to a finished video:", ProjectsUi.font(12f), ProjectsUi.FG_2, innerWidth, 1.4f))
+        add(WrapLabel("From a match video to a finished video:", ProjectsUi.font(12f), Palette.FG_2, innerWidth, 1.4f))
         add(Gap(0, 10).leftAligned())
         add(WorkflowSteps(innerWidth))
         add(Gap(0, 14).leftAligned())
@@ -50,7 +51,7 @@ internal class NewProjectBlock(contentWidth: Int, onImportNewMatch: () -> Unit) 
     override fun paintComponent(g: Graphics) {
         val g2 = ProjectsUi.smooth(g)
         try {
-            ProjectsUi.paintBox(g2, 0, 0, width, height, 8, ProjectsUi.WORKFLOW_BG, ProjectsUi.LINE)
+            ProjectsUi.paintBox(g2, 0, 0, width, height, 8, Palette.INSET, Palette.LINE)
         } finally {
             g2.dispose()
         }
@@ -76,12 +77,12 @@ private object Chips {
     fun paint(g2: Graphics2D, c: Component, label: String, icon: Icon, x: Int, y: Int, highlighted: Boolean) {
         val w = width(label)
         ProjectsUi.paintBox(
-            g2, x, y, w, HEIGHT, 4, Color(0x1C1C1C),
-            if (highlighted) ProjectsUi.LIME_LINE else Color(0x2C2C2C),
+            g2, x, y, w, HEIGHT, 4, Palette.OVERLAY,
+            if (highlighted) Palette.LIME_LINE else Palette.TRACK,
         )
         icon.paintIcon(c, g2, x + 6, y + (HEIGHT - icon.iconHeight) / 2)
         ProjectsUi.drawText(
-            g2, label, chipFont, if (highlighted) ProjectsUi.FG else ProjectsUi.FG_2,
+            g2, label, chipFont, if (highlighted) Palette.FG else Palette.FG_2,
             (x + 6 + ICON + 3).toFloat(), y.toFloat(), HEIGHT.toFloat(),
         )
     }
@@ -105,7 +106,7 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
     )
     private val stepFont = ProjectsUi.font(12.5f)
     private val numberFont = ProjectsUi.font(11f, ProjectsUi.Weight.BOLD)
-    private val scheduleIcon = ProjectsUi.icon(Material2OutlinedMZ.SCHEDULE, 13, ProjectsUi.FG_3)
+    private val scheduleIcon = ProjectsUi.icon(Material2OutlinedMZ.SCHEDULE, 13, Palette.FG_3)
 
     private val optionalTop get() = steps.size * ROW + 4
 
@@ -127,39 +128,39 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
         try {
             val textX = CIRCLE + 10f
             // The line that joins the step numbers. The circles paint over it.
-            g2.color = Color(0x2E2E2E)
+            g2.color = Palette.TRACK
             g2.fillRect(CIRCLE / 2 - 1, ROW / 2, 1, optionalTop)
             steps.forEachIndexed { index, step ->
                 val top = index * ROW
                 val here = index == 0
                 val circleY = top + (ROW - CIRCLE) / 2
-                g2.color = if (here) ProjectsUi.LIME else Color(0x262626)
+                g2.color = if (here) Palette.LIME else Palette.LINE
                 g2.fillOval(0, circleY, CIRCLE, CIRCLE)
                 val number = (index + 1).toString()
                 val numberX = (CIRCLE - ProjectsUi.textWidth(number, numberFont)) / 2f
                 ProjectsUi.drawText(
-                    g2, number, numberFont, if (here) ProjectsUi.ON_LIME else ProjectsUi.FG,
+                    g2, number, numberFont, if (here) Palette.ON_LIME else Palette.FG,
                     numberX, circleY.toFloat(), CIRCLE.toFloat(),
                 )
                 val chipsWidth = chipsWidth(step)
                 val chipY = top + (ROW - Chips.HEIGHT) / 2
                 paintChips(g2, step, width - chipsWidth, chipY, here)
                 val text = ProjectsUi.ellipsize(step.text, stepFont, width - textX - chipsWidth - 10)
-                ProjectsUi.drawText(g2, text, stepFont, ProjectsUi.FG, textX, top.toFloat(), ROW.toFloat())
+                ProjectsUi.drawText(g2, text, stepFont, Palette.FG, textX, top.toFloat(), ROW.toFloat())
             }
             // The optional step: a dashed circle with a clock, the text, and its tabs on a second line.
             val top = optionalTop
             val circleY = top + (ROW - CIRCLE) / 2
-            g2.color = ProjectsUi.WORKFLOW_BG
+            g2.color = Palette.INSET
             g2.fillOval(0, circleY, CIRCLE, CIRCLE)
-            g2.color = Color(0x4A4A4A)
+            g2.color = Palette.HOVER_LINE
             g2.stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10f, floatArrayOf(2.5f, 2f), 0f)
             g2.drawOval(0, circleY, CIRCLE - 1, CIRCLE - 1)
             scheduleIcon.paintIcon(this, g2, (CIRCLE - scheduleIcon.iconWidth) / 2, circleY + (CIRCLE - scheduleIcon.iconHeight) / 2)
-            ProjectsUi.drawText(g2, optional.text, stepFont, ProjectsUi.FG_2, textX, top.toFloat(), ROW.toFloat())
+            ProjectsUi.drawText(g2, optional.text, stepFont, Palette.FG_2, textX, top.toFloat(), ROW.toFloat())
             val note = " (optional)"
             val noteX = textX + ProjectsUi.textWidth(optional.text, stepFont)
-            ProjectsUi.drawText(g2, note, stepFont, ProjectsUi.FG_3, noteX, top.toFloat(), ROW.toFloat())
+            ProjectsUi.drawText(g2, note, stepFont, Palette.FG_3, noteX, top.toFloat(), ROW.toFloat())
             paintChips(g2, optional, textX.toInt(), top + ROW + 5, false)
         } finally {
             g2.dispose()

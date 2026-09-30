@@ -23,55 +23,10 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /**
- * Colors, fonts and small painted parts that the redesigned tabs share (Points, Scoring, Colors, Transform).
- * The values come from the shared.css files of the design/<tab>-redesign folders, which have the same base.
+ * Fonts and small painted parts that the redesigned tabs share (Points, Scoring, Colors, Transform).
+ * The colors are in [Palette].
  */
 internal object UiKit {
-    val BG = Color(0x0E0E0E)
-    val PANEL = Color(0x161616)
-    val CARD = Color(0x1A1A1A)
-    val RAISED = Color(0x202020)
-    val RAISED_2 = Color(0x2A2A2A)
-    val LINE = Color(0x262626)
-    val LINE_2 = Color(0x363636)
-    val FG = Color(0xE4E4E4)
-    val FG_2 = Color(0xADAAAA)
-    val FG_3 = Color(0x6A6A6A)
-    val LIME = Color(0xA1FE00)
-    val LIME_HOVER = Color(0xB4FF33)
-    val LIME_TINT = Color(161, 254, 0, 18)
-    val LIME_LINE = Color(161, 254, 0, 153)
-    val SAGE = Color(0xA3C586)
-    val ON_LIME = Color(0x142000)
-    val YELLOW = Color(0xF2D64B)
-    val YELLOW_TINT = Color(242, 214, 75, 20)
-    val YELLOW_LINE = Color(242, 214, 75, 89)
-    val RED = Color(0xFF7351)
-    val RED_TINT = Color(255, 115, 81, 26)
-    val RED_LINE = Color(255, 115, 81, 102)
-    val ERROR = Color(0xFF6B6B)
-
-    /** The border of a hovered button. */
-    val HOVER_LINE = Color(0x444444)
-
-    /** The line between two slider rows of a group card. */
-    val CARD_ROW_LINE = Color(0x202020)
-
-    /** The background of the playback bar under the video. */
-    val PLAYBAR = Color(0x1C1C1C)
-
-    /** The row lines and the hover color of the points table. */
-    val ROW_LINE = Color(0x191919)
-    val ROW_HOVER = Color(0x181818)
-    val ROW_SELECTED = Color(0x232323)
-    val COMMENT_ROW = Color(0x131313)
-    val TABLE_HEAD = Color(0x121212)
-
-    /** Timeline colors. */
-    val MARK = Color(0x4CAF50)
-    val VIDEO = Color(68, 136, 255, 140)
-    val PLAYHEAD = Color(0xFF5555)
-
     enum class Weight { REGULAR, SEMIBOLD, BOLD }
 
     private val fonts = HashMap<Pair<Float, Weight>, Font>()
@@ -168,9 +123,9 @@ internal object UiKit {
  * [fixedWidth] gives all chips of a group the same width, for example the arrow keys on the seek buttons.
  */
 internal data class KeyChipStyle(
-    val fill: Color = UiKit.PANEL,
-    val border: Color = Color(0x454545),
-    val text: Color = UiKit.FG_2,
+    val fill: Color = Palette.PANEL,
+    val border: Color = Palette.HOVER_LINE,
+    val text: Color = Palette.FG_2,
     val fixedWidth: Int? = null,
     val height: Int = KeyChips.HEIGHT,
     val fontSize: Float = 10.5f,
@@ -179,7 +134,7 @@ internal data class KeyChipStyle(
         val DEFAULT = KeyChipStyle()
 
         /** The chips on the seek buttons: a lighter border and white text. */
-        val SEEK = KeyChipStyle(fill = Color(0x1B1B1B), border = Color(0x555555), text = UiKit.FG, fixedWidth = 18)
+        val SEEK = KeyChipStyle(fill = Palette.CARD, border = Palette.LINE_5, text = Palette.FG, fixedWidth = 18)
 
         /** The small chips of a compact button, for example Previous and Next of the Scoring tab. */
         val SMALL = KeyChipStyle(height = 16, fontSize = 10f)

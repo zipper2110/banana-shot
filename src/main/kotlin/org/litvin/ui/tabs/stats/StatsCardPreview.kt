@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.stats
 
 import org.litvin.export.scoreboard.ScoreboardScene
 import org.litvin.ui.UiStyles
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ScoreboardSceneImage
 import org.litvin.ui.commons.UiKit
 import java.awt.BasicStroke
@@ -64,15 +65,15 @@ class StatsCardPreview : JComponent() {
             if (frame == null) drawCourt(g, x, y, frameWidth, frameHeight) else drawFrame(g, frame, x, y, frameWidth, frameHeight)
             val scene = pages.getOrNull(page)
             if (scene == null) {
-                g.color = Color(0, 0, 0, 150)
+                g.color = Palette.SCRIM
                 g.fill(java.awt.geom.Rectangle2D.Double(x, y, frameWidth, frameHeight))
-                g.color = UiStyles.FG_SECONDARY
+                g.color = Palette.FG_2
                 val metrics = g.fontMetrics
                 g.drawString(emptyText, (width - metrics.stringWidth(emptyText)) / 2, height / 2 + metrics.ascent / 2)
             } else {
                 ScoreboardSceneImage.draw(g, scene, x, y, frameHeight / scene.height)
             }
-            g.color = UiKit.LINE
+            g.color = Palette.LINE
             g.stroke = BasicStroke(1f)
             g.draw(java.awt.geom.RoundRectangle2D.Double(x + 0.5, y + 0.5, frameWidth - 1, frameHeight - 1, 8.0, 8.0))
         } finally {
@@ -101,9 +102,9 @@ class StatsCardPreview : JComponent() {
 
     /** A simple tennis court in perspective, in place of the video frame. */
     private fun drawCourt(g: Graphics2D, x: Double, y: Double, w: Double, h: Double) {
-        g.color = Color(0x2E, 0x4B, 0x3A)
+        g.color = Palette.COURT_SURROUND
         g.fill(java.awt.geom.Rectangle2D.Double(x, y, w, h))
-        g.color = Color(0x3D, 0x6B, 0x8C)
+        g.color = Palette.COURT_HARD
         val court = Path2D.Double().apply {
             moveTo(x + w * 0.33, y + h * 0.22)
             lineTo(x + w * 0.67, y + h * 0.22)
@@ -112,7 +113,7 @@ class StatsCardPreview : JComponent() {
             closePath()
         }
         g.fill(court)
-        g.color = Color(255, 255, 255, 170)
+        g.color = Palette.COURT_LINE_2
         g.stroke = BasicStroke((h / 180).toFloat().coerceAtLeast(1f))
         g.draw(court)
         val netY = y + h * 0.5

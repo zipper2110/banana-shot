@@ -98,33 +98,33 @@ internal class UiButton(
             val iconColor: Color
             when (kind) {
                 Kind.SECONDARY -> {
-                    fill = if (hover) UiKit.RAISED_2 else UiKit.RAISED
-                    border = if (hover) UiKit.HOVER_LINE else UiKit.LINE_2
-                    fg = UiKit.FG
-                    iconColor = UiKit.FG_2
+                    fill = if (hover) Palette.RAISED_2 else Palette.RAISED
+                    border = if (hover) Palette.HOVER_LINE else Palette.LINE_2
+                    fg = Palette.FG
+                    iconColor = Palette.FG_2
                 }
                 Kind.LIME -> {
-                    fill = if (hover) UiKit.LIME_HOVER else UiKit.LIME
+                    fill = if (hover) Palette.LIME_HOVER else Palette.LIME
                     border = null
-                    fg = UiKit.ON_LIME
-                    iconColor = UiKit.ON_LIME
+                    fg = Palette.ON_LIME
+                    iconColor = Palette.ON_LIME
                 }
                 Kind.DANGER -> {
-                    fill = if (hover) DANGER_HOVER else DANGER_FILL
-                    border = if (hover) UiKit.RED else DANGER_LINE
-                    fg = if (hover) Color.WHITE else DANGER_TEXT
+                    fill = if (hover) Palette.RED_FILL_HOVER else Palette.RED_FILL
+                    border = if (hover) Palette.RED else Palette.RED_LINE_2
+                    fg = if (hover) Palette.FG_STRONG else Palette.RED_TEXT
                     iconColor = fg
                 }
                 Kind.GHOST -> {
-                    fill = if (hover) UiKit.RAISED else null
-                    border = if (hover) UiKit.LINE_2 else null
-                    fg = if (hover) UiKit.FG else UiKit.FG_2
+                    fill = if (hover) Palette.RAISED else null
+                    border = if (hover) Palette.LINE_2 else null
+                    fg = if (hover) Palette.FG else Palette.FG_2
                     iconColor = fg
                 }
                 Kind.QUIET -> {
-                    fill = if (hover) UiKit.RAISED else null
-                    border = UiKit.LINE
-                    fg = if (hover) UiKit.FG else UiKit.FG_2
+                    fill = if (hover) Palette.RAISED else null
+                    border = Palette.LINE
+                    fg = if (hover) Palette.FG else Palette.FG_2
                     iconColor = fg
                 }
             }
@@ -135,7 +135,7 @@ internal class UiButton(
             val color = swatch
             val icon = iconFor(iconColor)
             if (color != null) {
-                UiKit.paintBox(g2, x.toInt(), (height - SWATCH) / 2, SWATCH, SWATCH, 3, color, Color(255, 255, 255, 64))
+                UiKit.paintBox(g2, x.toInt(), (height - SWATCH) / 2, SWATCH, SWATCH, 3, color, Palette.HIGHLIGHT_3)
                 x += SWATCH + SWATCH_GAP
             } else if (icon != null) {
                 icon.paintIcon(this, g2, x.toInt(), (height - icon.iconHeight) / 2)
@@ -144,11 +144,11 @@ internal class UiButton(
             UiKit.drawText(g2, text.orEmpty(), textFont, fg, x, 0f, height.toFloat())
             detail?.let {
                 x += UiKit.textWidth(text.orEmpty(), textFont) + DETAIL_GAP
-                UiKit.drawText(g2, it, DETAIL_FONT, UiKit.FG_2, x, 0f, height.toFloat())
+                UiKit.drawText(g2, it, DETAIL_FONT, Palette.FG_2, x, 0f, height.toFloat())
             }
             if (isFocusOwner) {
                 g2.composite = AlphaComposite.SrcOver
-                UiKit.paintBox(g2, 0, 0, width, height, 4, null, UiKit.LIME_LINE)
+                UiKit.paintBox(g2, 0, 0, width, height, 4, null, Palette.LIME_LINE)
             }
         } finally {
             g2.dispose()
@@ -168,10 +168,6 @@ internal class UiButton(
         private const val SWATCH_GAP = 8
         private const val DETAIL_GAP = 8
         private val DETAIL_FONT get() = MonoFont.of(12f)
-        private val DANGER_FILL = Color(0x3A1812)
-        private val DANGER_HOVER = Color(0x4A1D15)
-        private val DANGER_LINE = Color(255, 115, 81, 140)
-        private val DANGER_TEXT = Color(0xFFB4A3)
     }
 }
 

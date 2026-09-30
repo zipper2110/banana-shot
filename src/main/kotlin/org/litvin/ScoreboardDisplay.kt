@@ -25,6 +25,8 @@ data class ScoreboardDisplay(
 object ScoreboardComponent {
     const val DEFAULT_PLAYER1_RGB = 0x4DA3FF
     const val DEFAULT_PLAYER2_RGB = 0xFF6B6B
+    val DEFAULT_PLAYER1_HEX = "#%06X".format(DEFAULT_PLAYER1_RGB)
+    val DEFAULT_PLAYER2_HEX = "#%06X".format(DEFAULT_PLAYER2_RGB)
     const val PLAYER_NAME_MAX_CHARS = 20
 
     /** The number of completed sets that a scoreboard shows. Older sets are not shown. */

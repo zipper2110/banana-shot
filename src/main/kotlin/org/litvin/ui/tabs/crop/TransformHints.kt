@@ -6,6 +6,7 @@ import org.kordamp.ikonli.material2.Material2OutlinedMZ
 import org.litvin.ui.commons.HeightForWidth
 import org.litvin.ui.commons.KeyChipStyle
 import org.litvin.ui.commons.KeyChips
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.Color
 import java.awt.BasicStroke
@@ -67,11 +68,11 @@ internal data class TransformHint(val ikon: Ikon, val parts: List<HintPart>) {
  * "ON THE VIDEO". The hint texts wrap at the width of the card.
  */
 internal class TransformHints(private val hints: List<TransformHint> = TransformHint.ALL) : JPanel(null), HeightForWidth {
-    private val captionIcon = UiKit.icon(Material2OutlinedMZ.MOUSE, 14, UiKit.FG_3)
+    private val captionIcon = UiKit.icon(Material2OutlinedMZ.MOUSE, 14, Palette.FG_3)
     private val captionFont = UiKit.trackedFont(10.5f, 0.1, UiKit.Weight.BOLD)
     private val textFont = UiKit.font(12f)
     private val boldFont = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
-    private val icons = hints.map { UiKit.icon(it.ikon, ICON_SIZE, UiKit.FG_3) }
+    private val icons = hints.map { UiKit.icon(it.ikon, ICON_SIZE, Palette.FG_3) }
 
     init {
         name = "crop-hints"
@@ -136,7 +137,7 @@ internal class TransformHints(private val hints: List<TransformHint> = Transform
             paintDashedBorder(g2)
             captionIcon.paintIcon(this, g2, PAD_X, PAD_TOP + (CAPTION_LINE - captionIcon.iconHeight) / 2)
             val captionX = (PAD_X + captionIcon.iconWidth + CAPTION_ICON_GAP).toFloat()
-            UiKit.drawText(g2, CAPTION.uppercase(), captionFont, UiKit.FG_3, captionX, PAD_TOP.toFloat(), CAPTION_LINE.toFloat())
+            UiKit.drawText(g2, CAPTION.uppercase(), captionFont, Palette.FG_3, captionX, PAD_TOP.toFloat(), CAPTION_LINE.toFloat())
 
             var top = (PAD_TOP + CAPTION_LINE + CAPTION_GAP_BOTTOM).toFloat()
             val textX = (PAD_X + ICON_COLUMN + ICON_GAP).toFloat()
@@ -152,7 +153,7 @@ internal class TransformHints(private val hints: List<TransformHint> = Transform
                             (lineTop + (LINE - KEY_STYLE.height) / 2f).roundToInt(), KEY_STYLE,
                         )
                         is HintPart.Text -> UiKit.drawText(
-                            g2, item.text, fontOf(part), if (part.bold) UiKit.FG else UiKit.FG_2,
+                            g2, item.text, fontOf(part), if (part.bold) Palette.FG else Palette.FG_2,
                             textX + item.x, lineTop, LINE,
                         )
                     }
@@ -187,7 +188,7 @@ internal class TransformHints(private val hints: List<TransformHint> = Transform
         private const val ITEM_GAP = 7
         private const val LINE = 16.8f
         private val KEY_STYLE = KeyChipStyle.SMALL
-        private val HINT_LINE = Color(0x2C2C2C)
+        private val HINT_LINE = Palette.TRACK
         private const val KEY_MARGIN = 1f
     }
 }

@@ -15,6 +15,7 @@ import java.awt.geom.Point2D
 import java.awt.geom.Rectangle2D
 import kotlin.math.abs
 import kotlin.math.atan2
+import org.litvin.ui.commons.Palette
 
 /**
  * Crop/Rotate editor on the live video.
@@ -37,7 +38,7 @@ class CropEditorOverlay(
         private const val HANDLE_SIZE = 10.0
         private const val HANDLE_HIT_SIZE = 14.0
         private const val ROTATION_HANDLE_OFFSET = 24.0
-        private val DIM = Color(0, 0, 0, 148)
+        private val DIM = Palette.SCRIM
     }
 
     private val target = player.component
@@ -182,7 +183,7 @@ class CropEditorOverlay(
     private fun shapes(content: Rectangle2D.Double): List<OverlayShape> {
         val overlay = overlayRect(content)
         val active = hoverTarget != HitTarget.NONE || dragTarget != HitTarget.NONE
-        val stroke = if (active) UiStyles.LIME else Color.WHITE
+        val stroke = if (active) Palette.LIME else Palette.FG_STRONG
         val shapes = mutableListOf<OverlayShape>()
 
         // The chip is under the editor, so it never hides a handle.
@@ -202,14 +203,14 @@ class CropEditorOverlay(
         handleRects(overlay, HANDLE_SIZE).forEach { (_, rect) ->
             shapes += OverlayShape.Rect(
                 rect.x, rect.y, rect.width, rect.height,
-                fill = UiStyles.DARK_BG, stroke = stroke, strokeWidth = 1.5,
+                fill = Palette.BG, stroke = stroke, strokeWidth = 1.5,
             )
         }
         val rotation = rotationHandleCenter(overlay)
         shapes += OverlayShape.Line(overlay.x + overlay.width / 2.0, overlay.y, rotation.x, rotation.y, stroke, 1.4)
         shapes += OverlayShape.Circle(
             rotation.x, rotation.y, HANDLE_SIZE / 2.0,
-            fill = UiStyles.DARK_BG, stroke = stroke, strokeWidth = 1.5,
+            fill = Palette.BG, stroke = stroke, strokeWidth = 1.5,
         )
         return shapes
     }

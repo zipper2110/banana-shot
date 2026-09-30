@@ -15,6 +15,7 @@ import org.litvin.points.components.PointsDispatcher
 import org.litvin.media.PlayerStatus
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
@@ -294,7 +295,7 @@ class SwingPointsPanel(
 
     init {
         isOpaque = true
-        background = UiKit.PANEL
+        background = Palette.PANEL
 
         playbackBar = PlaybackBar(
             onTogglePlay = { togglePlayPause() },
@@ -308,7 +309,7 @@ class SwingPointsPanel(
         // Left column: the video with the playback bar under it
         val leftColumn = JPanel(BorderLayout())
         leftColumn.isOpaque = true
-        leftColumn.background = Color.BLACK
+        leftColumn.background = Palette.VIDEO_BG
         // Wrap the video component with the geometry viewport for live zoom/pan (Task 5.4)
         geometryViewport = GeometryViewportPanel(player.component)
         geometryViewport.name = "points-video"
@@ -409,8 +410,8 @@ class SwingPointsPanel(
         return JPanel(BorderLayout()).apply {
             name = "points-side-column"
             isOpaque = true
-            background = UiKit.BG
-            border = BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE)
+            background = Palette.BG
+            border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
             preferredSize = Dimension(SIDE_COLUMN_WIDTH, 0)
             minimumSize = Dimension(SIDE_COLUMN_WIDTH, 0)
             add(top, BorderLayout.NORTH)

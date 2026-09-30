@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.crop
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.CropGeometryMath
 import org.litvin.ui.commons.CardColumn
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ResetAllButton
 import org.litvin.ui.commons.SIDE_PANEL_WIDTH
 import org.litvin.ui.commons.SidePanelHeader
@@ -62,8 +63,8 @@ class CropTransformControls(
     init {
         name = "crop-transform-panel"
         isOpaque = true
-        background = UiKit.BG
-        border = BorderFactory.createMatteBorder(0, 1, 0, 0, UiKit.LINE)
+        background = Palette.BG
+        border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
 
         rows.values.forEach { row -> bindRow(row) }
 

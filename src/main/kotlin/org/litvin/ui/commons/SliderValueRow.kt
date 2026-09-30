@@ -62,8 +62,8 @@ internal class SliderValueField(
         toolTipText = tooltip
         horizontalAlignment = SwingConstants.RIGHT
         font = UiKit.font(13f, UiKit.Weight.SEMIBOLD)
-        foreground = UiKit.FG_2
-        caretColor = UiKit.FG
+        foreground = Palette.FG_2
+        caretColor = Palette.FG
         isOpaque = false
         border = BorderFactory.createEmptyBorder()
         putClientProperty("JComponent.outline", null)
@@ -88,7 +88,7 @@ internal class SliderValueField(
         set(value) {
             if (field == value) return
             field = value
-            textField.foreground = if (value) UiKit.LIME else UiKit.FG_2
+            textField.foreground = if (value) Palette.LIME else Palette.FG_2
             repaint()
         }
 
@@ -182,14 +182,14 @@ internal class SliderValueField(
         val g2 = UiKit.smooth(g)
         try {
             val focused = textField.hasFocus()
-            if (focused) UiKit.paintBox(g2, 0, 0, width, height, 6, LIME_GLOW, null)
+            if (focused) UiKit.paintBox(g2, 0, 0, width, height, 6, Palette.LIME_TINT_2, null)
             UiKit.paintBox(
-                g2, GLOW, GLOW, BOX_WIDTH, BOX_HEIGHT, 4, UiKit.RAISED,
-                if (focused) UiKit.LIME_LINE else UiKit.LINE_2,
+                g2, GLOW, GLOW, BOX_WIDTH, BOX_HEIGHT, 4, Palette.RAISED,
+                if (focused) Palette.LIME_LINE else Palette.LINE_2,
             )
             if (unit.isNotEmpty()) {
                 val unitX = (GLOW + BOX_WIDTH - PAD_X - unitWidth()).toFloat()
-                UiKit.drawText(g2, unit, unitFont, UiKit.FG_3, unitX, GLOW.toFloat(), BOX_HEIGHT.toFloat())
+                UiKit.drawText(g2, unit, unitFont, Palette.FG_3, unitX, GLOW.toFloat(), BOX_HEIGHT.toFloat())
             }
         } finally {
             g2.dispose()
@@ -210,7 +210,6 @@ internal class SliderValueField(
         private const val PAD_X = 7
         private const val UNIT_GAP = 2
         private const val UNIT_MIN_WIDTH = 10
-        private val LIME_GLOW = Color(161, 254, 0, 31)
     }
 }
 
@@ -289,7 +288,7 @@ internal open class SliderValueRow(
             val nameRight = (valueField.x + SliderValueField.GLOW - NAME_GAP).toFloat()
             val name = UiKit.ellipsize(label, nameFont, nameRight - SliderRows.PAD_X)
             UiKit.drawText(
-                g2, name, nameFont, UiKit.FG, SliderRows.PAD_X.toFloat(), PAD_TOP.toFloat(), SliderValueField.BOX_HEIGHT.toFloat(),
+                g2, name, nameFont, Palette.FG, SliderRows.PAD_X.toFloat(), PAD_TOP.toFloat(), SliderValueField.BOX_HEIGHT.toFloat(),
             )
             val midX = slider.x + DefaultFillSliderUI.xOf(slider, default)
             SliderRows.paintEnds(g2, width, (SLIDER_Y + SLIDER_HEIGHT - 1).toFloat(), low, high, mid, midX)

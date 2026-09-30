@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.scoring.ui
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
+import org.litvin.ScoreboardComponent
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoringEngine.MatchState
 import java.awt.AlphaComposite
@@ -23,6 +24,7 @@ import javax.swing.SwingConstants
 import kotlin.math.max
 import org.litvin.ui.commons.KeyChipStyle
 import org.litvin.ui.commons.KeyChips
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 
 /** Everything that the score panel shows for the selected point. A negative [index] means that no point is selected. */
@@ -51,8 +53,8 @@ internal data class ScorePanelState(
 internal data class ScorePlayers(
     val p1Name: String = "Player 1",
     val p2Name: String = "Player 2",
-    val p1Color: Color = Color(0x4DA3FF),
-    val p2Color: Color = Color(0xFF6B6B),
+    val p1Color: Color = Color(ScoreboardComponent.DEFAULT_PLAYER1_RGB),
+    val p2Color: Color = Color(ScoreboardComponent.DEFAULT_PLAYER2_RGB),
 ) {
     fun name(player: Int) = if (player == 1) p1Name else p2Name
     fun color(player: Int) = if (player == 1) p1Color else p2Color
@@ -135,7 +137,7 @@ internal class ScorePanel(
         player2.players = players
         player1Button.setPlayer(players.p1Name, players.p1Color)
         player2Button.setPlayer(players.p2Name, players.p2Color)
-        noPointButton.setPlayer("No point", ScoringUi.NO_POINT)
+        noPointButton.setPlayer("No point", Palette.LINE_6)
         render(state)
     }
 
@@ -147,10 +149,10 @@ internal class ScorePanel(
         nextButton.kind = if (state.selected && state.outcome != null) ScoringButton.Kind.LIME else ScoringButton.Kind.SECONDARY
         if (state.selected) {
             pointLabel.text = "Point ${state.index + 1} / ${state.total}"
-            pointLabel.foreground = UiKit.FG
+            pointLabel.foreground = Palette.FG
         } else {
             pointLabel.text = "No point selected"
-            pointLabel.foreground = UiKit.FG_3
+            pointLabel.foreground = Palette.FG_3
         }
         favoriteButton.isVisible = state.selected
         favoriteButton.favorite = state.favorite
@@ -240,7 +242,7 @@ internal class ScorePanel(
         val g2 = UiKit.smooth(g)
         try {
             val card = card()
-            UiKit.paintBox(g2, card.x, card.y, card.width, card.height, 8, UiKit.CARD, UiKit.LINE)
+            UiKit.paintBox(g2, card.x, card.y, card.width, card.height, 8, Palette.CARD, Palette.LINE)
 
             // The caption row of the score table. It has the same right padding as the player rows.
             val caption = captionBounds()
@@ -248,14 +250,14 @@ internal class ScorePanel(
             val font = captionFont
             val top = caption.y.toFloat()
             val h = CAPTION_HEIGHT.toFloat()
-            UiKit.drawText(g2, "AFTER THE POINT", font, UiKit.FG_3, caption.x.toFloat(), top, h)
-            UiKit.drawText(g2, "SETS", font, UiKit.FG_3, (caption.x + columns.setsX).toFloat(), top, h)
-            UiKit.drawText(g2, "GAMES", font, UiKit.FG_3, (caption.x + columns.gamesX).toFloat(), top, h)
+            UiKit.drawText(g2, "AFTER THE POINT", font, Palette.FG_3, caption.x.toFloat(), top, h)
+            UiKit.drawText(g2, "SETS", font, Palette.FG_3, (caption.x + columns.setsX).toFloat(), top, h)
+            UiKit.drawText(g2, "GAMES", font, Palette.FG_3, (caption.x + columns.gamesX).toFloat(), top, h)
             val points = "POINTS"
-            UiKit.drawText(g2, points, font, UiKit.FG_3, caption.x + columns.pointsRight - UiKit.textWidth(points, font), top, h)
+            UiKit.drawText(g2, points, font, Palette.FG_3, caption.x + columns.pointsRight - UiKit.textWidth(points, font), top, h)
 
             val who = captionBounds().y + CAPTION_HEIGHT + ROW_GAP * 2 + PlayerScoreRow.HEIGHT * 2 + SECTION_GAP
-            UiKit.drawText(g2, "WHO WON THE POINT?", whoFont, UiKit.FG_3, caption.x.toFloat(), who.toFloat(), WHO_HEIGHT.toFloat())
+            UiKit.drawText(g2, "WHO WON THE POINT?", whoFont, Palette.FG_3, caption.x.toFloat(), who.toFloat(), WHO_HEIGHT.toFloat())
         } finally {
             g2.dispose()
         }
@@ -366,7 +368,7 @@ internal class PlayerScoreRow(
     private fun valueLabel(componentName: String, size: Float, weight: UiKit.Weight) = JLabel("0").apply {
         name = componentName
         font = UiKit.font(size, weight)
-        foreground = UiKit.FG
+        foreground = Palette.FG
     }
 
     fun render(state: ScorePanelState) {
@@ -375,7 +377,7 @@ internal class PlayerScoreRow(
         setsLabel.text = (if (player == 1) after.setsP1 else after.setsP2).toString()
         gamesLabel.text = (if (player == 1) after.gamesP1 else after.gamesP2).toString()
         pointsLabel.text = ScoringUi.pointsText(after, player)
-        pointsLabel.foreground = if (state.selected && ScoringUi.leads(after, player)) UiKit.LIME else UiKit.FG
+        pointsLabel.foreground = if (state.selected && ScoringUi.leads(after, player)) Palette.LIME else Palette.FG
 
         val enabled = state.selected && state.canScore
         serveButton.isEnabled = enabled
@@ -437,7 +439,7 @@ internal class PlayerScoreRow(
         val g2 = UiKit.smooth(g)
         try {
             val shape = RoundRectangle2D.Double(0.0, 0.0, width.toDouble(), height.toDouble(), 8.0, 8.0)
-            g2.color = ScoringUi.PLAYER_ROW
+            g2.color = Palette.PANEL_DIM
             g2.fill(shape)
             // The color strip at the left edge. The rounded row clips it.
             val clip = g2.clip
@@ -445,10 +447,10 @@ internal class PlayerScoreRow(
             g2.color = players.color(player)
             g2.fillRect(0, 0, STRIP, height)
             g2.clip = clip
-            UiKit.paintBox(g2, 0, 0, width, height, 4, null, UiKit.LINE)
+            UiKit.paintBox(g2, 0, 0, width, height, 4, null, Palette.LINE)
             val x = STRIP + NAME_GAP
             val name = UiKit.ellipsize(players.name(player), nameFont, (columns.nameRight - x).toFloat())
-            UiKit.drawText(g2, name, nameFont, UiKit.FG, x.toFloat(), 0f, height.toFloat())
+            UiKit.drawText(g2, name, nameFont, Palette.FG, x.toFloat(), 0f, height.toFloat())
         } finally {
             g2.dispose()
         }
@@ -506,24 +508,24 @@ internal class ServeButton : JButton() {
             val hover = model.isRollover && isEnabled
             val radius = HEIGHT / 2
             val color = when {
-                serving -> ScoringUi.RACKET
-                hover -> UiKit.FG_2
-                else -> UiKit.FG_3
+                serving -> Palette.RACKET
+                hover -> Palette.FG_2
+                else -> Palette.FG_3
             }
             when {
                 marked -> {
-                    UiKit.paintBox(g2, 0, 0, width, height, radius, ScoringUi.SERVE_FILL, null)
-                    g2.color = UiKit.LIME
+                    UiKit.paintBox(g2, 0, 0, width, height, radius, Palette.SERVE_FILL, null)
+                    g2.color = Palette.LIME
                     g2.stroke = BasicStroke(2f)
                     g2.draw(RoundRectangle2D.Double(1.0, 1.0, width - 2.0, height - 2.0, radius * 2.0 - 2, radius * 2.0 - 2))
                 }
-                serving -> UiKit.paintBox(g2, 0, 0, width, height, radius, ScoringUi.SERVE_FILL, ScoringUi.SERVE_LINE)
-                else -> UiKit.paintBox(g2, 0, 0, width, height, radius, null, if (hover) Color(0x555555) else UiKit.LINE_2)
+                serving -> UiKit.paintBox(g2, 0, 0, width, height, radius, Palette.SERVE_FILL, Palette.SERVE_LINE)
+                else -> UiKit.paintBox(g2, 0, 0, width, height, radius, null, if (hover) Palette.LINE_5 else Palette.LINE_2)
             }
             val racket = icon(Material2MZ.SPORTS_TENNIS, ICON, color)
             racket.paintIcon(this, g2, PAD, (height - racket.iconHeight) / 2)
             if (marked) {
-                val pin = icon(Material2MZ.PUSH_PIN, PIN, UiKit.LIME)
+                val pin = icon(Material2MZ.PUSH_PIN, PIN, Palette.LIME)
                 pin.paintIcon(this, g2, PAD + ICON + GAP, (height - pin.iconHeight) / 2)
             }
         } finally {
@@ -548,7 +550,7 @@ internal class WonTag(private val ikon: Ikon) : JComponent() {
             field = value
             repaint()
         }
-    var playerColor: Color = UiKit.FG
+    var playerColor: Color = Palette.FG
         set(value) {
             field = value
             repaint()
@@ -587,7 +589,7 @@ internal class PlusButton : JButton() {
             field = value
             repaint()
         }
-    var playerColor: Color = UiKit.FG
+    var playerColor: Color = Palette.FG
         set(value) {
             field = value
             repaint()
@@ -618,10 +620,10 @@ internal class PlusButton : JButton() {
                 UiKit.paintBox(g2, 0, 0, width, height, 4, playerColor, null)
                 ScoringUi.onPlayer(playerColor)
             } else {
-                g2.color = if (hover) UiKit.FG_2 else Color(0x555555)
+                g2.color = if (hover) Palette.FG_2 else Palette.LINE_5
                 g2.stroke = dash
                 g2.draw(RoundRectangle2D.Double(0.5, 0.5, width - 1.0, height - 1.0, 7.0, 7.0))
-                if (hover) UiKit.FG else UiKit.FG_2
+                if (hover) Palette.FG else Palette.FG_2
             }
             val icon = icons.getOrPut(iconColor) { UiKit.icon(Material2AL.ADD, 16, iconColor) }
             icon.paintIcon(this, g2, (width - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
@@ -641,7 +643,7 @@ internal class PlusButton : JButton() {
  * the buttons have a lime outline: choosing the winner is the next step.
  */
 internal class OutcomeButton(private val player: Int, private val key: String) : JButton() {
-    private var color: Color = ScoringUi.NO_POINT
+    private var color: Color = Palette.LINE_6
     private var on = false
     private var next = false
     private val labelFont get() = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
@@ -685,30 +687,30 @@ internal class OutcomeButton(private val player: Int, private val key: String) :
             val hover = model.isRollover && isEnabled
             val noPoint = player == 0
             val (fill, border) = when {
-                on && noPoint -> Color(0x5A5A5A) to Color(0x6A6A6A)
+                on && noPoint -> Palette.LINE_5 to Palette.FG_3
                 on -> color to color
-                next -> (if (hover) UiKit.RAISED_2 else UiKit.RAISED) to UiKit.LIME_LINE
-                hover -> UiKit.RAISED_2 to Color(0x4A4A4A)
-                else -> UiKit.RAISED to UiKit.LINE_2
+                next -> (if (hover) Palette.RAISED_2 else Palette.RAISED) to Palette.LIME_LINE
+                hover -> Palette.RAISED_2 to Palette.HOVER_LINE
+                else -> Palette.RAISED to Palette.LINE_2
             }
             val shape = RoundRectangle2D.Double(0.0, 0.0, width.toDouble(), height.toDouble(), 8.0, 8.0)
             g2.color = fill
             g2.fill(shape)
             val clip = g2.clip
             g2.clip(shape)
-            g2.color = if (on) Color(0, 0, 0, 46) else color
+            g2.color = if (on) Palette.SHADE else color
             g2.fillRect(0, 0, STRIP, height)
             g2.clip = clip
             UiKit.paintBox(g2, 0, 0, width, height, 4, null, border)
             if (next) {
                 // The inset glow of the next step.
-                UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 3, null, Color(161, 254, 0, 46))
+                UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 3, null, Palette.LIME_EDGE)
             }
 
             val textColor = when {
-                on && noPoint -> Color.WHITE
+                on && noPoint -> Palette.FG_STRONG
                 on -> ScoringUi.onPlayer(color)
-                else -> UiKit.FG
+                else -> Palette.FG
             }
             val chipStyle = when {
                 on && noPoint -> ON_NO_POINT_KEY
@@ -733,7 +735,7 @@ internal class OutcomeButton(private val player: Int, private val key: String) :
         const val LABEL_GAP = 6
         const val PAD_RIGHT = 10
 
-        val ON_NO_POINT_KEY = KeyChipStyle(fill = Color(0, 0, 0, 38), border = Color(0, 0, 0, 89), text = Color.WHITE)
+        val ON_NO_POINT_KEY = KeyChipStyle(fill = Palette.SHADE, border = Palette.SHADE_2, text = Palette.FG_STRONG)
     }
 }
 
@@ -765,11 +767,11 @@ internal class FavoriteButton(private val side: Int) : JButton() {
         val g2 = UiKit.smooth(g)
         try {
             val hover = model.isRollover && isEnabled
-            if (hover) UiKit.paintBox(g2, 0, 0, width, height, 4, UiKit.RAISED_2, UiKit.LINE_2)
+            if (hover) UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.RAISED_2, Palette.LINE_2)
             val color = when {
-                favorite -> UiKit.YELLOW
-                hover -> UiKit.FG
-                else -> UiKit.FG_3
+                favorite -> Palette.YELLOW
+                hover -> Palette.FG
+                else -> Palette.FG_3
             }
             val icon = icons.getOrPut(favorite to color) {
                 UiKit.icon(if (favorite) Material2MZ.STAR else Material2MZ.STAR_BORDER, 17, color)

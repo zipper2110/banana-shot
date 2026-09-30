@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.projects.components
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.TextRun
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
@@ -57,9 +58,9 @@ class DeleteProjectDialog private constructor(
         val textFont = UiKit.font(13f)
         val question = WrapText(
             listOf(
-                TextRun("Delete the project \"", textFont, UiKit.FG_2),
-                TextRun(projectName, UiKit.font(13f, UiKit.Weight.SEMIBOLD), UiKit.FG),
-                TextRun("\"?", textFont, UiKit.FG_2),
+                TextRun("Delete the project \"", textFont, Palette.FG_2),
+                TextRun(projectName, UiKit.font(13f, UiKit.Weight.SEMIBOLD), Palette.FG),
+                TextRun("\"?", textFont, Palette.FG_2),
             ),
             1.55f,
         ).apply { name = "delete-project-question" }

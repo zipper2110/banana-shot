@@ -195,15 +195,15 @@ class AnimatedAppMark(
         const val BALL_RADIUS = 21.0
         const val SEAM_POINTS = 192
 
-        val DETAIL = Color(0x0E, 0x0E, 0x0E)
+        val DETAIL = Palette.BG
 
         // Lime and pale lime come from the Import button gradient. The yellow comes from the design palette.
         val STOPS = floatArrayOf(0f, 0.35f, 0.65f, 1f)
         val COLORS = arrayOf(
-            Color(0xA1, 0xFE, 0x00),
-            Color(0xDD, 0xFF, 0xB0),
-            Color(0xED, 0xE4, 0x50),
-            Color(0xA1, 0xFE, 0x00),
+            Palette.LIME,
+            Palette.LIME_LIGHT,
+            Palette.BRAND_GOLD,
+            Palette.LIME,
         )
 
         val DETAIL_STROKE = BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)

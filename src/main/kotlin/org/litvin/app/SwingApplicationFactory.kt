@@ -11,6 +11,7 @@ import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.help.HelpDialog
 import org.litvin.ui.help.HelpPage
 import org.litvin.ui.help.HelpPreferences
@@ -120,7 +121,7 @@ object SwingApplicationFactory {
             val sidebar = JPanel().apply {
                 UiStyles.styleSidebarContainer(this)
                 preferredSize = Dimension(81, 0)
-                foreground = UiStyles.SIDEBAR_FG
+                foreground = Palette.FG
             }
 
             lateinit var btnProjects: UiStyles.SidebarButton

@@ -10,6 +10,7 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 import kotlin.math.ceil
 import kotlin.math.max
+import org.litvin.ui.commons.Palette
 
 /**
  * Column layout of the projects table. The header and each [ProjectRow] use this layout.
@@ -86,7 +87,7 @@ internal object ProjectsTableColumns {
     private class HeaderRow : JPanel(Layout(HEADER_HEIGHT)) {
         init {
             isOpaque = true
-            background = ProjectsUi.BG
+            background = Palette.BG
             name = "projects-table-header"
             add(Gap(0, 0))
             add(HeaderText("Project", SwingConstants.LEFT))
@@ -102,7 +103,7 @@ internal object ProjectsTableColumns {
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
-            g.color = ProjectsUi.LINE_2
+            g.color = Palette.LINE_2
             g.fillRect(0, height - 1, width, 1)
         }
     }
@@ -119,7 +120,7 @@ internal object ProjectsTableColumns {
             try {
                 val textWidth = ProjectsUi.textWidth(shown, headerFont)
                 val x = if (align == SwingConstants.RIGHT) width - rightInset - textWidth else 0f
-                ProjectsUi.drawText(g2, shown, headerFont, ProjectsUi.FG_3, x, 0f, height.toFloat())
+                ProjectsUi.drawText(g2, shown, headerFont, Palette.FG_3, x, 0f, height.toFloat())
             } finally {
                 g2.dispose()
             }

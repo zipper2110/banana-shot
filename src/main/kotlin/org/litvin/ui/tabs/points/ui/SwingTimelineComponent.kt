@@ -27,6 +27,7 @@ import javax.swing.ToolTipManager
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 
 internal data class CommentMarkerLayout(
@@ -58,18 +59,18 @@ class SwingTimelineComponent(
     private val pendingStartProvider: () -> Long? = { null },
 ) : JComponent() {
 
-    private val gutterBg = Color(0x131313)
-    private val rowLine = Color(0x1D1D1D)
-    private val tickColor = Color(0x3A3A3A)
-    private val defaultCommentColor = Color(0xFF, 0xC1, 0x07)
-    private val tagText = Color(0x161616)
+    private val gutterBg = Palette.INSET
+    private val rowLine = Palette.ROW_LINE
+    private val tickColor = Palette.LINE_3
+    private val defaultCommentColor = Palette.YELLOW
+    private val tagText = Palette.ON_LIGHT
     private val gutterFont = UiKit.trackedFont(10.5f, 0.06, UiKit.Weight.SEMIBOLD)
     private val countFont = UiKit.font(10.5f)
     private val tickFont = UiKit.font(10.5f)
     private val tagFont = UiKit.font(10.5f, UiKit.Weight.BOLD)
-    private val videoIcon: Icon = UiKit.icon(Material2MZ.MOVIE, 14, UiKit.FG_3)
-    private val marksIcon: Icon = UiKit.icon(Material2AL.FLAG, 14, UiKit.FG_3)
-    private val commentsIcon: Icon = UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, UiKit.FG_3)
+    private val videoIcon: Icon = UiKit.icon(Material2MZ.MOVIE, 14, Palette.FG_3)
+    private val marksIcon: Icon = UiKit.icon(Material2AL.FLAG, 14, Palette.FG_3)
+    private val commentsIcon: Icon = UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, Palette.FG_3)
     private var lastKnownLaneCount = -1
     private var pressPoint: Point? = null
 
@@ -79,7 +80,7 @@ class SwingTimelineComponent(
 
     init {
         isOpaque = true
-        background = UiKit.PANEL
+        background = Palette.PANEL
         ToolTipManager.sharedInstance().registerComponent(this)
         addMouseListener(object : MouseAdapter() {
             override fun mousePressed(event: MouseEvent) = handlePress(event)
@@ -204,9 +205,9 @@ class SwingTimelineComponent(
     }
 
     private fun paintTimeline(g: Graphics2D) {
-        g.color = UiKit.PANEL
+        g.color = Palette.PANEL
         g.fillRect(0, 0, width, height)
-        g.color = UiKit.LINE
+        g.color = Palette.LINE
         g.fillRect(0, 0, width, TOP_BORDER)
 
         val total = max(1L, durationProvider())
@@ -229,17 +230,17 @@ class SwingTimelineComponent(
     private fun paintGutter(g: Graphics2D, markCount: Int, commentCount: Int, commentHeight: Int) {
         g.color = gutterBg
         g.fillRect(0, TOP_BORDER, GUTTER, height - TOP_BORDER)
-        g.color = UiKit.LINE
+        g.color = Palette.LINE
         g.fillRect(GUTTER - 1, TOP_BORDER, 1, height - TOP_BORDER)
         g.color = rowLine
         listOf(videoTrackTop(), marksTrackTop(), commentsTrackTop()).forEach { g.fillRect(0, it, GUTTER - 1, 1) }
 
         fun label(icon: Icon, text: String, count: String, top: Int, rowHeight: Int) {
             icon.paintIcon(this, g, GUTTER_PAD, top + (rowHeight - icon.iconHeight) / 2)
-            UiKit.drawText(g, text, gutterFont, UiKit.FG_2, (GUTTER_PAD + icon.iconWidth + 6).toFloat(), top.toFloat(), rowHeight.toFloat())
+            UiKit.drawText(g, text, gutterFont, Palette.FG_2, (GUTTER_PAD + icon.iconWidth + 6).toFloat(), top.toFloat(), rowHeight.toFloat())
             if (count.isNotEmpty()) {
                 val x = GUTTER - 1 - GUTTER_PAD - UiKit.textWidth(count, countFont)
-                UiKit.drawText(g, count, countFont, UiKit.FG_3, x, top.toFloat(), rowHeight.toFloat())
+                UiKit.drawText(g, count, countFont, Palette.FG_3, x, top.toFloat(), rowHeight.toFloat())
             }
         }
         label(videoIcon, "VIDEO", "", videoTrackTop(), TRACK_HEIGHT)
@@ -252,7 +253,7 @@ class SwingTimelineComponent(
         val lanes = lanesWidth()
         g.color = gutterBg
         g.fillRect(GUTTER, top, lanes, RULER_HEIGHT)
-        g.color = UiKit.LINE
+        g.color = Palette.LINE
         g.fillRect(GUTTER, top + RULER_HEIGHT - 1, lanes, 1)
         for (index in 0..TICKS) {
             val x = GUTTER + (index * (lanes.toDouble() / TICKS)).toInt()
@@ -262,13 +263,13 @@ class SwingTimelineComponent(
             if (lanes < ALL_TICK_LABELS_WIDTH && index % 2 == 1) continue
             val text = Timecode.format(index * (total / TICKS.toLong()))
             val textX = if (index == TICKS) x - 4 - UiKit.textWidth(text, tickFont) else x + 4f
-            UiKit.drawText(g, text, tickFont, UiKit.FG_3, textX, top.toFloat(), RULER_HEIGHT - 1f)
+            UiKit.drawText(g, text, tickFont, Palette.FG_3, textX, top.toFloat(), RULER_HEIGHT - 1f)
         }
     }
 
     private fun paintVideoTrack(g: Graphics2D) {
         val top = videoTrackTop()
-        g.color = UiKit.VIDEO
+        g.color = Palette.VIDEO_RANGE
         g.fill(RoundRectangle2D.Double(GUTTER.toDouble(), top + 7.0, lanesWidth().toDouble(), 8.0, 4.0, 4.0))
     }
 
@@ -285,15 +286,15 @@ class SwingTimelineComponent(
                 selected = Rectangle(x1, top + 1, w, TRACK_HEIGHT - 2)
                 return@forEach
             }
-            g.color = if (point.favorite) UiKit.YELLOW else UiKit.MARK
+            g.color = if (point.favorite) Palette.YELLOW else Palette.GREEN
             g.fill(RoundRectangle2D.Double(x1.toDouble(), top + 4.0, w.toDouble(), TRACK_HEIGHT - 8.0, 2.0, 2.0))
         }
         pendingStartProvider()?.let { start -> paintPending(g, start, pxPerMs, top) }
         selected?.let { box ->
             val favorite = points.firstOrNull { it.id == selectedId }?.favorite == true
-            g.color = if (favorite) UiKit.YELLOW else UiKit.MARK
+            g.color = if (favorite) Palette.YELLOW else Palette.GREEN
             g.fill(RoundRectangle2D.Double(box.x.toDouble(), box.y.toDouble(), box.width.toDouble(), box.height.toDouble(), 2.0, 2.0))
-            g.color = Color.WHITE
+            g.color = Palette.FG_STRONG
             g.stroke = BasicStroke(1.5f)
             g.draw(RoundRectangle2D.Double(box.x - 0.75, box.y - 0.75, box.width + 1.5, box.height + 1.5, 3.0, 3.0))
         }
@@ -307,7 +308,7 @@ class SwingTimelineComponent(
         val box = Rectangle(x1, top + 3, w, TRACK_HEIGHT - 6)
         val clip = g.clip
         g.clip(box)
-        g.color = Color(161, 254, 0, 56)
+        g.color = Palette.LIME_EDGE
         g.stroke = BasicStroke(4f * 0.7071f)
         var x = box.x - box.height
         while (x < box.x + box.width + box.height) {
@@ -315,7 +316,7 @@ class SwingTimelineComponent(
             x += 8
         }
         g.clip = clip
-        g.color = UiKit.LIME
+        g.color = Palette.LIME
         g.stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, floatArrayOf(3f, 3f), 0f)
         g.draw(RoundRectangle2D.Double(box.x + 0.5, box.y + 0.5, box.width - 1.0, box.height - 1.0, 3.0, 3.0))
         g.stroke = BasicStroke(1f)
@@ -328,7 +329,7 @@ class SwingTimelineComponent(
         val byId = comments.associateBy { it.id }
         for (layout in layouts) {
             val color = byId[layout.id]?.colorHex?.let(::colorFor) ?: defaultCommentColor
-            g.color = Color(color.red, color.green, color.blue, 204)
+            g.color = Palette.withAlpha(color, 204)
             g.fillRect(layout.lineX, layout.lineTop, 2, max(1, layout.lineBottom - layout.lineTop))
         }
         for (layout in layouts) {
@@ -341,7 +342,7 @@ class SwingTimelineComponent(
     }
 
     private fun paintPlayhead(g: Graphics2D, x: Int) {
-        g.color = UiKit.PLAYHEAD
+        g.color = Palette.PLAYHEAD
         g.fillRect(x - 1, TOP_BORDER, 2, height - TOP_BORDER)
         val head = Path2D.Double().apply {
             moveTo(x - 6.0, TOP_BORDER.toDouble())

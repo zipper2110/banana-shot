@@ -6,6 +6,7 @@ import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.JPanel
 import kotlin.math.roundToInt
+import org.litvin.ui.commons.Palette
 
 /**
  * UI-layer geometry preview for the heavyweight video canvas.
@@ -27,7 +28,7 @@ class GeometryViewportPanel(private val content: Component) : JPanel(null /* abs
 
     init {
         isOpaque = true
-        background = Color.BLACK
+        background = Palette.VIDEO_BG
         add(content)
         addComponentListener(object : ComponentAdapter() {
             override fun componentShown(e: ComponentEvent) {

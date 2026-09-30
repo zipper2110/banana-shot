@@ -11,6 +11,7 @@ import org.litvin.stats.MatchStat
 import org.litvin.stats.StatRows
 import org.litvin.stats.StatsIO
 import org.litvin.stats.StatsSettingsV1
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.UserDialogService
 import java.awt.Component
@@ -132,8 +133,8 @@ class SwingStatsPanelTest {
         onEdt {
             val panel = openPanel()
 
-            assertEquals(StatsColors.LEAD, panel.label("stats-value-points_won-p1-text").foreground)
-            assertEquals(UiKit.FG_2, panel.label("stats-value-points_won-p2-text").foreground)
+            assertEquals(Palette.FG_STRONG, panel.label("stats-value-points_won-p1-text").foreground)
+            assertEquals(Palette.FG_2, panel.label("stats-value-points_won-p2-text").foreground)
         }
     }
 

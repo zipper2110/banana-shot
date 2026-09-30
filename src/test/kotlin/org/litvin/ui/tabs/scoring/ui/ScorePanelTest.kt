@@ -7,6 +7,7 @@ import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 
 class ScorePanelTest {
@@ -69,8 +70,8 @@ class ScorePanelTest {
             assertEquals("5", panel.player1.gamesLabel.text)
             assertEquals("1", panel.player2.gamesLabel.text)
             // The player who leads the game has the lime value.
-            assertEquals(UiKit.LIME, panel.player1.pointsLabel.foreground)
-            assertEquals(UiKit.FG, panel.player2.pointsLabel.foreground)
+            assertEquals(Palette.LIME, panel.player1.pointsLabel.foreground)
+            assertEquals(Palette.FG, panel.player2.pointsLabel.foreground)
         }
     }
 
@@ -188,7 +189,7 @@ class ScorePanelTest {
         assertEquals(10.0, square.minY)
         assertEquals(30.0, square.maxY)
 
-        val icon = ScoringUi.scoreboardIcon(18, UiKit.FG)
+        val icon = ScoringUi.scoreboardIcon(18, Palette.FG)
         assertEquals(18, icon.iconWidth)
         val image = java.awt.image.BufferedImage(18, 18, java.awt.image.BufferedImage.TYPE_INT_ARGB)
         val g = image.createGraphics()
@@ -205,18 +206,18 @@ class ScorePanelTest {
         assertEquals(java.awt.Color.WHITE, ScoringUi.onPlayer(java.awt.Color.BLACK))
         assertEquals(java.awt.Color.WHITE, ScoringUi.onPlayer(java.awt.Color(0x00, 0x5F, 0x5F)))
         assertEquals(java.awt.Color.WHITE, ScoringUi.onPlayer(java.awt.Color(0x00, 0x00, 0xFF)))
-        assertEquals(ScoringUi.ON_PLAYER, ScoringUi.onPlayer(java.awt.Color(0xFF, 0xD5, 0x4A)))
-        assertEquals(ScoringUi.ON_PLAYER, ScoringUi.onPlayer(java.awt.Color(0x00, 0xFF, 0x00)))
-        assertEquals(ScoringUi.ON_PLAYER, ScoringUi.onPlayer(UiKit.LIME))
+        assertEquals(Palette.ON_LIGHT, ScoringUi.onPlayer(java.awt.Color(0xFF, 0xD5, 0x4A)))
+        assertEquals(Palette.ON_LIGHT, ScoringUi.onPlayer(java.awt.Color(0x00, 0xFF, 0x00)))
+        assertEquals(Palette.ON_LIGHT, ScoringUi.onPlayer(Palette.LIME))
         assertEquals(java.awt.Color.WHITE, ScoringUi.onPlayerKeyStyle(java.awt.Color.BLACK).text)
-        assertEquals(ScoringUi.ON_PLAYER, ScoringUi.onPlayerKeyStyle(UiKit.LIME).text)
+        assertEquals(Palette.ON_LIGHT, ScoringUi.onPlayerKeyStyle(Palette.LIME).text)
     }
 
     @Test
     fun aRacketInADarkPlayerColorGetsALightBadge() {
         assertTrue(ScoringUi.needsBadge(java.awt.Color.BLACK))
         assertTrue(ScoringUi.needsBadge(java.awt.Color(0x00, 0x5F, 0x5F)))
-        assertFalse(ScoringUi.needsBadge(UiKit.LIME))
+        assertFalse(ScoringUi.needsBadge(Palette.LIME))
         assertFalse(ScoringUi.needsBadge(ScorePlayers().p1Color))
         assertFalse(ScoringUi.needsBadge(ScorePlayers().p2Color))
         assertEquals(21.0, ScoringUi.contrast(java.awt.Color.BLACK, java.awt.Color.WHITE), 0.01)

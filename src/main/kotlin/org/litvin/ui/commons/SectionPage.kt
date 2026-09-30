@@ -31,14 +31,14 @@ internal open class SectionPage(title: String) : ToolPage() {
     /** Starts a new card with [text] as its title. */
     fun subheading(text: String): JLabel = JLabel(text).apply {
         font = UiKit.font(13.5f, UiKit.Weight.SEMIBOLD)
-        foreground = UiKit.FG
+        foreground = Palette.FG
     }.also {
         card = null
         addItem(it)
     }
 
     fun paragraph(text: String, secondary: Boolean = false): WrapText =
-        WrapText(text, UiKit.font(13f), if (secondary) UiKit.FG_3 else UiKit.FG_2, 1.55f, MAX_WIDTH)
+        WrapText(text, UiKit.font(13f), if (secondary) Palette.FG_3 else Palette.FG_2, 1.55f, MAX_WIDTH)
             .also { addItem(it) }
 
     /** A line for the result of an action, directly under its button. The line is hidden while it has no text. */
@@ -55,10 +55,10 @@ internal open class SectionPage(title: String) : ToolPage() {
             lineWrap = true
             wrapStyleWord = false
             font = if (mono) MonoFont.of(12f) else UiKit.font(12.5f)
-            foreground = UiKit.FG
-            caretColor = UiKit.FG
-            selectionColor = Color(161, 254, 0, 70)
-            selectedTextColor = UiKit.FG
+            foreground = Palette.FG
+            caretColor = Palette.FG
+            selectionColor = Palette.SELECTION
+            selectedTextColor = Palette.FG
             border = BorderFactory.createEmptyBorder()
         }
         addItem(ValueRow(label, valueArea))
@@ -98,7 +98,7 @@ internal open class SectionPage(title: String) : ToolPage() {
     private class ValueRow(label: String, private val value: JTextArea) : JPanel(null), HeightForWidth {
         private val key = JLabel(label).apply {
             font = UiKit.font(12.5f)
-            foreground = UiKit.FG_3
+            foreground = Palette.FG_3
         }
 
         init {
@@ -162,7 +162,7 @@ internal open class SectionPage(title: String) : ToolPage() {
         private const val GAP_Y = 8
 
         /** The color of a status line that tells about a problem. */
-        val BAD = Color(0xFF9A85)
+        val BAD = Palette.RED_TEXT
 
         fun secondaryButton(text: String, onClick: () -> Unit): JButton = secondaryButton(text, null, onClick)
 

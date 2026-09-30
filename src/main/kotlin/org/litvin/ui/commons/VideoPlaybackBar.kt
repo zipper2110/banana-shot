@@ -35,13 +35,13 @@ internal class VideoPlaybackBar(
     private val nowLabel = JLabel(format(0)).apply {
         name = "$namePrefix-current-time"
         font = UiKit.font(13f)
-        foreground = UiKit.FG
+        foreground = Palette.FG
         toolTipText = "Current time"
     }
     private val totalLabel = JLabel(format(0), SwingConstants.RIGHT).apply {
         name = "$namePrefix-total-time"
         font = UiKit.font(13f)
-        foreground = UiKit.FG_3
+        foreground = Palette.FG_3
         toolTipText = "Video length"
     }
     val seekSlider: JSlider = JSlider(0, SEEK_STEPS, 0).apply {
@@ -60,9 +60,9 @@ internal class VideoPlaybackBar(
     init {
         name = barName
         isOpaque = true
-        background = UiKit.PLAYBAR
+        background = Palette.OVERLAY
         border = BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, UiKit.LINE),
+            BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
             BorderFactory.createEmptyBorder(PAD_Y, PAD_X, PAD_Y, PAD_X),
         )
         add(playButton)
@@ -166,7 +166,7 @@ internal class SeekSliderUI : FlatSliderUI() {
             val fill = thumbRect.x + thumbRect.width / 2.0
             g2.color = TRACK_BG
             g2.fill(RoundRectangle2D.Double(0.0, y, slider.width.toDouble(), TRACK, TRACK, TRACK))
-            g2.color = UiKit.LIME
+            g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(0.0, y, fill, TRACK, TRACK, TRACK))
         } finally {
             g2.dispose()
@@ -178,11 +178,11 @@ internal class SeekSliderUI : FlatSliderUI() {
         try {
             val x = thumbRect.x + (thumbRect.width - KNOB) / 2.0
             val y = thumbRect.y + (thumbRect.height - KNOB) / 2.0
-            g2.color = UiKit.LIME
+            g2.color = Palette.LIME
             g2.fill(Ellipse2D.Double(x, y, KNOB.toDouble(), KNOB.toDouble()))
-            g2.color = UiKit.PLAYBAR
+            g2.color = Palette.OVERLAY
             g2.fill(Ellipse2D.Double(x + 1, y + 1, KNOB - 2.0, KNOB - 2.0))
-            g2.color = UiKit.LIME
+            g2.color = Palette.LIME
             g2.fill(Ellipse2D.Double(x + 4, y + 4, KNOB - 8.0, KNOB - 8.0))
         } finally {
             g2.dispose()
@@ -192,6 +192,6 @@ internal class SeekSliderUI : FlatSliderUI() {
     private companion object {
         const val KNOB = 16
         const val TRACK = 4.0
-        val TRACK_BG = Color(0x3A, 0x3A, 0x3A)
+        val TRACK_BG = Palette.LINE_3
     }
 }

@@ -11,6 +11,7 @@ import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 import kotlin.math.ceil
+import org.litvin.ui.commons.Palette
 
 /** The brand at the top of the start panel: the app mark, the app name and the tagline. */
 class ProjectsHeader : JPanel() {
@@ -57,7 +58,7 @@ class ProjectsHeader : JPanel() {
             val g2 = ProjectsUi.smooth(g)
             try {
                 ProjectsUi.drawText(
-                    g2, text, textFont, if (primary) ProjectsUi.FG else ProjectsUi.FG_2, 0f, 0f, height.toFloat(),
+                    g2, text, textFont, if (primary) Palette.FG else Palette.FG_2, 0f, 0f, height.toFloat(),
                 )
             } finally {
                 g2.dispose()

@@ -5,6 +5,7 @@ import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.litvin.stats.StatsCard
 import org.litvin.stats.StatsSettingsV1
 import org.litvin.ui.commons.DefaultFillSliderUI
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.Dimension
 import java.awt.Graphics
@@ -31,12 +32,12 @@ internal class StatsCardColumn(
 ) : JPanel(null), Scrollable {
     private val title = JLabel("In the video").apply {
         font = UiKit.font(15f, UiKit.Weight.BOLD)
-        foreground = UiKit.FG
+        foreground = Palette.FG
     }
     val summary = JLabel(" ").apply {
         name = "stats-card-summary"
         font = UiKit.font(12f)
-        foreground = UiKit.FG_2
+        foreground = Palette.FG_2
     }
     val previous = StatsButton("Previous page", Material2AL.CHEVRON_LEFT).apply {
         name = "stats-preview-previous"
@@ -49,18 +50,18 @@ internal class StatsCardColumn(
     val pageLabel = JLabel("", SwingConstants.CENTER).apply {
         name = "stats-preview-page"
         font = UiKit.font(12.5f)
-        foreground = UiKit.FG_2
+        foreground = Palette.FG_2
     }
     private val transparencyCaption = JLabel("Card transparency").apply {
         font = UiKit.font(12.5f)
-        foreground = UiKit.FG
+        foreground = Palette.FG
         toolTipText = TRANSPARENCY_TIP
     }
     val transparencyValue = JLabel("", SwingConstants.RIGHT).apply {
         name = "stats-card-transparency-value"
         border = BorderFactory.createEmptyBorder(0, 0, 0, 3)
         font = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
-        foreground = UiKit.FG
+        foreground = Palette.FG
     }
     val transparency = DefaultFillSliderUI.slider(0, StatsSettingsV1.MAX_CARD_TRANSPARENCY_PERCENT, 0).apply {
         name = "stats-card-transparency"
@@ -82,7 +83,7 @@ internal class StatsCardColumn(
     init {
         name = "stats-card-column"
         isOpaque = true
-        background = UiKit.CARD
+        background = Palette.CARD
         listOf(title, summary, preview, previous, pageLabel, next, transparencyCaption, transparencyValue, transparency, solid, moreVideo, about)
             .forEach { add(it) }
     }
@@ -91,7 +92,7 @@ internal class StatsCardColumn(
         // The right padding keeps the last character visible when the text paints wider than measured.
         border = BorderFactory.createEmptyBorder(0, 0, 0, 3)
         font = UiKit.font(11f)
-        foreground = UiKit.FG_3
+        foreground = Palette.FG_3
     }
 
     /** Shows the card summary, for example "Match statistics · 7 rows and the momentum chart". */
@@ -200,7 +201,7 @@ internal class StatsCardColumn(
                 this@StatsCardColumn.repaint()
             }
         }
-        private val paragraphs = HELP.map { WrapText(it, UiKit.font(12f), UiKit.FG_2, lineSpacing = 1.5f) }
+        private val paragraphs = HELP.map { WrapText(it, UiKit.font(12f), Palette.FG_2, lineSpacing = 1.5f) }
 
         init {
             isOpaque = false
@@ -228,7 +229,7 @@ internal class StatsCardColumn(
         }
 
         override fun paintComponent(g: Graphics) {
-            g.color = UiKit.LINE
+            g.color = Palette.LINE
             g.fillRect(0, 0, width, 1)
         }
     }
@@ -253,7 +254,7 @@ internal class StatsCardColumn(
         override fun paintComponent(g: Graphics) {
             val g2 = UiKit.smooth(g)
             try {
-                val color = if (model.isRollover) UiKit.FG else UiKit.FG_2
+                val color = if (model.isRollover) Palette.FG else Palette.FG_2
                 val info = UiKit.icon(Material2OutlinedAL.INFO, ICON, color)
                 info.paintIcon(this, g2, 0, (height - info.iconHeight) / 2)
                 val textX = ICON + 6f

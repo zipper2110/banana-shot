@@ -10,6 +10,7 @@ import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.ExportCardInfo
 import org.litvin.export.RenderFormatting
 import org.litvin.export.RenderService
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.applyDarkScrollbar
 import org.litvin.ui.tabs.export.ExportUi.Weight
@@ -76,7 +77,7 @@ internal class ExportsTable(
     private val completedEmpty = EmptyRow(Material2OutlinedAL.CHECK_CIRCLE_OUTLINE, "No completed exports")
 
     private val runningStat = Stat("running")
-    private val failedStat = Stat("failed", ExportUi.YELLOW)
+    private val failedStat = Stat("failed", Palette.YELLOW)
     private val queueStat = Stat("in the queue")
     private val completedStat = Stat("completed")
 
@@ -89,7 +90,7 @@ internal class ExportsTable(
     init {
         name = "export-exports"
         isOpaque = true
-        background = ExportUi.BG
+        background = Palette.BG
         border = BorderFactory.createEmptyBorder(16, 16, 16, 16)
 
         completedGroup.header.button?.name = "export-completed-clear"
@@ -185,10 +186,10 @@ internal class ExportsTable(
             setCells(
                 status = StatusPill("Queued · ${index + 1}", StatusPill.Kind.QUEUED),
                 file = fileCell(info, "$prefix-path"),
-                content = textCell(info.content, ExportUi.FG),
-                video = textCell(info.video, ExportUi.FG_2),
+                content = textCell(info.content, Palette.FG),
+                video = textCell(info.video, Palette.FG_2),
                 size = valueCell(job.expectedBytes?.let { "~" + RenderFormatting.formatSize(it) } ?: DASH, null),
-                time = valueCell("Waiting", null, ExportUi.FG_3),
+                time = valueCell("Waiting", null, Palette.FG_3),
                 actions = actions(
                     IconButton(Material2AL.FOLDER_OPEN, OPEN_FOLDER).apply {
                         name = "$prefix-open-folder"
@@ -223,8 +224,8 @@ internal class ExportsTable(
             setCells(
                 status = StatusPill("Done", StatusPill.Kind.DONE),
                 file = fileCell(info, "$prefix-path"),
-                content = textCell(info.content, ExportUi.FG),
-                video = textCell(info.video, ExportUi.FG_2),
+                content = textCell(info.content, Palette.FG),
+                video = textCell(info.video, Palette.FG_2),
                 size = valueCell(RenderFormatting.formatSize(item.bytesWritten), item.expectedBytes?.let { "of ~" + RenderFormatting.formatSize(it) }),
                 time = valueCell(finished?.format(TIME_FORMAT) ?: DASH, finished?.format(DATE_FORMAT)),
                 actions = actions(
@@ -241,12 +242,12 @@ internal class ExportsTable(
     private inner class ActiveRow(onOpenFolder: () -> Unit, onCancel: () -> Unit) : DataRow() {
         private val pill = StatusPill("Running", StatusPill.Kind.RUNNING)
         private val file = FileCell().apply { nameText.name = "export-active-path" }
-        private val content = textCell("", ExportUi.FG).apply { name = "export-active-content" }
-        private val video = textCell("", ExportUi.FG_2).apply { name = "export-active-video" }
+        private val content = textCell("", Palette.FG).apply { name = "export-active-content" }
+        private val video = textCell("", Palette.FG_2).apply { name = "export-active-video" }
         private val size = valueCell("", null).apply { name = "export-active-size" }
         private val time = valueCell("", null)
         val progress = ProgressLine().apply { name = "export-progress" }
-        private val percent = WrapText("", ExportUi.font(12f, Weight.BOLD), ExportUi.FG, align = WrapText.Align.RIGHT)
+        private val percent = WrapText("", ExportUi.font(12f, Weight.BOLD), Palette.FG, align = WrapText.Align.RIGHT)
         private val progressRow = ProgressRow(progress, percent)
         private val errorBox = ErrorBox()
         val cancelButton = IconButton(Material2OutlinedAL.CLOSE, CANCEL_EXPORT, danger = true).apply {
@@ -277,12 +278,12 @@ internal class ExportsTable(
         fun show(job: RenderJob) {
             val info = ExportCardInfo.of(job)
             file.show(info)
-            content.setText(info.content, CELL_FONT, ExportUi.FG)
-            video.setText(info.video, CELL_FONT, ExportUi.FG_2)
+            content.setText(info.content, CELL_FONT, Palette.FG)
+            video.setText(info.video, CELL_FONT, Palette.FG_2)
             size.show(info.size, null)
             val percentValue = (job.progress * 100).toInt().coerceIn(0, 100)
             progress.value = percentValue
-            percent.setText("$percentValue%", ExportUi.font(12f, Weight.BOLD), ExportUi.FG)
+            percent.setText("$percentValue%", ExportUi.font(12f, Weight.BOLD), Palette.FG)
             cancelButton.isEnabled = job.status == RenderStatus.RUNNING || job.status == RenderStatus.QUEUED
             when (job.status) {
                 RenderStatus.QUEUED -> {
@@ -295,7 +296,7 @@ internal class ExportsTable(
                     pill.set("Running", StatusPill.Kind.RUNNING)
                     tone = Tone.LIVE
                     val eta = job.etaSeconds
-                    if (eta != null) time.show(RenderFormatting.formatDuration(eta * 1000), "left") else time.show("calculating…", null, ExportUi.FG_2)
+                    if (eta != null) time.show(RenderFormatting.formatDuration(eta * 1000), "left") else time.show("calculating…", null, Palette.FG_2)
                     extra = progressRow
                 }
                 RenderStatus.COMPLETED -> {
@@ -365,7 +366,7 @@ internal class ExportsTable(
             setColumnHeaderView(head)
             columnHeader.isOpaque = false
             setCorner(ScrollPaneConstants.UPPER_RIGHT_CORNER, HeadCorner())
-            applyDarkScrollbar(this, ExportUi.CARD)
+            applyDarkScrollbar(this, Palette.CARD)
             viewport.scrollMode = JViewport.SIMPLE_SCROLL_MODE
             viewport.addChangeListener { updateSticky() }
         }
@@ -426,7 +427,7 @@ internal class ExportsTable(
     }
 
     private class GroupHeader(title: String, withCount: Boolean, val button: JComponent?) : JPanel(null), HeightForWidth {
-        private val titleText = WrapText(title, ExportUi.font(12f, Weight.SEMIBOLD), ExportUi.FG_2)
+        private val titleText = WrapText(title, ExportUi.font(12f, Weight.SEMIBOLD), Palette.FG_2)
         private val countPill = CountPill().apply { isVisible = withCount }
 
         var count: Int = 0
@@ -467,7 +468,7 @@ internal class ExportsTable(
         override fun paintComponent(g: Graphics) {
             g.color = GROUP_BG
             g.fillRect(0, 0, width, height)
-            g.color = ExportUi.LINE
+            g.color = Palette.LINE
             g.fillRect(0, height - 1, width, 1)
         }
 
@@ -477,7 +478,7 @@ internal class ExportsTable(
             const val PAD_X = 16
             const val PAD_TOP = 8
             const val PAD_BOTTOM = 6
-            val GROUP_BG = Color(0x15, 0x15, 0x15)
+            val GROUP_BG = Palette.PANEL_DIM
         }
     }
 
@@ -500,7 +501,7 @@ internal class ExportsTable(
                 ExportUi.paintBox(g2, 0, 0, width, height, height / 2, PILL_BG, null)
                 val metrics = pillFont.getLineMetrics(text, ExportUi.frc)
                 g2.font = pillFont
-                g2.color = ExportUi.FG_2
+                g2.color = Palette.FG_2
                 g2.drawString(text, (width - ExportUi.textWidth(text, pillFont)) / 2f, (height - metrics.ascent - metrics.descent) / 2f + metrics.ascent)
             } finally {
                 g2.dispose()
@@ -508,7 +509,7 @@ internal class ExportsTable(
         }
 
         private companion object {
-            val PILL_BG = Color(0x26, 0x26, 0x26)
+            val PILL_BG = Palette.LINE
         }
     }
 
@@ -518,7 +519,7 @@ internal class ExportsTable(
             WrapText(
                 caption.uppercase(Locale.ROOT),
                 ExportUi.trackedFont(11f, 0.06),
-                ExportUi.FG_3,
+                Palette.FG_3,
                 align = if (index == 4 || index == 5) WrapText.Align.RIGHT else WrapText.Align.LEFT,
             )
         }
@@ -541,13 +542,13 @@ internal class ExportsTable(
         override fun paintComponent(g: Graphics) {
             g.color = HEAD_BG
             g.fillRect(0, 0, width, height)
-            g.color = ExportUi.LINE
+            g.color = Palette.LINE
             g.fillRect(0, height - 1, width, 1)
         }
 
         companion object {
             const val HEIGHT = 32
-            val HEAD_BG = Color(0x1C, 0x1C, 0x1C)
+            val HEAD_BG = Palette.OVERLAY
         }
     }
 
@@ -556,14 +557,14 @@ internal class ExportsTable(
         override fun paintComponent(g: Graphics) {
             g.color = HeadRow.HEAD_BG
             g.fillRect(0, 0, width, height)
-            g.color = ExportUi.LINE
+            g.color = Palette.LINE
             g.fillRect(0, height - 1, width, 1)
         }
     }
 
     /** The title "Exports" and the counts of the exports on the right. */
     private class HeaderBar(stats: List<Stat>) : JPanel(null) {
-        private val titleText = WrapText("Exports", ExportUi.font(14f, Weight.SEMIBOLD), ExportUi.FG)
+        private val titleText = WrapText("Exports", ExportUi.font(14f, Weight.SEMIBOLD), Palette.FG)
         private val statsRow = JPanel().apply {
             isOpaque = false
             layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -591,7 +592,7 @@ internal class ExportsTable(
         }
 
         override fun paintComponent(g: Graphics) {
-            g.color = ExportUi.LINE
+            g.color = Palette.LINE
             g.fillRect(0, height - 1, width, 1)
         }
 
@@ -602,14 +603,14 @@ internal class ExportsTable(
     }
 
     /** One count in the header, for example "7 completed". A count of 0 hides it, unless it must always show. */
-    private class Stat(private val label: String, private val numberColor: Color = ExportUi.FG) {
+    private class Stat(private val label: String, private val numberColor: Color = Palette.FG) {
         val text = WrapText(emptyList())
         val gap: Component = Box.createHorizontalStrut(14)
 
         fun show(count: Int, always: Boolean = false) {
             text.runs = listOf(
                 TextRun(count.toString(), ExportUi.font(12f, Weight.SEMIBOLD), numberColor),
-                TextRun(" $label", ExportUi.font(12f), ExportUi.FG_2),
+                TextRun(" $label", ExportUi.font(12f), Palette.FG_2),
             )
             val visible = always || count > 0
             text.isVisible = visible
@@ -628,7 +629,7 @@ internal class ExportsTable(
         override fun paintComponent(g: Graphics) {
             val g2 = ExportUi.smooth(g)
             try {
-                ExportUi.paintBox(g2, 0, 0, width, height, RADIUS, ExportUi.CARD, null)
+                ExportUi.paintBox(g2, 0, 0, width, height, RADIUS, Palette.CARD, null)
             } finally {
                 g2.dispose()
             }
@@ -647,7 +648,7 @@ internal class ExportsTable(
         override fun paintBorder(g: Graphics) {
             val g2 = ExportUi.smooth(g)
             try {
-                ExportUi.paintBox(g2, 0, 0, width, height, RADIUS, null, ExportUi.LINE)
+                ExportUi.paintBox(g2, 0, 0, width, height, RADIUS, null, Palette.LINE)
             } finally {
                 g2.dispose()
             }
@@ -682,7 +683,7 @@ internal class ExportsTable(
 
         private fun textCell(text: String, color: Color) = WrapText(text, CELL_FONT, color)
 
-        private fun valueCell(value: String, sub: String?, color: Color = ExportUi.FG) = ValueCell().apply { show(value, sub, color) }
+        private fun valueCell(value: String, sub: String?, color: Color = Palette.FG) = ValueCell().apply { show(value, sub, color) }
 
         private fun fileCell(info: ExportCardInfo, componentName: String) = FileCell().apply {
             nameText.name = componentName
@@ -829,26 +830,26 @@ internal open class DataRow : JPanel(null), HeightForWidth {
             Tone.LIVE -> if (hovered) LIVE_HOVER_BG else LIVE_BG
             Tone.FAILED -> FAILED_BG
             Tone.NORMAL -> if (hovered) HOVER_BG else null
-        } ?: ExportUi.CARD
+        } ?: Palette.CARD
         if (tone != Tone.NORMAL || hovered) g.fillRect(0, 0, width, height)
-        g.color = ExportUi.LINE
+        g.color = Palette.LINE
         g.fillRect(0, height - 1, width, 1)
     }
 
     private companion object {
         const val PAD_Y = 9
         const val EXTRA_GAP = 8
-        val HOVER_BG = Color(0x1E, 0x1E, 0x1E)
-        val LIVE_BG = Color(0x1D, 0x21, 0x16)
-        val LIVE_HOVER_BG = Color(0x20, 0x25, 0x1A)
-        val FAILED_BG = Color(0x22, 0x16, 0x13)
+        val HOVER_BG = Palette.OVERLAY
+        val LIVE_BG = Palette.LIME_ROW
+        val LIVE_HOVER_BG = Palette.LIME_ROW_HOVER
+        val FAILED_BG = Palette.RED_ROW
     }
 }
 
 /** A row with an icon and a grey text, for example "No active exports". */
 internal class EmptyRow(ikon: org.kordamp.ikonli.Ikon, text: String) : JPanel(null) {
-    private val icon: Icon = ExportUi.icon(ikon, 18, ExportUi.FG_3)
-    private val label = WrapText(text, ExportUi.font(12.5f), ExportUi.FG_3)
+    private val icon: Icon = ExportUi.icon(ikon, 18, Palette.FG_3)
+    private val label = WrapText(text, ExportUi.font(12.5f), Palette.FG_3)
 
     init {
         isOpaque = false
@@ -866,7 +867,7 @@ internal class EmptyRow(ikon: org.kordamp.ikonli.Ikon, text: String) : JPanel(nu
         val g2 = ExportUi.smooth(g)
         try {
             icon.paintIcon(this, g2, PAD_X, (height - 1 - icon.iconHeight) / 2)
-            g2.color = ExportUi.LINE
+            g2.color = Palette.LINE
             g2.fillRect(0, height - 1, width, 1)
         } finally {
             g2.dispose()
@@ -882,10 +883,10 @@ internal class EmptyRow(ikon: org.kordamp.ikonli.Ikon, text: String) : JPanel(nu
 /** A status in a round pill with a dot, for example "Running" or "Queued · 1". */
 internal class StatusPill(text: String, kind: Kind) : JComponent() {
     enum class Kind(val foreground: Color, val background: Color) {
-        RUNNING(ExportUi.LIME, Color(161, 254, 0, 26)),
-        QUEUED(ExportUi.FG_2, Color(0x23, 0x23, 0x23)),
-        FAILED(ExportUi.RED, ExportUi.RED_TINT),
-        DONE(ExportUi.SAGE, Color(163, 197, 134, 26)),
+        RUNNING(Palette.LIME, Palette.LIME_TINT_2),
+        QUEUED(Palette.FG_2, Palette.SELECTED),
+        FAILED(Palette.RED, Palette.RED_TINT),
+        DONE(Palette.SAGE, Palette.SAGE_TINT),
     }
 
     private var text = text
@@ -928,8 +929,8 @@ internal class StatusPill(text: String, kind: Kind) : JComponent() {
 
 /** The file name in the accent color and, under it, the folder and the project. Both lines end with "…" when they are too long. */
 internal class FileCell : Stack(0) {
-    val nameText = WrapText("", ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.SAGE, ellipsis = true)
-    private val subText = WrapText("", ExportUi.font(11.5f), ExportUi.FG_3, ellipsis = true)
+    val nameText = WrapText("", ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.SAGE, ellipsis = true)
+    private val subText = WrapText("", ExportUi.font(11.5f), Palette.FG_3, ellipsis = true)
 
     init {
         add(nameText)
@@ -939,26 +940,26 @@ internal class FileCell : Stack(0) {
     fun show(info: ExportCardInfo) {
         val fileName = File(info.outputPath).name
         val folder = info.outputPath.removeSuffix(fileName)
-        nameText.setText(fileName, ExportUi.font(12.5f, Weight.SEMIBOLD), ExportUi.SAGE)
-        subText.setText(listOfNotNull(folder.ifEmpty { null }, info.projectName).joinToString(" · "), ExportUi.font(11.5f), ExportUi.FG_3)
+        nameText.setText(fileName, ExportUi.font(12.5f, Weight.SEMIBOLD), Palette.SAGE)
+        subText.setText(listOfNotNull(folder.ifEmpty { null }, info.projectName).joinToString(" · "), ExportUi.font(11.5f), Palette.FG_3)
         if (toolTipText != info.outputPath) toolTipText = info.outputPath
     }
 }
 
 /** A right-aligned value and an optional grey line under it, for example the size and "of ~7.55 GB". */
 internal class ValueCell : Stack(0) {
-    private val valueText = WrapText("", ExportUi.font(12f), ExportUi.FG, align = WrapText.Align.RIGHT)
-    private val subText = WrapText("", ExportUi.font(11.5f), ExportUi.FG_3, align = WrapText.Align.RIGHT, ellipsis = true)
+    private val valueText = WrapText("", ExportUi.font(12f), Palette.FG, align = WrapText.Align.RIGHT)
+    private val subText = WrapText("", ExportUi.font(11.5f), Palette.FG_3, align = WrapText.Align.RIGHT, ellipsis = true)
 
     init {
         add(valueText)
         add(subText)
     }
 
-    fun show(value: String, sub: String?, color: Color = ExportUi.FG) {
+    fun show(value: String, sub: String?, color: Color = Palette.FG) {
         valueText.setText(value, ExportUi.font(12f), color)
         subText.isVisible = sub != null
-        subText.setText(sub.orEmpty(), ExportUi.font(11.5f), ExportUi.FG_3)
+        subText.setText(sub.orEmpty(), ExportUi.font(11.5f), Palette.FG_3)
     }
 }
 
@@ -980,7 +981,7 @@ internal class ProgressLine : JProgressBar(0, 100) {
             ExportUi.paintBox(g2, 0, y, width, 6, 3, TRACK, null)
             val fill = (width * percentComplete).roundToInt()
             if (fill > 0) {
-                g2.paint = GradientPaint(0f, 0f, FILL_START, width.toFloat(), 0f, ExportUi.LIME)
+                g2.paint = GradientPaint(0f, 0f, FILL_START, width.toFloat(), 0f, Palette.LIME)
                 g2.fill(RoundRectangle2D.Double(0.0, y.toDouble(), fill.toDouble(), 6.0, 6.0, 6.0))
             }
         } finally {
@@ -991,8 +992,8 @@ internal class ProgressLine : JProgressBar(0, 100) {
     override fun paintBorder(g: Graphics) = Unit
 
     private companion object {
-        val TRACK = Color(0x2C, 0x2C, 0x2C)
-        val FILL_START = Color(0x7F, 0xCC, 0x00)
+        val TRACK = Palette.TRACK
+        val FILL_START = Palette.LIME_DEEP
     }
 }
 
@@ -1019,7 +1020,7 @@ internal class ProgressRow(private val bar: ProgressLine, private val percent: W
 
 /** The error of a failed export in a red box. */
 internal class ErrorBox : JPanel(null), HeightForWidth {
-    private val icon: Icon = ExportUi.icon(Material2OutlinedAL.ERROR_OUTLINE, 18, ExportUi.RED)
+    private val icon: Icon = ExportUi.icon(Material2OutlinedAL.ERROR_OUTLINE, 18, Palette.RED)
     private val message = WrapText(emptyList())
 
     init {
@@ -1050,7 +1051,7 @@ internal class ErrorBox : JPanel(null), HeightForWidth {
     override fun paintComponent(g: Graphics) {
         val g2 = ExportUi.smooth(g)
         try {
-            ExportUi.paintBox(g2, 0, 0, width, height, 4, ExportUi.RED_TINT, BORDER)
+            ExportUi.paintBox(g2, 0, 0, width, height, 4, Palette.RED_TINT, BORDER)
             icon.paintIcon(this, g2, PAD_X, (height - icon.iconHeight) / 2)
         } finally {
             g2.dispose()
@@ -1060,7 +1061,7 @@ internal class ErrorBox : JPanel(null), HeightForWidth {
     private companion object {
         const val PAD_X = 11
         const val PAD_Y = 7
-        val TEXT = Color(0xFF, 0xC2, 0xB3)
-        val BORDER = Color(255, 115, 81, 89)
+        val TEXT = Palette.RED_TEXT
+        val BORDER = Palette.RED_LINE
     }
 }

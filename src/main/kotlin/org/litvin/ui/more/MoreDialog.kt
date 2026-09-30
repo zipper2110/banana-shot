@@ -3,6 +3,7 @@ package org.litvin.ui.more
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ToolNav
 import org.litvin.ui.commons.ToolNavItem
 import org.litvin.ui.commons.ToolPage
@@ -57,11 +58,11 @@ class MorePanel(private val sections: List<MoreSection>) : JPanel(BorderLayout()
 
     init {
         require(sections.isNotEmpty()) { "The More window needs at least one section" }
-        background = UiKit.BG
+        background = Palette.BG
         navigation = ToolNav("more-navigation", sections.map { ToolNavItem(it.title, it.title, iconOf(it.title)) }) { showSection(it) }
 
         content.name = "more-content"
-        content.background = UiKit.PANEL
+        content.background = Palette.PANEL
         sections.forEach { section -> content.add(scrollOf(section.content), section.title) }
 
         add(navigation, BorderLayout.WEST)
@@ -86,8 +87,8 @@ class MorePanel(private val sections: List<MoreSection>) : JPanel(BorderLayout()
         (component as? ToolPage)?.inScrollPane() ?: JScrollPane(component).apply {
             border = BorderFactory.createEmptyBorder()
             horizontalScrollBarPolicy = JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
-            viewport.background = UiKit.PANEL
-            applyDarkScrollbar(this, UiKit.PANEL)
+            viewport.background = Palette.PANEL
+            applyDarkScrollbar(this, Palette.PANEL)
         }
 
     private companion object {

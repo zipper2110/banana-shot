@@ -22,6 +22,7 @@ import javax.swing.JPanel
 import kotlin.math.ceil
 import kotlin.math.max
 import org.litvin.ui.commons.KeyChips
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.PlayButton
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SeekButton
@@ -73,9 +74,9 @@ internal class ScoringPlaybackBar(
     init {
         name = "scoring-playback-bar"
         isOpaque = true
-        background = UiKit.PLAYBAR
+        background = Palette.OVERLAY
         border = BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, UiKit.LINE),
+            BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
             BorderFactory.createEmptyBorder(8, 16, 10, 16),
         )
         add(scrub)
@@ -245,11 +246,11 @@ internal class PointScrubBar(private val onScrub: (targetMs: Long) -> Unit) : JC
             val captionHeight = 13f
             val timeTop = captionTop + captionHeight
             val timeHeight = 15f
-            UiKit.drawText(g2, START, captionFont, UiKit.FG_3, 0f, captionTop, captionHeight)
-            UiKit.drawText(g2, startTime(), timeFont, UiKit.FG_2, 0f, timeTop, timeHeight)
+            UiKit.drawText(g2, START, captionFont, Palette.FG_3, 0f, captionTop, captionHeight)
+            UiKit.drawText(g2, startTime(), timeFont, Palette.FG_2, 0f, timeTop, timeHeight)
             val end = endTime()
-            UiKit.drawText(g2, END, captionFont, UiKit.FG_3, width - UiKit.textWidth(END, captionFont), captionTop, captionHeight)
-            UiKit.drawText(g2, end, timeFont, UiKit.FG_2, width - UiKit.textWidth(end, timeFont), timeTop, timeHeight)
+            UiKit.drawText(g2, END, captionFont, Palette.FG_3, width - UiKit.textWidth(END, captionFont), captionTop, captionHeight)
+            UiKit.drawText(g2, end, timeFont, Palette.FG_2, width - UiKit.textWidth(end, timeFont), timeTop, timeHeight)
 
             val (left, right) = trackBounds()
             val trackY = height / 2.0 - RAIL / 2.0
@@ -257,11 +258,11 @@ internal class PointScrubBar(private val onScrub: (targetMs: Long) -> Unit) : JC
             g2.color = RAIL_COLOR
             g2.fill(RoundRectangle2D.Double(left.toDouble(), trackY, length, RAIL, RAIL, RAIL))
             val x = left + length * fraction
-            g2.color = UiKit.LIME
+            g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(left.toDouble(), trackY, x - left, RAIL, RAIL, RAIL))
             // The thumb: a light knob with a 3 px lime glow ring.
             val cy = height / 2.0
-            g2.color = Color(161, 254, 0, 64)
+            g2.color = Palette.LIME_GLOW
             g2.fill(Ellipse2D.Double(x - THUMB / 2.0 - 3, cy - THUMB / 2.0 - 3, THUMB + 6.0, THUMB + 6.0))
             g2.color = THUMB_COLOR
             g2.fill(Ellipse2D.Double(x - THUMB / 2.0, cy - THUMB / 2.0, THUMB.toDouble(), THUMB.toDouble()))
@@ -277,8 +278,8 @@ internal class PointScrubBar(private val onScrub: (targetMs: Long) -> Unit) : JC
         const val RAIL = 4.0
         const val START = "POINT START"
         const val END = "POINT END"
-        val RAIL_COLOR = Color(0x343434)
-        val THUMB_COLOR = Color(0xF4F4F4)
+        val RAIL_COLOR = Palette.LINE_2
+        val THUMB_COLOR = Palette.NEUTRAL_LIGHT
 
         /** A time from the point start, for example "0:07.6". */
         fun formatRelative(ms: Long): String {
@@ -298,7 +299,7 @@ internal class FrameStepToggle : JButton("Frame step") {
             repaint()
         }
     private val textFont get() = UiKit.font(12f)
-    private val check by lazy { UiKit.icon(Material2AL.CHECK, 12, UiKit.ON_LIME) }
+    private val check by lazy { UiKit.icon(Material2AL.CHECK, 12, Palette.ON_LIME) }
 
     init {
         name = "scoring-frame-step"
@@ -325,21 +326,21 @@ internal class FrameStepToggle : JButton("Frame step") {
         try {
             val hover = model.isRollover
             val border = when {
-                on -> UiKit.LIME_LINE
-                hover -> Color(0x444444)
-                else -> UiKit.LINE_2
+                on -> Palette.LIME_LINE
+                hover -> Palette.HOVER_LINE
+                else -> Palette.LINE_2
             }
-            UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) UiKit.RAISED_2 else UiKit.RAISED, border)
+            UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.RAISED_2 else Palette.RAISED, border)
             var x = PAD
             val boxY = (height - BOX) / 2
             if (on) {
-                UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, UiKit.LIME, null)
+                UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, Palette.LIME, null)
                 check.paintIcon(this, g2, x + (BOX - check.iconWidth) / 2, boxY + (BOX - check.iconHeight) / 2)
             } else {
-                UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, null, Color(0x555555))
+                UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, null, Palette.LINE_5)
             }
             x += BOX + GAP
-            UiKit.drawText(g2, text, textFont, UiKit.FG, x.toFloat(), 0f, height.toFloat())
+            UiKit.drawText(g2, text, textFont, Palette.FG, x.toFloat(), 0f, height.toFloat())
             x += ceil(UiKit.textWidth(text, textFont)).toInt() + GAP
             KeyChips.paint(g2, KEY, x, (height - KeyChips.HEIGHT) / 2)
         } finally {

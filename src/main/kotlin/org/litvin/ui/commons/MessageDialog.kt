@@ -125,7 +125,7 @@ internal object MessageDialog {
         glyph: Ikon? = null,
     ): JPanel {
         val text = Stack(pad = Insets(4, 0, 0, 0)).apply {
-            add(WrapText(title, UiKit.font(15f, UiKit.Weight.SEMIBOLD), UiKit.FG, 1.35f, textWidth(dialogWidth)), gapAfter = if (parts.isEmpty()) 0 else 8)
+            add(WrapText(title, UiKit.font(15f, UiKit.Weight.SEMIBOLD), Palette.FG, 1.35f, textWidth(dialogWidth)), gapAfter = if (parts.isEmpty()) 0 else 8)
             parts.forEachIndexed { index, part -> add(part, gapAfter = if (index == parts.lastIndex) 0 else 8) }
         }
         val body = MessageBody(text, kind, glyph, dialogWidth)
@@ -166,7 +166,7 @@ internal object MessageDialog {
     }
 
     /** A paragraph of the message box: gray text with 1.55 line height. */
-    fun paragraph(text: String, width: Int = DialogKit.SMALL, color: Color = UiKit.FG_2): WrapText =
+    fun paragraph(text: String, width: Int = DialogKit.SMALL, color: Color = Palette.FG_2): WrapText =
         WrapText(runsOf(text, color), 1.55f, textWidth(width))
 
     /** The parts of [message]: paragraphs and path boxes. */
@@ -175,7 +175,7 @@ internal object MessageDialog {
             // A path line in a block gets its own box. The other lines stay together as one paragraph.
             val text = mutableListOf<String>()
             fun flushText() {
-                if (text.isNotEmpty()) add(WrapText(runsOf(text.joinToString("\n"), UiKit.FG_2), 1.55f, wrapWidth))
+                if (text.isNotEmpty()) add(WrapText(runsOf(text.joinToString("\n"), Palette.FG_2), 1.55f, wrapWidth))
                 text.clear()
             }
             block.trim().lines().forEach { line ->
@@ -193,7 +193,7 @@ internal object MessageDialog {
     /** The text runs of [text]: the parts between "**" marks are bold and bright. */
     fun runsOf(text: String, color: Color): List<TextRun> = text.split("**").mapIndexedNotNull { index, part ->
         if (part.isEmpty()) null
-        else if (index % 2 == 1) TextRun(part, UiKit.font(13f, UiKit.Weight.SEMIBOLD), UiKit.FG)
+        else if (index % 2 == 1) TextRun(part, UiKit.font(13f, UiKit.Weight.SEMIBOLD), Palette.FG)
         else TextRun(part, UiKit.font(13f), color)
     }
 
@@ -214,15 +214,13 @@ internal object MessageDialog {
     }
 
     private fun colors(kind: MessageKind): Pair<Color, Color> = when (kind) {
-        MessageKind.INFO -> BLUE to Color(111, 181, 255, 31)
-        MessageKind.HINT -> UiKit.LIME to Color(161, 254, 0, 18)
-        MessageKind.WARNING -> WARN_YELLOW to Color(255, 213, 74, 20)
-        MessageKind.ERROR, MessageKind.DANGER -> UiKit.RED to UiKit.RED_TINT
-        MessageKind.QUESTION -> UiKit.FG to Color(255, 255, 255, 15)
+        MessageKind.INFO -> Palette.BLUE to Palette.BLUE_TINT
+        MessageKind.HINT -> Palette.LIME to Palette.LIME_TINT
+        MessageKind.WARNING -> Palette.YELLOW to Palette.YELLOW_TINT
+        MessageKind.ERROR, MessageKind.DANGER -> Palette.RED to Palette.RED_TINT
+        MessageKind.QUESTION -> Palette.FG to Palette.HIGHLIGHT
     }
 
-    private val BLUE = Color(0x6FB5FF)
-    private val WARN_YELLOW = Color(0xFFD54A)
     private const val ICON = 30
     private const val TEXT_X = DialogKit.PAD_X + ICON + 14
     private const val PAD_TOP = 20
@@ -237,17 +235,17 @@ internal class PathBox(path: String) : JTextArea(path) {
         wrapStyleWord = false
         isOpaque = false
         font = MonoFont.of(12f)
-        foreground = UiKit.FG
-        caretColor = UiKit.FG
-        selectionColor = Color(161, 254, 0, 70)
-        selectedTextColor = UiKit.FG
+        foreground = Palette.FG
+        caretColor = Palette.FG
+        selectionColor = Palette.SELECTION
+        selectedTextColor = Palette.FG
         border = BorderFactory.createEmptyBorder(7, 10, 7, 10)
     }
 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.paintBox(g2, 0, 0, width, height, 4, DialogKit.INPUT_BG, UiKit.LINE)
+            UiKit.paintBox(g2, 0, 0, width, height, 4, Palette.INSET, Palette.LINE)
         } finally {
             g2.dispose()
         }

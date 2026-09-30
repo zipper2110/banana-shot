@@ -11,17 +11,18 @@ import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
 import kotlin.math.ceil
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 
 /** The "Points & events" title with the counts of marked points, favorites and comments. */
 internal class EventsHeader : JPanel(null) {
-    val markedCount = CountLabel(UiKit.icon(Material2AL.FLAG, 14, UiKit.LIME), "marked", "Marked points").apply {
+    val markedCount = CountLabel(UiKit.icon(Material2AL.FLAG, 14, Palette.LIME), "marked", "Marked points").apply {
         name = "points-point-count"
     }
-    val favoriteCount = CountLabel(UiKit.icon(Material2MZ.STAR, 14, UiKit.YELLOW), "favorites", "Favorite points").apply {
+    val favoriteCount = CountLabel(UiKit.icon(Material2MZ.STAR, 14, Palette.YELLOW), "favorites", "Favorite points").apply {
         name = "points-favorite-count"
     }
-    val commentCount = CountLabel(UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, UiKit.FG_2), "comments", "Comments").apply {
+    val commentCount = CountLabel(UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, Palette.FG_2), "comments", "Comments").apply {
         name = "points-comment-count"
     }
     private val counts = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
@@ -59,7 +60,7 @@ internal class EventsHeader : JPanel(null) {
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.drawText(g2, "Points & events", titleFont, UiKit.FG, insets.left.toFloat(), insets.top.toFloat(), TITLE_HEIGHT.toFloat())
+            UiKit.drawText(g2, "Points & events", titleFont, Palette.FG, insets.left.toFloat(), insets.top.toFloat(), TITLE_HEIGHT.toFloat())
         } finally {
             g2.dispose()
         }
@@ -108,9 +109,9 @@ internal class CountLabel(private val countIcon: Icon, private val noun: String,
             countIcon.paintIcon(this, g2, 0, (height - countIcon.iconHeight) / 2)
             var x = countIcon.iconWidth + GAP.toFloat()
             val number = count.toString()
-            UiKit.drawText(g2, number, numberFont, UiKit.FG, x, 0f, height.toFloat())
+            UiKit.drawText(g2, number, numberFont, Palette.FG, x, 0f, height.toFloat())
             x += UiKit.textWidth(number, numberFont)
-            UiKit.drawText(g2, " $noun", nounFont, UiKit.FG_2, x, 0f, height.toFloat())
+            UiKit.drawText(g2, " $noun", nounFont, Palette.FG_2, x, 0f, height.toFloat())
         } finally {
             g2.dispose()
         }

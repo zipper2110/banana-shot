@@ -14,6 +14,7 @@ import javax.swing.BoxLayout
 import javax.swing.JLabel
 import javax.swing.JPanel
 import kotlin.math.max
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.PlayButton
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
@@ -34,12 +35,12 @@ internal class PlaybackBar(
     private val nowLabel = JLabel(Timecode.format(0)).apply {
         name = "points-current-time"
         font = UiKit.font(15f)
-        foreground = UiKit.FG
+        foreground = Palette.FG
         toolTipText = "Current time"
     }
     private val totalLabel = JLabel("").apply {
         font = UiKit.font(12f)
-        foreground = UiKit.FG_3
+        foreground = Palette.FG_3
     }
     private val clock = JPanel(FlowLayout(FlowLayout.LEFT, CLOCK_GAP, 0)).apply {
         name = "points-time-panel"
@@ -83,9 +84,9 @@ internal class PlaybackBar(
 
     init {
         isOpaque = true
-        background = UiKit.PLAYBAR
+        background = Palette.OVERLAY
         border = BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(1, 0, 0, 0, UiKit.LINE),
+            BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
             BorderFactory.createEmptyBorder(10, 16, 10, 16),
         )
         layout = BarLayout()

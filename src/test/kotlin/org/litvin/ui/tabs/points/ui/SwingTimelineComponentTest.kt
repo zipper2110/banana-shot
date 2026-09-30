@@ -2,11 +2,13 @@ package org.litvin.ui.tabs.points.ui
 
 import org.litvin.points.CommentV1
 import org.litvin.points.PointV1
+import org.litvin.ui.commons.Palette
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.image.BufferedImage
 import java.awt.event.MouseEvent
 import javax.swing.SwingUtilities
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -177,8 +179,13 @@ class SwingTimelineComponentTest {
             val favorite = Color(image.getRGB(GUTTER + 30, timeline.marksTrackCenterYForTest()))
             assertTrue(favorite.red > 200 && favorite.green > 180 && favorite.blue < 120, "favorite color was $favorite")
             val center = timeline.marksTrackCenterYForTest()
+            val lime = Palette.LIME
             val limePixels = (GUTTER + 100..GUTTER + 120).sumOf { x ->
-                (center - 8..center + 8).count { y -> Color(image.getRGB(x, y)).let { it.green > 200 && it.blue < 100 && it.red < 200 } }
+                (center - 8..center + 8).count { y ->
+                    Color(image.getRGB(x, y)).let {
+                        abs(it.red - lime.red) + abs(it.green - lime.green) + abs(it.blue - lime.blue) <= 30
+                    }
+                }
             }
             assertTrue(limePixels > 10, "the pending range should have a lime border, found $limePixels lime pixels")
         }

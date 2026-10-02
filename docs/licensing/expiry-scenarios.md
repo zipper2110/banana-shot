@@ -74,13 +74,16 @@ Terms:
   1. The user starts the app.
 - **App behavior:**
   - The warning shows: "This version works until 29 March 2027, 16:00."
-    (local time, with the hour), with a "Download update" button.
+    (local time, with the hour), with "Update and restart" and "Download
+    update" buttons.
   - While the app runs, the warning shows again one time on each calendar
     day (local time), in the first hour after midnight.
 - **Next steps for the user:**
+  - Click "Update and restart": the app downloads the setup, starts it, and
+    closes. The new build starts. It has a new expiry, and the warning does
+    not show. See S-02.
   - Click "Download update": the browser opens the download page. The user
-    installs the new build. The new build has a new expiry, and the warning
-    does not show.
+    installs the new build by hand.
   - Close the warning: it stays hidden until the next calendar day.
   - Do nothing: the build expires on the date in the warning (S-03 or S-04).
 - **Expected result:** the warning starts exactly 30 × 24 hours before the
@@ -95,14 +98,29 @@ Terms:
 - **Steps:**
   1. The user starts the app, or the 24-hour online check runs.
 - **App behavior:** a notice that is not modal shows the new version, the
-  `notes`, a "Download" button, and a "Later" button.
+  `notes`, an "Update and restart" button, a "Download update" button, and a
+  "Later" button.
 - **Next steps for the user:**
-  - "Download": the browser opens `latest.downloadUrl`.
+  - "Update and restart":
+    1. If an export runs, the app asks first. The running export starts
+       again from the beginning after the update.
+    2. The app downloads the setup EXE (`latest.installerUrl`) and shows the
+       progress.
+    3. The app saves the open project, starts the setup, and closes.
+    4. The setup installs the new version and starts it. The projects, the
+       preferences, and the export queue stay.
+    - If the download fails: the app shows the error and stays open.
+      "Download update" stays available.
+  - "Download update": the browser opens `latest.downloadUrl`. The app does
+    not quit.
   - "Later": the notice does not show again for this version. It shows again
     for the next version.
 - **Expected result:** the notice shows only for a newer version. A
-  development build `1.4.0-SNAPSHOT` does not show it for `1.4.0`.
-- **References:** "Update notice", "Rules for the app".
+  development build `1.4.0-SNAPSHOT` does not show it for `1.4.0`. After
+  "Update and restart", the new version runs with the same projects and the
+  same export queue.
+- **References:** "Update notice", "Update and restart", "Rules for the
+  app".
 
 ### S-03 Expiry during a session, with exports in the queue
 
@@ -125,7 +143,7 @@ Terms:
   - Close the dialog: the banner stays. The Export tab works.
   - Close the app: the queue stays (B-18). At the next start, the app opens
     in expired mode (path B), and the queue continues.
-  - "Download update": see S-05.
+  - "Update and restart" or "Download update": see S-05.
 - **Expected result:** no lost work. The project is saved. All exports that
   the user started before the expiry finish. The user cannot edit a project
   or start a new export.
@@ -146,7 +164,7 @@ Terms:
      the flag. The dialog shows the expired text and the date that the app
      used.
 - **Next steps for the user:**
-  - "Download update": see S-05.
+  - "Update and restart" or "Download update": see S-05.
   - "Close": the banner stays. The completed exports show.
   - Close and start the app again: path B. Expired mode shows at once, with
     the dialog in "Checking…".
@@ -159,19 +177,24 @@ Terms:
 - **User:** honest.
 - **Starting state:** expired mode. Exports can wait in the queue.
 - **Steps:**
-  1. The user clicks "Download update" in the dialog or in the banner.
-  2. The user downloads the installer and installs the new build.
+  1. The user clicks "Update and restart" in the dialog or in the banner.
 - **App behavior:**
-  1. The browser opens `latest.downloadUrl`, or the GitHub releases page if
-     there is no saved rules file. The app does not quit.
-  2. When the user closes the app for the installation, the queue stays
-     (B-18).
+  1. If an export runs, the app asks first (as in S-02).
+  2. The app downloads the setup EXE: `latest.installerUrl`, or the stable
+     URL if there is no saved rules file. It starts the setup and closes.
+     The queue stays (B-18).
   3. The new build starts in normal mode, because its expiry is in the
      future. It clears the flag. The queue continues.
+  - If the download fails (for example, with no network): the app shows the
+    error and stays in expired mode. The user can click "Download update":
+    the browser opens `latest.downloadUrl`, or the GitHub releases page if
+    there is no saved rules file. The user then installs the new build by
+    hand, for example from another device (S-10).
 - **Next steps for the user:** work as usual.
 - **Expected result:** after the update, the app opens in normal mode with
   all tabs. The exports from the queue continue.
-- **References:** "Expired mode", B-18 in `backlog.md`.
+- **References:** "Expired mode", "Update and restart", B-18 in
+  `backlog.md`.
 
 ## Clock errors
 
@@ -248,8 +271,10 @@ Terms:
     arrives. The notice closes. The wrong clock notice shows. Windows usually
     corrects the clock itself when it is online.
   - Correct the clock by hand: the next start is normal.
-  - Stay offline: each start uses 12 hours of the time that is left. If the
-    user starts the app 2 times each day or less, the user loses no time.
+  - Stay offline: each start uses 12 hours of the time that is left, and
+    the run time also uses it. The user loses time when 12 hours for each
+    start plus the run time is more than 24 hours in a day. Example: 2
+    starts and 3 hours of work in a day use 27 hours.
 - **Expected result:** the user can work. The notice tells the cause and the
   fix. Recovery within 1 minute after the network is available.
 - **References:** "Clock behind", "Online check", "Wrong clock notice".

@@ -117,6 +117,122 @@ Do these items before the first public release.
   and opens the app again. The Exports table shows the 3 exports, and they
   complete. A canceled export does not come back.
 
+### B-21 First dry run of the release workflow
+
+- The "Windows release" workflow has never run. Start a dry run now with
+  the current installer. It can find problems before B-23 and B-24.
+- Install the dry-run installer on a clean Windows account. Do the checks of
+  step 6 of `release-checklist.md`.
+- In the app image, run `runtime\bin\java --list-modules`. The JDK 17
+  jpackage default can omit `jdk.crypto.ec` and `jdk.crypto.mscapi`, but
+  `build-expiry-spec.md` requires them. Write the result in B-23.
+- Done when: the dry run passes, and each problem that it finds is fixed or
+  is an item in this file. Do the dry run again after B-23 and B-24.
+
+### B-23 Bundle the JDK 25 runtime
+
+- Build with JDK 25 (LTS) and bundle its runtime. Keep the bytecode target
+  17 unless a reason to change it comes up.
+- Update `ci.yml`, `windows-release.yml`, and the JDK 17 check in
+  `Build-AppImage.ps1`. Update the JDK version in the docs.
+- Add `--enable-native-access=ALL-UNNAMED` to the jpackage java options.
+  JNA calls native code, and JDK 24 and later warn about it.
+- Give jpackage an explicit `--add-modules` list. Use `jdeps` to find the
+  modules. Add `jdk.crypto.mscapi` (the `Windows-ROOT` key store). In JDK 22
+  and later, the elliptic-curve code is in `java.base`.
+- Add checks to `DistributionDiagnostics`: the `Windows-ROOT` key store
+  loads, and an HTTPS request to GitHub works.
+- Check that Kotlin, JNA, FlatLaf, and assertj-swing work with JDK 25.
+- Done when: `mvn -B test` and the ui-flow tests pass with JDK 25, and the
+  packaged diagnostics pass.
+
+### B-24 Velopack installer
+
+- Replace the jpackage EXE installer (WiX 3) with Velopack. WiX 3 is at its
+  end of life. JDK 17 jpackage supports only WiX 3.
+- Velopack installs for each user with no administrator rights. It also
+  gives the update functions of B-30 and B-25. The installer of the first
+  release sets how users update later. Thus, do this item before the first
+  release.
+- jpackage continues to make the app image. `vpk pack` makes the installer
+  and the update packages from the app image.
+- Velopack starts the app with hook arguments (`--veloapp-install`,
+  `--veloapp-updated`, `--veloapp-uninstall`, and others) when it installs,
+  updates, or removes the app. The app does not use a Velopack SDK. Thus,
+  `SwingMainApp` must exit at once for these arguments and must not open
+  the main window. Check the full list in the Velopack docs.
+- The release workflow uploads the Velopack files (the setup EXE, the
+  packages, and the release feed) to the GitHub release. Remove the WiX
+  step and `Build-Installer.ps1`.
+- Find how Velopack shows the license. L-3.8 of `elv2-migration-plan.md`
+  requires the ELv2 text and the third-party notices in the installer.
+- The uninstall must not delete the app data (`%APPDATA%\BananaShot`) or the
+  preferences in `HKCU\Software\JavaSoft\Prefs`. `build-expiry-spec.md`
+  requires this.
+- Update `distribution/windows/README.md`, `release-checklist.md`,
+  `ui-smoke.md`, and the paths in `Run-UiSmoke.ps1`.
+- Done when: a dry run makes a Velopack installer. The installer
+  installs the app, makes the Start menu shortcut, and the app starts.
+
+### B-30 Simple update from the app
+
+- This is the simple form of the automatic update. B-25 is the full form,
+  after the first release.
+- In the update notice and the expiry dialog of `build-expiry-spec.md`,
+  replace "Download update" with "Update and restart".
+- When the user clicks it, the app downloads the setup EXE of the newest
+  release to a temporary folder. Then it starts the setup EXE and closes.
+  The Velopack setup installs the new version over the old version and
+  starts it.
+- The app must know the URL of the setup EXE. Add a field for it to the
+  rules file, for example `latest.installerUrl`. The app reads it from the
+  first release, so the field must be in the first release (see "Changes to
+  the file format" in `build-expiry-spec.md`). If the field is missing, use
+  the stable URL `releases/latest/download/<setup EXE name>`. Thus, the
+  release workflow must give the setup EXE the same name in each release.
+- The app does not check the URL or the file (decided on 2026-10-02, see
+  "Accepted risks" in `build-expiry-spec.md`).
+- The spec has the details: "Update and restart" in
+  `build-expiry-spec.md`. The spec wins if this item and the spec do not
+  agree.
+- If an export runs, ask the user before the app closes. B-18 saves the
+  queue, so the queued exports continue after the update. The running
+  export starts again from the beginning.
+- Show the download progress. If the download fails, show the error and
+  keep "Download update" (open the download page in the browser) as the
+  second option.
+- Check how the Velopack setup acts when the app is already installed.
+  The setup must update the app, keep the app data, and start the new
+  version.
+- Do this after B-4 and B-24.
+- Done when: version N-1 shows the update notice for version N. The user
+  clicks "Update and restart", and version N starts with the same projects
+  and the same export queue.
+
+### B-26 Test install, update, and uninstall
+
+- No test installs a new version over an old version.
+- Install version N-1, start it, and make a project. Then install version N
+  while the app runs.
+- Check: the app closes or the installer asks the user to close it. Version
+  N starts. The projects, the preferences, and the export history stay.
+- Uninstall. Check that the app data and `HKCU\Software\JavaSoft\Prefs`
+  stay.
+- Add these checks to step 6 of `release-checklist.md`. Automate them in the
+  release workflow if it is possible.
+- Done when: the checks pass with two dry-run builds.
+
+### B-27 Release workflow hardening
+
+- Pin each third-party action to a commit SHA, mainly
+  `softprops/action-gh-release` and the Azure actions. Keep the version as a
+  comment.
+- Now `mvn -B test` runs in the job that has the `contents: write` and
+  `id-token: write` permissions. Run the tests in a separate job with
+  read-only permissions. Give the write permissions only to the job that
+  publishes.
+- Done when: a dry run passes with the new jobs.
+
 ## Post-release
 
 Do these items after the first public release.
@@ -158,3 +274,48 @@ Do these items after the first public release.
 - Copy its MIT-licensed MSYS2 workflow into this project or into a separate
   repository. CI must make a pinned LGPL libmpv and its source archive.
 - This is item L-1.4 of `docs/licensing/elv2-migration-plan.md`.
+
+### B-22 Code signing
+
+- The first release is unsigned. SmartScreen shows a warning for the
+  installer. The user must click "More info", then "Run anyway".
+- On a computer with Smart App Control on, Windows can block the unsigned
+  installer or the unsigned natives. The user cannot select "Run anyway".
+- Make sure that the author can use Azure Artifact Signing. It accepts
+  individual developers only from some countries. If the author cannot use
+  it, buy an OV certificate on a cloud HSM (for example Certum or SSL.com).
+- Sign each EXE and DLL in the app image, not only `BananaShot.exe`. This
+  includes `ffmpeg.exe`, `ffprobe.exe`, `libmpv-2.dll`, and the FFmpeg DLLs.
+- Sign the installer and the update packages with the signing options of
+  `vpk` (see B-24).
+- Check if JNA extracts an unsigned `jnidispatch.dll` at run time. If it
+  does, find a solution for Smart App Control.
+- The release workflow must check the signature of each signed file.
+- Done when: the installer of a dry run starts on a clean Windows 11
+  computer with Smart App Control on, and the preview and the export work.
+
+### B-25 Full automatic update with Velopack
+
+- B-30 downloads the full setup EXE and shows the setup window. Replace it
+  with the Velopack updater: delta packages, no setup window, and a restart
+  into the new version.
+- Velopack has no Java SDK. Bind its C library (`velopack_libc`) with JNA:
+  check, download, and apply. Do a short test of the binding first.
+- The release workflow downloads the previous release, makes a delta
+  package, and uploads the feed file and the packages.
+- Done when: version N-1 updates to version N with a delta package and no
+  setup window, and version N starts with the same projects.
+
+### B-28 winget package
+
+- Add a winget manifest for each release. Users can then install with
+  `winget install` and update with `winget upgrade`.
+- Do this after B-22.
+
+### B-29 Smaller installer
+
+- libmpv contains its own FFmpeg libraries. Thus, the installer has two
+  copies of FFmpeg. The FFmpeg archive is 81 MB compressed.
+- Build FFmpeg in our own CI with only the codecs and filters that the app
+  uses. Do this together with B-20.
+- Measure the installer size before and after the change.

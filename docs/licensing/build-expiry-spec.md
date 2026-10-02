@@ -24,8 +24,8 @@ file on a server can stop some versions earlier and tell the user why.
 | Expired build | Expired mode: only the Export tab, a banner, and a dialog that the user can close. The export queue continues. The app does not open projects or start new exports. |
 | Expiry during a session | The app checks the expiry while it runs. It goes to expired mode at once. The running export and the queued exports continue. |
 | Read-only mode | No. Expired mode does not show projects. |
-| Update check | Yes, in the first release. It shows a notice and opens the download page. |
-| Automatic update | No. Do it after the first release. |
+| Update check | Yes, in the first release. It shows a notice with "Update and restart". |
+| Update from the app | Yes, in the first release, in the simple form (B-30): the app downloads the setup EXE of the newest release, starts it, and closes. The full automatic update (B-25) comes after the first release. |
 | Version rules from the server | Yes, in the first release |
 | Offline use | The build expiry and the last saved rules apply. No grace period is necessary. |
 | License keys | No. Do them before the first paid release. |
@@ -64,7 +64,7 @@ the file format"). Do not release a build with only some of the measures.
   exist in the target month, the result is the last day of that month. For
   example, 31 August plus 6 months is 28 February (29 February in a leap
   year). Java `LocalDate.plusMonths` and PowerShell `DateTime.AddMonths` both
-  calculate this. The app and `Validate-Release.ps1` must get the same result.
+  calculate this. The app and `Validate-AppImage.ps1` must get the same result.
 - For the exact moment of the expiry, see "Expiry moment".
 - Do not put the date or the version in these places:
   - a resource file in the JAR, for example a `.properties` file. The install
@@ -75,6 +75,14 @@ the file format"). Do not release a build with only some of the measures.
 - Do not add a switch that turns off the expiry. Tests set the clock and the
   dates through constructor parameters. A property or an environment variable
   is a bypass.
+- Tests also give these parts through constructor parameters: the read of
+  the rules file (the network request), the store of the saved time and the
+  flag (the preferences), and the data folder (the saved rules file and the
+  time probe). Only the production setup (`AppServices.production()`) makes
+  the real parts. Thus, a test never reads GitHub and never writes the
+  preferences of the user in `HKCU`. The UI-flow tests build the app in the
+  same process, so this applies to them too. They use
+  `InMemoryPreferencesProvider` and a fake read of the rules file.
 - Development builds also expire. They are built again often, so this has no
   effect on the work.
 - A build in IntelliJ does not run the Maven phase `generate-sources`. Then
@@ -87,8 +95,23 @@ the file format"). Do not release a build with only some of the measures.
   expiry date, and the version, for example
   `org.litvin.license.BuildInfoPrinter`. It reads the same constants and the
   same calculation as the app. It has no options.
-- `Validate-Release.ps1` runs this class with the bundled runtime. It must fail
-  in these cases:
+- A new script `distribution/windows/Validate-AppImage.ps1 -Version <version>`
+  runs this class with the bundled runtime of the app image:
+  `runtime\bin\java.exe -cp "app\*" org.litvin.license.BuildInfoPrinter`.
+  - The release workflow runs the script in a new step directly after "Build
+    application image", before the packaged diagnostics, the signing, and the
+    installer. It gives the release version (`APP_VERSION`) as `-Version`.
+  - The script changes the version in the same way as `Build-AppImage.ps1`:
+    it removes a `v` at the start and the text after a `-`. The result is the
+    jpackage `--app-version`.
+  - jpackage does not put `java.exe` in the runtime. `Build-AppImage.ps1`
+    copies it into `runtime\bin`. The script needs this copy, so keep it.
+  - `Validate-Release.ps1` stays the first step of the workflow. Its checks
+    (the license files and the natives manifest) need no build.
+  - Do not put these checks in the packaged diagnostics. Users also run
+    `BananaShot Diagnostics.cmd`, and the check of the build date would fail
+    for them 7 days after the build.
+- `Validate-AppImage.ps1` must fail in these cases:
   - The class does not run, or it prints no build date or no version.
   - The expiry date is not 6 calendar months after the build date.
   - The build date is more than 7 days before the day of the check. Thus, an
@@ -116,10 +139,42 @@ safe.
 - The app waits a maximum of 10 seconds for the file. If the read fails, the
   app shows no error, except in the states that "Online check" names. It
   tries again on the schedule in "Online check".
-- The app sets `java.net.useSystemProxies=true`, so it uses the proxy of
-  Windows. If the read still fails (for example, behind a firewall), the build
-  expiry and the saved file apply. The user does not get the update notice or
-  new rules.
+- The app uses the proxy settings of Windows (see "Proxy"). If the read
+  still fails (for example, behind a firewall), the build expiry and the
+  saved file apply. The user does not get the update notice or new rules.
+
+### Proxy
+
+Some offices and schools block direct connections to the internet. All web
+traffic must go through a proxy. Windows keeps the proxy settings for each
+user: a manual address with a bypass list, a PAC script, or "Automatically
+detect settings" (WPAD). Browsers use these settings. By default, Java does
+not use them and connects directly. Then the read of the rules file fails,
+and these users get no rules, no update notice, and no server time.
+
+- The first line of `main` in `SwingMainApp` sets the system property
+  `java.net.useSystemProxies=true`. It does this at each start, with no
+  condition and no user option. The Windows settings decide if a proxy is
+  used.
+- With this property, Java asks Windows (WinHTTP) for the proxy of each URL.
+  Java supports the manual proxy, the PAC script, and the automatic
+  detection on Windows. With no proxy in Windows, Java connects directly, as
+  before.
+- The property must be set before all other code. Java reads it only one
+  time: when the first network request of the process needs a proxy. If a
+  request runs first (for example, the analytics request), Java ignores a
+  later change of the property, and all requests of the process connect
+  directly.
+- Set the property in `main`, not in the jpackage `--java-options`. Then a
+  development run from the IDE behaves the same as the installed app.
+- The property applies to all Java network code of the app: the rules file
+  and the analytics. It has no effect on ffmpeg and libmpv.
+- With "Automatically detect settings" (on by default in Windows), the first
+  request can wait for a short search for a proxy. The 10-second limit still
+  applies.
+- `HttpClient` cannot log in to a proxy that asks for the Windows account
+  (NTLM or Kerberos, HTTP status 407). Such a request fails, and the user is
+  offline for the app. See "Accepted risks".
 
 Example:
 
@@ -129,6 +184,7 @@ Example:
   "latest": {
     "version": "1.4.0",
     "downloadUrl": "https://github.com/zipper2110/tennis-record/releases/latest",
+    "installerUrl": "https://github.com/zipper2110/tennis-record/releases/download/v1.4.0/BananaShot-win-Setup.exe",
     "notes": "Faster export. New score overlay."
   },
   "rules": [
@@ -149,7 +205,19 @@ Example:
   does not know.
 - `latest`: the newest release. The update check uses it. This field is
   optional.
+  - `version`: the version of the newest release. Required in `latest`.
+  - `downloadUrl`: the page that "Download update" opens in the browser.
+    Required in `latest`.
+  - `installerUrl`: the setup EXE that "Update and restart" downloads and
+    starts (see "Update and restart"). Optional. With no `installerUrl`, the
+    app uses the stable URL
+    `https://github.com/zipper2110/tennis-record/releases/latest/download/<setup EXE name>`.
+    The app reads this field from the first release. Thus, it is in the
+    first release, also if the file does not use it yet (see "Changes to the
+    file format").
+  - `notes`: a short text about the release. Optional.
 - `rules`: a list of rules. Each rule stops a range of versions on a date.
+  This field is required. The list can be empty.
   - `id`: a unique name. The app uses it to show the warning again when a
     new rule makes the expiry earlier (see "Expiry warning"), and in the log.
   - `fromVersion`, `toVersion`: the range (both ends included). `toVersion`
@@ -161,6 +229,64 @@ Example:
     in the past stops the versions at the next expiry check.
   - `message`: the reason. The app shows it in the warning and in the dialog
     of expired mode. This field is optional. English only until localization (B-11).
+
+The app shows `latest.notes` and `message` as plain text. A Swing label shows
+a text that starts with `<html>` as HTML, and HTML can load images from other
+servers. Thus, the app does not give these texts to a component that can
+show HTML, or it escapes them first.
+
+### Valid file
+
+A mistake in the file has the smallest effect that is safe. The app checks
+the file on three levels.
+
+The whole file is not valid in these cases:
+
+- The response body is larger than 64 KB. The app stops the read at this
+  limit.
+- The body is not JSON, or the top level is not an object.
+- `schema` is missing or is not an integer.
+- `rules` is missing or is not a list. An empty list is valid. `rules` is
+  required because a valid file replaces the saved file. A file with no
+  `rules` would remove the saved rules.
+
+The app ignores a file that is not valid. It keeps the saved file. The
+response still gives a server time. The next check is after 15 minutes (see
+"Online check").
+
+A file with a `schema` that is an integer that the app does not know is a
+file with an unknown schema. The app ignores it and keeps the saved file. The
+next check is after 24 hours.
+
+A rule is not valid in these cases:
+
+- `id`, `toVersion`, or `stopsOn` is missing or is not a string.
+- `stopsOn` is not a valid date in the format `yyyy-MM-dd`.
+- `fromVersion` is present and is not a string.
+
+The app ignores a rule that is not valid, and writes its `id` (if any) to the
+log. It uses the other rules. Thus, a mistake in one rule does not block the
+other rules, the update notice, or the removal of an old rule (S-15 in
+`expiry-scenarios.md`).
+
+An optional field is not valid in these cases:
+
+- `message`, `notes`, or `installerUrl` is present and is not a string. The
+  app ignores only this field. For `installerUrl`, the app then uses the
+  stable URL.
+- `latest` is not an object, or its `version` or `downloadUrl` is missing or
+  is not a string. The app ignores all of `latest`: it shows no update notice
+  and uses the default download URL (see "Expired mode").
+
+Other rules:
+
+- A version text that does not start with a number is `0.0.0` (see "Rules
+  for the app"). It does not make the rule or the file not valid.
+- The app uses all rules, also two rules with the same `id`. The repository
+  test finds such a mistake (see "Release steps").
+- The app checks the saved file with the same rules at each start. If the
+  saved file is not valid (for example, a damaged file on the disk), the app
+  uses no saved file.
 
 ### Rules for the app
 
@@ -208,7 +334,7 @@ Example:
   a mistake, because it also stops the version that the user must download.
 - The app saves the last valid file in its data folder. If the app cannot
   read the server, it uses the saved file. A new valid file replaces the saved
-  file. The app ignores a file that is not valid.
+  file. The app ignores a file that is not valid (see "Valid file").
 - The app ignores fields that it does not know. It still reads the fields
   that it knows.
 
@@ -298,7 +424,12 @@ The app calculates the current time as follows:
   the rules file is a server response with no valid file. Its `Date` header
   is a server time. Thus, the server time always comes from the host of the
   rules file, and never from a host that a redirect names.
-- The server time is the `Date` header of a server response.
+- The server time is the `Date` header of a server response plus the `Age`
+  header, if it is present. GitHub keeps the file in a cache (about 5
+  minutes), and `Age` is the time in seconds that the response was in the
+  cache. The app uses `Age` only if it is a number from 0 to 3600. Else it
+  uses only `Date`. Thus, a wrong `Age` value cannot move the time far
+  forward. The error of the server time is then a few minutes at most.
 - Until the first server time in the session: if the system time is later
   than the saved time, the saved time becomes the system time.
 - After a server time:
@@ -414,6 +545,10 @@ use. For a user who uses the app a few hours each week, this is some years.
 - Accepted: if the lock fails (fail open), each start adds 12 hours, also a
   second start while the app runs. This needs a failed lock and a clock that
   is behind, so it is very rare.
+- Accepted (2026-10-02): a process that Velopack starts with a hook argument
+  (B-24) does the time steps before it quits. With a clock that is behind,
+  each install or update adds 12 hours. The loss is small, and the start
+  order stays the same for all processes.
 - The limit of 24 hours prevents false results from small clock errors, for
   example a computer that uses local time in its hardware clock.
 - A server time sets the saved time to the server time. Thus, the 12 hours
@@ -430,11 +565,14 @@ use. For a user who uses the app a few hours each week, this is some years.
 - When a server time arrives, the notice closes. Its text is then not true.
 - In expired mode, the app does not show this notice. It still adds the 12
   hours. The banner of expired mode tells the user the cause and the fix.
-- Result: for a user who moves the clock back, the time that is left is a
-  number of starts (2 starts for each day), not a number of run hours.
+- Result: for a user who moves the clock back, each start uses 12 hours of
+  the time that is left, and the run time uses the rest. One day of the time
+  that is left is 2 starts with no run time, not 24 run hours.
 - Harm: an offline user with a broken clock (for example, a flat clock
-  battery) loses time faster if they start the app more than 2 times a day.
-  The notice tells them the cause and the fix.
+  battery) loses time when 12 hours for each start plus the run time is more
+  than 24 hours in a day. Example: 2 starts and 3 hours of work in a day use
+  27 hours, so 30 days of time that is left last about 27 days. The notice
+  tells them the cause and the fix.
 
 ### File time probe
 
@@ -466,15 +604,24 @@ app is false, but the rest of Windows uses the correct time.
   that GitHub uses.
 - The bundled runtime must contain these modules:
   - `jdk.crypto.mscapi`: the `Windows-ROOT` key store.
-  - `jdk.crypto.ec`: the elliptic-curve algorithms for TLS. In Java 17, they
-    are not in `java.base`.
   - `java.net.http`: `HttpClient`.
+  - Only for a runtime earlier than JDK 22: `jdk.crypto.ec`, the
+    elliptic-curve algorithms for TLS. From JDK 22, these algorithms are in
+    `java.base`, and `jdk.crypto.ec` is an empty module that is deprecated
+    for removal. Do not require it for JDK 22 and later (B-23 bundles
+    JDK 25).
+- `Validate-AppImage.ps1` gets the JDK version of the bundled runtime from
+  `JAVA_VERSION` in `runtime\release`, and selects the list of modules for
+  that version.
+- The list of modules shows only that the parts are present. The packaged
+  diagnostics also check that they work: the `Windows-ROOT` key store loads,
+  and an HTTPS request to the host of the rules file works (B-23).
 - jpackage builds the runtime with jlink. jlink does not always add a module
   that only supplies a provider and exports no package, for example
   `jdk.crypto.mscapi`. If a module is missing, the request fails with no
   error to the user (fail open), and the users of an office with TLS
   inspection silently get no rules (S-12 in `expiry-scenarios.md`). Thus,
-  `Validate-Release.ps1` checks the modules (see "Build expiry").
+  `Validate-AppImage.ps1` checks the modules (see "Build expiry").
 - If a module is missing, add it with the jpackage option `--add-modules` in
   `Build-AppImage.ps1`. This option replaces the default list of modules, so
   the list must also contain all other modules that the app needs.
@@ -640,19 +787,57 @@ the name can change.
 ### Update notice
 
 - When `latest.version` is newer than the app version, the app shows a notice
-  that is not modal. The notice shows the version, the `notes`, a "Download"
-  button, and a "Later" button.
-- "Download" opens `latest.downloadUrl` in the browser.
+  that is not modal. The notice shows the version, the `notes`, an "Update
+  and restart" button, a "Download update" button, and a "Later" button.
+- "Update and restart" and "Download update": see "Update and restart".
 - "Later" hides the notice for this version. The notice shows again for the
   next version.
+
+### Update and restart
+
+This is the simple update from the app (B-30). The full automatic update
+(B-25) replaces it after the first release.
+
+- Buttons: the update notice, the expiry warning, the banner of expired
+  mode, and the dialog of expired mode have the same two buttons:
+  - "Update and restart": the update from the app. It shows when
+    `latest.version` is newer than the app version, or when the app has no
+    valid `latest`. It does not show when `latest.version` is the app
+    version or older, because the setup would install the same version
+    again.
+  - "Download update": opens the download page in the browser. The app does
+    not quit. The page is `latest.downloadUrl`. With no valid `latest`, it
+    is the GitHub releases page.
+- When the user clicks "Update and restart":
+  1. If an export runs, the app asks the user first: the running export
+     starts again from the beginning after the update. The queued exports
+     continue (B-18). If the user cancels, nothing happens.
+  2. The app downloads the setup EXE to a temporary folder and shows the
+     progress. The URL is `latest.installerUrl`, or the stable URL if the
+     app has no `installerUrl` (see "Fields"). The download follows
+     redirects, because GitHub sends release files from another host. It
+     uses the same proxy and the same trust as the read of the rules file.
+  3. The app saves the open project, starts the setup EXE, and closes.
+  4. The Velopack setup installs the new version over the old version and
+     starts it. The app data and the preferences stay (B-24).
+- If the download fails, the app shows the error, deletes the partial file,
+  and stays open. "Download update" stays available.
+- Only one download runs at a time. While it runs, "Update and restart"
+  shows the progress, and the user cannot click it.
+- The app does not check the URL or the downloaded file. HTTPS protects the
+  download. See "Accepted risks".
+- The setup EXE has the same name in each release (see "Release steps").
+  The stable URL needs this.
+- In expired mode, "Update and restart" works the same. The new build starts
+  in normal mode, because its expiry is in the future.
 
 ### Expiry warning
 
 - From 30 days before the effective expiry, the app shows a warning that is
   not modal. It shows the warning at start, and after that one time on each
   calendar day while it runs. The warning shows the moment of the expiry in
-  local time (see "Expiry moment"), the rule `message` if there is one, and a
-  "Download update" button.
+  local time (see "Expiry moment"), the rule `message` if there is one, and
+  the buttons of "Update and restart".
 - "Calendar day" is the date of the current time (see "Time and the clock")
   in the local time zone of the computer. The app keeps in memory the date
   when it last showed the warning. The hourly expiry check shows the warning
@@ -662,7 +847,10 @@ the name can change.
 - The user can close the warning. It then stays hidden until the next
   calendar day.
 - If a rule that the app has not seen in this session makes the effective
-  expiry earlier, the warning shows at once, also if the user closed it. The
+  expiry earlier than 30 × 24 hours from the current time, the warning shows
+  at once, also if the user closed it. A rule with a later `stopsOn` does not
+  show the warning at once. Its warning starts 30 days before the expiry, as
+  usual. The
   app finds new rules by their `id`. It keeps the seen `id` values in memory
   for the session only. It does not save them.
 
@@ -686,17 +874,16 @@ the app as usual. Each start of an expired build opens in expired mode.
   mode does not stop them and does not add to them.
 - Banner: a panel at the top of the window says that this version has
   expired. It shows the date that the app used, the state of the online
-  check, a "Check now" button, and a "Download update" button. The user
-  cannot close the banner.
+  check, a "Check now" button, and the buttons of "Update and restart". The
+  user cannot close the banner.
 - Dialog: the app shows the dialog when it goes to expired mode and at each
   start in expired mode. The dialog is modal, and the user can close it.
   - It shows the rule `message` if there is one. If there is no message, it
     shows a default text, for example: "This version of <app name> has
-    expired. Download the new version to continue. Your projects stay on
+    expired. Update to the new version to continue. Your projects stay on
     your computer. Exports that you started before continue."
   - It shows the date that the app used and the state of the online check.
-  - Buttons: "Check now", "Download update" (opens the download URL; the app
-    does not quit), and "Close".
+  - Buttons: "Check now", the buttons of "Update and restart", and "Close".
 - The state of the online check, in the banner and in the dialog:
   - While a check runs: "Checking…".
   - No connection: "<app name> cannot connect to the update server. It
@@ -704,8 +891,9 @@ the app as usual. Each start of an expired build opens in expired mode.
     connect to the internet." The text does not say "no internet": a
     firewall or a blocked region can block only the server.
   - Still expired: no extra text. The server time confirms the date.
-- The download URL is `latest.downloadUrl` from the saved file. If there is no
-  saved file, the URL is the GitHub releases page.
+- The URLs come from the saved file (see "Update and restart"). If there is
+  no saved file, the app uses the GitHub releases page and the stable URL of
+  the setup EXE.
 - Leaving expired mode: if an online check shows that the build has not
   expired, the app closes the dialog, removes the banner, clears the flag
   (see "Start of a build that looks expired"), and shows the tabs again. The
@@ -743,24 +931,52 @@ queue, a person must edit a file in the data folder, which is after the line.
   is not part of the analytics consent.
 - The privacy text in the app and the README must tell the user about this
   request, separately from the analytics text.
+- "Update and restart" downloads the setup EXE from GitHub. This request
+  also sends no user ID. The privacy text names it together with the request
+  for the rules file.
 - Add this item to the lawyer review (L-6.2).
 
 ## Release steps
 
-A test in this repository reads `release/version-policy.json`. It fails if
-the file is not valid, if the file has no `latest`, if a rule has no
-`toVersion`, if a rule matches `latest.version`, or if two rules have the same
-`id`. Thus, a mistake in the file cannot stop all users. `latest` is optional
-for the app, but required in the repository.
+A test in this repository reads `release/version-policy.json`. It fails in
+these cases:
+
+- The file is not valid, or a rule is not valid (see "Valid file").
+- The file has no valid `latest`. `latest` is optional for the app, but
+  required in the repository.
+- `schema` is not 1. A file with a different schema is valid for the app,
+  but all released builds ignore it (see "Changes to the file format").
+- A version text does not start with a number.
+- A rule matches `latest.version`.
+- A rule matches the version in `pom.xml` (`BuildInfo.VERSION`, for example
+  `1.4.0-SNAPSHOT`, which compares as `1.4.0`). The default version in
+  `pom.xml` is always the next release, so such a rule stops the next
+  release by mistake.
+- Two rules have the same `id`.
+
+Thus, a mistake in the file cannot stop all users.
 
 Add these steps to `release-checklist.md`:
 
-- Before a release: make sure that no rule stops the new version by mistake.
+- Before a release: make sure that `pom.xml` has the version of the new
+  release with `-SNAPSHOT`, and that CI passed on `master`. Then the test of
+  the rules file has checked that no rule stops the new version.
 - After a release: set the default version in `pom.xml` to the next version
   with `-SNAPSHOT`.
+- Publish the draft release within 7 days after the workflow built it. Each
+  day as a draft is a day less of use for the users. If more than 7 days
+  passed, delete the draft and run the release workflow of the tag again.
+  `Validate-AppImage.ps1` makes sure only that the build is new when the
+  workflow runs. It cannot check the day of the publish.
+- Publish the release with "Set as the latest release". The stable URL of
+  the setup EXE (`releases/latest/download/...`) points to the latest
+  release.
+- The release workflow gives the setup EXE the same name in each release
+  (for example `BananaShot-win-Setup.exe`, see B-24). The stable URL needs
+  this name. Do not add the version to the name.
 - After the release is published: set `latest` in
-  `release/version-policy.json` to the new version, and push the change to
-  `master`.
+  `release/version-policy.json` to the new version, with `installerUrl` to
+  the setup EXE of the new release, and push the change to `master`.
 - Emergency rebuild: if no normal release is ready and the newest build
   expires in less than 60 days, push the next patch tag (for example
   `v1.4.1`) on the commit of the newest release. The release workflow builds
@@ -788,17 +1004,24 @@ Add these steps to `release-checklist.md`:
 The recovery from "no release for 6 months" must not depend on the memory of
 the author (rule 5 in `threat-model.md`). Thus, a workflow gives a reminder.
 
-- A scheduled GitHub workflow runs one time each week. It finds the newest
-  published `v*.*.*` release and its publish date.
-- If the publish date is more than 4 months before the day of the run, the
-  workflow opens an issue: "The newest release expires in less than 60 days.
-  Make a release or an emergency rebuild." 4 months is the build life (6
-  months) minus the 60 days of "Emergency rebuild".
+- A scheduled GitHub workflow runs one time each week. It looks at the
+  published `v*.*.*` releases. For each release, it reads the upload date of
+  the installer file (the `created_at` of the asset). The build age is the
+  time from the latest of these dates to the day of the run.
+- If the build age is more than 4 months, the workflow opens an issue: "The
+  newest release expires in less than 60 days. Make a release or an
+  emergency rebuild." 4 months is the build life (6 months) minus the 60 days
+  of "Emergency rebuild".
 - If an open issue with the same title exists, the workflow does not open a
   second one.
-- The publish date is approximately the build date: the release workflow
-  builds and publishes in one run. `Validate-Release.ps1` makes sure that the
-  build date is at most 7 days earlier.
+- The upload date of the installer is the build date (±1 day): the release
+  workflow builds the installer and uploads it to the draft in one run.
+- Do not use the publish date. The release workflow makes a draft, and the
+  author publishes it later by hand. A draft that waits makes the publish
+  date later than the build date, and the reminder comes too late.
+- Do not use the `created_at` of the release. GitHub sets it to the date of
+  the commit. For an emergency rebuild of an old commit, this date is months
+  before the build.
 - With no published release, the workflow does nothing.
 - Limit: in a public repository, GitHub turns off scheduled workflows after
   60 days with no activity in the repository. GitHub sends an email to the
@@ -880,10 +1103,11 @@ no change to the design.
   `stopsOn` date for each rule. An immediate stop is sometimes necessary, for
   example for a version that damages project files.
 - **Some users cannot read the rules file.** Some regions and some firewalls
-  block `raw.githubusercontent.com`. For these users
-  the app is always offline: they get no rules, no update notice, and no
-  correction of the clock from the server time. The build expiry still
-  applies.
+  block `raw.githubusercontent.com`. Some offices use a proxy that asks for
+  the Windows account (NTLM or Kerberos), and `HttpClient` cannot log in to
+  it (see "Proxy"). For these users the app is always offline: they get no
+  rules, no update notice, and no correction of the clock from the server
+  time. The build expiry still applies.
 - **A clock that is too far forward locks an offline user.** One start with
   such a clock moves the saved time forward, and the saved time does not move
   back without a server time. The app stays locked until a server response,
@@ -896,6 +1120,13 @@ no change to the design.
   to `master` changes the file for all users in some minutes. The file has no
   signature. Such a person can do these things:
   - Set `latest.downloadUrl` to a page with a false installer.
+  - Set `latest.downloadUrl` to a `file:` or network-share URL. The app
+    opens the URL with the browser function of Windows, and Windows can
+    start a program from such a URL. The app does not check the scheme or
+    the host of the URL (decided on 2026-10-02).
+  - Set `latest.installerUrl` to any EXE. "Update and restart" downloads
+    the file and runs it. The app does not check the URL or the file
+    (decided on 2026-10-02).
   - Stop all versions: set `latest.version` to a high version, and add a rule
     with a `toVersion` just below it.
   - Push a mistake. The file is live before CI runs the test of the file.
@@ -907,7 +1138,9 @@ no change to the design.
 
 ## Out of scope
 
-- Automatic download and installation of updates.
+- The full automatic update (B-25): delta packages, an update with no setup
+  window, and an update in the background. The first release has only
+  "Update and restart" (B-30).
 - License keys and the checks of their signatures.
 - The entitlement layer (a check that enables or disables each feature).
 - A read-only mode for expired builds.
@@ -950,6 +1183,10 @@ no change to the design.
 - Manual check before the first release: on a laptop, start the app, put the
   laptop to sleep for 10 minutes, and wake it. The log must show a run time
   that includes the 10 minutes.
+- Manual check of the proxy before the first release: set a manual proxy in
+  the Windows settings (for example, a local Fiddler or mitmproxy), with
+  analytics on. Start the installed app. The proxy must show the request for
+  the rules file and the analytics request. Then remove the proxy setting.
 - The build-date floor: a saved time earlier than the build moment becomes
   the build moment at start; with no saved time and a system time 1 year
   before the build date, the "Clock behind" rule adds 12 hours and shows the
@@ -982,39 +1219,88 @@ no change to the design.
   when the system property `bananashot.version` has a different value;
   `AppInfo.displayName` contains the version; `BUILD_DATE` is a valid
   `yyyy-MM-dd` date; `BuildInfoPrinter` prints the values that
-  `Validate-Release.ps1` checks; `Validate-Release.ps1` fails when the
-  bundled runtime does not contain `jdk.crypto.mscapi`, `jdk.crypto.ec`, or
-  `java.net.http`.
+  `Validate-AppImage.ps1` checks; `Validate-AppImage.ps1` fails when the
+  bundled runtime does not contain `jdk.crypto.mscapi`, `java.net.http`, or
+  (only for a runtime earlier than JDK 22) `jdk.crypto.ec`; the packaged
+  diagnostics fail when the `Windows-ROOT` key store does not load or the
+  HTTPS request to the host of the rules file fails.
 - A system clock that is too far forward: with a network, the app opens in
   normal mode after the "Checking the date…" window and shows the wrong
   clock notice; with no network, the app opens in expired mode, and it leaves
   expired mode within 1 minute after the network is available.
+- Test isolation (the tests do not read GitHub and do not write `HKCU`):
+  - A source guard test, in the style of `ArchitectureDependencyHygieneTest`:
+    in `src/main`, only the production setup refers to the real read of the
+    rules file, the URL of the rules file, and the real store of the saved
+    time. In `src/test`, no test refers to them or to
+    `AppServices.production()`. An allow list names the tests that must use a
+    real part, for example the HTTPS trust test with a local test server.
+  - A UI-flow test starts the app and checks that the fake read of the rules
+    file got the online check of the start, and that the saved time and the
+    flag are in `InMemoryPreferencesProvider`. Thus, the app uses the parts
+    that the test gives, and not real parts.
+  - A network guard for the test run: a JUnit extension that the test run
+    loads automatically sets a default `ProxySelector`. For each request to
+    the host of the rules file, the selector records the request and stops
+    it. After each test, the extension fails the test if a request was
+    recorded. The app shows no error for a failed request (fail open), so a
+    selector that only stops the request cannot find the mistake. This code
+    is only in the tests. It is not a switch in the app.
 - The rules file: not valid, unknown schema, no connection (the saved file
   applies), a timeout after 10 seconds, a new valid file replaces the saved
   file; a file with unknown fields is valid, and the app reads the known
   fields.
+- The valid file: a body larger than 64 KB, a body that is not JSON, a file
+  with no `schema`, and a file with no `rules` are not valid, and the saved
+  file stays; an empty `rules` list is valid; a rule with no `id`, no
+  `stopsOn`, or a `stopsOn` that is not a date is ignored and written to the
+  log, and the other rules apply; a `latest` with no `version` is ignored, and
+  the default download URL applies; a `message` that is not a string is
+  ignored, and the rule applies; a damaged saved file at start gives no saved
+  file.
 - The server response: a 404, a redirect, a file that is not valid, and a file
   with an unknown schema all give a server time; the app does not follow a
   redirect; a failed connection, a timeout, and a TLS error give no server
-  time.
+  time; the server time is `Date` plus `Age` (`Age: 120` adds 2 minutes); an
+  `Age` that is not a number, below 0, or above 3600 is ignored.
+- The texts from the file: a `notes` or a `message` that starts with
+  `<html>` shows as plain text.
 - The release age reminder (run it by hand with `workflow_dispatch`): a
   newest release older than 4 months opens one issue; a second run does not
   open a second issue; a newest release younger than 4 months opens no issue.
-- `release/version-policy.json` in the repository is valid, has `latest`,
-  each rule has a `toVersion`, no rule matches `latest.version`, and each
-  `id` is unique.
+- `release/version-policy.json` in the repository is valid, has a valid
+  `latest`, `schema` is 1, each rule is valid, each version text starts with
+  a number, no rule matches `latest.version` or the version in `pom.xml`,
+  and each `id` is unique; the test fails for a file with `"schema": 2` and
+  for a rule with `toVersion` equal to the version in `pom.xml`.
 - The user interface: the warning starts 30 days before the expiry, and it
   shows one time on each local calendar day in a long session (a session
   from 23:00 to 02:00 local time shows it at start and again before 01:00);
   a closed warning stays hidden for the rest of the calendar day and shows
-  again on the next one; a new rule that makes the expiry earlier shows the
-  warning at once, also after the user closed it; a rule that the app already
-  saw in this session does not show it again.
+  again on the next one; a new rule that makes the expiry earlier than 30
+  days from now shows the warning at once, also after the user closed it; a
+  new rule with a `stopsOn` 90 days from now shows no warning; a rule that
+  the app already saw in this session does not show it again.
 - The log: a rule that gives the effective expiry writes its `id` and the
   date to the log.
+- Update and restart (with a fake download and a fake start of the setup):
+  the update notice shows "Update and restart", "Download update", and
+  "Later" for a newer `latest.version`; "Update and restart" downloads
+  `latest.installerUrl`, saves the open project, starts the setup, and
+  closes the app; with no `installerUrl`, the app downloads the stable URL;
+  with a running export, the app asks first, and "Cancel" changes nothing;
+  a failed download shows the error, deletes the partial file, keeps the app
+  open, and keeps "Download update"; a second click during the download has
+  no effect; when `latest.version` is the app version, the expiry warning
+  and expired mode show only "Download update"; with no saved file, expired
+  mode shows both buttons and uses the stable URL and the releases page.
+- Manual check before the first release (B-26): install version N-1, start
+  it, and click "Update and restart" for version N. Version N starts with
+  the same projects, preferences, and export queue.
 - Expired mode: at start, an expired build shows only the Export tab, the
   banner, and the dialog, and it does not open a project; the dialog closes
-  with "Close", and "Download update" opens the URL and does not quit; the
+  with "Close", and "Download update" opens the URL and does not quit; "Update
+  and restart" works as in a normal session; the
   start button shows the dialog and does not add an export; the function that
   opens a project and the function that adds an export both refuse in
   expired mode, also when the user interface does not call them.

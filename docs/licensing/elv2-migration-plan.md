@@ -26,13 +26,34 @@ Each phase and task heading has one of these marks:
 | 1 LGPL libmpv | Done | L-1.4 moved to the backlog (B-20, post-release). |
 | 2 GPL code in the source | Done | - |
 | 3 License files | Partly done | L-3.8: full installer build. |
-| 4 Third-party sources | Done | The release workflow checks were not run in CI yet (see L-6.1). |
+| 4 Third-party sources | Done | - |
 | 5 License key functionality | Open | L-5.1: approve the spec. L-5.2: implement it. |
 | 6 Release | Open | L-6.1, L-6.2, L-6.3. |
 
-The workflow `windows-release.yml` has not run yet. Thus the first run of the
-release workflow (L-6.1) also closes the open CI items of L-3.7, L-3.8,
-and L-4.5.
+A dry run of `windows-release.yml` (version 0.0.1) passed on 2026-10-02. It
+closed the CI items of L-1.3, L-3.7, and L-4.5. See "Dry run 2026-10-02"
+below.
+
+### Dry run 2026-10-02
+
+The workflow `windows-release.yml` ran by hand with version 0.0.1 on the
+`windows-2022` runner. All steps passed:
+
+- `Validate-Release.ps1` (with `pwsh`) passed.
+- The natives release has both source archives with the SHA-256 of the
+  manifest.
+- `mvn -B test`: 561 tests, 0 failures, 2 skipped.
+- `Get-NativeDependencies.ps1` downloaded FFmpeg and the LGPL libmpv from the
+  natives release.
+- The packaged diagnostics passed. "libmpv load" found client API 2.5 in the
+  `natives\windows-x64\mpv` folder of the app image.
+- `Build-Installer.ps1` made `BananaShot-0.0.1.exe` with WiX 3.14.1.8722. The
+  installer license page uses the joined `BananaShot-License.txt`.
+- The artifact `bananashot-v0.0.1-dry-run-windows-x64` has 8 files. The files
+  are not signed (signing is not configured).
+- The first attempt failed at "Install WiX Toolset 3": the runner image has a
+  newer WiX 3 build, and choco does not install an older pinned version. The
+  step now uses the WiX 3 of the runner image.
 
 ## Goals
 
@@ -289,6 +310,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   files. It fails on the `HEAD` files (LICENSE check). With new license files
   and the old manifest, it fails on the libmpv check. PowerShell 7 is not
   installed locally. CI uses `pwsh`.
+- The dry run of 2026-10-02 passed it with `pwsh`.
 
 ### L-3.8 Installer license page — Partly done
 
@@ -298,6 +320,19 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - **Done 2026-09-25.** The script now reads the files as UTF-8, so the "’" in
   the ELv2 text stays correct in Windows PowerShell 5.1. The license page text
   was tested. A full installer build is still to do (with L-1.3).
+- **Dry run 2026-10-02.** The installer shows the notice, the ELv2 text, and
+  the third-party notices. Two defects: the "’" in "licensor’s" showed as "?",
+  and the list items of `LICENSE-NOTICE` ran together on one line. The cause
+  is the text-to-RTF conversion of jpackage. It writes each character above
+  U+00FF incorrectly, and it keeps a line break only at a blank line.
+- **Fixed 2026-10-02.** `Build-Installer.ps1` now writes
+  `BananaShot-License.rtf` itself, so jpackage does not convert it. It writes
+  non-ASCII characters as RTF Unicode escapes. It joins the lines that were
+  wrapped for width, and keeps the line break before a list item, after a
+  short line, and after a URL line. Tested locally: a RichEdit control shows
+  "licensor’s" and the list items on separate lines.
+- Still to do: a new dry run, and a check of the license page in its
+  installer.
 
 ## Phase 4: Third-party source obligations — Done
 
@@ -382,7 +417,8 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   release in the release notes.
 - Note: the natives release is a pre-release (checked 2026-10-02), so it is
   not the latest release. Publish the first app release as a full release.
-- Still to check: the release workflow steps run in CI (L-6.1).
+- The dry run of 2026-10-02 passed the natives release check (each source
+  file is present and has the SHA-256 of the manifest).
 
 ### L-4.4 Keep FFmpeg out of the app process — Done
 
@@ -420,6 +456,10 @@ ELv2 does not help the goal of this plan.
     and at export start). An app that is never closed also expires.
   - An update check (notice and download link) is in the first release.
     Automatic update comes after the first release.
+    **Changed 2026-10-02:** the first release also has the simple update
+    from the app ("Update and restart", B-30). The full automatic update
+    (B-25) comes after the first release. The spec has the current
+    decisions.
   - Signed license files and the entitlement layer move to L-6.3.
 - **Threat model 2026-10-01:** `threat-model.md`. Use it to assess each
   license measure in this plan.
@@ -433,7 +473,8 @@ ELv2 does not help the goal of this plan.
 - Add `release/version-policy.json` to the repository.
 - Set the default version in `pom.xml` to the next version with `-SNAPSHOT`
   (now `1.0-SNAPSHOT`). **Done:** `<revision>` is `1.0-SNAPSHOT`.
-- Add the expiry check to `Validate-Release.ps1` and the policy steps to
+- Add `Validate-AppImage.ps1` and its step in `windows-release.yml` (see
+  "Build expiry" in the spec). Add the policy steps to
   `release-checklist.md`.
 - Done when: the tests in the spec pass, and an expired test build shows the
   modal dialog and does not open a project.

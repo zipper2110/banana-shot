@@ -27,11 +27,20 @@
       "schema_version": 1,
       "notice_version": 1,
       "session_id": "00000000-0000-4000-8000-000000000002",
-      "app_version": "12345678901234567890123456789012",
+      "app_version": "1.0-SNAPSHOT (dev build) ü/2026-10-03 with a long text",
       "os_family": "other",
       "events": [
         { "sequence_number": 1000000, "name": "source_video_opened", "elapsed_ms": 604800000, "properties": { "result": "other" } }
       ]
-    }
+    },
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000100", "app_version": "", "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000101", "app_version": 7, "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000102", "app_version": 1.5, "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000103", "app_version": null, "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000104", "app_version": true, "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000105", "app_version": {"major": 1}, "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000106", "app_version": ["1", "0"], "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000107", "app_version": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]},
+    {"schema_version": 1, "notice_version": 1, "session_id": "00000000-0000-4000-8000-000000000108", "os_family": "windows", "events": [{"sequence_number": 0, "name": "session_started", "elapsed_ms": 0, "properties": {}}]}
   ]
 }

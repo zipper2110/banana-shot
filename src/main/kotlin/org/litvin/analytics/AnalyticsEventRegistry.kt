@@ -14,9 +14,9 @@ object AnalyticsEventRegistry {
     private const val MAX_EVENTS = 20
     private const val MAX_PROPERTIES_BYTES = 2_048
     private val mapper = ObjectMapper()
-    private val envelopeKeys = setOf("schema_version", "notice_version", "session_id", "app_version", "os_family", "events")
+    private val envelopeKeys = setOf("schema_version", "notice_version", "session_id", "os_family", "events")
+    private val optionalEnvelopeKeys = setOf("app_version")
     private val eventKeys = setOf("sequence_number", "name", "elapsed_ms", "properties")
-    private val appVersion = Regex("[0-9A-Za-z.+-]{1,32}")
     private val uuidV4 = Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
     private val osFamilies = setOf("windows", "macos", "linux", "other")
 
@@ -75,13 +75,14 @@ object AnalyticsEventRegistry {
     internal fun isValidEnvelopeJson(json: String): Boolean = runCatching { mapper.readTree(json) }.getOrNull()?.let(::isValidEnvelopeJson) == true
 
     internal fun isValidEnvelopeJson(envelope: JsonNode): Boolean {
-        if (!envelope.isObject || envelope.fieldNames().asSequence().toSet() != envelopeKeys) return false
+        if (!envelope.isObject) return false
+        val keys = envelope.fieldNames().asSequence().toSet()
+        if (!keys.containsAll(envelopeKeys) || !(envelopeKeys + optionalEnvelopeKeys).containsAll(keys)) return false
         if (envelope.path("schema_version").intValue() != SCHEMA_VERSION || !envelope.path("schema_version").isInt) return false
         if (envelope.path("notice_version").intValue() != NOTICE_VERSION || !envelope.path("notice_version").isInt) return false
         val sessionId = envelope.path("session_id")
         if (!sessionId.isTextual || !uuidV4.matches(sessionId.textValue())) return false
-        val version = envelope.path("app_version")
-        if (!version.isTextual || !appVersion.matches(version.textValue())) return false
+        // Accept all app version values (also a missing one), so that no build loses its data.
         val osFamily = envelope.path("os_family")
         if (!osFamily.isTextual || osFamily.textValue() !in osFamilies) return false
         val events = envelope.path("events")

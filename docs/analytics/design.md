@@ -104,9 +104,17 @@ the most time and hides the wait from the user.
   the summary with the highest `snapshot`.
 - `counters` contains only keys from the counter list below. Each value is an
   integer in `0..1000000`. The app does not send a counter with the value 0.
-- There are no other fields. There are no strings except the closed values of
-  `app_version` (pattern `[0-9A-Za-z.+-]{1,32}`) and `os_family`
-  (`windows`, `macos`, `linux`, `other`).
+- There are no other fields. The only strings are `app_version` and
+  `os_family` (`windows`, `macos`, `linux`, `other`).
+- `app_version` is `BuildInfo.VERSION`. The app and the Worker accept all
+  values of `app_version` (decided on 2026-10-03). Thus a build with an
+  unusual version does not lose its data. The request size limit is the only
+  length limit.
+  - The Worker stores a string as it is.
+  - The Worker stores a number, a boolean, an object, or an array as its JSON
+    text, for example `7` or `{"major":1}`.
+  - A summary can omit `app_version`. The Worker stores a missing value or
+    `null` as `unknown`.
 - The app does not send a clock time, a time zone, a locale, a path, a file
   name, a project name, a score, a player name, or text from the user.
 
@@ -336,15 +344,17 @@ CREATE TABLE analytics_session (
 
 - Contract fixtures (`analytics-contract/v1`): valid and invalid summaries.
   The Kotlin tests and the Worker tests both read them.
-- Kotlin: counter key list, JSON body, timer and "send only if changed" (an
+- Kotlin: counter key list, JSON body (`app_version` is `BuildInfo.VERSION`,
+  see `VersionSourceTest`; all `app_version` values are valid), timer and "send only if changed" (an
   idle app does not send), active time stops when the window is not active,
   the exit sequence and the 500 ms limit, no send after disable, consent
   stays enabled after `close()` (done), `unclean_exit` and the session
   bucket, stop after 410, daemon threads, and one test for each place in
   "Where to record".
 - Worker (vitest with a fake D1): each status code, upsert only with a higher
-  snapshot, kill switch, retention, times rounded to the hour, and no IP
-  address or headers in stored values.
+  snapshot, kill switch, retention, times rounded to the hour, no IP
+  address or headers in stored values, and all `app_version` values (also a
+  missing one) are accepted and stored as described in "Wire format".
 - A guard test for the new architecture rule.
 
 ## Work order

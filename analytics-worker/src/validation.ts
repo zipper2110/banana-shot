@@ -1,6 +1,5 @@
 const eventNames = new Set(['session_started','session_heartbeat','session_ended','project_created','project_opened','source_video_opened','point_added','point_removed','score_point_recorded','adjustment_changed','export_started','export_completed','export_failed','export_cancelled']);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const appVersion = /^[0-9A-Za-z.+-]{1,32}$/;
 const noProperties = new Set(['session_started','session_heartbeat','session_ended','project_created','project_opened','point_added','point_removed','score_point_recorded']);
 
 export type ValidatedEvent = { sequence_number: number; name: string; elapsed_ms: number; properties: Record<string, unknown> };
@@ -9,8 +8,8 @@ export type ValidatedBatch = { session_id: string; app_version: string; os_famil
 export function validateBatch(value: unknown): ValidatedBatch | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const batch = value as Record<string, unknown>;
-  if (!exact(batch, ['schema_version','notice_version','session_id','app_version','os_family','events']) || batch.schema_version !== 1 || batch.notice_version !== 1) return null;
-  if (typeof batch.session_id !== 'string' || !uuid.test(batch.session_id) || typeof batch.app_version !== 'string' || !appVersion.test(batch.app_version)) return null;
+  if (!exact(batch, ['schema_version','notice_version','session_id','os_family','events'], ['app_version']) || batch.schema_version !== 1 || batch.notice_version !== 1) return null;
+  if (typeof batch.session_id !== 'string' || !uuid.test(batch.session_id)) return null;
   if (!['windows','macos','linux','other'].includes(batch.os_family as string) || !Array.isArray(batch.events) || batch.events.length < 1 || batch.events.length > 20) return null;
   const seen = new Set<number>();
   const events: ValidatedEvent[] = [];
@@ -21,9 +20,15 @@ export function validateBatch(value: unknown): ValidatedBatch | null {
     if (!validProperties(event.name, event.properties as Record<string, unknown>)) return null;
     seen.add(event.sequence_number); events.push(event as ValidatedEvent);
   }
-  return { session_id: batch.session_id, app_version: batch.app_version, os_family: batch.os_family as string, events };
+  return { session_id: batch.session_id, app_version: appVersionText(batch.app_version), os_family: batch.os_family as string, events };
 }
-function exact(value: Record<string, unknown>, keys: string[]) { const actual = Object.keys(value); return actual.length === keys.length && keys.every(key => Object.hasOwn(value, key)); }
+/** Accept all app version values, so that no build loses its data. A missing or null value is "unknown". */
+export function appVersionText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value === undefined || value === null) return 'unknown';
+  return JSON.stringify(value);
+}
+function exact(value: Record<string, unknown>, keys: string[], optional: string[] = []) { return keys.every(key => Object.hasOwn(value, key)) && Object.keys(value).every(key => keys.includes(key) || optional.includes(key)); }
 function validProperties(name: string, p: Record<string, unknown>) {
   if (JSON.stringify(p).length > 2048) return false;
   if (noProperties.has(name)) return exact(p, []);

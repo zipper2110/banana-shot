@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Why a video file does not open, in words for the user. [title] is one short sentence.
- * [explanation] tells what happened, the probable cause, and what the user can do. A blank line separates the paragraphs.
+ * [explanation] tells what the application found and what the user can do. A blank line separates the paragraphs.
+ * Each text states only what a check proved (see [find]). [UNREADABLE] is for all other cases.
  */
 data class VideoProblem(val title: String, val explanation: String) {
     companion object {
@@ -22,13 +23,31 @@ data class VideoProblem(val title: String, val explanation: String) {
                 "or the drive with the file is not connected.\n\n" +
                 "Put the file back or connect the drive, then try again.",
         )
-        val INCOMPLETE = VideoProblem(
+        val STILL_WRITING = VideoProblem(
+            "A different program is still writing this file.",
+            "A different program is writing to this file now, for example a copy in File Explorer. " +
+                "$APP can open the video only after that program closes the file.\n\n" +
+                "Wait until the copy is finished, then try again.",
+        )
+        val TRUNCATED = VideoProblem(
             "This video cannot be played.",
-            "$APP could not open the file because the end of the file is missing. " +
-                "This occurs when the copy from the phone or camera is not finished, " +
-                "or when the copy stopped before the end.\n\n" +
-                "If the file is still copying, wait until the copy is finished, then try again. " +
-                "If the copy is finished, copy the video from the device again.",
+            "The end of the file is missing: the file is smaller than its own header says. " +
+                "This occurs when a copy stopped before the end.\n\n" +
+                "Copy the video from the device again.",
+        )
+        val UNWRITTEN_END = VideoProblem(
+            "This video cannot be played.",
+            "The last part of the file contains only zeros. A copy sets the full file size first " +
+                "and then writes the data, so the copy of this file stopped before the end.\n\n" +
+                "Copy the video from the device again.",
+        )
+        val NOT_FINALIZED = VideoProblem(
+            "This recording was not finished correctly.",
+            "The file contains video data, but the index that a video player needs is missing. " +
+                "The device writes the index when the recording stops. This occurs when the recording stopped " +
+                "unexpectedly, for example because the phone turned off or the camera app closed.\n\n" +
+                "A new copy does not help, because the file on the device has the same problem. " +
+                "A video repair tool can sometimes recover the video.",
         )
         val UNREADABLE = VideoProblem(
             "This video cannot be played.",
@@ -41,21 +60,20 @@ data class VideoProblem(val title: String, val explanation: String) {
             "The file has no video stream. For example, it can be an audio file.\n\nSelect a different file.",
         )
 
-        /** Finds the problem from the error lines of FFmpeg or mpv. */
-        fun fromErrors(file: File, errorLines: List<String>): VideoProblem = when {
+        /**
+         * Returns the problem that the checks prove, or null when they find no problem.
+         * The checks read only some bytes of the file, so they are fast also for a large file.
+         */
+        fun find(file: File): VideoProblem? = when {
             !file.isFile -> NOT_FOUND
-            // An MP4 file from a phone has the index (the moov atom) at the end. A copy that is not finished has no index.
-            // A file that is not an MP4 file gives the same error, so the file must also start with an MP4 header.
-            errorLines.any { it.contains("moov atom not found", ignoreCase = true) } && startsWithMp4Header(file) -> INCOMPLETE
-            else -> UNREADABLE
+            FileWriteCheck.isOpenForWriting(file) -> STILL_WRITING
+            else -> when (Mp4Structure.inspect(file)) {
+                Mp4Defect.TRUNCATED -> TRUNCATED
+                Mp4Defect.UNWRITTEN_END -> UNWRITTEN_END
+                Mp4Defect.NOT_FINALIZED -> NOT_FINALIZED
+                null -> null
+            }
         }
-
-        /** True when the file starts with an `ftyp` box, as MP4 and MOV files do. */
-        private fun startsWithMp4Header(file: File): Boolean = runCatching {
-            val head = ByteArray(8)
-            val count = file.inputStream().use { it.readNBytes(head, 0, head.size) }
-            count == head.size && String(head, 4, 4, Charsets.US_ASCII) == "ftyp"
-        }.getOrDefault(false)
     }
 }
 
@@ -76,7 +94,10 @@ fun interface VideoReadCheck {
     fun problem(videoPath: String): VideoProblem?
 }
 
-/** Reads the header of the first video stream with ffprobe. This takes less than one second for a local file. */
+/**
+ * Runs the checks of [VideoProblem.find] first. Then it reads the header of the first video stream with ffprobe.
+ * This takes less than one second for a local file.
+ */
 class FfprobeVideoReadCheck(
     private val ffprobeExecutable: () -> String = { ApplicationLayout.current().ffprobeExecutable },
     private val timeoutSeconds: Long = 10,
@@ -87,7 +108,7 @@ class FfprobeVideoReadCheck(
 
     override fun problem(videoPath: String): VideoProblem? {
         val file = File(videoPath.trim())
-        if (!file.isFile) return VideoProblem.NOT_FOUND
+        VideoProblem.find(file)?.let { return it }
         val process = try {
             ProcessBuilder(
                 ffprobeExecutable(),
@@ -110,6 +131,6 @@ class FfprobeVideoReadCheck(
         val lines = process.inputStream.bufferedReader().use { it.readLines() }.map { it.trim() }.filter { it.isNotEmpty() }
         if (process.exitValue() == 0) return if ("video" in lines) null else VideoProblem.NO_VIDEO
         logger.warn { "ffprobe cannot read $file: ${lines.joinToString(" | ")}" }
-        return VideoProblem.fromErrors(file, lines)
+        return VideoProblem.UNREADABLE
     }
 }

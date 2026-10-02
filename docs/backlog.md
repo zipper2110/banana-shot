@@ -57,6 +57,40 @@ Do these items before the first public release.
 
 - Make a landing site for the app.
 
+### B-19 Only one instance for each Windows account
+
+- Now the user can start the app more than one time. Two instances can open
+  the same project and overwrite the changes of the other. Each instance has
+  its own export queue, so two ffmpeg exports can run at the same time.
+- In `main` (`SwingMainApp`), before the main window opens, lock a file in
+  the data folder (`AppDataPaths`, for example `instance.lock`) with
+  `FileChannel.tryLock`. Keep the lock until the process ends.
+- Windows releases the lock when the process ends, also after a crash or End
+  task. Thus, a lock from an old process never blocks the start. Do not use a
+  file with a process ID and no lock.
+- If the lock is held by another process, show a message and quit: "<app
+  name> is already running. Use the open window. If you cannot see it, look
+  in the taskbar."
+- The lock is in the data folder of the Windows account. Thus, each account
+  can run one instance. A lock for the whole device is not necessary: the
+  projects, the saved queue, the preferences, and the installation are all
+  per account, so two accounts share no state. A lock for the whole device
+  would also block user B while user A keeps the app open in another
+  session, and B cannot close it without administrator rights.
+- Fail open: if the app cannot create or lock the file (for example, the data
+  folder is read-only), it starts, and it writes a line to the log.
+- Take the lock in `main`, not in `AppServices`. The UI-flow tests build the
+  app in the same process with temporary folders, so they must not take it.
+- A development run uses the same data folder as the installed app
+  (`%APPDATA%\BananaShot`), unless `bananashot.appDataDir` or
+  `BANANASHOT_APP_DATA_DIR` is set. Then an open installed app blocks the
+  development run. Set the property for development runs.
+- Do this before B-18. B-18 then needs no rules for a queue that two
+  instances share.
+- Done when: a second start shows the message and quits; after End task on
+  the first instance, the next start works; two Windows accounts can each
+  run one instance.
+
 ### B-18 Keep the export queue after the app closes
 
 - Now the export queue is only in memory (`RenderQueueManager` in
@@ -65,8 +99,13 @@ Do these items before the first public release.
   (`CompletedRendersRepository`).
 - Save each queued `RenderJob` to a file in `AppDataPaths`. Update the file
   when a job is added, starts, completes, fails, or is canceled.
+- B-19 makes sure that only one instance runs. Thus, only one instance reads
+  and writes the file. If the lock of B-19 fails (fail open), two instances
+  can run. Then the instance that starts first owns the file, and the other
+  keeps its queue in memory only.
 - At startup, load the file and put the jobs back in the queue in the same
-  order. Start the restored queue again. A running export that was stopped by
+  order. Start the restored queue automatically. Do not ask the user first.
+  A running export that was stopped by
   the close starts again from the beginning. Delete its partial output file
   first.
 - Each `RenderJob` holds all its data. This includes a copy of the color,
@@ -111,3 +150,11 @@ Do these items after the first public release.
 - Remove background noise from the audio in the exported video. Examples are
   rain, wind, and traffic noise.
 - The sounds of the game (ball hits, calls) must stay clear.
+
+### B-20 Build libmpv in our own CI
+
+- The app now uses the LGPL libmpv build of `lpbborges/grid`. One person
+  keeps that project, so it can stop.
+- Copy its MIT-licensed MSYS2 workflow into this project or into a separate
+  repository. CI must make a pinned LGPL libmpv and its source archive.
+- This is item L-1.4 of `docs/licensing/elv2-migration-plan.md`.

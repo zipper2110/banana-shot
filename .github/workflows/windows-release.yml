@@ -81,7 +81,32 @@ jobs:
 
       - name: Install WiX Toolset 3
         shell: pwsh
-        run: choco install wixtoolset --version=3.14.1 --yes --no-progress
+        run: |
+          # The runner image can already have a WiX 3 build. A pinned choco install
+          # then fails, because choco does not install an older version over it.
+          function Find-WixBin {
+              $command = Get-Command candle.exe -ErrorAction SilentlyContinue
+              if ($command) { return Split-Path $command.Source }
+              $roots = @($env:WIX, "${env:ProgramFiles(x86)}\WiX Toolset v3.14", "${env:ProgramFiles(x86)}\WiX Toolset v3.11") |
+                  Where-Object { $_ }
+              foreach ($root in $roots) {
+                  $bin = Join-Path $root "bin"
+                  if (Test-Path -LiteralPath (Join-Path $bin "candle.exe")) { return $bin }
+              }
+              return $null
+          }
+          $wixBin = Find-WixBin
+          if (-not $wixBin) {
+              choco install wixtoolset --yes --no-progress
+              if ($LASTEXITCODE -ne 0) { throw "WiX Toolset 3 installation failed." }
+              $env:WIX = [Environment]::GetEnvironmentVariable("WIX", "Machine")
+              $wixBin = Find-WixBin
+          }
+          if (-not $wixBin) { throw "WiX Toolset 3 (candle.exe) was not found." }
+          $wixBin | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          $version = (Get-Item -LiteralPath (Join-Path $wixBin "candle.exe")).VersionInfo.FileVersion
+          if ($version -notmatch "^3\.") { throw "WiX Toolset 3 is required; found candle.exe $version." }
+          Write-Host "WiX Toolset $version in $wixBin"
 
       - name: Run tests
         shell: pwsh

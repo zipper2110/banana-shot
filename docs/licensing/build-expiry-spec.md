@@ -1,13 +1,8 @@
 # Build Expiry and Version Rules: Design Spec
 
-Status: draft. The decisions in the table were approved on 2026-09-30. The
-author must still review the details. On 2026-10-01, a review with the threat
-model added "Run time", "Build-date floor", and "Server time far forward".
-On 2026-10-02, a second review removed the measures that stop only actions
-after the line: the trusted time, "Server time far forward", the trust in the
-bundled certificate store only, and the time in project files.
 This spec is item L-5.1 of
 `elv2-migration-plan.md`. Assess its measures with `threat-model.md`.
+`expiry-scenarios.md` gives the user scenarios that the spec must support.
 
 ## Goal
 
@@ -36,17 +31,30 @@ file on a server can stop some versions earlier and tell the user why.
 | License keys | No. Do them before the first paid release. |
 | Entitlement layer | No. Design it with the pricing model. |
 
+All measures of this spec must be in the first release. A later release
+cannot add a measure to a build that is already released. Example: if the
+first release has no "Clock behind", a user of that build can move the clock
+back, block the network, and use the build for years, also after a paid
+release. The same
+applies to each field of the rules file that the app reads (see "Changes to
+the file format"). Do not release a build with only some of the measures.
+
 ## Build expiry
 
 - The build generates a Kotlin source file with constants, for example
   `BuildInfo.kt`:
-  - `const val BUILD_EPOCH_DAY: Long`: the build date (UTC) as the number of
-    days from 1970-01-01. A number is more difficult to find in a class file
-    than a date text.
+  - `const val BUILD_DATE: String`: the build date (UTC) in the format
+    `yyyy-MM-dd`, for example `"2026-10-02"`. The value comes from
+    `${maven.build.timestamp}` with `maven.build.timestamp.format` set to
+    `yyyy-MM-dd`. Maven gives this timestamp in UTC.
   - `const val VERSION: String`: the project version (`${revision}`).
   - Use a Maven plugin that fills a source template, for example
     `templating-maven-plugin`. The Kotlin compiler must compile the generated
     folder.
+- The app reads `BUILD_DATE` with `LocalDate.parse`. A date text is not more
+  difficult to change than a number: both need a bytecode edit, which is
+  after the line (see `threat-model.md`). A number would need a script in the
+  build, because Maven cannot format a timestamp as a number of days.
 - The Kotlin compiler copies each `const val` into the classes that use it.
   To change a value, a person must edit the bytecode. This is clearly a change
   of the checks, not a change of a setting.
@@ -69,6 +77,12 @@ file on a server can stop some versions earlier and tell the user why.
   is a bypass.
 - Development builds also expire. They are built again often, so this has no
   effect on the work.
+- A build in IntelliJ does not run the Maven phase `generate-sources`. Then
+  the IDE uses the `BuildInfo.kt` from the last Maven build, with its old
+  build date. If no Maven build ran for 6 months, a run from the IDE opens in
+  expired mode. The fix is one Maven build, for example
+  `mvn -DskipTests package`. When you implement this spec, add this
+  information to "Getting started (development)" in `README.md`.
 - The JAR has a small main class that prints the build date, the calculated
   expiry date, and the version, for example
   `org.litvin.license.BuildInfoPrinter`. It reads the same constants and the
@@ -85,6 +99,9 @@ file on a server can stop some versions earlier and tell the user why.
     the clock of the same machine as the build, so it cannot find a wrong
     clock. The release runs on GitHub runners, and their clocks are correct.
   - The version is not the jpackage `--app-version`.
+  - The bundled runtime does not contain one of the modules that the request
+    for the rules file needs (see "Trust for the HTTPS connection"). The
+    script gets the list with `runtime\bin\java.exe --list-modules`.
 
 ## Version rules file
 
@@ -97,7 +114,8 @@ because each build expires after that time. Thus, a later move of the file is
 safe.
 
 - The app waits a maximum of 10 seconds for the file. If the read fails, the
-  app shows no error. It tries again at the next read.
+  app shows no error, except in the states that "Online check" names. It
+  tries again on the schedule in "Online check".
 - The app sets `java.net.useSystemProxies=true`, so it uses the proxy of
   Windows. If the read still fails (for example, behind a firewall), the build
   expiry and the saved file apply. The user does not get the update notice or
@@ -134,8 +152,11 @@ Example:
 - `rules`: a list of rules. Each rule stops a range of versions on a date.
   - `id`: a unique name. The app uses it to show the warning again when a
     new rule makes the expiry earlier (see "Expiry warning"), and in the log.
-  - `fromVersion`, `toVersion`: the range (both ends included). Each field is
-    optional, but a rule must have at least one of them.
+  - `fromVersion`, `toVersion`: the range (both ends included). `toVersion`
+    is required. `fromVersion` is optional: with no `fromVersion`, the rule
+    stops all versions up to `toVersion`. The app ignores a rule with no
+    `toVersion`. Thus, a mistake in the file cannot stop a version that is
+    newer than the rule, also a version that is not released yet.
   - `stopsOn`: the date when the versions stop (see "Expiry moment"). A date
     in the past stops the versions at the next expiry check.
   - `message`: the reason. The app shows it in the warning and in the dialog
@@ -145,12 +166,22 @@ Example:
 
 - The app version is `BuildInfo.VERSION` (see "Build expiry"). The app does
   not read the version from a system property, from the `.cfg` file, or from
-  the JAR manifest. Now `AppInfo.version` and the analytics read the system
-  property `tennis.record.version`, and `Build-AppImage.ps1` writes it into the
-  `.cfg` file. Change both to `BuildInfo.VERSION`, and remove the property
-  from `Build-AppImage.ps1`. If not, a user can set the version to `99.0.0` in
-  the `.cfg` file. Then no rule with a `toVersion` stops the build, and the
-  update notice does not show.
+  the JAR manifest. If it did, a user could set the version to `99.0.0` in
+  the `.cfg` file. Then no rule with a `toVersion` would stop the build, and
+  the update notice would not show.
+- Now the code reads the version in these places. Change all of them:
+  - `AppInfo.version` reads the system property `bananashot.version`. If the
+    property has no value, it reads `Implementation-Version` from the JAR
+    manifest. If that has no value, the version is `"development"`. Change
+    `AppInfo.version` to `BuildInfo.VERSION`, and remove both fallbacks.
+    `BuildInfo.VERSION` always has a value, because each build generates it.
+  - `AppInfo.displayName` shows only the name when the version is
+    `"development"`. Remove this case. The name always shows with the
+    version, for example "BananaShot 1.4.0-SNAPSHOT" for a development build.
+  - `EnabledAnalytics` reads the system property `bananashot.version`, with
+    the default `"1.0.0"`. Change it to `BuildInfo.VERSION`.
+  - `Build-AppImage.ps1` writes `-Dbananashot.version` into the `.cfg` file.
+    Remove this option.
 - Versions compare as numbers (`MAJOR.MINOR.PATCH`). The app reads the
   numbers at the start of the version and ignores the rest. A missing number
   is 0. Examples: `1.3-SNAPSHOT` is `1.3.0`. `1.2.1-beta` is `1.2.1`. A
@@ -230,14 +261,23 @@ The app calculates the current time as follows:
 - While the app runs, it adds the run time to the saved time. The run time is
   the change of a counter that ignores changes of the system clock and counts
   the time while the computer sleeps. See "Run time".
-- The build moment is 00:00 UTC on the build date (`BUILD_EPOCH_DAY`). The
+- The build moment is 00:00 UTC on the build date (`BUILD_DATE`). The
   real time is never earlier than the build moment. See "Build-date floor".
 - At start, the saved time becomes the later of: the saved time and the
   build moment. See "Build-date floor".
 - At start, if the system time is more than 24 hours earlier than the saved
   time, the clock is behind. See "Clock behind".
-- More than one instance of the app can run. The first write of the saved
-  time after a new server time replaces the stored value. Thus, the server
+- Only one instance of the app runs for each Windows account (B-19 in
+  `backlog.md`). At start, the app takes the lock of B-19 before all steps of
+  this section: before it reads or writes the saved time, before the
+  build-date floor, and before "Clock behind". A process that does not get
+  the lock (a second start) shows the message of B-19 and quits. It does not
+  write the saved time, and it does not add the 12 hours of "Clock behind".
+  If it did, each second start (for example, a double-click on the icon while
+  the app runs) would use 12 hours of the time that is left.
+- If the lock of B-19 fails, more than one instance can run.
+  For this case, the writes of the saved time follow these rules. The first
+  write of the saved time after a new server time replaces the stored value. Thus, the server
   correction of a time that is too far forward stays after the app closes.
   All other writes keep the later of the stored value and the value of the
   instance. Thus, an instance with no new server time cannot move the stored
@@ -245,7 +285,8 @@ The app calculates the current time as follows:
 - Accepted: if an instance with a time that is too far forward runs together
   with an instance that got a server time, the first instance can write the
   false time again. It corrects itself at its next server time (in 24 hours
-  or less). This needs two instances and a wrong clock, so it is rare.
+  or less). This needs a failed lock, two instances, and a wrong clock, so it
+  is very rare.
 - A server response is any HTTPS response from the host of the rules file,
   with any HTTP status (for example 404). The file in the response can be not
   valid or have an unknown schema. The `Date` header is correct in all these
@@ -253,6 +294,10 @@ The app calculates the current time as follows:
   clock continues if the file moves, breaks, or changes its schema. A
   connection that fails (no network, timeout, TLS error) is not a server
   response.
+- The app does not follow redirects. A redirect (HTTP 3xx) from the host of
+  the rules file is a server response with no valid file. Its `Date` header
+  is a server time. Thus, the server time always comes from the host of the
+  rules file, and never from a host that a redirect names.
 - The server time is the `Date` header of a server response.
 - Until the first server time in the session: if the system time is later
   than the saved time, the saved time becomes the system time.
@@ -264,6 +309,41 @@ The app calculates the current time as follows:
     time. Only the run time moves it forward. Thus, a system clock that is
     too far forward has no effect after a server time.
 - The current time is the saved time.
+
+### Calculation of the saved time
+
+The rules above give one calculation. Implement it as follows. Use this
+section if a rule above seems to give a different result.
+
+The app keeps an anchor in memory: an anchor time `A` and the counter value
+`C_A` at that time. `C(now)` is the counter of "Run time".
+
+- The saved time at each moment: `saved = A + (C(now) − C_A)`.
+- At start, after the lock of B-19:
+  1. `A` = the stored saved time (or no value), and `C_A = C(now)`.
+  2. Build-date floor: if `A` has no value or is earlier than the build
+     moment, `A` = the build moment.
+  3. Clock behind: if the system time is more than 24 hours earlier than `A`,
+     `A = A + 12 hours`.
+- Before the first server time in the session, at each calculation (each
+  tick, each expiry check): if the system time is later than `saved`, then
+  `A` = the system time, and `C_A = C(now)`.
+- When a server time arrives: `A` = the server time, and `C_A` = the counter
+  value when the response arrived. After that, the system time does not
+  change `A` for the rest of the session.
+- Each write stores `saved` in the preferences, with the rules for more than
+  one instance (see above).
+
+Notes:
+
+- The calculation keeps a forward move of the system clock also after the
+  clock moves back in the same session. Example: the system time is 10 days
+  ahead for 1 minute, and then it moves back. `saved` stays 10 days ahead and
+  continues with the run time. A calculation such as
+  `max(stored time + run time, system time)` loses this forward move, so do
+  not use it.
+- The difference between the counter and a clock that Windows corrects (NTP)
+  is some seconds each day. It has no effect on the 24-hour limits.
 
 The app does not protect the server time against a false response. A false
 server time needs a certificate and a proxy, and both are after the line (see
@@ -329,6 +409,11 @@ use. For a user who uses the app a few hours each week, this is some years.
   more than 24 hours earlier than the saved time, the app adds 12 hours to the
   saved time. It does this at each start while the clock is behind. The run
   time moves the saved time forward as usual.
+- Only a process that has the lock of B-19 adds the 12 hours (see "Time and
+  the clock"). A second start that quits adds nothing.
+- Accepted: if the lock fails (fail open), each start adds 12 hours, also a
+  second start while the app runs. This needs a failed lock and a clock that
+  is behind, so it is very rare.
 - The limit of 24 hours prevents false results from small clock errors, for
   example a computer that uses local time in its hardware clock.
 - A server time sets the saved time to the server time. Thus, the 12 hours
@@ -338,6 +423,13 @@ use. For a user who uses the app a few hours each week, this is some years.
   computer and connect to the internet. Until then, each start of <app name>
   uses 12 hours of the time that is left for this version." The user can close
   the notice for the current session.
+- The notice has a "Check now" button. It starts an online check at once
+  (see "Online check"). While the check runs, the button shows "Checking…"
+  and the user cannot click it. If the check gives no connection, the notice
+  shows "<app name> cannot connect to the update server".
+- When a server time arrives, the notice closes. Its text is then not true.
+- In expired mode, the app does not show this notice. It still adds the 12
+  hours. The banner of expired mode tells the user the cause and the fix.
 - Result: for a user who moves the clock back, the time that is left is a
   number of starts (2 starts for each day), not a number of run hours.
 - Harm: an offline user with a broken clock (for example, a flat clock
@@ -372,6 +464,20 @@ app is false, but the rest of Windows uses the correct time.
 - The bundled store is also necessary. Windows gets some root certificates
   only when a program asks for them, so `Windows-ROOT` in Java can miss a root
   that GitHub uses.
+- The bundled runtime must contain these modules:
+  - `jdk.crypto.mscapi`: the `Windows-ROOT` key store.
+  - `jdk.crypto.ec`: the elliptic-curve algorithms for TLS. In Java 17, they
+    are not in `java.base`.
+  - `java.net.http`: `HttpClient`.
+- jpackage builds the runtime with jlink. jlink does not always add a module
+  that only supplies a provider and exports no package, for example
+  `jdk.crypto.mscapi`. If a module is missing, the request fails with no
+  error to the user (fail open), and the users of an office with TLS
+  inspection silently get no rules (S-12 in `expiry-scenarios.md`). Thus,
+  `Validate-Release.ps1` checks the modules (see "Build expiry").
+- If a module is missing, add it with the jpackage option `--add-modules` in
+  `Build-AppImage.ps1`. This option replaces the default list of modules, so
+  the list must also contain all other modules that the app needs.
 - Do not pin the GitHub certificates. GitHub can change its certificate
   authority. Then all users would lose the server time and the rules.
 - A person who adds a certificate can use a proxy to send a false server
@@ -394,10 +500,16 @@ app is false, but the rest of Windows uses the correct time.
   user out when the app is online.
 - The dialog and the banner of expired mode show the date that the app used.
   Thus, the user can see if the clock of the computer is wrong.
-- In expired mode, the app still reads the rules file. If the server time
-  shows that the build has not expired, the app leaves expired mode (see
-  "Expired mode"). Thus, a wrong clock does not block the app when it is
-  online.
+- In expired mode, the app still reads the rules file: every minute while it
+  has no connection, and at once when the user clicks "Check now". If the
+  server time shows that the build has not expired, the app leaves expired
+  mode (see "Expired mode"). Thus, a wrong clock does not block the app when
+  it is online.
+- At start, a build that was not expired in the last session makes an online
+  check before it goes to expired mode. Thus, a clock that is too far forward
+  does not show expired mode for a moment at each start.
+- After a server time, the app tells the user if the clock of the computer is
+  wrong (see "Wrong clock notice").
 
 ## When the app does the checks
 
@@ -405,7 +517,8 @@ app is false, but the rest of Windows uses the correct time.
 
 - At start: the app calculates the effective expiry from the build expiry and
   the saved rules file. It does this before it shows the main window and before
-  it opens a project.
+  it opens a project. If the build looks expired, see "Start of a build that
+  looks expired".
 - During the session: the app does the same check every hour, when the user
   opens a project, and when the user starts an export. Thus, an app that is
   never closed also expires.
@@ -416,10 +529,9 @@ app is false, but the rest of Windows uses the correct time.
   extra work.
 - The worker of the export queue does not check the expiry. An export that
   runs after the expiry contains only work from before the expiry: the job
-  keeps the points, the overlays, and the scoreboard from the moment when the
-  user added it to the queue. The job can read the color and crop settings
-  from the project when it starts, but in expired mode the user cannot change
-  them.
+  keeps all its data (the points, the overlays, the scoreboard, and the color,
+  crop and rotate adjustments) from the moment when the user added it to the
+  queue.
 - Java schedulers use `System.nanoTime`, so an hourly timer can fire up to 1
   hour late after a sleep. Thus, the app uses a tick each minute. The tick
   calculates the current time in memory (see "Time and the clock") and
@@ -431,16 +543,93 @@ app is false, but the rest of Windows uses the correct time.
   write files. When 5 minutes of run time have passed since the last write of
   the saved time, the tick writes the saved time to the preferences.
 - If the build expires during a session, the app saves the open project and
-  goes to expired mode at once (see "Expired mode"). The running export and
-  the queued exports continue.
+  goes to expired mode (see "Expired mode"). The running export and the
+  queued exports continue.
+  - If the session has a server time, the expiry is real (the run time or a
+    rule). The app goes to expired mode at once.
+  - If the session has no server time, the expiry can come from a clock that
+    moved forward. The app first makes one online check with the retries of
+    path A (see "Start of a build that looks expired"). During the check, the
+    app stays in normal mode. If the check shows that the build has not
+    expired, the app stays in normal mode. If not, it goes to expired mode.
 
-### Rules file (network)
+### Start of a build that looks expired
 
-- The app reads the rules file in the background after start. It does not
-  make the start slower.
-- It reads the file again every 24 hours while it runs. Thus, an app that is
-  never closed also gets new rules.
-- After each read, the app does the expiry check again.
+The app keeps a flag in its preferences: "expired mode in the last session".
+The app sets the flag when it goes to expired mode. It clears the flag when
+it leaves expired mode, and at each start in normal mode. Thus, a flag from
+an old build (for example, before an update) does not select path B for the
+new build.
+
+- Path A: the build looks expired, and the flag is not set.
+  - Before the main window opens, the app shows a small window: "Checking the
+    date…". Thus, the user cannot open a project during the check.
+  - The app makes an online check with retries: a maximum of 3 attempts, 2
+    seconds apart. The check stops after 15 seconds in total, also if an
+    attempt still waits for its 10-second limit (for example, behind a
+    firewall that drops the connection).
+  - Not expired: the normal main window opens. If the clock is wrong, the
+    wrong clock notice shows.
+  - Still expired, or no connection: the app opens in expired mode. The
+    dialog shows the result of the check.
+- Path B: the build looks expired, and the flag is set.
+  - The app opens in expired mode at once. The dialog shows "Checking…" and
+    the app makes an online check.
+  - No connection: the dialog shows "<app name> cannot connect to the update
+    server". The checks continue every minute.
+  - Still expired: the dialog shows the text of an expired build.
+  - Not expired: the dialog closes, and the app leaves expired mode.
+- The flag selects only the path. It never changes the result of the expiry
+  check. A user who deletes or changes the flag changes only which path
+  runs. Thus, the flag needs no protection.
+
+### Online check
+
+An online check is a read of the rules file. It has one of these results:
+
+- No connection: the read fails (no network, a timeout, a TLS error).
+- Still expired: a server response arrives, and the expiry check after it
+  still gives an expired build.
+- Not expired: a server response arrives, and the expiry check after it does
+  not give an expired build.
+
+When the app does an online check:
+
+- At start, in the background. It does not make the start slower. (For a
+  build that looks expired, see "Start of a build that looks expired".)
+- When the user clicks "Check now" in the expired dialog, the banner of
+  expired mode, or the "Clock behind" notice. The check runs at once, and the
+  schedule starts again from this check.
+- After each check, on this schedule:
+
+| State | Result of the last check | Next check |
+|---|---|---|
+| Expired mode, or "Clock behind" with no server time in the session | No connection | After 1 minute |
+| Expired mode | Still expired | After 15 minutes |
+| Normal | No connection | After 15 minutes |
+| Normal | A server response with no file that the app can use | After 15 minutes |
+| Normal | A valid file, or a file with an unknown schema | After 24 hours |
+
+- "A server response with no file that the app can use" is an HTTP status
+  that is not 200 (for example 404, 429, a server error, or a redirect), or
+  a file that is not valid. The response still gives a server time.
+- The interval of 15 minutes after such a response: a short error of GitHub
+  then delays the rules and the update notice by 15 minutes, not by one day.
+- A file with an unknown schema gets 24 hours. The author changed the schema
+  on purpose (see "Changes to the file format"), so a short interval gives
+  only load on the server.
+
+- The interval of 1 minute costs nothing on the server: with no network, the
+  request does not get to GitHub. The user waits for the network in this
+  state, so a short interval is necessary.
+- The interval of 15 minutes after "Still expired" limits the load on the
+  server. A real expiry does not change in 15 minutes. Only a fix of a wrong
+  rule changes it, and the user can click "Check now".
+- With the interval of 24 hours, an app that is never closed also gets new
+  rules.
+- Only one check runs at a time. While a check runs, "Check now" shows
+  "Checking…" and the user cannot click it.
+- After each check, the app does the expiry check again.
 
 ## User interface
 
@@ -460,12 +649,18 @@ the name can change.
 ### Expiry warning
 
 - From 30 days before the effective expiry, the app shows a warning that is
-  not modal. It shows the warning at start, and after that one time each day
-  while it runs (from the hourly check). The warning shows the moment of the
-  expiry in local time (see "Expiry moment"), the rule `message` if there is
-  one, and a "Download update" button.
-- The user can close the warning. It then stays hidden until the next daily
-  warning.
+  not modal. It shows the warning at start, and after that one time on each
+  calendar day while it runs. The warning shows the moment of the expiry in
+  local time (see "Expiry moment"), the rule `message` if there is one, and a
+  "Download update" button.
+- "Calendar day" is the date of the current time (see "Time and the clock")
+  in the local time zone of the computer. The app keeps in memory the date
+  when it last showed the warning. The hourly expiry check shows the warning
+  when the date is now later. Thus, the warning shows again in the first hour
+  after local midnight. The app does not save this date: each start shows
+  the warning.
+- The user can close the warning. It then stays hidden until the next
+  calendar day.
 - If a rule that the app has not seen in this session makes the effective
   expiry earlier, the warning shows at once, also if the user closed it. The
   app finds new rules by their `id`. It keeps the seen `id` values in memory
@@ -490,21 +685,31 @@ the app as usual. Each start of an expired build opens in expired mode.
 - Export queue: the running export and the queued exports continue. Expired
   mode does not stop them and does not add to them.
 - Banner: a panel at the top of the window says that this version has
-  expired. It shows the date that the app used and a "Download update"
-  button. The user cannot close the banner.
+  expired. It shows the date that the app used, the state of the online
+  check, a "Check now" button, and a "Download update" button. The user
+  cannot close the banner.
 - Dialog: the app shows the dialog when it goes to expired mode and at each
   start in expired mode. The dialog is modal, and the user can close it.
   - It shows the rule `message` if there is one. If there is no message, it
     shows a default text, for example: "This version of <app name> has
     expired. Download the new version to continue. Your projects stay on
     your computer. Exports that you started before continue."
-  - Buttons: "Download update" (opens the download URL; the app does not
-    quit) and "Close".
+  - It shows the date that the app used and the state of the online check.
+  - Buttons: "Check now", "Download update" (opens the download URL; the app
+    does not quit), and "Close".
+- The state of the online check, in the banner and in the dialog:
+  - While a check runs: "Checking…".
+  - No connection: "<app name> cannot connect to the update server. It
+    checks again every minute. If the date is wrong, correct the clock and
+    connect to the internet." The text does not say "no internet": a
+    firewall or a blocked region can block only the server.
+  - Still expired: no extra text. The server time confirms the date.
 - The download URL is `latest.downloadUrl` from the saved file. If there is no
   saved file, the URL is the GitHub releases page.
-- Leaving expired mode: if a server time or a new rules file shows that the
-  build has not expired, the app removes the banner and shows the tabs again.
-  The user can open a project and start exports as usual.
+- Leaving expired mode: if an online check shows that the build has not
+  expired, the app closes the dialog, removes the banner, clears the flag
+  (see "Start of a build that looks expired"), and shows the tabs again. The
+  user can open a project and start exports as usual.
 
 Dependency: B-18 in `backlog.md` (keep the export queue after the app
 closes). Until B-18 is done, the queue is lost when the app closes. Then
@@ -513,6 +718,20 @@ expired mode at start shows only the completed exports.
 Threat model: in expired mode, the user cannot do new work. The queued
 exports contain only work from before the expiry. To add a job to a saved
 queue, a person must edit a file in the data folder, which is after the line.
+
+### Wrong clock notice
+
+- After each server time, the app compares the system time with the server
+  time. If they differ by more than 24 hours, the app shows a notice that is
+  not modal: "The clock of this computer is wrong by N days. Correct the
+  clock. If you do not, <app name> can stop while the computer is offline."
+- The notice is necessary because a server time corrects the time only for
+  the current session. With a clock that is too far forward, the next start
+  with no network expires again. With a clock that is behind, the next start
+  with no network starts "Clock behind" again.
+- The app shows the notice one time in each session. The user can close it.
+- Harm: none. The notice shows only when the clock is wrong by more than one
+  day.
 
 ## Privacy
 
@@ -529,8 +748,10 @@ queue, a person must edit a file in the data folder, which is after the line.
 ## Release steps
 
 A test in this repository reads `release/version-policy.json`. It fails if
-the file is not valid, if a rule matches `latest.version`, or if two rules
-have the same `id`. Thus, a mistake in the file cannot stop all users.
+the file is not valid, if the file has no `latest`, if a rule has no
+`toVersion`, if a rule matches `latest.version`, or if two rules have the same
+`id`. Thus, a mistake in the file cannot stop all users. `latest` is optional
+for the app, but required in the repository.
 
 Add these steps to `release-checklist.md`:
 
@@ -540,11 +761,50 @@ Add these steps to `release-checklist.md`:
 - After the release is published: set `latest` in
   `release/version-policy.json` to the new version, and push the change to
   `master`.
+- Emergency rebuild: if no normal release is ready and the newest build
+  expires in less than 60 days, push the next patch tag (for example
+  `v1.4.1`) on the commit of the newest release. The release workflow builds
+  it with a new build date, so the new build works for 6 more months. Then
+  update `latest` in `release/version-policy.json`.
+  - Why 60 days, not 30: the expiry warning starts 30 days before the
+    expiry. With 60 days, the update notice gets to the users before the
+    warning. Also, a new user who downloads the newest release gets a build
+    with at least some months of use.
+  - If the release workflow of the old commit fails (for example, an action
+    that GitHub no longer supports), fix the workflow on a branch from the
+    release commit. Then push the tag on the commit with the fix.
+- Do not delete a natives release (for example `natives-2026-09`) while a
+  release tag uses it. The release workflow downloads the natives release
+  that `native-dependencies.json` of the tagged commit names. An emergency
+  rebuild of an old commit fails if this natives release is deleted.
 - Recommendation (not a check): after a release N, wait about 30 days before
   you add a rule that stops N-1. If N has a serious bug on some computers,
   users can install N-1 again until a fix is available. Stop N-1 earlier when
   necessary, for example when N-1 can damage project files. No test or script
   checks this step.
+
+### Release age reminder
+
+The recovery from "no release for 6 months" must not depend on the memory of
+the author (rule 5 in `threat-model.md`). Thus, a workflow gives a reminder.
+
+- A scheduled GitHub workflow runs one time each week. It finds the newest
+  published `v*.*.*` release and its publish date.
+- If the publish date is more than 4 months before the day of the run, the
+  workflow opens an issue: "The newest release expires in less than 60 days.
+  Make a release or an emergency rebuild." 4 months is the build life (6
+  months) minus the 60 days of "Emergency rebuild".
+- If an open issue with the same title exists, the workflow does not open a
+  second one.
+- The publish date is approximately the build date: the release workflow
+  builds and publishes in one run. `Validate-Release.ps1` makes sure that the
+  build date is at most 7 days earlier.
+- With no published release, the workflow does nothing.
+- Limit: in a public repository, GitHub turns off scheduled workflows after
+  60 days with no activity in the repository. GitHub sends an email to the
+  owner before it does this. Thus, if the author makes no commit for 60 days,
+  the reminder can stop. The email from GitHub is then the reminder. Add a
+  line about this to `release-checklist.md`.
 
 ## Known limits
 
@@ -561,6 +821,15 @@ The limits:
   set to a date between the build date and the build expiry. The build-date
   floor limits this to one build life (6 months or less) for each device with
   no saved time.
+- A new Windows user account on the same device has no saved time, because
+  the saved time is in `HKCU`. A user who creates a new account, sets the
+  clock to just after the build date of an old installer, and keeps the
+  device offline gets one build life for each new account. The number of
+  accounts has no limit. Each step is a normal user action. A copy of the
+  saved time in `ProgramData` for the whole device was considered on
+  2026-10-02 and rejected: the effort is too large for a method with this
+  much friction (the device stays offline with a wrong clock for months, and
+  the projects move to each new account). See C-05 in `expiry-scenarios.md`.
 - A user who moves the clock back and blocks the network gets 12 hours for
   each start, plus the run time. The spec does not add a maximum offline
   period, because it would stop honest offline users. Decide this again with
@@ -580,6 +849,11 @@ The limits:
   use it with no limits.
 - Nobody can extend a build after its release. The rules file can only make
   the expiry earlier. If no new release comes for 6 months, all users stop.
+  The recovery is an emergency rebuild (see "Release steps"). It needs a
+  working release workflow and the natives release of the old commit. The
+  release age reminder tells the author 60 days before the expiry. An extension in the rules file with no signature
+  was considered on 2026-10-02 and rejected: the rebuild covers the case when
+  the author is available, and no measure helps when the author is not.
   A signed extension in the rules file was considered and rejected
   (2026-09-30): it adds a key pair, a signing step, and a check in the app,
   and the value is too small for now. It works only for builds that contain
@@ -623,7 +897,7 @@ no change to the design.
   signature. Such a person can do these things:
   - Set `latest.downloadUrl` to a page with a false installer.
   - Stop all versions: set `latest.version` to a high version, and add a rule
-    with no `toVersion`.
+    with a `toVersion` just below it.
   - Push a mistake. The file is live before CI runs the test of the file.
 
   This adds almost no new risk. A person who can push to `master` can also
@@ -653,13 +927,17 @@ no change to the design.
   hour; 31 August plus 6 months is 28 February, and 29 February in a leap
   year.
 - The versions: `1.3-SNAPSHOT` is `1.3.0`; a version with no number is
-  `0.0.0`; a rule that matches `latest.version` is ignored.
+  `0.0.0`; a rule that matches `latest.version` is ignored; a rule with no
+  `toVersion` is ignored; a rule with no `fromVersion` stops all versions up
+  to its `toVersion`.
 - The clock: the system clock moved back (the time still moves forward with
   the run time); the server time replaces a saved time that is too far forward;
   after a server time, a system time that moves back does not change the
   saved time; the saved time is written at each check, every 5 minutes of run
   time, and when the app closes; a session that ends with no close (End task)
-  loses at most 5 minutes of run time.
+  loses at most 5 minutes of run time; before a server time, a system time
+  that moves 10 days forward and then back keeps the saved time 10 days
+  ahead, and the run time continues from there.
 - The run time: a jump of the counter (a sleep) moves the saved time forward,
   also offline with the clock behind; a change of the system clock does not
   change the run time; after a server time, a system time that moves
@@ -687,6 +965,10 @@ no change to the design.
   system time; a Java clock later than the file time stays the system time; a
   probe that cannot write or read the file uses the Java clock and shows no
   error.
+- The instance lock: a second start while the app runs does not get the lock,
+  does not write the saved time, and does not add the 12 hours of "Clock
+  behind", also when the clock is behind; the lock is taken before the saved
+  time is read.
 - More than one instance: a write with no new server time keeps the later of
   the stored value and the new value; the first write after a new server time
   replaces a stored value that is later; after that, a start with no network
@@ -696,23 +978,36 @@ no change to the design.
   rejects a certificate that neither store trusts.
 - The build information: `BuildInfo` has the build date and the version from
   the build; the expiry date is 6 calendar months after the build date;
-  `AppInfo.version` is `BuildInfo.VERSION` also when the system property
-  `tennis.record.version` has a different value; `BuildInfoPrinter` prints
-  the values that `Validate-Release.ps1` checks.
-- A system clock that is too far forward: the app starts in expired mode,
-  then leaves expired mode after a server response.
+  `AppInfo.version` and the analytics version are `BuildInfo.VERSION` also
+  when the system property `bananashot.version` has a different value;
+  `AppInfo.displayName` contains the version; `BUILD_DATE` is a valid
+  `yyyy-MM-dd` date; `BuildInfoPrinter` prints the values that
+  `Validate-Release.ps1` checks; `Validate-Release.ps1` fails when the
+  bundled runtime does not contain `jdk.crypto.mscapi`, `jdk.crypto.ec`, or
+  `java.net.http`.
+- A system clock that is too far forward: with a network, the app opens in
+  normal mode after the "Checking the date…" window and shows the wrong
+  clock notice; with no network, the app opens in expired mode, and it leaves
+  expired mode within 1 minute after the network is available.
 - The rules file: not valid, unknown schema, no connection (the saved file
   applies), a timeout after 10 seconds, a new valid file replaces the saved
   file; a file with unknown fields is valid, and the app reads the known
   fields.
-- The server response: a 404, a file that is not valid, and a file with an
-  unknown schema all give a server time; a failed connection, a timeout, and
-  a TLS error give no server time.
-- `release/version-policy.json` in the repository is valid, no rule matches
-  `latest.version`, and each `id` is unique.
+- The server response: a 404, a redirect, a file that is not valid, and a file
+  with an unknown schema all give a server time; the app does not follow a
+  redirect; a failed connection, a timeout, and a TLS error give no server
+  time.
+- The release age reminder (run it by hand with `workflow_dispatch`): a
+  newest release older than 4 months opens one issue; a second run does not
+  open a second issue; a newest release younger than 4 months opens no issue.
+- `release/version-policy.json` in the repository is valid, has `latest`,
+  each rule has a `toVersion`, no rule matches `latest.version`, and each
+  `id` is unique.
 - The user interface: the warning starts 30 days before the expiry, and it
-  shows one time each day in a long session; a closed warning shows again at
-  the next daily warning; a new rule that makes the expiry earlier shows the
+  shows one time on each local calendar day in a long session (a session
+  from 23:00 to 02:00 local time shows it at start and again before 01:00);
+  a closed warning stays hidden for the rest of the calendar day and shows
+  again on the next one; a new rule that makes the expiry earlier shows the
   warning at once, also after the user closed it; a rule that the app already
   saw in this session does not show it again.
 - The log: a rule that gives the effective expiry writes its `id` and the
@@ -726,7 +1021,37 @@ no change to the design.
 - Expiry during a session: the check saves the open project, stops the
   player, hides all tabs except Export, and shows the banner and the dialog;
   the running export and the queued exports continue to the end; the
-  keyboard shortcuts of the hidden tabs have no effect.
-- Leaving expired mode: a server time that shows that the build has not
-  expired removes the banner and shows the tabs again; the user can then
-  open a project and start an export.
+  keyboard shortcuts of the hidden tabs have no effect; with a server time in
+  the session, the app goes to expired mode with no online check; with no
+  server time in the session, the app makes an online check first and stays
+  in normal mode if the check gives "Not expired".
+- Leaving expired mode: an online check that gives "Not expired" closes the
+  dialog, removes the banner, clears the flag, and shows the tabs again; the
+  user can then open a project and start an export.
+- Start of a build that looks expired: path A (no flag) shows "Checking the
+  date…" before the main window, tries a maximum of 3 times 2 seconds apart,
+  and stops after 15 seconds in total; "Not expired" opens the normal main
+  window; "Still expired" and "No connection" open expired mode with that
+  result in the dialog; path B (flag set) opens expired mode at once with the
+  dialog in "Checking…", and "Not expired" then leaves expired mode; going to
+  expired mode sets the flag, and leaving it clears the flag; a start in
+  normal mode clears the flag; a deleted flag gives path A and the same final
+  result.
+- The online check schedule: "No connection" in expired mode or in "Clock
+  behind" gives the next check after 1 minute; "Still expired" gives 15
+  minutes; "No connection" in normal mode gives 15 minutes; in normal mode, a
+  404, a server error, a redirect, or a file that is not valid gives 15
+  minutes; a valid file or a file with an unknown schema gives 24 hours;
+  "Check now" runs a check at once
+  and starts the schedule again; a second click while a check runs has no
+  effect.
+- The state text: the banner and the dialog show "Checking…" while a check
+  runs, the "cannot connect to the update server" text after "No
+  connection", and no
+  extra text after "Still expired".
+- The "Clock behind" notice: "Check now" runs a check; the notice closes when
+  a server time arrives; in expired mode the notice does not show, and the
+  app still adds the 12 hours.
+- The wrong clock notice: a system time 25 hours from the server time shows
+  the notice with the number of days; 23 hours does not show it; the notice
+  shows one time in each session.

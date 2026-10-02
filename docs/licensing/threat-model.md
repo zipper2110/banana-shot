@@ -95,8 +95,8 @@ against it.
 4. **Prefer measures where the only bypass is a patch for one version.** A
    patched JAR becomes old with each release. Instructions that work for all
    versions ("set the clock to X, add this hosts line") can spread to
-   cheaters. Such instructions are acceptable only when each step is after
-   the line.
+   cheaters. Such instructions are acceptable only when at least one step is
+   after the line.
 5. **Give the author a way to recover.** A measure must not lock all honest
    users if the author or the infrastructure fails. Examples: no release for
    a long time, a wrong server time.

@@ -9,6 +9,31 @@ only when its "Done when" condition is true.
 This plan is not legal advice. Get a review from a lawyer before the first
 paid release.
 
+## Status (checked 2026-10-02)
+
+Each phase and task heading has one of these marks:
+
+- **Done**: the "Done when" condition is true.
+- **Partly done**: some work is complete. The task text lists the work that
+  stays.
+- **Replaced**: a later task replaced this task.
+- **Moved**: the task is now an item in `docs/backlog.md`.
+- **Open**: the work did not start, or the "Done when" condition is not true.
+
+| Phase | Status | Work that stays |
+|---|---|---|
+| 0 Preparation | Done | - |
+| 1 LGPL libmpv | Done | L-1.4 moved to the backlog (B-20, post-release). |
+| 2 GPL code in the source | Done | - |
+| 3 License files | Partly done | L-3.8: full installer build. |
+| 4 Third-party sources | Done | The release workflow checks were not run in CI yet (see L-6.1). |
+| 5 License key functionality | Open | L-5.1: approve the spec. L-5.2: implement it. |
+| 6 Release | Open | L-6.1, L-6.2, L-6.3. |
+
+The workflow `windows-release.yml` has not run yet. Thus the first run of the
+release workflow (L-6.1) also closes the open CI items of L-3.7, L-3.8,
+and L-4.5.
+
 ## Goals
 
 - Keep the source code public.
@@ -41,9 +66,9 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 | libmpv (shinchiro build) | GPLv2+ | In process | **No** |
 | Fonts | System fonts, none bundled | - | Yes |
 
-## Phase 0: Preparation
+## Phase 0: Preparation — Done
 
-### L-0.1 Record which code is already under GPL
+### L-0.1 Record which code is already under GPL — Done
 
 - Find out if the GitHub repository is public and if any build was shared.
 - Tag the last GPL commit (for example `last-gpl`).
@@ -55,7 +80,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   on GitHub. Uncommitted work after `311a444` was never published,
   so it goes directly to ELv2.
 
-### L-0.2 Protect the right to relicense
+### L-0.2 Protect the right to relicense — Done
 
 - You are the only author now. Keep it this way, or get a Contributor License
   Agreement (CLA) from each outside contributor.
@@ -64,16 +89,16 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - **Done 2026-09-25.** `CONTRIBUTING.md` says that the project does not accept
   outside code until it publishes a CLA.
 
-### L-0.3 Choose the licensor name
+### L-0.3 Choose the licensor name — Done
 
 - ELv2 needs a named "Licensor". `LICENSE-NOTICE` now says "BananaShot
   contributors". Use your legal name or your company name.
 - Done when: the licensor name is decided.
 - **Done 2026-09-25.** Licensor: Dmitrii Litvin (no company).
 
-## Phase 1: Replace GPL libmpv with LGPL libmpv
+## Phase 1: Replace GPL libmpv with LGPL libmpv — Done
 
-### L-1.1 Choose an LGPL build
+### L-1.1 Choose an LGPL build — Done
 
 - Needs: LGPL; `d3d11` render API with a shader compiler (`shaderc`,
   `spirv-cross`) for `gpu-next` and `tr-adjust.hook`; `libplacebo`; H.264 and
@@ -108,7 +133,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - A scan of all 31 DLLs found no GPL markers. All six FFmpeg DLLs report
   "LGPL version 2.1 or later".
 
-### L-1.2 Test the preview with the LGPL build
+### L-1.2 Test the preview with the LGPL build — Done
 
 - Test playback, seek, frame step, and hardware decoding.
 - Test `vo=gpu-next` and the `tr-adjust.hook` shader (rotate, crop, color).
@@ -140,10 +165,10 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   profiles, which the app does not set).
 - The DLL must load by an absolute path with backslashes. Then Windows finds
   the dependent DLLs in the same folder. `LibMpv` already does this.
-- Still to do: the diagnostics command and the UI integration tests on a
-  packaged build.
+- The diagnostics command and the UI tests on the packaged app are now release
+  steps. See `docs/release-checklist.md`, step 6 ("Packaged app").
 
-### L-1.3 Change the native dependency manifest
+### L-1.3 Change the native dependency manifest — Done
 
 - **Done 2026-09-25.** The `mpv` entry pins the grid binary and source
   (`license`, `sourceUrl`, `sourceSha256`, `sourceArchiveName`, `buildTag`).
@@ -152,20 +177,23 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   `natives/windows-x64/mpv`. `LICENSES/` and `BUILD-INFO.txt` go beside the
   DLLs. Tested locally for the mpv entry: 31 DLLs, `BUILD-INFO.txt`, and 54
   license files.
-- Still to do: a clean full build and an installer run (CI).
-- Local development: the user variable `MPV_PATH` still points to the GPL DLL
-  in `C:\Program Files\libmpv`. Replace the folder contents with the grid `bin/`
-  files.
+- The clean full build and the installer run are now release steps. See
+  `docs/release-checklist.md`, step 5 ("Dry run") and step 6.
+- Local development: the user variable `MPV_PATH` points to
+  `C:\Program Files\libmpv`. **Done (checked 2026-10-02).** The folder has the
+  31 grid DLLs (`libplacebo-351.dll`, `libshaderc_shared.dll`, and the others).
 
-### L-1.4 Later: build libmpv in our own CI
+### L-1.4 Later: build libmpv in our own CI — Moved
 
 - Copy the MIT-licensed MSYS2 workflow of `lpbborges/grid` into this project
   or a separate repository. Then we do not depend on a one-person project.
 - Done when: CI makes a pinned LGPL libmpv and its source archive.
+- Moved 2026-10-02 to `docs/backlog.md`, item B-20 (post-release). The first
+  release does not need it.
 
-## Phase 2: Remove GPL code from the project source
+## Phase 2: Remove GPL code from the project source — Done
 
-### L-2.1 Review `tr-adjust.hook`
+### L-2.1 Review `tr-adjust.hook` — Done
 
 - The shader copies the math of FFmpeg `vf_eq.c`, `vf_hue.c`, and `vf_lut.c`.
   `vf_eq.c` is in the GPL-only list of FFmpeg (verify this).
@@ -184,7 +212,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   shader. This keeps parity and makes the formula our own.
 - Decision 2026-09-25: keep the shader as it is.
 
-### L-2.2 Search for other copied code
+### L-2.2 Search for other copied code — Done
 
 - Search the source for "ported from", "based on", "copied from", and links to
   GPL projects.
@@ -195,16 +223,16 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - `src/test/resources/media/ui-smoke.mp4` is a project-owner file. Its README
   records the permission.
 
-## Phase 3: Change the license files
+## Phase 3: Change the license files — Partly done
 
-### L-3.1 `LICENSE`
+### L-3.1 `LICENSE` — Done
 
 - Replace the GPLv3 text with the full ELv2 text.
 - Done when: `LICENSE` contains only the ELv2 text.
 - **Done 2026-09-25.** The text is the same as `licenses/ELASTIC-LICENSE-2.0.txt`
   in the elastic/elasticsearch repository (CRLF, UTF-8).
 
-### L-3.2 `LICENSE-NOTICE`
+### L-3.2 `LICENSE-NOTICE` — Done
 
 - Name the licensor (from L-0.3).
 - State that the build expiry, the version check, and the license file are
@@ -216,14 +244,18 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - **Done 2026-09-25.** Get a lawyer to check the definition of "license key
   functionality" (L-6.2).
 
-### L-3.3 `pom.xml`
+### L-3.3 `pom.xml` — Done
 
 - Change `<licenses>` (lines 12-18) to "Elastic License 2.0" with URL
   `https://www.elastic.co/licensing/elastic-license`.
 - Done when: the POM and the SBOM show ELv2.
-- **Done 2026-09-25** for the POM. Check the SBOM in the next release build.
+- **Done 2026-09-25** for the POM.
+- **Done 2026-10-02** for the SBOM. The `cyclonedx-maven-plugin` 2.9.1 (the
+  version of the release profile) gives the app component the license
+  `Elastic-2.0` (SPDX ID) with the ELv2 URL. Step 5 of
+  `docs/release-checklist.md` reviews the SBOM of each release.
 
-### L-3.4 `README.md`
+### L-3.4 `README.md` — Done
 
 - Rewrite the license section (lines 104-110). Say that the source is public
   under ELv2 and that ELv2 is not an OSI open source license.
@@ -231,14 +263,14 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - Done when: the README has no GPL claim about the app.
 - **Done 2026-09-25.**
 
-### L-3.5 `distribution/windows/README.md`
+### L-3.5 `distribution/windows/README.md` — Done
 
 - Rewrite lines 36-38. The app uses ELv2. libmpv is LGPL. FFmpeg is GPL in a
   separate process.
 - Done when: the file matches the new license state.
 - **Done 2026-09-25.**
 
-### L-3.6 `distribution/THIRD-PARTY-NOTICES.txt`
+### L-3.6 `distribution/THIRD-PARTY-NOTICES.txt` — Done
 
 - Change the libmpv entry to LGPL, with the new build source.
 - Change the BananaShot entry to ELv2.
@@ -247,7 +279,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - **Done 2026-09-25.** The FFmpeg and libmpv entries say that the source is
   published beside each release. Phase 4 must make this true before a release.
 
-### L-3.7 `distribution/windows/Validate-Release.ps1`
+### L-3.7 `distribution/windows/Validate-Release.ps1` — Done
 
 - Change the checks (lines 5-15) to require the ELv2 text and the notice
   statements from L-3.2.
@@ -258,7 +290,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   and the old manifest, it fails on the libmpv check. PowerShell 7 is not
   installed locally. CI uses `pwsh`.
 
-### L-3.8 Installer license page
+### L-3.8 Installer license page — Partly done
 
 - `Build-Installer.ps1` joins `LICENSE-NOTICE` and `LICENSE` into the
   installer license page. Add `THIRD-PARTY-NOTICES.txt` to it.
@@ -267,9 +299,9 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   the ELv2 text stays correct in Windows PowerShell 5.1. The license page text
   was tested. A full installer build is still to do (with L-1.3).
 
-## Phase 4: Third-party source obligations
+## Phase 4: Third-party source obligations — Done
 
-### L-4.1 Fix the empty release sources folder
+### L-4.1 Fix the empty release sources folder — Replaced
 
 - `.github/workflows/windows-release.yml` line 120 copies
   `target/distribution/sources/*`. No script fills this folder.
@@ -283,8 +315,9 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - **Changed 2026-09-26.** The natives release replaces the job
   `native-sources` (see L-4.5). The workflow no longer collects sources and
   no longer copies `target/distribution/sources/`.
+- Status: L-4.5 replaced this task. No work stays.
 
-### L-4.2 Publish the FFmpeg source with each release
+### L-4.2 Publish the FFmpeg source with each release — Done
 
 - GPLv3 requires the source of the exact FFmpeg build that you ship.
 - Include the FFmpeg source at the build commit, the BtbN build scripts, and
@@ -310,8 +343,11 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
   stages worked. The result is one 858 MB `.tar` file. It is in the natives
   release (L-4.5), not in each app release. The collection needed Autoconf
   2.73 (LAME), `meson` (glib), and `pkgconf` and `gettext` (LAME macros).
+- Status: done with L-4.5. The "Done when" condition is now: the natives
+  release has the FFmpeg source archive, and each app release links the
+  natives release.
 
-### L-4.3 Publish the libmpv source with each release
+### L-4.3 Publish the libmpv source with each release — Done
 
 - The LGPL also requires the source.
 - **Done 2026-09-25** (not yet run in CI). The job `native-sources` downloads
@@ -320,8 +356,9 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - The zhongfly build was rejected for this reason (see L-1.1).
 - **Changed 2026-09-26.** The natives release keeps a copy of the grid source
   archive (L-4.5).
+- Status: done with L-4.5, the same as L-4.2.
 
-### L-4.5 Keep the native binaries and sources in a natives release
+### L-4.5 Keep the native binaries and sources in a natives release — Done
 
 - Upstream hosting is not permanent. BtbN removes daily builds after about
   two weeks. The GPL requires the source for as long as we offer the binary.
@@ -343,11 +380,11 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - The release workflow checks that the natives release has each source file
   with the SHA-256 of the manifest (`gh release view`). It links the natives
   release in the release notes.
-- Note: the natives release is marked as the latest release. The first app
-  release becomes the latest release when you publish it with "Set as the
-  latest release" selected.
+- Note: the natives release is a pre-release (checked 2026-10-02), so it is
+  not the latest release. Publish the first app release as a full release.
+- Still to check: the release workflow steps run in CI (L-6.1).
 
-### L-4.4 Keep FFmpeg out of the app process
+### L-4.4 Keep FFmpeg out of the app process — Done
 
 - Add a rule to `docs/architecture-rules.md`: the app must start FFmpeg only as
   a separate process, with command-line arguments and pipes.
@@ -357,12 +394,12 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 - **Done 2026-09-25.** The section "Third-party license boundaries" is in
   `docs/architecture-rules.md`.
 
-## Phase 5: License key functionality
+## Phase 5: License key functionality — Open
 
 ELv2 protects only "license key functionality". Without a license check,
 ELv2 does not help the goal of this plan.
 
-### L-5.1 Write a design spec
+### L-5.1 Write a design spec — Open
 
 - Cover: build expiry date, remote minimum-version check, signed license file,
   an offline grace period, and warnings before expiry.
@@ -386,27 +423,32 @@ ELv2 does not help the goal of this plan.
   - Signed license files and the entitlement layer move to L-6.3.
 - **Threat model 2026-10-01:** `threat-model.md`. Use it to assess each
   license measure in this plan.
+- Status: open. The decisions were approved on 2026-09-30, but the spec is
+  still a draft. Reviews on 2026-10-01 and 2026-10-02 changed it. The author
+  must approve the details.
 
-### L-5.2 Add the build expiry, the version rules, and the update check
+### L-5.2 Add the build expiry, the version rules, and the update check — Open
 
 - Implement the design from `build-expiry-spec.md`.
 - Add `release/version-policy.json` to the repository.
 - Set the default version in `pom.xml` to the next version with `-SNAPSHOT`
-  (now `1.0-SNAPSHOT`).
+  (now `1.0-SNAPSHOT`). **Done:** `<revision>` is `1.0-SNAPSHOT`.
 - Add the expiry check to `Validate-Release.ps1` and the policy steps to
   `release-checklist.md`.
 - Done when: the tests in the spec pass, and an expired test build shows the
   modal dialog and does not open a project.
+- Status (checked 2026-10-02): open. Do L-5.1 first. No expiry code and no
+  `release/version-policy.json` exist yet.
 
-## Phase 6: Release
+## Phase 6: Release — Open
 
-### L-6.1 First ELv2 release
+### L-6.1 First ELv2 release — Open
 
 - Release notes must say that the license changed, and why.
 - Done when: `Validate-Release.ps1` passes and the release has all license
   files and source archives.
 
-### L-6.2 Before the first paid release
+### L-6.2 Before the first paid release — Open
 
 - Get a lawyer review of the license files and the EULA terms.
 - Check codec patent licenses for H.264 (libx264) and AAC encoding. The
@@ -419,7 +461,7 @@ ELv2 does not help the goal of this plan.
   Store signs MSIX packages). No certificate gives an instant SmartScreen pass.
 - Done when: the review is complete.
 
-### L-6.3 Before the first paid release: license keys and entitlements
+### L-6.3 Before the first paid release: license keys and entitlements — Open
 
 - Design them together with the pricing model (features, number of exports,
   or the full app).

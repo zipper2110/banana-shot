@@ -26,7 +26,6 @@ import java.awt.event.MouseWheelEvent
 import java.awt.geom.Rectangle2D
 import java.io.File
 import java.util.Locale
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
@@ -61,7 +60,6 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         private const val EDITOR_MARGIN_HORIZONTAL = 0.04
         private const val VIDEO_CARD = "video"
         private const val ERROR_CARD = "error"
-        private const val MAX_LOAD_ERRORS = 20
     }
 
     private val playerId = playerIds.incrementAndGet()
@@ -104,9 +102,6 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     @Volatile private var frameStepCursorMs: Long? = null
     @Volatile private var playbackRate = 1.0f
     @Volatile private var lastStatus = PlayerStatus.STOPPED
-
-    /** The error log lines of mpv since the last `loadfile` command. They tell why a file did not open. */
-    private val loadErrors = CopyOnWriteArrayList<String>()
 
     @Volatile private var videoWidth = 0
     @Volatile private var videoHeight = 0
@@ -304,7 +299,6 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         claimActive()
         loadStartMs = lastKnownTimeMs
         pendingSeekMs = null
-        loadErrors.clear()
         val startSeconds = String.format(Locale.US, "%.3f", loadStartMs / 1000.0)
         logger.info { "Loading into mpv preview #$playerId: ${file.absolutePath} at ${startSeconds}s ($reason)" }
         mpv.setProperty("pause", "yes")
@@ -575,16 +569,14 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                 if (event.endFileReason() == LibMpv.END_FILE_REASON_ERROR) {
                     logger.warn { "mpv preview #$playerId end-file error ${event.endFileError()}" }
                     mediaFile?.let { file ->
-                        val problem = VideoProblem.fromErrors(file, loadErrors.toList())
+                        // The checks read only some bytes of the file, so they are fast also for a large file.
+                        val problem = VideoProblem.find(file) ?: VideoProblem.UNREADABLE
                         SwingUtilities.invokeLater { showErrorCard(problem) }
                     }
                     setStatus(PlayerStatus.ERROR)
                 } else {
                     setStatus(PlayerStatus.STOPPED)
                 }
-            }
-            LibMpv.EVENT_LOG_MESSAGE -> event.logMessage()?.let { (_, level, text) ->
-                if ((level == "error" || level == "fatal") && loadErrors.size < MAX_LOAD_ERRORS) loadErrors += text
             }
             LibMpv.EVENT_VIDEO_RECONFIG -> {
                 logger.debug {

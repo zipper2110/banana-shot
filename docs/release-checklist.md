@@ -45,7 +45,10 @@ the features of this release.
 
 Install the app from the installer of the dry run.
 
-- [ ] `BananaShot Diagnostics.cmd` in the app folder passes.
+- [ ] `BananaShot Diagnostics.cmd` in the app folder passes. The check
+      "libmpv load" shows that Windows finds all libmpv DLLs.
+- [ ] The libmpv folder of the app has `BUILD-INFO.txt` and `LICENSES/` of
+      the LGPL build that `native-dependencies.json` pins.
 - [ ] Run the packaged smoke test and complete its report. See
       `qa/windows/ui-smoke.md`. The smoke test does a real FFmpeg export and
       checks the adjustment controls.

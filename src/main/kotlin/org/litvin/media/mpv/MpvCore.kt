@@ -13,7 +13,6 @@ import kotlin.concurrent.write
  * that no API call runs while mpv_terminate_destroy runs.
  *
  * [onEvent] runs on the event thread. The [MpvEvent] is valid only during the call.
- * [onEvent] also gets the log messages (warning level and higher), after this class logs them.
  */
 internal class MpvCore(
     private val lib: LibMpv,
@@ -83,15 +82,13 @@ internal class MpvCore(
             when (event.id) {
                 LibMpv.EVENT_NONE -> if (closing) return
                 LibMpv.EVENT_SHUTDOWN -> return
-                else -> {
-                    if (event.id == LibMpv.EVENT_LOG_MESSAGE) {
-                        event.logMessage()?.let { (prefix, level, text) -> logger.warn { "mpv[$name] $level [$prefix] $text" } }
-                    }
-                    try {
-                        onEvent(event)
-                    } catch (t: Throwable) {
-                        logger.warn(t) { "mpv[$name] event handler failed for event ${event.id}" }
-                    }
+                LibMpv.EVENT_LOG_MESSAGE -> event.logMessage()?.let { (prefix, level, text) ->
+                    logger.warn { "mpv[$name] $level [$prefix] $text" }
+                }
+                else -> try {
+                    onEvent(event)
+                } catch (t: Throwable) {
+                    logger.warn(t) { "mpv[$name] event handler failed for event ${event.id}" }
                 }
             }
             if (closing) return

@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.export
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.ApplicationLayout
 import org.litvin.ExportPresetsIO
+import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.export.ProductionCompletedRendersRepository
 import org.litvin.export.CompletedRendersRepository
@@ -53,6 +54,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class SwingExportPanel(
     private val settingsPreferences: ExportSettingsPreferences,
     private val renderService: RenderService,
+    // The adjustments of the open project. The export takes a copy when the user queues it.
+    private val adjustments: AdjustmentsSession,
     private val completedRepository: CompletedRendersRepository,
     private val filePicker: FilePicker,
     private val dialogs: UserDialogService,
@@ -60,7 +63,8 @@ class SwingExportPanel(
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
         ExportSettingsPreferences(),
-        ProductionRenderService(AdjustmentsStore.legacySession(), ProductionCompletedRendersRepository),
+        ProductionRenderService(ProductionCompletedRendersRepository),
+        AdjustmentsStore.legacySession(),
         ProductionCompletedRendersRepository,
         SystemFilePicker(),
         SwingUserDialogService(),
@@ -391,6 +395,7 @@ class SwingExportPanel(
                 includeStatsCard = statsCardCheck.isSelected,
                 includeSetSummaries = setSummariesCheck.isEnabled && setSummariesCheck.isSelected,
                 statsSettings = readCurrentStatsSettings(),
+                adjustments = adjustments.get(),
             )
         )
 

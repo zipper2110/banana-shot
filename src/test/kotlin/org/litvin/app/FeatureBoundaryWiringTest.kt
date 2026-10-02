@@ -71,6 +71,7 @@ class FeatureBoundaryWiringTest {
             export = SwingExportPanel(
                 ExportSettingsPreferences(preferences),
                 render,
+                adjustments,
                 completed,
                 picker,
                 dialogs,

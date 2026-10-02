@@ -4,9 +4,6 @@ import org.junit.jupiter.api.Test
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.CompletedRender
 import org.litvin.RenderJob
-import org.litvin.adjustments.AdjustmentsSession
-import org.litvin.app.TrackedExecutorProvider
-import java.time.Duration
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -15,92 +12,63 @@ import kotlin.test.assertSame
 class RenderServiceTest {
     @Test
     fun enqueueBindsEachJobToTheOriginatingServiceGraphsOwnedStateAndRepository() {
-        val executors = TrackedExecutorProvider("render-graph-test", Duration.ofSeconds(5))
-        try {
-            val firstAdjustments = AdjustmentsSession(executors.createScheduledExecutor("first"))
-            val secondAdjustments = AdjustmentsSession(executors.createScheduledExecutor("second"))
-            val firstCompleted = RecordingCompletedRendersRepository()
-            val secondCompleted = RecordingCompletedRendersRepository()
-            val gateway = RecordingRenderQueueGateway()
-            val firstService = ProductionRenderService(firstAdjustments, firstCompleted, gateway)
-            val secondService = ProductionRenderService(secondAdjustments, secondCompleted, gateway)
-            val firstJob = renderJob("first")
-            val secondJob = renderJob("second")
+        val firstCompleted = RecordingCompletedRendersRepository()
+        val secondCompleted = RecordingCompletedRendersRepository()
+        val gateway = RecordingRenderQueueGateway()
+        val firstService = ProductionRenderService(firstCompleted, gateway)
+        val secondService = ProductionRenderService(secondCompleted, gateway)
+        val firstJob = renderJob("first")
+        val secondJob = renderJob("second")
 
-            firstService.enqueue(firstJob)
-            secondService.enqueue(secondJob)
+        firstService.enqueue(firstJob)
+        secondService.enqueue(secondJob)
 
-            assertSame(firstAdjustments, gateway.requests[0].adjustments)
-            assertSame(firstCompleted, gateway.requests[0].completedRenders)
-            assertSame(secondAdjustments, gateway.requests[1].adjustments)
-            assertSame(secondCompleted, gateway.requests[1].completedRenders)
-            firstService.close()
-            secondService.close()
-            firstAdjustments.close()
-            secondAdjustments.close()
-        } finally {
-            executors.close()
-        }
+        assertSame(firstCompleted, gateway.requests[0].completedRenders)
+        assertSame(secondCompleted, gateway.requests[1].completedRenders)
+        firstService.close()
+        secondService.close()
     }
 
     @Test
     fun closingAServiceCancelsOnlyRequestsOwnedByThatServiceGraph() {
-        val executors = TrackedExecutorProvider("render-owner-test", Duration.ofSeconds(5))
-        try {
-            val firstAdjustments = AdjustmentsSession(executors.createScheduledExecutor("first"))
-            val secondAdjustments = AdjustmentsSession(executors.createScheduledExecutor("second"))
-            val gateway = RecordingRenderQueueGateway()
-            val firstService = ProductionRenderService(firstAdjustments, RecordingCompletedRendersRepository(), gateway)
-            val secondService = ProductionRenderService(secondAdjustments, RecordingCompletedRendersRepository(), gateway)
-            val firstJob = renderJob("first-owned")
-            val secondJob = renderJob("second-owned")
-            firstService.enqueue(firstJob)
-            secondService.enqueue(secondJob)
+        val gateway = RecordingRenderQueueGateway()
+        val firstService = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val secondService = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val firstJob = renderJob("first-owned")
+        val secondJob = renderJob("second-owned")
+        firstService.enqueue(firstJob)
+        secondService.enqueue(secondJob)
 
-            firstService.close()
+        firstService.close()
 
-            val firstOwner = gateway.requests[0].ownerId
-            val secondOwner = gateway.requests[1].ownerId
-            assertNotEquals(firstOwner, secondOwner)
-            assertEquals(listOf(firstOwner to firstJob.id), gateway.cancelQueuedRequests)
-            assertEquals(listOf(firstOwner), gateway.cancelCurrentOwners)
-            secondService.close()
-            firstAdjustments.close()
-            secondAdjustments.close()
-        } finally {
-            executors.close()
-        }
+        val firstOwner = gateway.requests[0].ownerId
+        val secondOwner = gateway.requests[1].ownerId
+        assertNotEquals(firstOwner, secondOwner)
+        assertEquals(listOf(firstOwner to firstJob.id), gateway.cancelQueuedRequests)
+        assertEquals(listOf(firstOwner), gateway.cancelCurrentOwners)
+        secondService.close()
     }
 
     @Test
     fun observationHandleRemovesExactlyItsObserver() {
-        val executors = TrackedExecutorProvider("render-observer-test", Duration.ofSeconds(5))
         val gateway = RecordingRenderQueueGateway()
-        val adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"))
-        val service = ProductionRenderService(adjustments, RecordingCompletedRendersRepository(), gateway)
-        try {
-            val first: (ActiveQueueSnapshot) -> Unit = { }
-            val second: (ActiveQueueSnapshot) -> Unit = { }
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val first: (ActiveQueueSnapshot) -> Unit = { }
+        val second: (ActiveQueueSnapshot) -> Unit = { }
 
-            val firstHandle = service.observe(first)
-            service.observe(second)
-            firstHandle.close()
-            firstHandle.close()
+        val firstHandle = service.observe(first)
+        service.observe(second)
+        firstHandle.close()
+        firstHandle.close()
 
-            assertEquals(listOf(second), gateway.observers)
-            service.close()
-        } finally {
-            adjustments.close()
-            executors.close()
-        }
+        assertEquals(listOf(second), gateway.observers)
+        service.close()
     }
 
     @Test
     fun cancellationOperationsDelegateAndReturnTheGatewayResult() {
-        val executors = TrackedExecutorProvider("render-delegation-test", Duration.ofSeconds(5))
-        val adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"))
         val gateway = RecordingRenderQueueGateway().apply { cancelQueuedResult = true }
-        val service = ProductionRenderService(adjustments, RecordingCompletedRendersRepository(), gateway)
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
         try {
             service.cancelCurrent()
 
@@ -109,77 +77,55 @@ class RenderServiceTest {
             assertEquals(listOf("queued-job"), gateway.cancelQueuedIds)
         } finally {
             service.close()
-            adjustments.close()
-            executors.close()
         }
     }
 
     @Test
     fun closeAttemptsEveryObserverRemovalAndCancellationBeforePropagatingFailures() {
-        val executors = TrackedExecutorProvider("render-cleanup-test", Duration.ofSeconds(5))
-        val adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"))
         val gateway = FailingCleanupGateway()
-        val service = ProductionRenderService(adjustments, RecordingCompletedRendersRepository(), gateway)
-        try {
-            val first: (ActiveQueueSnapshot) -> Unit = { }
-            val second: (ActiveQueueSnapshot) -> Unit = { }
-            service.observe(first)
-            service.observe(second)
-            gateway.failRemovalFor = second
-            gateway.failCancellation = true
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val first: (ActiveQueueSnapshot) -> Unit = { }
+        val second: (ActiveQueueSnapshot) -> Unit = { }
+        service.observe(first)
+        service.observe(second)
+        gateway.failRemovalFor = second
+        gateway.failCancellation = true
 
-            val failure = assertFailsWith<IllegalStateException> { service.close() }
+        val failure = assertFailsWith<IllegalStateException> { service.close() }
 
-            assertEquals(listOf(second, first), gateway.removalAttempts)
-            assertEquals(1, gateway.cancelCalls)
-            assertEquals(1, failure.suppressed.size)
-        } finally {
-            adjustments.close()
-            executors.close()
-        }
+        assertEquals(listOf(second, first), gateway.removalAttempts)
+        assertEquals(1, gateway.cancelCalls)
+        assertEquals(1, failure.suppressed.size)
     }
 
     @Test
     fun everyNaturalTerminalOutcomeRemovesHistoricalJobIdsExactlyOnce() {
-        val executors = TrackedExecutorProvider("render-terminal-signal-test", Duration.ofSeconds(5))
-        val adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"))
         val gateway = RecordingRenderQueueGateway()
-        val service = ProductionRenderService(adjustments, RecordingCompletedRendersRepository(), gateway)
-        try {
-            val outcomes = RenderTerminalOutcome.entries
-            repeat(90) { index ->
-                service.enqueue(renderJob("terminal-$index"))
-            }
-            gateway.requests.forEachIndexed { index, request ->
-                request.signalTerminal(outcomes[index % outcomes.size])
-                request.signalTerminal(outcomes[index % outcomes.size])
-            }
-
-            service.close()
-
-            assertEquals(emptyList(), gateway.cancelQueuedRequests)
-        } finally {
-            adjustments.close()
-            executors.close()
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val outcomes = RenderTerminalOutcome.entries
+        repeat(90) { index ->
+            service.enqueue(renderJob("terminal-$index"))
         }
+        gateway.requests.forEachIndexed { index, request ->
+            request.signalTerminal(outcomes[index % outcomes.size])
+            request.signalTerminal(outcomes[index % outcomes.size])
+        }
+
+        service.close()
+
+        assertEquals(emptyList(), gateway.cancelQueuedRequests)
     }
 
     @Test
     fun terminalSignalFollowedByExceptionalEnqueueDoesNotRetainTheJob() {
-        val executors = TrackedExecutorProvider("render-terminal-exception-test", Duration.ofSeconds(5))
-        val adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"))
         val gateway = TerminalThenThrowingGateway()
-        val service = ProductionRenderService(adjustments, RecordingCompletedRendersRepository(), gateway)
-        try {
-            assertFailsWith<IllegalStateException> { service.enqueue(renderJob("exceptional-terminal")) }
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
 
-            service.close()
+        assertFailsWith<IllegalStateException> { service.enqueue(renderJob("exceptional-terminal")) }
 
-            assertEquals(emptyList(), gateway.cancelQueuedIds)
-        } finally {
-            adjustments.close()
-            executors.close()
-        }
+        service.close()
+
+        assertEquals(emptyList(), gateway.cancelQueuedIds)
     }
 
     private class RecordingRenderQueueGateway : RenderQueueGateway {

@@ -33,8 +33,8 @@ internal data class AppServicesProductionFactory(
     val adjustments: (ExecutorProvider) -> AdjustmentsSession = {
         AdjustmentsSession(it.createScheduledExecutor("adjustments-autosave"))
     },
-    val renderService: (AdjustmentsSession, CompletedRendersRepository) -> RenderService = { adjustments, completed ->
-        ProductionRenderService(adjustments, completed)
+    val renderService: (CompletedRendersRepository) -> RenderService = { completed ->
+        ProductionRenderService(completed)
     },
     val encoderCapabilities: () -> EncoderCapabilities = EncoderCapabilities::production,
     val afterConstruction: (AppServices) -> Unit = { },
@@ -107,7 +107,7 @@ data class AppServices(
                 val projectsRepository = construct { factory.projectsRepository(paths) }
                 val completedRenders = construct { factory.completedRenders(paths) }
                 val adjustments = construct { factory.adjustments(executors) }
-                val renderService = construct { factory.renderService(adjustments, completedRenders) }
+                val renderService = construct { factory.renderService(completedRenders) }
                 val encoderCapabilities = CompletableFuture.supplyAsync { factory.encoderCapabilities() }
                 val analyticsConfig = AnalyticsBuildConfig.fromSystemProperties()
                 val analyticsPreferences = if (analyticsConfig is AnalyticsBuildConfig.Enabled) {

@@ -78,7 +78,7 @@ class AppServicesTest {
                         adjustments = { provider ->
                             AdjustmentsSession(provider.createScheduledExecutor("construction-adjustments"))
                         },
-                        renderService = { _, _ -> render },
+                        renderService = { _ -> render },
                         encoderCapabilities = { EncoderCapabilities.NONE },
                         afterConstruction = { throw IllegalStateException("construction failed") },
                     ),

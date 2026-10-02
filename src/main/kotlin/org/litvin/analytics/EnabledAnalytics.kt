@@ -4,7 +4,7 @@ package org.litvin.analytics
 internal class EnabledAnalytics(config: AnalyticsBuildConfig.Enabled) : ManagedAnalytics {
     private val session = AnalyticsSession()
     private val buffer = AnalyticsBuffer()
-    private val appVersion = System.getProperty("tennis.record.version", "1.0.0")
+    private val appVersion = System.getProperty("bananashot.version", "1.0.0")
     private val osFamily = config.osFamily
     @Volatile private var closed = false
 

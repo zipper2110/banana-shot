@@ -12,10 +12,12 @@ Do these items before the first public release.
 
 ### B-4 License restriction
 
-- `docs/licensing/elv2-migration-plan.md` has the open license items
-  (phase 5, license key functionality, and phase 6, release).
-- The license restriction (phase 5) must be in the first release. Check which
-  other items must also be in it.
+- `docs/licensing/build-expiry-spec.md` has the design (build expiry, version
+  rules, update check). Review the draft, then do L-5.2 of
+  `docs/licensing/elv2-migration-plan.md`.
+- This must be in the first release. A build without an expiry stays free
+  forever.
+- Phase 6 of the plan has the other license items for the release.
 
 ### B-5 First-time hints for new users
 
@@ -55,6 +57,25 @@ Do these items before the first public release.
 
 - Make a landing site for the app.
 
+### B-18 Keep the export queue after the app closes
+
+- Now the export queue is only in memory (`RenderQueueManager` in
+  `RenderQueue.kt`). When the app closes, the queued exports and the running
+  export are lost. Only completed exports are saved
+  (`CompletedRendersRepository`).
+- Save each queued `RenderJob` to a file in `AppDataPaths`. Update the file
+  when a job is added, starts, completes, fails, or is canceled.
+- At startup, load the file and put the jobs back in the queue in the same
+  order. Start the restored queue again. A running export that was stopped by
+  the close starts again from the beginning. Delete its partial output file
+  first.
+- `RenderQueueRequest` also needs an `AdjustmentsSession`, which is not data.
+  Make it again from the project of the job. If the project or the source
+  video is not available, show the job as failed with a clear reason.
+- Done when: the user adds 3 exports, closes the app during the first export,
+  and opens the app again. The Exports table shows the 3 exports, and they
+  complete. A canceled export does not come back.
+
 ## Post-release
 
 Do these items after the first public release.
@@ -82,3 +103,9 @@ Do these items after the first public release.
 ### B-16 Social media features
 
 - Add features for social media use.
+
+### B-17 Audio noise reduction
+
+- Remove background noise from the audio in the exported video. Examples are
+  rain, wind, and traffic noise.
+- The sounds of the game (ball hits, calls) must stay clear.

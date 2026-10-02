@@ -13,6 +13,7 @@ import org.litvin.projects.ProjectsRepository
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.SystemFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
+import org.litvin.ui.commons.VideoErrorPanel
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsController
@@ -24,7 +25,7 @@ internal data class AppServicesProductionFactory(
     val paths: () -> AppDataPaths = AppDataPaths::production,
     val preferences: () -> PreferencesProvider = PreferencesProvider::production,
     val executors: () -> ExecutorProvider = { TrackedExecutorProvider() },
-    val mediaPlayers: () -> MediaPlayerFactory = { productionMediaPlayerFactory() },
+    val mediaPlayers: () -> MediaPlayerFactory = { productionMediaPlayerFactory(VideoErrorPanel) },
     val filePicker: () -> FilePicker = { SystemFilePicker() },
     val dialogs: () -> UserDialogService = { SwingUserDialogService() },
     val projectsRepository: (AppDataPaths) -> ProjectsRepository = { FileProjectsRepository(it.projects) },

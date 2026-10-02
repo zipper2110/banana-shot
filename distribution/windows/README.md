@@ -12,7 +12,7 @@ import libraries and HTML docs are not.
 .\distribution\windows\Get-NativeDependencies.ps1
 mvn test
 .\distribution\windows\Build-AppImage.ps1 -Version 1.0.0
-& ".\target\package\app-image\Tennis Record\Tennis Record Diagnostics.cmd"
+& ".\target\package\app-image\BananaShot\BananaShot Diagnostics.cmd"
 ```
 
 Building the EXE additionally requires WiX Toolset 3:
@@ -22,7 +22,7 @@ Building the EXE additionally requires WiX Toolset 3:
 ```
 
 The app icon source is `src/main/resources/icons/app-icon.svg`. The app uses
-this SVG for the window icon. `assets/tennis-record.ico` is generated from it.
+this SVG for the window icon. `assets/bananashot.ico` is generated from it.
 After you change the SVG, run this command to generate the ICO again:
 
 ```powershell
@@ -44,9 +44,9 @@ release. It gives the release steps in sequence. The open work is in
 - To test the release workflow without a release, start it by hand: open the
   Actions tab, select "Windows release", click "Run workflow", and type a
   version. This dry run builds, tests and checks everything. It uploads the
-  files as the workflow artifact `tennis-record-v<version>-dry-run-windows-x64`
+  files as the workflow artifact `bananashot-v<version>-dry-run-windows-x64`
   and does not create a tag or a release.
-- Tennis Record uses the Elastic License 2.0. Bundle only an LGPL build of
+- BananaShot uses the Elastic License 2.0. Bundle only an LGPL build of
   libmpv (`-Dgpl=false`), because the app loads libmpv into its own process.
   `Validate-Release.ps1` checks this.
 - Run FFmpeg only as a separate process. The GPL FFmpeg build is then an

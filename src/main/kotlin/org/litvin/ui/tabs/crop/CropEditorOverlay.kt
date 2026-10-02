@@ -102,7 +102,7 @@ class CropEditorOverlay(
         val current = overlayRect(content)
         val moved = CropGeometryMath.clampInside(
             current.copy(x = current.x + dx, y = current.y + dy),
-            allowedBounds(content),
+            frameBounds(content),
             aspect(content),
         )
         emit(modelFrom(content, moved))
@@ -117,7 +117,7 @@ class CropEditorOverlay(
 
     private fun handleDrag(e: MouseEvent) {
         val content = player.videoBounds() ?: return
-        val bounds = allowedBounds(content)
+        val bounds = frameBounds(content)
         val aspect = aspect(content)
         val dx = e.x - dragStartPoint.x
         val dy = e.y - dragStartPoint.y
@@ -136,14 +136,16 @@ class CropEditorOverlay(
             )
             HitTarget.N, HitTarget.S -> {
                 val delta = if (dragTarget == HitTarget.N) dy else -dy
-                CropGeometryMath.centeredResize(dragStartRect, bounds, aspect, -2.0 * delta)
+                fitToRotatedFrame(CropGeometryMath.centeredResize(dragStartRect, bounds, aspect, -2.0 * delta), content)
             }
             HitTarget.E, HitTarget.W -> {
                 val delta = if (dragTarget == HitTarget.E) dx else -dx
-                CropGeometryMath.centeredResize(dragStartRect, bounds, aspect, 2.0 * delta)
+                fitToRotatedFrame(CropGeometryMath.centeredResize(dragStartRect, bounds, aspect, 2.0 * delta), content)
             }
-            HitTarget.NW, HitTarget.NE, HitTarget.SW, HitTarget.SE ->
-                CropGeometryMath.centeredResize(dragStartRect, bounds, aspect, 2.0 * cornerDelta(dx, dy, aspect))
+            HitTarget.NW, HitTarget.NE, HitTarget.SW, HitTarget.SE -> fitToRotatedFrame(
+                CropGeometryMath.centeredResize(dragStartRect, bounds, aspect, 2.0 * cornerDelta(dx, dy, aspect)),
+                content,
+            )
             else -> dragStartRect
         }
         emit(modelFrom(content, nextRect))
@@ -242,25 +244,18 @@ class CropEditorOverlay(
     private fun aspect(content: Rectangle2D.Double): Double =
         if (content.height > 0.0) content.width / content.height else 16.0 / 9.0
 
-    /** The crop rectangle in component pixels, clamped inside the rotated frame. */
+    /** The crop rectangle in component pixels, fitted to the rotated frame as the export fits it. */
     private fun overlayRect(content: Rectangle2D.Double): CropRect {
         val model = CropGeometryMath.overlayFromModel(content.width, content.height, adjustments)
-        return CropGeometryMath.clampInside(
-            model.copy(x = model.x + content.x, y = model.y + content.y),
-            allowedBounds(content),
-            aspect(content),
-        )
+        return fitToRotatedFrame(model.copy(x = model.x + content.x, y = model.y + content.y), content)
     }
 
-    private fun allowedBounds(content: Rectangle2D.Double): CropRect {
-        val local = CropGeometryMath.largestCenteredInscribedRect(
-            content.width,
-            content.height,
-            adjustments.rotationDeg.toDouble(),
-            aspect(content),
-        )
-        return local.copy(x = content.x + local.x, y = content.y + local.y)
-    }
+    /** The size limit comes from the rotated frame. The position limit is the content box. */
+    private fun fitToRotatedFrame(rect: CropRect, content: Rectangle2D.Double): CropRect =
+        CropGeometryMath.fitToRotatedFrame(rect, frameBounds(content), adjustments.rotationDeg.toDouble(), aspect(content))
+
+    private fun frameBounds(content: Rectangle2D.Double): CropRect =
+        CropRect(content.x, content.y, content.width, content.height)
 
     private fun handleRects(overlay: CropRect, size: Double): List<Pair<HitTarget, CropRect>> {
         val half = size / 2.0

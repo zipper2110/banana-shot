@@ -113,7 +113,7 @@
 //!HOOK MAIN
 //!BIND HOOKED
 //!WHEN tr_active
-//!DESC tennis-record adjust (ffmpeg rotate/crop/eq/lutyuv parity)
+//!DESC bananashot adjust (ffmpeg rotate/crop/eq/lutyuv parity)
 
 vec3 rgb_to_codes(vec3 rgb, float kr, float kb) {
     float kg = 1.0 - kr - kb;

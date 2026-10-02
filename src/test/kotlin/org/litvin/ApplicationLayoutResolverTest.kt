@@ -14,7 +14,7 @@ class ApplicationLayoutResolverTest {
 
     @Test
     fun prefers_explicit_tool_overrides_even_when_paths_contain_spaces() {
-        val appHome = tempDir.resolve("Tennis Record").toFile().apply { mkdirs() }
+        val appHome = tempDir.resolve("BananaShot").toFile().apply { mkdirs() }
         val ffmpeg = tempDir.resolve("Custom Tools/ffmpeg.exe").toFile().apply {
             parentFile.mkdirs()
             writeText("")
@@ -42,7 +42,7 @@ class ApplicationLayoutResolverTest {
     fun resolves_packaged_layout_and_sibling_ffprobe() {
         val appHome = tempDir.resolve("installed app").toFile().apply { mkdirs() }
         val appDirectory = File(appHome, "app").apply { mkdirs() }
-        val mainJar = File(appDirectory, "tennisrecord.jar").apply { writeText("") }
+        val mainJar = File(appDirectory, "bananashot.jar").apply { writeText("") }
         val nativeRoot = File(appHome, "natives/windows-x64")
         val mpv = File(nativeRoot, "mpv").apply {
             mkdirs()
@@ -53,7 +53,7 @@ class ApplicationLayoutResolverTest {
             writeText("")
         }
         val ffprobe = File(ffmpeg.parentFile, "ffprobe.exe").apply { writeText("") }
-        val launcher = File(appHome, "Tennis Record.exe").apply { writeText("") }
+        val launcher = File(appHome, "BananaShot.exe").apply { writeText("") }
 
         val layout = ApplicationLayoutResolver(
             properties = mapOf("os.name" to "Windows 11", "user.home" to tempDir.toString()),
@@ -95,7 +95,7 @@ class ApplicationLayoutResolverTest {
             properties = mapOf(
                 "os.name" to "Windows 11",
                 "user.home" to tempDir.resolve("home").toString(),
-                "tennis.record.appDir" to appHome.absolutePath,
+                "bananashot.appDir" to appHome.absolutePath,
             ),
             environment = emptyMap(),
             codeSourceLocation = null,
@@ -115,10 +115,10 @@ class ApplicationLayoutResolverTest {
             properties = mapOf(
                 "os.name" to "Windows 11",
                 "user.home" to tempDir.resolve("home").toString(),
-                "tennis.record.appDataDir" to propertyRoot.path,
+                "bananashot.appDataDir" to propertyRoot.path,
             ),
             environment = mapOf(
-                "TENNIS_RECORD_APP_DATA_DIR" to environmentRoot.path,
+                "BANANASHOT_APP_DATA_DIR" to environmentRoot.path,
                 "APPDATA" to tempDir.resolve("roaming").toString(),
             ),
         ).resolve()
@@ -137,7 +137,7 @@ class ApplicationLayoutResolverTest {
                 "user.home" to tempDir.resolve("home").toString(),
             ),
             environment = mapOf(
-                "TENNIS_RECORD_APP_DATA_DIR" to environmentRoot.path,
+                "BANANASHOT_APP_DATA_DIR" to environmentRoot.path,
                 "APPDATA" to tempDir.resolve("roaming").toString(),
             ),
         ).resolve()
@@ -158,7 +158,7 @@ class ApplicationLayoutResolverTest {
             environment = mapOf("APPDATA" to appData.path),
         ).resolve()
 
-        assertEquals(appData.resolve("tennis-record"), layout.appDataDirectory)
+        assertEquals(appData.resolve("BananaShot"), layout.appDataDirectory)
     }
 
     @Test
@@ -171,7 +171,7 @@ class ApplicationLayoutResolverTest {
             environment = emptyMap(),
         ).resolve()
 
-        assertEquals(userHome.resolve(".tennis-record"), layout.appDataDirectory)
+        assertEquals(userHome.resolve(".bananashot"), layout.appDataDirectory)
     }
 
     @Test
@@ -191,7 +191,7 @@ class ApplicationLayoutResolverTest {
         properties: Map<String, String>,
         environment: Map<String, String> = emptyMap(),
     ) = ApplicationLayoutResolver(
-        properties = properties + ("tennis.record.appDir" to appHome.absolutePath),
+        properties = properties + ("bananashot.appDir" to appHome.absolutePath),
         environment = environment,
         codeSourceLocation = null,
         workingDirectory = tempDir.toFile(),

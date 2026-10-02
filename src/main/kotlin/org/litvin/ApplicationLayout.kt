@@ -41,13 +41,13 @@ class ApplicationLayoutResolver(
             mpvDirectory = resolveMpvDirectory(nativeRoot),
             ffmpegExecutable = ffmpegExecutable,
             ffprobeExecutable = ffprobeExecutable,
-            packagedLauncher = File(appHome, "Tennis Record.exe").takeIf { it.isFile },
+            packagedLauncher = File(appHome, "${AppInfo.NAME}.exe").takeIf { it.isFile },
             appDataDirectory = resolveAppDataDirectory(),
         )
     }
 
     private fun resolveAppHome(): File {
-        value("tennis.record.appDir")?.let { return File(it).absoluteFile.normalize() }
+        value("bananashot.appDir")?.let { return File(it).absoluteFile.normalize() }
 
         val location = codeSourceLocation?.let(::File)?.absoluteFile?.normalize()
         if (location != null) {
@@ -100,14 +100,14 @@ class ApplicationLayoutResolver(
     }
 
     private fun resolveAppDataDirectory(): File {
-        value("tennis.record.appDataDir")?.let { return File(it).absoluteFile.normalize() }
-        environment["TENNIS_RECORD_APP_DATA_DIR"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        value("bananashot.appDataDir")?.let { return File(it).absoluteFile.normalize() }
+        environment["BANANASHOT_APP_DATA_DIR"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absoluteFile.normalize()
         }
         environment["APPDATA"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
-            return File(it, "tennis-record")
+            return File(it, AppInfo.NAME)
         }
-        return File(properties["user.home"] ?: ".", ".tennis-record")
+        return File(properties["user.home"] ?: ".", ".bananashot")
     }
 
     private fun value(name: String): String? = properties[name]?.trim()?.takeIf { it.isNotEmpty() }

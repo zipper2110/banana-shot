@@ -88,6 +88,28 @@ object CropGeometryMath {
         return CropRect(x, y, width, height)
     }
 
+    /**
+     * Fits [rect] to [frame] when the frame content turns by [rotationDeg].
+     * The size is not larger than the largest centered rectangle inside the rotated content, so a rotation
+     * without zoom shows no black corners. A larger [rect] shrinks about its center.
+     * The position can be anywhere inside [frame], so a pan can show the black corners of the rotated content.
+     */
+    fun fitToRotatedFrame(rect: CropRect, frame: CropRect, rotationDeg: Double, aspect: Double): CropRect {
+        val maxWidth = largestCenteredInscribedRect(frame.width, frame.height, rotationDeg, aspect).width
+        val shrunk = if (rect.width > maxWidth) {
+            val height = maxWidth / aspect
+            CropRect(
+                x = rect.x + (rect.width - maxWidth) / 2.0,
+                y = rect.y + (rect.height - height) / 2.0,
+                width = maxWidth,
+                height = height,
+            )
+        } else {
+            rect
+        }
+        return clampInside(shrunk, frame, aspect)
+    }
+
     private fun coerceCoordinate(value: Double, minimum: Double, maximum: Double): Double {
         return if (maximum <= minimum) minimum else value.coerceIn(minimum, maximum)
     }

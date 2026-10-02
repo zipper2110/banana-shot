@@ -11,9 +11,9 @@
 
     <!-- The user sends these files with a bug report. Keep at most 6 files of 5 MB. -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/tennis-record.log</file>
+        <file>${LOG_DIR}/bananashot.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>${LOG_DIR}/tennis-record.%i.log</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/bananashot.%i.log</fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>5</maxIndex>
         </rollingPolicy>

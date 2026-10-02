@@ -63,6 +63,26 @@ class CropGeometryMathTest {
     }
 
     @Test
+    fun rotationWithoutPanKeepsTheCenteredInscribedRect() {
+        val frame = CropRect(0.0, 0.0, 1920.0, 1080.0)
+        val fitted = CropGeometryMath.fitToRotatedFrame(frame, frame, 5.0, 16.0 / 9.0)
+        val inscribed = CropGeometryMath.largestCenteredInscribedRect(1920.0, 1080.0, 5.0, 16.0 / 9.0)
+
+        assertNear(inscribed.x, fitted.x, 0.001)
+        assertNear(inscribed.y, fitted.y, 0.001)
+        assertNear(inscribed.width, fitted.width, 0.001)
+    }
+
+    @Test
+    fun panMovesTheCropPastTheRotatedFrameToTheFrameEdge() {
+        val plan = GeometryPlan.of(AdjustmentsV1(zoom = 1.3f, panX = 1.0f, rotationDeg = 5.0f), 3840, 2160)
+
+        // The even-pixel snap can leave up to 4 source pixels. The old clamp stopped near 0.934.
+        assertNear(1.0, plan.crop.x + plan.crop.width, 4.0 / 3840.0)
+        assertNear(1.0 / 1.3, plan.crop.width, 2.0 / 3840.0)
+    }
+
+    @Test
     fun zoomBelowOneGivesTheFullFrame() {
         val full = CropGeometryMath.overlayFromModel(1600.0, 900.0, AdjustmentsV1(zoom = 1.0f))
         val small = CropGeometryMath.overlayFromModel(1600.0, 900.0, AdjustmentsV1(zoom = 0.3f, panX = 0.5f))

@@ -137,10 +137,10 @@ Copy-Item -LiteralPath $manifestPath -Destination $outDir
 Copy-Item -LiteralPath (Join-Path $repoRoot "distribution\THIRD-PARTY-NOTICES.txt") -Destination $outDir
 
 $readme = @"
-Tennis Record natives $ReleaseTag
+BananaShot natives $ReleaseTag
 
-Third-party native builds that Tennis Record bundles, and their
-corresponding source code. This is not a Tennis Record release.
+Third-party native builds that BananaShot bundles, and their
+corresponding source code. This is not a BananaShot release.
 
 Binaries (unmodified copies of the pinned upstream builds):
 - $($manifest.ffmpeg.archiveName)

@@ -16,6 +16,7 @@ import org.litvin.points.PointV1
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
 import org.litvin.media.PlayerStatus
+import org.litvin.media.relativeSeekDeltaMs
 import org.litvin.media.VideoOverlay
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
@@ -613,7 +614,8 @@ class SwingScoringPanel(
 
     private fun seekBy(deltaMs: Long) {
         // Compute target and clamp to current segment when available
-        var target = (player.currentTimeMs() + deltaMs)
+        val playing = player.status() == PlayerStatus.PLAYING
+        var target = (player.currentTimeMs() + relativeSeekDeltaMs(deltaMs, playing))
         if (segmentEndMs > segmentStartMs) {
             val maxPlayable = (segmentEndMs - 1).coerceAtLeast(segmentStartMs)
             if (target < segmentStartMs) target = segmentStartMs

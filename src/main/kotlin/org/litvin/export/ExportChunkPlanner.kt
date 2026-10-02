@@ -15,7 +15,7 @@ object ExportChunkPlanner {
     const val DEFAULT_MAX_SEGMENTS_PER_CHUNK = 8
 
     /** Override for troubleshooting; a larger value trades memory for fewer passes. */
-    private const val MAX_SEGMENTS_PROPERTY = "tennisrecord.export.chunkSegments"
+    private const val MAX_SEGMENTS_PROPERTY = "bananashot.export.chunkSegments"
 
     data class Chunk(
         val keeps: List<PointV1>,

@@ -90,8 +90,8 @@ object SwingMainApp {
 
     private fun configureTextRendering() {
         try {
-            val override = System.getProperty("tennisrecord.textAA")
-                ?: System.getenv("TENNISRECORD_TEXT_AA")
+            val override = System.getProperty("bananashot.textAA")
+                ?: System.getenv("BANANASHOT_TEXT_AA")
             val isWindows = (System.getProperty("os.name") ?: "").lowercase().contains("win")
             val value = when (override?.lowercase()?.trim()) {
                 null, "", "auto" -> if (isWindows) "lcd_hrgb" else "on"

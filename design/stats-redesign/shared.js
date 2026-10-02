@@ -9,7 +9,7 @@
     { name: 'Alex', color: '#4DA3FF' },
     { name: 'Sam', color: '#FF6B6B' },
   ];
-  const CREDIT = 'TennisRecord app';
+  const CREDIT = 'BananaShot app';
   const ROWS_PER_PAGE = 7;
 
   // ---------- The statistics, in display order (MatchStat) ----------
@@ -729,7 +729,7 @@
     const title = document.getElementById('titlebar');
     if (title) {
       title.className = 'titlebar';
-      title.innerHTML = '<span class="logo"></span>Tennis Record — Stats — PXL_20260913_070045619' +
+      title.innerHTML = '<span class="logo"></span>BananaShot — Stats — PXL_20260913_070045619' +
         '<span class="win-buttons"><span>—</span><span>☐</span><span>✕</span></span>';
     }
     const nav = document.getElementById('nav');

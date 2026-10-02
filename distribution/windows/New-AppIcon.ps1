@@ -10,9 +10,9 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $svg = Join-Path $repoRoot "src\main\resources\icons\app-icon.svg"
-if (-not $OutputPath) { $OutputPath = Join-Path $PSScriptRoot "assets\tennis-record.ico" }
+if (-not $OutputPath) { $OutputPath = Join-Path $PSScriptRoot "assets\bananashot.ico" }
 
-$classpathFile = Join-Path ([IO.Path]::GetTempPath()) "tennis-record-jsvg-classpath.txt"
+$classpathFile = Join-Path ([IO.Path]::GetTempPath()) "bananashot-jsvg-classpath.txt"
 & mvn -q -f (Join-Path $repoRoot "pom.xml") dependency:build-classpath "-Dmdep.includeArtifactIds=jsvg" "-Dmdep.outputFile=$classpathFile"
 if ($LASTEXITCODE -ne 0) { throw "Maven could not resolve the jsvg library." }
 $classpath = (Get-Content -LiteralPath $classpathFile -Raw).Trim()

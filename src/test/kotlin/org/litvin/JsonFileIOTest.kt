@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 class JsonFileIOTest {
     @Test
     fun `a reader never observes a partially written document`() {
-        val projectDir = Files.createTempDirectory("tennis-record-atomic").toFile()
+        val projectDir = Files.createTempDirectory("bananashot-atomic").toFile()
         val edl = EdlV1(points = (1..400).map { PointV1(id = "point-$it", startMs = it * 1000, endMs = it * 1000 + 500) })
         EdlIO.writeForProjectDir(projectDir.absolutePath, edl)
 
@@ -53,7 +53,7 @@ class JsonFileIOTest {
 
     @Test
     fun `the destination is left untouched when serialization fails`() {
-        val directory = Files.createTempDirectory("tennis-record-atomic-fail").toFile()
+        val directory = Files.createTempDirectory("bananashot-atomic-fail").toFile()
         val target = directory.resolve("edl.json")
         val original = EdlV1(points = listOf(PointV1(id = "keep-me", startMs = 0, endMs = 1_000)))
         EdlIO.write(target.absolutePath, original)

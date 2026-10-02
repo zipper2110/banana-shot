@@ -12,6 +12,8 @@ import org.litvin.ui.commons.VideoPlaybackBar
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.ActionEvent
+import java.awt.event.InputEvent
+import java.awt.event.MouseEvent
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.prefs.AbstractPreferences
@@ -129,6 +131,35 @@ class SwingColorAdjustmentsPanelTest {
     }
 
     @Test
+    fun holdingTheMouseOnTheVideoShowsTheOriginalColorsAndKeepsTheGeometry() {
+        adjustments.set { it.copy(zoom = 1.5f) }
+        val player = FakePlayer(adjustSupported = true)
+        lateinit var panel: SwingColorAdjustmentsPanel
+        onEdt {
+            panel = SwingColorAdjustmentsPanel(player, adjustments, MemoryPreferences())
+            panel.onActivated()
+            (panel.find("colors-brightness") as JSlider).value = 30
+            (panel.find("colors-saturation") as JSlider).value = -50
+        }
+        // The session delivers the change with invokeLater.
+        onEdt { }
+        onEdt { }
+        val adjusted = adjustments.get()
+        assertEquals(adjusted, player.lastPreview)
+
+        onEdt { player.component.press(MouseEvent.MOUSE_PRESSED) }
+        val original = player.lastPreview!!
+        assertEquals(AdjustmentsV1().brightness, original.brightness)
+        assertEquals(AdjustmentsV1().saturation, original.saturation)
+        assertEquals(1.5f, original.zoom)
+        assertEquals(adjusted, adjustments.get(), "holding the mouse must not change the saved values")
+
+        onEdt { player.component.press(MouseEvent.MOUSE_RELEASED) }
+        assertEquals(adjusted, player.lastPreview)
+        onEdt { panel.close() }
+    }
+
+    @Test
     fun theNoticeAndTheTooltipNoteShowOnlyWithoutLivePreview() {
         onEdt {
             val supported = panel(adjustSupported = true)
@@ -213,9 +244,14 @@ class SwingColorAdjustmentsPanelTest {
         if (this@descendants is Container) components.forEach { yieldAll(it.descendants()) }
     }
 
+    private fun Component.press(id: Int) = dispatchEvent(
+        MouseEvent(this, id, System.currentTimeMillis(), InputEvent.BUTTON1_DOWN_MASK, 10, 10, 1, false, MouseEvent.BUTTON1),
+    )
+
     private fun Component.find(name: String): Component? = descendants().firstOrNull { it.name == name }
 
     private class FakePlayer(private val adjustSupported: Boolean) : SwingMediaPlayer {
+        var lastPreview: AdjustmentsV1? = null
         override val component: Component = JPanel()
         override var onReady: (() -> Unit)? = null
         override var onStatusChanged: ((PlayerStatus) -> Unit)? = null
@@ -231,7 +267,7 @@ class SwingColorAdjustmentsPanelTest {
         override fun isAdjustSupported() = adjustSupported
         override fun applyColorAdjustments(adj: AdjustmentsV1) = Unit
         override fun applyGeometryAdjustments(adj: AdjustmentsV1) = true
-        override fun applyPreviewAdjustments(adj: AdjustmentsV1) = Unit
+        override fun applyPreviewAdjustments(adj: AdjustmentsV1) { lastPreview = adj }
         override fun applyPreviewRotation(rotationDeg: Float, reason: String) = Unit
         override fun setPreviewOverlay(overlay: VideoOverlay?) = Unit
         override fun stepFrameForward(maximumTimeMs: Long) = 0L

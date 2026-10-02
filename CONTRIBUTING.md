@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in Tennis Record.
+Thank you for your interest in BananaShot.
 
 ## Code contributions
 
@@ -18,6 +18,6 @@ You can open issues for bug reports and feature requests.
 
 ## License
 
-Tennis Record uses the Elastic License 2.0. See [LICENSE](LICENSE) and
+BananaShot uses the Elastic License 2.0. See [LICENSE](LICENSE) and
 [LICENSE-NOTICE](LICENSE-NOTICE). Versions up to the `last-gpl` tag were
 released under the GNU General Public License version 3 or later.

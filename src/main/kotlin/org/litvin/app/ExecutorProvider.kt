@@ -17,7 +17,7 @@ interface ExecutorProvider : AutoCloseable {
 }
 
 class TrackedExecutorProvider(
-    private val threadPrefix: String = "tennis-record",
+    private val threadPrefix: String = "bananashot",
     private val shutdownTimeout: Duration = Duration.ofSeconds(5),
 ) : ExecutorProvider {
     private val executors = CopyOnWriteArrayList<ExecutorService>()

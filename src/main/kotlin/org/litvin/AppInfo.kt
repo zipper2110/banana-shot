@@ -5,7 +5,7 @@ object AppInfo {
     const val TAGLINE = "Tennis Video Editor"
 
     val version: String by lazy {
-        System.getProperty("tennis.record.version")?.takeIf { it.isNotBlank() }
+        System.getProperty("bananashot.version")?.takeIf { it.isNotBlank() }
             ?: AppInfo::class.java.`package`?.implementationVersion?.takeIf { it.isNotBlank() }
             ?: "development"
     }

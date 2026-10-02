@@ -8,9 +8,9 @@ sealed interface AnalyticsBuildConfig {
     data class Disabled(val diagnosticCode: String) : AnalyticsBuildConfig
 
     companion object {
-        const val ENDPOINT_PROPERTY = "tennis.record.analytics.endpoint"
-        const val PRIVACY_URL_PROPERTY = "tennis.record.analytics.privacyUrl"
-        const val NOTICE_VERSION_PROPERTY = "tennis.record.analytics.noticeVersion"
+        const val ENDPOINT_PROPERTY = "bananashot.analytics.endpoint"
+        const val PRIVACY_URL_PROPERTY = "bananashot.analytics.privacyUrl"
+        const val NOTICE_VERSION_PROPERTY = "bananashot.analytics.noticeVersion"
 
         fun fromSystemProperties(): AnalyticsBuildConfig = fromProperties(System.getProperties())
 

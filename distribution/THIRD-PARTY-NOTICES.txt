@@ -1,4 +1,4 @@
-TENNIS RECORD THIRD-PARTY NOTICES
+BANANASHOT THIRD-PARTY NOTICES
 
 This distribution contains third-party software. The authoritative license
 texts shipped inside dependency archives and JAR files remain controlling.
@@ -38,7 +38,7 @@ The corresponding source code of this build (FFmpeg, the build scripts, and
 the source of each library) is published with a copy of the binaries in the
 natives release:
 https://github.com/zipper2110/tennis-record/releases/tag/natives-2026-09
-Tennis Record runs FFmpeg only as separate programs (ffmpeg.exe and
+BananaShot runs FFmpeg only as separate programs (ffmpeg.exe and
 ffprobe.exe). The shared libraries and executables are unmodified and remain
 replaceable in the installation directory. The FFmpeg license text is
 installed at natives/windows-x64/ffmpeg/LICENSE.txt.
@@ -54,11 +54,11 @@ Kotlin Logging, and Ikonli artifacts. Their license metadata and license texts
 are retained in their distributed JAR files. The release includes a
 CycloneDX software bill of materials for the exact Maven dependency set.
 
-Tennis Record
+BananaShot
 Copyright (c) 2026 Dmitrii Litvin.
 License: Elastic License 2.0. The complete license text is in LICENSE.txt.
 LICENSE-NOTICE.txt describes the license key functionality and the earlier
-GPL versions. The Elastic License 2.0 applies only to Tennis Record. It does
+GPL versions. The Elastic License 2.0 applies only to BananaShot. It does
 not change the license of any third-party component in this file.
-The source code of Tennis Record is published beside each release and at
+The source code of BananaShot is published beside each release and at
 https://github.com/zipper2110/tennis-record.

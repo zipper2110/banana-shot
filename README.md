@@ -1,4 +1,4 @@
-# Tennis Record (Kotlin Desktop)
+# BananaShot (Kotlin Desktop)
 
 A desktop application that helps tennis players turn full‑match recordings into compact, watchable videos. You can remove dead time between points, track the score, and export a final video with a scoreboard overlay. Future versions add zoom/crop/reposition and color adjustments.
 
@@ -102,7 +102,7 @@ See: [docs/solution-outline.md](docs/solution-outline.md)
 - Keep EDL/score models versioned and migration‑ready.
 
 ## Licensing & third‑party components
-- Tennis Record is source-available software under the Elastic License 2.0
+- BananaShot is source-available software under the Elastic License 2.0
   (ELv2). See [LICENSE](LICENSE) and [LICENSE-NOTICE](LICENSE-NOTICE). ELv2 is
   not an OSI open source license. You must not bypass the license key
   functionality that LICENSE-NOTICE describes.

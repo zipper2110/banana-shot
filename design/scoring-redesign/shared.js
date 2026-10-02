@@ -425,7 +425,7 @@
         return `<div class="sb-row"><div class="sb-name" style="${pc(pl)}"><i></i>${escapeHtml(players[pl - 1].name)}${c.server === pl ? '<span class="sb-ball"></span>' : ''}</div>
           ${sets}<div class="sb-cell games">${pl === 1 ? s.g1 : s.g2}</div><div class="sb-pts">${pointsText(s, pl)}</div></div>`;
       };
-      sb.innerHTML = `<div class="sb-title">${escapeHtml(TITLE)}</div>${row(1)}${row(2)}<div class="sb-credit">TennisRecord app</div>`;
+      sb.innerHTML = `<div class="sb-title">${escapeHtml(TITLE)}</div>${row(1)}${row(2)}<div class="sb-credit">BananaShot app</div>`;
     }
     new ResizeObserver(layout).observe(host);
     on((reason) => { if (reason === 'data' || reason === 'select') render(); });
@@ -640,7 +640,7 @@
     const title = document.getElementById('titlebar');
     if (title) {
       title.className = 'titlebar';
-      title.innerHTML = '<span class="logo"></span>Tennis Record — Scoring — PXL_20260913_070045619' +
+      title.innerHTML = '<span class="logo"></span>BananaShot — Scoring — PXL_20260913_070045619' +
         '<span class="win-buttons"><span>—</span><span>☐</span><span>✕</span></span>';
     }
     const nav = document.getElementById('nav');

@@ -41,7 +41,7 @@ public class AppIconRenderer {
             Path pngDirectory = Path.of(args[2]);
             Files.createDirectories(pngDirectory);
             for (int size : PNG_SIZES) {
-                Files.write(pngDirectory.resolve("tennis-record-" + size + ".png"), png(render(document, size)));
+                Files.write(pngDirectory.resolve("bananashot-" + size + ".png"), png(render(document, size)));
             }
         }
     }

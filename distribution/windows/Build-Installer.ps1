@@ -6,13 +6,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
-$appImage = Join-Path $repoRoot "target\package\app-image\Tennis Record"
+$appImage = Join-Path $repoRoot "target\package\app-image\BananaShot"
 $installerDirectory = Join-Path $repoRoot "target\package\installer"
 $tempDirectory = Join-Path $repoRoot "target\package\jpackage-installer-temp"
-$installerLicense = Join-Path $repoRoot "target\package\Tennis-Record-License.txt"
+$installerLicense = Join-Path $repoRoot "target\package\BananaShot-License.txt"
 $packageVersion = ($Version -replace '^v', '') -replace '-.*$', ''
 
-if (-not (Test-Path -LiteralPath (Join-Path $appImage "Tennis Record.exe"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $appImage "BananaShot.exe"))) {
     throw "Signed application image is missing: $appImage"
 }
 if (-not (Get-Command candle.exe -ErrorAction SilentlyContinue)) {
@@ -44,19 +44,19 @@ if (Test-Path -LiteralPath $tempDirectory) {
 }
 $arguments = @(
     "--type", "exe",
-    "--name", "Tennis Record",
+    "--name", "BananaShot",
     "--app-image", $appImage,
     "--dest", $installerDirectory,
     "--temp", $tempDirectory,
     "--verbose",
     "--app-version", $packageVersion,
-    "--vendor", "Tennis Record",
+    "--vendor", "BananaShot",
     "--description", "Turn tennis match recordings into compact scored videos.",
-    "--copyright", "Copyright (c) 2026 Tennis Record",
+    "--copyright", "Copyright (c) 2026 BananaShot",
     "--license-file", $installerLicense,
     "--win-per-user-install",
     "--win-menu",
-    "--win-menu-group", "Tennis Record",
+    "--win-menu-group", "BananaShot",
     "--win-shortcut",
     "--win-shortcut-prompt",
     "--win-upgrade-uuid", "fc715967-3696-4f32-8690-4df9742077c6"

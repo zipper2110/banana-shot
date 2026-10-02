@@ -1,4 +1,4 @@
-name = "tennis-record-analytics"
+name = "bananashot-analytics"
 main = "src/index.ts"
 compatibility_date = "2026-09-03"
 compatibility_flags = ["nodejs_compat"]

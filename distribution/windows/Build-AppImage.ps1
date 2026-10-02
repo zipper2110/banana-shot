@@ -11,7 +11,7 @@ $inputDirectory = Join-Path $targetRoot "distribution\input"
 $nativeDirectory = Join-Path $targetRoot "native\windows-x64"
 $packageRoot = Join-Path $targetRoot "package"
 $appImageRoot = Join-Path $packageRoot "app-image"
-$icon = Join-Path $PSScriptRoot "assets\tennis-record.ico"
+$icon = Join-Path $PSScriptRoot "assets\bananashot.ico"
 
 if (-not $IsWindows -and $PSVersionTable.PSEdition -eq "Core") {
     throw "The Windows application image must be built on Windows."
@@ -58,7 +58,7 @@ if (-not (Test-Path -LiteralPath $icon)) {
     & (Join-Path $PSScriptRoot "New-AppIcon.ps1") -OutputPath $icon
 }
 
-$mainJar = Get-ChildItem -LiteralPath $inputDirectory -Filter "tennisrecord-*.jar" |
+$mainJar = Get-ChildItem -LiteralPath $inputDirectory -Filter "bananashot-*.jar" |
     Where-Object { $_.Name -notlike "*sources*" } |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1
@@ -78,23 +78,23 @@ New-Item -ItemType Directory -Path $appImageRoot -Force | Out-Null
 
 $arguments = @(
     "--type", "app-image",
-    "--name", "Tennis Record",
+    "--name", "BananaShot",
     "--dest", $appImageRoot,
     "--input", $inputDirectory,
     "--main-jar", $mainJar.Name,
     "--main-class", "org.litvin.SwingMainApp",
     "--app-version", $packageVersion,
-    "--vendor", "Tennis Record",
+    "--vendor", "BananaShot",
     "--description", "Turn tennis match recordings into compact scored videos.",
-    "--copyright", "Copyright (c) 2026 Tennis Record",
+    "--copyright", "Copyright (c) 2026 BananaShot",
     "--icon", $icon,
     "--java-options", "-Dfile.encoding=UTF-8",
-    "--java-options", "-Dtennis.record.version=$packageVersion"
+    "--java-options", "-Dbananashot.version=$packageVersion"
 )
 & jpackage @arguments
 if ($LASTEXITCODE -ne 0) { throw "jpackage app-image creation failed." }
 
-$appHome = Join-Path $appImageRoot "Tennis Record"
+$appHome = Join-Path $appImageRoot "BananaShot"
 $javaCommand = Join-Path $env:JAVA_HOME "bin\java.exe"
 if (-not (Test-Path -LiteralPath $javaCommand)) {
     throw "JDK 17 java.exe was not found: $javaCommand"
@@ -106,8 +106,8 @@ New-Item -ItemType Directory -Path (Join-Path $appHome "legal") -Force | Out-Nul
 Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE") -Destination (Join-Path $appHome "legal\LICENSE.txt")
 Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE-NOTICE") -Destination (Join-Path $appHome "legal\LICENSE-NOTICE.txt")
 Copy-Item -LiteralPath (Join-Path $repoRoot "distribution\THIRD-PARTY-NOTICES.txt") -Destination (Join-Path $appHome "legal\THIRD-PARTY-NOTICES.txt")
-$diagnosticsTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot "Tennis Record Diagnostics.cmd") -Raw
+$diagnosticsTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot "BananaShot Diagnostics.cmd") -Raw
 $diagnosticsTemplate.Replace("@APP_VERSION@", $packageVersion) |
-    Set-Content -LiteralPath (Join-Path $appHome "Tennis Record Diagnostics.cmd") -Encoding ascii
+    Set-Content -LiteralPath (Join-Path $appHome "BananaShot Diagnostics.cmd") -Encoding ascii
 
 Write-Host "Application image created: $appHome"

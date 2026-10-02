@@ -187,7 +187,7 @@ function Start-UiSmokeChildProcess {
     $startInfo.FileName = $resolvedExecutable
     $startInfo.Arguments = $Arguments
     $startInfo.UseShellExecute = $false
-    $startInfo.EnvironmentVariables["TENNIS_RECORD_APP_DATA_DIR"] = $resolvedAppData
+    $startInfo.EnvironmentVariables["BANANASHOT_APP_DATA_DIR"] = $resolvedAppData
 
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $startInfo
@@ -203,7 +203,7 @@ function Assert-UiSmokeLogFile {
         [Parameter(Mandatory = $true)][string]$AppDataDirectory
     )
 
-    $logFile = Join-Path $AppDataDirectory "logs\tennis-record.log"
+    $logFile = Join-Path $AppDataDirectory "logs\bananashot.log"
     if (-not (Test-Path -LiteralPath $logFile -PathType Leaf) -or (Get-Item -LiteralPath $logFile).Length -eq 0) {
         throw "Packaged application did not write a log file: $logFile"
     }
@@ -377,7 +377,7 @@ function Invoke-UiSmokeRunner {
         $resolvedExecutable = Resolve-UiSmokeExecutable -ExecutablePath $ExecutablePath
     }
     else {
-        $defaultExecutable = Join-Path $repoRoot "target\package\app-image\Tennis Record\Tennis Record.exe"
+        $defaultExecutable = Join-Path $repoRoot "target\package\app-image\BananaShot\BananaShot.exe"
         if (-not (Test-Path -LiteralPath $defaultExecutable -PathType Leaf)) {
             & (Join-Path $repoRoot "distribution\windows\Build-AppImage.ps1")
             if ($LASTEXITCODE -ne 0) {

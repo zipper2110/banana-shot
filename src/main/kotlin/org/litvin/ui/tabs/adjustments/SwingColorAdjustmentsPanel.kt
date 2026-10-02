@@ -18,6 +18,8 @@ import java.awt.Color
 import java.awt.Dimension
 import java.awt.EventQueue
 import java.awt.event.ActionEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.File
 import java.util.prefs.Preferences
 import java.util.concurrent.atomic.AtomicBoolean
@@ -26,6 +28,7 @@ import javax.swing.*
 /**
  * The Colors tab: the video preview with the playback bar on the left, and the Color grade panel on the right.
  * The layout comes from design/colors-redesign/option-a.html.
+ * While the user holds the left mouse button on the video, the preview shows the original colors.
  * Component IDs: adj-color-root, adj-color-left, adj-color-right, adj-color-viewport, adj-color-transport
  */
 class SwingColorAdjustmentsPanel(
@@ -49,6 +52,9 @@ class SwingColorAdjustmentsPanel(
     // Media player and media loading state
     private var pendingMediaFile: File? = null
     private var isMediaLoaded: Boolean = false
+
+    // True while the user holds the left mouse button on the video to compare with the original colors
+    private var showingOriginal: Boolean = false
 
     private val viewportPanel = JPanel(BorderLayout()).apply {
         name = "adj-color-viewport"
@@ -104,6 +110,7 @@ class SwingColorAdjustmentsPanel(
 
         installKeyBindings()
         installPlayerCallbacks()
+        installCompareOnHold()
 
         add(leftPanel, BorderLayout.CENTER)
         add(gradePanel, BorderLayout.EAST)
@@ -122,7 +129,8 @@ class SwingColorAdjustmentsPanel(
     }
 
     fun applyPreview(adjustments: AdjustmentsV1) {
-        player.applyPreviewAdjustments(adjustments)
+        val shown = if (showingOriginal) mergeColorInto(adjustments, AdjustmentsUiConverter.DEFAULTS) else adjustments
+        player.applyPreviewAdjustments(shown)
         geometryViewport.refreshGeometry()
     }
 
@@ -194,6 +202,25 @@ class SwingColorAdjustmentsPanel(
         }
     }
 
+    /** Shows the original colors while the left mouse button is down on the video. The geometry stays the same. */
+    private fun installCompareOnHold() {
+        player.component.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e)) setShowingOriginal(true)
+            }
+
+            override fun mouseReleased(e: MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e)) setShowingOriginal(false)
+            }
+        })
+    }
+
+    private fun setShowingOriginal(value: Boolean) {
+        if (showingOriginal == value) return
+        showingOriginal = value
+        applyPreview(adjustments.get())
+    }
+
     private fun togglePlayPause() {
         val wasPlaying = player.status() == PlayerStatus.PLAYING
         if (wasPlaying) player.pause() else player.play()
@@ -262,6 +289,7 @@ class SwingColorAdjustmentsPanel(
     }
 
     fun onDeactivated() {
+        showingOriginal = false
         player.pause()
         player.deactivatePreview("color adjustments deactivated")
         unsubscribeStore?.invoke(); unsubscribeStore = null

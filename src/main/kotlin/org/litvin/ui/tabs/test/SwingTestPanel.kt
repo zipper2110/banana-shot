@@ -466,7 +466,7 @@ class SwingTestPanel : JPanel(BorderLayout()) {
         val duration = player.totalDurationMs().takeIf { it > 0L } ?: (6L * 60L * 60L * 1000L)
         val assFile = File(
             System.getProperty("java.io.tmpdir"),
-            "tennis-record-test-scoreboard-${System.nanoTime()}-${subtitleGeneration++}.ass"
+            "bananashot-test-scoreboard-${System.nanoTime()}-${subtitleGeneration++}.ass"
         )
         AssOverlayWriter.write(
             assFile,

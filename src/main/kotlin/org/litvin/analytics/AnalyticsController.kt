@@ -36,12 +36,18 @@ class AnalyticsController(
         created.record(AnalyticsEvent.SessionStarted)
     }
 
+    /** The user turned off analytics. Stops delivery and saves the choice. */
     fun disable() {
-        delegate.set(DisabledAnalytics)
-        val active = managed.getAndSet(null)
-        runCatching { active?.close() }
+        stopDelivery()
         preferences.record(AnalyticsPreferences.Choice.DISABLED)
     }
 
-    override fun close() = disable()
+    /** App shutdown. Stops delivery and keeps the saved choice. */
+    override fun close() = stopDelivery()
+
+    private fun stopDelivery() {
+        delegate.set(DisabledAnalytics)
+        val active = managed.getAndSet(null)
+        runCatching { active?.close() }
+    }
 }

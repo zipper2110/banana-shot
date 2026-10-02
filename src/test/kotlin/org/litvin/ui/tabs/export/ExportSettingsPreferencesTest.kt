@@ -49,7 +49,7 @@ class ExportSettingsPreferencesTest {
 
     @Test
     fun savesAndLoadsOutputDirectory() {
-        val directory = Files.createTempDirectory("tennis-record-export")
+        val directory = Files.createTempDirectory("bananashot-export")
             .resolve("videos")
             .createDirectory()
         withSettings { settings ->
@@ -61,7 +61,7 @@ class ExportSettingsPreferencesTest {
 
     @Test
     fun ignoresOutputDirectoryThatNoLongerExists() {
-        val missingDirectory = Files.createTempDirectory("tennis-record-export")
+        val missingDirectory = Files.createTempDirectory("bananashot-export")
             .resolve("missing")
             .toFile()
         withSettings { settings ->

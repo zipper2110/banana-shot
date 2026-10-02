@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.litvin</groupId>
-    <artifactId>tennisrecord</artifactId>
+    <artifactId>bananashot</artifactId>
     <version>${revision}</version>
     <name>BananaShot</name>
     <description>Turn tennis match recordings into compact scored videos.</description>
@@ -212,7 +212,7 @@
                                     <parallel>none</parallel>
                                     <forkedProcessTimeoutInSeconds>180</forkedProcessTimeoutInSeconds>
                                     <systemPropertyVariables>
-                                        <tennis.record.uiFlow>true</tennis.record.uiFlow>
+                                        <bananashot.uiFlow>true</bananashot.uiFlow>
                                     </systemPropertyVariables>
                                 </configuration>
                             </execution>
@@ -254,10 +254,10 @@
                                     <parallel>none</parallel>
                                     <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
                                     <systemPropertyVariables>
-                                        <tennis.record.uiFlow>true</tennis.record.uiFlow>
-                                        <tennis.record.appDir>${ui.smoke.appDir}</tennis.record.appDir>
-                                        <tennis.record.appDataDir>${ui.smoke.resultsDir}/app-data</tennis.record.appDataDir>
-                                        <tennis.record.nativeSmoke.resultsDir>${ui.smoke.resultsDir}</tennis.record.nativeSmoke.resultsDir>
+                                        <bananashot.uiFlow>true</bananashot.uiFlow>
+                                        <bananashot.appDir>${ui.smoke.appDir}</bananashot.appDir>
+                                        <bananashot.appDataDir>${ui.smoke.resultsDir}/app-data</bananashot.appDataDir>
+                                        <bananashot.nativeSmoke.resultsDir>${ui.smoke.resultsDir}</bananashot.nativeSmoke.resultsDir>
                                         <tr.mpv.path>${ui.smoke.mpvPath}</tr.mpv.path>
                                         <tr.ffmpeg.path>${ui.smoke.ffmpegPath}</tr.ffmpeg.path>
                                         <tr.ffprobe.path>${ui.smoke.ffprobePath}</tr.ffprobe.path>
@@ -344,7 +344,7 @@
                                 </goals>
                                 <configuration>
                                     <outputFormat>json</outputFormat>
-                                    <outputName>tennis-record-sbom</outputName>
+                                    <outputName>bananashot-sbom</outputName>
                                     <includeBomSerialNumber>true</includeBomSerialNumber>
                                 </configuration>
                             </execution>

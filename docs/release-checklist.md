@@ -39,13 +39,13 @@ the features of this release.
       workflow builds the package and runs `Validate-Release.ps1`.
 - [ ] Download the workflow artifact.
 - [ ] Review the Maven dependency licenses and the SBOM
-      (`tennis-record-sbom.json`).
+      (`bananashot-sbom.json`).
 
 ## 6. Packaged app
 
 Install the app from the installer of the dry run.
 
-- [ ] `Tennis Record Diagnostics.cmd` in the app folder passes.
+- [ ] `BananaShot Diagnostics.cmd` in the app folder passes.
 - [ ] Run the packaged smoke test and complete its report. See
       `qa/windows/ui-smoke.md`. The smoke test does a real FFmpeg export and
       checks the adjustment controls.
@@ -54,7 +54,7 @@ Install the app from the installer of the dry run.
 - [ ] More → About: the version is correct. The License, License notice, and
       Third-party notices buttons open the files from `legal/`.
 - [ ] More → Contact: "Write an email" opens the email app. "Open log folder"
-      opens the folder that contains `tennis-record.log`.
+      opens the folder that contains `bananashot.log`.
 - [ ] More → Settings: "Open folder" opens the app data folder.
 - [ ] First-time hints: each hint shows at its trigger. A closed hint does not
       show again. "Show all hints again" shows the hints again.

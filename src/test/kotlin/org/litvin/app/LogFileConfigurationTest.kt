@@ -27,7 +27,7 @@ class LogFileConfigurationTest {
             context.getLogger("org.litvin.LogFileConfigurationTest").info("log file check")
             context.stop()
 
-            val logFile = AppDataPaths(appData).logs.resolve("tennis-record.log")
+            val logFile = AppDataPaths(appData).logs.resolve("bananashot.log")
             assertTrue(logFile.isFile, "Missing log file: $logFile")
             assertTrue("log file check" in logFile.readText())
         } finally {
@@ -38,6 +38,6 @@ class LogFileConfigurationTest {
     }
 
     private companion object {
-        const val APP_DATA_PROPERTY = "tennis.record.appDataDir"
+        const val APP_DATA_PROPERTY = "bananashot.appDataDir"
     }
 }

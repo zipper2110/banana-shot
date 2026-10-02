@@ -32,8 +32,9 @@ data class GeometryPlan(
         val IDENTITY = GeometryPlan(0.0, FULL_FRAME)
 
         /**
-         * Builds the plan for a [width] x [height] frame. The crop rectangle has the frame aspect and stays
-         * inside the rotated frame, with the same math as the Transform editor.
+         * Builds the plan for a [width] x [height] frame, with the same math as the Transform editor.
+         * The crop rectangle has the frame aspect. Its size fits inside the rotated frame, and a pan can move it
+         * over the black corners of the rotated frame.
          */
         fun of(adjustments: AdjustmentsV1, width: Int, height: Int): GeometryPlan {
             val rotation = CropGeometryMath.normalizeRotation(adjustments.rotationDeg.coerceIn(-180.0f, 180.0f)).toDouble()
@@ -42,8 +43,7 @@ data class GeometryPlan(
             val h = height.toDouble()
             val aspect = w / h
             val model = CropGeometryMath.overlayFromModel(w, h, adjustments)
-            val allowed = CropGeometryMath.largestCenteredInscribedRect(w, h, rotation, aspect)
-            val clamped = CropGeometryMath.clampInside(model, allowed, aspect)
+            val clamped = CropGeometryMath.fitToRotatedFrame(model, CropRect(0.0, 0.0, w, h), rotation, aspect)
             val normalized = CropRect(clamped.x / w, clamped.y / h, clamped.width / w, clamped.height / h)
             if (isFullFrame(normalized)) return GeometryPlan(rotation, FULL_FRAME)
             // Snap to even source pixels: FFmpeg crops 4:2:0 video at even whole pixels.
@@ -55,7 +55,7 @@ data class GeometryPlan(
             )
         }
 
-        /** Width and height round down, so the crop stays inside the rotated frame. x and y round to nearest. */
+        /** Width and height round down, so the crop does not grow past the fitted size. x and y round to nearest. */
         private fun snapToEvenPixels(rect: CropRect, width: Int, height: Int): CropRect {
             fun even(value: Double) = Math.round(value / 2.0) * 2.0
             fun evenDown(value: Double) = Math.floor(value / 2.0 + 1e-9) * 2.0

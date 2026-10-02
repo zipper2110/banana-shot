@@ -34,7 +34,7 @@ import kotlin.math.abs
  *
  * `qa/windows/Run-UiSmoke.ps1` runs this test with the natives of the packaged app.
  * The test writes the measured values to `native-results.txt` and the frames to PNG files
- * in the folder of the `tennis.record.nativeSmoke.resultsDir` property.
+ * in the folder of the `bananashot.nativeSmoke.resultsDir` property.
  */
 class NativeSmokeIT {
     private val results = linkedMapOf<String, String>()
@@ -264,7 +264,7 @@ class NativeSmokeIT {
     }
 
     companion object {
-        private const val RESULTS_DIRECTORY_PROPERTY = "tennis.record.nativeSmoke.resultsDir"
+        private const val RESULTS_DIRECTORY_PROPERTY = "bananashot.nativeSmoke.resultsDir"
         private const val BRIGHTNESS_SLIDER = 20
         private const val BRIGHTNESS = 1.2f
         private const val ROTATION_DEGREES = 15f

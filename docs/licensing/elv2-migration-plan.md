@@ -2,7 +2,7 @@
 
 Status: in progress. Created 2026-09-25.
 
-This plan lists the work to change Tennis Record from GPLv3-or-later to the
+This plan lists the work to change BananaShot from GPLv3-or-later to the
 Elastic License 2.0 (ELv2). Do each item as a separate task. Mark an item done
 only when its "Done when" condition is true.
 
@@ -30,7 +30,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 
 | Component | License | How the app uses it | Compatible with ELv2 |
 |---|---|---|---|
-| Tennis Record code | GPLv3-or-later, single author | - | Author can relicense |
+| BananaShot code | GPLv3-or-later, single author | - | Author can relicense |
 | Kotlin, Jackson, FlatLaf, Ikonli, kotlin-logging | Apache-2.0 | In process | Yes |
 | Ikonli icon packs (Material2, Feather) | Apache-2.0 | In process | Yes |
 | SLF4J | MIT | In process | Yes |
@@ -66,7 +66,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 
 ### L-0.3 Choose the licensor name
 
-- ELv2 needs a named "Licensor". `LICENSE-NOTICE` now says "Tennis Record
+- ELv2 needs a named "Licensor". `LICENSE-NOTICE` now says "BananaShot
   contributors". Use your legal name or your company name.
 - Done when: the licensor name is decided.
 - **Done 2026-09-25.** Licensor: Dmitrii Litvin (no company).
@@ -241,7 +241,7 @@ The GPL calls this an "aggregate" (GPLv3 section 5).
 ### L-3.6 `distribution/THIRD-PARTY-NOTICES.txt`
 
 - Change the libmpv entry to LGPL, with the new build source.
-- Change the Tennis Record entry to ELv2.
+- Change the BananaShot entry to ELv2.
 - Point the source text to the release assets from phase 4.
 - Done when: each entry matches the shipped files.
 - **Done 2026-09-25.** The FFmpeg and libmpv entries say that the source is
@@ -371,18 +371,32 @@ ELv2 does not help the goal of this plan.
 - Cover privacy: disclose the version check separately from the analytics
   consent.
 - Done when: the spec is approved.
+- **Draft 2026-09-30:** `build-expiry-spec.md`. Decisions:
+  - Each build expires 6 months after its build date. A warning shows from
+    30 days before.
+  - A version rules file on GitHub can stop a range of versions earlier, with
+    a message. It cannot extend a build. The app saves the last file for
+    offline use, so no grace period is necessary.
+  - An expired build shows a "Download update / Quit" modal dialog and does
+    not open projects. No read-only mode.
+  - The app also checks the expiry while it runs (every hour, at project open,
+    and at export start). An app that is never closed also expires.
+  - An update check (notice and download link) is in the first release.
+    Automatic update comes after the first release.
+  - Signed license files and the entitlement layer move to L-6.3.
+- **Threat model 2026-10-01:** `threat-model.md`. Use it to assess each
+  license measure in this plan.
 
-### L-5.2 Add an entitlement layer
+### L-5.2 Add the build expiry, the version rules, and the update check
 
-- Features ask `Entitlements.has(Feature.X)`. For now, all features are free.
-- Done when: the layer exists and has tests.
-
-### L-5.3 Add the build expiry and the version check
-
-- Implement the design from L-5.1.
-- Add the version endpoint to `analytics-worker` or to a separate Worker.
-- Done when: an expired test build shows the correct message and the offline
-  grace period works.
+- Implement the design from `build-expiry-spec.md`.
+- Add `release/version-policy.json` to the repository.
+- Set the default version in `pom.xml` to the next version with `-SNAPSHOT`
+  (now `1.0-SNAPSHOT`).
+- Add the expiry check to `Validate-Release.ps1` and the policy steps to
+  `release-checklist.md`.
+- Done when: the tests in the spec pass, and an expired test build shows the
+  modal dialog and does not open a project.
 
 ## Phase 6: Release
 
@@ -404,3 +418,20 @@ ELv2 does not help the goal of this plan.
   per year, one-year validity), or the Microsoft Store (free registration; the
   Store signs MSIX packages). No certificate gives an instant SmartScreen pass.
 - Done when: the review is complete.
+
+### L-6.3 Before the first paid release: license keys and entitlements
+
+- Design them together with the pricing model (features, number of exports,
+  or the full app).
+- License keys: a signed license file and the check of its signature.
+- Assess the design with `threat-model.md`.
+- Decide if an online check (activation, or a check each N days) is
+  necessary. A signed license file that the app checks offline does not close
+  the limits of the build expiry that depend on the clock. See "Known limits"
+  in `build-expiry-spec.md`.
+- Entitlement layer: one place in the code that tells if a feature is
+  available. Each paid feature asks it.
+- Decide what a user who does not pay can do with existing projects. A
+  project is a folder of JSON files, so the app cannot tell an old project from
+  a new one.
+- Done when: the design is approved and implemented.

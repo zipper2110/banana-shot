@@ -19,10 +19,10 @@ interface MediaPlayerFactory : AutoCloseable {
 
 private val logger = KotlinLogging.logger {}
 
-/** The preview engine is libmpv. */
-fun productionMediaPlayerFactory(): MediaPlayerFactory {
+/** The preview engine is libmpv. Each player shows a view from [errorViews] when the video does not open. */
+fun productionMediaPlayerFactory(errorViews: VideoErrorViewFactory? = null): MediaPlayerFactory {
     logger.info { "Preview engine: mpv (libmpv)." }
-    return PreviewMediaPlayerFactory()
+    return PreviewMediaPlayerFactory(playerCreator = { MpvSwingMediaPlayerAdapter(errorViews) })
 }
 
 class PreviewMediaPlayerFactory internal constructor(

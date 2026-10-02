@@ -12,9 +12,11 @@ import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.media.OverlayShape
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
+import org.litvin.media.VideoErrorViewFactory
 import org.litvin.media.VideoOverlay
-import java.awt.BorderLayout
+import org.litvin.media.VideoProblem
 import java.awt.Canvas
+import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Graphics
@@ -24,6 +26,7 @@ import java.awt.event.MouseWheelEvent
 import java.awt.geom.Rectangle2D
 import java.io.File
 import java.util.Locale
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
@@ -40,8 +43,11 @@ import kotlin.math.roundToLong
  *
  * Deactivation unloads the file (this releases the decoder) but keeps the mpv instance.
  * Activation loads the file again at the last position.
+ *
+ * When the file does not open, the player shows the view from [errorViews] in place of the video.
+ * The Retry button of the view, a tab change, and play load the file again. Without [errorViews] the area stays black.
  */
-class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
+class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : SwingMediaPlayer {
     private companion object {
         private val logger = KotlinLogging.logger {}
         private val playerIds = AtomicInteger(0)
@@ -53,15 +59,24 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
         private const val SCOREBOARD_OVERLAY_ID = "2"
         private const val EDITOR_MARGIN_VERTICAL = 0.07
         private const val EDITOR_MARGIN_HORIZONTAL = 0.04
+        private const val VIDEO_CARD = "video"
+        private const val ERROR_CARD = "error"
+        private const val MAX_LOAD_ERRORS = 20
     }
 
     private val playerId = playerIds.incrementAndGet()
     private val canvas = VideoCanvas()
-    private val host = JPanel(BorderLayout()).apply {
+    private val errorView = errorViews?.create(onRetry = { activatePreview("retry") })
+
+    // The canvas is a native window, so a Swing view cannot show over it. The card layout hides the canvas
+    // (and the mpv window in it) while the error view shows. The canvas stays displayable, so mpv keeps running.
+    private val cards = CardLayout()
+    private val host = JPanel(cards).apply {
         isOpaque = true
         background = Color.BLACK
         isFocusable = true
-        add(canvas, BorderLayout.CENTER)
+        add(canvas, VIDEO_CARD)
+        errorView?.let { add(it.component, ERROR_CARD) }
     }
     override val component: Component get() = host
 
@@ -89,6 +104,9 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
     @Volatile private var frameStepCursorMs: Long? = null
     @Volatile private var playbackRate = 1.0f
     @Volatile private var lastStatus = PlayerStatus.STOPPED
+
+    /** The error log lines of mpv since the last `loadfile` command. They tell why a file did not open. */
+    private val loadErrors = CopyOnWriteArrayList<String>()
 
     @Volatile private var videoWidth = 0
     @Volatile private var videoHeight = 0
@@ -262,6 +280,8 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
         videoHeight = 0
         fileLoaded = false
         active = true
+        // An error of the previous video does not apply to the new video.
+        onEdt { showVideoCard() }
         loadCurrentFile("load")
     }
 
@@ -284,6 +304,7 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
         claimActive()
         loadStartMs = lastKnownTimeMs
         pendingSeekMs = null
+        loadErrors.clear()
         val startSeconds = String.format(Locale.US, "%.3f", loadStartMs / 1000.0)
         logger.info { "Loading into mpv preview #$playerId: ${file.absolutePath} at ${startSeconds}s ($reason)" }
         mpv.setProperty("pause", "yes")
@@ -537,6 +558,7 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
                 }
                 logger.info { "mpv preview #$playerId file loaded: durationMs=$durationMs" }
                 SwingUtilities.invokeLater {
+                    showVideoCard()
                     applyEditorMargins()
                     applyShaderOptions()
                     applyOverlay()
@@ -552,10 +574,17 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
                 pendingSeekMs = null
                 if (event.endFileReason() == LibMpv.END_FILE_REASON_ERROR) {
                     logger.warn { "mpv preview #$playerId end-file error ${event.endFileError()}" }
+                    mediaFile?.let { file ->
+                        val problem = VideoProblem.fromErrors(file, loadErrors.toList())
+                        SwingUtilities.invokeLater { showErrorCard(problem) }
+                    }
                     setStatus(PlayerStatus.ERROR)
                 } else {
                     setStatus(PlayerStatus.STOPPED)
                 }
+            }
+            LibMpv.EVENT_LOG_MESSAGE -> event.logMessage()?.let { (_, level, text) ->
+                if ((level == "error" || level == "fatal") && loadErrors.size < MAX_LOAD_ERRORS) loadErrors += text
             }
             LibMpv.EVENT_VIDEO_RECONFIG -> {
                 logger.debug {
@@ -618,6 +647,24 @@ class MpvSwingMediaPlayerAdapter : SwingMediaPlayer {
                 true
             }, null)
         }.onFailure { logger.warn(it) { "Cannot disable input of the mpv video window." } }
+    }
+
+    // ---- Error view -------------------------------------------------------------------------------------------
+
+    private fun showErrorCard(problem: VideoProblem) {
+        val view = errorView ?: return
+        // A load can start before this runs, for example after Retry. Its result decides the card.
+        if (fileLoaded) return
+        view.showProblem(problem)
+        cards.show(host, ERROR_CARD)
+    }
+
+    private fun showVideoCard() {
+        if (errorView != null) cards.show(host, VIDEO_CARD)
+    }
+
+    private fun onEdt(block: () -> Unit) {
+        if (SwingUtilities.isEventDispatchThread()) block() else SwingUtilities.invokeLater(block)
     }
 
     private fun scheduleOverlay() {

@@ -1,9 +1,16 @@
 package org.litvin.ui.tabs.projects.components
 
 import org.kordamp.ikonli.material2.Material2AL
+import org.litvin.media.FfprobeVideoReadCheck
+import org.litvin.media.VideoProblem
+import org.litvin.media.VideoReadCheck
 import org.litvin.projects.NewProjectRules
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiButton
+import org.litvin.ui.commons.TextRun
+import org.litvin.ui.commons.UiKit
+import org.litvin.ui.commons.WrapText
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dialog
@@ -39,20 +46,26 @@ fun interface NewProjectEditor {
  *
  * "Create project" is disabled while the name is empty or the path is not a supported video file.
  * A message under each field tells the user what to correct.
+ *
+ * "Create project" also opens the video with [videoCheck] in the background. A file that does not open,
+ * for example a copy that is not finished, keeps the dialog open with the problem under the video field.
  */
 class NewProjectDialog private constructor(
     owner: Window?,
     initial: NewProjectRequest,
     private val chooseVideo: (dialog: Component, currentPath: String) -> String?,
+    private val videoCheck: VideoReadCheck,
 ) : JDialog(owner, "New project", Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : NewProjectEditor {
+        private val videoCheck = FfprobeVideoReadCheck()
+
         override fun edit(
             parent: Component,
             initial: NewProjectRequest,
             chooseVideo: (dialog: Component, currentPath: String) -> String?,
         ): NewProjectRequest? {
-            val dialog = NewProjectDialog(SwingUtilities.getWindowAncestor(parent), initial, chooseVideo)
+            val dialog = NewProjectDialog(SwingUtilities.getWindowAncestor(parent), initial, chooseVideo, videoCheck)
             dialog.setLocationRelativeTo(parent)
             dialog.isVisible = true
             return dialog.result
@@ -68,6 +81,15 @@ class NewProjectDialog private constructor(
     private val nameError = DialogKit.errorLine("new-project-name-error")
     private val videoField = JTextField(initial.sourceVideoPath, 36).apply { name = "new-project-video" }
     private val videoError = DialogKit.errorLine("new-project-video-error")
+
+    /** What happened to a video that does not open, and what the user can do. It shows only after a failed video check. */
+    private val videoExplanation = WrapText(" ", UiKit.font(12.5f), Palette.FG_2, lineFactor = 1.45f).apply {
+        name = "new-project-video-explanation"
+        isVisible = false
+    }
+
+    /** True while the video check runs. */
+    private var checking = false
     private val browseButton = UiButton("Browse…", buttonHeight = 34).apply {
         name = "new-project-browse"
         toolTipText = "Select a different match video"
@@ -121,6 +143,7 @@ class NewProjectDialog private constructor(
             nameError,
             DialogKit.field("Match video", videoRow),
             videoError,
+            videoExplanation,
             gap = 6,
         )
     }
@@ -131,8 +154,9 @@ class NewProjectDialog private constructor(
         val videoMessage = NewProjectRules.sourceVideoError(videoField.text)
         showError(nameError, nameMessage)
         showError(videoError, videoMessage)
+        showVideoExplanation(null)
         val valid = nameMessage == null && videoMessage == null
-        createButton.isEnabled = valid
+        createButton.isEnabled = valid && !checking
         // The input boxes paint a red border for an error.
         contentPane?.repaint()
         return valid
@@ -149,9 +173,46 @@ class NewProjectDialog private constructor(
     }
 
     private fun create() {
-        if (!validateFields()) return
-        result = NewProjectRequest(name = nameField.text.trim(), sourceVideoPath = videoField.text.trim())
-        dispose()
+        if (checking || !validateFields()) return
+        val request = currentRequest()
+        checking = true
+        createButton.isEnabled = false
+        createButton.text = "Checking video…"
+        Thread({
+            val problem = videoCheck.problem(request.sourceVideoPath)
+            SwingUtilities.invokeLater { onVideoChecked(request, problem) }
+        }, "new-project-video-check").apply { isDaemon = true }.start()
+    }
+
+    private fun onVideoChecked(request: NewProjectRequest, problem: VideoProblem?) {
+        checking = false
+        createButton.text = "Create project"
+        if (!isDisplayable) return
+        // The user changed a field during the check. The next click checks the new values.
+        if (request != currentRequest()) {
+            validateFields()
+            return
+        }
+        if (problem == null) {
+            result = request
+            dispose()
+            return
+        }
+        // Keep "Create project" enabled: after the copy is finished, the user clicks it again.
+        validateFields()
+        showError(videoError, problem.title)
+        showVideoExplanation(problem.explanation)
+        contentPane?.repaint()
+    }
+
+    private fun currentRequest() = NewProjectRequest(name = nameField.text.trim(), sourceVideoPath = videoField.text.trim())
+
+    private fun showVideoExplanation(explanation: String?) {
+        videoExplanation.runs = listOf(TextRun(explanation ?: " ", UiKit.font(12.5f), Palette.FG_2))
+        if (videoExplanation.isVisible == (explanation != null)) return
+        videoExplanation.isVisible = explanation != null
+        // The explanation adds some lines, so the dialog gets taller.
+        pack()
     }
 
     private fun showError(label: JLabel, message: String?) {

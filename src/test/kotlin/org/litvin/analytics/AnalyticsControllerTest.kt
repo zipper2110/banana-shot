@@ -33,6 +33,27 @@ class AnalyticsControllerTest {
         assertEquals(listOf(AnalyticsEvent.SessionStarted, AnalyticsEvent.ProjectCreated), captured)
     }
 
+    @Test
+    fun `close at app shutdown stops delivery and keeps the consent choice`() = withPreferences { node ->
+        val preferences = AnalyticsPreferences(node)
+        val captured = mutableListOf<AnalyticsEvent>()
+        var closed = false
+        val controller = AnalyticsController(
+            enabledConfig(),
+            preferences,
+            enabledFactory = { RecordingEnabledAnalytics(captured) { closed = true } }
+        )
+        controller.enable()
+
+        controller.close()
+        controller.record(AnalyticsEvent.ProjectOpened)
+
+        assertTrue(closed)
+        assertEquals(listOf<AnalyticsEvent>(AnalyticsEvent.SessionStarted), captured)
+        assertTrue(preferences.resolve().isEnabled)
+        assertFalse(preferences.resolve().needsChoice)
+    }
+
     private fun enabledConfig(): AnalyticsBuildConfig.Enabled = AnalyticsBuildConfig.fromProperties(Properties().apply {
         setProperty(AnalyticsBuildConfig.ENDPOINT_PROPERTY, "https://analytics.example.test/v1/events/batch")
         setProperty(AnalyticsBuildConfig.PRIVACY_URL_PROPERTY, "https://tennis.example.test/privacy/analytics/")
@@ -44,8 +65,11 @@ class AnalyticsControllerTest {
         try { block(node) } finally { node.removeNode() }
     }
 
-    private class RecordingEnabledAnalytics(private val events: MutableList<AnalyticsEvent>) : ManagedAnalytics {
+    private class RecordingEnabledAnalytics(
+        private val events: MutableList<AnalyticsEvent>,
+        private val onClose: () -> Unit = {},
+    ) : ManagedAnalytics {
         override fun record(event: AnalyticsEvent) { events += event }
-        override fun close() = Unit
+        override fun close() = onClose()
     }
 }

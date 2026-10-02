@@ -24,7 +24,7 @@
   function project(name, path, duration, size, scored, total, fav, extra) {
     return Object.assign({
       id: 'p' + (++project.n), name, path, duration, size, scored, total, fav,
-      manifest: 'C:\\Users\\me\\TennisRecord\\projects\\' + name.replace(/[^\w]+/g, '-').toLowerCase() + '\\project.json',
+      manifest: 'C:\\Users\\me\\BananaShot\\projects\\' + name.replace(/[^\w]+/g, '-').toLowerCase() + '\\project.json',
     }, extra || {});
   }
   project.n = 0;
@@ -407,7 +407,7 @@
       const cur = current();
       if (title) {
         title.className = 'titlebar';
-        title.innerHTML = '<span class="logo"></span>Tennis Record — Projects' + (cur ? ' — ' + esc(cur.name) : '') +
+        title.innerHTML = '<span class="logo"></span>BananaShot — Projects' + (cur ? ' — ' + esc(cur.name) : '') +
           '<span class="win-buttons"><span>—</span><span>☐</span><span>✕</span></span>';
       }
       if (nav) {

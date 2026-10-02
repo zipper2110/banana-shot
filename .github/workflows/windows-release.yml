@@ -98,7 +98,7 @@ jobs:
       - name: Run packaged diagnostics
         shell: pwsh
         run: |
-          & "${{ github.workspace }}\target\package\app-image\Tennis Record\Tennis Record Diagnostics.cmd"
+          & "${{ github.workspace }}\target\package\app-image\BananaShot\BananaShot Diagnostics.cmd"
           if ($LASTEXITCODE -ne 0) { throw "Packaged diagnostics failed." }
 
       - name: Sign in to Azure
@@ -116,11 +116,11 @@ jobs:
           endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
           signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
           certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\target\package\app-image\Tennis Record\Tennis Record.exe
+          files: ${{ github.workspace }}\target\package\app-image\BananaShot\BananaShot.exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-          description: Tennis Record
+          description: BananaShot
           timeout: 900
 
       - name: Build EXE installer
@@ -140,14 +140,14 @@ jobs:
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
-          description: Tennis Record installer
+          description: BananaShot installer
           timeout: 900
 
       - name: Check signatures and stage release files
         shell: pwsh
         run: |
           $releaseDir = New-Item -ItemType Directory -Force target/release
-          $launchers = @("target/package/app-image/Tennis Record/Tennis Record.exe")
+          $launchers = @("target/package/app-image/BananaShot/BananaShot.exe")
           $installer = Get-ChildItem target/package/installer -Filter *.exe | Select-Object -First 1
           if (-not $installer) { throw "Installer not found." }
           if ($env:SIGNING_ENABLED -eq "true") {
@@ -165,8 +165,8 @@ jobs:
           Copy-Item LICENSE -Destination (Join-Path $releaseDir "LICENSE.txt")
           Copy-Item LICENSE-NOTICE -Destination (Join-Path $releaseDir "LICENSE-NOTICE.txt")
           Copy-Item distribution/windows/native-dependencies.json -Destination $releaseDir
-          Copy-Item target/tennis-record-sbom.json -Destination $releaseDir
-          $sourceArchive = Join-Path $releaseDir "tennis-record-$($env:RELEASE_NAME)-source.zip"
+          Copy-Item target/bananashot-sbom.json -Destination $releaseDir
+          $sourceArchive = Join-Path $releaseDir "bananashot-$($env:RELEASE_NAME)-source.zip"
           git archive --format=zip --output=$sourceArchive HEAD
           if ($LASTEXITCODE -ne 0) { throw "Source archive creation failed." }
           $publishedInstaller = Join-Path $releaseDir $installer.Name
@@ -176,7 +176,7 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          name: tennis-record-${{ env.RELEASE_NAME }}-windows-x64
+          name: bananashot-${{ env.RELEASE_NAME }}-windows-x64
           path: target/release/*
           if-no-files-found: error
 

@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    # Tennis Record is a Windows app. Some tests use Windows paths, and the Swing
+    # BananaShot is a Windows app. Some tests use Windows paths, and the Swing
     # tests need a display. The release workflow uses the same runner.
     runs-on: windows-2022
     steps:

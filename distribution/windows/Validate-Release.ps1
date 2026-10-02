@@ -63,7 +63,7 @@ if ($thirdParty -notmatch [regex]::Escape($manifest.mpv.variant)) {
     throw "THIRD-PARTY-NOTICES.txt must name the bundled libmpv variant '$($manifest.mpv.variant)'."
 }
 if ($thirdParty -notmatch "GNU Lesser General Public License" -or $thirdParty -notmatch "License: Elastic License 2\.0") {
-    throw "THIRD-PARTY-NOTICES.txt must list libmpv under the LGPL and Tennis Record under ELv2."
+    throw "THIRD-PARTY-NOTICES.txt must list libmpv under the LGPL and BananaShot under ELv2."
 }
 if ($thirdParty -notmatch [regex]::Escape($manifest.nativesRelease.url)) {
     throw "THIRD-PARTY-NOTICES.txt must link the natives release $($manifest.nativesRelease.url)."

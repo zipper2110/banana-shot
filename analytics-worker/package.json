@@ -1,5 +1,5 @@
 {
-  "name": "tennis-record-analytics-worker",
+  "name": "bananashot-analytics-worker",
   "private": true,
   "type": "module",
   "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run" },

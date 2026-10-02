@@ -488,7 +488,7 @@
     const title = document.getElementById('titlebar');
     if (title) {
       title.className = 'titlebar';
-      title.innerHTML = '<span class="logo"></span>Tennis Record — Points — PXL_20260913_070045619' +
+      title.innerHTML = '<span class="logo"></span>BananaShot — Points — PXL_20260913_070045619' +
         '<span class="win-buttons"><span>—</span><span>☐</span><span>✕</span></span>';
     }
     const nav = document.getElementById('nav');

@@ -13,6 +13,7 @@ import org.litvin.points.components.CommentPatch as DispatcherCommentPatch
 import org.litvin.points.components.CommentState
 import org.litvin.points.components.PointsDispatcher
 import org.litvin.media.PlayerStatus
+import org.litvin.media.relativeSeekDeltaMs
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
 import org.litvin.ui.commons.Palette
@@ -420,7 +421,8 @@ class SwingPointsPanel(
     }
 
     private fun nudge(deltaMs: Long) {
-        val newTime = max(0L, player.currentTimeMs() + deltaMs)
+        val playing = player.status() == PlayerStatus.PLAYING
+        val newTime = max(0L, player.currentTimeMs() + relativeSeekDeltaMs(deltaMs, playing))
         player.seek(newTime)
         EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
     }

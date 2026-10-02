@@ -48,7 +48,7 @@ Describe "UI smoke fixture validation" {
 
 Describe "UI smoke executable validation" {
     It "requires a supplied packaged executable to exist" {
-        $missing = Join-Path $TestDrive "Tennis Record.exe"
+        $missing = Join-Path $TestDrive "BananaShot.exe"
 
         $failure = $null
         try { Resolve-UiSmokeExecutable -ExecutablePath $missing } catch { $failure = $_ }
@@ -57,7 +57,7 @@ Describe "UI smoke executable validation" {
     }
 
     It "returns the absolute path of a supplied executable" {
-        $executable = Join-Path $TestDrive "Tennis Record.exe"
+        $executable = Join-Path $TestDrive "BananaShot.exe"
         Set-Content -LiteralPath $executable -Value "placeholder"
 
         $resolved = Resolve-UiSmokeExecutable -ExecutablePath $executable
@@ -86,8 +86,8 @@ Describe "UI smoke isolated run lifecycle" {
         New-Item -ItemType Directory -Path $appData | Out-Null
         $capture = Join-Path $TestDrive "child-environment.txt"
         $childScript = Join-Path $TestDrive "capture-environment.ps1"
-        Set-Content -LiteralPath $childScript -Value 'param($OutputPath) [IO.File]::WriteAllText($OutputPath, $env:TENNIS_RECORD_APP_DATA_DIR)'
-        $parentBefore = $env:TENNIS_RECORD_APP_DATA_DIR
+        Set-Content -LiteralPath $childScript -Value 'param($OutputPath) [IO.File]::WriteAllText($OutputPath, $env:BANANASHOT_APP_DATA_DIR)'
+        $parentBefore = $env:BANANASHOT_APP_DATA_DIR
         $arguments = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}" "{1}"' -f $childScript, $capture
 
         $exitCode = Start-UiSmokeChildProcess `
@@ -97,7 +97,7 @@ Describe "UI smoke isolated run lifecycle" {
 
         $exitCode | Should Be 0
         (Get-Content -LiteralPath $capture -Raw) | Should Be ([IO.Path]::GetFullPath($appData))
-        $env:TENNIS_RECORD_APP_DATA_DIR | Should Be $parentBefore
+        $env:BANANASHOT_APP_DATA_DIR | Should Be $parentBefore
     }
 
     It "removes a passing run while preserving its report" {
@@ -127,7 +127,7 @@ Describe "UI smoke log file check" {
     It "accepts an app-data directory with a log file" {
         $appData = Join-Path $TestDrive "with-log"
         New-Item -ItemType Directory -Path (Join-Path $appData "logs") | Out-Null
-        Set-Content -LiteralPath (Join-Path $appData "logs\tennis-record.log") -Value "started" -Encoding utf8
+        Set-Content -LiteralPath (Join-Path $appData "logs\bananashot.log") -Value "started" -Encoding utf8
 
         Assert-UiSmokeLogFile -AppDataDirectory $appData
     }
@@ -156,7 +156,7 @@ Describe "UI smoke native checks" {
     }
 
     It "returns the natives of the packaged app" {
-        $appDirectory = New-FakeAppDirectory "Tennis Record"
+        $appDirectory = New-FakeAppDirectory "BananaShot"
 
         $paths = Get-UiSmokeNativePaths -AppDirectory $appDirectory
 

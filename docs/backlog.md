@@ -69,9 +69,11 @@ Do these items before the first public release.
   order. Start the restored queue again. A running export that was stopped by
   the close starts again from the beginning. Delete its partial output file
   first.
-- `RenderQueueRequest` also needs an `AdjustmentsSession`, which is not data.
-  Make it again from the project of the job. If the project or the source
-  video is not available, show the job as failed with a clear reason.
+- Each `RenderJob` holds all its data. This includes a copy of the color,
+  crop and rotate adjustments from the time that the user queued the export
+  (`RenderJob.adjustments`). Thus a restored job does not need its project.
+  Save all the fields of the job. If the source video is not available, the
+  worker shows the job as failed with the reason "Source file missing".
 - Done when: the user adds 3 exports, closes the app during the first export,
   and opens the app again. The Exports table shows the 3 exports, and they
   complete. A canceled export does not come back.

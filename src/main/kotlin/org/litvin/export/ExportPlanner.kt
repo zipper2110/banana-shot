@@ -3,6 +3,7 @@ package org.litvin.export
 import org.litvin.ExportPreset
 import org.litvin.OverlaySpan
 import org.litvin.RenderJob
+import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.ScoreboardTimelineBuilder
 import org.litvin.CommentOverlaySpan
 import org.litvin.points.CommentV1
@@ -74,6 +75,8 @@ data class ExportRenderPlanRequest(
     val includeSetSummaries: Boolean = false,
     /** The rows of the statistics cards. */
     val statsSettings: StatsSettingsV1 = StatsSettingsV1(),
+    /** The color, crop and rotate adjustments of the project when the user queues the export. */
+    val adjustments: AdjustmentsV1 = AdjustmentsV1(),
 )
 
 object ExportPlanner {
@@ -280,6 +283,7 @@ object ExportPlanner {
             commentOverlayTimeline = commentOverlayTimeline,
             statsCard = statsCard,
             setSummaries = setSummaries,
+            adjustments = request.adjustments,
         )
 
         return ExportRenderPlan(

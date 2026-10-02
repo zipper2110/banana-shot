@@ -202,6 +202,7 @@ object SwingApplicationFactory {
             val exportPanel = SwingExportPanel(
                 ExportSettingsPreferences(services.preferences.node(PreferencesProvider.EXPORT)),
                 services.renderService,
+                services.adjustments,
                 services.completedRenders,
                 services.filePicker,
                 services.dialogs,

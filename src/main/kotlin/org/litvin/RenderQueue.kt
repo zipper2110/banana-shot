@@ -51,6 +51,8 @@ data class RenderJob(
     val statsCard: org.litvin.stats.StatsCardVideo? = null,
     // The statistics card of each completed set, after the last kept point of the set.
     val setSummaries: List<org.litvin.stats.SetSummaryCard> = emptyList(),
+    // The color, crop and rotate adjustments when the user queued the export. A later change or project switch does not change them.
+    val adjustments: org.litvin.adjustments.AdjustmentsV1 = org.litvin.adjustments.AdjustmentsV1(),
     // Runtime fields
     var status: RenderStatus = RenderStatus.QUEUED,
     var progress: Double = 0.0,          // 0.0 .. 1.0
@@ -277,13 +279,13 @@ object RenderQueueManager {
                 if (abortIfCanceled(request, partOut, assFile)) continue
 
                 // The crop/rotate geometry needs the source aspect. Probe the size only when the geometry is used.
-                val jobAdjustments = try { request.adjustments.get() } catch (_: Throwable) { null }
+                val jobAdjustments = job.adjustments
                 val sourceSize = jobAdjustments
-                    ?.takeIf { !org.litvin.adjustments.GeometryPlan.of(it, job.outWidth, job.outHeight).isIdentity }
+                    .takeIf { !org.litvin.adjustments.GeometryPlan.of(it, job.outWidth, job.outHeight).isIdentity }
                     ?.let { org.litvin.export.ExportResolutionProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable) }
                 // The brightness and shadows/highlights curve needs the black and white codes of the source. Probe them only when the curve is used.
                 val toneRange = jobAdjustments
-                    ?.takeIf { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
+                    .takeIf { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
                     ?.let { org.litvin.export.SourceToneRangeProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable) }
                     ?: ToneRange.LIMITED
 

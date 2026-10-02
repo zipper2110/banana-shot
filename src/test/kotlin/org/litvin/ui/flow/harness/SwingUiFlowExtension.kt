@@ -184,7 +184,7 @@ class SwingUiFlowExtension(
             preferences = preferences,
             executors = executors,
             mediaPlayers = fakeMediaPlayers ?: checkNotNull(nativeMediaPlayers),
-            renderService = fakeRenderService ?: ProductionRenderService(adjustments, completedRenders),
+            renderService = fakeRenderService ?: ProductionRenderService(completedRenders),
             filePicker = filePicker,
             dialogs = dialogs,
             projectsRepository = FileProjectsRepository(paths.projects),

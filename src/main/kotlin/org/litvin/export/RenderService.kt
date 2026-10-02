@@ -3,7 +3,6 @@ package org.litvin.export
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.RenderJob
 import org.litvin.RenderQueueManager
-import org.litvin.adjustments.AdjustmentsSession
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
@@ -23,7 +22,6 @@ internal enum class RenderTerminalOutcome { COMPLETED, FAILED, CANCELED }
 internal class RenderQueueRequest(
     val ownerId: String,
     val job: RenderJob,
-    val adjustments: AdjustmentsSession,
     val completedRenders: CompletedRendersRepository,
     private val onTerminal: (RenderTerminalOutcome) -> Unit = { },
 ) {
@@ -55,7 +53,6 @@ private object GlobalRenderQueueGateway : RenderQueueGateway {
 }
 
 class ProductionRenderService internal constructor(
-    private val adjustments: AdjustmentsSession,
     private val completedRenders: CompletedRendersRepository,
     private val gateway: RenderQueueGateway = GlobalRenderQueueGateway,
 ) : RenderService {
@@ -74,7 +71,7 @@ class ProductionRenderService internal constructor(
             ownedJobIds += job.id
             try {
                 gateway.enqueue(
-                    RenderQueueRequest(ownerId, job, adjustments, completedRenders) {
+                    RenderQueueRequest(ownerId, job, completedRenders) {
                         ownedJobIds.remove(job.id)
                     },
                 )

@@ -28,38 +28,30 @@ Do these items before the first public release.
 - Decided on 2026-10-03: an in-app feedback form sends the report to a
   Cloudflare Worker, and the Worker sends it to the author with a Telegram
   bot. `docs/feedback/b-8-tasks.md` has the decisions and the tasks.
-- Status 2026-10-03: the code of T1 to T5 is done. Open: deploy the Worker,
-  make the bot, set the GitHub variable `FEEDBACK_ENDPOINT`, and do the
-  manual checks of T5. The site text waits for B-10.
+- Status 2026-10-03: the code of T1 to T5 is done. The Worker and the bot
+  work. Open: set the GitHub variable `FEEDBACK_ENDPOINT`, and do the manual
+  check of T5 with an installed dry-run build. The site text waits for B-10.
 - Replies inside the app are B-33 (post-release).
 
 ### B-9 Analytics
 
 - The app code is in `org.litvin.analytics`. The Worker is in
-  `analytics-worker`. The Worker does not accept events until
-  `ANALYTICS_INGESTION_ENABLED` is `true`.
-- Finish the analytics work and turn it on.
-- No build sets the three JVM properties that turn on analytics:
-  `bananashot.analytics.endpoint`, `bananashot.analytics.privacyUrl`, and
-  `bananashot.analytics.noticeVersion`. Without them, the app never shows
-  the consent dialog and never sends analytics (found on 2026-10-03).
-- Add `-AnalyticsEndpoint`, `-AnalyticsPrivacyUrl`, and
-  `-AnalyticsNoticeVersion` to `Build-AppImage.ps1`, as
-  `docs/analytics/design.md` says. Add the three values to
-  `windows-release.yml` from GitHub variables. A shelved IntelliJ patch has
-  this code with the old `tennis.record.` prefix. Do not use that prefix.
-- The endpoint must be an `https` URL that ends in `/v1/events/batch`. The
-  notice version must be `AnalyticsEventRegistry.NOTICE_VERSION` (now 1).
-- To see the consent dialog in a dev run, add the three properties to the VM
-  options. Also clear `analytics.choice` and `analytics.noticeVersion` in the
-  application preferences.
-- At the first start, the Overview help opens after the consent dialog
-  closes (`AnalyticsConsentDialog.show(onClosed)`). Check this order on a
-  fresh install with analytics turned on.
+  `analytics-worker`. The design is `docs/analytics/design.md`.
+  `docs/analytics/b-9-tasks.md` has the state, the open questions, and the
+  tasks.
+- Status 2026-10-03: the redesign (session summaries) has not started. No
+  build sends analytics. T1 to T7 are open. The release with analytics also
+  needs the privacy notice on the site (B-10).
 
 ### B-10 Landing site
 
 - Make a landing site for the app.
+- Reminder: the site must have the privacy notice page before the first
+  release. The page has the analytics notice (B-9, T5:
+  `docs/analytics/privacy-notice.md`) and the feedback notice
+  (`docs/feedback/privacy-notice.md`). The release build gets the page URL
+  as `-AnalyticsPrivacyUrl`. Without this page, the release has no
+  analytics. There is no temporary page (decided on 2026-10-03).
 
 ### B-21 First dry run of the release workflow
 

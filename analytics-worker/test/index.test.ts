@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import worker, { type Env } from '../src/index';
+import worker, { MAX_BODY_BYTES, type Env } from '../src/index';
+import { HOURLY_LIMIT } from '../src/rate-limit';
 import { appVersionText } from '../src/validation';
 import { FakeD1 } from './fake-d1';
-import { batch, bodyOf, invalidBatches, validBatches } from './fixtures';
+import { bodyOf, invalidSummaries, summary, validSummaries } from './fixtures';
 
-const NOW = Date.UTC(2026, 9, 3, 12, 0, 0);
-const URL_BATCH = 'https://analytics.example.test/v1/events/batch';
+const HOUR = 60 * 60 * 1000;
+const NOW = Date.UTC(2026, 9, 3, 12, 34, 56);
+const NOW_HOUR = Date.UTC(2026, 9, 3, 12, 0, 0);
+const URL_SESSION = 'https://analytics.example.test/v1/session';
+const IP = '203.0.113.7';
 
 let db: FakeD1;
 let env: Env;
@@ -14,118 +18,174 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
   db = new FakeD1();
-  env = { ANALYTICS_INGESTION_ENABLED: 'true', ANALYTICS_DB: db.asD1() };
+  env = { ANALYTICS_INGESTION_ENABLED: 'true', ANALYTICS_DB: db.asD1(), RATE_LIMIT_KEY: 'test-rate-key' };
 });
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-function post(body: string, contentType: string | null = 'application/json', url = URL_BATCH): Request {
-  const headers = new Headers();
+function post(body: string, contentType: string | null = 'application/json', url = URL_SESSION, ip = IP): Request {
+  const headers = new Headers({ 'cf-connecting-ip': ip, 'user-agent': 'Java-http-client/25' });
   if (contentType !== null) headers.set('content-type', contentType);
   return new Request(url, { method: 'POST', headers, body });
 }
 
 const send = (request: Request) => worker.fetch(request, env);
+const sendSummary = (overrides: Record<string, unknown> = {}) => send(post(JSON.stringify(summary(overrides))));
 
 describe('kill switch', () => {
   it.each(['false', '', 'TRUE', '1'])('returns 410 and stores nothing when ingestion is "%s"', async value => {
     env.ANALYTICS_INGESTION_ENABLED = value;
-    const response = await send(post(JSON.stringify(batch())));
+    const response = await sendSummary();
     expect(response.status).toBe(410);
-    expect(await response.json()).toEqual({ accepted: 0, rejected: 0, reasons: {} });
-    expect(db.eventRows()).toHaveLength(0);
+    expect(await response.text()).toBe('');
+    expect(db.sessionRows()).toHaveLength(0);
   });
 
   it('comes before all other checks', async () => {
     env.ANALYTICS_INGESTION_ENABLED = 'false';
-    const response = await send(new Request('https://analytics.example.test/other', { method: 'GET' }));
-    expect(response.status).toBe(410);
+    expect((await send(new Request('https://analytics.example.test/other', { method: 'GET' }))).status).toBe(410);
   });
 });
 
 describe('request checks', () => {
-  it('returns 405 for GET', async () => {
-    expect((await send(new Request(URL_BATCH, { method: 'GET' }))).status).toBe(405);
+  it.each(['/', '/v1', '/v1/session/', '/v1/events/batch'])('returns 404 for the path %s', async path => {
+    expect((await send(post(JSON.stringify(summary()), 'application/json', `https://analytics.example.test${path}`))).status).toBe(404);
   });
 
-  it.each(['PUT', 'DELETE', 'PATCH'])('returns 404 for %s', async method => {
-    expect((await send(new Request(URL_BATCH, { method, body: '{}' }))).status).toBe(404);
-  });
-
-  it.each(['/', '/v1/events', '/v1/events/batch/', '/v1/session'])('returns 404 for the path %s', async path => {
-    expect((await send(post(JSON.stringify(batch()), 'application/json', `https://analytics.example.test${path}`))).status).toBe(404);
+  it.each(['GET', 'PUT', 'DELETE'])('returns 405 for %s', async method => {
+    const body = method === 'GET' ? undefined : '{}';
+    expect((await send(new Request(URL_SESSION, { method, body }))).status).toBe(405);
   });
 
   it.each([null, 'text/plain', 'application/x-www-form-urlencoded'])('returns 415 for the content type %s', async contentType => {
-    expect((await send(post(JSON.stringify(batch()), contentType))).status).toBe(415);
+    expect((await send(post(JSON.stringify(summary()), contentType))).status).toBe(415);
   });
 
   it('accepts a content type with a charset and in uppercase', async () => {
-    expect((await send(post(JSON.stringify(batch()), 'Application/JSON; charset=utf-8'))).status).toBe(202);
+    expect((await send(post(JSON.stringify(summary()), 'Application/JSON; charset=utf-8'))).status).toBe(204);
   });
 
-  it('returns 413 for a body above 64 KiB', async () => {
-    const body = JSON.stringify(batch({ app_version: 'x'.repeat(65_536) }));
+  it('returns 413 for a body above 8 KiB and stores nothing', async () => {
+    const body = JSON.stringify(summary({ app_version: 'x'.repeat(MAX_BODY_BYTES) }));
     expect((await send(post(body))).status).toBe(413);
-    expect(db.eventRows()).toHaveLength(0);
+    expect(db.sessionRows()).toHaveLength(0);
   });
 
-  it('accepts a body of exactly 64 KiB', async () => {
-    const empty = JSON.stringify(batch({ app_version: '' }));
-    const body = JSON.stringify(batch({ app_version: 'x'.repeat(65_536 - empty.length) }));
-    expect(body.length).toBe(65_536);
-    expect((await send(post(body))).status).toBe(202);
+  it('accepts a body of exactly 8 KiB', async () => {
+    const empty = JSON.stringify(summary({ app_version: '' }));
+    const body = JSON.stringify(summary({ app_version: 'x'.repeat(MAX_BODY_BYTES - empty.length) }));
+    expect(new TextEncoder().encode(body).length).toBe(MAX_BODY_BYTES);
+    expect((await send(post(body))).status).toBe(204);
+  });
+
+  it('counts bytes, not characters', async () => {
+    const empty = JSON.stringify(summary({ app_version: '' }));
+    const body = JSON.stringify(summary({ app_version: 'ü'.repeat((MAX_BODY_BYTES - empty.length) / 2 + 1) }));
+    expect((await send(post(body))).status).toBe(413);
   });
 });
 
-describe('invalid batches', () => {
-  it.each(invalidBatches.map(invalid => [invalid.name, invalid]))('returns 422 for "%s" and stores nothing', async (_name, invalid) => {
+describe('invalid summaries', () => {
+  it.each(invalidSummaries.map(invalid => [invalid.name, invalid]))('returns 400 for "%s" and stores nothing', async (_name, invalid) => {
     const response = await send(post(bodyOf(invalid)));
-    expect(response.status).toBe(422);
-    const text = await response.text();
-    expect(JSON.parse(text)).toEqual({ accepted: 0, rejected: 1, reasons: { invalid: 1 } });
-    expect(text).not.toContain('secret');
-    expect(text).not.toContain('example.test');
-    expect(db.eventRows()).toHaveLength(0);
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe('');
+    expect(db.sessionRows()).toHaveLength(0);
+    expect(db.rates.size).toBe(0);
   });
 });
 
-describe('valid batches', () => {
-  it.each(validBatches.map((value, i) => [i, value]))('stores valid batch %i', async (_i, value) => {
-    const events = value.events as Record<string, unknown>[];
+describe('valid summaries', () => {
+  it.each(validSummaries.map((value, i) => [i, value]))('stores valid summary %i', async (_i, value) => {
     const response = await send(post(JSON.stringify(value)));
-    expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({ accepted: events.length, rejected: 0, reasons: {} });
-    expect(db.eventRows()).toEqual(events.map(event => ({
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+    expect(db.sessionRows()).toEqual([{
       session_id: value.session_id,
-      sequence_number: event.sequence_number,
-      received_at: NOW,
+      first_received_at: NOW_HOUR,
+      last_received_at: NOW_HOUR,
       schema_version: 1,
       notice_version: 1,
-      event_name: event.name,
-      elapsed_ms: event.elapsed_ms,
       app_version: appVersionText(value.app_version),
       os_family: value.os_family,
-      properties: JSON.stringify(event.properties),
-    })));
+      snapshot: value.snapshot,
+      final: value.final ? 1 : 0,
+      duration_s: value.duration_s,
+      active_s: value.active_s,
+      counters: JSON.stringify(value.counters),
+    }]);
   });
 
-  it('ignores an event that is already stored', async () => {
-    await send(post(JSON.stringify(batch())));
-    vi.setSystemTime(NOW + 60_000);
-    const response = await send(post(JSON.stringify(batch({ app_version: '2.0.0' }))));
-    expect(response.status).toBe(202);
-    expect(db.eventRows()).toHaveLength(1);
-    expect(db.eventRows()[0]).toMatchObject({ app_version: '1.0.0', received_at: NOW });
+  it('does not store the IP address or the headers', async () => {
+    await sendSummary({ counters: { point_added: 2 } });
+    const stored = JSON.stringify([db.sessionRows(), [...db.rates.values()]]);
+    expect(stored).not.toContain(IP);
+    expect(stored).not.toContain('Java-http-client');
+    expect(stored).not.toContain('application/json');
+  });
+});
+
+describe('snapshots', () => {
+  it('replaces the row with a higher snapshot and keeps first_received_at', async () => {
+    await sendSummary({ snapshot: 0 });
+    vi.setSystemTime(NOW + 2 * HOUR);
+    const response = await sendSummary({ snapshot: 1, final: true, duration_s: 300, active_s: 200, counters: { point_added: 4 } });
+    expect(response.status).toBe(204);
+    expect(db.sessionRows()).toHaveLength(1);
+    expect(db.sessionRows()[0]).toMatchObject({
+      first_received_at: NOW_HOUR, last_received_at: NOW_HOUR + 2 * HOUR, snapshot: 1, final: 1, duration_s: 300, active_s: 200,
+      counters: '{"point_added":4}',
+    });
   });
 
+  it.each([3, 2])('keeps the row when the snapshot is %i (not higher than 3)', async snapshot => {
+    await sendSummary({ snapshot: 3, counters: { point_added: 9 } });
+    vi.setSystemTime(NOW + HOUR);
+    expect((await sendSummary({ snapshot, counters: { point_added: 1 } })).status).toBe(204);
+    expect(db.sessionRows()[0]).toMatchObject({ snapshot: 3, last_received_at: NOW_HOUR, counters: '{"point_added":9}' });
+  });
+
+  it('keeps one row for each session', async () => {
+    await sendSummary({ session_id: '00000000-0000-4000-8000-000000000001' });
+    await sendSummary({ session_id: '00000000-0000-4000-8000-000000000002' });
+    expect(db.sessionRows()).toHaveLength(2);
+  });
+});
+
+describe('rate limit', () => {
+  it(`accepts ${HOURLY_LIMIT} summaries from one address in one hour and refuses the next one`, async () => {
+    for (let i = 0; i < HOURLY_LIMIT; i++) expect((await sendSummary({ snapshot: i })).status).toBe(204);
+    expect((await sendSummary({ snapshot: HOURLY_LIMIT })).status).toBe(429);
+    expect(db.sessionRows()[0].snapshot).toBe(HOURLY_LIMIT - 1);
+  });
+
+  it('counts each address separately', async () => {
+    for (let i = 0; i < HOURLY_LIMIT; i++) await sendSummary({ snapshot: i });
+    expect((await send(post(JSON.stringify(summary({ snapshot: 999 })), 'application/json', URL_SESSION, '198.51.100.1'))).status).toBe(204);
+  });
+
+  it('starts a new count in the next hour and deletes the old rows', async () => {
+    for (let i = 0; i < HOURLY_LIMIT; i++) await sendSummary({ snapshot: i });
+    vi.setSystemTime(NOW + HOUR);
+    expect((await sendSummary({ snapshot: 999 })).status).toBe(204);
+    expect(db.rates.size).toBe(1);
+  });
+
+  it('returns 503 and stores nothing when the rate key is not set', async () => {
+    env.RATE_LIMIT_KEY = undefined;
+    expect((await sendSummary()).status).toBe(503);
+    expect(db.sessionRows()).toHaveLength(0);
+  });
+});
+
+describe('failures', () => {
   it('returns 503 when D1 fails', async () => {
-    db.failBatch = true;
-    const response = await send(post(JSON.stringify(batch())));
+    db.fail = true;
+    const response = await sendSummary();
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ accepted: 0, rejected: 0, reasons: { unavailable: 1 } });
+    expect(await response.text()).toBe('');
   });
 });
 
@@ -139,17 +199,16 @@ describe('app_version', () => {
     [null, 'unknown'],
     [undefined, 'unknown'],
   ])('accepts %j and stores %j', async (value, stored) => {
-    const response = await send(post(JSON.stringify(batch({ app_version: value }))));
-    expect(response.status).toBe(202);
-    expect(db.eventRows()[0].app_version).toBe(stored);
+    expect((await sendSummary({ app_version: value })).status).toBe(204);
+    expect(db.sessionRows()[0].app_version).toBe(stored);
   });
 });
 
 describe('scheduled', () => {
   it('runs the retention', async () => {
-    db.events.set('old|0', { session_id: 'old', sequence_number: 0, received_at: 0 });
+    db.sessions.set('old', { session_id: 'old', last_received_at: 0 });
     await worker.scheduled({} as ScheduledController, env);
-    expect(db.eventRows()).toHaveLength(0);
+    expect(db.sessionRows()).toHaveLength(0);
     expect(db.retentionStatus).toMatchObject({ ran_at: NOW, deleted_count: 1 });
   });
 });

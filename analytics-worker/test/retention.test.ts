@@ -3,12 +3,13 @@ import { runRetention } from '../src/retention';
 import { FakeD1 } from './fake-d1';
 
 const NOW = Date.UTC(2026, 9, 3, 3, 0, 0);
-const DAYS_90 = 90 * 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+const DAYS_90 = 90 * 24 * HOUR;
 
 let db: FakeD1;
 
-function addEvent(sessionId: string, receivedAt: number) {
-  db.events.set(`${sessionId}|0`, { session_id: sessionId, sequence_number: 0, received_at: receivedAt });
+function addSession(sessionId: string, lastReceivedAt: number) {
+  db.sessions.set(sessionId, { session_id: sessionId, first_received_at: 0, last_received_at: lastReceivedAt });
 }
 
 beforeEach(() => {
@@ -16,31 +17,45 @@ beforeEach(() => {
 });
 
 describe('runRetention', () => {
-  it('deletes events older than 90 days and keeps the others', async () => {
-    addEvent('older', NOW - DAYS_90 - 1);
-    addEvent('at-cutoff', NOW - DAYS_90);
-    addEvent('new', NOW - 1000);
+  it('deletes sessions with a last summary older than 90 days and keeps the others', async () => {
+    addSession('older', NOW - DAYS_90 - 1);
+    addSession('at-cutoff', NOW - DAYS_90);
+    addSession('new', NOW - 1000);
     await runRetention(db.asD1(), NOW);
-    expect(db.eventRows().map(row => row.session_id)).toEqual(['at-cutoff', 'new']);
+    expect(db.sessionRows().map(row => row.session_id)).toEqual(['at-cutoff', 'new']);
   });
 
-  it('writes the status with the deleted count and the oldest kept event', async () => {
-    addEvent('a', NOW - DAYS_90 - 5);
-    addEvent('b', NOW - DAYS_90 - 6);
-    addEvent('c', NOW - 2000);
+  it('keeps a session that started long ago when its last summary is new', async () => {
+    db.sessions.set('long', { session_id: 'long', first_received_at: NOW - 2 * DAYS_90, last_received_at: NOW - HOUR });
     await runRetention(db.asD1(), NOW);
-    expect(db.retentionStatus).toEqual({ id: 1, ran_at: NOW, deleted_count: 2, oldest_received_at: NOW - 2000, consecutive_failures: 0 });
+    expect(db.sessionRows()).toHaveLength(1);
   });
 
-  it('writes no oldest event when the table is empty', async () => {
+  it('deletes the rate rows of the previous hours', async () => {
+    const hour = NOW / HOUR;
+    db.rates.set('old', { id: 'old', hour: hour - 1, count: 5 });
+    db.rates.set('current', { id: 'current', hour, count: 5 });
     await runRetention(db.asD1(), NOW);
-    expect(db.retentionStatus).toEqual({ id: 1, ran_at: NOW, deleted_count: 0, oldest_received_at: null, consecutive_failures: 0 });
+    expect([...db.rates.keys()]).toEqual(['current']);
+  });
+
+  it('writes the status with the deleted count and the oldest kept session', async () => {
+    addSession('a', NOW - DAYS_90 - 5);
+    addSession('b', NOW - DAYS_90 - 6);
+    addSession('c', NOW - 2000);
+    await runRetention(db.asD1(), NOW);
+    expect(db.retentionStatus).toEqual({ id: 1, ran_at: NOW, deleted_count: 2, oldest_received_at: NOW - 2000 });
+  });
+
+  it('writes no oldest session when the table is empty', async () => {
+    await runRetention(db.asD1(), NOW);
+    expect(db.retentionStatus).toEqual({ id: 1, ran_at: NOW, deleted_count: 0, oldest_received_at: null });
   });
 
   it('replaces the status of the previous run', async () => {
-    addEvent('a', NOW - DAYS_90 - 1);
+    addSession('a', NOW - DAYS_90 - 1);
     await runRetention(db.asD1(), NOW);
     await runRetention(db.asD1(), NOW + 1000);
-    expect(db.retentionStatus).toEqual({ id: 1, ran_at: NOW + 1000, deleted_count: 0, oldest_received_at: null, consecutive_failures: 0 });
+    expect(db.retentionStatus).toEqual({ id: 1, ran_at: NOW + 1000, deleted_count: 0, oldest_received_at: null });
   });
 });

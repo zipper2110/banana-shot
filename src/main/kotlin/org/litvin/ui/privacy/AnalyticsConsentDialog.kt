@@ -31,6 +31,9 @@ object AnalyticsConsentDialog {
     private const val WIDTH = DialogKit.MEDIUM
     private const val TEXT_WIDTH = WIDTH - 84
 
+    /** The first paragraph. It must agree with the privacy notice (docs/analytics/privacy-notice.md). */
+    internal val INTRO = "Help improve ${AppInfo.NAME} by sending optional, anonymous usage counts."
+
     /** Shows the question. [onClosed] runs after the window closes, with any answer. */
     fun show(
         owner: Window,
@@ -74,7 +77,7 @@ object AnalyticsConsentDialog {
         }
         val later = WrapText("You can change this later in More → Privacy.", UiKit.font(12f), Palette.FG_3, 1.45f, TEXT_WIDTH)
         val parts = listOf(
-            MessageDialog.paragraph("Help improve ${AppInfo.NAME} by sending optional, anonymous product events.", WIDTH),
+            MessageDialog.paragraph(INTRO, WIDTH),
             fact,
             copyLine,
             later,

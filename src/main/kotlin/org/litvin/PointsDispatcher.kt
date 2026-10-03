@@ -99,25 +99,25 @@ class PointsDispatcher {
         }
     }
 
-    /** Called when user presses V or clicks Point End. */
-    fun onPointEnd(timeMs: Long) {
+    /** Called when user presses V or clicks Point End. Returns true when a point was created. */
+    fun onPointEnd(timeMs: Long): Boolean {
         val s = pendingStartMs
         if (s == null) {
             // No-op per spec (gentle hint)
             notifyUser("Set a Start first (press C) before setting End")
-            return
+            return false
         }
         val e = Timecode.roundTo10ms(timeMs)
         val duration = e - s
         if (e <= s || duration < 200) {
             // Invalid; keep pending and show hint
             notifyUser("Invalid point: End must be > Start and duration ≥ 200 ms")
-            return
+            return false
         }
         // Validation 2.7: reject overlaps with existing points; adjacent allowed via half-open rule
         if (overlapsExisting(s, e)) {
             notifyUser("Overlap blocked for [$s, $e). Adjust boundaries to avoid overlaps.")
-            return
+            return false
         }
         val id = pendingId ?: EdlIO.generateId()
         points.add(PointV1(id = id, startMs = s, endMs = e))
@@ -128,6 +128,7 @@ class PointsDispatcher {
         pendingId = null
         logger.debug { "Point created: $id [$s, $e]" }
         onPointsChanged?.invoke()
+        return true
     }
 
     fun getCompletedPoints(): List<PointV1> = points.toList()

@@ -17,6 +17,17 @@ class PointsDispatcherTest {
     }
 
     @Test
+    fun onPointEnd_returnsTrueOnlyWhenItCreatesAPoint() {
+        val d = newDispatcher()
+        assertEquals(false, d.onPointEnd(1000), "no start")
+        d.onPointStart(1000)
+        assertEquals(false, d.onPointEnd(1100), "too short")
+        assertEquals(true, d.onPointEnd(2000))
+        d.onPointStart(500)
+        assertEquals(false, d.onPointEnd(1500), "overlap")
+    }
+
+    @Test
     fun create_point_happyPath_and_adjacent_allowed() {
         val d = newDispatcher()
         // First point: [0, 1000)

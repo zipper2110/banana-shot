@@ -3,6 +3,9 @@ package org.litvin.ui.tabs.scoring
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.GeometryViewportPanel
 import org.litvin.OverlaySpan
+import org.litvin.analytics.Analytics
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
 import org.litvin.ScoreboardComponent
 import org.litvin.ScoreboardDisplay
 import org.litvin.ScoreboardTimelineBuilder
@@ -83,6 +86,7 @@ class SwingScoringPanel(
     private val scoreSettingsEditor: ScoreSettingsEditor = ScoreSettingsDialog,
     private val hints: HintController = HintController.NONE,
     private val frameLoader: VideoFrameLoader = VideoFrameLoader(),
+    private val analytics: Analytics = DisabledAnalytics,
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
         MpvSwingMediaPlayerAdapter(),
@@ -747,6 +751,7 @@ class SwingScoringPanel(
         try {
             EdlIO.writeForProjectDir(dir, EdlV1(points = updated, version = 1))
             points = updated
+            if (updated.any { it.id == pointId && it.favorite }) analytics.record(AnalyticsEvent.PointFavorited)
             refreshScoring()
         } catch (t: Throwable) {
             dialogs.showError(this, t.message ?: t.toString(), "Failed to save favorite")
@@ -758,7 +763,7 @@ class SwingScoringPanel(
         // A point without a valid length gets no outcome
         if (segmentEndMs <= segmentStartMs) return
         val p = points[selectedPointIndex]
-        outcomesByPointId[p.id] = outcome
+        if (outcomesByPointId.put(p.id, outcome) != outcome) analytics.record(AnalyticsEvent.ScoreRecorded)
         saveNow()
         refreshScoring()
         refreshVideoScoreboardOverlay()

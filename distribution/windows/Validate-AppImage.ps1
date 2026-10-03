@@ -6,7 +6,10 @@ param(
     # The app image folder. The default is the output folder of Build-AppImage.ps1.
     [string]$AppHome,
     # Only for a local build: do not require the feedback endpoint. The release workflow never uses it.
-    [switch]$AllowNoFeedbackEndpoint
+    [switch]$AllowNoFeedbackEndpoint,
+    # Only for a local build: do not require the analytics properties (B-9 decision 4). The release workflow never
+    # uses it.
+    [switch]$AllowNoAnalytics
 )
 
 # Checks the build information and the runtime modules of the app image (see "Build expiry" in
@@ -127,9 +130,37 @@ if ($feedbackEndpoint) {
     throw "The app image has no feedback endpoint. Set the GitHub variable FEEDBACK_ENDPOINT, or give -FeedbackEndpoint to Build-AppImage.ps1."
 }
 
+# The usage analytics (B-9 decision 4). The same rules as AnalyticsBuildConfig.fromProperties in the app.
+$expectedNoticeVersion = "1"
+function Get-LauncherProperty([string]$name) {
+    $prefix = "-D$name="
+    $line = Get-Content -LiteralPath $launcherConfig | Where-Object { $_.Contains($prefix) } | Select-Object -First 1
+    if ($line) { ($line -split [regex]::Escape($prefix), 2)[1].Trim() } else { "" }
+}
+$analyticsEndpoint = Get-LauncherProperty "bananashot.analytics.endpoint"
+$analyticsPrivacyUrl = Get-LauncherProperty "bananashot.analytics.privacyUrl"
+$analyticsNotice = Get-LauncherProperty "bananashot.analytics.noticeVersion"
+$analyticsValues = @($analyticsEndpoint, $analyticsPrivacyUrl, $analyticsNotice) | Where-Object { $_ }
+if ($analyticsValues.Count -eq 0) {
+    if (-not $AllowNoAnalytics) {
+        throw "The app image has no analytics properties. Set the GitHub variables ANALYTICS_ENDPOINT, ANALYTICS_PRIVACY_URL, and ANALYTICS_NOTICE_VERSION, or give the -Analytics* parameters to Build-AppImage.ps1."
+    }
+} else {
+    if ($analyticsEndpoint -notmatch '^https://[^/@?#\s]+/v1/session$') {
+        throw "The analytics endpoint '$analyticsEndpoint' is not an https URL with the path /v1/session."
+    }
+    if ($analyticsPrivacyUrl -notmatch '^https://[^/@?#\s]+(/[^?#\s]*)?$') {
+        throw "The analytics privacy URL '$analyticsPrivacyUrl' is not an https URL with no query."
+    }
+    if ($analyticsNotice -ne $expectedNoticeVersion) {
+        throw "The analytics notice version '$analyticsNotice' is not $expectedNoticeVersion, the notice version of the app."
+    }
+}
+
 Write-Host "Build date: $($values["buildDate"]) UTC"
 Write-Host "Expiry date: $($values["expiryDate"])"
 Write-Host "Version: $($values["version"])"
 Write-Host "Runtime: JDK $javaFeature, modules present: $($requiredModules -join ', ')"
 Write-Host "Feedback endpoint: $(if ($feedbackEndpoint) { $feedbackEndpoint } else { 'none (local build)' })"
+Write-Host "Analytics: $(if ($analyticsEndpoint) { "$analyticsEndpoint, notice $analyticsNotice at $analyticsPrivacyUrl" } else { 'none (local build)' })"
 Write-Host "The application image is valid."

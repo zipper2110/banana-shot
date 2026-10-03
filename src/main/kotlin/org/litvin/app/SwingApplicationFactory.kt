@@ -40,8 +40,11 @@ import org.litvin.ui.tabs.scoring.PreferencesScoreboardStyleDefaults
 import org.litvin.ui.tabs.scoring.SwingScoringPanel
 import org.litvin.ui.tabs.stats.SwingStatsPanel
 import org.litvin.ui.tabs.test.SwingTestPanel
+import org.litvin.RenderQueueManager
+import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
 import org.litvin.ui.privacy.AnalyticsConsentDialog
 import org.litvin.ui.more.AboutDocument
 import org.litvin.ui.more.AboutInfo
@@ -57,12 +60,14 @@ import java.awt.CardLayout
 import java.awt.Desktop
 import java.awt.Dimension
 import java.awt.EventQueue
+import java.awt.KeyboardFocusManager
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.beans.PropertyChangeListener
 import java.io.File
 import java.net.URI
 import javax.swing.AbstractAction
@@ -152,6 +157,8 @@ object SwingApplicationFactory {
         }
         val closeActions = mutableListOf<() -> Unit>({ services.close() })
         val handle = SwingApplicationHandle(frame, closeActions)
+        val analyticsController = services.analyticsController
+        val analytics: Analytics = analyticsController ?: DisabledAnalytics
 
         try {
             val feedback = FeedbackLauncher(frame, feedbackPresenter(services))
@@ -161,6 +168,11 @@ object SwingApplicationFactory {
                 feedback.open(FeedbackRequest(FeedbackTopic.PROBLEM, "$title\n\n$message", attachLog = true))
             val helpDialog = lazy { HelpDialog(frame, onTellUs = { feedback.open(FeedbackRequest(FeedbackTopic.QUESTION)) }) }
             fun showHelp(page: HelpPage, tab: HelpPage? = page) = helpDialog.value.open(page, tab)
+
+            // Exports report their facts to the analytics (B-9). The exit stops this before the exports stop.
+            val renderAnalytics = RenderAnalytics(analytics)
+            RenderQueueManager.runListener = renderAnalytics
+            closeActions += { if (RenderQueueManager.runListener === renderAnalytics) RenderQueueManager.runListener = null }
 
             val sidebar = JPanel().apply {
                 UiStyles.styleSidebarContainer(this)
@@ -176,6 +188,17 @@ object SwingApplicationFactory {
             lateinit var btnExport: UiStyles.SidebarButton
             lateinit var btnCropRotate: UiStyles.SidebarButton
             var btnTest: UiStyles.SidebarButton? = null
+
+            // True while the app clicks a sidebar button. The analytics count only the clicks of the user (B-9).
+            var navigatingInCode = false
+            fun clickInCode(button: UiStyles.SidebarButton) {
+                navigatingInCode = true
+                try {
+                    button.doClick()
+                } finally {
+                    navigatingInCode = false
+                }
+            }
 
             // Match tabs go in order. Video tabs are settings for the image that the user can change at any time.
             val groupMatch = UiStyles.SidebarGroup("Match").apply { name = "nav-group-match" }
@@ -205,6 +228,7 @@ object SwingApplicationFactory {
                 services.executors.createExecutor("points-autosave"),
                 services.dialogs,
                 hints,
+                analytics,
             )
             closeActions += pointsPanel::close
 
@@ -212,12 +236,13 @@ object SwingApplicationFactory {
                 services.mediaPlayers.create(MediaScreen.COLORS),
                 services.adjustments,
                 services.preferences.node(PreferencesProvider.COLOR_ADJUSTMENTS),
+                analytics,
             )
             closeActions += colorsPanel::close
 
             val cropRotatePanel = SwingCropRotatePanel(
                 services.mediaPlayers.create(MediaScreen.CROP),
-                DefaultCropRotatePresenter(services.adjustments),
+                DefaultCropRotatePresenter(services.adjustments, analytics),
             )
             closeActions += cropRotatePanel::dispose
 
@@ -228,18 +253,19 @@ object SwingApplicationFactory {
                 services.dialogs,
                 PreferencesScoreboardStyleDefaults(scoringPreferences),
                 hints = hints,
+                analytics = analytics,
             )
             closeActions += scoringPanel::close
             scoringPanel.onGoToPoint = { pointId ->
-                btnPoints.doClick()
+                clickInCode(btnPoints)
                 pointsPanel.selectPoint(pointId)
             }
 
             val statsPanel = SwingStatsPanel(
                 services.dialogs,
-                onOpenScoring = { btnScoring.doClick() },
+                onOpenScoring = { clickInCode(btnScoring) },
                 onOpenPoint = { pointId ->
-                    btnScoring.doClick()
+                    clickInCode(btnScoring)
                     scoringPanel.selectPoint(pointId)
                 },
             )
@@ -285,7 +311,19 @@ object SwingApplicationFactory {
                 else -> HelpPage.OVERVIEW
             }
 
-            fun goTo(card: String) {
+            fun analyticsTab(card: String): AnalyticsEvent.Tab? = when (card) {
+                CARD_PROJECTS -> AnalyticsEvent.Tab.PROJECTS
+                CARD_POINTS -> AnalyticsEvent.Tab.POINTS
+                CARD_ADJ_COLORS -> AnalyticsEvent.Tab.COLORS
+                CARD_ADJ_CROP_ROTATE -> AnalyticsEvent.Tab.CROP_ROTATE
+                CARD_SCORING -> AnalyticsEvent.Tab.SCORING
+                CARD_STATS -> AnalyticsEvent.Tab.STATS
+                CARD_EXPORT -> AnalyticsEvent.Tab.EXPORT
+                else -> null
+            }
+
+            /** Shows [card]. [byUser] is true only for a click of the user on a sidebar button. */
+            fun goTo(card: String, byUser: Boolean = false) {
                 if (card == currentCard) {
                     // A click on the open Projects tab reloads the list, for example to show a project
                     // that was added after the list loaded. Other tabs stay as they are, because a
@@ -323,12 +361,14 @@ object SwingApplicationFactory {
                 btnExport.active = card == CARD_EXPORT
                 btnTest?.active = card == CARD_TEST
                 currentCard = card
+                analytics.record(AnalyticsEvent.TabShown(analyticsTab(card), byUser))
             }
 
             val projectsPresenter = DefaultProjectsPresenter(
                 services.projectsRepository,
                 services.preferences.node(PreferencesProvider.PROJECTS),
                 services.executors.createExecutor("projects-io"),
+                analytics,
             )
             projectsPanel = SwingProjectsPanel(
                 projectsPresenter,
@@ -373,18 +413,18 @@ object SwingApplicationFactory {
 
             btnProjects = UiStyles.sidebarButton("Projects", UiStyles.folderIcon()) {
                 showTitle("Projects")
-                goTo(CARD_PROJECTS)
+                goTo(CARD_PROJECTS, byUser = !navigatingInCode)
             }.apply { name = "nav-projects" }
             addItem(btnProjects)
             addGroup(groupMatch)
             btnPoints = UiStyles.sidebarButton("Points", UiStyles.pointsIcon()) {
                 showTitle("Points")
-                goTo(CARD_POINTS)
+                goTo(CARD_POINTS, byUser = !navigatingInCode)
             }.apply { name = "nav-points" }
             addItem(btnPoints, groupMatch)
             btnScoring = UiStyles.sidebarButton("Scoring", UiStyles.targetIcon()) {
                 showTitle("Scoring")
-                goTo(CARD_SCORING)
+                goTo(CARD_SCORING, byUser = !navigatingInCode)
             }.apply { name = "nav-scoring" }
             addItem(btnScoring, groupMatch)
             pointsPanel.onMarkedPointCount = { count ->
@@ -392,25 +432,25 @@ object SwingApplicationFactory {
             }
             btnStats = UiStyles.sidebarButton("Stats", UiStyles.statsIcon()) {
                 showTitle("Statistics")
-                goTo(CARD_STATS)
+                goTo(CARD_STATS, byUser = !navigatingInCode)
             }.apply { name = "nav-stats" }
             addItem(btnStats, groupMatch)
             addGroup(groupVideo)
             btnColors = UiStyles.sidebarButton("Colors", UiStyles.colorsIcon()) {
                 showTitle("Color")
-                goTo(CARD_ADJ_COLORS)
+                goTo(CARD_ADJ_COLORS, byUser = !navigatingInCode)
             }.apply { name = "nav-colors" }
             addItem(btnColors, groupVideo)
             btnCropRotate = UiStyles.sidebarButton("Transform", UiStyles.cropRotateIcon()) {
                 showTitle("Transform")
-                goTo(CARD_ADJ_CROP_ROTATE)
+                goTo(CARD_ADJ_CROP_ROTATE, byUser = !navigatingInCode)
             }.apply { name = "nav-crop" }
             addItem(btnCropRotate, groupVideo)
             // addItem adds the usual button gap before Export. Together they make the same gap as between the groups.
             sidebar.add(Box.createRigidArea(Dimension(0, SIDEBAR_GROUP_GAP - SIDEBAR_BUTTON_GAP)))
             btnExport = UiStyles.sidebarButton("Export", UiStyles.exportIcon()) {
                 showTitle("Export")
-                goTo(CARD_EXPORT)
+                goTo(CARD_EXPORT, byUser = !navigatingInCode)
             }.apply { name = "nav-export" }
             addItem(btnExport)
             // The export queue does not depend on the project, so the Export button always shows (B-32).
@@ -422,17 +462,17 @@ object SwingApplicationFactory {
             }
             exportPanel.onActiveExportCountChanged = ::showExportCount
             showExportCount(exportPanel.activeExportCount)
-            val analytics = services.analyticsController
             val analyticsConfig = services.analyticsConfig as? AnalyticsBuildConfig.Enabled
             if (testEnabled) {
                 btnTest = UiStyles.sidebarButton("Test", UiStyles.targetIcon()) {
                     showTitle("Test")
-                    goTo(CARD_TEST)
+                    goTo(CARD_TEST, byUser = !navigatingInCode)
                 }
                 addItem(btnTest!!)
             }
             sidebar.add(Box.createVerticalGlue())
             fun openContextHelp() {
+                analytics.record(AnalyticsEvent.HelpOpened)
                 hints.dismiss(HintId.HELP_BUTTON)
                 showHelp(currentHelpPage())
             }
@@ -457,8 +497,8 @@ object SwingApplicationFactory {
             sidebar.add(btnHelp)
             sidebar.add(Box.createRigidArea(Dimension(0, 6)))
             val moreDialog = lazy {
-                val privacyPage = if (analytics != null && analyticsConfig != null && services.analyticsPreferences != null) {
-                    PrivacyPage.withAnalytics(analytics, services.analyticsPreferences, analyticsConfig.privacyUrl, CONTACT_EMAIL)
+                val privacyPage = if (analyticsController != null && analyticsConfig != null && services.analyticsPreferences != null) {
+                    PrivacyPage.withAnalytics(analyticsController, services.analyticsPreferences, analyticsConfig.privacyUrl, CONTACT_EMAIL)
                 } else {
                     PrivacyPage.withoutAnalytics(CONTACT_EMAIL)
                 }
@@ -535,11 +575,22 @@ object SwingApplicationFactory {
                 }
             }
 
+            // The exit sequence of the analytics ("Exit sequence" in docs/analytics/design.md): count the running
+            // exports as interrupted, then start the last summary. The 500 ms limit starts here.
+            fun beginAnalyticsExit() {
+                if (RenderQueueManager.runListener === renderAnalytics) RenderQueueManager.runListener = null
+                RenderQueueManager.runningExports().forEach(renderAnalytics::interrupted)
+                analyticsController?.beginFinalSend()
+            }
+
             val updateRunner = UpdateRunner(
                 update = updateAndRestart,
                 background = services.executors.createExecutor("update-download"),
                 exportRuns = { exportPanel.activeExportCount > 0 },
-                closeSequence = { handle.close() },
+                closeSequence = {
+                    beginAnalyticsExit()
+                    handle.close()
+                },
                 exit = onWindowClosed,
                 openUrl = { url -> runCatching { Desktop.getDesktop().browse(URI(url)) } },
                 parent = { frame },
@@ -587,7 +638,9 @@ object SwingApplicationFactory {
 
             frame.addWindowListener(object : WindowAdapter() {
                 override fun windowClosing(event: WindowEvent?) {
-                    analytics?.record(AnalyticsEvent.SessionEnded)
+                    beginAnalyticsExit()
+                    // The user does not see the wait for the last summary.
+                    frame.isVisible = false
                     try {
                         handle.close()
                     } finally {
@@ -596,7 +649,21 @@ object SwingApplicationFactory {
                 }
             })
 
-            btnProjects.doClick()
+            // Active time (B-9): the main window or one of its dialogs is the active window.
+            val focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+            var appActive = false
+            val activeWindowListener = PropertyChangeListener {
+                val window = focusManager.activeWindow
+                val active = window != null && generateSequence(window) { it.owner }.any { it === frame }
+                if (active != appActive) {
+                    appActive = active
+                    analytics.record(AnalyticsEvent.WindowActive(active))
+                }
+            }
+            focusManager.addPropertyChangeListener("activeWindow", activeWindowListener)
+            closeActions += { focusManager.removePropertyChangeListener("activeWindow", activeWindowListener) }
+
+            clickInCode(btnProjects)
             // After the Projects tab: in expired mode, the state hides it again and opens the Export tab.
             expiryUi.install()
             frame.isVisible = show
@@ -613,10 +680,10 @@ object SwingApplicationFactory {
                 })
             }
             var askConsent = false
-            if (show && analytics != null && analyticsConfig != null && services.analyticsPreferences?.resolve()?.needsChoice == true) {
+            if (show && analyticsController != null && analyticsConfig != null && services.analyticsPreferences?.resolve()?.needsChoice == true) {
                 askConsent = true
                 EventQueue.invokeLater {
-                    AnalyticsConsentDialog.show(frame, analytics, analyticsConfig.privacyUrl, onClosed = { showFirstLaunchOverview() })
+                    AnalyticsConsentDialog.show(frame, analyticsController, analyticsConfig.privacyUrl, onClosed = { showFirstLaunchOverview() })
                 }
             }
 

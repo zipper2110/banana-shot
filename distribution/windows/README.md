@@ -21,12 +21,18 @@ Without it, the feedback form of the app cannot send, and `Validate-AppImage.ps1
 refuses the image. For a local build without the Worker, give
 `-AllowNoFeedbackEndpoint` to `Validate-AppImage.ps1`.
 
+`-AnalyticsEndpoint`, `-AnalyticsPrivacyUrl`, and `-AnalyticsNoticeVersion`
+turn on the usage analytics (`analytics-worker/README.md`). Give all three or
+none. Without them, the app sends no analytics and does not ask for consent,
+and `Validate-AppImage.ps1` refuses the image. For a local build without
+analytics, give `-AllowNoAnalytics` to `Validate-AppImage.ps1`.
+
 `Validate-AppImage.ps1` runs `org.litvin.license.BuildInfoPrinter` with the
 bundled runtime. It fails when the build date is more than 7 days ago or later
 than tomorrow, when the expiry date is not 6 calendar months after the build
 date, when the app version is not the jpackage `--app-version`, or when the
 runtime does not contain the modules for the HTTPS request of the rules file,
-or when the image has no valid feedback endpoint.
+or when the image has no valid feedback endpoint or analytics properties.
 The packaged diagnostics do not do these checks.
 
 ## Velopack installer
@@ -88,6 +94,10 @@ release. It gives the release steps in sequence. The open work is in
 - The repository variable `FEEDBACK_ENDPOINT` must be the URL of the feedback
   Worker (`https://<host>/v1/feedback`). Without it, the workflow fails at
   "Validate application image".
+- The repository variables `ANALYTICS_ENDPOINT` (`https://<host>/v1/session`),
+  `ANALYTICS_PRIVACY_URL` (the notice on the landing site), and
+  `ANALYTICS_NOTICE_VERSION` (`1`) must be set. Without them, the workflow
+  fails at "Validate application image".
 - The release workflow creates a draft release. Check it on the GitHub
   releases page, then click "Publish release".
 - To test the release workflow without a release, start it by hand: open the

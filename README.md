@@ -56,6 +56,23 @@ To use a separate data folder, set the system property
 `-Dbananashot.appDataDir=<folder>` or the environment variable
 `BANANASHOT_APP_DATA_DIR` in the run configuration.
 
+### Usage analytics in a development run
+
+A development run has no analytics properties. Thus it sends no analytics
+and does not show the consent dialog. To see the dialog:
+
+1. Add these VM options to the run configuration. Use a test Worker, or a
+   local `wrangler dev` with an https tunnel. The app accepts only https.
+   - `-Dbananashot.analytics.endpoint=https://<host>/v1/session`
+   - `-Dbananashot.analytics.privacyUrl=https://<host>/privacy`
+   - `-Dbananashot.analytics.noticeVersion=1`
+2. Delete the values `analytics.choice` and `analytics.noticeVersion` in the
+   preferences node `org/litvin` (on Windows, the registry key
+   `HKCU\Software\JavaSoft\Prefs\org\litvin`). The app then asks again.
+
+A development run that sends to the production Worker adds rows to the
+production data. Do not do this.
+
 ### Build information and the build expiry
 
 The Maven phase `generate-sources` makes
@@ -138,8 +155,10 @@ See: [docs/solution-outline.md](docs/solution-outline.md)
 ## Privacy
 
 ### Usage analytics
-- A build can send optional usage analytics. The app asks first, and you can
-  turn the analytics off in More → Privacy. See
+- A build can send optional usage analytics: anonymous counts of the tabs
+  and features in use, export results, and session length. The app asks
+  first, and you can turn the analytics off in More → Privacy. See
+  [docs/analytics/privacy-notice.md](docs/analytics/privacy-notice.md) and
   [docs/analytics/design.md](docs/analytics/design.md).
 
 ### Version check and updates

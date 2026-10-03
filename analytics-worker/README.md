@@ -1,7 +1,80 @@
 # BananaShot analytics Worker
 
-The Worker accepts only version-one, typed analytics envelopes at `POST /v1/events/batch`. Copy `wrangler.toml.example` to the ignored `wrangler.toml` and fill binding IDs locally. Keep `ANALYTICS_INGESTION_ENABLED=false` until the manual deployment checklist and synthetic smoke exercise are complete.
+The Worker receives the anonymous session summaries of the app (B-9) and keeps one row for each
+session in D1. The design is in `docs/analytics/design.md`. The tasks are in
+`docs/analytics/b-9-tasks.md`.
 
-Run `npm ci`, `npm run typecheck`, and `npm test` before a manual deployment. The tests are in `test/`. They use an in-memory D1 (`test/fake-d1.ts`) and the shared fixtures in `analytics-contract/v1`.
+- `POST /v1/session` with `Content-Type: application/json` and a body of 8 KiB or less. Other
+  paths return `404`. Other methods return `405`.
+- The responses have no body: `204` (stored), `400` (invalid summary), `410` (the kill switch is
+  off, or the schema version is too old), `413`, `415`, `429` (rate limit), `503` (D1 failure).
+- The summary format and the closed counter key list are in `analytics-contract/v1`. The Worker
+  refuses a summary with an unknown counter key. Thus, deploy the Worker with the new keys before
+  an app release that sends them.
+- The Worker keeps the summary with the highest `snapshot` for each session. It rounds the
+  receive times down to the hour.
+- The Worker does not keep the IP address. The rate limit (300 summaries from one address in one
+  hour) keeps an HMAC of the hour and the address, with the secret `RATE_LIMIT_KEY`.
+- The daily cron deletes sessions with a last summary older than 90 days.
+- The kill switch `ANALYTICS_INGESTION_ENABLED` must be `true`. Another value gives `410`, and the
+  app stops sending for the rest of the process.
 
-The Worker accepts all `app_version` values, also a missing one. It stores a string as it is, another value as its JSON text, and a missing value or `null` as `unknown`. Do not commit credentials, binding IDs, event exports, `.dev.vars`, or the local Wrangler configuration.
+## Test
+
+```bash
+npm ci
+npm run typecheck
+npm test
+```
+
+The tests use an in-memory D1 (`test/fake-d1.ts`) and the shared fixtures in
+`analytics-contract/v1`.
+
+## Deploy
+
+1. Copy `wrangler.toml.example` to `wrangler.toml`. Git ignores `wrangler.toml`.
+2. Make the database in the EU jurisdiction:
+   `npx wrangler d1 create bananashot-analytics --jurisdiction eu`. Write the database ID in
+   `wrangler.toml`. Keep `binding = "ANALYTICS_DB"`. If `d1 create` offers to add a binding with
+   a different name, do not accept it.
+3. Apply the schema: `npx wrangler d1 migrations apply bananashot-analytics --remote`.
+4. Set the secret `RATE_LIMIT_KEY`: a new random text of 32 or more characters, for example from
+   `openssl rand -hex 32`. Do not use the key of the feedback Worker.
+
+   ```bash
+   npx wrangler secret put RATE_LIMIT_KEY
+   ```
+
+5. Deploy with `ANALYTICS_INGESTION_ENABLED = "false"`: `npx wrangler deploy`.
+6. Check that `POST /v1/session` returns `410`.
+7. Set `ANALYTICS_INGESTION_ENABLED = "true"` in `wrangler.toml` and deploy again.
+8. Send the synthetic summary. The Worker must return `204`:
+
+   ```bash
+   curl.exe -i -X POST https://<worker-host>/v1/session -H "content-type: application/json" --data "@../analytics-contract/v1/smoke-summary.json"
+   ```
+
+   In Windows PowerShell, `curl` is a short name for `Invoke-WebRequest`. Type `curl.exe`.
+
+9. Check the row:
+   `npx wrangler d1 execute bananashot-analytics --remote --command "SELECT * FROM analytics_session WHERE app_version = 'synthetic-smoke'"`.
+10. Give the endpoint URL to the release build: the GitHub variable `ANALYTICS_ENDPOINT`
+    (see `docs/release-checklist.md`).
+
+To stop the summaries at once, set `ANALYTICS_INGESTION_ENABLED = "false"` and deploy.
+
+## Queries
+
+The SQL files in `queries/` answer the three questions of the design. There is no dashboard.
+Each query uses the sessions of the last 30 days and excludes `app_version = 'synthetic-smoke'`.
+
+```bash
+npx wrangler d1 execute bananashot-analytics --remote --file queries/features.sql
+```
+
+- `features.sql`: tabs and features.
+- `exports.sql`: exports by encoder, with the encode speed.
+- `export-details.sql`: failure reasons, export options, and output resolutions.
+- `sessions.sql`: session length, app versions, OS families, crashes, and the session buckets.
+
+Do not commit the rate key, the database ID, data exports, `.dev.vars`, or `wrangler.toml`.

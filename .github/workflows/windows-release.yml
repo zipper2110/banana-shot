@@ -101,12 +101,22 @@ jobs:
         env:
           # The URL of the feedback Worker (B-8). It is not a secret. Validate-AppImage.ps1 refuses a build without it.
           FEEDBACK_ENDPOINT: ${{ vars.FEEDBACK_ENDPOINT }}
-        run: ./distribution/windows/Build-AppImage.ps1 -Version $env:APP_VERSION -FeedbackEndpoint "$env:FEEDBACK_ENDPOINT"
+          # The usage analytics (B-9). They are not secrets. Validate-AppImage.ps1 refuses a build without them.
+          ANALYTICS_ENDPOINT: ${{ vars.ANALYTICS_ENDPOINT }}
+          ANALYTICS_PRIVACY_URL: ${{ vars.ANALYTICS_PRIVACY_URL }}
+          ANALYTICS_NOTICE_VERSION: ${{ vars.ANALYTICS_NOTICE_VERSION }}
+        run: >-
+          ./distribution/windows/Build-AppImage.ps1 -Version $env:APP_VERSION
+          -FeedbackEndpoint "$env:FEEDBACK_ENDPOINT"
+          -AnalyticsEndpoint "$env:ANALYTICS_ENDPOINT"
+          -AnalyticsPrivacyUrl "$env:ANALYTICS_PRIVACY_URL"
+          -AnalyticsNoticeVersion "$env:ANALYTICS_NOTICE_VERSION"
 
       - name: Validate application image
         # The build date, the expiry date, the version, the runtime modules
         # for the request of the rules file (see "Build expiry" in
-        # docs/licensing/build-expiry-spec.md), and the feedback endpoint (B-8).
+        # docs/licensing/build-expiry-spec.md), the feedback endpoint (B-8),
+        # and the analytics properties (B-9).
         shell: pwsh
         run: ./distribution/windows/Validate-AppImage.ps1 -Version $env:APP_VERSION
 

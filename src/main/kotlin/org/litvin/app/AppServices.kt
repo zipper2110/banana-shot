@@ -38,6 +38,9 @@ import org.litvin.ui.commons.UserDialogService
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsController
 import org.litvin.analytics.AnalyticsPreferences
+import org.litvin.analytics.AnalyticsTransport
+import org.litvin.analytics.JdkAnalyticsTransport
+import org.litvin.license.BuildInfo
 import java.net.URI
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
@@ -146,7 +149,7 @@ data class AppServices(
                     AnalyticsPreferences(preferences.node(PreferencesProvider.ANALYTICS))
                 } else null
                 val analyticsController = analyticsPreferences?.let { preferencesForAnalytics ->
-                    construct { AnalyticsController(analyticsConfig, preferencesForAnalytics) }.also { it.startIfConsented() }
+                    construct { productionAnalyticsController(analyticsConfig, preferencesForAnalytics) }.also { it.startIfConsented() }
                 }
                 val services = AppServices(
                     paths = paths,
@@ -187,6 +190,21 @@ data class AppServices(
  * preferences, and the data folder. Only this function makes them. All other code gets them through constructor
  * parameters, and the tests give fakes. No property or environment variable turns off the expiry.
  */
+/**
+ * The analytics controller of the app (B-9). The summaries contain [BuildInfo.VERSION]. The transport uses the proxy
+ * of Windows and the trust of E5-S4, as the feedback sender does. It follows no redirect.
+ */
+internal fun productionAnalyticsController(
+    config: AnalyticsBuildConfig,
+    preferences: AnalyticsPreferences,
+    transport: (AnalyticsBuildConfig.Enabled) -> AnalyticsTransport = ::productionAnalyticsTransport,
+): AnalyticsController = AnalyticsController.create(config, preferences, BuildInfo.VERSION, transport)
+
+private fun productionAnalyticsTransport(config: AnalyticsBuildConfig.Enabled): AnalyticsTransport =
+    JdkAnalyticsTransport(config.endpoint) {
+        UpdateTrust.production.client(HttpClient.Redirect.NEVER, JdkAnalyticsTransport.CONNECT_TIMEOUT)
+    }
+
 /**
  * The sender of the feedback reports, or null without a valid `bananashot.feedback.endpoint` (T2 of B-8). It uses the
  * proxy of Windows and the trust of E5-S4. The trust stores load at the first send, not at the start.

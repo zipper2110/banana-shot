@@ -11,6 +11,7 @@ sealed interface AnalyticsBuildConfig {
         const val ENDPOINT_PROPERTY = "bananashot.analytics.endpoint"
         const val PRIVACY_URL_PROPERTY = "bananashot.analytics.privacyUrl"
         const val NOTICE_VERSION_PROPERTY = "bananashot.analytics.noticeVersion"
+        const val ENDPOINT_PATH = "/v1/session"
 
         fun fromSystemProperties(): AnalyticsBuildConfig = fromProperties(System.getProperties())
 
@@ -19,8 +20,8 @@ sealed interface AnalyticsBuildConfig {
             val privacyUrl = parseUrl(properties.getProperty(PRIVACY_URL_PROPERTY)) ?: return Disabled("invalid_privacy_url")
             val noticeVersion = properties.getProperty(NOTICE_VERSION_PROPERTY)?.toIntOrNull()
                 ?: return Disabled("invalid_notice_version")
-            if (noticeVersion != AnalyticsEventRegistry.NOTICE_VERSION) return Disabled("unsupported_notice_version")
-            if (endpoint.rawPath != "/v1/events/batch") return Disabled("invalid_endpoint_path")
+            if (noticeVersion != AnalyticsSchema.NOTICE_VERSION) return Disabled("unsupported_notice_version")
+            if (endpoint.rawPath != ENDPOINT_PATH) return Disabled("invalid_endpoint_path")
             return Enabled(endpoint, privacyUrl, noticeVersion, osFamily(osName))
         }
 

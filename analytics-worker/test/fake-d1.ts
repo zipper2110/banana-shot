@@ -5,25 +5,21 @@
 export type Row = Record<string, unknown>;
 
 export class FakeD1 {
-  readonly events = new Map<string, Row>();
+  readonly sessions = new Map<string, Row>();
+  readonly rates = new Map<string, Row>();
   retentionStatus: Row | null = null;
-  failBatch = false;
+  fail = false;
 
   prepare(sql: string): FakeStatement {
     return new FakeStatement(this, sql);
-  }
-
-  async batch(statements: FakeStatement[]): Promise<unknown[]> {
-    if (this.failBatch) throw new Error('D1 is not available');
-    return statements.map(statement => statement.execute());
   }
 
   asD1(): D1Database {
     return this as unknown as D1Database;
   }
 
-  eventRows(): Row[] {
-    return [...this.events.values()];
+  sessionRows(): Row[] {
+    return [...this.sessions.values()];
   }
 }
 
@@ -38,34 +34,53 @@ export class FakeStatement {
   }
 
   async run(): Promise<{ meta: { changes: number } }> {
+    this.check();
     return { meta: { changes: this.execute() } };
   }
 
   async first<T>(): Promise<T | null> {
-    if (!this.sql.startsWith('SELECT MIN(received_at) AS oldest FROM analytics_event')) throw new Error(`Unknown query: ${this.sql}`);
-    const times = this.db.eventRows().map(row => row.received_at as number);
-    return { oldest: times.length ? Math.min(...times) : null } as T;
+    this.check();
+    if (this.sql.startsWith('INSERT INTO analytics_rate ') && this.sql.endsWith('RETURNING count')) {
+      const [id, hour] = this.args as [string, number];
+      const row = this.db.rates.get(id) ?? { id, hour, count: 0 };
+      row.count = (row.count as number) + 1;
+      this.db.rates.set(id, row);
+      return { count: row.count } as T;
+    }
+    if (this.sql === 'SELECT MIN(last_received_at) AS oldest FROM analytics_session') {
+      const times = this.db.sessionRows().map(row => row.last_received_at as number);
+      return { oldest: times.length ? Math.min(...times) : null } as T;
+    }
+    throw new Error(`Unknown query: ${this.sql}`);
   }
 
-  execute(): number {
-    if (this.sql.startsWith('INSERT OR IGNORE INTO analytics_event ')) {
+  private check() {
+    if (this.db.fail) throw new Error('D1 is not available');
+  }
+
+  private execute(): number {
+    if (this.sql.startsWith('INSERT INTO analytics_session ')
+      && this.sql.includes('ON CONFLICT(session_id) DO UPDATE SET ')
+      && this.sql.endsWith('WHERE excluded.snapshot > analytics_session.snapshot')) {
       const row = this.columnsToRow();
-      const key = `${row.session_id}|${row.sequence_number}`;
-      if (this.db.events.has(key)) return 0;
-      this.db.events.set(key, row);
+      const stored = this.db.sessions.get(row.session_id as string);
+      if (!stored) {
+        this.db.sessions.set(row.session_id as string, row);
+        return 1;
+      }
+      if ((row.snapshot as number) <= (stored.snapshot as number)) return 0;
+      this.db.sessions.set(row.session_id as string, { ...row, first_received_at: stored.first_received_at });
       return 1;
     }
-    if (this.sql.startsWith('DELETE FROM analytics_event WHERE received_at < ?')) {
-      const cutoff = this.args[0] as number;
-      let changes = 0;
-      for (const [key, row] of this.db.events) {
-        if ((row.received_at as number) < cutoff) { this.db.events.delete(key); changes++; }
-      }
-      return changes;
+    if (this.sql === 'DELETE FROM analytics_session WHERE last_received_at < ?') {
+      return deleteWhere(this.db.sessions, row => (row.last_received_at as number) < (this.args[0] as number));
+    }
+    if (this.sql === 'DELETE FROM analytics_rate WHERE hour < ?') {
+      return deleteWhere(this.db.rates, row => (row.hour as number) < (this.args[0] as number));
     }
     if (this.sql.startsWith('INSERT INTO analytics_retention_status ')) {
       const [ranAt, deletedCount, oldest] = this.args;
-      this.db.retentionStatus = { id: 1, ran_at: ranAt, deleted_count: deletedCount, oldest_received_at: oldest, consecutive_failures: 0 };
+      this.db.retentionStatus = { id: 1, ran_at: ranAt, deleted_count: deletedCount, oldest_received_at: oldest };
       return 1;
     }
     throw new Error(`Unknown statement: ${this.sql}`);
@@ -76,4 +91,12 @@ export class FakeStatement {
     if (columns.length !== this.args.length) throw new Error(`${columns.length} columns, ${this.args.length} values`);
     return Object.fromEntries(columns.map((column, i) => [column, this.args[i]]));
   }
+}
+
+function deleteWhere(rows: Map<string, Row>, matches: (row: Row) => boolean): number {
+  let changes = 0;
+  for (const [key, row] of rows) {
+    if (matches(row)) { rows.delete(key); changes++; }
+  }
+  return changes;
 }

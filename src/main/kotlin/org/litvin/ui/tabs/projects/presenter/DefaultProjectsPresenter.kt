@@ -1,5 +1,8 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.analytics.Analytics
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
 import org.litvin.export.RenderFormatting
 import org.litvin.projects.NewProjectRules
 import org.litvin.projects.ProjectStats
@@ -16,6 +19,7 @@ class DefaultProjectsPresenter(
     private val repository: ProjectsRepository,
     private val preferences: Preferences = PreferencesProvider.production().node(PreferencesProvider.PROJECTS),
     private val ioExecutor: Executor = Executors.newSingleThreadExecutor(),
+    private val analytics: Analytics = DisabledAnalytics,
 ) : ProjectsPresenter {
     private val pageSize = 10
     private val stateLock = Any()
@@ -86,6 +90,7 @@ class DefaultProjectsPresenter(
             }
             rememberVideoDir(sourceVideoPath)
             val created = repository.createProject(sourceVideoPath.trim(), name.trim()).toCardState()
+            analytics.record(AnalyticsEvent.ProjectCreated)
             val refreshed = repository.getRecents().map { it.toCardState() }
             synchronized(stateLock) {
                 currentProject = created
@@ -116,12 +121,14 @@ class DefaultProjectsPresenter(
             val video = sourceVideoPath?.takeIf { it.isNotBlank() } ?: manifest.sourceVideo.orEmpty()
             if (!File(video).isFile) {
                 // The other tabs cannot load the project without the video. Thus the project stays closed.
+                analytics.record(AnalyticsEvent.VideoOpenFailed)
                 emitEffect(ProjectsViewEffect.ShowError("Cannot open project", videoMissingMessage(video)))
                 loadVisibleStats()
                 return@runIo
             }
 
             val opened = repository.openProject(manifestPath, sourceVideoPath).toCardState()
+            analytics.record(AnalyticsEvent.ProjectOpened)
             val refreshed = repository.getRecents().map { it.toCardState() }
             synchronized(stateLock) {
                 currentProject = opened

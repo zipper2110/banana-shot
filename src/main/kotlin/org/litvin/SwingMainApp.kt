@@ -2,6 +2,7 @@ package org.litvin
 
 import com.formdev.flatlaf.FlatDarkLaf
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litvin.analytics.AnalyticsEvent
 import org.litvin.app.AppDataPaths
 import org.litvin.app.AppServices
 import org.litvin.app.InstanceLock
@@ -87,6 +88,8 @@ object SwingMainApp {
             var handle: SwingApplicationHandle? = null
             Thread.setDefaultUncaughtExceptionHandler { _, failure ->
                 logger.error(failure) { "Unexpected uncaught Swing error." }
+                // The analytics send only the count, not the exception (B-9).
+                services.analyticsController?.record(AnalyticsEvent.UncaughtError)
                 val message = failure.message ?: failure.toString()
                 // "Report this problem" opens the feedback form after the main window exists (T3 of B-8).
                 val onReport = handle?.reportProblem?.let { report -> { EventQueue.invokeLater { report(UNEXPECTED_ERROR, message) } } }

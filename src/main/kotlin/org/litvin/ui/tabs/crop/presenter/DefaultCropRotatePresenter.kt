@@ -1,6 +1,9 @@
 package org.litvin.ui.tabs.crop.presenter
 
 import org.litvin.adjustments.AdjustmentsSession
+import org.litvin.analytics.Analytics
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.projects.ManifestIO
@@ -14,8 +17,15 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class DefaultCropRotatePresenter(
     private val adjustments: AdjustmentsSession = AdjustmentsStore.legacySession(),
+    private val analytics: Analytics = DisabledAnalytics,
 ) : CropRotatePresenter {
     private val disposed = AtomicBoolean(false)
+
+    /**
+     * True when the user changed the transform during this visit of the tab. A drag sends many changes, so the
+     * analytics count one change for each visit (B-9 decision 12).
+     */
+    private var changedByUser = false
 
     private var view: CropRotateView? = null
     private var unsubscribeStore: (() -> Unit)? = null
@@ -42,6 +52,10 @@ class DefaultCropRotatePresenter(
     }
 
     override fun onDeactivated() {
+        if (changedByUser) {
+            changedByUser = false
+            analytics.record(AnalyticsEvent.CropRotateChanged)
+        }
         adjustments.save(projectDir)
     }
 
@@ -57,16 +71,22 @@ class DefaultCropRotatePresenter(
                 updateState {
                     it.copy(adjustments = it.adjustments.copy(zoom = zoom, panX = panX, panY = panY, rotationDeg = rotationDeg))
                 }
-                adjustments.set { previous ->
-                    previous.copy(zoom = zoom, panX = panX, panY = panY, rotationDeg = rotationDeg)
-                }
+                noteChange { previous -> previous.copy(zoom = zoom, panX = panX, panY = panY, rotationDeg = rotationDeg) }
             }
             CropRotateIntent.ResetTransform -> {
-                adjustments.set { previous ->
-                    previous.copy(zoom = 1.0f, panX = 0.0f, panY = 0.0f, rotationDeg = 0.0f)
-                }
+                noteChange { previous -> previous.copy(zoom = 1.0f, panX = 0.0f, panY = 0.0f, rotationDeg = 0.0f) }
             }
         }
+    }
+
+    /**
+     * Applies a change of the user. A change that has no effect does not count. The store clamps each value, so
+     * only the stored result shows if the change had an effect.
+     */
+    private fun noteChange(change: (AdjustmentsV1) -> AdjustmentsV1) {
+        val before = adjustments.get()
+        adjustments.set(change)
+        if (adjustments.get() != before) changedByUser = true
     }
 
     fun dispose() {

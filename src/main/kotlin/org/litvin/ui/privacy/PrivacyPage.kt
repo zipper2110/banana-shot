@@ -61,11 +61,8 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
                 addActionListener { if (isSelected) controller.enable() else controller.disable() }
             }
             addItem(toggle)
-            paragraph("Collected: approved product action categories only.")
-            paragraph(
-                "Excluded: video, audio, filenames, paths, project data, scores, player data, identifiers, and diagnostics.",
-                secondary = true,
-            )
+            paragraph(ANALYTICS_COLLECTED)
+            paragraph(ANALYTICS_EXCLUDED, secondary = true)
             buttonRow(
                 secondaryButton("Privacy notice", Material2MZ.OPEN_IN_NEW) { linkOpener.open(privacyUrl) },
                 secondaryButton("Contact", Material2MZ.MAIL_OUTLINE) { linkOpener.open(URI("mailto:$contactEmail")) },
@@ -92,6 +89,13 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
         }
 
         const val VERSION_CHECK_TITLE = "Version check and updates"
+
+        /** The short version of the analytics notice (docs/analytics/privacy-notice.md). Keep the two in agreement. */
+        const val ANALYTICS_COLLECTED =
+            "Collected: counts of the tabs and features you use, export results, session length, app version, and OS family."
+        const val ANALYTICS_EXCLUDED =
+            "Excluded: video, audio, file names, paths, project names, scores, player names, text that you type, " +
+                "user or device IDs, and error details."
 
         val VERSION_CHECK_TEXT = listOf(
             "${AppInfo.NAME} reads a small file from GitHub when it starts and from time to time while it runs. " +

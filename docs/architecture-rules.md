@@ -12,7 +12,7 @@ Top‑level feature and shared packages:
 - `org.litvin.points` — points/EDL domain and services.
 - `org.litvin.scoring` — scoring rules/engine, score timelines, score IO.
 - `org.litvin.export` — export/pipeline/FFmpeg/queue/overlay writing.
-- `org.litvin.analytics` — opt‑in telemetry: event registry, buffering, transport, consent state.
+- `org.litvin.analytics` — opt‑in usage analytics (B-9): the events, the session counters, the summary transport, consent state.
 - `org.litvin.feedback` — feedback reports (B-8): the report and its JSON, the log data, the sender, the endpoint setting.
 - `org.litvin.shared.util` — cross‑cutting utilities and primitives (timecode, debouncers, pagination, OS tweaks, etc.).
 - `org.litvin.ui` — UI layer only.
@@ -34,10 +34,11 @@ Allowed directions:
 - `app` → `ui`, `projects`, feature packages, `analytics`, `shared.util`, `media`.
 - `ui.tabs.*` → the corresponding feature package(s), `projects`, `export`, `media`, `shared.util`, and `ui.commons`.
 - `ui.commons` → `shared.util` only (must not depend on any specific tab or feature).
-- `ui.privacy` → `analytics` (the consent/privacy dialogs are the only UI allowed to touch it); `ui.help` → `shared.util` and `ui.commons`; `ui.more` → `ui.commons` only (`app` gives it the pages of other packages as `MoreSection` items).
+- `ui.privacy` → `analytics` (the consent/privacy dialogs are the only UI that uses more than the analytics facade); `ui.help` → `shared.util` and `ui.commons`; `ui.more` → `ui.commons` only (`app` gives it the pages of other packages as `MoreSection` items).
 - Feature packages may depend on `shared.util` and other leaf services (`media`) but not on `ui` or `app`.
 - `media` → `adjustments` is allowed and deliberate: the libmpv preview must apply the same crop/rotate/color transforms the FFmpeg export does, so it consumes the adjustments domain (`GeometryPlan`, `CropRect`, `AdjustmentsV1`) instead of duplicating the math.
-- `analytics` must not depend on any other `org.litvin` package — it is a leaf service reached from `app` and `ui.privacy`.
+- `analytics` must not depend on any other `org.litvin` package — it is a leaf service. `app` gives it the app version and the HTTP client.
+- Feature and UI packages can use only `Analytics`, `AnalyticsEvent` (with its nested types), and `DisabledAnalytics`. They get `Analytics` from `app` through the constructor; the default is `DisabledAnalytics`. Only `app` and `ui.privacy` use the rest of `analytics`. A feature that has no constructor from `app` (for example `RenderQueueManager`) gives plain facts to a listener, and `app` changes them into events. `AnalyticsDependencyTest` checks these rules.
 - `ui.feedback` → `feedback` and `ui.commons`. `feedback` must not depend on any other `org.litvin` package: `app` gives it the HTTP client with the trust of `license.online`. The other UI packages open the form only through callbacks from `app`.
 - `shared.util` must not depend on any feature/ui/app.
 - Cycles are forbidden.

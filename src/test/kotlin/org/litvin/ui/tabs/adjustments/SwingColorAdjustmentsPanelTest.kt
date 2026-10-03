@@ -3,6 +3,8 @@ package org.litvin.ui.tabs.adjustments
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.litvin.adjustments.AdjustmentsSession
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.RecordingAnalytics
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
@@ -225,6 +227,29 @@ class SwingColorAdjustmentsPanelTest {
             val scroll = grade.descendants().filterIsInstance<javax.swing.JScrollPane>().single()
             assertTrue(scroll.viewport.view.preferredSize.height <= scroll.viewport.height, "the cards need a scroll bar at 720 px")
         }
+    }
+
+    @Test
+    fun analyticsCountOneColorChangeForEachDragAndForEachResetWithAnEffect() {
+        val analytics = RecordingAnalytics()
+        onEdt {
+            val panel = SwingColorAdjustmentsPanel(FakePlayer(true), adjustments, MemoryPreferences(), analytics)
+            val slider = panel.find("colors-brightness") as JSlider
+            slider.valueIsAdjusting = true
+            slider.value = 10
+            slider.value = 20
+            slider.valueIsAdjusting = false
+            slider.value = 25
+            panel.descendants().filterIsInstance<ResetAllButton>().single().doClick()
+            panel.close()
+        }
+        onEdt { }
+        onEdt {
+            val panel = SwingColorAdjustmentsPanel(FakePlayer(true), adjustments, MemoryPreferences(), analytics)
+            panel.descendants().filterIsInstance<ResetAllButton>().single().doClick()
+            panel.close()
+        }
+        assertEquals(listOf<AnalyticsEvent>(AnalyticsEvent.ColorChanged, AnalyticsEvent.ColorChanged, AnalyticsEvent.ColorChanged), analytics.events)
     }
 
     private fun panel(adjustSupported: Boolean = true) =

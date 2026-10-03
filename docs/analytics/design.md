@@ -254,10 +254,12 @@ counter keys. `EnabledAnalytics` converts each event to counter changes.
   event. See "Exit sequence".
 - `AnalyticsPreferences` stores the consent choice, the session count, and
   the open-session flag. It stores no counters and no session ID.
-- `JdkAnalyticsTransport` gets `sendWithin(payload, 500 ms)` for the exit
-  and stops after a 410 response. It uses `ProxySelector.getDefault()`, and
-  the launcher sets `java.net.useSystemProxies=true`. Without this, users
-  behind a proxy send nothing and see no error.
+- `JdkAnalyticsTransport` sends one summary and returns the status.
+  `EnabledAnalytics` waits for the final send until the 500 ms limit and
+  stops after a 410 response (changed on 2026-10-03, B-9 decision 9).
+- The HTTP client uses the default proxy selector, and `main` sets
+  `java.net.useSystemProxies=true`. Without this, users behind a proxy send
+  nothing and see no error.
 - Local logs contain only the status class and the count of sends. They do
   not contain request bodies or the session ID.
 
@@ -265,12 +267,14 @@ counter keys. `EnabledAnalytics` converts each event to counter changes.
 
 - `POST /v1/session` only. Other routes return 404. The checks are in this
   order: kill switch (410), method, content type (415), size (413, limit
-  8 KiB), JSON and schema (400).
+  8 KiB), JSON and schema (400). The full order is B-9 decision 6.
 - A summary with an old `schema_version` gets 410. Thus an old app stops
   sending after we remove support for its schema.
 - Success returns 204 with no body.
-- A Workers rate-limit binding limits the requests from one IP address. The
-  Worker does not store or log the IP address.
+- A D1 count row for each hour limits the requests from one IP address, as
+  in the feedback Worker (changed on 2026-10-03, see
+  `docs/analytics/b-9-tasks.md`, decisions 2 and 3). The Worker does not
+  store or log the IP address.
 
 Table:
 
@@ -333,6 +337,9 @@ CREATE TABLE analytics_session (
 - `Build-AppImage.ps1` gets `-AnalyticsEndpoint`, `-AnalyticsPrivacyUrl`, and
   `-AnalyticsNoticeVersion`. It adds the three JVM properties only when all
   three are given.
+- `Validate-AppImage.ps1` refuses an image without the three valid
+  properties. A local build can give `-AllowNoAnalytics` (decided on
+  2026-10-03).
 - The release workflow passes the three values from GitHub variables. They
   are not secrets. The workflow does not deploy the Worker.
 - Add to `release-checklist.md`: the privacy URL opens; the Worker returns

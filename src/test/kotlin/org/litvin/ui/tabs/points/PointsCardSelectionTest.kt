@@ -1,6 +1,8 @@
 package org.litvin.ui.tabs.points
 
 import org.litvin.adjustments.AdjustmentsStore
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.RecordingAnalytics
 import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
@@ -98,6 +100,40 @@ class PointsCardSelectionTest {
         }
         drainEventQueue()
         assertEquals(listOf("Comment #7"), cards.visibleTitles())
+    }
+
+    @Test
+    fun analyticsCountNewPointsFavoritesAndDeletes() {
+        val player = FakeMediaPlayer(MediaScreen.POINTS)
+        val analytics = RecordingAnalytics()
+        SwingUtilities.invokeAndWait {
+            panel = SwingPointsPanel(
+                player,
+                AdjustmentsStore.legacySession(),
+                Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "test-autosave") },
+                ScriptedDialogService(),
+                analytics = analytics,
+            ).also { it.setProjectManifest(ManifestIO.manifestFilePath(projectDir.absolutePath)) }
+        }
+        val target = panel!!
+        drainEventQueue()
+        fun run(action: String, atMs: Long) {
+            player.seek(atMs)
+            drainEventQueue()
+            drainEventQueue()
+            SwingUtilities.invokeAndWait { target.actionMap.get(action).actionPerformed(null) }
+            drainEventQueue()
+        }
+
+        run("points.toggleFavorite", 500)
+        run("points.toggleFavorite", 500)
+        run("points.pointStart", 2_000)
+        run("points.pointEnd", 3_000)
+        run("points.delete", 500)
+
+        assertEquals(1, analytics.count(AnalyticsEvent.PointFavorited), "a favorite that is removed again does not count")
+        assertEquals(1, analytics.count(AnalyticsEvent.PointAdded))
+        assertEquals(1, analytics.count(AnalyticsEvent.PointDeleted))
     }
 
     private fun drainEventQueue() {

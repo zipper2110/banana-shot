@@ -3,13 +3,21 @@ main = "src/index.ts"
 compatibility_date = "2026-09-03"
 compatibility_flags = ["nodejs_compat"]
 
+# Set "true" in production only after the checks in README.md.
 [vars]
 ANALYTICS_INGESTION_ENABLED = "false"
 
+# Secrets (set with `wrangler secret put`, never here):
+#   RATE_LIMIT_KEY
+
+# The code reads the database as ANALYTICS_DB. Keep this binding name.
+# `wrangler d1 create` can offer a different name: do not accept it.
 [[d1_databases]]
 binding = "ANALYTICS_DB"
-database_name = "replace-locally"
+database_name = "bananashot-analytics"
 database_id = "replace-locally"
+migrations_dir = "migrations"
 
-[[triggers.crons]]
-cron = "0 3 * * *"
+# The daily retention job.
+[triggers]
+crons = ["0 3 * * *"]

@@ -1,6 +1,9 @@
 package org.litvin.ui.tabs.adjustments
 
 import org.litvin.GeometryViewportPanel
+import org.litvin.analytics.Analytics
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
 import org.litvin.projects.ManifestIO
 import org.litvin.media.PlayerStatus
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
@@ -35,6 +38,7 @@ class SwingColorAdjustmentsPanel(
     private val player: SwingMediaPlayer,
     private val adjustments: AdjustmentsSession,
     private val prefs: Preferences,
+    private val analytics: Analytics = DisabledAnalytics,
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
         MpvSwingMediaPlayerAdapter(),
@@ -95,15 +99,21 @@ class SwingColorAdjustmentsPanel(
         viewportPanel.add(geometryViewport, BorderLayout.CENTER)
 
         gradePanel.resetButton.addActionListener {
+            // The store clamps each value, so only the stored result shows if the reset had an effect.
+            val before = adjustments.get()
             adjustments.set { prev -> mergeColorInto(prev, AdjustmentsUiConverter.DEFAULTS) }
+            if (adjustments.get() != before) analytics.record(AnalyticsEvent.ColorChanged)
         }
         ColorControl.entries.forEach { control ->
-            gradePanel.slider(control).addChangeListener {
+            val slider = gradePanel.slider(control)
+            slider.addChangeListener {
                 if (!updatingFromModel) {
                     val color = uiToModel()
                     val nextAdjustments = mergeColorInto(adjustments.get(), color)
                     applyPreview(nextAdjustments)
                     adjustments.set { prev -> mergeColorInto(prev, color) }
+                    // A drag counts one time, when the user releases the slider.
+                    if (!slider.valueIsAdjusting) countColorChange(color)
                 }
             }
         }
@@ -128,6 +138,15 @@ class SwingColorAdjustmentsPanel(
         )
     }
 
+    /** The colors of the last counted change or of the last load. A change back to them is not a new change. */
+    private var countedColor: AdjustmentsV1? = null
+
+    private fun countColorChange(color: AdjustmentsV1) {
+        if (color == countedColor) return
+        countedColor = color
+        analytics.record(AnalyticsEvent.ColorChanged)
+    }
+
     fun applyPreview(adjustments: AdjustmentsV1) {
         val shown = if (showingOriginal) mergeColorInto(adjustments, AdjustmentsUiConverter.DEFAULTS) else adjustments
         player.applyPreviewAdjustments(shown)
@@ -146,6 +165,7 @@ class SwingColorAdjustmentsPanel(
             gradePanel.slider(ColorControl.TEMPERATURE).value = sliderValues.temperature
             // Also update live preview, preserving geometry from the shared model.
             applyPreview(adjustments)
+            countedColor = uiToModel()
         } finally {
             updatingFromModel = false
         }

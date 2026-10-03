@@ -1,6 +1,9 @@
 package org.litvin.ui.tabs.points
 
 import org.litvin.GeometryViewportPanel
+import org.litvin.analytics.Analytics
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
 import org.litvin.SessionSettings
 import org.litvin.projects.ManifestIO
 import org.litvin.adjustments.AdjustmentsStore
@@ -56,6 +59,7 @@ class SwingPointsPanel(
     autosaveExecutor: ExecutorService,
     private val dialogs: UserDialogService,
     private val hints: HintController = HintController.NONE,
+    private val analytics: Analytics = DisabledAnalytics,
 ) : JPanel(BorderLayout()), AutoCloseable {
 
     constructor() : this(
@@ -600,6 +604,7 @@ class SwingPointsPanel(
             colorHex = colorHex,
         )
         maybeShowCommentHint()
+        if (comment != null) analytics.record(AnalyticsEvent.CommentAdded)
         comment?.let { EventQueue.invokeLater { scrollToEvent("comment:${it.id}") } }
     }
 
@@ -637,7 +642,10 @@ class SwingPointsPanel(
 
     private fun deletePoint(id: String) {
         hints.dismiss(HintId.POINT_ROW)
-        if (dispatcher.deletePoint(id)) setSelectedVisual(-1)
+        if (dispatcher.deletePoint(id)) {
+            analytics.record(AnalyticsEvent.PointDeleted)
+            setSelectedVisual(-1)
+        }
     }
 
     /** Deletes the selected point. Comments have no active state, so they are deleted from their card. */
@@ -665,6 +673,7 @@ class SwingPointsPanel(
     private fun toggleFavorite(id: String) {
         hints.dismiss(HintId.POINT_ROW)
         if (dispatcher.toggleFavorite(id)) {
+            if (dispatcher.getCompletedPoints().any { it.id == id && it.favorite }) analytics.record(AnalyticsEvent.PointFavorited)
             pushCardsState()
             timeline.repaint()
             scheduleAutosave()
@@ -750,7 +759,7 @@ class SwingPointsPanel(
     private fun onEndAtPlayhead() {
         // Capture pending Start before finalization to select the created row afterwards
         val prevPending = dispatcher.getPendingStart()
-        dispatcher.onPointEnd(player.currentTimeMs())
+        if (dispatcher.onPointEnd(player.currentTimeMs())) analytics.record(AnalyticsEvent.PointAdded)
         maybeShowDispatcherHint()
         EventQueue.invokeLater {
             val nowPending = dispatcher.getPendingStart()

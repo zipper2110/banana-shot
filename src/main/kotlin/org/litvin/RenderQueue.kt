@@ -1,12 +1,17 @@
 package org.litvin
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litvin.export.RenderFailReason
 import org.litvin.export.RenderRequestCoordinator
+import org.litvin.export.RenderRunFacts
+import org.litvin.export.RenderRunListener
+import org.litvin.export.RenderRunResult
 import org.litvin.export.RenderQueueRequest
 import org.litvin.export.RenderTerminalOutcome
 import org.litvin.points.PointV1
 import org.litvin.scoring.ScoreboardSettingsV1
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -100,6 +105,48 @@ object RenderQueueManager {
 
     private val started = AtomicBoolean(false)
     private val stopSignal = AtomicBoolean(false)
+
+    /** The listener of the usage analytics (B-9). It gets only [RenderRunFacts], not the job. */
+    @Volatile var runListener: RenderRunListener? = null
+
+    private class RunRecord(val facts: RenderRunFacts, val startedAtNanos: Long) {
+        @Volatile var failReason: RenderFailReason? = null
+        @Volatile var videoMs: Long? = null
+    }
+
+    /** The exports that started and did not end, by job ID. */
+    private val runs = ConcurrentHashMap<String, RunRecord>()
+
+    /** The facts of the exports that run now. The app counts them as interrupted when it closes. */
+    fun runningExports(): List<RenderRunFacts> = runs.values.map { it.facts }
+
+    private fun startRun(job: RenderJob) {
+        val record = RunRecord(RenderRunFacts.of(job), System.nanoTime())
+        runs[job.id] = record
+        try {
+            runListener?.started(record.facts)
+        } catch (failure: Throwable) {
+            logger.warn(failure) { "Render run listener failed" }
+        }
+    }
+
+    private fun failRun(job: RenderJob, reason: RenderFailReason) {
+        runs[job.id]?.failReason = reason
+    }
+
+    private fun endRun(job: RenderJob) {
+        val record = runs.remove(job.id) ?: return
+        val result = when (job.status) {
+            RenderStatus.COMPLETED -> RenderRunResult.Completed((System.nanoTime() - record.startedAtNanos) / 1_000_000, record.videoMs)
+            RenderStatus.CANCELED -> RenderRunResult.Canceled
+            else -> RenderRunResult.Failed(record.failReason ?: RenderFailReason.OTHER)
+        }
+        try {
+            runListener?.finished(record.facts, result)
+        } catch (failure: Throwable) {
+            logger.warn(failure) { "Render run listener failed" }
+        }
+    }
 
     /** Cancel the currently running job, if any. */
     fun cancelCurrent() = cancelCurrent(org.litvin.export.LEGACY_RENDER_OWNER_ID)
@@ -203,6 +250,7 @@ object RenderQueueManager {
                 job.status = RenderStatus.RUNNING
                 job.updatedAtEpochMs = System.currentTimeMillis()
                 logger.info { "Render job running id=${job.id} -> ${job.outputPath} (${job.encoderLabel} / ${job.outWidth}x${job.outHeight})" }
+                startRun(job)
                 notifyObservers()
                 if (abortIfCanceled(request)) continue
 
@@ -218,6 +266,7 @@ object RenderQueueManager {
                 if (!srcFile.exists()) {
                     job.status = RenderStatus.FAILED
                     job.failureReason = "Source file missing: ${job.sourcePath}"
+                    failRun(job, RenderFailReason.SOURCE_MISSING)
                     job.stderrTail = null
                     job.updatedAtEpochMs = System.currentTimeMillis()
                     logger.error { job.failureReason.orEmpty() }
@@ -236,6 +285,7 @@ object RenderQueueManager {
                 } catch (ex: Throwable) {
                     job.status = RenderStatus.FAILED
                     job.failureReason = "Cannot write to output directory: ${outDir.absolutePath} — ${ex.javaClass.simpleName}: ${ex.message}"
+                    failRun(job, RenderFailReason.OUTPUT_WRITE)
                     job.stderrTail = null
                     job.updatedAtEpochMs = System.currentTimeMillis()
                     logger.error(ex) { job.failureReason.orEmpty() }
@@ -323,6 +373,7 @@ object RenderQueueManager {
                     probedDurationMs
                 }
                 val totalDurationMs: Long? = videoDurationMs?.plus(org.litvin.export.ExportPassPlanner.cardDurationMs(passes))
+                runs[job.id]?.videoMs = totalDurationMs
 
                 fun buildFor(
                     passKeeps: List<PointV1>,
@@ -509,6 +560,7 @@ object RenderQueueManager {
                                 null
                             }
                             job.failureReason = "Failed to finalize output file move: ${moveFailure.javaClass.simpleName}: ${moveFailure.message}"
+                            failRun(job, RenderFailReason.OUTPUT_WRITE)
                             if (partOut.exists()) partOut.delete()
                             try { java.io.File(partOut.absolutePath + ".ass").delete() } catch (_: Throwable) { }
                         }
@@ -516,6 +568,7 @@ object RenderQueueManager {
                     }
                     else -> requestCoordinator.terminalize(request.ownerId, job.id) {
                         job.status = RenderStatus.FAILED
+                        failRun(job, RenderFailReason.FFMPEG_EXIT)
                         if (partOut.exists()) partOut.delete()
                         try { java.io.File(partOut.absolutePath + ".ass").delete() } catch (_: Throwable) { }
                         val tailCopy = synchronized(errTail) { errTail.joinToString("\n") }
@@ -574,6 +627,7 @@ object RenderQueueManager {
         val job = request.job
         logger.error(cause) { "Failed to start ffmpeg" }
         job.status = RenderStatus.FAILED
+        failRun(job, RenderFailReason.PROCESS_START)
         job.failureReason = "Failed to start FFmpeg: ${cause.javaClass.simpleName}: ${cause.message}. Run ${AppInfo.NAME} distribution diagnostics for details."
         job.stderrTail = null
         job.updatedAtEpochMs = System.currentTimeMillis()
@@ -815,6 +869,7 @@ object RenderQueueManager {
 
     private fun finishRequest(request: RenderQueueRequest) {
         requestCoordinator.finish(request.ownerId, request.job.id)
+        endRun(request.job)
         val outcome = when (request.job.status) {
             RenderStatus.COMPLETED -> RenderTerminalOutcome.COMPLETED
             RenderStatus.CANCELED -> RenderTerminalOutcome.CANCELED

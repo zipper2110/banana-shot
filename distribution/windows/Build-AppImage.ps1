@@ -5,7 +5,15 @@ param(
     # The URL of the feedback Worker (B-8), for example https://<host>/v1/feedback. Without it, the feedback
     # form of the app cannot send: it offers only "Copy report" and "Write an email". Validate-AppImage.ps1
     # refuses a release build without it.
-    [string]$FeedbackEndpoint
+    [string]$FeedbackEndpoint,
+    # The usage analytics (B-9). Give all three or none. Without them, the app cannot send analytics and does not
+    # ask for consent. Validate-AppImage.ps1 refuses a release build without them.
+    # The URL of the analytics Worker, for example https://<host>/v1/session.
+    [string]$AnalyticsEndpoint,
+    # The URL of the privacy notice on the landing site (B-10).
+    [string]$AnalyticsPrivacyUrl,
+    # The version of that notice. It must be AnalyticsSchema.NOTICE_VERSION of the app.
+    [string]$AnalyticsNoticeVersion
 )
 
 $ErrorActionPreference = "Stop"
@@ -47,6 +55,29 @@ $FeedbackEndpoint = "$FeedbackEndpoint".Trim()
 $feedbackEndpointPattern = '^https://[^/@?#\s]+(/[^?#\s]*)?/v1/feedback$'
 if ($FeedbackEndpoint -and $FeedbackEndpoint -notmatch $feedbackEndpointPattern) {
     throw "-FeedbackEndpoint must be an https URL that ends in /v1/feedback; got '$FeedbackEndpoint'."
+}
+$AnalyticsEndpoint = "$AnalyticsEndpoint".Trim()
+$AnalyticsPrivacyUrl = "$AnalyticsPrivacyUrl".Trim()
+$AnalyticsNoticeVersion = "$AnalyticsNoticeVersion".Trim()
+# The same rules as AnalyticsBuildConfig.fromProperties in the app. Validate-AppImage.ps1 has the same values.
+$expectedNoticeVersion = "1"
+$analyticsEndpointPattern = '^https://[^/@?#\s]+/v1/session$'
+$analyticsPrivacyUrlPattern = '^https://[^/@?#\s]+(/[^?#\s]*)?$'
+$analyticsValues = @($AnalyticsEndpoint, $AnalyticsPrivacyUrl, $AnalyticsNoticeVersion) | Where-Object { $_ }
+$withAnalytics = $analyticsValues.Count -eq 3
+if ($analyticsValues.Count -ne 0 -and -not $withAnalytics) {
+    throw "Give all three of -AnalyticsEndpoint, -AnalyticsPrivacyUrl, and -AnalyticsNoticeVersion, or none."
+}
+if ($withAnalytics) {
+    if ($AnalyticsEndpoint -notmatch $analyticsEndpointPattern) {
+        throw "-AnalyticsEndpoint must be an https URL with the path /v1/session; got '$AnalyticsEndpoint'."
+    }
+    if ($AnalyticsPrivacyUrl -notmatch $analyticsPrivacyUrlPattern) {
+        throw "-AnalyticsPrivacyUrl must be an https URL with no query; got '$AnalyticsPrivacyUrl'."
+    }
+    if ($AnalyticsNoticeVersion -ne $expectedNoticeVersion) {
+        throw "-AnalyticsNoticeVersion must be $expectedNoticeVersion, the notice version of the app; got '$AnalyticsNoticeVersion'."
+    }
 }
 
 if (-not $SkipBuild) {
@@ -133,6 +164,15 @@ if ($FeedbackEndpoint) {
     $arguments += @("--java-options", "-Dbananashot.feedback.endpoint=$FeedbackEndpoint")
 } else {
     Write-Warning "No -FeedbackEndpoint: the feedback form of this build cannot send reports."
+}
+if ($withAnalytics) {
+    $arguments += @(
+        "--java-options", "-Dbananashot.analytics.endpoint=$AnalyticsEndpoint",
+        "--java-options", "-Dbananashot.analytics.privacyUrl=$AnalyticsPrivacyUrl",
+        "--java-options", "-Dbananashot.analytics.noticeVersion=$AnalyticsNoticeVersion"
+    )
+} else {
+    Write-Warning "No analytics parameters: this build cannot send usage analytics."
 }
 & jpackage @arguments
 if ($LASTEXITCODE -ne 0) { throw "jpackage app-image creation failed." }

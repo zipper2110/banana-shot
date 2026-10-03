@@ -20,6 +20,7 @@ import kotlin.test.assertTrue
 /**
  * E10-S3 (build-expiry-spec.md, "Privacy"): each build tells about the requests to GitHub, apart from the analytics.
  * T4 of B-8: each build also tells about the feedback reports.
+ * T5 of B-9: the analytics texts agree with the privacy notice.
  */
 class PrivacyPageTest {
     @Test
@@ -52,14 +53,41 @@ class PrivacyPageTest {
         }
     }
 
-    private fun analyticsPage(): PrivacyPage {
-        val config = AnalyticsBuildConfig.fromProperties(Properties().apply {
-            setProperty(AnalyticsBuildConfig.ENDPOINT_PROPERTY, "https://analytics.example.test/v1/events/batch")
-            setProperty(AnalyticsBuildConfig.PRIVACY_URL_PROPERTY, "https://tennis.example.test/privacy/analytics/")
-            setProperty(AnalyticsBuildConfig.NOTICE_VERSION_PROPERTY, "1")
-        }) as AnalyticsBuildConfig.Enabled
+    @Test
+    fun `a build with analytics tells what the analytics collect and exclude`() {
+        val page = analyticsPage()
+        val text = onEdt { texts(page) }.joinToString("\n")
+        listOf(
+            "counts of the tabs and features you use, export results, session length, app version, and OS family",
+            "user or device IDs",
+            "text that you type",
+        ).forEach { assertTrue(it in text, it) }
+        assertTrue("product action" !in text, "the old text is removed")
+    }
+
+    @Test
+    fun `the consent dialog asks for anonymous usage counts`() {
+        val config = analyticsConfig()
         val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
-        val controller = AnalyticsController(config, preferences, enabledFactory = { NoAnalytics })
+        val controller = AnalyticsController(config, preferences, enabledFactory = { _, _ -> NoAnalytics })
+        val text = onEdt {
+            val dialog = AnalyticsConsentDialog.build(null, controller, URI("https://example.test/privacy")) { true }
+            try { texts(dialog).joinToString("\n") } finally { dialog.dispose() }
+        }
+        assertTrue("anonymous usage counts" in text, text)
+        assertTrue("product events" !in text, text)
+    }
+
+    private fun analyticsConfig() = AnalyticsBuildConfig.fromProperties(Properties().apply {
+        setProperty(AnalyticsBuildConfig.ENDPOINT_PROPERTY, "https://analytics.example.test/v1/session")
+        setProperty(AnalyticsBuildConfig.PRIVACY_URL_PROPERTY, "https://tennis.example.test/privacy/analytics/")
+        setProperty(AnalyticsBuildConfig.NOTICE_VERSION_PROPERTY, "1")
+    }) as AnalyticsBuildConfig.Enabled
+
+    private fun analyticsPage(): PrivacyPage {
+        val config = analyticsConfig()
+        val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+        val controller = AnalyticsController(config, preferences, enabledFactory = { _, _ -> NoAnalytics })
         return onEdt {
             PrivacyPage.withAnalytics(controller, preferences, URI("https://example.test/privacy"), CONTACT) { true }
         }
@@ -80,7 +108,7 @@ class PrivacyPageTest {
 
     private fun texts(component: Component): List<String> = buildList {
         when (component) {
-            is JLabel -> add(component.text)
+            is JLabel -> component.text?.let(::add)
             is WrapText -> add(component.text)
         }
         if (component is Container) component.components.forEach { addAll(texts(it)) }

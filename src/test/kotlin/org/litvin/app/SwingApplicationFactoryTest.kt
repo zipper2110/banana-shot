@@ -7,6 +7,11 @@ import org.litvin.CompletedRender
 import org.litvin.RenderJob
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.AdjustmentsV1
+import org.litvin.analytics.AnalyticsBuildConfig
+import org.litvin.analytics.AnalyticsController
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.AnalyticsPreferences
+import org.litvin.analytics.ManagedAnalytics
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
 import org.litvin.export.RenderService
@@ -203,6 +208,71 @@ class SwingApplicationFactoryTest {
     }
 
     @Test
+    fun `analytics count only the tab clicks of the user, the Help button, and a project open`() {
+        val projectFixture = OpenProjectFixture()
+        val session = RecordingAnalyticsSession()
+        val fixture = TestServices(projectsRepository = projectFixture.repository, analyticsController = session.controller())
+        val windowsBefore = Window.getWindows().toSet()
+        var handle: SwingApplicationHandle? = null
+
+        try {
+            val opened = GuiActionRunner.execute<SwingApplicationHandle> {
+                SwingApplicationFactory.create(fixture.services, show = true)
+            }
+            handle = opened
+            fun click(name: String) = GuiActionRunner.execute {
+                checkNotNull(findComponent<AbstractButton>(opened.frame) { it.name == name }).doClick()
+            }
+
+            click("projects-open-${projectFixture.project.id}")
+            click("nav-scoring")
+            click("nav-scoring")
+            click("nav-help")
+
+            val tabs = session.events().filterIsInstance<AnalyticsEvent.TabShown>()
+            assertEquals(
+                listOf(
+                    AnalyticsEvent.TabShown(AnalyticsEvent.Tab.PROJECTS, byUser = false),
+                    AnalyticsEvent.TabShown(AnalyticsEvent.Tab.POINTS, byUser = false),
+                    AnalyticsEvent.TabShown(AnalyticsEvent.Tab.SCORING, byUser = true),
+                ),
+                tabs.drop(tabs.size - 3),
+            )
+            assertEquals(1, session.events().count { it == AnalyticsEvent.ProjectOpened })
+            assertEquals(1, session.events().count { it == AnalyticsEvent.HelpOpened })
+        } finally {
+            handle?.close()
+            Window.getWindows().filterNot(windowsBefore::contains).forEach(Window::dispose)
+        }
+    }
+
+    @Test
+    fun `window close starts the last summary and hides the window before it closes the services`() {
+        val session = RecordingAnalyticsSession()
+        val fixture = TestServices(analyticsController = session.controller())
+        val windowsBefore = Window.getWindows().toSet()
+        var handle: SwingApplicationHandle? = null
+
+        try {
+            val opened = GuiActionRunner.execute<SwingApplicationHandle> {
+                SwingApplicationFactory.create(fixture.services, show = true)
+            }
+            handle = opened
+            session.onFinalSend = { assertTrue(opened.frame.isVisible, "the window still shows at the final send") }
+            session.onClose = { assertFalse(opened.frame.isVisible, "the window is hidden when the services close") }
+
+            GuiActionRunner.execute {
+                opened.frame.dispatchEvent(WindowEvent(opened.frame, WindowEvent.WINDOW_CLOSING))
+            }
+
+            assertEquals(listOf("final send", "close"), session.lifecycle)
+        } finally {
+            handle?.close()
+            Window.getWindows().filterNot(windowsBefore::contains).forEach(Window::dispose)
+        }
+    }
+
+    @Test
     fun visibleApplicationUsesInjectedEncoderCapabilitiesWithoutNativeProbe() {
         val fixture = TestServices(EncoderCapabilities(setOf("h264_nvenc"), "h264_nvenc"))
         val windowsBefore = Window.getWindows().toSet()
@@ -276,9 +346,35 @@ class SwingApplicationFactoryTest {
         if (root is Container) root.components.forEach { addAll(findComponents(it, type)) }
     }
 
+    /** A running analytics session that records the events and the exit steps. */
+    private class RecordingAnalyticsSession : ManagedAnalytics {
+        private val recorded = CopyOnWriteArrayList<AnalyticsEvent>()
+        val lifecycle = CopyOnWriteArrayList<String>()
+        var onFinalSend: () -> Unit = {}
+        var onClose: () -> Unit = {}
+
+        fun events(): List<AnalyticsEvent> = recorded.toList()
+
+        fun controller(): AnalyticsController {
+            val config = AnalyticsBuildConfig.Enabled(
+                java.net.URI("https://analytics.example.test/v1/session"),
+                java.net.URI("https://example.test/privacy"),
+                noticeVersion = 1,
+                osFamily = "windows",
+            )
+            val preferences = AnalyticsPreferences(MemoryPreferences())
+            return AnalyticsController(config, preferences, { _, _ -> this }, { AutoCloseable {} }).apply { enable() }
+        }
+
+        override fun record(event: AnalyticsEvent) { recorded += event }
+        override fun beginFinalSend() { lifecycle += "final send"; onFinalSend() }
+        override fun close() { lifecycle += "close"; onClose() }
+    }
+
     private class TestServices(
         encoderCapabilities: EncoderCapabilities = EncoderCapabilities.NONE,
         projectsRepository: ProjectsRepository = EmptyProjectsRepository,
+        analyticsController: AnalyticsController? = null,
     ) {
         val root = kotlin.io.path.createTempDirectory("swing-application-").toFile()
         val executors = RecordingExecutorProvider()
@@ -300,6 +396,7 @@ class SwingApplicationFactoryTest {
             adjustments = AdjustmentsSession(adjustmentsExecutor, 60_000),
             expiry = TestExpiry.controller(root),
             encoderCapabilities = java.util.concurrent.CompletableFuture.completedFuture(encoderCapabilities),
+            analyticsController = analyticsController,
         )
     }
 

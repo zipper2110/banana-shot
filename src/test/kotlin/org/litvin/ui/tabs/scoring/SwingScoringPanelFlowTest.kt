@@ -3,6 +3,8 @@ package org.litvin.ui.tabs.scoring
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.litvin.adjustments.AdjustmentsSession
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.RecordingAnalytics
 import org.litvin.media.MediaScreen
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
@@ -38,6 +40,7 @@ class SwingScoringPanelFlowTest {
     private val projectDir: File = Files.createTempDirectory("scoring-flow-").toFile()
     private val manifestPath = File(projectDir, "project.trproj").absolutePath
     private val errors = mutableListOf<String>()
+    private val analytics = RecordingAnalytics()
     private lateinit var panel: SwingScoringPanel
 
     private val dialogs = object : UserDialogService {
@@ -68,7 +71,7 @@ class SwingScoringPanelFlowTest {
     private fun open(score: ScoreV1 = ScoreV1(player1Name = "Alex", player2Name = "Sam", scoreSettingsReviewed = true)) {
         ScoreIO.writeForProjectDir(projectDir.absolutePath, score)
         SwingUtilities.invokeAndWait {
-            panel = SwingScoringPanel(FakeMediaPlayer(MediaScreen.SCORING), adjustments, dialogs)
+            panel = SwingScoringPanel(FakeMediaPlayer(MediaScreen.SCORING), adjustments, dialogs, analytics = analytics)
             panel.setSize(1400, 900)
             panel.setProjectManifest(manifestPath)
             panel.onActivated()
@@ -104,6 +107,20 @@ class SwingScoringPanelFlowTest {
             assertEquals("Point 2 / 3", find<JLabel>("current-point-label").text)
             assertTrue(find<AbstractButton>("previous-point").isEnabled)
         }
+    }
+
+    @Test
+    fun analyticsCountEachNewOutcomeAndEachPointThatBecomesAFavorite() {
+        open()
+        SwingUtilities.invokeAndWait {
+            find<OutcomeButton>("scoring-player-1-point").doClick()
+            find<OutcomeButton>("scoring-player-2-point").doClick()
+            val favorite = panel.actionMap.get("toggleFavorite")
+            favorite.actionPerformed(java.awt.event.ActionEvent(panel, java.awt.event.ActionEvent.ACTION_PERFORMED, "test"))
+            favorite.actionPerformed(java.awt.event.ActionEvent(panel, java.awt.event.ActionEvent.ACTION_PERFORMED, "test"))
+        }
+        assertEquals(2, analytics.count(AnalyticsEvent.ScoreRecorded))
+        assertEquals(1, analytics.count(AnalyticsEvent.PointFavorited))
     }
 
     @Test

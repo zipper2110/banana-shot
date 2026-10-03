@@ -1,5 +1,9 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.analytics.Analytics
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
+import org.litvin.analytics.RecordingAnalytics
 import org.junit.jupiter.api.io.TempDir
 import org.litvin.app.PreferencesProvider
 import org.litvin.license.AllowNewWork
@@ -28,6 +32,32 @@ import kotlin.test.assertIs
 class DefaultProjectsPresenterTest {
     @TempDir
     lateinit var tempDir: Path
+
+    @Test
+    fun analyticsCountCreatedAndOpenedProjectsAndVideosThatCannotOpen() {
+        val video = videoFile()
+        val repository = FakeProjectsRepository(
+            manifests = mutableMapOf(
+                "match.trproj" to manifest("Match", sourceVideo = video),
+                "lost.trproj" to manifest("Lost", sourceVideo = tempDir.resolve("missing.mp4").toString()),
+            ),
+        )
+        val analytics = RecordingAnalytics()
+        val presenter = presenter(repository, analytics)
+        presenter.attach(RecordingProjectsView())
+
+        presenter.onIntent(ProjectsIntent.CreateProject("New match", video))
+        presenter.onIntent(ProjectsIntent.OpenProject("match.trproj"))
+        presenter.onIntent(ProjectsIntent.OpenProject("lost.trproj"))
+        presenter.onIntent(ProjectsIntent.CreateProject("", video))
+        presenter.onActivated()
+        drainEdt()
+
+        assertEquals(
+            listOf(AnalyticsEvent.ProjectCreated, AnalyticsEvent.ProjectOpened, AnalyticsEvent.VideoOpenFailed),
+            analytics.events,
+        )
+    }
 
     @Test
     fun activationRendersPagedRecentsFromRepository() {
@@ -381,13 +411,14 @@ class DefaultProjectsPresenterTest {
         assertEquals(expected, actual)
     }
 
-    private fun presenter(repository: ProjectsRepository): DefaultProjectsPresenter {
+    private fun presenter(repository: ProjectsRepository, analytics: Analytics = DisabledAnalytics): DefaultProjectsPresenter {
         val prefs = Preferences.userNodeForPackage(DefaultProjectsPresenterTest::class.java)
             .node("test-${UUID.randomUUID()}")
         return DefaultProjectsPresenter(
             repository = repository,
             preferences = prefs,
             ioExecutor = Executor { it.run() },
+            analytics = analytics,
         )
     }
 

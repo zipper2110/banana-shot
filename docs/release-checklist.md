@@ -35,6 +35,24 @@ See `feedback-worker/README.md` and `docs/feedback/b-8-tasks.md`.
       (`https://<host>/v1/feedback`). `Validate-AppImage.ps1` refuses a build
       without it.
 
+## 3a. Analytics Worker and privacy notice
+
+See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
+
+- [ ] The privacy notice (`docs/analytics/privacy-notice.md`) is on the
+      landing site with the effective date. The URL opens.
+- [ ] The analytics Worker is deployed with the D1 schema in the EU
+      jurisdiction and the secret `RATE_LIMIT_KEY`.
+- [ ] The deployed Worker knows all counter keys of this release
+      (`analytics-contract/v1/counter-keys.json`). Deploy the Worker before
+      the app release, because the Worker refuses a summary with an unknown
+      key.
+- [ ] `ANALYTICS_INGESTION_ENABLED` is `true`. The synthetic summary
+      (`analytics-contract/v1/smoke-summary.json`) returns `204`.
+- [ ] The GitHub variables `ANALYTICS_ENDPOINT` (`https://<host>/v1/session`),
+      `ANALYTICS_PRIVACY_URL`, and `ANALYTICS_NOTICE_VERSION` are set.
+      `Validate-AppImage.ps1` refuses a build without them.
+
 ## 4. Native dependencies
 
 - [ ] If a pin in `native-dependencies.json` changed, make a new natives
@@ -77,8 +95,13 @@ in `%LocalAppData%\BananaShot\current`.
 - [ ] Run the packaged smoke test with `-Installed` and complete its report.
       See `qa/windows/ui-smoke.md`. The smoke test does a real FFmpeg export and
       checks the adjustment controls.
-- [ ] First start with empty app data: the analytics consent dialog (when the
-      build has analytics) and the Overview help open.
+- [ ] First start with empty app data: the analytics consent dialog opens.
+      After you answer it, the Overview help opens. "Read privacy notice"
+      opens the notice on the site.
+- [ ] Analytics: click "Enable analytics", and use some tabs. Within 5
+      minutes, a row with this app version appears in D1
+      (`analytics-worker/queries/sessions.sql`). Then turn off the analytics
+      in More → Privacy.
 - [ ] More → About: the version is correct. The License, License notice, and
       Third-party notices buttons open the files from `legal/`.
 - [ ] More → Contact: "Write an email" opens the email app. "Open log folder"

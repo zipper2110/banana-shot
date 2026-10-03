@@ -1,25 +1,61 @@
-import { validateBatch } from './validation';
+import { allow, HOUR } from './rate-limit';
 import { runRetention } from './retention';
+import { validateSummary, type Summary } from './validation';
 
-export interface Env { ANALYTICS_INGESTION_ENABLED: string; ANALYTICS_DB: D1Database }
+export interface Env {
+  ANALYTICS_INGESTION_ENABLED: string;
+  ANALYTICS_DB: D1Database;
+  RATE_LIMIT_KEY?: string;
+}
+
+/** The largest request body: 8 KiB. A summary with all counter keys is about 2 KiB. */
+export const MAX_BODY_BYTES = 8 * 1024;
+
+const status = (code: number) => new Response(null, { status: code });
+
+/**
+ * Inserts the first summary of a session. A later summary replaces the row only when its snapshot is higher.
+ * `first_received_at` does not change.
+ */
+const UPSERT = 'INSERT INTO analytics_session (session_id,first_received_at,last_received_at,schema_version,notice_version,app_version,os_family,snapshot,final,duration_s,active_s,counters) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) '
+  + 'ON CONFLICT(session_id) DO UPDATE SET last_received_at=excluded.last_received_at, schema_version=excluded.schema_version, notice_version=excluded.notice_version, '
+  + 'app_version=excluded.app_version, os_family=excluded.os_family, snapshot=excluded.snapshot, final=excluded.final, duration_s=excluded.duration_s, '
+  + 'active_s=excluded.active_s, counters=excluded.counters WHERE excluded.snapshot > analytics_session.snapshot';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    if (env.ANALYTICS_INGESTION_ENABLED !== 'true') return Response.json({ accepted: 0, rejected: 0, reasons: {} }, { status: 410 });
-    if (request.method !== 'POST') return new Response(null, { status: request.method === 'GET' ? 405 : 404 });
-    if (new URL(request.url).pathname !== '/v1/events/batch') return new Response(null, { status: 404 });
-    if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return new Response(null, { status: 415 });
-    const body = await request.text();
-    if (body.length > 65_536) return new Response(null, { status: 413 });
-    const batch = (() => { try { return validateBatch(JSON.parse(body)); } catch { return null; } })();
-    if (!batch) return Response.json({ accepted: 0, rejected: 1, reasons: { invalid: 1 } }, { status: 422 });
+    if (env.ANALYTICS_INGESTION_ENABLED !== 'true') return status(410);
+    if (new URL(request.url).pathname !== '/v1/session') return status(404);
+    if (request.method !== 'POST') return status(405);
+    if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return status(415);
+    if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) return status(413);
+    const bytes = await request.arrayBuffer();
+    if (bytes.byteLength > MAX_BODY_BYTES) return status(413);
+    const result = (() => {
+      try { return validateSummary(JSON.parse(new TextDecoder().decode(bytes))); } catch { return { status: 400 } as const; }
+    })();
+    if ('status' in result) return status(result.status);
     try {
-      const now = Date.now();
-      await env.ANALYTICS_DB.batch(batch.events.map(event => env.ANALYTICS_DB.prepare('INSERT OR IGNORE INTO analytics_event (session_id,sequence_number,received_at,schema_version,notice_version,event_name,elapsed_ms,app_version,os_family,properties) VALUES (?,?,?,?,?,?,?,?,?,?)').bind(batch.session_id,event.sequence_number,now,1,1,event.name,event.elapsed_ms,batch.app_version,batch.os_family,JSON.stringify(event.properties))));
-      return Response.json({ accepted: batch.events.length, rejected: 0, reasons: {} }, { status: 202 });
-    } catch { return Response.json({ accepted: 0, rejected: 0, reasons: { unavailable: 1 } }, { status: 503 }); }
+      return await store(result.summary, request, env);
+    } catch (failure) {
+      console.error(`Summary not stored: ${failure instanceof Error ? failure.message : 'unknown failure'}`);
+      return status(503);
+    }
   },
   async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
     await runRetention(env.ANALYTICS_DB);
-  }
+  },
 } satisfies ExportedHandler<Env>;
+
+async function store(summary: Summary, request: Request, env: Env): Promise<Response> {
+  const db = env.ANALYTICS_DB;
+  if (!env.RATE_LIMIT_KEY) throw new Error('RATE_LIMIT_KEY is not set');
+  if (!await allow(db, env.RATE_LIMIT_KEY, request.headers.get('cf-connecting-ip') ?? 'unknown')) return status(429);
+  // The server keeps no exact clock time: both times are rounded down to the hour.
+  const hour = Math.floor(Date.now() / HOUR) * HOUR;
+  await db.prepare(UPSERT).bind(
+    summary.session_id, hour, hour, summary.schema_version, summary.notice_version, summary.app_version, summary.os_family,
+    summary.snapshot, summary.final ? 1 : 0, summary.duration_s, summary.active_s, JSON.stringify(summary.counters),
+  ).run();
+  return status(204);
+}

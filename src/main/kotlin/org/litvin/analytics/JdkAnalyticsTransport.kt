@@ -5,46 +5,30 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
-/** HTTPS-only, daemon-owned, best-effort transport. It never exposes response values to product code. */
+/**
+ * Sends a summary with the JDK HTTP client. [client] makes the client at the first send, on the analytics thread.
+ * The `app` package gives a client with the proxy of the system and the trust of E5-S4. The client follows no
+ * redirect. The transport never reads the response body.
+ */
 class JdkAnalyticsTransport(
     private val endpoint: URI,
-    private val onThreadStarted: (Boolean) -> Unit = {}
+    private val timeout: Duration = TIMEOUT,
+    client: () -> HttpClient,
 ) : AnalyticsTransport {
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
-        Thread {
-            onThreadStarted(Thread.currentThread().isDaemon)
-            runnable.run()
-        }.apply { isDaemon = true; name = "analytics-delivery" }
-    }
-    private val client = HttpClient.newBuilder().executor(executor).connectTimeout(Duration.ofSeconds(3)).build()
-    @Volatile private var open = true
+    private val client by lazy(client)
 
-    override fun send(payload: String) {
-        if (!open) return
-        runCatching {
-            executor.execute {
-                if (!open) return@execute
-                // close() can shut the executor down after the check above; sendAsync then rejects its work.
-                runCatching {
-                    val request = HttpRequest.newBuilder(endpoint)
-                        .timeout(Duration.ofSeconds(5))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(payload))
-                        .build()
-                    client.sendAsync(request, HttpResponse.BodyHandlers.discarding())
-                        .exceptionally { null }
-                }
-            }
-        }
+    override fun post(body: String): Int {
+        val request = HttpRequest.newBuilder(endpoint)
+            .timeout(timeout)
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body, Charsets.UTF_8))
+            .build()
+        return client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
     }
 
-    fun isOpen(): Boolean = open
-
-    override fun close() {
-        open = false
-        executor.shutdownNow()
+    companion object {
+        val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(3)
+        val TIMEOUT: Duration = Duration.ofSeconds(5)
     }
 }

@@ -1,5 +1,5 @@
 /** The number of reports that one IP address can send in one hour. */
-export const HOURLY_LIMIT = 10;
+export const HOURLY_LIMIT = 30;
 
 const HOUR = 60 * 60 * 1000;
 

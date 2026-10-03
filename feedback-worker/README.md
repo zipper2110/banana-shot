@@ -6,7 +6,7 @@ author with a Telegram bot. The contract is in `feedback-contract/v1`.
 
 - The Worker does not keep the log. It sends the log to Telegram as a `.log.gz` file and
   then drops it.
-- The Worker does not keep the IP address. The rate limit (10 reports from one address in
+- The Worker does not keep the IP address. The rate limit (30 reports from one address in
   one hour) keeps an HMAC of the hour and the address, and deletes it after the hour.
 - The daily cron job deletes the report rows that are older than 90 days. The copy in the
   Telegram chat is the responsibility of the author.
@@ -39,7 +39,8 @@ and the shared fixtures in `feedback-contract/v1`.
 
 1. Copy `wrangler.toml.example` to `wrangler.toml`. Git ignores `wrangler.toml`.
 2. Make the database: `npx wrangler d1 create bananashot-feedback`. Write the database ID
-   in `wrangler.toml`.
+   in `wrangler.toml`. Keep `binding = "FEEDBACK_DB"`. If `d1 create` offers to add a
+   binding with a different name, do not accept it.
 3. Apply the schema: `npx wrangler d1 migrations apply bananashot-feedback --remote`.
 4. Set the secrets. `RATE_LIMIT_KEY` is a random text of 32 or more characters, for
    example from `openssl rand -hex 32`.
@@ -56,8 +57,10 @@ and the shared fixtures in `feedback-contract/v1`.
 8. Send a synthetic report. The bot must send a message to the author chat:
 
    ```bash
-   curl -i -X POST https://<worker-host>/v1/feedback -H "content-type: application/json" --data @../feedback-contract/v1/smoke-report.json
+   curl.exe -i -X POST https://<worker-host>/v1/feedback -H "content-type: application/json" --data "@../feedback-contract/v1/smoke-report.json"
    ```
+
+   In Windows PowerShell, `curl` is a short name for `Invoke-WebRequest`. Type `curl.exe`.
 
    A second send of the same file must return `200`.
 

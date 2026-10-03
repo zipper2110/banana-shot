@@ -43,3 +43,4 @@ build/
 /feedback-worker/wrangler.toml
 /feedback-worker/.dev.vars
 /feedback-worker/.wrangler/
+/.wrangler/

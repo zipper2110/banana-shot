@@ -27,7 +27,7 @@ Decided on 2026-10-03:
 | 10 | Q3: the Worker does not keep the log. It sends the log to Telegram as a file and then drops it. D1 keeps only the report text and the app data. Thus, the server keeps less personal data. |
 | 11 | Q4: the Worker keeps a report row for 90 days, the same as the analytics retention. Then the daily cron job deletes it. The copy in the Telegram chat is the author's responsibility (a bot can delete its messages only for 48 hours). |
 | 12 | Q5: the app attaches the last 2 MB of the log: the end of `bananashot.log`, and the end of `bananashot.1.log` if the newest file is shorter than 2 MB. The app compresses it with gzip (about 200 KB). |
-| 13 | T1 rate limit: 10 reports from one IP address in one hour. The key of a count row is an HMAC of the hour and the address with the Worker secret `RATE_LIMIT_KEY`. Each request deletes the rows of the previous hours. |
+| 13 | T1 rate limit: 30 reports from one IP address in one hour (changed from 10 on 2026-10-03: users behind one shared address, for example an office or a club, must not block each other). The key of a count row is an HMAC of the hour and the address with the Worker secret `RATE_LIMIT_KEY`. Each request deletes the rows of the previous hours. |
 | 14 | T1: the body limit is 3 MiB (3,145,728 bytes). The Worker sends the log to Telegram as a `.log.gz` file. It does not decompress it. |
 | 15 | T1: `message` must contain a character that is not white space. Error bodies are `{"error": "<code>"}` and never contain a request value. See `feedback-contract/v1/README.md`. |
 | 16 | T2: "Send" needs a topic and a message. The sidebar opens the form with no topic, so the user must select one. |
@@ -56,9 +56,10 @@ None. Write each new decision in "Decisions" at once.
 Status values: `open`, `in-progress`, `done`. When a task is done, write
 the test classes in its "Tests" line. Do not remove the task.
 
-Next work (2026-10-03): the code of T1–T5 is done. The author must deploy the
-Worker, make the bot, set the GitHub variable `FEEDBACK_ENDPOINT`, and do the
-manual checks of T5. The site text of T4 waits for the site (B-10).
+Next work (2026-10-03): the code of T1–T5 is done, and the Worker is
+deployed. The author must set the GitHub variable `FEEDBACK_ENDPOINT` and do
+the manual check of T5 with an installed dry-run build. The site text of T4
+waits for the site (B-10).
 
 ### T1 Feedback Worker
 
@@ -188,8 +189,20 @@ The texts that tell the user what the app sends and why.
 The steps that make the feature work in a release build.
 
 - Status: in-progress. The scripts, the workflow, the README, and the
-  checklist are done. Open: the deployment and the manual checks (the
-  author does them).
+  checklist are done. The Worker is deployed (2026-10-03). Open: the
+  GitHub variable `FEEDBACK_ENDPOINT` and the manual check from an
+  installed dry-run build (the author does them).
+- Deployed (2026-10-03): the Worker `bananashot-feedback` at
+  `https://bananashot-feedback.banana-shot-feedback.workers.dev/v1/feedback`,
+  with D1 `bananashot-feedback`, the three secrets, and the daily cron
+  `15 3 * * *`. With the kill switch off, the Worker returned `410`. With
+  the kill switch on, the synthetic report returned `201` and the author
+  chat got the message. A second send returned `200`.
+- Deployment fixes (2026-10-03): the cron syntax in
+  `wrangler.toml.example` was wrong (`[[triggers.crons]]`). It is now
+  `[triggers] crons = [...]`. `wrangler d1 create` offered a binding with
+  a different name. The example and the README now tell to keep
+  `FEEDBACK_DB`.
 - Build: `Build-AppImage.ps1` has the parameter `-FeedbackEndpoint`.
   `windows-release.yml` gives it from a GitHub variable.
   `Validate-AppImage.ps1` checks that a release build has the property.

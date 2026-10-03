@@ -92,7 +92,8 @@ internal class FeedbackDialog(owner: Window?, private val presenter: FeedbackPre
 
 /**
  * The feedback form. The presenter has all the state. This panel only shows it and forwards the user actions.
- * [onSizeChanged] runs when a part shows or hides, so the window can change its size.
+ * [onSizeChanged] runs when the preferred size changes (a part shows or hides, or a text gets more lines), so the
+ * window can change its size.
  */
 internal class FeedbackPanel(
     private val presenter: FeedbackPresenter,
@@ -150,7 +151,7 @@ internal class FeedbackPanel(
         name = "feedback-close"
         addActionListener { onClose() }
     }
-    private val send =UiButton("Send", Material2MZ.SEND, UiButton.Kind.LIME).apply {
+    private val send = UiButton("Send", Material2MZ.SEND, UiButton.Kind.LIME).apply {
         name = "feedback-send"
         addActionListener { presenter.onIntent(FeedbackIntent.Send) }
     }
@@ -217,12 +218,12 @@ internal class FeedbackPanel(
 
     override fun render(state: FeedbackViewState) {
         rendering = true
+        val sizeBefore = preferredSize
         try {
             topic.selected = state.topic
             setText(message, state.message)
             setText(email, state.email)
             attachLog.isSelected = state.attachLog
-            val errorShown = errorPanel.isVisible
             errorPanel.isVisible = state.error != null
             setText(errorText, state.error ?: "")
             messageError.text = state.messageError ?: " "
@@ -246,7 +247,9 @@ internal class FeedbackPanel(
                 send.isVisible -> send
                 else -> null
             }
-            if (errorShown != errorPanel.isVisible) onSizeChanged()
+            // A longer status or a shown part needs more height. The window must grow, or the text is cut off.
+            invalidate()
+            if (preferredSize != sizeBefore) onSizeChanged()
             revalidate()
             repaint()
         } finally {

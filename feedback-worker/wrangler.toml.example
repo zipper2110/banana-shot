@@ -10,12 +10,14 @@ FEEDBACK_INGESTION_ENABLED = "false"
 # Secrets (set with `wrangler secret put`, never here):
 #   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, RATE_LIMIT_KEY
 
+# The code reads the database as FEEDBACK_DB. Keep this binding name.
+# `wrangler d1 create` can offer a different name: do not accept it.
 [[d1_databases]]
 binding = "FEEDBACK_DB"
-database_name = "replace-locally"
+database_name = "bananashot-feedback"
 database_id = "replace-locally"
 migrations_dir = "migrations"
 
 # The daily retention job.
-[[triggers.crons]]
-cron = "15 3 * * *"
+[triggers]
+crons = ["15 3 * * *"]

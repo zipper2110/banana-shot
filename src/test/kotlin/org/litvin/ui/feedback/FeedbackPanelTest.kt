@@ -86,6 +86,26 @@ class FeedbackPanelTest {
     }
 
     @Test
+    fun `a longer status makes the form taller and asks the window for a new size`() {
+        System.setProperty("java.awt.headless", "true")
+        val presenter = presenter(withSender = true)
+        var sizeChanges = 0
+        SwingUtilities.invokeAndWait {
+            val panel = FeedbackPanel(presenter, onClose = {}, onSizeChanged = { sizeChanges++ }).also { presenter.attach(it) }
+            find(panel, "feedback-topic-1", AbstractButton::class.java).doClick()
+            find(panel, "feedback-message", JTextArea::class.java).text = "An idea"
+            find(panel, "feedback-email", JTextField::class.java).text = "user@example.test"
+            val heightBefore = panel.preferredSize.height
+            sizeChanges = 0
+
+            find(panel, "feedback-send", AbstractButton::class.java).doClick()
+
+            assertTrue(panel.preferredSize.height > heightBefore, "The thank-you text with the report ID needs more lines")
+            assertTrue(sizeChanges > 0, "The panel asks the window for a new size")
+        }
+    }
+
+    @Test
     fun `without an endpoint the form shows copy and email in place of Send`() {
         System.setProperty("java.awt.headless", "true")
         SwingUtilities.invokeAndWait {

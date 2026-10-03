@@ -61,6 +61,7 @@ Write each new decision here at once. The design decisions are in
 | 15 | T4: only a tab change by a click of the user counts as a tab open (`byUser`). A tab change by code (startup, "Go to point", the stats link) counts tab time but no open. |
 | 16 | T5 (2026-10-03): the "Excluded" text of the Privacy page also changes. The old text said "identifiers", but a summary has a random session ID. The new text says "user or device IDs", and the notice tells that the session ID lives only in memory and does not link two sessions. The app texts are constants (`AnalyticsConsentDialog.INTRO`, `PrivacyPage.ANALYTICS_COLLECTED`, `ANALYTICS_EXCLUDED`), so that a test can check them. |
 | 17 | T6 (2026-10-03): `Build-AppImage.ps1` refuses a part of the three analytics parameters, and it checks them with the rules of `AnalyticsBuildConfig`. The scripts keep the notice version as `$expectedNoticeVersion`; `AnalyticsBuildConfigTest` checks that it is `NOTICE_VERSION`. A new notice version thus needs a change of the scripts and of the GitHub variable. |
+| 18 | (2026-10-03, the author): a development run can send to the production Worker. This is the easy way to test. The queries do not exclude the `-SNAPSHOT` versions. To exclude them later, filter on `app_version`. |
 
 ## Open questions
 
@@ -76,7 +77,7 @@ None. Write each new decision in "Decisions" at once.
 | T4 | Record actions in the features | T3 | done |
 | T5 | Texts and privacy notice | T1 | done |
 | T6 | Build and release checks | T3 | done |
-| T7 | Deployment and turn on | T1–T6, B-10 | open |
+| T7 | Deployment and turn on | T1–T6, B-10 | in-progress |
 
 Status values: `open`, `in-progress`, `done`. When a task is done, write
 the test classes in its "Tests" line. Do not remove the task.
@@ -251,3 +252,13 @@ Design: work order step 6. The author does these steps.
   landing site (B-10, decision 5).
 - Do the analytics steps of `release-checklist.md` with an installed
   dry-run build.
+- Status (2026-10-03): in progress. The Worker is deployed on
+  `bananashot-analytics.banana-shot-feedback.workers.dev` with ingestion on.
+  The synthetic summary returned 204. The first deploy returned 503, because
+  `d1 create` had set the binding name `bananashot_analytics` in place of
+  `ANALYTICS_DB`. The synthetic row is in D1, with the receive times rounded
+  down to the hour (18:20 gave 18:00 UTC). A development run (IDE, the three
+  VM options) sent a full session: snapshot 0 at start, the final summary at
+  exit, tab and export counters as expected, no tab open by code. The 410
+  check is done, and the three GitHub variables are set. Open: the dry run
+  with an installed build (the author), and the notice on the site (B-10).

@@ -61,17 +61,21 @@ To use a separate data folder, set the system property
 A development run has no analytics properties. Thus it sends no analytics
 and does not show the consent dialog. To see the dialog:
 
-1. Add these VM options to the run configuration. Use a test Worker, or a
-   local `wrangler dev` with an https tunnel. The app accepts only https.
+1. Add these VM options to the run configuration. You can use the
+   production Worker. A development run sends the version `<x>-SNAPSHOT`,
+   so you can find its rows (B-9 decision 18). The app accepts only https.
    - `-Dbananashot.analytics.endpoint=https://<host>/v1/session`
    - `-Dbananashot.analytics.privacyUrl=https://<host>/privacy`
    - `-Dbananashot.analytics.noticeVersion=1`
 2. Delete the values `analytics.choice` and `analytics.noticeVersion` in the
-   preferences node `org/litvin` (on Windows, the registry key
-   `HKCU\Software\JavaSoft\Prefs\org\litvin`). The app then asks again.
+   preferences node `org/litvin`. On Windows, they are in the registry key
+   `HKCU\Software\JavaSoft\Prefs\org\litvin`. Java writes a `/` before each
+   capital letter, so the second name is `analytics.notice/Version`. The
+   installed app uses the same values. The app then asks again:
 
-A development run that sends to the production Worker adds rows to the
-production data. Do not do this.
+   ```powershell
+   Remove-ItemProperty -Path 'HKCU:\Software\JavaSoft\Prefs\org\litvin' -Name 'analytics.choice','analytics.notice/Version' -ErrorAction SilentlyContinue
+   ```
 
 ### Build information and the build expiry
 

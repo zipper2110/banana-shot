@@ -39,9 +39,9 @@ Do these items before the first public release.
   `analytics-worker`. The design is `docs/analytics/design.md`.
   `docs/analytics/b-9-tasks.md` has the state, the open questions, and the
   tasks.
-- Status 2026-10-03: the redesign (session summaries) has not started. No
-  build sends analytics. T1 to T7 are open. The release with analytics also
-  needs the privacy notice on the site (B-10).
+- Status 2026-10-03: T1 to T6 are done. The Worker is deployed, and the
+  GitHub variables are set. Open in T7: the dry run with an installed build,
+  and the privacy notice on the site (B-10).
 
 ### B-10 Landing site
 
@@ -49,9 +49,14 @@ Do these items before the first public release.
 - Reminder: the site must have the privacy notice page before the first
   release. The page has the analytics notice (B-9, T5:
   `docs/analytics/privacy-notice.md`) and the feedback notice
-  (`docs/feedback/privacy-notice.md`). The release build gets the page URL
-  as `-AnalyticsPrivacyUrl`. Without this page, the release has no
-  analytics. There is no temporary page (decided on 2026-10-03).
+  (`docs/feedback/privacy-notice.md`). There is no temporary page (decided
+  on 2026-10-03).
+  - The GitHub variable `ANALYTICS_PRIVACY_URL` is already set (2026-10-03).
+    The page must be at that URL. If the URL changes, change the variable.
+    The consent dialog and the Privacy page of each release open this URL.
+  - Write the effective date in the analytics notice when the page goes
+    live.
+  - The B-9 task T7 stays open until the page is live.
 
 ### B-21 First dry run of the release workflow
 

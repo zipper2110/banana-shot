@@ -24,3 +24,6 @@ jobs:
 
       - name: Build and run tests
         run: mvn -B test
+
+      - name: Test the workflow scripts
+        run: node --test .github/scripts/release-age-reminder.test.js

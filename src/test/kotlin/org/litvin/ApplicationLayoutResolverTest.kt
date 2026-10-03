@@ -27,9 +27,9 @@ class ApplicationLayoutResolverTest {
             properties = mapOf(
                 "os.name" to "Windows 11",
                 "user.home" to tempDir.toString(),
-                "tr.ffmpeg.path" to ffmpeg.absolutePath,
-                "tr.ffprobe.path" to ffprobe.absolutePath,
-                "tr.mpv.path" to mpv.absolutePath,
+                "bananashot.ffmpegPath" to ffmpeg.absolutePath,
+                "bananashot.ffprobePath" to ffprobe.absolutePath,
+                "bananashot.mpvPath" to mpv.absolutePath,
             ),
         ).resolve()
 

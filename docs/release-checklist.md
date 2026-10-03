@@ -42,6 +42,11 @@ See `feedback-worker/README.md` and `docs/feedback/b-8-tasks.md`.
 
 ## 5. Tests
 
+- [ ] `<revision>` in `pom.xml` is the version of the new release with
+      `-SNAPSHOT` (for example `1.4.0-SNAPSHOT`).
+- [ ] CI passed on `master` with this version. Then `VersionPolicyFileTest`
+      has checked that no rule in `release/version-policy.json` stops the new
+      version.
 - [ ] `mvn -B test` passes.
 - [ ] `mvn -B -Pui-flow verify` passes with JDK 25.
 
@@ -101,4 +106,68 @@ If a check fails, fix the cause and start again at step 5.
       draft release.
 - [ ] On the GitHub releases page, check the files and the release notes.
 - [ ] The release notes link the natives release.
-- [ ] Publish the release with "Set as the latest release" selected.
+- [ ] The setup file is `BananaShot-win-Setup.exe`, with no version in the
+      name. The stable URL of "Update and restart"
+      (`releases/latest/download/BananaShot-win-Setup.exe`) needs this name.
+- [ ] Publish the draft within 7 days after the workflow built it. Each day as
+      a draft is a day less of use for the users, because the build expiry
+      starts at the build date. If more than 7 days passed, delete the draft
+      and run the release workflow of the tag again. No script can check the
+      day of the publish.
+- [ ] Publish the release with "Set as the latest release" selected. The
+      stable URL of the setup file points to the latest release.
+
+## 9. After the release
+
+- [ ] Set `latest` in `release/version-policy.json` to the new release, and
+      push the change to `master`:
+      - `version`: the new version.
+      - `downloadUrl`: `https://github.com/zipper2110/banana-shot/releases/latest`.
+      - `installerUrl`:
+        `https://github.com/zipper2110/banana-shot/releases/download/v<version>/BananaShot-win-Setup.exe`.
+      - `notes` (optional): a short text about the release. The app shows it
+        as plain text.
+- [ ] Set `<revision>` in `pom.xml` to the next version with `-SNAPSHOT`.
+- Recommendation (not a check): wait about 30 days before you add a rule that
+  stops the version before this release (N-1). If the new version has a
+  serious bug on some computers, users can install N-1 again until a fix is
+  available. Stop N-1 earlier when necessary, for example when N-1 can damage
+  project files.
+
+## Emergency rebuild
+
+Each build stops 6 months after its build date (`build-expiry-spec.md`,
+"Build expiry"). Do this when no normal release is ready and the newest build
+expires in less than 60 days. The release age reminder (below) opens an issue
+at this time.
+
+- [ ] Push the next patch tag (for example `v1.4.1`) on the commit of the
+      newest release. The release workflow builds it with a new build date, so
+      the new build works for 6 more months.
+- [ ] If the release workflow of the old commit fails (for example, an action
+      that GitHub no longer supports), fix the workflow on a branch from the
+      release commit. Then push the tag on the commit with the fix.
+- [ ] Do steps 8 and 9 for the new build.
+
+Why 60 days: the expiry warning starts 30 days before the expiry. With 60
+days, the update notice gets to the users before the warning. Also, a new
+user who downloads the newest release gets a build with some months of use.
+
+## Natives releases
+
+- Do not delete a natives release (for example `natives-2026-09`) while a
+  release tag uses it. The release workflow downloads the natives release
+  that `native-dependencies.json` of the tagged commit names. An emergency
+  rebuild of an old commit fails when its natives release is deleted.
+
+## Release age reminder
+
+- The weekly workflow `release-age-reminder.yml` opens an issue when the
+  newest release is older than 4 months (`build-expiry-spec.md`, "Release age
+  reminder"). It reads the date of `BananaShot-win-Setup.exe` of each
+  published release. If the name of the setup file changes, change it also in
+  `.github/scripts/release-age-reminder.js`.
+- In a public repository, GitHub turns off scheduled workflows after 60 days
+  with no activity in the repository. GitHub sends an email to the owner
+  before it does this. If you get this email, the reminder can stop: treat
+  the email as the reminder, and turn the workflow on again.

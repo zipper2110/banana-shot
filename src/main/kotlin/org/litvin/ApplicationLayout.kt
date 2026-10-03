@@ -28,7 +28,7 @@ class ApplicationLayoutResolver(
         val appHome = resolveAppHome()
         val nativeRoot = File(appHome, "natives/windows-x64")
         val ffmpegExecutable = resolveExecutable(
-            propertyName = "tr.ffmpeg.path",
+            propertyName = "bananashot.ffmpegPath",
             environmentName = "FFMPEG_PATH",
             bundledFile = File(nativeRoot, "ffmpeg/bin/ffmpeg.exe"),
             fallbackCommand = if (isWindows()) "ffmpeg.exe" else "ffmpeg",
@@ -60,7 +60,7 @@ class ApplicationLayoutResolver(
     }
 
     private fun resolveMpvDirectory(nativeRoot: File): File? {
-        value("tr.mpv.path")?.let { return File(it).absoluteFile.normalize() }
+        value("bananashot.mpvPath")?.let { return File(it).absoluteFile.normalize() }
         environment["MPV_PATH"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absoluteFile.normalize()
         }
@@ -69,7 +69,7 @@ class ApplicationLayoutResolver(
     }
 
     private fun resolveFfprobe(nativeRoot: File, ffmpegExecutable: String): String {
-        value("tr.ffprobe.path")?.let { return File(it).absolutePath }
+        value("bananashot.ffprobePath")?.let { return File(it).absolutePath }
         environment["FFPROBE_PATH"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absolutePath
         }

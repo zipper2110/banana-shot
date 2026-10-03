@@ -28,7 +28,7 @@ class NetworkGuardExtensionTest {
 
     @Test
     fun `the guard records and stops an HttpClient request to the host of the rules file`() {
-        val uri = URI("https://raw.githubusercontent.com/zipper2110/tennis-record/master/release/version-policy.json")
+        val uri = URI("https://raw.githubusercontent.com/zipper2110/banana-shot/master/release/version-policy.json")
         val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
 
         val started = System.nanoTime()
@@ -42,7 +42,7 @@ class NetworkGuardExtensionTest {
 
     @Test
     fun `the guard records and stops a URLConnection request`() {
-        val url = URL("https://github.com/zipper2110/tennis-record/releases/latest")
+        val url = URL("https://github.com/zipper2110/banana-shot/releases/latest")
 
         assertFailsWith<IOException> {
             (url.openConnection().apply { connectTimeout = 5000; readTimeout = 5000 }).getInputStream().close()

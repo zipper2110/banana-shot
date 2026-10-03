@@ -45,7 +45,7 @@ if ($manifest.mpv.license -notmatch "^LGPL-") {
 if ($manifest.nativesRelease.tag -notmatch "^natives-") {
     throw "native-dependencies.json nativesRelease.tag must name a natives-* release."
 }
-$nativesDownload = "https://github.com/zipper2110/tennis-record/releases/download/$($manifest.nativesRelease.tag)/"
+$nativesDownload = "https://github.com/zipper2110/banana-shot/releases/download/$($manifest.nativesRelease.tag)/"
 foreach ($name in @("mpv", "ffmpeg")) {
     $dependency = $manifest.$name
     foreach ($field in @("sourceUrl", "sourceSha256", "sourceArchiveName")) {

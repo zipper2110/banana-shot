@@ -22,10 +22,10 @@ data class UpdateOptions(
         val SETUP_EXE_NAME = "${AppInfo.NAME}-win-Setup.exe"
 
         /** The page that "Download update" opens with no valid `latest`. */
-        const val RELEASES_PAGE_URL = "https://github.com/zipper2110/tennis-record/releases/latest"
+        const val RELEASES_PAGE_URL = "https://github.com/zipper2110/banana-shot/releases/latest"
 
         /** The setup EXE of the latest release, for a file with no `latest.installerUrl`. */
-        val STABLE_INSTALLER_URL = "https://github.com/zipper2110/tennis-record/releases/latest/download/$SETUP_EXE_NAME"
+        val STABLE_INSTALLER_URL = "https://github.com/zipper2110/banana-shot/releases/latest/download/$SETUP_EXE_NAME"
 
         /**
          * The options for [appVersion] with the rules file [rules] (the new file or the saved file).

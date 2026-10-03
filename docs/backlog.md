@@ -18,7 +18,7 @@ Do these items before the first public release.
 - This must be in the first release. A build without an expiry stays free
   forever.
 - Status 2026-10-03: E0 to E7 are done. E8 (the expiry user interface)
-  is done except one run of its UI-flow tests. E9 waits for a manual check
+  is done. E9 waits for a manual check
   with a real release. The "Next work" list in `l-5.2-epics.md` has
   the stories that can start now.
 
@@ -103,7 +103,7 @@ Do these items before the first public release.
     has the full texts of the Apache License 2.0, the EPL-1.0, and the MIT
     License (with the SLF4J, JSVG, and Feather copyright lines). The file
     tells that BananaShot uses Logback under the EPL-1.0 and JNA under the
-    Apache License 2.0. Step 5 of `release-checklist.md` now has a check
+    Apache License 2.0. Step 6 of `release-checklist.md` now has a check
     that this list agrees with the SBOM.
   - Still to do: a new dry run with the fixed notices. Its installer is
     version N-1 for B-26.
@@ -275,7 +275,7 @@ Do these items before the first public release.
 - You need two dry-run builds with different versions: version N-1 and
   version N.
 - Checks with one build (version N-1):
-  1. Fresh install: do the checks of step 6 of `release-checklist.md`
+  1. Fresh install: do the checks of step 7 of `release-checklist.md`
      (B-21, B-24). The setup installs with no administrator rights, makes
      the Start menu shortcut, and starts the app.
   2. Proxy: E11-S2 of `l-5.2-epics.md`.
@@ -295,7 +295,7 @@ Do these items before the first public release.
 - Before you start:
   - Checks 1 and 2 need the new dry run of B-21 (with the fixed notices).
   - Check 4 needs the user interface of B-30.
-- Add checks 3 to 5 to step 6 of `release-checklist.md`. Automate them in
+- Add checks 3 to 5 to step 7 of `release-checklist.md`. Automate them in
   the release workflow if it is possible.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.

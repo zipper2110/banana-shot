@@ -50,7 +50,7 @@ class UpdateAndRestartTest {
         val options = UpdateOptions.of("1.3.0", latest.copy(installerUrl = null))
 
         assertEquals(
-            "https://github.com/zipper2110/tennis-record/releases/latest/download/BananaShot-win-Setup.exe",
+            "https://github.com/zipper2110/banana-shot/releases/latest/download/BananaShot-win-Setup.exe",
             options.installerUrl,
         )
     }

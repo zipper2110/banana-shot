@@ -1,6 +1,7 @@
 package org.litvin.app
 
 import org.litvin.SwingMainApp
+import org.litvin.license.BuildExpiry
 import org.litvin.ui.tabs.adjustments.SwingColorAdjustmentsPanel
 import org.litvin.ui.tabs.export.SwingExportPanel
 import org.litvin.ui.tabs.scoring.SwingScoringPanel
@@ -18,6 +19,9 @@ fun interface PreferencesProvider {
         const val SCORING = "scoring"
         const val ANALYTICS = "analytics"
 
+        /** The saved time and the expired flag of `build-expiry-spec.md`. */
+        const val LICENSE = "license"
+
         fun production(): PreferencesProvider = ProductionPreferencesProvider
     }
 }
@@ -30,6 +34,7 @@ private object ProductionPreferencesProvider : PreferencesProvider {
         PreferencesProvider.EXPORT to SwingExportPanel::class.java,
         PreferencesProvider.SCORING to SwingScoringPanel::class.java,
         PreferencesProvider.ANALYTICS to SwingMainApp::class.java,
+        PreferencesProvider.LICENSE to BuildExpiry::class.java,
     )
 
     override fun node(key: String): Preferences {

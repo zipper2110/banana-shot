@@ -1,5 +1,6 @@
 package org.litvin
 
+import org.litvin.license.online.UpdateTrust
 import org.litvin.media.mpv.LibMpv
 import java.io.File
 import java.net.URI
@@ -47,7 +48,7 @@ object DistributionDiagnostics {
 
     /**
      * The host of the rules file of build-expiry-spec.md. The check reads only the host, not the file:
-     * each HTTP status shows that the proxy, TLS, and the trust of the bundled runtime work.
+     * each HTTP status shows that the proxy, TLS, and the trust of the update requests work.
      */
     internal val UPDATE_HOST: URI = URI("https://raw.githubusercontent.com/")
 
@@ -73,10 +74,8 @@ object DistributionDiagnostics {
 
     private fun sendHeadRequest(uri: URI): Int {
         // main sets java.net.useSystemProxies before this check, so the request uses the proxy of Windows.
-        val client = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .build()
+        // The trust is the same as for the rules file: the bundled store and Windows-ROOT (E5-S4).
+        val client = UpdateTrust.production.client(HttpClient.Redirect.NEVER, Duration.ofSeconds(10))
         val request = HttpRequest.newBuilder(uri)
             .method("HEAD", HttpRequest.BodyPublishers.noBody())
             .timeout(Duration.ofSeconds(10))

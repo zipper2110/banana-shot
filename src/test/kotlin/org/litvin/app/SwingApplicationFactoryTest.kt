@@ -10,14 +10,16 @@ import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
 import org.litvin.export.RenderService
+import org.litvin.license.AllowNewWork
+import org.litvin.license.TestExpiry
 import org.litvin.media.MediaPlayerFactory
 import org.litvin.media.MediaScreen
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
 import org.litvin.media.VideoOverlay
+import org.litvin.projects.FileProjectsRepository
 import org.litvin.projects.ProjectManifestV1
 import org.litvin.projects.ProjectSummary
-import org.litvin.projects.FileProjectsRepository
 import org.litvin.projects.ProjectsRepository
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.UserDialogService
@@ -262,6 +264,7 @@ class SwingApplicationFactoryTest {
             projectsRepository = projectsRepository,
             completedRenders = EmptyCompletedRendersRepository,
             adjustments = AdjustmentsSession(adjustmentsExecutor, 60_000),
+            expiry = TestExpiry.controller(root),
             encoderCapabilities = java.util.concurrent.CompletableFuture.completedFuture(encoderCapabilities),
         )
     }
@@ -269,7 +272,7 @@ class SwingApplicationFactoryTest {
     private class OpenProjectFixture {
         val root = kotlin.io.path.createTempDirectory("swing-project-navigation-").toFile()
         val source = root.resolve("source.mp4").apply { writeText("") }
-        val repository = FileProjectsRepository(root.resolve("projects"))
+        val repository = FileProjectsRepository(root.resolve("projects"), newWork = AllowNewWork)
         val project = repository.createProject(source.absolutePath, "source")
     }
 

@@ -637,6 +637,15 @@ internal class ExportSliderUI : FlatSliderUI() {
 /** The lime button at the bottom of the left column. It has a play icon and bold dark text. */
 internal class StartExportButton(text: String) : JButton(text) {
     private val playIcon = ExportUi.icon(Material2OutlinedMZ.PLAY_CIRCLE_OUTLINE, 20, Palette.ON_LIME)
+    private val blockedIcon = ExportUi.icon(Material2OutlinedMZ.PLAY_CIRCLE_OUTLINE, 20, Palette.FG_3)
+
+    /** Expired mode (build-expiry-spec.md, "Expired mode"): a gray button with no glow. A click shows the dialog. */
+    var blocked = false
+        set(value) {
+            field = value
+            foreground = if (value) Palette.FG_3 else Palette.ON_LIME
+            parent?.repaint()
+        }
 
     init {
         plain()
@@ -651,6 +660,7 @@ internal class StartExportButton(text: String) : JButton(text) {
         val g2 = ExportUi.smooth(g)
         try {
             val fill = when {
+                blocked -> if (model.isRollover) Palette.RAISED_2 else Palette.RAISED
                 model.isArmed && model.isPressed -> Palette.LIME_PRESSED
                 model.isRollover -> Palette.LIME_HOVER
                 else -> Palette.LIME
@@ -658,9 +668,10 @@ internal class StartExportButton(text: String) : JButton(text) {
             ExportUi.paintBox(g2, 0, 0, width, height, 6, fill, null)
             val label = text.orEmpty()
             val textWidth = ExportUi.textWidth(label, font)
-            val total = playIcon.iconWidth + ICON_GAP + textWidth
+            val icon = if (blocked) blockedIcon else playIcon
+            val total = icon.iconWidth + ICON_GAP + textWidth
             val x = (width - total) / 2f
-            playIcon.paintIcon(this, g2, x.toInt(), (height - playIcon.iconHeight) / 2)
+            icon.paintIcon(this, g2, x.toInt(), (height - icon.iconHeight) / 2)
             val metrics = font.getLineMetrics(label, ExportUi.frc)
             g2.font = font
             g2.color = foreground

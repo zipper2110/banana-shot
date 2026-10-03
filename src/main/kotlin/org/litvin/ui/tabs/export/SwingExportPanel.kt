@@ -3,11 +3,8 @@ import org.litvin.ActiveQueueSnapshot
 import org.litvin.ApplicationLayout
 import org.litvin.ExportPresetsIO
 import org.litvin.adjustments.AdjustmentsSession
-import org.litvin.adjustments.AdjustmentsStore
-import org.litvin.export.ProductionCompletedRendersRepository
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
-import org.litvin.export.ProductionRenderService
 import org.litvin.export.RenderService
 import org.litvin.RenderStatus
 import org.litvin.export.ExportChunkPlanner
@@ -35,8 +32,6 @@ import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.Palette
-import org.litvin.ui.commons.SystemFilePicker
-import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.applyDarkScrollbar
 
@@ -66,16 +61,6 @@ class SwingExportPanel(
     encoderCapabilities: CompletableFuture<EncoderCapabilities>,
     private val hints: HintController = HintController.NONE,
 ) : JPanel(BorderLayout()), AutoCloseable {
-    constructor() : this(
-        ExportSettingsPreferences(),
-        ProductionRenderService(ProductionCompletedRendersRepository),
-        AdjustmentsStore.legacySession(),
-        ProductionCompletedRendersRepository,
-        SystemFilePicker(),
-        SwingUserDialogService(),
-        CompletableFuture.supplyAsync(EncoderCapabilities::production),
-    )
-
     private val logger = KotlinLogging.logger {}
     private val closed = AtomicBoolean(false)
     private var queueSubscription: AutoCloseable? = null
@@ -85,6 +70,19 @@ class SwingExportPanel(
 
     /** The number of running and queued exports in the last snapshot of the queue. */
     val activeExportCount: Int get() = activeCount(lastSnapshot)
+
+    /**
+     * Expired mode (build-expiry-spec.md, "Expired mode"): the start button is gray, and a click calls
+     * [onNewExportRefused] in place of the start of an export. The queue and the completed exports work as usual.
+     */
+    var newExportRefused = false
+        set(value) {
+            field = value
+            initButton.blocked = value
+        }
+
+    /** Called on the EDT when the user clicks the start button in expired mode. */
+    var onNewExportRefused: (() -> Unit)? = null
 
     fun onActivated() {
         // Ensure Completed list reflects latest persisted items (global across projects)
@@ -327,6 +325,10 @@ class SwingExportPanel(
     }
 
     private fun onInitializeRender() {
+        if (newExportRefused) {
+            onNewExportRefused?.invoke()
+            return
+        }
         val readiness = initializationReadiness()
         if (!readiness.enabled) {
             dialogs.showWarning(
@@ -807,7 +809,9 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
         try {
             g2.color = Palette.LINE
             g2.fillRect(0, 0, width, 1)
-            StartExportButton.paintGlow(g2, button.x, button.y, button.width, button.height)
+            if (!button.blocked) {
+                StartExportButton.paintGlow(g2, button.x, button.y, button.width, button.height)
+            }
         } finally {
             g2.dispose()
         }

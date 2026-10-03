@@ -13,17 +13,23 @@ import org.litvin.app.PreferencesProvider
 import org.litvin.app.SwingApplicationFactory
 import org.litvin.app.SwingApplicationHandle
 import org.litvin.app.TrackedExecutorProvider
-import org.litvin.export.FileCompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
+import org.litvin.export.FileCompletedRendersRepository
 import org.litvin.export.ProductionRenderService
+import org.litvin.license.BuildExpiry
+import org.litvin.license.TestExpiry
+import org.litvin.license.check.ExecutorExpiryScheduler
+import org.litvin.license.check.ExpiryController
 import org.litvin.projects.FileProjectsRepository
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.PreferencesHintRegistry
+import org.litvin.ui.expiry.CheckingDateWindow
 import org.litvin.ui.flow.driver.RobotSwingDriver
 import org.litvin.ui.flow.driver.SwingUiDriver
 import org.litvin.ui.flow.fakes.FakeMediaPlayerFactory
 import org.litvin.ui.flow.fakes.FakeRenderService
 import org.litvin.ui.flow.fakes.InMemoryPreferencesProvider
+import org.litvin.ui.flow.fakes.RecordingRulesFetcher
 import org.litvin.ui.flow.fakes.ScriptedDialogService
 import org.litvin.ui.flow.fakes.ScriptedFilePicker
 import org.litvin.ui.flow.fixtures.UiFlowFixtureBuilder
@@ -32,6 +38,8 @@ import java.awt.Window
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.FutureTask
@@ -49,11 +57,26 @@ enum class UiFlowMedia {
     NATIVE,
 }
 
+/**
+ * The build expiry of a UI flow (E8-S9). The defaults give a build that has not expired, and no network.
+ *
+ * @property clockOffset moves the system time that the app reads, for example 400 days forward.
+ * @property buildExpiry the build expiry, or null for the expiry of this build.
+ * @property setup runs before each start of the app (also after a restart), for example to set the expired flag or
+ *   a server response.
+ */
+class UiFlowExpiry(
+    val clockOffset: Duration = Duration.ZERO,
+    val buildExpiry: LocalDate? = null,
+    val setup: (RecordingRulesFetcher, InMemoryPreferencesProvider) -> Unit = { _, _ -> },
+)
+
 class SwingUiFlowExtension(
     private val workspaceParent: Path = Path.of("target", "ui-test-workspaces"),
     private val artifactsRoot: Path = Path.of("target", "ui-test-artifacts"),
     private val driverFactory: () -> SwingUiDriver = ::RobotSwingDriver,
     private val media: UiFlowMedia = UiFlowMedia.FAKE,
+    private val expiryOptions: UiFlowExpiry = UiFlowExpiry(),
 ) : BeforeEachCallback, AfterTestExecutionCallback, AfterEachCallback, ParameterResolver {
     private var current: UiFlowContext? = null
     private var testFailure: Throwable? = null
@@ -183,17 +206,29 @@ class SwingUiFlowExtension(
         val dialogs = ScriptedDialogService()
         val adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"), 25L)
         val completedRenders = FileCompletedRendersRepository(paths.completedRenders)
+        // The fakes of the build expiry (E7-S4): no read of GitHub, and the saved time and the flag stay in [preferences].
+        val rulesFetcher = RecordingRulesFetcher()
+        expiryOptions.setup(rulesFetcher, preferences)
+        val expiry = TestExpiry.controller(
+            dataFolder = paths.root,
+            preferences = preferences,
+            fetcher = rulesFetcher,
+            scheduler = ExecutorExpiryScheduler(executors.createScheduledExecutor("expiry-check")),
+            systemClock = { Instant.now() + expiryOptions.clockOffset },
+            buildExpiry = expiryOptions.buildExpiry ?: BuildExpiry.expiryDate(),
+        )
         val services = AppServices(
             paths = paths,
             preferences = preferences,
             executors = executors,
             mediaPlayers = fakeMediaPlayers ?: checkNotNull(nativeMediaPlayers),
-            renderService = fakeRenderService ?: ProductionRenderService(completedRenders),
+            renderService = fakeRenderService ?: ProductionRenderService(completedRenders, expiry),
             filePicker = filePicker,
             dialogs = dialogs,
-            projectsRepository = FileProjectsRepository(paths.projects),
+            projectsRepository = FileProjectsRepository(paths.projects, expiry),
             completedRenders = completedRenders,
             adjustments = adjustments,
+            expiry = expiry,
             encoderCapabilities = if (native) {
                 CompletableFuture.supplyAsync(EncoderCapabilities::production)
             } else {
@@ -204,7 +239,12 @@ class SwingUiFlowExtension(
         var application: SwingApplicationHandle? = null
         var driver: SwingUiDriver? = null
         try {
-            val builtApplication = onEdt { SwingApplicationFactory.create(services, show = true) }
+            // As in main: the expiry check at start, before the main window.
+            if (expiry.start() == ExpiryController.StartPath.DATE_CHECK) CheckingDateWindow.during { expiry.runDateCheck() }
+            val builtApplication = onEdt {
+                // A click on "Update and restart" must not download or close anything in a test.
+                SwingApplicationFactory.create(services, show = true, updateAndRestart = UiFlowUpdate.NONE)
+            }
             application = builtApplication
             val builtDriver = driverFactory()
             driver = builtDriver
@@ -213,6 +253,7 @@ class SwingUiFlowExtension(
                 artifactDirectory = artifactDirectory,
                 paths = paths,
                 preferences = preferences,
+                rulesFetcher = rulesFetcher,
                 fakeMediaPlayers = fakeMediaPlayers,
                 fakeRenderService = fakeRenderService,
                 nativeMediaPlayers = nativeMediaPlayers,
@@ -315,4 +356,12 @@ class SwingUiFlowExtension(
             }
         }
     }
+}
+
+/** "Update and restart" in the UI flows: the download always fails, and nothing starts. */
+internal object UiFlowUpdate {
+    val NONE = org.litvin.license.update.UpdateAndRestart(
+        downloader = { _, _, _ -> throw java.io.IOException("ui flow: no download") },
+        launcher = { error("ui flow: no setup") },
+    )
 }

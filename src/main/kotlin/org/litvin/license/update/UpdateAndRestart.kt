@@ -1,6 +1,7 @@
 package org.litvin.license.update
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litvin.license.online.UpdateTrust
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -31,14 +32,11 @@ fun interface SetupLauncher {
  * another host.
  *
  * The spec requires the same proxy and the same trust as the read of the rules file. The proxy comes
- * from `java.net.useSystemProxies` in `main`. The trust with the bundled store and `Windows-ROOT` is
- * E5-S4 of `l-5.2-epics.md`: when it is available, give its client as [client].
+ * from `java.net.useSystemProxies` in `main`. The trust is [UpdateTrust.production]: the bundled store
+ * and `Windows-ROOT`.
  */
 class HttpSetupDownloader(
-    private val client: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(10))
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .build(),
+    private val client: HttpClient = UpdateTrust.production.client(HttpClient.Redirect.NORMAL, Duration.ofSeconds(10)),
 ) : SetupDownloader {
     override fun download(url: URI, target: File, progress: (bytes: Long, totalBytes: Long?) -> Unit) {
         // The request sends no user ID and no analytics data (build-expiry-spec.md, "Privacy").

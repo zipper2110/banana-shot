@@ -40,6 +40,20 @@ class StartOrderSourceTest {
     }
 
     @Test
+    fun `main starts the expiry check after the lock and the services, and before the main window`() {
+        val lock = mainBody.indexOf("takeInstanceLock()")
+        val services = mainBody.indexOf("AppServices.production()")
+        val expiry = mainBody.indexOf("services.expiry.start()")
+        val dateCheck = mainBody.indexOf("services.expiry.runDateCheck()")
+        val window = mainBody.indexOf("EventQueue.invokeLater")
+
+        assertTrue(lock in 0 until services, "The lock comes before the services.")
+        assertTrue(services < expiry, "The services make the expiry controller (E7-S1).")
+        assertTrue(expiry < dateCheck, "Path A runs the date check after the start of the expiry check.")
+        assertTrue(dateCheck < window, "The expiry check comes before the main window (E6-S2).")
+    }
+
+    @Test
     fun `no jpackage java option sets the proxy property`() {
         val script = File("distribution/windows/Build-AppImage.ps1").readText()
 

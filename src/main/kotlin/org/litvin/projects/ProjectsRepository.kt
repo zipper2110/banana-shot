@@ -1,6 +1,7 @@
 package org.litvin.projects
 
-import org.litvin.app.AppDataPaths
+import org.litvin.license.ExpiredVersionException
+import org.litvin.license.NewWorkGate
 import org.litvin.points.EdlIO
 import org.litvin.scoring.ScoreIO
 import java.awt.Desktop
@@ -35,11 +36,12 @@ interface ProjectsRepository {
 
 class FileProjectsRepository(
     private val projectsRoot: File,
+    // The expiry check of the function that opens a project (E7-S2). A new project opens at once, so its creation
+    // has the check too.
+    private val newWork: NewWorkGate,
     private val durationProbe: VideoDurationProbe = CachingVideoDurationProbe(FfprobeVideoDurationProbe()),
     private val removeFolder: (File) -> Unit = ::moveToTrashOrDelete,
 ) : ProjectsRepository {
-    constructor() : this(AppDataPaths.production().projects)
-
     private val recentsProvider = RecentsProvider(projectsRoot)
 
     override fun projectsRootPath(): String = projectsRoot.absolutePath
@@ -58,6 +60,7 @@ class FileProjectsRepository(
     }
 
     override fun createProject(sourceVideoPath: String, name: String): ProjectSummary {
+        if (!newWork.allowsNewWork()) throw ExpiredVersionException()
         NewProjectRules.nameError(name)?.let { throw IllegalArgumentException(it) }
         val selected = File(sourceVideoPath)
         val targetRoot = projectsRoot.apply {
@@ -92,6 +95,7 @@ class FileProjectsRepository(
     }
 
     override fun openProject(path: String, sourceVideoPath: String?): ProjectSummary {
+        if (!newWork.allowsNewWork()) throw ExpiredVersionException()
         val manifest = ManifestIO.read(path)
         val updated = manifest.copy(
             lastOpenedAt = ManifestIO.nowIsoUtc(),

@@ -1,19 +1,20 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.junit.jupiter.api.io.TempDir
 import org.litvin.app.PreferencesProvider
+import org.litvin.license.AllowNewWork
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.projects.CachingVideoDurationProbe
+import org.litvin.projects.FileProjectsRepository
 import org.litvin.projects.ProjectManifestV1
 import org.litvin.projects.ProjectStats
 import org.litvin.projects.ProjectSummary
 import org.litvin.projects.ProjectsRepository
-import org.litvin.projects.FileProjectsRepository
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
-import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.Executor
@@ -254,7 +255,7 @@ class DefaultProjectsPresenterTest {
 
     @Test
     fun fileRepositoryRenameKeepsTheFilesAndTheLastOpenedTime() {
-        val repository = FileProjectsRepository(tempDir.resolve("projects").toFile())
+        val repository = FileProjectsRepository(tempDir.resolve("projects").toFile(), newWork = AllowNewWork)
         val video = tempDir.resolve("match.mp4").toFile().apply { writeText("video") }
         val created = repository.createProject(video.absolutePath, "Match")
         val before = repository.readManifest(created.path)
@@ -273,7 +274,7 @@ class DefaultProjectsPresenterTest {
         val repository = FileProjectsRepository(tempDir.resolve("projects").toFile(), durationProbe = { path ->
             probedPaths += path
             83_000L
-        })
+        }, newWork = AllowNewWork)
         val video = tempDir.resolve("match.mp4").toFile().apply { writeText("video") }
         val project = repository.createProject(video.absolutePath, "Match")
         val projectDir = EdlIO.projectDirFromManifest(project.path)
@@ -306,7 +307,7 @@ class DefaultProjectsPresenterTest {
     @Test
     fun fileRepositoryDeletesOnlyTheProjectFolder() {
         val root = tempDir.resolve("projects").toFile()
-        val repository = FileProjectsRepository(root, removeFolder = { it.deleteRecursively() })
+        val repository = FileProjectsRepository(root, removeFolder = { it.deleteRecursively() }, newWork = AllowNewWork)
         val video = tempDir.resolve("match.mp4").toFile().apply { writeText("video") }
         val first = repository.createProject(video.absolutePath, "First")
         val second = repository.createProject(video.absolutePath, "Second")
@@ -338,7 +339,7 @@ class DefaultProjectsPresenterTest {
 
     @Test
     fun fileRepositoryUsesTheProjectNameAndMakesItUnique() {
-        val repository = FileProjectsRepository(tempDir.resolve("projects").toFile())
+        val repository = FileProjectsRepository(tempDir.resolve("projects").toFile(), newWork = AllowNewWork)
         val video = tempDir.resolve("match.mp4").toFile().apply { writeText("video") }
 
         val first = repository.createProject(video.absolutePath, "Club final")
@@ -355,8 +356,8 @@ class DefaultProjectsPresenterTest {
         val secondRoot = tempDir.resolve("second/projects").toFile()
         val firstSource = tempDir.resolve("first-match.mp4").toFile().apply { writeText("first") }
         val secondSource = tempDir.resolve("second-match.mp4").toFile().apply { writeText("second") }
-        val firstRepository = FileProjectsRepository(firstRoot)
-        val secondRepository = FileProjectsRepository(secondRoot)
+        val firstRepository = FileProjectsRepository(firstRoot, newWork = AllowNewWork)
+        val secondRepository = FileProjectsRepository(secondRoot, newWork = AllowNewWork)
 
         val firstProject = firstRepository.createProject(firstSource.absolutePath, "First")
 

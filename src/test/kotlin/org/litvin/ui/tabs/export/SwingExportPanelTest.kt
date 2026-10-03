@@ -71,6 +71,49 @@ class SwingExportPanelTest {
         }
     }
 
+    /** E8-S1: in expired mode, a click on the start button shows the dialog and does not add an export. */
+    @Test
+    fun inExpiredModeTheStartButtonCallsTheRefusalAndAddsNoExport(@TempDir root: File) {
+        val scheduler = ScheduledThreadPoolExecutor(1)
+        val adjustments = AdjustmentsSession(scheduler, saveDelayMs = 60_000L)
+        val render = RecordingRenderService()
+        val manifest = createProject(root, "a", AdjustmentsV1())
+        var panel: SwingExportPanel? = null
+        var refusals = 0
+        try {
+            SwingUtilities.invokeAndWait {
+                adjustments.load(File(manifest).parent)
+                panel = SwingExportPanel(
+                    ExportSettingsPreferences(MemoryPreferences()),
+                    render,
+                    adjustments,
+                    EmptyCompletedRendersRepository,
+                    FixedFilePicker(File(root, "a-export.mp4")),
+                    AcceptingDialogs(),
+                    CompletableFuture.completedFuture(EncoderCapabilities.NONE),
+                )
+                panel!!.setProjectManifest(manifest)
+                panel!!.onNewExportRefused = { refusals++ }
+                panel!!.newExportRefused = true
+                findButton(panel!!, "export-initialize").doClick()
+
+                assertEquals(1, refusals)
+                assertTrue(render.jobs.isEmpty())
+
+                // Normal mode again: the same click starts the export.
+                panel!!.newExportRefused = false
+                findButton(panel!!, "export-initialize").doClick()
+            }
+
+            assertEquals(1, refusals)
+            assertEquals(1, render.jobs.size)
+        } finally {
+            SwingUtilities.invokeAndWait { panel?.close() }
+            adjustments.close()
+            scheduler.shutdownNow()
+        }
+    }
+
     @Test
     fun withNoProjectTheLeftColumnShowsANoticeAndTheSettingsShowAfterAProjectOpens(@TempDir root: File) {
         val scheduler = ScheduledThreadPoolExecutor(1)

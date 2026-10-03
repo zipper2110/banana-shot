@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.CompletedRender
 import org.litvin.RenderJob
+import org.litvin.license.AllowNewWork
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -15,8 +16,8 @@ class RenderServiceTest {
         val firstCompleted = RecordingCompletedRendersRepository()
         val secondCompleted = RecordingCompletedRendersRepository()
         val gateway = RecordingRenderQueueGateway()
-        val firstService = ProductionRenderService(firstCompleted, gateway)
-        val secondService = ProductionRenderService(secondCompleted, gateway)
+        val firstService = ProductionRenderService(firstCompleted, AllowNewWork, gateway)
+        val secondService = ProductionRenderService(secondCompleted, AllowNewWork, gateway)
         val firstJob = renderJob("first")
         val secondJob = renderJob("second")
 
@@ -32,8 +33,8 @@ class RenderServiceTest {
     @Test
     fun closingAServiceCancelsOnlyRequestsOwnedByThatServiceGraph() {
         val gateway = RecordingRenderQueueGateway()
-        val firstService = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
-        val secondService = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val firstService = ProductionRenderService(RecordingCompletedRendersRepository(), AllowNewWork, gateway)
+        val secondService = ProductionRenderService(RecordingCompletedRendersRepository(), AllowNewWork, gateway)
         val firstJob = renderJob("first-owned")
         val secondJob = renderJob("second-owned")
         firstService.enqueue(firstJob)
@@ -52,7 +53,7 @@ class RenderServiceTest {
     @Test
     fun observationHandleRemovesExactlyItsObserver() {
         val gateway = RecordingRenderQueueGateway()
-        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), AllowNewWork, gateway)
         val first: (ActiveQueueSnapshot) -> Unit = { }
         val second: (ActiveQueueSnapshot) -> Unit = { }
 
@@ -68,7 +69,7 @@ class RenderServiceTest {
     @Test
     fun cancellationOperationsDelegateAndReturnTheGatewayResult() {
         val gateway = RecordingRenderQueueGateway().apply { cancelQueuedResult = true }
-        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), AllowNewWork, gateway)
         try {
             service.cancelCurrent()
 
@@ -83,7 +84,7 @@ class RenderServiceTest {
     @Test
     fun closeAttemptsEveryObserverRemovalAndCancellationBeforePropagatingFailures() {
         val gateway = FailingCleanupGateway()
-        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), AllowNewWork, gateway)
         val first: (ActiveQueueSnapshot) -> Unit = { }
         val second: (ActiveQueueSnapshot) -> Unit = { }
         service.observe(first)
@@ -101,7 +102,7 @@ class RenderServiceTest {
     @Test
     fun everyNaturalTerminalOutcomeRemovesHistoricalJobIdsExactlyOnce() {
         val gateway = RecordingRenderQueueGateway()
-        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), AllowNewWork, gateway)
         val outcomes = RenderTerminalOutcome.entries
         repeat(90) { index ->
             service.enqueue(renderJob("terminal-$index"))
@@ -119,7 +120,7 @@ class RenderServiceTest {
     @Test
     fun terminalSignalFollowedByExceptionalEnqueueDoesNotRetainTheJob() {
         val gateway = TerminalThenThrowingGateway()
-        val service = ProductionRenderService(RecordingCompletedRendersRepository(), gateway)
+        val service = ProductionRenderService(RecordingCompletedRendersRepository(), AllowNewWork, gateway)
 
         assertFailsWith<IllegalStateException> { service.enqueue(renderJob("exceptional-terminal")) }
 

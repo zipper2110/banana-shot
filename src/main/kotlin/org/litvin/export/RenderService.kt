@@ -4,6 +4,8 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.RenderJob
 import org.litvin.RenderQueueManager
+import org.litvin.license.ExpiredVersionException
+import org.litvin.license.NewWorkGate
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicBoolean
@@ -55,12 +57,14 @@ private object GlobalRenderQueueGateway : RenderQueueGateway {
 
 class ProductionRenderService internal constructor(
     private val completedRenders: CompletedRendersRepository,
+    // The expiry check of the function that adds a new export (E7-S2). The restore of the saved queue does not use it.
+    private val newWork: NewWorkGate,
     private val gateway: RenderQueueGateway = GlobalRenderQueueGateway,
     // The queue file of B-18. Null keeps the queue in memory only.
     private val savedQueue: SavedRenderQueue? = null,
 ) : RenderService {
-    constructor(completedRenders: CompletedRendersRepository, savedQueue: SavedRenderQueue?) :
-        this(completedRenders, GlobalRenderQueueGateway, savedQueue)
+    constructor(completedRenders: CompletedRendersRepository, newWork: NewWorkGate, savedQueue: SavedRenderQueue?) :
+        this(completedRenders, newWork, GlobalRenderQueueGateway, savedQueue)
 
     private companion object {
         private val ownerSequence = AtomicLong(0L)
@@ -82,7 +86,11 @@ class ProductionRenderService internal constructor(
         if (savedQueue != null) gateway.addObserver(ownerId, savedQueueObserver)
     }
 
-    override fun enqueue(job: RenderJob) = add(job)
+    /** A new export of the user. It refuses in expired mode. The worker of the queue does not check the expiry. */
+    override fun enqueue(job: RenderJob) {
+        if (!newWork.allowsNewWork()) throw ExpiredVersionException()
+        add(job)
+    }
 
     /**
      * Puts the jobs of the saved queue back in the queue, in the same order, and starts them (B-18).

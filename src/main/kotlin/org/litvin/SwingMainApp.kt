@@ -6,7 +6,9 @@ import org.litvin.app.AppDataPaths
 import org.litvin.app.AppServices
 import org.litvin.app.InstanceLock
 import org.litvin.app.SwingApplicationFactory
+import org.litvin.license.check.ExpiryController
 import org.litvin.ui.commons.SwingUserDialogService
+import org.litvin.ui.expiry.CheckingDateWindow
 import java.awt.EventQueue
 import java.awt.Font
 import java.awt.GraphicsEnvironment
@@ -61,6 +63,20 @@ object SwingMainApp {
         } catch (failure: Throwable) {
             logger.error(failure) { "Application startup failed." }
             SwingUserDialogService().showError(null, failure.message ?: failure.toString(), "Startup error")
+            return
+        }
+
+        // 4. The time steps and the expiry check, after the lock and before the main window and a project
+        //    ("Time and the clock", "Expiry check").
+        try {
+            if (services.expiry.start() == ExpiryController.StartPath.DATE_CHECK) {
+                // Path A of "Start of a build that looks expired": a maximum of 15 seconds before the main window.
+                CheckingDateWindow.during { services.expiry.runDateCheck() }
+            }
+        } catch (failure: Throwable) {
+            logger.error(failure) { "The expiry check at start failed." }
+            SwingUserDialogService().showError(null, failure.message ?: failure.toString(), "Startup error")
+            runCatching { services.close() }
             return
         }
 

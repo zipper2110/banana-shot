@@ -14,6 +14,9 @@ import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.expiry.ExpiryUi
+import org.litvin.ui.expiry.UpdateRunner
+import org.litvin.license.update.UpdateAndRestart
 import org.litvin.ui.help.HelpDialog
 import org.litvin.ui.help.HelpPage
 import org.litvin.ui.help.HelpPreferences
@@ -111,6 +114,7 @@ object SwingApplicationFactory {
         services: AppServices,
         show: Boolean = true,
         onWindowClosed: () -> Unit = {},
+        updateAndRestart: UpdateAndRestart = UpdateAndRestart(),
     ): SwingApplicationHandle {
         check(EventQueue.isDispatchThread()) { "Swing application must be created on the EDT" }
 
@@ -228,6 +232,7 @@ object SwingApplicationFactory {
 
             var tabTitle = "Projects"
             var projectName: String? = null
+            var projectOpen = false
             fun updateTitle() {
                 frame.title = listOfNotNull(AppInfo.NAME, tabTitle, projectName?.takeIf { it.isNotBlank() })
                     .joinToString(" — ")
@@ -300,6 +305,7 @@ object SwingApplicationFactory {
                 services.dialogs,
             ).apply {
                 onProjectOpened = { path ->
+                    projectOpen = true
                     pointsPanel.setProjectManifest(path)
                     colorsPanel.setProjectManifest(path)
                     cropRotatePanel.setProjectManifest(path)
@@ -463,8 +469,57 @@ object SwingApplicationFactory {
             btnStats.isVisible = false
             projectGroups.forEach { it.isVisible = false }
 
+            // Expired mode (E8-S1): only the Export tab shows. It uses the same mechanism that hides the tabs when no
+            // project is open. A hidden card is not showing, so the keyboard shortcuts of its panel have no effect.
+            fun setExpiredMode(expired: Boolean) {
+                val projectTabs = !expired && projectOpen
+                btnProjects.isVisible = !expired
+                btnPoints.isVisible = projectTabs
+                btnColors.isVisible = projectTabs
+                btnCropRotate.isVisible = projectTabs
+                btnScoring.isVisible = projectTabs
+                btnStats.isVisible = projectTabs
+                btnTest?.isVisible = projectTabs
+                projectGroups.forEach { it.isVisible = projectTabs }
+                sidebar.revalidate()
+                sidebar.repaint()
+                exportPanel.newExportRefused = expired
+                if (expired) {
+                    showTitle("Export")
+                    goTo(CARD_EXPORT)
+                } else {
+                    showTitle("Projects")
+                    goTo(CARD_PROJECTS)
+                }
+            }
+
+            val updateRunner = UpdateRunner(
+                update = updateAndRestart,
+                background = services.executors.createExecutor("update-download"),
+                exportRuns = { exportPanel.activeExportCount > 0 },
+                closeSequence = { handle.close() },
+                exit = onWindowClosed,
+                openUrl = { url -> runCatching { Desktop.getDesktop().browse(URI(url)) } },
+                parent = { frame },
+            )
+            val expiryUi = ExpiryUi(
+                services.expiry,
+                updateRunner,
+                frame,
+                // Leaving the open tab saves the project and stops the player.
+                beforeExpiredMode = { goTo(CARD_EXPORT) },
+                setExpiredMode = ::setExpiredMode,
+                windowShows = { frame.isShowing },
+            )
+            closeActions += expiryUi::close
+            exportPanel.onNewExportRefused = services.expiry::showExpiredDialog
+
             frame.add(sidebar, BorderLayout.WEST)
-            frame.add(cards, BorderLayout.CENTER)
+            frame.add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                add(expiryUi.bar, BorderLayout.NORTH)
+                add(cards, BorderLayout.CENTER)
+            }, BorderLayout.CENTER)
             frame.rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
                 .put(KeyStroke.getKeyStroke(AppShortcuts.HELP.keyStroke), "openContextHelp")
             frame.rootPane.actionMap.put("openContextHelp", object : AbstractAction() {
@@ -498,6 +553,8 @@ object SwingApplicationFactory {
             })
 
             btnProjects.doClick()
+            // After the Projects tab: in expired mode, the state hides it again and opens the Export tab.
+            expiryUi.install()
             frame.isVisible = show
 
             // The first start shows the consent question, then the Overview help, then the hint at the Help button.

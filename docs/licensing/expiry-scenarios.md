@@ -228,7 +228,7 @@ Terms:
     the tabs show again.
   - Connect, but do not correct the clock: the app leaves expired mode in
     the same way. The wrong clock notice shows: "The clock of this computer
-    is wrong by N days…". If the user does not correct the clock, the next
+    is N days ahead…". If the user does not correct the clock, the next
     start with no network goes to expired mode again.
   - Stay offline: expired mode stays. This is an accepted risk.
 - **Expected result:** recovery within 1 minute after the network is
@@ -249,8 +249,8 @@ Terms:
      second.
   2. The server time shows that the build is not expired. The normal main
      window opens. Expired mode does not show.
-  3. The wrong clock notice shows: "The clock of this computer is wrong by
-     N days. Correct the clock. If you do not, <app name> can stop while the
+  3. The wrong clock notice shows: "The clock of this computer is N days
+     ahead. Correct the clock. If you do not, <app name> can stop while the
      computer is offline."
 - **Next steps for the user:**
   - Correct the clock: the next start is normal, with no check window.

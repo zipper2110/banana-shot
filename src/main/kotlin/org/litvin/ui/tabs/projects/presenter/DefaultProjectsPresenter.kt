@@ -1,7 +1,6 @@
 package org.litvin.ui.tabs.projects.presenter
 
 import org.litvin.export.RenderFormatting
-import org.litvin.projects.FileProjectsRepository
 import org.litvin.projects.NewProjectRules
 import org.litvin.projects.ProjectStats
 import org.litvin.projects.ProjectSummary
@@ -14,7 +13,7 @@ import java.util.concurrent.Executors
 import java.util.prefs.Preferences
 
 class DefaultProjectsPresenter(
-    private val repository: ProjectsRepository = FileProjectsRepository(),
+    private val repository: ProjectsRepository,
     private val preferences: Preferences = PreferencesProvider.production().node(PreferencesProvider.PROJECTS),
     private val ioExecutor: Executor = Executors.newSingleThreadExecutor(),
 ) : ProjectsPresenter {

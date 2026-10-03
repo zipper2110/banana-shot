@@ -848,6 +848,11 @@ the name can change.
   session, it shows again only for a newer version.
 - At start, the app shows the notice from the saved rules file, also with no
   connection. The saved `latest` is still true when the app is offline.
+- In expired mode, the notice does not show (decided on 2026-10-03). The
+  banner and the dialog of expired mode have the same buttons, and "Later"
+  has no meaning there. They show the new version instead (see "Expired
+  mode"). When the app leaves expired mode, the notice shows again, unless
+  the user clicked "Later" for that version in this session.
 
 ### Update and restart
 
@@ -946,6 +951,10 @@ the app as usual. Each start of an expired build opens in expired mode.
   expired. It shows the date that the app used, the state of the online
   check, a "Check now" button, and the buttons of "Update and restart". The
   user cannot close the banner.
+- New version: when `latest.version` is newer than the app version, the
+  banner and the dialog also show one line, for example "Version 1.4.0 is
+  available." The update notice does not show in expired mode (decided on
+  2026-10-03, see "Update notice").
 - Dialog: the app shows the dialog when it goes to expired mode and at each
   start in expired mode. The dialog is modal, and the user can close it.
   - It shows the rule `message` if there is one. If there is no message, it
@@ -981,8 +990,12 @@ queue, a person must edit a file in the data folder, which is after the line.
 
 - After each server time, the app compares the system time with the server
   time. If they differ by more than 24 hours, the app shows a notice that is
-  not modal: "The clock of this computer is wrong by N days. Correct the
-  clock. If you do not, <app name> can stop while the computer is offline."
+  not modal: "The clock of this computer is N days ahead. Correct the clock.
+  If you do not, <app name> can stop while the computer is offline." For a
+  clock that is behind, the text says "N days behind".
+- N is the difference in hours divided by 24, rounded, and at least 1. For
+  example, 25 hours is 1 day, and 36 hours is 2 days (decided on
+  2026-10-03).
 - The notice is necessary because a server time corrects the time only for
   the current session. With a clock that is too far forward, the next start
   with no network expires again. With a clock that is behind, the next start
@@ -1328,7 +1341,9 @@ no change to the design.
     it. After each test, the extension fails the test if a request was
     recorded. The app shows no error for a failed request (fail open), so a
     selector that only stops the request cannot find the mistake. This code
-    is only in the tests. It is not a switch in the app.
+    is only in the tests. It is not a switch in the app. The guard also
+    covers `github.com`, the host of the setup download of "Update and
+    restart" (decided on 2026-10-03).
 - The rules file: not valid, unknown schema, no connection (the saved file
   applies), a timeout after 10 seconds, a new valid file replaces the saved
   file; a file with unknown fields is valid, and the app reads the known

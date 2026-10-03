@@ -15,6 +15,9 @@ import org.litvin.export.scoreboard.SceneItem
 import org.litvin.export.scoreboard.ScenePoint
 import org.litvin.export.scoreboard.ScoreboardScene
 import org.litvin.export.scoreboard.TextAnchor
+import org.litvin.license.AllowNewWork
+import org.litvin.license.ExpiredVersionException
+import org.litvin.license.NewWorkGate
 import org.litvin.points.PointV1
 import org.litvin.scoring.ScoreboardPosition
 import org.litvin.scoring.ScoreboardSettingsV1
@@ -27,6 +30,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.full.primaryConstructor
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -125,7 +129,7 @@ class SavedRenderQueueTest {
     @Test
     fun `the service writes the file when a job is added, starts, completes, fails, or is canceled`() {
         val gateway = FakeGateway()
-        val service = ProductionRenderService(NoCompletedRenders, gateway, SavedRenderQueue(queueFile))
+        val service = ProductionRenderService(NoCompletedRenders, AllowNewWork, gateway, SavedRenderQueue(queueFile))
         val queue = SavedRenderQueue(queueFile)
 
         service.enqueue(job("a"))
@@ -156,10 +160,27 @@ class SavedRenderQueueTest {
     }
 
     @Test
+    fun `in expired mode a new export is refused, and the restore of the saved queue still adds the saved jobs`() {
+        SavedRenderQueue(queueFile).save(listOf(job("a"), job("b")))
+        val gateway = FakeGateway()
+        val expired = NewWorkGate { false }
+        val service = ProductionRenderService(NoCompletedRenders, expired, gateway, SavedRenderQueue(queueFile))
+
+        assertFailsWith<ExpiredVersionException> { service.enqueue(job("new")) }
+        assertTrue(gateway.requests.isEmpty(), "The refused export is not in the queue")
+        assertEquals(emptyList(), SavedRenderQueue(queueFile).load().filter { it.id == "new" })
+
+        service.restoreSavedQueue()
+
+        assertEquals(listOf("a", "b"), gateway.requests.map { it.job.id }, "The restored jobs continue in expired mode")
+        service.close()
+    }
+
+    @Test
     fun `three exports continue after the app closes during the first export`() {
         val output = dir.resolve("a.mp4")
         val firstGateway = FakeGateway()
-        val first = ProductionRenderService(NoCompletedRenders, firstGateway, SavedRenderQueue.claim(queueFile, lockFile))
+        val first = ProductionRenderService(NoCompletedRenders, AllowNewWork, firstGateway, SavedRenderQueue.claim(queueFile, lockFile))
         first.enqueue(job("a").copy(outputPath = output.path))
         first.enqueue(job("b"))
         first.enqueue(job("c"))
@@ -171,7 +192,7 @@ class SavedRenderQueueTest {
         firstGateway.requests.forEach { it.signalTerminal(RenderTerminalOutcome.CANCELED) }
 
         val secondGateway = FakeGateway()
-        val second = ProductionRenderService(NoCompletedRenders, secondGateway, SavedRenderQueue.claim(queueFile, lockFile))
+        val second = ProductionRenderService(NoCompletedRenders, AllowNewWork, secondGateway, SavedRenderQueue.claim(queueFile, lockFile))
         second.restoreSavedQueue()
 
         assertEquals(listOf("a", "b", "c"), secondGateway.requests.map { it.job.id })
@@ -183,14 +204,14 @@ class SavedRenderQueueTest {
     @Test
     fun `a canceled export does not come back`() {
         val firstGateway = FakeGateway().apply { cancelQueuedResult = true }
-        val first = ProductionRenderService(NoCompletedRenders, firstGateway, SavedRenderQueue.claim(queueFile, lockFile))
+        val first = ProductionRenderService(NoCompletedRenders, AllowNewWork, firstGateway, SavedRenderQueue.claim(queueFile, lockFile))
         first.enqueue(job("a"))
         first.enqueue(job("b"))
         first.cancelQueued("b")
         first.close()
 
         val secondGateway = FakeGateway()
-        val second = ProductionRenderService(NoCompletedRenders, secondGateway, SavedRenderQueue.claim(queueFile, lockFile))
+        val second = ProductionRenderService(NoCompletedRenders, AllowNewWork, secondGateway, SavedRenderQueue.claim(queueFile, lockFile))
         second.restoreSavedQueue()
 
         assertEquals(listOf("a"), secondGateway.requests.map { it.job.id })
@@ -199,7 +220,7 @@ class SavedRenderQueueTest {
 
     @Test
     fun `a service with no queue file keeps the queue in memory only`() {
-        val service = ProductionRenderService(NoCompletedRenders, FakeGateway(), null)
+        val service = ProductionRenderService(NoCompletedRenders, AllowNewWork, FakeGateway(), null)
 
         service.enqueue(job("a"))
         service.restoreSavedQueue()
@@ -214,7 +235,7 @@ class SavedRenderQueueTest {
         SavedRenderQueue(queueFile).save(
             listOf(job("missing-source").copy(sourcePath = missingSource.path, outputPath = dir.resolve("out.mp4").path)),
         )
-        val service = ProductionRenderService(NoCompletedRenders, SavedRenderQueue(queueFile))
+        val service = ProductionRenderService(NoCompletedRenders, AllowNewWork, SavedRenderQueue(queueFile))
         val failed = CountDownLatch(1)
         var reason: String? = null
         service.observe { snapshot ->

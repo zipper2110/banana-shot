@@ -7,6 +7,7 @@ import org.litvin.ui.flow.driver.SwingUiDriver
 import org.litvin.ui.flow.fakes.FakeMediaPlayerFactory
 import org.litvin.ui.flow.fakes.FakeRenderService
 import org.litvin.ui.flow.fakes.InMemoryPreferencesProvider
+import org.litvin.ui.flow.fakes.RecordingRulesFetcher
 import org.litvin.ui.flow.fakes.ScriptedDialogService
 import org.litvin.ui.flow.fakes.ScriptedFilePicker
 import org.litvin.ui.flow.fixtures.UiFlowFixtureBuilder
@@ -18,6 +19,8 @@ class UiFlowContext internal constructor(
     val artifactDirectory: Path,
     val paths: AppDataPaths,
     val preferences: InMemoryPreferencesProvider,
+    /** The fake read of the rules file (E7-S4). */
+    val rulesFetcher: RecordingRulesFetcher,
     internal val fakeMediaPlayers: FakeMediaPlayerFactory?,
     internal val fakeRenderService: FakeRenderService?,
     internal val nativeMediaPlayers: NativeMediaPlayers?,

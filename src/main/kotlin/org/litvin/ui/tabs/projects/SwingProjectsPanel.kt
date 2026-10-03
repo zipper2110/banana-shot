@@ -19,7 +19,6 @@ import org.litvin.ui.tabs.projects.components.ProjectsTableColumns
 import org.litvin.ui.tabs.projects.components.ProjectsUi
 import org.litvin.ui.tabs.projects.components.RenameProjectDialog
 import org.litvin.ui.tabs.projects.components.StartPanel
-import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
 import org.litvin.ui.tabs.projects.presenter.ProjectCardState
 import org.litvin.ui.tabs.projects.presenter.ProjectsIntent
 import org.litvin.ui.tabs.projects.presenter.ProjectsPresenter
@@ -50,7 +49,7 @@ import javax.swing.Scrollable
  * This panel only forwards user intents and renders immutable ProjectsViewState.
  */
 class SwingProjectsPanel(
-    private val presenter: ProjectsPresenter = DefaultProjectsPresenter(),
+    private val presenter: ProjectsPresenter,
     private val filePicker: FilePicker = SystemFilePicker(),
     private val dialogs: UserDialogService = SwingUserDialogService(),
     private val newProjectEditor: NewProjectEditor = NewProjectDialog,

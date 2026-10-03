@@ -15,6 +15,7 @@ import org.litvin.app.SwingApplicationFactory
 import org.litvin.app.SwingApplicationHandle
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.RenderService
+import org.litvin.license.TestExpiry
 import org.litvin.media.MediaPlayerFactory
 import org.litvin.media.MediaScreen
 import org.litvin.media.PlayerStatus
@@ -87,6 +88,7 @@ class ComponentNameContractTest {
             projectsRepository = OneProjectRepository,
             completedRenders = EmptyCompletedRendersRepository,
             adjustments = AdjustmentsSession(executors.createScheduledExecutor("adjustments"), 60_000),
+            expiry = TestExpiry.controller(root),
         )
     }
 

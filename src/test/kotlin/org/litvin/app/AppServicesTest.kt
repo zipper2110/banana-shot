@@ -7,6 +7,7 @@ import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
 import org.litvin.export.RenderService
+import org.litvin.license.TestExpiry
 import org.litvin.media.MediaPlayerFactory
 import org.litvin.media.MediaScreen
 import org.litvin.media.SwingMediaPlayer
@@ -47,6 +48,7 @@ class AppServicesTest {
             projectsRepository = NoOpProjectsRepository,
             completedRenders = NoOpCompletedRendersRepository,
             adjustments = adjustments,
+            expiry = TestExpiry.controller(root),
         )
 
         services.close()
@@ -70,15 +72,16 @@ class AppServicesTest {
                         paths = { AppDataPaths(root) },
                         preferences = { PreferencesProvider { throw UnsupportedOperationException() } },
                         executors = { executors },
+                        expiry = { paths, _, _ -> TestExpiry.controller(paths.root) },
                         mediaPlayers = { media },
                         filePicker = { NoOpFilePicker },
                         dialogs = { NoOpDialogs },
-                        projectsRepository = { _ -> NoOpProjectsRepository },
+                        projectsRepository = { _, _ -> NoOpProjectsRepository },
                         completedRenders = { _ -> NoOpCompletedRendersRepository },
                         adjustments = { provider ->
                             AdjustmentsSession(provider.createScheduledExecutor("construction-adjustments"))
                         },
-                        renderService = { _, _ -> render },
+                        renderService = { _, _, _ -> render },
                         encoderCapabilities = { EncoderCapabilities.NONE },
                         afterConstruction = { throw IllegalStateException("construction failed") },
                     ),

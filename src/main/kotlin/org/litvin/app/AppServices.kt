@@ -1,5 +1,6 @@
 package org.litvin.app
 
+import org.litvin.AppInfo
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
@@ -7,6 +8,18 @@ import org.litvin.export.FileCompletedRendersRepository
 import org.litvin.export.ProductionRenderService
 import org.litvin.export.RenderService
 import org.litvin.export.SavedRenderQueue
+import org.litvin.license.NewWorkGate
+import org.litvin.license.SavedVersionRules
+import org.litvin.license.check.ExecutorExpiryScheduler
+import org.litvin.license.check.ExpiryController
+import org.litvin.license.check.PreferencesExpiredFlagStore
+import org.litvin.license.check.SystemRetryTiming
+import org.litvin.license.online.HttpRulesFetcher
+import org.litvin.license.time.DataFolderFileTimeProbe
+import org.litvin.license.time.PreferencesSavedTimeStore
+import org.litvin.license.time.RunTimeCounter
+import org.litvin.license.time.SystemTime
+import org.litvin.license.time.TimeEngine
 import org.litvin.media.MediaPlayerFactory
 import org.litvin.media.productionMediaPlayerFactory
 import org.litvin.projects.FileProjectsRepository
@@ -19,6 +32,7 @@ import org.litvin.ui.commons.UserDialogService
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsController
 import org.litvin.analytics.AnalyticsPreferences
+import java.net.URI
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -29,13 +43,16 @@ internal data class AppServicesProductionFactory(
     val mediaPlayers: () -> MediaPlayerFactory = { productionMediaPlayerFactory(VideoErrorPanel) },
     val filePicker: () -> FilePicker = { SystemFilePicker() },
     val dialogs: () -> UserDialogService = { SwingUserDialogService() },
-    val projectsRepository: (AppDataPaths) -> ProjectsRepository = { FileProjectsRepository(it.projects) },
+    val expiry: (AppDataPaths, PreferencesProvider, ExecutorProvider) -> ExpiryController = ::productionExpiryController,
+    val projectsRepository: (AppDataPaths, NewWorkGate) -> ProjectsRepository = { paths, newWork ->
+        FileProjectsRepository(paths.projects, newWork)
+    },
     val completedRenders: (AppDataPaths) -> CompletedRendersRepository = { FileCompletedRendersRepository(it.completedRenders) },
     val adjustments: (ExecutorProvider) -> AdjustmentsSession = {
         AdjustmentsSession(it.createScheduledExecutor("adjustments-autosave"))
     },
-    val renderService: (AppDataPaths, CompletedRendersRepository) -> RenderService = { paths, completed ->
-        ProductionRenderService(completed, SavedRenderQueue.claim(paths.renderQueue, paths.renderQueueLock))
+    val renderService: (AppDataPaths, CompletedRendersRepository, NewWorkGate) -> RenderService = { paths, completed, newWork ->
+        ProductionRenderService(completed, newWork, SavedRenderQueue.claim(paths.renderQueue, paths.renderQueueLock))
             .also { it.restoreSavedQueue() }
     },
     val encoderCapabilities: () -> EncoderCapabilities = EncoderCapabilities::production,
@@ -53,6 +70,8 @@ data class AppServices(
     val projectsRepository: ProjectsRepository,
     val completedRenders: CompletedRendersRepository,
     val adjustments: AdjustmentsSession,
+    /** The build expiry, the version rules, and the update check (`build-expiry-spec.md`). `main` starts it. */
+    val expiry: ExpiryController,
     // The detection runs test encodes and takes some seconds, so the export panel waits for it in the background.
     val encoderCapabilities: CompletableFuture<EncoderCapabilities> = CompletableFuture.completedFuture(EncoderCapabilities.NONE),
     val analyticsConfig: AnalyticsBuildConfig = AnalyticsBuildConfig.Disabled("not_configured"),
@@ -67,6 +86,7 @@ data class AppServices(
             paths,
             preferences,
             executors,
+            expiry,
             mediaPlayers,
             filePicker,
             dialogs,
@@ -103,13 +123,14 @@ data class AppServices(
                 val paths = construct(factory.paths)
                 val preferences = construct(factory.preferences)
                 val executors = construct(factory.executors)
+                val expiry = construct { factory.expiry(paths, preferences, executors) }
                 val mediaPlayers = construct(factory.mediaPlayers)
                 val filePicker = construct(factory.filePicker)
                 val dialogs = construct(factory.dialogs)
-                val projectsRepository = construct { factory.projectsRepository(paths) }
+                val projectsRepository = construct { factory.projectsRepository(paths, expiry) }
                 val completedRenders = construct { factory.completedRenders(paths) }
                 val adjustments = construct { factory.adjustments(executors) }
-                val renderService = construct { factory.renderService(paths, completedRenders) }
+                val renderService = construct { factory.renderService(paths, completedRenders, expiry) }
                 val encoderCapabilities = CompletableFuture.supplyAsync { factory.encoderCapabilities() }
                 val analyticsConfig = AnalyticsBuildConfig.fromSystemProperties()
                 val analyticsPreferences = if (analyticsConfig is AnalyticsBuildConfig.Enabled) {
@@ -129,6 +150,7 @@ data class AppServices(
                     projectsRepository = projectsRepository,
                     completedRenders = completedRenders,
                     adjustments = adjustments,
+                    expiry = expiry,
                     encoderCapabilities = encoderCapabilities,
                     analyticsConfig = analyticsConfig,
                     analyticsPreferences = analyticsPreferences,
@@ -148,4 +170,28 @@ data class AppServices(
             }
         }
     }
+}
+
+/**
+ * The real parts of the build expiry (E7-S1): the read of the rules file, its URL, the saved time and the flag in the
+ * preferences, and the data folder. Only this function makes them. All other code gets them through constructor
+ * parameters, and the tests give fakes. No property or environment variable turns off the expiry.
+ */
+internal fun productionExpiryController(
+    paths: AppDataPaths,
+    preferences: PreferencesProvider,
+    executors: ExecutorProvider,
+): ExpiryController {
+    val node = preferences.node(PreferencesProvider.LICENSE)
+    val counter = RunTimeCounter.production()
+    return ExpiryController(
+        appVersion = AppInfo.version,
+        engine = TimeEngine(counter, SystemTime(DataFolderFileTimeProbe.inDataFolder(paths.root)), PreferencesSavedTimeStore(node)),
+        counter = counter,
+        savedRules = SavedVersionRules(paths.root),
+        fetcher = HttpRulesFetcher(URI(HttpRulesFetcher.RULES_URL), counter),
+        flag = PreferencesExpiredFlagStore(node),
+        scheduler = ExecutorExpiryScheduler(executors.createScheduledExecutor("expiry-check")),
+        retryTiming = SystemRetryTiming,
+    )
 }

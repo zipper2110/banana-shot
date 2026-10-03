@@ -17,11 +17,18 @@ Do these items before the first public release.
   `docs/licensing/l-5.2-epics.md` tracks the work.
 - This must be in the first release. A build without an expiry stays free
   forever.
+- Status 2026-10-03: E0 to E7 are done. E8 (the expiry user interface)
+  is done except one run of its UI-flow tests. E9 waits for a manual check
+  with a real release. The "Next work" list in `l-5.2-epics.md` has
+  the stories that can start now.
 
 ### B-8 Requests for bug reports and features
 
 - Ask users to send bug reports and feature requests.
-- The Contact page already asks for the log files with a bug report.
+- Decided on 2026-10-03: an in-app feedback form sends the report to a
+  Cloudflare Worker, and the Worker sends it to the author with a Telegram
+  bot. `docs/feedback/b-8-tasks.md` has the decisions and the tasks.
+- Replies inside the app are B-33 (post-release).
 
 ### B-9 Analytics
 
@@ -252,30 +259,8 @@ Do these items before the first public release.
   - Tests: `UpdateAndRestartTest` (fake download and setup start, and a local
     HTTP server for the real download).
 - Still to do: the buttons in the update notice, the expiry warning, and
-  expired mode (E8), the wiring of the close sequence and the saved time
-  (E7), and the trust of E5-S4 for the download.
-
-### B-32 Export tab without an open project
-
-- Decided on 2026-10-03. The app restores the saved export queue (B-18) at
-  start and the exports run at once. The queue is global and does not
-  depend on the project. But the Export button showed only after the user
-  opened a project. Thus, the user could not see, cancel, or open the
-  exports after a restart.
-- The Export button always shows.
-- With no open project, the export table on the right works as usual. The
-  settings column on the left shows "Open a project to set up a new
-  export". The user cannot start an export.
-- The Export button shows a badge with the number of running and queued
-  exports. The badge shows on all tabs. With no exports, the badge does
-  not show.
-- Done when: after a restart with a saved queue, the Projects tab shows the
-  Export button with the badge, and the Export tab shows the running export
-  with no open project.
-- Status 2026-10-03: the code is done (`SidebarButton.badgeCount`,
-  `ActiveQueueSnapshot.activeCount`, the no-project notice in
-  `SwingExportPanel`). The unit tests and `mvn -Pui-flow verify` (JDK 25)
-  pass. Still to do: the restart check in the real app.
+  expired mode (E8), and the wiring of the close sequence and the saved time
+  (E7). The download uses the trust of E5-S4 (2026-10-03).
 
 ### B-26 Pre-release install testing
 
@@ -326,6 +311,47 @@ Do these items before the first public release.
 ## Post-release
 
 Do these items after the first public release.
+
+### B-33 Replies to feedback inside the app
+
+- Option C of B-8, decided on 2026-10-03. The author can reply to a report
+  in the app. The user does not need to give an email address.
+- The app keeps the `report_id` of each sent report. It checks the Worker
+  for replies and shows a badge when a reply is available.
+- The author can mark a report as fixed in a version. The app shows "Fixed
+  in version X" after the update.
+- Each report needs a secret that only the app knows. Without it, a person
+  who knows a `report_id` must not read the replies.
+- Do this after B-8 (`docs/feedback/b-8-tasks.md`).
+
+### B-34 Social media accounts
+
+- Decided on 2026-10-03: after the first release. Show the accounts in the
+  app (the Contact and About pages in More) and on the landing site (B-10).
+- Make the accounts only when the app name is final. Use the same name on
+  all platforms.
+- Most users are in Europe and the USA. Some are in Latin America and Asia.
+  The analysis of 2026-10-03 (not decided):
+  - YouTube: yes. It is the main place for tennis video in all regions. Use
+    it for how-to videos, release videos, and match highlights.
+  - Instagram: yes. It is strong in Europe, the USA, Latin America, India,
+    and Southeast Asia. Use it for short clips made with the app and for
+    direct messages.
+  - Facebook page: optional. Meta Business Suite can copy the Instagram
+    posts to it. It reaches older club players and Latin America.
+  - TikTok: later, when there is time to make clips often. It is blocked in
+    India.
+  - WhatsApp channel: later, if many users are in Latin America. A channel
+    is one-way, so use it for announcements such as "Fixed in 1.2".
+  - Discord: later, at about 100 active users. It needs moderation.
+  - Reddit (r/10s): take part, but do not show it as an account.
+  - Not useful: X, Threads, Bluesky, LINE, KakaoTalk, WeChat.
+- Each account that the app shows is a promise to answer messages there.
+  Start with few accounts.
+- The in-app feedback form of B-8 stays the main way to report a problem.
+  Direct messages cannot attach the log.
+- The icon pack of the app (Material2) has no brand logos. Use SVG files
+  (JSVG) or an icon pack with brand icons.
 
 ### B-11 Localization
 

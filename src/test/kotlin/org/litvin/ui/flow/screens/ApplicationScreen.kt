@@ -86,8 +86,10 @@ internal class ApplicationScreen(
 
     private fun assertNavigation(projectNavigationVisible: Boolean) {
         eventually("project navigation visibility to be $projectNavigationVisible") {
+            // The export queue does not depend on the project, so Export always shows (B-32).
             context.driver.requireShowing("nav-projects")
-            listOf("nav-points", "nav-colors", "nav-crop", "nav-scoring", "nav-stats", "nav-export")
+            context.driver.requireShowing("nav-export")
+            listOf("nav-points", "nav-colors", "nav-crop", "nav-scoring", "nav-stats")
                 .forEach { name -> context.driver.requireShowing(name, projectNavigationVisible) }
         }
     }

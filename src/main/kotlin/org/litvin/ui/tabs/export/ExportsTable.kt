@@ -8,6 +8,7 @@ import org.litvin.RenderJob
 import org.litvin.RenderStatus
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.ExportCardInfo
+import org.litvin.export.ExportFailureAdvice
 import org.litvin.export.RenderFormatting
 import org.litvin.export.RenderService
 import org.litvin.ui.commons.Palette
@@ -112,6 +113,9 @@ internal class ExportsTable(
         showSnapshot(null)
         showCompleted(emptyList())
     }
+
+    /** The row of the active export. */
+    val activeExportRow: JComponent get() = activeRow
 
     /** The progress bar and the "Cancel export" button of the active export. */
     val progressBar: JProgressBar get() = activeRow.progress
@@ -309,7 +313,7 @@ internal class ExportsTable(
                     pill.set("Failed", StatusPill.Kind.FAILED)
                     tone = Tone.FAILED
                     time.show(DASH, null)
-                    errorBox.show(job.failureReason ?: "Unknown error")
+                    errorBox.show(job.failureReason ?: "Unknown error", ExportFailureAdvice.of(job))
                     extra = errorBox
                 }
                 RenderStatus.CANCELED -> {
@@ -1029,10 +1033,12 @@ internal class ErrorBox : JPanel(null), HeightForWidth {
         add(message)
     }
 
-    fun show(reason: String) {
-        message.runs = listOf(
+    /** Shows the error [reason], and the [advice] on a new line when there is one. */
+    fun show(reason: String, advice: String? = null) {
+        message.runs = listOfNotNull(
             TextRun("Error:", ExportUi.font(12f, Weight.BOLD), TEXT),
             TextRun(" $reason", ExportUi.font(12f), TEXT),
+            advice?.let { TextRun("\n$it", ExportUi.font(12f), TEXT) },
         )
     }
 

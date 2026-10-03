@@ -18,24 +18,6 @@ Do these items before the first public release.
 - This must be in the first release. A build without an expiry stays free
   forever.
 
-### B-5 First-time hints for new users
-
-- The proposal has 23 one-time hints, with an anchor, a trigger, a text, and
-  a priority for each hint:
-  [First-time hints for new users](https://claude.ai/code/artifact/6ed337ac-c2da-470d-b120-487ad46e118c).
-  The review of the proposal is not finished.
-- Build the 8 high-priority hints first: 1, 2, 8, 10, 14, 15, 18, 23.
-- First replace `PreferencesScoreSettingsHint` with a registry that keeps one
-  flag for each hint. More → Settings → "Show all hints again" must reset
-  all hints.
-- Done when: the high-priority hints show once. After the user closes a
-  hint, it does not show again. "Show all hints again" shows the hints again.
-
-### B-6 Better tooltips for new users
-
-- Add more information to the tooltips, so that new users can learn the app.
-  B-5 adds one-time hints. This item is about the usual tooltips.
-
 ### B-8 Requests for bug reports and features
 
 - Ask users to send bug reports and feature requests.
@@ -47,6 +29,23 @@ Do these items before the first public release.
   `analytics-worker`. The Worker does not accept events until
   `ANALYTICS_INGESTION_ENABLED` is `true`.
 - Finish the analytics work and turn it on.
+- No build sets the three JVM properties that turn on analytics:
+  `bananashot.analytics.endpoint`, `bananashot.analytics.privacyUrl`, and
+  `bananashot.analytics.noticeVersion`. Without them, the app never shows
+  the consent dialog and never sends analytics (found on 2026-10-03).
+- Add `-AnalyticsEndpoint`, `-AnalyticsPrivacyUrl`, and
+  `-AnalyticsNoticeVersion` to `Build-AppImage.ps1`, as
+  `docs/analytics/design.md` says. Add the three values to
+  `windows-release.yml` from GitHub variables. A shelved IntelliJ patch has
+  this code with the old `tennis.record.` prefix. Do not use that prefix.
+- The endpoint must be an `https` URL that ends in `/v1/events/batch`. The
+  notice version must be `AnalyticsEventRegistry.NOTICE_VERSION` (now 1).
+- To see the consent dialog in a dev run, add the three properties to the VM
+  options. Also clear `analytics.choice` and `analytics.noticeVersion` in the
+  application preferences.
+- At the first start, the Overview help opens after the consent dialog
+  closes (`AnalyticsConsentDialog.show(onClosed)`). Check this order on a
+  fresh install with analytics turned on.
 
 ### B-10 Landing site
 
@@ -56,13 +55,48 @@ Do these items before the first public release.
 
 - The "Windows release" workflow has never run. Start a dry run now with
   the current installer. It can find problems before B-23 and B-24.
-- Install the dry-run installer on a clean Windows account. Do the checks of
-  step 6 of `release-checklist.md`.
+- B-26 does the install checks with the installer of the dry run.
 - In the app image, run `runtime\bin\java --list-modules`. The JDK 17
   jpackage default can omit `jdk.crypto.ec` and `jdk.crypto.mscapi`, but
   `build-expiry-spec.md` requires them. Write the result in B-23.
 - Done when: the dry run passes, and each problem that it finds is fixed or
   is an item in this file. Do the dry run again after B-23 and B-24.
+- Status 2026-10-03:
+  - The first dry run (version 0.0.1, commit 17bc4b8, Temurin 25.0.4) passed
+    in CI. `mvn -B test`: 706 tests, 0 failures, 2 skipped.
+    `Validate-AppImage.ps1` passed: the runtime has `jdk.crypto.mscapi` and
+    `java.net.http`, and the expiry date is 2027-04-03. All packaged
+    diagnostics passed (libmpv load, FFmpeg, `Windows-ROOT` with 564
+    certificates, HTTPS). `vpk pack` made `BananaShot-win-Setup.exe` and the
+    `.nupkg` package. The workflow artifact has 10 files (336 MB).
+  - Expected warnings: the open L-5.2 stories (a real release fails until
+    B-4 is done) and the unsigned files (B-22).
+  - Not a problem: at the end of the job, the runner stopped an orphan
+    `java` process (probably the Kotlin compile daemon). The Maven cache was
+    not saved because a different job saved the same key.
+  - Step 5 review of the artifact: the SHA-256 file agrees with the setup
+    EXE. The SBOM has 20 Maven components. They are the same as the 20
+    library JARs in `lib/app/app` of the `.nupkg`. All are `required`, and
+    no test library is in the SBOM. The licenses are Apache-2.0, MIT,
+    EPL-1.0 or LGPL (Logback), and LGPL-2.1+ or Apache-2.0 (JNA). All
+    are acceptable. The `THIRD-PARTY-NOTICES.txt` of the artifact is the
+    same as the file in the repository.
+  - Problem: `THIRD-PARTY-NOTICES.txt` says that the license texts are in
+    the JAR files. These 5 JARs have no license file:
+    `kotlin-stdlib-2.2.20`, `kotlin-reflect-2.2.20`, `annotations-13.0`
+    (Apache-2.0), `logback-classic-1.5.18`, and `logback-core-1.5.18`
+    (EPL-1.0 or LGPL-2.1). Apache-2.0 and EPL-1.0 require a copy of the
+    license with the binaries. The notices also do not name `jsvg` (MIT)
+    and the JetBrains `annotations`.
+  - Fixed 2026-10-03: "Java libraries" in `THIRD-PARTY-NOTICES.txt` now
+    lists each library, its version, and its license. The end of the file
+    has the full texts of the Apache License 2.0, the EPL-1.0, and the MIT
+    License (with the SLF4J, JSVG, and Feather copyright lines). The file
+    tells that BananaShot uses Logback under the EPL-1.0 and JNA under the
+    Apache License 2.0. Step 5 of `release-checklist.md` now has a check
+    that this list agrees with the SBOM.
+  - Still to do: a new dry run with the fixed notices. Its installer is
+    version N-1 for B-26.
 
 ### B-23 Bundle the JDK 25 runtime
 
@@ -104,7 +138,10 @@ Do these items before the first public release.
     2026-10-03): 706 unit tests and 17 ui-flow tests, 1 skipped by design
     (`ValidationRecoveryUiFlowIT`). `AssertJSwingCompatibilityUiFlowIT`
     passes, so assertj-swing works with JDK 25.
-- Still to do: a CI run of the release workflow with JDK 25 (B-21).
+  - The CI run of the release workflow passed with Temurin 25.0.4
+    (2026-10-03, B-21): tests, `Validate-AppImage.ps1`, and the packaged
+    diagnostics.
+- All "Done when" conditions are true.
 
 ### B-24 Velopack installer
 
@@ -139,7 +176,8 @@ Do these items before the first public release.
 - Update `distribution/windows/README.md`, `release-checklist.md`,
   `ui-smoke.md`, and the paths in `Run-UiSmoke.ps1`.
 - Done when: a dry run makes a Velopack installer. The installer
-  installs the app, makes the Start menu shortcut, and the app starts.
+  installs the app, makes the Start menu shortcut, and the app starts
+  (check 1 of B-26).
 - Status 2026-10-03:
   - Done: `Build-VelopackRelease.ps1` runs `vpk pack` (vpk 1.2.161, pinned in
     `windows-release.yml`) with `--skipVeloAppCheck`, `--runtime win-x64`,
@@ -164,7 +202,8 @@ Do these items before the first public release.
   The license files stay in `legal/` of the app, and More → About opens them.
   No Velopack MSI. A license dialog at the first start is B-31 (after the
   first release).
-- Still to do: a dry run, then install, update, and uninstall checks (B-26).
+  - The dry run of 2026-10-03 (B-21) made the Velopack installer in CI.
+- Still to do: the install checks of B-26.
 
 ### B-30 Simple update from the app
 
@@ -196,12 +235,12 @@ Do these items before the first public release.
 - Checked on 2026-10-02 in the Velopack source: over an existing install,
   the setup asks "Update" or "Cancel", kills each process that runs from the
   install folder, installs, and starts the new version. The spec has the
-  rules that follow from this. Confirm the behavior with the pinned
-  Velopack version (B-26).
+  rules that follow from this. Check 3 of B-26 confirms the behavior with
+  the pinned Velopack version.
 - Do this after B-4 and B-24.
 - Done when: version N-1 shows the update notice for version N. The user
   clicks "Update and restart", and version N starts with the same projects
-  and the same export queue.
+  and the same export queue (check 4 of B-26).
 - Status 2026-10-03: the logic is done, the user interface is not.
   - `UpdateOptions` (in `org.litvin.license.update`) decides if "Update and
     restart" shows and gives the installer URL and the download page (E9-S1).
@@ -216,18 +255,62 @@ Do these items before the first public release.
   expired mode (E8), the wiring of the close sequence and the saved time
   (E7), and the trust of E5-S4 for the download.
 
-### B-26 Test install, update, and uninstall
+### B-32 Export tab without an open project
 
-- No test installs a new version over an old version.
-- Install version N-1, start it, and make a project. Then install version N
-  while the app runs.
-- Check: the app closes or the installer asks the user to close it. Version
-  N starts. The projects, the preferences, and the export history stay.
-- Uninstall. Check that the app data and `HKCU\Software\JavaSoft\Prefs`
-  stay.
-- Add these checks to step 6 of `release-checklist.md`. Automate them in the
-  release workflow if it is possible.
-- Done when: the checks pass with two dry-run builds.
+- Decided on 2026-10-03. The app restores the saved export queue (B-18) at
+  start and the exports run at once. The queue is global and does not
+  depend on the project. But the Export button showed only after the user
+  opened a project. Thus, the user could not see, cancel, or open the
+  exports after a restart.
+- The Export button always shows.
+- With no open project, the export table on the right works as usual. The
+  settings column on the left shows "Open a project to set up a new
+  export". The user cannot start an export.
+- The Export button shows a badge with the number of running and queued
+  exports. The badge shows on all tabs. With no exports, the badge does
+  not show.
+- Done when: after a restart with a saved queue, the Projects tab shows the
+  Export button with the badge, and the Export tab shows the running export
+  with no open project.
+- Status 2026-10-03: the code is done (`SidebarButton.badgeCount`,
+  `ActiveQueueSnapshot.activeCount`, the no-project notice in
+  `SwingExportPanel`). The unit tests and `mvn -Pui-flow verify` (JDK 25)
+  pass. Still to do: the restart check in the real app.
+
+### B-26 Pre-release install testing
+
+- This item has all the checks that need the app installed with
+  `BananaShot-win-Setup.exe`. Other items refer to it: B-21, B-24, B-30,
+  and E11 of `l-5.2-epics.md`. Do the checks together, on a clean Windows
+  account.
+- No automatic test installs a new version over an old version.
+- You need two dry-run builds with different versions: version N-1 and
+  version N.
+- Checks with one build (version N-1):
+  1. Fresh install: do the checks of step 6 of `release-checklist.md`
+     (B-21, B-24). The setup installs with no administrator rights, makes
+     the Start menu shortcut, and starts the app.
+  2. Proxy: E11-S2 of `l-5.2-epics.md`.
+- Checks with two builds:
+  3. Install over a running app: start version N-1 and make a project. Then
+     run the setup of version N. The app closes or the setup asks the user
+     to close it. Version N starts. The projects, the preferences, and the
+     export history stay. Confirm the Velopack behavior of B-30 with the
+     pinned vpk version.
+  4. "Update and restart" (B-30, E11-S3, and "Tests" in
+     `build-expiry-spec.md`): in version N-1, click "Update and restart" for
+     version N. The Velopack dialog shows. Version N starts with the same
+     projects, preferences, and export queue. Also check that "Cancel" in
+     the Velopack dialog installs nothing and leaves the app closed.
+  5. Uninstall: the app data (`%APPDATA%\BananaShot`) and
+     `HKCU\Software\JavaSoft\Prefs` stay.
+- Before you start:
+  - Checks 1 and 2 need the new dry run of B-21 (with the fixed notices).
+  - Check 4 needs the user interface of B-30.
+- Add checks 3 to 5 to step 6 of `release-checklist.md`. Automate them in
+  the release workflow if it is possible.
+- Done when: all checks pass with two dry-run builds. Write the result of
+  each check in this item.
 
 ### B-27 Release workflow hardening
 

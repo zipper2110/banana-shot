@@ -31,8 +31,18 @@ object AnalyticsConsentDialog {
     private const val WIDTH = DialogKit.MEDIUM
     private const val TEXT_WIDTH = WIDTH - 84
 
-    fun show(owner: Window, controller: AnalyticsController, privacyUrl: URI, linkOpener: PrivacyLinkOpener = PrivacyLinkOpener.DesktopBrowser) {
+    /** Shows the question. [onClosed] runs after the window closes, with any answer. */
+    fun show(
+        owner: Window,
+        controller: AnalyticsController,
+        privacyUrl: URI,
+        linkOpener: PrivacyLinkOpener = PrivacyLinkOpener.DesktopBrowser,
+        onClosed: () -> Unit = {},
+    ) {
         val dialog = build(owner, controller, privacyUrl, linkOpener)
+        dialog.addWindowListener(object : WindowAdapter() {
+            override fun windowClosed(e: WindowEvent) = onClosed()
+        })
         dialog.setLocationRelativeTo(owner)
         dialog.isVisible = true
     }

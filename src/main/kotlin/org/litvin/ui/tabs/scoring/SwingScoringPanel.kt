@@ -29,6 +29,8 @@ import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoringEngine
 import org.litvin.scoring.ScoringEngine.MatchState
 import org.litvin.ui.commons.HintBalloon
+import org.litvin.ui.commons.HintController
+import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SwingUserDialogService
@@ -79,7 +81,7 @@ class SwingScoringPanel(
     private val dialogs: UserDialogService,
     private val styleDefaults: ScoreboardStyleDefaults = ScoreboardStyleDefaults.NONE,
     private val scoreSettingsEditor: ScoreSettingsEditor = ScoreSettingsDialog,
-    private val scoreSettingsHint: ScoreSettingsHint = ScoreSettingsHint.NONE,
+    private val hints: HintController = HintController.NONE,
     private val frameLoader: VideoFrameLoader = VideoFrameLoader(),
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
@@ -102,6 +104,7 @@ class SwingScoringPanel(
         player.pause()
         // Refresh points every time the tab is opened to reflect latest Points tab changes
         refreshPointsFromProject()
+        showServeMarkHint()
         // Do not auto-play; optionally restore focus
         EventQueue.invokeLater { player.component.requestFocusInWindow() }
         promptScoreSettingsOnFirstVisit()
@@ -118,7 +121,7 @@ class SwingScoringPanel(
 
     fun onDeactivated(): Unit = uiSafe {
         isActive = false
-        hideScoreSettingsHint()
+        hideHints()
         player.pause()
         player.deactivatePreview("scoring deactivated")
         // Flush pending autosave when leaving the tab
@@ -194,7 +197,6 @@ class SwingScoringPanel(
 
     // False until the score settings open once for this project (see promptScoreSettingsOnFirstVisit)
     private var scoreSettingsReviewed = true
-    private var scoreSettingsBalloon: HintBalloon? = null
 
     // Settings that the open settings dialog shows on the video before the user saves them.
     private var scoreboardPreviewSettings: ScoreboardSettingsV1? = null
@@ -245,7 +247,10 @@ class SwingScoringPanel(
         onPrevious = { goToPreviousPoint() },
         onNext = { advanceToNextPoint() },
         onToggleFavorite = { toggleFavorite(selectedPointIndex); focusPlayer() },
-        onOutcome = { outcome -> setOutcomeForSelectedPoint(outcome) },
+        onOutcome = { outcome ->
+            setOutcomeForSelectedPoint(outcome)
+            showScoringKeysHint()
+        },
         onServe = { server -> markServerForSelectedPoint(server) },
         onManualGame = { winner -> toggleManualMark(manualGameWins, winner) },
         onManualSet = { winner -> toggleManualMark(manualSetWins, winner) },
@@ -692,8 +697,14 @@ class SwingScoringPanel(
         bind(AppShortcuts.SCORE_NO_POINT.keyStroke, "scoreNone") { setOutcomeForSelectedPoint(Outcome.NONE) }
         bind(AppShortcuts.SCORE_PLAYER_2.keyStroke, "scoreP2") { setOutcomeForSelectedPoint(Outcome.P2) }
         // R advances to the next point and starts playback; Shift+R steps back
-        bind(AppShortcuts.NEXT_POINT.keyStroke, "nextPoint") { advanceToNextPoint() }
-        bind(AppShortcuts.PREVIOUS_POINT.keyStroke, "previousPoint") { goToPreviousPoint() }
+        bind(AppShortcuts.NEXT_POINT.keyStroke, "nextPoint") {
+            hints.dismiss(HintId.SCORING_KEYS)
+            advanceToNextPoint()
+        }
+        bind(AppShortcuts.PREVIOUS_POINT.keyStroke, "previousPoint") {
+            hints.dismiss(HintId.SCORING_KEYS)
+            goToPreviousPoint()
+        }
         bind(AppShortcuts.TOGGLE_FAVORITE.keyStroke, "toggleFavorite") { toggleFavorite(selectedPointIndex) }
         // S switches the server of the selected point
         bind(AppShortcuts.SWITCH_SERVE.keyStroke, "switchServe") { switchServerForSelectedPoint() }
@@ -752,6 +763,7 @@ class SwingScoringPanel(
         refreshScoring()
         refreshVideoScoreboardOverlay()
         focusPlayer()
+        showServeMarkHint()
     }
 
     /** Manual scoring: marks [winner] in [marks] for the selected point, or clears the mark when it is already there. */
@@ -788,6 +800,7 @@ class SwingScoringPanel(
         refreshScoring()
         refreshVideoScoreboardOverlay()
         focusPlayer()
+        if (serverMarks.isNotEmpty()) hints.dismiss(HintId.SERVE_MARK)
     }
 
     /** Makes the other player the server of the selected point. Without a known server, player 1 serves. */
@@ -838,24 +851,29 @@ class SwingScoringPanel(
     }
 
     private fun showScoreSettingsHint(): Unit = uiSafe {
-        if (!isActive || scoreSettingsHint.isDismissed()) return@uiSafe
-        hideScoreSettingsHint()
-        val balloon = HintBalloon(
-            "You can change the scoring settings at any time with this button.",
-            HintBalloon.Placement.ABOVE,
-        ) {
-            scoreSettingsBalloon = null
-            uiSafe { scoreSettingsHint.dismiss() }
-            focusPlayer()
-        }
-        scoreSettingsBalloon = balloon
-        balloon.showAt(scoreSettingsButton)
+        if (!isActive) return@uiSafe
+        hints.show(HintId.SCORE_SETTINGS, scoreSettingsButton, SCORE_SETTINGS_HINT, HintBalloon.Placement.ABOVE) { focusPlayer() }
     }
 
-    /** Removes the score settings balloon from the screen. The hint stays for the next automatic dialog. */
-    private fun hideScoreSettingsHint() {
-        scoreSettingsBalloon?.hideBalloon()
-        scoreSettingsBalloon = null
+    /** After a click on a winner button: R and Shift+R move to the next and the previous point. */
+    private fun showScoringKeysHint(): Unit = uiSafe {
+        if (!isActive) return@uiSafe
+        hints.show(HintId.SCORING_KEYS, scorePanel.nextButton, SCORING_KEYS_HINT, HintBalloon.Placement.LEFT) { focusPlayer() }
+    }
+
+    /** When 3 points have a winner and no point has a serve mark: one mark gives the serve statistics. */
+    private fun showServeMarkHint(): Unit = uiSafe {
+        if (!isActive || serverMarks.isNotEmpty()) return@uiSafe
+        val won = points.count { outcomesByPointId[it.id].let { outcome -> outcome == Outcome.P1 || outcome == Outcome.P2 } }
+        if (won < SERVE_HINT_POINTS) return@uiSafe
+        hints.show(HintId.SERVE_MARK, scorePanel.player1.serveButton, SERVE_MARK_HINT, HintBalloon.Placement.LEFT) { focusPlayer() }
+    }
+
+    /** Removes the hints of this tab from the screen. They show again at their next trigger. */
+    private fun hideHints() {
+        hints.hide(HintId.SCORE_SETTINGS)
+        hints.hide(HintId.SCORING_KEYS)
+        hints.hide(HintId.SERVE_MARK)
     }
 
     /** Opens the score settings: player names and colors, the match format, and manual scoring. */
@@ -971,5 +989,13 @@ class SwingScoringPanel(
     private companion object {
         /** The width of the side column in the design (380 px). */
         const val SIDE_COLUMN_WIDTH = 380
+
+        const val SCORE_SETTINGS_HINT = "You can change the scoring settings at any time with this button."
+        const val SCORING_KEYS_HINT = "Press R to go to the next point and play it. Press Shift+R to go back. Q, W, and E give the point."
+        const val SERVE_MARK_HINT = "Click the racket of the player who serves, on one point. " +
+            "The app then tracks the serve for the whole match, and Stats shows the serve and break point statistics."
+
+        /** The serve hint shows when this number of points has a winner. */
+        const val SERVE_HINT_POINTS = 3
     }
 }

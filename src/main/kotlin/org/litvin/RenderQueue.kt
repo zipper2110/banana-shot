@@ -69,7 +69,15 @@ data class RenderJob(
 data class ActiveQueueSnapshot(
     val current: RenderJob?,
     val queued: List<RenderJob>,
-)
+) {
+    /** The number of exports that run or wait in the queue. A completed, failed or canceled current job is not counted. */
+    val activeCount: Int
+        get() {
+            val status = current?.status
+            val currentActive = status == RenderStatus.RUNNING || status == RenderStatus.QUEUED
+            return (if (currentActive) 1 else 0) + queued.size
+        }
+}
 
 /**
  * Global queue manager: single worker thread consumes jobs sequentially.

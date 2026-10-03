@@ -9,6 +9,8 @@ import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.AppIcon
 import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.HintController
+import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.commons.Palette
@@ -23,7 +25,7 @@ import org.litvin.ui.tabs.export.SwingExportPanel
 import org.litvin.ui.tabs.points.SwingPointsPanel
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
-import org.litvin.ui.tabs.scoring.PreferencesScoreSettingsHint
+import org.litvin.ui.commons.PreferencesHintRegistry
 import org.litvin.ui.tabs.scoring.PreferencesScoreboardStyleDefaults
 import org.litvin.ui.tabs.scoring.SwingScoringPanel
 import org.litvin.ui.tabs.stats.SwingStatsPanel
@@ -45,6 +47,8 @@ import java.awt.CardLayout
 import java.awt.Desktop
 import java.awt.Dimension
 import java.awt.EventQueue
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.io.File
@@ -67,6 +71,11 @@ object SwingApplicationFactory {
     private const val CARD_TEST = "test"
     private const val SIDEBAR_BUTTON_GAP = 6
     private const val SIDEBAR_GROUP_GAP = 28
+    private const val HELP_BUTTON_HINT = "Help is always here. Each tab has its own help page. Press F1 on any tab."
+    private const val GO_TO_SCORING_HINT = "When you finish marking, go to Scoring and give each point a winner."
+
+    /** The Scoring hint shows when the project has this number of marked points. */
+    private const val GO_TO_SCORING_POINTS = 4
     private const val CONTACT_EMAIL = "leetvin@gmail.com"
     private val CONTACT = URI("mailto:$CONTACT_EMAIL")
 
@@ -153,12 +162,14 @@ object SwingApplicationFactory {
             val cards = JPanel(CardLayout())
             val cardLayout = cards.layout as CardLayout
             val applicationPreferences = services.preferences.node(PreferencesProvider.APPLICATION)
+            val hints = HintController(PreferencesHintRegistry(applicationPreferences))
 
             val pointsPanel = SwingPointsPanel(
                 services.mediaPlayers.create(MediaScreen.POINTS),
                 services.adjustments,
                 services.executors.createExecutor("points-autosave"),
                 services.dialogs,
+                hints,
             )
             closeActions += pointsPanel::close
 
@@ -176,13 +187,12 @@ object SwingApplicationFactory {
             closeActions += cropRotatePanel::dispose
 
             val scoringPreferences = services.preferences.node(PreferencesProvider.SCORING)
-            val scoreSettingsHint = PreferencesScoreSettingsHint(scoringPreferences)
             val scoringPanel = SwingScoringPanel(
                 services.mediaPlayers.create(MediaScreen.SCORING),
                 services.adjustments,
                 services.dialogs,
                 PreferencesScoreboardStyleDefaults(scoringPreferences),
-                scoreSettingsHint = scoreSettingsHint,
+                hints = hints,
             )
             closeActions += scoringPanel::close
             scoringPanel.onGoToPoint = { pointId ->
@@ -207,6 +217,7 @@ object SwingApplicationFactory {
                 services.filePicker,
                 services.dialogs,
                 services.encoderCapabilities,
+                hints,
             )
             closeActions += exportPanel::close
 
@@ -254,6 +265,8 @@ object SwingApplicationFactory {
                     CARD_SCORING -> scoringPanel.onDeactivated()
                     CARD_TEST -> testPanel?.onDeactivated()
                 }
+                // The Scoring hint points at the Scoring button while the Points tab is open. Scoring is the action that it teaches.
+                if (card == CARD_SCORING) hints.dismiss(HintId.GO_TO_SCORING) else hints.hide(HintId.GO_TO_SCORING)
                 cardLayout.show(cards, card)
                 when (card) {
                     CARD_PROJECTS -> projectsPanel.onActivated()
@@ -299,7 +312,6 @@ object SwingApplicationFactory {
                     btnCropRotate.isVisible = true
                     btnScoring.isVisible = true
                     btnStats.isVisible = true
-                    btnExport.isVisible = true
                     btnTest?.isVisible = true
                     projectGroups.forEach { it.isVisible = true }
                     sidebar.revalidate()
@@ -338,6 +350,9 @@ object SwingApplicationFactory {
                 goTo(CARD_SCORING)
             }.apply { name = "nav-scoring" }
             addItem(btnScoring, groupMatch)
+            pointsPanel.onMarkedPointCount = { count ->
+                if (count >= GO_TO_SCORING_POINTS) hints.show(HintId.GO_TO_SCORING, btnScoring, GO_TO_SCORING_HINT)
+            }
             btnStats = UiStyles.sidebarButton("Stats", UiStyles.statsIcon()) {
                 showTitle("Statistics")
                 goTo(CARD_STATS)
@@ -361,6 +376,15 @@ object SwingApplicationFactory {
                 goTo(CARD_EXPORT)
             }.apply { name = "nav-export" }
             addItem(btnExport)
+            // The export queue does not depend on the project, so the Export button always shows (B-32).
+            // The badge shows the number of running and queued exports.
+            fun showExportCount(count: Int) {
+                btnExport.badgeCount = count
+                btnExport.accessibleContext.accessibleDescription =
+                    if (count > 0) "$count running or queued export(s)" else null
+            }
+            exportPanel.onActiveExportCountChanged = ::showExportCount
+            showExportCount(exportPanel.activeExportCount)
             val analytics = services.analyticsController
             val analyticsConfig = services.analyticsConfig as? AnalyticsBuildConfig.Enabled
             if (testEnabled) {
@@ -371,14 +395,19 @@ object SwingApplicationFactory {
                 addItem(btnTest!!)
             }
             sidebar.add(Box.createVerticalGlue())
-            sidebar.add(UiStyles.sidebarButton("Help", UiStyles.helpIcon()) {
+            fun openContextHelp() {
+                hints.dismiss(HintId.HELP_BUTTON)
                 showHelp(currentHelpPage())
+            }
+            val btnHelp = UiStyles.sidebarButton("Help", UiStyles.helpIcon()) {
+                openContextHelp()
             }.apply {
                 name = "nav-help"
                 toolTipText = "F1 - Help"
                 alignmentX = 0f
                 maximumSize = Dimension(Int.MAX_VALUE, 64)
-            })
+            }
+            sidebar.add(btnHelp)
             sidebar.add(Box.createRigidArea(Dimension(0, 6)))
             val moreDialog = lazy {
                 val privacyPage = if (analytics != null && analyticsConfig != null && services.analyticsPreferences != null) {
@@ -394,7 +423,7 @@ object SwingApplicationFactory {
                             SettingsPage(
                                 services.paths.root,
                                 onShowHintsAgain = {
-                                    scoreSettingsHint.reset()
+                                    hints.resetAll()
                                     HelpPreferences.resetFirstLaunchOverview(applicationPreferences)
                                 },
                                 onOpenFolder = ::openWithDesktop,
@@ -432,7 +461,6 @@ object SwingApplicationFactory {
             btnCropRotate.isVisible = false
             btnScoring.isVisible = false
             btnStats.isVisible = false
-            btnExport.isVisible = false
             projectGroups.forEach { it.isVisible = false }
 
             frame.add(sidebar, BorderLayout.WEST)
@@ -441,7 +469,7 @@ object SwingApplicationFactory {
                 .put(KeyStroke.getKeyStroke(AppShortcuts.HELP.keyStroke), "openContextHelp")
             frame.rootPane.actionMap.put("openContextHelp", object : AbstractAction() {
                 override fun actionPerformed(event: java.awt.event.ActionEvent?) {
-                    showHelp(currentHelpPage())
+                    openContextHelp()
                 }
             })
 
@@ -472,8 +500,23 @@ object SwingApplicationFactory {
             btnProjects.doClick()
             frame.isVisible = show
 
+            // The first start shows the consent question, then the Overview help, then the hint at the Help button.
+            fun showFirstLaunchOverview() {
+                if (!HelpPreferences.claimFirstLaunchOverview(applicationPreferences)) return
+                showHelp(HelpPage.OVERVIEW, currentHelpPage())
+                helpDialog.value.addComponentListener(object : ComponentAdapter() {
+                    override fun componentHidden(e: ComponentEvent) {
+                        helpDialog.value.removeComponentListener(this)
+                        hints.show(HintId.HELP_BUTTON, btnHelp, HELP_BUTTON_HINT)
+                    }
+                })
+            }
+            var askConsent = false
             if (show && analytics != null && analyticsConfig != null && services.analyticsPreferences?.resolve()?.needsChoice == true) {
-                EventQueue.invokeLater { AnalyticsConsentDialog.show(frame, analytics, analyticsConfig.privacyUrl) }
+                askConsent = true
+                EventQueue.invokeLater {
+                    AnalyticsConsentDialog.show(frame, analytics, analyticsConfig.privacyUrl, onClosed = { showFirstLaunchOverview() })
+                }
             }
 
             if (shouldShowGpuRestartNotification(show, testEnabled, WindowsGpuPreference.wasChangeApplied())) {
@@ -487,9 +530,7 @@ object SwingApplicationFactory {
                     DialogKit.WIDE,
                 )
             }
-            if (show && HelpPreferences.claimFirstLaunchOverview(applicationPreferences)) {
-                showHelp(HelpPage.OVERVIEW, currentHelpPage())
-            }
+            if (show && !askConsent) showFirstLaunchOverview()
 
             return handle
         } catch (failure: Throwable) {

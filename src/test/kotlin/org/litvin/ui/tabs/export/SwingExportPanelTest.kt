@@ -5,6 +5,7 @@ import org.junit.jupiter.api.io.TempDir
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.CompletedRender
 import org.litvin.RenderJob
+import org.litvin.RenderStatus
 import org.litvin.adjustments.AdjustmentsIO
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.AdjustmentsV1
@@ -28,6 +29,8 @@ import java.util.prefs.AbstractPreferences
 import javax.swing.JButton
 import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SwingExportPanelTest {
     @Test
@@ -68,6 +71,99 @@ class SwingExportPanelTest {
         }
     }
 
+    @Test
+    fun withNoProjectTheLeftColumnShowsANoticeAndTheSettingsShowAfterAProjectOpens(@TempDir root: File) {
+        val scheduler = ScheduledThreadPoolExecutor(1)
+        val adjustments = AdjustmentsSession(scheduler, saveDelayMs = 60_000L)
+        val manifest = createProject(root, "a", AdjustmentsV1())
+        var panel: SwingExportPanel? = null
+        try {
+            SwingUtilities.invokeAndWait {
+                panel = newPanel(RecordingRenderService(), adjustments, root)
+                assertTrue(findNamed(panel!!, "export-no-project").isVisible)
+                assertFalse(isShownInPanel(findButton(panel!!, "export-initialize"), panel!!))
+
+                panel!!.setProjectManifest(manifest)
+                assertFalse(findNamed(panel!!, "export-no-project").isVisible)
+                assertTrue(isShownInPanel(findButton(panel!!, "export-initialize"), panel!!))
+
+                panel!!.setProjectManifest(null)
+                assertTrue(findNamed(panel!!, "export-no-project").isVisible)
+            }
+        } finally {
+            SwingUtilities.invokeAndWait { panel?.close() }
+            adjustments.close()
+            scheduler.shutdownNow()
+        }
+    }
+
+    @Test
+    fun thePanelReportsTheNumberOfRunningAndQueuedExports(@TempDir root: File) {
+        val scheduler = ScheduledThreadPoolExecutor(1)
+        val adjustments = AdjustmentsSession(scheduler, saveDelayMs = 60_000L)
+        val render = RecordingRenderService()
+        val counts = mutableListOf<Int>()
+        var panel: SwingExportPanel? = null
+        try {
+            SwingUtilities.invokeAndWait {
+                panel = newPanel(render, adjustments, root)
+                panel!!.onActiveExportCountChanged = { counts += it }
+            }
+            val running = job("running").apply { status = RenderStatus.RUNNING }
+            render.push(ActiveQueueSnapshot(current = running, queued = listOf(job("q1"), job("q2"))))
+            SwingUtilities.invokeAndWait { }
+            render.push(ActiveQueueSnapshot(current = running.copy(status = RenderStatus.COMPLETED), queued = emptyList()))
+            SwingUtilities.invokeAndWait { }
+
+            assertEquals(listOf(0, 3, 0), counts)
+            assertEquals(0, panel!!.activeExportCount)
+        } finally {
+            SwingUtilities.invokeAndWait { panel?.close() }
+            adjustments.close()
+            scheduler.shutdownNow()
+        }
+    }
+
+    private fun newPanel(render: RenderService, adjustments: AdjustmentsSession, root: File) = SwingExportPanel(
+        ExportSettingsPreferences(MemoryPreferences()),
+        render,
+        adjustments,
+        EmptyCompletedRendersRepository,
+        FixedFilePicker(File(root, "export.mp4")),
+        AcceptingDialogs(),
+        CompletableFuture.completedFuture(EncoderCapabilities.NONE),
+    )
+
+    private fun job(id: String) = RenderJob(
+        id = id,
+        sourcePath = "in.mp4",
+        presetId = "p",
+        outWidth = 1280,
+        outHeight = 720,
+        encoderLabel = "x264",
+        idleTrim = true,
+        outputPath = "$id.mp4",
+    )
+
+    /** True when [component] and all its parents up to [panel] are visible. A hidden card hides its children. */
+    private fun isShownInPanel(component: Component, panel: Component): Boolean {
+        var current: Component? = component
+        while (current != null && current !== panel) {
+            if (!current.isVisible) return false
+            current = current.parent
+        }
+        return current === panel
+    }
+
+    private fun findNamed(root: Component, name: String): Component =
+        checkNotNull(findNamedOrNull(root, name)) { "No component named $name" }
+
+    private fun findNamedOrNull(root: Component, name: String): Component? {
+        if (root.name == name) return root
+        if (root !is Container) return null
+        return root.components.firstNotNullOfOrNull { findNamedOrNull(it, name) }
+    }
+
     private fun createProject(root: File, name: String, projectAdjustments: AdjustmentsV1): String {
         val dir = File(root, name).apply { mkdirs() }
         val video = File(root, "$name.mp4").apply { writeText("video") }
@@ -98,10 +194,16 @@ class SwingExportPanelTest {
 
     private class RecordingRenderService : RenderService {
         val jobs = mutableListOf<RenderJob>()
+        private val observers = mutableListOf<(ActiveQueueSnapshot) -> Unit>()
+        fun push(snapshot: ActiveQueueSnapshot) = observers.forEach { it(snapshot) }
         override fun enqueue(job: RenderJob) { jobs += job }
         override fun cancelCurrent() = Unit
         override fun cancelQueued(jobId: String) = false
-        override fun observe(observer: (ActiveQueueSnapshot) -> Unit): AutoCloseable = AutoCloseable { }
+        override fun observe(observer: (ActiveQueueSnapshot) -> Unit): AutoCloseable {
+            observers += observer
+            observer(ActiveQueueSnapshot(current = null, queued = emptyList()))
+            return AutoCloseable { observers -= observer }
+        }
         override fun close() = Unit
     }
 

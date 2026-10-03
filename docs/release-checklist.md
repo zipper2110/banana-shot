@@ -40,6 +40,9 @@ the features of this release.
 - [ ] Download the workflow artifact.
 - [ ] Review the Maven dependency licenses and the SBOM
       (`bananashot-sbom.json`).
+- [ ] "Java libraries" in `distribution/THIRD-PARTY-NOTICES.txt` lists each
+      library of the SBOM with its version. The end of the file has the full
+      text of each license that the list names.
 
 ## 6. Packaged app
 

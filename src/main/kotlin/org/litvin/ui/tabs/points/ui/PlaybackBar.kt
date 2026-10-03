@@ -77,7 +77,7 @@ internal class PlaybackBar(
     val speed = SpeedControl("points-speed", onSpeedIndex)
     private val commentButton = UiButton("Add comment", Material2AL.ADD_COMMENT, buttonHeight = 40).apply {
         name = "points-add-comment"
-        toolTipText = "Add a comment at the playhead"
+        toolTipText = "Add a comment at the playhead. To show the comments in the exported video, select Comments in the Export tab."
         // Space must stay the play hotkey, so the bar buttons never keep the focus.
         isFocusable = false
     }

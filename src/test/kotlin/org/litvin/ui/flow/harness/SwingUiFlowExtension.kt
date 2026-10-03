@@ -17,6 +17,8 @@ import org.litvin.export.FileCompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
 import org.litvin.export.ProductionRenderService
 import org.litvin.projects.FileProjectsRepository
+import org.litvin.ui.commons.HintId
+import org.litvin.ui.commons.PreferencesHintRegistry
 import org.litvin.ui.flow.driver.RobotSwingDriver
 import org.litvin.ui.flow.driver.SwingUiDriver
 import org.litvin.ui.flow.fakes.FakeMediaPlayerFactory
@@ -73,6 +75,8 @@ class SwingUiFlowExtension(
         val failures = CopyOnWriteArrayList<Throwable>()
         val preferences = InMemoryPreferencesProvider().apply {
             node(PreferencesProvider.APPLICATION).putBoolean("help.overviewShown", true)
+            // The hint balloons can cover the controls that the tests click.
+            HintId.entries.forEach { node(PreferencesProvider.APPLICATION).putBoolean(PreferencesHintRegistry.key(it), true) }
         }
         lifecycleOrdinal = 0
 

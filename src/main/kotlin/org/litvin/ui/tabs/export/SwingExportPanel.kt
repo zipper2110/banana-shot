@@ -11,6 +11,7 @@ import org.litvin.export.ProductionRenderService
 import org.litvin.export.RenderService
 import org.litvin.RenderStatus
 import org.litvin.export.ExportChunkPlanner
+import org.litvin.export.ExportFailureAdvice
 import org.litvin.export.ExportPlanner
 import org.litvin.export.ExportPointSummary
 import org.litvin.export.ExportReadiness
@@ -30,6 +31,9 @@ import org.litvin.stats.StatsCardVideo
 import org.litvin.stats.StatsIO
 import org.litvin.stats.StatsSettingsV1
 import org.litvin.ui.commons.FilePicker
+import org.litvin.ui.commons.HintBalloon
+import org.litvin.ui.commons.HintController
+import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SystemFilePicker
 import org.litvin.ui.commons.SwingUserDialogService
@@ -60,6 +64,7 @@ class SwingExportPanel(
     private val filePicker: FilePicker,
     private val dialogs: UserDialogService,
     encoderCapabilities: CompletableFuture<EncoderCapabilities>,
+    private val hints: HintController = HintController.NONE,
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
         ExportSettingsPreferences(),
@@ -74,6 +79,12 @@ class SwingExportPanel(
     private val logger = KotlinLogging.logger {}
     private val closed = AtomicBoolean(false)
     private var queueSubscription: AutoCloseable? = null
+
+    /** Called on the EDT with the number of running and queued exports, after each change of the queue. */
+    var onActiveExportCountChanged: ((Int) -> Unit)? = null
+
+    /** The number of running and queued exports in the last snapshot of the queue. */
+    val activeExportCount: Int get() = activeCount(lastSnapshot)
 
     fun onActivated() {
         // Ensure Completed list reflects latest persisted items (global across projects)
@@ -122,6 +133,8 @@ class SwingExportPanel(
         addActionListener { onInitializeRender() }
     }
     private val footer = ExportFooter(initButton)
+    // The left column: the export settings, or a notice when no project is open
+    private val leftCards = JPanel(CardLayout())
 
     // Right side: one table with the active export, the queue and the completed exports
     private val exportsTable = ExportsTable(renderService, completedRepository, dialogs, onCancelActive = { cancelActiveExport() })
@@ -156,14 +169,20 @@ class SwingExportPanel(
             horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             applyDarkScrollbar(this, Palette.CARD)
         }
-        val left = JPanel(BorderLayout()).apply {
+        val settings = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            add(scroll, BorderLayout.CENTER)
+            add(footer, BorderLayout.SOUTH)
+        }
+        val left = leftCards.apply {
             background = Palette.CARD
             border = BorderFactory.createMatteBorder(0, 0, 0, 1, Palette.LINE)
             preferredSize = Dimension(LEFT_WIDTH, 10)
             minimumSize = Dimension(LEFT_WIDTH, 10)
-            add(scroll, BorderLayout.CENTER)
-            add(footer, BorderLayout.SOUTH)
+            add(settings, LEFT_SETTINGS)
+            add(NoProjectNotice(), LEFT_NO_PROJECT)
         }
+        showLeftCard()
 
         add(left, BorderLayout.WEST)
         add(exportsTable, BorderLayout.CENTER)
@@ -237,17 +256,26 @@ class SwingExportPanel(
         queueSubscription = renderService.observe { snap ->
             SwingUtilities.invokeLater {
                 lastSnapshot = snap
+                onActiveExportCountChanged?.invoke(activeCount(snap))
                 updateStartButtonText(snap)
                 exportsTable.showSnapshot(snap)
                 val cur = snap.current
+                if (cur?.status == RenderStatus.RUNNING) showExportQueueHint()
                 if (cur?.status == RenderStatus.COMPLETED) refreshCompletedFromStore()
                 if (cur?.status == RenderStatus.FAILED && lastFailureNotifiedJobId != cur.id) {
                     lastFailureNotifiedJobId = cur.id
-                    dialogs.showError(this, cur.failureReason ?: "Unknown error", "Export failed")
+                    val message = listOfNotNull(cur.failureReason ?: "Unknown error", ExportFailureAdvice.of(cur)).joinToString("\n\n")
+                    dialogs.showError(this, message, "Export failed")
                 }
             }
         }
         updateFooter()
+    }
+
+    /** While an export runs: the user can continue to edit, and more exports go into a queue. */
+    private fun showExportQueueHint() {
+        if (!isShowing) return
+        hints.show(HintId.EXPORT_QUEUE, exportsTable.activeExportRow, EXPORT_QUEUE_HINT, HintBalloon.Placement.ABOVE)
     }
 
     private fun cancelActiveExport() {
@@ -266,12 +294,19 @@ class SwingExportPanel(
 
     fun setProjectManifest(path: String?) {
         manifestPath = path
+        showLeftCard()
         refreshSourceInfo()
         updatePointsSummary()
         updateFavoriteOnlyAvailability()
         updateInitButtonState()
         updateScoreboardDefault()
         updateCommentsDefault()
+    }
+
+    /** The export settings need an open project. Without a project, the left column shows a notice. */
+    private fun showLeftCard() {
+        val card = if (manifestPath.isNullOrBlank()) LEFT_NO_PROJECT else LEFT_SETTINGS
+        (leftCards.layout as CardLayout).show(leftCards, card)
     }
 
     private fun idleTrimSelected(): Boolean = !fullVideoCard.isSelected
@@ -678,23 +713,51 @@ class SwingExportPanel(
         }
     }
 
-    private fun hasActiveExports(snapshot: ActiveQueueSnapshot?): Boolean {
-        if (snapshot == null) return false
-        val current = snapshot.current
-        val running = current != null && (current.status == RenderStatus.RUNNING || current.status == RenderStatus.QUEUED)
-        return running || snapshot.queued.isNotEmpty()
-    }
+    private fun hasActiveExports(snapshot: ActiveQueueSnapshot?): Boolean = activeCount(snapshot) > 0
+
+    private fun activeCount(snapshot: ActiveQueueSnapshot?): Int = snapshot?.activeCount ?: 0
 
     private companion object {
         const val LEFT_WIDTH = 440
+        const val LEFT_SETTINGS = "settings"
+        const val LEFT_NO_PROJECT = "no-project"
         const val START_EXPORT = "Start export"
         const val ENQUEUE_EXPORT = "Enqueue export"
         const val INIT_BUTTON_TOOLTIP = "Choose an output file and start the export."
+        const val EXPORT_QUEUE_HINT = "You can continue to edit while the export runs. More exports can go into a queue."
         const val INIT_BLOCKED_TITLE = "Cannot start export"
     }
 }
 
 /** The bottom of the left column: the estimated file size and the settings on the left, the start button on the right. */
+/** The left column when no project is open. The export table on the right still shows all exports. */
+private class NoProjectNotice : JPanel(GridBagLayout()) {
+    init {
+        name = "export-no-project"
+        isOpaque = false
+        val text = JPanel().apply {
+            isOpaque = false
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            add(line("No project is open", ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG))
+            add(Box.createVerticalStrut(8))
+            add(line("Open a project to set up a new export.", ExportUi.font(13f), Palette.FG_2))
+        }
+        add(text, GridBagConstraints().apply {
+            fill = GridBagConstraints.HORIZONTAL
+            weightx = 1.0
+            insets = Insets(0, 20, 0, 20)
+        })
+    }
+
+    // The label fills the width of the column, so that the text has room and does not clip.
+    private fun line(text: String, font: Font, color: Color) = JLabel(text, SwingConstants.CENTER).apply {
+        this.font = font
+        foreground = color
+        alignmentX = CENTER_ALIGNMENT
+        maximumSize = Dimension(Int.MAX_VALUE, preferredSize.height)
+    }
+}
+
 private class ExportFooter(private val button: StartExportButton) : JPanel(null) {
     private val sizeText = WrapText("", ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG, lineHeight = 1.45f).apply {
         name = "export-footer-size"

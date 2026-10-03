@@ -7,6 +7,7 @@ import java.awt.Font
 import java.awt.GradientPaint
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.Rectangle
 import java.awt.RenderingHints
 import javax.swing.AbstractButton
 import javax.swing.BorderFactory
@@ -14,6 +15,7 @@ import javax.swing.BoxLayout
 import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 // Ikonli (icon packs)
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.feather.Feather
@@ -146,6 +148,15 @@ object UiStyles {
     class SidebarButton(text: String, icon: Icon) : JButton(text) {
         var active: Boolean = false
             set(value) { field = value; repaint() }
+
+        /** The number in the badge at the top right of the icon. Zero hides the badge. */
+        var badgeCount: Int = 0
+            set(value) {
+                if (field == value) return
+                field = value
+                repaint()
+            }
+
         init {
             this.icon = icon
             // Center icon and place text under the icon
@@ -187,6 +198,58 @@ object UiStyles {
             // text color
             foreground = if (active) Palette.FG_STRONG else Palette.FG
             super.paintComponent(g)
+            if (badgeCount > 0) paintBadge(g2)
+        }
+
+        private fun paintBadge(g2: Graphics2D) {
+            val iconBounds = iconBounds() ?: return
+            val label = if (badgeCount > MAX_BADGE_COUNT) "$MAX_BADGE_COUNT+" else badgeCount.toString()
+            g2.font = BADGE_FONT
+            val metrics = g2.fontMetrics
+            val pillHeight = BADGE_HEIGHT
+            val pillWidth = maxOf(pillHeight, metrics.stringWidth(label) + 2 * BADGE_PADDING)
+            // The badge sits on the top right corner of the icon.
+            val x = iconBounds.x + iconBounds.width - pillHeight / 2
+            // The ring must stay inside the button, or the button edge cuts it.
+            val y = maxOf(iconBounds.y - pillHeight / 2 + 2, BADGE_RING)
+            // A ring in the color behind the badge separates the badge from the icon.
+            g2.color = when {
+                active -> Palette.ROW_HOVER
+                model.isRollover -> Palette.RAISED_2
+                else -> parent?.background ?: Palette.BG
+            }
+            val ring = BADGE_RING
+            g2.fillRoundRect(x - ring, y - ring, pillWidth + 2 * ring, pillHeight + 2 * ring, pillHeight + 2 * ring, pillHeight + 2 * ring)
+            // Blue contrasts with the lime icons, so the badge is easy to see.
+            g2.color = Palette.BLUE
+            g2.fillRoundRect(x, y, pillWidth, pillHeight, pillHeight, pillHeight)
+            g2.color = Palette.ON_LIGHT
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+            val textX = x + (pillWidth - metrics.stringWidth(label)) / 2
+            val textY = y + (pillHeight - metrics.height) / 2 + metrics.ascent
+            g2.drawString(label, textX, textY)
+        }
+
+        /** The place of the icon, from the same layout that the button look uses. */
+        private fun iconBounds(): Rectangle? {
+            val icon = icon ?: return null
+            val insets = insets
+            val view = Rectangle(insets.left, insets.top, width - insets.left - insets.right, height - insets.top - insets.bottom)
+            val iconRect = Rectangle()
+            SwingUtilities.layoutCompoundLabel(
+                this, getFontMetrics(font), text, icon,
+                verticalAlignment, horizontalAlignment, verticalTextPosition, horizontalTextPosition,
+                view, iconRect, Rectangle(), iconTextGap,
+            )
+            return iconRect
+        }
+
+        private companion object {
+            const val MAX_BADGE_COUNT = 99
+            const val BADGE_HEIGHT = 16
+            const val BADGE_PADDING = 5
+            const val BADGE_RING = 2
+            val BADGE_FONT = Font(Font.SANS_SERIF, Font.BOLD, 10)
         }
     }
 

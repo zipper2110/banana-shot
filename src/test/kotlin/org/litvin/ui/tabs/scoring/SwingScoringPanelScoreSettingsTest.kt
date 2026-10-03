@@ -19,6 +19,10 @@ import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStyleId
+import org.litvin.ui.commons.HintBalloon
+import org.litvin.ui.commons.HintController
+import org.litvin.ui.commons.HintId
+import org.litvin.ui.commons.HintRegistry
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.tabs.scoring.ui.ScoreSettings
 import org.litvin.ui.tabs.scoring.ui.ScoreSettingsEditor
@@ -119,7 +123,7 @@ class SwingScoringPanelScoreSettingsTest {
     @Test
     fun hintShowsAfterEachAutomaticDialogUntilTheUserClosesIt() {
         assumeFalse(GraphicsEnvironment.isHeadless())
-        val hint = MemoryHint()
+        val hint = MemoryHints()
         val editor = RecordingEditor { null }
         SwingUtilities.invokeAndWait {
             panel = createPanel(ScoreboardStyleDefaults.NONE, editor, hint).apply { setProjectManifest(manifestPath) }
@@ -136,7 +140,7 @@ class SwingScoringPanelScoreSettingsTest {
 
         SwingUtilities.invokeAndWait { panel!!.onDeactivated() }
         assertFalse(balloonShown(), "Leaving the tab removes the balloon")
-        assertFalse(hint.isDismissed(), "Leaving the tab does not close the hint for good")
+        assertFalse(hint.isDismissed(HintId.SCORE_SETTINGS), "Leaving the tab does not close the hint for good")
 
         // The next project with no reviewed settings shows the dialog and the balloon again
         reopenWithUnreviewedSettings()
@@ -144,25 +148,15 @@ class SwingScoringPanelScoreSettingsTest {
         assertEquals(2, editor.calls.size)
         assertTrue(balloonShown())
 
-        SwingUtilities.invokeAndWait { (find(frame!!.layeredPane, "hint-balloon-close") as AbstractButton).doClick() }
+        SwingUtilities.invokeAndWait { (find(shownBalloonWindows().single(), "hint-balloon-close") as AbstractButton).doClick() }
         assertFalse(balloonShown())
-        assertTrue(hint.isDismissed(), "The close button closes the hint for good")
+        assertTrue(hint.isDismissed(HintId.SCORE_SETTINGS), "The close button closes the hint for good")
 
         SwingUtilities.invokeAndWait { panel!!.onDeactivated() }
         reopenWithUnreviewedSettings()
         activateAndFlush()
         assertEquals(3, editor.calls.size)
         assertFalse(balloonShown(), "A closed hint does not show again")
-    }
-
-    @Test
-    fun preferencesKeepTheClosedHint() {
-        val preferences = MemoryPreferences()
-        assertFalse(PreferencesScoreSettingsHint(preferences).isDismissed())
-
-        PreferencesScoreSettingsHint(preferences).dismiss()
-
-        assertTrue(PreferencesScoreSettingsHint(preferences).isDismissed())
     }
 
     @Test
@@ -195,8 +189,8 @@ class SwingScoringPanelScoreSettingsTest {
     private fun createPanel(
         defaults: ScoreboardStyleDefaults,
         editor: ScoreSettingsEditor,
-        hint: ScoreSettingsHint = ScoreSettingsHint.NONE,
-    ) = SwingScoringPanel(FakePlayer(), adjustments, dialogs, defaults, editor, hint)
+        hints: HintRegistry = HintRegistry.NONE,
+    ) = SwingScoringPanel(FakePlayer(), adjustments, dialogs, defaults, editor, HintController(hints))
 
     private fun reopenWithUnreviewedSettings() {
         ScoreIO.writeForProjectDir(projectDir.absolutePath, ScoreV1(scoreSettingsReviewed = false))
@@ -205,9 +199,13 @@ class SwingScoringPanelScoreSettingsTest {
 
     private fun balloonShown(): Boolean {
         var shown = false
-        SwingUtilities.invokeAndWait { shown = find(frame!!.layeredPane, "hint-balloon")?.isShowing == true }
+        SwingUtilities.invokeAndWait { shown = shownBalloonWindows().any { find(it, "hint-balloon")?.isShowing == true } }
         return shown
     }
+
+    /** The balloons are in their own windows, owned by the frame. */
+    private fun shownBalloonWindows(): List<Container> =
+        frame!!.ownedWindows.filter { it.name == HintBalloon.HOST_NAME && it.isShowing }
 
     private fun find(root: Container, name: String): Component? {
         for (child in root.components) {
@@ -232,15 +230,13 @@ class SwingScoringPanelScoreSettingsTest {
         }
     }
 
-    private class MemoryHint : ScoreSettingsHint {
-        private var dismissed = false
-        override fun isDismissed() = dismissed
-        override fun dismiss() {
-            dismissed = true
+    private class MemoryHints : HintRegistry {
+        private val dismissed = mutableSetOf<HintId>()
+        override fun isDismissed(hint: HintId) = hint in dismissed
+        override fun dismiss(hint: HintId) {
+            dismissed += hint
         }
-        override fun reset() {
-            dismissed = false
-        }
+        override fun resetAll() = dismissed.clear()
     }
 
     private class FixedDefaults(private val style: ScoreboardSettingsV1) : ScoreboardStyleDefaults {

@@ -19,6 +19,7 @@ import java.awt.event.ComponentEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.BorderFactory
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JViewport
@@ -110,6 +111,15 @@ class PointsTableView(
         // Calculate the rectangle from the index. After a rebuild, the new rows have empty bounds until the next
         // layout, and a scroll to an empty rectangle at (0, 0) moves the list to the top.
         rowsPanel.scrollRectToVisible(Rectangle(0, index * TableRow.HEIGHT, rowsPanel.width, TableRow.HEIGHT))
+    }
+
+    /** The row of the first marked point, or null when the list has no point or the row is scrolled out of view. */
+    fun firstPointRowInView(): JComponent? {
+        val index = rows.indexOfFirst { it is PointRow }
+        if (index < 0) return null
+        // The rows have a fixed height, so the rectangle is correct also before the next layout.
+        val rect = Rectangle(0, index * TableRow.HEIGHT, rowsPanel.width.coerceAtLeast(1), TableRow.HEIGHT)
+        return rows[index].takeIf { scroll.viewport.viewRect.intersects(rect) }
     }
 
     internal fun visibleTitles(): List<String> = rows.map { it.title }

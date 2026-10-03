@@ -16,6 +16,9 @@ import org.litvin.media.PlayerStatus
 import org.litvin.media.relativeSeekDeltaMs
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
+import org.litvin.ui.commons.HintBalloon
+import org.litvin.ui.commons.HintController
+import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SwingUserDialogService
@@ -52,6 +55,7 @@ class SwingPointsPanel(
     private val adjustments: AdjustmentsSession,
     autosaveExecutor: ExecutorService,
     private val dialogs: UserDialogService,
+    private val hints: HintController = HintController.NONE,
 ) : JPanel(BorderLayout()), AutoCloseable {
 
     constructor() : this(
@@ -107,8 +111,15 @@ class SwingPointsPanel(
         }
     }.apply { isRepeats = true }
 
+    /** Called on the EDT with the number of marked points, after each change while the tab is active. */
+    var onMarkedPointCount: ((Int) -> Unit)? = null
+
+    // True while the tab is open
+    private var active = false
+
     // Lifecycle hooks controlled by navigation
     fun onActivated() {
+        active = true
         refreshPointsFromProject()
         ensurePlayerLoaded()
         player.activatePreview("points activated")
@@ -132,6 +143,8 @@ class SwingPointsPanel(
     }
 
     fun onDeactivated() {
+        active = false
+        hints.hide(HintId.POINT_ROW)
         saveNow()
         player.pause()
         player.deactivatePreview("points deactivated")
@@ -472,6 +485,20 @@ class SwingPointsPanel(
             comments = commentDispatcher.state().comments.size,
         )
         markPanel.setState(dispatcher.getPendingStart()?.toLong(), player.currentTimeMs())
+        if (active) {
+            onMarkedPointCount?.invoke(points.size)
+            // The rows are built again after this call, so the hint waits for the new rows.
+            if (points.isNotEmpty()) EventQueue.invokeLater(::showPointRowHint)
+        }
+    }
+
+    /** After the first point: the actions of a row show only on hover, and A makes the selected point a favorite. */
+    private fun showPointRowHint() {
+        if (!active) return
+        val row = cardsView.firstPointRowInView() ?: return
+        hints.show(HintId.POINT_ROW, row, POINT_ROW_HINT, HintBalloon.Placement.LEFT) {
+            player.component.requestFocusInWindow()
+        }
     }
 
     private fun refreshPointsFromProject() {
@@ -604,10 +631,12 @@ class SwingPointsPanel(
             patch.label ?: existing.label,
         )
         maybeShowDispatcherHint()
+        hints.dismiss(HintId.POINT_ROW)
         if (updated) EventQueue.invokeLater { selectEventAndScroll("point:$id") }
     }
 
     private fun deletePoint(id: String) {
+        hints.dismiss(HintId.POINT_ROW)
         if (dispatcher.deletePoint(id)) setSelectedVisual(-1)
     }
 
@@ -634,6 +663,7 @@ class SwingPointsPanel(
     }
 
     private fun toggleFavorite(id: String) {
+        hints.dismiss(HintId.POINT_ROW)
         if (dispatcher.toggleFavorite(id)) {
             pushCardsState()
             timeline.repaint()
@@ -783,5 +813,10 @@ class SwingPointsPanel(
         player.onStatusChanged = null
         player.onReady = null
         player.close()
+    }
+
+    private companion object {
+        const val POINT_ROW_HINT = "Put the pointer on a row to show Favorite, Edit, and Delete. " +
+            "You can mark this point as a favorite. Click this row to go to point start."
     }
 }

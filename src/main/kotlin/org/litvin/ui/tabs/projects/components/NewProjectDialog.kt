@@ -141,7 +141,7 @@ class NewProjectDialog private constructor(
         return DialogKit.form(
             DialogKit.field("Project name", DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
             nameError,
-            DialogKit.field("Match video", videoRow),
+            DialogKit.field("Match video", videoRow, note = "The app never changes the video file."),
             videoError,
             videoExplanation,
             gap = 6,

@@ -47,7 +47,7 @@ class PrivacyPageTest {
                 "Telegram",
                 "90 days",
                 "does not keep the log files or your IP address",
-                "write to $CONTACT and give the report ID",
+                "write to $CONTACT. Give the report ID, or the date and the text of your message",
             ).forEach { assertTrue(it in text, it) }
         }
     }

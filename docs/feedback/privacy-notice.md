@@ -50,8 +50,8 @@ processes the report.
 - The copy in the Telegram chat of the author stays until the author deletes
   it.
 
-**How to ask for deletion.** Write to the contact address and give the report
-ID. The form shows the ID after the send. The author then deletes the report on
-the server and in the Telegram chat.
+**How to ask for deletion.** Write to the contact address. Give the report ID,
+or the date and the text of your message. The app shows the ID after the send.
+The author then deletes the report on the server and in the Telegram chat.
 
 **Contact.** The address is in More → Contact of the app.

@@ -36,7 +36,11 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
                 "The copy in the Telegram chat of the author stays until the author deletes it.",
             secondary = true,
         )
-        paragraph("To ask for the deletion of a report, write to $contactEmail and give the report ID.", secondary = true)
+        paragraph(
+            "To ask for the deletion of a report, write to $contactEmail. Give the report ID, or the date and " +
+                "the text of your message.",
+            secondary = true,
+        )
     }
 
     companion object {

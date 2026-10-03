@@ -1,5 +1,6 @@
 package org.litvin.ui.feedback
 
+import org.litvin.feedback.FeedbackFailure
 import org.litvin.feedback.FeedbackPreferences
 import org.litvin.feedback.FeedbackSendResult
 import org.litvin.feedback.FeedbackSender
@@ -34,8 +35,8 @@ class FeedbackPanelTest {
         node.removeNode()
     }
 
-    private fun presenter(withSender: Boolean) = DefaultFeedbackPresenter(
-        sender = if (withSender) FeedbackSender { FeedbackSendResult.Sent } else null,
+    private fun presenter(withSender: Boolean, result: FeedbackSendResult = FeedbackSendResult.Sent) = DefaultFeedbackPresenter(
+        sender = if (withSender) FeedbackSender { result } else null,
         readLog = { null },
         preferences = FeedbackPreferences(node),
         system = FeedbackSystemInfo("1.0.0", "Windows 11", "10.0", "21.0.4"),
@@ -62,11 +63,12 @@ class FeedbackPanelTest {
         generateSequence(component) { if (it === root) null else it.parent }.all { it.isVisible }
 
     @Test
-    fun `the user writes, sends, and sees thank you`() {
+    fun `the user writes and sends, then the form gives the thank-you text and is empty again`() {
         System.setProperty("java.awt.headless", "true")
         val presenter = presenter(withSender = true)
+        val sentTexts = mutableListOf<String>()
         SwingUtilities.invokeAndWait {
-            val panel = panel(presenter)
+            val panel = FeedbackPanel(presenter, onClose = {}, onSent = { sentTexts += it }).also { presenter.attach(it) }
             val send = find(panel, "feedback-send", AbstractButton::class.java)
             assertFalse(send.isEnabled)
             find(panel, "feedback-topic-1", AbstractButton::class.java).doClick()
@@ -76,31 +78,32 @@ class FeedbackPanelTest {
             assertFalse(find(panel, "feedback-copy", AbstractButton::class.java).isVisible)
 
             send.doClick()
-            assertEquals(FeedbackPhase.SENT, presenter.state.phase)
-            assertEquals(FeedbackTopic.IDEA, presenter.state.topic)
-            assertEquals("An idea", presenter.state.message)
-            assertFalse(send.isVisible)
-            assertTrue(find(panel, "feedback-new", AbstractButton::class.java).isVisible)
-            assertFalse(find(panel, "feedback-message", JTextArea::class.java).isEnabled)
+            assertTrue(sentTexts.single().startsWith("Thank you. The author has your report. Report ID: "), sentTexts.single())
+            assertNull(presenter.state.topic)
+            assertEquals("", find(panel, "feedback-message", JTextArea::class.java).text)
+            assertEquals("user@example.test", find(panel, "feedback-email", JTextField::class.java).text)
+            assertTrue(send.isVisible)
+            assertFalse(send.isEnabled)
+            assertTrue(all(panel).none { it.name == "feedback-new" }, "The form has no New report button")
         }
     }
 
     @Test
     fun `a longer status makes the form taller and asks the window for a new size`() {
         System.setProperty("java.awt.headless", "true")
-        val presenter = presenter(withSender = true)
+        val presenter = presenter(withSender = true, result = FeedbackSendResult.Failed(FeedbackFailure.NO_CONNECTION))
         var sizeChanges = 0
         SwingUtilities.invokeAndWait {
             val panel = FeedbackPanel(presenter, onClose = {}, onSizeChanged = { sizeChanges++ }).also { presenter.attach(it) }
             find(panel, "feedback-topic-1", AbstractButton::class.java).doClick()
             find(panel, "feedback-message", JTextArea::class.java).text = "An idea"
-            find(panel, "feedback-email", JTextField::class.java).text = "user@example.test"
             val heightBefore = panel.preferredSize.height
             sizeChanges = 0
 
             find(panel, "feedback-send", AbstractButton::class.java).doClick()
 
-            assertTrue(panel.preferredSize.height > heightBefore, "The thank-you text with the report ID needs more lines")
+            assertEquals(FeedbackPhase.FAILED, presenter.state.phase)
+            assertTrue(panel.preferredSize.height > heightBefore, "The failure text needs more lines")
             assertTrue(sizeChanges > 0, "The panel asks the window for a new size")
         }
     }

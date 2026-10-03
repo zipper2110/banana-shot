@@ -38,6 +38,7 @@ Decided on 2026-10-03:
 | 21 | T3: the entry points are callbacks from `app`, so the tab, Help, and More packages do not depend on `ui.feedback`. "Report this problem" is in "Unexpected error", "Export failed", and "Failed to read manifest" of the export. The error text is the title and the text of the dialog. |
 | 22 | T4: the site text is in `docs/feedback/privacy-notice.md`. It goes on the site with the analytics notice (B-10). |
 | 23 | T5: `Validate-AppImage.ps1` refuses an image without a valid endpoint. A local build can give `-AllowNoFeedbackEndpoint`. The release workflow never gives it. |
+| 24 | T2 (changed on 2026-10-03 by the author): after a successful send, the form closes, and a popup shows the thank-you text with the report ID. The popup has only a Close button. The form has no "sent" state and no "New report" button. |
 
 ## Open questions
 
@@ -136,7 +137,10 @@ The dialog where the user writes and sends a report.
 - Send, result, and failure:
   - The send runs in the background. The dialog shows the progress, and the
     user can continue to use the app.
-  - After `201` or `200`, the dialog shows "Thank you" and the report ID.
+  - After `201` or `200`, the form closes and starts a new report. The app
+    keeps the email address. A popup "Report sent" shows "Thank you", the
+    report ID, and if the author can reply. It has only a Close button
+    (decision 24).
   - On a network error, a `5xx`, a `410`, or a `429`, the dialog keeps the
     text and offers "Try again", "Copy report", and "Write an email".
     "Try again" sends the same `report_id`.

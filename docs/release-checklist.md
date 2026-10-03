@@ -86,8 +86,8 @@ in `%LocalAppData%\BananaShot\current`.
 - [ ] Feedback: in the sidebar, click Feedback. Select a topic, write a
       message, give an email address, and select "Attach the log files".
       "Show the data" shows the report and the log text. Click Send. The form
-      shows "Thank you" and the report ID. The author chat gets the message
-      and the `.log.gz` file with the same ID.
+      closes, and the popup "Report sent" shows the report ID. The author
+      chat gets the message and the `.log.gz` file with the same ID.
 - [ ] Feedback without network: turn off the network and send a report. The
       form keeps the text and shows "Try again", "Copy report", and "Write an
       email". Turn on the network and click "Try again". The author chat gets

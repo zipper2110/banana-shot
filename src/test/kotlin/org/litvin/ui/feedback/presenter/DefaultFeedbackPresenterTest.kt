@@ -102,8 +102,9 @@ class DefaultFeedbackPresenterTest {
     }
 
     @Test
-    fun `the send runs in the background and then shows thank you and the report ID`() {
+    fun `the send runs in the background and then tells thank you and the report ID`() {
         val presenter = presenter()
+        presenter.attach(view)
         presenter.fill(email = "user@example.test")
         presenter.onIntent(FeedbackIntent.Send)
 
@@ -112,9 +113,12 @@ class DefaultFeedbackPresenterTest {
         assertTrue(sent.isEmpty())
 
         runBackground()
-        assertEquals(FeedbackPhase.SENT, presenter.state.phase)
-        assertTrue("Thank you" in presenter.state.status)
-        assertTrue("00000000-0000-4000-8000-000000000001" in presenter.state.status)
+        val text = (view.effects.single() as FeedbackViewEffect.Sent).text
+        assertEquals(
+            "Thank you. The author has your report. Report ID: 00000000-0000-4000-8000-000000000001. " +
+                "The author can reply to user@example.test.",
+            text,
+        )
         val report = sent.single()
         assertEquals(FeedbackTopic.IDEA, report.topic)
         assertEquals("My idea", report.message)
@@ -177,6 +181,17 @@ class DefaultFeedbackPresenterTest {
     }
 
     @Test
+    fun `without an email address the thank-you text tells that the author cannot reply`() {
+        val presenter = presenter()
+        presenter.attach(view)
+        presenter.fill()
+        presenter.onIntent(FeedbackIntent.Send)
+        runBackground()
+        val text = (view.effects.single() as FeedbackViewEffect.Sent).text
+        assertTrue(text.endsWith("You gave no email address, so the author cannot reply."), text)
+    }
+
+    @Test
     fun `Try again sends the same report ID`() {
         results += FeedbackSendResult.Failed(FeedbackFailure.NO_CONNECTION)
         val presenter = presenter()
@@ -190,7 +205,8 @@ class DefaultFeedbackPresenterTest {
         assertEquals(2, sent.size)
         assertEquals(sent[0].reportId, sent[1].reportId)
         assertEquals(sent[0].log, sent[1].log)
-        assertEquals(FeedbackPhase.SENT, presenter.state.phase)
+        assertEquals(FeedbackPhase.EDITING, presenter.state.phase)
+        assertEquals("", presenter.state.message)
     }
 
     @Test
@@ -304,14 +320,19 @@ class DefaultFeedbackPresenterTest {
     }
 
     @Test
-    fun `an open after a sent report starts a new report with a new ID`() {
+    fun `a sent report clears the form for a new report with a new ID and keeps the email address`() {
         val presenter = presenter()
-        presenter.fill()
+        presenter.fill(email = "user@example.test")
+        presenter.onIntent(FeedbackIntent.SetAttachLog(true))
         presenter.onIntent(FeedbackIntent.Send)
         runBackground()
         presenter.onIntent(FeedbackIntent.Open(FeedbackRequest()))
         assertEquals(FeedbackPhase.EDITING, presenter.state.phase)
+        assertEquals(null, presenter.state.topic)
         assertEquals("", presenter.state.message)
+        assertFalse(presenter.state.attachLog)
+        assertEquals("", presenter.state.status)
+        assertEquals("user@example.test", presenter.state.email)
 
         presenter.fill()
         presenter.onIntent(FeedbackIntent.Send)

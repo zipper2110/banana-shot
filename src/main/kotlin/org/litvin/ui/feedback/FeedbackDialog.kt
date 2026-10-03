@@ -4,6 +4,9 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.feedback.FeedbackTopic
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.MessageButton
+import org.litvin.ui.commons.MessageDialog
+import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.commons.MonoFont
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SegmentedChoice
@@ -59,11 +62,21 @@ class FeedbackLauncher(private val owner: Window?, private val presenter: Feedba
 
 /**
  * The window of the feedback form (T2 of B-8). It is not modal: the user can continue to use the app while the
- * report goes. A close only hides the window, so the draft stays.
+ * report goes. A close only hides the window, so the draft stays. After a successful send, the window closes and
+ * a popup over the owner tells that the author has the report.
  */
 internal class FeedbackDialog(owner: Window?, private val presenter: FeedbackPresenter) :
     JDialog(owner, "Send feedback", Dialog.ModalityType.MODELESS) {
-    private val panel = FeedbackPanel(presenter, onClose = { isVisible = false }, onSizeChanged = { if (isDisplayable) pack() })
+    private val panel = FeedbackPanel(
+        presenter,
+        onClose = { isVisible = false },
+        onSizeChanged = { if (isDisplayable) pack() },
+        onSent = { text ->
+            isVisible = false
+            // The popup is modal, so it opens after the current event. Then the presenter does not wait for it.
+            SwingUtilities.invokeLater { showSent(owner, text) }
+        },
+    )
 
     init {
         name = "feedback-dialog"
@@ -90,15 +103,32 @@ internal class FeedbackDialog(owner: Window?, private val presenter: FeedbackPre
     }
 }
 
+internal const val SENT_TITLE = "Report sent"
+
+/** The popup after a successful send: the text with the report ID and only a Close button. Enter and Esc close it. */
+internal fun showSent(owner: Window?, text: String) {
+    MessageDialog.show(
+        owner,
+        MessageKind.HINT,
+        SENT_TITLE,
+        text,
+        listOf(MessageButton("Close", UiButton.Kind.LIME)),
+        defaultIndex = 0,
+        cancelIndex = 0,
+        glyph = Material2AL.CHECK,
+    )
+}
+
 /**
  * The feedback form. The presenter has all the state. This panel only shows it and forwards the user actions.
  * [onSizeChanged] runs when the preferred size changes (a part shows or hides, or a text gets more lines), so the
- * window can change its size.
+ * window can change its size. [onSent] gets the text for the user after a successful send.
  */
 internal class FeedbackPanel(
     private val presenter: FeedbackPresenter,
     private val onClose: () -> Unit,
     private val onSizeChanged: () -> Unit = {},
+    private val onSent: (String) -> Unit = {},
 ) : JPanel(BorderLayout()), FeedbackView {
 
     /** True while [render] changes the inputs, so the listeners do not send the change back. */
@@ -159,10 +189,6 @@ internal class FeedbackPanel(
         name = "feedback-try-again"
         addActionListener { presenter.onIntent(FeedbackIntent.Send) }
     }
-    private val newReport = UiButton("New report", Material2AL.ADD).apply {
-        name = "feedback-new"
-        addActionListener { presenter.onIntent(FeedbackIntent.NewReport) }
-    }
 
     init {
         name = "feedback-panel"
@@ -206,7 +232,7 @@ internal class FeedbackPanel(
                 DialogKit.WIDE,
                 DialogKit.head("Send feedback", "Tell about a problem, an idea, or a question. The author reads each report.", DialogKit.WIDE),
                 form,
-                DialogKit.footer(left = listOf(copyReport, writeEmail), right = listOf(newReport, close, send, tryAgain)),
+                DialogKit.footer(left = listOf(copyReport, writeEmail), right = listOf(close, send, tryAgain)),
             ),
             BorderLayout.CENTER,
         )
@@ -235,13 +261,12 @@ internal class FeedbackPanel(
 
             listOf(topic, message, email, attachLog).forEach { it.isEnabled = state.inputsEnabled }
             showData.isEnabled = state.showDataEnabled
-            send.isVisible = state.canSendOnline && !state.showTryAgain && state.phase != FeedbackPhase.SENT
+            send.isVisible = state.canSendOnline && !state.showTryAgain
             send.isEnabled = state.sendEnabled
             send.text = if (state.phase == FeedbackPhase.SENDING) "Sending…" else "Send"
             tryAgain.isVisible = state.showTryAgain
             copyReport.isVisible = state.showFallbacks
             writeEmail.isVisible = state.showFallbacks
-            newReport.isVisible = state.phase == FeedbackPhase.SENT
             SwingUtilities.getRootPane(this)?.defaultButton = when {
                 tryAgain.isVisible -> tryAgain
                 send.isVisible -> send
@@ -260,6 +285,7 @@ internal class FeedbackPanel(
     override fun renderEffect(effect: FeedbackViewEffect) {
         when (effect) {
             is FeedbackViewEffect.ShowData -> DataWindow(SwingUtilities.getWindowAncestor(this), effect.text).isVisible = true
+            is FeedbackViewEffect.Sent -> onSent(effect.text)
         }
     }
 

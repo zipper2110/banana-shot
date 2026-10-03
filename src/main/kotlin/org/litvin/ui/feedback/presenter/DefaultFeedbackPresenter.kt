@@ -75,13 +75,11 @@ class DefaultFeedbackPresenter(
             FeedbackIntent.ShowData -> showData()
             FeedbackIntent.CopyReport -> copyReport()
             FeedbackIntent.WriteEmail -> writeEmail()
-            FeedbackIntent.NewReport -> newReport()
         }
     }
 
     private fun open(request: FeedbackRequest) {
         if (state.phase == FeedbackPhase.SENDING) return
-        if (state.phase == FeedbackPhase.SENT) newReport()
         // A request with no values (the sidebar button) keeps the draft as it is.
         if (request.topic == null && request.error == null) return
         update(
@@ -116,13 +114,17 @@ class DefaultFeedbackPresenter(
 
     private fun onSent(id: UUID, draft: FeedbackViewState, result: FeedbackSendResult) {
         if (id != reportId) return
-        failure = (result as? FeedbackSendResult.Failed)?.failure
-        update(
-            when (result) {
-                FeedbackSendResult.Sent -> state.copy(phase = FeedbackPhase.SENT, status = thanks(id, draft.email), statusIsError = false)
-                is FeedbackSendResult.Failed -> state.copy(phase = FeedbackPhase.FAILED, status = failureText(result.failure), statusIsError = true)
-            },
-        )
+        when (result) {
+            FeedbackSendResult.Sent -> {
+                // The next open starts a new report. The email address stays in the preferences.
+                newReport()
+                view?.renderEffect(FeedbackViewEffect.Sent(thanks(id, draft.email)))
+            }
+            is FeedbackSendResult.Failed -> {
+                failure = result.failure
+                update(state.copy(phase = FeedbackPhase.FAILED, status = failureText(result.failure), statusIsError = true))
+            }
+        }
     }
 
     private fun showData() {
@@ -155,7 +157,6 @@ class DefaultFeedbackPresenter(
     }
 
     private fun newReport() {
-        if (state.phase == FeedbackPhase.SENDING) return
         reportId = newReportId()
         log = null
         failure = null

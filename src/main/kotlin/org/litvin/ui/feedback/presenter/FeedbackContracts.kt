@@ -9,7 +9,8 @@ data class FeedbackRequest(
     val attachLog: Boolean = false,
 )
 
-enum class FeedbackPhase { EDITING, SENDING, SENT, FAILED }
+/** After a successful send, the form closes and starts a new report, so there is no "sent" phase. */
+enum class FeedbackPhase { EDITING, SENDING, FAILED }
 
 data class FeedbackViewState(
     val topic: FeedbackTopic? = null,
@@ -50,12 +51,14 @@ sealed interface FeedbackIntent {
     data object ShowData : FeedbackIntent
     data object CopyReport : FeedbackIntent
     data object WriteEmail : FeedbackIntent
-    data object NewReport : FeedbackIntent
 }
 
 sealed interface FeedbackViewEffect {
     /** Opens a window with the exact data that the app sends. */
     data class ShowData(val text: String) : FeedbackViewEffect
+
+    /** The server has the report. The form closes, and a popup shows [text] with the report ID. */
+    data class Sent(val text: String) : FeedbackViewEffect
 }
 
 interface FeedbackView {

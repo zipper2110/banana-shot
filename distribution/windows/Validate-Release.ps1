@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param()
+param(
+    # A dry run of the release workflow. The L-5.2 story check gives a warning, not an error.
+    [switch]$DryRun
+)
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Join-Path $PSScriptRoot "..\.."
@@ -70,3 +73,27 @@ if ($thirdParty -notmatch [regex]::Escape($manifest.nativesRelease.url)) {
 }
 
 Write-Host "Elastic License 2.0 distribution license validation passed."
+
+# The build expiry spec forbids a release with only some of the L-5.2 measures.
+# Each story in the epics file has a line "- Status: <value>". A value other than
+# "done" blocks the release. Remove this check in E11-S4.
+$epicsFile = "docs\licensing\l-5.2-epics.md"
+$notDoneStories = @()
+$story = "(no story)"
+foreach ($line in (Read-RepoFile $epicsFile) -split "\r?\n") {
+    if ($line -match '^### (E\d+-S\d+)\b') {
+        $story = $Matches[1]
+    } elseif ($line -match '^- Status:\s*(.*?)\s*$' -and $Matches[1] -ne "done") {
+        $notDoneStories += "$story ($($Matches[1]))"
+    }
+}
+if ($notDoneStories.Count -gt 0) {
+    $message = "$epicsFile has stories that are not done: $($notDoneStories -join ', ')."
+    if ($DryRun) {
+        Write-Warning "$message A release with this commit fails."
+    } else {
+        throw "$message Do not release L-5.2 with only some of the measures."
+    }
+} else {
+    Write-Host "All L-5.2 stories are done."
+}

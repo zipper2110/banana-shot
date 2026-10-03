@@ -67,6 +67,15 @@ class JsonFileIOTest {
         )
     }
 
+    @Test
+    fun `two spellings of the same path have the same lock key`() {
+        val directory = Files.createTempDirectory("bananashot-lock-key").toFile()
+        val direct = directory.resolve("edl.json")
+        val indirect = java.io.File(directory, "sub/../EDL.JSON")
+
+        assertEquals(fileLockKey(direct), fileLockKey(indirect))
+    }
+
     private class Unserializable {
         @Suppress("unused")
         val boom: Any get() = throw IllegalStateException("cannot serialize")

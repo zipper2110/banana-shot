@@ -6,7 +6,13 @@ Run this only on Windows from a packaged app image with its libmpv and FFmpeg de
 pwsh -File qa/windows/Run-UiSmoke.ps1 -KeepArtifacts
 ```
 
-After the app closes, the runner checks that the app wrote `logs/bananashot.log` in the app-data directory. The runner prints absolute paths for the report, screenshots/artifacts directory, and isolated app-data directory. Use the checked-in `src/test/resources/media/ui-smoke.mp4`; do not substitute a local video. The runner leaves the QA root in place on failure and when `-KeepArtifacts` is supplied. To validate fixture, FFprobe metadata, and a known executable without launching it:
+After the app closes, the runner checks that the app wrote `logs/bananashot.log` in the app-data directory. The runner prints absolute paths for the report, screenshots/artifacts directory, and isolated app-data directory. Use the checked-in `src/test/resources/media/ui-smoke.mp4`; do not substitute a local video. The runner leaves the QA root in place on failure and when `-KeepArtifacts` is supplied. To test the app that the Velopack setup installed (`%LocalAppData%\BananaShot\current\BananaShot.exe`) instead of the app image, add `-Installed`:
+
+```powershell
+pwsh -File qa/windows/Run-UiSmoke.ps1 -Installed -KeepArtifacts
+```
+
+To validate fixture, FFprobe metadata, and a known executable without launching it:
 
 ```powershell
 pwsh -File qa/windows/Run-UiSmoke.ps1 -ExecutablePath "C:\path\to\BananaShot.exe" -ValidateOnly

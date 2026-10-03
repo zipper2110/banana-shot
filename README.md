@@ -28,7 +28,7 @@ Rationale, trade‑offs, and module plan are explained in the [solution outline]
 
 ## Getting started (development)
 ### Prerequisites
-- JDK 17+
+- JDK 25 (the build and the bundled runtime use JDK 25; the bytecode target is 17)
 - Maven 3.9+
 - FFmpeg (ffmpeg/ffprobe) available in PATH (for export stage)
 - Bundled libmpv (for preview at runtime)
@@ -43,6 +43,40 @@ or another source-run configuration:
 This places libmpv under `target/native/windows-x64/mpv` and FFmpeg under
 `target/native/windows-x64/ffmpeg`, which source runs prefer over machine-wide
 installations. Packaged Windows builds already include the same pinned runtime.
+
+### Data folder of a development run
+
+Only one instance of the app runs for each Windows account. The app locks
+`instance.lock` in its data folder. By default, a development run uses the
+same data folder as the installed app (`%APPDATA%\BananaShot`). Then an open
+installed app blocks the development run: the run shows "BananaShot is
+already running" and quits.
+
+To use a separate data folder, set the system property
+`-Dbananashot.appDataDir=<folder>` or the environment variable
+`BANANASHOT_APP_DATA_DIR` in the run configuration.
+
+### Build information and the build expiry
+
+The Maven phase `generate-sources` makes
+`target/generated-sources/kotlin-templates/org/litvin/license/BuildInfo.kt`
+from `src/main/kotlin-templates`. It contains the build date (UTC) and the
+version from `pom.xml`. Each build expires 6 calendar months after its build
+date.
+
+IntelliJ does not run `generate-sources`. An IDE run uses the `BuildInfo.kt`
+of the last Maven build, with its old build date. If no Maven build ran for 6
+months, an IDE run opens in expired mode. To fix this, run one Maven build:
+
+```bash
+mvn -DskipTests package
+```
+
+Warning: a development run and the installed app use the same preferences
+(`HKCU\Software\JavaSoft\Prefs`), also with a different data folder. Thus,
+they share the saved time and the expired-mode flag. A manual clock test with
+a development build changes the installed app. For example, a clock set to
+2028 makes the installed app open in expired mode until it gets a server time.
 
 ### Build
 ```bash
@@ -62,7 +96,7 @@ mvn -DskipTests package
 ## Testing UI flows
 
 UI changes should use the narrowest test lane that gives useful confidence. Run
-these commands from the repository root with JDK 17 selected.
+these commands from the repository root with JDK 25 selected.
 
 | Lane | Command | Use it for |
 | --- | --- | --- |

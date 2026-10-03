@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$ExecutablePath,
+    # Test the app that the Velopack setup installed (%LocalAppData%\BananaShot\current), not the app image.
+    [switch]$Installed,
     [switch]$KeepArtifacts,
     [string]$ReportPath,
     [switch]$ValidateOnly,
@@ -375,6 +377,11 @@ function Invoke-UiSmokeRunner {
 
     if ($ExecutablePath) {
         $resolvedExecutable = Resolve-UiSmokeExecutable -ExecutablePath $ExecutablePath
+    }
+    elseif ($Installed) {
+        # The Velopack setup installs for each user and keeps the app in the "current" folder.
+        $installedExecutable = Join-Path $env:LOCALAPPDATA "BananaShot\current\BananaShot.exe"
+        $resolvedExecutable = Resolve-UiSmokeExecutable -ExecutablePath $installedExecutable
     }
     else {
         $defaultExecutable = Join-Path $repoRoot "target\package\app-image\BananaShot\BananaShot.exe"

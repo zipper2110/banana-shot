@@ -13,11 +13,10 @@ Do these items before the first public release.
 ### B-4 License restriction
 
 - `docs/licensing/build-expiry-spec.md` has the design (build expiry, version
-  rules, update check). Review the draft, then do L-5.2 of
-  `docs/licensing/elv2-migration-plan.md`.
+  rules, update check). The spec was approved on 2026-10-02.
+  `docs/licensing/l-5.2-epics.md` tracks the work.
 - This must be in the first release. A build without an expiry stays free
   forever.
-- Phase 6 of the plan has the other license items for the release.
 
 ### B-5 First-time hints for new users
 
@@ -37,10 +36,6 @@ Do these items before the first public release.
 - Add more information to the tooltips, so that new users can learn the app.
   B-5 adds one-time hints. This item is about the usual tooltips.
 
-### B-7 Popup window redesign
-
-- Redesign the popup windows.
-
 ### B-8 Requests for bug reports and features
 
 - Ask users to send bug reports and feature requests.
@@ -56,66 +51,6 @@ Do these items before the first public release.
 ### B-10 Landing site
 
 - Make a landing site for the app.
-
-### B-19 Only one instance for each Windows account
-
-- Now the user can start the app more than one time. Two instances can open
-  the same project and overwrite the changes of the other. Each instance has
-  its own export queue, so two ffmpeg exports can run at the same time.
-- In `main` (`SwingMainApp`), before the main window opens, lock a file in
-  the data folder (`AppDataPaths`, for example `instance.lock`) with
-  `FileChannel.tryLock`. Keep the lock until the process ends.
-- Windows releases the lock when the process ends, also after a crash or End
-  task. Thus, a lock from an old process never blocks the start. Do not use a
-  file with a process ID and no lock.
-- If the lock is held by another process, show a message and quit: "<app
-  name> is already running. Use the open window. If you cannot see it, look
-  in the taskbar."
-- The lock is in the data folder of the Windows account. Thus, each account
-  can run one instance. A lock for the whole device is not necessary: the
-  projects, the saved queue, the preferences, and the installation are all
-  per account, so two accounts share no state. A lock for the whole device
-  would also block user B while user A keeps the app open in another
-  session, and B cannot close it without administrator rights.
-- Fail open: if the app cannot create or lock the file (for example, the data
-  folder is read-only), it starts, and it writes a line to the log.
-- Take the lock in `main`, not in `AppServices`. The UI-flow tests build the
-  app in the same process with temporary folders, so they must not take it.
-- A development run uses the same data folder as the installed app
-  (`%APPDATA%\BananaShot`), unless `bananashot.appDataDir` or
-  `BANANASHOT_APP_DATA_DIR` is set. Then an open installed app blocks the
-  development run. Set the property for development runs.
-- Do this before B-18. B-18 then needs no rules for a queue that two
-  instances share.
-- Done when: a second start shows the message and quits; after End task on
-  the first instance, the next start works; two Windows accounts can each
-  run one instance.
-
-### B-18 Keep the export queue after the app closes
-
-- Now the export queue is only in memory (`RenderQueueManager` in
-  `RenderQueue.kt`). When the app closes, the queued exports and the running
-  export are lost. Only completed exports are saved
-  (`CompletedRendersRepository`).
-- Save each queued `RenderJob` to a file in `AppDataPaths`. Update the file
-  when a job is added, starts, completes, fails, or is canceled.
-- B-19 makes sure that only one instance runs. Thus, only one instance reads
-  and writes the file. If the lock of B-19 fails (fail open), two instances
-  can run. Then the instance that starts first owns the file, and the other
-  keeps its queue in memory only.
-- At startup, load the file and put the jobs back in the queue in the same
-  order. Start the restored queue automatically. Do not ask the user first.
-  A running export that was stopped by
-  the close starts again from the beginning. Delete its partial output file
-  first.
-- Each `RenderJob` holds all its data. This includes a copy of the color,
-  crop and rotate adjustments from the time that the user queued the export
-  (`RenderJob.adjustments`). Thus a restored job does not need its project.
-  Save all the fields of the job. If the source video is not available, the
-  worker shows the job as failed with the reason "Source file missing".
-- Done when: the user adds 3 exports, closes the app during the first export,
-  and opens the app again. The Exports table shows the 3 exports, and they
-  complete. A canceled export does not come back.
 
 ### B-21 First dry run of the release workflow
 
@@ -145,6 +80,31 @@ Do these items before the first public release.
 - Check that Kotlin, JNA, FlatLaf, and assertj-swing work with JDK 25.
 - Done when: `mvn -B test` and the ui-flow tests pass with JDK 25, and the
   packaged diagnostics pass.
+- Status 2026-10-03:
+  - Done: `ci.yml`, `windows-release.yml`, `Build-AppImage.ps1`, the docs,
+    and the ui-flow spike test use JDK 25. The bytecode target stays 17.
+    `--enable-native-access=ALL-UNNAMED` is in the jpackage java options and
+    in `BananaShot Diagnostics.cmd`.
+  - `jdeps` (JDK 25) gives java.base, java.desktop, java.naming,
+    java.net.http, java.prefs, and java.sql. `Build-AppImage.ps1` gives
+    `--add-modules` with these modules, java.logging, java.xml,
+    jdk.crypto.mscapi, jdk.localedata, jdk.charsets, and jdk.accessibility.
+  - `DistributionDiagnostics` checks that `Windows-ROOT` loads and that an
+    HTTPS request to `raw.githubusercontent.com` gets an HTTP status.
+  - `mvn -B test` passes with Temurin 25.0.2 (local, 2026-10-03). A test app
+    image with the module list passed `Validate-AppImage.ps1` up to the
+    version check (a local SNAPSHOT build) and the packaged diagnostics.
+  - Kotlin 2.2.20, JNA 5.18.1, FlatLaf 3.7.2: compile and tests pass.
+  - Found and fixed: in JDK 25, `File.getCanonicalPath` opens the file on
+    Windows. `JsonFileIO` made its lock key with it before it took the lock.
+    Thus, a reader blocked the move of a writer ("Access is denied"), and
+    `JsonFileIOTest` failed. The key now comes from the normalized absolute
+    path (`fileLockKey`).
+  - `mvn -B -Pui-flow verify` passes with Temurin 25.0.2 (local,
+    2026-10-03): 706 unit tests and 17 ui-flow tests, 1 skipped by design
+    (`ValidationRecoveryUiFlowIT`). `AssertJSwingCompatibilityUiFlowIT`
+    passes, so assertj-swing works with JDK 25.
+- Still to do: a CI run of the release workflow with JDK 25 (B-21).
 
 ### B-24 Velopack installer
 
@@ -161,11 +121,18 @@ Do these items before the first public release.
   updates, or removes the app. The app does not use a Velopack SDK. Thus,
   `SwingMainApp` must exit at once for these arguments and must not open
   the main window. Check the full list in the Velopack docs.
+- The order in `main` is in "Velopack hook processes" in
+  `build-expiry-spec.md`: the proxy property, then the hook check, then the
+  lock of B-19.
+- `vpk pack` checks that the app uses the Velopack SDK. The app does not use
+  it, so the pack command probably needs `--skipVeloAppCheck` (a hidden
+  option).
 - The release workflow uploads the Velopack files (the setup EXE, the
   packages, and the release feed) to the GitHub release. Remove the WiX
   step and `Build-Installer.ps1`.
-- Find how Velopack shows the license. L-3.8 of `elv2-migration-plan.md`
-  requires the ELv2 text and the third-party notices in the installer.
+- Decided 2026-10-03: the first release has no installer license page. The
+  files in `legal/` and More → About replace it. A license dialog at the
+  first start is B-31.
 - The uninstall must not delete the app data (`%APPDATA%\BananaShot`) or the
   preferences in `HKCU\Software\JavaSoft\Prefs`. `build-expiry-spec.md`
   requires this.
@@ -173,6 +140,31 @@ Do these items before the first public release.
   `ui-smoke.md`, and the paths in `Run-UiSmoke.ps1`.
 - Done when: a dry run makes a Velopack installer. The installer
   installs the app, makes the Start menu shortcut, and the app starts.
+- Status 2026-10-03:
+  - Done: `Build-VelopackRelease.ps1` runs `vpk pack` (vpk 1.2.161, pinned in
+    `windows-release.yml`) with `--skipVeloAppCheck`, `--runtime win-x64`,
+    and `--noPortable`. The setup EXE is `BananaShot-win-Setup.exe` (the
+    default name of vpk for the pack ID `BananaShot` and the channel `win`).
+    The workflow uploads it, the `.nupkg` package, and `releases.win.json`.
+    The WiX step and `Build-Installer.ps1` are removed. Checked locally with
+    Windows PowerShell 5.1 on a test app image.
+  - `main` sets the proxy property, then exits with code 0 for each argument
+    that starts with `--veloapp-`, then takes the lock. The Velopack docs
+    (checked 2026-10-03) list `--veloapp-install`, `--veloapp-obsolete`,
+    `--veloapp-updated`, and `--veloapp-uninstall`. The first start after the
+    install and a restart are environment variables (`VELOPACK_FIRSTRUN`,
+    `VELOPACK_RESTART`), so the app starts as usual for them. Tests:
+    `VelopackHooksTest`, `StartOrderSourceTest`.
+  - Velopack installs in `%LocalAppData%\BananaShot`. The app data
+    (`%APPDATA%\BananaShot`) and the preferences are in other places.
+  - `distribution/windows/README.md`, `release-checklist.md`, `ui-smoke.md`,
+    and `Run-UiSmoke.ps1` (`-Installed`) are updated.
+- License page, decided on 2026-10-03: the Velopack setup EXE is a one-click
+  installer with no license page, and the first release has no license page.
+  The license files stay in `legal/` of the app, and More → About opens them.
+  No Velopack MSI. A license dialog at the first start is B-31 (after the
+  first release).
+- Still to do: a dry run, then install, update, and uninstall checks (B-26).
 
 ### B-30 Simple update from the app
 
@@ -201,13 +193,28 @@ Do these items before the first public release.
 - Show the download progress. If the download fails, show the error and
   keep "Download update" (open the download page in the browser) as the
   second option.
-- Check how the Velopack setup acts when the app is already installed.
-  The setup must update the app, keep the app data, and start the new
-  version.
+- Checked on 2026-10-02 in the Velopack source: over an existing install,
+  the setup asks "Update" or "Cancel", kills each process that runs from the
+  install folder, installs, and starts the new version. The spec has the
+  rules that follow from this. Confirm the behavior with the pinned
+  Velopack version (B-26).
 - Do this after B-4 and B-24.
 - Done when: version N-1 shows the update notice for version N. The user
   clicks "Update and restart", and version N starts with the same projects
   and the same export queue.
+- Status 2026-10-03: the logic is done, the user interface is not.
+  - `UpdateOptions` (in `org.litvin.license.update`) decides if "Update and
+    restart" shows and gives the installer URL and the download page (E9-S1).
+  - `UpdateAndRestart` asks first when an export runs, downloads the setup
+    EXE to a temporary folder with progress (redirects followed), does the
+    close sequence, starts the setup with no `--silent` as the last step,
+    and exits. A failed download deletes the partial file and keeps the app
+    open. A second click during the download has no effect (E9-S2).
+  - Tests: `UpdateAndRestartTest` (fake download and setup start, and a local
+    HTTP server for the real download).
+- Still to do: the buttons in the update notice, the expiry warning, and
+  expired mode (E8), the wiring of the close sequence and the saved time
+  (E7), and the trust of E5-S4 for the download.
 
 ### B-26 Test install, update, and uninstall
 
@@ -273,7 +280,6 @@ Do these items after the first public release.
   keeps that project, so it can stop.
 - Copy its MIT-licensed MSYS2 workflow into this project or into a separate
   repository. CI must make a pinned LGPL libmpv and its source archive.
-- This is item L-1.4 of `docs/licensing/elv2-migration-plan.md`.
 
 ### B-22 Code signing
 
@@ -319,3 +325,12 @@ Do these items after the first public release.
 - Build FFmpeg in our own CI with only the codecs and filters that the app
   uses. Do this together with B-20.
 - Measure the installer size before and after the change.
+
+### B-31 License dialog at the first start
+
+- The Velopack setup EXE shows no license page (B-24). Show the ELv2 text,
+  `LICENSE-NOTICE`, and the third-party notices in a dialog at the first
+  start of the app.
+- Keep a flag in the preferences, so that the dialog shows only one time.
+- Done when: the first start with empty preferences shows the dialog. The
+  next start does not show it.

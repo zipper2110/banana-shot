@@ -21,7 +21,7 @@ class AssertJSwingCompatibilityUiFlowIT {
     @Test
     fun `driver ignores a disposed duplicate hierarchy and drives the current FlatLaf window`() {
         assertEquals("true", System.getProperty("bananashot.uiFlow"))
-        assertEquals(17, Runtime.version().feature(), "compatibility spike must run on JDK 17")
+        assertEquals(25, Runtime.version().feature(), "compatibility spike must run on JDK 25, the bundled runtime")
 
         lateinit var frame: SpikeWindow
         RobotSwingDriver().use { driver ->

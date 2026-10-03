@@ -1,15 +1,13 @@
 package org.litvin
 
+import org.litvin.license.BuildInfo
+
 object AppInfo {
     const val NAME = "BananaShot"
     const val TAGLINE = "Tennis Video Editor"
 
-    val version: String by lazy {
-        System.getProperty("bananashot.version")?.takeIf { it.isNotBlank() }
-            ?: AppInfo::class.java.`package`?.implementationVersion?.takeIf { it.isNotBlank() }
-            ?: "development"
-    }
+    /** Only from BuildInfo. A system property, the .cfg file, or the JAR manifest must not change it. */
+    const val version: String = BuildInfo.VERSION
 
-    val displayName: String
-        get() = if (version == "development") NAME else "$NAME $version"
+    const val displayName: String = "$NAME $version"
 }

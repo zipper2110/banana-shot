@@ -2,7 +2,6 @@ package org.litvin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
-import java.io.IOException
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -53,14 +52,8 @@ object JsonFileIO {
         }
     }
 
-    private fun lockFor(path: String): ReentrantReadWriteLock {
-        val key = try {
-            File(path).canonicalPath
-        } catch (_: IOException) {
-            File(path).absolutePath
-        }
-        return locks.getOrPut(key) { ReentrantReadWriteLock() }
-    }
+    private fun lockFor(path: String): ReentrantReadWriteLock =
+        locks.getOrPut(fileLockKey(File(path))) { ReentrantReadWriteLock() }
 
     private val locks = ConcurrentHashMap<String, ReentrantReadWriteLock>()
 
@@ -77,4 +70,21 @@ object JsonFileIO {
             Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
+}
+
+/**
+ * The key of the in-process lock of [file]. Two spellings of the same path give the same key.
+ *
+ * Do not use [File.getCanonicalPath] here. In JDK 25 (not in JDK 22), it opens the file on Windows. The key is made
+ * before the lock is taken, so a reader that makes its key can block the move of a writer that has
+ * the lock ("Access is denied").
+ */
+internal fun fileLockKey(file: File): String {
+    val path = try {
+        file.toPath().toAbsolutePath().normalize().toString()
+    } catch (_: java.nio.file.InvalidPathException) {
+        file.absolutePath
+    }
+    // Windows paths do not depend on the case of the letters.
+    return if (File.separatorChar == '\\') path.lowercase(java.util.Locale.ROOT) else path
 }

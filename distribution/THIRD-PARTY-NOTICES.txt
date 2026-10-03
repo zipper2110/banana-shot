@@ -43,7 +43,7 @@ ffprobe.exe). The shared libraries and executables are unmodified and remain
 replaceable in the installation directory. The FFmpeg license text is
 installed at natives/windows-x64/ffmpeg/LICENSE.txt.
 
-Eclipse Temurin OpenJDK 17 runtime
+Eclipse Temurin OpenJDK 25 runtime
 Copyright Eclipse Foundation and OpenJDK contributors.
 License: GNU General Public License v2 with the Classpath Exception.
 https://adoptium.net/

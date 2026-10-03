@@ -103,11 +103,7 @@ internal class CanonicalFileLockRegistry {
         get() = synchronized(monitor) { entries.size }
 
     fun <T> withLock(file: File, action: () -> T): T {
-        val key = try {
-            file.canonicalPath
-        } catch (_: Throwable) {
-            file.absoluteFile.toPath().normalize().toString()
-        }
+        val key = fileLockKey(file)
         val entry = synchronized(monitor) {
             entries.getOrPut(key) { Entry() }.also { it.references++ }
         }

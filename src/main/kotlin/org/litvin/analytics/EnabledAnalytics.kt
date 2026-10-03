@@ -1,10 +1,12 @@
 package org.litvin.analytics
 
+import org.litvin.license.BuildInfo
+
 /** In-memory event collector. Delivery is added by the lifecycle transport in a later task step. */
 internal class EnabledAnalytics(config: AnalyticsBuildConfig.Enabled) : ManagedAnalytics {
     private val session = AnalyticsSession()
     private val buffer = AnalyticsBuffer()
-    private val appVersion = System.getProperty("bananashot.version", "1.0.0")
+    internal val appVersion = BuildInfo.VERSION
     private val osFamily = config.osFamily
     @Volatile private var closed = false
 

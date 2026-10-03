@@ -1,5 +1,6 @@
 package org.litvin.export
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.RenderJob
 import org.litvin.RenderQueueManager
@@ -55,9 +56,15 @@ private object GlobalRenderQueueGateway : RenderQueueGateway {
 class ProductionRenderService internal constructor(
     private val completedRenders: CompletedRendersRepository,
     private val gateway: RenderQueueGateway = GlobalRenderQueueGateway,
+    // The queue file of B-18. Null keeps the queue in memory only.
+    private val savedQueue: SavedRenderQueue? = null,
 ) : RenderService {
+    constructor(completedRenders: CompletedRendersRepository, savedQueue: SavedRenderQueue?) :
+        this(completedRenders, GlobalRenderQueueGateway, savedQueue)
+
     private companion object {
         private val ownerSequence = AtomicLong(0L)
+        private val logger = KotlinLogging.logger {}
     }
 
     private val ownerId = "render-service-${ownerSequence.incrementAndGet()}"
@@ -65,18 +72,60 @@ class ProductionRenderService internal constructor(
     private val ownedJobIds = ConcurrentHashMap.newKeySet<String>()
     private val closed = AtomicBoolean(false)
 
-    override fun enqueue(job: RenderJob) {
+    // The jobs that are not terminal, in the queue order. The queue file contains these jobs.
+    private val pendingJobs = LinkedHashMap<String, RenderJob>()
+    private var savedRunningJobId: String? = null
+    private var saving = savedQueue != null
+    private val savedQueueObserver: (ActiveQueueSnapshot) -> Unit = { snapshot -> onQueueSnapshot(snapshot) }
+
+    init {
+        if (savedQueue != null) gateway.addObserver(ownerId, savedQueueObserver)
+    }
+
+    override fun enqueue(job: RenderJob) = add(job)
+
+    /**
+     * Puts the jobs of the saved queue back in the queue, in the same order, and starts them (B-18).
+     * This is a separate entry from [enqueue]: the restore must not use the expiry check of a new
+     * export (`build-expiry-spec.md`, "Expiry check"). The restored jobs continue also in expired mode.
+     */
+    fun restoreSavedQueue() {
+        val queue = savedQueue ?: return
+        val jobs = try {
+            queue.load()
+        } catch (failure: Throwable) {
+            logger.warn(failure) { "Cannot restore the saved export queue." }
+            return
+        }
+        if (jobs.isEmpty()) return
+        logger.info { "Restoring ${jobs.size} export(s) from the saved queue." }
+        jobs.distinctBy { it.id }.forEach { saved ->
+            val job = SavedRenderQueue.restoredCopy(saved)
+            try {
+                // A job that ran when the app closed starts again from the beginning.
+                SavedRenderQueue.deletePartialOutput(job)
+                add(job)
+            } catch (failure: Throwable) {
+                logger.warn(failure) { "Cannot restore the export ${job.id} (${job.outputPath})." }
+            }
+        }
+    }
+
+    private fun add(job: RenderJob) {
         synchronized(subscriptions) {
             check(!closed.get()) { "Render service is closed" }
             ownedJobIds += job.id
+            updateSavedQueue { pendingJobs[job.id] = job; true }
             try {
                 gateway.enqueue(
                     RenderQueueRequest(ownerId, job, completedRenders) {
                         ownedJobIds.remove(job.id)
+                        updateSavedQueue { pendingJobs.remove(job.id) != null }
                     },
                 )
             } catch (failure: Throwable) {
                 ownedJobIds.remove(job.id)
+                updateSavedQueue { pendingJobs.remove(job.id) != null }
                 throw failure
             }
         }
@@ -85,7 +134,29 @@ class ProductionRenderService internal constructor(
     override fun cancelCurrent() = gateway.cancelCurrent(ownerId)
 
     override fun cancelQueued(jobId: String): Boolean = gateway.cancelQueued(ownerId, jobId).also { removed ->
-        if (removed) ownedJobIds.remove(jobId)
+        if (removed) {
+            ownedJobIds.remove(jobId)
+            updateSavedQueue { pendingJobs.remove(jobId) != null }
+        }
+    }
+
+    /** Writes the queue file again when a job starts. */
+    private fun onQueueSnapshot(snapshot: ActiveQueueSnapshot) {
+        val runningId = snapshot.current?.id
+        updateSavedQueue {
+            val changed = runningId != savedRunningJobId
+            savedRunningJobId = runningId
+            changed
+        }
+    }
+
+    /** Runs [change] and writes the queue file when [change] gives true. */
+    private fun updateSavedQueue(change: () -> Boolean) {
+        val queue = savedQueue ?: return
+        synchronized(pendingJobs) {
+            if (!saving) return
+            if (change()) queue.save(pendingJobs.values.toList())
+        }
     }
 
     override fun observe(observer: (ActiveQueueSnapshot) -> Unit): AutoCloseable {
@@ -115,7 +186,12 @@ class ProductionRenderService internal constructor(
             val observers = subscriptions.toList().asReversed().also { subscriptions.clear() }
             observers to ownedJobIds.toList()
         }
+        // The close stops the jobs, but they must stay in the queue file for the next start (B-18).
+        if (savedQueue != null) synchronized(pendingJobs) { saving = false }
         var failure: Throwable? = null
+        if (savedQueue != null) {
+            failure = attemptCleanup(failure) { gateway.removeObserver(ownerId, savedQueueObserver) }
+        }
         ownedSubscriptions.forEach { subscription ->
             failure = attemptCleanup(failure) { subscription.close() }
         }
@@ -123,6 +199,7 @@ class ProductionRenderService internal constructor(
             failure = attemptCleanup(failure) { cancelQueued(jobId) }
         }
         failure = attemptCleanup(failure) { gateway.closeOwner(ownerId) }
+        failure = attemptCleanup(failure) { savedQueue?.close() }
         failure?.let { throw it }
     }
 

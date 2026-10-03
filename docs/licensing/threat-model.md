@@ -4,8 +4,8 @@ Status: agreed on 2026-10-01.
 
 This document tells how to assess a license measure: a check, a limit, or a
 stored value that enforces the license. Use it for each license spec, for
-example `build-expiry-spec.md`, and for license keys (L-6.3 in
-`elv2-migration-plan.md`).
+example `build-expiry-spec.md`, and for license keys if the project adds
+them.
 
 ## User groups
 

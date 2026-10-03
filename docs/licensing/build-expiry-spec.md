@@ -1,7 +1,8 @@
 # Build Expiry and Version Rules: Design Spec
 
-This spec is item L-5.1 of
-`elv2-migration-plan.md`. Assess its measures with `threat-model.md`.
+Status: approved, 2026-10-02. `l-5.2-epics.md` tracks the implementation.
+
+Assess the measures of this spec with `threat-model.md`.
 `expiry-scenarios.md` gives the user scenarios that the spec must support.
 
 ## Goal
@@ -91,6 +92,15 @@ the file format"). Do not release a build with only some of the measures.
   expired mode. The fix is one Maven build, for example
   `mvn -DskipTests package`. When you implement this spec, add this
   information to "Getting started (development)" in `README.md`.
+- A development run and the installed app use the same preferences
+  (`HKCU\Software\JavaSoft\Prefs`), also when `bananashot.appDataDir` gives
+  the development run a different data folder. Thus, they share the saved
+  time and the flag. A manual clock test with a development build changes
+  the saved time of the installed app. For example, a clock set to 2028
+  makes the installed app open in expired mode until it gets a server time.
+  This affects only developers. Add a warning about it to "Getting started
+  (development)" in `README.md` (decided on 2026-10-02: a note only, no
+  separate preferences).
 - The JAR has a small main class that prints the build date, the calculated
   expiry date, and the version, for example
   `org.litvin.license.BuildInfoPrinter`. It reads the same constants and the
@@ -176,6 +186,35 @@ and these users get no rules, no update notice, and no server time.
   (NTLM or Kerberos, HTTP status 407). Such a request fails, and the user is
   offline for the app. See "Accepted risks".
 
+### Velopack hook processes
+
+Decided on 2026-10-02.
+
+- The Velopack setup and update start the app EXE with a hook argument, for
+  example `--veloapp-install 1.4.0` (B-24). Velopack always runs these hooks.
+  It has no option to turn them off.
+- A hook process must show no UI. It must exit within 30 seconds (install,
+  uninstall) or 15 seconds (update). If it does not, Velopack kills it and
+  shows a warning to the user.
+- The app has no task for a hook. Thus, `main` in `SwingMainApp` does these
+  steps in this order:
+  1. It sets `java.net.useSystemProxies=true` (see "Proxy").
+  2. If an argument starts with `--veloapp-`, it exits at once with code 0.
+  3. It takes the lock of B-19, and then it does the time steps of "Time and
+     the clock".
+- Thus, a hook process does not take the lock, does not show the message of
+  B-19, does not read or write the saved time, and does not add the 12 hours
+  of "Clock behind".
+- If a hook task is necessary later (for example, a file association), it
+  runs in step 2: before the lock, with no UI, and with no time steps.
+- Checked on 2026-10-03 in the Velopack docs: the hooks are
+  `--veloapp-install`, `--veloapp-obsolete`, `--veloapp-updated`, and
+  `--veloapp-uninstall`. The first start after the install and a restart by
+  Velopack are not hooks: Velopack gives them as the environment variables
+  `VELOPACK_FIRSTRUN` and `VELOPACK_RESTART`. Thus, the app starts as usual
+  for them. Step 2 exits for each argument that starts with `--veloapp-`, so
+  a hook of a later Velopack version also exits.
+
 Example:
 
 ```json
@@ -256,7 +295,9 @@ response still gives a server time. The next check is after 15 minutes (see
 
 A file with a `schema` that is an integer that the app does not know is a
 file with an unknown schema. The app ignores it and keeps the saved file. The
-next check is after 24 hours.
+next check is after 24 hours. Such a file can have a different format. Thus,
+the app does not check its other fields: a file with an unknown schema and
+no `rules` is a file with an unknown schema, not a file that is not valid.
 
 A rule is not valid in these cases:
 
@@ -393,8 +434,8 @@ The app calculates the current time as follows:
   build moment. See "Build-date floor".
 - At start, if the system time is more than 24 hours earlier than the saved
   time, the clock is behind. See "Clock behind".
-- Only one instance of the app runs for each Windows account (B-19 in
-  `backlog.md`). At start, the app takes the lock of B-19 before all steps of
+- Only one instance of the app runs for each Windows account (B-19, done
+  on 2026-10-02: `org.litvin.app.InstanceLock`). At a normal start, the app takes the lock of B-19 before all steps of
   this section: before it reads or writes the saved time, before the
   build-date floor, and before "Clock behind". A process that does not get
   the lock (a second start) shows the message of B-19 and quits. It does not
@@ -545,10 +586,9 @@ use. For a user who uses the app a few hours each week, this is some years.
 - Accepted: if the lock fails (fail open), each start adds 12 hours, also a
   second start while the app runs. This needs a failed lock and a clock that
   is behind, so it is very rare.
-- Accepted (2026-10-02): a process that Velopack starts with a hook argument
-  (B-24) does the time steps before it quits. With a clock that is behind,
-  each install or update adds 12 hours. The loss is small, and the start
-  order stays the same for all processes.
+- A process that Velopack starts with a hook argument (B-24) does not add
+  the 12 hours. It quits before the lock and before the time steps (see
+  "Velopack hook processes").
 - The limit of 24 hours prevents false results from small clock errors, for
   example a computer that uses local time in its hardware clock.
 - A server time sets the saved time to the server time. Thus, the 12 hours
@@ -674,6 +714,12 @@ app is false, but the rest of Windows uses the correct time.
   that adds the export to the queue. Thus, a new way to open a project or to
   start an export (for example, a file association) gets the check with no
   extra work.
+- The check for a new export applies only to an export that the user
+  starts. The restore of the saved queue at start (B-18) does not use this
+  check. The restored jobs were added to the queue before the expiry, so they
+  continue also in expired mode. Thus, the restore must not go through the
+  function that adds a new export, or that function must have a separate
+  entry for the restore with no check.
 - The worker of the export queue does not check the expiry. An export that
   runs after the expiry contains only work from before the expiry: the job
   keeps all its data (the points, the overlays, the scoreboard, and the color,
@@ -699,6 +745,12 @@ app is false, but the rest of Windows uses the correct time.
     path A (see "Start of a build that looks expired"). During the check, the
     app stays in normal mode. If the check shows that the build has not
     expired, the app stays in normal mode. If not, it goes to expired mode.
+  - During this check (a maximum of 15 seconds), the function that opens a
+    project and the function that adds an export work as usual. They do not
+    refuse and do not wait (decided on 2026-10-02). Thus, after a real
+    expiry, the user can open a project or start an export in these 15
+    seconds. This is accepted: the case needs no server time in the session,
+    and the gain is a few seconds.
 
 ### Start of a build that looks expired
 
@@ -790,8 +842,12 @@ the name can change.
   that is not modal. The notice shows the version, the `notes`, an "Update
   and restart" button, a "Download update" button, and a "Later" button.
 - "Update and restart" and "Download update": see "Update and restart".
-- "Later" hides the notice for this version. The notice shows again for the
-  next version.
+- "Later" hides the notice for this version until the app closes. The app
+  keeps the hidden version in memory only. It does not save it (decided on
+  2026-10-02). Thus, the notice shows again at the next start. In the same
+  session, it shows again only for a newer version.
+- At start, the app shows the notice from the saved rules file, also with no
+  connection. The saved `latest` is still true when the app is offline.
 
 ### Update and restart
 
@@ -817,9 +873,23 @@ This is the simple update from the app (B-30). The full automatic update
      app has no `installerUrl` (see "Fields"). The download follows
      redirects, because GitHub sends release files from another host. It
      uses the same proxy and the same trust as the read of the rules file.
-  3. The app saves the open project, starts the setup EXE, and closes.
-  4. The Velopack setup installs the new version over the old version and
-     starts it. The app data and the preferences stay (B-24).
+  3. The app does the normal close sequence. It saves the open project and
+     all changes that wait for a save, and writes the saved time (and the
+     queue of B-18). Then, as the last step, it starts the setup EXE, and the
+     process exits. If the setup EXE does not start, the app writes this to
+     the log.
+  4. The Velopack setup shows its own dialog: an older version is installed,
+     with "Update" and "Cancel".
+     - "Update": the setup stops each process that runs from the install
+       folder, installs the new version over the old version, and starts
+       it. The app data and the preferences stay (B-24).
+     - "Cancel": the setup installs nothing. The app stays closed. The user
+       starts it again by hand. This is accepted.
+- The order of step 3 is necessary. The setup kills each process that still
+  runs from the install folder, with no clean stop. Thus, the app must have
+  no write left when it starts the setup EXE.
+- Do not start the setup EXE with `--silent`. In silent mode, the setup does
+  not show its dialog, but it also does not start the new version.
 - If the download fails, the app shows the error, deletes the partial file,
   and stays open. "Download update" stays available.
 - Only one download runs at a time. While it runs, "Update and restart"
@@ -934,7 +1004,6 @@ queue, a person must edit a file in the data folder, which is after the line.
 - "Update and restart" downloads the setup EXE from GitHub. This request
   also sends no user ID. The privacy text names it together with the request
   for the rules file.
-- Add this item to the lawyer review (L-6.2).
 
 ## Release steps
 
@@ -1032,9 +1101,10 @@ the author (rule 5 in `threat-model.md`). Thus, a workflow gives a reminder.
 ## Known limits
 
 These limits are accepted. A signed license file that the app checks
-offline (L-6.3) does not close the limits that depend on the clock. Only an
+offline does not close the limits that depend on the clock. Only an
 online check can close them, for example an activation or a check each N
-days. An online check has a cost for offline users. Decide this in L-6.3. The
+days. An online check has a cost for offline users. Decide this together
+with license keys, if the project adds them. The
 limits for builds from source and for changed code only legal action (ELv2)
 can close. Nothing can close the limit for the GPLv3 code.
 
@@ -1056,7 +1126,7 @@ The limits:
 - A user who moves the clock back and blocks the network gets 12 hours for
   each start, plus the run time. The spec does not add a maximum offline
   period, because it would stop honest offline users. Decide this again with
-  license keys (L-6.3).
+  license keys, if the project adds them.
 - A person who builds from source gets a new build expiry each time. The
   version rules still stop such a build when it is online. To avoid the rules,
   the person must change the version or the checks. ELv2 forbids this, because
@@ -1146,7 +1216,7 @@ no change to the design.
 - A read-only mode for expired builds.
 - A signed extension of the build expiry (see "Known limits").
 - What a user who does not pay can do with existing projects. Decide this with
-  the pricing model (L-6.3). A project is a folder of JSON files, so the app
+  the pricing model. A project is a folder of JSON files, so the app
   cannot tell an old project from a new one.
 
 ## Tests
@@ -1187,6 +1257,12 @@ no change to the design.
   the Windows settings (for example, a local Fiddler or mitmproxy), with
   analytics on. Start the installed app. The proxy must show the request for
   the rules file and the analytics request. Then remove the proxy setting.
+- Manual check of TLS inspection (S-12) before the first release: use
+  mitmproxy as the proxy, and add its root certificate only to the Windows
+  store (not to the bundled `cacerts`). Start the installed app. The app
+  must get the rules file through the proxy. Then remove the proxy setting
+  and the certificate. Do this check together with the manual check of the
+  proxy.
 - The build-date floor: a saved time earlier than the build moment becomes
   the build moment at start; with no saved time and a system time 1 year
   before the build date, the "Clock behind" rule adds 12 hours and shows the
@@ -1205,14 +1281,21 @@ no change to the design.
 - The instance lock: a second start while the app runs does not get the lock,
   does not write the saved time, and does not add the 12 hours of "Clock
   behind", also when the clock is behind; the lock is taken before the saved
-  time is read.
+  time is read; a process with a `--veloapp-` argument exits with code 0
+  before the lock, shows no UI, and does not read or write the saved time.
 - More than one instance: a write with no new server time keeps the later of
   the stored value and the new value; the first write after a new server time
   replaces a stored value that is later; after that, a start with no network
   uses the corrected value.
 - The HTTPS trust: the request accepts a certificate that only the bundled
   store trusts, and a certificate that only the Windows store trusts; it
-  rejects a certificate that neither store trusts.
+  rejects a certificate that neither store trusts. The trust code gets its
+  two key stores through a constructor parameter. The test gives it two key
+  stores that the test makes, and a local HTTPS server. The test does not
+  add a certificate to the real Windows store: Windows shows a security
+  dialog for a new root, and a test must not change HKCU (decided on
+  2026-10-02). The packaged diagnostics check that the real `Windows-ROOT`
+  store loads.
 - The build information: `BuildInfo` has the build date and the version from
   the build; the expiry date is 6 calendar months after the build date;
   `AppInfo.version` and the analytics version are `BuildInfo.VERSION` also
@@ -1285,9 +1368,14 @@ no change to the design.
   date to the log.
 - Update and restart (with a fake download and a fake start of the setup):
   the update notice shows "Update and restart", "Download update", and
-  "Later" for a newer `latest.version`; "Update and restart" downloads
-  `latest.installerUrl`, saves the open project, starts the setup, and
-  closes the app; with no `installerUrl`, the app downloads the stable URL;
+  "Later" for a newer `latest.version`; "Later" hides the notice for the rest
+  of the session, and the next start shows it again; in the same session, a
+  newer `latest.version` shows it again; at a start with no connection, the
+  notice shows from the saved file; "Update and restart" downloads
+  `latest.installerUrl`, does the close sequence (the open project, the
+  changes that wait for a save, the saved time), then starts the setup as
+  the last step, and exits; the setup does not get `--silent`; with no
+  `installerUrl`, the app downloads the stable URL;
   with a running export, the app asks first, and "Cancel" changes nothing;
   a failed download shows the error, deletes the partial file, keeps the app
   open, and keeps "Download update"; a second click during the download has
@@ -1296,21 +1384,27 @@ no change to the design.
   mode shows both buttons and uses the stable URL and the releases page.
 - Manual check before the first release (B-26): install version N-1, start
   it, and click "Update and restart" for version N. Version N starts with
-  the same projects, preferences, and export queue.
+  the same projects, preferences, and export queue. Also check that the
+  Velopack dialog shows, and that "Cancel" in it installs nothing and
+  leaves the app closed.
 - Expired mode: at start, an expired build shows only the Export tab, the
   banner, and the dialog, and it does not open a project; the dialog closes
   with "Close", and "Download update" opens the URL and does not quit; "Update
   and restart" works as in a normal session; the
   start button shows the dialog and does not add an export; the function that
   opens a project and the function that adds an export both refuse in
-  expired mode, also when the user interface does not call them.
+  expired mode, also when the user interface does not call them; the
+  restore of the saved queue (B-18) in expired mode does not use the check,
+  and the restored jobs continue.
 - Expiry during a session: the check saves the open project, stops the
   player, hides all tabs except Export, and shows the banner and the dialog;
   the running export and the queued exports continue to the end; the
   keyboard shortcuts of the hidden tabs have no effect; with a server time in
   the session, the app goes to expired mode with no online check; with no
   server time in the session, the app makes an online check first and stays
-  in normal mode if the check gives "Not expired".
+  in normal mode if the check gives "Not expired"; during this check, the
+  function that opens a project and the function that adds an export work
+  as usual.
 - Leaving expired mode: an online check that gives "Not expired" closes the
   dialog, removes the banner, clears the flag, and shows the tabs again; the
   user can then open a project and start an export.

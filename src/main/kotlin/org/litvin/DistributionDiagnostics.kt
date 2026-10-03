@@ -2,6 +2,12 @@ package org.litvin
 
 import org.litvin.media.mpv.LibMpv
 import java.io.File
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.security.KeyStore
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 
 data class DiagnosticCheck(val name: String, val passed: Boolean, val detail: String)
@@ -34,7 +40,48 @@ object DistributionDiagnostics {
             executableCheck("FFmpeg", layout.ffmpegExecutable),
             executableCheck("FFprobe", layout.ffprobeExecutable),
             writableDirectoryCheck(layout.appDataDirectory),
+            windowsTrustStoreCheck(),
+            httpsCheck(),
         )
+    }
+
+    /**
+     * The host of the rules file of build-expiry-spec.md. The check reads only the host, not the file:
+     * each HTTP status shows that the proxy, TLS, and the trust of the bundled runtime work.
+     */
+    internal val UPDATE_HOST: URI = URI("https://raw.githubusercontent.com/")
+
+    /** The `Windows-ROOT` key store needs the module `jdk.crypto.mscapi` ("Trust for the HTTPS connection"). */
+    internal fun windowsTrustStoreCheck(
+        load: () -> KeyStore = { KeyStore.getInstance("Windows-ROOT").apply { load(null, null) } },
+    ): DiagnosticCheck = try {
+        val store = load()
+        DiagnosticCheck("Windows trust store", store.size() > 0, "Windows-ROOT, ${store.size()} certificates")
+    } catch (t: Throwable) {
+        DiagnosticCheck("Windows trust store", false, "Windows-ROOT (${t.javaClass.simpleName}: ${t.message})")
+    }
+
+    /** An HTTPS request to [uri]. Each HTTP status passes. A failed connection or a TLS error fails. */
+    internal fun httpsCheck(
+        uri: URI = UPDATE_HOST,
+        send: (URI) -> Int = ::sendHeadRequest,
+    ): DiagnosticCheck = try {
+        DiagnosticCheck("HTTPS connection", true, "$uri (HTTP ${send(uri)})")
+    } catch (t: Throwable) {
+        DiagnosticCheck("HTTPS connection", false, "$uri (${t.javaClass.simpleName}: ${t.message})")
+    }
+
+    private fun sendHeadRequest(uri: URI): Int {
+        // main sets java.net.useSystemProxies before this check, so the request uses the proxy of Windows.
+        val client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .build()
+        val request = HttpRequest.newBuilder(uri)
+            .method("HEAD", HttpRequest.BodyPublishers.noBody())
+            .timeout(Duration.ofSeconds(10))
+            .build()
+        return client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode()
     }
 
     private fun fileCheck(name: String, file: File?): DiagnosticCheck = DiagnosticCheck(

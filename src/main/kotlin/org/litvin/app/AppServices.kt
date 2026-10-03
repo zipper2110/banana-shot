@@ -6,6 +6,7 @@ import org.litvin.export.EncoderCapabilities
 import org.litvin.export.FileCompletedRendersRepository
 import org.litvin.export.ProductionRenderService
 import org.litvin.export.RenderService
+import org.litvin.export.SavedRenderQueue
 import org.litvin.media.MediaPlayerFactory
 import org.litvin.media.productionMediaPlayerFactory
 import org.litvin.projects.FileProjectsRepository
@@ -33,8 +34,9 @@ internal data class AppServicesProductionFactory(
     val adjustments: (ExecutorProvider) -> AdjustmentsSession = {
         AdjustmentsSession(it.createScheduledExecutor("adjustments-autosave"))
     },
-    val renderService: (CompletedRendersRepository) -> RenderService = { completed ->
-        ProductionRenderService(completed)
+    val renderService: (AppDataPaths, CompletedRendersRepository) -> RenderService = { paths, completed ->
+        ProductionRenderService(completed, SavedRenderQueue.claim(paths.renderQueue, paths.renderQueueLock))
+            .also { it.restoreSavedQueue() }
     },
     val encoderCapabilities: () -> EncoderCapabilities = EncoderCapabilities::production,
     val afterConstruction: (AppServices) -> Unit = { },
@@ -107,7 +109,7 @@ data class AppServices(
                 val projectsRepository = construct { factory.projectsRepository(paths) }
                 val completedRenders = construct { factory.completedRenders(paths) }
                 val adjustments = construct { factory.adjustments(executors) }
-                val renderService = construct { factory.renderService(completedRenders) }
+                val renderService = construct { factory.renderService(paths, completedRenders) }
                 val encoderCapabilities = CompletableFuture.supplyAsync { factory.encoderCapabilities() }
                 val analyticsConfig = AnalyticsBuildConfig.fromSystemProperties()
                 val analyticsPreferences = if (analyticsConfig is AnalyticsBuildConfig.Enabled) {

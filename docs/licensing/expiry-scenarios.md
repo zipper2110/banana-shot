@@ -1,6 +1,6 @@
 # Build Expiry: User Scenarios
 
-Status: draft, 2026-10-02.
+Status: approved, 2026-10-02.
 
 This file lists the user scenarios that the build expiry must support. Each
 scenario is an acceptance criterion for `build-expiry-spec.md`. The spec
@@ -106,15 +106,20 @@ Terms:
        again from the beginning after the update.
     2. The app downloads the setup EXE (`latest.installerUrl`) and shows the
        progress.
-    3. The app saves the open project, starts the setup, and closes.
-    4. The setup installs the new version and starts it. The projects, the
-       preferences, and the export queue stay.
+    3. The app saves the open project and the saved time, starts the setup
+       as the last step, and closes.
+    4. The setup asks "Update" or "Cancel". After "Update", it installs the
+       new version and starts it. The projects, the preferences, and the
+       export queue stay. After "Cancel", nothing is installed, and the
+       user starts the app again by hand.
     - If the download fails: the app shows the error and stays open.
       "Download update" stays available.
   - "Download update": the browser opens `latest.downloadUrl`. The app does
     not quit.
-  - "Later": the notice does not show again for this version. It shows again
-    for the next version.
+  - "Later": the notice does not show again in this session for this
+    version. It shows again at the next start, and in this session for a
+    newer version. At a start with no network, it shows from the saved
+    rules file.
 - **Expected result:** the notice shows only for a newer version. A
   development build `1.4.0-SNAPSHOT` does not show it for `1.4.0`. After
   "Update and restart", the new version runs with the same projects and the
@@ -181,8 +186,10 @@ Terms:
 - **App behavior:**
   1. If an export runs, the app asks first (as in S-02).
   2. The app downloads the setup EXE: `latest.installerUrl`, or the stable
-     URL if there is no saved rules file. It starts the setup and closes.
-     The queue stays (B-18).
+     URL if there is no saved rules file. It saves its data, starts the
+     setup as the last step, and closes. The setup asks "Update" or
+     "Cancel" (as in S-02). The queue stays (B-18). The restore of the
+     queue does not use the expiry check of a new export.
   3. The new build starts in normal mode, because its expiry is in the
      future. It clears the flag. The queue continues.
   - If the download fails (for example, with no network): the app shows the
@@ -452,7 +459,8 @@ Terms:
   Another Windows account on the same device can run its own instance. If
   the app cannot lock the file, it starts anyway (fail open), and the write
   rules for more than one instance protect the saved time.
-- **References:** "Time and the clock", B-19 and B-18 in `backlog.md`.
+- **References:** "Time and the clock", B-19 (`InstanceLock`), B-18 in
+  `backlog.md`.
 
 ### S-18 Reinstall, or install an old installer
 

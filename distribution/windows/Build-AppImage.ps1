@@ -20,15 +20,15 @@ if (-not [Environment]::Is64BitOperatingSystem) {
     throw "Windows x64 is required."
 }
 if (-not (Get-Command jpackage.exe -ErrorAction SilentlyContinue)) {
-    throw "jpackage.exe was not found. Install and select JDK 17."
+    throw "jpackage.exe was not found. Install and select JDK 25."
 }
 $jdkRelease = Join-Path $env:JAVA_HOME "release"
 if (-not (Test-Path -LiteralPath $jdkRelease)) {
-    throw "JAVA_HOME must point to a JDK 17 installation."
+    throw "JAVA_HOME must point to a JDK 25 installation."
 }
 $javaVersionLine = Get-Content -LiteralPath $jdkRelease | Where-Object { $_ -like "JAVA_VERSION=*" } | Select-Object -First 1
-if ($javaVersionLine -notmatch 'JAVA_VERSION="17(\.|")') {
-    throw "JAVA_HOME must point to JDK 17; found $javaVersionLine."
+if ($javaVersionLine -notmatch 'JAVA_VERSION="25(\.|")') {
+    throw "JAVA_HOME must point to JDK 25; found $javaVersionLine."
 }
 
 if (-not $Version) {
@@ -76,6 +76,32 @@ if (Test-Path -LiteralPath $appImageRoot) {
 }
 New-Item -ItemType Directory -Path $appImageRoot -Force | Out-Null
 
+# The modules of the bundled runtime. --add-modules replaces the default list of jpackage, so this
+# list must contain each module that the app needs. To find the list, run on the distribution input:
+#   jdeps --print-module-deps --ignore-missing-deps --multi-release 25 --class-path "<input>\*" "<input>ananashot-*.jar"
+# Then add the modules that jdeps cannot find because the code loads them only through a service:
+# - jdk.crypto.mscapi: the Windows-ROOT key store (build-expiry-spec.md, "Trust for the HTTPS connection").
+# - jdk.localedata: the date and number formats of other locales than English.
+# - jdk.charsets: the code pages of Windows that java.base does not have.
+# - jdk.accessibility: the Java Access Bridge for screen readers.
+# Validate-AppImage.ps1 checks the modules of the expiry spec in the result.
+# jdeps result of 2026-10-03 (JDK 25): java.base, java.desktop, java.naming, java.net.http, java.prefs,
+# java.sql. java.logging and java.xml come with them; the list names them because the libraries use them.
+$runtimeModules = @(
+    "java.base",
+    "java.desktop",
+    "java.logging",
+    "java.naming",
+    "java.net.http",
+    "java.prefs",
+    "java.sql",
+    "java.xml",
+    "jdk.accessibility",
+    "jdk.charsets",
+    "jdk.crypto.mscapi",
+    "jdk.localedata"
+)
+
 $arguments = @(
     "--type", "app-image",
     "--name", "BananaShot",
@@ -88,8 +114,10 @@ $arguments = @(
     "--description", "Turn tennis match recordings into compact scored videos.",
     "--copyright", "Copyright (c) 2026 BananaShot",
     "--icon", $icon,
+    "--add-modules", ($runtimeModules -join ","),
     "--java-options", "-Dfile.encoding=UTF-8",
-    "--java-options", "-Dbananashot.version=$packageVersion"
+    # JNA calls native code. From JDK 24, the JVM shows a warning for this without the option.
+    "--java-options", "--enable-native-access=ALL-UNNAMED"
 )
 & jpackage @arguments
 if ($LASTEXITCODE -ne 0) { throw "jpackage app-image creation failed." }
@@ -97,7 +125,7 @@ if ($LASTEXITCODE -ne 0) { throw "jpackage app-image creation failed." }
 $appHome = Join-Path $appImageRoot "BananaShot"
 $javaCommand = Join-Path $env:JAVA_HOME "bin\java.exe"
 if (-not (Test-Path -LiteralPath $javaCommand)) {
-    throw "JDK 17 java.exe was not found: $javaCommand"
+    throw "JDK 25 java.exe was not found: $javaCommand"
 }
 Copy-Item -LiteralPath $javaCommand -Destination (Join-Path $appHome "runtime\bin\java.exe")
 New-Item -ItemType Directory -Path (Join-Path $appHome "natives") -Force | Out-Null
@@ -106,8 +134,6 @@ New-Item -ItemType Directory -Path (Join-Path $appHome "legal") -Force | Out-Nul
 Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE") -Destination (Join-Path $appHome "legal\LICENSE.txt")
 Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE-NOTICE") -Destination (Join-Path $appHome "legal\LICENSE-NOTICE.txt")
 Copy-Item -LiteralPath (Join-Path $repoRoot "distribution\THIRD-PARTY-NOTICES.txt") -Destination (Join-Path $appHome "legal\THIRD-PARTY-NOTICES.txt")
-$diagnosticsTemplate = Get-Content -LiteralPath (Join-Path $PSScriptRoot "BananaShot Diagnostics.cmd") -Raw
-$diagnosticsTemplate.Replace("@APP_VERSION@", $packageVersion) |
-    Set-Content -LiteralPath (Join-Path $appHome "BananaShot Diagnostics.cmd") -Encoding ascii
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "BananaShot Diagnostics.cmd") -Destination (Join-Path $appHome "BananaShot Diagnostics.cmd")
 
 Write-Host "Application image created: $appHome"

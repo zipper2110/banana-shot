@@ -2,7 +2,9 @@ package org.litvin
 
 import com.formdev.flatlaf.FlatDarkLaf
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litvin.app.AppDataPaths
 import org.litvin.app.AppServices
+import org.litvin.app.InstanceLock
 import org.litvin.app.SwingApplicationFactory
 import org.litvin.ui.commons.SwingUserDialogService
 import java.awt.EventQueue
@@ -14,8 +16,25 @@ import javax.swing.UIManager
 object SwingMainApp {
     private val logger = KotlinLogging.logger {}
 
+    private val ALREADY_RUNNING_MESSAGE =
+        "${AppInfo.NAME} is already running. Use the open window. If you cannot see it, look in the taskbar."
+
+    @Volatile
+    private var instanceLock: InstanceLock? = null
+
     @JvmStatic
     fun main(args: Array<String>) {
+        // The order of the first steps is in build-expiry-spec.md, "Velopack hook processes".
+        // 1. Use the proxy settings of Windows. Java reads this property only one time, at the first
+        //    network request of the process, so it must come before all other code ("Proxy").
+        System.setProperty("java.net.useSystemProxies", "true")
+        // 2. The Velopack setup starts the app with a hook argument when it installs, updates, or
+        //    removes the app. The app has no task for a hook: exit at once, with no UI, no lock,
+        //    and no read or write of the saved time.
+        if (VelopackHooks.isHookProcess(args)) {
+            kotlin.system.exitProcess(0)
+        }
+        // 3. The lock of B-19 and the time steps come after these steps (takeInstanceLock below).
         if (args.contains("--diagnostics")) {
             kotlin.system.exitProcess(DistributionDiagnostics.run())
         }
@@ -32,6 +51,10 @@ object SwingMainApp {
 
         configureDisplayScaling()
         configureTextRendering()
+
+        if (!takeInstanceLock()) {
+            kotlin.system.exitProcess(0)
+        }
 
         val services = try {
             AppServices.production()
@@ -62,6 +85,30 @@ object SwingMainApp {
                 } catch (cleanupFailure: Throwable) {
                     failure.addSuppressed(cleanupFailure)
                 }
+            }
+        }
+    }
+
+    /**
+     * Takes the lock of B-19 before the app reads or writes its state. Returns false when another
+     * instance runs: then the user sees a message, and the process must quit.
+     */
+    private fun takeInstanceLock(): Boolean {
+        val lockFile = AppDataPaths.production().instanceLock
+        return when (val result = InstanceLock.acquire(lockFile)) {
+            is InstanceLock.Result.Acquired -> {
+                // Keep the lock reachable. If the channel is collected, Windows releases the lock.
+                instanceLock = result.lock
+                true
+            }
+            InstanceLock.Result.HeldByOtherInstance -> {
+                logger.info { "Another instance has the lock $lockFile. This start quits." }
+                SwingUserDialogService().showInfo(null, ALREADY_RUNNING_MESSAGE, AppInfo.NAME)
+                false
+            }
+            is InstanceLock.Result.Failed -> {
+                logger.warn(result.cause) { "Cannot lock $lockFile. The app starts without the instance lock." }
+                true
             }
         }
     }

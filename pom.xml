@@ -24,6 +24,10 @@
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <maven.compiler.release>17</maven.compiler.release>
         <app.mainClass>org.litvin.SwingMainApp</app.mainClass>
+        <!-- BuildInfo.BUILD_DATE. Maven gives maven.build.timestamp in UTC. The template uses
+             build.date, because some plugins do not replace maven.build.timestamp (MRESOURCES-99). -->
+        <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
+        <build.date>${maven.build.timestamp}</build.date>
     </properties>
 
     <repositories>
@@ -37,6 +41,25 @@
         <sourceDirectory>src/main/kotlin</sourceDirectory>
         <testSourceDirectory>src/test/kotlin</testSourceDirectory>
         <plugins>
+            <plugin>
+                <!-- Makes BuildInfo.kt (the build date and the version) from src/main/kotlin-templates.
+                     It adds the output folder to the compile source roots for the Kotlin compiler. -->
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>templating-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-build-info</id>
+                        <goals>
+                            <goal>filter-sources</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirectory>${basedir}/src/main/kotlin-templates</sourceDirectory>
+                            <outputDirectory>${project.build.directory}/generated-sources/kotlin-templates</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
@@ -61,6 +84,12 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.22.2</version>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- BuildInfoTest compares BuildInfo.VERSION with this value. -->
+                        <bananashot.test.projectVersion>${project.version}</bananashot.test.projectVersion>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>

@@ -1,0 +1,21 @@
+name = "bananashot-feedback"
+main = "src/index.ts"
+compatibility_date = "2026-09-03"
+compatibility_flags = ["nodejs_compat"]
+
+# Set "true" in production only after the checks in README.md.
+[vars]
+FEEDBACK_INGESTION_ENABLED = "false"
+
+# Secrets (set with `wrangler secret put`, never here):
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, RATE_LIMIT_KEY
+
+[[d1_databases]]
+binding = "FEEDBACK_DB"
+database_name = "replace-locally"
+database_id = "replace-locally"
+migrations_dir = "migrations"
+
+# The daily retention job.
+[[triggers.crons]]
+cron = "15 3 * * *"

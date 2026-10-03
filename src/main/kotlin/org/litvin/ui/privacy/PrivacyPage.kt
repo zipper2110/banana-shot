@@ -13,6 +13,31 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
         name = "more-privacy"
     }
 
+    /**
+     * What a feedback report contains, where it goes, how long the server keeps it, and how to ask for its deletion
+     * (T4 of B-8). The analytics choice does not change the feedback.
+     */
+    private fun feedbackSection(contactEmail: String) {
+        subheading("Feedback reports")
+        paragraph(
+            "The app sends a report only when you click Send in the feedback form. " +
+                "The usage analytics choice does not change this.",
+        ).name = "more-privacy-feedback"
+        paragraph(
+            "A report contains the topic, your message, the app version, the version of Windows, and the Java version. " +
+                "It also contains your email address if you give it, the error text if you send the report from an error " +
+                "message, and the end of the log files if you select \"Attach the log files\". The log files contain " +
+                "the names and folders of your videos and projects, but not the videos.",
+        )
+        paragraph(
+            "The report goes to our server on Cloudflare. The server sends it to the author through Telegram. " +
+                "The server keeps the report text for 90 days. It does not keep the log files or your IP address. " +
+                "The copy in the Telegram chat of the author stays until the author deletes it.",
+            secondary = true,
+        )
+        paragraph("To ask for the deletion of a report, write to $contactEmail and give the report ID.", secondary = true)
+    }
+
     companion object {
         const val TITLE = "Privacy"
 
@@ -21,7 +46,7 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
             controller: AnalyticsController,
             preferences: AnalyticsPreferences,
             privacyUrl: URI,
-            contact: URI,
+            contactEmail: String,
             linkOpener: PrivacyLinkOpener = PrivacyLinkOpener.DesktopBrowser,
         ): PrivacyPage = PrivacyPage().apply {
             subheading("Usage analytics")
@@ -38,14 +63,16 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
             )
             buttonRow(
                 secondaryButton("Privacy notice", Material2MZ.OPEN_IN_NEW) { linkOpener.open(privacyUrl) },
-                secondaryButton("Contact", Material2MZ.MAIL_OUTLINE) { linkOpener.open(contact) },
+                secondaryButton("Contact", Material2MZ.MAIL_OUTLINE) { linkOpener.open(URI("mailto:$contactEmail")) },
             )
+            feedbackSection(contactEmail)
         }
 
         /** The page for a build that cannot send usage analytics. */
-        fun withoutAnalytics(): PrivacyPage = PrivacyPage().apply {
+        fun withoutAnalytics(contactEmail: String): PrivacyPage = PrivacyPage().apply {
             subheading("Usage analytics")
             paragraph("This version of the app does not send usage analytics. Your videos and projects stay on this computer.")
+            feedbackSection(contactEmail)
         }
     }
 }

@@ -1,7 +1,11 @@
 [CmdletBinding()]
 param(
     [string]$Version,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    # The URL of the feedback Worker (B-8), for example https://<host>/v1/feedback. Without it, the feedback
+    # form of the app cannot send: it offers only "Copy report" and "Write an email". Validate-AppImage.ps1
+    # refuses a release build without it.
+    [string]$FeedbackEndpoint
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,6 +41,12 @@ if (-not $Version) {
 $packageVersion = ($Version -replace '^v', '') -replace '-.*$', ''
 if ($packageVersion -notmatch '^\d+(\.\d+){0,3}$') {
     throw "jpackage requires a numeric version; got '$packageVersion'."
+}
+$FeedbackEndpoint = "$FeedbackEndpoint".Trim()
+# The same rule as FeedbackBuildConfig.endpoint in the app.
+$feedbackEndpointPattern = '^https://[^/@?#\s]+(/[^?#\s]*)?/v1/feedback$'
+if ($FeedbackEndpoint -and $FeedbackEndpoint -notmatch $feedbackEndpointPattern) {
+    throw "-FeedbackEndpoint must be an https URL that ends in /v1/feedback; got '$FeedbackEndpoint'."
 }
 
 if (-not $SkipBuild) {
@@ -119,6 +129,11 @@ $arguments = @(
     # JNA calls native code. From JDK 24, the JVM shows a warning for this without the option.
     "--java-options", "--enable-native-access=ALL-UNNAMED"
 )
+if ($FeedbackEndpoint) {
+    $arguments += @("--java-options", "-Dbananashot.feedback.endpoint=$FeedbackEndpoint")
+} else {
+    Write-Warning "No -FeedbackEndpoint: the feedback form of this build cannot send reports."
+}
 & jpackage @arguments
 if ($LASTEXITCODE -ne 0) { throw "jpackage app-image creation failed." }
 

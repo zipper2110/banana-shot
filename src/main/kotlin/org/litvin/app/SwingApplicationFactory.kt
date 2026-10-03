@@ -17,6 +17,13 @@ import org.litvin.ui.commons.Palette
 import org.litvin.ui.expiry.ExpiryUi
 import org.litvin.ui.expiry.UpdateRunner
 import org.litvin.license.update.UpdateAndRestart
+import org.litvin.feedback.FeedbackLog
+import org.litvin.feedback.FeedbackPreferences
+import org.litvin.feedback.FeedbackSystemInfo
+import org.litvin.feedback.FeedbackTopic
+import org.litvin.ui.feedback.FeedbackLauncher
+import org.litvin.ui.feedback.presenter.DefaultFeedbackPresenter
+import org.litvin.ui.feedback.presenter.FeedbackRequest
 import org.litvin.ui.help.HelpDialog
 import org.litvin.ui.help.HelpPage
 import org.litvin.ui.help.HelpPreferences
@@ -50,6 +57,8 @@ import java.awt.CardLayout
 import java.awt.Desktop
 import java.awt.Dimension
 import java.awt.EventQueue
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import java.awt.event.WindowAdapter
@@ -79,8 +88,25 @@ object SwingApplicationFactory {
 
     /** The Scoring hint shows when the project has this number of marked points. */
     private const val GO_TO_SCORING_POINTS = 4
+
+    /**
+     * The reply address of the feedback (decision 7 of B-8). When the app domain exists (B-10), change it here to an
+     * address on that domain. The Contact page, the Privacy page, and the feedback form show it.
+     */
     private const val CONTACT_EMAIL = "leetvin@gmail.com"
-    private val CONTACT = URI("mailto:$CONTACT_EMAIL")
+
+    /** The feedback form. The send and the read of the log run on their own executor. */
+    private fun feedbackPresenter(services: AppServices) = DefaultFeedbackPresenter(
+        sender = services.feedbackSender,
+        readLog = FeedbackLog(services.paths.logs)::read,
+        preferences = FeedbackPreferences(services.preferences.node(PreferencesProvider.APPLICATION)),
+        system = FeedbackSystemInfo.current(AppInfo.version),
+        contactEmail = CONTACT_EMAIL,
+        copyToClipboard = { text -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null) },
+        openMail = { uri -> runCatching { Desktop.getDesktop().mail(uri) }.isSuccess },
+        background = services.executors.createExecutor("feedback-send"),
+        ui = EventQueue::invokeLater,
+    )
 
     internal fun shouldShowGpuRestartNotification(
         show: Boolean,
@@ -128,7 +154,12 @@ object SwingApplicationFactory {
         val handle = SwingApplicationHandle(frame, closeActions)
 
         try {
-            val helpDialog = lazy { HelpDialog(frame) }
+            val feedback = FeedbackLauncher(frame, feedbackPresenter(services))
+            closeActions += feedback::close
+            // "Report this problem" of an error dialog: the topic Problem, the error text, and the log files (T3 of B-8).
+            fun reportProblem(title: String, message: String) =
+                feedback.open(FeedbackRequest(FeedbackTopic.PROBLEM, "$title\n\n$message", attachLog = true))
+            val helpDialog = lazy { HelpDialog(frame, onTellUs = { feedback.open(FeedbackRequest(FeedbackTopic.QUESTION)) }) }
             fun showHelp(page: HelpPage, tab: HelpPage? = page) = helpDialog.value.open(page, tab)
 
             val sidebar = JPanel().apply {
@@ -413,13 +444,23 @@ object SwingApplicationFactory {
                 alignmentX = 0f
                 maximumSize = Dimension(Int.MAX_VALUE, 64)
             }
+            // The Feedback button is always visible, also with no open project (T3 of B-8).
+            sidebar.add(UiStyles.sidebarButton("Feedback", UiStyles.feedbackIcon()) {
+                feedback.open()
+            }.apply {
+                name = "nav-feedback"
+                toolTipText = "Send a problem, an idea, or a question to the author"
+                alignmentX = 0f
+                maximumSize = Dimension(Int.MAX_VALUE, 64)
+            })
+            sidebar.add(Box.createRigidArea(Dimension(0, 6)))
             sidebar.add(btnHelp)
             sidebar.add(Box.createRigidArea(Dimension(0, 6)))
             val moreDialog = lazy {
                 val privacyPage = if (analytics != null && analyticsConfig != null && services.analyticsPreferences != null) {
-                    PrivacyPage.withAnalytics(analytics, services.analyticsPreferences, analyticsConfig.privacyUrl, CONTACT)
+                    PrivacyPage.withAnalytics(analytics, services.analyticsPreferences, analyticsConfig.privacyUrl, CONTACT_EMAIL)
                 } else {
-                    PrivacyPage.withoutAnalytics()
+                    PrivacyPage.withoutAnalytics(CONTACT_EMAIL)
                 }
                 MoreDialog(
                     frame,
@@ -446,6 +487,7 @@ object SwingApplicationFactory {
                                 CONTACT_EMAIL,
                                 AppInfo.version,
                                 services.paths.logs,
+                                onSendFeedback = { feedback.open() },
                                 onOpenLink = PrivacyLinkOpener.DesktopBrowser::open,
                                 onOpenFolder = ::openWithDesktop,
                             ),
@@ -513,6 +555,8 @@ object SwingApplicationFactory {
             )
             closeActions += expiryUi::close
             exportPanel.onNewExportRefused = services.expiry::showExpiredDialog
+            exportPanel.onReportProblem = ::reportProblem
+            handle.reportProblem = ::reportProblem
 
             frame.add(sidebar, BorderLayout.WEST)
             frame.add(JPanel(BorderLayout()).apply {

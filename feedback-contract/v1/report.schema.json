@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Feedback report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["report_id", "topic", "message", "app_version", "os_name", "os_version", "java_version"],
+  "properties": {
+    "report_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$" },
+    "topic": { "enum": ["problem", "idea", "question", "other"] },
+    "message": { "type": "string", "minLength": 1, "maxLength": 10000 },
+    "email": { "type": "string", "minLength": 3, "maxLength": 254, "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$" },
+    "app_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "os_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "os_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "java_version": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "error": { "type": "string", "minLength": 1, "maxLength": 10000 },
+    "log": { "type": "string", "minLength": 4, "maxLength": 2900000, "pattern": "^[A-Za-z0-9+/]+={0,2}$" }
+  }
+}

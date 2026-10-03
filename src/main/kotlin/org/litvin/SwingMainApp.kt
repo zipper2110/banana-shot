@@ -6,6 +6,7 @@ import org.litvin.app.AppDataPaths
 import org.litvin.app.AppServices
 import org.litvin.app.InstanceLock
 import org.litvin.app.SwingApplicationFactory
+import org.litvin.app.SwingApplicationHandle
 import org.litvin.license.check.ExpiryController
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.expiry.CheckingDateWindow
@@ -20,6 +21,8 @@ object SwingMainApp {
 
     private val ALREADY_RUNNING_MESSAGE =
         "${AppInfo.NAME} is already running. Use the open window. If you cannot see it, look in the taskbar."
+
+    private const val UNEXPECTED_ERROR = "Unexpected error"
 
     @Volatile
     private var instanceLock: InstanceLock? = null
@@ -81,15 +84,19 @@ object SwingMainApp {
         }
 
         EventQueue.invokeLater {
+            var handle: SwingApplicationHandle? = null
             Thread.setDefaultUncaughtExceptionHandler { _, failure ->
                 logger.error(failure) { "Unexpected uncaught Swing error." }
-                services.dialogs.showError(null, failure.message ?: failure.toString(), "Unexpected error")
+                val message = failure.message ?: failure.toString()
+                // "Report this problem" opens the feedback form after the main window exists (T3 of B-8).
+                val onReport = handle?.reportProblem?.let { report -> { EventQueue.invokeLater { report(UNEXPECTED_ERROR, message) } } }
+                services.dialogs.showReportableError(null, message, UNEXPECTED_ERROR, onReport)
             }
 
             try {
                 WindowsGpuPreference.ensureHighPerformancePreference()
                 applyBaseTheme()
-                SwingApplicationFactory.create(
+                handle = SwingApplicationFactory.create(
                     services = services,
                     onWindowClosed = { kotlin.system.exitProcess(0) },
                 )

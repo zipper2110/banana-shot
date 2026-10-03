@@ -70,12 +70,27 @@ class MorePanelTest {
     private fun findButton(root: Component, name: String): AbstractButton? = buttons(root).firstOrNull { it.name == name }
 
     @Test
+    fun `Send feedback is the first action of the Contact page and opens the form`() {
+        System.setProperty("java.awt.headless", "true")
+        var opened = 0
+
+        SwingUtilities.invokeAndWait {
+            val page = ContactPage("someone@example.com", "1.2.3", File("logs"), onSendFeedback = { opened++ }, onOpenLink = { true }, onOpenFolder = { true })
+            val all = buttons(page)
+            assertEquals("more-contact-feedback", all.first().name)
+            all.first().doClick()
+        }
+
+        assertEquals(1, opened)
+    }
+
+    @Test
     fun `Write an email opens a mailto link with the address`() {
         System.setProperty("java.awt.headless", "true")
         val opened = mutableListOf<java.net.URI>()
 
         SwingUtilities.invokeAndWait {
-            val page = ContactPage("someone@example.com", "1.2.3", File("logs"), onOpenLink = { opened += it; true }, onOpenFolder = { true })
+            val page = ContactPage("someone@example.com", "1.2.3", File("logs"), onSendFeedback = {}, onOpenLink = { opened += it; true }, onOpenFolder = { true })
             checkNotNull(findButton(page, "more-contact-write")).doClick()
         }
 
@@ -90,7 +105,7 @@ class MorePanelTest {
 
         try {
             SwingUtilities.invokeAndWait {
-                val page = ContactPage("someone@example.com", "1.2.3", logFolder, onOpenLink = { true }, onOpenFolder = { opened += it; true })
+                val page = ContactPage("someone@example.com", "1.2.3", logFolder, onSendFeedback = {}, onOpenLink = { true }, onOpenFolder = { opened += it; true })
                 checkNotNull(findButton(page, "more-contact-open-log-folder")).doClick()
             }
 

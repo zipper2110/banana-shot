@@ -11,6 +11,13 @@ class SwingApplicationHandle(
 ) : AutoCloseable {
     private val closed = AtomicBoolean(false)
 
+    /**
+     * Opens the feedback form for an error dialog (T3 of B-8) with the title and the text of the dialog.
+     * Call it on the EDT.
+     */
+    @Volatile
+    var reportProblem: ((title: String, message: String) -> Unit)? = null
+
     override fun close() {
         if (EventQueue.isDispatchThread()) {
             closeOnEventDispatchThread()

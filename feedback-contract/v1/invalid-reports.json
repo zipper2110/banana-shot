@@ -1,0 +1,26 @@
+{
+  "invalidReports": [
+    { "name": "not JSON", "raw": "report_id=secret" },
+    { "name": "an array", "payload": [] },
+    { "name": "null", "payload": null },
+    { "name": "a string", "payload": "secret" },
+    { "name": "unknown key", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4", "path": "C:\\secret.mp4" } },
+    { "name": "no report_id", "payload": { "topic": "idea", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "report_id is not UUID v4", "payload": { "report_id": "00000000-0000-1000-8000-000000000101", "topic": "idea", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "report_id in uppercase", "payload": { "report_id": "00000000-0000-4000-8000-00000000010A", "topic": "idea", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "unknown topic", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "secret", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "no topic", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "empty message", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "blank message", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": " \n\t ", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "message is not text", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": 7, "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "email without @", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "m", "email": "secret.example.test", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "email with a space", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "m", "email": "se cret@example.test", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "email is null", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "m", "email": null, "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "no app_version", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "m", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "empty os_name", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "m", "app_version": "1.0.0", "os_name": "", "os_version": "10.0", "java_version": "21.0.4" } },
+    { "name": "java_version is a number", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "idea", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": 21 } },
+    { "name": "empty error", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "problem", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4", "error": "" } },
+    { "name": "log is not Base64", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "problem", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4", "log": "secret!*" } },
+    { "name": "log is not gzip", "payload": { "report_id": "00000000-0000-4000-8000-000000000101", "topic": "problem", "message": "m", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4", "log": "bm90IGd6aXA=" } }
+  ]
+}

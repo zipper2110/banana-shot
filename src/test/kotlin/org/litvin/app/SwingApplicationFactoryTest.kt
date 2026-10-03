@@ -22,7 +22,10 @@ import org.litvin.projects.ProjectManifestV1
 import org.litvin.projects.ProjectSummary
 import org.litvin.projects.ProjectsRepository
 import org.litvin.ui.commons.FilePicker
+import org.litvin.feedback.FeedbackTopic
+import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.UserDialogService
+import org.litvin.ui.feedback.FeedbackDialog
 import org.litvin.ui.help.HelpDialog
 import org.litvin.ui.help.HelpPage
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
@@ -44,6 +47,7 @@ import javax.swing.AbstractButton
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JTextArea
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
@@ -128,6 +132,36 @@ class SwingApplicationFactoryTest {
             }
             assertEquals(HelpPage.POINTS, clickHelp().selectedPage)
             assertEquals("BananaShot — Points — source", opened.frame.title)
+        } finally {
+            handle?.close()
+            Window.getWindows().filterNot(windowsBefore::contains).forEach(Window::dispose)
+        }
+    }
+
+    @Test
+    fun `sidebar Feedback opens the form with no project, and an error report fills in the problem`() {
+        val fixture = TestServices()
+        val windowsBefore = Window.getWindows().toSet()
+        var handle: SwingApplicationHandle? = null
+
+        try {
+            val opened = GuiActionRunner.execute<SwingApplicationHandle> {
+                SwingApplicationFactory.create(fixture.services, show = true)
+            }
+            handle = opened
+            val dialog = GuiActionRunner.execute<FeedbackDialog> {
+                checkNotNull(findComponent<AbstractButton>(opened.frame) { it.name == "nav-feedback" }).doClick()
+                Window.getWindows().filterIsInstance<FeedbackDialog>().single { it.isShowing }
+            }
+            GuiActionRunner.execute {
+                assertEquals(null, checkNotNull(findComponent<SegmentedChoice<*>>(dialog) { it.name == "feedback-topic" }).selected)
+                // A build without an endpoint offers copy and email in place of Send.
+                assertFalse(checkNotNull(findComponent<AbstractButton>(dialog) { it.name == "feedback-send" }).isVisible)
+                checkNotNull(opened.reportProblem).invoke("Export failed", "boom")
+                assertEquals(FeedbackTopic.PROBLEM, checkNotNull(findComponent<SegmentedChoice<*>>(dialog) { it.name == "feedback-topic" }).selected)
+                assertEquals("Export failed\n\nboom", checkNotNull(findComponent<JTextArea>(dialog) { it.name == "feedback-error" }).text)
+                assertTrue(checkNotNull(findComponent<AbstractButton>(dialog) { it.name == "feedback-attach-log" }).isSelected)
+            }
         } finally {
             handle?.close()
             Window.getWindows().filterNot(windowsBefore::contains).forEach(Window::dispose)

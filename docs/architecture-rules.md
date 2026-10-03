@@ -13,6 +13,7 @@ Top‑level feature and shared packages:
 - `org.litvin.scoring` — scoring rules/engine, score timelines, score IO.
 - `org.litvin.export` — export/pipeline/FFmpeg/queue/overlay writing.
 - `org.litvin.analytics` — opt‑in telemetry: event registry, buffering, transport, consent state.
+- `org.litvin.feedback` — feedback reports (B-8): the report and its JSON, the log data, the sender, the endpoint setting.
 - `org.litvin.shared.util` — cross‑cutting utilities and primitives (timecode, debouncers, pagination, OS tweaks, etc.).
 - `org.litvin.ui` — UI layer only.
   - `org.litvin.ui.tabs.{projects,points,scoring,adjustments,crop,export}` — tab UIs per feature (plus `test`, a diagnostics tab wired in only when the test flag is enabled).
@@ -20,6 +21,7 @@ Top‑level feature and shared packages:
   - `org.litvin.ui.help` — help catalog and dialog.
   - `org.litvin.ui.privacy` — analytics consent dialog and the Privacy page of the More window.
   - `org.litvin.ui.more` — the More window and its Settings and About pages.
+  - `org.litvin.ui.feedback` — the feedback form (MVP: the presenter and its contracts are in `.presenter`).
 
 Subpackage conventions inside a tab (`org.litvin.ui.tabs.<feature>`):
 - `.presenter` — the presenter and its UI contracts (see MVP below).
@@ -36,6 +38,7 @@ Allowed directions:
 - Feature packages may depend on `shared.util` and other leaf services (`media`) but not on `ui` or `app`.
 - `media` → `adjustments` is allowed and deliberate: the libmpv preview must apply the same crop/rotate/color transforms the FFmpeg export does, so it consumes the adjustments domain (`GeometryPlan`, `CropRect`, `AdjustmentsV1`) instead of duplicating the math.
 - `analytics` must not depend on any other `org.litvin` package — it is a leaf service reached from `app` and `ui.privacy`.
+- `ui.feedback` → `feedback` and `ui.commons`. `feedback` must not depend on any other `org.litvin` package: `app` gives it the HTTP client with the trust of `license.online`. The other UI packages open the form only through callbacks from `app`.
 - `shared.util` must not depend on any feature/ui/app.
 - Cycles are forbidden.
 

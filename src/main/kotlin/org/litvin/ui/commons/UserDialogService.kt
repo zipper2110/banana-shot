@@ -17,6 +17,13 @@ interface UserDialogService {
     /** A message about an action that the app cannot do now. The user did nothing wrong with the data. */
     fun showWarning(parent: Component?, message: String, title: String) = showInfo(parent, message, title)
 
+    /**
+     * An error message with the button "Report this problem" (T3 of B-8). After a click on it, the message closes and
+     * [onReport] runs. Without [onReport], the message is a normal error.
+     */
+    fun showReportableError(parent: Component?, message: String, title: String, onReport: (() -> Unit)?) =
+        showError(parent, message, title)
+
     /** A short tip about how to use the app. */
     fun showHint(parent: Component?, message: String, title: String = "Hint") = showInfo(parent, message, title)
 
@@ -40,6 +47,13 @@ class SwingUserDialogService : UserDialogService {
 
     override fun showError(parent: Component?, message: String, title: String) =
         MessageDialog.show(parent, MessageKind.ERROR, title, message)
+
+    override fun showReportableError(parent: Component?, message: String, title: String, onReport: (() -> Unit)?) {
+        if (onReport == null) return showError(parent, message, title)
+        val buttons = listOf(MessageButton("Report this problem"), MessageButton("OK", UiButton.Kind.LIME))
+        val clicked = MessageDialog.show(parent, MessageKind.ERROR, title, message, buttons, defaultIndex = 1, cancelIndex = 1)
+        if (clicked == 0) onReport()
+    }
 
     override fun showWarning(parent: Component?, message: String, title: String) =
         MessageDialog.show(parent, MessageKind.WARNING, title, message)

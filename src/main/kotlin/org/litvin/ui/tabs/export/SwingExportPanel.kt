@@ -84,6 +84,14 @@ class SwingExportPanel(
     /** Called on the EDT when the user clicks the start button in expired mode. */
     var onNewExportRefused: (() -> Unit)? = null
 
+    /** Opens the feedback form for an export error (T3 of B-8) with the title and the text of the error dialog. */
+    var onReportProblem: ((title: String, message: String) -> Unit)? = null
+
+    private fun showReportableError(message: String, title: String) {
+        val report = onReportProblem
+        dialogs.showReportableError(this, message, title, report?.let { { it(title, message) } })
+    }
+
     fun onActivated() {
         // Ensure Completed list reflects latest persisted items (global across projects)
         refreshCompletedFromStore()
@@ -263,7 +271,7 @@ class SwingExportPanel(
                 if (cur?.status == RenderStatus.FAILED && lastFailureNotifiedJobId != cur.id) {
                     lastFailureNotifiedJobId = cur.id
                     val message = listOfNotNull(cur.failureReason ?: "Unknown error", ExportFailureAdvice.of(cur)).joinToString("\n\n")
-                    dialogs.showError(this, message, "Export failed")
+                    showReportableError(message, "Export failed")
                 }
             }
         }
@@ -346,7 +354,7 @@ class SwingExportPanel(
         val manifest = try {
             if (manifestPath.isNullOrBlank()) null else ManifestIO.read(manifestPath)
         } catch (t: Throwable) {
-            dialogs.showError(this, t.message ?: t.toString(), "Failed to read manifest")
+            showReportableError(t.message ?: t.toString(), "Failed to read manifest")
             return
         }
         val source = manifest?.sourceVideo

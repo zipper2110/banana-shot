@@ -220,6 +220,7 @@ class ComponentNameContractTest {
             "nav-scoring",
             "nav-stats",
             "nav-export",
+            "nav-feedback",
             "nav-help",
             "nav-more",
             "projects-import-match",

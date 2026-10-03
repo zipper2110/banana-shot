@@ -14,7 +14,13 @@ import org.litvin.license.check.ExecutorExpiryScheduler
 import org.litvin.license.check.ExpiryController
 import org.litvin.license.check.PreferencesExpiredFlagStore
 import org.litvin.license.check.SystemRetryTiming
+import org.litvin.feedback.FeedbackBuildConfig
+import org.litvin.feedback.FeedbackSender
+import org.litvin.feedback.HttpFeedbackSender
 import org.litvin.license.online.HttpRulesFetcher
+import org.litvin.license.online.UpdateTrust
+import java.net.http.HttpClient
+import java.time.Duration
 import org.litvin.license.time.DataFolderFileTimeProbe
 import org.litvin.license.time.PreferencesSavedTimeStore
 import org.litvin.license.time.RunTimeCounter
@@ -56,6 +62,7 @@ internal data class AppServicesProductionFactory(
             .also { it.restoreSavedQueue() }
     },
     val encoderCapabilities: () -> EncoderCapabilities = EncoderCapabilities::production,
+    val feedbackSender: () -> FeedbackSender? = ::productionFeedbackSender,
     val afterConstruction: (AppServices) -> Unit = { },
 )
 
@@ -77,6 +84,8 @@ data class AppServices(
     val analyticsConfig: AnalyticsBuildConfig = AnalyticsBuildConfig.Disabled("not_configured"),
     val analyticsPreferences: AnalyticsPreferences? = null,
     val analyticsController: AnalyticsController? = null,
+    /** Sends the feedback reports (B-8). Null when the build has no endpoint: then the form offers only copy and email. */
+    val feedbackSender: FeedbackSender? = null,
 ) : AutoCloseable {
     private val closed = AtomicBoolean(false)
 
@@ -155,6 +164,7 @@ data class AppServices(
                     analyticsConfig = analyticsConfig,
                     analyticsPreferences = analyticsPreferences,
                     analyticsController = analyticsController,
+                    feedbackSender = factory.feedbackSender(),
                 )
                 factory.afterConstruction(services)
                 return services
@@ -177,6 +187,18 @@ data class AppServices(
  * preferences, and the data folder. Only this function makes them. All other code gets them through constructor
  * parameters, and the tests give fakes. No property or environment variable turns off the expiry.
  */
+/**
+ * The sender of the feedback reports, or null without a valid `bananashot.feedback.endpoint` (T2 of B-8). It uses the
+ * proxy of Windows and the trust of E5-S4. The trust stores load at the first send, not at the start.
+ */
+internal fun productionFeedbackSender(): FeedbackSender? {
+    val endpoint = FeedbackBuildConfig.endpointFromSystemProperties() ?: return null
+    val sender by lazy {
+        HttpFeedbackSender(endpoint, UpdateTrust.production.client(HttpClient.Redirect.NEVER, Duration.ofSeconds(10)))
+    }
+    return FeedbackSender { report -> sender.send(report) }
+}
+
 internal fun productionExpiryController(
     paths: AppDataPaths,
     preferences: PreferencesProvider,

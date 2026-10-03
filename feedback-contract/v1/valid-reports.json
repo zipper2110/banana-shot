@@ -1,0 +1,9 @@
+{
+  "validReports": [
+    { "report_id": "00000000-0000-4000-8000-000000000001", "topic": "problem", "message": "The export stops at 50 %.", "email": "user@example.test", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4", "error": "Export failed\n\nffmpeg exited with code 1", "log": "H4sIAAAAAAAACjMyMDLTNTTQNTBWMDSyMjCwMjBQ8PRz81corswryUgtyUxWyMlPV8jJzEvlAgDMlupcLAAAAA==" },
+    { "report_id": "00000000-0000-4000-8000-000000000002", "topic": "idea", "message": "Add a dark scoreboard.", "app_version": "1.0.0", "os_name": "Windows 10", "os_version": "10.0", "java_version": "21.0.4" },
+    { "report_id": "00000000-0000-4000-8000-000000000003", "topic": "question", "message": "How do I mark a let?", "email": "a.b+c@sub.example.test", "app_version": "1.0-SNAPSHOT", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21" },
+    { "report_id": "00000000-0000-4000-8000-000000000004", "topic": "other", "message": "x", "app_version": "dev", "os_name": "Linux", "os_version": "6.8", "java_version": "21.0.4" },
+    { "report_id": "00000000-0000-4000-8000-000000000005", "topic": "other", "message": "Ünïcödé – text with 🎾 and\nmore lines.", "app_version": "1.0.0", "os_name": "Windows 11", "os_version": "10.0", "java_version": "21.0.4" }
+  ]
+}

@@ -4,7 +4,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
     # The app image folder. The default is the output folder of Build-AppImage.ps1.
-    [string]$AppHome
+    [string]$AppHome,
+    # Only for a local build: do not require the feedback endpoint. The release workflow never uses it.
+    [switch]$AllowNoFeedbackEndpoint
 )
 
 # Checks the build information and the runtime modules of the app image (see "Build expiry" in
@@ -109,8 +111,25 @@ if ($missingModules.Count -gt 0) {
     throw "The bundled runtime (JDK $javaFeature) does not contain these modules: $($missingModules -join ', '). Add them with --add-modules in Build-AppImage.ps1, with the full list of modules that the app needs."
 }
 
+# The feedback endpoint (T5 of B-8). jpackage writes the --java-options to app\BananaShot.cfg.
+$launcherConfig = Join-Path $AppHome "app\BananaShot.cfg"
+if (-not (Test-Path -LiteralPath $launcherConfig)) {
+    throw "The launcher configuration was not found: $launcherConfig"
+}
+$feedbackLine = Get-Content -LiteralPath $launcherConfig | Where-Object { $_ -match '-Dbananashot\.feedback\.endpoint=' } | Select-Object -First 1
+$feedbackEndpoint = if ($feedbackLine) { ($feedbackLine -split '-Dbananashot\.feedback\.endpoint=', 2)[1].Trim() } else { "" }
+if ($feedbackEndpoint) {
+    # The same rule as FeedbackBuildConfig.endpoint in the app.
+    if ($feedbackEndpoint -notmatch '^https://[^/@?#\s]+(/[^?#\s]*)?/v1/feedback$') {
+        throw "The feedback endpoint '$feedbackEndpoint' is not an https URL that ends in /v1/feedback."
+    }
+} elseif (-not $AllowNoFeedbackEndpoint) {
+    throw "The app image has no feedback endpoint. Set the GitHub variable FEEDBACK_ENDPOINT, or give -FeedbackEndpoint to Build-AppImage.ps1."
+}
+
 Write-Host "Build date: $($values["buildDate"]) UTC"
 Write-Host "Expiry date: $($values["expiryDate"])"
 Write-Host "Version: $($values["version"])"
 Write-Host "Runtime: JDK $javaFeature, modules present: $($requiredModules -join ', ')"
+Write-Host "Feedback endpoint: $(if ($feedbackEndpoint) { $feedbackEndpoint } else { 'none (local build)' })"
 Write-Host "The application image is valid."

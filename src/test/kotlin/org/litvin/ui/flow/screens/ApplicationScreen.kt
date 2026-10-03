@@ -89,6 +89,8 @@ internal class ApplicationScreen(
             // The export queue does not depend on the project, so Export always shows (B-32).
             context.driver.requireShowing("nav-projects")
             context.driver.requireShowing("nav-export")
+            // Feedback also shows with no open project (T3 of B-8).
+            context.driver.requireShowing("nav-feedback")
             listOf("nav-points", "nav-colors", "nav-crop", "nav-scoring", "nav-stats")
                 .forEach { name -> context.driver.requireShowing(name, projectNavigationVisible) }
         }

@@ -15,6 +15,7 @@ import org.litvin.ui.commons.ToolCard
 import org.litvin.ui.commons.ToolNav
 import org.litvin.ui.commons.ToolNavItem
 import org.litvin.ui.commons.ToolPage
+import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.WrapText
 import java.awt.BorderLayout
@@ -35,9 +36,10 @@ import javax.swing.WindowConstants
 /**
  * The Help window. It does not block the app. The layout comes from design/dialogs-redesign/help.html:
  * the page list with the icons and the groups of the sidebar on the left, and the page on the right.
+ * [onTellUs] opens the feedback form with the topic "Question" (T3 of B-8). Without it, the pages have no such line.
  */
-class HelpDialog(owner: Window?) : JDialog(owner, "${AppInfo.NAME} Help", ModalityType.MODELESS) {
-    private val helpPanel = HelpPanel()
+class HelpDialog(owner: Window?, onTellUs: (() -> Unit)? = null) : JDialog(owner, "${AppInfo.NAME} Help", ModalityType.MODELESS) {
+    private val helpPanel = HelpPanel(onTellUs)
 
     init {
         defaultCloseOperation = WindowConstants.HIDE_ON_CLOSE
@@ -60,7 +62,7 @@ class HelpDialog(owner: Window?) : JDialog(owner, "${AppInfo.NAME} Help", Modali
     }
 }
 
-class HelpPanel : JPanel(BorderLayout()) {
+class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayout()) {
     private val navigation = ToolNav(
         "help-navigation",
         HelpPage.entries.map { page -> ToolNavItem(page, page.title, iconOf(page), captionOf(page)) },
@@ -113,6 +115,7 @@ class HelpPanel : JPanel(BorderLayout()) {
         if (content.shortcuts.isNotEmpty()) {
             section(column, "Keyboard shortcuts", Material2AL.KEYBOARD, listOf(shortcutTable(content.shortcuts)))
         }
+        onTellUs?.let { column.add(tellUsRow(it)) }
 
         page.revalidate()
         page.repaint()
@@ -124,6 +127,22 @@ class HelpPanel : JPanel(BorderLayout()) {
         if (rows.isEmpty()) return
         column.add(ToolPage.caption(caption, ikon), gapAfter = 8)
         rows.forEachIndexed { index, row -> column.add(row, gapAfter = if (index == rows.lastIndex) 22 else 2) }
+    }
+
+    /** The last line of each page: "Is something not clear? Tell us." The link opens the feedback form. */
+    private fun tellUsRow(onClick: () -> Unit): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+        name = "help-tell-us-row"
+        isOpaque = false
+        (layout as FlowLayout).alignOnBaseline = true
+        add(JLabel("Is something not clear?").apply {
+            font = UiKit.font(14f)
+            foreground = Palette.FG_2
+        })
+        add(UiButton("Tell us.", kind = UiButton.Kind.GHOST, fontSize = 14f).apply {
+            name = "help-tell-us"
+            toolTipText = "Send a question to the author"
+            addActionListener { onClick() }
+        })
     }
 
     private fun bodyText(text: String) = WrapText(text, UiKit.font(14f), Palette.FG, 1.5f, ToolPage.MAX_WIDTH - 40)

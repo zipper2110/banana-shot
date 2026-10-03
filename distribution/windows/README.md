@@ -11,16 +11,22 @@ import libraries and HTML docs are not.
 ```powershell
 .\distribution\windows\Get-NativeDependencies.ps1
 mvn test
-.\distribution\windows\Build-AppImage.ps1 -Version 1.0.0
+.\distribution\windows\Build-AppImage.ps1 -Version 1.0.0 -FeedbackEndpoint https://<host>/v1/feedback
 .\distribution\windows\Validate-AppImage.ps1 -Version 1.0.0
 & ".\target\package\app-image\BananaShot\BananaShot Diagnostics.cmd"
 ```
+
+`-FeedbackEndpoint` is the URL of the feedback Worker (`feedback-worker/README.md`).
+Without it, the feedback form of the app cannot send, and `Validate-AppImage.ps1`
+refuses the image. For a local build without the Worker, give
+`-AllowNoFeedbackEndpoint` to `Validate-AppImage.ps1`.
 
 `Validate-AppImage.ps1` runs `org.litvin.license.BuildInfoPrinter` with the
 bundled runtime. It fails when the build date is more than 7 days ago or later
 than tomorrow, when the expiry date is not 6 calendar months after the build
 date, when the app version is not the jpackage `--app-version`, or when the
-runtime does not contain the modules for the HTTPS request of the rules file.
+runtime does not contain the modules for the HTTPS request of the rules file,
+or when the image has no valid feedback endpoint.
 The packaged diagnostics do not do these checks.
 
 ## Velopack installer
@@ -79,6 +85,9 @@ release. It gives the release steps in sequence. The open work is in
 - Code signing is optional. The release workflow signs only when the repository
   variable `ARTIFACT_SIGNING_ENDPOINT` and the other Azure Artifact Signing
   settings exist. Without them, it builds unsigned files and shows a warning.
+- The repository variable `FEEDBACK_ENDPOINT` must be the URL of the feedback
+  Worker (`https://<host>/v1/feedback`). Without it, the workflow fails at
+  "Validate application image".
 - The release workflow creates a draft release. Check it on the GitHub
   releases page, then click "Publish release".
 - To test the release workflow without a release, start it by hand: open the

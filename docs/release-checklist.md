@@ -22,17 +22,30 @@ the features of this release.
 - [ ] Tooltips on the changed controls.
 - [ ] More → About and More → Contact.
 
-## 3. Native dependencies
+## 3. Feedback Worker
+
+See `feedback-worker/README.md` and `docs/feedback/b-8-tasks.md`.
+
+- [ ] The feedback Worker is deployed with the D1 schema and the secrets
+      `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `RATE_LIMIT_KEY`.
+- [ ] `FEEDBACK_INGESTION_ENABLED` is `true`. The synthetic report
+      (`feedback-contract/v1/smoke-report.json`) returns `201`, and the author
+      chat gets the message. A second send returns `200`.
+- [ ] The GitHub variable `FEEDBACK_ENDPOINT` is the URL of the Worker
+      (`https://<host>/v1/feedback`). `Validate-AppImage.ps1` refuses a build
+      without it.
+
+## 4. Native dependencies
 
 - [ ] If a pin in `native-dependencies.json` changed, make a new natives
       release. See `distribution/windows/README.md`, "Natives release".
 
-## 4. Tests
+## 5. Tests
 
 - [ ] `mvn -B test` passes.
 - [ ] `mvn -B -Pui-flow verify` passes with JDK 25.
 
-## 5. Dry run
+## 6. Dry run
 
 - [ ] Start the "Windows release" workflow by hand with the version number.
       See `distribution/windows/README.md`, "Release requirements". The
@@ -44,7 +57,7 @@ the features of this release.
       library of the SBOM with its version. The end of the file has the full
       text of each license that the list names.
 
-## 6. Packaged app
+## 7. Packaged app
 
 Install the app with `BananaShot-win-Setup.exe` of the dry run. The app is
 in `%LocalAppData%\BananaShot\current`.
@@ -65,13 +78,24 @@ in `%LocalAppData%\BananaShot\current`.
       Third-party notices buttons open the files from `legal/`.
 - [ ] More → Contact: "Write an email" opens the email app. "Open log folder"
       opens the folder that contains `bananashot.log`.
+- [ ] Feedback: in the sidebar, click Feedback. Select a topic, write a
+      message, give an email address, and select "Attach the log files".
+      "Show the data" shows the report and the log text. Click Send. The form
+      shows "Thank you" and the report ID. The author chat gets the message
+      and the `.log.gz` file with the same ID.
+- [ ] Feedback without network: turn off the network and send a report. The
+      form keeps the text and shows "Try again", "Copy report", and "Write an
+      email". Turn on the network and click "Try again". The author chat gets
+      the report one time.
+- [ ] Help: the end of a help page has "Is something not clear? Tell us." The
+      link opens the form with the topic Question.
 - [ ] More → Settings: "Open folder" opens the app data folder.
 - [ ] First-time hints: each hint shows at its trigger. A closed hint does not
       show again. "Show all hints again" shows the hints again.
 
-If a check fails, fix the cause and start again at step 4.
+If a check fails, fix the cause and start again at step 5.
 
-## 7. Release
+## 8. Release
 
 - [ ] Push the tag `v<version>` on `master`. The release workflow makes a
       draft release.

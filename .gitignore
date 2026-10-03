@@ -39,3 +39,7 @@ build/
 .DS_Store
 /.idea/
 /analytics-worker/node_modules/
+/feedback-worker/node_modules/
+/feedback-worker/wrangler.toml
+/feedback-worker/.dev.vars
+/feedback-worker/.wrangler/

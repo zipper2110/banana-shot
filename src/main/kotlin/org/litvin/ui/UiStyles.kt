@@ -270,6 +270,8 @@ object UiStyles {
 
     fun moreIcon(size: Int = 20): Icon = ikon(Material2MZ.MORE_HORIZ, size, Palette.LIME)
 
+    fun feedbackIcon(size: Int = 20): Icon = ikon(Material2AL.FEEDBACK, size, Palette.LIME)
+
     // Close button of a hint balloon
     fun closeIcon(size: Int = 14, color: Color = Palette.FG_2): Icon = ikon(Material2AL.CLOSE, size, color)
 

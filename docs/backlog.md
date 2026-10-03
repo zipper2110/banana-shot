@@ -28,6 +28,9 @@ Do these items before the first public release.
 - Decided on 2026-10-03: an in-app feedback form sends the report to a
   Cloudflare Worker, and the Worker sends it to the author with a Telegram
   bot. `docs/feedback/b-8-tasks.md` has the decisions and the tasks.
+- Status 2026-10-03: the code of T1 to T5 is done. Open: deploy the Worker,
+  make the bot, set the GitHub variable `FEEDBACK_ENDPOINT`, and do the
+  manual checks of T5. The site text waits for B-10.
 - Replies inside the app are B-33 (post-release).
 
 ### B-9 Analytics

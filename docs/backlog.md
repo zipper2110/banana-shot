@@ -17,10 +17,10 @@ Do these items before the first public release.
   `docs/licensing/l-5.2-epics.md` tracks the work.
 - This must be in the first release. A build without an expiry stays free
   forever.
-- Status 2026-10-03: E0 to E7 are done. E8 (the expiry user interface)
-  is done. E9 waits for a manual check
-  with a real release. The "Next work" list in `l-5.2-epics.md` has
-  the stories that can start now.
+- Status 2026-10-03: E0 to E8 and E10 are done. E9 waits for a manual
+  check with a real release. E11 (the manual checks before the first
+  release) waits for E9 and B-26. The "Next work" list in `l-5.2-epics.md`
+  has the stories that can start now.
 
 ### B-8 Requests for bug reports and features
 
@@ -294,9 +294,36 @@ Do these items before the first public release.
      `HKCU\Software\JavaSoft\Prefs` stay.
 - Before you start:
   - Checks 1 and 2 need the new dry run of B-21 (with the fixed notices).
-  - Check 4 needs the user interface of B-30.
-- Add checks 3 to 5 to step 7 of `release-checklist.md`. Automate them in
-  the release workflow if it is possible.
+  - The user interface of B-30 for check 4 is done (E8 of
+    `l-5.2-epics.md`, 2026-10-03).
+- Done (2026-10-03): checks 3 and 5 are in step 7 of `release-checklist.md`,
+  and check 4 is in step 9 (after the publish, because the app downloads
+  only a public setup file). For the first release, do them here with two
+  test builds. No automation: the checks need the Velopack dialog and a real
+  install.
+- Setup for check 4 (decided on 2026-10-03). The app downloads the setup
+  from the `installerUrl` of `release/version-policy.json` on `master`. A
+  workflow artifact needs a GitHub login, so version N must be in a public
+  release. A tag push cannot make it: `Validate-Release.ps1` (E0-S3) stops
+  the tag build while a story of `l-5.2-epics.md` is open. Thus:
+  1. Start the "Windows release" workflow by hand two times, with the
+     versions `0.9.0` (N-1) and `0.9.1` (N). Download both artifacts. The
+     versions are lower than the first release, so the test builds never
+     replace it.
+  2. Make a public pre-release for N by hand. Its tag does not start with
+     `v`, so the release workflow does not run, and the release age reminder
+     ignores it:
+     `gh release create update-test-0.9.1 --prerelease --title "Update test 0.9.1 (delete after B-26)" --notes "Test build for B-26. Do not use." <folder of N>/BananaShot-win-Setup.exe`
+  3. On `master`, set `latest` in `release/version-policy.json` to
+     `"version": "0.9.1"`, `"downloadUrl": "https://github.com/zipper2110/banana-shot/releases/tag/update-test-0.9.1"`,
+     and `"installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/update-test-0.9.1/BananaShot-win-Setup.exe"`.
+     Push. GitHub can need about 5 minutes to show the new file.
+  4. Install N-1 from its artifact, and start it. The update notice shows
+     version 0.9.1. Do check 4: first "Cancel" in the Velopack dialog, then
+     "Update".
+  5. After the checks: set `latest` back to the values before step 3, and
+     push. Delete the pre-release and its tag:
+     `gh release delete update-test-0.9.1 --cleanup-tag --yes`.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.
 

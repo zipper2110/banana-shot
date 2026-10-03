@@ -98,6 +98,19 @@ in `%LocalAppData%\BananaShot\current`.
 - [ ] First-time hints: each hint shows at its trigger. A closed hint does not
       show again. "Show all hints again" shows the hints again.
 
+Install over the previous release (B-26, check 3). Skip this for the first
+release: B-26 does it with two test builds.
+
+- [ ] Uninstall the app. Install the previous published release, start it,
+      and make a project. Then run `BananaShot-win-Setup.exe` of the dry run.
+      The app closes, or the setup asks you to close it. The new version
+      starts. The projects, the preferences, and the export history stay.
+
+Uninstall (B-26, check 5):
+
+- [ ] Uninstall the app in Windows Settings → Apps. The app data
+      (`%APPDATA%\BananaShot`) and `HKCU\Software\JavaSoft\Prefs` stay.
+
 If a check fails, fix the cause and start again at step 5.
 
 ## 8. Release
@@ -128,6 +141,12 @@ If a check fails, fix the cause and start again at step 5.
       - `notes` (optional): a short text about the release. The app shows it
         as plain text.
 - [ ] Set `<revision>` in `pom.xml` to the next version with `-SNAPSHOT`.
+- [ ] "Update and restart" (B-26, check 4). Skip this for the first release.
+      Install the previous release, and start it. GitHub can need about 5
+      minutes to show the new `latest`. The update notice shows the new
+      version. Click "Update and restart", then "Update" in the Velopack
+      dialog. The new version starts with the same projects, preferences,
+      and export queue.
 - Recommendation (not a check): wait about 30 days before you add a rule that
   stops the version before this release (N-1). If the new version has a
   serious bug on some computers, users can install N-1 again until a fix is

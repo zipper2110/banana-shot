@@ -18,7 +18,7 @@ Do these items before the first public release.
 - This must be in the first release. A build without an expiry stays free
   forever.
 - Status 2026-10-03: E0 to E7 are done. E8 (the expiry user interface)
-  is done except one run of its UI-flow tests. E9 waits for a manual check
+  is done. E9 waits for a manual check
   with a real release. The "Next work" list in `l-5.2-epics.md` has
   the stories that can start now.
 

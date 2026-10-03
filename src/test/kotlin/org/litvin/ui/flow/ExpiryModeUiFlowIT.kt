@@ -33,7 +33,10 @@ private fun requireExpiredWindow(context: UiFlowContext) {
 }
 
 private fun requireNormalWindow(context: UiFlowContext) {
-    context.driver.requireShowing("expired-dialog", false)
+    // The driver does not find a dialog that never showed. Thus, this check reads the windows.
+    context.driver.waitUntil("the expired dialog to be hidden") {
+        onEdt { Window.getWindows().none { it.name == "expired-dialog" && it.isShowing } }
+    }
     context.driver.requireShowing("expiry-banner", false)
     context.driver.requireShowing("nav-projects")
 }

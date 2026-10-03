@@ -23,7 +23,7 @@ https://github.com/lpbborges/grid
 The corresponding source code of this build (mpv, FFmpeg, libplacebo, the
 build recipe, and the LGPL MSYS2 source packages) is published with a copy of
 the binaries in the natives release:
-https://github.com/zipper2110/tennis-record/releases/tag/natives-2026-09
+https://github.com/zipper2110/banana-shot/releases/tag/natives-2026-09
 The bundled DLLs are unmodified. You can replace them with your own builds in
 the installation directory (natives/windows-x64/mpv).
 
@@ -37,7 +37,7 @@ https://ffmpeg.org/
 The corresponding source code of this build (FFmpeg, the build scripts, and
 the source of each library) is published with a copy of the binaries in the
 natives release:
-https://github.com/zipper2110/tennis-record/releases/tag/natives-2026-09
+https://github.com/zipper2110/banana-shot/releases/tag/natives-2026-09
 BananaShot runs FFmpeg only as separate programs (ffmpeg.exe and
 ffprobe.exe). The shared libraries and executables are unmodified and remain
 replaceable in the installation directory. The FFmpeg license text is
@@ -92,7 +92,7 @@ LICENSE-NOTICE.txt describes the license key functionality and the earlier
 GPL versions. The Elastic License 2.0 applies only to BananaShot. It does
 not change the license of any third-party component in this file.
 The source code of BananaShot is published beside each release and at
-https://github.com/zipper2110/tennis-record.
+https://github.com/zipper2110/banana-shot.
 
 
 ===============================================================================

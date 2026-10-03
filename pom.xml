@@ -287,9 +287,9 @@
                                         <bananashot.appDir>${ui.smoke.appDir}</bananashot.appDir>
                                         <bananashot.appDataDir>${ui.smoke.resultsDir}/app-data</bananashot.appDataDir>
                                         <bananashot.nativeSmoke.resultsDir>${ui.smoke.resultsDir}</bananashot.nativeSmoke.resultsDir>
-                                        <tr.mpv.path>${ui.smoke.mpvPath}</tr.mpv.path>
-                                        <tr.ffmpeg.path>${ui.smoke.ffmpegPath}</tr.ffmpeg.path>
-                                        <tr.ffprobe.path>${ui.smoke.ffprobePath}</tr.ffprobe.path>
+                                        <bananashot.mpvPath>${ui.smoke.mpvPath}</bananashot.mpvPath>
+                                        <bananashot.ffmpegPath>${ui.smoke.ffmpegPath}</bananashot.ffmpegPath>
+                                        <bananashot.ffprobePath>${ui.smoke.ffprobePath}</bananashot.ffprobePath>
                                     </systemPropertyVariables>
                                 </configuration>
                             </execution>

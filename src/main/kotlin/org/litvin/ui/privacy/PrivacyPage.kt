@@ -1,5 +1,6 @@
 package org.litvin.ui.privacy
 
+import org.litvin.AppInfo
 import org.litvin.analytics.AnalyticsController
 import org.litvin.analytics.AnalyticsPreferences
 import org.kordamp.ikonli.material2.Material2MZ
@@ -40,12 +41,35 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
                 secondaryButton("Privacy notice", Material2MZ.OPEN_IN_NEW) { linkOpener.open(privacyUrl) },
                 secondaryButton("Contact", Material2MZ.MAIL_OUTLINE) { linkOpener.open(contact) },
             )
+            versionCheck()
         }
 
         /** The page for a build that cannot send usage analytics. */
         fun withoutAnalytics(): PrivacyPage = PrivacyPage().apply {
             subheading("Usage analytics")
             paragraph("This version of the app does not send usage analytics. Your videos and projects stay on this computer.")
+            versionCheck()
         }
+
+        /**
+         * The requests to GitHub for the build expiry and the update (build-expiry-spec.md, "Privacy"). They are not
+         * part of the analytics, so they have their own section in each build.
+         */
+        private fun PrivacyPage.versionCheck() {
+            subheading(VERSION_CHECK_TITLE)
+            VERSION_CHECK_TEXT.forEach { paragraph(it) }
+        }
+
+        const val VERSION_CHECK_TITLE = "Version check and updates"
+
+        val VERSION_CHECK_TEXT = listOf(
+            "${AppInfo.NAME} reads a small file from GitHub when it starts and from time to time while it runs. " +
+                "The file tells if this version still works and if a new version is available.",
+            "The request sends no user ID and no analytics data. GitHub receives your IP address and the standard " +
+                "data of a web request.",
+            "\"Update and restart\" downloads the setup file of the new version from GitHub. This request also sends " +
+                "no user ID.",
+            "The version check is necessary for the license, so you cannot turn it off. It is not part of the usage analytics.",
+        )
     }
 }

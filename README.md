@@ -135,6 +135,26 @@ See: [docs/solution-outline.md](docs/solution-outline.md)
 - File issues and proposals referencing sections of the [solution outline](docs/solution-outline.md).
 - Keep EDL/score models versioned and migration‑ready.
 
+## Privacy
+
+### Usage analytics
+- A build can send optional usage analytics. The app asks first, and you can
+  turn the analytics off in More → Privacy. See
+  [docs/analytics/design.md](docs/analytics/design.md).
+
+### Version check and updates
+- This is separate from the usage analytics. It is necessary for the license
+  (the build expiry), so you cannot turn it off.
+- The app reads a small file from GitHub when it starts and from time to time
+  while it runs: `release/version-policy.json` in this repository, on
+  `raw.githubusercontent.com`. The file tells if this version still works and
+  if a new version is available.
+- "Update and restart" downloads the setup EXE of the new version from GitHub.
+- These requests send no user ID and no analytics data. GitHub receives the IP
+  address and the standard HTTP headers.
+- Details: "Privacy" in
+  [docs/licensing/build-expiry-spec.md](docs/licensing/build-expiry-spec.md).
+
 ## Licensing & third‑party components
 - BananaShot is source-available software under the Elastic License 2.0
   (ELv2). See [LICENSE](LICENSE) and [LICENSE-NOTICE](LICENSE-NOTICE). ELv2 is
@@ -145,7 +165,7 @@ See: [docs/solution-outline.md](docs/solution-outline.md)
 - Binary releases include the application source, an SBOM, native dependency
   provenance, and third-party notices. The bundled FFmpeg and libmpv builds
   and their source are in the
-  [natives release](https://github.com/zipper2110/tennis-record/releases/tag/natives-2026-09).
+  [natives release](https://github.com/zipper2110/banana-shot/releases/tag/natives-2026-09).
 - libmpv (LGPL build, `-Dgpl=false`) — loaded in the app process, shipped
   unmodified, and replaceable by users.
 - FFmpeg (GPL build) — runs only as a separate `ffmpeg.exe` process. An

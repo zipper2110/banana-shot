@@ -109,7 +109,7 @@ class HttpRulesFetcher(
         const val MAX_AGE_SECONDS = 3600L
 
         /** The raw GitHub URL of `release/version-policy.json` on `master`. Only the production setup uses it (E7-S3). */
-        const val RULES_URL = "https://raw.githubusercontent.com/zipper2110/tennis-record/master/release/version-policy.json"
+        const val RULES_URL = "https://raw.githubusercontent.com/zipper2110/banana-shot/master/release/version-policy.json"
 
         /** No redirects, and HTTP/1.1: the file is small, and a test server can answer it. */
         fun client(trust: UpdateTrust, timeout: Duration = TIMEOUT): HttpClient =

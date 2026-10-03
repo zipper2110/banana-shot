@@ -79,7 +79,7 @@ object FFmpegCapabilities {
     fun h264Encoders(): Set<String> {
         cached?.let { return it }
         val set = mutableSetOf<String>()
-        val timeoutMs = System.getProperty("tr.ffmpeg.probe.timeout.ms")?.toLongOrNull() ?: 10_000L
+        val timeoutMs = System.getProperty("bananashot.ffmpegProbeTimeoutMs")?.toLongOrNull() ?: 10_000L
         try {
             val exe = ffmpegCmd().joinToString(" ")
             logger.info { "Probing FFmpeg encoders using: $exe -hide_banner -encoders (timeout=${timeoutMs}ms)" }
@@ -117,7 +117,7 @@ object FFmpegCapabilities {
      * AMF on a PC without an AMD GPU. Only a real encode shows that the encoder works.
      */
     fun canEncode(encoderId: String): Boolean {
-        val timeoutMs = System.getProperty("tr.ffmpeg.probe.timeout.ms")?.toLongOrNull() ?: 15_000L
+        val timeoutMs = System.getProperty("bananashot.ffmpegProbeTimeoutMs")?.toLongOrNull() ?: 15_000L
         return try {
             val (_, exitCode, timedOut) = runAndCapture(
                 ffmpegCmd() + listOf(

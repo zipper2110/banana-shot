@@ -137,7 +137,7 @@ Make a new natives release only when you change a pin in
 9. In `native-dependencies.json`, set `nativesRelease` to the new tag and
    URL. Move each upstream URL to `upstreamUrl` or `upstreamSourceUrl`. Set
    `url` and `sourceUrl` to the natives release
-   (`https://github.com/zipper2110/tennis-record/releases/download/<tag>/<file>`).
+   (`https://github.com/zipper2110/banana-shot/releases/download/<tag>/<file>`).
    Set the FFmpeg `sourceSha256` from `SHA256SUMS.txt`. Do not change the
    other SHA-256 values. The files are the same.
 10. Change the natives release link in `distribution/THIRD-PARTY-NOTICES.txt`.

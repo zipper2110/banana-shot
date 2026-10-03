@@ -222,8 +222,8 @@ Example:
   "schema": 1,
   "latest": {
     "version": "1.4.0",
-    "downloadUrl": "https://github.com/zipper2110/tennis-record/releases/latest",
-    "installerUrl": "https://github.com/zipper2110/tennis-record/releases/download/v1.4.0/BananaShot-win-Setup.exe",
+    "downloadUrl": "https://github.com/zipper2110/banana-shot/releases/latest",
+    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.0/BananaShot-win-Setup.exe",
     "notes": "Faster export. New score overlay."
   },
   "rules": [
@@ -250,7 +250,7 @@ Example:
   - `installerUrl`: the setup EXE that "Update and restart" downloads and
     starts (see "Update and restart"). Optional. With no `installerUrl`, the
     app uses the stable URL
-    `https://github.com/zipper2110/tennis-record/releases/latest/download/<setup EXE name>`.
+    `https://github.com/zipper2110/banana-shot/releases/latest/download/<setup EXE name>`.
     The app reads this field from the first release. Thus, it is in the
     first release, also if the file does not use it yet (see "Changes to the
     file format").

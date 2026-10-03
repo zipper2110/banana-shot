@@ -172,8 +172,8 @@ class SwingApplicationFactoryTest {
     fun visibleApplicationUsesInjectedEncoderCapabilitiesWithoutNativeProbe() {
         val fixture = TestServices(EncoderCapabilities(setOf("h264_nvenc"), "h264_nvenc"))
         val windowsBefore = Window.getWindows().toSet()
-        val previousFfmpeg = System.getProperty("tr.ffmpeg.path")
-        System.setProperty("tr.ffmpeg.path", fixture.root.resolve("must-not-run-ffmpeg.exe").absolutePath)
+        val previousFfmpeg = System.getProperty("bananashot.ffmpegPath")
+        System.setProperty("bananashot.ffmpegPath", fixture.root.resolve("must-not-run-ffmpeg.exe").absolutePath)
         org.litvin.ApplicationLayout.resetForTests()
         org.litvin.FFmpegCapabilities.refresh()
         var handle: SwingApplicationHandle? = null
@@ -191,8 +191,8 @@ class SwingApplicationFactoryTest {
         } finally {
             handle?.close()
             Window.getWindows().filterNot(windowsBefore::contains).forEach(Window::dispose)
-            if (previousFfmpeg == null) System.clearProperty("tr.ffmpeg.path")
-            else System.setProperty("tr.ffmpeg.path", previousFfmpeg)
+            if (previousFfmpeg == null) System.clearProperty("bananashot.ffmpegPath")
+            else System.setProperty("bananashot.ffmpegPath", previousFfmpeg)
             org.litvin.ApplicationLayout.resetForTests()
             org.litvin.FFmpegCapabilities.refresh()
         }

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BananaShot: tennis match video editor for Windows</title>
+  <meta name="description" content="Turn a full tennis match recording into a short video with a scoreboard. Mark the points, score them, and export. Free for Windows.">
+  <link rel="canonical" href="https://banana-shot-editor.app/">
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <meta property="og:title" content="BananaShot: tennis match video editor">
+  <meta property="og:description" content="Turn a full tennis match into a short video with a scoreboard.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://banana-shot-editor.app/">
+  <meta property="og:image" content="https://banana-shot-editor.app/assets/icon-256.png">
+  <meta name="theme-color" content="#0e0e0e">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="28" height="28">BananaShot</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/download/">Download</a>
+      <a href="/faq/">FAQ</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/privacy/">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">Tennis video editor for Windows</div>
+        <h1>Your full match. Only the points. With the score.</h1>
+        <p class="lead">BananaShot turns a long tennis recording into a short video that is easy to watch. Mark the points, click who won each point, and export the video with a scoreboard.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/download/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            Download for Windows
+          </a>
+          <a class="btn btn-secondary" href="#how">How it works</a>
+        </div>
+        <span class="btn-note">Free. No account. Windows 10 and 11, 64-bit.</span>
+      </div>
+
+      <figure class="shot" style="margin:0">
+        <svg viewBox="0 0 640 440" role="img" aria-labelledby="shot-title">
+          <title id="shot-title">A tennis video with a scoreboard. Under the video, a timeline of the full match shows the marked points. A shorter bar shows the exported video with only the points.</title>
+          <!-- The video frame: a hard court. -->
+          <rect width="640" height="360" fill="#2c5470"/>
+          <path d="M90 330 L550 330 L430 110 L210 110 Z" fill="#3d6b8c"/>
+          <g stroke="rgba(255,255,255,0.6)" stroke-width="2" fill="none">
+            <path d="M90 330 L550 330 L430 110 L210 110 Z"/>
+            <path d="M147.5 330 L237.5 110 M492.5 330 L402.5 110"/>
+            <path d="M190.9 145 L449.1 145 M130.9 255 L509.1 255 M320 145 L320 255"/>
+            <path d="M316 330 L324 330 M320 110 L320 114"/>
+          </g>
+          <!-- The net. -->
+          <rect x="166" y="178" width="308" height="13" fill="rgba(10,10,10,0.35)"/>
+          <path d="M166 178 L474 178" stroke="#f2f2f2" stroke-width="2.5"/>
+          <path d="M166 178 L166 196 M474 178 L474 196" stroke="#1a1a1a" stroke-width="3"/>
+          <!-- The players and the ball. -->
+          <ellipse cx="298" cy="318" rx="16" ry="4" fill="rgba(0,0,0,0.3)"/>
+          <rect x="289" y="282" width="18" height="34" rx="7" fill="#e9e9e9"/>
+          <circle cx="298" cy="274" r="8" fill="#d9a77c"/>
+          <ellipse cx="368" cy="131" rx="9" ry="2.5" fill="rgba(0,0,0,0.3)"/>
+          <rect x="363" y="111" width="10" height="19" rx="4" fill="#ff7351"/>
+          <circle cx="368" cy="106" r="4.5" fill="#c8916a"/>
+          <circle cx="402" cy="214" r="4.5" fill="#e6ff4d"/>
+          <!-- The scoreboard. -->
+          <g font-family="Segoe UI, system-ui, sans-serif" font-size="13" font-weight="600">
+            <rect x="16" y="16" width="214" height="58" rx="6" fill="rgba(14,14,14,0.88)"/>
+            <circle cx="30" cy="34" r="3.5" fill="#e6ff4d"/>
+            <text x="42" y="39" fill="#ffffff">J. PARK</text>
+            <text x="42" y="63" fill="#ffffff">M. SILVA</text>
+            <text x="140" y="39" fill="#adaaaa">6</text>
+            <text x="140" y="63" fill="#adaaaa">4</text>
+            <text x="160" y="39" fill="#ffffff">3</text>
+            <text x="160" y="63" fill="#ffffff">2</text>
+            <rect x="180" y="22" width="42" height="22" rx="4" fill="#a1fe00"/>
+            <text x="201" y="38" fill="#142000" text-anchor="middle">40</text>
+            <rect x="180" y="47" width="42" height="22" rx="4" fill="#202020"/>
+            <text x="201" y="63" fill="#ffffff" text-anchor="middle">15</text>
+          </g>
+          <g font-family="Segoe UI, system-ui, sans-serif" font-size="12" font-weight="600">
+            <rect x="520" y="16" width="104" height="26" rx="13" fill="rgba(14,14,14,0.75)"/>
+            <text x="572" y="33" fill="#e4e4e4" text-anchor="middle">Point 31 of 74</text>
+          </g>
+          <!-- The timeline of the full match and the exported video. -->
+          <rect y="360" width="640" height="80" fill="#161616"/>
+          <g font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600" letter-spacing="0.06em">
+            <text x="12" y="396" fill="#8a8a8a">MATCH</text>
+            <text x="12" y="426" fill="#a3c586">EXPORT</text>
+            <text x="628" y="382" fill="#8a8a8a" text-anchor="end">1:52:40</text>
+            <text x="335" y="412" fill="#a3c586" text-anchor="end">49:35</text>
+          </g>
+          <rect x="70" y="387" width="558" height="10" rx="2" fill="#2c2c2c"/>
+          <g fill="#a1fe00">
+            <rect x="78" y="387" width="8" height="10"/><rect x="96" y="387" width="12" height="10"/>
+            <rect x="120" y="387" width="6" height="10"/><rect x="134" y="387" width="10" height="10"/>
+            <rect x="156" y="387" width="9" height="10"/><rect x="178" y="387" width="14" height="10"/>
+            <rect x="205" y="387" width="7" height="10"/><rect x="222" y="387" width="11" height="10"/>
+            <rect x="246" y="387" width="8" height="10"/><rect x="268" y="387" width="13" height="10"/>
+            <rect x="296" y="387" width="6" height="10"/><rect x="312" y="387" width="10" height="10"/>
+            <rect x="336" y="387" width="9" height="10"/><rect x="360" y="387" width="12" height="10"/>
+            <rect x="386" y="387" width="7" height="10"/><rect x="404" y="387" width="10" height="10"/>
+            <rect x="428" y="387" width="8" height="10"/><rect x="448" y="387" width="15" height="10" fill="#f2d64b"/>
+            <rect x="476" y="387" width="9" height="10"/><rect x="498" y="387" width="11" height="10"/>
+            <rect x="522" y="387" width="7" height="10"/><rect x="540" y="387" width="12" height="10"/>
+            <rect x="566" y="387" width="8" height="10"/><rect x="584" y="387" width="10" height="10"/>
+            <rect x="604" y="387" width="9" height="10"/>
+          </g>
+          <path d="M305 383 L305 401" stroke="#ff7351" stroke-width="2"/>
+          <g fill="#a1fe00">
+            <rect x="70" y="417" width="8" height="10"/><rect x="79" y="417" width="12" height="10"/>
+            <rect x="92" y="417" width="6" height="10"/><rect x="99" y="417" width="10" height="10"/>
+            <rect x="110" y="417" width="9" height="10"/><rect x="120" y="417" width="14" height="10"/>
+            <rect x="135" y="417" width="7" height="10"/><rect x="143" y="417" width="11" height="10"/>
+            <rect x="155" y="417" width="8" height="10"/><rect x="164" y="417" width="13" height="10"/>
+            <rect x="178" y="417" width="6" height="10"/><rect x="185" y="417" width="10" height="10"/>
+            <rect x="196" y="417" width="9" height="10"/><rect x="206" y="417" width="12" height="10"/>
+            <rect x="219" y="417" width="7" height="10"/><rect x="227" y="417" width="10" height="10"/>
+            <rect x="238" y="417" width="8" height="10"/><rect x="247" y="417" width="15" height="10" fill="#f2d64b"/>
+            <rect x="263" y="417" width="9" height="10"/><rect x="273" y="417" width="11" height="10"/>
+            <rect x="285" y="417" width="7" height="10"/><rect x="293" y="417" width="12" height="10"/>
+            <rect x="306" y="417" width="8" height="10"/><rect x="315" y="417" width="10" height="10"/>
+            <rect x="326" y="417" width="9" height="10"/>
+          </g>
+        </svg>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">How it works</div>
+        <h2>Four steps from the court to the video</h2>
+        <p class="muted">Most of a tennis recording is time between the points. BananaShot removes this time and adds the score.</p>
+      </div>
+      <ol class="steps">
+        <li>
+          <h3>Record your match</h3>
+          <p class="step-tags">Any camera, any resolution, any length</p>
+          <p>Record a match or a training session with a phone, an action camera, or a video camera.</p>
+        </li>
+        <li>
+          <h3>Mark the points</h3>
+          <p class="step-tags">Special UI, easy and fast</p>
+          <p>Open your recording. Set the start and the end of each point with one key. Mark the best points as favorites.</p>
+        </li>
+        <li>
+          <h3>Score the match</h3>
+          <p class="step-tags">Get a scoreboard &amp; stats</p>
+          <p>Play each point and click the player who won it. The app counts the sets, the games, and the points with the tennis rules.</p>
+        </li>
+        <li>
+          <h3>Export the video</h3>
+          <p class="step-tags">Get the result</p>
+          <p>Select the full match, only the points, or only the favorites. The video gets the scoreboard, your comments, and the match statistics.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Features</div>
+        <h2>Made for tennis players and coaches</h2>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.6 7.6 20 18M8.6 16.4 20 6"/></svg>
+          <h3>No dead time</h3>
+          <p>The export keeps only the marked points. A two-hour match often becomes less than one hour of video.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 12h18M14 5v14"/></svg>
+          <h3>Scoreboard in the video</h3>
+          <p>Best of 3 or 5 sets, match tiebreak, pro set, games only, or manual scoring. Select the style, the colors, and the position of the scoreboard.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+          <h3>Match statistics</h3>
+          <p>Serve, break points, point length, and a momentum chart. Add a statistics card at the end of the video or a summary after each set.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>
+          <h3>Comments on the video</h3>
+          <p>Add a comment to a moment of the match. Coaches can explain a shot. The export shows the comment on the video.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><circle cx="12" cy="12" r="3"/></svg>
+          <h3>Color and framing</h3>
+          <p>Make a dark or flat video clear with the light and color controls. Zoom, move, and rotate the image to frame the court.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
+          <h3>Fast export</h3>
+          <p>The app finds the video encoders that work on your PC: NVIDIA, AMD, or Intel. Many exports can wait in a queue.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Your video stays on your PC</div>
+        <h2>Local and safe for your files</h2>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <h3>No upload</h3>
+          <p>The app edits on your PC. It does not send your videos to a server.</p>
+        </div>
+        <div class="feature">
+          <h3>The original stays</h3>
+          <p>The app only reads your recording. The export writes a new file.</p>
+        </div>
+        <div class="feature">
+          <h3>Works offline</h3>
+          <p>Edit and export without an internet connection. You do not need an account.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">No AI involved</div>
+        <h2>You are in control, not an algorithm</h2>
+        <p class="muted">Sure, doing it by hand takes a bit of time. But BananaShot makes it as quick and easy as it gets. And you never have to fight an AI that got it wrong.</p>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <h3>You mark the points</h3>
+          <p>No AI guesses where a point starts or ends. Each cut is where you put it.</p>
+        </div>
+        <div class="feature">
+          <h3>The score is correct</h3>
+          <p>The score comes from your clicks and the tennis rules. There are no detection errors to fix later.</p>
+        </div>
+        <div class="feature">
+          <h3>Fast on a normal PC</h3>
+          <p>The app runs no AI model. You do not need a strong computer or a subscription to a cloud service.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">The author</div>
+        <h2>Made by a person, not a corporation</h2>
+      </div>
+      <div class="author">
+        <div class="author-avatar" aria-hidden="true">D</div>
+        <div>
+          <p>Hi! My name is Dmitri, I'm a tennis player and a programmer. I made this app for myself and decided to share it with the community.</p>
+          <p>It saves lots of my time and makes the process enjoyable. Hope it helps you too!</p>
+          <p>I'd be happy to improve the app based on your feedback, just let me know! <a href="/faq/#report">How to send feedback</a></p>
+          <p class="author-sign">Dmitri, the author of BananaShot</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="cta">
+        <div>
+          <h2>Get BananaShot</h2>
+          <p>Free for Windows 10 and 11. Opens MP4, MOV, MKV, AVI, M4V, and WMV files.</p>
+        </div>
+        <a class="btn btn-primary" href="/download/">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+          Download for Windows
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>&copy; 2026 Dmitrii Litvin. BananaShot</p>
+    <nav aria-label="Footer">
+      <a href="/download/">Download</a>
+      <a href="/faq/">FAQ</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://github.com/zipper2110/banana-shot">Source code</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

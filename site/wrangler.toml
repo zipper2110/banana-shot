@@ -1,0 +1,16 @@
+# The landing site (B-10): static files only, no Worker code.
+# Deploy from this folder with `wrangler deploy`. See README.md.
+name = "bananashot-site"
+compatibility_date = "2026-09-03"
+
+[assets]
+directory = "./public"
+# /privacy/ serves public/privacy/index.html, and /privacy redirects to /privacy/.
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
+
+# The app opens https://banana-shot-editor.app/privacy/ (ANALYTICS_PRIVACY_URL).
+# Do not remove this domain.
+[[routes]]
+pattern = "banana-shot-editor.app"
+custom_domain = true

@@ -19,6 +19,8 @@ the features of this release.
 - [ ] Help: `HelpCatalog.kt`. Check each help page for each changed feature.
 - [ ] Hints: `HintBalloon`, `ScoreSettingsHint`, `TransformHints`, and the
       first-time hints.
+- [ ] Change the hint text for the Points tab (`HintRegistry.kt`). The
+      author asked for this change before the release.
 - [ ] Tooltips on the changed controls.
 - [ ] More → About and More → Contact.
 
@@ -39,8 +41,9 @@ See `feedback-worker/README.md` and `docs/feedback/b-8-tasks.md`.
 
 See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
 
-- [ ] The privacy notice (`docs/analytics/privacy-notice.md`) is on the
-      landing site with the effective date. The URL opens.
+- [ ] The privacy notice (`site/public/privacy/index.html`) has the
+      effective date, and the site is deployed. The URL
+      `https://banana-shot-editor.app/privacy/` opens.
 - [ ] The analytics Worker is deployed with the D1 schema in the EU
       jurisdiction and the secret `RATE_LIMIT_KEY`.
 - [ ] The deployed Worker knows all counter keys of this release
@@ -52,6 +55,18 @@ See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
 - [ ] The GitHub variables `ANALYTICS_ENDPOINT` (`https://<host>/v1/session`),
       `ANALYTICS_PRIVACY_URL`, and `ANALYTICS_NOTICE_VERSION` are set.
       `Validate-AppImage.ps1` refuses a build without them.
+
+## 3b. Code signing
+
+See `distribution/windows/README.md`, "Code signing".
+
+- [ ] The Certum certificate is valid for the release date. A certificate is
+      valid for at most 459 days.
+- [ ] The secrets `CERTUM_USERNAME` and `CERTUM_TOTP_SECRET` are set in the
+      GitHub environment `windows-release`. A release without them fails at
+      "Validate release gates".
+- [ ] The step "Check signatures and stage release files" of the dry run
+      passed with the signature check (not with the "unsigned" warning).
 
 ## 4. Native dependencies
 

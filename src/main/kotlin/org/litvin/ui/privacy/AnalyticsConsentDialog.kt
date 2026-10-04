@@ -31,7 +31,7 @@ object AnalyticsConsentDialog {
     private const val WIDTH = DialogKit.MEDIUM
     private const val TEXT_WIDTH = WIDTH - 84
 
-    /** The first paragraph. It must agree with the privacy notice (docs/analytics/privacy-notice.md). */
+    /** The first paragraph. It must agree with the privacy notice (site/public/privacy/index.html). */
     internal val INTRO = "Help improve ${AppInfo.NAME} by sending optional, anonymous usage counts."
 
     /** Shows the question. [onClosed] runs after the window closes, with any answer. */

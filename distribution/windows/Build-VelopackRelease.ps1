@@ -3,7 +3,11 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Version,
     # The vpk command. The release workflow installs it as a .NET global tool (see windows-release.yml).
-    [string]$Vpk = "vpk"
+    [string]$Vpk = "vpk",
+    # The signing command for vpk (B-22). {{file...}} stands for the files to sign. Without it, the files are unsigned.
+    # vpk signs each EXE and DLL in the app image that does not have a trusted signature yet (the Java runtime keeps
+    # its signatures), then the setup EXE, Update.exe, and the start stub.
+    [string]$SignTemplate
 )
 
 # Makes the Velopack installer and the update package from the app image of Build-AppImage.ps1 (B-24).
@@ -65,6 +69,12 @@ $arguments = @(
     # an app with no VelopackApp builder.
     "--skipVeloAppCheck"
 )
+if ($SignTemplate) {
+    if ($SignTemplate -notmatch '\{\{file(\.\.\.)?\}\}') {
+        throw "-SignTemplate must contain {{file}} or {{file...}}."
+    }
+    $arguments += @("--signTemplate", $SignTemplate)
+}
 & $Vpk @arguments
 if ($LASTEXITCODE -ne 0) { throw "vpk pack failed." }
 

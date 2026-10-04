@@ -47,3 +47,4 @@ build/
 /feedback-worker/.dev.vars
 /feedback-worker/.wrangler/
 /.wrangler/
+/site/.wrangler/

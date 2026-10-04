@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BananaShot privacy notice</title>
+  <meta name="description" content="Which data BananaShot and this site collect: optional usage analytics, feedback reports, the version check, and site visits.">
+  <link rel="canonical" href="https://banana-shot-editor.app/privacy/">
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <meta name="theme-color" content="#0e0e0e">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<!--
+  This page is the only full text of the privacy notice (B-10 decision 4).
+  The app opens it from the consent dialog and from More > Privacy. Do not change its path.
+  The app has a short version of this text: AnalyticsConsentDialog.INTRO and PrivacyPage.kt.
+  Keep the texts in agreement. The maintainer notes are in docs/analytics/privacy-notice.md
+  and docs/feedback/privacy-notice.md.
+-->
+<a class="skip" href="#main">Skip to the content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="28" height="28">BananaShot</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/download/">Download</a>
+      <a href="/faq/">FAQ</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/privacy/" aria-current="page">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="page">
+  <div class="wrap narrow">
+    <h1>Privacy notice</h1>
+    <p class="lead">This page tells which data the BananaShot app and this site collect, why, and for how long.</p>
+
+    <div class="card">
+      <p><strong>In short.</strong> The app edits your videos on your PC. It never sends your videos. The app sends data only in these cases:</p>
+      <ul>
+        <li><a href="#analytics">Usage analytics</a>: anonymous counts, only if you select "Enable analytics".</li>
+        <li><a href="#feedback">Feedback reports</a>: only when you click Send in the feedback form.</li>
+        <li><a href="#version-check">Version check</a>: a request for a small file on GitHub, with no user data.</li>
+      </ul>
+      <p>This site counts visits without cookies. See <a href="#website">This site</a>.</p>
+    </div>
+
+    <!-- ====== Usage analytics: notice version 1. Increase the version when a new type of data is collected. ====== -->
+    <h2 id="analytics">Usage analytics</h2>
+    <p class="meta">Notice version 1. Effective from: (date of the release).</p>
+
+    <p>BananaShot can send anonymous usage counts. The counts tell us which parts of the app people use, how long sessions are, and how well exports work. The analytics are off until you select "Enable analytics". If you select "No thanks" or close the question, the app sends nothing.</p>
+
+    <h3>What the app sends</h3>
+    <p>While analytics are on, the app sends one short summary of the current session: at the start, every 5 minutes if something changed, and at exit. A summary contains only these items:</p>
+    <ul>
+      <li>A random session ID. The app makes a new ID for each session and keeps it only in memory. The ID does not identify you or your computer, and it does not link two sessions.</li>
+      <li>The app version and the OS family (Windows, macOS, Linux, or other).</li>
+      <li>The number of the summary in the session, and if it is the last summary.</li>
+      <li>The session length in seconds, and the seconds while the app window was active.</li>
+      <li>The version of this notice that you accepted.</li>
+      <li>These counts:
+        <ul>
+          <li>The tabs that you open with a click, and the active seconds on each tab (Projects, Points, Colors, Crop/Rotate, Scoring, Stats, Export).</li>
+          <li>Projects created and opened, and videos that could not open.</li>
+          <li>Points added, deleted, and marked as favorites. Comments added. Point outcomes recorded in Scoring.</li>
+          <li>Changes of the colors, and changes of the crop or rotation.</li>
+          <li>Help windows opened.</li>
+          <li>Exports for each encoder type (software, NVIDIA, AMD, Intel): started, completed, failed, cancelled, and interrupted at exit. The total export time and the total video length of the completed exports, in seconds. The failures by cause (source missing, output not writable, process start, encoder error, other). The export options in use (scoreboard, comments, stats card, favorites only, idle trim). The output size (720p, 1080p, 1440p, 2160p, or other).</li>
+          <li>Errors that the app did not expect. The app sends only the number, not the error.</li>
+          <li>If the previous session did not close normally.</li>
+          <li>A range for the number of sessions on this computer (1, 2 to 5, 6 to 20, or more than 20).</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>What the app does not send</h3>
+    <p>Your videos, audio, or frames. File names, folder names, or paths. Project names, player names, scores, or comments. Text that you type. A user ID, a device ID, or an install ID. Error messages or log files. The clock time, the time zone, or the language of your computer.</p>
+
+    <h3>Where the data goes</h3>
+    <p>The app sends the summary over HTTPS to our server on Cloudflare (a Cloudflare Worker). Cloudflare processes the data for us. The server stores the summary in a Cloudflare D1 database in the EU jurisdiction. The server keeps the receive times only to the hour.</p>
+
+    <h3>Your IP address</h3>
+    <p>Cloudflare receives your IP address to deliver the request. The server does not store it. To limit the number of requests, the server keeps a keyed hash of the address for one hour.</p>
+
+    <h3>How long the data stays</h3>
+    <p>A daily job deletes each session 90 days after its last summary.</p>
+
+    <h3>How to turn off analytics</h3>
+    <p>Open More &rarr; Privacy and turn off "Send optional usage analytics". The app then stops at once and sends nothing more. It deletes the counts of the current session. The summaries that the server already has stay until the 90 days end. We cannot delete them on request, because no value links a summary to you.</p>
+
+    <!-- ====== Feedback reports ====== -->
+    <h2 id="feedback">Feedback reports</h2>
+    <p>You can send a problem, an idea, or a question to the author from the app: the Feedback button in the sidebar, the "Report this problem" button of an error message, the "Tell us" link at the end of each help page, or More &rarr; Contact.</p>
+
+    <h3>When the app sends a report</h3>
+    <p>The app sends a report only when you click Send in the feedback form. The usage analytics choice does not change this. If you do not send a report, the app sends no feedback data.</p>
+
+    <h3>What a report contains</h3>
+    <ul>
+      <li>The topic (problem, idea, question, or other) and your message.</li>
+      <li>A random report ID that the app makes for each report.</li>
+      <li>The app version, the name and version of Windows, and the Java version.</li>
+      <li>Your email address, only if you give it. The author can reply only to this address. The app keeps it on your computer for the next report. You can delete it in the form.</li>
+      <li>The text of the error message, only if you open the form from an error message. You can remove it before you send.</li>
+      <li>The last 2 MB of the log files of the app, only if you select "Attach the log files". The log files contain the names and folders of your videos and projects. They do not contain your videos. Before you send, "Show the data" shows the exact data that the app sends.</li>
+    </ul>
+
+    <h3>Where a report goes</h3>
+    <p>The app sends the report over HTTPS to our server on Cloudflare (a Cloudflare Worker with a Cloudflare D1 database). The server sends the report to the author with a Telegram bot. Thus, Telegram also processes the report.</p>
+
+    <h3>How long the data stays</h3>
+    <ul>
+      <li>The server keeps the report text, the topic, the email address, the app data, and the error text for 90 days. Then a daily job deletes them.</li>
+      <li>The server does not keep the log files. It sends them to Telegram and drops them.</li>
+      <li>Cloudflare receives your IP address to deliver the request. The server does not keep it. To limit the number of reports, the server keeps a keyed hash of the address for one hour.</li>
+      <li>The copy in the Telegram chat of the author stays until the author deletes it.</li>
+    </ul>
+
+    <h3>How to ask for deletion</h3>
+    <p>Write to the <a href="#contact">contact address</a>. Give the report ID, or the date and the text of your message. The app shows the ID after the send. The author then deletes the report on the server and in the Telegram chat.</p>
+
+    <!-- ====== Version check ====== -->
+    <h2 id="version-check">Version check and updates</h2>
+    <p>This section is separate from the analytics. The app reads a small file from GitHub when it starts and from time to time while it runs. The file tells if this version still works and if a new version is available. The request sends no user ID and no analytics data. GitHub receives your IP address and the standard data of a web request. "Update and restart" downloads the setup file of the new version from GitHub. You cannot turn off the version check, because each version stops working after a time.</p>
+
+    <!-- ====== This site ====== -->
+    <h2 id="website">This site</h2>
+    <p>Cloudflare hosts this site. Cloudflare receives your IP address to deliver the pages.</p>
+    <p>The site counts visits with Cloudflare Web Analytics. It does not use cookies or other storage on your device, and it does not follow you to other sites. It records the page address, the address of the page that sent you here, the browser and the device type, and the country. We see only totals, not single visitors.</p>
+    <p>The download button opens a file on GitHub. GitHub then receives your IP address and the standard data of a web request.</p>
+
+    <!-- ====== Contact and rights ====== -->
+    <h2 id="contact">Contact and your rights</h2>
+    <p>The author of BananaShot, Dmitrii Litvin, is responsible for the data on this page. The contact address is in More &rarr; Contact of the app.</p>
+    <p>You can ask for a copy of your data, a correction, or a deletion. You can also make a complaint to the data protection authority of your country.</p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>&copy; 2026 Dmitrii Litvin. BananaShot</p>
+    <nav aria-label="Footer">
+      <a href="/download/">Download</a>
+      <a href="/faq/">FAQ</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://github.com/zipper2110/banana-shot">Source code</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

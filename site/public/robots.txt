@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://banana-shot-editor.app/sitemap.xml

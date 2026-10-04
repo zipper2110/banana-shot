@@ -161,8 +161,9 @@ See: [docs/solution-outline.md](docs/solution-outline.md)
 ### Usage analytics
 - A build can send optional usage analytics: anonymous counts of the tabs
   and features in use, export results, and session length. The app asks
-  first, and you can turn the analytics off in More → Privacy. See
-  [docs/analytics/privacy-notice.md](docs/analytics/privacy-notice.md) and
+  first, and you can turn the analytics off in More → Privacy. See the
+  [privacy notice](https://banana-shot-editor.app/privacy/) (source:
+  [site/public/privacy/index.html](site/public/privacy/index.html)) and
   [docs/analytics/design.md](docs/analytics/design.md).
 
 ### Version check and updates

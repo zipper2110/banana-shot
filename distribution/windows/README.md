@@ -88,9 +88,8 @@ release. It gives the release steps in sequence. The open work is in
 [docs/backlog.md](../../docs/backlog.md).
 
 - Build on Windows x64 with Eclipse Temurin JDK 25 and the .NET SDK (for `vpk`).
-- Code signing is optional. The release workflow signs only when the repository
-  variable `ARTIFACT_SIGNING_ENDPOINT` and the other Azure Artifact Signing
-  settings exist. Without them, it builds unsigned files and shows a warning.
+- Code signing: see "Code signing" below. A release must be signed. A dry run
+  without the signing secrets builds unsigned files and shows a warning.
 - The repository variable `FEEDBACK_ENDPOINT` must be the URL of the feedback
   Worker (`https://<host>/v1/feedback`). Without it, the workflow fails at
   "Validate application image".
@@ -120,6 +119,44 @@ release. It gives the release steps in sequence. The open work is in
   that the natives release has the source files, and it links the natives
   release in the release notes.
 - Review the generated Maven dependency license/SBOM output before release.
+
+## Code signing
+
+Smart App Control (Windows 11) blocks each EXE or DLL that has no trusted
+signature and no reputation. The user cannot allow the file. On the test
+computer of 2026-10-03, it blocked `ffmpeg.exe` and some DLLs of libmpv, so
+the preview was black and the export did not work (B-22).
+
+The release workflow signs with a Certum "Standard Code Signing in the Cloud"
+certificate (OV, key in the SimplySign cloud HSM):
+
+1. The step "Sign in to Certum SimplySign" uses the community action
+   `jay0lee/certum-cloud-code-sign`, pinned to a full commit SHA. It installs
+   SimplySign Desktop on the runner, logs in with a TOTP code, and gives the
+   signtool path and the certificate thumbprint.
+2. `Build-VelopackRelease.ps1 -SignTemplate` gives vpk the signtool command
+   (SHA-256, timestamp from `http://time.certum.pl`). vpk signs each EXE and
+   DLL of the app image that has no trusted signature yet: the launcher, the
+   FFmpeg files, and the libmpv files. The files of the Java runtime keep the
+   signatures of their vendors. Then vpk signs the setup EXE, `Update.exe`,
+   and the start stub.
+3. `Test-ReleaseSignatures.ps1` opens the update package and checks that each
+   EXE and DLL and the setup EXE has a valid signature with a timestamp.
+
+Settings of the GitHub environment `windows-release`:
+
+- Secret `CERTUM_USERNAME`: the e-mail of the SimplySign account.
+- Secret `CERTUM_TOTP_SECRET`: the Base32 TOTP secret of SimplySign (the seed
+  of the one-time codes, not a code).
+- Variable `CERTUM_CERT_SHA1` (optional): the SHA-1 thumbprint of the
+  certificate. With it, the action refuses a different certificate.
+
+A tag release without the secrets fails. A dry run without them builds
+unsigned files and shows a warning.
+
+Known gap: JNA extracts an unsigned `jnidispatch.dll` from its JAR at run
+time. Smart App Control did not block it on the test computer, probably
+because the file has reputation.
 
 ## Natives release
 

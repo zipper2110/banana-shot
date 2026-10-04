@@ -6,6 +6,8 @@ import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.analytics.RecordingAnalytics
 import org.litvin.media.MediaScreen
+import org.litvin.points.CommentDefaultsV1
+import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
@@ -121,6 +123,33 @@ class SwingScoringPanelFlowTest {
         }
         assertEquals(2, analytics.count(AnalyticsEvent.ScoreRecorded))
         assertEquals(1, analytics.count(AnalyticsEvent.PointFavorited))
+    }
+
+    @Test
+    fun favoriteKeepsTheCommentsOfTheProject() {
+        val comments = listOf(
+            CommentV1(id = 1, startMs = 500, durationMs = 2_000, text = "Serve", colorHex = "#FF0000"),
+            CommentV1(id = 4, startMs = 3_000, durationMs = 1_000, text = "Rally"),
+        )
+        EdlIO.writeForProjectDir(
+            projectDir.absolutePath,
+            EdlIO.readForProjectDir(projectDir.absolutePath).copy(
+                comments = comments,
+                commentDefaults = CommentDefaultsV1("#FF0000"),
+                nextCommentId = 5,
+            ),
+        )
+        open()
+        SwingUtilities.invokeAndWait {
+            val favorite = panel.actionMap.get("toggleFavorite")
+            favorite.actionPerformed(java.awt.event.ActionEvent(panel, java.awt.event.ActionEvent.ACTION_PERFORMED, "test"))
+        }
+
+        val saved = EdlIO.readForProjectDir(projectDir.absolutePath)
+        assertTrue(saved.points.first { it.id == "p1" }.favorite)
+        assertEquals(comments, saved.comments)
+        assertEquals(CommentDefaultsV1("#FF0000"), saved.commentDefaults)
+        assertEquals(5, saved.nextCommentId)
     }
 
     @Test

@@ -46,13 +46,18 @@ Do these items before the first public release.
 ### B-10 Landing site
 
 - Make a landing site for the app.
+- `docs/site/b-10-tasks.md` has the decisions and the tasks. Decided on
+  2026-10-03: the domain is `banana-shot-editor.app` (on Cloudflare), and
+  the first version is the full site.
+- Status 2026-10-03: the pages are in `site/public/` (T1 to T6). Not
+  deployed yet.
 - Reminder: the site must have the privacy notice page before the first
-  release. The page has the analytics notice (B-9, T5:
-  `docs/analytics/privacy-notice.md`) and the feedback notice
-  (`docs/feedback/privacy-notice.md`). There is no temporary page (decided
-  on 2026-10-03).
-  - The GitHub variable `ANALYTICS_PRIVACY_URL` is already set (2026-10-03).
-    The page must be at that URL. If the URL changes, change the variable.
+  release. The page (`site/public/privacy/index.html`) has the analytics
+  notice (B-9) and the feedback notice (B-8). There is no temporary page
+  (decided on 2026-10-03).
+  - The GitHub variable `ANALYTICS_PRIVACY_URL` is now the repository URL,
+    a temporary value. When the page is live, change it to
+    `https://banana-shot-editor.app/privacy/` (B-10 decision 5).
     The consent dialog and the Privacy page of each release open this URL.
   - Write the effective date in the analytics notice when the page goes
     live.
@@ -335,6 +340,79 @@ Do these items before the first public release.
   publishes.
 - Done when: a dry run passes with the new jobs.
 
+### B-35 GPU popup only with more than one GPU
+
+- At the first start, the app shows the "GPU preference set" popup
+  (`SwingApplicationFactory`, `shouldShowGpuRestartNotification`). The popup
+  tells the user to restart the app.
+- If the system has only one GPU, the GPU preference has no effect, and the
+  popup is not necessary. Do not show the popup in this case.
+- Count the GPUs before the app shows the popup.
+- Done when: a system with one GPU does not show the popup, a system with
+  two or more GPUs shows it, and a unit test covers the new rule.
+
+### B-36 Relax the rules for project names
+
+- Now `NewProjectRules.nameError` refuses a project name that is not a
+  correct Windows file name: the characters `< > : " / \ | ? *`, a period at
+  the end, and reserved names such as `CON` and `COM1`. The cause is that the
+  project name is also the name of the project folder.
+- Let the user type these names. For example, "Final 3:2" or "Who won?" must
+  be correct names.
+- Keep the project name and the folder name separate. Make a safe folder name
+  from the project name. Keep the maximum length and the rule for an empty
+  name.
+- Done when: the dialog accepts the names in the examples, the app makes a
+  correct folder for them, and the unit tests cover the new rules.
+
+### B-22 Code signing
+
+- Smart App Control is confirmed (2026-10-03, dry run of B-21 on a tester
+  computer). The CodeIntegrity log has 3077 events with the Smart App
+  Control policy `{0283ac0f-fff1-49ae-ada1-8a933130cad6}`. Windows blocked
+  `ffmpeg.exe`, `swscale-8.dll`, `libharfbuzz-0.dll`, and `libstdc++-6.dll`
+  (error 4551). The preview was black and the export did not work.
+  `BananaShot.exe`, the Velopack files, the Java runtime, and JNA were not
+  blocked. Windows stops at the first blocked dependency of `libmpv-2.dll`,
+  so the log does not show all files that fail. The user cannot allow a
+  blocked file, so the first release must be signed.
+- Decision (2026-10-03): Certum "Standard Code Signing in the Cloud" (OV,
+  SimplySign cloud HSM, EUR 209 per year, for an individual). The author
+  bought it on 2026-10-04. The release workflow signs in CI. Rejected:
+  - Azure Artifact Signing: individuals only from the USA and Canada. The
+    author is in Georgia.
+  - Certum Open Source: ELv2 is not an open source license, and paid
+    releases are planned. Certum can revoke the certificate.
+  - The Microsoft Store (MSIX), Sectigo, SSL.com, and shared-certificate
+    services (for example Bamboo Deploy): more work, a higher price, or
+    the files get the publisher name of a different company.
+- From 2026-02-27, a certificate is valid for at most 459 days. Certum
+  reissues it free of charge for the rest of a multi-year order.
+- Done (2026-10-04): `windows-release.yml` signs with the community action
+  `jay0lee/certum-cloud-code-sign` and `vpk --signTemplate`. vpk signs each
+  EXE and DLL of the app image, the setup EXE, and `Update.exe`.
+  `Test-ReleaseSignatures.ps1` checks the signature and the timestamp of
+  each EXE and DLL in the setup and the update package. A tag release
+  without the signing secrets fails. See `distribution/windows/README.md`,
+  "Code signing".
+- To do:
+  - The author: activate SimplySign, then set the secrets
+    `CERTUM_USERNAME` and `CERTUM_TOTP_SECRET` (and optionally the variable
+    `CERTUM_CERT_SHA1`) in the GitHub environment `windows-release`.
+  - Run a dry run. The signature check must pass.
+  - When Windows blocks a native file (error 4551), show a message that
+    names Smart App Control. Do not show only a black preview.
+  - `ApplicationLayout.resolveMpvDirectory` prefers `MPV_PATH` to the
+    bundled libmpv. A packaged app must use its own `natives` folder first.
+  - JNA extracts an unsigned `jnidispatch.dll` at run time. On the tester
+    computer, Smart App Control did not block it (probably because the file
+    has reputation). Keep this in the install check.
+  - Change the Smart App Control notes on the site (`download` and `faq`
+    pages, B-10) after the first signed release. An OV signature does not
+    give SmartScreen reputation at once, so keep the "Run anyway" steps.
+- Done when: the installer of a signed dry run starts on a Windows 11
+  computer with Smart App Control on, and the preview and the export work.
+
 ## Post-release
 
 Do these items after the first public release.
@@ -416,25 +494,6 @@ Do these items after the first public release.
   keeps that project, so it can stop.
 - Copy its MIT-licensed MSYS2 workflow into this project or into a separate
   repository. CI must make a pinned LGPL libmpv and its source archive.
-
-### B-22 Code signing
-
-- The first release is unsigned. SmartScreen shows a warning for the
-  installer. The user must click "More info", then "Run anyway".
-- On a computer with Smart App Control on, Windows can block the unsigned
-  installer or the unsigned natives. The user cannot select "Run anyway".
-- Make sure that the author can use Azure Artifact Signing. It accepts
-  individual developers only from some countries. If the author cannot use
-  it, buy an OV certificate on a cloud HSM (for example Certum or SSL.com).
-- Sign each EXE and DLL in the app image, not only `BananaShot.exe`. This
-  includes `ffmpeg.exe`, `ffprobe.exe`, `libmpv-2.dll`, and the FFmpeg DLLs.
-- Sign the installer and the update packages with the signing options of
-  `vpk` (see B-24).
-- Check if JNA extracts an unsigned `jnidispatch.dll` at run time. If it
-  does, find a solution for Smart App Control.
-- The release workflow must check the signature of each signed file.
-- Done when: the installer of a dry run starts on a clean Windows 11
-  computer with Smart App Control on, and the preview and the export work.
 
 ### B-25 Full automatic update with Velopack
 

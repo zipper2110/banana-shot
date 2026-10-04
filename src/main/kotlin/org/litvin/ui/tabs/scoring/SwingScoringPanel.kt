@@ -14,7 +14,6 @@ import org.litvin.SessionSettings
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.points.EdlIO
-import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
@@ -749,7 +748,8 @@ class SwingScoringPanel(
             if (p.id == pointId) p.copy(favorite = !p.favorite) else p
         }.sortedBy { it.startMs }
         try {
-            EdlIO.writeForProjectDir(dir, EdlV1(points = updated, version = 1))
+            // Keep the comments and the other EDL fields of the Points tab: change only the points.
+            EdlIO.writeForProjectDir(dir, EdlIO.readForProjectDir(dir).copy(points = updated))
             points = updated
             if (updated.any { it.id == pointId && it.favorite }) analytics.record(AnalyticsEvent.PointFavorited)
             refreshScoring()

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BananaShot FAQ</title>
+  <meta name="description" content="Answers to frequent questions about BananaShot: video files, install, updates, the 6-month version period, export problems, and contact.">
+  <link rel="canonical" href="https://banana-shot-editor.app/faq/">
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <meta name="theme-color" content="#0e0e0e">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/assets/logo.svg" alt="" width="28" height="28">BananaShot</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/download/">Download</a>
+      <a href="/faq/" aria-current="page">FAQ</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/privacy/">Privacy</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="page faq">
+  <div class="wrap narrow">
+    <h1>Frequent questions</h1>
+    <p class="lead">For help with a tab of the app, press F1 in the app.</p>
+
+    <h2>About the app</h2>
+
+    <details id="what">
+      <summary>What does BananaShot do?</summary>
+      <div>
+        <p>BananaShot makes a short video from a full recording of a tennis match. You mark the start and the end of each point. Then you click the player who won each point. The export keeps only the points and adds a scoreboard. You can also add comments, match statistics, and color corrections.</p>
+      </div>
+    </details>
+
+    <details id="free">
+      <summary>Is BananaShot free?</summary>
+      <div>
+        <p>Yes. Now all features are free, and you do not need an account.</p>
+      </div>
+    </details>
+
+    <details id="files">
+      <summary>Which video files can I open?</summary>
+      <div>
+        <p>MP4, MOV, MKV, AVI, M4V, and WMV. Most phones, action cameras, and video cameras record one of these formats. The export makes an MP4 file.</p>
+      </div>
+    </details>
+
+    <details id="original">
+      <summary>Does the app change my original video?</summary>
+      <div>
+        <p>No. The app only reads your recording. Your marks, scores, and settings go into a project file. The export writes a new video file.</p>
+      </div>
+    </details>
+
+    <details id="upload">
+      <summary>Does the app upload my videos?</summary>
+      <div>
+        <p>No. All editing and export occur on your PC. The app does not send your videos to a server. The <a href="/privacy/">privacy notice</a> tells which data the app can send, and when.</p>
+      </div>
+    </details>
+
+    <details id="formats">
+      <summary>Which match formats can the app score?</summary>
+      <div>
+        <p>Best of 1, 3, or 5 sets, a match tiebreak instead of the last set, a pro set, games only, and plain points. You can also select the deuce rule. Fully manual scoring lets you give each set, game, or point by hand.</p>
+      </div>
+    </details>
+
+    <details id="other-sports">
+      <summary>Can I use it for padel or other sports?</summary>
+      <div>
+        <p>The app is made for tennis. Padel support is planned. With manual scoring or plain points, you can use the app for other sports that count points.</p>
+      </div>
+    </details>
+
+    <details id="mac">
+      <summary>Is there a version for macOS or Linux?</summary>
+      <div>
+        <p>Not now. The app works on Windows 10 and Windows 11, 64-bit. A macOS version is planned.</p>
+      </div>
+    </details>
+
+    <details id="offline">
+      <summary>Does the app work without the internet?</summary>
+      <div>
+        <p>Yes. You can edit and export without a connection. When it can, the app reads a small version file from GitHub. Without a connection, the app works until the end date of its version.</p>
+      </div>
+    </details>
+
+    <h2>Install and updates</h2>
+
+    <details id="smartscreen">
+      <summary>Why does Windows show "Windows protected your PC"?</summary>
+      <div>
+        <p>The setup file has no code signature now. Thus, Windows does not know the publisher. Click <strong>More info</strong>, then click <strong>Run anyway</strong>. A signed version is planned.</p>
+        <p>If Smart App Control is on, Windows can block the app, and "Run anyway" is not available. Until the signed version is available, the app cannot start on these PCs.</p>
+      </div>
+    </details>
+
+    <details id="expiry">
+      <summary>Why does each version stop working after 6 months?</summary>
+      <div>
+        <p>Each version of BananaShot works for 6 months after its build date. This makes sure that all users get the fixes and the new features. It also lets the author change the terms of later versions, for example if some features become paid.</p>
+        <p>From 30 days before the end date, the app shows a warning. The update is free and takes one click: <strong>Update and restart</strong>. Your projects and settings stay.</p>
+        <p>After the end date, the app opens only the Export tab. Exports that run or wait in the queue continue. To open your projects again, install the newest version.</p>
+      </div>
+    </details>
+
+    <details id="data">
+      <summary>Where are my projects?</summary>
+      <div>
+        <p>The projects and the settings are in the folder <code>%APPDATA%\BananaShot</code>. An update or an uninstall does not delete this folder.</p>
+      </div>
+    </details>
+
+    <details id="video-not-found">
+      <summary>A project shows "Video not found". What can I do?</summary>
+      <div>
+        <p>The project refers to a video file that is not at its old location. Put the video back in the same folder, with the same name. Then open the project again.</p>
+      </div>
+    </details>
+
+    <h2>Export</h2>
+
+    <details id="export-fails">
+      <summary>The export fails. What can I do?</summary>
+      <div>
+        <ol>
+          <li>On the Export tab, select <strong>Advanced</strong>, and then select the encoder <strong>Software (x264)</strong>. It is slower, but it works on all PCs. A hardware encoder can fail after an update of the graphics driver.</li>
+          <li>If the export fails again, select a lower resolution or a lower FPS.</li>
+          <li>If the export still fails, send a report from the app (see below). Attach the log files.</li>
+        </ol>
+      </div>
+    </details>
+
+    <details id="size">
+      <summary>Why is the file size different from the estimate?</summary>
+      <div>
+        <p>The app estimates the size before the export. Fast motion needs more data, so the real size can be larger or smaller.</p>
+      </div>
+    </details>
+
+    <h2>Help and contact</h2>
+
+    <details id="report" open>
+      <summary>How do I report a problem or suggest a feature?</summary>
+      <div>
+        <p>Use the <strong>Feedback</strong> button in the sidebar of the app. Select a topic, write your message, and click <strong>Send</strong>. You can attach the log files. To get a reply, give your email address. Error messages also have a <strong>Report this problem</strong> button.</p>
+        <p>The address for email is in More &rarr; Contact of the app.</p>
+      </div>
+    </details>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>&copy; 2026 Dmitrii Litvin. BananaShot</p>
+    <nav aria-label="Footer">
+      <a href="/download/">Download</a>
+      <a href="/faq/">FAQ</a>
+      <a href="/changelog/">Changelog</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="https://github.com/zipper2110/banana-shot">Source code</a>
+    </nav>
+  </div>
+</footer>
+<script>
+  // Open the question that the address names, for example /faq/#expiry.
+  function openFromHash() {
+    var target = location.hash && document.getElementById(location.hash.slice(1));
+    if (target && target.tagName === "DETAILS") { target.open = true; target.scrollIntoView({ block: "start" }); }
+  }
+  window.addEventListener("hashchange", openFromHash);
+  openFromHash();
+</script>
+</body>
+</html>

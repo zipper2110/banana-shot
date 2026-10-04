@@ -15,16 +15,16 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   windows-installer:
     runs-on: windows-2022
     environment: windows-release
     env:
-      # Signing is optional. Set the repository variable ARTIFACT_SIGNING_ENDPOINT
-      # (and the other Azure settings) to sign. Without it, the release is unsigned.
-      SIGNING_ENABLED: ${{ vars.ARTIFACT_SIGNING_ENDPOINT != '' }}
+      # Code signing with the Certum cloud certificate (B-22). Set the secrets CERTUM_USERNAME (the
+      # SimplySign e-mail) and CERTUM_TOTP_SECRET (the Base32 TOTP secret) in the windows-release
+      # environment. A release must be signed. A dry run without the secrets is unsigned.
+      SIGNING_ENABLED: ${{ secrets.CERTUM_USERNAME != '' && secrets.CERTUM_TOTP_SECRET != '' }}
 
     steps:
       - name: Check out source
@@ -48,6 +48,10 @@ jobs:
               throw "Release tag must use vMAJOR.MINOR.PATCH."
             }
             $version = $releaseName.TrimStart("v")
+            # Smart App Control blocks unsigned native files (B-22).
+            if ($env:SIGNING_ENABLED -ne "true") {
+              throw "A release must be signed. Set CERTUM_USERNAME and CERTUM_TOTP_SECRET in the windows-release environment."
+            }
           } else {
             $version = $env:DRY_RUN_VERSION
             if ($version -notmatch '^\d+\.\d+\.\d+$') {
@@ -126,55 +130,55 @@ jobs:
           & "${{ github.workspace }}\target\package\app-image\BananaShot\BananaShot Diagnostics.cmd"
           if ($LASTEXITCODE -ne 0) { throw "Packaged diagnostics failed." }
 
-      - name: Sign in to Azure
+      - name: Sign in to Certum SimplySign
+        # A community action: it installs SimplySign Desktop and logs in with a TOTP code. It contacts only
+        # files.certum.eu and time.certum.pl (checked at this commit). Keep it pinned to the full commit SHA,
+        # because it receives the TOTP secret. The optional variable CERTUM_CERT_SHA1 makes the action
+        # refuse a different certificate.
         if: env.SIGNING_ENABLED == 'true'
-        uses: azure/login@v3
+        id: certum
+        uses: jay0lee/certum-cloud-code-sign@a3324503499c49090869856eeeecfe95fb613d87 # v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Sign application launchers
-        if: env.SIGNING_ENABLED == 'true'
-        uses: azure/artifact-signing-action@v2
-        with:
-          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
-          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
-          files: ${{ github.workspace }}\target\package\app-image\BananaShot\BananaShot.exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
-          description: BananaShot
-          timeout: 900
+          username: ${{ secrets.CERTUM_USERNAME }}
+          totp_secret: ${{ secrets.CERTUM_TOTP_SECRET }}
+          cert_sha1: ${{ vars.CERTUM_CERT_SHA1 }}
 
       - name: Build Velopack installer
         # The setup EXE has the same name in each release: the app downloads
         # releases/latest/download/BananaShot-win-Setup.exe ("Update and restart" in
-        # docs/licensing/build-expiry-spec.md). Signing of the setup EXE and the packages
-        # with the signing options of vpk is B-22.
+        # docs/licensing/build-expiry-spec.md). With signing, vpk signs each EXE and DLL of the
+        # app image, the setup EXE, and Update.exe (B-22).
         shell: pwsh
-        run: ./distribution/windows/Build-VelopackRelease.ps1 -Version $env:APP_VERSION
+        env:
+          SIGNTOOL: ${{ steps.certum.outputs.signtool-path }}
+          CERT_SHA1: ${{ steps.certum.outputs.cert-thumbprint }}
+        run: |
+          $signTemplate = ""
+          if ($env:SIGNING_ENABLED -eq "true") {
+            if (-not $env:SIGNTOOL -or -not $env:CERT_SHA1) { throw "The Certum step gave no signtool path or certificate." }
+            $signTemplate = "`"$env:SIGNTOOL`" sign /sha1 $env:CERT_SHA1 /fd SHA256 /tr http://time.certum.pl /td SHA256 /d BananaShot {{file...}}"
+          }
+          ./distribution/windows/Build-VelopackRelease.ps1 -Version $env:APP_VERSION -SignTemplate $signTemplate
+
+      - name: Sign out of Certum SimplySign
+        if: always() && steps.certum.outcome != 'skipped'
+        shell: pwsh
+        env:
+          TEARDOWN: ${{ steps.certum.outputs.teardown-script }}
+        run: if ($env:TEARDOWN -and (Test-Path -LiteralPath $env:TEARDOWN)) { & $env:TEARDOWN }
 
       - name: Check signatures and stage release files
         shell: pwsh
         run: |
           $releaseDir = New-Item -ItemType Directory -Force target/release
-          $launchers = @("target/package/app-image/BananaShot/BananaShot.exe")
           $velopack = "target/package/velopack"
           $installer = Get-Item -LiteralPath (Join-Path $velopack "BananaShot-win-Setup.exe")
           $packages = @(Get-ChildItem -LiteralPath $velopack -Filter "*.nupkg")
           if ($packages.Count -eq 0) { throw "The Velopack update package is missing." }
           if ($env:SIGNING_ENABLED -eq "true") {
-            # The setup EXE and the packages are not signed yet (B-22).
-            foreach ($file in $launchers) {
-              $signature = Get-AuthenticodeSignature -LiteralPath $file
-              if ($signature.Status -ne "Valid") {
-                throw "Invalid Authenticode signature for $file`: $($signature.Status)"
-              }
-            }
+            ./distribution/windows/Test-ReleaseSignatures.ps1 -VelopackDirectory $velopack
           } else {
-            Write-Host "::warning::Code signing is not configured. The release files are unsigned."
+            Write-Host "::warning::Code signing is not configured. The release files are unsigned. Smart App Control blocks them (B-22)."
           }
           # The Velopack files: the setup EXE, the update packages, and the release feed.
           Copy-Item -LiteralPath $installer.FullName -Destination $releaseDir

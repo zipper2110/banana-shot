@@ -90,7 +90,7 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
 
         const val VERSION_CHECK_TITLE = "Version check and updates"
 
-        /** The short version of the analytics notice (docs/analytics/privacy-notice.md). Keep the two in agreement. */
+        /** The short version of the analytics notice (site/public/privacy/index.html, "Usage analytics"). Keep the two in agreement. */
         const val ANALYTICS_COLLECTED =
             "Collected: counts of the tabs and features you use, export results, session length, app version, and OS family."
         const val ANALYTICS_EXCLUDED =

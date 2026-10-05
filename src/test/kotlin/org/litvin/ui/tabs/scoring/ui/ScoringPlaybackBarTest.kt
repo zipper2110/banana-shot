@@ -78,14 +78,14 @@ class ScoringPlaybackBarTest {
 
             val button = bar.findNamed("scoring-add-comment") as? JButton
             assertNotNull(button)
-            assertFalse(button.isFocusable, "Add comment must not take the focus from the player")
-            assertEquals("Add comment", button.text)
+            assertFalse(button.isFocusable, "Comment must not take the focus from the player")
+            assertEquals("Comment", button.text)
             button.doClick()
             assertEquals(listOf("add-comment"), calls.list)
 
             val transport = bar.findNamed("scoring-video-controls")!!
-            assertTrue(button.x > transport.x + transport.width, "Add comment is at the right of the transport")
-            assertTrue(button.x + button.width < bar.frameStep.x, "Add comment is at the left of Frame step")
+            assertTrue(button.x > transport.x + transport.width, "Comment is at the right of the transport")
+            assertTrue(button.x + button.width < bar.frameStep.x, "Comment is at the left of Frame step")
             assertTrue(bar.frameStep.x + bar.frameStep.width <= bar.width - bar.insets.right, "Frame step stays in the bar")
 
             // A narrow bar shows only the icon; the tooltip keeps the action name.
@@ -93,7 +93,7 @@ class ScoringPlaybackBarTest {
             bar.doLayout()
             assertEquals("", button.text)
             assertTrue(button.toolTipText.startsWith("Add a comment"))
-            assertTrue(button.x > transport.x + transport.width, "The narrow Add comment does not cover the transport")
+            assertTrue(button.x > transport.x + transport.width, "The narrow Comment does not cover the transport")
         }
     }
 

@@ -79,7 +79,7 @@ import javax.swing.SwingUtilities
 /**
  * The Scoring tab (design/scoring-redesign/final.html):
  * - the video with the scoreboard and the comments at the playhead, and the playback bar of the selected point under it
- *   (with Add comment),
+ *   (with Comment),
  * - the side column: the score panel (Previous, Point x / y, Next, the score after the point, and the outcome
  *   buttons), the points list, and the Scoring settings and Scoreboard style buttons.
  *

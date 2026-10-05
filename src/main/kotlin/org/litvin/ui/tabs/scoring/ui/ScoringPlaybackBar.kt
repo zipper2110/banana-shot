@@ -33,7 +33,7 @@ import org.litvin.ui.commons.UiButton
 /**
  * The playback bar under the video (the `.pointbar` of design/scoring-redesign/final.html):
  * - the scrub bar of the selected point, with the times from the point start,
- * - the speed at the left end, the transport in the center, and Add comment and the frame step toggle at the right end.
+ * - the speed at the left end, the transport in the center, and Comment and the frame step toggle at the right end.
  */
 internal class ScoringPlaybackBar(
     onTogglePlay: () -> Unit,
@@ -113,7 +113,7 @@ internal class ScoringPlaybackBar(
 
     private fun controlsHeight() = listOf(speed, transport, commentButton, frameStep).maxOf { it.preferredSize.height }
 
-    /** The width of Add comment and the frame step toggle together. */
+    /** The width of Comment and the frame step toggle together. */
     private fun rightGroupWidth() = commentButton.preferredSize.width + RIGHT_GAP + frameStep.preferredSize.width
 
     override fun getPreferredSize(): Dimension {
@@ -129,8 +129,8 @@ internal class ScoringPlaybackBar(
 
     /**
      * The grid "1fr auto 1fr" of the design: the transport stays in the center, the speed uses the space on its left
-     * and Add comment with the frame step toggle the space on its right. A narrow bar hides the speed caption
-     * and key chips, the text of Add comment, and the label of the frame step toggle. When the right group still
+     * and Comment with the frame step toggle the space on its right. A narrow bar hides the speed caption
+     * and key chips, the text of Comment, and the label of the frame step toggle. When the right group still
      * has no space, the transport moves to the left.
      */
     override fun doLayout() {
@@ -169,7 +169,7 @@ internal class ScoringPlaybackBar(
         const val TRANSPORT_GAP = 6
         const val PLAY_MARGIN = 6
         const val RIGHT_GAP = 8
-        const val COMMENT_TEXT = "Add comment"
+        const val COMMENT_TEXT = "Comment"
 
         /** The design hides the speed caption and key chips below 760 px (a container query on the bar). */
         const val COMPACT_SPEED_BELOW = 760

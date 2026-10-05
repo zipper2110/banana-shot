@@ -140,7 +140,7 @@ object HelpCatalog {
                 "Move the playhead to the beginning of a point and set Point start in the Mark a point panel.",
                 "Move to the end and set Point end to create a marked point.",
                 "Click a row in the Points & events table to seek, then edit, delete, or mark favorites as needed.",
-                "Move the playhead to the moment you want to explain and click Add comment.",
+                "Move the playhead to the moment you want to explain and click Comment.",
                 "Give the comment its text, start time, duration, color, and style, then save it. A new comment gets the style that you saved last.",
             ),
             actions = listOf(
@@ -189,7 +189,7 @@ object HelpCatalog {
                 "To show the serve, click the racket button next to the player who serves (or press S). You can mark the server on any point. Click a marked racket again to clear the mark.",
                 "Click Scoreboard style to choose the scoreboard style, title, player colors, serve ball, bottom app line, position, size, background, and accent color.",
                 "Use the bar below the video to move in the selected point, to change the playback speed, and to turn on frame-by-frame stepping with the arrow keys while the video is paused.",
-                "Click Add comment on the bar below the video to add a comment at the playhead. To edit or delete a comment, use the Points tab.",
+                "Click Comment on the bar below the video to add a comment at the playhead. To edit or delete a comment, use the Points tab.",
             ),
             goodToKnow = listOf(
                 "In fully manual scoring, the app counts points only.",

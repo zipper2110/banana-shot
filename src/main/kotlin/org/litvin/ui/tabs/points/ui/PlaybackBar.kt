@@ -23,7 +23,7 @@ import org.litvin.ui.commons.SpeedControl
 
 /**
  * The playback bar under the video: the current time and the speed on the left, the seek and play buttons in the
- * center, and Add comment on the right. It has playback controls only; the mark buttons are in [MarkPanel].
+ * center, and Comment on the right. It has playback controls only; the mark buttons are in [MarkPanel].
  */
 internal class PlaybackBar(
     onTogglePlay: () -> Unit,
@@ -75,7 +75,7 @@ internal class PlaybackBar(
         playButton.alignmentY = CENTER_ALIGNMENT
     }
     val speed = SpeedControl("points-speed", onSpeedIndex)
-    private val commentButton = UiButton("Add comment", Material2AL.ADD_COMMENT, buttonHeight = 40).apply {
+    private val commentButton = UiButton("Comment", Material2AL.ADD_COMMENT, buttonHeight = 40).apply {
         name = "points-add-comment"
         toolTipText = "Add a comment at the playhead. To show the comments in the exported video, select Comments in the Export tab."
         // Space must stay the play hotkey, so the bar buttons never keep the focus.
@@ -119,7 +119,7 @@ internal class PlaybackBar(
 
     /**
      * The grid "1fr auto 1fr" of the design: the transport stays in the center of the bar,
-     * the clock and the speed use the space on its left and Add comment the space on its right.
+     * the clock and the speed use the space on its left and Comment the space on its right.
      * A narrow bar hides the direction icons of the seek buttons first. When the left space is too small,
      * the speed hides its caption and key chips, then the clock hides the video length, and then the speed hides.
      */

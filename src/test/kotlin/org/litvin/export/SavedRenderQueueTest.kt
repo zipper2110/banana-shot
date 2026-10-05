@@ -368,6 +368,7 @@ class SavedRenderQueueTest {
                 accentColorHex = "#123456",
             ),
             outputPath = "C:/videos/out.mp4",
+            replaceableOutputModifiedMs = 1_700_000_000_000L,
             includeComments = true,
             commentOverlayTimeline = listOf(CommentOverlaySpan(7, 100, 900, "Nice", "#FFFF00")),
             statsCard = StatsCardVideo(listOf(page), pageDurationMs = 5_000),

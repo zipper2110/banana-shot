@@ -1,14 +1,7 @@
-package org.litvin.ui.tabs.points.ui
+package org.litvin.ui.commons
 
+import org.litvin.points.CommentStyle
 import org.litvin.shared.util.Timecode
-import org.litvin.ui.commons.ColorPickerDialog
-import org.litvin.ui.commons.DialogKit
-import org.litvin.ui.commons.Palette
-import org.litvin.ui.commons.UiButton
-import org.litvin.ui.commons.formatSeconds
-import org.litvin.ui.tabs.points.CommentDto
-import org.litvin.ui.tabs.points.CommentPatch
-import org.litvin.ui.tabs.points.PointsActions
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
@@ -17,41 +10,75 @@ import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.Locale
 import javax.swing.JDialog
 import javax.swing.JPanel
 import javax.swing.JTextArea
 import javax.swing.JTextField
 
-/** Modal editor for creating or changing a source-time-pinned point comment. */
-object EditCommentDialog {
+/** The values of a comment in [CommentDialog]. The start is in source time; the color uses the #RRGGBB format. */
+data class CommentInput(
+    val startMs: Long,
+    val durationMs: Long,
+    val text: String,
+    val colorHex: String,
+    val style: CommentStyle = CommentStyle.OUTLINE,
+)
+
+/**
+ * Modal editor for creating or changing a source-time-pinned comment. The Points tab and the Scoring tab use it.
+ * [namePrefix] starts the names of the fields, for example "points" gives "points-comment-text".
+ */
+object CommentDialog {
     /** How long a new comment stays on screen until the user changes it. */
     private const val DEFAULT_DURATION_MS = 5_000L
 
     /** The height of the text box, about five lines. */
     private const val TEXT_HEIGHT = 96
 
-    fun showCreate(parent: Component, initialStartMs: Long, defaultColor: String, actions: PointsActions) {
-        buildCreate(parent, initialStartMs, defaultColor, actions).showOver(parent)
+    private val COLOR_HEX = Regex("^#?([0-9A-Fa-f]{6})$")
+
+    /** The choices of the Style switch. The order is the order of the buttons "<prefix>-comment-style-<index>". */
+    private val STYLE_OPTIONS = listOf(
+        SegmentedChoice.Option(CommentStyle.OUTLINE, "Outline", sub = "text only", tooltip = "Colored text with an outline and a shadow"),
+        SegmentedChoice.Option(CommentStyle.CARD, "Card", sub = "text on a box", tooltip = "Colored text on a rounded dark or light box"),
+        SegmentedChoice.Option(CommentStyle.PILL, "Pill", sub = "colored box", tooltip = "Each line on a rounded box of the comment color"),
+    )
+
+    fun showCreate(
+        parent: Component,
+        namePrefix: String,
+        initialStartMs: Long,
+        defaultColor: String,
+        defaultStyle: CommentStyle,
+        onSave: (CommentInput) -> Unit,
+    ) {
+        buildCreate(parent, namePrefix, initialStartMs, defaultColor, defaultStyle, onSave).showOver(parent)
     }
 
-    fun showEdit(parent: Component, comment: CommentDto, actions: PointsActions) {
-        buildEdit(parent, comment, actions).showOver(parent)
+    fun showEdit(parent: Component, namePrefix: String, id: Int, comment: CommentInput, onSave: (CommentInput) -> Unit) {
+        buildEdit(parent, namePrefix, id, comment, onSave).showOver(parent)
     }
 
     /** Builds the packed "Add comment" dialog without showing it. */
-    internal fun buildCreate(parent: Component, initialStartMs: Long, defaultColor: String, actions: PointsActions): JDialog =
-        build(parent, "Add comment", initialStartMs, DEFAULT_DURATION_MS, "", defaultColor) { startMs, durationMs, text, color ->
-            actions.createComment(startMs, durationMs, text, color)
-        }
+    internal fun buildCreate(
+        parent: Component,
+        namePrefix: String,
+        initialStartMs: Long,
+        defaultColor: String,
+        defaultStyle: CommentStyle,
+        onSave: (CommentInput) -> Unit,
+    ): JDialog = build(
+        parent,
+        namePrefix,
+        "Add comment",
+        CommentInput(initialStartMs, DEFAULT_DURATION_MS, "", defaultColor, defaultStyle),
+        onSave,
+    )
 
     /** Builds the packed "Edit comment" dialog without showing it. */
-    internal fun buildEdit(parent: Component, comment: CommentDto, actions: PointsActions): JDialog =
-        build(parent, "Edit comment #${comment.id}", comment.startMs, comment.durationMs, comment.text, comment.colorHex) { startMs, durationMs, text, color ->
-            actions.editComment(
-                comment.id,
-                CommentPatch(startMs = startMs, durationMs = durationMs, text = text, colorHex = color),
-            )
-        }
+    internal fun buildEdit(parent: Component, namePrefix: String, id: Int, comment: CommentInput, onSave: (CommentInput) -> Unit): JDialog =
+        build(parent, namePrefix, "Edit comment #$id", comment, onSave)
 
     private fun JDialog.showOver(parent: Component) {
         setLocationRelativeTo(parent)
@@ -60,35 +87,34 @@ object EditCommentDialog {
 
     private fun build(
         parent: Component,
+        namePrefix: String,
         title: String,
-        initialStartMs: Long,
-        initialDurationMs: Long,
-        initialText: String,
-        initialColor: String,
-        save: (Long, Long, String, String) -> Unit,
+        initial: CommentInput,
+        save: (CommentInput) -> Unit,
     ): JDialog {
         val dialog = DialogKit.modal(parent, title)
-        val text = JTextArea(initialText).apply {
-            name = "points-comment-text"
+        val text = JTextArea(initial.text).apply {
+            name = "$namePrefix-comment-text"
             lineWrap = true
             wrapStyleWord = true
         }
-        val start = JTextField(formatTimestamp(initialStartMs)).apply {
-            name = "points-comment-start"
+        val start = JTextField(formatTimestamp(initial.startMs)).apply {
+            name = "$namePrefix-comment-start"
             toolTipText = "hh:mm:ss.mmm, mm:ss.mmm, or seconds"
         }
-        val duration = JTextField(formatSeconds(initialDurationMs)).apply {
-            name = "points-comment-duration"
+        val duration = JTextField(formatDurationField(initial.durationMs)).apply {
+            name = "$namePrefix-comment-duration"
             toolTipText = "How long the comment stays on screen, in seconds"
         }
-        var colorHex = initialColor
+        var colorHex = initial.colorHex
         val color = UiButton("Change…").apply {
-            name = "points-comment-color"
+            name = "$namePrefix-comment-color"
             swatch = colorFor(colorHex)
             toolTipText = colorHex
         }
+        val style = SegmentedChoice("$namePrefix-comment-style", STYLE_OPTIONS).apply { selected = initial.style }
         val error = DialogKit.errorLine()
-        val saveButton = UiButton("Save", kind = UiButton.Kind.LIME).apply { name = "points-comment-save" }
+        val saveButton = UiButton("Save", kind = UiButton.Kind.LIME).apply { name = "$namePrefix-comment-save" }
         val cancelButton = UiButton("Cancel")
 
         color.addActionListener {
@@ -104,11 +130,11 @@ object EditCommentDialog {
             if (problem != null) {
                 error.text = problem
             } else {
-                val parsed = parseFields(start.text, duration.text, text.text, colorHex)
+                val parsed = parseFields(start.text, duration.text, text.text, colorHex, style.selected ?: initial.style)
                 if (parsed == null) {
                     error.text = "Text color must use the #RRGGBB format."
                 } else {
-                    save(parsed.startMs, parsed.durationMs, parsed.text, parsed.colorHex)
+                    save(parsed)
                     dialog.dispose()
                 }
             }
@@ -133,6 +159,7 @@ object EditCommentDialog {
                     DialogKit.field("Duration", DialogKit.inputBox(duration), note = "seconds"),
                 ),
                 DialogKit.field("Text color", colorRow),
+                DialogKit.field("Style", style),
                 error,
             ),
             DialogKit.footer(left = emptyList(), right = listOf(cancelButton, saveButton)),
@@ -163,24 +190,26 @@ object EditCommentDialog {
         return null
     }
 
-    private data class ParsedComment(val startMs: Long, val durationMs: Long, val text: String, val colorHex: String)
-
-    private fun parseFields(start: String, durationSeconds: String, text: String, color: String): ParsedComment? = try {
+    private fun parseFields(start: String, durationSeconds: String, text: String, color: String, style: CommentStyle): CommentInput? = try {
         val startMs = Timecode.parse(start)
         val durationMs = BigDecimal(durationSeconds.trim())
             .movePointRight(3)
             .setScale(0, RoundingMode.HALF_UP)
             .longValueExact()
-        val normalizedColor = org.litvin.points.EdlIO.normalizeColorHex(color) ?: return null
+        val normalizedColor = normalizeColorHex(color) ?: return null
         val trimmedText = text.trim()
         if (startMs < 0 || durationMs <= 0 || trimmedText.isBlank()) null
-        else ParsedComment(startMs, durationMs, trimmedText, normalizedColor)
+        else CommentInput(startMs, durationMs, trimmedText, normalizedColor, style)
     } catch (_: Throwable) {
         null
     }
 
+    /** The same rule as the EDL: six hex digits, with or without "#". The result is "#" and upper case. */
+    private fun normalizeColorHex(color: String): String? =
+        COLOR_HEX.matchEntire(color.trim())?.let { "#${it.groupValues[1].uppercase(Locale.ROOT)}" }
+
     private fun colorFor(hex: String): Color = runCatching { Color.decode(hex) }.getOrDefault(Palette.PURE_WHITE)
-    private fun formatSeconds(durationMs: Long): String = BigDecimal(durationMs).movePointLeft(3).stripTrailingZeros().toPlainString()
+    private fun formatDurationField(durationMs: Long): String = BigDecimal(durationMs).movePointLeft(3).stripTrailingZeros().toPlainString()
     private fun formatTimestamp(totalMs: Long): String {
         val hours = totalMs / 3_600_000L
         val minutes = (totalMs % 3_600_000L) / 60_000L

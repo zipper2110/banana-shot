@@ -1,37 +1,49 @@
 # BananaShot (Kotlin Desktop)
 
-A desktop application that helps tennis players turn full‑match recordings into compact, watchable videos. You can remove dead time between points, track the score, and export a final video with a scoreboard overlay. Future versions add zoom/crop/reposition and color adjustments.
+A desktop application that helps tennis players turn full‑match recordings into compact, watchable videos. You can remove dead time between points, track the score, and export a final video with a scoreboard overlay.
 
-> Detailed architecture and workflows live in the Solution Outline:
-> - 📄 [docs/solution-outline.md](docs/solution-outline.md)
-> Roadmap, milestones, and changelog:
-> - 🗺️ [docs/roadmap.md](docs/roadmap.md)
+## Documentation
 
-## Key features (scope)
-- Manual trimming of empty time between points (mark in/out, ripple delete)
-- Score entry during editing; live scoreboard overlay in preview
-- Final render: cuts applied + overlayed scoreboard
-- Future: zoom/crop/reposition, brightness/contrast, presets, hardware‑accelerated exports
+- Open work and the order of the work: [docs/backlog.md](docs/backlog.md)
+- Package and dependency rules: [docs/architecture-rules.md](docs/architecture-rules.md)
+- Steps of a release: [docs/release-checklist.md](docs/release-checklist.md)
+- Windows packaging: [distribution/windows/README.md](distribution/windows/README.md)
 
-## Tech stack (selected)
-- UI: Compose Multiplatform Desktop (Kotlin/JVM)
+## Key features
+
+- Projects: create a project from a video. Open, rename, and delete projects.
+- Points: mark the start and the end of each point. Edit points, delete
+  points, and mark favorites. Add comments.
+- Scoring: give each point a winner. The app computes the games, sets, and
+  tiebreaks for the selected match format.
+- Statistics: statistics of the match and of each set.
+- Colors and Transform: color, crop, and rotation of the video.
+- Export: the full video, only the points, or only the favorites. The export
+  can show the scoreboard, the comments, a statistics card, and set
+  summaries. A queue keeps the exports after a restart. The export can use
+  hardware encoding.
+
+## Tech stack
+
+- UI: Swing with FlatLaf (Kotlin/JVM)
 - Preview: libmpv (JNA binding), GPU rendering with a custom FFmpeg-parity shader
-- Export/render: FFmpeg (CLI initially), optional hardware encoding (NVENC/Quick Sync/Videotoolbox)
-- Models & storage: Kotlin + kotlinx.serialization (EDL JSON)
-- Packaging: jpackage (Windows/macOS/Linux)
-
-Rationale, trade‑offs, and module plan are explained in the [solution outline](docs/solution-outline.md).
+- Export: FFmpeg as a separate process, optional hardware encoding
+- Project files: JSON (Jackson)
+- Runtime: a bundled JDK 25 runtime
+- Packaging: Velopack setup EXE for Windows
 
 ## Project status
-- This repository currently contains a Kotlin/Maven skeleton.
-- Implementation will proceed in phases; see the Roadmap below.
+
+- The app is near its first public release. The first release is for
+  Windows only. macOS is a post-release item (B-13).
+- The open work is in [docs/backlog.md](docs/backlog.md).
 
 ## Getting started (development)
 ### Prerequisites
 - JDK 25 (the build and the bundled runtime use JDK 25; the bytecode target is 17)
 - Maven 3.9+
-- FFmpeg (ffmpeg/ffprobe) available in PATH (for export stage)
-- Bundled libmpv (for preview at runtime)
+- FFmpeg (ffmpeg/ffprobe) and libmpv. The script below gets the pinned
+  versions.
 
 On Windows, provision the pinned native runtime before launching from IntelliJ
 or another source-run configuration:
@@ -137,23 +149,32 @@ app. This test does a real FFmpeg export and checks that the adjustment
 controls change the mpv preview and the exported video. Then you do the
 manual checklist in the packaged app.
 
-### Run (temporary)
-A proper desktop entrypoint (Compose Desktop) will be added with dependencies and packaging. For now, the skeleton app is minimal and only for verifying the toolchain.
+### Run
+
+The main class is `org.litvin.SwingMainApp`. To start the app from Maven:
+
+```bash
+mvn compile exec:java
+```
+
+`exec:java` ignores `-Dexec.mainClass`. To start a different main class, use
+`-Dapp.mainClass=<class>`.
 
 ## CI
 - GitHub Actions workflow runs `mvn test` on pushes and pull requests to `main`/`master`.
+- `windows-release.yml` builds, tests, and publishes a Windows release. See
+  [docs/release-checklist.md](docs/release-checklist.md).
 - The architecture dependency hygiene test (`org.litvin.ArchitectureDependencyHygieneTest`) is part of the suite and will fail the build on violations.
 
 ## High‑level architecture
-See: [docs/solution-outline.md](docs/solution-outline.md)
+See: [docs/architecture-rules.md](docs/architecture-rules.md)
 
-## Roadmap (high level)
-- v0.1 (MVP): Open video, mark segments, simple scoreboard, save/load project, basic export with overlay.
-- v0.2: Better scrubbing, thumbnails, undo/redo, presets, HW accel paths.
-- v0.3: Proxy media, color adjustments, richer themes, in‑process FFmpeg.
+## Roadmap
+The pre-release and post-release work is in [docs/backlog.md](docs/backlog.md).
 
 ## Contributing
-- File issues and proposals referencing sections of the [solution outline](docs/solution-outline.md).
+- Read [CONTRIBUTING.md](CONTRIBUTING.md). The project does not accept
+  outside code contributions now.
 - Keep EDL/score models versioned and migration‑ready.
 
 ## Privacy
@@ -197,4 +218,4 @@ See: [docs/solution-outline.md](docs/solution-outline.md)
 - Fonts — ensure redistribution rights (e.g., OFL fonts like Roboto).
 
 ## Acknowledgements
-- FFmpeg, mpv, Kotlin, and JetBrains Compose teams for awesome tooling.
+- FFmpeg, mpv, Kotlin, and FlatLaf teams for awesome tooling.

@@ -1,6 +1,7 @@
 package org.litvin
 
 import org.litvin.points.CommentDefaultsV1
+import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
 import org.litvin.points.components.CommentDispatcher
 import org.litvin.points.components.CommentPatch
@@ -41,6 +42,21 @@ class CommentDispatcherTest {
 
         assertEquals("#12AB34", dispatcher.state().comments.single().colorHex)
         assertEquals("#12AB34", dispatcher.state().defaults.colorHex)
+    }
+
+    @Test
+    fun createAndUpdateKeepTheStyle() {
+        val dispatcher = CommentDispatcher()
+        dispatcher.load(CommentState(emptyList(), CommentDefaultsV1(), nextCommentId = 1))
+
+        val created = dispatcher.create(startMs = 0, durationMs = 1_000, text = "In", style = CommentStyle.PILL)
+        assertEquals(CommentStyle.PILL, created?.style)
+
+        assertTrue(dispatcher.update(1, CommentPatch(text = "Out")))
+        assertEquals(CommentStyle.PILL, dispatcher.state().comments.single().style, "A patch without a style keeps the style")
+
+        assertTrue(dispatcher.update(1, CommentPatch(style = CommentStyle.CARD)))
+        assertEquals(CommentStyle.CARD, dispatcher.state().comments.single().style)
     }
 
     @Test

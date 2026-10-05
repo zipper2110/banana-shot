@@ -22,6 +22,7 @@ class ScoringPlaybackBarTest {
         onScrub = { calls.list += "scrub:$it" },
         onSpeedIndex = { calls.list += "speed:$it" },
         onToggleFrameStep = { calls.list += "frame-step" },
+        onAddComment = { calls.list += "add-comment" },
     )
 
     @Test
@@ -64,6 +65,35 @@ class ScoringPlaybackBarTest {
             assertTrue(bar.speed.x < transport.x, "The speed is at the left of the transport")
             assertTrue(bar.frameStep.x > transport.x + transport.width, "Frame step is at the right of the transport")
             assertTrue(bar.scrub.y < transport.y, "The scrub bar is above the controls")
+        }
+    }
+
+    @Test
+    fun addCommentIsAtTheRightBeforeFrameStep() {
+        SwingUtilities.invokeAndWait {
+            val calls = Calls()
+            val bar = bar(calls)
+            bar.setSize(1100, bar.preferredSize.height)
+            bar.doLayout()
+
+            val button = bar.findNamed("scoring-add-comment") as? JButton
+            assertNotNull(button)
+            assertFalse(button.isFocusable, "Add comment must not take the focus from the player")
+            assertEquals("Add comment", button.text)
+            button.doClick()
+            assertEquals(listOf("add-comment"), calls.list)
+
+            val transport = bar.findNamed("scoring-video-controls")!!
+            assertTrue(button.x > transport.x + transport.width, "Add comment is at the right of the transport")
+            assertTrue(button.x + button.width < bar.frameStep.x, "Add comment is at the left of Frame step")
+            assertTrue(bar.frameStep.x + bar.frameStep.width <= bar.width - bar.insets.right, "Frame step stays in the bar")
+
+            // A narrow bar shows only the icon; the tooltip keeps the action name.
+            bar.setSize(700, bar.preferredSize.height)
+            bar.doLayout()
+            assertEquals("", button.text)
+            assertTrue(button.toolTipText.startsWith("Add a comment"))
+            assertTrue(button.x > transport.x + transport.width, "The narrow Add comment does not cover the transport")
         }
     }
 

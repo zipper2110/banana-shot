@@ -15,6 +15,10 @@ import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.points.EdlIO
 import org.litvin.points.PointV1
+import org.litvin.points.components.CommentDispatcher
+import org.litvin.points.components.CommentState
+import org.litvin.export.comments.CommentAss
+import org.litvin.export.comments.CommentPreview
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
 import org.litvin.media.PlayerStatus
@@ -30,6 +34,9 @@ import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoringEngine
 import org.litvin.scoring.ScoringEngine.MatchState
+import org.litvin.ui.commons.CommentDialog
+import org.litvin.ui.commons.CommentInput
+import org.litvin.ui.commons.CommentStyleDefaults
 import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
@@ -71,7 +78,8 @@ import javax.swing.SwingUtilities
 
 /**
  * The Scoring tab (design/scoring-redesign/final.html):
- * - the video with the scoreboard preview, and the playback bar of the selected point under it,
+ * - the video with the scoreboard and the comments at the playhead, and the playback bar of the selected point under it
+ *   (with Add comment),
  * - the side column: the score panel (Previous, Point x / y, Next, the score after the point, and the outcome
  *   buttons), the points list, and the Scoring settings and Scoreboard style buttons.
  *
@@ -86,6 +94,7 @@ class SwingScoringPanel(
     private val hints: HintController = HintController.NONE,
     private val frameLoader: VideoFrameLoader = VideoFrameLoader(),
     private val analytics: Analytics = DisabledAnalytics,
+    private val commentStyles: CommentStyleDefaults = CommentStyleDefaults.inMemory(),
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
         MpvSwingMediaPlayerAdapter(),
@@ -201,6 +210,9 @@ class SwingScoringPanel(
     // False until the score settings open once for this project (see promptScoreSettingsOnFirstVisit)
     private var scoreSettingsReviewed = true
 
+    // The comments of the project (edl.json) on the video at the playhead
+    private val commentPreview = CommentPreview()
+
     // Settings that the open settings dialog shows on the video before the user saves them.
     private var scoreboardPreviewSettings: ScoreboardSettingsV1? = null
     private var lastScoreboardDisplay: ScoreboardDisplay? = null
@@ -244,6 +256,7 @@ class SwingScoringPanel(
         },
         onSpeedIndex = { index -> setSpeedIndex(index); focusPlayer() },
         onToggleFrameStep = { toggleFrameStep() },
+        onAddComment = { addCommentAtPlayhead() },
     )
 
     private val scorePanel = ScorePanel(
@@ -284,6 +297,7 @@ class SwingScoringPanel(
         // Load points from EDL (sorted by startMs)
         val edl = EdlIO.readForProjectDir(projectDir!!)
         points = edl.points.sortedBy { it.startMs }
+        commentPreview.setComments(edl.comments)
         // Load outcomes and player names from score.json (ignore orphans)
         outcomesByPointId.clear()
         manualGameWins.clear()
@@ -329,7 +343,10 @@ class SwingScoringPanel(
         val dir = projectDir ?: return@uiSafe
         // Remember currently selected point id (if any) to restore selection after reload
         val prevSelectedId = points.getOrNull(selectedPointIndex)?.id
-        val newPoints = EdlIO.readForProjectDir(dir).points.sortedBy { it.startMs }
+        // The Points tab can change the comments too
+        val edl = EdlIO.readForProjectDir(dir)
+        commentPreview.setComments(edl.comments)
+        val newPoints = edl.points.sortedBy { it.startMs }
         points = newPoints
         // Remove outcomes for orphaned point ids (keep existing outcomes for still-valid ids)
         val validIds = newPoints.map { it.id }.toSet()
@@ -586,6 +603,7 @@ class SwingScoringPanel(
 
     private fun updateScrubUi(absMs: Long) {
         playbackBar.scrub.setPosition(absMs)
+        if (commentPreview.moveTo(absMs)) refreshVideoScoreboardOverlay()
     }
 
     private fun focusPlayer() {
@@ -815,6 +833,53 @@ class SwingScoringPanel(
         markServerForSelectedPoint(next)
     }
 
+    /** Opens "Add comment" with the playhead as the start, as in the Points tab. */
+    private fun addCommentAtPlayhead(): Unit = uiSafe {
+        val dir = projectDir ?: return@uiSafe
+        val defaultColor = try {
+            EdlIO.readForProjectDir(dir).commentDefaults.colorHex
+        } catch (t: Throwable) {
+            dialogs.showError(this, t.message ?: t.toString(), "Failed to read comments")
+            return@uiSafe
+        }
+        CommentDialog.showCreate(this, "scoring", player.currentTimeMs(), defaultColor, commentStyles.load()) { comment ->
+            createComment(dir, comment)
+        }
+        focusPlayer()
+    }
+
+    /**
+     * Adds [comment] to the EDL of the project. The Points tab reads the EDL again when it opens, so it shows the comment.
+     * Only the comment fields change; the points stay as they are.
+     */
+    private fun createComment(dir: String, comment: CommentInput): Unit = uiSafe {
+        val startMs = comment.startMs.takeIf { it <= Int.MAX_VALUE }?.toInt()
+        val durationMs = comment.durationMs.takeIf { it <= Int.MAX_VALUE }?.toInt()
+        if (startMs == null || durationMs == null) {
+            dialogs.showWarning(this, "Comment times must fit within the supported video timeline.", "Invalid comment")
+            return@uiSafe
+        }
+        try {
+            val edl = EdlIO.readForProjectDir(dir)
+            val comments = CommentDispatcher()
+            comments.load(CommentState(edl.comments, edl.commentDefaults, edl.nextCommentId))
+            if (comments.create(startMs, durationMs, comment.text, comment.colorHex, comment.style) == null) {
+                comments.consumeUserMessage()?.let { dialogs.showHint(this, it) }
+                return@uiSafe
+            }
+            val state = comments.state()
+            EdlIO.writeForProjectDir(
+                dir,
+                edl.copy(comments = state.comments, commentDefaults = state.defaults, nextCommentId = state.nextCommentId),
+            )
+            commentStyles.save(comment.style)
+            analytics.record(AnalyticsEvent.CommentAdded)
+            if (commentPreview.setComments(state.comments)) refreshVideoScoreboardOverlay()
+        } catch (t: Throwable) {
+            dialogs.showError(this, t.message ?: t.toString(), "Failed to save comment")
+        }
+    }
+
     fun saveNow() {
         try {
             val dir = projectDir ?: return
@@ -982,9 +1047,11 @@ class SwingScoringPanel(
             lastScoreboardDisplay = display
             val settings = scoreboardPreviewSettings ?: scoreboardSettings
             val scene = ScoreboardLayouts.scene(display, settings)
+            // The comments draw after the scoreboard, so they are on top of it, as in the export.
+            val comments = commentPreview.shown
             player.setPreviewOverlay(VideoOverlay { area ->
                 val placement = ScoreboardAss.place(scene, settings, area.x, area.y, area.width, area.height)
-                ScoreboardAss.events(scene, placement)
+                ScoreboardAss.events(scene, placement) + CommentAss.previewEvents(comments, area)
             })
         } catch (_: Throwable) {
             // Preview overlay is best-effort; scoring/export data remains authoritative.

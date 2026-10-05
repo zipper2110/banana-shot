@@ -110,8 +110,7 @@ class OverlayAssWriterTest {
         )
 
         val ass = tmp.readText()
-        assertTrue(ass.contains("Style: CommentText"))
-        assertTrue(ass.contains("Style: CommentBackdrop"))
+        assertTrue(ass.contains("Style: Comment,"))
         assertTrue(ass.contains("\\N"))
         assertTrue(ass.contains("\\{"))
         assertTrue(ass.contains("FFAA22"))

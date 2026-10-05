@@ -2,6 +2,7 @@ package org.litvin.points.components
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.points.CommentDefaultsV1
+import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
@@ -11,6 +12,7 @@ data class CommentPatch(
     val durationMs: Int? = null,
     val text: String? = null,
     val colorHex: String? = null,
+    val style: CommentStyle? = null,
 )
 
 data class CommentState(
@@ -52,7 +54,13 @@ class CommentDispatcher {
         nextCommentId = nextCommentId,
     )
 
-    fun create(startMs: Int, durationMs: Int, text: String, colorHex: String? = null): CommentV1? {
+    fun create(
+        startMs: Int,
+        durationMs: Int,
+        text: String,
+        colorHex: String? = null,
+        style: CommentStyle = CommentStyle.OUTLINE,
+    ): CommentV1? {
         val requestedColor = colorHex?.let(EdlIO::normalizeColorHex)
         if (colorHex != null && requestedColor == null) {
             notifyUser("Comment color must use #RRGGBB format")
@@ -67,6 +75,7 @@ class CommentDispatcher {
             durationMs = durationMs,
             text = text.trim(),
             colorHex = color,
+            style = style,
         )
         comments += comment
         comments.sortWith(compareBy<CommentV1> { it.startMs }.thenBy { it.id })
@@ -92,6 +101,7 @@ class CommentDispatcher {
             durationMs = patch.durationMs ?: existing.durationMs,
             text = (patch.text ?: existing.text).trim(),
             colorHex = requestedColor ?: existing.colorHex,
+            style = patch.style ?: existing.style,
         )
         if (!isValid(updated.startMs, updated.durationMs, updated.text, updated.colorHex)) return false
 

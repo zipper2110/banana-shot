@@ -72,7 +72,7 @@ internal class UiButton(
 
     private fun leadingWidth() = when {
         swatch != null -> SWATCH + SWATCH_GAP
-        ikon != null -> ICON_SIZE + GAP
+        ikon != null -> ICON_SIZE + if (text.isNullOrEmpty()) 0 else GAP
         else -> 0
     }
 

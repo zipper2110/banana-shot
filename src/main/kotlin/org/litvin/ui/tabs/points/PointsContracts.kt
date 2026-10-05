@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points
 
+import org.litvin.points.CommentStyle
+
 /**
  * Contracts for the Points tab UI and its container.
  *
@@ -59,6 +61,7 @@ data class CommentDto(
     val durationMs: Long,
     val text: String,
     val colorHex: String,
+    val style: CommentStyle = CommentStyle.OUTLINE,
 ) : TimelineEventDto {
     override val stableKey: String get() = "comment:$id"
 }
@@ -88,6 +91,7 @@ data class CommentPatch(
     val durationMs: Long? = null,
     val text: String? = null,
     val colorHex: String? = null,
+    val style: CommentStyle? = null,
 )
 
 /** Autosave status surfaced to the toolbar and other indicators. */

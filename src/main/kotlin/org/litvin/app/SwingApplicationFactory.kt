@@ -36,6 +36,7 @@ import org.litvin.ui.tabs.points.SwingPointsPanel
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
 import org.litvin.ui.commons.PreferencesHintRegistry
+import org.litvin.ui.commons.PreferencesCommentStyleDefaults
 import org.litvin.ui.tabs.scoring.PreferencesScoreboardStyleDefaults
 import org.litvin.ui.tabs.scoring.SwingScoringPanel
 import org.litvin.ui.tabs.stats.SwingStatsPanel
@@ -221,6 +222,7 @@ object SwingApplicationFactory {
             val cardLayout = cards.layout as CardLayout
             val applicationPreferences = services.preferences.node(PreferencesProvider.APPLICATION)
             val hints = HintController(PreferencesHintRegistry(applicationPreferences))
+            val commentStyles = PreferencesCommentStyleDefaults(applicationPreferences)
 
             val pointsPanel = SwingPointsPanel(
                 services.mediaPlayers.create(MediaScreen.POINTS),
@@ -229,6 +231,7 @@ object SwingApplicationFactory {
                 services.dialogs,
                 hints,
                 analytics,
+                commentStyles,
             )
             closeActions += pointsPanel::close
 
@@ -254,6 +257,7 @@ object SwingApplicationFactory {
                 PreferencesScoreboardStyleDefaults(scoringPreferences),
                 hints = hints,
                 analytics = analytics,
+                commentStyles = commentStyles,
             )
             closeActions += scoringPanel::close
             scoringPanel.onGoToPoint = { pointId ->

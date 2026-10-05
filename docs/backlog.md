@@ -529,3 +529,82 @@ Do these items after the first public release.
 - Keep a flag in the preferences, so that the dialog shows only one time.
 - Done when: the first start with empty preferences shows the dialog. The
   next start does not show it.
+
+### B-37 Locate a moved source video
+
+- Finding F-02 of the feature audit of 2026-10-05. Decided on 2026-10-05:
+  after the first release.
+- Problem: when the source video is moved, renamed, or on a USB drive with a
+  different drive letter, the project does not open. The app tells the user
+  to put the video back at the old path.
+- The parts for the fix are in the code. `FileProjectsRepository.openProject`
+  writes a new `sourceVideo` path into the manifest. The intent
+  `MissingSourceVideoSelected` opens the project with a new video. Now the
+  app uses them only when the manifest has no video path.
+- Tasks:
+  1. In `DefaultProjectsPresenter.openProject`, when the video is not on the
+     disk, send a new effect instead of `ShowError`. The effect gives the old
+     path and the project name.
+  2. In `SwingProjectsPanel`, show a dialog with the old path and two
+     buttons: "Locate video..." and "Cancel". "Locate video..." opens the
+     file chooser in the folder of the old path. If that folder does not
+     exist, the chooser opens in the last video folder.
+  3. Send `MissingSourceVideoSelected` with the selected file. The project
+     then opens, and the manifest keeps the new path.
+  4. Check the selected video before the project opens. Probe its duration
+     with the existing duration probe. If the last point ends after the end
+     of the video, show a warning: "This video is shorter than the points of
+     the project." The user can continue or select a different file.
+  5. On a project row that shows "The video is not on the disk anymore", add
+     the same "Locate video..." action.
+  6. Update the Projects help text in `HelpCatalog`.
+  7. Add presenter tests: a missing video sends the new effect; a selected
+     video opens the project and changes the manifest; Cancel keeps the
+     project closed; a video that is too short gives the warning.
+- Not in scope: exports in the queue keep the old `sourcePath`. They fail
+  with "Source file missing". The user can start these exports again.
+- Done when: a project whose video was moved to a different folder opens
+  after the user selects the video. The next start opens it with no dialog.
+
+### B-38 Minor findings of the feature audit
+
+- The minor and super-minor findings (F-04 to F-17) of the feature audit of
+  2026-10-05. Decided on 2026-10-05: after the first release.
+- The tasks and the open questions are in `docs/audit/b-38-tasks.md`.
+- Done when: each task of the file is done, or it has a decision to keep the
+  current behavior.
+
+### B-39 Silent errors
+
+- Found by the feature audit of 2026-10-05. Decided on 2026-10-05: after the
+  first release.
+- Problem: many code paths catch all errors and continue with no log and no
+  message. Some of them can hide data loss from the user. Two known cases
+  are in B-38: a skipped overlay or statistics card in an export (T2), and a
+  failed save of `adjustments.json` (T6).
+- On 2026-10-05, `src/main/kotlin` had 90 blocks
+  `catch (_: Throwable)` or `catch (_: Exception)`. Most are in
+  `RenderQueue.kt` (15), `SwingExportPanel.kt` (10), `SwingScoringPanel.kt`
+  (6), `AdjustmentsStore.kt` (6), and `FFmpegCapabilities.kt` (5). Also look
+  for `catch (e: ...) { }` with an empty body.
+- Tasks:
+  1. Make a list of each block: file, line, and the operation that can fail.
+     Put the list in this item or in a separate file.
+  2. Put each block in one class:
+     - Expected: the error is a normal case (for example, an optional probe
+       or a UI cleanup). Keep the catch. Add a short comment that tells why.
+     - Log: the error does not change the user data or the result. Write it
+       to the log with the context.
+     - Show: the error can lose user data or change the result (a save, an
+       export, the queue file). Show it to the user, for example with the
+       "Autosave failed" status or an export warning.
+  3. Fix the "Show" blocks first, then the "Log" blocks.
+  4. Catch `Throwable` only where the code must survive an `Error` (for
+     example, a thread loop). In other places, catch `Exception` or a
+     narrower type.
+  5. Add tests for each "Show" block: a failing store or writer gives a
+     message to the user.
+- Optional: add a guard test that refuses a new empty catch block without a
+  comment.
+- Done when: each block of the list has a class, and each "Show" and "Log"
+  block is fixed.

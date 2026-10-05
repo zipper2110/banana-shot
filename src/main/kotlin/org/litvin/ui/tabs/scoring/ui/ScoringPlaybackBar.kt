@@ -21,17 +21,19 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.min
 import org.litvin.ui.commons.KeyChips
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.PlayButton
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SeekButton
 import org.litvin.ui.commons.SpeedControl
+import org.litvin.ui.commons.UiButton
 
 /**
  * The playback bar under the video (the `.pointbar` of design/scoring-redesign/final.html):
  * - the scrub bar of the selected point, with the times from the point start,
- * - the speed at the left end, the transport in the center, and the frame step toggle at the right end.
+ * - the speed at the left end, the transport in the center, and Add comment and the frame step toggle at the right end.
  */
 internal class ScoringPlaybackBar(
     onTogglePlay: () -> Unit,
@@ -39,6 +41,7 @@ internal class ScoringPlaybackBar(
     onScrub: (targetMs: Long) -> Unit,
     onSpeedIndex: (index: Int) -> Unit,
     onToggleFrameStep: () -> Unit,
+    onAddComment: () -> Unit = {},
 ) : JPanel(null) {
 
     val scrub = PointScrubBar(onScrub)
@@ -70,6 +73,13 @@ internal class ScoringPlaybackBar(
 
     val speed = SpeedControl("scoring-speed", onSpeedIndex)
     val frameStep = FrameStepToggle().apply { addActionListener { onToggleFrameStep() } }
+    val commentButton = UiButton(COMMENT_TEXT, Material2AL.ADD_COMMENT, buttonHeight = FrameStepToggle.HEIGHT).apply {
+        name = "scoring-add-comment"
+        toolTipText = "Add a comment at the playhead. To show the comments in the exported video, select Comments in the Export tab."
+        // Space must stay the play hotkey, so the bar buttons never keep the focus.
+        isFocusable = false
+        addActionListener { onAddComment() }
+    }
 
     init {
         name = "scoring-playback-bar"
@@ -82,6 +92,7 @@ internal class ScoringPlaybackBar(
         add(scrub)
         add(speed)
         add(transport)
+        add(commentButton)
         add(frameStep)
         playButton.addActionListener { onTogglePlay() }
         // The seek buttons of the Scoring design have the step and the key chips, without the direction icons.
@@ -100,11 +111,14 @@ internal class ScoringPlaybackBar(
         seekButtons.firstOrNull { it.deltaMs == deltaMs }?.flash()
     }
 
-    private fun controlsHeight() = listOf(speed, transport, frameStep).maxOf { it.preferredSize.height }
+    private fun controlsHeight() = listOf(speed, transport, commentButton, frameStep).maxOf { it.preferredSize.height }
+
+    /** The width of Add comment and the frame step toggle together. */
+    private fun rightGroupWidth() = commentButton.preferredSize.width + RIGHT_GAP + frameStep.preferredSize.width
 
     override fun getPreferredSize(): Dimension {
         val insets = insets
-        val side = max(speed.preferredSize.width, frameStep.preferredSize.width)
+        val side = max(speed.preferredSize.width, rightGroupWidth())
         return Dimension(
             insets.left + insets.right + side * 2 + transport.preferredSize.width + GRID_GAP * 2,
             insets.top + insets.bottom + scrub.preferredSize.height + ROW_GAP + controlsHeight(),
@@ -115,14 +129,20 @@ internal class ScoringPlaybackBar(
 
     /**
      * The grid "1fr auto 1fr" of the design: the transport stays in the center, the speed uses the space on its left
-     * and the frame step toggle the space on its right. A narrow bar hides the speed caption and key chips.
+     * and Add comment with the frame step toggle the space on its right. A narrow bar hides the speed caption
+     * and key chips, the text of Add comment, and the label of the frame step toggle. When the right group still
+     * has no space, the transport moves to the left.
      */
     override fun doLayout() {
         val insets = insets
         val inner = width - insets.left - insets.right
         scrub.setBounds(insets.left, insets.top, inner, scrub.preferredSize.height)
 
-        speed.compact = inner < COMPACT_SPEED_BELOW
+        val compact = inner < COMPACT_SPEED_BELOW
+        speed.compact = compact
+        val commentText = if (compact) "" else COMMENT_TEXT
+        if (commentButton.text != commentText) commentButton.text = commentText
+        frameStep.compact = compact
 
         val top = insets.top + scrub.preferredSize.height + ROW_GAP
         val height = controlsHeight()
@@ -131,11 +151,16 @@ internal class ScoringPlaybackBar(
             component.setBounds(x, top + (height - h) / 2, w, h)
         }
         val center = transport.preferredSize.width
-        val centerX = insets.left + (inner - center) / 2
+        val group = rightGroupWidth()
+        // The transport moves to the left from the center only when the right group has no space.
+        val centered = insets.left + (inner - center) / 2
+        val centerX = max(insets.left, min(centered, width - insets.right - group - GRID_GAP - center))
         place(transport, centerX, center)
         place(speed, insets.left, speed.preferredSize.width.coerceAtMost(max(0, centerX - GRID_GAP - insets.left)))
-        val toggle = frameStep.preferredSize.width
-        place(frameStep, max(centerX + center + GRID_GAP, width - insets.right - toggle), toggle)
+        val groupX = max(centerX + center + GRID_GAP, width - insets.right - group)
+        val button = commentButton.preferredSize.width
+        place(commentButton, groupX, button)
+        place(frameStep, groupX + button + RIGHT_GAP, frameStep.preferredSize.width)
     }
 
     private companion object {
@@ -143,6 +168,8 @@ internal class ScoringPlaybackBar(
         const val ROW_GAP = 6
         const val TRANSPORT_GAP = 6
         const val PLAY_MARGIN = 6
+        const val RIGHT_GAP = 8
+        const val COMMENT_TEXT = "Add comment"
 
         /** The design hides the speed caption and key chips below 760 px (a container query on the bar). */
         const val COMPACT_SPEED_BELOW = 760
@@ -289,8 +316,19 @@ internal class PointScrubBar(private val onScrub: (targetMs: Long) -> Unit) : JC
     }
 }
 
-/** The frame step toggle: a check box, "Frame step", and the F key chip. It has a lime border when it is on. */
+/**
+ * The frame step toggle: a check box, "Frame step", and the F key chip. It has a lime border when it is on.
+ * A compact toggle has no label; the tooltip names the action.
+ */
 internal class FrameStepToggle : JButton("Frame step") {
+    var compact = false
+        set(value) {
+            if (field == value) return
+            field = value
+            revalidate()
+            repaint()
+        }
+
     var on = false
         set(value) {
             if (field == value) return
@@ -313,10 +351,9 @@ internal class FrameStepToggle : JButton("Frame step") {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
-    override fun getPreferredSize() = Dimension(
-        PAD * 2 + BOX + GAP + ceil(UiKit.textWidth(text, textFont)).toInt() + GAP + KeyChips.width(KEY),
-        HEIGHT,
-    )
+    private fun labelWidth() = if (compact) 0 else ceil(UiKit.textWidth(text, textFont)).toInt() + GAP
+
+    override fun getPreferredSize() = Dimension(PAD * 2 + BOX + GAP + labelWidth() + KeyChips.width(KEY), HEIGHT)
 
     override fun getMinimumSize() = preferredSize
     override fun getMaximumSize() = preferredSize
@@ -340,19 +377,19 @@ internal class FrameStepToggle : JButton("Frame step") {
                 UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, null, Palette.LINE_5)
             }
             x += BOX + GAP
-            UiKit.drawText(g2, text, textFont, Palette.FG, x.toFloat(), 0f, height.toFloat())
-            x += ceil(UiKit.textWidth(text, textFont)).toInt() + GAP
+            if (!compact) UiKit.drawText(g2, text, textFont, Palette.FG, x.toFloat(), 0f, height.toFloat())
+            x += labelWidth()
             KeyChips.paint(g2, KEY, x, (height - KeyChips.HEIGHT) / 2)
         } finally {
             g2.dispose()
         }
     }
 
-    private companion object {
+    companion object {
         const val HEIGHT = 32
-        const val PAD = 12
-        const val BOX = 14
-        const val GAP = 7
-        const val KEY = "F"
+        private const val PAD = 12
+        private const val BOX = 14
+        private const val GAP = 7
+        private const val KEY = "F"
     }
 }

@@ -1,6 +1,5 @@
 package org.litvin.ui.tabs.points
 
-import java.awt.EventQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
@@ -11,13 +10,15 @@ import javax.swing.Timer
  * Debounced autosave controller for the Points tab.
  *
  * - Schedules autosave with a debounce timer (no EDT blocking)
- * - Executes provided [saver] off-EDT
- * - Notifies UI about state changes via [onStateChanged] on the EDT
+ * - Takes a [snapshot] of the state on the thread that starts the save (the EDT), so the
+ *   background thread never reads the mutable editor state. A null snapshot skips the save.
+ * - Executes [saver] with that snapshot off-EDT
  */
-class AutosaveController(
+class AutosaveController<T : Any>(
     debounceMs: Int = 300,
     private val executor: ExecutorService,
-    private val saver: () -> Unit
+    private val snapshot: () -> T?,
+    private val saver: (T) -> Unit,
 ) : AutoCloseable {
     private val timer = Timer(debounceMs) { _ -> triggerSave() }.apply { isRepeats = false }
     private val closed = AtomicBoolean(false)
@@ -65,10 +66,16 @@ class AutosaveController(
     private fun triggerSave() {
         synchronized(saveLock) {
             if (closed.get()) return
-            inFlightSave = executor.submit {
-                saver()
-                _lastSavedAtMs = System.currentTimeMillis()
-            }
+            submitSave()?.let { inFlightSave = it }
+        }
+    }
+
+    /** Takes the snapshot on the calling thread and writes it off-EDT. */
+    private fun submitSave(): Future<*>? {
+        val state = snapshot() ?: return null
+        return executor.submit {
+            saver(state)
+            _lastSavedAtMs = System.currentTimeMillis()
         }
     }
 
@@ -78,10 +85,7 @@ class AutosaveController(
         timer.stop()
         val pending = synchronized(saveLock) {
             if (hadPendingTimer) {
-                executor.submit {
-                    saver()
-                    _lastSavedAtMs = System.currentTimeMillis()
-                }.also { inFlightSave = it }
+                submitSave()?.also { inFlightSave = it } ?: inFlightSave
             } else {
                 inFlightSave
             }

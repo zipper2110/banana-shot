@@ -22,7 +22,7 @@ class RenderOverlayScriptTest {
 
             assertNotNull(script)
             assertTrue(script.exists())
-            assertTrue(script.readText().contains("CommentText"))
+            assertTrue(script.readText().contains(",Comment,,0,0,0,,"))
         } finally {
             tempDir.deleteRecursively()
         }

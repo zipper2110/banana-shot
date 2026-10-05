@@ -395,6 +395,7 @@ class SwingExportPanel(
             initialDir,
             ExportPlanner.suggestFilename(
                 projectName = manifest?.name ?: File(source).nameWithoutExtension,
+                contentLabel = ExportPlanner.contentLabel(keeps, favoriteOnly),
                 presetId = selPreset.id,
                 resolutionLabel = target.resolution.label,
             )
@@ -436,6 +437,8 @@ class SwingExportPanel(
                 includeScoreboard = scoreboardCheck.isSelected,
                 includeComments = commentsCheck.isSelected,
                 outputPath = out.absolutePath,
+                // The file dialog or the prompt above asked the user to replace an existing file.
+                replaceableOutputModifiedMs = out.takeIf { it.exists() }?.lastModified(),
                 sourceDurationMs = sourceInfo.durationMs,
                 includeStatsCard = statsCardCheck.isSelected,
                 includeSetSummaries = setSummariesCheck.isEnabled && setSummariesCheck.isSelected,

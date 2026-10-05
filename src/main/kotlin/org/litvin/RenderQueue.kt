@@ -49,7 +49,10 @@ data class RenderJob(
     val includeScoreboard: Boolean = false,
     val overlayTimeline: List<OverlaySpan> = emptyList(),
     val scoreboardSettings: ScoreboardSettingsV1 = ScoreboardSettingsV1(),
-    val outputPath: String,
+    // The worker changes the path when the job starts and the file exists. See ExportPlanner.startOutputFile.
+    var outputPath: String,
+    // The last-modified time of the output file that the user agreed to replace at queue time. Null when the file did not exist.
+    val replaceableOutputModifiedMs: Long? = null,
     val includeComments: Boolean = false,
     val commentOverlayTimeline: List<CommentOverlaySpan> = emptyList(),
     // The statistics card after the last point, on a frozen last frame. Null when the export has no card.
@@ -247,6 +250,15 @@ object RenderQueueManager {
                     cancelBeforeProcessStart(request)
                     continue
                 }
+                // An earlier export can have written a file with the same name after the user queued this job.
+                val startOutput = org.litvin.export.ExportPlanner.startOutputFile(
+                    java.io.File(job.outputPath),
+                    job.replaceableOutputModifiedMs,
+                )
+                if (startOutput.path != job.outputPath) {
+                    logger.info { "Render job id=${job.id}: ${job.outputPath} exists, the export writes ${startOutput.path}" }
+                    job.outputPath = startOutput.path
+                }
                 job.status = RenderStatus.RUNNING
                 job.updatedAtEpochMs = System.currentTimeMillis()
                 logger.info { "Render job running id=${job.id} -> ${job.outputPath} (${job.encoderLabel} / ${job.outWidth}x${job.outHeight})" }
@@ -346,6 +358,8 @@ object RenderQueueManager {
                     .takeIf { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
                     ?.let { org.litvin.export.SourceToneRangeProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable) }
                     ?: ToneRange.LIMITED
+                // A source without audio gets silent audio. Without it, the filter graph refers to a missing stream.
+                val sourceHasAudio = org.litvin.export.SourceAudioProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable)
 
                 // Build command(s). Idle trim gives every kept segment its own seeked input, and
                 // ffmpeg allocates a decoder for each input up front, so a long match is encoded in
@@ -402,6 +416,7 @@ object RenderQueueManager {
                         chunkOutput = chunkOutput,
                         videoBitrateK = job.videoBitrateK,
                         freezeFrame = freezeFrame,
+                        sourceHasAudio = sourceHasAudio,
                     )
                 )
 

@@ -109,12 +109,12 @@ class ExportPlannerTest {
     @Test
     fun filenamesExtensionsAndResolutionParsingMatchExportUiDefaults() {
         assertEquals(
-            "Match-balanced-1080p.mp4",
-            ExportPlanner.suggestFilename("Match", "balanced", "1080p"),
+            "Match-points-balanced-1080p.mp4",
+            ExportPlanner.suggestFilename("Match", "points", "balanced", "1080p"),
         )
         assertEquals(
-            "Match-quality-4K.mp4",
-            ExportPlanner.suggestFilename("Match", "quality", "4K"),
+            "Match-full-quality-4K.mp4",
+            ExportPlanner.suggestFilename("Match", "full", "quality", "4K"),
         )
         assertEquals(
             File("render.mp4"),
@@ -127,6 +127,60 @@ class ExportPlannerTest {
         assertEquals(ExportResolution("4K", 3840, 2160), ExportPlanner.parseResolution("4K"))
         assertEquals(ExportResolution("4K", 3840, 2160), ExportPlanner.parseResolution("4K (source)"))
         assertEquals(ExportResolution("2560x1440", 2560, 1440), ExportPlanner.parseResolution("2560x1440"))
+    }
+
+    @Test
+    fun contentLabelTellsFullPointsOrFavorites() {
+        val points = listOf(point("a", 0, 1_000, favorite = true))
+        assertEquals("full", ExportPlanner.contentLabel(emptyList(), favoriteOnly = false))
+        assertEquals("full", ExportPlanner.contentLabel(emptyList(), favoriteOnly = true))
+        assertEquals("points", ExportPlanner.contentLabel(points, favoriteOnly = false))
+        assertEquals("favs", ExportPlanner.contentLabel(points, favoriteOnly = true))
+    }
+
+    @Test
+    fun startOutputFileAddsSuffixWhenAnEarlierExportWroteTheFile() {
+        val dir = kotlin.io.path.createTempDirectory("start-output").toFile()
+        try {
+            val output = File(dir, "Match-points.mp4")
+            assertEquals(output, ExportPlanner.startOutputFile(output, replaceableModifiedMs = null))
+
+            output.writeText("first export")
+            assertEquals(File(dir, "Match-points_1.mp4"), ExportPlanner.startOutputFile(output, replaceableModifiedMs = null))
+
+            File(dir, "Match-points_1.mp4").writeText("second export")
+            assertEquals(File(dir, "Match-points_2.mp4"), ExportPlanner.startOutputFile(output, replaceableModifiedMs = null))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun startOutputFileReplacesOnlyTheUnchangedFileThatTheUserAgreedToReplace() {
+        val dir = kotlin.io.path.createTempDirectory("start-output").toFile()
+        try {
+            val output = File(dir, "Match.mp4")
+            output.writeText("old export")
+            output.setLastModified(1_000_000L)
+            val confirmed = output.lastModified()
+            assertEquals(output, ExportPlanner.startOutputFile(output, replaceableModifiedMs = confirmed))
+
+            // An earlier export in the queue wrote the file again after the user agreed.
+            output.setLastModified(2_000_000L)
+            assertEquals(File(dir, "Match_1.mp4"), ExportPlanner.startOutputFile(output, replaceableModifiedMs = confirmed))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun freeOutputFileHandlesNamesWithoutExtension() {
+        val dir = kotlin.io.path.createTempDirectory("start-output").toFile()
+        try {
+            assertEquals(File(dir, "render_1"), ExportPlanner.freeOutputFile(File(dir, "render")))
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 
     @Test

@@ -106,6 +106,7 @@ class SavedRenderQueue internal constructor(
         internal val mapper: ObjectMapper = ObjectMapper()
             .registerModule(KotlinModule.Builder().build())
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE, true)
             .setSerializationInclusion(JsonInclude.Include.NON_NULL)
             .addMixIn(SceneItem::class.java, SceneItemTypes::class.java)
 

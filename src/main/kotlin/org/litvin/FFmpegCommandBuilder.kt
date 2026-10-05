@@ -43,6 +43,9 @@ object FFmpegCommandBuilder {
         val videoBitrateK: Int? = null,
         // When set, the output is one frozen frame of the source with silent audio, in place of the keeps.
         val freezeFrame: FreezeFrame? = null,
+        // False when the source has no audio stream. Then each pass writes silent audio, so that all
+        // passes have the same streams and the join can copy them.
+        val sourceHasAudio: Boolean = true,
     )
 
     /**
@@ -51,6 +54,9 @@ object FFmpegCommandBuilder {
      * The pass uses the same filters and encoder settings as the other passes, so the join can copy the streams.
      */
     data class FreezeFrame(val atMs: Long?, val durationMs: Long)
+
+    /** Silent audio for a source without an audio stream. All passes of one export use the same format. */
+    private const val SILENT_AUDIO = "anullsrc=r=48000:cl=stereo"
 
     /** The length of the source window that the freeze reads. The last frame of the window is the still frame. */
     private const val FREEZE_WINDOW_SECS = 0.25
@@ -223,6 +229,10 @@ object FFmpegCommandBuilder {
             }
         } else {
             args += listOf("-i", p.sourcePath)
+            if (!p.sourceHasAudio) {
+                // The second input gives the audio. -shortest stops it at the end of the video.
+                args += listOf("-f", "lavfi", "-i", SILENT_AUDIO)
+            }
         }
 
         var filterComplex: String? = null
@@ -261,19 +271,28 @@ object FFmpegCommandBuilder {
             buildColorFilter(p.adjustments)?.let { video += it }
             p.subtitlesAssPath?.let { video += "subtitles='${escapeForFilterPath(it)}'" }
             // The source audio keeps its sample rate and channels, so the AAC settings match the other passes.
-            val audio = "asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
-            filterComplex = "[0:v]${video.joinToString(",")}$vMap;[0:a]$audio$aMap"
+            val audio = if (p.sourceHasAudio) {
+                "[0:a]asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
+            } else {
+                "$SILENT_AUDIO,atrim=duration=$duration"
+            }
+            filterComplex = "[0:v]${video.joinToString(",")}$vMap;$audio$aMap"
         } else if (segmentInputs) {
             // Build the concat graph over the per-segment inputs. Each input was already seeked and
             // length-limited on the command line, so the segment only needs its timestamps rebased.
             val parts = mutableListOf<String>()
             val vLabels = mutableListOf<String>()
             val aLabels = mutableListOf<String>()
-            p.keeps.forEachIndexed { idx, _ ->
+            p.keeps.forEachIndexed { idx, keep ->
                 val vLbl = "v$idx"
                 val aLbl = "a$idx"
                 parts += "[$idx:v]setpts=PTS-STARTPTS[$vLbl]"
-                parts += "[$idx:a]asetpts=PTS-STARTPTS[$aLbl]"
+                parts += if (p.sourceHasAudio) {
+                    "[$idx:a]asetpts=PTS-STARTPTS[$aLbl]"
+                } else {
+                    val durationSecs = (keep.endMs - keep.startMs).coerceAtLeast(0) / 1000.0
+                    "$SILENT_AUDIO,atrim=duration=${durationSecs.formatSecs()}[$aLbl]"
+                }
                 vLabels += "[$vLbl]"
                 aLabels += "[$aLbl]"
             }
@@ -380,6 +399,9 @@ object FFmpegCommandBuilder {
             }
             val vf = filters.joinToString(",")
             args += listOf("-vf", vf)
+            if (!p.sourceHasAudio) {
+                args += listOf("-map", "0:v:0", "-map", "1:a:0", "-shortest")
+            }
         }
 
         // Container options

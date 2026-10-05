@@ -3,6 +3,7 @@ package org.litvin
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.CommentDefaultsV1
+import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
 import org.litvin.points.PointV1
 import kotlin.test.Test
@@ -92,14 +93,33 @@ class EdlIOTest {
         val tmpDir: Path = Files.createTempDirectory("edl_comments_rt_")
         val edlPath = tmpDir.resolve("edl.json").toFile().absolutePath
         val edl = EdlV1(
-            comments = listOf(CommentV1(7, 1_250, 3_500, "Ball was in", "#22AAFF")),
+            comments = listOf(
+                CommentV1(7, 1_250, 3_500, "Ball was in", "#22AAFF"),
+                CommentV1(8, 5_000, 2_000, "Let", "#FFEE00", CommentStyle.PILL),
+            ),
             commentDefaults = CommentDefaultsV1("#22AAFF"),
-            nextCommentId = 8,
+            nextCommentId = 9,
         )
 
         EdlIO.write(edlPath, edl)
 
         assertEquals(edl, EdlIO.read(edlPath))
+    }
+
+    @Test
+    fun read_commentWithoutOrWithUnknownStyle_usesOutline() {
+        val tmpDir: Path = Files.createTempDirectory("edl_comments_style_")
+        val edlPath = tmpDir.resolve("edl.json")
+        Files.writeString(
+            edlPath,
+            """{"version":1,"points":[],"nextCommentId":3,"comments":[""" +
+                """{"id":1,"startMs":0,"durationMs":1000,"text":"Old","colorHex":"#FFFFFF"},""" +
+                """{"id":2,"startMs":0,"durationMs":1000,"text":"Future","colorHex":"#FFFFFF","style":"NEON"}]}""",
+        )
+
+        val read = EdlIO.read(edlPath.toFile().absolutePath)
+
+        assertEquals(listOf(CommentStyle.OUTLINE, CommentStyle.OUTLINE), read.comments.map { it.style })
     }
 
     @Test

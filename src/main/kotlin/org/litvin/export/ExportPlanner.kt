@@ -66,6 +66,8 @@ data class ExportRenderPlanRequest(
     val favoriteOnly: Boolean,
     val includeScoreboard: Boolean,
     val outputPath: String,
+    /** The last-modified time of the output file that the user agreed to replace. Null when the file did not exist. */
+    val replaceableOutputModifiedMs: Long? = null,
     val includeComments: Boolean = false,
     /** Duration of the source video. A full video export uses it for the expected file size. */
     val sourceDurationMs: Long? = null,
@@ -145,15 +147,46 @@ object ExportPlanner {
         }
     }
 
+    /** The part of the file name that tells the content of the export: "full", "points" or "favs". */
+    fun contentLabel(keptPoints: List<PointV1>, favoriteOnly: Boolean): String = when {
+        keptPoints.isEmpty() -> "full"
+        favoriteOnly -> "favs"
+        else -> "points"
+    }
+
     fun suggestFilename(
         projectName: String,
+        contentLabel: String,
         presetId: String,
         resolutionLabel: String,
         defaultExtNoDot: String = "mp4",
     ): String {
         val base = projectName.ifBlank { "export" }
         val dims = resolutionLabel.replace('x', 'p')
-        return "$base-${presetId.lowercase()}-$dims.$defaultExtNoDot"
+        return "$base-$contentLabel-${presetId.lowercase()}-$dims.$defaultExtNoDot"
+    }
+
+    /**
+     * The file that an export writes when it starts. When [output] exists, the export writes a file with a `_N` suffix.
+     * Thus, a queued export does not replace the output of an earlier export. The export replaces [output] only when
+     * the user agreed to replace it at queue time and the file did not change after that ([replaceableModifiedMs]).
+     */
+    fun startOutputFile(output: File, replaceableModifiedMs: Long?): File {
+        if (!output.exists()) return output
+        if (replaceableModifiedMs != null && output.lastModified() == replaceableModifiedMs) return output
+        return freeOutputFile(output)
+    }
+
+    /** The first file name `name_1.ext`, `name_2.ext`, ... next to [output] that does not exist. */
+    fun freeOutputFile(output: File): File {
+        val base = output.nameWithoutExtension
+        val ext = output.extension
+        var n = 1
+        while (true) {
+            val candidate = File(output.parentFile, if (ext.isEmpty()) "${base}_$n" else "${base}_$n.$ext")
+            if (!candidate.exists()) return candidate
+            n++
+        }
     }
 
     fun ensureExtension(file: File, defaultExtNoDot: String = "mp4"): File {
@@ -279,6 +312,7 @@ object ExportPlanner {
             overlayTimeline = overlayTimeline,
             scoreboardSettings = request.score.scoreboard,
             outputPath = request.outputPath,
+            replaceableOutputModifiedMs = request.replaceableOutputModifiedMs,
             includeComments = request.includeComments,
             commentOverlayTimeline = commentOverlayTimeline,
             statsCard = statsCard,
@@ -320,6 +354,7 @@ object ExportPlanner {
                     endMs = comment.startMs.toLong() + comment.durationMs.toLong(),
                     text = comment.text,
                     colorHex = EdlIO.normalizeColorHex(comment.colorHex)!!,
+                    style = comment.style,
                 )
             }
         }
@@ -336,6 +371,7 @@ object ExportPlanner {
                         endMs = startMs + comment.durationMs.toLong(),
                         text = comment.text,
                         colorHex = EdlIO.normalizeColorHex(comment.colorHex)!!,
+                        style = comment.style,
                     )
                 }
                 elapsedMs += (point.endMs - point.startMs).toLong().coerceAtLeast(0L)

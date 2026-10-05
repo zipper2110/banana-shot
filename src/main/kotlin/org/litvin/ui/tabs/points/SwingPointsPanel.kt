@@ -8,6 +8,7 @@ import org.litvin.SessionSettings
 import org.litvin.projects.ManifestIO
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
+import org.litvin.points.CommentStyle
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
@@ -15,10 +16,15 @@ import org.litvin.points.components.CommentDispatcher
 import org.litvin.points.components.CommentPatch as DispatcherCommentPatch
 import org.litvin.points.components.CommentState
 import org.litvin.points.components.PointsDispatcher
+import org.litvin.export.comments.CommentAss
+import org.litvin.export.comments.CommentPreview
 import org.litvin.media.PlayerStatus
+import org.litvin.media.VideoOverlay
 import org.litvin.media.relativeSeekDeltaMs
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
+import org.litvin.ui.commons.CommentDialog
+import org.litvin.ui.commons.CommentStyleDefaults
 import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
@@ -27,7 +33,6 @@ import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.tabs.points.ui.SwingTimelineComponent
-import org.litvin.ui.tabs.points.ui.EditCommentDialog
 import org.litvin.ui.tabs.points.components.Keybindings
 import org.litvin.ui.tabs.points.components.PointsKeyActions
 import org.litvin.ui.tabs.points.ui.EventsHeader
@@ -60,6 +65,7 @@ class SwingPointsPanel(
     private val dialogs: UserDialogService,
     private val hints: HintController = HintController.NONE,
     private val analytics: Analytics = DisabledAnalytics,
+    private val commentStyles: CommentStyleDefaults = CommentStyleDefaults.inMemory(),
 ) : JPanel(BorderLayout()), AutoCloseable {
 
     constructor() : this(
@@ -84,6 +90,9 @@ class SwingPointsPanel(
     // EDL Dispatcher
     private val dispatcher = PointsDispatcher()
     private val commentDispatcher = CommentDispatcher()
+
+    // The comments on the video at the playhead
+    private val commentPreview = CommentPreview()
 
     // Current project manifest path (projectDir derived from it)
     private var manifestPath: String? = null
@@ -217,6 +226,7 @@ class SwingPointsPanel(
                 durationMs = comment.durationMs.toLong(),
                 text = comment.text,
                 colorHex = comment.colorHex,
+                style = comment.style,
             )
         }
         return (pointEvents + comments).sortedWith(compareBy<TimelineEventDto> { it.startMs }.thenBy { it.stableKey })
@@ -253,13 +263,14 @@ class SwingPointsPanel(
         pendingStartProvider = { dispatcher.getPendingStart()?.toLong() },
     ).apply { name = "points-seek" }
 
-    // Autosave controller (debounced, off-EDT persistence)
+    // Autosave controller (debounced, off-EDT persistence). The snapshot is taken on the EDT,
+    // so the save thread does not read the dispatchers, and the project folder is that of the snapshot.
     private val autosave = AutosaveController(
-        debounceMs = 300, executor = autosaveExecutor, saver = {
-            try {
-                val dir = projectDir ?: return@AutosaveController
+        debounceMs = 300, executor = autosaveExecutor,
+        snapshot = {
+            projectDir?.let { dir ->
                 val comments = commentDispatcher.state()
-                EdlIO.writeForProjectDir(
+                EdlSnapshot(
                     dir,
                     EdlV1(
                         points = dispatcher.getCompletedPoints(),
@@ -269,6 +280,11 @@ class SwingPointsPanel(
                         version = 1,
                     ),
                 )
+            }
+        },
+        saver = { snapshot ->
+            try {
+                EdlIO.writeForProjectDir(snapshot.projectDir, snapshot.edl)
             } catch (t: Throwable) {
                 // Surface error on EDT
                 EventQueue.invokeLater { dialogs.showError(this, t.message ?: t.toString(), "Autosave failed") }
@@ -294,7 +310,7 @@ class SwingPointsPanel(
         override fun saveNow() = this@SwingPointsPanel.saveNow()
         override fun addCommentAtPlayhead() = this@SwingPointsPanel.addCommentAtPlayhead()
         override fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) =
-            this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex)
+            this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex, commentStyles.load())
         override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
         override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
     }
@@ -445,6 +461,8 @@ class SwingPointsPanel(
     }
 
     fun setProjectManifest(path: String) {
+        // Write the pending changes to the current project before the project folder changes.
+        autosave.flush()
         manifestPath = path
         projectDir = File(path).parentFile.absolutePath
         // Load adjustments for this project into the central store
@@ -579,6 +597,7 @@ class SwingPointsPanel(
     private fun onPointsChanged() {
         val skipAutosave = reloadingProjectFromDisk
         EventQueue.invokeLater {
+            showComments(commentPreview.setComments(commentDispatcher.state().comments))
             updateCountBadge(dispatcher.getCompletedPoints())
             pushCardsState()
             timeline.revalidate()
@@ -588,23 +607,28 @@ class SwingPointsPanel(
     }
 
     private fun addCommentAtPlayhead() {
-        EditCommentDialog.showCreate(
+        CommentDialog.showCreate(
             parent = this,
+            namePrefix = "points",
             initialStartMs = player.currentTimeMs(),
             defaultColor = commentDispatcher.state().defaults.colorHex,
-            actions = panelActions,
-        )
+            defaultStyle = commentStyles.load(),
+        ) { comment -> createComment(comment.startMs, comment.durationMs, comment.text, comment.colorHex, comment.style) }
     }
 
-    private fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) {
+    private fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String, style: CommentStyle) {
         val comment = commentDispatcher.create(
             startMs = startMs.toCommentIntOrNull() ?: return showCommentRangeError(),
             durationMs = durationMs.toCommentIntOrNull() ?: return showCommentRangeError(),
             text = text,
             colorHex = colorHex,
+            style = style,
         )
         maybeShowCommentHint()
-        if (comment != null) analytics.record(AnalyticsEvent.CommentAdded)
+        if (comment != null) {
+            commentStyles.save(style)
+            analytics.record(AnalyticsEvent.CommentAdded)
+        }
         comment?.let { EventQueue.invokeLater { scrollToEvent("comment:${it.id}") } }
     }
 
@@ -616,9 +640,11 @@ class SwingPointsPanel(
                 durationMs = patch.durationMs?.toCommentIntOrNull() ?: patch.durationMs?.let { return showCommentRangeError() },
                 text = patch.text,
                 colorHex = patch.colorHex,
+                style = patch.style,
             ),
         )
         maybeShowCommentHint()
+        if (updated) patch.style?.let(commentStyles::save)
         if (updated) EventQueue.invokeLater { scrollToEvent("comment:$id") }
     }
 
@@ -728,6 +754,14 @@ class SwingPointsPanel(
         val shown = max(0, timeline.scrubTimeMs ?: ms)
         playbackBar.setTime(shown, player.totalDurationMs())
         markPanel.setState(dispatcher.getPendingStart()?.toLong(), shown)
+        showComments(commentPreview.moveTo(shown))
+    }
+
+    /** Draws the comments at the playhead over the video, after [changed] comments on screen. */
+    private fun showComments(changed: Boolean) {
+        if (!changed) return
+        val shown = commentPreview.shown
+        player.setPreviewOverlay(if (shown.isEmpty()) null else VideoOverlay { area -> CommentAss.previewEvents(shown, area) })
     }
 
     private fun refreshUiAtCurrentTime() {
@@ -821,8 +855,12 @@ class SwingPointsPanel(
         player.onTimeChanged = null
         player.onStatusChanged = null
         player.onReady = null
+        player.setPreviewOverlay(null)
         player.close()
     }
+
+    /** The EDL to write and the project folder that it belongs to. */
+    private class EdlSnapshot(val projectDir: String, val edl: EdlV1)
 
     private companion object {
         const val POINT_ROW_HINT = "Put the pointer on a row to show Favorite, Edit, and Delete. " +

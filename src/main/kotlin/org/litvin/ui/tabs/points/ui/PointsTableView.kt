@@ -1,9 +1,12 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.litvin.ui.commons.CommentDialog
+import org.litvin.ui.commons.CommentInput
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.applyDarkScrollbar
 import org.litvin.ui.tabs.points.CommentDto
+import org.litvin.ui.tabs.points.CommentPatch
 import org.litvin.ui.tabs.points.PointEventDto
 import org.litvin.ui.tabs.points.PointsActions
 import org.litvin.ui.tabs.points.PointsViewState
@@ -163,7 +166,7 @@ class PointsTableView(
                 is CommentDto -> CommentRow(
                     visualIndex = visualIndex,
                     comment = event,
-                    onEdit = { EditCommentDialog.showEdit(this, event, actions) },
+                    onEdit = { editComment(event) },
                     onDelete = { actions.deleteComment(event.id) },
                 )
             }
@@ -177,6 +180,15 @@ class PointsTableView(
         rowsPanel.repaint()
         // A click on a star rebuilds the rows. The pointer stays on the new row, but Swing sends no enter event.
         SwingUtilities.invokeLater(::restoreHover)
+    }
+
+    private fun editComment(comment: CommentDto) {
+        val current = CommentInput(comment.startMs, comment.durationMs, comment.text, comment.colorHex, comment.style)
+        CommentDialog.showEdit(this, "points", comment.id, current) { saved ->
+            // The style is in the patch only when the user changed it, so that the panel remembers only a new choice.
+            val style = saved.style.takeIf { it != comment.style }
+            actions.editComment(comment.id, CommentPatch(saved.startMs, saved.durationMs, saved.text, saved.colorHex, style))
+        }
     }
 
     private fun restoreHover() {

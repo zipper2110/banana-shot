@@ -1,5 +1,6 @@
 package org.litvin.points
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -32,12 +33,32 @@ data class PointV1(
     val favorite: Boolean = false,
 )
 
+/**
+ * How the video shows a comment (decided on 2026-10-05). `CommentAss` draws each style.
+ * The text, the card and the outline use black or white, whichever has the higher contrast with the comment color.
+ */
+enum class CommentStyle {
+    /**
+     * No backdrop: the text has the comment color, an outline and a soft shadow.
+     * Comments saved before the styles existed use it, and new comments use it until the user selects a style.
+     */
+    @JsonEnumDefaultValue
+    OUTLINE,
+
+    /** The text has the comment color, on a rounded card that fits the text. */
+    CARD,
+
+    /** Each line is on a rounded pill with the comment color. */
+    PILL,
+}
+
 data class CommentV1(
     val id: Int,
     val startMs: Int,
     val durationMs: Int,
     val text: String,
     val colorHex: String = "#FFFFFF",
+    val style: CommentStyle = CommentStyle.OUTLINE,
 )
 
 data class CommentDefaultsV1(
@@ -66,6 +87,7 @@ object EdlIO {
     private val mapper: ObjectMapper = ObjectMapper()
         .registerModule(KotlinModule.Builder().build())
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE, true)
         .setSerializationInclusion(JsonInclude.Include.NON_NULL)
         .enable(SerializationFeature.INDENT_OUTPUT)
 

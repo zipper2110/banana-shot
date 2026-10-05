@@ -1,5 +1,6 @@
 package org.litvin
 
+import org.litvin.points.CommentStyle
 import org.litvin.points.PointV1
 import org.litvin.scoring.ManualScoreMarks
 import org.litvin.scoring.MatchRulesV1
@@ -43,6 +44,7 @@ data class CommentOverlaySpan(
     val endMs: Long,
     val text: String,
     val colorHex: String,
+    val style: CommentStyle = CommentStyle.OUTLINE,
 )
 
 object ScoreboardTimelineBuilder {

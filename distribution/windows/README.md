@@ -45,7 +45,7 @@ dotnet tool install --global vpk --version 1.2.161
 .\distribution\windows\Build-VelopackRelease.ps1 -Version 1.0.0
 ```
 
-The files are in `target\packageelopack`:
+The files are in `target\package\velopack`:
 
 - `BananaShot-win-Setup.exe`: the installer. The name is the same in each
   release. "Update and restart" in the app downloads
@@ -104,6 +104,19 @@ release. It gives the release steps in sequence. The open work is in
   version. This dry run builds, tests and checks everything. It uploads the
   files as the workflow artifact `bananashot-v<version>-dry-run-windows-x64`
   and does not create a tag or a release.
+- The release workflow has three jobs:
+  - `test` runs `mvn -B test` with a read-only token and no secrets.
+  - `windows-installer` starts after `test`. It builds, signs, and checks the
+    release files, and uploads them as the workflow artifact. It has a
+    read-only token. Only this job uses the GitHub environment
+    `windows-release`, which has the signing secrets.
+  - `publish` downloads the workflow artifact and creates the draft release.
+    Only this job has the `contents: write` permission. Only a tag push starts
+    it. A dry run skips it.
+- Each workflow pins each action to a full commit SHA. The comment after the
+  SHA gives the version. To update an action, get the commit SHA of the new
+  tag, for example `gh api repos/softprops/action-gh-release/commits/v3.0.3 --jq .sha`,
+  and change the SHA and the comment.
 - Until all stories in
   [docs/licensing/l-5.2-epics.md](../../docs/licensing/l-5.2-epics.md) are
   `done`, `Validate-Release.ps1` fails for a tag release. A dry run shows only

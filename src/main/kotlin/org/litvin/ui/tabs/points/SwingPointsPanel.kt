@@ -514,7 +514,7 @@ class SwingPointsPanel(
         }
     }
 
-    /** After the first point: the actions of a row show only on hover, and A makes the selected point a favorite. */
+    /** After the first point: a click on a row goes to the point start, and the actions of a row show only on hover. */
     private fun showPointRowHint() {
         if (!active) return
         val row = cardsView.firstPointRowInView() ?: return
@@ -863,7 +863,7 @@ class SwingPointsPanel(
     private class EdlSnapshot(val projectDir: String, val edl: EdlV1)
 
     private companion object {
-        const val POINT_ROW_HINT = "Put the pointer on a row to show Favorite, Edit, and Delete. " +
-            "You can mark this point as a favorite. Click this row to go to point start."
+        const val POINT_ROW_HINT = "Click a row to go to the start of the point. " +
+            "Hover on a row to show Favorite, Edit, and Delete."
     }
 }

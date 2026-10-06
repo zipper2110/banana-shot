@@ -19,8 +19,6 @@ the features of this release.
 - [ ] Help: `HelpCatalog.kt`. Check each help page for each changed feature.
 - [ ] Hints: `HintBalloon`, `ScoreSettingsHint`, `TransformHints`, and the
       first-time hints.
-- [ ] Change the hint text for the Points tab (`HintRegistry.kt`). The
-      author asked for this change before the release.
 - [ ] Tooltips on the changed controls.
 - [ ] More → About and More → Contact.
 

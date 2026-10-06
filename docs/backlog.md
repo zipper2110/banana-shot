@@ -241,17 +241,6 @@ Do these items before the first public release.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.
 
-### B-27 Release workflow hardening
-
-- Pin each third-party action to a commit SHA, mainly
-  `softprops/action-gh-release` and `jay0lee/certum-cloud-code-sign`. Keep
-  the version as a comment.
-- Now `mvn -B test` runs in the job that has the `contents: write` and
-  `id-token: write` permissions. Run the tests in a separate job with
-  read-only permissions. Give the write permissions only to the job that
-  publishes.
-- Done when: a dry run passes with the new jobs.
-
 ### B-22 Code signing
 
 - Smart App Control is confirmed (2026-10-03, dry run of B-21 on a tester

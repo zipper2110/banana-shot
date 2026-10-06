@@ -6,6 +6,12 @@
       "runtimeExecutable": "C:\\w\\banana-shot\\analytics-worker\\node_modules\\.bin\\wrangler.cmd",
       "runtimeArgs": ["dev", "--config", "site/wrangler.toml", "--port", "8790", "--local"],
       "port": 8790
+    },
+    {
+      "name": "cockpit",
+      "runtimeExecutable": "C:\\w\\banana-shot\\cockpit-worker\\node_modules\\.bin\\wrangler.cmd",
+      "runtimeArgs": ["dev", "--config", "cockpit-worker/wrangler.toml", "--port", "8791", "--local", "--persist-to", "cockpit-worker/.wrangler/state"],
+      "port": 8791
     }
   ]
 }

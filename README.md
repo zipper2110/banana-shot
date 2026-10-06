@@ -8,6 +8,7 @@ A desktop application that helps tennis players turn full‑match recordings int
 - Package and dependency rules: [docs/architecture-rules.md](docs/architecture-rules.md)
 - Steps of a release: [docs/release-checklist.md](docs/release-checklist.md)
 - Windows packaging: [distribution/windows/README.md](distribution/windows/README.md)
+- Private dashboard of the numbers (cockpit): [cockpit-worker/README.md](cockpit-worker/README.md)
 
 ## Key features
 
@@ -70,8 +71,9 @@ To use a separate data folder, set the system property
 
 ### Usage analytics in a development run
 
-A development run has no analytics properties. Thus it sends no analytics
-and does not show the consent dialog. To see the dialog:
+A development run has no analytics properties. Thus it sends no usage
+statistics and does not show the consent dialog. With the properties, the run
+sends the essential statistics at once. To see the dialog:
 
 1. Add these VM options to the run configuration. You can use the
    production Worker. A development run sends the version `<x>-SNAPSHOT`,
@@ -180,15 +182,18 @@ The pre-release and post-release work is in [docs/backlog.md](docs/backlog.md).
 ## Privacy
 
 ### Usage analytics
-- A build can send optional usage analytics: anonymous counts of the tabs
-  and features in use, export results, and session length. The app asks
-  first, and you can turn the analytics off in More → Privacy. See the
+- A release build sends anonymous usage statistics at two levels. The
+  essential statistics are on by default: app version, OS family, session
+  length, error counts, and a range for the number of sessions. The extended
+  statistics add counts of the tabs and features in use and the export
+  results. The app asks at the first start. In More → Privacy, you can turn
+  the extended statistics on or off, or turn off all statistics. See the
   [privacy notice](https://banana-shot-editor.app/privacy/) (source:
   [site/public/privacy/index.html](site/public/privacy/index.html)) and
   [docs/analytics/design.md](docs/analytics/design.md).
 
 ### Version check and updates
-- This is separate from the usage analytics. It is necessary for the license
+- This is separate from the usage statistics. It is necessary for the license
   (the build expiry), so you cannot turn it off.
 - The app reads a small file from GitHub when it starts and from time to time
   while it runs: `release/version-policy.json` in this repository, on

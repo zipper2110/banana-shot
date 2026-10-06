@@ -2,6 +2,6 @@
   "name": "bananashot-analytics-worker",
   "private": true,
   "type": "module",
-  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run", "query": "node scripts/query.mjs" },
   "devDependencies": { "@cloudflare/workers-types": "^5.20260903.1", "typescript": "^5.8.3", "vitest": "^3.2.4", "wrangler": "^4.36.0" }
 }

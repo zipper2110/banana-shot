@@ -1,6 +1,7 @@
 # Usage analytics design
 
-Status: approved, 2026-10-01. Revised the same day after a review. This
+Status: approved, 2026-10-01. Revised the same day after a review. Revised
+on 2026-10-06: two levels, see "Levels". This
 design replaces the 2026-08-29 spec and the 2026-09-03 plan. Commit `29710b6` deleted them. Get them from `29710b6^` if
 necessary.
 
@@ -16,6 +17,65 @@ necessary.
      encoder? How fast are they?
   3. How long are sessions? Which app versions and OS families are in use?
 - Analytics ship in the first release (B-9).
+- Since 2026-10-06, the statistics have two levels. The essential level is
+  on by default, and the user can turn it off. Only the user can turn on the
+  extended level. See "Levels".
+
+## Levels
+
+Decided on 2026-10-06 by the author. Before, all analytics were opt-in. With
+opt-in only, the author cannot see if anyone uses the app. Thus the author
+cannot decide the direction of the app.
+
+| Level | When | Counters |
+|---|---|---|
+| `essential` | On by default, from the app start. The user can turn it off. | `unclean_exit`, `uncaught_error`, `session_n_<bucket>` |
+| `extended` | Only when the user selects it. It needs the essential level. | All counter keys |
+| (off) | Only when the user turns off the essential level. | Nothing is sent. |
+
+- Both levels send `duration_s` and `active_s`. They are the session length.
+- The essential level answers "Does anyone use the app?" and "Is the new
+  version stable?": sessions, first sessions (`session_n_1`), returning
+  sessions, active time, app versions, OS families, and crashes.
+  `queries/usage.sql` shows this for each week.
+- The extended level answers the three questions of "Decisions".
+- Legal basis: legitimate interest (GDPR Article 6(1)(f)) for the essential
+  level, consent for the extended level. The essential level contains no
+  feature use, so that it stays a minimum. The assessment is in
+  `docs/analytics/legitimate-interest.md`.
+- The off switch is the answer to the right to object (GDPR Article 21).
+  First, the essential level had no switch. The author changed this on
+  2026-10-06 after a review of the legal risk (B-9 decision 26).
+- The consent dialog at the first start offers "Essential only" and "Send
+  extended". Closing the dialog or Escape means "Essential only". The dialog
+  tells that More → Privacy can turn off all statistics. It has no "Off"
+  button, so that the default stays essential.
+- More → Privacy has two switches: "Send essential statistics" (on by
+  default) and "Send extended statistics". When the essential switch is off,
+  the extended switch is off and disabled.
+- The app records the stored choice `UNDECIDED`, `OFF`, `ESSENTIAL`, or
+  `EXTENDED`. `UNDECIDED` and a choice for another notice version send the
+  essential level, and the app asks again. An unknown stored value (for example
+  `ENABLED` of a test build before 2026-10-06) is `UNDECIDED`.
+- A session has one level at a time. The user can change it while the
+  session runs:
+  - To extended: the session counts the extended keys from the change.
+    Earlier actions of the session are not counted.
+  - To essential: the session deletes the extended counters at once. The
+    next summary contains only the essential keys. It replaces the row of the
+    session on the server, so the extended counts of this session go away.
+  - A change of the level is a change for the timer, so the next timer tick
+    sends a summary.
+  - To off: the session stops at once without a send and deletes its
+    counters. The open-session flag is cleared, and the shutdown hook is
+    removed. The rows that the server already has stay until the 90 days end.
+    After a restart, the app sends nothing.
+  - From off to a level: a new session starts, with a new session ID and the
+    next session number.
+- The session tracks the current tab and the window state also at the
+  essential level. Thus the tab time is correct after a change to extended.
+- The notice version stays 1. No public release had notice version 1 with
+  the old opt-in text.
 
 ## What stays from the first attempt
 
@@ -23,7 +83,7 @@ necessary.
 |---|---|
 | `Analytics.record(AnalyticsEvent)` as the only API for features | Keep. |
 | `AnalyticsPreferences`: consent choice and notice version | Keep. Add the session count and the open-session flag. |
-| `AnalyticsController`: on/off switch, `DisabledAnalytics` by default | Keep. `close()` at app shutdown keeps the consent choice (fixed 2026-10-01). Only `disable()` saves `DISABLED`. |
+| `AnalyticsController`: on/off switch, `DisabledAnalytics` by default | Keep. `close()` at app shutdown keeps the consent choice (fixed 2026-10-01). Since 2026-10-06: `start()` and `choose(level)`, no `disable()`. See "Levels". |
 | `AnalyticsBuildConfig`: endpoint, privacy URL, notice version from system properties | Keep. Change the endpoint path. |
 | `AnalyticsConsentDialog`, `PrivacyPage` | Keep. Change the dialog text and the "Collected" text. |
 | `JdkAnalyticsTransport` | Keep. Add the 410 stop, a send with a time limit at exit, and the system proxy. |
@@ -37,11 +97,11 @@ and the v1 fixtures in place.
 
 ## Session
 
-- A session starts when analytics becomes enabled in a process: at start, or
-  when the user turns on analytics later.
+- A session starts at the app start, in each build with the three analytics
+  properties. The level comes from the saved choice (see "Levels").
 - The session ID is a random UUID v4. It stays only in memory.
-- A session ends at exit, or when the user turns off analytics. App shutdown
-  never changes the consent choice.
+- A session ends at exit. A change of the level does not end the session.
+  App shutdown never changes the choice.
 - `duration_s` is process time while analytics is enabled. Use a monotonic
   clock. The app clamps it to 7 days.
 - `active_s` is the part of `duration_s` while the main window is the active
@@ -56,7 +116,7 @@ and the v1 fixtures in place.
 | Session start | The first summary (all counters 0). Thus the server counts a session even if the app crashes early. |
 | Every 5 minutes | The summary, only if a counter or `active_s` changed. A change of `duration_s` alone does not cause a send. Thus an idle app does not send. |
 | Normal exit | The last summary with `final = true`. See "Exit sequence". |
-| User turns off analytics | Nothing. The app deletes the counters. |
+| User changes the level | The next timer tick sends a summary with the new level. A change to essential deletes the extended counters first. |
 
 - The app does not retry. The next summary replaces a lost one.
 - A crash loses a maximum of 5 minutes of counts.
@@ -87,8 +147,9 @@ the most time and hides the wait from the user.
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "notice_version": 1,
+  "level": "extended",
   "session_id": "7df3a8ca-4d5d-44d1-913d-ae553df3916f",
   "app_version": "1.0.0",
   "os_family": "windows",
@@ -100,6 +161,10 @@ the most time and hides the wait from the user.
 }
 ```
 
+- `schema_version` 2 added `level` (2026-10-06). The Worker refuses version 1
+  with 410, so that a test build with the old opt-in stops sending.
+- `level` is `essential` or `extended`. An essential summary can contain only
+  the essential counter keys (see "Levels").
 - `snapshot` starts at 0 and increases by 1 with each send. The server keeps
   the summary with the highest `snapshot`.
 - `counters` contains only keys from the counter list below. Each value is an
@@ -136,7 +201,7 @@ loses all of its sessions.
 | `session_n_<bucket>` | Always 1. `<bucket>` is the number of this analytics session on this install: `1`, `2_5`, `6_20`, `21p`. |
 
 - `unclean_exit`: at session start, the app sets a flag in Preferences. A JVM
-  shutdown hook and `disable()` clear it. A shutdown hook runs at a normal
+  shutdown hook clears it. A shutdown hook runs at a normal
   exit and at a Windows logoff. It does not run at a JVM crash or a kill. At
   the next session start, a set flag gives `unclean_exit = 1`.
 - `session_n_<bucket>`: the app keeps a session count in Preferences. It
@@ -246,13 +311,13 @@ counter keys. `EnabledAnalytics` converts each event to counter changes.
   and the 5-minute timer. `beginFinalSend()` starts the last summary.
   `close()` waits for that send until the 500 ms limit. Without
   `beginFinalSend()`, `close()` sends nothing.
-- `AnalyticsController.disable()` stops delivery and saves `DISABLED`.
-  `AnalyticsController.close()` stops delivery and does not change the
-  choice. `AppServices.close()` calls `close()` at each exit. Thus `close()`
-  must never call `disable()`.
+- `AnalyticsController.start()` starts the session with the saved level.
+  `choose(level)` saves the choice and calls `setLevel` on the running
+  session. `close()` stops delivery and does not change the choice.
+  `AppServices.close()` calls `close()` at each exit.
 - `windowClosing` calls `beginFinalSend()` in place of the `SessionEnded`
   event. See "Exit sequence".
-- `AnalyticsPreferences` stores the consent choice, the session count, and
+- `AnalyticsPreferences` stores the level choice, the session count, and
   the open-session flag. It stores no counters and no session ID.
 - `JdkAnalyticsTransport` sends one summary and returns the status.
   `EnabledAnalytics` waits for the final send until the 500 ms limit and
@@ -285,6 +350,7 @@ CREATE TABLE analytics_session (
   last_received_at INTEGER NOT NULL,
   schema_version INTEGER NOT NULL,
   notice_version INTEGER NOT NULL,
+  level TEXT NOT NULL DEFAULT 'extended',  -- migration 0002
   app_version TEXT NOT NULL,
   os_family TEXT NOT NULL,
   snapshot INTEGER NOT NULL,
@@ -302,7 +368,7 @@ CREATE TABLE analytics_session (
   hour. Thus the server also keeps no exact clock time.
 - The daily cron deletes rows with `last_received_at` older than 90 days.
 - SQL files in `analytics-worker/queries/` answer the three questions. Run
-  them with `npx wrangler d1 execute <db> --remote --file <query>`. There is
+  them with `npm run query -- queries/<name>.sql` in `analytics-worker`. There is
   no dashboard. Exclude `app_version = 'synthetic-smoke'`.
 - The queries do not use `final = 0` as a crash count. They use
   `unclean_exit`.
@@ -343,9 +409,10 @@ CREATE TABLE analytics_session (
 - The release workflow passes the three values from GitHub variables. They
   are not secrets. The workflow does not deploy the Worker.
 - Add to `release-checklist.md`: the privacy URL opens; the Worker returns
-  204 for a synthetic summary; a fresh install shows the consent dialog; after
-  "Enable analytics", a row appears in D1 within 5 minutes; the deployed
-  Worker knows all counter keys of the release.
+  204 for a synthetic summary; a fresh install shows the consent dialog; an
+  essential row appears in D1 at the start; after "Send extended", the row
+  changes to extended within 5 minutes; the deployed Worker knows all counter
+  keys of the release.
 
 ## Tests
 

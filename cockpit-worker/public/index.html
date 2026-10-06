@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#2a2c30">
+  <title>BananaShot Cockpit</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/cockpit.css">
+  <script src="/charts.js" defer></script>
+  <script src="/cockpit.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="/favicon.svg" alt="" width="26" height="26">
+    <span>BananaShot <b>cockpit</b></span>
+  </div>
+  <div class="controls">
+    <div class="segmented" role="group" aria-label="Period">
+      <button type="button" data-days="7">7 days</button>
+      <button type="button" data-days="30">30 days</button>
+      <button type="button" data-days="90">90 days</button>
+    </div>
+    <label class="switch"><input type="checkbox" id="dev"> Dev builds</label>
+    <button type="button" class="ghost" id="refresh" title="Load the numbers again">Refresh</button>
+  </div>
+</header>
+
+<main id="main">
+  <p class="updated" id="updated">Loading…</p>
+
+  <section aria-label="Attention" id="alerts" class="alerts"></section>
+
+  <section aria-label="Key numbers" id="kpis" class="kpis"></section>
+
+  <section class="card" id="funnel-card">
+    <div class="card-head">
+      <h2>From visit to use</h2>
+      <p class="hint">The selected period. Each step has no link to the step before it: the numbers come from different sources, so a step can be larger than the step before it.</p>
+    </div>
+    <div id="funnel" class="funnel"></div>
+  </section>
+
+  <h2 class="group" id="downloads">Downloads</h2>
+  <div class="grid two">
+    <section class="card">
+      <div class="card-head"><h3>Setup downloads per day</h3><p class="hint" id="downloads-note"></p></div>
+      <div class="chart" id="downloads-daily"></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h3>Setup downloads per week</h3><p class="hint">The last 12 weeks, Monday to Sunday (UTC).</p></div>
+      <div class="chart" id="downloads-weekly"></div>
+    </section>
+  </div>
+  <section class="card">
+    <div class="card-head"><h3>Releases</h3><p class="hint">All-time totals from GitHub. The setup count includes "Update and restart".</p></div>
+    <div id="releases"></div>
+  </section>
+
+  <h2 class="group" id="site">Site</h2>
+  <section class="card">
+    <div class="card-head"><h3>Visits and page views per day</h3><p class="hint" id="site-note">Cloudflare Web Analytics, sampled.</p></div>
+    <div class="chart" id="site-daily"></div>
+  </section>
+  <div class="grid four" id="site-grid">
+    <section class="card"><div class="card-head"><h3>Pages</h3></div><div id="site-pages"></div></section>
+    <section class="card"><div class="card-head"><h3>Referrers</h3></div><div id="site-referrers"></div></section>
+    <section class="card"><div class="card-head"><h3>Countries</h3></div><div id="site-countries"></div></section>
+    <section class="card"><div class="card-head"><h3>Devices</h3></div><div id="site-devices"></div></section>
+  </div>
+
+  <h2 class="group" id="usage">App usage</h2>
+  <div class="grid two">
+    <section class="card">
+      <div class="card-head"><h3>Sessions per day</h3><p class="hint">A first session is about one new install that started the app.</p></div>
+      <div class="chart" id="usage-daily"></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h3>Sessions per week</h3><p class="hint">The last 12 weeks.</p></div>
+      <div class="chart" id="usage-weekly"></div>
+    </section>
+  </div>
+  <div class="grid three">
+    <section class="card"><div class="card-head"><h3>Active time of a session</h3><p class="hint" id="active-note"></p></div><div id="usage-length"></div></section>
+    <section class="card"><div class="card-head"><h3>Session number on the computer</h3><p class="hint">New users against users who come back.</p></div><div id="usage-number"></div></section>
+    <section class="card"><div class="card-head"><h3>Systems and levels</h3></div><div id="usage-os"></div></section>
+  </div>
+  <section class="card">
+    <div class="card-head"><h3>App versions</h3></div>
+    <div id="versions"></div>
+  </section>
+
+  <h2 class="group" id="features">Features</h2>
+  <div class="grid two">
+    <section class="card"><div class="card-head"><h3>Tabs</h3><p class="hint">Percent of the extended sessions that opened the tab, and the active time.</p></div><div id="tabs"></div></section>
+    <section class="card"><div class="card-head"><h3>Actions</h3><p class="hint">Percent of the extended sessions that did the action at least once, and the total count.</p></div><div id="actions"></div></section>
+  </div>
+
+  <h2 class="group" id="exports">Exports</h2>
+  <div class="grid two">
+    <section class="card">
+      <div class="card-head"><h3>Exports per day</h3><p class="hint">Extended sessions only.</p></div>
+      <div class="chart" id="exports-daily"></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h3>Encoders</h3><p class="hint">Stopped: cancelled, or the app closed during the export. Speed: seconds of video for each second of encode time.</p></div>
+      <div id="encoders"></div>
+    </section>
+  </div>
+  <div class="grid three">
+    <section class="card"><div class="card-head"><h3>Failure reasons</h3></div><div id="export-fails"></div></section>
+    <section class="card"><div class="card-head"><h3>Options</h3><p class="hint">Exports that used the option.</p></div><div id="export-options"></div></section>
+    <section class="card"><div class="card-head"><h3>Resolutions</h3></div><div id="export-res"></div></section>
+  </div>
+
+  <h2 class="group" id="errors">Errors</h2>
+  <section class="card">
+    <div class="card-head"><h3>Errors per day</h3><p class="hint">A crash shows on the day of the next start of the app. Failed video opens and failed exports come only from extended sessions.</p></div>
+    <div class="chart" id="errors-daily"></div>
+  </section>
+  <div class="grid two">
+    <section class="card"><div class="card-head"><h3>Errors in feedback reports</h3><p class="hint">The first line of the error that the user sent with "Report this problem".</p></div><div id="top-errors"></div></section>
+    <section class="card"><div class="card-head"><h3>Workers</h3><p class="hint">Requests and exceptions of the Cloudflare Workers.</p></div><div id="workers"></div></section>
+  </div>
+
+  <h2 class="group" id="feedback">Feedback</h2>
+  <div class="grid two">
+    <section class="card">
+      <div class="card-head"><h3>Reports per day</h3></div>
+      <div class="chart" id="feedback-daily"></div>
+    </section>
+    <section class="card"><div class="card-head"><h3>Topics</h3></div><div id="feedback-topics"></div></section>
+  </div>
+  <section class="card">
+    <div class="card-head row">
+      <h3>Latest reports</h3>
+      <div class="segmented small" role="group" aria-label="Topic" id="topic-filter">
+        <button type="button" data-topic="">All</button>
+        <button type="button" data-topic="problem">Problems</button>
+        <button type="button" data-topic="idea">Ideas</button>
+        <button type="button" data-topic="question">Questions</button>
+        <button type="button" data-topic="other">Other</button>
+      </div>
+    </div>
+    <div id="reports" class="reports"></div>
+  </section>
+
+  <footer class="footer">
+    <div id="sources"></div>
+    <button type="button" class="ghost" id="snapshot">Take a download snapshot now</button>
+  </footer>
+</main>
+
+<div class="tooltip" id="tooltip" role="status" hidden></div>
+</body>
+</html>

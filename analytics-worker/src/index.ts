@@ -15,10 +15,11 @@ const status = (code: number) => new Response(null, { status: code });
 
 /**
  * Inserts the first summary of a session. A later summary replaces the row only when its snapshot is higher.
- * `first_received_at` does not change.
+ * `first_received_at` does not change. Thus an essential summary after a change from the extended level also
+ * replaces the extended counters.
  */
-const UPSERT = 'INSERT INTO analytics_session (session_id,first_received_at,last_received_at,schema_version,notice_version,app_version,os_family,snapshot,final,duration_s,active_s,counters) VALUES (?,?,?,?,?,?,?,?,?,?,?,?) '
-  + 'ON CONFLICT(session_id) DO UPDATE SET last_received_at=excluded.last_received_at, schema_version=excluded.schema_version, notice_version=excluded.notice_version, '
+const UPSERT = 'INSERT INTO analytics_session (session_id,first_received_at,last_received_at,schema_version,notice_version,level,app_version,os_family,snapshot,final,duration_s,active_s,counters) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) '
+  + 'ON CONFLICT(session_id) DO UPDATE SET last_received_at=excluded.last_received_at, schema_version=excluded.schema_version, notice_version=excluded.notice_version, level=excluded.level, '
   + 'app_version=excluded.app_version, os_family=excluded.os_family, snapshot=excluded.snapshot, final=excluded.final, duration_s=excluded.duration_s, '
   + 'active_s=excluded.active_s, counters=excluded.counters WHERE excluded.snapshot > analytics_session.snapshot';
 
@@ -54,7 +55,7 @@ async function store(summary: Summary, request: Request, env: Env): Promise<Resp
   // The server keeps no exact clock time: both times are rounded down to the hour.
   const hour = Math.floor(Date.now() / HOUR) * HOUR;
   await db.prepare(UPSERT).bind(
-    summary.session_id, hour, hour, summary.schema_version, summary.notice_version, summary.app_version, summary.os_family,
+    summary.session_id, hour, hour, summary.schema_version, summary.notice_version, summary.level, summary.app_version, summary.os_family,
     summary.snapshot, summary.final ? 1 : 0, summary.duration_s, summary.active_s, JSON.stringify(summary.counters),
   ).run();
   return status(204);

@@ -106,8 +106,9 @@ describe('valid summaries', () => {
       session_id: value.session_id,
       first_received_at: NOW_HOUR,
       last_received_at: NOW_HOUR,
-      schema_version: 1,
+      schema_version: 2,
       notice_version: 1,
+      level: value.level,
       app_version: appVersionText(value.app_version),
       os_family: value.os_family,
       snapshot: value.snapshot,
@@ -145,6 +146,12 @@ describe('snapshots', () => {
     vi.setSystemTime(NOW + HOUR);
     expect((await sendSummary({ snapshot, counters: { point_added: 1 } })).status).toBe(204);
     expect(db.sessionRows()[0]).toMatchObject({ snapshot: 3, last_received_at: NOW_HOUR, counters: '{"point_added":9}' });
+  });
+
+  it('replaces the extended counters when the level changes to essential', async () => {
+    await sendSummary({ snapshot: 1, counters: { session_n_1: 1, point_added: 4, tab_s_points: 60 } });
+    expect((await sendSummary({ snapshot: 2, level: 'essential', counters: { session_n_1: 1 } })).status).toBe(204);
+    expect(db.sessionRows()[0]).toMatchObject({ level: 'essential', snapshot: 2, counters: '{"session_n_1":1}' });
   });
 
   it('keeps one row for each session', async () => {

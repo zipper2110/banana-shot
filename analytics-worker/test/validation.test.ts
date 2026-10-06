@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { COUNTER_KEYS } from '../src/counters';
+import { COUNTER_KEYS, ESSENTIAL_COUNTER_KEYS } from '../src/counters';
 import { appVersionText, validateSummary } from '../src/validation';
-import { bodyOf, contractCounterKeys, invalidSummaries, smokeSummary, summary, validSummaries } from './fixtures';
+import { bodyOf, contractCounterKeys, contractEssentialCounterKeys, invalidSummaries, smokeSummary, summary, validSummaries } from './fixtures';
 
 const accepted = (value: unknown) => 'summary' in validateSummary(value);
 
@@ -9,6 +9,11 @@ describe('counter keys', () => {
   it('are the keys of the contract', () => {
     expect([...COUNTER_KEYS].sort()).toEqual([...contractCounterKeys].sort());
     expect(new Set(contractCounterKeys).size).toBe(contractCounterKeys.length);
+  });
+
+  it('have the essential keys of the contract, and each essential key is a counter key', () => {
+    expect([...ESSENTIAL_COUNTER_KEYS].sort()).toEqual([...contractEssentialCounterKeys].sort());
+    expect([...ESSENTIAL_COUNTER_KEYS].every(key => COUNTER_KEYS.has(key))).toBe(true);
   });
 
   it('are all in one valid fixture', () => {
@@ -56,8 +61,24 @@ describe('fields', () => {
     expect(accepted(summary({ os_family: os }))).toBe(true);
   });
 
+  it('accepts each essential key in an essential summary, and refuses the other keys', () => {
+    for (const key of COUNTER_KEYS) {
+      expect(accepted(summary({ level: 'essential', counters: { [key]: 1 } }))).toBe(ESSENTIAL_COUNTER_KEYS.has(key));
+      expect(accepted(summary({ level: 'extended', counters: { [key]: 1 } }))).toBe(true);
+    }
+  });
+
+  it('returns the level', () => {
+    const result = validateSummary(summary({ level: 'essential' }));
+    expect('summary' in result && result.summary.level).toBe('essential');
+  });
+
+  it.each(['constructor', '__proto__', 'toString'])('refuses the level "%s"', level => {
+    expect(accepted(summary({ level }))).toBe(false);
+  });
+
   it('refuses a counter key of the prototype', () => {
-    expect(accepted(JSON.parse('{"schema_version":1,"notice_version":1,"session_id":"00000000-0000-4000-8000-000000000201","os_family":"windows","snapshot":0,"final":false,"duration_s":0,"active_s":0,"counters":{"__proto__":1}}'))).toBe(false);
+    expect(accepted(JSON.parse('{"schema_version":2,"notice_version":1,"level":"extended","session_id":"00000000-0000-4000-8000-000000000201","os_family":"windows","snapshot":0,"final":false,"duration_s":0,"active_s":0,"counters":{"__proto__":1}}'))).toBe(false);
   });
 });
 
@@ -67,10 +88,14 @@ describe('schema version', () => {
     expect(validateSummary({ schema_version: 1, events: [] }, 2)).toEqual({ status: 410 });
   });
 
+  it('gives 410 for a version 1 summary (no level), so that an old app stops sending', () => {
+    expect(validateSummary(summary({ schema_version: 1, level: undefined }))).toEqual({ status: 410 });
+  });
+
   it('gives 400 for a version above the current version, 0, or a text', () => {
-    expect(validateSummary(summary({ schema_version: 2 }))).toEqual({ status: 400 });
+    expect(validateSummary(summary({ schema_version: 3 }))).toEqual({ status: 400 });
     expect(validateSummary(summary({ schema_version: 0 }))).toEqual({ status: 400 });
-    expect(validateSummary(summary({ schema_version: '1' }), 2)).toEqual({ status: 400 });
+    expect(validateSummary(summary({ schema_version: '2' }))).toEqual({ status: 400 });
   });
 });
 

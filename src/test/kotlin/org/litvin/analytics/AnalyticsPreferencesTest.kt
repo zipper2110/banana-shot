@@ -9,29 +9,39 @@ import kotlin.test.assertTrue
 
 class AnalyticsPreferencesTest {
     @Test
-    fun `current enabled decision is effective and old decisions require a new choice`() = withPreferences { node ->
+    fun `no choice is essential, and a choice for another notice version needs a new choice`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
         assertTrue(preferences.resolve().needsChoice)
-        assertFalse(preferences.resolve().isEnabled)
+        assertEquals(AnalyticsLevel.ESSENTIAL, preferences.resolve().level)
 
-        preferences.record(AnalyticsPreferences.Choice.ENABLED)
-        assertTrue(preferences.resolve().isEnabled)
+        preferences.record(AnalyticsPreferences.Choice.EXTENDED)
+        assertEquals(AnalyticsPreferences.Choice.EXTENDED, preferences.resolve().choice)
+        assertEquals(AnalyticsLevel.EXTENDED, preferences.resolve().level)
         assertFalse(preferences.resolve().needsChoice)
 
-        node.putInt("analytics.noticeVersion", 0)
-        assertFalse(preferences.resolve().isEnabled)
-        assertTrue(preferences.resolve().needsChoice)
+        listOf(0, 99).forEach { version ->
+            node.putInt("analytics.noticeVersion", version)
+            assertEquals(AnalyticsPreferences.Choice.UNDECIDED, preferences.resolve().choice)
+            assertEquals(AnalyticsLevel.ESSENTIAL, preferences.resolve().level)
+            assertTrue(preferences.resolve().needsChoice)
+        }
     }
 
     @Test
-    fun `future notice decision fails closed and dismissal records disabled`() = withPreferences { node ->
+    fun `the essential and the off choices need no new question, and an unknown stored value is undecided`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
-        preferences.dismiss()
-        assertEquals(AnalyticsPreferences.Choice.DISABLED, preferences.resolve().choice)
+        preferences.record(AnalyticsPreferences.Choice.ESSENTIAL)
+        assertEquals(AnalyticsPreferences.Choice.ESSENTIAL, preferences.resolve().choice)
         assertFalse(preferences.resolve().needsChoice)
 
-        node.putInt("analytics.noticeVersion", 99)
-        assertEquals(AnalyticsPreferences.Choice.DISABLED, preferences.resolve().choice)
+        preferences.record(AnalyticsPreferences.Choice.OFF)
+        assertEquals(AnalyticsPreferences.Choice.OFF, preferences.resolve().choice)
+        assertEquals(null, preferences.resolve().level)
+        assertFalse(preferences.resolve().needsChoice)
+
+        node.put("analytics.choice", "ENABLED")
+        assertEquals(AnalyticsPreferences.Choice.UNDECIDED, preferences.resolve().choice)
+        assertEquals(AnalyticsLevel.ESSENTIAL, preferences.resolve().level)
         assertTrue(preferences.resolve().needsChoice)
     }
 
@@ -47,7 +57,7 @@ class AnalyticsPreferencesTest {
     @Test
     fun `stores only the choice, the count, and the flag`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
-        preferences.record(AnalyticsPreferences.Choice.ENABLED)
+        preferences.record(AnalyticsPreferences.Choice.EXTENDED)
         preferences.startSession()
         assertEquals(
             setOf("analytics.choice", "analytics.noticeVersion", "analytics.decidedAt", "analytics.sessionCount", "analytics.sessionOpen"),

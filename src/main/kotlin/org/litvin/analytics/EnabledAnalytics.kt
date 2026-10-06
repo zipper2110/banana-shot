@@ -10,8 +10,10 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 /**
- * One analytics session (`docs/analytics/design.md`, "Session" and "When the app sends").
+ * One analytics session (`docs/analytics/design.md`, "Session", "Levels", and "When the app sends").
  *
+ * - The session counts only the keys of its [AnalyticsLevel]. A change to [AnalyticsLevel.ESSENTIAL] deletes the
+ *   other counters. The next summary then replaces the extended counters on the server.
  * - The constructor sends the first summary. Then the timer sends a summary every [sendInterval], but only if a
  *   counter or `active_s` changed. Thus an idle app does not send.
  * - [beginFinalSend] starts the last summary (`final = true`). [close] waits for it until [finalSendLimit] after
@@ -25,6 +27,7 @@ internal class EnabledAnalytics(
     private val appVersion: String,
     private val osFamily: String,
     start: AnalyticsPreferences.SessionStart,
+    private var level: AnalyticsLevel,
     private val clock: AnalyticsClock = SystemAnalyticsClock,
     private val executor: ScheduledExecutorService = newDaemonExecutor(),
     sendInterval: Duration = SEND_INTERVAL,
@@ -38,7 +41,7 @@ internal class EnabledAnalytics(
     private var activeNanos = 0L
     private var currentTab: AnalyticsEvent.Tab? = null
     private var snapshot = 0
-    private var lastSent: Pair<Int, Map<String, Int>>? = null
+    private var lastSent: SentState? = null
     private var finalSend: Future<*>? = null
     private var finalSendStartedAt = 0L
     private var closed = false
@@ -46,8 +49,8 @@ internal class EnabledAnalytics(
     private val statusCounts = sortedMapOf<String, Int>()
 
     init {
-        counters.add(AnalyticsSchema.sessionBucket(start.number))
-        if (start.uncleanExit) counters.add(AnalyticsSchema.UNCLEAN_EXIT)
+        count(AnalyticsSchema.sessionBucket(start.number))
+        if (start.uncleanExit) count(AnalyticsSchema.UNCLEAN_EXIT)
         sendSummary(final = false)
         val intervalMs = sendInterval.toMillis()
         executor.scheduleWithFixedDelay({ runCatching { sendIfChanged() } }, intervalMs, intervalMs, TimeUnit.MILLISECONDS)
@@ -59,23 +62,42 @@ internal class EnabledAnalytics(
         }
     }
 
+    override fun setLevel(level: AnalyticsLevel) {
+        synchronized(lock) {
+            if (closed || level == this.level) return
+            addActiveTime()
+            this.level = level
+            counters.retainOnly(level.counterKeys)
+        }
+    }
+
+    /** Adds to the counter [key] only if the current level has the key. Call only while holding [lock]. */
+    private fun count(key: String, value: Long = 1) {
+        if (key in level.counterKeys) counters.add(key, value)
+    }
+
+    /** As [count], for a time in nanoseconds. Call only while holding [lock]. */
+    private fun countNanos(key: String, value: Long) {
+        if (key in level.counterKeys) counters.addNanos(key, value)
+    }
+
     /** Call only while holding [lock]. */
     private fun apply(event: AnalyticsEvent) {
-        AnalyticsSchema.simpleKey(event)?.let { counters.add(it) }
+        AnalyticsSchema.simpleKey(event)?.let { count(it) }
         when (event) {
             is AnalyticsEvent.TabShown -> {
                 addActiveTime()
                 currentTab = event.tab
-                if (event.byUser && event.tab != null) counters.add(AnalyticsSchema.tabOpened(event.tab))
+                if (event.byUser && event.tab != null) count(AnalyticsSchema.tabOpened(event.tab))
             }
             is AnalyticsEvent.WindowActive -> {
                 addActiveTime()
                 activeSince = if (event.active) clock.nanoTime() else null
             }
             is AnalyticsEvent.ExportStarted -> {
-                counters.add("export_started_${event.encoder.key}")
-                event.options.forEach { counters.add("export_opt_${it.key}") }
-                counters.add("export_res_${event.resolution.key}")
+                count("export_started_${event.encoder.key}")
+                event.options.forEach { count("export_opt_${it.key}") }
+                count("export_res_${event.resolution.key}")
             }
             is AnalyticsEvent.ExportFinished -> recordExportResult(event.encoder.key, event.outcome)
             else -> Unit
@@ -84,16 +106,16 @@ internal class EnabledAnalytics(
 
     private fun recordExportResult(encoder: String, outcome: AnalyticsEvent.ExportOutcome) = when (outcome) {
         is AnalyticsEvent.ExportOutcome.Completed -> {
-            counters.add("export_completed_$encoder")
-            counters.addNanos("export_run_s_$encoder", TimeUnit.MILLISECONDS.toNanos(outcome.runMs.coerceAtLeast(0)))
-            counters.add("export_video_s_$encoder", outcome.videoS)
+            count("export_completed_$encoder")
+            countNanos("export_run_s_$encoder", TimeUnit.MILLISECONDS.toNanos(outcome.runMs.coerceAtLeast(0)))
+            count("export_video_s_$encoder", outcome.videoS)
         }
         is AnalyticsEvent.ExportOutcome.Failed -> {
-            counters.add("export_failed_$encoder")
-            counters.add("export_fail_${outcome.reason.key}")
+            count("export_failed_$encoder")
+            count("export_fail_${outcome.reason.key}")
         }
-        AnalyticsEvent.ExportOutcome.Cancelled -> counters.add("export_cancelled_$encoder")
-        AnalyticsEvent.ExportOutcome.Interrupted -> counters.add("export_interrupted_$encoder")
+        AnalyticsEvent.ExportOutcome.Cancelled -> count("export_cancelled_$encoder")
+        AnalyticsEvent.ExportOutcome.Interrupted -> count("export_interrupted_$encoder")
     }
 
     override fun beginFinalSend() {
@@ -126,7 +148,7 @@ internal class EnabledAnalytics(
         logger.info { "Analytics: session closed. Summaries sent: ${synchronized(statusCounts) { statusCounts.toString() }}" }
     }
 
-    /** The timer task. Sends a summary only if a counter or `active_s` changed since the last send. */
+    /** The timer task. Sends a summary only if the level, a counter, or `active_s` changed since the last send. */
     internal fun sendIfChanged() {
         synchronized(lock) {
             if (closed || stopped) return
@@ -142,7 +164,7 @@ internal class EnabledAnalytics(
     }
 
     /** Call only while holding [lock]. */
-    private fun send(summary: SessionSummary, state: Pair<Int, Map<String, Int>>): Future<*>? {
+    private fun send(summary: SessionSummary, state: SentState): Future<*>? {
         if (stopped || snapshot > AnalyticsSchema.MAX_SNAPSHOT) return null
         snapshot++
         lastSent = state
@@ -151,13 +173,14 @@ internal class EnabledAnalytics(
     }
 
     /** Call only while holding [lock]. */
-    private fun summaryNow(final: Boolean): Pair<SessionSummary, Pair<Int, Map<String, Int>>> {
+    private fun summaryNow(final: Boolean): Pair<SessionSummary, SentState> {
         addActiveTime()
         val now = clock.nanoTime()
         val activeS = seconds(activeNanos)
         val values = counters.values()
         val summary = SessionSummary(
             sessionId = sessionId,
+            level = level,
             appVersion = appVersion,
             osFamily = osFamily,
             snapshot = snapshot,
@@ -166,7 +189,7 @@ internal class EnabledAnalytics(
             activeS = activeS,
             counters = values,
         )
-        return summary to (activeS to values)
+        return summary to SentState(level, activeS, values)
     }
 
     /** Adds the active time since the last call to `active_s` and to the time of the current tab. */
@@ -175,7 +198,7 @@ internal class EnabledAnalytics(
         val now = clock.nanoTime()
         val delta = (now - since).coerceAtLeast(0)
         activeNanos += delta
-        currentTab?.let { counters.addNanos(AnalyticsSchema.tabSeconds(it), delta) }
+        currentTab?.let { countNanos(AnalyticsSchema.tabSeconds(it), delta) }
         activeSince = now
     }
 
@@ -200,6 +223,9 @@ internal class EnabledAnalytics(
 
     private fun seconds(nanos: Long): Int =
         (nanos.coerceAtLeast(0) / SessionCounters.NANOS_PER_SECOND).coerceAtMost(AnalyticsSchema.MAX_SECONDS.toLong()).toInt()
+
+    /** The values that decide if the timer sends. `duration_s` is not one of them. */
+    private data class SentState(val level: AnalyticsLevel, val activeS: Int, val counters: Map<String, Int>)
 
     companion object {
         private val logger = KotlinLogging.logger {}

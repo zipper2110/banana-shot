@@ -1,0 +1,49 @@
+# The private cockpit of the author (B-41). See README.md.
+name = "bananashot-cockpit"
+main = "src/index.ts"
+compatibility_date = "2026-09-03"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# The page. The Worker checks the password before it serves a file (decision 7).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+GITHUB_REPO = "zipper2110/banana-shot"
+WORKER_SCRIPTS = "bananashot-analytics,bananashot-feedback,bananashot-cockpit"
+# Write the account ID here (README, "Deploy", step 4).
+CF_ACCOUNT_ID = ""
+# The site numbers are filtered by this host. Optional: CF_WEB_ANALYTICS_SITE_TAG filters by the site tag instead.
+SITE_HOST = "banana-shot-editor.app"
+
+# Secrets (set with `wrangler secret put`, never here):
+#   COCKPIT_PASSWORD, CF_API_TOKEN, GITHUB_TOKEN (optional)
+
+# Read only: the database of the analytics Worker. Write the ID from analytics-worker/wrangler.toml.
+# migrations_dir is only for the local preview. Never apply these migrations from here to the remote database.
+[[d1_databases]]
+binding = "ANALYTICS_DB"
+database_name = "bananashot-analytics"
+database_id = "replace-locally-analytics"
+migrations_dir = "../analytics-worker/migrations"
+
+# Read only: the database of the feedback Worker. Write the ID from feedback-worker/wrangler.toml.
+[[d1_databases]]
+binding = "FEEDBACK_DB"
+database_name = "bananashot-feedback"
+database_id = "replace-locally-feedback"
+migrations_dir = "../feedback-worker/migrations"
+
+# The own database of the cockpit: the download snapshots.
+[[d1_databases]]
+binding = "COCKPIT_DB"
+database_name = "bananashot-cockpit"
+database_id = "replace-locally-cockpit"
+migrations_dir = "migrations"
+
+# The download snapshot. Each hour, so that a failed run has no big effect (decision 3).
+[triggers]
+crons = ["17 * * * *"]

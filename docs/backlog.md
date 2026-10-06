@@ -36,6 +36,12 @@ Do these items after the first public release.
 
 ### B-41 Admin dashboard for the numbers
 
+- Status (2026-10-06): the MVP "cockpit" is built and deployed
+  (`cockpit-worker/`, `https://bananashot-cockpit.banana-shot-feedback.workers.dev`).
+  The decisions and the tasks are in `docs/cockpit/b-41-tasks.md`. Open: on
+  the day of the first release, click "Take a download snapshot now" once,
+  and check Q1 (the 90-day range). Then remove this item. The ideas for
+  later are in B-43.
 - Make a private dashboard for the author. It shows on one page:
   - The downloads of the setup file, with a daily and a weekly history.
   - The numbers of the site (Cloudflare Web Analytics): visits, page views,
@@ -59,6 +65,67 @@ Do these items after the first public release.
   hosting of the page; the time periods and the charts.
 - Done when: the author opens the dashboard and sees the three groups of
   numbers, with the daily and weekly download history.
+
+### B-43 Cockpit: next steps (epic)
+
+- Added on 2026-10-06. The ideas that are not in the MVP of B-41. Do them
+  after B-41 T8 (the deploy), when real data shows what is missing.
+  Each line is one task. Decide the order with real data.
+- Access and safety:
+  1. Cloudflare Access (Zero Trust) in front of the cockpit in place of the
+     Basic password (B-41 decision 7). The Worker then checks the
+     `Cf-Access-Jwt-Assertion` token.
+  2. Rate limit for wrong passwords, if Access is not done.
+- Downloads:
+  3. Separate new downloads from "Update and restart" downloads. Idea: the
+     app sends `update_downloaded` in the essential counters, or the update
+     uses a different file name or URL (B-25 or B-30).
+  4. Count the clicks on the download button of the site (for example a
+     redirect path `/get` on the site Worker with a counter). Web Analytics
+     counts page views only, not clicks.
+  5. A backfill of the downloads before the first snapshot is not possible
+     (GitHub has no history). Write the first total as "before tracking" on
+     the page.
+- App analytics:
+  6. Retention: the share of first sessions that have a second session in
+     the next 7 days. This needs an install ID or a cohort counter. Today
+     there is only the session number range (privacy decision of B-9).
+  7. Funnel of the first session: project created → first point → first
+     export. Needs new essential or extended counters.
+  8. Charts by app version: crash-free sessions and export failure rate for
+     each version over time, to see if a release made it better or worse.
+  9. A daily export to CSV or a weekly e-mail or Telegram digest of the key
+     numbers (Cron + the Telegram bot of B-8).
+- Errors:
+  10. Group the errors of the logs: the feedback Worker drops the logs
+      (B-8 decision 10). An error report channel with stack traces is a
+      privacy decision first.
+  11. HTTP status of the Workers (4xx/5xx): `workersInvocationsAdaptive`
+      gives only exceptions. Use `httpRequestsAdaptiveGroups` or Workers Logs.
+  12. Alerts outside the page: a Telegram message when the crash-free rate
+      or the snapshot job fails (Cron + B-8 bot).
+- Feedback:
+  13. Mark a report as "done" or "answered" in the cockpit (needs a new
+      table and write access). Link with B-33 (replies in the app).
+  14. Search and full text of long reports (the page shows 600 characters).
+- Site:
+  15. Search Console data (queries and positions) for the site.
+  16. Core Web Vitals of the site (`rumPerformanceEventsAdaptiveGroups`).
+  20. Unique visitors per day (asked by the author on 2026-10-06, moved here
+      for later). Web Analytics has no visitor ID (no cookies), so it gives
+      only visits. The zone analytics of `banana-shot-editor.app` has the
+      unique IP addresses of each day (`httpRequests1dGroups` →
+      `uniq { uniques }`). Limits: it counts bots and crawlers; one IP is not
+      one person; the days cannot be added. It needs the token permission
+      "Zone → Analytics → Read" and the zone ID. Add one sentence to the
+      section "This site" of the privacy page. Show it as a second line in
+      the site chart, with the note "includes bots".
+  17. Check B-41 Q1 and Q2 with the real API after the deploy.
+- Page:
+  18. A date picker for a custom range, and a compare switch (this release
+      against the previous release).
+  19. A table view of each chart (accessibility), and CSV download.
+- Done when: each task is done, or it has a decision not to do it.
 
 ### B-33 Replies to feedback inside the app
 

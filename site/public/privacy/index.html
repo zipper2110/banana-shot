@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BananaShot privacy notice</title>
-  <meta name="description" content="Which data BananaShot and this site collect: optional usage analytics, feedback reports, the version check, and site visits.">
+  <meta name="description" content="Which data BananaShot and this site collect: usage statistics, feedback reports, the version check, and site visits.">
   <link rel="canonical" href="https://banana-shot-editor.app/privacy/">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
@@ -15,7 +15,7 @@
 <!--
   This page is the only full text of the privacy notice (B-10 decision 4).
   The app opens it from the consent dialog and from More > Privacy. Do not change its path.
-  The app has a short version of this text: AnalyticsConsentDialog.INTRO and PrivacyPage.kt.
+  The app has a short version of this text: AnalyticsConsentDialog.ESSENTIAL, EXTENDED, and PrivacyPage.kt.
   Keep the texts in agreement. The maintainer notes are in docs/analytics/privacy-notice.md
   and docs/feedback/privacy-notice.md.
 -->
@@ -41,41 +41,57 @@
     <div class="card">
       <p><strong>In short.</strong> The app edits your videos on your PC. It never sends your videos. The app sends data only in these cases:</p>
       <ul>
-        <li><a href="#analytics">Usage analytics</a>: anonymous counts, only if you select "Enable analytics".</li>
+        <li><a href="#analytics">Usage statistics</a>: essential anonymous statistics, on by default (you can turn them off), and extended statistics only if you select them.</li>
         <li><a href="#feedback">Feedback reports</a>: only when you click Send in the feedback form.</li>
         <li><a href="#version-check">Version check</a>: a request for a small file on GitHub, with no user data.</li>
       </ul>
       <p>This site counts visits without cookies. See <a href="#website">This site</a>.</p>
     </div>
 
-    <!-- ====== Usage analytics: notice version 1. Increase the version when a new type of data is collected. ====== -->
-    <h2 id="analytics">Usage analytics</h2>
+    <!-- ====== Usage statistics: notice version 1. Increase the version when a new type of data is collected. ====== -->
+    <h2 id="analytics">Usage statistics</h2>
     <p class="meta">Notice version 1. Effective from: 2026-10-06.</p>
 
-    <p>BananaShot can send anonymous usage counts. The counts tell us which parts of the app people use, how long sessions are, and how well exports work. The analytics are off until you select "Enable analytics". If you select "No thanks" or close the question, the app sends nothing.</p>
+    <p>BananaShot sends anonymous usage statistics. There are two levels:</p>
+    <ul>
+      <li><a href="#essential"><strong>Essential statistics</strong></a> are on by default. They tell us how many people use the app, how often, and which versions. Without them, we cannot know if anyone uses the app at all. You can <a href="#turn-off">turn them off</a> at any time.</li>
+      <li><a href="#extended"><strong>Extended statistics</strong></a> are optional. They also tell us which parts of the app people use and how well exports work. The app sends them only if you select "Send extended" at the first start, or turn on "Send extended statistics" in More &rarr; Privacy.</li>
+    </ul>
+    <p>No level sends your videos, file names, project names, or text that you type. No level identifies you or your computer.</p>
 
-    <h3>What the app sends</h3>
-    <p>While analytics are on, the app sends one short summary of the current session: at the start, every 5 minutes if something changed, and at exit. A summary contains only these items:</p>
+    <h3>When the app sends</h3>
+    <p>The app sends one short summary of the current session: at the start, every 5 minutes if something changed, and at exit. Each new summary of a session replaces the previous one on the server.</p>
+
+    <h3 id="essential">Essential statistics (on by default)</h3>
+    <p>Each summary contains these items:</p>
     <ul>
       <li>A random session ID. The app makes a new ID for each session and keeps it only in memory. The ID does not identify you or your computer, and it does not link two sessions.</li>
+      <li>The level of the summary (essential or extended).</li>
       <li>The app version and the OS family (Windows, macOS, Linux, or other).</li>
       <li>The number of the summary in the session, and if it is the last summary.</li>
       <li>The session length in seconds, and the seconds while the app window was active.</li>
-      <li>The version of this notice that you accepted.</li>
+      <li>The version of this notice.</li>
       <li>These counts:
         <ul>
-          <li>The tabs that you open with a click, and the active seconds on each tab (Projects, Points, Colors, Crop/Rotate, Scoring, Stats, Export).</li>
-          <li>Projects created and opened, and videos that could not open.</li>
-          <li>Points added, deleted, and marked as favorites. Comments added. Point outcomes recorded in Scoring.</li>
-          <li>Changes of the colors, and changes of the crop or rotation.</li>
-          <li>Help windows opened.</li>
-          <li>Exports for each encoder type (software, NVIDIA, AMD, Intel): started, completed, failed, cancelled, and interrupted at exit. The total export time and the total video length of the completed exports, in seconds. The failures by cause (source missing, output not writable, process start, encoder error, other). The export options in use (scoreboard, comments, stats card, favorites only, idle trim). The output size (720p, 1080p, 1440p, 2160p, or other).</li>
+          <li>A range for the number of sessions on this computer (1, 2 to 5, 6 to 20, or more than 20). Thus we can tell new users from users who come back, without a user ID.</li>
           <li>Errors that the app did not expect. The app sends only the number, not the error.</li>
           <li>If the previous session did not close normally.</li>
-          <li>A range for the number of sessions on this computer (1, 2 to 5, 6 to 20, or more than 20).</li>
         </ul>
       </li>
     </ul>
+    <p>Why the essential statistics are on by default: BananaShot is a small project. These numbers are the only way for us to know if people use the app and if a new version is stable. They are a legitimate interest of the author (GDPR Article 6(1)(f)). We keep them to the minimum: they contain no feature use and nothing about your videos or projects. You have the right to object (GDPR Article 21): turn them off as described <a href="#turn-off">below</a>.</p>
+
+    <h3 id="extended">Extended statistics (optional)</h3>
+    <p>If you select the extended statistics, the summary also contains these counts. The extended statistics need the essential statistics.</p>
+    <ul>
+      <li>The tabs that you open with a click, and the active seconds on each tab (Projects, Points, Colors, Crop/Rotate, Scoring, Stats, Export).</li>
+      <li>Projects created and opened, and videos that could not open.</li>
+      <li>Points added, deleted, and marked as favorites. Comments added. Point outcomes recorded in Scoring.</li>
+      <li>Changes of the colors, and changes of the crop or rotation.</li>
+      <li>Help windows opened.</li>
+      <li>Exports for each encoder type (software, NVIDIA, AMD, Intel): started, completed, failed, cancelled, and interrupted at exit. The total export time and the total video length of the completed exports, in seconds. The failures by cause (source missing, output not writable, process start, encoder error, other). The export options in use (scoreboard, comments, stats card, favorites only, idle trim). The output size (720p, 1080p, 1440p, 2160p, or other).</li>
+    </ul>
+    <p>The legal basis of the extended statistics is your consent (GDPR Article 6(1)(a)). You can withdraw it at any time.</p>
 
     <h3>What the app does not send</h3>
     <p>Your videos, audio, or frames. File names, folder names, or paths. Project names, player names, scores, or comments. Text that you type. A user ID, a device ID, or an install ID. Error messages or log files. The clock time, the time zone, or the language of your computer.</p>
@@ -89,15 +105,18 @@
     <h3>How long the data stays</h3>
     <p>A daily job deletes each session 90 days after its last summary.</p>
 
-    <h3>How to turn off analytics</h3>
-    <p>Open More &rarr; Privacy and turn off "Send optional usage analytics". The app then stops at once and sends nothing more. It deletes the counts of the current session. The summaries that the server already has stay until the 90 days end. We cannot delete them on request, because no value links a summary to you.</p>
+    <h3>How to turn off the extended statistics</h3>
+    <p>Open More &rarr; Privacy and turn off "Send extended statistics". The app then deletes the extended counts of the current session at once. Its next summary contains only the essential statistics and replaces the extended counts of this session on the server. The summaries of earlier sessions stay until the 90 days end. We cannot delete them on request, because no value links a summary to you.</p>
+
+    <h3 id="turn-off">How to turn off all statistics</h3>
+    <p>Open More &rarr; Privacy and turn off "Send essential statistics". This also turns off the extended statistics. The app then stops at once and sends nothing more, also after a restart. It deletes the counts of the current session. The summaries that the server already has stay until the 90 days end. We cannot delete them on request, because no value links a summary to you. The app works the same without statistics.</p>
 
     <!-- ====== Feedback reports ====== -->
     <h2 id="feedback">Feedback reports</h2>
     <p>You can send a problem, an idea, or a question to the author from the app: the Feedback button in the sidebar, the "Report this problem" button of an error message, the "Tell us" link at the end of each help page, or More &rarr; Contact.</p>
 
     <h3>When the app sends a report</h3>
-    <p>The app sends a report only when you click Send in the feedback form. The usage analytics choice does not change this. If you do not send a report, the app sends no feedback data.</p>
+    <p>The app sends a report only when you click Send in the feedback form. The usage statistics choice does not change this. If you do not send a report, the app sends no feedback data.</p>
 
     <h3>What a report contains</h3>
     <ul>
@@ -125,7 +144,7 @@
 
     <!-- ====== Version check ====== -->
     <h2 id="version-check">Version check and updates</h2>
-    <p>This section is separate from the analytics. The app reads a small file from GitHub when it starts and from time to time while it runs. The file tells if this version still works and if a new version is available. The request sends no user ID and no analytics data. GitHub receives your IP address and the standard data of a web request. "Update and restart" downloads the setup file of the new version from GitHub. You cannot turn off the version check, because each version stops working after a time.</p>
+    <p>This section is separate from the usage statistics. The app reads a small file from GitHub when it starts and from time to time while it runs. The file tells if this version still works and if a new version is available. The request sends no user ID and no usage statistics. GitHub receives your IP address and the standard data of a web request. "Update and restart" downloads the setup file of the new version from GitHub. You cannot turn off the version check, because each version stops working after a time.</p>
 
     <!-- ====== This site ====== -->
     <h2 id="website">This site</h2>

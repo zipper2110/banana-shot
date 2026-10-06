@@ -36,11 +36,11 @@ class VersionSourceTest {
         val transport = AnalyticsTransport { body -> bodies.put(body); 204 }
         val controller = productionAnalyticsController(enabledConfig(), AnalyticsPreferences(node)) { transport }
         try {
-            controller.enable()
+            controller.start()
             val body = bodies.poll(5, TimeUnit.SECONDS) ?: error("no summary")
             return ObjectMapper().readTree(body)["app_version"].textValue()
         } finally {
-            controller.disable()
+            controller.close()
             node.removeNode()
         }
     }

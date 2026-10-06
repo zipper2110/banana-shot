@@ -1,9 +1,9 @@
 -- Question 2, details: failure reasons, export options, and output resolutions in the last 30 days.
 -- export_fail_ counts failed exports. export_opt_ and export_res_ count started exports.
--- Run: npx wrangler d1 execute bananashot-analytics --remote --file queries/export-details.sql
+-- Run (in analytics-worker): npm run query -- queries/export-details.sql
 WITH recent AS (
   SELECT counters FROM analytics_session
-  WHERE app_version <> 'synthetic-smoke'
+  WHERE app_version <> 'synthetic-smoke' AND level = 'extended'
     AND last_received_at >= (CAST(strftime('%s', 'now') AS INTEGER) - 30 * 86400) * 1000
 )
 SELECT c.key AS counter, COUNT(*) AS sessions, SUM(c.value) AS total

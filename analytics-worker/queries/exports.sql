@@ -1,10 +1,10 @@
 -- Question 2: how many exports start, complete, fail, or get cancelled? With which encoder? How fast are they?
 -- One line for each encoder in the last 30 days. speed is the output video seconds for each second of run time
 -- of the completed exports. A speed of 2.0 encodes 1 minute of video in 30 seconds.
--- Run: npx wrangler d1 execute bananashot-analytics --remote --file queries/exports.sql
+-- Run (in analytics-worker): npm run query -- queries/exports.sql
 WITH recent AS (
   SELECT counters FROM analytics_session
-  WHERE app_version <> 'synthetic-smoke'
+  WHERE app_version <> 'synthetic-smoke' AND level = 'extended'
     AND last_received_at >= (CAST(strftime('%s', 'now') AS INTEGER) - 30 * 86400) * 1000
 ),
 encoder(name) AS (VALUES ('software'), ('nvenc'), ('amf'), ('qsv')),

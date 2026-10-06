@@ -1,11 +1,12 @@
 package org.litvin.analytics
 
 /**
- * The version-one session summary (`docs/analytics/design.md`, "Wire format" and "Counters"). The Worker has the same
- * closed key list. A test checks both lists against `analytics-contract/v1/counter-keys.json`.
+ * The session summary (`docs/analytics/design.md`, "Wire format" and "Counters"). The Worker has the same closed key
+ * lists. A test checks both lists against `analytics-contract/v1/counter-keys.json`.
  */
 object AnalyticsSchema {
-    const val SCHEMA_VERSION = 1
+    /** Version 2 adds the `level` field. The Worker refuses version 1 with 410. */
+    const val SCHEMA_VERSION = 2
     const val NOTICE_VERSION = 1
     const val MAX_COUNTER_VALUE = 1_000_000
     /** 7 days. `duration_s` and `active_s` are clamped to this value. */
@@ -15,10 +16,15 @@ object AnalyticsSchema {
     const val UNCLEAN_EXIT = "unclean_exit"
     const val UNCAUGHT_ERROR = "uncaught_error"
 
-    val COUNTER_KEYS: Set<String> = buildSet {
+    /** The keys of the essential level. All other keys need the extended level. */
+    val ESSENTIAL_KEYS: Set<String> = buildSet {
         add(UNCLEAN_EXIT)
         add(UNCAUGHT_ERROR)
         listOf("1", "2_5", "6_20", "21p").forEach { add("session_n_$it") }
+    }
+
+    val COUNTER_KEYS: Set<String> = buildSet {
+        addAll(ESSENTIAL_KEYS)
         AnalyticsEvent.Tab.entries.forEach { add(tabOpened(it)) }
         AnalyticsEvent.Tab.entries.forEach { add(tabSeconds(it)) }
         addAll(listOf(

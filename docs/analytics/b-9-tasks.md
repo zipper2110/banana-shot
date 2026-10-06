@@ -62,6 +62,16 @@ Write each new decision here at once. The design decisions are in
 | 16 | T5 (2026-10-03): the "Excluded" text of the Privacy page also changes. The old text said "identifiers", but a summary has a random session ID. The new text says "user or device IDs", and the notice tells that the session ID lives only in memory and does not link two sessions. The app texts are constants (`AnalyticsConsentDialog.INTRO`, `PrivacyPage.ANALYTICS_COLLECTED`, `ANALYTICS_EXCLUDED`), so that a test can check them. |
 | 17 | T6 (2026-10-03): `Build-AppImage.ps1` refuses a part of the three analytics parameters, and it checks them with the rules of `AnalyticsBuildConfig`. The scripts keep the notice version as `$expectedNoticeVersion`; `AnalyticsBuildConfigTest` checks that it is `NOTICE_VERSION`. A new notice version thus needs a change of the scripts and of the GitHub variable. |
 | 18 | (2026-10-03, the author): a development run can send to the production Worker. This is the easy way to test. The queries do not exclude the `-SNAPSHOT` versions. To exclude them later, filter on `app_version`. |
+| 19 | T8 (2026-10-06, the author): two levels of statistics. The essential level is always on (changed by decision 26). It lets the author see if anyone uses the app. The extended level (the old analytics) needs the choice of the user. Details are in the design, "Levels". |
+| 20 | T8: the essential level has only `unclean_exit`, `uncaught_error`, `session_n_<bucket>`, `duration_s`, and `active_s`. No feature use, so that the level without a switch stays a minimum. |
+| 21 | T8: `schema_version` 2 adds the required field `level`. `MIN_SCHEMA_VERSION` is 2, so the test builds with the old opt-in get 410 and stop. Migration `0002` adds the column `level` (default `extended` for the old rows). |
+| 22 | T8: the notice version stays 1. No public release had the old opt-in text. Thus the GitHub variable `ANALYTICS_NOTICE_VERSION` and the build scripts do not change. A stored choice of the old values (`ENABLED`, `DISABLED`) is unknown and gives a new question. |
+| 23 | T8: the dialog buttons are "Essential only" and "Send extended". Closing the dialog means "Essential only". The Privacy page has the switch "Send extended statistics". The texts say "usage statistics", not "analytics". |
+| 24 | T8: the privacy notice gives the legal basis of each level (legitimate interest and consent) and the right to object. An objection goes to the contact address. |
+| 25 | T8: `queries/usage.sql` shows sessions, first sessions, returning sessions, and active hours for each week. The feature and export queries use only the extended sessions. |
+| 26 | T9 (2026-10-06, the author): the essential level is on by default, with an off switch ("option B" of the legal review). Reason: GDPR Article 21 (right to object) needs a real way to stop the processing, and the ePrivacy Directive (Article 5(3)) is unclear for app telemetry without a switch. Common products (VS Code, Firefox) also have a switch. Few users change a default, so the author still sees almost all users. |
+| 27 | T9: the first-start dialog keeps two buttons ("Essential only", "Send extended"). It tells that More → Privacy can turn off all statistics. More → Privacy has two switches. The choice `OFF` stops the session without a send, as the old `disable()`. |
+| 28 | T9: the legitimate interest assessment is in `docs/analytics/legitimate-interest.md`. Review it when an essential key changes. |
 
 ## Open questions
 
@@ -78,9 +88,15 @@ None. Write each new decision in "Decisions" at once.
 | T5 | Texts and privacy notice | T1 | done |
 | T6 | Build and release checks | T3 | done |
 | T7 | Deployment and turn on | T1–T6, B-10 | in-progress |
+| T8 | Two levels: essential and extended | T1–T6 | done |
+| T9 | Off switch for the essential level | T8 | done |
 
 Status values: `open`, `in-progress`, `done`. When a task is done, write
 the test classes in its "Tests" line. Do not remove the task.
+
+Since T8 (2026-10-06), T7 also needs: migration `0002` on the remote D1,
+then a new Worker deployment, then the site deployment with the new privacy
+notice.
 
 Next work (2026-10-06): T7, by the author. Only the check with an
 installed dry-run build (B-26) is open.
@@ -263,3 +279,34 @@ Design: work order step 6. The author does these steps.
   check is done, and the three GitHub variables are set. The notice is live
   on the site (2026-10-06), and `ANALYTICS_PRIVACY_URL` points to it. Open:
   the dry run with an installed build (the author, B-26).
+
+### T8 Two levels: essential and extended
+
+Design: "Levels". Decisions 19–25.
+
+- App: `AnalyticsLevel`, the level in the summary, `AnalyticsController.start()`
+  and `choose(level)`, `EnabledAnalytics.setLevel`. The consent dialog and the
+  Privacy page offer the two levels.
+- Contract: schema version 2 with `level`, `essentialCounterKeys`, new valid
+  and invalid fixtures.
+- Worker: validation of the level and the essential keys, migration `0002`,
+  the level in the upsert, `queries/usage.sql`.
+- Site: the "Usage statistics" section of the privacy notice, the changelog.
+- Status: done. The deployment is part of T7.
+- Tests: `AnalyticsControllerTest`, `AnalyticsPreferencesTest`,
+  `EnabledAnalyticsTest` (the level tests), `AnalyticsSchemaTest`,
+  `PrivacyPageTest`; `analytics-worker/test/validation.test.ts`,
+  `index.test.ts`.
+
+### T9 Off switch for the essential level
+
+Design: "Levels". Decisions 26–28.
+
+- App: the choice `OFF` (`AnalyticsPreferences.Choice`), `AnalyticsController.choose(choice)`
+  stops the session for `OFF`. More → Privacy has the switches "Send essential statistics" and
+  "Send extended statistics". The dialog tells where to turn off all statistics.
+- Site: "on by default" and the section "How to turn off all statistics" (`#turn-off`).
+- Docs: `docs/analytics/legitimate-interest.md`.
+- Status: done.
+- Tests: `AnalyticsControllerTest` (off), `AnalyticsPreferencesTest`, `PrivacyPageTest` (the two
+  switches).

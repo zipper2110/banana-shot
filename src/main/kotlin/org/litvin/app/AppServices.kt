@@ -149,7 +149,7 @@ data class AppServices(
                     AnalyticsPreferences(preferences.node(PreferencesProvider.ANALYTICS))
                 } else null
                 val analyticsController = analyticsPreferences?.let { preferencesForAnalytics ->
-                    construct { productionAnalyticsController(analyticsConfig, preferencesForAnalytics) }.also { it.startIfConsented() }
+                    construct { productionAnalyticsController(analyticsConfig, preferencesForAnalytics) }.also { it.start() }
                 }
                 val services = AppServices(
                     paths = paths,

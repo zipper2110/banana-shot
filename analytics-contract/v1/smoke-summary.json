@@ -1,6 +1,7 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "notice_version": 1,
+  "level": "essential",
   "session_id": "00000000-0000-4000-8000-0000000005e0",
   "app_version": "synthetic-smoke",
   "os_family": "other",

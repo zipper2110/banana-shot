@@ -6,6 +6,7 @@ import smokeFile from '../../analytics-contract/v1/smoke-summary.json';
 export type InvalidSummary = { name: string; payload?: unknown; raw?: string };
 
 export const contractCounterKeys: string[] = keysFile.counterKeys;
+export const contractEssentialCounterKeys: string[] = keysFile.essentialCounterKeys;
 export const validSummaries: Record<string, unknown>[] = validFile.validSummaries;
 export const invalidSummaries: InvalidSummary[] = invalidFile.invalidSummaries;
 export const smokeSummary: Record<string, unknown> = smokeFile;
@@ -13,8 +14,9 @@ export const smokeSummary: Record<string, unknown> = smokeFile;
 /** A valid summary. Change it with `overrides`; a value of `undefined` removes the key. */
 export function summary(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const value: Record<string, unknown> = {
-    schema_version: 1,
+    schema_version: 2,
     notice_version: 1,
+    level: 'extended',
     session_id: '00000000-0000-4000-8000-000000000201',
     app_version: '1.0.0',
     os_family: 'windows',

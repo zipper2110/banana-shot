@@ -34,8 +34,9 @@ class EnabledAnalyticsTest {
         start()
         val first = transport.next()
         assertEquals(contractFieldNames(), first.fieldNames().asSequence().toSet())
-        assertEquals(1, first["schema_version"].intValue())
+        assertEquals(2, first["schema_version"].intValue())
         assertEquals(1, first["notice_version"].intValue())
+        assertEquals("extended", first["level"].textValue())
         assertTrue(Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}").matches(first["session_id"].textValue()))
         assertEquals("1.2.3", first["app_version"].textValue())
         assertEquals("windows", first["os_family"].textValue())
@@ -178,6 +179,71 @@ class EnabledAnalyticsTest {
     }
 
     @Test
+    fun `the essential level sends only the essential keys, the session length, and the active time`() {
+        val session = start(AnalyticsPreferences.SessionStart(number = 3, uncleanExit = true), level = AnalyticsLevel.ESSENTIAL)
+        val first = transport.next()
+        assertEquals("essential", first["level"].textValue())
+        assertEquals(mapOf("session_n_2_5" to 1, "unclean_exit" to 1), counters(first))
+
+        session.record(AnalyticsEvent.TabShown(AnalyticsEvent.Tab.POINTS, byUser = true))
+        session.record(AnalyticsEvent.WindowActive(true))
+        clock.advance(Duration.ofSeconds(30))
+        session.record(AnalyticsEvent.PointAdded)
+        session.record(AnalyticsEvent.ExportStarted(AnalyticsEvent.Encoder.NVENC, emptySet(), AnalyticsEvent.Resolution.P1080))
+        session.record(AnalyticsEvent.ExportFinished(AnalyticsEvent.Encoder.NVENC, AnalyticsEvent.ExportOutcome.Completed(1_000, 60)))
+        session.record(AnalyticsEvent.UncaughtError)
+        session.sendIfChanged()
+
+        val summary = transport.next()
+        assertEquals(30, summary["active_s"].intValue())
+        assertEquals(mapOf("session_n_2_5" to 1, "unclean_exit" to 1, "uncaught_error" to 1), counters(summary))
+    }
+
+    @Test
+    fun `a change to the essential level deletes the extended counters and causes a send`() {
+        val session = start()
+        transport.next()
+        session.record(AnalyticsEvent.WindowActive(true))
+        session.record(AnalyticsEvent.TabShown(AnalyticsEvent.Tab.STATS, byUser = true))
+        session.record(AnalyticsEvent.PointAdded)
+        session.record(AnalyticsEvent.UncaughtError)
+        clock.advance(Duration.ofSeconds(10))
+        session.sendIfChanged()
+        transport.next()
+
+        session.setLevel(AnalyticsLevel.ESSENTIAL)
+        clock.advance(Duration.ofSeconds(10))
+        session.record(AnalyticsEvent.PointAdded)
+        session.sendIfChanged()
+
+        val summary = transport.next()
+        assertEquals("essential", summary["level"].textValue())
+        assertEquals(20, summary["active_s"].intValue())
+        assertEquals(mapOf("session_n_1" to 1, "uncaught_error" to 1), counters(summary))
+    }
+
+    @Test
+    fun `a change to the extended level counts from the change and causes a send`() {
+        val session = start(level = AnalyticsLevel.ESSENTIAL)
+        transport.next()
+        session.record(AnalyticsEvent.WindowActive(true))
+        session.record(AnalyticsEvent.TabShown(AnalyticsEvent.Tab.STATS, byUser = false))
+        session.record(AnalyticsEvent.PointAdded)
+        clock.advance(Duration.ofSeconds(10))
+
+        session.setLevel(AnalyticsLevel.EXTENDED)
+        session.sendIfChanged()
+        val changed = transport.next()
+        assertEquals("extended", changed["level"].textValue())
+        assertEquals(mapOf("session_n_1" to 1), counters(changed))
+
+        clock.advance(Duration.ofSeconds(5))
+        session.record(AnalyticsEvent.PointAdded)
+        session.sendIfChanged()
+        assertEquals(mapOf("session_n_1" to 1, "point_added" to 1, "tab_s_stats" to 5), counters(transport.next()))
+    }
+
+    @Test
     fun `clamps duration_s and active_s to 7 days`() {
         val session = start()
         transport.next()
@@ -273,8 +339,9 @@ class EnabledAnalyticsTest {
     private fun start(
         sessionStart: AnalyticsPreferences.SessionStart = AnalyticsPreferences.SessionStart(1, uncleanExit = false),
         finalSendLimit: Duration = Duration.ofSeconds(2),
+        level: AnalyticsLevel = AnalyticsLevel.EXTENDED,
     ): EnabledAnalytics = EnabledAnalytics(
-        transport, "1.2.3", "windows", sessionStart, clock, executor,
+        transport, "1.2.3", "windows", sessionStart, level, clock, executor,
         sendInterval = Duration.ofDays(1), finalSendLimit = finalSendLimit,
     ).also { sessions += it }
 

@@ -1,7 +1,10 @@
 # Privacy notice: usage analytics (maintainer notes)
 
 The full text of the notice is on the landing site (B-10):
-`site/public/privacy/index.html`, section "Usage analytics" (`#analytics`).
+`site/public/privacy/index.html`, section "Usage statistics" (`#analytics`).
+The section tells about the two levels (`#essential`, `#extended`), the
+legal basis of each level, the right to object, and how to turn off all
+statistics (`#turn-off`).
 The URL of the page is `https://banana-shot-editor.app/privacy/`. Since
 2026-10-03 (B-10 decision 4), the site page is the only full text. Change the
 text there, not in this file.
@@ -11,12 +14,14 @@ variable `ANALYTICS_PRIVACY_URL`). The site must show the notice before the
 first release with analytics.
 
 The app has a short version of this text: the consent dialog
-(`AnalyticsConsentDialog.INTRO`) and the Privacy page in More
-(`PrivacyPage.ANALYTICS_COLLECTED` and `ANALYTICS_EXCLUDED`). Keep the texts in
-agreement.
+(`AnalyticsConsentDialog.ESSENTIAL` and `EXTENDED`) and the Privacy page in
+More (`PrivacyPage.ANALYTICS_ESSENTIAL`, `ANALYTICS_EXTENDED`, and
+`ANALYTICS_EXCLUDED`). Keep the texts in agreement.
 
 When a counter key is added or changed, update the list in the "Usage
-analytics" section of the site page. Increase the notice version if the new
+statistics" section of the site page. A new essential key needs a strong
+reason: the essential level is on by default, and it rests on legitimate
+interest. Update `docs/analytics/legitimate-interest.md` first. Increase the notice version if the new
 key collects a new type of data. The app then asks the user again.
 
 - Notice version: 1

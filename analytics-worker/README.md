@@ -8,8 +8,9 @@ session in D1. The design is in `docs/analytics/design.md`. The tasks are in
   paths return `404`. Other methods return `405`.
 - The responses have no body: `204` (stored), `400` (invalid summary), `410` (the kill switch is
   off, or the schema version is too old), `413`, `415`, `429` (rate limit), `503` (D1 failure).
-- The summary format and the closed counter key list are in `analytics-contract/v1`. The Worker
-  refuses a summary with an unknown counter key. Thus, deploy the Worker with the new keys before
+- The summary format and the closed counter key lists are in `analytics-contract/v1`. The Worker
+  refuses a summary with an unknown counter key, and an essential summary with a key that is not
+  essential. A summary of schema version 1 (no `level`) gets `410`. Thus, deploy the Worker with the new keys before
   an app release that sends them.
 - The Worker keeps the summary with the highest `snapshot` for each session. It rounds the
   receive times down to the hour.
@@ -37,7 +38,9 @@ The tests use an in-memory D1 (`test/fake-d1.ts`) and the shared fixtures in
    `npx wrangler d1 create bananashot-analytics --jurisdiction eu`. Write the database ID in
    `wrangler.toml`. Keep `binding = "ANALYTICS_DB"`. If `d1 create` offers to add a binding with
    a different name, do not accept it.
-3. Apply the schema: `npx wrangler d1 migrations apply bananashot-analytics --remote`.
+3. Apply the schema: `npx wrangler d1 migrations apply bananashot-analytics --remote`. Do this
+   also for a database that exists: migration `0002` adds the column `level`. Apply it before
+   you deploy the Worker, because the new Worker writes this column.
 4. Set the secret `RATE_LIMIT_KEY`: a new random text of 32 or more characters, for example from
    `openssl rand -hex 32`. Do not use the key of the feedback Worker.
 
@@ -65,16 +68,25 @@ To stop the summaries at once, set `ANALYTICS_INGESTION_ENABLED = "false"` and d
 
 ## Queries
 
-The SQL files in `queries/` answer the three questions of the design. There is no dashboard.
-Each query uses the sessions of the last 30 days and excludes `app_version = 'synthetic-smoke'`.
+The SQL files in `queries/` answer the questions of the design. There is no dashboard. Each query
+excludes `app_version = 'synthetic-smoke'`. `usage.sql` uses the last 12 weeks. The other queries
+use the last 30 days.
 
 ```bash
-npx wrangler d1 execute bananashot-analytics --remote --file queries/features.sql
+npm run query -- queries/features.sql
 ```
 
-- `features.sql`: tabs and features.
-- `exports.sql`: exports by encoder, with the encode speed.
-- `export-details.sql`: failure reasons, export options, and output resolutions.
-- `sessions.sql`: session length, app versions, OS families, crashes, and the session buckets.
+Do not use `wrangler d1 execute --remote --file` for the queries. With `--file`, Wrangler uses the
+import path and prints only statistics, not the result rows. `scripts/query.mjs` sends the text of
+the file with `--command`.
+
+- `usage.sql`: for each week, sessions, first sessions, returning sessions, active hours, and the
+  percent of extended sessions. All sessions count. This answers "Does anyone use the app?".
+- `features.sql`: tabs and features. Only the extended sessions.
+- `exports.sql`: exports by encoder, with the encode speed. Only the extended sessions.
+- `export-details.sql`: failure reasons, export options, and output resolutions. Only the extended
+  sessions.
+- `sessions.sql`: session length, app versions, OS families, crashes, and the session buckets. All
+  sessions count.
 
 Do not commit the rate key, the database ID, data exports, `.dev.vars`, or `wrangler.toml`.

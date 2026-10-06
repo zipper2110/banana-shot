@@ -1,10 +1,11 @@
 -- Question 3: how long are sessions? Which app versions and OS families are in use?
--- One line for each app version and OS family in the last 30 days. active_s is the time while the main window
--- is active. Crashes are unclean_exit (the previous session did not close normally), not final = 0.
--- Run: npx wrangler d1 execute bananashot-analytics --remote --file queries/sessions.sql
+-- One line for each app version and OS family in the last 30 days. All sessions count, essential and extended.
+-- active_s is the time while the main window is active. Crashes are unclean_exit (the previous session did not close normally), not final = 0.
+-- Run (in analytics-worker): npm run query -- queries/sessions.sql
 SELECT app_version,
        os_family,
        COUNT(*) AS sessions,
+       SUM(level = 'extended') AS extended_sessions,
        ROUND(AVG(active_s) / 60.0, 1) AS avg_active_min,
        SUM(active_s < 60) AS active_under_1_min,
        SUM(active_s >= 60 AND active_s < 600) AS active_1_to_10_min,

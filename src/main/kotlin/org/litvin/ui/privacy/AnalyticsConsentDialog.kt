@@ -4,6 +4,7 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.AppInfo
 import org.litvin.analytics.AnalyticsController
+import org.litvin.analytics.AnalyticsPreferences.Choice
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.LeadRow
 import org.litvin.ui.commons.MessageDialog
@@ -24,15 +25,24 @@ import javax.swing.JDialog
 import javax.swing.JLabel
 
 /**
- * The question about the optional usage analytics at the app start. It does not block the app.
- * The look comes from design/dialogs-redesign/messages.html ("consent"). Closing the window means "No thanks".
+ * The question about the level of the usage statistics at the app start. It does not block the app.
+ * The look comes from design/dialogs-redesign/messages.html ("consent"). Closing the window means "Essential only".
  */
 object AnalyticsConsentDialog {
     private const val WIDTH = DialogKit.MEDIUM
     private const val TEXT_WIDTH = WIDTH - 84
+    private const val TITLE = "Usage statistics"
+    internal const val ESSENTIAL_BUTTON = "Essential only"
+    internal const val EXTENDED_BUTTON = "Send extended"
+    internal const val LATER = "You can change this later, or turn off all statistics, in More → Privacy."
 
-    /** The first paragraph. It must agree with the privacy notice (site/public/privacy/index.html). */
-    internal val INTRO = "Help improve ${AppInfo.NAME} by sending optional, anonymous usage counts."
+    /** The paragraphs. They must agree with the privacy notice (site/public/privacy/index.html). */
+    internal val ESSENTIAL =
+        "By default, ${AppInfo.NAME} sends essential, anonymous usage statistics: the app version, the OS family, " +
+            "the session length, and the number of errors. They tell us how many people use the app."
+    internal const val EXTENDED =
+        "You can also send extended statistics: anonymous counts of the tabs and features you use, " +
+            "and the export results. They help us decide what to improve next."
 
     /** Shows the question. [onClosed] runs after the window closes, with any answer. */
     fun show(
@@ -52,15 +62,15 @@ object AnalyticsConsentDialog {
 
     /** Builds the packed window without showing it. */
     internal fun build(owner: Window?, controller: AnalyticsController, privacyUrl: URI, linkOpener: PrivacyLinkOpener): JDialog {
-        val dialog = DialogKit.modal(owner, "Optional usage analytics", Dialog.ModalityType.MODELESS)
+        val dialog = DialogKit.modal(owner, TITLE, Dialog.ModalityType.MODELESS)
         dialog.name = "analytics-consent"
-        fun decline() {
-            controller.disable()
+        fun choose(choice: Choice) {
+            controller.choose(choice)
             dialog.dispose()
         }
-        DialogKit.onEscape(dialog) { decline() }
+        DialogKit.onEscape(dialog) { choose(Choice.ESSENTIAL) }
         dialog.addWindowListener(object : WindowAdapter() {
-            override fun windowClosing(e: WindowEvent) = controller.disable()
+            override fun windowClosing(e: WindowEvent) = controller.choose(Choice.ESSENTIAL)
         })
 
         val fact = LeadRow(
@@ -75,9 +85,10 @@ object AnalyticsConsentDialog {
             add(PathBox(privacyUrl.toString()))
             isVisible = false
         }
-        val later = WrapText("You can change this later in More → Privacy.", UiKit.font(12f), Palette.FG_3, 1.45f, TEXT_WIDTH)
+        val later = WrapText(LATER, UiKit.font(12f), Palette.FG_3, 1.45f, TEXT_WIDTH)
         val parts = listOf(
-            MessageDialog.paragraph(INTRO, WIDTH),
+            MessageDialog.paragraph(ESSENTIAL, WIDTH),
+            MessageDialog.paragraph(EXTENDED, WIDTH),
             fact,
             copyLine,
             later,
@@ -91,15 +102,12 @@ object AnalyticsConsentDialog {
                 }
             }
         }
-        val noThanks = UiButton("No thanks").apply { addActionListener { decline() } }
-        val enable = UiButton("Enable analytics", kind = UiButton.Kind.LIME).apply {
-            addActionListener {
-                controller.enable()
-                dialog.dispose()
-            }
+        val essential = UiButton(ESSENTIAL_BUTTON).apply { addActionListener { choose(Choice.ESSENTIAL) } }
+        val extended = UiButton(EXTENDED_BUTTON, kind = UiButton.Kind.LIME).apply {
+            addActionListener { choose(Choice.EXTENDED) }
         }
-        val footer = DialogKit.footer(left = listOf(read), right = listOf(noThanks, enable))
-        dialog.contentPane = MessageDialog.content(MessageKind.INFO, "Optional usage analytics", parts, footer, WIDTH, Material2AL.INSIGHTS)
+        val footer = DialogKit.footer(left = listOf(read), right = listOf(essential, extended))
+        dialog.contentPane = MessageDialog.content(MessageKind.INFO, TITLE, parts, footer, WIDTH, Material2AL.INSIGHTS)
         dialog.isResizable = false
         dialog.pack()
         return dialog

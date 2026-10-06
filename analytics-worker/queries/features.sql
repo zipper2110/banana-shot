@@ -1,10 +1,11 @@
 -- Question 1: which tabs and features do users use?
 -- One line for each tab and feature counter in the last 30 days: the number of sessions that used it, the percent
 -- of all sessions, and the total count. The tab_s_ counters are active seconds.
--- Run: npx wrangler d1 execute bananashot-analytics --remote --file queries/features.sql
+-- Only extended sessions have these counters, so the percent uses only the extended sessions.
+-- Run (in analytics-worker): npm run query -- queries/features.sql
 WITH recent AS (
   SELECT counters FROM analytics_session
-  WHERE app_version <> 'synthetic-smoke'
+  WHERE app_version <> 'synthetic-smoke' AND level = 'extended'
     AND last_received_at >= (CAST(strftime('%s', 'now') AS INTEGER) - 30 * 86400) * 1000
 )
 SELECT c.key AS counter,

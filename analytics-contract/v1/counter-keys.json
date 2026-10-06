@@ -74,5 +74,13 @@
     "export_res_1440",
     "export_res_2160",
     "export_res_other"
+  ],
+  "essentialCounterKeys": [
+    "unclean_exit",
+    "uncaught_error",
+    "session_n_1",
+    "session_n_2_5",
+    "session_n_6_20",
+    "session_n_21p"
   ]
 }

@@ -22,9 +22,18 @@ class AnalyticsSchemaTest {
     }
 
     @Test
-    fun `each counter key of the valid fixtures is known`() {
+    fun `the essential keys are the essential keys of the contract`() {
+        val contract = contract("counter-keys.json")["essentialCounterKeys"].map { it.textValue() }
+        assertEquals(contract.toSortedSet(), AnalyticsSchema.ESSENTIAL_KEYS.toSortedSet())
+        assertEquals(AnalyticsSchema.ESSENTIAL_KEYS, AnalyticsLevel.ESSENTIAL.counterKeys)
+        assertEquals(AnalyticsSchema.COUNTER_KEYS, AnalyticsLevel.EXTENDED.counterKeys)
+    }
+
+    @Test
+    fun `each counter key of the valid fixtures is known for the level of the summary`() {
         validSummaries().forEach { summary ->
-            summary["counters"].fieldNames().forEach { assertTrue(it in AnalyticsSchema.COUNTER_KEYS, it) }
+            val level = AnalyticsLevel.entries.single { it.key == summary["level"].textValue() }
+            summary["counters"].fieldNames().forEach { assertTrue(it in level.counterKeys, it) }
         }
     }
 
@@ -32,6 +41,7 @@ class AnalyticsSchemaTest {
     fun `the summary JSON has the fields of the contract`() {
         val json = mapper.readTree(SessionSummary(
             sessionId = "00000000-0000-4000-8000-000000000201",
+            level = AnalyticsLevel.EXTENDED,
             appVersion = "1.0.0",
             osFamily = "windows",
             snapshot = 3,
@@ -43,7 +53,7 @@ class AnalyticsSchemaTest {
         assertEquals(contract("smoke-summary.json").fieldNames().asSequence().toSet(), json.fieldNames().asSequence().toSet())
         assertEquals(
             mapper.readTree("""
-                {"schema_version":1,"notice_version":1,"session_id":"00000000-0000-4000-8000-000000000201",
+                {"schema_version":2,"notice_version":1,"level":"extended","session_id":"00000000-0000-4000-8000-000000000201",
                  "app_version":"1.0.0","os_family":"windows","snapshot":3,"final":true,"duration_s":912,"active_s":640,
                  "counters":{"point_added":31,"tab_s_points":540}}
             """),
@@ -54,14 +64,14 @@ class AnalyticsSchemaTest {
     @Test
     fun `the summary JSON keeps all app_version values as text`() {
         listOf("", "1.0-SNAPSHOT (dev build) ü/2026", "x".repeat(1000)).forEach { version ->
-            val json = mapper.readTree(SessionSummary("id", version, "other", 0, false, 0, 0, emptyMap()).toJson())
+            val json = mapper.readTree(SessionSummary("id", AnalyticsLevel.ESSENTIAL, version, "other", 0, false, 0, 0, emptyMap()).toJson())
             assertEquals(version, json["app_version"].textValue())
         }
     }
 
     @Test
     fun `the summary JSON contains no forbidden data`() {
-        val text = SessionSummary("id", "1.0.0", "windows", 0, false, 0, 0, AnalyticsSchema.COUNTER_KEYS.associateWith { 1 }).toJson()
+        val text = SessionSummary("id", AnalyticsLevel.EXTENDED, "1.0.0", "windows", 0, false, 0, 0, AnalyticsSchema.COUNTER_KEYS.associateWith { 1 }).toJson()
         listOf("path", "file", "email", "exception", "stack", "locale", "zone", "player", "score\"").forEach {
             assertFalse(text.contains(it, ignoreCase = true), it)
         }

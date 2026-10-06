@@ -3,6 +3,9 @@ package org.litvin.analytics
 interface ManagedAnalytics : Analytics, AutoCloseable {
     /** Starts the last summary of the session. [close] waits for it for a short time. */
     fun beginFinalSend() = Unit
+
+    /** Changes the level of the running session. */
+    fun setLevel(level: AnalyticsLevel) = Unit
 }
 
 /** Runs an action at JVM shutdown. Tests give a fake. */
@@ -20,24 +23,26 @@ fun interface ShutdownHooks {
 }
 
 /**
- * The stable analytics facade for the features. It swaps delivery on consent changes.
+ * The stable analytics facade for the features (`docs/analytics/design.md`, "Levels").
  *
- * - [disable]: the user turned off analytics. Stops delivery without a send, deletes the counters, and saves
- *   `DISABLED`.
- * - [close]: app shutdown. Stops delivery and does not change the choice. Thus it must never call [disable].
+ * - [start]: app start. Starts the session with the saved level. Without a choice, the level is essential.
+ * - [choose]: the user made a choice. Saves it and changes the level of the running session. The choice
+ *   [AnalyticsPreferences.Choice.OFF] stops the session without a send and deletes its counters.
+ * - [close]: app shutdown. Stops delivery and does not change the choice.
  *
- * The controller keeps the last tab and window state. A new session gets them, so that the user can turn on
- * analytics at any time.
+ * The controller keeps the last tab and window state. A session that starts later (the user turns the statistics
+ * on again, or the start failed) gets them.
  */
 class AnalyticsController(
     private val config: AnalyticsBuildConfig,
     private val preferences: AnalyticsPreferences,
-    private val enabledFactory: (AnalyticsBuildConfig.Enabled, AnalyticsPreferences.SessionStart) -> ManagedAnalytics,
+    private val sessionFactory: (AnalyticsBuildConfig.Enabled, AnalyticsPreferences.SessionStart, AnalyticsLevel) -> ManagedAnalytics,
     private val shutdownHooks: ShutdownHooks = ShutdownHooks.Jvm,
 ) : Analytics, AutoCloseable {
     @Volatile private var delegate: Analytics = DisabledAnalytics
     private var managed: ManagedAnalytics? = null
     private var sessionHook: AutoCloseable? = null
+    private var closed = false
     @Volatile private var lastTab = AnalyticsEvent.TabShown(null, byUser = false)
     @Volatile private var lastWindow = AnalyticsEvent.WindowActive(false)
 
@@ -50,23 +55,32 @@ class AnalyticsController(
         runCatching { delegate.record(event) }
     }
 
-    fun startIfConsented() {
-        if (preferences.resolve().isEnabled) enable(recordConsent = false)
+    /** App start: starts the session with the saved level. The choice [AnalyticsPreferences.Choice.OFF] starts nothing. */
+    @Synchronized
+    fun start() {
+        preferences.resolve().level?.let(::startSession)
     }
 
-    fun enable() = enable(recordConsent = true)
-
+    /** The user made [choice]. Saves it and changes the level of the running session, or stops the session. */
     @Synchronized
-    private fun enable(recordConsent: Boolean) {
+    fun choose(choice: AnalyticsPreferences.Choice) {
+        require(choice != AnalyticsPreferences.Choice.UNDECIDED)
+        runCatching { preferences.record(choice) }
+        val level = choice.level ?: return stopSession()
+        val running = managed
+        if (running != null) runCatching { running.setLevel(level) } else startSession(level)
+    }
+
+    /** Call only while holding the lock. */
+    private fun startSession(level: AnalyticsLevel) {
         val enabled = config as? AnalyticsBuildConfig.Enabled ?: return
-        if (managed != null) return
+        if (managed != null || closed) return
         val start = runCatching { preferences.startSession() }.getOrNull() ?: return
-        val created = runCatching { enabledFactory(enabled, start) }.getOrNull()
+        val created = runCatching { sessionFactory(enabled, start, level) }.getOrNull()
         if (created == null) {
             runCatching { preferences.endSession() }
             return
         }
-        if (recordConsent) preferences.record(AnalyticsPreferences.Choice.ENABLED)
         sessionHook = runCatching { shutdownHooks.add { preferences.endSession() } }.getOrNull()
         managed = created
         runCatching { created.record(lastTab) }
@@ -80,19 +94,21 @@ class AnalyticsController(
         runCatching { managed?.beginFinalSend() }
     }
 
-    /** The user turned off analytics. Stops delivery and saves the choice. */
-    @Synchronized
-    fun disable() {
+    /** The user turned off the statistics. Stops delivery without a send and ends the session. */
+    private fun stopSession() {
+        if (managed == null) return
         stopDelivery()
         runCatching { sessionHook?.close() }
         sessionHook = null
         runCatching { preferences.endSession() }
-        preferences.record(AnalyticsPreferences.Choice.DISABLED)
     }
 
     /** App shutdown. Stops delivery and keeps the saved choice. The shutdown hook ends the session. */
     @Synchronized
-    override fun close() = stopDelivery()
+    override fun close() {
+        closed = true
+        stopDelivery()
+    }
 
     private fun stopDelivery() {
         delegate = DisabledAnalytics
@@ -108,8 +124,8 @@ class AnalyticsController(
             preferences: AnalyticsPreferences,
             appVersion: String,
             transport: (AnalyticsBuildConfig.Enabled) -> AnalyticsTransport,
-        ): AnalyticsController = AnalyticsController(config, preferences, { enabled, start ->
-            EnabledAnalytics(transport(enabled), appVersion, enabled.osFamily, start)
+        ): AnalyticsController = AnalyticsController(config, preferences, { enabled, start, level ->
+            EnabledAnalytics(transport(enabled), appVersion, enabled.osFamily, start, level)
         })
     }
 }

@@ -4,8 +4,10 @@ import org.litvin.AppInfo
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsController
 import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.AnalyticsLevel
 import org.litvin.analytics.AnalyticsPreferences
 import org.litvin.analytics.ManagedAnalytics
+import org.litvin.ui.commons.SwitchBox
 import org.litvin.ui.commons.WrapText
 import org.litvin.ui.flow.fakes.InMemoryPreferencesProvider
 import java.awt.Component
@@ -13,8 +15,11 @@ import java.awt.Container
 import java.awt.EventQueue
 import java.net.URI
 import java.util.Properties
+import javax.swing.AbstractButton
 import javax.swing.JLabel
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -31,7 +36,7 @@ class PrivacyPageTest {
     @Test
     fun `a build with analytics has the same section after the analytics`() {
         val texts = assertVersionCheckSection(analyticsPage())
-        assertTrue(texts.indexOf("Usage analytics") < texts.indexOf(PrivacyPage.VERSION_CHECK_TITLE))
+        assertTrue(texts.indexOf(PrivacyPage.ANALYTICS_TITLE) < texts.indexOf(PrivacyPage.VERSION_CHECK_TITLE))
     }
 
     @Test
@@ -41,7 +46,7 @@ class PrivacyPageTest {
             listOf(
                 "Feedback reports",
                 "only when you click Send",
-                "usage analytics choice does not change this",
+                "usage statistics choice does not change this",
                 "your email address if you give it",
                 "the end of the log files",
                 "Cloudflare",
@@ -54,28 +59,90 @@ class PrivacyPageTest {
     }
 
     @Test
-    fun `a build with analytics tells what the analytics collect and exclude`() {
+    fun `a build with analytics tells what each level collects and what the app excludes`() {
         val page = analyticsPage()
         val text = onEdt { texts(page) }.joinToString("\n")
         listOf(
-            "counts of the tabs and features you use, export results, session length, app version, and OS family",
+            "Essential statistics are on by default: app version, OS family, session length, the number of errors",
+            "Turn them off to send no statistics at all",
+            "Extended statistics also send counts of the tabs and features you use, and the export results",
             "user or device IDs",
             "text that you type",
         ).forEach { assertTrue(it in text, it) }
-        assertTrue("product action" !in text, "the old text is removed")
+        assertTrue("optional usage analytics" !in text, "the old text is removed")
     }
 
     @Test
-    fun `the consent dialog asks for anonymous usage counts`() {
-        val config = analyticsConfig()
+    fun `the switches of the Privacy page select the level or turn off all statistics`() {
         val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
-        val controller = AnalyticsController(config, preferences, enabledFactory = { _, _ -> NoAnalytics })
+        val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
+        val page = onEdt { PrivacyPage.withAnalytics(controller, preferences, URI("https://example.test/privacy"), CONTACT) { true } }
+        val (essential, extended) = onEdt { find<SwitchBox>(page) }
+        assertEquals(PrivacyPage.ESSENTIAL_SWITCH, essential.text)
+        assertEquals(PrivacyPage.EXTENDED_SWITCH, extended.text)
+        onEdt {
+            assertTrue(essential.isSelected, "essential is on by default")
+            assertFalse(extended.isSelected)
+            assertTrue(extended.isEnabled)
+        }
+
+        onEdt { extended.doClick() }
+        assertEquals(AnalyticsLevel.EXTENDED, preferences.resolve().level)
+
+        onEdt { essential.doClick() }
+        assertEquals(AnalyticsPreferences.Choice.OFF, preferences.resolve().choice)
+        onEdt {
+            assertFalse(extended.isSelected, "off also clears the extended switch")
+            assertFalse(extended.isEnabled)
+        }
+
+        onEdt { essential.doClick() }
+        assertEquals(AnalyticsPreferences.Choice.ESSENTIAL, preferences.resolve().choice)
+        assertTrue(onEdt { extended.isEnabled })
+    }
+
+    @Test
+    fun `the Privacy page shows the saved choice off`() {
+        val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+        preferences.record(AnalyticsPreferences.Choice.OFF)
+        val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
+        val page = onEdt { PrivacyPage.withAnalytics(controller, preferences, URI("https://example.test/privacy"), CONTACT) { true } }
+        val (essential, extended) = onEdt { find<SwitchBox>(page) }
+        onEdt {
+            assertFalse(essential.isSelected)
+            assertFalse(extended.isSelected)
+            assertFalse(extended.isEnabled)
+        }
+    }
+
+    @Test
+    fun `the consent dialog offers the essential and the extended statistics`() {
+        val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+        val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
         val text = onEdt {
             val dialog = AnalyticsConsentDialog.build(null, controller, URI("https://example.test/privacy")) { true }
             try { texts(dialog).joinToString("\n") } finally { dialog.dispose() }
         }
-        assertTrue("anonymous usage counts" in text, text)
-        assertTrue("product events" !in text, text)
+        listOf("essential, anonymous usage statistics", "extended statistics", "how many people use the app", "turn off all statistics").forEach {
+            assertTrue(it in text, text)
+        }
+        assertTrue("Enable analytics" !in text, text)
+    }
+
+    @Test
+    fun `each answer of the consent dialog saves a level`() {
+        listOf(
+            AnalyticsConsentDialog.EXTENDED_BUTTON to AnalyticsPreferences.Choice.EXTENDED,
+            AnalyticsConsentDialog.ESSENTIAL_BUTTON to AnalyticsPreferences.Choice.ESSENTIAL,
+        ).forEach { (button, choice) ->
+            val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+            val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
+            onEdt {
+                val dialog = AnalyticsConsentDialog.build(null, controller, URI("https://example.test/privacy")) { true }
+                try { find<AbstractButton>(dialog).single { it.text == button }.doClick() } finally { dialog.dispose() }
+            }
+            assertEquals(choice, preferences.resolve().choice, button)
+        }
     }
 
     private fun analyticsConfig() = AnalyticsBuildConfig.fromProperties(Properties().apply {
@@ -87,7 +154,7 @@ class PrivacyPageTest {
     private fun analyticsPage(): PrivacyPage {
         val config = analyticsConfig()
         val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
-        val controller = AnalyticsController(config, preferences, enabledFactory = { _, _ -> NoAnalytics })
+        val controller = AnalyticsController(config, preferences, sessionFactory = { _, _, _ -> NoAnalytics })
         return onEdt {
             PrivacyPage.withAnalytics(controller, preferences, URI("https://example.test/privacy"), CONTACT) { true }
         }
@@ -112,6 +179,13 @@ class PrivacyPageTest {
             is WrapText -> add(component.text)
         }
         if (component is Container) component.components.forEach { addAll(texts(it)) }
+    }
+
+    private inline fun <reified T : Component> find(root: Component): List<T> = all(root).filterIsInstance<T>()
+
+    private fun all(root: Component): List<Component> = buildList {
+        add(root)
+        if (root is Container) root.components.forEach { addAll(all(it)) }
     }
 
     private fun <T> onEdt(block: () -> T): T {

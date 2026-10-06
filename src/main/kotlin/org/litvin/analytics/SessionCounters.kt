@@ -26,6 +26,13 @@ internal class SessionCounters {
         if (value > 0) nanos.merge(key, value, Math::addExact)
     }
 
+    /** Deletes all counters with a key that is not in [keys]. */
+    @Synchronized
+    fun retainOnly(keys: Set<String>) {
+        counts.keys.retainAll(keys)
+        nanos.keys.retainAll(keys)
+    }
+
     /** The counters with a value above 0, sorted by key. */
     @Synchronized
     fun values(): Map<String, Int> {
@@ -45,6 +52,7 @@ internal class SessionCounters {
 /** One session summary as the app sends it to `POST /v1/session`. */
 internal data class SessionSummary(
     val sessionId: String,
+    val level: AnalyticsLevel,
     val appVersion: String,
     val osFamily: String,
     val snapshot: Int,
@@ -56,6 +64,7 @@ internal data class SessionSummary(
     fun toJson(): String = mapper.writeValueAsString(mapper.createObjectNode().apply {
         put("schema_version", AnalyticsSchema.SCHEMA_VERSION)
         put("notice_version", AnalyticsSchema.NOTICE_VERSION)
+        put("level", level.key)
         put("session_id", sessionId)
         put("app_version", appVersion)
         put("os_family", osFamily)

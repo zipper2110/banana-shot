@@ -1,0 +1,12 @@
+{
+  "name": "bananashot-cockpit-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev:seed": "node scripts/seed-local.mjs",
+    "dev": "wrangler dev --local --port 8791"
+  },
+  "devDependencies": { "@cloudflare/workers-types": "^5.20260903.1", "@types/node": "^22.14.0", "typescript": "^5.8.3", "vitest": "^3.2.4", "wrangler": "^4.36.0" }
+}

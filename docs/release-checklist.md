@@ -43,7 +43,8 @@ See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
       effective date, and the site is deployed. The URL
       `https://banana-shot-editor.app/privacy/` opens.
 - [ ] The analytics Worker is deployed with the D1 schema in the EU
-      jurisdiction and the secret `RATE_LIMIT_KEY`.
+      jurisdiction and the secret `RATE_LIMIT_KEY`. All migrations are
+      applied (`0002` adds the column `level`).
 - [ ] The deployed Worker knows all counter keys of this release
       (`analytics-contract/v1/counter-keys.json`). Deploy the Worker before
       the app release, because the Worker refuses a summary with an unknown
@@ -111,13 +112,17 @@ in `%LocalAppData%\BananaShot\current`.
 - [ ] Run the packaged smoke test with `-Installed` and complete its report.
       See `qa/windows/ui-smoke.md`. The smoke test does a real FFmpeg export and
       checks the adjustment controls.
-- [ ] First start with empty app data: the analytics consent dialog opens.
+- [ ] First start with empty app data: the usage statistics dialog opens.
       After you answer it, the Overview help opens. "Read privacy notice"
       opens the notice on the site.
-- [ ] Analytics: click "Enable analytics", and use some tabs. Within 5
-      minutes, a row with this app version appears in D1
-      (`analytics-worker/queries/sessions.sql`). Then turn off the analytics
-      in More → Privacy.
+- [ ] Analytics: at once after the start, a row with this app version and
+      the level `essential` appears in D1
+      (`analytics-worker/queries/sessions.sql`). Click "Send extended", and
+      use some tabs. Within 5 minutes, the row has the level `extended` and
+      the tab counters. Then turn off "Send extended statistics" in
+      More → Privacy. Within 5 minutes, the row has the level `essential`
+      again and no tab counters. Then turn off "Send essential statistics",
+      and restart the app. No new row appears.
 - [ ] More → About: the version is correct. The License, License notice, and
       Third-party notices buttons open the files from `legal/`.
 - [ ] More → Contact: "Write an email" opens the email app. "Open log folder"

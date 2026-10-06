@@ -2,6 +2,7 @@ package org.litvin
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import java.io.File
+import java.nio.file.AccessDeniedException
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -20,6 +21,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
  * The lock is also what makes the move reliable on Windows, where replacing a file that any reader
  * still holds open fails - Java opens files without granting deletion to others, so no timeout can
  * be relied on to outlast a reader.
+ *
+ * The lock does not cover all access. A check such as [File.exists] outside the lock, an antivirus
+ * scan or a sync tool can also have the file open for a short time. Thus the move tries again a few
+ * times with a short delay when Windows refuses it.
  */
 object JsonFileIO {
     /**
@@ -57,7 +62,25 @@ object JsonFileIO {
 
     private val locks = ConcurrentHashMap<String, ReentrantReadWriteLock>()
 
+    private const val MOVE_ATTEMPTS = 10
+    private const val MOVE_RETRY_STEP_MS = 20L
+
     private fun moveIntoPlace(temporary: File, target: File) {
+        var attempt = 1
+        while (true) {
+            try {
+                replace(temporary, target)
+                return
+            } catch (e: AccessDeniedException) {
+                if (attempt >= MOVE_ATTEMPTS) throw e
+                // The delays grow from 20 ms to 180 ms. All the delays together are less than 1 s.
+                Thread.sleep(MOVE_RETRY_STEP_MS * attempt)
+                attempt++
+            }
+        }
+    }
+
+    private fun replace(temporary: File, target: File) {
         try {
             Files.move(
                 temporary.toPath(),

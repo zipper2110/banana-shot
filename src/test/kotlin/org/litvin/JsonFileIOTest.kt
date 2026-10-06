@@ -68,6 +68,29 @@ class JsonFileIOTest {
     }
 
     @Test
+    fun `a save waits for a short open of the destination outside the lock`() {
+        val directory = Files.createTempDirectory("bananashot-atomic-busy").toFile()
+        val target = directory.resolve("edl.json")
+        EdlIO.write(target.absolutePath, EdlV1(points = listOf(PointV1(id = "old", startMs = 0, endMs = 1_000))))
+        val updated = EdlV1(points = listOf(PointV1(id = "new", startMs = 0, endMs = 1_000)))
+
+        // On Windows, FileInputStream does not let other threads replace the file while it is open.
+        val saving = java.io.FileInputStream(target).use {
+            val save = Executors.newSingleThreadExecutor()
+            try {
+                val result = save.submit { EdlIO.write(target.absolutePath, updated) }
+                Thread.sleep(100)
+                result
+            } finally {
+                save.shutdown()
+            }
+        }
+
+        saving.get(5, TimeUnit.SECONDS)
+        assertEquals("new", EdlIO.read(target.absolutePath).points.single().id)
+    }
+
+    @Test
     fun `two spellings of the same path have the same lock key`() {
         val directory = Files.createTempDirectory("bananashot-lock-key").toFile()
         val direct = directory.resolve("edl.json")

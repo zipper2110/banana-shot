@@ -234,6 +234,15 @@ Do these items before the first public release.
     sequence now goes to the log, and the update still starts the setup and
     exits (`UpdateAndRestart`, test "a close sequence that fails ...").
     The fix must be in version N-1, so both test builds must be made again.
+  - New builds with the fix (commit `8f65dbc`): `0.9.0` is run 37467101773,
+    and `0.9.1` is run 37468290849.
+  - The repository has GitHub "immutable releases" turned on. A published
+    release (also a pre-release) cannot get new files, and its files cannot
+    be deleted or replaced. Thus, the new `0.9.1` setup goes into a new
+    pre-release `update-test-0.9.1-fix`, and `latest` in
+    `release/version-policy.json` points to it. Delete both test
+    pre-releases after the checks. If GitHub keeps their tags, that is no
+    problem: the tags do not start with `v`.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.
 

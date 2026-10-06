@@ -69,6 +69,7 @@ Decided on 2026-10-06 (contact address):
 | 29 | The effective date of the privacy notice is 6 October 2026, the planned day of the site deploy, not the release date. The site goes live before the release, so a placeholder date must not be on the live page. The section "This site" applies from the deploy. No released app sends analytics before the first release, so the earlier date causes no problem. |
 | 30 | The site texts tell that the app is signed (B-22). The "Run anyway" steps stay, because an OV signature does not give SmartScreen reputation at once. The Smart App Control notes now say that the signed app works with it. The changelog shows "Release date: coming soon" for 1.0.0 until the release; write the date (YYYY-MM-DD) on the day of the release. T2, T3, and T6 are done (2026-10-06). |
 | 26 | Each page has a "Home" link as the first item of the header menu and of the footer menu, so that the way back to the home page is clear. The current page has a light pill in the header menu. On a phone, the five header items fit in one line down to 360 px. |
+| 31 | The site has a Contact page (`/contact/`, 2026-10-06). It is the last item of the header menu and comes after Privacy in the footer menu. It has the same information as More &rarr; Contact in the app (`ContactPage.kt`): feedback from the app first, then the email address, then what to put in a problem report by email and where the log files are. The FAQ answer "How do I report a problem" links to it. The privacy page keeps its own contact section. On a phone, the six header items fit in one line down to 360 px (smaller items below 420 px). This changes the "five header items" of the second decision 26. |
 
 ## Open questions
 
@@ -107,6 +108,7 @@ Write each new decision in "Decisions" at once.
 | T7 | Contact address: the personal Gmail in the app and on the site (decision 26). The domain address is B-40 | — | done |
 | T8 | Deployment: wrangler config, custom domain, Web Analytics, `ANALYTICS_PRIVACY_URL` | T1–T6 | done |
 | T9 | Release checks: links, phone width, steps in `release-checklist.md` | T8 | done |
+| T10 | Contact page, in the menus of all pages, `404.html`, and `sitemap.xml` (decision 31) | T1 | done |
 
 Status values: `open`, `in-progress`, `done`.
 

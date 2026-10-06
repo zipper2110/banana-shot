@@ -17,124 +17,9 @@ Do these items before the first public release.
   `docs/licensing/l-5.2-epics.md` tracks the work.
 - This must be in the first release. A build without an expiry stays free
   forever.
-- Status 2026-10-03: E0 to E8 and E10 are done. E9 waits for a manual
-  check with a real release. E11 (the manual checks before the first
-  release) waits for E9 and B-26. The "Next work" list in `l-5.2-epics.md`
-  has the stories that can start now.
-
-### B-24 Velopack installer
-
-- Replace the jpackage EXE installer (WiX 3) with Velopack. WiX 3 is at its
-  end of life. JDK 17 jpackage supports only WiX 3.
-- Velopack installs for each user with no administrator rights. It also
-  gives the update functions of B-30 and B-25. The installer of the first
-  release sets how users update later. Thus, do this item before the first
-  release.
-- jpackage continues to make the app image. `vpk pack` makes the installer
-  and the update packages from the app image.
-- Velopack starts the app with hook arguments (`--veloapp-install`,
-  `--veloapp-updated`, `--veloapp-uninstall`, and others) when it installs,
-  updates, or removes the app. The app does not use a Velopack SDK. Thus,
-  `SwingMainApp` must exit at once for these arguments and must not open
-  the main window. Check the full list in the Velopack docs.
-- The order in `main` is in "Velopack hook processes" in
-  `build-expiry-spec.md`: the proxy property, then the hook check, then the
-  lock of B-19.
-- `vpk pack` checks that the app uses the Velopack SDK. The app does not use
-  it, so the pack command probably needs `--skipVeloAppCheck` (a hidden
-  option).
-- The release workflow uploads the Velopack files (the setup EXE, the
-  packages, and the release feed) to the GitHub release. Remove the WiX
-  step and `Build-Installer.ps1`.
-- Decided 2026-10-03: the first release has no installer license page. The
-  files in `legal/` and More → About replace it. A license dialog at the
-  first start is B-31.
-- The uninstall must not delete the app data (`%APPDATA%\BananaShot`) or the
-  preferences in `HKCU\Software\JavaSoft\Prefs`. `build-expiry-spec.md`
-  requires this.
-- Update `distribution/windows/README.md`, `release-checklist.md`,
-  `ui-smoke.md`, and the paths in `Run-UiSmoke.ps1`.
-- Done when: a dry run makes a Velopack installer. The installer
-  installs the app, makes the Start menu shortcut, and the app starts
-  (check 1 of B-26).
-- Status 2026-10-03:
-  - Done: `Build-VelopackRelease.ps1` runs `vpk pack` (vpk 1.2.161, pinned in
-    `windows-release.yml`) with `--skipVeloAppCheck`, `--runtime win-x64`,
-    and `--noPortable`. The setup EXE is `BananaShot-win-Setup.exe` (the
-    default name of vpk for the pack ID `BananaShot` and the channel `win`).
-    The workflow uploads it, the `.nupkg` package, and `releases.win.json`.
-    The WiX step and `Build-Installer.ps1` are removed. Checked locally with
-    Windows PowerShell 5.1 on a test app image.
-  - `main` sets the proxy property, then exits with code 0 for each argument
-    that starts with `--veloapp-`, then takes the lock. The Velopack docs
-    (checked 2026-10-03) list `--veloapp-install`, `--veloapp-obsolete`,
-    `--veloapp-updated`, and `--veloapp-uninstall`. The first start after the
-    install and a restart are environment variables (`VELOPACK_FIRSTRUN`,
-    `VELOPACK_RESTART`), so the app starts as usual for them. Tests:
-    `VelopackHooksTest`, `StartOrderSourceTest`.
-  - Velopack installs in `%LocalAppData%\BananaShot`. The app data
-    (`%APPDATA%\BananaShot`) and the preferences are in other places.
-  - `distribution/windows/README.md`, `release-checklist.md`, `ui-smoke.md`,
-    and `Run-UiSmoke.ps1` (`-Installed`) are updated.
-- License page, decided on 2026-10-03: the Velopack setup EXE is a one-click
-  installer with no license page, and the first release has no license page.
-  The license files stay in `legal/` of the app, and More → About opens them.
-  No Velopack MSI. A license dialog at the first start is B-31 (after the
-  first release).
-  - The dry run of 2026-10-03 (B-21) made the Velopack installer in CI.
-- Still to do: the install checks of B-26.
-
-### B-30 Simple update from the app
-
-- This is the simple form of the automatic update. B-25 is the full form,
-  after the first release.
-- In the update notice and the expiry dialog of `build-expiry-spec.md`,
-  replace "Download update" with "Update and restart".
-- When the user clicks it, the app downloads the setup EXE of the newest
-  release to a temporary folder. Then it starts the setup EXE and closes.
-  The Velopack setup installs the new version over the old version and
-  starts it.
-- The app must know the URL of the setup EXE. Add a field for it to the
-  rules file, for example `latest.installerUrl`. The app reads it from the
-  first release, so the field must be in the first release (see "Changes to
-  the file format" in `build-expiry-spec.md`). If the field is missing, use
-  the stable URL `releases/latest/download/<setup EXE name>`. Thus, the
-  release workflow must give the setup EXE the same name in each release.
-- The app does not check the URL or the file (decided on 2026-10-02, see
-  "Accepted risks" in `build-expiry-spec.md`).
-- The spec has the details: "Update and restart" in
-  `build-expiry-spec.md`. The spec wins if this item and the spec do not
-  agree.
-- If an export runs, ask the user before the app closes. B-18 saves the
-  queue, so the queued exports continue after the update. The running
-  export starts again from the beginning.
-- Show the download progress. If the download fails, show the error and
-  keep "Download update" (open the download page in the browser) as the
-  second option.
-- Checked on 2026-10-02 in the Velopack source: over an existing install,
-  the setup asks "Update" or "Cancel", kills each process that runs from the
-  install folder, installs, and starts the new version. The spec has the
-  rules that follow from this. Check 3 of B-26 confirms the behavior with
-  the pinned Velopack version.
-- Do this after B-4 and B-24.
-- Done when: version N-1 shows the update notice for version N. The user
-  clicks "Update and restart", and version N starts with the same projects
-  and the same export queue (check 4 of B-26).
-- Status 2026-10-03: the logic and the user interface are done.
-  - `UpdateOptions` (in `org.litvin.license.update`) decides if "Update and
-    restart" shows and gives the installer URL and the download page (E9-S1).
-  - `UpdateAndRestart` asks first when an export runs, downloads the setup
-    EXE to a temporary folder with progress (redirects followed), does the
-    close sequence, starts the setup with no `--silent` as the last step,
-    and exits. A failed download deletes the partial file and keeps the app
-    open. A second click during the download has no effect (E9-S2).
-  - Tests: `UpdateAndRestartTest` (fake download and setup start, and a local
-    HTTP server for the real download).
-  - Done (2026-10-03, with E8 and E7): the update notice, the expiry
-    warning, and expired mode have the buttons (`UpdateButtons`).
-    `UpdateRunner` shows the progress and the errors. The close sequence is
-    `SwingApplicationHandle.close`. The download uses the trust of E5-S4.
-- Still to do: the manual check of the update (B-26, check 4).
+- Status 2026-10-06: E0 to E10 are done. In E11, S2 (moved to B-42) and S3
+  are done. Open: E11-S1 (sleep on a laptop) and E11-S4 (the final check,
+  which also removes the release block of E0-S3).
 
 ### B-26 Pre-release install testing
 
@@ -218,8 +103,17 @@ Do these items before the first public release.
   - Check 1 (fresh install of `0.9.0`, step 7 of the checklist): passed.
   - Check 2 (proxy): postponed to after the first release (B-42). E11-S2
     records the decision.
-  - Check 3 (install `0.9.1` over a running `0.9.0`): the setup installed.
-  - Check 5 (uninstall): the app was removed.
+  - Check 3 (install `0.9.1` over a running `0.9.0`): passed. The setup
+    installed, and `0.9.1` started with the projects, the preferences, and
+    the export history.
+  - Check 5 (uninstall): passed. The Velopack log shows the uninstall of
+    `0.9.1` at 18:18:08. After it, `%APPDATA%\BananaShot` (4 projects, the
+    export history, the render queue, the logs) and
+    `HKCU\Software\JavaSoft\Prefs\org\litvin` (21 values and the sub-keys)
+    stayed. Only `%LocalAppData%\BananaShot`, the shortcuts, and the
+    uninstall registry keys were removed.
+  - All checks are done (2026-10-06). Open: the clean-up (step 5 of the
+    setup for check 4).
   - Check 4 ("Update and restart" from `0.9.0` to `0.9.1`): failed (2026-10-06). After the download, `0.9.0` showed "Unexpected
     error" (`RejectedExecutionException` from `DefaultProjectsPresenter`),
     did not start the setup, and stayed open. The log shows the cause: the
@@ -243,6 +137,10 @@ Do these items before the first public release.
     `release/version-policy.json` points to it. Delete both test
     pre-releases after the checks. If GitHub keeps their tags, that is no
     problem: the tags do not start with `v`.
+  - Check 4 with the fixed builds (2026-10-06, the author): passed. The new
+    `0.9.0` downloaded the setup from `update-test-0.9.1-fix`, closed, and
+    `0.9.1` started after the update. "Cancel" in the Velopack dialog
+    installed nothing, and the app stayed closed.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.
 

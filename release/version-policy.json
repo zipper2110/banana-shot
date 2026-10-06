@@ -1,9 +1,8 @@
 {
   "schema": 1,
   "latest": {
-    "version": "0.9.1",
-    "downloadUrl": "https://github.com/zipper2110/banana-shot/releases/tag/update-test-0.9.1-fix",
-    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/update-test-0.9.1-fix/BananaShot-win-Setup.exe"
+    "version": "1.0.0",
+    "downloadUrl": "https://github.com/zipper2110/banana-shot/releases/latest"
   },
   "rules": []
 }

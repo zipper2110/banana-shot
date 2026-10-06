@@ -316,6 +316,14 @@ main > .section-noai .section-head { margin-bottom: 48px; }
   .spec tr { display: block; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
 }
 
+/* Pricing: the card of the free plan. */
+.plan { padding: 28px; border-color: var(--lime-edge); }
+.plan-name { margin: 0; color: var(--fg-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.85rem; }
+.plan-price { margin: 4px 0 18px; font: 650 3.2rem/1.1 var(--font-display); color: var(--fg-strong); letter-spacing: -0.03em; }
+.page .checks { list-style: none; padding: 0; margin: 0 0 24px; }
+.checks li { position: relative; padding-left: 30px; }
+.checks li::before { content: ""; position: absolute; left: 2px; top: 0.35em; width: 14px; height: 8px; border: solid var(--lime); border-width: 0 0 2px 2px; transform: rotate(-45deg); transform-origin: center; }
+
 /* FAQ. */
 .faq details { border-bottom: 1px solid var(--line); }
 .faq summary {

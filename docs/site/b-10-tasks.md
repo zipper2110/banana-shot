@@ -70,6 +70,9 @@ Decided on 2026-10-06 (contact address):
 | 30 | The site texts tell that the app is signed (B-22). The "Run anyway" steps stay, because an OV signature does not give SmartScreen reputation at once. The Smart App Control notes now say that the signed app works with it. The changelog shows "Release date: coming soon" for 1.0.0 until the release; write the date (YYYY-MM-DD) on the day of the release. T2, T3, and T6 are done (2026-10-06). |
 | 26 | Each page has a "Home" link as the first item of the header menu and of the footer menu, so that the way back to the home page is clear. The current page has a light pill in the header menu. On a phone, the five header items fit in one line down to 360 px. |
 | 31 | The site has a Contact page (`/contact/`, 2026-10-06). It is the last item of the header menu and comes after Privacy in the footer menu. It has the same information as More &rarr; Contact in the app (`ContactPage.kt`): feedback from the app first, then the email address, then what to put in a problem report by email and where the log files are. The FAQ answer "How do I report a problem" links to it. The privacy page keeps its own contact section. On a phone, the six header items fit in one line down to 360 px (smaller items below 420 px). This changes the "five header items" of the second decision 26. |
+| 32 | The site has a Pricing page (`/pricing/`, 2026-10-06). It says that the app is free: all features, no account, no ads, and no watermark. A Pro version might come in the future, with more features. There is no Pro version now and no date for one. The author respects the users, so the app stays as free as possible. The page makes no stronger promise. The FAQ answer "Is BananaShot free?" links to it. The header menu is Home, Download, Pricing, FAQ, Changelog, Contact. Privacy is only in the footer menu, because seven items do not fit in one line at 360 px. The footer menu has all pages. This changes the menu of decision 31. |
+| 33 | The note under the download button of the home page says "Windows 10 and 11", without "64-bit": the author finds it too technical for this place. The system needs on the download page and the FAQ keep "64-bit". |
+| 34 | The download page has no note under the download buttons. The note named the setup file and told that it comes from the GitHub release (removed by the author, 2026-10-06). |
 
 ## Open questions
 
@@ -109,6 +112,7 @@ Write each new decision in "Decisions" at once.
 | T8 | Deployment: wrangler config, custom domain, Web Analytics, `ANALYTICS_PRIVACY_URL` | T1–T6 | done |
 | T9 | Release checks: links, phone width, steps in `release-checklist.md` | T8 | done |
 | T10 | Contact page, in the menus of all pages, `404.html`, and `sitemap.xml` (decision 31) | T1 | done |
+| T11 | Pricing page, in the menus of all pages, `404.html`, and `sitemap.xml` (decision 32) | T1 | done |
 
 Status values: `open`, `in-progress`, `done`.
 

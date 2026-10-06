@@ -10,17 +10,6 @@ to a different section.
 
 Do these items before the first public release.
 
-### B-4 License restriction
-
-- `docs/licensing/build-expiry-spec.md` has the design (build expiry, version
-  rules, update check). The spec was approved on 2026-10-02.
-  `docs/licensing/l-5.2-epics.md` tracks the work.
-- This must be in the first release. A build without an expiry stays free
-  forever.
-- Status 2026-10-06: E0 to E10 are done. In E11, S2 (moved to B-42) and S3
-  are done. Open: E11-S1 (sleep on a laptop) and E11-S4 (the final check,
-  which also removes the release block of E0-S3).
-
 ### B-26 Pre-release install testing
 
 - This item has all the checks that need the app installed with
@@ -169,10 +158,12 @@ Do these items after the first public release.
 - Done when: an email to the new address gets to the Gmail, and the app and
   the site show the new address.
 
-### B-42 Proxy check of the installed app
+### B-42 Manual checks after the first release
 
-- Moved from B-26 check 2 and E11-S2 on 2026-10-06. The author cannot set
-  up a proxy before the first release.
+- Moved from B-26 check 2 and E11-S2 (proxy) and from E11-S1 (sleep) on
+  2026-10-06. The author postponed them to after the first release.
+- Sleep (E11-S1): on a laptop, start the app, sleep for 10 minutes, and
+  wake it. The log shows a run time that includes the 10 minutes.
 - Set a manual proxy in Windows (for example a local Fiddler or mitmproxy),
   with analytics on. Start the installed app. The proxy shows the request
   for the rules file and the analytics request. Remove the proxy setting
@@ -181,7 +172,7 @@ Do these items after the first public release.
   mitmproxy with its root certificate only in the Windows store. The app
   gets the rules file through the proxy. Remove the proxy setting and the
   certificate after the check.
-- Done when: both checks pass with a released build.
+- Done when: the three checks pass with a released build.
 
 ### B-41 Admin dashboard for the numbers
 

@@ -92,7 +92,7 @@ jobs:
           "APP_VERSION=$version" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           "RELEASE_NAME=$releaseName" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           "release-name=$releaseName" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
-          ./distribution/windows/Validate-Release.ps1 -DryRun:("${{ github.event_name }}" -ne "push")
+          ./distribution/windows/Validate-Release.ps1
 
       - name: Check native sources in the natives release
         # The GPL and the LGPL require the corresponding source of the bundled

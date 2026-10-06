@@ -121,10 +121,6 @@ release. It gives the release steps in sequence. The open work is in
   SHA gives the version. To update an action, get the commit SHA of the new
   tag, for example `gh api repos/softprops/action-gh-release/commits/v3.0.3 --jq .sha`,
   and change the SHA and the comment.
-- Until all stories in
-  [docs/licensing/l-5.2-epics.md](../../docs/licensing/l-5.2-epics.md) are
-  `done`, `Validate-Release.ps1` fails for a tag release. A dry run shows only
-  a warning with the stories that are not done.
 - BananaShot uses the Elastic License 2.0. Bundle only an LGPL build of
   libmpv (`-Dgpl=false`), because the app loads libmpv into its own process.
   `Validate-Release.ps1` checks this.

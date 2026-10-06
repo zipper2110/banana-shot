@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site Restyle Options</title>
+<style>
+  :root { color-scheme: dark; --bg: #1a1b1d; --card: #24262a; --line: #33363b; --fg: #e7e5e1; --fg-2: #aaa8a3; --lime: #c8ec46; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.6 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; }
+  .page { max-width: 1120px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  .lede { color: var(--fg-2); max-width: 760px; margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  a.opt { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; color: inherit; text-decoration: none; }
+  a.opt:hover { border-color: var(--lime); }
+  a.opt img { display: block; width: 100%; aspect-ratio: 1440 / 900; object-fit: cover; object-position: top; border-bottom: 1px solid var(--line); }
+  .body { padding: 16px 18px 18px; }
+  .body h2 { margin: 0 0 6px; font-size: 17px; }
+  .body p { margin: 0; color: var(--fg-2); font-size: 14px; }
+  .swatches { display: flex; gap: 6px; margin-top: 12px; }
+  .swatches i { width: 22px; height: 22px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.15); }
+  .base { margin-top: 24px; color: var(--fg-2); font-size: 14px; }
+  .base a { color: var(--lime); }
+  .main { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #191e09; vertical-align: middle; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Site restyle: 3 options</h1>
+  <p class="lede">The text of the home page does not change. Each option only adds one CSS file after site.css.
+    All options use the app accent #C8EC46 (Palette.kt) in place of the old lime, also in the demos and the logo. No option uses the near-black #0e0e0e or the faint green eyebrow. Each option has its own type, layout, and section structure.</p>
+  <div class="grid">
+    <a class="opt" href="option-a.html">
+      <img src="shots/top-a.png" alt="">
+      <div class="body">
+        <h2>A. Studio <span class="main">main</span></h2>
+        <p>Large titles, a lot of space, thin rules and large thin numbers. Text and buttons on the left of a smaller hero screenshot. A background effect shows through matte glass parts: switch Glass, Court, or Aurora at the bottom right of the page. The Local and No AI sections are soft bands of their own color, with one tile for each item.</p>
+        <div class="swatches"><i style="background:#18191b"></i><i style="background:#202124"></i><i style="background:#e6e4e0"></i><i style="background:#c8ec46"></i></div>
+      </div>
+    </a>
+    <a class="opt" href="option-b.html">
+      <img src="shots/top-b.png" alt="">
+      <div class="body">
+        <h2>B. Console</h2>
+        <p>Structured, like a tool for professionals. Section titles in a left column, content on the right. Steps in a 2 x 2 grid, feature rows in large panels, mono tags, a dot grid, a slight 3D turn on the hero. Has the same background effects as A. Cool charcoal, Space Grotesk titles.</p>
+        <div class="swatches"><i style="background:#15181d"></i><i style="background:#1c2027"></i><i style="background:#e2e5ea"></i><i style="background:#c8ec46"></i></div>
+      </div>
+    </a>
+    <a class="opt" href="option-c.html">
+      <img src="shots/top-c.png" alt="">
+      <div class="body">
+        <h2>C. Sport</h2>
+        <p>A light sports poster. Tall bold uppercase titles with an accent marker, outlined step numbers, hard rules, a solid accent block behind the hero, a dark No AI band, and an accent download block. Warm paper, Barlow Condensed titles.</p>
+        <div class="swatches"><i style="background:#f4f3ee"></i><i style="background:#ffffff"></i><i style="background:#1f211d"></i><i style="background:#c8ec46"></i></div>
+      </div>
+    </a>
+  </div>
+  <p class="base">Compare with the <a href="option-current.html">current design</a>. To update the pages after a change in site/public/index.html, run build.sh. The Google fonts load only in the mockups; the real site would host them itself.</p>
+</div>
+</body>
+</html>

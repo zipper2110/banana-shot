@@ -1,0 +1,70 @@
+/* The background effects of the mockups (html[data-bg], set by option-bg.js): glass, court, and aurora.
+   A fixed layer behind the page shows through the panels, which are matte glass. The page is not near-black. */
+:root {
+  /* Matte glass: a dark tint, a blur of the background layer, a light top edge. */
+  --glass: rgba(26, 32, 40, 0.58);
+  --glass-strong: rgba(24, 29, 37, 0.76);
+  --glass-edge: rgba(255, 255, 255, 0.09);
+  --glass-light: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --blur: blur(22px) saturate(150%);
+}
+/* ---- The background layer ---- */
+body { background: var(--bg); }
+body::before, body::after { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+/* Fine grain on top of each effect, so that the large color areas look matte, not flat. */
+body::after {
+  opacity: 0.09; mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Glass: soft blobs of the accent, the court blue, and a green teal float behind the glass. */
+html[data-bg="glass"] body::before {
+  inset: -10%;
+  background:
+    radial-gradient(max(38vw, 320px) max(42vh, 300px) at 14% 20%, rgba(200, 236, 70, 0.4), transparent 70%),
+    radial-gradient(max(46vw, 320px) max(52vh, 300px) at 86% 18%, rgba(61, 107, 140, 0.9), transparent 70%),
+    radial-gradient(max(40vw, 320px) max(46vh, 300px) at 62% 88%, rgba(54, 140, 110, 0.42), transparent 70%),
+    radial-gradient(max(30vw, 320px) max(40vh, 300px) at 6% 82%, rgba(61, 107, 140, 0.5), transparent 70%);
+  animation: bg-drift 38s ease-in-out infinite alternate;
+}
+@keyframes bg-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(4%, -3%, 0) scale(1.08); }
+}
+
+/* Court: a blue hard court in perspective, like a floor under the page. A soft accent light from the top. */
+html[data-bg="court"] body { background: linear-gradient(180deg, #1b222b 0%, #161b22 100%); }
+html[data-bg="court"] body::before {
+  inset: auto -60% 0 -60%; height: 90vh;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1100 600' fill='none'%3E%3Crect width='1100' height='600' fill='%233d6b8c' fill-opacity='.38'/%3E%3Cg stroke='%23ffffff' stroke-opacity='.16' stroke-width='4'%3E%3Crect x='100' y='60' width='900' height='480'/%3E%3Cpath d='M100 120h900M100 480h900M310 120v360M790 120v360M310 300h480M550 60v480'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  transform: perspective(1400px) rotateX(52deg);
+  transform-origin: 50% 100%;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 75%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 75%);
+}
+html[data-bg="court"] main { background: radial-gradient(max(70vw, 320px) max(50vh, 300px) at 30% 0%, rgba(200, 236, 70, 0.10), transparent 70%) no-repeat; }
+
+/* Aurora: wide, slow bands of green and blue light, very blurred. */
+html[data-bg="aurora"] body { background: #151a21; }
+html[data-bg="aurora"] body::before {
+  inset: -20%;
+  background:
+    conic-gradient(from 210deg at 50% 40%, rgba(200, 236, 70, 0) 0deg, rgba(200, 236, 70, 0.30) 40deg, rgba(54, 140, 110, 0.36) 90deg, rgba(61, 107, 140, 0.50) 150deg, rgba(61, 107, 140, 0) 210deg, rgba(61, 107, 140, 0.30) 280deg, rgba(200, 236, 70, 0) 360deg);
+  filter: blur(90px);
+  animation: bg-turn 60s linear infinite;
+}
+@keyframes bg-turn { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) { body::before { animation: none !important; } }
+
+/* ---- The switch of the background effect (mockup only) ---- */
+.bg-switch {
+  position: fixed; right: 16px; bottom: 16px; z-index: 20; display: flex; gap: 4px; align-items: center;
+  padding: 5px; border-radius: 999px; font: 500 12px var(--font);
+  background: var(--glass-strong); border: 1px solid var(--line-2); backdrop-filter: var(--blur);
+}
+.bg-switch span { padding: 0 8px 0 10px; color: var(--fg-3); }
+.bg-switch button { font: inherit; color: var(--fg-2); background: none; border: 0; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.bg-switch button:hover { color: var(--fg-strong); }
+.bg-switch button[aria-pressed="true"] { background: var(--lime); color: var(--on-lime); }

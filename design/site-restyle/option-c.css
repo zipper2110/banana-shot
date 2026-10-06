@@ -1,0 +1,121 @@
+/* Option C: Sport. A light page like a sports poster.
+   Warm paper and dark ink, not black. Tall, bold, uppercase titles (Barlow Condensed).
+   The accent is a fill (a marker under the title, solid blocks), because accent text is hard to read on a light page. */
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&display=swap");
+@import url("demo-scope.css");
+:root {
+  color-scheme: light;
+  --bg: #f4f3ee;
+  --band: #ebeae3;
+  --inset: #efeee8;
+  --panel: #ffffff;
+  --card: #ffffff;
+  --raised: #ffffff;
+  --line: #dcdad1;
+  --line-2: #c9c7bc;
+  --fg: #2a2c27;
+  --fg-2: #5b5e56;
+  --fg-3: #7d8077;
+  --fg-strong: #1b1d19;
+  --ink: #1f211d;
+  --radius: 4px;
+  --radius-sm: 4px;
+  --font-display: "Barlow Condensed", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+}
+a { color: var(--fg-strong); text-decoration-color: var(--lime); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+a:hover { color: var(--fg-strong); background: rgba(200, 236, 70, 0.35); }
+:focus-visible { outline-color: var(--ink); }
+
+h1, h2 { text-transform: uppercase; font-weight: 800; letter-spacing: 0; line-height: 0.95; }
+h3 { font-family: var(--font); letter-spacing: -0.01em; }
+
+.site-header { background: rgba(244, 243, 238, 0.88); border-bottom: 2px solid var(--ink); }
+.brand { font-family: var(--font-display); text-transform: uppercase; font-weight: 800; font-size: 1.35rem; letter-spacing: 0.01em; }
+.nav a { color: var(--fg); font-weight: 500; }
+.nav a:hover { color: var(--fg-strong); background: rgba(200, 236, 70, 0.4); }
+
+/* Eyebrow: dark ink with an accent square. */
+.eyebrow { display: inline-flex; align-items: center; gap: 10px; color: var(--fg-strong); font-weight: 700; letter-spacing: 0.14em; font-size: 0.78rem; }
+.eyebrow::before { content: ""; width: 12px; height: 12px; background: var(--lime); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12); }
+
+.btn { border-radius: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.92rem; font-weight: 700; padding: 14px 22px; }
+.btn-primary { background: var(--ink); color: var(--lime); }
+.btn-primary:hover { background: #000; color: var(--lime-hover); }
+.btn-secondary { background: transparent; border: 2px solid var(--ink); color: var(--ink); }
+.btn-secondary:hover { background: var(--ink); color: #fff; }
+a.btn:hover { text-decoration: none; }
+.btn { text-decoration: none; }
+
+/* Hero: a big title with an accent marker, the screenshot with a solid accent block behind it. */
+.hero { padding: 88px 0 104px; }
+.hero .wrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 64px; }
+.hero h1 {
+  display: inline; font-size: clamp(3.2rem, 7.4vw, 6.2rem);
+  background: linear-gradient(transparent 60%, var(--lime) 60%, var(--lime) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.hero p.lead { margin-top: 28px; color: var(--fg); }
+.hero-shot { box-shadow: 18px 18px 0 var(--lime), 18px 18px 0 2px var(--ink) !important; border: 2px solid var(--ink) !important; border-radius: 6px !important; }
+
+.section { border-top: 0; padding: 112px 0; }
+main > .section-how, main > .section-local, main > .section-author { background: var(--band); }
+.section-head h2 { font-size: clamp(2.4rem, 5.4vw, 4rem); }
+
+.ui-demo { border: 2px solid var(--ink); border-radius: 6px; box-shadow: 0 30px 60px -30px rgba(30, 34, 22, 0.5); }
+
+/* Steps: four columns between rules. Large outlined numbers. */
+.steps { gap: 0; border-top: 2px solid var(--ink); }
+.steps li { background: none; border: 0; border-radius: 0; border-left: 1px solid var(--line-2); padding: 20px 24px 8px; }
+.steps li:first-child { border-left: 0; padding-left: 0; }
+.steps li::before {
+  display: block; width: auto; height: auto; margin-bottom: 12px; background: none; border: 0; border-radius: 0;
+  font: 800 5rem/0.9 var(--font-display); color: transparent; -webkit-text-stroke: 2px var(--ink);
+}
+.steps h3 { font-size: 1.2rem; }
+.steps p.step-tags { color: var(--fg-strong); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Feature rows: a solid number tag and a big uppercase title. */
+.feature-rows { gap: 112px; margin-bottom: 0; }
+.feature-num { display: inline-block; padding: 2px 10px; background: var(--lime); color: var(--ink); font: 800 1.1rem/1.4 var(--font-display); letter-spacing: 0.04em; }
+.feature-row h3 { font: 800 clamp(2rem, 3.6vw, 2.8rem)/0.95 var(--font-display); text-transform: uppercase; letter-spacing: 0; }
+.feature-row p { color: var(--fg); }
+
+/* Local and No AI: white tiles with a thick top rule. */
+.features { gap: 20px; background: none; border: 0; border-radius: 0; overflow: visible; }
+.feature { background: var(--card); border-top: 4px solid var(--ink); padding: 24px 24px 28px; }
+.feature h3 { font-size: 1.15rem; }
+
+/* No AI: the one dark band of the page. */
+main > .section-noai { background: var(--ink); color: #e9e8e2; --fg-strong: #ffffff; --fg-2: #b4b5ad; }
+main > .section-noai .eyebrow { color: #fff; }
+main > .section-noai .feature { background: #2a2c27; border-top-color: var(--lime); }
+
+/* Author: no card, a big avatar and a thick rule. */
+.author { background: none; border: 0; border-top: 2px solid var(--ink); border-radius: 0; padding: 32px 0 0; max-width: 860px; gap: 32px; }
+.author p { font-size: 1.3rem; line-height: 1.55; }
+.author-avatar { width: 96px; height: 96px; border-radius: 4px; background: var(--lime); border: 2px solid var(--ink); color: var(--ink); font-size: 3rem; font-weight: 800; }
+
+/* Download: a solid accent block. */
+.cta { background: var(--lime); border: 2px solid var(--ink); border-radius: 6px; padding: 56px; color: var(--ink); }
+.cta h2 { font-size: clamp(2.6rem, 6vw, 4.4rem); color: var(--ink); }
+.cta p { color: #3a4219; font-weight: 500; }
+
+.site-footer { border-top: 2px solid var(--ink); color: var(--fg-2); }
+.site-footer a:hover { background: none; }
+
+@media (max-width: 960px) {
+  .steps li:nth-child(3) { border-left: 0; padding-left: 0; }
+}
+@media (max-width: 880px) {
+  .hero-shot { box-shadow: 10px 10px 0 var(--lime), 10px 10px 0 2px var(--ink) !important; margin-right: 12px; }
+}
+@media (max-width: 560px) {
+  .steps li { border-left: 0; padding-left: 0; border-top: 1px solid var(--line-2); }
+  .cta { padding: 32px 22px; }
+}
+.brand:hover { background: none; }
+
+h1, h2 { text-wrap: balance; }
+.hero .wrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); }
+.hero .btn { padding: 13px 18px; letter-spacing: 0.04em; }
+@media (max-width: 880px) { .hero .wrap { grid-template-columns: minmax(0, 1fr); } }

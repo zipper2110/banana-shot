@@ -63,98 +63,6 @@ Do these items before the first public release.
     live.
   - The B-9 task T7 stays open until the page is live.
 
-### B-21 First dry run of the release workflow
-
-- The "Windows release" workflow has never run. Start a dry run now with
-  the current installer. It can find problems before B-23 and B-24.
-- B-26 does the install checks with the installer of the dry run.
-- In the app image, run `runtime\bin\java --list-modules`. The JDK 17
-  jpackage default can omit `jdk.crypto.ec` and `jdk.crypto.mscapi`, but
-  `build-expiry-spec.md` requires them. Write the result in B-23.
-- Done when: the dry run passes, and each problem that it finds is fixed or
-  is an item in this file. Do the dry run again after B-23 and B-24.
-- Status 2026-10-03:
-  - The first dry run (version 0.0.1, commit 17bc4b8, Temurin 25.0.4) passed
-    in CI. `mvn -B test`: 706 tests, 0 failures, 2 skipped.
-    `Validate-AppImage.ps1` passed: the runtime has `jdk.crypto.mscapi` and
-    `java.net.http`, and the expiry date is 2027-04-03. All packaged
-    diagnostics passed (libmpv load, FFmpeg, `Windows-ROOT` with 564
-    certificates, HTTPS). `vpk pack` made `BananaShot-win-Setup.exe` and the
-    `.nupkg` package. The workflow artifact has 10 files (336 MB).
-  - Expected warnings: the open L-5.2 stories (a real release fails until
-    B-4 is done) and the unsigned files (B-22).
-  - Not a problem: at the end of the job, the runner stopped an orphan
-    `java` process (probably the Kotlin compile daemon). The Maven cache was
-    not saved because a different job saved the same key.
-  - Step 5 review of the artifact: the SHA-256 file agrees with the setup
-    EXE. The SBOM has 20 Maven components. They are the same as the 20
-    library JARs in `lib/app/app` of the `.nupkg`. All are `required`, and
-    no test library is in the SBOM. The licenses are Apache-2.0, MIT,
-    EPL-1.0 or LGPL (Logback), and LGPL-2.1+ or Apache-2.0 (JNA). All
-    are acceptable. The `THIRD-PARTY-NOTICES.txt` of the artifact is the
-    same as the file in the repository.
-  - Problem: `THIRD-PARTY-NOTICES.txt` says that the license texts are in
-    the JAR files. These 5 JARs have no license file:
-    `kotlin-stdlib-2.2.20`, `kotlin-reflect-2.2.20`, `annotations-13.0`
-    (Apache-2.0), `logback-classic-1.5.18`, and `logback-core-1.5.18`
-    (EPL-1.0 or LGPL-2.1). Apache-2.0 and EPL-1.0 require a copy of the
-    license with the binaries. The notices also do not name `jsvg` (MIT)
-    and the JetBrains `annotations`.
-  - Fixed 2026-10-03: "Java libraries" in `THIRD-PARTY-NOTICES.txt` now
-    lists each library, its version, and its license. The end of the file
-    has the full texts of the Apache License 2.0, the EPL-1.0, and the MIT
-    License (with the SLF4J, JSVG, and Feather copyright lines). The file
-    tells that BananaShot uses Logback under the EPL-1.0 and JNA under the
-    Apache License 2.0. Step 6 of `release-checklist.md` now has a check
-    that this list agrees with the SBOM.
-  - Still to do: a new dry run with the fixed notices. Its installer is
-    version N-1 for B-26.
-
-### B-23 Bundle the JDK 25 runtime
-
-- Build with JDK 25 (LTS) and bundle its runtime. Keep the bytecode target
-  17 unless a reason to change it comes up.
-- Update `ci.yml`, `windows-release.yml`, and the JDK 17 check in
-  `Build-AppImage.ps1`. Update the JDK version in the docs.
-- Add `--enable-native-access=ALL-UNNAMED` to the jpackage java options.
-  JNA calls native code, and JDK 24 and later warn about it.
-- Give jpackage an explicit `--add-modules` list. Use `jdeps` to find the
-  modules. Add `jdk.crypto.mscapi` (the `Windows-ROOT` key store). In JDK 22
-  and later, the elliptic-curve code is in `java.base`.
-- Add checks to `DistributionDiagnostics`: the `Windows-ROOT` key store
-  loads, and an HTTPS request to GitHub works.
-- Check that Kotlin, JNA, FlatLaf, and assertj-swing work with JDK 25.
-- Done when: `mvn -B test` and the ui-flow tests pass with JDK 25, and the
-  packaged diagnostics pass.
-- Status 2026-10-03:
-  - Done: `ci.yml`, `windows-release.yml`, `Build-AppImage.ps1`, the docs,
-    and the ui-flow spike test use JDK 25. The bytecode target stays 17.
-    `--enable-native-access=ALL-UNNAMED` is in the jpackage java options and
-    in `BananaShot Diagnostics.cmd`.
-  - `jdeps` (JDK 25) gives java.base, java.desktop, java.naming,
-    java.net.http, java.prefs, and java.sql. `Build-AppImage.ps1` gives
-    `--add-modules` with these modules, java.logging, java.xml,
-    jdk.crypto.mscapi, jdk.localedata, jdk.charsets, and jdk.accessibility.
-  - `DistributionDiagnostics` checks that `Windows-ROOT` loads and that an
-    HTTPS request to `raw.githubusercontent.com` gets an HTTP status.
-  - `mvn -B test` passes with Temurin 25.0.2 (local, 2026-10-03). A test app
-    image with the module list passed `Validate-AppImage.ps1` up to the
-    version check (a local SNAPSHOT build) and the packaged diagnostics.
-  - Kotlin 2.2.20, JNA 5.18.1, FlatLaf 3.7.2: compile and tests pass.
-  - Found and fixed: in JDK 25, `File.getCanonicalPath` opens the file on
-    Windows. `JsonFileIO` made its lock key with it before it took the lock.
-    Thus, a reader blocked the move of a writer ("Access is denied"), and
-    `JsonFileIOTest` failed. The key now comes from the normalized absolute
-    path (`fileLockKey`).
-  - `mvn -B -Pui-flow verify` passes with Temurin 25.0.2 (local,
-    2026-10-03): 706 unit tests and 17 ui-flow tests, 1 skipped by design
-    (`ValidationRecoveryUiFlowIT`). `AssertJSwingCompatibilityUiFlowIT`
-    passes, so assertj-swing works with JDK 25.
-  - The CI run of the release workflow passed with Temurin 25.0.4
-    (2026-10-03, B-21): tests, `Validate-AppImage.ps1`, and the packaged
-    diagnostics.
-- All "Done when" conditions are true.
-
 ### B-24 Velopack installer
 
 - Replace the jpackage EXE installer (WiX 3) with Velopack. WiX 3 is at its
@@ -253,7 +161,7 @@ Do these items before the first public release.
 - Done when: version N-1 shows the update notice for version N. The user
   clicks "Update and restart", and version N starts with the same projects
   and the same export queue (check 4 of B-26).
-- Status 2026-10-03: the logic is done, the user interface is not.
+- Status 2026-10-03: the logic and the user interface are done.
   - `UpdateOptions` (in `org.litvin.license.update`) decides if "Update and
     restart" shows and gives the installer URL and the download page (E9-S1).
   - `UpdateAndRestart` asks first when an export runs, downloads the setup
@@ -263,14 +171,16 @@ Do these items before the first public release.
     open. A second click during the download has no effect (E9-S2).
   - Tests: `UpdateAndRestartTest` (fake download and setup start, and a local
     HTTP server for the real download).
-- Still to do: the buttons in the update notice, the expiry warning, and
-  expired mode (E8), and the wiring of the close sequence and the saved time
-  (E7). The download uses the trust of E5-S4 (2026-10-03).
+  - Done (2026-10-03, with E8 and E7): the update notice, the expiry
+    warning, and expired mode have the buttons (`UpdateButtons`).
+    `UpdateRunner` shows the progress and the errors. The close sequence is
+    `SwingApplicationHandle.close`. The download uses the trust of E5-S4.
+- Still to do: the manual check of the update (B-26, check 4).
 
 ### B-26 Pre-release install testing
 
 - This item has all the checks that need the app installed with
-  `BananaShot-win-Setup.exe`. Other items refer to it: B-21, B-24, B-30,
+  `BananaShot-win-Setup.exe`. Other items refer to it: B-24, B-30,
   and E11 of `l-5.2-epics.md`. Do the checks together, on a clean Windows
   account.
 - No automatic test installs a new version over an old version.
@@ -278,7 +188,7 @@ Do these items before the first public release.
   version N.
 - Checks with one build (version N-1):
   1. Fresh install: do the checks of step 7 of `release-checklist.md`
-     (B-21, B-24). The setup installs with no administrator rights, makes
+     (B-24). The setup installs with no administrator rights, makes
      the Start menu shortcut, and starts the app.
   2. Proxy: E11-S2 of `l-5.2-epics.md`.
 - Checks with two builds:
@@ -295,7 +205,9 @@ Do these items before the first public release.
   5. Uninstall: the app data (`%APPDATA%\BananaShot`) and
      `HKCU\Software\JavaSoft\Prefs` stay.
 - Before you start:
-  - Checks 1 and 2 need the new dry run of B-21 (with the fixed notices).
+  - Checks 1 and 2 need a dry-run build that has the fixed
+    `THIRD-PARTY-NOTICES.txt` (commit c1ea279 or later). The builds 0.9.0
+    and 0.9.1 of check 4 have it.
   - The user interface of B-30 for check 4 is done (E8 of
     `l-5.2-epics.md`, 2026-10-03).
 - Done (2026-10-03): checks 3 and 5 are in step 7 of `release-checklist.md`,

@@ -1,0 +1,13 @@
+/* The demos are copies of the app screen. They keep the colors of the app (Palette.kt, default seeds)
+   in each option, so that they look like the real app. */
+.ui-demo {
+  --bg: #0e0e0e; --inset: #121212; --panel: #161616; --card: #1a1a1a; --raised: #202020;
+  --line: #262626; --line-2: #363636;
+  --fg: #e4e4e4; --fg-2: #adaaaa; --fg-3: #8a8a8a; --fg-strong: #ffffff;
+  --lime: #c8ec46; --lime-hover: #d0ed68; --on-lime: #191e09;
+  --lime-tint: rgba(200, 236, 70, 0.07); --lime-edge: rgba(200, 236, 70, 0.19);
+  --sage: #a7b78e; --radius: 10px;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  text-transform: none; letter-spacing: normal;
+}
+.ui-demo h1, .ui-demo h2, .ui-demo h3 { font-family: inherit; text-transform: none; }

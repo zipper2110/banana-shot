@@ -1,0 +1,136 @@
+/* Option A: Studio. The main direction (B-10 decision 23).
+   Large type, a lot of space, thin rules and large thin numbers in place of text cards.
+   The page is not near-black: a background effect (bg-effects.css) shows through the glass parts.
+   The hero has the text and the buttons on the left and a smaller screenshot on the right.
+   The advantage sections each have their own soft band, and each item is its own tile (as in option C, but softer). */
+@import url("demo-scope.css");
+@import url("bg-effects.css");
+:root {
+  --bg: #1a1c1f;
+  --inset: #16181b;
+  --panel: #212327;
+  --card: #232529;
+  --raised: #2c2e33;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-2: rgba(255, 255, 255, 0.15);
+  --fg: #e6e4e0;
+  --fg-2: #a6a49f;
+  --fg-3: #7a7873;
+  --fg-strong: #f6f5f2;
+  --court-text: #9cc3e2;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --max: 1160px;
+}
+body { font-size: 17px; }
+h1, h2 { text-wrap: balance; }
+
+.site-header { background: var(--glass-strong); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border-bottom-color: var(--glass-edge); }
+.nav a:hover { background: rgba(255, 255, 255, 0.07); }
+
+/* Neutral eyebrow with a small dot. The dot has the color of the section. */
+.eyebrow { display: inline-flex; align-items: center; gap: 10px; color: var(--fg-2); font-size: 0.78rem; letter-spacing: 0.16em; }
+.eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--dot, var(--lime)); }
+
+.btn { border-radius: 999px; padding: 14px 26px; }
+.btn-secondary { background: rgba(255, 255, 255, 0.05); border-color: var(--line-2); backdrop-filter: var(--blur); }
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+
+/* ---- Hero: the text and the buttons on the left, a smaller screenshot on the right ---- */
+.hero { padding: 104px 0 24px; }
+.hero .wrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 72px; }
+.hero h1 { font-size: clamp(2.6rem, 5.4vw, 4.6rem); letter-spacing: -0.035em; line-height: 1.02; }
+.hero p.lead { font-size: 1.2rem; margin-bottom: 36px; }
+.hero .btn-note { margin-top: 16px; }
+.hero .wrap > .ui-demo { border-radius: 14px; box-shadow: 0 50px 100px -40px rgba(200, 236, 70, 0.18), 0 40px 80px -30px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+@media (max-width: 760px) {
+  .hero { padding-top: 56px; }
+  .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 48px; }
+}
+
+/* ---- Sections ---- */
+.section { border-top: 0; padding: 128px 0 0; }
+main > section:last-child { padding-bottom: 128px; }
+.section-head { max-width: 760px; margin: 0 auto 64px; text-align: center; }
+.section-head h2 { font-size: clamp(2rem, 4.6vw, 3.2rem); letter-spacing: -0.03em; line-height: 1.08; }
+.section-head p.muted { font-size: 1.15rem; }
+
+.ui-demo { border-color: rgba(255, 255, 255, 0.1); border-radius: 14px; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7); }
+
+/* Example videos: large rounded frames with a deep shadow, like the demos. */
+.videos { gap: 32px; }
+.video-play { border-color: rgba(255, 255, 255, 0.1); border-radius: 14px; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7); }
+.video-btn { width: 76px; height: 76px; margin: -38px 0 0 -38px; box-shadow: 0 0 0 10px rgba(200, 236, 70, 0.18), 0 10px 30px rgba(0, 0, 0, 0.5); }
+.video figcaption { margin-top: 16px; }
+.video figcaption b { font-size: 1.1rem; }
+.video-note { text-align: center; margin-top: 28px; }
+
+/* Steps: no cards. A line on top and a large thin number. */
+.steps { gap: 40px; }
+.steps li { background: none; border: 0; border-top: 1px solid var(--line-2); border-radius: 0; padding: 24px 0 0; }
+.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  display: block; width: auto; height: auto; margin-bottom: 18px;
+  background: none; border: 0; border-radius: 0;
+  font: 200 3.2rem/1 var(--font-display); color: var(--lime); letter-spacing: -0.02em;
+}
+.steps h3 { font-size: 1.25rem; }
+.steps p.step-tags { color: var(--fg); font-weight: 500; font-size: 0.95rem; }
+
+/* Feature rows: more space, a large thin number, a larger title. */
+.feature-rows { gap: 144px; margin-bottom: 0; }
+.feature-row.wide { gap: 64px; }
+.feature-num { font: 200 3.6rem/1 var(--font-display); color: var(--fg-3); margin-bottom: 20px; }
+.feature-row h3 { font-size: clamp(1.6rem, 3vw, 2.3rem); letter-spacing: -0.02em; }
+.feature-row p { font-size: 1.15rem; line-height: 1.65; }
+
+/* ---- The advantage sections: each one is a soft band of its own color, each item is a tile ---- */
+/* Local and safe: the court blue. No AI: the accent. */
+main > .section-local { --tint: 61, 107, 140; --dot: var(--court-text); }
+main > .section-noai { --tint: 200, 236, 70; --dot: var(--lime); }
+main > .section-local,
+main > .section-noai {
+  margin-top: 128px; padding: 112px 0;
+  background: linear-gradient(180deg, rgba(var(--tint), 0.15), rgba(var(--tint), 0.05)), var(--glass);
+  border-top: 1px solid rgba(var(--tint), 0.25); border-bottom: 1px solid rgba(var(--tint), 0.12);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+}
+main > .section-noai { margin-top: 0; border-top-color: rgba(var(--tint), 0.2); }
+main > .section-local .section-head,
+main > .section-noai .section-head { margin-bottom: 48px; }
+
+.features { gap: 20px; background: none; border: 0; border-radius: 0; overflow: visible; }
+.feature {
+  padding: 28px 26px 30px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 3px solid rgba(var(--tint), 0.7); box-shadow: var(--glass-light);
+}
+.feature h3 { font-size: 1.25rem; }
+.feature p { font-size: 1.02rem; }
+
+/* Author: a centered note with large text. */
+.author { flex-direction: column; align-items: center; text-align: center; margin: 0 auto; max-width: 780px; background: none; border: 0; padding: 0; gap: 28px; }
+.author p { font-size: 1.4rem; line-height: 1.55; color: var(--fg-strong); letter-spacing: -0.01em; }
+.author p.author-sign { font-size: 1rem; }
+.author-avatar { width: 80px; height: 80px; font-size: 2rem; background: var(--lime); border: 0; color: var(--on-lime); }
+
+/* Download: a large centered glass panel with an accent glow. */
+.cta {
+  flex-direction: column; justify-content: center; text-align: center; gap: 32px;
+  padding: 96px 40px; border: 1px solid var(--glass-edge); border-radius: 32px;
+  background: radial-gradient(60% 90% at 50% 0%, rgba(200, 236, 70, 0.18), transparent 70%), var(--glass);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--glass-light);
+}
+.cta h2 { font-size: clamp(2.2rem, 5vw, 3.6rem); letter-spacing: -0.03em; }
+
+.site-footer { border-top-color: var(--glass-edge); background: var(--glass-strong); backdrop-filter: var(--blur); }
+
+@media (max-width: 880px) {
+  .section { padding-top: 88px; }
+  main > .section-local { margin-top: 88px; }
+  main > .section-local, main > .section-noai { padding: 72px 0; }
+  .feature-rows { gap: 88px; }
+  .feature-num { font-size: 2.6rem; }
+  .features { gap: 14px; }
+}
+@media (max-width: 560px) { .cta { padding: 56px 22px; border-radius: 22px; } }

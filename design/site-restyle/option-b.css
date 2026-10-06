@@ -1,0 +1,150 @@
+/* Option B: Console. A structured product page, like a tool for professionals.
+   The section titles stay in a left column, the content is on the right. Space Grotesk for the titles.
+   The page is not near-black: a fixed background layer (html[data-bg], see option-bg.js) shows through
+   the panels, which are matte glass. Three background effects: glass (default), court, and aurora. */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap");
+@import url("demo-scope.css");
+@import url("bg-effects.css");
+:root {
+  --bg: #171c23;
+  --inset: #141920;
+  --panel: #1c222a;
+  --card: #1e242d;
+  --raised: #283039;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --fg: #e3e7ec;
+  --fg-2: #a2aab6;
+  --fg-3: #7d8591;
+  --fg-strong: #f6f7f9;
+  --court: #3d6b8c;
+  --court-text: #9cc3e2;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --max: 1180px;
+  --font-display: "Space Grotesk", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+}
+h1, h2, h3 { letter-spacing: -0.02em; text-wrap: balance; }
+
+/* ---- Glass parts ---- */
+.site-header { background: var(--glass-strong); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border-bottom-color: var(--glass-edge); }
+.nav a:hover { background: rgba(255, 255, 255, 0.07); }
+
+/* Eyebrow: a small mono tag with the accent text. */
+.eyebrow {
+  display: inline-block; padding: 4px 10px; border-radius: 6px;
+  font: 500 0.74rem/1.4 var(--mono); letter-spacing: 0.06em;
+  color: var(--lime); background: rgba(200, 236, 70, 0.09); border: 1px solid rgba(200, 236, 70, 0.3);
+}
+
+.btn-secondary { background: rgba(255, 255, 255, 0.07); border-color: var(--line-2); backdrop-filter: var(--blur); }
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* ---- Hero: the text and the buttons on the left, a smaller screenshot on the right ---- */
+.hero { padding: 88px 0 96px; }
+.hero .wrap { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 64px; }
+.hero h1 { font-size: clamp(2.3rem, 4.6vw, 3.7rem); line-height: 1.04; }
+.hero p.lead { font-size: 1.15rem; }
+.hero-shot { transform: perspective(1800px) rotateY(-7deg) rotateX(2deg); transform-origin: 0 50%; }
+.hero .wrap > .ui-demo { box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+@media (max-width: 760px) {
+  .hero .wrap { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .hero-shot { transform: none; }
+}
+
+/* ---- Sections ---- */
+.section { border-top: 0; padding: 96px 0; }
+.section-head h2 { font-size: clamp(1.7rem, 3.2vw, 2.4rem); }
+
+/* The sections with short content: the title on the left, the content on the right. */
+main > .section-how .wrap,
+main > .section-local .wrap,
+main > .section-noai .wrap,
+main > .section-author .wrap { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 64px; align-items: start; }
+.section-how .section-head, .section-local .section-head, .section-noai .section-head, .section-author .section-head { margin: 0; position: sticky; top: 100px; }
+
+.ui-demo { border-color: rgba(255, 255, 255, 0.1); }
+
+/* Steps: a 2 x 2 grid of glass tiles. The number is a mono label at the top right. */
+.steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.steps li {
+  position: relative; padding: 28px; border: 1px solid var(--glass-edge);
+  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--glass-light);
+}
+.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  position: absolute; right: 20px; top: 20px; width: auto; height: auto; margin: 0;
+  background: none; border: 0; font: 500 0.85rem var(--mono); color: var(--fg-3);
+}
+.steps h3 { font-size: 1.3rem; margin-top: 4px; }
+.steps p.step-tags { color: var(--lime); font: 500 0.78rem/1.5 var(--mono); letter-spacing: 0.02em; margin-bottom: 14px; }
+
+/* Feature rows: each row is a large glass panel. */
+.feature-rows { gap: 24px; margin-bottom: 0; }
+.feature-row.wide, .feature-row.wide:nth-child(even) {
+  gap: 48px; padding: 40px; border-radius: 22px; border: 1px solid var(--glass-edge);
+  background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--glass-light);
+}
+.feature-num {
+  display: inline-block; padding: 3px 8px; border-radius: 6px; margin-bottom: 16px;
+  font: 500 0.78rem var(--mono); color: var(--fg-2); border: 1px solid var(--line-2);
+}
+.feature-row h3 { font-size: clamp(1.5rem, 2.6vw, 2rem); }
+
+/* ---- The advantage sections: each one has its own soft tint, each item is its own tile ---- */
+/* Local and safe: the court blue. No AI: the accent. The author: neutral. */
+main > .section-local { --tint: 61, 107, 140; --tag: var(--court-text); }
+main > .section-noai { --tint: 200, 236, 70; --tag: var(--lime); }
+main > .section-author { --tint: 255, 255, 255; --tag: var(--fg-2); }
+main > .section-local,
+main > .section-noai,
+main > .section-author {
+  margin: 0 auto 20px; max-width: calc(var(--max) + 64px); border-radius: 28px;
+  background: linear-gradient(160deg, rgba(var(--tint), 0.16), rgba(var(--tint), 0.04) 70%), var(--glass);
+  border: 1px solid rgba(var(--tint), 0.22);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--glass-light);
+}
+main > .section-author { background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 70%), var(--glass); border-color: var(--glass-edge); }
+main > .section-local .eyebrow,
+main > .section-noai .eyebrow,
+main > .section-author .eyebrow { color: var(--tag); background: rgba(var(--tint), 0.12); border-color: rgba(var(--tint), 0.35); }
+
+.features { grid-template-columns: minmax(0, 1fr); gap: 12px; background: none; border: 0; border-radius: 0; overflow: visible; }
+.feature {
+  display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: baseline;
+  padding: 22px 24px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(14, 18, 24, 0.35);
+}
+.feature h3 { margin: 0; font-size: 1.1rem; }
+.feature p { font-size: 1rem; }
+
+.author { background: none; border: 0; padding: 0; max-width: none; }
+.author p { font-size: 1.1rem; }
+.author-avatar { background: rgba(255, 255, 255, 0.07); border-color: var(--line-2); color: var(--lime); }
+
+/* Download: glass with an accent edge. */
+.cta {
+  padding: 56px; border-radius: 28px; border-color: rgba(200, 236, 70, 0.38);
+  background: linear-gradient(120deg, rgba(200, 236, 70, 0.14), rgba(200, 236, 70, 0.02) 60%), var(--glass);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); box-shadow: var(--glass-light);
+}
+.cta h2 { font-size: clamp(1.8rem, 3.6vw, 2.6rem); }
+
+.site-footer { border-top-color: var(--glass-edge); background: var(--glass-strong); backdrop-filter: var(--blur); }
+
+@media (max-width: 960px) {
+  main > .section-how .wrap,
+  main > .section-local .wrap,
+  main > .section-noai .wrap,
+  main > .section-author .wrap { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  main > section .section-head { position: static !important; }
+}
+@media (max-width: 880px) {
+  .feature-row.wide, .feature-row.wide:nth-child(even) { padding: 24px; }
+  main > .section-local, main > .section-noai, main > .section-author { margin: 0 12px 16px; border-radius: 20px; padding: 56px 0; }
+}
+@media (max-width: 560px) {
+  .steps { grid-template-columns: minmax(0, 1fr); }
+  .feature { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .cta { padding: 32px 22px; }
+}

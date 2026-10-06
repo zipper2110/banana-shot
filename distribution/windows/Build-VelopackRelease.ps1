@@ -74,6 +74,9 @@ if ($SignTemplate) {
         throw "-SignTemplate must contain {{file}} or {{file...}}."
     }
     $arguments += @("--signTemplate", $SignTemplate)
+    # jpackage makes the launcher EXE read-only. vpk keeps this attribute in its copy, and signtool then fails
+    # with "Access is denied".
+    Get-ChildItem -LiteralPath $appImage -Recurse -File | Where-Object IsReadOnly | ForEach-Object { $_.IsReadOnly = $false }
 }
 & $Vpk @arguments
 if ($LASTEXITCODE -ne 0) { throw "vpk pack failed." }

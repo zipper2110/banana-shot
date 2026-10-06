@@ -115,11 +115,18 @@ object SwingApplicationFactory {
         ui = EventQueue::invokeLater,
     )
 
+    /**
+     * With one GPU, the GPU preference has no effect, so the restart popup is not necessary (B-35).
+     * If the GPU count is not available ([gpuCount] is null), the popup shows. A missing popup on a
+     * system with two GPUs keeps the app on the slow GPU until the next start. An unnecessary popup
+     * on a system with one GPU shows only one time.
+     */
     internal fun shouldShowGpuRestartNotification(
         show: Boolean,
         testEnabled: Boolean,
         gpuPreferenceChanged: Boolean,
-    ): Boolean = show && !testEnabled && gpuPreferenceChanged
+        gpuCount: Int?,
+    ): Boolean = show && !testEnabled && gpuPreferenceChanged && (gpuCount == null || gpuCount > 1)
 
     private fun openWithDesktop(file: File): Boolean = runCatching { Desktop.getDesktop().open(file) }.isSuccess
 
@@ -696,7 +703,13 @@ object SwingApplicationFactory {
                 }
             }
 
-            if (shouldShowGpuRestartNotification(show, testEnabled, WindowsGpuPreference.wasChangeApplied())) {
+            if (shouldShowGpuRestartNotification(
+                    show,
+                    testEnabled,
+                    WindowsGpuPreference.wasChangeApplied(),
+                    WindowsGpuPreference.gpuCountAtChange(),
+                )
+            ) {
                 MessageDialog.show(
                     frame,
                     MessageKind.INFO,

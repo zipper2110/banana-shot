@@ -401,9 +401,10 @@ Do these items before the first public release.
   `CERTUM_CERT_SHA1` are set in the GitHub environment `windows-release`.
   The signed dry run 37442956227 passed the signature check: the setup EXE
   and 116 EXE and DLL files.
-- To do:
-  - Install the setup EXE of the signed dry run on a Windows 11 computer
-    with Smart App Control on.
+- Done (2026-10-06): the setup of the signed dry run installed on a
+  Windows 11 computer with Smart App Control on. The preview and the export
+  work. The "Done when" condition is met.
+- To do (not blocking the release):
   - When Windows blocks a native file (error 4551), show a message that
     names Smart App Control. Do not show only a black preview.
   - `ApplicationLayout.resolveMpvDirectory` prefers `MPV_PATH` to the
@@ -414,6 +415,15 @@ Do these items before the first public release.
   - Change the Smart App Control notes on the site (`download` and `faq`
     pages, B-10) after the first signed release. An OV signature does not
     give SmartScreen reputation at once, so keep the "Run anyway" steps.
+    Update (2026-10-06): SmartScreen did not show a warning for the signed
+    setup of the dry run on the author's computer. Check this on a second
+    computer before you remove the "Run anyway" steps.
+  - Chrome blocks the download of the signed dry run (2026-10-06) as
+    dangerous or suspicious. The user must allow it on the downloads page.
+    Check the file on VirusTotal by hash. If no engine detects it, the cause
+    is low download reputation. Then add the Chrome "Keep" steps to the
+    `download` page, and submit the setup EXE to Microsoft as a software
+    developer.
 - Done when: the installer of a signed dry run starts on a Windows 11
   computer with Smart App Control on, and the preview and the export work.
 

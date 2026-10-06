@@ -59,17 +59,26 @@ class ApplicationLayoutResolver(
         return workingDirectory.absoluteFile.normalize()
     }
 
+    /*
+     * The order for each native tool: the system property, the bundled file, the environment variable, the fallback.
+     * The bundled file comes before the environment variable, because an installed app must use its own signed and
+     * pinned build (B-22). A variable that a different program set on the user's PC must not replace it. In development,
+     * the app home has no bundle, so the variable still applies.
+     */
+
     private fun resolveMpvDirectory(nativeRoot: File): File? {
         value("bananashot.mpvPath")?.let { return File(it).absoluteFile.normalize() }
+        File(nativeRoot, "mpv").takeIf { it.isDirectory }?.let { return it }
         environment["MPV_PATH"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absoluteFile.normalize()
         }
-        return File(nativeRoot, "mpv").takeIf { it.isDirectory }
-            ?: File(workingDirectory, "target/native/windows-x64/mpv").takeIf { it.isDirectory }
+        return File(workingDirectory, "target/native/windows-x64/mpv").takeIf { it.isDirectory }
     }
 
     private fun resolveFfprobe(nativeRoot: File, ffmpegExecutable: String): String {
         value("bananashot.ffprobePath")?.let { return File(it).absolutePath }
+        val bundled = File(nativeRoot, "ffmpeg/bin/ffprobe.exe")
+        if (bundled.isFile) return bundled.absolutePath
         environment["FFPROBE_PATH"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absolutePath
         }
@@ -79,9 +88,6 @@ class ApplicationLayoutResolver(
             val sibling = File(ffmpegFile.parentFile, if (isWindows()) "ffprobe.exe" else "ffprobe")
             if (sibling.isFile) return sibling.absolutePath
         }
-
-        val bundled = File(nativeRoot, "ffmpeg/bin/ffprobe.exe")
-        if (bundled.isFile) return bundled.absolutePath
         return if (isWindows()) "ffprobe.exe" else "ffprobe"
     }
 
@@ -92,10 +98,10 @@ class ApplicationLayoutResolver(
         fallbackCommand: String,
     ): String {
         value(propertyName)?.let { return File(it).absolutePath }
+        if (bundledFile.isFile) return bundledFile.absolutePath
         environment[environmentName]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absolutePath
         }
-        if (bundledFile.isFile) return bundledFile.absolutePath
         return fallbackCommand
     }
 

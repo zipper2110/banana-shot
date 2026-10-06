@@ -70,6 +70,55 @@ class ApplicationLayoutResolverTest {
     }
 
     @Test
+    fun the_bundle_of_an_installed_app_comes_before_the_environment_variables() {
+        val appHome = tempDir.resolve("installed app").toFile().apply { mkdirs() }
+        val nativeRoot = File(appHome, "natives/windows-x64")
+        val mpv = File(nativeRoot, "mpv").apply { mkdirs() }
+        val ffmpeg = File(nativeRoot, "ffmpeg/bin/ffmpeg.exe").apply {
+            parentFile.mkdirs()
+            writeText("")
+        }
+        val ffprobe = File(ffmpeg.parentFile, "ffprobe.exe").apply { writeText("") }
+        val otherTools = tempDir.resolve("other tools").toFile().apply { mkdirs() }
+
+        val layout = resolver(
+            appHome = appHome,
+            properties = mapOf("os.name" to "Windows 11", "user.home" to tempDir.toString()),
+            environment = mapOf(
+                "MPV_PATH" to otherTools.path,
+                "FFMPEG_PATH" to File(otherTools, "ffmpeg.exe").path,
+                "FFPROBE_PATH" to File(otherTools, "ffprobe.exe").path,
+            ),
+        ).resolve()
+
+        assertEquals(mpv.absoluteFile, layout.mpvDirectory)
+        assertEquals(ffmpeg.absolutePath, layout.ffmpegExecutable)
+        assertEquals(ffprobe.absolutePath, layout.ffprobeExecutable)
+    }
+
+    @Test
+    fun in_development_the_environment_variables_come_before_the_build_folder() {
+        val workspace = tempDir.resolve("workspace").toFile().apply { mkdirs() }
+        workspace.resolve("target/native/windows-x64/mpv").mkdirs()
+        val installedMpv = tempDir.resolve("libmpv").toFile().apply { mkdirs() }
+        val ffmpeg = tempDir.resolve("tools/ffmpeg.exe").toFile()
+
+        val layout = ApplicationLayoutResolver(
+            properties = mapOf(
+                "os.name" to "Windows 11",
+                "user.home" to tempDir.resolve("home").toString(),
+                "bananashot.appDir" to workspace.resolve("target/classes").absolutePath,
+            ),
+            environment = mapOf("MPV_PATH" to installedMpv.path, "FFMPEG_PATH" to ffmpeg.path),
+            codeSourceLocation = null,
+            workingDirectory = workspace,
+        ).resolve()
+
+        assertEquals(installedMpv.absoluteFile, layout.mpvDirectory)
+        assertEquals(ffmpeg.absolutePath, layout.ffmpegExecutable)
+    }
+
+    @Test
     fun falls_back_to_path_commands_when_bundle_is_absent() {
         val appHome = tempDir.resolve("plain").toFile().apply { mkdirs() }
         val layout = resolver(

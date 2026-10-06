@@ -421,8 +421,11 @@ Do these items before the first public release.
     and Smart App Control, and it does not give the hardware encoder advice.
     `WindowsSecurityBlock` has the list of block errors for the preview and
     the export.
-  - `ApplicationLayout.resolveMpvDirectory` prefers `MPV_PATH` to the
-    bundled libmpv. A packaged app must use its own `natives` folder first.
+  - Done (2026-10-06): an installed app uses its own `natives` folder
+    before `MPV_PATH`, `FFMPEG_PATH` and `FFPROBE_PATH`. The order for each
+    tool is: the `bananashot.*` system property, the bundled file, the
+    environment variable, the fallback. In development, the app home has no
+    bundle, so `MPV_PATH` still comes before `target/native`.
   - JNA extracts an unsigned `jnidispatch.dll` at run time. On the tester
     computer, Smart App Control did not block it (probably because the file
     has reputation). Keep this in the install check.

@@ -84,6 +84,9 @@ See `distribution/windows/README.md`, "Code signing".
 ## 6. Dry run
 
 - [ ] Start the "Windows release" workflow by hand with the version number.
+      Start only one signed run at a time. Two runs that log in to
+      SimplySign at the same time can use the same TOTP code, and the
+      second login fails.
       See `distribution/windows/README.md`, "Release requirements". The
       workflow builds the package and runs `Validate-Release.ps1`.
 - [ ] Download the workflow artifact.

@@ -199,7 +199,15 @@ Do these items before the first public release.
      `gh release delete update-test-0.9.1 --cleanup-tag --yes`.
 - Builds (2026-10-06): the dry runs of commit `db219df` (after the change
   of `ANALYTICS_PRIVACY_URL`): `0.9.0` is run 37461914426, and `0.9.1` is
-  run 37461925236.
+  run 37461925236. Both passed. The two `BananaShot.cfg` files have the
+  correct version, the privacy URL `https://banana-shot-editor.app/privacy/`,
+  and the feedback and analytics endpoints. Both setup EXEs have a valid
+  signature (`CN=Dmitrii Litvin`), and the SHA-256 files agree.
+  - The first try of `0.9.1` failed at the Certum login ("No matching
+    certificate was found in Cert:\CurrentUser\My within 60 seconds"). The
+    two runs started 5 seconds apart, so they probably used the same TOTP
+    code, and SimplySign refused the second login. A rerun of the failed
+    job passed. Do not start two signed runs at the same time.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.
 

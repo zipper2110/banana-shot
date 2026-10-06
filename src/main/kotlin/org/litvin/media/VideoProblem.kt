@@ -12,10 +12,26 @@ import java.util.concurrent.TimeUnit
  * Why a video file does not open, in words for the user. [title] is one short sentence.
  * [explanation] tells what the application found and what the user can do. A blank line separates the paragraphs.
  * Each text states only what a check proved (see [find]). [UNREADABLE] is for all other cases.
+ * When [reportable] is true, the cause can be a bug of the application, and the view shows "Report this problem".
+ * [details] is the technical cause for the report. The view does not show it.
  */
-data class VideoProblem(val title: String, val explanation: String) {
+data class VideoProblem(
+    val title: String,
+    val explanation: String,
+    val reportable: Boolean = false,
+    val details: String? = null,
+) {
+    /** The text for the feedback form: the explanation and the technical cause. */
+    fun reportText(): String = explanation + (details?.let { "\n\n$it" } ?: "")
+
     companion object {
         private val APP = AppInfo.NAME
+
+        /**
+         * Windows errors when Windows security blocks a file: 225 and 226 (a virus scanner), 1260 (a group policy),
+         * and 4550-4559 (Application Control, for example Smart App Control blocks an unsigned DLL with error 4551).
+         */
+        private val WINDOWS_BLOCK_ERRORS = setOf(225, 226, 1260) + (4550..4559)
 
         val NOT_FOUND = VideoProblem(
             "The video file is not found.",
@@ -53,7 +69,21 @@ data class VideoProblem(val title: String, val explanation: String) {
             "This video cannot be played.",
             "$APP could not open the file. The file is damaged, or its format is not supported.\n\n" +
                 "Make sure that the video plays in a different video player. " +
-                "If it does not play, copy the video from the device again.",
+                "If it does not play, copy the video from the device again. If it plays, report the problem.",
+            reportable = true,
+        )
+        val PREVIEW_BLOCKED = VideoProblem(
+            "Windows blocked the video player.",
+            "Windows security, for example Smart App Control, blocked a file of the video player in $APP. " +
+                "Thus $APP cannot show videos.\n\n" +
+                "Install the latest version of $APP from the website. If the problem continues, report it.",
+            reportable = true,
+        )
+        val PREVIEW_FAILED = VideoProblem(
+            "The video player cannot start.",
+            "The video player in $APP did not start. The problem is in $APP, not in your video.\n\n" +
+                "Restart $APP. If the problem continues, report it.",
+            reportable = true,
         )
         val NO_VIDEO = VideoProblem(
             "This file has no video.",
@@ -73,6 +103,16 @@ data class VideoProblem(val title: String, val explanation: String) {
                 Mp4Defect.NOT_FINALIZED -> NOT_FINALIZED
                 null -> null
             }
+        }
+
+        /** The problem when the video player does not start. [windowsError] is the Windows error of the DLL load. */
+        fun previewFailure(cause: Throwable?, windowsError: Int?): VideoProblem {
+            val details = listOfNotNull(
+                windowsError?.let { "Windows error $it." },
+                cause?.let { "${it.javaClass.simpleName}: ${it.message}" },
+            ).joinToString("\n").ifEmpty { null }
+            val problem = if (windowsError != null && windowsError in WINDOWS_BLOCK_ERRORS) PREVIEW_BLOCKED else PREVIEW_FAILED
+            return problem.copy(details = details)
         }
     }
 }

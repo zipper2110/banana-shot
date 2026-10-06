@@ -405,8 +405,20 @@ Do these items before the first public release.
   Windows 11 computer with Smart App Control on. The preview and the export
   work. The "Done when" condition is met.
 - To do (not blocking the release):
-  - When Windows blocks a native file (error 4551), show a message that
-    names Smart App Control. Do not show only a black preview.
+  - Done (2026-10-06): when libmpv does not load or mpv does not start, the
+    video area shows an error card in place of a black area. For Windows
+    errors 225, 226, 1260 and 4550-4559, the card names Windows security and
+    Smart App Control. `LibMpv` reads the error code with `LoadLibraryEx`,
+    because the JNA error has only the translated text.
+  - Decision (2026-10-06): the error card shows "Report this problem" only
+    when the cause can be a bug of the app: the video player does not start,
+    or a file does not open for an unknown reason (`UNREADABLE`). For a
+    cause that the user can fix (file not found, copy not finished, damaged
+    file), the card shows no report button. The report contains the
+    technical cause and the log files.
+  - Open: FFmpeg that Windows blocks makes the export fail with
+    "CreateProcess error=4551". The export error does not name Smart App
+    Control yet.
   - `ApplicationLayout.resolveMpvDirectory` prefers `MPV_PATH` to the
     bundled libmpv. A packaged app must use its own `natives` folder first.
   - JNA extracts an unsigned `jnidispatch.dll` at run time. On the tester

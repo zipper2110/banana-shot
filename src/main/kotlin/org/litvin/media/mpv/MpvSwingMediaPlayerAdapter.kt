@@ -83,6 +83,9 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     override var onTimeChanged: ((Long) -> Unit)? = null
 
     @Volatile private var core: MpvCore? = null
+
+    /** Why the last [ensureCore] made no mpv instance, or null when it did not fail. */
+    @Volatile private var coreProblem: VideoProblem? = null
     @Volatile private var mediaFile: File? = null
     @Volatile private var fileLoaded = false
     @Volatile private var active = true
@@ -175,10 +178,16 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         if (active && mediaFile != null && !fileLoaded) loadCurrentFile("canvas displayable")
     }
 
+    /** Returns the mpv instance, or null. [coreProblem] is set when the reason is an error and not a wait for the canvas. */
     private fun ensureCore(): MpvCore? {
         core?.let { return it }
+        coreProblem = null
         if (!canvas.isDisplayable) return null
-        val lib = LibMpv.instanceOrNull() ?: return null
+        val lib = LibMpv.instanceOrNull()
+        if (lib == null) {
+            coreProblem = VideoProblem.previewFailure(LibMpv.loadFailure(), LibMpv.loadErrorCode)
+            return null
+        }
         val wid = Native.getComponentID(canvas)
         if (wid == 0L) return null
         val shader = MpvShaderFile.path()
@@ -229,6 +238,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
             }
         } catch (t: Throwable) {
             logger.warn(t) { "Failed to create mpv preview #$playerId" }
+            coreProblem = VideoProblem.previewFailure(t, null)
             null
         }
     }
@@ -295,7 +305,16 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
 
     private fun loadCurrentFile(reason: String) {
         val file = mediaFile ?: return
-        val mpv = ensureCore() ?: return
+        val mpv = ensureCore()
+        if (mpv == null) {
+            // Without this card, the video area stays black when the video player cannot start (B-22).
+            coreProblem?.let { problem ->
+                logger.warn { "mpv preview #$playerId cannot load ${file.name}: ${problem.title}" }
+                onEdt { showErrorCard(problem) }
+                setStatus(PlayerStatus.ERROR)
+            }
+            return
+        }
         claimActive()
         loadStartMs = lastKnownTimeMs
         pendingSeekMs = null

@@ -4,9 +4,12 @@ import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.NativeLibrary
 import com.sun.jna.NativeLong
+import com.sun.jna.Platform
 import com.sun.jna.Pointer
+import com.sun.jna.platform.win32.Kernel32
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.ApplicationLayout
+import java.io.File
 
 /**
  * JNA mapping of the libmpv client API (mpv/client.h, API version 2.x).
@@ -63,6 +66,13 @@ internal interface LibMpv : Library {
         @Volatile private var loaded: LibMpv? = null
         @Volatile private var loadFailure: Throwable? = null
 
+        /** The Windows error of the failed load, or null. For example 4551: an Application Control policy blocked a file. */
+        @Volatile var loadErrorCode: Int? = null
+            private set
+
+        /** The cause of the failed load, or null when the library loaded or did not try to load. */
+        fun loadFailure(): Throwable? = loadFailure
+
         /** Returns the loaded library, or null when libmpv is not available. */
         fun instanceOrNull(): LibMpv? {
             loaded?.let { return it }
@@ -70,8 +80,10 @@ internal interface LibMpv : Library {
             return synchronized(this) {
                 loaded ?: runCatching { load() }
                     .onFailure {
+                        loadErrorCode = ApplicationLayout.current().mpvDirectory
+                            ?.let { windowsLoadError(File(it, "$LIBRARY_NAME.dll")) }
                         loadFailure = it
-                        logger.warn(it) { "libmpv is not available." }
+                        logger.warn(it) { "libmpv is not available (Windows error ${loadErrorCode ?: "unknown"})." }
                     }
                     .getOrNull()
                     ?.also { loaded = it }
@@ -97,6 +109,26 @@ internal interface LibMpv : Library {
             }
             return library
         }
+
+        /**
+         * Loads [dll] again with LoadLibraryEx and returns the Windows error, or null when it loads.
+         * The JNA error has only the error text, and Windows translates that text.
+         */
+        internal fun windowsLoadError(dll: File): Int? {
+            if (!Platform.isWindows() || !dll.isFile) return null
+            return runCatching {
+                // The flag finds the dependencies in the folder of the DLL, as the JNA search path does.
+                val module = Kernel32.INSTANCE.LoadLibraryEx(dll.absolutePath, null, LOAD_WITH_ALTERED_SEARCH_PATH)
+                if (module == null) {
+                    Native.getLastError()
+                } else {
+                    Kernel32.INSTANCE.FreeLibrary(module)
+                    null
+                }
+            }.getOrNull()
+        }
+
+        private const val LOAD_WITH_ALTERED_SEARCH_PATH = 0x8
     }
 }
 

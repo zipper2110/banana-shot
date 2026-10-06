@@ -14,6 +14,7 @@ import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.VideoErrorPanel
 import org.litvin.ui.expiry.ExpiryUi
 import org.litvin.ui.expiry.UpdateRunner
 import org.litvin.license.update.UpdateAndRestart
@@ -167,6 +168,10 @@ object SwingApplicationFactory {
             // "Report this problem" of an error dialog: the topic Problem, the error text, and the log files (T3 of B-8).
             fun reportProblem(title: String, message: String) =
                 feedback.open(FeedbackRequest(FeedbackTopic.PROBLEM, "$title\n\n$message", attachLog = true))
+            // The video error views are made by the media players of AppServices, before this window exists.
+            val reportVideoProblem: (String, String) -> Unit = ::reportProblem
+            VideoErrorPanel.onReportProblem = reportVideoProblem
+            closeActions += { if (VideoErrorPanel.onReportProblem === reportVideoProblem) VideoErrorPanel.onReportProblem = null }
             val helpDialog = lazy { HelpDialog(frame, onTellUs = { feedback.open(FeedbackRequest(FeedbackTopic.QUESTION)) }) }
             fun showHelp(page: HelpPage, tab: HelpPage? = page) = helpDialog.value.open(page, tab)
 

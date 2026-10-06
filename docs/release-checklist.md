@@ -138,7 +138,7 @@ in `%LocalAppData%\BananaShot\current`.
       show again. "Show all hints again" shows the hints again.
 
 Install over the previous release (B-26, check 3). Skip this for the first
-release: B-26 does it with two test builds.
+release: B-26 did it with two test builds (passed on 2026-10-06).
 
 - [ ] Uninstall the app. Install the previous published release, start it,
       and make a project. Then run `BananaShot-win-Setup.exe` of the dry run.

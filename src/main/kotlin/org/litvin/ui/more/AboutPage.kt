@@ -27,7 +27,7 @@ internal class AboutPage(
         subheading("License")
         paragraph(
             "${info.appName} is source-available software under the Elastic License 2.0 (ELv2). " +
-                "The app includes libmpv and FFmpeg. The third-party notices give their licenses.",
+                "The app includes libmpv, FFmpeg, a Java runtime, and Java libraries. The third-party notices give their licenses.",
         )
         val documents = info.documents.filter { it.file.isFile }
         lateinit var status: StatusLine

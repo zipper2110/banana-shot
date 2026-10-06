@@ -45,6 +45,7 @@ object HelpCatalog {
                 "Press F1 on a tab to open the help for that tab.",
                 "Select a page in the list on the left to read the help for a different tab.",
                 "In the sidebar, the Match tabs go in order. Each Match tab uses the data of the tab above it. The Video tabs change the image, and you can use them at any time.",
+                "Click Feedback in the sidebar to report a problem, suggest a feature, or ask a question.",
             ),
             goodToKnow = listOf(
                 "Projects, point marks, comments, adjustments, and scoring are saved in project files.",
@@ -285,6 +286,7 @@ object HelpCatalog {
                 "The file size is an estimate (~). The real size can be different, because fast motion needs more data.",
                 "Each row of the Exports table shows the status, the file name with its folder and project, the content and video settings, the size, and the time. The size of the active export is the written size against the expected size. Point to the file name to see the full path.",
                 "Clear list does not delete the exported video files.",
+                "When you close the app, the queue is saved. At the next start, the queued exports continue. An export that was running starts again from the beginning.",
                 "Export has no other tab-specific keyboard shortcuts.",
                 "Troubleshooting: if an export fails for an unclear reason, select Advanced and then Software (x264). The software encoder is slower, but it works on all PCs. A hardware encoder can fail after a graphics driver update.",
                 "Troubleshooting: if the export still fails, select a lower resolution or FPS, or select Full video to find out if the points cause the problem.",

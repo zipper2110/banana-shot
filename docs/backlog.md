@@ -395,11 +395,15 @@ Do these items before the first public release.
   each EXE and DLL in the setup and the update package. A tag release
   without the signing secrets fails. See `distribution/windows/README.md`,
   "Code signing".
+- Done (2026-10-06): the certificate is issued (RSA 3072, valid until
+  2027-10-06, thumbprint `DB2D2E3BB8A4BBC15E4F3907C6B8D6136152CDCA`). The
+  secrets `CERTUM_USERNAME` and `CERTUM_TOTP_SECRET` and the variable
+  `CERTUM_CERT_SHA1` are set in the GitHub environment `windows-release`.
+  The signed dry run 37442956227 passed the signature check: the setup EXE
+  and 116 EXE and DLL files.
 - To do:
-  - The author: activate SimplySign, then set the secrets
-    `CERTUM_USERNAME` and `CERTUM_TOTP_SECRET` (and optionally the variable
-    `CERTUM_CERT_SHA1`) in the GitHub environment `windows-release`.
-  - Run a dry run. The signature check must pass.
+  - Install the setup EXE of the signed dry run on a Windows 11 computer
+    with Smart App Control on.
   - When Windows blocks a native file (error 4551), show a message that
     names Smart App Control. Do not show only a black preview.
   - `ApplicationLayout.resolveMpvDirectory` prefers `MPV_PATH` to the

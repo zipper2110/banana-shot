@@ -66,6 +66,7 @@ class SwingApplicationFactoryTest {
                 show = true,
                 testEnabled = false,
                 gpuPreferenceChanged = true,
+                gpuCount = 2,
             )
         )
         assertFalse(
@@ -73,8 +74,25 @@ class SwingApplicationFactoryTest {
                 show = true,
                 testEnabled = true,
                 gpuPreferenceChanged = true,
+                gpuCount = 2,
             )
         )
+    }
+
+    @Test
+    fun `the GPU restart notification shows only with more than one GPU`() {
+        fun showFor(gpuCount: Int?) = SwingApplicationFactory.shouldShowGpuRestartNotification(
+            show = true,
+            testEnabled = false,
+            gpuPreferenceChanged = true,
+            gpuCount = gpuCount,
+        )
+        assertFalse(showFor(0))
+        assertFalse(showFor(1))
+        assertTrue(showFor(2))
+        assertTrue(showFor(3))
+        // A failed count shows the notification (the safe default).
+        assertTrue(showFor(null))
     }
 
     @Test

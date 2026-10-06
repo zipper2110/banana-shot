@@ -16,9 +16,13 @@ object WindowsGpuPreference {
 
     @Volatile private var applied = false
     @Volatile private var failedReason: String? = null
+    @Volatile private var gpuCount: Int? = null
 
     fun wasChangeApplied(): Boolean = applied
     fun failureMessage(): String? = failedReason
+
+    /** The number of GPUs at the time of the change, or null if the count failed or no change occurred (B-35). */
+    fun gpuCountAtChange(): Int? = gpuCount
 
     fun ensureHighPerformancePreference() {
         try {
@@ -47,6 +51,8 @@ object WindowsGpuPreference {
                     logger.debug { "HighPerformance GPU preference already set for $exePath" }
                 }
             }
+            // Count the GPUs only after a change, because only the restart popup uses the count.
+            if (anyChanged) gpuCount = WindowsGpuCount.count()
             applied = anyChanged
             if (!anyChanged) {
                 failedReason = null // not an error; nothing to do

@@ -252,17 +252,6 @@ Do these items before the first public release.
   publishes.
 - Done when: a dry run passes with the new jobs.
 
-### B-35 GPU popup only with more than one GPU
-
-- At the first start, the app shows the "GPU preference set" popup
-  (`SwingApplicationFactory`, `shouldShowGpuRestartNotification`). The popup
-  tells the user to restart the app.
-- If the system has only one GPU, the GPU preference has no effect, and the
-  popup is not necessary. Do not show the popup in this case.
-- Count the GPUs before the app shows the popup.
-- Done when: a system with one GPU does not show the popup, a system with
-  two or more GPUs shows it, and a unit test covers the new rule.
-
 ### B-36 Relax the rules for project names
 
 - Now `NewProjectRules.nameError` refuses a project name that is not a

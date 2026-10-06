@@ -1,0 +1,10 @@
+# Redirects www.banana-shot-editor.app to banana-shot-editor.app (B-10, T8).
+# A separate Worker, so that the main site stays static files only.
+# Deploy: see site/README.md.
+name = "bananashot-www-redirect"
+main = "worker.js"
+compatibility_date = "2026-09-03"
+
+[[routes]]
+pattern = "www.banana-shot-editor.app"
+custom_domain = true

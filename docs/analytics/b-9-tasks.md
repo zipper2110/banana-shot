@@ -82,8 +82,8 @@ None. Write each new decision in "Decisions" at once.
 Status values: `open`, `in-progress`, `done`. When a task is done, write
 the test classes in its "Tests" line. Do not remove the task.
 
-Next work (2026-10-03): T7, by the author. T7 also needs the landing site
-(B-10).
+Next work (2026-10-06): T7, by the author. Only the check with an
+installed dry-run build (B-26) is open.
 
 ### T1 Contract and Worker validation
 
@@ -260,5 +260,6 @@ Design: work order step 6. The author does these steps.
   down to the hour (18:20 gave 18:00 UTC). A development run (IDE, the three
   VM options) sent a full session: snapshot 0 at start, the final summary at
   exit, tab and export counters as expected, no tab open by code. The 410
-  check is done, and the three GitHub variables are set. Open: the dry run
-  with an installed build (the author), and the notice on the site (B-10).
+  check is done, and the three GitHub variables are set. The notice is live
+  on the site (2026-10-06), and `ANALYTICS_PRIVACY_URL` points to it. Open:
+  the dry run with an installed build (the author, B-26).

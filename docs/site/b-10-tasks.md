@@ -15,9 +15,10 @@ page must be live before the first release.
   works for 6 months. Thus, the privacy URL of the first release must stay
   valid for at least 6 months after the last build that uses it. Do not
   change the path of the privacy page after the first release.
-- On 2026-10-03, `ANALYTICS_PRIVACY_URL` is
-  `https://github.com/zipper2110/banana-shot`. This is a temporary value. It
-  must change to the URL of the privacy page before the first release.
+- Since 2026-10-06, `ANALYTICS_PRIVACY_URL` is
+  `https://banana-shot-editor.app/privacy/` (decision 5). Before, it was the
+  repository URL, a temporary value. Builds made before 2026-10-06 have the
+  old URL. Do not use them for the release or for B-26.
 - The full privacy text is in `site/public/privacy/index.html` (decision 4).
 - `site/README.md` tells how to preview and deploy the site.
 
@@ -104,8 +105,8 @@ Write each new decision in "Decisions" at once.
 | T5 | Changelog page | T1 | done |
 | T6 | Privacy page: analytics, feedback, version check, site analytics. The docs notice files point to it | T1 | done |
 | T7 | Contact address: the personal Gmail in the app and on the site (decision 26). The domain address is B-40 | — | done |
-| T8 | Deployment: wrangler config, custom domain, Web Analytics, `ANALYTICS_PRIVACY_URL` | T1–T6 | in-progress |
-| T9 | Release checks: links, phone width, steps in `release-checklist.md` | T8 | open |
+| T8 | Deployment: wrangler config, custom domain, Web Analytics, `ANALYTICS_PRIVACY_URL` | T1–T6 | done |
+| T9 | Release checks: links, phone width, steps in `release-checklist.md` | T8 | done |
 
 Status values: `open`, `in-progress`, `done`.
 
@@ -130,10 +131,40 @@ Status values: `open`, `in-progress`, `done`.
   custom domain `banana-shot-editor.app`. Checked: each page returns 200,
   `/privacy` redirects (307) to `/privacy/`, an unknown path returns 404,
   the privacy page shows "Effective from: 2026-10-06", and the browser
-  console has no errors. Open: Web Analytics (no beacon on the pages),
-  `www.banana-shot-editor.app` (no DNS record), and `ANALYTICS_PRIVACY_URL`.
+  console has no errors.
+- T8 (2026-10-06): Web Analytics is on with the automatic setup. Cloudflare
+  adds the beacon (`static.cloudflareinsights.com/beacon.min.js`) at the
+  edge, and a browser sends `/cdn-cgi/rum`. `curl` does not get the beacon,
+  because it does not ask for HTML like a browser. Check in a browser.
   The download button returns 404 until the first release is published.
+- T8 (2026-10-06): the author set `ANALYTICS_PRIVACY_URL` to
+  `https://banana-shot-editor.app/privacy/`. The www address is a separate
+  Worker (`site/www-redirect/`, version ID
+  `8125b2bb-4332-4358-b444-d2c97560295c`) on the custom domain
+  `www.banana-shot-editor.app`. It returns 301 to the same path and query on
+  the domain without www. The main site stays static files only
+  (decision 3). T8 is done.
 - T8: change `ANALYTICS_PRIVACY_URL` only when the page is live. Add the
   Web Analytics script to each page, or turn on the automatic setup in the
   Cloudflare dashboard. Redirect `www.banana-shot-editor.app` to the domain
-  without `www`.
+  without `www`. (All done on 2026-10-06, see above.)
+- T9 (2026-10-06), on the live site:
+  - Links: a script followed the 43 links and images of the 6 pages and
+    checked each anchor (`#...`). All return 200. The only exception is the
+    download file (`releases/latest/download/BananaShot-win-Setup.exe`). It
+    returns 404 until the first release is published. `robots.txt` names
+    the sitemap, and each sitemap URL returns 200.
+  - Phone width: at 375 px and at 320 px, no page scrolls sideways, and no
+    element goes past the right edge (the demo stages are clipped by their
+    frame, as intended). Note: headless Chrome cannot make a window
+    narrower than about 500 px, so its screenshots cut the text. Use the
+    browser device emulation for phone checks.
+  - Fixed: on a phone, the menu goes under the logo, and the row gap was 0.
+    The pill of the current page touched the logo. The row gap is now 10 px
+    (`site.css`, max-width 640 px). Deployed (version ID
+    `75ab4414-ba02-4022-9b20-39020567dfba`).
+  - `release-checklist.md` step 9 has the site steps: the changelog date and
+    the download link of the new release. Step 3a has the privacy page.
+  - Minor, not fixed: the menu links on a phone are 23 px high. WCAG 2.2
+    asks for 24 px or enough space around the target; the space between the
+    links is enough.

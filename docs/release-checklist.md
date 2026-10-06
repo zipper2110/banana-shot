@@ -179,6 +179,9 @@ If a check fails, fix the cause and start again at step 5.
 - [ ] Site changelog (`site/public/changelog/index.html`): write the release
       date (YYYY-MM-DD) of the new version, and deploy the site. For the
       first release, replace "coming soon" of 1.0.0.
+- [ ] Site: "Download for Windows" on `https://banana-shot-editor.app/download/`
+      downloads `BananaShot-win-Setup.exe` of the new release. Before the
+      first release, this link returns 404.
 - [ ] Set `<revision>` in `pom.xml` to the next version with `-SNAPSHOT`.
 - [ ] "Update and restart" (B-26, check 4). Skip this for the first release.
       Install the previous release, and start it. GitHub can need about 5

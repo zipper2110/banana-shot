@@ -43,3 +43,14 @@ analytics-worker/node_modules/.bin/wrangler deploy --config site/wrangler.toml
 
 `wrangler.toml` connects the domain `banana-shot-editor.app` to the site.
 The site has no Worker code and no secrets.
+
+`www-redirect/` is a separate small Worker. It redirects
+`www.banana-shot-editor.app` to the domain without www (301, same path and
+query). Deploy it again only when you change it:
+
+```bash
+analytics-worker/node_modules/.bin/wrangler deploy --config site/www-redirect/wrangler.toml
+```
+
+Web Analytics uses the automatic setup of Cloudflare. Cloudflare adds the
+beacon script to the pages, so the files have no analytics script.

@@ -22,48 +22,6 @@ Do these items before the first public release.
   release) waits for E9 and B-26. The "Next work" list in `l-5.2-epics.md`
   has the stories that can start now.
 
-### B-8 Requests for bug reports and features
-
-- Ask users to send bug reports and feature requests.
-- Decided on 2026-10-03: an in-app feedback form sends the report to a
-  Cloudflare Worker, and the Worker sends it to the author with a Telegram
-  bot. `docs/feedback/b-8-tasks.md` has the decisions and the tasks.
-- Status 2026-10-06: the code of T1 to T5 is done. The Worker and the bot
-  work. The GitHub variable `FEEDBACK_ENDPOINT` is set (2026-10-03). The
-  site text is live (B-10). Open: the manual check of T5 with an installed
-  dry-run build (B-26).
-- Replies inside the app are B-33 (post-release).
-
-### B-9 Analytics
-
-- The app code is in `org.litvin.analytics`. The Worker is in
-  `analytics-worker`. The design is `docs/analytics/design.md`.
-  `docs/analytics/b-9-tasks.md` has the state, the open questions, and the
-  tasks.
-- Status 2026-10-03: T1 to T6 are done. The Worker is deployed, and the
-  GitHub variables are set. Open in T7: the dry run with an installed build,
-  and the privacy notice on the site (B-10).
-
-### B-10 Landing site
-
-- Make a landing site for the app.
-- `docs/site/b-10-tasks.md` has the decisions and the tasks. Decided on
-  2026-10-03: the domain is `banana-shot-editor.app` (on Cloudflare), and
-  the first version is the full site.
-- Status 2026-10-06: the pages in `site/public/` are done (T1 to T7). Not
-  deployed yet (T8).
-- Reminder: the site must have the privacy notice page before the first
-  release. The page (`site/public/privacy/index.html`) has the analytics
-  notice (B-9) and the feedback notice (B-8). There is no temporary page
-  (decided on 2026-10-03).
-  - The GitHub variable `ANALYTICS_PRIVACY_URL` is now the repository URL,
-    a temporary value. When the page is live, change it to
-    `https://banana-shot-editor.app/privacy/` (B-10 decision 5).
-    The consent dialog and the Privacy page of each release open this URL.
-  - The effective date of the privacy notice is 2026-10-06 (B-10
-    decision 29).
-  - The B-9 task T7 stays open until the page is live.
-
 ### B-24 Velopack installer
 
 - Replace the jpackage EXE installer (WiX 3) with Velopack. WiX 3 is at its
@@ -194,17 +152,17 @@ Do these items before the first public release.
   2. Proxy: E11-S2 of `l-5.2-epics.md`.
 - Checks with two builds:
   3. Install over a running app: start version N-1 and make a project. Then
-     run the setup of version N. The app closes or the setup asks the user
-     to close it. Version N starts. The projects, the preferences, and the
-     export history stay. Confirm the Velopack behavior of B-30 with the
-     pinned vpk version.
+  run the setup of version N. The app closes or the setup asks the user
+  to close it. Version N starts. The projects, the preferences, and the
+  export history stay. Confirm the Velopack behavior of B-30 with the
+  pinned vpk version.
   4. "Update and restart" (B-30, E11-S3, and "Tests" in
-     `build-expiry-spec.md`): in version N-1, click "Update and restart" for
-     version N. The Velopack dialog shows. Version N starts with the same
-     projects, preferences, and export queue. Also check that "Cancel" in
-     the Velopack dialog installs nothing and leaves the app closed.
+  `build-expiry-spec.md`): in version N-1, click "Update and restart" for
+  version N. The Velopack dialog shows. Version N starts with the same
+  projects, preferences, and export queue. Also check that "Cancel" in
+  the Velopack dialog installs nothing and leaves the app closed.
   5. Uninstall: the app data (`%APPDATA%\BananaShot`) and
-     `HKCU\Software\JavaSoft\Prefs` stay.
+  `HKCU\Software\JavaSoft\Prefs` stay.
 - Before you start:
   - Checks 1 and 2 need a dry-run build that has the fixed
     `THIRD-PARTY-NOTICES.txt` (commit c1ea279 or later). The builds 0.9.0
@@ -239,88 +197,11 @@ Do these items before the first public release.
   5. After the checks: set `latest` back to the values before step 3, and
      push. Delete the pre-release and its tag:
      `gh release delete update-test-0.9.1 --cleanup-tag --yes`.
+- Builds (2026-10-06): the dry runs of commit `db219df` (after the change
+  of `ANALYTICS_PRIVACY_URL`): `0.9.0` is run 37461914426, and `0.9.1` is
+  run 37461925236.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.
-
-### B-22 Code signing
-
-- Smart App Control is confirmed (2026-10-03, dry run of B-21 on a tester
-  computer). The CodeIntegrity log has 3077 events with the Smart App
-  Control policy `{0283ac0f-fff1-49ae-ada1-8a933130cad6}`. Windows blocked
-  `ffmpeg.exe`, `swscale-8.dll`, `libharfbuzz-0.dll`, and `libstdc++-6.dll`
-  (error 4551). The preview was black and the export did not work.
-  `BananaShot.exe`, the Velopack files, the Java runtime, and JNA were not
-  blocked. Windows stops at the first blocked dependency of `libmpv-2.dll`,
-  so the log does not show all files that fail. The user cannot allow a
-  blocked file, so the first release must be signed.
-- Decision (2026-10-03): Certum "Standard Code Signing in the Cloud" (OV,
-  SimplySign cloud HSM, EUR 209 per year, for an individual). The author
-  bought it on 2026-10-04. The release workflow signs in CI. Rejected:
-  - Azure Artifact Signing: individuals only from the USA and Canada. The
-    author is in Georgia.
-  - Certum Open Source: ELv2 is not an open source license, and paid
-    releases are planned. Certum can revoke the certificate.
-  - The Microsoft Store (MSIX), Sectigo, SSL.com, and shared-certificate
-    services (for example Bamboo Deploy): more work, a higher price, or
-    the files get the publisher name of a different company.
-- From 2026-02-27, a certificate is valid for at most 459 days. Certum
-  reissues it free of charge for the rest of a multi-year order.
-- Done (2026-10-04): `windows-release.yml` signs with the community action
-  `jay0lee/certum-cloud-code-sign` and `vpk --signTemplate`. vpk signs each
-  EXE and DLL of the app image, the setup EXE, and `Update.exe`.
-  `Test-ReleaseSignatures.ps1` checks the signature and the timestamp of
-  each EXE and DLL in the setup and the update package. A tag release
-  without the signing secrets fails. See `distribution/windows/README.md`,
-  "Code signing".
-- Done (2026-10-06): the certificate is issued (RSA 3072, valid until
-  2027-10-06, thumbprint `DB2D2E3BB8A4BBC15E4F3907C6B8D6136152CDCA`). The
-  secrets `CERTUM_USERNAME` and `CERTUM_TOTP_SECRET` and the variable
-  `CERTUM_CERT_SHA1` are set in the GitHub environment `windows-release`.
-  The signed dry run 37442956227 passed the signature check: the setup EXE
-  and 116 EXE and DLL files.
-- Done (2026-10-06): the setup of the signed dry run installed on a
-  Windows 11 computer with Smart App Control on. The preview and the export
-  work. The "Done when" condition is met.
-- To do (not blocking the release):
-  - Done (2026-10-06): when libmpv does not load or mpv does not start, the
-    video area shows an error card in place of a black area. For Windows
-    errors 225, 226, 1260 and 4550-4559, the card names Windows security and
-    Smart App Control. `LibMpv` reads the error code with `LoadLibraryEx`,
-    because the JNA error has only the translated text.
-  - Decision (2026-10-06): the error card shows "Report this problem" only
-    when the cause can be a bug of the app: the video player does not start,
-    or a file does not open for an unknown reason (`UNREADABLE`). For a
-    cause that the user can fix (file not found, copy not finished, damaged
-    file), the card shows no report button. The report contains the
-    technical cause and the log files.
-  - Done (2026-10-06): when Windows blocks FFmpeg, the export fails with
-    "CreateProcess error=4551". The export error now names Windows security
-    and Smart App Control, and it does not give the hardware encoder advice.
-    `WindowsSecurityBlock` has the list of block errors for the preview and
-    the export.
-  - Done (2026-10-06): an installed app uses its own `natives` folder
-    before `MPV_PATH`, `FFMPEG_PATH` and `FFPROBE_PATH`. The order for each
-    tool is: the `bananashot.*` system property, the bundled file, the
-    environment variable, the fallback. In development, the app home has no
-    bundle, so `MPV_PATH` still comes before `target/native`.
-  - JNA extracts an unsigned `jnidispatch.dll` at run time. On the tester
-    computer, Smart App Control did not block it (probably because the file
-    has reputation). Keep this in the install check.
-  - Done (2026-10-06, B-10 decision 30): the Smart App Control notes on the
-    site (`download` and `faq` pages) say that the signed app works with it.
-    An OV signature does not give SmartScreen reputation at once, so the
-    "Run anyway" steps stay.
-    Update (2026-10-06): SmartScreen did not show a warning for the signed
-    setup of the dry run on the author's computer. Check this on a second
-    computer before you remove the "Run anyway" steps.
-  - Chrome blocks the download of the signed dry run (2026-10-06) as
-    dangerous or suspicious. The user must allow it on the downloads page.
-    Check the file on VirusTotal by hash. If no engine detects it, the cause
-    is low download reputation. Then add the Chrome "Keep" steps to the
-    `download` page, and submit the setup EXE to Microsoft as a software
-    developer.
-- Done when: the installer of a signed dry run starts on a Windows 11
-  computer with Smart App Control on, and the preview and the export work.
 
 ## Post-release
 
@@ -346,6 +227,32 @@ Do these items after the first public release.
   the Gmail address in use.
 - Done when: an email to the new address gets to the Gmail, and the app and
   the site show the new address.
+
+### B-41 Admin dashboard for the numbers
+
+- Make a private dashboard for the author. It shows on one page:
+  - The downloads of the setup file, with a daily and a weekly history.
+  - The numbers of the site (Cloudflare Web Analytics): visits, page views,
+    the pages, and the referrers.
+  - The numbers of the analytics Worker (B-9): sessions, app versions, the
+    use of the features, and the exports. The SQL is in
+    `analytics-worker/queries/`.
+- Downloads: GitHub gives only the total `download_count` of each release
+  file, with no history. Thus, a scheduled job must save the totals each
+  day (for example a cron trigger of a Worker that writes to D1). The
+  history starts on the day that the job starts, so start it soon after
+  the first release.
+- The count of `BananaShot-win-Setup.exe` includes the downloads of
+  "Update and restart" (B-30). Show the number of new installs from the
+  analytics Worker next to it.
+- Site numbers: read them with the Cloudflare GraphQL Analytics API. This
+  needs an API token with read access to the account analytics.
+- Only the author can open the dashboard. For example, use Cloudflare Access
+  in front of the page. The page must not show the data of a single user.
+- Open questions: a new Worker or a part of the analytics Worker; the
+  hosting of the page; the time periods and the charts.
+- Done when: the author opens the dashboard and sees the three groups of
+  numbers, with the daily and weekly download history.
 
 ### B-33 Replies to feedback inside the app
 

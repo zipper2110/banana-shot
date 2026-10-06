@@ -20,8 +20,8 @@ analytics" section of the site page. Increase the notice version if the new
 key collects a new type of data. The app then asks the user again.
 
 - Notice version: 1
-- Effective date: the date of the first release with analytics. Write it on
-  the site page ("Effective from") at the release.
+- Effective date: 6 October 2026 (B-10 decision 29). It is on the site page
+  ("Effective from"). When the notice version changes, write the new date.
 
 The "Version check and updates" section of the same page tells about the
 request to GitHub (`docs/licensing/build-expiry-spec.md`). That request is

@@ -185,8 +185,8 @@ The texts that tell the user what the app sends and why.
 - The analytics consent does not cover the feedback. A report goes only
   when the user clicks "Send".
 - Reply address: the form and the Contact page show the address of
-  decision 7. When the domain exists, a change of `CONTACT_EMAIL` in
-  `SwingApplicationFactory` replaces the address.
+  decision 7. A change of `CONTACT_EMAIL` in `SwingApplicationFactory`
+  replaces the address. The domain address is B-40 (post-release).
 - Tests: `PrivacyPageTest`, `FeedbackPanelTest` (the reply address).
 
 ### T5 Build, deployment, and release checks
@@ -194,9 +194,9 @@ The texts that tell the user what the app sends and why.
 The steps that make the feature work in a release build.
 
 - Status: in-progress. The scripts, the workflow, the README, and the
-  checklist are done. The Worker is deployed (2026-10-03). Open: the
-  GitHub variable `FEEDBACK_ENDPOINT` and the manual check from an
-  installed dry-run build (the author does them).
+  checklist are done. The Worker is deployed (2026-10-03). The GitHub
+  variable `FEEDBACK_ENDPOINT` is set (2026-10-03). Open: the manual check
+  from an installed dry-run build (the author does it, B-26).
 - Deployed (2026-10-03): the Worker `bananashot-feedback` at
   `https://bananashot-feedback.banana-shot-feedback.workers.dev/v1/feedback`,
   with D1 `bananashot-feedback`, the three secrets, and the daily cron

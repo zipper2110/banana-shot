@@ -207,8 +207,8 @@ Design: "Privacy notice", work order step 5.
   version check request).
 - The site text goes on the site with the feedback notice (B-10).
 - Status: done (decision 16). The site text is
-  `docs/analytics/privacy-notice.md`. The effective date is written at the
-  release.
+  `docs/analytics/privacy-notice.md`. The effective date is 6 October 2026
+  (B-10 decision 29).
 - Tests: `PrivacyPageTest` (the Privacy page texts and the consent dialog
   text).
 

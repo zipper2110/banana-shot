@@ -1,5 +1,5 @@
 import com.github.weisj.jsvg.SVGDocument;
-import com.github.weisj.jsvg.attributes.ViewBox;
+import com.github.weisj.jsvg.view.ViewBox;
 import com.github.weisj.jsvg.parser.SVGLoader;
 
 import javax.imageio.ImageIO;

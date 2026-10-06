@@ -81,6 +81,10 @@ After you change the SVG, run this command to generate the ICO again:
 .\distribution\windows\New-AppIcon.ps1 -PngDirectory design\app-icon
 ```
 
+The site uses two of these PNG files. Copy them after you generate the icon
+again: `design/app-icon/bananashot-32.png` to `site/public/favicon-32.png`, and
+`design/app-icon/bananashot-256.png` to `site/public/assets/icon-256.png`.
+
 ## Release requirements
 
 Use [docs/release-checklist.md](../../docs/release-checklist.md) for each

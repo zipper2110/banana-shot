@@ -5,7 +5,7 @@
       <circle cx="32" cy="32" r="21"/>
     </clipPath>
   </defs>
-  <circle cx="32" cy="32" r="21" fill="#a1fe00"/>
+  <circle cx="32" cy="32" r="21" fill="#c8ec46"/>
   <path d="M12 15Q21.5 32 12 49M52 15Q42.5 32 52 49" clip-path="url(#ball)" fill="none" stroke="#0e0e0e" stroke-width="3" stroke-linecap="round"/>
   <path d="M27.5 23.5L41 32L27.5 40.5Z" fill="#0e0e0e" stroke="#0e0e0e" stroke-width="3" stroke-linejoin="round"/>
 </svg>

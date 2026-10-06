@@ -28,9 +28,10 @@ Do these items before the first public release.
 - Decided on 2026-10-03: an in-app feedback form sends the report to a
   Cloudflare Worker, and the Worker sends it to the author with a Telegram
   bot. `docs/feedback/b-8-tasks.md` has the decisions and the tasks.
-- Status 2026-10-03: the code of T1 to T5 is done. The Worker and the bot
-  work. Open: set the GitHub variable `FEEDBACK_ENDPOINT`, and do the manual
-  check of T5 with an installed dry-run build. The site text waits for B-10.
+- Status 2026-10-06: the code of T1 to T5 is done. The Worker and the bot
+  work. The GitHub variable `FEEDBACK_ENDPOINT` is set (2026-10-03). The
+  site text is live (B-10). Open: the manual check of T5 with an installed
+  dry-run build (B-26).
 - Replies inside the app are B-33 (post-release).
 
 ### B-9 Analytics
@@ -49,8 +50,8 @@ Do these items before the first public release.
 - `docs/site/b-10-tasks.md` has the decisions and the tasks. Decided on
   2026-10-03: the domain is `banana-shot-editor.app` (on Cloudflare), and
   the first version is the full site.
-- Status 2026-10-03: the pages are in `site/public/` (T1 to T6). Not
-  deployed yet.
+- Status 2026-10-06: the pages in `site/public/` are done (T1 to T7). Not
+  deployed yet (T8).
 - Reminder: the site must have the privacy notice page before the first
   release. The page (`site/public/privacy/index.html`) has the analytics
   notice (B-9) and the feedback notice (B-8). There is no temporary page
@@ -59,8 +60,8 @@ Do these items before the first public release.
     a temporary value. When the page is live, change it to
     `https://banana-shot-editor.app/privacy/` (B-10 decision 5).
     The consent dialog and the Privacy page of each release open this URL.
-  - Write the effective date in the analytics notice when the page goes
-    live.
+  - The effective date of the privacy notice is 2026-10-06 (B-10
+    decision 29).
   - The B-9 task T7 stays open until the page is live.
 
 ### B-24 Velopack installer
@@ -305,9 +306,10 @@ Do these items before the first public release.
   - JNA extracts an unsigned `jnidispatch.dll` at run time. On the tester
     computer, Smart App Control did not block it (probably because the file
     has reputation). Keep this in the install check.
-  - Change the Smart App Control notes on the site (`download` and `faq`
-    pages, B-10) after the first signed release. An OV signature does not
-    give SmartScreen reputation at once, so keep the "Run anyway" steps.
+  - Done (2026-10-06, B-10 decision 30): the Smart App Control notes on the
+    site (`download` and `faq` pages) say that the signed app works with it.
+    An OV signature does not give SmartScreen reputation at once, so the
+    "Run anyway" steps stay.
     Update (2026-10-06): SmartScreen did not show a warning for the signed
     setup of the dry run on the author's computer. Check this on a second
     computer before you remove the "Run anyway" steps.
@@ -323,6 +325,27 @@ Do these items before the first public release.
 ## Post-release
 
 Do these items after the first public release.
+
+### B-40 Contact address on the domain
+
+- The first release uses the personal Gmail of the author
+  (`leetvin@gmail.com`) as the contact address (B-10 decision 26). Change
+  it to an address on `banana-shot-editor.app`.
+- Select the local part of the address, for example `hello@` or
+  `support@`.
+- Set up Cloudflare Email Routing: forward the address to the Gmail. The
+  author replies from Gmail. To reply from the domain address, set up
+  "Send mail as" in Gmail with an SMTP service. Without it, the replies come
+  from the Gmail address.
+- Change the address in three places: `CONTACT_EMAIL` in
+  `SwingApplicationFactory`, "Contact and your rights" of
+  `site/public/privacy/index.html`, and "Help and contact" of
+  `site/public/faq/index.html`. On the site, the address is reversed in
+  the `data-email` attribute (`assets/email.js`).
+- Released apps keep the Gmail address until the users update. Thus, keep
+  the Gmail address in use.
+- Done when: an email to the new address gets to the Gmail, and the app and
+  the site show the new address.
 
 ### B-33 Replies to feedback inside the app
 

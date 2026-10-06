@@ -240,7 +240,14 @@ class SwingUiFlowExtension(
         var driver: SwingUiDriver? = null
         try {
             // As in main: the expiry check at start, before the main window.
-            if (expiry.start() == ExpiryController.StartPath.DATE_CHECK) CheckingDateWindow.during { expiry.runDateCheck() }
+            // The test reads the result later. Then the closed window can be gone from Window.getWindows() (garbage collection).
+            var checkingDateWindowShown = false
+            if (expiry.start() == ExpiryController.StartPath.DATE_CHECK) {
+                CheckingDateWindow.during {
+                    checkingDateWindowShown = onEdt { Window.getWindows().any { it.name == "checking-date-window" && it.isShowing } }
+                    expiry.runDateCheck()
+                }
+            }
             val builtApplication = onEdt {
                 // A click on "Update and restart" must not download or close anything in a test.
                 SwingApplicationFactory.create(services, show = true, updateAndRestart = UiFlowUpdate.NONE)
@@ -265,6 +272,7 @@ class SwingUiFlowExtension(
                 driver = builtDriver,
                 threadPrefix = threadPrefix,
                 asynchronousFailures = failures,
+                checkingDateWindowShown = checkingDateWindowShown,
             ).apply {
                 onRestart { restartApplication(this) }
             }

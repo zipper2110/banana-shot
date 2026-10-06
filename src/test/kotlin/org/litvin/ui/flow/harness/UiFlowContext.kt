@@ -32,6 +32,8 @@ class UiFlowContext internal constructor(
     val driver: SwingUiDriver,
     internal val threadPrefix: String,
     internal val asynchronousFailures: CopyOnWriteArrayList<Throwable>,
+    /** True when the "Checking the date…" window showed during the expiry check at start (path A). */
+    val checkingDateWindowShown: Boolean = false,
 ) {
     val mediaPlayers: FakeMediaPlayerFactory
         get() = checkNotNull(fakeMediaPlayers) { "This UI flow uses the native media players" }

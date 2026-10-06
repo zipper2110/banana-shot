@@ -119,8 +119,7 @@ class ExpiryInSessionUiFlowIT {
 class ClockForwardOnlineUiFlowIT {
     @Test
     fun `the normal window opens after Checking the date, with the wrong clock notice`(context: UiFlowContext) {
-        val checkingWindowShown = onEdt { Window.getWindows().any { it.name == "checking-date-window" } }
-        assertTrue(checkingWindowShown, "The 'Checking the date…' window showed before the main window")
+        assertTrue(context.checkingDateWindowShown, "The 'Checking the date…' window showed before the main window")
 
         requireNormalWindow(context)
         context.driver.requireShowing("wrong-clock")

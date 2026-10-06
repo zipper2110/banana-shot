@@ -19,16 +19,31 @@ class NewProjectRulesTest {
     }
 
     @Test
-    fun nameMustNotBeEmptyAndMustBeAValidFolderName() {
+    fun nameMustNotBeEmptyOrTooLong() {
         assertNull(NewProjectRules.nameError("Club final"))
         assertNull(NewProjectRules.nameError("  Club final (2)  "))
         assertNotNull(NewProjectRules.nameError(""))
         assertNotNull(NewProjectRules.nameError("   "))
-        assertNotNull(NewProjectRules.nameError("Final: day 2"))
-        assertNotNull(NewProjectRules.nameError("a/b"))
-        assertNotNull(NewProjectRules.nameError("Final."))
-        assertNotNull(NewProjectRules.nameError("con"))
+        assertNull(NewProjectRules.nameError("x".repeat(NewProjectRules.MAX_NAME_LENGTH)))
         assertNotNull(NewProjectRules.nameError("x".repeat(NewProjectRules.MAX_NAME_LENGTH + 1)))
+    }
+
+    @Test
+    fun nameCanHaveCharactersThatWindowsDoesNotPermitInAFileName() {
+        assertNull(NewProjectRules.nameError("Final 3:2"))
+        assertNull(NewProjectRules.nameError("Who won?"))
+        assertNull(NewProjectRules.nameError("a/b"))
+        assertNull(NewProjectRules.nameError("Final."))
+        assertNull(NewProjectRules.nameError("con"))
+    }
+
+    @Test
+    fun folderNameIsACorrectWindowsFileName() {
+        assertEquals("Final 3_2", NewProjectRules.folderName("Final 3:2"))
+        assertEquals("Who won_", NewProjectRules.folderName("  Who won?  "))
+        assertEquals("con_", NewProjectRules.folderName("con"))
+        assertEquals("Club final", NewProjectRules.folderName("Club final"))
+        assertEquals("Project", NewProjectRules.folderName("..."))
     }
 
     @Test

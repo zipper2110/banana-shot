@@ -105,6 +105,14 @@ For a feature `Foo` (e.g., Scoring, Points):
 - View wiring (`attach`/`detach` from `addNotify`/`removeNotify`) — [`SwingProjectsPanel.kt`](../src/main/kotlin/org/litvin/ui/tabs/projects/SwingProjectsPanel.kt)
 - Presenter test against a fake view — [`DefaultProjectsPresenterTest.kt`](../src/test/kotlin/org/litvin/ui/tabs/projects/presenter/DefaultProjectsPresenterTest.kt)
 
+## Project names and folders
+- Decision (B-36, 2026-10-06): the project name and the project folder name are different. The manifest keeps the name that the user typed. The name can have any characters. It must not be empty, and it must have a maximum of 80 characters (`NewProjectRules.nameError`).
+- `NewProjectRules.folderName` makes a correct Windows file name from the name (`SafeFileName`). It replaces `< > : " / \ | ? *` and control characters with `_`, removes the periods and spaces at the end, and adds `_` to a reserved name such as `CON`. For example, "Who won?" gives the folder `Who won_`. The manifest file in the folder has the folder name and the extension `.trproj`.
+- The app does not get the project name from the folder name. It reads the name from the manifest. The folder name is only a fallback when the manifest has no name.
+- A new project gets a suffix such as " (2)" when a project with the same name exists (the comparison ignores case). The folder gets a suffix when the folder exists. Thus, "Who won?" and "Who won*" get the folders `Who won_` and `Who won_ (2)`.
+- A rename changes only the manifest. The folder keeps its name. Projects from before B-36 have a folder name that is the same as the name. They open with no change.
+- The export file name also uses `SafeFileName` on the project name.
+
 ## UI component conventions
 - Encapsulate business logic or visual style in focused components with clear APIs.
 - Prefer extracting repeated or cohesive UI widgets into separate component classes instead of keeping them as builder methods inside a tab panel.

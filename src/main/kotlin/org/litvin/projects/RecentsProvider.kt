@@ -6,7 +6,7 @@ import java.time.Instant
 /**
  * Provides Most-Recently-Used (MRU) projects list by scanning manifests on disk.
  * - Scans one repository-owned projects root
- * - Reads <projectName>.trproj in each subfolder
+ * - Reads the .trproj manifest in each subfolder
  * - Keeps only valid manifests; sorts by lastOpenedAt desc
  * - Supports simple in-memory remove-from-view
  */

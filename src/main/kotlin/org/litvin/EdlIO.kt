@@ -18,7 +18,7 @@ import java.util.UUID
  * Now includes ID backfill and duplicate repair per task 2.16.
  *
  * Storage:
- * - File name: edl.json placed in the project directory (next to <projectName>.trproj)
+ * - File name: edl.json placed in the project directory (next to the .trproj manifest)
  * - JSON library: Jackson Kotlin module (same configuration as ManifestIO)
  */
 

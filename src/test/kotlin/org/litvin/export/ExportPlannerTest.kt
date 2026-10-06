@@ -117,6 +117,14 @@ class ExportPlannerTest {
             ExportPlanner.suggestFilename("Match", "full", "quality", "4K"),
         )
         assertEquals(
+            "Who won_-points-balanced-1080p.mp4",
+            ExportPlanner.suggestFilename("Who won?", "points", "balanced", "1080p"),
+        )
+        assertEquals(
+            "export-points-balanced-1080p.mp4",
+            ExportPlanner.suggestFilename(" ", "points", "balanced", "1080p"),
+        )
+        assertEquals(
             File("render.mp4"),
             ExportPlanner.ensureExtension(File("render"), "mp4"),
         )

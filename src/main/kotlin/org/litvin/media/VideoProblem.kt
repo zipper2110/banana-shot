@@ -3,6 +3,7 @@ package org.litvin.media
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.AppInfo
 import org.litvin.ApplicationLayout
+import org.litvin.WindowsSecurityBlock
 import java.awt.Component
 import java.io.File
 import java.io.IOException
@@ -26,12 +27,6 @@ data class VideoProblem(
 
     companion object {
         private val APP = AppInfo.NAME
-
-        /**
-         * Windows errors when Windows security blocks a file: 225 and 226 (a virus scanner), 1260 (a group policy),
-         * and 4550-4559 (Application Control, for example Smart App Control blocks an unsigned DLL with error 4551).
-         */
-        private val WINDOWS_BLOCK_ERRORS = setOf(225, 226, 1260) + (4550..4559)
 
         val NOT_FOUND = VideoProblem(
             "The video file is not found.",
@@ -111,7 +106,7 @@ data class VideoProblem(
                 windowsError?.let { "Windows error $it." },
                 cause?.let { "${it.javaClass.simpleName}: ${it.message}" },
             ).joinToString("\n").ifEmpty { null }
-            val problem = if (windowsError != null && windowsError in WINDOWS_BLOCK_ERRORS) PREVIEW_BLOCKED else PREVIEW_FAILED
+            val problem = if (WindowsSecurityBlock.isBlockError(windowsError)) PREVIEW_BLOCKED else PREVIEW_FAILED
             return problem.copy(details = details)
         }
     }

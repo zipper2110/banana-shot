@@ -416,9 +416,11 @@ Do these items before the first public release.
     cause that the user can fix (file not found, copy not finished, damaged
     file), the card shows no report button. The report contains the
     technical cause and the log files.
-  - Open: FFmpeg that Windows blocks makes the export fail with
-    "CreateProcess error=4551". The export error does not name Smart App
-    Control yet.
+  - Done (2026-10-06): when Windows blocks FFmpeg, the export fails with
+    "CreateProcess error=4551". The export error now names Windows security
+    and Smart App Control, and it does not give the hardware encoder advice.
+    `WindowsSecurityBlock` has the list of block errors for the preview and
+    the export.
   - `ApplicationLayout.resolveMpvDirectory` prefers `MPV_PATH` to the
     bundled libmpv. A packaged app must use its own `natives` folder first.
   - JNA extracts an unsigned `jnidispatch.dll` at run time. On the tester

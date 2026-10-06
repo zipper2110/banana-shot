@@ -1,6 +1,7 @@
 package org.litvin
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litvin.export.ExportFailureAdvice
 import org.litvin.export.RenderFailReason
 import org.litvin.export.RenderRequestCoordinator
 import org.litvin.export.RenderRunFacts
@@ -643,7 +644,7 @@ object RenderQueueManager {
         logger.error(cause) { "Failed to start ffmpeg" }
         job.status = RenderStatus.FAILED
         failRun(job, RenderFailReason.PROCESS_START)
-        job.failureReason = "Failed to start FFmpeg: ${cause.javaClass.simpleName}: ${cause.message}. Run ${AppInfo.NAME} distribution diagnostics for details."
+        job.failureReason = ExportFailureAdvice.startFailure(cause)
         job.stderrTail = null
         job.updatedAtEpochMs = System.currentTimeMillis()
         notifyObservers()

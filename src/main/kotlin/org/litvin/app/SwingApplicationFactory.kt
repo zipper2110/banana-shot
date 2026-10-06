@@ -101,7 +101,7 @@ object SwingApplicationFactory {
      * The reply address of the feedback (decision 7 of B-8). When the app domain exists (B-10), change it here to an
      * address on that domain. The Contact page, the Privacy page, and the feedback form show it.
      */
-    private const val CONTACT_EMAIL = "leetvin@gmail.com"
+    private const val CONTACT_EMAIL = "contact@banana-shot-editor.app"
 
     /** The feedback form. The send and the read of the log run on their own executor. */
     private fun feedbackPresenter(services: AppServices) = DefaultFeedbackPresenter(

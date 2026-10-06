@@ -168,3 +168,10 @@ Status values: `open`, `in-progress`, `done`.
   - Minor, not fixed: the menu links on a phone are 23 px high. WCAG 2.2
     asks for 24 px or enough space around the target; the space between the
     links is enough.
+- B-40 (2026-10-06): the contact address is now
+  `contact@banana-shot-editor.app`. Cloudflare Email Routing forwards it to
+  the Gmail of the author, and a test email arrived. The author replies from
+  the Gmail. The app (`CONTACT_EMAIL`), the privacy page, and the FAQ show
+  the new address. The site is deployed (version ID
+  `65b89769-cc82-47ca-aafc-1d6e4b10cd63`). Released apps show the Gmail
+  until the users update, so the Gmail stays in use.

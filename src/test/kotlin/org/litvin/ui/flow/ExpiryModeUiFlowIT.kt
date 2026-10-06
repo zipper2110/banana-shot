@@ -124,7 +124,7 @@ class ClockForwardOnlineUiFlowIT {
 
         requireNormalWindow(context)
         context.driver.requireShowing("wrong-clock")
-        val text = onEdt { (Window.getWindows().flatMap { all(it) }.first { it.name == "wrong-clock" } as org.litvin.ui.expiry.NoticeRow).shownText }
+        val text = onEdt { (Window.getWindows().flatMap { all(it) }.first { it.name == "wrong-clock" && it.isShowing } as org.litvin.ui.expiry.NoticeRow).shownText }
         assertTrue(text.contains("400 days ahead"), text)
 
         context.driver.click("wrong-clock-close")

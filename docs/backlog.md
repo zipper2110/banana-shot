@@ -18,27 +18,6 @@ are in B-42.
 
 Do these items after the first public release.
 
-### B-40 Contact address on the domain
-
-- The first release uses the personal Gmail of the author
-  (`leetvin@gmail.com`) as the contact address (B-10 decision 26). Change
-  it to an address on `banana-shot-editor.app`.
-- Select the local part of the address, for example `hello@` or
-  `support@`.
-- Set up Cloudflare Email Routing: forward the address to the Gmail. The
-  author replies from Gmail. To reply from the domain address, set up
-  "Send mail as" in Gmail with an SMTP service. Without it, the replies come
-  from the Gmail address.
-- Change the address in three places: `CONTACT_EMAIL` in
-  `SwingApplicationFactory`, "Contact and your rights" of
-  `site/public/privacy/index.html`, and "Help and contact" of
-  `site/public/faq/index.html`. On the site, the address is reversed in
-  the `data-email` attribute (`assets/email.js`).
-- Released apps keep the Gmail address until the users update. Thus, keep
-  the Gmail address in use.
-- Done when: an email to the new address gets to the Gmail, and the app and
-  the site show the new address.
-
 ### B-42 Manual checks after the first release
 
 - Moved from B-26 check 2 and E11-S2 (proxy) and from E11-S1 (sleep) on

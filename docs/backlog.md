@@ -252,20 +252,6 @@ Do these items before the first public release.
   publishes.
 - Done when: a dry run passes with the new jobs.
 
-### B-36 Relax the rules for project names
-
-- Now `NewProjectRules.nameError` refuses a project name that is not a
-  correct Windows file name: the characters `< > : " / \ | ? *`, a period at
-  the end, and reserved names such as `CON` and `COM1`. The cause is that the
-  project name is also the name of the project folder.
-- Let the user type these names. For example, "Final 3:2" or "Who won?" must
-  be correct names.
-- Keep the project name and the folder name separate. Make a safe folder name
-  from the project name. Keep the maximum length and the rule for an empty
-  name.
-- Done when: the dialog accepts the names in the examples, the app makes a
-  correct folder for them, and the unit tests cover the new rules.
-
 ### B-22 Code signing
 
 - Smart App Control is confirmed (2026-10-03, dry run of B-21 on a tester

@@ -12,6 +12,7 @@ import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.projects.ProjectManifestV1
 import org.litvin.scoring.ScoreV1
+import org.litvin.shared.util.SafeFileName
 import org.litvin.stats.SetSummaryCard
 import org.litvin.stats.StatsCardVideo
 import org.litvin.stats.StatsSettingsV1
@@ -161,7 +162,8 @@ object ExportPlanner {
         resolutionLabel: String,
         defaultExtNoDot: String = "mp4",
     ): String {
-        val base = projectName.ifBlank { "export" }
+        // The project name can have characters that Windows does not permit in a file name, for example "Who won?".
+        val base = SafeFileName.of(projectName, "export")
         val dims = resolutionLabel.replace('x', 'p')
         return "$base-$contentLabel-${presetId.lowercase()}-$dims.$defaultExtNoDot"
     }

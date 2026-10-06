@@ -20,7 +20,10 @@ interface ProjectsRepository {
     fun getRecents(): List<ProjectSummary>
     fun readManifest(path: String): ProjectManifestV1
     fun summarize(path: String): ProjectSummary
-    /** Creates a project with the [name] for the video. A suffix such as " (2)" makes the name unique. */
+    /**
+     * Creates a project with the [name] for the video. A suffix such as " (2)" makes the name unique. The project
+     * folder gets a correct Windows file name from the name ([NewProjectRules.folderName]).
+     */
     fun createProject(sourceVideoPath: String, name: String): ProjectSummary
     fun openProject(path: String, sourceVideoPath: String? = null): ProjectSummary
 
@@ -67,14 +70,12 @@ class FileProjectsRepository(
             if (!exists()) mkdirs()
         }
 
-        val baseName = name.trim()
-        var projectName = baseName
-        var projectDir = File(targetRoot, projectName)
-        var suffix = 2
-        while (projectDir.exists()) {
-            projectName = "$baseName (${suffix++})"
-            projectDir = File(targetRoot, projectName)
-        }
+        // The project name and the folder name are different (B-36). The name is unique among the project names.
+        // The folder is unique on the disk, because two names can give the same folder name ("Who won?", "Who won_").
+        val takenNames = recentsProvider.refresh().map { it.name.lowercase() }.toSet()
+        val projectName = withSuffix(name.trim()) { it.lowercase() !in takenNames }
+        val folderName = withSuffix(NewProjectRules.folderName(projectName)) { !File(targetRoot, it).exists() }
+        val projectDir = File(targetRoot, folderName)
         if (!projectDir.mkdirs() && !projectDir.exists()) {
             error("Could not create project directory: ${projectDir.absolutePath}")
         }
@@ -88,7 +89,7 @@ class FileProjectsRepository(
             version = 1,
             sourceVideo = selected.absolutePath,
         )
-        val manifestPath = File(projectDir, "$projectName.trproj").absolutePath
+        val manifestPath = File(projectDir, "$folderName.trproj").absolutePath
         ManifestIO.write(manifestPath, manifest)
         recentsProvider.refresh()
         return summaryFor(manifestPath, manifest)
@@ -143,6 +144,14 @@ class FileProjectsRepository(
     }
 
     private fun summarize(entry: RecentsProvider.RecentEntry): ProjectSummary = summarize(entry.path)
+
+    /** Returns [base], or the first of "[base] (2)", "[base] (3)", ... that [isFree] accepts. */
+    private fun withSuffix(base: String, isFree: (String) -> Boolean): String {
+        var candidate = base
+        var suffix = 2
+        while (!isFree(candidate)) candidate = "$base (${suffix++})"
+        return candidate
+    }
 
     private fun summaryFor(path: String, manifest: ProjectManifestV1): ProjectSummary {
         return ProjectSummary(

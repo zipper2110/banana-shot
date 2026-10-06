@@ -187,6 +187,18 @@ class UpdateAndRestartTest {
     }
 
     @Test
+    fun `a close sequence that fails goes to the log, and the app still starts the setup and exits`() {
+        // B-26, check 4: the close stopped the executor of the download thread, and invokeAndWait was interrupted.
+        val steps = mutableListOf<String>()
+        val update = UpdateAndRestart({ _, target, _ -> target.writeText("setup") }, { steps += "start" }, { dir })
+
+        val result = update.run(latest.installerUrl!!, { false }, { true }, { _, _ -> }, { throw InterruptedException() }, { steps += "exit" })
+
+        assertIs<UpdateAndRestart.Result.Closing>(result)
+        assertEquals(listOf("start", "exit"), steps)
+    }
+
+    @Test
     fun `a setup that does not start goes to the log and the app still exits`() {
         var exited = false
         val update = UpdateAndRestart({ _, target, _ -> target.writeText("setup") }, { throw IOException("not a program") }, { dir })

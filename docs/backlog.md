@@ -208,6 +208,32 @@ Do these items before the first public release.
     two runs started 5 seconds apart, so they probably used the same TOTP
     code, and SimplySign refused the second login. A rerun of the failed
     job passed. Do not start two signed runs at the same time.
+- Setup for check 4 (2026-10-06): the author made the pre-release
+  `update-test-0.9.1` with the `0.9.1` setup EXE (174,020,184 bytes) and
+  pushed `latest` = `0.9.1` in commit `3dc5999`. Before, `latest` was
+  `"version": "1.0.0"`, `"downloadUrl": "https://github.com/zipper2110/banana-shot/releases/latest"`,
+  with no `installerUrl`. Set these values back after the checks (step 5
+  of the setup).
+- Results (2026-10-06, the author, on the author's computer):
+  - Check 1 (fresh install of `0.9.0`, step 7 of the checklist): passed.
+  - Check 2 (proxy): postponed to after the first release (B-42). E11-S2
+    records the decision.
+  - Check 3 (install `0.9.1` over a running `0.9.0`): the setup installed.
+  - Check 5 (uninstall): the app was removed.
+  - Check 4 ("Update and restart" from `0.9.0` to `0.9.1`): failed (2026-10-06). After the download, `0.9.0` showed "Unexpected
+    error" (`RejectedExecutionException` from `DefaultProjectsPresenter`),
+    did not start the setup, and stayed open. The log shows the cause: the
+    download thread came from `services.executors`. It waited in
+    `invokeAndWait` for the close sequence on the EDT, and the close
+    sequence stopped all executors with `shutdownNow`. This interrupted the
+    download thread, so `UpdateAndRestart` never started the setup and
+    never called `exit`. The second error came later, from a panel of the
+    half-closed app.
+    Fixed: the download thread is now a separate daemon thread that the
+    close does not stop (`SwingApplicationFactory`). Also, a failed close
+    sequence now goes to the log, and the update still starts the setup and
+    exits (`UpdateAndRestart`, test "a close sequence that fails ...").
+    The fix must be in version N-1, so both test builds must be made again.
 - Done when: all checks pass with two dry-run builds. Write the result of
   each check in this item.
 
@@ -235,6 +261,20 @@ Do these items after the first public release.
   the Gmail address in use.
 - Done when: an email to the new address gets to the Gmail, and the app and
   the site show the new address.
+
+### B-42 Proxy check of the installed app
+
+- Moved from B-26 check 2 and E11-S2 on 2026-10-06. The author cannot set
+  up a proxy before the first release.
+- Set a manual proxy in Windows (for example a local Fiddler or mitmproxy),
+  with analytics on. Start the installed app. The proxy shows the request
+  for the rules file and the analytics request. Remove the proxy setting
+  after the check.
+- TLS inspection (S-12 of `docs/licensing/expiry-scenarios.md`): use
+  mitmproxy with its root certificate only in the Windows store. The app
+  gets the rules file through the proxy. Remove the proxy setting and the
+  certificate after the check.
+- Done when: both checks pass with a released build.
 
 ### B-41 Admin dashboard for the numbers
 

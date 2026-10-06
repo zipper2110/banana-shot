@@ -117,7 +117,8 @@ class UpdateAndRestart(
      * @param progress the bytes that arrived and the size of the file, if known.
      * @param closeSequence the normal close: save the open project and all changes that wait for a
      *   save, write the saved time and the export queue. After it, the app must not write anything,
-     *   because the setup kills the processes of the install folder with no clean stop.
+     *   because the setup kills the processes of the install folder with no clean stop. If it fails,
+     *   the update logs the failure and still starts the setup and exits.
      * @param exit ends the process.
      */
     fun run(
@@ -144,7 +145,12 @@ class UpdateAndRestart(
                 return Result.DownloadFailed(failure.message ?: failure.javaClass.simpleName)
             }
 
-            closeSequence()
+            try {
+                closeSequence()
+            } catch (failure: Exception) {
+                // After a part of the close, the app cannot continue. Thus, start the setup and exit also here.
+                logger.error(failure) { "The close sequence before the update failed. The update continues." }
+            }
             // The last step. The setup kills this process when the user clicks "Update".
             try {
                 launcher.start(setup)

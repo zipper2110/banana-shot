@@ -72,6 +72,7 @@ import java.awt.event.WindowEvent
 import java.beans.PropertyChangeListener
 import java.io.File
 import java.net.URI
+import java.util.concurrent.Executor
 import javax.swing.AbstractAction
 import javax.swing.Box
 import javax.swing.JComponent
@@ -601,7 +602,11 @@ object SwingApplicationFactory {
 
             val updateRunner = UpdateRunner(
                 update = updateAndRestart,
-                background = services.executors.createExecutor("update-download"),
+                // Not an executor of services.executors: the close sequence stops those executors, but this thread
+                // must live until it starts the setup and exits the app.
+                background = Executor { task ->
+                    Thread(task, "bananashot-update-download").apply { isDaemon = true }.start()
+                },
                 exportRuns = { exportPanel.activeExportCount > 0 },
                 closeSequence = {
                     beginAnalyticsExit()

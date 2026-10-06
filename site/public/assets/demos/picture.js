@@ -153,8 +153,8 @@
       ui.camera("wide");
       await ui.sleep(1300);
       // The Crop tab: rotate, then zoom and move.
+      // The camera stays wide, so that the full video shows the rotation and the crop.
       await pc.openCrop();
-      ui.camera("panel");
       await ui.sleep(650);
       pc.grid.classList.add("show");
       ui.label("crop", "Rotate to level the court");
@@ -166,7 +166,6 @@
       await pc.slide(["panX", "panY"], 600);
       await ui.sleep(400);
       ui.hideLabel();
-      ui.camera("wide");
       await ui.sleep(1800);
     }
 

@@ -482,7 +482,7 @@ internal class ExportsTable(
             const val PAD_X = 16
             const val PAD_TOP = 8
             const val PAD_BOTTOM = 6
-            val GROUP_BG = Palette.PANEL_DIM
+            val GROUP_BG get() = Palette.PANEL_DIM
         }
     }
 
@@ -513,7 +513,7 @@ internal class ExportsTable(
         }
 
         private companion object {
-            val PILL_BG = Palette.LINE
+            val PILL_BG get() = Palette.LINE
         }
     }
 
@@ -552,7 +552,7 @@ internal class ExportsTable(
 
         companion object {
             const val HEIGHT = 32
-            val HEAD_BG = Palette.OVERLAY
+            val HEAD_BG get() = Palette.OVERLAY
         }
     }
 
@@ -843,10 +843,10 @@ internal open class DataRow : JPanel(null), HeightForWidth {
     private companion object {
         const val PAD_Y = 9
         const val EXTRA_GAP = 8
-        val HOVER_BG = Palette.OVERLAY
-        val LIVE_BG = Palette.LIME_ROW
-        val LIVE_HOVER_BG = Palette.LIME_ROW_HOVER
-        val FAILED_BG = Palette.RED_ROW
+        val HOVER_BG get() = Palette.OVERLAY
+        val LIVE_BG get() = Palette.LIME_ROW
+        val LIVE_HOVER_BG get() = Palette.LIME_ROW_HOVER
+        val FAILED_BG get() = Palette.RED_ROW
     }
 }
 
@@ -996,8 +996,8 @@ internal class ProgressLine : JProgressBar(0, 100) {
     override fun paintBorder(g: Graphics) = Unit
 
     private companion object {
-        val TRACK = Palette.TRACK
-        val FILL_START = Palette.LIME_DEEP
+        val TRACK get() = Palette.TRACK
+        val FILL_START get() = Palette.LIME_DEEP
     }
 }
 
@@ -1067,7 +1067,7 @@ internal class ErrorBox : JPanel(null), HeightForWidth {
     private companion object {
         const val PAD_X = 11
         const val PAD_Y = 7
-        val TEXT = Palette.RED_TEXT
-        val BORDER = Palette.RED_LINE
+        val TEXT get() = Palette.RED_TEXT
+        val BORDER get() = Palette.RED_LINE
     }
 }

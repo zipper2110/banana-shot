@@ -162,7 +162,7 @@ internal open class SectionPage(title: String) : ToolPage() {
         private const val GAP_Y = 8
 
         /** The color of a status line that tells about a problem. */
-        val BAD = Palette.RED_TEXT
+        val BAD get() = Palette.RED_TEXT
 
         fun secondaryButton(text: String, onClick: () -> Unit): JButton = secondaryButton(text, null, onClick)
 

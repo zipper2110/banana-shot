@@ -1,5 +1,8 @@
 package org.litvin.ui.more
 
+import org.litvin.ui.commons.AppTheme
+import org.litvin.ui.commons.ThemeSettings
+import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.io.File
@@ -8,6 +11,7 @@ import javax.swing.JLabel
 import javax.swing.SwingUtilities
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MorePanelTest {
@@ -34,11 +38,64 @@ class MorePanelTest {
         var resets = 0
 
         SwingUtilities.invokeAndWait {
-            val page = SettingsPage(File("data"), onShowHintsAgain = { resets++ }, onOpenFolder = { true })
+            val page = SettingsPage(File("data"), RecordingThemeSettings(), onShowHintsAgain = { resets++ }, onOpenFolder = { true })
             checkNotNull(findButton(page, "more-settings-show-hints")).doClick()
         }
 
         assertEquals(1, resets)
+    }
+
+    @Test
+    fun `selecting a theme calls the theme callback`() {
+        System.setProperty("java.awt.headless", "true")
+        val settings = RecordingThemeSettings()
+
+        SwingUtilities.invokeAndWait {
+            val page = SettingsPage(File("data"), settings, onShowHintsAgain = {}, onOpenFolder = { true })
+            checkNotNull(findButton(page, "more-settings-theme-2")).doClick()
+            // The selected theme does not call the callback again.
+            checkNotNull(findButton(page, "more-settings-theme-2")).doClick()
+        }
+
+        assertEquals(listOf(AppTheme.LIGHT), settings.themes)
+    }
+
+    @Test
+    fun `Default removes the custom accent and is disabled without one`() {
+        System.setProperty("java.awt.headless", "true")
+        val settings = RecordingThemeSettings(customAccent = Color(0x3366FF))
+
+        SwingUtilities.invokeAndWait {
+            val page = SettingsPage(File("data"), settings, onShowHintsAgain = {}, onOpenFolder = { true })
+            val default = checkNotNull(findButton(page, "more-settings-accent-default"))
+            assertTrue(default.isEnabled)
+            default.doClick()
+            assertFalse(default.isEnabled)
+        }
+
+        assertEquals(listOf<Color?>(null), settings.accents)
+    }
+
+    private class RecordingThemeSettings(
+        override var theme: AppTheme = AppTheme.DARK,
+        override var customAccent: Color? = null,
+    ) : ThemeSettings {
+        val themes = mutableListOf<AppTheme>()
+        val accents = mutableListOf<Color?>()
+
+        override fun selectTheme(theme: AppTheme) {
+            themes += theme
+            this.theme = theme
+        }
+
+        override fun selectAccent(accent: Color?) {
+            accents += accent
+            customAccent = accent
+        }
+
+        override fun previewAccent(accent: Color) = Unit
+
+        override fun onChange(listener: () -> Unit) = Unit
     }
 
     @Test

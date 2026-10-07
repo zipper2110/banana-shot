@@ -3,6 +3,8 @@ package org.litvin.ui.tabs.projects
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SystemFilePicker
+import org.litvin.ui.commons.ThemeSettings
+import org.litvin.ui.commons.ThemeSwitch
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.applyDarkScrollbar
@@ -55,6 +57,7 @@ class SwingProjectsPanel(
     private val newProjectEditor: NewProjectEditor = NewProjectDialog,
     private val projectNameEditor: ProjectNameEditor = RenameProjectDialog,
     private val deleteConfirmer: ProjectDeleteConfirmer = DeleteProjectDialog,
+    private val themeSettings: ThemeSettings? = null,
 ) : JPanel(BorderLayout()), ProjectsView {
     private val startPanel = StartPanel(onImportNewMatch = { presenter.onIntent(ProjectsIntent.ImportNewMatch) })
     private val rows = RowsPanel()
@@ -169,6 +172,18 @@ class SwingProjectsPanel(
             add(Box.createHorizontalGlue())
             add(paginationBar)
             add(Box.createVerticalStrut(30))
+            themeSettings?.let { settings ->
+                add(Box.createHorizontalStrut(28))
+                add(JLabel("App theme").apply {
+                    font = ProjectsUi.font(12.5f)
+                    foreground = Palette.FG_3
+                    // A few pixels more than the measured text, so that the last letter is never cut.
+                    preferredSize = Dimension(preferredSize.width + 4, preferredSize.height)
+                    maximumSize = preferredSize
+                })
+                add(Box.createHorizontalStrut(8))
+                add(ThemeSwitch("projects-theme", settings))
+            }
         }
 
         val listScroll = JScrollPane(rows).apply {

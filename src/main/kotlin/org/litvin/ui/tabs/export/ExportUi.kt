@@ -115,7 +115,7 @@ internal object ExportUi {
     fun paintCheck(g2: Graphics2D, x: Int, y: Int, checked: Boolean) {
         val size = 16.0
         if (checked) {
-            g2.color = Palette.LIME
+            g2.color = Palette.LIME_FILL
             g2.fill(RoundRectangle2D.Double(x.toDouble(), y.toDouble(), size, size, 6.0, 6.0))
             g2.color = Palette.ON_LIME
             g2.stroke = BasicStroke(2.2f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER)

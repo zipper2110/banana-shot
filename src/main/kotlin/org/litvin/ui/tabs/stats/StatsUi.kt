@@ -191,7 +191,7 @@ internal class InVideoCheck(componentName: String) : JCheckBox() {
             val g2 = UiKit.smooth(g)
             try {
                 if (checked) {
-                    g2.color = Palette.LIME
+                    g2.color = Palette.LIME_FILL
                     g2.fill(RoundRectangle2D.Double(x.toDouble(), y.toDouble(), SIZE.toDouble(), SIZE.toDouble(), 6.0, 6.0))
                     g2.color = Palette.ON_LIME
                     g2.stroke = BasicStroke(2f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER)
@@ -253,7 +253,7 @@ internal class StatsButton(
             val hover = isEnabled && model.isRollover
             val textColor: Color
             if (lime) {
-                UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.LIME_HOVER else Palette.LIME, null)
+                UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.LIME_HOVER else Palette.LIME_FILL, null)
                 textColor = Palette.ON_LIME
             } else {
                 UiKit.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.RAISED_2 else Palette.RAISED, if (hover) Palette.HOVER_LINE else Palette.LINE_2)
@@ -326,7 +326,7 @@ internal class ScopeButton(componentName: String, private val title: String, pri
         const val SMALL_LINE = 15f
         val TITLE_FONT = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
         val SMALL_FONT = UiKit.font(11f)
-        val HOVER_BG = Palette.OVERLAY
+        val HOVER_BG get() = Palette.OVERLAY
     }
 }
 

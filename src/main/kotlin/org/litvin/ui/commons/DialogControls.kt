@@ -57,8 +57,8 @@ internal class SwitchBox(text: String, private val fontSize: Float = 13f) : JChe
         const val TRACK_W = 30
         const val TRACK_H = 17
         private const val GAP = 10
-        private val TRACK_OFF = Palette.LINE_3
-        private val KNOB_OFF = Palette.FG_2
+        private val TRACK_OFF get() = Palette.LINE_3
+        private val KNOB_OFF get() = Palette.FG_2
 
         /** Paints the switch track and the knob with the top-left corner at [x], [y]. */
         fun paintSwitch(g2: Graphics2D, x: Int, y: Int, on: Boolean, focused: Boolean) {
@@ -67,7 +67,7 @@ internal class SwitchBox(text: String, private val fontSize: Float = 13f) : JChe
                 g2.stroke = BasicStroke(1.5f)
                 g2.draw(RoundRectangle2D.Double(x - 2.5, y - 2.5, TRACK_W + 5.0, TRACK_H + 5.0, TRACK_H + 5.0, TRACK_H + 5.0))
             }
-            g2.color = if (on) Palette.LIME else TRACK_OFF
+            g2.color = if (on) Palette.LIME_FILL else TRACK_OFF
             g2.fill(RoundRectangle2D.Double(x.toDouble(), y.toDouble(), TRACK_W.toDouble(), TRACK_H.toDouble(), TRACK_H.toDouble(), TRACK_H.toDouble()))
             val knob = TRACK_H - 4.0
             val knobX = if (on) x + TRACK_W - 2.0 - knob else x + 2.0

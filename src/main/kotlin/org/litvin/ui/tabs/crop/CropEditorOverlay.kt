@@ -38,7 +38,7 @@ class CropEditorOverlay(
         private const val HANDLE_SIZE = 10.0
         private const val HANDLE_HIT_SIZE = 14.0
         private const val ROTATION_HANDLE_OFFSET = 24.0
-        private val DIM = Palette.SCRIM
+        private val DIM get() = Palette.SCRIM
     }
 
     private val target = player.component

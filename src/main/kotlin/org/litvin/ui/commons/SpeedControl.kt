@@ -1,6 +1,5 @@
 package org.litvin.ui.commons
 
-import com.formdev.flatlaf.FlatClientProperties
 import com.formdev.flatlaf.ui.FlatArrowButton
 import java.awt.Dimension
 import java.awt.Graphics
@@ -25,12 +24,11 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
         font = UiKit.font(12.5f)
         // Up and Down must stay the speed hotkeys of the tab, so the list never keeps the focus.
         isFocusable = false
-        putClientProperty(
-            FlatClientProperties.STYLE,
+        Theme.themedStyle(this) {
             "arc: 8; background: ${Palette.hex(Palette.INSET)}; foreground: ${Palette.hex(Palette.FG)}; " +
                 "borderColor: ${Palette.hex(Palette.LINE_2)}; buttonBackground: ${Palette.hex(Palette.INSET)}; " +
-                "buttonArrowColor: ${Palette.hex(Palette.FG_2)}; buttonStyle: none; padding: 0,6,0,4",
-        )
+                "buttonArrowColor: ${Palette.hex(Palette.FG_2)}; buttonStyle: none; padding: 0,6,0,4"
+        }
     }
     private val captionFont get() = UiKit.font(12f)
     private var updating = false

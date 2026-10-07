@@ -211,11 +211,10 @@ internal object DialogKit {
         combo.font = UiKit.font(13f)
         combo.background = Palette.INSET
         combo.foreground = Palette.FG
-        combo.putClientProperty(
-            "FlatLaf.style",
+        Theme.themedStyle(combo) {
             "borderColor: ${Palette.hex(Palette.LINE_2)}; focusedBorderColor: ${Palette.hex(Palette.LIME_LINE)}; arc: 8; buttonStyle: none;" +
-                " buttonArrowColor: ${Palette.hex(Palette.FG_2)}; popupBackground: ${Palette.hex(Palette.OVERLAY)}; padding: 4,10,4,6",
-        )
+                " buttonArrowColor: ${Palette.hex(Palette.FG_2)}; popupBackground: ${Palette.hex(Palette.OVERLAY)}; padding: 4,10,4,6"
+        }
         combo.preferredSize = Dimension(combo.preferredSize.width, INPUT_HEIGHT)
     }
 

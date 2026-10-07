@@ -192,6 +192,6 @@ internal class SeekSliderUI : FlatSliderUI() {
     private companion object {
         const val KNOB = 16
         const val TRACK = 4.0
-        val TRACK_BG = Palette.LINE_3
+        val TRACK_BG get() = Palette.LINE_3
     }
 }

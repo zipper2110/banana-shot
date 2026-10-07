@@ -171,7 +171,7 @@ internal class PlayButton(private val style: PlayButtonStyle = PlayButtonStyle.L
             val fill = when {
                 model.isArmed && model.isPressed -> Palette.LIME_PRESSED
                 model.isRollover -> Palette.LIME_HOVER
-                else -> Palette.LIME
+                else -> Palette.LIME_FILL
             }
             UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 8, fill, null)
             val icon = if (playing) pauseIcon else playIcon

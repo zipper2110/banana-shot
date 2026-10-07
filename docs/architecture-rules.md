@@ -116,7 +116,10 @@ For a feature `Foo` (e.g., Scoring, Points):
 ## UI component conventions
 - Encapsulate business logic or visual style in focused components with clear APIs.
 - Prefer extracting repeated or cohesive UI widgets into separate component classes instead of keeping them as builder methods inside a tab panel.
-- Keep theme-level colors in `UiStyles`; UI components should consume shared style constants instead of defining local palettes.
+- Get all UI colors from the tokens of `Palette` (`ui/commons/Palette.kt`). `ArchitectureDependencyHygieneTest` finds color values in other UI files.
+- A theme change applies at once (B-12). The Palette tokens are live colors: a component can keep a token, and it paints with the new value after a theme change. Do not copy the value of a token into a new `Color`, a cached image or a string.
+- Make a FlatLaf style string with `Theme.themedStyle`, so that a theme change makes the string again.
+- `LIME` is for lime marks on a surface (icons, text, lines). `LIME_FILL` is for a lime fill with `ON_LIME` content (primary buttons, the play button, a checked box). On the Light theme, `LIME` is darker than `LIME_FILL`.
 - Favor composition over inheritance; keep components testable.
 - Prefer immutable value objects for inputs/outputs where practical.
 

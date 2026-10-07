@@ -73,7 +73,7 @@ internal fun paintLane(g: Graphics, x: Int, width: Int, height: Int, selected: B
     g.fillRect(x, 0, 1, height)
 }
 
-/** The player colors of the table, lighter when a color is too dark for the dark tab. */
+/** The player colors of the table, with enough contrast for the surface of the theme ([Palette.readableOnSurface]). */
 internal typealias PlayerColors = PerPlayer<Color>
 
 /**

@@ -104,7 +104,7 @@ internal class UiButton(
                     iconColor = Palette.FG_2
                 }
                 Kind.LIME -> {
-                    fill = if (hover) Palette.LIME_HOVER else Palette.LIME
+                    fill = if (hover) Palette.LIME_HOVER else Palette.LIME_FILL
                     border = null
                     fg = Palette.ON_LIME
                     iconColor = Palette.ON_LIME

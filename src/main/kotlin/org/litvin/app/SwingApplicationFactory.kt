@@ -37,6 +37,8 @@ import org.litvin.ui.tabs.points.SwingPointsPanel
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
 import org.litvin.ui.commons.PreferencesHintRegistry
+import org.litvin.ui.commons.ThemeController
+import org.litvin.ui.commons.ThemePreferences
 import org.litvin.ui.commons.PreferencesCommentStyleDefaults
 import org.litvin.ui.tabs.scoring.PreferencesAppCreditRequest
 import org.litvin.ui.tabs.scoring.PreferencesScoreboardStyleDefaults
@@ -235,6 +237,8 @@ object SwingApplicationFactory {
             val cards = JPanel(CardLayout())
             val cardLayout = cards.layout as CardLayout
             val applicationPreferences = services.preferences.node(PreferencesProvider.APPLICATION)
+            // One controller for the theme controls of the Projects tab and More > Settings.
+            val themeSettings = ThemeController(ThemePreferences(applicationPreferences))
             val hints = HintController(PreferencesHintRegistry(applicationPreferences))
             val commentStyles = PreferencesCommentStyleDefaults(applicationPreferences)
 
@@ -393,6 +397,7 @@ object SwingApplicationFactory {
                 projectsPresenter,
                 services.filePicker,
                 services.dialogs,
+                themeSettings = themeSettings,
             ).apply {
                 onProjectOpened = { path ->
                     projectOpen = true
@@ -528,6 +533,7 @@ object SwingApplicationFactory {
                             SettingsPage.TITLE,
                             SettingsPage(
                                 services.paths.root,
+                                themeSettings,
                                 onShowHintsAgain = {
                                     hints.resetAll()
                                     HelpPreferences.resetFirstLaunchOverview(applicationPreferences)

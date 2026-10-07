@@ -1,6 +1,7 @@
 package org.litvin.ui.commons
 
 import java.awt.Color
+import kotlin.math.roundToInt
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
 
@@ -13,8 +14,11 @@ import kotlin.reflect.KProperty
  * Thus a theme can change one purpose and keep the other.
  * The base values come from the shared.css files of the redesign folders in design/.
  *
- * Experimental: two seed colors can change at runtime, the [accent] and the [background]. The Test tab sets them.
+ * Two seed colors can change at runtime, the [accent] and the [background]. Each [AppTheme] has its seeds.
+ * The Test tab can also set other seeds.
  * A token that comes from a seed ("by surface", "by accentOf", ...) calculates its value again after [setSeeds].
+ * Such a token is a live color: the same [Color] object always has the value of the current seeds. A component can
+ * keep it, and the component gets the new value at its next repaint. [withAlpha] of a live color is also live.
  * The lime tokens have base values for [BASE_ACCENT]. With another accent seed, they follow the seed.
  * With the default background seed, each surface token has its base value. [Theme] changes the seeds and updates the open windows.
  */
@@ -30,6 +34,15 @@ internal object Palette {
     /** The default background seed: the base value of [BG]. */
     val DEFAULT_BACKGROUND = Color(0x0E0E0E)
 
+    /** The background seed of the Mid theme. */
+    val MID_BACKGROUND = Color(0x2E2E2E)
+
+    /** The accent seed of the Light theme: the lime fill. The lime marks ([LIME]) are darker on a light background. */
+    val LIGHT_ACCENT = Color(0xB4DF3C)
+
+    /** The background seed of the Light theme. */
+    val LIGHT_BACKGROUND = Color(0xF2F2F2)
+
     var accent: Color = DEFAULT_ACCENT
         private set
 
@@ -40,8 +53,6 @@ internal object Palette {
     @Volatile
     private var generation = 0
 
-    private val seeded = mutableListOf<Token>()
-
     /** Sets the seed colors. The alpha of the seeds is ignored. */
     fun setSeeds(accent: Color, background: Color) {
         this.accent = Color(accent.rgb and 0xFFFFFF)
@@ -49,8 +60,9 @@ internal object Palette {
         generation++
     }
 
-    /** The current values of all tokens that come from a seed, always in the same order. */
-    fun seededValues(): List<Color> = seeded.map { it.value() }
+    /** True when the background seed is light. Then the text is dark and the surface steps go darker. */
+    val isLightBackground: Boolean
+        get() = isLight(background)
 
     // ---- Surfaces, from the darkest to the lightest ----
 
@@ -132,10 +144,18 @@ internal object Palette {
 
     // ---- The lime accent ----
 
-    /** The accent seed itself. */
-    val LIME by token { accent }
+    /**
+     * Lime marks on a surface: icons, text, lines, bars and small dots. On a dark background it is the accent seed.
+     * On a light background it is darker, so that the marks have enough contrast.
+     * An accent with too little contrast to the background (for example a dark gray accent on a dark theme) is mixed
+     * with white or black.
+     */
+    val LIME by token { readable(if (isLight(background)) markOf(accent) else accent, MIN_ACCENT_MARK_CONTRAST) }
+
+    /** A lime fill with [ON_LIME] text or icons on it: primary buttons, the play button, a checked box. The accent seed itself. */
+    val LIME_FILL by token { accent }
     val LIME_HOVER by accentOf(0xB4FF33)
-    val LIME_PRESSED by token { LIME.darker() }
+    val LIME_PRESSED by token { LIME_FILL.darker() }
 
     /** The light start of the lime gradient of the older primary buttons and the app mark. */
     val LIME_LIGHT by accentOf(0xDDFFB0)
@@ -143,11 +163,13 @@ internal object Palette {
     /** The dark start of the lime progress fill. */
     val LIME_DEEP by accentOf(0x7FCC00)
 
-    /** Text and icons on a lime fill. */
-    val ON_LIME by accentOf(0x142000)
+    /** Text and icons on a lime fill. Dark on a light accent, white on a dark accent. */
+    val ON_LIME by token { if (needsLightInk(LIME_FILL)) PURE_WHITE else shiftAccent(Color(0x142000), keepBrightness = false) }
 
     /** Quiet text on a lime fill, for example "SPACE" under the play icon. */
-    val ON_LIME_MUTED by accentOf(0x4D6B16)
+    val ON_LIME_MUTED by token {
+        if (needsLightInk(LIME_FILL)) withAlpha(PURE_WHITE, 170) else shiftAccent(Color(0x4D6B16), keepBrightness = false)
+    }
 
     /** Lime tints, from the weakest to the strongest. */
     val LIME_WASH by token { withAlpha(LIME, 10) }
@@ -170,20 +192,20 @@ internal object Palette {
     val SAGE by accentOf(0xA3C586)
     val SAGE_TINT by token { withAlpha(SAGE, 26) }
 
-    // ---- Status colors ----
+    // ---- Status colors. On a light background they are darker, so that text in these colors is clear. ----
 
     /** Favorites, warnings and notes. */
-    val YELLOW = Color(0xF2D64B)
-    val YELLOW_TINT = withAlpha(YELLOW, 20)
-    val YELLOW_LINE = withAlpha(YELLOW, 89)
-    val YELLOW_TEXT = Color(0xF3E2A4)
+    val YELLOW by onBackground(dark = 0xF2D64B, light = 0xA88700)
+    val YELLOW_TINT by token { withAlpha(YELLOW, 20) }
+    val YELLOW_LINE by token { withAlpha(YELLOW, 89) }
+    val YELLOW_TEXT by onBackground(dark = 0xF3E2A4, light = 0x6B5600)
 
     /** Errors, failures and destructive actions. */
-    val RED = Color(0xFF7351)
-    val RED_TINT = withAlpha(RED, 26)
-    val RED_LINE = withAlpha(RED, 102)
-    val RED_LINE_2 = withAlpha(RED, 160)
-    val RED_TEXT = Color(0xFFB4A3)
+    val RED by onBackground(dark = 0xFF7351, light = 0xD9472A)
+    val RED_TINT by token { withAlpha(RED, 26) }
+    val RED_LINE by token { withAlpha(RED, 102) }
+    val RED_LINE_2 by token { withAlpha(RED, 160) }
+    val RED_TEXT by onBackground(dark = 0xFFB4A3, light = 0xA8321A)
 
     /** The dark fill of a quiet destructive button. */
     val RED_FILL by surface(0x3A1812)
@@ -197,8 +219,8 @@ internal object Palette {
     val RED_ROW by surface(0x221613)
 
     /** Information. */
-    val BLUE = Color(0x6FB5FF)
-    val BLUE_TINT = withAlpha(BLUE, 31)
+    val BLUE by onBackground(dark = 0x6FB5FF, light = 0x2A7AD4)
+    val BLUE_TINT by token { withAlpha(BLUE, 31) }
 
     /** Marked points on the timeline. */
     val GREEN = Color(0x4CAF50)
@@ -219,14 +241,14 @@ internal object Palette {
     val VIDEO_BG: Color = Color.BLACK
 
     /** The video range on the timeline. */
-    val VIDEO_RANGE = withAlpha(BLUE, 140)
+    val VIDEO_RANGE by token { withAlpha(BLUE, 140) }
 
-    val PLAYHEAD: Color = RED
+    val PLAYHEAD by token { RED }
 
     // ---- Scoring ----
 
     /** The racket of the serve button, and its fill and border. */
-    val RACKET = Color(0xC2DB43)
+    val RACKET by onBackground(dark = 0xC2DB43, light = 0x5A7010)
     val SERVE_FILL by surface(0x3A3F24)
     val SERVE_LINE by surface(0x59622C)
 
@@ -250,31 +272,47 @@ internal object Palette {
 
     // ---- Seed math ----
 
-    /** A token value that is calculated again after a seed change. */
-    private class Token(private val compute: () -> Color) : ReadOnlyProperty<Any?, Color> {
-        private var cached: Color? = null
+    /**
+     * A color that has the value of the current seeds. [compute] runs again after a seed change.
+     * Java2D, Swing and FlatLaf read a color with [getRGB] when they paint, so a kept live color follows the theme.
+     */
+    private class LiveColor(private val compute: () -> Color) : Color(0, true) {
+        @Volatile
+        private var cachedRgb = 0
+
+        @Volatile
         private var cachedGeneration = -1
 
-        fun value(): Color {
+        override fun getRGB(): Int {
             val current = generation
-            val known = cached
-            if (known != null && cachedGeneration == current) return known
-            return compute().also {
-                cached = it
+            if (cachedGeneration != current) {
+                cachedRgb = compute().rgb
                 cachedGeneration = current
             }
+            return cachedRgb
         }
 
-        override fun getValue(thisRef: Any?, property: KProperty<*>): Color = value()
+        // Color.hashCode() returns the value from the constructor. A live color must agree with equals(), which uses getRGB().
+        override fun hashCode(): Int = rgb
     }
 
-    private fun token(compute: () -> Color) = Token(compute).also { seeded += it }
+    /** A token: a live color that the object properties give out. */
+    private class Token(compute: () -> Color) : ReadOnlyProperty<Any?, Color> {
+        private val color = LiveColor(compute)
+
+        override fun getValue(thisRef: Any?, property: KProperty<*>): Color = color
+    }
+
+    private fun token(compute: () -> Color) = Token(compute)
 
     /** A surface, a line or a dark tinted fill. It follows the background seed. */
     private fun surface(rgb: Int) = token { shiftSurface(Color(rgb)) }
 
-    /** A text color. It is inverted on a light background. */
-    private fun text(rgb: Int) = token { if (isLight(background)) invert(Color(rgb)) else Color(rgb) }
+    /** A text color. It follows the background seed. On a light background it is dark. */
+    private fun text(rgb: Int) = token { shiftText(Color(rgb)) }
+
+    /** A color for a dark background and a different color for a light background. */
+    private fun onBackground(dark: Int, light: Int) = token { Color(if (isLight(background)) light else dark) }
 
     /** An accent color. It follows the hue, the saturation and the brightness of the accent seed. */
     private fun accentOf(rgb: Int) = token { shiftAccent(Color(rgb), keepBrightness = false) }
@@ -286,8 +324,7 @@ internal object Palette {
      * Moves [color] from the default background to the background seed. The distance from the default background stays
      * the same. On a light background the gray part of the distance is negative, so that the steps go darker.
      */
-    private fun shiftSurface(color: Color): Color {
-        val seed = background
+    private fun shiftSurface(color: Color, seed: Color = background): Color {
         if (seed == DEFAULT_BACKGROUND) return color
         val base = DEFAULT_BACKGROUND
         val dr = color.red - base.red
@@ -301,6 +338,34 @@ internal object Palette {
             (seed.blue + step + db - gray).coerceIn(0, 255),
         )
     }
+
+    /**
+     * Moves the text color [color] from the default background to the background seed. The text keeps its relative
+     * position between the background and the strongest text. The strongest text is white on a dark background
+     * and black on a light background.
+     */
+    private fun shiftText(color: Color, seed: Color = background): Color {
+        if (seed == DEFAULT_BACKGROUND) return color
+        val base = DEFAULT_BACKGROUND
+        val end = if (isLight(seed)) 0 else 255
+        fun channel(value: Int, baseValue: Int, seedValue: Int): Int {
+            val share = (value - baseValue).toDouble() / (255 - baseValue)
+            return (seedValue + (end - seedValue) * share).roundToInt().coerceIn(0, 255)
+        }
+        return Color(
+            channel(color.red, base.red, seed.red),
+            channel(color.green, base.green, seed.green),
+            channel(color.blue, base.blue, seed.blue),
+        )
+    }
+
+    /** A darker version of the accent [color] for marks on a light surface. Hue and saturation stay. */
+    private fun markOf(color: Color): Color {
+        val hsb = Color.RGBtoHSB(color.red, color.green, color.blue, null)
+        return Color(Color.HSBtoRGB(hsb[0], hsb[1], minOf(hsb[2], MARK_BRIGHTNESS_ON_LIGHT)) and 0xFFFFFF)
+    }
+
+    private const val MARK_BRIGHTNESS_ON_LIGHT = 0.52f
 
     /** Turns the hue of [color] by the hue difference between the base accent and the accent seed. Scales the saturation. */
     private fun shiftAccent(color: Color, keepBrightness: Boolean): Color {
@@ -317,10 +382,76 @@ internal object Palette {
 
     private fun isLight(color: Color) = 0.299 * color.red + 0.587 * color.green + 0.114 * color.blue > 128
 
-    private fun invert(color: Color) = Color(255 - color.red, 255 - color.green, 255 - color.blue)
+    /**
+     * [color] as a mark on the surfaces of the app, for example a player name in the player color. When [color] has
+     * too little contrast with [BG], it is mixed with white on a dark background, or with black on a light background.
+     * The hue stays. The result is live, so it follows a theme change.
+     */
+    fun readableOnSurface(color: Color): Color {
+        val base = Color(color.rgb and 0xFFFFFF)
+        return LiveColor { readable(base) }
+    }
 
-    /** [color] with the opacity [alpha] (0 to 255). */
-    fun withAlpha(color: Color, alpha: Int): Color = Color(color.red, color.green, color.blue, alpha.coerceIn(0, 255))
+    private fun readable(color: Color, minContrast: Double = MIN_MARK_CONTRAST): Color {
+        val bg = luminance(BG)
+        val toward = if (isLight(background)) PURE_BLACK else PURE_WHITE
+        var part = 0.0
+        var mixed = color
+        while (contrast(luminance(mixed), bg) < minContrast && part < 1.0) {
+            part += 0.01
+            mixed = mix(color, toward, part)
+        }
+        return mixed
+    }
+
+    /** The minimum WCAG contrast of [readableOnSurface] (level AA for text). */
+    private const val MIN_MARK_CONTRAST = 4.5
+
+    /** The minimum WCAG contrast of [LIME] with [BG] (level AA for icons and large text). */
+    private const val MIN_ACCENT_MARK_CONTRAST = 3.0
+
+    /** True when white text has more contrast on [fill] than the dark lime text. */
+    private fun needsLightInk(fill: Color): Boolean {
+        val l = luminance(fill)
+        return contrast(l, 1.0) > contrast(l, luminance(shiftAccent(Color(0x142000), keepBrightness = false)))
+    }
+
+    /** The relative luminance of the WCAG definition, from 0 (black) to 1 (white). */
+    private fun luminance(color: Color): Double {
+        fun channel(value: Int): Double {
+            val v = value / 255.0
+            return if (v <= 0.03928) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(color.red) + 0.7152 * channel(color.green) + 0.0722 * channel(color.blue)
+    }
+
+    private fun contrast(a: Double, b: Double) = (maxOf(a, b) + 0.05) / (minOf(a, b) + 0.05)
+
+    private fun mix(from: Color, to: Color, part: Double): Color {
+        fun channel(a: Int, b: Int) = (a + (b - a) * part).roundToInt().coerceIn(0, 255)
+        return Color(channel(from.red, to.red), channel(from.green, to.green), channel(from.blue, to.blue))
+    }
+
+    /** The colors of a small picture of the app with the background seed [background], for the theme control. */
+    data class ThemePreviewColors(val background: Color, val sidebar: Color, val border: Color, val text: Color, val quietText: Color)
+
+    /** The preview colors for the background seed [background]. They do not depend on the current seeds. */
+    fun previewColors(background: Color): ThemePreviewColors {
+        val seed = Color(background.rgb and 0xFFFFFF)
+        return ThemePreviewColors(
+            background = seed,
+            sidebar = shiftSurface(Color(0x1C1C1C), seed),
+            border = shiftSurface(Color(0x363636), seed),
+            text = shiftText(Color(0xE4E4E4), seed),
+            quietText = shiftText(Color(0x6A6A6A), seed),
+        )
+    }
+
+    /** [color] with the opacity [alpha] (0 to 255). For a live [color] the result is also live. */
+    fun withAlpha(color: Color, alpha: Int): Color =
+        if (color is LiveColor) LiveColor { fixedAlpha(color, alpha) } else fixedAlpha(color, alpha)
+
+    private fun fixedAlpha(color: Color, alpha: Int) = Color(color.red, color.green, color.blue, alpha.coerceIn(0, 255))
 
     /** [color] as "#RRGGBB", or as "#RRGGBBAA" when it is not opaque. For FlatLaf style strings. */
     fun hex(color: Color): String =

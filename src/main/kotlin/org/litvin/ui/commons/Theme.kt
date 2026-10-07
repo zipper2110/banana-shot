@@ -1,103 +1,79 @@
 package org.litvin.ui.commons
 
-import org.kordamp.ikonli.swing.FontIcon
+import com.formdev.flatlaf.FlatClientProperties
+import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.FlatLaf
+import com.formdev.flatlaf.FlatLightLaf
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.Window
-import java.util.Collections
-import java.util.IdentityHashMap
-import javax.swing.AbstractButton
-import javax.swing.Icon
 import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JTable
-import javax.swing.border.Border
-import javax.swing.border.CompoundBorder
-import javax.swing.border.LineBorder
-import javax.swing.border.MatteBorder
-import javax.swing.plaf.UIResource
-import javax.swing.text.JTextComponent
+import javax.swing.SwingUtilities
+import javax.swing.UIManager
 
 /**
- * Experimental runtime theme. [apply] changes the seed colors of [Palette] and updates the open windows.
+ * The runtime theme. [start] sets the theme before the app makes its windows.
+ * [apply] changes the theme of the open windows at once.
  *
- * A component that reads a Palette token when it paints gets the new color at the next repaint.
- * A component that keeps a color from the time it was built gets the new color when its color is equal to an old
- * token value: backgrounds, foregrounds, text and table colors, line and matte borders, and Ikonli icons.
- * Other colors change only when the component is built again, for example FlatLaf style strings and cached images.
+ * The tokens of [Palette] are live colors, so a component that keeps a token gets the new value at its next repaint.
+ * Thus, keep the token itself: do not copy its value into a new [Color], a cached image or a string.
+ * A FlatLaf style string must come from [themedStyle], so that [apply] can make it again.
  */
 internal object Theme {
+    private const val STYLE_BUILDER = "bananashot.themedStyle"
+
+    /** Sets the seeds and the look and feel of [theme]. Call it one time, before the app makes a component. */
+    fun start(theme: AppTheme, accent: Color = theme.accent) {
+        Palette.setSeeds(accent, theme.background)
+        UIManager.setLookAndFeel(lookAndFeel())
+    }
+
+    /** Changes the open windows to [theme] with the accent seed [accent]. */
+    fun apply(theme: AppTheme, accent: Color = theme.accent) = apply(accent, theme.background)
+
     fun apply(accent: Color, background: Color) {
         if (accent.rgb == Palette.accent.rgb && background.rgb == Palette.background.rgb) return
-        val before = Palette.seededValues()
         Palette.setSeeds(accent, background)
-        val after = Palette.seededValues()
-        // The key is the ARGB value, because a UIResource color is not equal to a plain color with the same value.
-        val changes = HashMap<Int, Color>()
-        before.zip(after).forEach { (old, new) -> if (old.rgb != new.rgb) changes.putIfAbsent(old.rgb, new) }
-        if (changes.isEmpty()) return
-        // Buttons can share one icon. Change each icon one time only, because a new value can also be a key.
-        val icons = Collections.newSetFromMap(IdentityHashMap<Icon, Boolean>())
+        val laf = lookAndFeel()
+        val lafChanged = UIManager.getLookAndFeel()?.javaClass != laf.javaClass
+        if (lafChanged) UIManager.setLookAndFeel(laf)
         // Window.getWindows() also returns the owned windows, so the walk does not go into them.
         Window.getWindows().forEach { window ->
-            update(window, changes, icons)
+            update(window, lafChanged)
+            window.invalidate()
+            window.validate()
             window.repaint()
         }
     }
 
-    private fun update(component: Component, changes: Map<Int, Color>, icons: MutableSet<Icon>) {
-        fun swap(color: Color?): Color? = color?.takeIf { it !is UIResource }?.let { changes[it.rgb] }
+    /**
+     * Sets the FlatLaf style of [component] from [build]. [apply] calls [build] again after a theme change,
+     * because a style string keeps the color values of the time when it was made.
+     */
+    fun themedStyle(component: JComponent, build: () -> String) {
+        component.putClientProperty(STYLE_BUILDER, build)
+        component.putClientProperty(FlatClientProperties.STYLE, build())
+    }
 
-        if (component.isBackgroundSet) swap(component.background)?.let { component.background = it }
-        if (component.isForegroundSet) swap(component.foreground)?.let { component.foreground = it }
+    private fun lookAndFeel(): FlatLaf = if (Palette.isLightBackground) FlatLightLaf() else FlatDarkLaf()
+
+    /**
+     * Updates [component] and its children. A new look and feel needs new UI delegates. A component with a UI delegate
+     * of the app (a custom slider or scroll bar) keeps its delegate: that delegate paints with the live Palette colors.
+     */
+    private fun update(component: Component, lafChanged: Boolean) {
         if (component is JComponent) {
-            val border = component.border
-            val newBorder = swapBorder(border, changes)
-            if (newBorder !== border) component.border = newBorder
-        }
-        when (component) {
-            is JTextComponent -> {
-                swap(component.caretColor)?.let { component.caretColor = it }
-                swap(component.selectionColor)?.let { component.selectionColor = it }
-                swap(component.selectedTextColor)?.let { component.selectedTextColor = it }
-                swap(component.disabledTextColor)?.let { component.disabledTextColor = it }
+            if (lafChanged && !hasAppUi(component)) component.updateUI()
+            @Suppress("UNCHECKED_CAST")
+            (component.getClientProperty(STYLE_BUILDER) as? () -> String)?.let {
+                component.putClientProperty(FlatClientProperties.STYLE, it())
             }
-            is JTable -> {
-                swap(component.gridColor)?.let { component.gridColor = it }
-                swap(component.selectionBackground)?.let { component.selectionBackground = it }
-                swap(component.selectionForeground)?.let { component.selectionForeground = it }
-            }
-            is AbstractButton -> listOf(
-                component.icon, component.rolloverIcon, component.pressedIcon, component.selectedIcon, component.disabledIcon,
-            ).forEach { swapIcon(it, changes, icons) }
-            is JLabel -> swapIcon(component.icon, changes, icons)
+            if (lafChanged) component.componentPopupMenu?.let { SwingUtilities.updateComponentTreeUI(it) }
         }
-        if (component is Container) component.components.forEach { update(it, changes, icons) }
+        if (component is Container) component.components.forEach { update(it, lafChanged) }
     }
 
-    private fun swapIcon(icon: Icon?, changes: Map<Int, Color>, icons: MutableSet<Icon>) {
-        if (icon !is FontIcon || !icons.add(icon)) return
-        changes[icon.iconColor?.rgb ?: return]?.let { icon.iconColor = it }
-    }
-
-    /** Returns [border] with new colors, or [border] itself when no color changes. */
-    private fun swapBorder(border: Border?, changes: Map<Int, Color>): Border? = when {
-        border is CompoundBorder -> {
-            val outside = swapBorder(border.outsideBorder, changes)
-            val inside = swapBorder(border.insideBorder, changes)
-            if (outside === border.outsideBorder && inside === border.insideBorder) border else CompoundBorder(outside, inside)
-        }
-        border?.javaClass == LineBorder::class.java -> {
-            val line = border as LineBorder
-            changes[line.lineColor.rgb]?.let { LineBorder(it, line.thickness, line.roundedCorners) } ?: border
-        }
-        border?.javaClass == MatteBorder::class.java -> {
-            val matte = border as MatteBorder
-            val color = matte.matteColor
-            if (matte.tileIcon != null || color == null) border
-            else changes[color.rgb]?.let { MatteBorder(matte.borderInsets, it) } ?: border
-        }
-        else -> border
-    }
+    private fun hasAppUi(component: JComponent): Boolean =
+        component.ui?.javaClass?.name?.startsWith("org.litvin.") == true
 }

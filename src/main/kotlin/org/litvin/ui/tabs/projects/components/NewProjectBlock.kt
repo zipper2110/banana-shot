@@ -134,7 +134,7 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
                 val top = index * ROW
                 val here = index == 0
                 val circleY = top + (ROW - CIRCLE) / 2
-                g2.color = if (here) Palette.LIME else Palette.LINE
+                g2.color = if (here) Palette.LIME_FILL else Palette.LINE
                 g2.fillOval(0, circleY, CIRCLE, CIRCLE)
                 val number = (index + 1).toString()
                 val numberX = (CIRCLE - ProjectsUi.textWidth(number, numberFont)) / 2f

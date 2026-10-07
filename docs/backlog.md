@@ -34,35 +34,6 @@ Do these items after the first public release.
   certificate after the check.
 - Done when: the three checks pass with a released build.
 
-### B-43 Tour scoreboard styles
-
-- Decided on 2026-10-07: add two scoreboard styles that are based on world
-  tour TV graphics. Mockup: `design/scoreboard-tour/index.html`.
-- Next Gen (Next Gen ATP Finals): slanted blocks on black, accent and
-  magenta.
-- Violet (WTA purple): a purple title bar, white rows and point pills.
-- Rejected on 2026-10-07 after the mockup: Tour Glass and Team Clash.
-  Rejected before the mockup: Finals Arena (too close to Night Session),
-  Hand Board (too close to Grass Court), Cup Tie.
-- Use generic style names. Do not use tour names or trademarks in the app.
-- Each mockup builder uses the same parts as `ScoreboardScene`. Port each
-  one to `ScoreboardTourLayouts` and add it to `ScoreboardStyleId`.
-- Text on an accent or player color must change between dark and light
-  ink, because the user can set a light color.
-- 2026-10-07: ten more candidates, based on scoreboard images online.
-  Mockup: `design/scoreboard-tour/more.html`. Melbourne, Flip Clock,
-  Stadium Board, Chalkboard, Deco, HUD, Neon, Sunset, Club Plates,
-  Paris Green.
-- Decided on 2026-10-07: add Chalkboard and Sunset. The other eight are
-  rejected. Chalkboard uses the Ink Free font (Windows 10 1803 and later)
-  and shows the player colors as polylines.
-- Status 2026-10-07: Next Gen, Violet, Chalkboard and Sunset are done in
-  `ScoreboardTourLayouts.kt`. The tests pass. Remove this item after the
-  author checks the four styles in the app.
-- Decided on 2026-10-07: remove the Classic and Night Session styles. A
-  project or a default style that uses one of them opens with Broadcast,
-  because unknown style names fall back to the default style.
-
 ### B-33 Replies to feedback inside the app
 
 - Option C of B-8, decided on 2026-10-03. The author can reply to a report
@@ -108,10 +79,6 @@ Do these items after the first public release.
 
 - Translate the user interface into more languages.
 
-### B-12 Themes
-
-- Let the user select a theme for the user interface.
-
 ### B-13 macOS
 
 - Build, package, and test the app on macOS.
@@ -133,6 +100,16 @@ Do these items after the first public release.
 - Remove background noise from the audio in the exported video. Examples are
   rain, wind, and traffic noise.
 - The sounds of the game (ball hits, calls) must stay clear.
+- Rejected (2026-10-07): the ffmpeg `highpass` + `afftdn` chain. The author
+  tested 3 strengths on a rain video. All of them made the sound muffled.
+  With heavy rain, only the strongest level removed enough rain, but it
+  distorted the game sounds too much.
+- Rejected (2026-10-07): a sidechain gate that opens on ball hits. The rain
+  pumps between hits, and the rain comes back on each hit.
+- Rejected (2026-10-07): Meta SAM Audio. It needs a 2.4 GB or larger model
+  and a GPU with 6-8 GB of video memory or more.
+- Do not use speech-only models (RNNoise, DeepFilterNet and similar). They
+  remove ball hits as noise.
 
 ### B-20 Build libmpv in our own CI
 

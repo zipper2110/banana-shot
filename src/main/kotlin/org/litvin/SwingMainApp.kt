@@ -1,15 +1,18 @@
 package org.litvin
 
-import com.formdev.flatlaf.FlatDarkLaf
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.app.AppDataPaths
 import org.litvin.app.AppServices
 import org.litvin.app.InstanceLock
+import org.litvin.app.PreferencesProvider
 import org.litvin.app.SwingApplicationFactory
 import org.litvin.app.SwingApplicationHandle
 import org.litvin.license.check.ExpiryController
+import org.litvin.ui.commons.AppTheme
 import org.litvin.ui.commons.SwingUserDialogService
+import org.litvin.ui.commons.Theme
+import org.litvin.ui.commons.ThemePreferences
 import org.litvin.ui.expiry.CheckingDateWindow
 import java.awt.EventQueue
 import java.awt.Font
@@ -49,7 +52,13 @@ object SwingMainApp {
                 "Java ${System.getProperty("java.version")}."
         }
         try {
-            UIManager.setLookAndFeel(FlatDarkLaf())
+            // The saved theme sets the seed colors of the Palette before the app makes a component.
+            val (theme, accent) = runCatching {
+                val themePreferences = ThemePreferences(PreferencesProvider.production().node(PreferencesProvider.APPLICATION))
+                val theme = themePreferences.load()
+                theme to themePreferences.accentFor(theme)
+            }.getOrDefault(AppTheme.DEFAULT to AppTheme.DEFAULT.accent)
+            Theme.start(theme, accent)
             UIManager.put("defaultFont", Font("Segoe UI", Font.PLAIN, 14))
         } catch (failure: Exception) {
             logger.warn(failure) { "Failed to initialize FlatLaf look and feel." }

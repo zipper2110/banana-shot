@@ -367,9 +367,12 @@ class SwingStatsPanel(
 
     private fun displayName(name: String, fallback: String) = name.trim().ifEmpty { fallback }
 
-    /** The player color, lighter when it is too dark for the dark tab. The card uses the same color. */
+    /**
+     * The player color, lighter when it is too dark for a dark theme and darker when it is too light for the Light theme.
+     * The card in the video is always dark, so it makes its own color with [StatsCard.onPanel].
+     */
     private fun parseColor(hex: String): Color =
-        hex.removePrefix("#").toIntOrNull(16)?.let { Color(StatsCard.onPanel(it)) } ?: Palette.FG
+        hex.removePrefix("#").toIntOrNull(16)?.let { Palette.readableOnSurface(Color(it)) } ?: Palette.FG
 
     private companion object {
         const val CARD_STATS = "stats"

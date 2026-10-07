@@ -172,7 +172,7 @@ internal class StepTile(private val number: Int, private val title: String, priv
             val circle = Ellipse2D.Double(PAD_X + 0.5, circleY + 0.5, CIRCLE - 1.0, CIRCLE - 1.0)
             val numberColor = when {
                 done -> {
-                    g2.color = Palette.LIME
+                    g2.color = Palette.LIME_FILL
                     g2.fill(Ellipse2D.Double(PAD_X.toDouble(), circleY, CIRCLE.toDouble(), CIRCLE.toDouble()))
                     Palette.ON_LIME
                 }

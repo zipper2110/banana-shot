@@ -244,7 +244,7 @@ internal class ProjectsButton(
                 Kind.LIME -> {
                     ProjectsUi.paintBox(
                         g2, 0, 0, width, height, radius,
-                        if (!isEnabled) Palette.LINE_3 else if (hover) Palette.LIME_HOVER else Palette.LIME,
+                        if (!isEnabled) Palette.LINE_3 else if (hover) Palette.LIME_HOVER else Palette.LIME_FILL,
                         null,
                     )
                     fg = if (isEnabled) Palette.ON_LIME else Palette.FG_3

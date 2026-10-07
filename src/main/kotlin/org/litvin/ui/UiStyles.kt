@@ -76,7 +76,7 @@ object UiStyles {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
                 val w = width; val h = height
                 val r = 18
-                val end = if (model.isRollover) Palette.LIME_HOVER else Palette.LIME
+                val end = if (model.isRollover) Palette.LIME_HOVER else Palette.LIME_FILL
                 g2.paint = GradientPaint(0f, 0f, Palette.LIME_LIGHT, 0f, h.toFloat(), end)
                 g2.fillRoundRect(0,0,w,h,r,r)
                 // icon
@@ -290,7 +290,7 @@ object UiStyles {
         }
     }.apply {
         addActionListener { onClick() }
-        background = Palette.LIME
+        background = Palette.LIME_FILL
         foreground = Palette.ON_LIME
         isOpaque = false
         isContentAreaFilled = false

@@ -315,7 +315,7 @@ internal object SliderRows {
     }
 
     /** The middle label ("Center", "0°") is darker than the end labels. */
-    private val MID_LABEL = Palette.LINE_5
+    private val MID_LABEL get() = Palette.LINE_5
 }
 
 /**
@@ -381,12 +381,12 @@ internal class DefaultFillSliderUI(private val default: Int, private val minorTi
         private const val TRACK = 4.0
         private const val TICK_HEIGHT = 12.0
         private const val MINOR_TICK_HEIGHT = 8.0
-        private val TRACK_BG = Palette.LINE_2
-        private val TICK = Palette.LINE_5
-        private val MINOR_TICK = Palette.HOVER_LINE
-        private val THUMB_IDLE = Palette.NEUTRAL_LIGHT
-        private val THUMB_RING = Palette.BG
-        private val FOCUS_GLOW = Palette.LIME_GLOW
+        private val TRACK_BG get() = Palette.LINE_2
+        private val TICK get() = Palette.LINE_5
+        private val MINOR_TICK get() = Palette.HOVER_LINE
+        private val THUMB_IDLE get() = Palette.NEUTRAL_LIGHT
+        private val THUMB_RING get() = Palette.BG
+        private val FOCUS_GLOW get() = Palette.LIME_GLOW
 
         /** A slider with this UI, a hand cursor and the focus glow. */
         fun slider(min: Int, max: Int, default: Int, minorTicks: List<Int> = emptyList()): JSlider =

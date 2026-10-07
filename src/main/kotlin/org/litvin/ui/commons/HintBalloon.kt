@@ -233,7 +233,7 @@ class HintBalloon(
         private const val ARROW_HALF_HEIGHT = 8.0
         private const val ARROW_OFFSET = 36
         private const val ARC = 12f
-        private val BACKGROUND = Palette.LINE
+        private val BACKGROUND get() = Palette.LINE
 
         private fun supports(window: Window, kind: WindowTranslucency): Boolean =
             runCatching { window.graphicsConfiguration.device.isWindowTranslucencySupported(kind) }.getOrDefault(false)

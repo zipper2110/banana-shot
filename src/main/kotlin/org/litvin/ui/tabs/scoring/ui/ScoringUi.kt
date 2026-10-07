@@ -36,7 +36,7 @@ internal object ScoringUi {
         if (contrast(bg, Palette.ON_LIGHT) >= contrast(bg, Palette.PURE_WHITE)) Palette.ON_LIGHT else Palette.PURE_WHITE
 
     /** The lightest row background of the points list: the selected row. */
-    private val LIST_ROW = Palette.SELECTED
+    private val LIST_ROW get() = Palette.SELECTED
 
     /**
      * True when a mark in the player [color] is not visible enough on a row of the points list.
@@ -275,7 +275,7 @@ internal class ScoringButton(
                     if (hover) Palette.LINE_2 else null,
                     if (hover) Palette.FG else Palette.FG_2,
                 )
-                Kind.LIME -> Triple(if (hover) Palette.LIME_HOVER else Palette.LIME, null, Palette.ON_LIME)
+                Kind.LIME -> Triple(if (hover) Palette.LIME_HOVER else Palette.LIME_FILL, null, Palette.ON_LIME)
             }
             UiKit.paintBox(g2, 0, 0, width, height, 4, fill, border)
             var x = if (alignLeft) padding.toFloat() else (width - contentWidth()) / 2f

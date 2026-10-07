@@ -188,7 +188,7 @@ internal class TransformHints(private val hints: List<TransformHint> = Transform
         private const val ITEM_GAP = 7
         private const val LINE = 16.8f
         private val KEY_STYLE = KeyChipStyle.SMALL
-        private val HINT_LINE = Palette.TRACK
+        private val HINT_LINE get() = Palette.TRACK
         private const val KEY_MARGIN = 1f
     }
 }

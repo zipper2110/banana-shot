@@ -59,11 +59,11 @@ class SwingTimelineComponent(
     private val pendingStartProvider: () -> Long? = { null },
 ) : JComponent() {
 
-    private val gutterBg = Palette.INSET
-    private val rowLine = Palette.ROW_LINE
-    private val tickColor = Palette.LINE_3
-    private val defaultCommentColor = Palette.YELLOW
-    private val tagText = Palette.ON_LIGHT
+    private val gutterBg get() = Palette.INSET
+    private val rowLine get() = Palette.ROW_LINE
+    private val tickColor get() = Palette.LINE_3
+    private val defaultCommentColor get() = Palette.YELLOW
+    private val tagText get() = Palette.ON_LIGHT
     private val gutterFont = UiKit.trackedFont(10.5f, 0.06, UiKit.Weight.SEMIBOLD)
     private val countFont = UiKit.font(10.5f)
     private val tickFont = UiKit.font(10.5f)

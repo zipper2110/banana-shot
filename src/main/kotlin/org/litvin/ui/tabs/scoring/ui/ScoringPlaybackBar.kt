@@ -305,8 +305,8 @@ internal class PointScrubBar(private val onScrub: (targetMs: Long) -> Unit) : JC
         const val RAIL = 4.0
         const val START = "POINT START"
         const val END = "POINT END"
-        val RAIL_COLOR = Palette.LINE_2
-        val THUMB_COLOR = Palette.NEUTRAL_LIGHT
+        val RAIL_COLOR get() = Palette.LINE_2
+        val THUMB_COLOR get() = Palette.NEUTRAL_LIGHT
 
         /** A time from the point start, for example "0:07.6". */
         fun formatRelative(ms: Long): String {
@@ -371,7 +371,7 @@ internal class FrameStepToggle : JButton("Frame step") {
             var x = PAD
             val boxY = (height - BOX) / 2
             if (on) {
-                UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, Palette.LIME, null)
+                UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, Palette.LIME_FILL, null)
                 check.paintIcon(this, g2, x + (BOX - check.iconWidth) / 2, boxY + (BOX - check.iconHeight) / 2)
             } else {
                 UiKit.paintBox(g2, x, boxY, BOX, BOX, 3, null, Palette.LINE_5)

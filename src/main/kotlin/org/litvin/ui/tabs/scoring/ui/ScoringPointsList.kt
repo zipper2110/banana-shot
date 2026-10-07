@@ -322,7 +322,7 @@ internal class ListHead : JComponent() {
         const val TITLE_HEIGHT = 20
         const val STAT_GAP = 14
         const val HEIGHT = TITLE_TOP + TITLE_HEIGHT + 8 + 4 + 10
-        val PROGRESS_BG = Palette.RAISED_2
+        val PROGRESS_BG get() = Palette.RAISED_2
     }
 }
 
@@ -563,7 +563,7 @@ internal class ScoringPointRow(
         const val STRIP = 4
         const val BADGE_HEIGHT = 16
         const val RACKET_BADGE_SIDE = 21
-        val SELECTED = Palette.SELECTED
+        val SELECTED get() = Palette.SELECTED
         private val NUMBER_FONT get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
         private val TEXT_FONT get() = UiKit.font(12.5f)
         private val BADGE_FONT get() = UiKit.trackedFont(9.5f, 0.05, UiKit.Weight.BOLD)

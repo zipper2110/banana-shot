@@ -35,12 +35,12 @@ internal object VideoFocusChip {
     private const val KEY_HEIGHT = 16.0
     private const val FRAME_WIDTH = 2.0
 
-    private val BACKGROUND = Palette.SCRIM_2
-    private val BORDER = Palette.LINE_3
-    private val BORDER_FOCUSED = Palette.LIME_LINE
-    private val FRAME = Palette.LIME_LINE
-    private val KEY_BG = Palette.PANEL
-    private val KEY_LINE = Palette.HOVER_LINE
+    private val BACKGROUND get() = Palette.SCRIM_2
+    private val BORDER get() = Palette.LINE_3
+    private val BORDER_FOCUSED get() = Palette.LIME_LINE
+    private val FRAME get() = Palette.LIME_LINE
+    private val KEY_BG get() = Palette.PANEL
+    private val KEY_LINE get() = Palette.HOVER_LINE
 
     /** A part of the chip content. */
     private sealed interface Item {

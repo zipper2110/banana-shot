@@ -242,7 +242,7 @@ internal class IncludeTile(componentName: String, label: String) : JCheckBox(), 
         const val PAD_Y = 10
         const val CHECK = 16
         const val TEXT_X = PAD_X + CHECK + 9
-        val CHECKED_BORDER = Palette.LIME_DIM_LINE
+        val CHECKED_BORDER get() = Palette.LIME_DIM_LINE
     }
 }
 
@@ -411,7 +411,7 @@ internal class SegmentButton(componentName: String, title: String, private val c
 
     private companion object {
         const val PAD_X = 10
-        val HOVER_BG = Palette.OVERLAY
+        val HOVER_BG get() = Palette.OVERLAY
     }
 }
 
@@ -621,8 +621,8 @@ internal class ExportSliderUI : FlatSliderUI() {
     companion object {
         private const val THUMB = 18
         private const val TRACK = 4.0
-        private val TRACK_BG = Palette.LINE_2
-        private val THUMB_RING = Palette.BG
+        private val TRACK_BG get() = Palette.LINE_2
+        private val THUMB_RING get() = Palette.BG
 
         fun slider(componentName: String): JSlider = JSlider().apply {
             name = componentName
@@ -663,7 +663,7 @@ internal class StartExportButton(text: String) : JButton(text) {
                 blocked -> if (model.isRollover) Palette.RAISED_2 else Palette.RAISED
                 model.isArmed && model.isPressed -> Palette.LIME_PRESSED
                 model.isRollover -> Palette.LIME_HOVER
-                else -> Palette.LIME
+                else -> Palette.LIME_FILL
             }
             ExportUi.paintBox(g2, 0, 0, width, height, 6, fill, null)
             val label = text.orEmpty()

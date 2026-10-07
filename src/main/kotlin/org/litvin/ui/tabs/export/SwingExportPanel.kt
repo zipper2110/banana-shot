@@ -834,6 +834,6 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
         const val PAD_BOTTOM = 14
         const val GAP = 14
         const val BUTTON_WIDTH = 210
-        val BACKGROUND = Palette.PANEL
+        val BACKGROUND get() = Palette.PANEL
     }
 }

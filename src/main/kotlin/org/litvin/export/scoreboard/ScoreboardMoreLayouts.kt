@@ -203,69 +203,6 @@ internal object ScoreboardMoreLayouts {
         return ScoreboardScene(width, height, items)
     }
 
-    /** Night Session: a near-black board with a thin accent frame and bright accent points. */
-    fun nightSession(display: ScoreboardDisplay, look: Look): ScoreboardScene {
-        val rows = rows(display, look)
-        val night = 0x06080F
-        val muted = 0x566074
-        val title = look.title?.uppercase(Locale.US)
-        val border = 2.0
-        val padX = 18.0
-        val headerH = if (title != null) 44.0 else 0.0
-        val rowH = 58.0
-        val nameSize = 25.0
-        val setSize = 27.0
-        val pointSize = 38.0
-        val titleSize = 17.0
-        val titleSpacing = 3.0
-        val nameX = if (look.playerColors) padX + 4.0 + 14.0 else padX
-        val setColW = 50.0
-        val pointColW = 90.0
-        val columns = display.completedSets.size + 1
-
-        val serveW = serveColumnWidth(display, look, 28.0)
-        val contentW = nameX + nameWidth(rows, SEGOE, nameSize, 150.0) + 22.0 + serveW + columns * setColW + pointColW
-        val titleW = if (title != null) padX + ScoreboardFonts.textWidth(title, SEGOE, true, titleSize, titleSpacing) + padX else 0.0
-        val width = max(contentW, titleW)
-        val top = if (title != null) headerH else border
-        val rowsBottom = top + 2 * rowH
-        val footerH = if (look.credit != null) 32.0 else 0.0
-        val height = rowsBottom + footerH + border
-        val pointX = width - pointColW
-        val setsX = pointX - columns * setColW
-        val items = mutableListOf<SceneItem>()
-
-        items += SceneItem.Box(0.0, 0.0, width, height, night, look.opacity)
-        if (title != null) {
-            items += centered(padX, headerH / 2 + 1.0, title, SEGOE, titleSize, look.accentRgb, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
-            items += SceneItem.Box(padX, headerH - 1.0, width - 2 * padX, 1.0, look.accentRgb, 0.35)
-        }
-        items += SceneItem.Box(padX, top + rowH - 0.5, width - 2 * padX, 1.0, WHITE, 0.08)
-
-        rows.forEachIndexed { index, row ->
-            val cy = top + index * rowH + rowH / 2
-            if (look.playerColors) items += SceneItem.Box(padX, cy - 14.0, 4.0, 28.0, row.rgb, 1.0, Corners.all(2.0))
-            items += centered(nameX, cy, row.name, SEGOE, nameSize, WHITE, TextAnchor.MIDDLE_LEFT)
-            if (row.serving) items += serveBall(setsX - serveW / 2, cy, 13.0, look.accentRgb)
-            row.sets.indices.forEach { setIndex ->
-                items += setGames(setsX + setIndex * setColW + setColW / 2, cy, row, setIndex, SEGOE, setSize, WHITE, muted)
-            }
-            items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), SEGOE, setSize, 0xE6F9FF, TextAnchor.CENTER)
-            val pointRgb = when {
-                row.leading -> look.accentRgb
-                row.trailing -> muted
-                else -> WHITE
-            }
-            items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, pointRgb, TextAnchor.CENTER)
-        }
-        if (look.credit != null) {
-            items += SceneItem.Box(padX, rowsBottom - 0.5, width - 2 * padX, 1.0, look.accentRgb, 0.2)
-            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, SEGOE, 17.0, muted, TextAnchor.CENTER, bold = false, spacing = 2.0)
-        }
-        items += frame(0.0, 0.0, width, height, border, look.accentRgb)
-        return ScoreboardScene(width, height, items)
-    }
-
     /** LED Board: a black stadium board with one-color digits in dark tiles. */
     fun ledBoard(display: ScoreboardDisplay, look: Look): ScoreboardScene {
         val rows = rows(display, look)

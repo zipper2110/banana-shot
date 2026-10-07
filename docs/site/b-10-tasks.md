@@ -74,6 +74,20 @@ Decided on 2026-10-06 (contact address):
 | 33 | The note under the download button of the home page says "Windows 10 and 11", without "64-bit": the author finds it too technical for this place. The system needs on the download page and the FAQ keep "64-bit". |
 | 34 | The download page has no note under the download buttons. The note named the setup file and told that it comes from the GitHub release (removed by the author, 2026-10-06). |
 
+Decided on 2026-10-07 (home page texts and the export animation):
+
+| # | Decision |
+|---|---|
+| 35 | The texts of the home page tell what the app can do, not what the user must do: "The app can count sets, games, and points by tennis rules", "You can change the style, colors, and position of the scoreboard". Use fewer articles ("sets, games, and points", not "the sets, the games, and the points"). Step 04 says "Export the full match, only the points, or just the favorites. The video gets a scoreboard, your comments, and match stats." |
+| 36 | A note under the four steps tells about color, rotation, and crop: "Is the video too dark, or is the camera not level? You can also correct the colors, rotate the video, and crop it." It is not a fifth step. It is centered and muted (`.steps-note`). |
+| 37 | The feature rows have no numbers (01 to 06). As a style element, they did not work well. The steps of "How it works" keep their numbers. |
+| 38 | The video with only the points is often 20 to 30 minutes long (the experience of the author). The text says "A two-hour match often becomes a 30-minute video". The demos show 28:15 for "Only points" of the 1:52:40 match. This changes "20 to 40 minutes" of decision 21. |
+| 39 | The comments feature says "Add more context to the match: leave a note on any moment, and it appears on the video." |
+| 40 | The export feature is "Fast and flexible export": "Export the video the way you want it. Go simple or advanced with your quality settings. The app adjusts to your hardware for the fastest export." ("for optimal performance" was vague.) The text and the animation complement each other: the text does not repeat what the animation shows (the content choice, the queue). |
+| 41 | The export animation shows the setup, not the encoders (too technical). Step by step: the content (full video, then only points, then only favorites); the scoreboard and the statistics card are checked; the quality goes from "Original quality" to "Fast export" (the Simple tiles of the app); then the full tab: one export runs, and two more wait in the queue in blue. The Simple / Advanced switch is visible in the quality step, but the animation does not use it. |
+| 42 | The main button of the download page says "Start the download". The buttons on the other pages say "Download for Windows" and open the download page, so the same name for a button that starts the download was confusing. |
+| 43 | On the download page, the system needs are in a closed block under the buttons (`details.disclosure`, `#system-needs`), so that the install steps fit on the first screen of a laptop (1366 × 768). The closed block shows "System needs · Windows 10 or 11, 64-bit". It looks like a control: a box with a hover state, and "Show" / "Hide" with a chevron. Thin lines and a "+" did not look expandable. |
+
 ## Open questions
 
 Write each new decision in "Decisions" at once.

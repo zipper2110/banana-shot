@@ -39,7 +39,7 @@ class UpdateAndRestartTest {
     }
 
     @Test
-    fun `when latest is the app version or older only Download update shows`() {
+    fun `when latest is the app version or older only Manually download update shows`() {
         assertFalse(UpdateOptions.of("1.4.0", latest).showsUpdateAndRestart)
         assertFalse(UpdateOptions.of("1.4.0-SNAPSHOT", latest).showsUpdateAndRestart)
         assertFalse(UpdateOptions.of("1.5.0", latest).showsUpdateAndRestart)

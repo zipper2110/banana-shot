@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tour Scoreboard Styles</title>
+<style>
+  /* Four new scoreboard styles, based on the tennis world tour.
+     The drawings use the same parts as the app scenes (boxes, polygons, labels) and the same units,
+     so each builder converts directly into a ScoreboardMoreLayouts function. */
+  :root { --bg: #111315; --fg: #eef0f2; --fg-2: #a9afb6; --line: #2a2e33; --lime: #c4ff4d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 1500px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { color: var(--fg-2); margin: 0 0 16px; max-width: 900px; }
+  .tools { display: flex; gap: 12px; align-items: center; margin-bottom: 24px; color: var(--fg-2); flex-wrap: wrap; }
+  .tools button { background: #1c1f23; color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  .tools input[type=range] { width: 140px; }
+  section { border-top: 1px solid var(--line); padding: 20px 0 8px; }
+  h2 { font-size: 18px; margin: 0; }
+  h2 small { font-size: 13px; color: var(--fg-2); font-weight: 400; margin-left: 8px; }
+  .desc { color: var(--fg-2); margin: 2px 0 12px; }
+  .states { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 12px; }
+  figure { margin: 0; }
+  .frame { position: relative; aspect-ratio: 16 / 9; background: #345 url("../dialogs-redesign/frame.jpg") center / cover; border-radius: 6px; overflow: hidden; }
+  .frame svg { position: absolute; left: 3%; top: 4%; }
+  figcaption { color: var(--fg-2); font-size: 12.5px; padding: 4px 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tour scoreboard styles</h1>
+  <p class="lead">Four new styles, based on world tour TV graphics. Each style shows three score states:
+    a normal game with all the parts, an advantage game without the title and the credit line,
+    and a tiebreak without the player colors.</p>
+  <div class="tools">
+    <label>Accent <input type="color" id="accent"></label>
+    <button id="resetAccent">Style accent</button>
+    <label>Background opacity <input type="range" id="opacity" min="20" max="100"></label>
+    <button id="resetOpacity">Style opacity</button>
+  </div>
+  <div id="styles"></div>
+</main>
+<script>
+// ---------- Scene parts, the same as ScoreboardScene ----------
+const K = 0.75; // ASS font size to CSS px
+const hex = (rgb) => '#' + rgb.toString(16).padStart(6, '0');
+const canvas = document.createElement('canvas').getContext('2d');
+const fontCss = (font, size, bold) => `${font === 'Segoe UI Black' ? 900 : bold ? 700 : 400} ${size * K}px "${font === 'Segoe UI Black' ? 'Segoe UI' : font}"`;
+function textWidth(text, font, bold, size, spacing = 0) {
+  canvas.font = fontCss(font, size, bold);
+  return canvas.measureText(text).width + spacing * text.length;
+}
+const nameWidth = (rows, font, size, min, bold = true) => Math.max(min, ...rows.map((r) => textWidth(r.name, font, bold, size)));
+const C = (tl = 0, tr = 0, br = 0, bl = 0) => ({ tl, tr, br, bl });
+const all = (r) => C(r, r, r, r);
+const box = (x, y, w, h, rgb, opacity = 1, corners = C()) => ({ t: 'box', x, y, w, h, rgb, opacity, corners });
+const poly = (points, rgb, opacity = 1) => ({ t: 'poly', points, rgb, opacity });
+/** A label whose capital letters and digits are centered on cy. */
+const label = (x, cy, text, font, size, rgb, anchor = 'left', o = {}) => ({ t: 'label', x, cy, text, font, size, rgb, anchor, bold: o.bold ?? true, opacity: o.opacity ?? 1, spacing: o.spacing ?? 0 });
+function serveBall(cx, cy, d, rgb, ring) {
+  const out = [];
+  if (ring != null) { out.push(box(cx - d / 2, cy - d / 2, d, d, ring, 1, all(d / 2))); d -= 4; }
+  out.push(box(cx - d / 2, cy - d / 2, d, d, rgb, 1, all(d / 2)));
+  return out;
+}
+/** A parallelogram that leans right. The bottom edge starts at x. */
+const slanted = (x, y, w, h, lean, rgb, opacity = 1) => poly([[x + lean, y], [x + w + lean, y], [x + w, y + h], [x, y + h]], rgb, opacity);
+const luminance = (rgb) => (0.299 * (rgb >> 16 & 255) + 0.587 * (rgb >> 8 & 255) + 0.114 * (rgb & 255)) / 255;
+const inkOn = (rgb, dark, light = 0xFFFFFF) => luminance(rgb) > 0.62 ? dark : light;
+
+function svgOf(scene, scale) {
+  const p = [];
+  for (const it of scene.items) {
+    if (it.t === 'box') {
+      const { x, y, w, h } = it; const c = it.corners;
+      const d = `M${x + c.tl},${y} H${x + w - c.tr} A${c.tr},${c.tr} 0 0 1 ${x + w},${y + c.tr} V${y + h - c.br} A${c.br},${c.br} 0 0 1 ${x + w - c.br},${y + h} H${x + c.bl} A${c.bl},${c.bl} 0 0 1 ${x},${y + h - c.bl} V${y + c.tl} A${c.tl},${c.tl} 0 0 1 ${x + c.tl},${y} Z`;
+      p.push(`<path d="${d}" fill="${hex(it.rgb)}" fill-opacity="${it.opacity}"/>`);
+    } else if (it.t === 'poly') {
+      p.push(`<polygon points="${it.points.map((q) => q.join(',')).join(' ')}" fill="${hex(it.rgb)}" fill-opacity="${it.opacity}"/>`);
+    } else {
+      const anchor = { left: 'start', center: 'middle', right: 'end' }[it.anchor];
+      const px = it.size * K;
+      const fam = it.font === 'Segoe UI Black' ? 'Segoe UI' : it.font;
+      const weight = it.font === 'Segoe UI Black' ? 900 : it.bold ? 700 : 400;
+      const text = it.text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      p.push(`<text x="${it.x}" y="${it.cy + px * 0.355}" text-anchor="${anchor}" font-family="${fam}" font-weight="${weight}" font-size="${px}" letter-spacing="${it.spacing}" fill="${hex(it.rgb)}" fill-opacity="${it.opacity}">${text}</text>`);
+    }
+  }
+  return `<svg width="${scene.width * scale}" height="${scene.height * scale}" viewBox="0 0 ${scene.width} ${scene.height}">${p.join('')}</svg>`;
+}
+
+// ---------- Sample score states ----------
+function rowsOf(d, look) {
+  return [0, 1].map((i) => ({
+    name: d.names[i], rgb: d.colors[i],
+    sets: d.sets.map((s) => s[i]), wonSets: d.sets.map((s) => s[i] > s[1 - i]),
+    games: d.games[i], points: d.points[i],
+    leading: d.leader === i + 1, trailing: d.leader !== 0 && d.leader !== i + 1,
+    serving: look.serve && d.server === i + 1,
+  }));
+}
+const BASE = { names: ['ALEX MORGAN', 'SAM RIVERA'], colors: [0x4DA3FF, 0xFF6B6B] };
+const STATES = [
+  { caption: 'Title, credit, player colors. Set 2, 3–2, 40–30. Alex serves.',
+    d: { ...BASE, sets: [[6, 4]], games: [3, 2], points: ['40', '30'], leader: 1, server: 1 },
+    look: { title: 'CLUB CHAMPIONSHIP', credit: 'BananaShot app', playerColors: true, serve: true } },
+  { caption: 'No title, no credit. Set 3, 5–5, 40–Ad. Sam serves.',
+    d: { ...BASE, sets: [[4, 6], [7, 6]], games: [5, 5], points: ['40', 'Ad'], leader: 2, server: 2 },
+    look: { title: null, credit: null, playerColors: true, serve: true } },
+  { caption: 'No player colors, no credit. Tiebreak 5–3. Sam serves.',
+    d: { ...BASE, sets: [[6, 3]], games: [6, 6], points: ['5', '3'], leader: 1, server: 2 },
+    look: { title: 'SUNDAY LEAGUE', credit: null, playerColors: false, serve: true } },
+];
+const serveColumnWidth = (d, look, w) => look.serve && d.server ? w : 0;
+
+// ---------- Tour Glass ----------
+/** Tour Glass: soft raised cells on a dark slate panel. Won sets have an accent mark. */
+function tourGlass(d, look) {
+  const rows = rowsOf(d, look);
+  const panel = 0x161B22, cell = 0x232A34, cellNow = 0x2D3644, inset = 0x0F1318;
+  const light = 0xEEF2F6, muted = 0x6B7480, ink = 0x0B1015;
+  const pad = 8, gap = 6, radius = 14, cellR = 9, rowH = 52;
+  const nameSize = 25, setSize = 26, pointSize = 32, titleSize = 15, titleSpacing = 1.4;
+  const setW = 44, pointW = 70;
+  const columns = d.sets.length + 1;
+  const titleH = look.title ? 30 : 0;
+  const top = look.title ? pad + titleH + gap : pad;
+  const creditH = look.credit ? 24 : 0;
+  const barW = look.playerColors ? 4 : 0;
+  const nameX0 = look.playerColors ? 26 : 16;
+  const serveW = serveColumnWidth(d, look, 22);
+  const nameCellW = nameX0 + nameWidth(rows, 'Segoe UI', nameSize, 130) + 12 + serveW + 10;
+  const titleW = look.title ? 14 + 8 + 10 + textWidth(look.title, 'Segoe UI', true, titleSize, titleSpacing) + 14 : 0;
+  const width = Math.max(pad + nameCellW + gap + columns * (setW + gap) + pointW + pad, pad + titleW + pad);
+  const rowsBottom = top + 2 * rowH + gap;
+  const height = rowsBottom + (look.credit ? creditH + 4 : pad);
+  const realNameW = width - pad - gap - columns * (setW + gap) - pointW - pad;
+  const cellsX = pad + realNameW + gap;
+  const pointX = width - pad - pointW;
+  const items = [];
+  /** A raised cell: a soft shadow under it and a light line on its top edge. */
+  const raised = (x, y, w, h, rgb, opacity) => {
+    items.push(box(x, y + 2, w, h, 0x000000, 0.45 * opacity, all(cellR)));
+    items.push(box(x, y, w, h, rgb, opacity, all(cellR)));
+    items.push(box(x + cellR, y, w - 2 * cellR, 1, 0xFFFFFF, 0.10));
+  };
+  items.push(box(0, 0, width, height, panel, look.opacity, all(radius)));
+  if (look.title) {
+    // The title is in a pressed pill: dark, with a shadow line on its top edge.
+    items.push(box(pad, pad, titleW, titleH, inset, look.opacity, all(titleH / 2)));
+    items.push(box(pad + titleH / 2, pad, titleW - titleH, 1.5, 0x000000, 0.6));
+    items.push(box(pad + 14, pad + titleH / 2 - 4, 8, 8, look.accent, 1, all(4)));
+    items.push(label(pad + 32, pad + titleH / 2, look.title, 'Segoe UI', titleSize, 0xD5DCE4, 'left', { spacing: titleSpacing }));
+  }
+  rows.forEach((row, i) => {
+    const y = top + i * (rowH + gap), cy = y + rowH / 2;
+    raised(pad, y, realNameW, rowH, cell, look.opacity);
+    if (look.playerColors) items.push(box(pad + 12, y + 12, barW, rowH - 24, row.rgb, 1, all(2)));
+    items.push(label(pad + nameX0, cy, row.name, 'Segoe UI', nameSize, light));
+    if (row.serving) items.push(...serveBall(pad + realNameW - 10 - serveW / 2, cy, 12, look.accent));
+    for (let c = 0; c < columns; c++) raised(cellsX + c * (setW + gap), y, setW, rowH, c === columns - 1 ? cellNow : cell, look.opacity);
+    row.sets.forEach((g, s) => {
+      const x = cellsX + s * (setW + gap) + setW / 2;
+      const won = row.wonSets[s];
+      items.push(label(x, cy - 2, String(g), 'Segoe UI', setSize, won ? light : muted, 'center', { bold: won }));
+      if (won) items.push(box(x - 8, y + rowH - 10, 16, 3, look.accent, 1, all(1.5)));
+    });
+    items.push(label(cellsX + row.sets.length * (setW + gap) + setW / 2, cy, String(row.games), 'Segoe UI', setSize, light, 'center'));
+    if (row.leading) raised(pointX, y, pointW, rowH, look.accent, 1); else raised(pointX, y, pointW, rowH, cell, look.opacity);
+    const pointRgb = row.leading ? inkOn(look.accent, ink, light) : row.trailing ? 0x7D8794 : light;
+    items.push(label(pointX + pointW / 2, cy, row.points, 'Segoe UI', pointSize, pointRgb, 'center'));
+  });
+  if (look.credit) items.push(label(width / 2, rowsBottom + creditH / 2, look.credit, 'Segoe UI', 16, 0x7D8794, 'center', { bold: false, spacing: 0.5 }));
+  return { width, height, items };
+}
+
+// ---------- Team Clash ----------
+/** Team Clash: each row is filled with the player color, like a team. A black column holds the points. */
+function teamClash(d, look) {
+  const rows = rowsOf(d, look);
+  const black = 0x0B0B0D, neutral = 0x2B3038;
+  const radius = 6, rowH = 56, rowGap = 3, stripeH = 5;
+  const nameSize = 26, setSize = 27, pointSize = 34, titleSize = 18, titleSpacing = 2;
+  const padX = 18, setW = 50, pointW = 84;
+  const columns = d.sets.length + 1;
+  const titleH = look.title ? 38 : 0;
+  const top = titleH + stripeH;
+  const serveW = serveColumnWidth(d, look, 28);
+  const titleW = look.title ? padX + textWidth(look.title, 'Segoe UI', true, titleSize, titleSpacing) + padX : 0;
+  const width = Math.max(padX + nameWidth(rows, 'Segoe UI Black', nameSize, 140) + 16 + serveW + columns * setW + pointW, titleW);
+  const rowsBottom = top + 2 * rowH + rowGap;
+  const footerH = look.credit ? 28 : 0;
+  const height = rowsBottom + footerH;
+  const pointX = width - pointW;
+  const setsX = pointX - columns * setW;
+  const items = [];
+  items.push(box(0, 0, width, height, black, look.opacity, all(radius)));
+  if (look.title) items.push(label(padX, titleH / 2, look.title, 'Segoe UI', titleSize, look.accent, 'left', { spacing: titleSpacing }));
+  // The stripe under the title has one half for each player color.
+  const stripeY = titleH;
+  const topCorners = look.title ? 0 : radius;
+  if (look.playerColors) {
+    items.push(box(0, stripeY, width / 2, stripeH, rows[0].rgb, 1, C(topCorners, 0, 0, 0)));
+    items.push(box(width / 2, stripeY, width / 2, stripeH, rows[1].rgb, 1, C(0, topCorners, 0, 0)));
+  } else {
+    items.push(box(0, stripeY, width, stripeH, look.accent, 1, C(topCorners, topCorners, 0, 0)));
+  }
+  rows.forEach((row, i) => {
+    const y = top + i * (rowH + rowGap), cy = y + rowH / 2;
+    const fill = look.playerColors ? row.rgb : neutral;
+    const bottomLeft = i === 1 && !look.credit ? radius : 0;
+    items.push(box(0, y, pointX, rowH, fill, look.opacity, C(0, 0, 0, bottomLeft)));
+    const ink = inkOn(fill, 0x0B0B0D);
+    // The set columns are a darker shade of the row color. The current set is the darkest.
+    items.push(box(setsX, y, (columns - 1) * setW, rowH, 0x000000, 0.22));
+    items.push(box(setsX + (columns - 1) * setW, y, setW, rowH, 0x000000, 0.40));
+    items.push(label(padX, cy, row.name, 'Segoe UI Black', nameSize, ink));
+    if (row.serving) items.push(...serveBall(setsX - serveW / 2, cy, 13, 0xFFFFFF, 0x0B0B0D));
+    row.sets.forEach((g, s) => {
+      const won = row.wonSets[s];
+      items.push(label(setsX + s * setW + setW / 2, cy, String(g), 'Segoe UI', setSize, 0xFFFFFF, 'center', { bold: won, opacity: won ? 1 : 0.55 }));
+    });
+    items.push(label(setsX + row.sets.length * setW + setW / 2, cy, String(row.games), 'Segoe UI', setSize, 0xFFFFFF, 'center'));
+    const pointRgb = row.leading ? look.accent : row.trailing ? 0x80868F : 0xFFFFFF;
+    items.push(label(pointX + pointW / 2, cy, row.points, 'Segoe UI Black', pointSize, pointRgb, 'center'));
+  });
+  if (look.credit) items.push(label(width / 2, rowsBottom + footerH / 2, look.credit, 'Segoe UI', 17, 0x8A8F96, 'center', { bold: false, spacing: 0.6 }));
+  return { width, height, items };
+}
+
+// ---------- Next Gen ----------
+/** Next Gen: slanted blocks on flat black, with an accent color and a fixed magenta. */
+function nextGen(d, look) {
+  const rows = rowsOf(d, look);
+  const black = 0x0A0A0A, tile = 0x26262C, magenta = 0xFF2D95, muted = 0x5E5E66;
+  const rowH = 54, rowGap = 4, lean = 12;
+  const nameSize = 25, setSize = 27, pointSize = 31, titleSize = 15, titleSpacing = 1.6;
+  const sliverW = look.playerColors ? 12 : 0;
+  const padX = 14, setW = 46, pointW = 74;
+  const columns = d.sets.length + 1;
+  const titleH = look.title ? 30 : 0;
+  const top = look.title ? titleH + rowGap : 0;
+  const serveW = serveColumnWidth(d, look, 24);
+  const bodyW = sliverW + padX + nameWidth(rows, 'Segoe UI Black', nameSize, 130) + 14 + serveW + columns * setW + 6 + pointW;
+  const width = bodyW + lean * 2 + 4;
+  const creditH = look.credit ? 24 : 0;
+  const rowsBottom = top + 2 * rowH + rowGap;
+  const height = rowsBottom + (look.credit ? rowGap + creditH : 0);
+  const items = [];
+  if (look.title) {
+    const tabW = 14 + textWidth(look.title, 'Segoe UI Black', true, titleSize, titleSpacing) + 18;
+    // Each block leans by the same angle, so the left edges line up.
+    const x = lean * (2 * rowH + rowGap + (top - titleH)) / rowH;
+    items.push(slanted(x, 0, tabW, titleH, lean * titleH / rowH, look.accent));
+    items.push(slanted(x + tabW + 6, 0, 10, titleH, lean * titleH / rowH, magenta));
+    items.push(label(x + 14, titleH / 2, look.title, 'Segoe UI Black', titleSize, inkOn(look.accent, 0x0A0A0A), 'left', { spacing: titleSpacing }));
+  }
+  rows.forEach((row, i) => {
+    const y = top + i * (rowH + rowGap), cy = y + rowH / 2;
+    // The lower row starts further left, so the two rows make one slanted block.
+    const x = (1 - i) * lean * (rowH + rowGap) / rowH;
+    const mid = lean / 2; // the x shift at the middle of the row
+    items.push(slanted(x, y, bodyW, rowH, lean, black, look.opacity));
+    if (look.playerColors) items.push(slanted(x, y, sliverW, rowH, lean, row.rgb));
+    items.push(label(x + mid + sliverW + padX, cy, row.name, 'Segoe UI Black', nameSize, 0xFFFFFF));
+    const setsX = x + bodyW - pointW - 6 - columns * setW;
+    if (row.serving) items.push(...serveBall(setsX + mid - serveW / 2, cy, 12, look.accent));
+    row.sets.forEach((g, s) => {
+      const won = row.wonSets[s];
+      items.push(label(setsX + mid + s * setW + setW / 2, cy, String(g), 'Segoe UI Black', setSize, won ? 0xFFFFFF : muted, 'center'));
+    });
+    items.push(label(setsX + mid + row.sets.length * setW + setW / 2, cy, String(row.games), 'Segoe UI Black', setSize, magenta, 'center'));
+    const pointX = x + bodyW - pointW - 3;
+    const pointFill = row.leading ? look.accent : tile;
+    items.push(slanted(pointX, y + 6, pointW - 6, rowH - 12, lean * (rowH - 12) / rowH, pointFill));
+    const pointRgb = row.leading ? inkOn(look.accent, 0x0A0A0A) : 0xFFFFFF;
+    items.push(label(pointX + (pointW - 6) / 2 + mid, cy, row.points, 'Segoe UI Black', pointSize, pointRgb, 'center', { opacity: row.trailing ? 0.55 : 1 }));
+  });
+  if (look.credit) {
+    const y = rowsBottom + rowGap;
+    const x = -lean * creditH / rowH + 0.0;
+    items.push(slanted(Math.max(0, x), y, bodyW * 0.62, creditH, lean * creditH / rowH, black, look.opacity));
+    items.push(label(Math.max(0, x) + 16, y + creditH / 2, look.credit.toUpperCase(), 'Segoe UI', 13, 0xFFFFFF, 'left', { opacity: 0.6, spacing: 1.4 }));
+  }
+  return { width, height, items };
+}
+
+// ---------- Violet ----------
+/** Violet: a purple title bar with a magenta band, white rows and pill-shaped points. */
+function violet(d, look) {
+  const rows = rowsOf(d, look);
+  const purple = 0x3D1A6E, magenta = 0xE0399A, ink = 0x22163A, lavender = 0xF1ECF8, lost = 0xA89DB9;
+  const radius = 10, rowH = 54, bandH = 4;
+  const nameSize = 25, setSize = 26, pointSize = 28, titleSize = 18, titleSpacing = 1.5;
+  const colorW = look.playerColors ? 6 : 0;
+  const padX = 18, setW = 48, pointColW = 84, pillW = 64, pillH = 38;
+  const columns = d.sets.length + 1;
+  const headerH = look.title ? 40 : 0;
+  const top = look.title ? headerH + bandH : 0;
+  const serveW = serveColumnWidth(d, look, 26);
+  const titleW = look.title ? padX + textWidth(look.title, 'Segoe UI', true, titleSize, titleSpacing) + padX : 0;
+  const width = Math.max(colorW + padX + nameWidth(rows, 'Segoe UI', nameSize, 140) + 16 + serveW + columns * setW + pointColW, titleW);
+  const rowsBottom = top + 2 * rowH;
+  const footerH = look.credit ? 28 : 0;
+  const height = rowsBottom + footerH;
+  const pointX = width - pointColW;
+  const setsX = pointX - columns * setW;
+  const items = [];
+  const rowsTop = look.title ? 0 : radius;
+  const rowsBottomR = look.credit ? 0 : radius;
+  if (look.title) {
+    items.push(box(0, 0, width, headerH, purple, look.opacity, C(radius, radius, 0, 0)));
+    items.push(label(padX, headerH / 2, look.title, 'Segoe UI', titleSize, 0xFFFFFF, 'left', { spacing: titleSpacing }));
+    items.push(box(0, headerH, width, bandH, magenta, 1));
+  }
+  items.push(box(0, top, width, 2 * rowH, 0xFFFFFF, look.opacity, C(rowsTop, rowsTop, rowsBottomR, rowsBottomR)));
+  items.push(box(setsX + (columns - 1) * setW, top, setW, 2 * rowH, lavender, look.opacity));
+  items.push(box(colorW, top + rowH - 0.5, width - colorW, 1, 0xE4DCEF, 1));
+  rows.forEach((row, i) => {
+    const y = top + i * rowH, cy = y + rowH / 2;
+    if (look.playerColors) items.push(box(0, y, colorW, rowH, row.rgb, 1, C(i === 0 ? rowsTop : 0, 0, 0, i === 1 ? rowsBottomR : 0)));
+    items.push(label(colorW + padX, cy, row.name, 'Segoe UI', nameSize, ink));
+    if (row.serving) items.push(...serveBall(setsX - serveW / 2, cy, 13, look.accent, ink));
+    row.sets.forEach((g, s) => {
+      const won = row.wonSets[s];
+      items.push(label(setsX + s * setW + setW / 2, cy, String(g), 'Segoe UI', setSize, won ? ink : lost, 'center', { bold: won }));
+    });
+    items.push(label(setsX + row.sets.length * setW + setW / 2, cy, String(row.games), 'Segoe UI', setSize, ink, 'center'));
+    const pillFill = row.leading ? look.accent : purple;
+    items.push(box(pointX + (pointColW - pillW) / 2, cy - pillH / 2, pillW, pillH, pillFill, 1, all(pillH / 2)));
+    items.push(label(pointX + pointColW / 2, cy, row.points, 'Segoe UI', pointSize, inkOn(pillFill, ink), 'center', { opacity: row.trailing ? 0.6 : 1 }));
+  });
+  if (look.credit) {
+    items.push(box(0, rowsBottom, width, footerH, purple, look.opacity, C(0, 0, radius, radius)));
+    items.push(label(width / 2, rowsBottom + footerH / 2, look.credit, 'Segoe UI', 17, 0xC9B8E6, 'center', { bold: false, spacing: 0.6 }));
+  }
+  return { width, height, items };
+}
+
+// ---------- Page ----------
+const STYLES = [
+  { id: 'TOUR_GLASS', title: 'Tour Glass', from: 'ATP Tour TV graphics since 2022', accent: 0x5CC8FF, opacity: 92, build: tourGlass,
+    desc: 'Soft raised cells on a dark slate panel. The title is in a pressed pill. Won sets have a small accent mark. The leading point cell is raised in the accent color.' },
+  { id: 'TEAM_CLASH', title: 'Team Clash', from: 'Laver Cup and other team events', accent: 0xFFD23F, opacity: 96, build: teamClash,
+    desc: 'Each row is filled with the player color, like a team color. A stripe under the title has one half for each player. A black column holds the points.' },
+  { id: 'NEXT_GEN', title: 'Next Gen', from: 'Next Gen ATP Finals', accent: 0xC6FF00, opacity: 94, build: nextGen,
+    desc: 'Slanted blocks on flat black. The title is a slanted accent tab with a magenta mark. The current games are magenta. The leading points are in a slanted accent tile.' },
+  { id: 'VIOLET', title: 'Violet', from: 'WTA purple brand', accent: 0xE0399A, opacity: 96, build: violet,
+    desc: 'A purple title bar with a magenta band, white rows and a lavender current-games column. The points are in pills. The leading pill has the accent color.' },
+];
+let accentOverride = null, opacityOverride = null;
+function render() {
+  const out = STYLES.map((s) => {
+    const figs = STATES.map((st) => {
+      const look = { ...st.look, accent: accentOverride ?? s.accent, opacity: (opacityOverride ?? s.opacity) / 100 };
+      return `<figure><div class="frame">${svgOf(s.build(st.d, look), 0.62)}</div><figcaption>${st.caption}</figcaption></figure>`;
+    }).join('');
+    return `<section><h2>${s.title}<small>Based on: ${s.from}. Accent ${hex(s.accent).toUpperCase()}, opacity ${s.opacity} %.</small></h2><p class="desc">${s.desc}</p><div class="states">${figs}</div></section>`;
+  }).join('');
+  document.getElementById('styles').innerHTML = out;
+}
+const accentInput = document.getElementById('accent'), opacityInput = document.getElementById('opacity');
+accentInput.value = '#c4ff4d'; opacityInput.value = 90;
+accentInput.addEventListener('input', () => { accentOverride = parseInt(accentInput.value.slice(1), 16); render(); });
+opacityInput.addEventListener('input', () => { opacityOverride = +opacityInput.value; render(); });
+document.getElementById('resetAccent').addEventListener('click', () => { accentOverride = null; render(); });
+document.getElementById('resetOpacity').addEventListener('click', () => { opacityOverride = null; render(); });
+document.fonts.ready.then(render);
+render();
+</script>
+</body>
+</html>

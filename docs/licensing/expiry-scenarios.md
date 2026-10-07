@@ -74,7 +74,7 @@ Terms:
   1. The user starts the app.
 - **App behavior:**
   - The warning shows: "This version works until 29 March 2027, 16:00."
-    (local time, with the hour), with "Update and restart" and "Download
+    (local time, with the hour), with "Update and restart" and "Manually download
     update" buttons.
   - While the app runs, the warning shows again one time on each calendar
     day (local time), in the first hour after midnight.
@@ -82,7 +82,7 @@ Terms:
   - Click "Update and restart": the app downloads the setup, starts it, and
     closes. The new build starts. It has a new expiry, and the warning does
     not show. See S-02.
-  - Click "Download update": the browser opens the download page. The user
+  - Click "Manually download update": the browser opens the download page. The user
     installs the new build by hand.
   - Close the warning: it stays hidden until the next calendar day.
   - Do nothing: the build expires on the date in the warning (S-03 or S-04).
@@ -98,7 +98,7 @@ Terms:
 - **Steps:**
   1. The user starts the app, or the 24-hour online check runs.
 - **App behavior:** a notice that is not modal shows the new version, the
-  `notes`, an "Update and restart" button, a "Download update" button, and a
+  `notes`, an "Update and restart" button, a "Manually download update" button, and a
   "Later" button.
 - **Next steps for the user:**
   - "Update and restart":
@@ -113,8 +113,8 @@ Terms:
        export queue stay. After "Cancel", nothing is installed, and the
        user starts the app again by hand.
     - If the download fails: the app shows the error and stays open.
-      "Download update" stays available.
-  - "Download update": the browser opens `latest.downloadUrl`. The app does
+      "Manually download update" stays available.
+  - "Manually download update": the browser opens `latest.downloadUrl`. The app does
     not quit.
   - "Later": the notice does not show again in this session for this
     version. It shows again at the next start, and in this session for a
@@ -148,7 +148,7 @@ Terms:
   - Close the dialog: the banner stays. The Export tab works.
   - Close the app: the queue stays (B-18). At the next start, the app opens
     in expired mode (path B), and the queue continues.
-  - "Update and restart" or "Download update": see S-05.
+  - "Update and restart" or "Manually download update": see S-05.
 - **Expected result:** no lost work. The project is saved. All exports that
   the user started before the expiry finish. The user cannot edit a project
   or start a new export.
@@ -169,7 +169,7 @@ Terms:
      the flag. The dialog shows the expired text and the date that the app
      used.
 - **Next steps for the user:**
-  - "Update and restart" or "Download update": see S-05.
+  - "Update and restart" or "Manually download update": see S-05.
   - "Close": the banner stays. The completed exports show.
   - Close and start the app again: path B. Expired mode shows at once, with
     the dialog in "Checking…".
@@ -193,7 +193,7 @@ Terms:
   3. The new build starts in normal mode, because its expiry is in the
      future. It clears the flag. The queue continues.
   - If the download fails (for example, with no network): the app shows the
-    error and stays in expired mode. The user can click "Download update":
+    error and stays in expired mode. The user can click "Manually download update":
     the browser opens `latest.downloadUrl`, or the GitHub releases page if
     there is no saved rules file. The user then installs the new build by
     hand, for example from another device (S-10).

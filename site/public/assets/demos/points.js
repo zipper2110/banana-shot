@@ -54,7 +54,7 @@
         '<span class="ui-gut" style="top:47px">MARKS</span><span class="ui-gut" style="top:84px">VIDEO</span>' +
         '<div class="ui-marks"></div><div class="ui-vtrack"></div>' +
         '<div class="ui-ph"></div>' +
-        '<div class="ui-result"><s class="ui-num">1:52:40</s><b class="ui-num">Only points: 49:35</b></div>' +
+        '<div class="ui-result"><s class="ui-num">1:52:40</s><b class="ui-num">Only points: 28:15</b></div>' +
       '</div>',
       {
         // 30% closer, on the bottom right corner: the timeline and the list.

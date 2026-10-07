@@ -99,7 +99,7 @@ class UpdateAndRestart(
         /** A download runs already. A second click has no effect. */
         data object AlreadyRunning : Result
 
-        /** The download failed. The app stays open. Show [message] and keep "Download update". */
+        /** The download failed. The app stays open. Show [message] and keep "Manually download update". */
         data class DownloadFailed(val message: String) : Result
 
         /** The app did the close sequence and tried to start the setup. Now the process must exit. */

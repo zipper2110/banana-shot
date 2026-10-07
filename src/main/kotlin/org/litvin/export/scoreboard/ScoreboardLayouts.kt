@@ -17,19 +17,21 @@ data class ScoreboardStyleDefaults(
 object ScoreboardLayouts {
     fun defaults(style: ScoreboardStyleId): ScoreboardStyleDefaults = when (style) {
         ScoreboardStyleId.BROADCAST -> ScoreboardStyleDefaults(accentRgb = 0xC4FF4D, backgroundOpacityPercent = 84)
-        ScoreboardStyleId.CLASSIC -> ScoreboardStyleDefaults(accentRgb = 0xC4FF4D, backgroundOpacityPercent = 69)
         ScoreboardStyleId.CENTER_COURT -> ScoreboardStyleDefaults(accentRgb = 0xD7FF3F, backgroundOpacityPercent = 96)
         ScoreboardStyleId.COMPACT -> ScoreboardStyleDefaults(accentRgb = 0xC4FF4D, backgroundOpacityPercent = 72)
         ScoreboardStyleId.GRASS_COURT -> ScoreboardStyleDefaults(accentRgb = 0xD9C27A, backgroundOpacityPercent = 92)
         ScoreboardStyleId.CLAY_COURT -> ScoreboardStyleDefaults(accentRgb = 0xFFE0A3, backgroundOpacityPercent = 94)
         ScoreboardStyleId.HARD_COURT -> ScoreboardStyleDefaults(accentRgb = 0xE9F24A, backgroundOpacityPercent = 92)
-        ScoreboardStyleId.NIGHT_SESSION -> ScoreboardStyleDefaults(accentRgb = 0x2FE6FF, backgroundOpacityPercent = 88)
         ScoreboardStyleId.LED_BOARD -> ScoreboardStyleDefaults(accentRgb = 0xFFB000, backgroundOpacityPercent = 95)
         ScoreboardStyleId.MINIMAL -> ScoreboardStyleDefaults(accentRgb = 0xC4FF4D, backgroundOpacityPercent = 30)
         ScoreboardStyleId.TILES -> ScoreboardStyleDefaults(accentRgb = 0xC4FF4D, backgroundOpacityPercent = 88)
         ScoreboardStyleId.TICKER -> ScoreboardStyleDefaults(accentRgb = 0xC4FF4D, backgroundOpacityPercent = 88)
         ScoreboardStyleId.RETRO -> ScoreboardStyleDefaults(accentRgb = 0xF2C14E, backgroundOpacityPercent = 94)
         ScoreboardStyleId.BOLD_BLOCK -> ScoreboardStyleDefaults(accentRgb = 0xFFD000, backgroundOpacityPercent = 97)
+        ScoreboardStyleId.NEXT_GEN -> ScoreboardStyleDefaults(accentRgb = 0xC6FF00, backgroundOpacityPercent = 94)
+        ScoreboardStyleId.VIOLET -> ScoreboardStyleDefaults(accentRgb = 0xD6267F, backgroundOpacityPercent = 96)
+        ScoreboardStyleId.CHALKBOARD -> ScoreboardStyleDefaults(accentRgb = 0xF7E07A, backgroundOpacityPercent = 96)
+        ScoreboardStyleId.SUNSET -> ScoreboardStyleDefaults(accentRgb = 0xFFB347, backgroundOpacityPercent = 94)
     }
 
     fun scene(display: ScoreboardDisplay, settings: ScoreboardSettingsV1): ScoreboardScene {
@@ -45,19 +47,21 @@ object ScoreboardLayouts {
         )
         return when (normalized.style) {
             ScoreboardStyleId.BROADCAST -> broadcast(display, look)
-            ScoreboardStyleId.CLASSIC -> classic(display, look)
             ScoreboardStyleId.CENTER_COURT -> centerCourt(display, look)
             ScoreboardStyleId.COMPACT -> compact(display, look)
             ScoreboardStyleId.GRASS_COURT -> ScoreboardMoreLayouts.grassCourt(display, look)
             ScoreboardStyleId.CLAY_COURT -> ScoreboardMoreLayouts.clayCourt(display, look)
             ScoreboardStyleId.HARD_COURT -> ScoreboardMoreLayouts.hardCourt(display, look)
-            ScoreboardStyleId.NIGHT_SESSION -> ScoreboardMoreLayouts.nightSession(display, look)
             ScoreboardStyleId.LED_BOARD -> ScoreboardMoreLayouts.ledBoard(display, look)
             ScoreboardStyleId.MINIMAL -> ScoreboardMoreLayouts.minimal(display, look)
             ScoreboardStyleId.TILES -> ScoreboardMoreLayouts.tiles(display, look)
             ScoreboardStyleId.TICKER -> ScoreboardMoreLayouts.ticker(display, look)
             ScoreboardStyleId.RETRO -> ScoreboardMoreLayouts.retro(display, look)
             ScoreboardStyleId.BOLD_BLOCK -> ScoreboardMoreLayouts.boldBlock(display, look)
+            ScoreboardStyleId.NEXT_GEN -> ScoreboardTourLayouts.nextGen(display, look)
+            ScoreboardStyleId.VIOLET -> ScoreboardTourLayouts.violet(display, look)
+            ScoreboardStyleId.CHALKBOARD -> ScoreboardTourLayouts.chalkboard(display, look)
+            ScoreboardStyleId.SUNSET -> ScoreboardTourLayouts.sunset(display, look)
         }
     }
 
@@ -150,58 +154,6 @@ object ScoreboardLayouts {
         if (look.credit != null) {
             items += SceneItem.Box(0.0, rowsBottom - 0.5, width, 1.0, rule, 0.10)
             items += centered(width / 2, rowsBottom + footerH / 2, look.credit, SEGOE, 19.2, 0x8A918D, TextAnchor.CENTER, bold = false, spacing = 0.6)
-        }
-        return ScoreboardScene(width, height, items)
-    }
-
-    /** Classic: the original BananaShot scoreboard with Arial text and neon points. */
-    private fun classic(display: ScoreboardDisplay, look: Look): ScoreboardScene {
-        val rows = rows(display, look)
-        val title = look.title
-        val headerH = if (title != null) 56.0 else 0.0
-        val nameSize = 30.0
-        val cellSize = 36.0
-        val pointSize = 42.0
-        val nameX = if (look.playerColors) 60.0 else 24.0
-        val cellStep = 66.0
-        val pointAreaW = 110.0
-        val rowTop = headerH + 15.0
-        val rowGap = 64.0
-
-        val serveW = serveColumnWidth(display, look, 30.0)
-        val cellsX = nameX + max(190.0, nameWidth(rows, ARIAL, nameSize, 0.0) + 24.0) + serveW
-        val cellsW = (display.completedSets.size + 1) * cellStep
-        val titleW = if (title != null) 48.0 + ScoreboardFonts.textWidth(title, ARIAL, true, 28.0, 2.0) + 24.0 else 0.0
-        val width = maxOf(420.0, cellsX + cellsW + pointAreaW, titleW)
-        val rowsBottom = rowTop + rowGap + 18.0 + 36.0
-        val footerH = if (look.credit != null) 38.0 else 0.0
-        val height = rowsBottom + footerH
-        val items = mutableListOf<SceneItem>()
-
-        items += SceneItem.Box(0.0, 0.0, width, height, 0x0E1116, look.opacity)
-        if (title != null) {
-            items += SceneItem.Box(20.0, headerH / 2 - 6.0, 12.0, 12.0, look.accentRgb, 1.0, Corners.all(6.0))
-            items += centered(44.0, headerH / 2, title, ARIAL, 28.0, look.accentRgb, TextAnchor.MIDDLE_LEFT, spacing = 2.0, outline = 1.5)
-        }
-        rows.forEachIndexed { index, row ->
-            val cy = rowTop + index * rowGap + 18.0
-            if (look.playerColors) items += SceneItem.Box(24.0, cy - 12.0, 24.0, 24.0, row.rgb, 0.85)
-            items += centered(nameX, cy, row.name, ARIAL, nameSize, 0xE7ECEF, TextAnchor.MIDDLE_LEFT, bold = false, opacity = 0.93, outline = 1.2)
-            if (row.serving) items += serveBall(cellsX - serveW / 2, cy, 15.0, look.accentRgb)
-            // The winner of a completed set is white and bold. The loser is dim.
-            row.sets.forEachIndexed { cell, games ->
-                val won = row.wonSets[cell]
-                items += centered(
-                    cellsX + cell * cellStep + 22.0, cy, games.toString(), ARIAL, cellSize,
-                    if (won) WHITE else 0xCCCCCC, TextAnchor.CENTER, bold = won, opacity = if (won) 1.0 else 0.5,
-                )
-            }
-            items += centered(cellsX + row.sets.size * cellStep + 22.0, cy, row.games.toString(), ARIAL, cellSize, 0xCCCCCC, TextAnchor.CENTER, bold = false)
-            items += centered(width - 24.0, cy, row.points, ARIAL, pointSize, look.accentRgb, TextAnchor.MIDDLE_RIGHT, outline = if (row.leading) 0.0 else 1.2)
-        }
-        if (look.credit != null) {
-            items += SceneItem.Box(24.0, rowsBottom - 6.0, width - 48.0, 1.0, WHITE, 0.14)
-            items += centered(width / 2, rowsBottom + footerH / 2 - 4.0, look.credit, ARIAL, 24.0, 0xCCCCCC, TextAnchor.CENTER, bold = false, opacity = 0.8)
         }
         return ScoreboardScene(width, height, items)
     }

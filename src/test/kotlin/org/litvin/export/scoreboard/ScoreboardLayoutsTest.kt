@@ -30,6 +30,16 @@ class ScoreboardLayoutsTest {
     private fun ScoreboardScene.texts() = items.filterIsInstance<SceneItem.Label>().map { it.text }
     private fun ScoreboardScene.label(text: String) = items.filterIsInstance<SceneItem.Label>().first { it.text == text }
 
+    /** The colors of the shapes. Some styles show the player colors as slanted polygons or as chalk strokes. */
+    private fun ScoreboardScene.shapeColors() = items.mapNotNull {
+        when (it) {
+            is SceneItem.Box -> it.rgb
+            is SceneItem.Polygon -> it.rgb
+            is SceneItem.Polyline -> it.rgb
+            else -> null
+        }
+    }
+
     @Test
     fun everyStyleShowsNamesSetsGamesAndPoints() {
         ScoreboardStyleId.entries.forEach { style ->
@@ -43,9 +53,14 @@ class ScoreboardLayoutsTest {
                 assertTrue(box.x >= -1 && box.x + box.width <= scene.width + 1, "$style: $box")
                 assertTrue(box.y >= -1 && box.y + box.height <= scene.height + 1, "$style: $box")
             }
+            // Every polygon and polyline is inside the board.
+            val shapePoints = scene.items.filterIsInstance<SceneItem.Polygon>().flatMap { it.points } +
+                scene.items.filterIsInstance<SceneItem.Polyline>().flatMap { it.points }
+            shapePoints.forEach { point ->
+                assertTrue(point.x >= -1 && point.x <= scene.width + 1 && point.y >= -1 && point.y <= scene.height + 1, "$style: $point")
+            }
             // The player colors appear on the board.
-            val colors = scene.items.filterIsInstance<SceneItem.Box>().map { it.rgb }
-            assertTrue(colors.containsAll(listOf(0x112233, 0x445566)), "$style")
+            assertTrue(scene.shapeColors().containsAll(listOf(0x112233, 0x445566)), "$style")
         }
     }
 
@@ -55,7 +70,7 @@ class ScoreboardLayoutsTest {
             val withColors = ScoreboardLayouts.scene(display, ScoreboardSettingsV1(style = style))
             val withoutColors = ScoreboardLayouts.scene(display, ScoreboardSettingsV1(style = style, showPlayerColors = false))
 
-            val colors = withoutColors.items.filterIsInstance<SceneItem.Box>().map { it.rgb }
+            val colors = withoutColors.shapeColors()
             assertFalse(colors.contains(0x112233) || colors.contains(0x445566), "$style")
             assertTrue(withoutColors.texts().containsAll(listOf("ALICE", "BOB")), "$style")
             assertTrue(withoutColors.width <= withColors.width, "$style")
@@ -70,6 +85,17 @@ class ScoreboardLayoutsTest {
         assertEquals(0xFF8800, scene.label("40").rgb)
         assertTrue(scene.label("15").rgb != 0xFF8800)
         assertEquals(0xFF8800, scene.label("BATUMI RAKETO LEAGUE").rgb)
+    }
+
+    @Test
+    fun theLeadingPointsOnAnAccentTileChangeTheTextColorWithTheAccent() {
+        listOf(ScoreboardStyleId.NEXT_GEN, ScoreboardStyleId.VIOLET, ScoreboardStyleId.SUNSET).forEach { style ->
+            val light = ScoreboardLayouts.scene(display, ScoreboardSettingsV1(style = style, accentColorHex = "#F5F5A0"))
+            val dark = ScoreboardLayouts.scene(display, ScoreboardSettingsV1(style = style, accentColorHex = "#202060"))
+
+            assertTrue(light.label("40").rgb != 0xFFFFFF, "$style: a light accent needs dark text")
+            assertEquals(0xFFFFFF, dark.label("40").rgb, "$style: a dark accent needs white text")
+        }
     }
 
     @Test

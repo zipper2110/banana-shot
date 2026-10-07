@@ -245,7 +245,7 @@ Example:
 - `latest`: the newest release. The update check uses it. This field is
   optional.
   - `version`: the version of the newest release. Required in `latest`.
-  - `downloadUrl`: the page that "Download update" opens in the browser.
+  - `downloadUrl`: the page that "Manually download update" opens in the browser.
     Required in `latest`.
   - `installerUrl`: the setup EXE that "Update and restart" downloads and
     starts (see "Update and restart"). Optional. With no `installerUrl`, the
@@ -840,8 +840,8 @@ the name can change.
 
 - When `latest.version` is newer than the app version, the app shows a notice
   that is not modal. The notice shows the version, the `notes`, an "Update
-  and restart" button, a "Download update" button, and a "Later" button.
-- "Update and restart" and "Download update": see "Update and restart".
+  and restart" button, a "Manually download update" button, and a "Later" button.
+- "Update and restart" and "Manually download update": see "Update and restart".
 - "Later" hides the notice for this version until the app closes. The app
   keeps the hidden version in memory only. It does not save it (decided on
   2026-10-02). Thus, the notice shows again at the next start. In the same
@@ -866,7 +866,7 @@ This is the simple update from the app (B-30). The full automatic update
     valid `latest`. It does not show when `latest.version` is the app
     version or older, because the setup would install the same version
     again.
-  - "Download update": opens the download page in the browser. The app does
+  - "Manually download update": opens the download page in the browser. The app does
     not quit. The page is `latest.downloadUrl`. With no valid `latest`, it
     is the GitHub releases page.
 - When the user clicks "Update and restart":
@@ -896,7 +896,7 @@ This is the simple update from the app (B-30). The full automatic update
 - Do not start the setup EXE with `--silent`. In silent mode, the setup does
   not show its dialog, but it also does not start the new version.
 - If the download fails, the app shows the error, deletes the partial file,
-  and stays open. "Download update" stays available.
+  and stays open. "Manually download update" stays available.
 - Only one download runs at a time. While it runs, "Update and restart"
   shows the progress, and the user cannot click it.
 - The app does not check the URL or the downloaded file. HTTPS protects the
@@ -1382,7 +1382,7 @@ no change to the design.
 - The log: a rule that gives the effective expiry writes its `id` and the
   date to the log.
 - Update and restart (with a fake download and a fake start of the setup):
-  the update notice shows "Update and restart", "Download update", and
+  the update notice shows "Update and restart", "Manually download update", and
   "Later" for a newer `latest.version`; "Later" hides the notice for the rest
   of the session, and the next start shows it again; in the same session, a
   newer `latest.version` shows it again; at a start with no connection, the
@@ -1393,9 +1393,9 @@ no change to the design.
   `installerUrl`, the app downloads the stable URL;
   with a running export, the app asks first, and "Cancel" changes nothing;
   a failed download shows the error, deletes the partial file, keeps the app
-  open, and keeps "Download update"; a second click during the download has
+  open, and keeps "Manually download update"; a second click during the download has
   no effect; when `latest.version` is the app version, the expiry warning
-  and expired mode show only "Download update"; with no saved file, expired
+  and expired mode show only "Manually download update"; with no saved file, expired
   mode shows both buttons and uses the stable URL and the releases page.
 - Manual check before the first release (B-26): install version N-1, start
   it, and click "Update and restart" for version N. Version N starts with
@@ -1404,7 +1404,7 @@ no change to the design.
   leaves the app closed.
 - Expired mode: at start, an expired build shows only the Export tab, the
   banner, and the dialog, and it does not open a project; the dialog closes
-  with "Close", and "Download update" opens the URL and does not quit; "Update
+  with "Close", and "Manually download update" opens the URL and does not quit; "Update
   and restart" works as in a normal session; the
   start button shows the dialog and does not add an export; the function that
   opens a project and the function that adds an export both refuse in

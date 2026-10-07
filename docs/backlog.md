@@ -34,98 +34,34 @@ Do these items after the first public release.
   certificate after the check.
 - Done when: the three checks pass with a released build.
 
-### B-41 Admin dashboard for the numbers
+### B-43 Tour scoreboard styles
 
-- Status (2026-10-06): the MVP "cockpit" is built and deployed
-  (`cockpit-worker/`, `https://bananashot-cockpit.banana-shot-feedback.workers.dev`).
-  The decisions and the tasks are in `docs/cockpit/b-41-tasks.md`. Open: on
-  the day of the first release, click "Take a download snapshot now" once,
-  and check Q1 (the 90-day range). Then remove this item. The ideas for
-  later are in B-43.
-- Make a private dashboard for the author. It shows on one page:
-  - The downloads of the setup file, with a daily and a weekly history.
-  - The numbers of the site (Cloudflare Web Analytics): visits, page views,
-    the pages, and the referrers.
-  - The numbers of the analytics Worker (B-9): sessions, app versions, the
-    use of the features, and the exports. The SQL is in
-    `analytics-worker/queries/`.
-- Downloads: GitHub gives only the total `download_count` of each release
-  file, with no history. Thus, a scheduled job must save the totals each
-  day (for example a cron trigger of a Worker that writes to D1). The
-  history starts on the day that the job starts, so start it soon after
-  the first release.
-- The count of `BananaShot-win-Setup.exe` includes the downloads of
-  "Update and restart" (B-30). Show the number of new installs from the
-  analytics Worker next to it.
-- Site numbers: read them with the Cloudflare GraphQL Analytics API. This
-  needs an API token with read access to the account analytics.
-- Only the author can open the dashboard. For example, use Cloudflare Access
-  in front of the page. The page must not show the data of a single user.
-- Open questions: a new Worker or a part of the analytics Worker; the
-  hosting of the page; the time periods and the charts.
-- Done when: the author opens the dashboard and sees the three groups of
-  numbers, with the daily and weekly download history.
-
-### B-43 Cockpit: next steps (epic)
-
-- Added on 2026-10-06. The ideas that are not in the MVP of B-41. Do them
-  after B-41 T8 (the deploy), when real data shows what is missing.
-  Each line is one task. Decide the order with real data.
-- Access and safety:
-  1. Cloudflare Access (Zero Trust) in front of the cockpit in place of the
-     Basic password (B-41 decision 7). The Worker then checks the
-     `Cf-Access-Jwt-Assertion` token.
-  2. Rate limit for wrong passwords, if Access is not done.
-- Downloads:
-  3. Separate new downloads from "Update and restart" downloads. Idea: the
-     app sends `update_downloaded` in the essential counters, or the update
-     uses a different file name or URL (B-25 or B-30).
-  4. Count the clicks on the download button of the site (for example a
-     redirect path `/get` on the site Worker with a counter). Web Analytics
-     counts page views only, not clicks.
-  5. A backfill of the downloads before the first snapshot is not possible
-     (GitHub has no history). Write the first total as "before tracking" on
-     the page.
-- App analytics:
-  6. Retention: the share of first sessions that have a second session in
-     the next 7 days. This needs an install ID or a cohort counter. Today
-     there is only the session number range (privacy decision of B-9).
-  7. Funnel of the first session: project created → first point → first
-     export. Needs new essential or extended counters.
-  8. Charts by app version: crash-free sessions and export failure rate for
-     each version over time, to see if a release made it better or worse.
-  9. A daily export to CSV or a weekly e-mail or Telegram digest of the key
-     numbers (Cron + the Telegram bot of B-8).
-- Errors:
-  10. Group the errors of the logs: the feedback Worker drops the logs
-      (B-8 decision 10). An error report channel with stack traces is a
-      privacy decision first.
-  11. HTTP status of the Workers (4xx/5xx): `workersInvocationsAdaptive`
-      gives only exceptions. Use `httpRequestsAdaptiveGroups` or Workers Logs.
-  12. Alerts outside the page: a Telegram message when the crash-free rate
-      or the snapshot job fails (Cron + B-8 bot).
-- Feedback:
-  13. Mark a report as "done" or "answered" in the cockpit (needs a new
-      table and write access). Link with B-33 (replies in the app).
-  14. Search and full text of long reports (the page shows 600 characters).
-- Site:
-  15. Search Console data (queries and positions) for the site.
-  16. Core Web Vitals of the site (`rumPerformanceEventsAdaptiveGroups`).
-  20. Unique visitors per day (asked by the author on 2026-10-06, moved here
-      for later). Web Analytics has no visitor ID (no cookies), so it gives
-      only visits. The zone analytics of `banana-shot-editor.app` has the
-      unique IP addresses of each day (`httpRequests1dGroups` →
-      `uniq { uniques }`). Limits: it counts bots and crawlers; one IP is not
-      one person; the days cannot be added. It needs the token permission
-      "Zone → Analytics → Read" and the zone ID. Add one sentence to the
-      section "This site" of the privacy page. Show it as a second line in
-      the site chart, with the note "includes bots".
-  17. Check B-41 Q1 and Q2 with the real API after the deploy.
-- Page:
-  18. A date picker for a custom range, and a compare switch (this release
-      against the previous release).
-  19. A table view of each chart (accessibility), and CSV download.
-- Done when: each task is done, or it has a decision not to do it.
+- Decided on 2026-10-07: add two scoreboard styles that are based on world
+  tour TV graphics. Mockup: `design/scoreboard-tour/index.html`.
+- Next Gen (Next Gen ATP Finals): slanted blocks on black, accent and
+  magenta.
+- Violet (WTA purple): a purple title bar, white rows and point pills.
+- Rejected on 2026-10-07 after the mockup: Tour Glass and Team Clash.
+  Rejected before the mockup: Finals Arena (too close to Night Session),
+  Hand Board (too close to Grass Court), Cup Tie.
+- Use generic style names. Do not use tour names or trademarks in the app.
+- Each mockup builder uses the same parts as `ScoreboardScene`. Port each
+  one to `ScoreboardTourLayouts` and add it to `ScoreboardStyleId`.
+- Text on an accent or player color must change between dark and light
+  ink, because the user can set a light color.
+- 2026-10-07: ten more candidates, based on scoreboard images online.
+  Mockup: `design/scoreboard-tour/more.html`. Melbourne, Flip Clock,
+  Stadium Board, Chalkboard, Deco, HUD, Neon, Sunset, Club Plates,
+  Paris Green.
+- Decided on 2026-10-07: add Chalkboard and Sunset. The other eight are
+  rejected. Chalkboard uses the Ink Free font (Windows 10 1803 and later)
+  and shows the player colors as polylines.
+- Status 2026-10-07: Next Gen, Violet, Chalkboard and Sunset are done in
+  `ScoreboardTourLayouts.kt`. The tests pass. Remove this item after the
+  author checks the four styles in the app.
+- Decided on 2026-10-07: remove the Classic and Night Session styles. A
+  project or a default style that uses one of them opens with Broadcast,
+  because unknown style names fall back to the default style.
 
 ### B-33 Replies to feedback inside the app
 

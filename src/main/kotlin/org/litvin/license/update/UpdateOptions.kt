@@ -10,18 +10,18 @@ import org.litvin.license.VersionRules
  * The update notice, the expiry warning, the banner, and the dialog of expired mode use the same values.
  */
 data class UpdateOptions(
-    /** "Update and restart" shows. "Download update" always shows. */
+    /** "Update and restart" shows. "Manually download update" always shows. */
     val showsUpdateAndRestart: Boolean,
     /** The setup EXE that "Update and restart" downloads and starts. */
     val installerUrl: String,
-    /** The page that "Download update" opens in the browser. The app does not quit. */
+    /** The page that "Manually download update" opens in the browser. The app does not quit. */
     val downloadPageUrl: String,
 ) {
     companion object {
         /** The setup EXE has this name in each release (B-24). `Build-VelopackRelease.ps1` makes it. */
         val SETUP_EXE_NAME = "${AppInfo.NAME}-win-Setup.exe"
 
-        /** The page that "Download update" opens with no valid `latest`. */
+        /** The page that "Manually download update" opens with no valid `latest`. */
         const val RELEASES_PAGE_URL = "https://github.com/zipper2110/banana-shot/releases/latest"
 
         /** The setup EXE of the latest release, for a file with no `latest.installerUrl`. */

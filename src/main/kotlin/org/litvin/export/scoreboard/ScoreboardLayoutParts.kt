@@ -13,6 +13,7 @@ internal const val GEORGIA = "Georgia"
 internal const val TREBUCHET = "Trebuchet MS"
 internal const val TAHOMA = "Tahoma"
 internal const val CONSOLAS = "Consolas"
+internal const val INK_FREE = "Ink Free"
 internal const val WHITE = 0xFFFFFF
 internal const val BLACK = 0x000000
 

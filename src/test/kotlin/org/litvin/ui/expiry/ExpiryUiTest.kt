@@ -116,7 +116,7 @@ class ExpiryUiTest {
     }
 
     @Test
-    fun `the dialog shows the rule message, and a latest version that is the app version shows only Download update`() {
+    fun `the dialog shows the rule message, and a latest version that is the app version shows only Manually download update`() {
         val rule = VersionRule("r1", null, "1.2.0", LocalDate.of(2026, 11, 1), "Version 1.2 has a bug.")
         show(state(mode = ExpiryMode.EXPIRED, rules = rules(latest = "1.2.0"), expiry = EffectiveExpiry(rule.stopsOn, rule)))
 

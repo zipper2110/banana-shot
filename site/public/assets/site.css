@@ -174,22 +174,22 @@ main > section:last-child { padding-bottom: 128px; }
 .steps h3 { font-size: 1.25rem; }
 .steps p { color: var(--fg-2); margin: 0; }
 .steps p.step-tags { color: var(--fg); font-weight: 500; font-size: 0.95rem; margin-bottom: 8px; }
+/* An optional extra under the steps. It is not a step. */
+.steps-note { margin: 48px auto 0; max-width: 760px; text-align: center; text-wrap: balance; color: var(--fg-2); }
 @media (max-width: 960px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .steps { grid-template-columns: minmax(0, 1fr); } }
 
-/* ---- Home: feature rows with an animation. A large thin number and a large title. ---- */
+/* ---- Home: feature rows with an animation and a large title. ---- */
 .feature-rows { display: grid; gap: 144px; }
 .feature-row { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
 .feature-row:nth-child(even) .feature-text { order: 2; }
 /* A wide row gives more space to a detailed animation. */
 .feature-row.wide { grid-template-columns: minmax(0, 0.6fr) minmax(0, 1.4fr); gap: 64px; }
 .feature-row.wide:nth-child(even) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr); }
-.feature-num { font: 200 3.6rem/1 var(--font-display); color: var(--fg-3); margin-bottom: 20px; }
 .feature-row h3 { font-size: clamp(1.6rem, 3vw, 2.3rem); letter-spacing: -0.02em; }
 .feature-row p { color: var(--fg-2); font-size: 1.15rem; line-height: 1.65; margin: 0; }
 @media (max-width: 880px) {
   .feature-rows { gap: 88px; }
-  .feature-num { font-size: 2.6rem; }
   .feature-row, .feature-row.wide, .feature-row.wide:nth-child(even) { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .feature-row:nth-child(even) .feature-text { order: 0; }
 }
@@ -335,6 +335,29 @@ main > .section-noai .section-head { margin-bottom: 48px; }
 .faq details[open] summary::after { content: "\2212"; }
 .faq details > div { padding: 0 0 18px; color: var(--fg); }
 .faq h2 { margin-top: 2em; }
+
+/* A closed block for details that most readers do not need (the system needs on the download page).
+   It looks like a control: a box, a hover state, and "Show" / "Hide" with a chevron that turns. */
+.disclosure { margin: 20px 0 0; border: 1px solid var(--line-2); border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); }
+.disclosure summary {
+  cursor: pointer; list-style: none; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+  padding: 14px 18px; border-radius: var(--radius-sm); font-weight: 600; color: var(--fg-strong);
+  transition: background 0.15s;
+}
+.disclosure summary::-webkit-details-marker { display: none; }
+.disclosure summary:hover { background: rgba(255, 255, 255, 0.05); }
+.disclosure summary:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.disclosure summary .muted { font-weight: 400; }
+.disclosure-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--lime); font-size: 0.9rem; font-weight: 600; }
+.disclosure-toggle::before { content: "Show"; }
+.disclosure[open] .disclosure-toggle::before { content: "Hide"; }
+.disclosure-toggle::after {
+  content: ""; width: 7px; height: 7px; margin-top: -4px; border: solid currentColor; border-width: 0 2px 2px 0;
+  transform: rotate(45deg); transition: transform 0.2s, margin 0.2s;
+}
+.disclosure[open] .disclosure-toggle::after { transform: rotate(-135deg); margin-top: 3px; }
+.disclosure-body { padding: 0 18px 8px; border-top: 1px solid var(--line); }
+.disclosure .spec { margin-top: 0; }
 
 /* Changelog. */
 .release { border-left: 2px solid var(--line-2); padding: 0 0 8px 24px; margin: 32px 0; position: relative; }

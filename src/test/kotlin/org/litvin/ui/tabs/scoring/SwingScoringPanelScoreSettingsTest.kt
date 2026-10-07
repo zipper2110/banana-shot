@@ -180,7 +180,7 @@ class SwingScoringPanelScoreSettingsTest {
         val defaults = PreferencesScoreboardStyleDefaults(MemoryPreferences())
         assertNull(defaults.load())
 
-        val style = ScoreboardSettingsV1(style = ScoreboardStyleId.NIGHT_SESSION, showAppCredit = false, sizePercent = 120)
+        val style = ScoreboardSettingsV1(style = ScoreboardStyleId.LED_BOARD, showAppCredit = false, sizePercent = 120)
         defaults.save(style)
 
         assertEquals(style, defaults.load())

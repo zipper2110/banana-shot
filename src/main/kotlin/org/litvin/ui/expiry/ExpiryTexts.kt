@@ -96,7 +96,7 @@ internal object ExpiryTexts {
     }
 
     const val UPDATE_AND_RESTART = "Update and restart"
-    const val DOWNLOAD_UPDATE = "Download update"
+    const val DOWNLOAD_UPDATE = "Manually download update"
     const val CHECK_NOW = "Check now"
     const val LATER = "Later"
     const val CLOSE = "Close"

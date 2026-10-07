@@ -6,19 +6,21 @@ import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 enum class ScoreboardStyleId(val title: String) {
     @JsonEnumDefaultValue
     BROADCAST("Broadcast"),
-    CLASSIC("Classic"),
     CENTER_COURT("Center Court"),
     COMPACT("Compact"),
     GRASS_COURT("Grass Court"),
     CLAY_COURT("Clay Court"),
     HARD_COURT("Hard Court"),
-    NIGHT_SESSION("Night Session"),
     LED_BOARD("LED Board"),
     MINIMAL("Minimal"),
     TILES("Tiles"),
     TICKER("Ticker"),
     RETRO("Retro"),
     BOLD_BLOCK("Bold Block"),
+    NEXT_GEN("Next Gen"),
+    VIOLET("Violet"),
+    CHALKBOARD("Chalkboard"),
+    SUNSET("Sunset"),
 }
 
 /** The corner of the video that shows the scoreboard. */

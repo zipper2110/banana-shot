@@ -37,9 +37,11 @@ and the shared fixtures in `feedback-contract/v1`.
 
 ## Deploy
 
-1. Copy `wrangler.toml.example` to `wrangler.toml`. Git ignores `wrangler.toml`.
-2. Make the database: `npx wrangler d1 create bananashot-feedback`. Write the database ID
-   in `wrangler.toml`. Keep `binding = "FEEDBACK_DB"`. If `d1 create` offers to add a
+`wrangler.toml` is in Git with the ID of the deployed database. It is not a secret. The
+first two steps are only for a new database.
+
+1. Make the database: `npx wrangler d1 create bananashot-feedback`.
+2. Write the database ID in `wrangler.toml`. Keep `binding = "FEEDBACK_DB"`. If `d1 create` offers to add a
    binding with a different name, do not accept it.
 3. Apply the schema: `npx wrangler d1 migrations apply bananashot-feedback --remote`.
 4. Set the secrets. `RATE_LIMIT_KEY` is a random text of 32 or more characters, for
@@ -69,5 +71,4 @@ and the shared fixtures in `feedback-contract/v1`.
 
 To stop the reports at once, set `FEEDBACK_INGESTION_ENABLED = "false"` and deploy.
 
-Do not commit the token, the chat ID, the rate key, the database ID, report exports,
-`.dev.vars`, or `wrangler.toml`.
+Do not commit the token, the chat ID, the rate key, report exports, or `.dev.vars`.

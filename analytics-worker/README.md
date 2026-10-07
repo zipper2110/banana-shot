@@ -33,10 +33,12 @@ The tests use an in-memory D1 (`test/fake-d1.ts`) and the shared fixtures in
 
 ## Deploy
 
-1. Copy `wrangler.toml.example` to `wrangler.toml`. Git ignores `wrangler.toml`.
-2. Make the database in the EU jurisdiction:
-   `npx wrangler d1 create bananashot-analytics --jurisdiction eu`. Write the database ID in
-   `wrangler.toml`. Keep `binding = "ANALYTICS_DB"`. If `d1 create` offers to add a binding with
+`wrangler.toml` is in Git with the IDs of the deployed database. They are not secrets. The
+first two steps are only for a new database.
+
+1. Make the database in the EU jurisdiction:
+   `npx wrangler d1 create bananashot-analytics --jurisdiction eu`.
+2. Write the database ID in `wrangler.toml`. Keep `binding = "ANALYTICS_DB"`. If `d1 create` offers to add a binding with
    a different name, do not accept it.
 3. Apply the schema: `npx wrangler d1 migrations apply bananashot-analytics --remote`. Do this
    also for a database that exists: migration `0002` adds the column `level`. Apply it before
@@ -89,4 +91,4 @@ the file with `--command`.
 - `sessions.sql`: session length, app versions, OS families, crashes, and the session buckets. All
   sessions count.
 
-Do not commit the rate key, the database ID, data exports, `.dev.vars`, or `wrangler.toml`.
+Do not commit the rate key, data exports, or `.dev.vars`.

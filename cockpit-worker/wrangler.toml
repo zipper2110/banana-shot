@@ -15,7 +15,7 @@ run_worker_first = true
 GITHUB_REPO = "zipper2110/banana-shot"
 WORKER_SCRIPTS = "bananashot-analytics,bananashot-feedback,bananashot-cockpit"
 # Write the account ID here (README, "Deploy", step 4).
-CF_ACCOUNT_ID = ""
+CF_ACCOUNT_ID = "6a013160bcd4459a28817b6a30384998"
 # The site numbers are filtered by this host. Optional: CF_WEB_ANALYTICS_SITE_TAG filters by the site tag instead.
 SITE_HOST = "banana-shot-editor.app"
 
@@ -27,23 +27,30 @@ SITE_HOST = "banana-shot-editor.app"
 [[d1_databases]]
 binding = "ANALYTICS_DB"
 database_name = "bananashot-analytics"
-database_id = "replace-locally-analytics"
+database_id = "647b433a-c6b1-40b0-9d31-743e5f4f839b"
 migrations_dir = "../analytics-worker/migrations"
 
 # Read only: the database of the feedback Worker. Write the ID from feedback-worker/wrangler.toml.
 [[d1_databases]]
 binding = "FEEDBACK_DB"
 database_name = "bananashot-feedback"
-database_id = "replace-locally-feedback"
+database_id = "18fbdae7-b0b9-41ec-b4a6-245efe1a6bec"
 migrations_dir = "../feedback-worker/migrations"
 
 # The own database of the cockpit: the download snapshots.
 [[d1_databases]]
 binding = "COCKPIT_DB"
 database_name = "bananashot-cockpit"
-database_id = "replace-locally-cockpit"
+database_id = "a35c78d9-d7a9-46bc-bd1f-ba6099c56046"
 migrations_dir = "migrations"
 
 # The download snapshot. Each hour, so that a failed run has no big effect (decision 3).
 [triggers]
 crons = ["17 * * * *"]
+
+# Workers Logs: keep the console output and the exceptions of each request and cron run.
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true

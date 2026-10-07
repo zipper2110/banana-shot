@@ -39,16 +39,13 @@ build/
 .DS_Store
 /.idea/
 /analytics-worker/node_modules/
-/analytics-worker/wrangler.toml
 /analytics-worker/.dev.vars
 /analytics-worker/.wrangler/
 /feedback-worker/node_modules/
-/feedback-worker/wrangler.toml
 /feedback-worker/.dev.vars
 /feedback-worker/.wrangler/
 /.wrangler/
 /site/.wrangler/
 /cockpit-worker/node_modules/
-/cockpit-worker/wrangler.toml
 /cockpit-worker/.dev.vars
 /cockpit-worker/.wrangler/

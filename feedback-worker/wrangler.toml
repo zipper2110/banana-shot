@@ -1,23 +1,23 @@
-name = "bananashot-analytics"
+name = "bananashot-feedback"
 main = "src/index.ts"
 compatibility_date = "2026-09-03"
 compatibility_flags = ["nodejs_compat"]
 
 # Set "true" in production only after the checks in README.md.
 [vars]
-ANALYTICS_INGESTION_ENABLED = "false"
+FEEDBACK_INGESTION_ENABLED = "true"
 
 # Secrets (set with `wrangler secret put`, never here):
-#   RATE_LIMIT_KEY
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, RATE_LIMIT_KEY
 
-# The code reads the database as ANALYTICS_DB. Keep this binding name.
+# The code reads the database as FEEDBACK_DB. Keep this binding name.
 # `wrangler d1 create` can offer a different name: do not accept it.
 [[d1_databases]]
-binding = "ANALYTICS_DB"
-database_name = "bananashot-analytics"
-database_id = "replace-locally"
+binding = "FEEDBACK_DB"
+database_name = "bananashot-feedback"
+database_id = "18fbdae7-b0b9-41ec-b4a6-245efe1a6bec"
 migrations_dir = "migrations"
 
 # The daily retention job.
 [triggers]
-crons = ["0 3 * * *"]
+crons = ["15 3 * * *"]

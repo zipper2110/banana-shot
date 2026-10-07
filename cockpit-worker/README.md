@@ -37,9 +37,7 @@ The tests run the real SQL on `node:sqlite` with the migrations of the three dat
 
 ## Local preview
 
-1. Copy `wrangler.toml.example` to `wrangler.toml`. Git ignores `wrangler.toml`. The placeholder
-   IDs work for the local preview.
-2. Make `.dev.vars` (Git ignores it). With `COCKPIT_DEV_NO_AUTH=true`, the page on `localhost`
+1. Make `.dev.vars` (Git ignores it). With `COCKPIT_DEV_NO_AUTH=true`, the page on `localhost`
    asks for no password. Never set this variable in `wrangler.toml` or as a secret.
 
    ```
@@ -47,13 +45,17 @@ The tests run the real SQL on `node:sqlite` with the migrations of the three dat
    COCKPIT_DEV_NO_AUTH=true
    ```
 
-3. Fill the local databases with made-up data: `npm run dev:seed`. It uses only `--local`.
-4. Start: `npm run dev`. Open `http://localhost:8791/`. The IDE can also start the
+2. Fill the local databases with made-up data: `npm run dev:seed`. It uses only `--local`.
+3. Start: `npm run dev`. Open `http://localhost:8791/`. The IDE can also start the
    configuration `cockpit` in `.claude/launch.json`.
 
 ## Deploy
 
 Do it soon after the first release: the download history starts on the day of the first snapshot.
+
+`wrangler.toml` is in Git with the account ID and the IDs of the deployed databases. They are not
+secrets. For a deployed cockpit, only `npx wrangler deploy` is necessary. The steps below are for
+a new setup.
 
 1. In `wrangler.toml`, write the database IDs of the analytics and the feedback Workers (from
    their `wrangler.toml`). Do not run `migrations apply` for these two databases from here.
@@ -84,4 +86,4 @@ Do it soon after the first release: the download history starts on the day of th
 6. `npx wrangler deploy`. Open the `workers.dev` URL, give the password, and click
    "Take a download snapshot now" once.
 
-Do not commit `wrangler.toml`, `.dev.vars`, the password, or the tokens.
+Do not commit `.dev.vars`, the password, or the tokens.

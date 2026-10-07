@@ -82,3 +82,8 @@ Status values: `open`, `in-progress`, `done`.
   Worker; that copy is deleted). Checked on the deployed page: all sections load with no
   error in the Worker log. The first download snapshot comes with the first app release
   (GitHub has only the `natives-` release now). Q1 (90 days) is still open.
+- 2026-10-07: the cockpit Worker had 6 exceptions. The two good snapshots were manual (19:30
+  and 01:48 UTC), not at minute 17 of the cron. Probable cause: the cron gets an error from
+  GitHub (no `GITHUB_TOKEN`, and Workers share their IP addresses), and `scheduled` throws.
+  Workers Logs is now on (`[observability.logs]` in `wrangler.toml`), deployed as version
+  `c268af07-5836-4867-be42-b2af12f6d996`.

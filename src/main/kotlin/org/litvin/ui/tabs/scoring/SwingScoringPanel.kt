@@ -95,6 +95,7 @@ class SwingScoringPanel(
     private val frameLoader: VideoFrameLoader = VideoFrameLoader(),
     private val analytics: Analytics = DisabledAnalytics,
     private val commentStyles: CommentStyleDefaults = CommentStyleDefaults.inMemory(),
+    private val appCreditRequest: AppCreditRequest = AppCreditRequest.NONE,
 ) : JPanel(BorderLayout()), AutoCloseable {
     constructor() : this(
         MpvSwingMediaPlayerAdapter(),
@@ -1000,7 +1001,8 @@ class SwingScoringPanel(
             if (frameRequest != null) frameLoader.load(frameRequest, onLoaded)
         }
         val result = try {
-            ScoreboardSettingsDialog.show(this, scoreboardSettings, sample, loadFrame) { preview ->
+            val takeCreditRequest = { appCreditRequest.shouldAsk().also { ask -> if (ask) appCreditRequest.markAsked() } }
+            ScoreboardSettingsDialog.show(this, scoreboardSettings, sample, loadFrame, takeCreditRequest) { preview ->
                 scoreboardPreviewSettings = preview
                 refreshVideoScoreboardOverlay()
             }

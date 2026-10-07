@@ -11,6 +11,7 @@ import org.litvin.scoring.ScoreboardStyleId
 import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DialogGroup
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ScoreboardSceneImage
 import org.litvin.ui.commons.SegmentedChoice
@@ -72,6 +73,7 @@ class ScoreboardSettingsDialog private constructor(
     initial: ScoreboardSettingsV1,
     private val sample: ScoreboardDisplay,
     loadFrame: ((BufferedImage?) -> Unit) -> Unit,
+    private val takeCreditRequest: () -> Boolean,
     private val onPreview: (ScoreboardSettingsV1) -> Unit,
 ) : JDialog(owner, "Scoreboard style", Dialog.ModalityType.APPLICATION_MODAL) {
 
@@ -84,6 +86,10 @@ class ScoreboardSettingsDialog private constructor(
         private const val THUMBNAIL_SCALE = 0.42
         private const val THUMBNAIL_MAX_WIDTH = 150.0
         private const val THUMBNAIL_MAX_HEIGHT = 54.0
+        internal const val CREDIT_REQUEST_TITLE = "A small favor"
+        internal const val CREDIT_REQUEST_TEXT = "Hey there! I make BananaShot in my free time, and it's free for you. " +
+            "If you like it, could you keep this small label in your videos? " +
+            "It helps other players find the app, and it costs you nothing. Thanks! ;)"
 
         /**
          * Shows the dialog and waits until it closes. Returns the new settings after Save,
@@ -91,16 +97,21 @@ class ScoreboardSettingsDialog private constructor(
          * the previews show player 1 as the server, so that the "Serve indicator" option has a visible result.
          * [loadFrame] reads the video frame for the previews and calls its argument with the frame, or with null.
          * Until the frame is there, the previews show a drawn court.
+         * [takeCreditRequest] returns true when the dialog must ask the user to keep the app credit line,
+         * and then marks the request as done. The dialog asks when the user turns the line off.
          */
         fun show(
             parent: Component,
             initial: ScoreboardSettingsV1,
             sample: ScoreboardDisplay,
             loadFrame: ((BufferedImage?) -> Unit) -> Unit = {},
+            takeCreditRequest: () -> Boolean = { false },
             onPreview: (ScoreboardSettingsV1) -> Unit = {},
         ): ScoreboardSettingsV1? {
             val previewSample = if (sample.server == 0) sample.copy(server = 1) else sample
-            val dialog = ScoreboardSettingsDialog(SwingUtilities.getWindowAncestor(parent), initial.normalized(), previewSample, loadFrame, onPreview)
+            val dialog = ScoreboardSettingsDialog(
+                SwingUtilities.getWindowAncestor(parent), initial.normalized(), previewSample, loadFrame, takeCreditRequest, onPreview,
+            )
             dialog.setLocationRelativeTo(parent)
             dialog.isVisible = true
             return dialog.result
@@ -181,7 +192,16 @@ class ScoreboardSettingsDialog private constructor(
             override fun changedUpdate(e: DocumentEvent) = onTitleChanged()
         })
         showTitle.addActionListener { update { it.copy(showTitle = showTitle.isSelected) } }
-        showAppCredit.addActionListener { update { it.copy(showAppCredit = showAppCredit.isSelected) } }
+        showAppCredit.addActionListener {
+            // The first time the user turns the line off, the app author asks to keep it. The answer applies at once.
+            if (!showAppCredit.isSelected && takeCreditRequest()) {
+                showAppCredit.isSelected = MessageDialog.confirm(
+                    this, CREDIT_REQUEST_TITLE, CREDIT_REQUEST_TEXT,
+                    confirmLabel = "Keep the label", cancelLabel = "Remove it", glyph = Feather.HEART,
+                )
+            }
+            update { it.copy(showAppCredit = showAppCredit.isSelected) }
+        }
         showPlayerColors.addActionListener { update { it.copy(showPlayerColors = showPlayerColors.isSelected) } }
         showServe.addActionListener { update { it.copy(showServe = showServe.isSelected) } }
         sizeSlider.addChangeListener { update { it.copy(sizePercent = sizeSlider.value) } }

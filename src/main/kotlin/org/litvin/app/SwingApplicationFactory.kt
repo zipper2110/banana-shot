@@ -38,6 +38,7 @@ import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
 import org.litvin.ui.commons.PreferencesHintRegistry
 import org.litvin.ui.commons.PreferencesCommentStyleDefaults
+import org.litvin.ui.tabs.scoring.PreferencesAppCreditRequest
 import org.litvin.ui.tabs.scoring.PreferencesScoreboardStyleDefaults
 import org.litvin.ui.tabs.scoring.SwingScoringPanel
 import org.litvin.ui.tabs.stats.SwingStatsPanel
@@ -271,6 +272,7 @@ object SwingApplicationFactory {
                 hints = hints,
                 analytics = analytics,
                 commentStyles = commentStyles,
+                appCreditRequest = PreferencesAppCreditRequest(scoringPreferences),
             )
             closeActions += scoringPanel::close
             scoringPanel.onGoToPoint = { pointId ->

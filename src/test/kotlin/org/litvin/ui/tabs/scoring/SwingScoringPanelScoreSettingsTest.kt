@@ -186,6 +186,19 @@ class SwingScoringPanelScoreSettingsTest {
         assertEquals(style, defaults.load())
     }
 
+    @Test
+    fun theAppCreditRequestIsShownOnlyOnce() {
+        val preferences = MemoryPreferences()
+        val request = PreferencesAppCreditRequest(preferences)
+        assertTrue(request.shouldAsk())
+
+        request.markAsked()
+
+        assertFalse(request.shouldAsk())
+        // The flag stays after a restart of the app.
+        assertFalse(PreferencesAppCreditRequest(preferences).shouldAsk())
+    }
+
     private fun createPanel(
         defaults: ScoreboardStyleDefaults,
         editor: ScoreSettingsEditor,

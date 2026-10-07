@@ -1,6 +1,9 @@
-# BananaShot (Kotlin Desktop)
+# BananaShot
 
 A desktop application that helps tennis players turn full‑match recordings into compact, watchable videos. You can remove dead time between points, track the score, and export a final video with a scoreboard overlay.
+
+- Site and download: <https://banana-shot-editor.app/>
+- Releases: [GitHub releases](https://github.com/zipper2110/banana-shot/releases)
 
 ## Documentation
 
@@ -8,6 +11,10 @@ A desktop application that helps tennis players turn full‑match recordings int
 - Package and dependency rules: [docs/architecture-rules.md](docs/architecture-rules.md)
 - Steps of a release: [docs/release-checklist.md](docs/release-checklist.md)
 - Windows packaging: [distribution/windows/README.md](distribution/windows/README.md)
+- UI test lanes and the packaged smoke checklist: [qa/windows/ui-smoke.md](qa/windows/ui-smoke.md)
+- Landing site: [site/README.md](site/README.md)
+- Usage statistics server: [analytics-worker/README.md](analytics-worker/README.md)
+- Feedback server: [feedback-worker/README.md](feedback-worker/README.md)
 - Private dashboard of the numbers (cockpit): [cockpit-worker/README.md](cockpit-worker/README.md)
 
 ## Key features
@@ -17,12 +24,19 @@ A desktop application that helps tennis players turn full‑match recordings int
   points, and mark favorites. Add comments.
 - Scoring: give each point a winner. The app computes the games, sets, and
   tiebreaks for the selected match format.
+- Scoreboard: 16 scoreboard styles, with a position, player colors, and
+  other settings.
 - Statistics: statistics of the match and of each set.
 - Colors and Transform: color, crop, and rotation of the video.
 - Export: the full video, only the points, or only the favorites. The export
   can show the scoreboard, the comments, a statistics card, and set
   summaries. A queue keeps the exports after a restart. The export can use
   hardware encoding.
+- Help: an overview page and a help page for each tab.
+- Feedback: send a problem, an idea, or a question to the author from the
+  app.
+- Updates: the app shows when a new version is available. "Update and
+  restart" installs it.
 
 ## Tech stack
 
@@ -31,12 +45,16 @@ A desktop application that helps tennis players turn full‑match recordings int
 - Export: FFmpeg as a separate process, optional hardware encoding
 - Project files: JSON (Jackson)
 - Runtime: a bundled JDK 25 runtime
-- Packaging: Velopack setup EXE for Windows
+- Packaging: Velopack setup EXE for Windows, signed with a Certum code
+  signing certificate
+- Servers: Cloudflare Workers with D1 for the usage statistics, the feedback
+  reports, and the cockpit. The landing site is static HTML on Cloudflare.
 
 ## Project status
 
-- The app is near its first public release. The first release is for
-  Windows only. macOS is a post-release item (B-13).
+- Version 1.0.0, the first public release, came out on 2026-10-06. The
+  development version is `1.0.1-SNAPSHOT`.
+- The app is for Windows x64 only. macOS is a post-release item (B-13).
 - The open work is in [docs/backlog.md](docs/backlog.md).
 
 ## Getting started (development)
@@ -163,9 +181,13 @@ mvn compile exec:java
 `-Dapp.mainClass=<class>`.
 
 ## CI
-- GitHub Actions workflow runs `mvn test` on pushes and pull requests to `main`/`master`.
-- `windows-release.yml` builds, tests, and publishes a Windows release. See
+- `ci.yml` runs `mvn test` on pushes and pull requests to `main`/`master`.
+- `windows-release.yml` builds, tests, signs, and publishes a Windows release.
+  A tag push makes a draft GitHub release. See
   [docs/release-checklist.md](docs/release-checklist.md).
+- `release-age-reminder.yml` runs each Monday. It opens an issue when the
+  newest release is older than 4 months, because each build expires 6 months
+  after its build date.
 - The architecture dependency hygiene test (`org.litvin.ArchitectureDependencyHygieneTest`) is part of the suite and will fail the build on violations.
 
 ## High‑level architecture
@@ -191,6 +213,16 @@ The pre-release and post-release work is in [docs/backlog.md](docs/backlog.md).
   [privacy notice](https://banana-shot-editor.app/privacy/) (source:
   [site/public/privacy/index.html](site/public/privacy/index.html)) and
   [docs/analytics/design.md](docs/analytics/design.md).
+
+### Feedback reports
+- The app sends a feedback report only when you click Send in the feedback
+  form. The usage statistics choice does not change this.
+- The log files are in the report only if you select "Attach the log files".
+  "Show the data" shows the exact data before you send.
+- The server keeps the report for 90 days and sends it to the author with a
+  Telegram bot. See "Feedback reports" in the
+  [privacy notice](https://banana-shot-editor.app/privacy/#feedback) and
+  [feedback-worker/README.md](feedback-worker/README.md).
 
 ### Version check and updates
 - This is separate from the usage statistics. It is necessary for the license
@@ -220,7 +252,8 @@ The pre-release and post-release work is in [docs/backlog.md](docs/backlog.md).
   unmodified, and replaceable by users.
 - FFmpeg (GPL build) — runs only as a separate `ffmpeg.exe` process. An
   in-process FFmpeg must be an LGPL build.
-- Fonts — ensure redistribution rights (e.g., OFL fonts like Roboto).
+- [distribution/THIRD-PARTY-NOTICES.txt](distribution/THIRD-PARTY-NOTICES.txt)
+  lists all components and their licenses, also the icon fonts.
 
 ## Acknowledgements
 - FFmpeg, mpv, Kotlin, and FlatLaf teams for awesome tooling.

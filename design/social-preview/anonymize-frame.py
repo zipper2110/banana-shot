@@ -1,8 +1,9 @@
 """Makes an anonymized copy of the doubles frame for the social preview image.
 
-- Blurs the faces of the three players that face the camera.
-- Replaces the player names and the place label on the scoreboard with
-  invented ones, in the same style.
+Replaces the player names and the place label on the scoreboard with
+invented ones, in the same style. The frame keeps the faces: the crop in
+og-image.html shows only the left part of the frame, where the only player
+has her back to the camera.
 
 Input: site/public/assets/frames/video-doubles.webp (1280 x 720).
 Output: design/social-preview/frame-anonymized.webp.
@@ -13,19 +14,12 @@ Needs Pillow and the Inter font (Inter-Bold.otf).
 from pathlib import Path
 from statistics import median
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "site/public/assets/frames/video-doubles.webp"
 TARGET = ROOT / "design/social-preview/frame-anonymized.webp"
 FONT = "/usr/share/fonts/opentype/inter/Inter-Bold.otf"
-
-# Ellipses (left, top, right, bottom) around the faces, in frame pixels.
-FACES = [
-    (636, 55, 659, 81),   # far court, yellow shirt
-    (782, 16, 800, 37),   # far court, back
-    (944, 92, 976, 126),  # near the net, cap
-]
 
 PLACE = "CITY CLUB : COURT 2"
 TEAM_1 = "ALEX / EMMA"
@@ -34,16 +28,6 @@ TEAM_2 = "LUCAS / NINA"
 SCOREBOARD_BLACK = (12, 10, 8)
 HEADER_TEXT = (6, 28, 4)
 NAME_TEXT = (255, 255, 255)
-
-
-def blur_faces(image: Image.Image) -> None:
-    blurred = image.filter(ImageFilter.GaussianBlur(6))
-    mask = Image.new("L", image.size, 0)
-    draw = ImageDraw.Draw(mask)
-    for box in FACES:
-        draw.ellipse(box, fill=255)
-    mask = mask.filter(ImageFilter.GaussianBlur(2))
-    image.paste(blurred, (0, 0), mask)
 
 
 def tab_color(image: Image.Image) -> tuple[int, int, int]:
@@ -76,7 +60,6 @@ def replace_names(image: Image.Image) -> None:
 
 def main() -> None:
     image = Image.open(SOURCE).convert("RGB")
-    blur_faces(image)
     replace_names(image)
     image.save(TARGET, quality=92, method=6)
     print(f"Wrote {TARGET.relative_to(ROOT)}")

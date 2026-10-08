@@ -7,9 +7,12 @@ the site.
 - Size: 1200 × 630 (the Open Graph size).
 - The frame is `frame-anonymized.webp`: a real export of the app
   (`site/public/assets/frames/video-doubles.webp`) with no personal data.
-  `anonymize-frame.py` makes it. The script blurs the faces of the players
-  and writes invented names and an invented place on the scoreboard. The
-  frame on the home page does not change.
+  `anonymize-frame.py` makes it. The script writes invented names and an
+  invented place on the scoreboard. The frame on the home page does not
+  change.
+- The image shows only the left part of the frame. There, the only player
+  has her back to the camera, so no face shows. Do not move the frame to the
+  left in `og-image.html`: then the far players and their faces show.
 - The logo is `site/public/assets/logo.svg`.
 - The font is Inter. If Inter is not installed, the browser uses a different
   font, and the text can wrap differently.
@@ -22,9 +25,9 @@ Do this only when the source frame or the invented names change.
 python3 design/social-preview/anonymize-frame.py
 ```
 
-Then look at the frame: the faces must be blurred, and the text must stay
-inside the scoreboard cells. The face positions are in pixels in the script.
-A different source frame needs new positions.
+Then look at the frame: the text must stay inside the scoreboard cells. The
+text positions are in pixels in the script. A different source frame needs
+new positions.
 
 ## Render the image
 

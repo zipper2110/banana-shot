@@ -356,9 +356,11 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
       on Reddit then show a match, not an icon. Done on 2026-10-08:
       `site/public/assets/og-image.jpg`. Deploy the site to publish it.
 - [ ] Record the 3-minute tutorial video. Put it on the home page and on
-      YouTube.
+      YouTube. The shot list, the spoken text, and the YouTube texts are in
+      `tutorial-video.md`.
 - [ ] Add the site link and one line about the app to the descriptions of
-      your two match videos.
+      your two match videos. The texts are in `tutorial-video.md`,
+      section 5.
 - [ ] Deploy the cockpit, if it is not deployed yet. Write down the start
       numbers: visits, downloads, installs, exports.
 - [ ] Make a simple sheet (a spreadsheet is enough) of people you contacted:

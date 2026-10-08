@@ -5,29 +5,35 @@ social networks, and forums show this image when a person shares a link to
 the site.
 
 - Size: 1200 × 630 (the Open Graph size).
-- The frame is `frame-anonymized.webp`: a real export of the app
-  (`site/public/assets/frames/video-doubles.webp`) with no personal data.
-  `anonymize-frame.py` makes it. The script writes invented names and an
-  invented place on the scoreboard. The frame on the home page does not
-  change.
-- The image shows only the left part of the frame. There, the only player
-  has her back to the camera, so no face shows. Do not move the frame to the
-  left in `og-image.html`: then the far players and their faces show.
+- The frame is `frame.webp`: a color-graded part of a real export of the
+  app, from a doubles match of the author. `prepare-frame.py` makes it.
+- The scoreboard shows invented names and an invented place. The source
+  frame is not in Git, because its scoreboard shows the real names.
+- The frame shows only the left part of the court. There, the near player
+  has the back to the camera, and no face shows. The far players are not in
+  `frame.webp`.
 - The logo is `site/public/assets/logo.svg`.
 - The font is Inter. If Inter is not installed, the browser uses a different
   font, and the text can wrap differently.
 
-## Make the anonymized frame
+## Make the frame
 
-Do this only when the source frame or the invented names change.
+Do this only when the source frame, the grade, or the invented names change.
+The input is a 1920 × 1080 frame of an export of the app.
 
 ```bash
-python3 design/social-preview/anonymize-frame.py
+python3 design/social-preview/prepare-frame.py <frame.png>
 ```
 
-Then look at the frame: the text must stay inside the scoreboard cells. The
-text positions are in pixels in the script. A different source frame needs
-new positions.
+Then look at the frame:
+
+- The text must stay inside the scoreboard cells.
+- The scoreboard must keep the colors of the app. The script grades only the
+  video, not the scoreboard.
+- No face must show.
+
+The positions of the scoreboard, the text, and the crop are in pixels in the
+script. A different source frame needs new positions.
 
 ## Render the image
 

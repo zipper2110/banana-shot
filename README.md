@@ -16,6 +16,7 @@ A desktop application that helps tennis players turn full‑match recordings int
 - Usage statistics server: [analytics-worker/README.md](analytics-worker/README.md)
 - Feedback server: [feedback-worker/README.md](feedback-worker/README.md)
 - Private dashboard of the numbers (cockpit): [cockpit-worker/README.md](cockpit-worker/README.md)
+- Marketing strategy and the plan for the first users: [docs/marketing/strategy.md](docs/marketing/strategy.md)
 
 ## Key features
 

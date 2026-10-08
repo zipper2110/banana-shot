@@ -42,6 +42,29 @@ real numbers from the cockpit when you have them.
 - The cockpit already counts site visits, downloads, sessions, and exports.
 - The scoreboard shows the "BananaShot app" credit line. It is on by default.
 
+### Big files: an advantage of local editing
+
+- A 2-hour match in 4K 60fps is about 50 GB. An iPhone records about
+  440 MB per minute in 4K 60fps (HEVC).
+- BananaShot opens such a file from the disk. There is no upload and no
+  wait.
+- A cloud tool must upload the file first. The time depends on the upload
+  speed of the connection:
+
+  | Upload speed | Time to upload 50 GB |
+  |---|---|
+  | 10 Mbit/s | about 11 hours |
+  | 20 Mbit/s | about 5.5 hours |
+  | 50 Mbit/s | about 2.2 hours |
+  | 100 Mbit/s | about 1.1 hours |
+
+- Phone editors must also play and cut a 4K 60fps file on a phone. A PC
+  with a graphics card does this more easily.
+- The numbers above are arithmetic, not measurements of a competitor. Do
+  not say that a specific app has a file size limit or is slow before you
+  test it.
+- Measure the app with a real 50 GB file before you use the claim (Phase 0).
+
 ### What blocks adoption
 
 - Windows only. Many video people use a Mac. Many players use only a phone.
@@ -62,7 +85,7 @@ real numbers from the cockpit when you have them.
 |---|---|---|
 | Do nothing (upload the raw video) | Free, no work | Nobody watches 2 hours of ball pickups |
 | General editors (DaVinci Resolve, Premiere, CapCut, Shotcut) | Cut anything | Long learning curve, no tennis score, the scoreboard is manual work for each point |
-| SwingVision (iPhone, iPad) | AI cuts, stats, line calls | About $180 per year, Apple only, uploads the video, AI errors |
+| SwingVision (iPhone, iPad) | AI cuts, stats, line calls | About $180 per year, Apple only, AI errors |
 | Aero AI, Perfect Swing (iPhone) | AI cuts dead time | Subscription or Apple only, no scoreboard |
 | Scorify, BT Tennis Camera, Scoreboard apps | Score on the video while you record | You must keep score during the match. No dead-time cut |
 | Tennis Studio (Windows, Microsoft Store) | Cut, crop, score overlay from a Garmin watch | Closest competitor. Check its price and quality before you compare |
@@ -84,11 +107,13 @@ real scoreboard. Free, on your PC, and no AI to fix."
 1. Watchable: only the points, with the score, the stats, and your comments.
 2. Correct: you mark the points, so each cut and each score is right.
 3. Yours: free, no account, no upload, works offline.
+4. Made for big files: a 4K 60fps recording of a full match (about 50 GB)
+   opens at once, because there is nothing to upload.
 
 ### Words to use and words not to use
 
 - Use: "full match", "dead time", "scoreboard", "share with your friends",
-  "your coach", "your opponents", "free".
+  "your coach", "your opponents", "free", "4K 60fps", "no upload".
 - Do not lead with "No AI". Lead with the result. Use "No AI" as the answer
   to "why must I mark the points myself?".
 - Do not use "manual" alone. It sounds slow. Use "you decide each cut, with
@@ -131,6 +156,9 @@ message.
   "NTRP 3.5 singles", "club tennis match", "tennis match vlog".
 - Message: "I edited one of your matches with my free app. Here is the
   result. You can use it, and you can make the next one yourself."
+- Many of them record in 4K 60fps with an action camera or a good phone.
+  The big-file advantage matters most to this group: "Your 4K 60fps files
+  open at once. Nothing to upload."
 
 ### Group C: the coach and the academy
 
@@ -350,6 +378,12 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
 ## 8. The plan: now and later
 
 ### Phase 0: preparation (this week, 2 to 4 hours)
+
+- [ ] Measure the app with a real 4K 60fps file of about 50 GB on your PC.
+      Write down: the time to create the project, the time to seek to a
+      point, if the playback is smooth, and the export time of "Only points"
+      (Balanced). Use the real numbers in the tutorial and on the site, for
+      example: "A 2-hour 4K 60fps match (50 GB) opens in [X] seconds."
 
 - [x] Make a social preview image (`og:image`, 1200 × 630) with a real frame
       of a match and the scoreboard. Use it on all pages. Links in chats and

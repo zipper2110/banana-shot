@@ -60,6 +60,8 @@ Write them down. You need them for the spoken text and the description.
 - `[X1]` The length of the full recording, for example "1 hour 52 minutes".
 - `[X2]` The length of the export with only the points.
 - `[X3]` Your time to mark and score the whole match.
+- `[X4]` The file size and format of the recording, for example "4K 60fps,
+  48 GB". Record the tutorial with your biggest real file.
 
 ### App settings
 
@@ -74,7 +76,7 @@ Write them down. You need them for the spoken text and the description.
 |---|---|---|---|
 | 1 | 0:00 to 0:10 | The finished video: 2 or 3 good points with the scoreboard. | "This is my doubles match, with only the points and a live scoreboard. I made it from a [X1] recording with a free app. I'll show you how in 3 minutes." |
 | 2 | 0:10 to 0:25 | Your face, or the raw recording with the dead time (ball pickups, the walk to the baseline). | "Most of a tennis recording is time between the points. Nobody watches that. I'm Dmitri, I play tennis and write code, and I made BananaShot to fix it for myself." |
-| 3 | 0:25 to 0:45 | Projects tab: Import new match, select the file, Create project. | "Step one: open your recording. Any phone or camera video works, also 4K. The app does not upload anything. Your video stays on your PC." |
+| 3 | 0:25 to 0:45 | Projects tab: Import new match, select the file, Create project. | "Step one: open your recording. Any phone or camera video works. This one is [X4], and it opens right away, because the app does not upload anything. Your video stays on your PC." |
 | 4 | 0:45 to 1:25 | Points tab. Play the video. Press C at the serve, V when the point ends. Do 3 or 4 points. Show the key overlay. Mark one favorite with A. Then use the arrow keys or a higher speed to skip the dead time. | "Step two: mark the points. Press C when the serve starts, and V when the point ends. That's it. Between points, I speed up the video or skip with the arrow keys. Press A to mark a great point as a favorite." |
 | 5 | 1:25 to 1:35 | Open the prepared project with all points marked. | "I marked the whole match like this. It took me about [X3]." |
 | 6 | 1:35 to 2:15 | Scoring tab. The scoring settings: names, colors, best of 3. Then score 3 or 4 points with Q and E, and R for the next point. Press S once to mark the server. | "Step three: the score. Set the names and the format, for example best of three sets. Then play each point and press Q or E for the player who won it. R goes to the next point. The app counts games, sets, and tiebreaks by the tennis rules. No AI guesses, so the score is always right." |
@@ -140,7 +142,8 @@ BananaShot:
 - No AI: you decide each cut, and the score is always right.
 - Scoreboard (16 styles), match statistics, comments on the video,
   color correction, crop and rotation.
-- Opens MP4, MOV, MKV, AVI, M4V, and WMV. Exports up to 4K 60fps.
+- Opens MP4, MOV, MKV, AVI, M4V, and WMV. Handles big 4K 60fps files: no
+  upload, no wait. Exports up to 4K 60fps.
 - Windows 10 and 11. A Mac version is planned.
 
 Questions or ideas? Use the Feedback button in the app, or write a comment

@@ -17,6 +17,7 @@ The author made these decisions on 2026-10-08:
 | Minimum macOS version | The version that covers 95% of Mac users. Now this is macOS 15 (see "Minimum macOS version") |
 | Scoreboard fonts | Replace the fonts on all platforms with bundled open fonts (see "5. Fonts") |
 | Installer and update | Velopack, if it works well on macOS. If it does not, use a DMG (see "Installer and update") |
+| Price and license | The same as on Windows |
 | Start date | Not in the scope of this document |
 
 ## Goal
@@ -552,7 +553,8 @@ The checks for Velopack on macOS:
   version, Apple Silicon), the install steps, and the uninstall steps
   (`site/public/download/index.html`). Change the title "Download
   BananaShot for Windows". The home page, the FAQ, and the pricing page also
-  say "Windows". Update them.
+  say "Windows". Update them. The pricing page must tell that the price and
+  the license are the same on Windows and on macOS.
 - **Cockpit:** `cockpit-worker/src/downloads.ts` counts only
   `BananaShot-win-Setup.exe` as a setup. Add the macOS installer.
 - **Privacy texts:** `PrivacyPage.kt` and the site privacy page say "the
@@ -589,10 +591,6 @@ The checks for Velopack on macOS:
    Velopack checks first.
 10. **CI, release, site, and texts** (about 1 week). Sections 9 and 10.
 11. **Beta.** Give a build to a few Mac users before the public release.
-
-## Open questions
-
-- The price and the license on macOS: the same as on Windows?
 
 ## Costs
 

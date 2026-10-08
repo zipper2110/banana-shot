@@ -18,6 +18,7 @@ A desktop application that helps tennis players turn full‑match recordings int
 - Private dashboard of the numbers (cockpit): [cockpit-worker/README.md](cockpit-worker/README.md)
 - Marketing strategy and the plan for the first users: [docs/marketing/strategy.md](docs/marketing/strategy.md)
 - Changes for padel support (B-14): [docs/padel/b-14-padel.md](docs/padel/b-14-padel.md)
+- Changes for macOS support (B-13): [docs/macos/b-13-macos.md](docs/macos/b-13-macos.md)
 
 ## Key features
 
@@ -56,7 +57,8 @@ A desktop application that helps tennis players turn full‑match recordings int
 
 - Version 1.0.0, the first public release, came out on 2026-10-06. The
   development version is `1.0.1-SNAPSHOT`.
-- The app is for Windows x64 only. macOS is a post-release item (B-13).
+- The app is for Windows x64 only. macOS is a post-release item (B-13). The
+  list of changes is in [docs/macos/b-13-macos.md](docs/macos/b-13-macos.md).
 - The open work is in [docs/backlog.md](docs/backlog.md).
 
 ## Getting started (development)

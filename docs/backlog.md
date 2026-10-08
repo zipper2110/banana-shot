@@ -82,6 +82,7 @@ Do these items after the first public release.
 ### B-13 macOS
 
 - Build, package, and test the app on macOS.
+- The list of changes is in `docs/macos/b-13-macos.md`.
 
 ### B-14 Padel
 

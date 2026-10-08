@@ -55,8 +55,6 @@ real numbers from the cockpit when you have them.
   accuracy, not a missing feature.
 - Nobody knows the app yet. There are no reviews, no mentions, and no
   social proof.
-- The social preview image (`og:image`) is the app icon. A link to the site
-  in a chat or on Reddit shows a small icon, not a match frame.
 
 ### Competitors and alternatives
 
@@ -353,9 +351,10 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
 
 ### Phase 0: preparation (this week, 2 to 4 hours)
 
-- [ ] Make a social preview image (`og:image`, 1200 × 630) with a real frame
+- [x] Make a social preview image (`og:image`, 1200 × 630) with a real frame
       of a match and the scoreboard. Use it on all pages. Links in chats and
-      on Reddit then show a match, not an icon.
+      on Reddit then show a match, not an icon. Done on 2026-10-08:
+      `site/public/assets/og-image.jpg`. Deploy the site to publish it.
 - [ ] Record the 3-minute tutorial video. Put it on the home page and on
       YouTube.
 - [ ] Add the site link and one line about the app to the descriptions of

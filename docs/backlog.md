@@ -86,6 +86,7 @@ Do these items after the first public release.
 ### B-14 Padel
 
 - Support padel matches.
+- The list of changes is in `docs/padel/b-14-padel.md`.
 
 ### B-15 Intro and outro videos
 

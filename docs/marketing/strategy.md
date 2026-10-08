@@ -63,7 +63,8 @@ real numbers from the cockpit when you have them.
 - The numbers above are arithmetic, not measurements of a competitor. Do
   not say that a specific app has a file size limit or is slow before you
   test it.
-- Measure the app with a real 50 GB file before you use the claim (Phase 0).
+- Measured on 2026-10-08: a 50 GB 4K 60fps file opens in about 1 second.
+  The home page and the FAQ say this now.
 
 ### What blocks adoption
 
@@ -380,10 +381,9 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
 ### Phase 0: preparation (this week, 2 to 4 hours)
 
 - [ ] Measure the app with a real 4K 60fps file of about 50 GB on your PC.
-      Write down: the time to create the project, the time to seek to a
-      point, if the playback is smooth, and the export time of "Only points"
-      (Balanced). Use the real numbers in the tutorial and on the site, for
-      example: "A 2-hour 4K 60fps match (50 GB) opens in [X] seconds."
+      Done: the file opens in about 1 second (2026-10-08). The home page and
+      the FAQ show it. Still to measure: the time to seek to a point, if the
+      playback is smooth, and the export time of "Only points" (Balanced).
 
 - [x] Make a social preview image (`og:image`, 1200 × 630) with a real frame
       of a match and the scoreboard. Use it on all pages. Links in chats and

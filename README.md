@@ -19,6 +19,7 @@ A desktop application that helps tennis players turn full‑match recordings int
 - Marketing strategy and the plan for the first users: [docs/marketing/strategy.md](docs/marketing/strategy.md)
 - Changes for padel support (B-14): [docs/padel/b-14-padel.md](docs/padel/b-14-padel.md)
 - Changes for macOS support (B-13): [docs/macos/b-13-macos.md](docs/macos/b-13-macos.md)
+- Brainstorm and trial plan for AI points detection: [docs/ai-points/ai-points-trial.md](docs/ai-points/ai-points-trial.md)
 
 ## Key features
 

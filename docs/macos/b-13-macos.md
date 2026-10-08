@@ -7,6 +7,18 @@ The list comes from a review of the code on 2026-10-08 (version
 `1.0.1-SNAPSHOT`). Items with "Verify" are not tested yet. Do a test of each
 of them on a Mac before you start the related work.
 
+## Decisions
+
+The author made these decisions on 2026-10-08:
+
+| Subject | Decision |
+|---|---|
+| CPU type | Apple Silicon (arm64) only. No Intel Mac build |
+| Minimum macOS version | The version that covers 95% of Mac users. Now this is macOS 15 (see "Minimum macOS version") |
+| Scoreboard fonts | Replace the fonts on all platforms with bundled open fonts (see "5. Fonts") |
+| Installer and update | Velopack, if it works well on macOS. If it does not, use a DMG (see "Installer and update") |
+| Start date | Not in the scope of this document |
+
 ## Goal
 
 A Mac user can do all the steps that a Windows user can do:
@@ -40,7 +52,8 @@ edges of the app:
    needs VideoToolbox.
 5. **The fonts.** The UI and 4 scoreboard fonts are Windows fonts (Segoe UI,
    Segoe UI Black, Consolas, Ink Free). A Mac does not have them, so the
-   scoreboard changes its look.
+   scoreboard changes its look. We replace all scoreboard fonts with bundled
+   open fonts on all platforms.
 6. **Small Windows services.** The registry, DXGI, `GetTickCount64`,
    `CreateFile`, the `Windows-ROOT` trust store, and the Windows error codes.
    Each one needs a macOS replacement or a "not used on macOS" path.
@@ -56,7 +69,7 @@ Apple Developer account. The preview spike can change this number.
 | Preview window | `wid` from `Native.getComponentID(canvas)`, `gpu-api=d3d11`, `hwdec=d3d11va` | A different embed method (see "1. Video preview") | `media/mpv/MpvSwingMediaPlayerAdapter.kt` |
 | Mouse input over the preview | `EnumChildWindows` and `EnableWindow` (user32) | Depends on the embed method | `MpvSwingMediaPlayerAdapter.kt` |
 | libmpv load | Library name `libmpv-2` (`libmpv-2.dll`), `LoadLibraryEx` error codes | Library name `mpv` (`libmpv.2.dylib`), a macOS error text | `media/mpv/LibMpv.kt` |
-| Native folder | `natives/windows-x64`, `ffmpeg.exe`, `ffprobe.exe` | `natives/macos-arm64` (and `macos-x64`), no `.exe` | `ApplicationLayout.kt` |
+| Native folder | `natives/windows-x64`, `ffmpeg.exe`, `ffprobe.exe` | `natives/macos-arm64`, no `.exe` | `ApplicationLayout.kt` |
 | Packaged launcher | `BananaShot.exe` | `BananaShot.app/Contents/MacOS/BananaShot` | `ApplicationLayout.kt` |
 | Data folder | `%APPDATA%\BananaShot` | `~/Library/Application Support/BananaShot` (now the fallback is `~/.bananashot`) | `ApplicationLayout.kt` |
 | GPU choice | Registry key `UserGpuPreferences`, DXGI GPU count | Not necessary. macOS selects the GPU. Skip on macOS | `WindowsGpuPreference.kt`, `WindowsGpuCount.kt` |
@@ -70,7 +83,7 @@ Apple Developer account. The preview spike can change this number.
 | Update | Download `BananaShot-win-Setup.exe` and start it | Download the macOS installer and open it | `license/update/UpdateAndRestart.kt`, `UpdateOptions.kt` |
 | Velopack hooks | `--veloapp-*` arguments | Verify which hooks Velopack runs on macOS | `VelopackHooks.kt` |
 | UI font | `Segoe UI` set in `SwingMainApp` | The macOS system font | `SwingMainApp.kt`, `ui/commons/UiKit.kt`, `ExportUi.kt`, `ProjectsUi.kt`, `VideoFocusChip.kt` |
-| Scoreboard fonts | Windows system fonts | Bundled fonts (see "5. Fonts") | `export/scoreboard/ScoreboardLayoutParts.kt`, `AssOverlayWriter.kt` |
+| Scoreboard fonts | Windows system fonts | Bundled open fonts on all platforms (see "5. Fonts") | `export/scoreboard/ScoreboardLayoutParts.kt`, `export/comments/CommentAss.kt`, `AssOverlayWriter.kt` |
 | Text anti-aliasing | `lcd_hrgb` on Windows | `on` (already the code path for other systems) | `SwingMainApp.kt` |
 | Diagnostics | `BananaShot Diagnostics.cmd`, check `libmpv-2.dll` | A shell script or `--diagnostics` from the bundle, check the dylib | `distribution/windows/`, `DistributionDiagnostics.kt` |
 | Build and CI | `windows-2022` runners, PowerShell scripts | macOS runners, shell scripts | `.github/workflows/`, `distribution/windows/` |
@@ -140,7 +153,8 @@ passes all the checks below. The spike code can start from
 
 ### The checks of the spike
 
-- 4K 60 fps H.264 and HEVC files play with no dropped frames on an M1 Mac.
+- 4K 60 fps H.264 and HEVC files play with no dropped frames on an M1 Mac
+  with macOS 15.
 - Seek, frame step, and the playback rate work as on Windows.
 - The color and the tone controls give the same result as the export
   (`FfmpegToneFilterParityTest` and `ExportPreviewParityMain`).
@@ -175,8 +189,9 @@ We need pinned macOS builds of libmpv and FFmpeg, as we have for Windows in
 - **libmpv:** a shared `libmpv.2.dylib` with all its dependencies (FFmpeg
   libraries, libplacebo, libass, MoltenVK if we use Vulkan). Each dependency
   must be in the bundle and must use `@rpath` or `@loader_path` names, not
-  Homebrew paths. Candidate sources: a build of our own in CI, or a
-  third-party build such as `media-kit/libmpv-darwin-build`. Verify the
+  Homebrew paths. Build for arm64 only, with the deployment target macOS 15.
+  Candidate sources: a build of our own in CI, or a third-party build such as
+  `media-kit/libmpv-darwin-build`. Verify the
   license (LGPL or GPL) and the available source of each candidate.
 - **FFmpeg:** `ffmpeg` and `ffprobe` with `libx264`, `h264_videotoolbox`,
   `libass`, and `zscale` (the export uses the same filters as on Windows).
@@ -192,7 +207,7 @@ the input of the build, and we do not depend on a third party.
 
 - Add `distribution/macos/native-dependencies.json` with the same schema:
   version, URL, SHA-256, source URL, and source SHA-256 for each file. Set
-  `architecture` to `macos-arm64` (and `macos-x64` if we support Intel Macs).
+  `architecture` to `macos-arm64`.
 - Add the macOS files and their source archives to a new natives release
   (for example `natives-2026-11`). Follow the steps of "Natives release" in
   `distribution/windows/README.md`. Do not delete `natives-2026-09`.
@@ -205,8 +220,9 @@ the input of the build, and we do not depend on a third party.
 ## 3. Runtime layout and data folders
 
 `ApplicationLayoutResolver` needs a platform value. Add an internal enum, for
-example `Platform { WINDOWS_X64, MACOS_ARM64, MACOS_X64 }`, and read it from
-`os.name` and `os.arch`. Then:
+example `Platform { WINDOWS_X64, MACOS_ARM64 }`, and read it from `os.name`
+and `os.arch`. An Intel Mac cannot run the app, because the bundle has only
+arm64 files. Then:
 
 - `nativeRoot`: `natives/<platform>` in place of `natives/windows-x64`.
 - The bundled FFmpeg: `ffmpeg/bin/ffmpeg` and `ffmpeg/bin/ffprobe` with no
@@ -231,8 +247,8 @@ example `Platform { WINDOWS_X64, MACOS_ARM64, MACOS_X64 }`, and read it from
   passes. Keep the real test encode, as for the other encoders.
 - **Quality:** `FFmpegCommandBuilder` maps the CRF only for NVENC. Add a map
   for VideoToolbox. On Apple Silicon, VideoToolbox accepts a constant
-  quality (`-q:v`). Verify the quality on Intel Macs. Use a bitrate there if
-  `-q:v` is not available. Add tests to `FFmpegCommandBuilderTest`.
+  quality (`-q:v`). Find the `-q:v` values that give the same quality as the
+  CRF values of the presets. Add tests to `FFmpegCommandBuilderTest`.
 - **Texts:** the encoder descriptions say "PC", "NVIDIA", "AMD", and
   "Intel". Add a description for VideoToolbox and change "PC" to "computer".
 - **Analytics:** the counter keys are a closed list with one key for each
@@ -254,54 +270,88 @@ On macOS, Java then uses a fallback font. Use the FlatLaf default font on
 macOS (the system font) and keep `Segoe UI` on Windows. Check each screen for
 text that does not fit, because the system font of macOS is wider.
 
-### Scoreboard and statistics card fonts
+### Scoreboard, statistics card, and comment fonts
 
-The scoreboard styles use these fonts in the export (libass) and in the
-preview (mpv `osd-overlay`), and Java measures the text with the same fonts
-(`ScoreboardFonts`):
-
-| Font | On macOS |
-|---|---|
-| Segoe UI, Segoe UI Black | No |
-| Arial, Arial Black, Georgia, Trebuchet MS, Tahoma | Yes. Verify each one on macOS 14 and later |
-| Consolas | No |
-| Ink Free | No |
+The scoreboard styles, the statistics card, and the comments use these
+fonts in the export (libass) and in the preview (mpv `osd-overlay`). Java
+measures the text with the same fonts (`ScoreboardFonts`). The font names
+are in `export/scoreboard/ScoreboardLayoutParts.kt`,
+`export/comments/CommentAss.kt` (Arial), and `AssOverlayWriter.kt` (Arial).
 
 When a font is missing, libass and Java select different fallback fonts.
-Then the text of the scoreboard does not fit its box. We must bundle fonts.
-We cannot bundle the Microsoft fonts, because their license does not permit
-it.
+Then the text of the scoreboard does not fit its box. A Mac does not have
+Segoe UI, Segoe UI Black, Consolas, and Ink Free. We cannot bundle the
+Microsoft fonts, because their license does not permit it.
 
-Options:
+**Decision:** replace all these fonts on all platforms with bundled open
+fonts. Then the export and the preview do not depend on the fonts of the
+computer, and the scoreboards look the same on Windows and on macOS.
 
-1. **Bundle open fonts on macOS only.** Use metric-compatible open fonts
-   (for example Selawik for Segoe UI, Cascadia Mono for Consolas, and an
-   open handwriting font for Ink Free). Windows keeps its look. The
-   scoreboards look a little different on a Mac.
-2. **Bundle open fonts on all platforms.** Change the styles to the bundled
-   fonts on Windows too. The scoreboards look the same on all platforms.
-   The Windows look changes, and existing users see the change.
+This step does not need macOS. Do it on Windows first and release it in a
+Windows version. Then the macOS work starts with fonts that are known to
+work.
 
-For both options:
+#### Candidate fonts
 
-- Put the fonts in the app (for example `natives/fonts` or a resource
-  folder).
+Select the fonts in a design review with screenshots of all 16 styles
+before and after the change. Each candidate has the SIL Open Font License
+(OFL). Verify the license and the weights of each font before you select it.
+
+| Current font | Candidate | Note |
+|---|---|---|
+| Segoe UI | Selawik | Microsoft made it as an open fallback with the metrics of Segoe UI. It has no Black weight |
+| Segoe UI Black | Inter (Black weight) | Not metric-compatible. Alternative: use Inter for Segoe UI too, so that one family has all weights |
+| Arial | Liberation Sans | Metric-compatible with Arial |
+| Arial Black | Archivo Black | Not metric-compatible |
+| Georgia | Gelasio | Metric-compatible with Georgia |
+| Trebuchet MS | Fira Sans | Not metric-compatible |
+| Tahoma | Open Sans or Noto Sans | Not metric-compatible |
+| Consolas | Cascadia Mono or Inconsolata | Not metric-compatible |
+| Ink Free | Patrick Hand or Caveat | Handwriting fonts. Not metric-compatible |
+
+A metric-compatible font keeps the text widths, so the boxes of a style need
+no change. For the other fonts, check the box sizes of each style.
+
+#### Tasks
+
+- Put the font files in the app as resources (for example
+  `src/main/resources/fonts`). At the start, copy them to a folder in the
+  app data folder or the app folder, because libass and mpv need a folder
+  on the disk.
+- Change the font names in `ScoreboardLayoutParts.kt`, `CommentAss.kt`, and
+  `AssOverlayWriter.kt` to the family names of the bundled fonts. Use the
+  family names that are in the font files. libass finds a font by this
+  name.
 - Give the folder to the ffmpeg `subtitles` filter with `fontsdir=`.
-- Give the folder to mpv with `sub-fonts-dir` and `osd-fonts-dir`.
+- Give the folder to mpv with `sub-fonts-dir` and `osd-fonts-dir`. Verify
+  that the `osd-overlay` text uses `osd-fonts-dir`.
 - Register the fonts in Java with `Font.createFont` and
-  `GraphicsEnvironment.registerFont`, so that `ScoreboardFonts` measures the
-  same font.
-- Add the font licenses to `THIRD-PARTY-NOTICES.txt`.
-- Run `ScoreboardLayoutsTest` and `ScoreboardAssTest` on macOS.
+  `GraphicsEnvironment.registerFont`, so that `ScoreboardFonts` and the
+  statistics card measure the same font. Register them before the first
+  layout.
+- Make sure that a font that is also installed on the computer does not
+  replace the bundled font. Give the bundled fonts unique names if
+  necessary.
+- Update the expected values of `ScoreboardLayoutsTest`,
+  `ScoreboardAssTest`, `CommentAssTest`, `StatsCardTest`, and
+  `ScoreboardComponentTest`. Add a test that each font name of a style is
+  a bundled font.
+- Run the export and the preview parity checks on Windows.
+- Add the font licenses to `THIRD-PARTY-NOTICES.txt` and copy them into
+  the `legal` folder of the app.
+- Tell the users in the changelog that the scoreboard fonts changed.
+  Existing projects keep their style, but a new export looks a little
+  different.
+- Update the screenshots on the site (`site/public/assets/frames`) and in
+  `design/` if they show the old fonts.
 
 ## 6. Platform services
 
 - **GPU preference and GPU count (B-35):** call
   `WindowsGpuPreference.ensureHighPerformancePreference` and
   `WindowsGpuCount.count` only on Windows (they return at once on other
-  systems now). Do not show the GPU restart message on macOS. Add
-  `NSSupportsAutomaticGraphicsSwitching = true` to `Info.plist` for Intel
-  Macs with two GPUs.
+  systems now). Do not show the GPU restart message on macOS. Apple Silicon
+  Macs have one GPU, so no GPU choice is necessary.
 - **Run time counter (expiry):** `RunTimeCounter.production` calls
   `Kernel32.GetTickCount64`. On macOS this call fails, and the app uses
   `System.nanoTime`. On macOS, `System.nanoTime` does not count the time
@@ -367,8 +417,9 @@ a small `MacIntegration` class that runs only on macOS:
   `New-AppIcon.ps1` and `AppIconRenderer.java`).
 - Use the same runtime modules as Windows, without `jdk.crypto.mscapi`.
   Check with `jdeps` on macOS.
-- Set `LSMinimumSystemVersion` in `Info.plist`. Recommendation: macOS 13 or
-  later. Verify the minimum version of the libmpv and FFmpeg builds.
+- Set `LSMinimumSystemVersion` in `Info.plist` to the minimum macOS version
+  (see "Minimum macOS version"). Build the libmpv and FFmpeg files with the
+  same deployment target.
 - Copy the natives, the fonts, and the legal files into the bundle.
 - Add `distribution/macos/validate-app-image.sh` with the same checks as
   `Validate-AppImage.ps1` (version, build and expiry dates, runtime
@@ -376,14 +427,33 @@ a small `MacIntegration` class that runs only on macOS:
 
 ### Architecture
 
-The bundled JDK runtime and the native files are specific to one CPU type.
+The app is for Apple Silicon (arm64) only. The bundled JDK runtime and the
+native files are arm64 files. Apple sells only Apple Silicon Macs since
+2023, and macOS 26 is the last macOS for Intel Macs.
 
-- **Recommendation:** start with Apple Silicon (arm64) only. Apple sells only
-  Apple Silicon Macs since 2023, and macOS 26 is the last macOS for Intel
-  Macs.
-- If the requests show demand for Intel Macs, add a second build
-  (`macos-x64`). A universal build is possible, but it needs a universal JDK
-  runtime and universal native files, and it doubles the download size.
+- Build on an arm64 GitHub runner with an arm64 JDK 25.
+- Set `LSArchitecturePriority` to `arm64` in `Info.plist`.
+- On the download page, tell that the app needs a Mac with Apple Silicon
+  (M1 or later).
+
+### Minimum macOS version
+
+Rule: select the newest minimum version that still runs on 95% or more of
+Macs. "Runs on" means that the Mac has this version or a newer version.
+
+TelemetryDeck data of July 2026 shows macOS 26 on 86.0% of Macs and macOS 15
+on 12.2%. Thus macOS 15 and later cover about 98%, and macOS 26 alone covers
+less than 95%. This data comes from the apps that use TelemetryDeck. It can
+contain more new Macs than the average.
+
+- Start with **macOS 15**.
+- Check the share again before each macOS release. The next macOS version
+  came out in September 2026. When macOS 26 and later cover 95%, change the
+  minimum to macOS 26.
+- When the app sends analytics, use the `os_version` of our own users in
+  place of the public data. The analytics send only `os_family` now. Add
+  the major macOS version to the analytics only with a change of the
+  contract and the privacy notice.
 
 ### Code signing and notarization
 
@@ -415,7 +485,8 @@ Without signing and notarization, Gatekeeper blocks the app.
 
 ### Installer and update
 
-Two options:
+**Decision:** use Velopack if it works well on macOS. Do the checks of
+option 1 first. If one check fails and we cannot fix it, use option 2.
 
 1. **Velopack for macOS.** `vpk pack` on macOS makes a `.pkg` installer, a
    portable `.zip`, the update package, and a release feed. It can sign and
@@ -427,8 +498,15 @@ Two options:
    usual Mac method. "Update and restart" must then download the DMG, mount
    it, copy the app, and start it again. This needs more own code.
 
-Recommendation: option 1, because "Update and restart" already uses a
-Velopack setup on Windows.
+The checks for Velopack on macOS:
+
+- The `.pkg` installs the app with no Gatekeeper warning on a clean Mac
+  with macOS 15.
+- "Update and restart" from the previous version installs the new version
+  and starts it. The project and the export queue stay.
+- The update works when the app is open, when the user moved the app to
+  another folder, and when the user has no administrator rights.
+- The uninstall removes the app and keeps the data folder.
 
 ### Changes for "Update and restart"
 
@@ -494,36 +572,32 @@ Velopack setup on Windows.
 
 ## Order of the work
 
-1. **Preview spike** (1 to 2 weeks). Select the embed method. If no method
+1. **Bundled fonts** (about 1 week). Section 5. Do this on Windows and
+   release it in a Windows version. It does not need a Mac.
+2. **Preview spike** (1 to 2 weeks). Select the embed method. If no method
    passes the checks, stop and tell the author before more work.
-2. **Apple Developer account.** Start early. The approval can take days.
-3. **Native files** (1 to 2 weeks). Build or select libmpv and FFmpeg for
+3. **Apple Developer account.** Start early. The approval can take days.
+4. **Native files** (1 to 2 weeks). Build or select libmpv and FFmpeg for
    macOS arm64. Make the manifest, the script, and the natives release.
-4. **Runtime layout and platform services** (about 1 week). Sections 3 and
+5. **Runtime layout and platform services** (about 1 week). Sections 3 and
    6. The app starts from source on a Mac with export and the preview.
-5. **Preview implementation** (1 to 2 weeks). The method of the spike, with
+6. **Preview implementation** (1 to 2 weeks). The method of the spike, with
    all overlays and input.
-6. **Export and fonts** (about 1 week). Sections 4 and 5.
-7. **macOS app behavior** (a few days). Section 7.
-8. **Packaging, signing, update** (1 to 2 weeks). Section 8.
-9. **CI, release, site, and texts** (about 1 week). Sections 9 and 10.
-10. **Beta.** Give a build to a few Mac users before the public release.
+7. **Export** (a few days). Section 4.
+8. **macOS app behavior** (a few days). Section 7.
+9. **Packaging, signing, update** (1 to 2 weeks). Section 8. Do the
+   Velopack checks first.
+10. **CI, release, site, and texts** (about 1 week). Sections 9 and 10.
+11. **Beta.** Give a build to a few Mac users before the public release.
 
-## Decisions for the author
+## Open questions
 
-- Apple Silicon only, or also Intel Macs?
-- The minimum macOS version.
-- The scoreboard fonts: open fonts on macOS only, or on all platforms?
-- The installer: Velopack `.pkg`, or a DMG?
-- The price and the license: the same as on Windows?
-- Start now, or wait for enough requests (`docs/marketing/strategy.md`
-  says: collect requests first)?
+- The price and the license on macOS: the same as on Windows?
 
 ## Costs
 
 - Apple Developer Program: 99 USD for each year.
-- A Mac for development and tests. An Apple Silicon Mac is necessary. An
-  Intel Mac is also necessary if we support Intel Macs.
+- An Apple Silicon Mac with macOS 15 for development and tests.
 - GitHub macOS runners cost more minutes than Linux and Windows runners on a
   private repository.
 
@@ -531,7 +605,8 @@ Velopack setup on Windows.
 
 - A signed and notarized macOS build is in a GitHub release, next to the
   Windows build.
-- A clean Mac installs and opens it with no Gatekeeper warning.
+- A clean Apple Silicon Mac with macOS 15 installs and opens it with no
+  Gatekeeper warning.
 - The packaged smoke test of `qa/macos/ui-smoke.md` passes.
 - "Update and restart" updates from the previous macOS version.
 - The B-42 checks (sleep, proxy, TLS inspection) pass on a Mac.

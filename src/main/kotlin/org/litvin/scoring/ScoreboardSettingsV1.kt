@@ -47,6 +47,8 @@ data class ScoreboardSettingsV1(
     val showPlayerColors: Boolean = true,
     /** Shows a ball next to the player who serves. The board shows it only when the server is known. */
     val showServe: Boolean = true,
+    /** Shows a badge such as "GOLDEN POINT" or "STAR POINT" next to the board during a deciding point. */
+    val showDecidingPoint: Boolean = true,
     val position: ScoreboardPosition = ScoreboardPosition.TOP_LEFT,
     val sizePercent: Int = 100,
     val backgroundOpacityPercent: Int? = null,

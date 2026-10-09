@@ -17,6 +17,8 @@ data class ScoreboardDisplay(
     val pointLeader: Int,
     /** 1 or 2 for the player who serves, 0 when the server is not known. */
     val server: Int = 0,
+    /** The badge of a deciding point, for example "STAR POINT", or null. All styles show it in the same way. */
+    val badge: String? = null,
 ) {
     val player1Leading: Boolean
         get() = pointLeader == 1
@@ -59,6 +61,7 @@ object ScoreboardComponent {
                 else -> 0
             },
             server = span.server?.takeIf { it == 1 || it == 2 } ?: 0,
+            badge = span.badge?.takeIf { it.isNotBlank() },
         )
     }
 

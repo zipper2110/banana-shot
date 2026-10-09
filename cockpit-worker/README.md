@@ -51,6 +51,9 @@ The tests run the real SQL on `node:sqlite` with the migrations of the three dat
 
 ## Deploy
 
+GitHub Actions can do the deploy: run the workflow "Deploy" from `master` and select "Cockpit Worker". The workflow runs `npm ci`, the type check, and the tests. Then it applies the migrations of `bananashot-cockpit` only and deploys the Worker.
+Setup of the token: see `.github/workflows/cloudflare-deploy.yml`. The steps below are still necessary for a new database and for the secrets.
+
 Do it soon after the first release: the download history starts on the day of the first snapshot.
 
 `wrangler.toml` is in Git with the account ID and the IDs of the deployed databases. They are not

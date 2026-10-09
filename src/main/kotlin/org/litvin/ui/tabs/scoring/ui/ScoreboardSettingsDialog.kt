@@ -153,6 +153,10 @@ class ScoreboardSettingsDialog private constructor(
         name = "scoreboard-show-serve"
         toolTipText = "Show a ball next to the player who serves. Mark the server on the Scoring tab"
     }
+    private val showDecidingPoint = SwitchBox("Golden / star point badge").apply {
+        name = "scoreboard-show-deciding-point"
+        toolTipText = "During a golden point or a star point, show a badge next to the scoreboard"
+    }
     private val showAppCredit = SwitchBox("“${ScoreboardSettingsV1.APP_CREDIT}” line").apply {
         name = "scoreboard-show-app-credit"
         toolTipText = "Show a line with the app name at the bottom of the scoreboard"
@@ -204,6 +208,7 @@ class ScoreboardSettingsDialog private constructor(
         }
         showPlayerColors.addActionListener { update { it.copy(showPlayerColors = showPlayerColors.isSelected) } }
         showServe.addActionListener { update { it.copy(showServe = showServe.isSelected) } }
+        showDecidingPoint.addActionListener { update { it.copy(showDecidingPoint = showDecidingPoint.isSelected) } }
         sizeSlider.addChangeListener { update { it.copy(sizePercent = sizeSlider.value) } }
         opacitySlider.addChangeListener { update { it.copy(backgroundOpacityPercent = opacitySlider.value) } }
         accentButton.addActionListener {
@@ -320,6 +325,7 @@ class ScoreboardSettingsDialog private constructor(
             indented(DialogKit.inputBox(titleField, 32), left = 54)
             wide(showPlayerColors, line = true)
             wide(showServe)
+            wide(showDecidingPoint)
             wide(showAppCredit)
         }
         val place = DialogGroup("Place and size", Material2MZ.PICTURE_IN_PICTURE, labelWidth = 92).apply {
@@ -384,6 +390,7 @@ class ScoreboardSettingsDialog private constructor(
             showAppCredit.isSelected = settings.showAppCredit
             showPlayerColors.isSelected = settings.showPlayerColors
             showServe.isSelected = settings.showServe
+            showDecidingPoint.isSelected = settings.showDecidingPoint
             sizeSlider.value = settings.sizePercent
             // The default of the background slider is the opacity of the style.
             opacityRow.default = defaults.backgroundOpacityPercent

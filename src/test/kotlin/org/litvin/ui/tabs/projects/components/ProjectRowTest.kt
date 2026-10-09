@@ -22,7 +22,7 @@ class ProjectRowTest {
         name = "Club final",
         secondary = "D:\\video\\2026\\PXL_20260920_153210877.mp4",
         id = "p1",
-        stats = ProjectStatsState("1:52:44", "14.61 GB", "96/128", "38", scoredCount = 96, pointCount = 128),
+        stats = ProjectStatsState("1:52:44", "14.61 GB", "96/128", "38", scoredCount = 96, pointCount = 128, sport = "Padel"),
     )
 
     @Test
@@ -37,6 +37,7 @@ class ProjectRowTest {
             assertEquals("96/128", find<JLabel>(row, "projects-scored-p1").text)
             assertEquals("96 of 128 points have a score", find<JLabel>(row, "projects-scored-p1").toolTipText)
             assertEquals("38", find<JLabel>(row, "projects-favorites-p1").text)
+            assertEquals("Padel", find<JLabel>(row, "projects-sport-p1").text)
             assertNull(findOrNull(row, "projects-video-missing-p1"))
         }
     }

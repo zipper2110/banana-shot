@@ -84,6 +84,7 @@ object ScoringEngine {
      * - The server changes after each game. In a tiebreak, the first server serves one point,
      *   then the players serve two points each. The player who received first in a set tiebreak
      *   serves the first game of the next set.
+     * - In a [MatchStructure.TOTAL_POINTS] match, each side serves [MatchRulesV1.serveTurnPoints] points in a row.
      * - A mark sets the server of its point. The next points of the same game (or tiebreak) continue from the mark.
      * - The points before the first mark get the servers that lead to the first mark.
      */
@@ -126,8 +127,27 @@ object ScoringEngine {
         return Timeline(initial, states, sets, if (marked) servers else servers.map { null }, stakes)
     }
 
-    /** The tiebreak target of [MatchStructure.PLAIN_POINTS]. No score gets to it, so the tiebreak does not end. */
+    /**
+     * The tiebreak target of [MatchStructure.PLAIN_POINTS] and [MatchStructure.TOTAL_POINTS]. No score gets to it,
+     * so the tiebreak does not end.
+     */
     private const val ENDLESS_TIEBREAK_TARGET = Int.MAX_VALUE
+
+    /** [DeuceRule.STAR_POINT]: the points of each side at the third deuce. The next point wins the game. */
+    private const val STAR_POINT_SCORE = 5
+
+    /**
+     * True when the next point wins the game for both sides: the golden point ([DeuceRule.NO_AD]) or the star point
+     * ([DeuceRule.STAR_POINT]). [before] is the score before the point.
+     */
+    fun isDecidingPoint(before: MatchState, rules: MatchRulesV1): Boolean {
+        if (rules.manualScoring || before.isTiebreak || before.p1Pts != before.p2Pts) return false
+        return when (rules.deuce) {
+            DeuceRule.ADVANTAGE -> false
+            DeuceRule.NO_AD -> before.p1Pts >= 3
+            DeuceRule.STAR_POINT -> before.p1Pts >= STAR_POINT_SCORE
+        }
+    }
 
     private fun otherPlayer(player: Int): Int = 3 - player
 
@@ -155,6 +175,9 @@ object ScoringEngine {
 
         /** The server of the current game, or the first server of the current tiebreak. */
         var gameServer = 1
+
+        /** True after the last point of the match. A [MatchStructure.TOTAL_POINTS] match can end in a draw. */
+        var ended = false
         var matchWonBy: Int? = null
         var gameWonBy: Int? = null
         var setWonBy: Int? = null
@@ -164,7 +187,8 @@ object ScoringEngine {
             if (!rules.manualScoring) {
                 when (rules.structure) {
                     MatchStructure.SINGLE_TIEBREAK -> startTiebreak(rules.tiebreakPoints, replacesSet = true)
-                    MatchStructure.PLAIN_POINTS -> startTiebreak(ENDLESS_TIEBREAK_TARGET, replacesSet = true)
+                    MatchStructure.PLAIN_POINTS, MatchStructure.TOTAL_POINTS ->
+                        startTiebreak(ENDLESS_TIEBREAK_TARGET, replacesSet = true)
                     MatchStructure.SETS, MatchStructure.GAMES_ONLY -> Unit
                 }
             }
@@ -176,15 +200,19 @@ object ScoringEngine {
         }
 
         fun pointWonBy(player: Int) {
-            if (matchWonBy != null) return
+            if (ended) return
             if (player == 1) p1Pts++ else p2Pts++
             if (rules.manualScoring) return
-            if (isTiebreak) checkTiebreak() else checkGame()
+            when {
+                rules.structure == MatchStructure.TOTAL_POINTS -> checkTotalPoints()
+                isTiebreak -> checkTiebreak()
+                else -> checkGame()
+            }
         }
 
         /** Plays the next point on a copy of the match, and tells what [player] wins with it. */
         fun stakeIfWonBy(player: Int): Stake {
-            if (rules.manualScoring || matchWonBy != null) return Stake.NONE
+            if (rules.manualScoring || ended) return Stake.NONE
             val next = copy().apply { pointWonBy(player) }
             return when {
                 next.matchWonBy != null -> Stake.MATCH
@@ -203,6 +231,7 @@ object ScoringEngine {
             m.tiebreakTarget = tiebreakTarget
             m.tiebreakReplacesSet = tiebreakReplacesSet
             m.gameServer = gameServer
+            m.ended = ended
             m.matchWonBy = matchWonBy
             m.gameWonBy = gameWonBy
             m.setWonBy = setWonBy
@@ -217,12 +246,22 @@ object ScoringEngine {
         }
 
         /** The server of the next point. */
-        fun server(): Int = if (isTiebreak && tiebreakReceiverServes()) otherPlayer(gameServer) else gameServer
+        fun server(): Int = if (receiverServes()) otherPlayer(gameServer) else gameServer
 
         /** Makes [player] the server of the next point. The rest of the game or tiebreak continues from it. */
         fun setServer(player: Int) {
-            gameServer = if (isTiebreak && tiebreakReceiverServes()) otherPlayer(player) else player
+            gameServer = if (receiverServes()) otherPlayer(player) else player
         }
+
+        /** True when the next point is served by the player who did not serve the first point of the game or tiebreak. */
+        private fun receiverServes(): Boolean = when {
+            rules.structure == MatchStructure.TOTAL_POINTS && !rules.manualScoring -> otherSideServeTurn()
+            isTiebreak -> tiebreakReceiverServes()
+            else -> false
+        }
+
+        /** [MatchStructure.TOTAL_POINTS]: each side serves [MatchRulesV1.serveTurnPoints] points in a row. */
+        private fun otherSideServeTurn(): Boolean = ((p1Pts + p2Pts) / rules.serveTurnPoints) % 2 == 1
 
         /** Tiebreak: the first server serves point 1, then each player serves two points (2–3, 4–5, ...). */
         private fun tiebreakReceiverServes(): Boolean = ((p1Pts + p2Pts + 1) / 2) % 2 == 1
@@ -254,8 +293,21 @@ object ScoringEngine {
             val won = when (rules.deuce) {
                 DeuceRule.ADVANTAGE -> top >= 4 && lead >= 2
                 DeuceRule.NO_AD -> top >= 4
+                // After two lost advantages, the point at 5–5 decides the game.
+                DeuceRule.STAR_POINT -> top >= 4 && (lead >= 2 || (lead == 1 && minOf(p1Pts, p2Pts) >= STAR_POINT_SCORE))
             }
             if (won) winGame(if (p1Pts > p2Pts) 1 else 2)
+        }
+
+        /** [MatchStructure.TOTAL_POINTS]: the match ends after the total points. The score stays on the scoreboard. */
+        private fun checkTotalPoints() {
+            if (p1Pts + p2Pts < rules.totalPoints) return
+            ended = true
+            matchWonBy = when {
+                p1Pts > p2Pts -> 1
+                p2Pts > p1Pts -> 2
+                else -> null
+            }
         }
 
         private fun winGame(player: Int) {
@@ -299,6 +351,7 @@ object ScoringEngine {
             val setsToWin = if (rules.structure == MatchStructure.SINGLE_TIEBREAK) 1 else rules.setsToWin()
             if (max(setsP1, setsP2) >= setsToWin) {
                 matchWonBy = player
+                ended = true
             } else if (rules.hasMatchTiebreakDecider() && setsP1 == setsToWin - 1 && setsP2 == setsToWin - 1) {
                 startTiebreak(MatchRulesV1.MATCH_TIEBREAK_POINTS, replacesSet = true)
             }

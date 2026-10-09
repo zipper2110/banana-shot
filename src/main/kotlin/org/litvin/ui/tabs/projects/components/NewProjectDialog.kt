@@ -5,8 +5,11 @@ import org.litvin.media.FfprobeVideoReadCheck
 import org.litvin.media.VideoProblem
 import org.litvin.media.VideoReadCheck
 import org.litvin.projects.NewProjectRules
+import org.litvin.scoring.MatchRulesV1
+import org.litvin.scoring.Sport
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.TextRun
 import org.litvin.ui.commons.UiKit
@@ -24,8 +27,16 @@ import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
-/** The name and the source video of a new project. */
-data class NewProjectRequest(val name: String, val sourceVideoPath: String)
+/**
+ * The name, the source video, the sport, and the match rules of a new project.
+ * The dialog edits [rules] only for padel. A tennis project gets the tennis default rules.
+ */
+data class NewProjectRequest(
+    val name: String,
+    val sourceVideoPath: String,
+    val sport: Sport = Sport.TENNIS,
+    val rules: MatchRulesV1 = sport.defaultRules(),
+)
 
 /** Opens the "New project" dialog and returns the confirmed values, or null after Cancel. Tests replace the dialog with a fake. */
 fun interface NewProjectEditor {
@@ -42,7 +53,8 @@ fun interface NewProjectEditor {
 }
 
 /**
- * Modal "New project" dialog: the project name and the match video.
+ * Modal "New project" dialog: the project name, the match video, and the sport.
+ * For padel, the dialog also shows the padel rules: the format, the deuce rule, and the Americano points.
  *
  * "Create project" is disabled while the name is empty or the path is not a supported video file.
  * A message under each field tells the user what to correct.
@@ -100,6 +112,20 @@ class NewProjectDialog private constructor(
         addActionListener { create() }
     }
 
+    private var sport = initial.sport
+    private val sportChoice = SegmentedChoice(
+        "new-project-sport",
+        Sport.entries.map { SegmentedChoice.Option(it, it.title) },
+    ).apply {
+        selected = sport
+        onChange { selectSport(it) }
+    }
+
+    /** The padel rules. The dialog keeps them while the user looks at tennis, so a switch back shows them again. */
+    private val padelRules = PadelRulesGroup(if (initial.sport == Sport.PADEL) initial.rules else Sport.PADEL.defaultRules()).apply {
+        component.isVisible = sport == Sport.PADEL
+    }
+
     init {
         name = "new-project-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
@@ -110,7 +136,7 @@ class NewProjectDialog private constructor(
         }
 
         contentPane = DialogKit.content(
-            DialogKit.MEDIUM,
+            DialogKit.WIDE,
             DialogKit.head("New project"),
             form(),
             DialogKit.footer(right = listOf(cancelButton, createButton)),
@@ -144,8 +170,19 @@ class NewProjectDialog private constructor(
             DialogKit.field("Match video", videoRow, note = "The app never changes the video file."),
             videoError,
             videoExplanation,
+            DialogKit.field("Sport", sportChoice),
+            padelRules.component,
             gap = 6,
         )
+    }
+
+    private fun selectSport(selected: Sport) {
+        sport = selected
+        padelRules.component.isVisible = selected == Sport.PADEL
+        // The padel rules make the dialog taller. Tennis makes it short again.
+        minimumSize = null
+        pack()
+        minimumSize = size
     }
 
     /** Shows the error messages and enables "Create project" only for correct values. Returns true for correct values. */
@@ -205,7 +242,12 @@ class NewProjectDialog private constructor(
         contentPane?.repaint()
     }
 
-    private fun currentRequest() = NewProjectRequest(name = nameField.text.trim(), sourceVideoPath = videoField.text.trim())
+    private fun currentRequest() = NewProjectRequest(
+        name = nameField.text.trim(),
+        sourceVideoPath = videoField.text.trim(),
+        sport = sport,
+        rules = if (sport == Sport.PADEL) padelRules.rules else sport.defaultRules(),
+    )
 
     private fun showVideoExplanation(explanation: String?) {
         videoExplanation.runs = listOf(TextRun(explanation ?: " ", UiKit.font(12.5f), Palette.FG_2))

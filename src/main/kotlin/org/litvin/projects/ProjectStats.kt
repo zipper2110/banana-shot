@@ -1,6 +1,7 @@
 package org.litvin.projects
 
 import org.litvin.ApplicationLayout
+import org.litvin.scoring.Sport
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -17,6 +18,8 @@ data class ProjectStats(
     val pointCount: Int = 0,
     val scoredCount: Int = 0,
     val favoriteCount: Int = 0,
+    /** The sport in score.json. A project without score.json is a tennis project. */
+    val sport: Sport = Sport.TENNIS,
 )
 
 /** Reads the duration of a video file. Returns null when the duration is not available. */

@@ -32,7 +32,7 @@ object HelpCatalog {
     val pages: List<HelpContent> = listOf(
         HelpContent(
             page = HelpPage.OVERVIEW,
-            summary = "Turn a full tennis recording into a compact, scored video without changing the source file.",
+            summary = "Turn a full tennis or padel recording into a compact, scored video without changing the source file.",
             workflow = listOf(
                 "Import a source video or open a recent project.",
                 "Mark the start and end of each point, and add comments where necessary.",
@@ -62,20 +62,22 @@ object HelpCatalog {
             workflow = listOf(
                 "Choose Import new match in the New project panel and select a supported video file.",
                 "In the New project dialog, change the project name or the video if necessary, then choose Create project.",
+                "Select Tennis or Padel in the New project dialog. For padel, also select the format, the deuce rule (advantage, golden point, or star point), and the total points of an Americano match.",
                 "Choose Open on a recent project to continue working.",
                 "The opened project becomes the current project, unlocks the editing tabs, and opens the Points tab.",
             ),
             actions = listOf(
                 "Click a row of the recent projects as an alternative to Open. The open project has no Open button.",
                 "Use the pencil button on a project row, or Rename on the current project, to rename the project.",
-                "Read the video path, the video duration, the file size, the scored points of all points, and the favorite points in the columns of each recent project. The bar in the Scored column shows the progress of the scoring.",
+                "Read the video path, the sport, the video duration, the file size, the scored points of all points, and the favorite points in the columns of each recent project. The bar in the Scored column shows the progress of the scoring.",
                 "Use the arrow buttons next to the page number when the list of recent projects has multiple pages.",
                 "Use the trash button on a project row to delete the project.",
             ),
             goodToKnow = listOf(
                 "When you delete a project, the video file stays on the disk.",
                 "You cannot delete the open project.",
-                "\"Video not found\" shows in red when the video of a project is not on the disk. Put the video back at the same location to open the project.",
+                "The next new project starts with the sport of the last new project. A padel project also starts with the padel rules of the last padel project.",
+                "\"Video not found\" shows in red when the video of a project is not on the disk. To open the project, choose Locate video and select the video at its new location. The project keeps the new location.",
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.HELP, "Open Projects help"),
@@ -185,7 +187,7 @@ object HelpCatalog {
                 "Click the star next to the point number to mark the point as a favorite.",
                 "Read the score after the point in the score panel: the sets, the games, and the points of each player.",
                 "Put the pointer on a row of the Points list and click Go to point to open that point in the Points tab.",
-                "Click Scoring settings to change the player names and colors, the match format (for example best of 3 sets, match tiebreak, pro set, games only, plain points), the deuce rule, or to turn on fully manual scoring.",
+                "Click Scoring settings to change the player names and colors, the sport, the match format (for example best of 3 sets, match tiebreak, pro set, games only, plain points), the deuce rule, or to turn on fully manual scoring.",
                 "In fully manual scoring, click the + buttons in the Sets, Games, and Points columns to give a set, a game, or the point to a player. Click a + button again to clear it.",
                 "To show the serve, click the racket button next to the player who serves (or press S). You can mark the server on any point. Click a marked racket again to clear the mark.",
                 "Click Scoreboard style to choose the scoreboard style, title, player colors, serve ball, bottom app line, position, size, background, and accent color.",
@@ -194,6 +196,11 @@ object HelpCatalog {
             ),
             goodToKnow = listOf(
                 "In fully manual scoring, the app counts points only.",
+                "Padel: a project has two teams. Type both players of a team in one name, for example \"Lebrón / Galán\".",
+                "Padel: with the golden point, the point at 40–40 wins the game. With the star point, the first two deuces use advantage, and the point at the third deuce wins the game.",
+                "Padel Americano: the points count 1, 2, 3 until both teams together played the total points. Each team serves the number of points in Serve turn, then the other team serves.",
+                "When you change the sport in the scoring settings, the match format changes to the default of the new sport.",
+                "During a golden point or a star point, the scoreboard shows a badge. To hide it, turn off Golden / star point badge in Scoreboard style.",
                 "The server changes after each game, and in a tiebreak after the first point and then after every two points. A new mark sets the server until the end of that game.",
                 "If you do not mark a server, the app does not track the serve.",
                 "The video shows the comments for their duration, over the scoreboard, as the export does.",
@@ -248,6 +255,7 @@ object HelpCatalog {
                 "The value of the player that leads a row is brighter. The bar under the label compares the two players, as on the statistics card.",
                 "Each group title shows how many of its rows are in the video, for example 2 of 4.",
                 "Return games won shows the service games of the opponent that the player won (breaks). Compare it with Service games won.",
+                "With the golden point or the star point, the Pressure group shows Golden points won or Star points won: the deciding points that each side won.",
                 "The Momentum chart shows the point difference. The line goes up when the first player wins a point, and down when the second player wins a point. A dashed line marks the start of a set.",
                 "When you select it, the Momentum chart is the last page of the statistics card. A set summary shows the chart of its set.",
                 "A value with a play icon comes from one point.",

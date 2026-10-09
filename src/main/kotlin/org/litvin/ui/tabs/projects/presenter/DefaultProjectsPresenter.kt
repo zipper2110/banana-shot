@@ -8,6 +8,9 @@ import org.litvin.projects.NewProjectRules
 import org.litvin.projects.ProjectStats
 import org.litvin.projects.ProjectSummary
 import org.litvin.projects.ProjectsRepository
+import org.litvin.scoring.MatchRulesV1
+import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.Sport
 import org.litvin.app.PreferencesProvider
 import java.awt.EventQueue
 import java.io.File
@@ -53,7 +56,7 @@ class DefaultProjectsPresenter(
         when (intent) {
             ProjectsIntent.ImportNewMatch -> emitEffect(ProjectsViewEffect.ChooseSourceVideo(lastVideoDir()))
             is ProjectsIntent.SourceVideoSelected -> confirmNewProject(intent.path)
-            is ProjectsIntent.CreateProject -> createProject(intent.name, intent.sourceVideoPath)
+            is ProjectsIntent.CreateProject -> createProject(intent)
             is ProjectsIntent.OpenProject -> openProject(intent.manifestPath)
             is ProjectsIntent.RenameProject -> renameProject(intent.manifestPath, intent.name)
             is ProjectsIntent.DeleteProject -> deleteProject(intent.manifestPath)
@@ -77,10 +80,19 @@ class DefaultProjectsPresenter(
     private fun confirmNewProject(sourceVideoPath: String) {
         if (sourceVideoPath.isBlank()) return
         rememberVideoDir(sourceVideoPath)
-        emitEffect(ProjectsViewEffect.ConfirmNewProject(NewProjectRules.suggestedName(sourceVideoPath), sourceVideoPath))
+        emitEffect(
+            ProjectsViewEffect.ConfirmNewProject(
+                name = NewProjectRules.suggestedName(sourceVideoPath),
+                sourceVideoPath = sourceVideoPath,
+                sport = lastSport(),
+                padelRules = lastPadelRules(),
+            )
+        )
     }
 
-    private fun createProject(name: String, sourceVideoPath: String) {
+    private fun createProject(intent: ProjectsIntent.CreateProject) {
+        val name = intent.name
+        val sourceVideoPath = intent.sourceVideoPath
         runIo("Failed to create project") {
             // The dialog also validates. This check stops a request that skips the dialog.
             val error = NewProjectRules.nameError(name) ?: NewProjectRules.sourceVideoError(sourceVideoPath)
@@ -89,7 +101,8 @@ class DefaultProjectsPresenter(
                 return@runIo
             }
             rememberVideoDir(sourceVideoPath)
-            val created = repository.createProject(sourceVideoPath.trim(), name.trim()).toCardState()
+            rememberMatchSetup(intent.sport, intent.rules)
+            val created = repository.createProject(sourceVideoPath.trim(), name.trim(), intent.sport, intent.rules).toCardState()
             analytics.record(AnalyticsEvent.ProjectCreated)
             val refreshed = repository.getRecents().map { it.toCardState() }
             synchronized(stateLock) {
@@ -118,11 +131,25 @@ class DefaultProjectsPresenter(
                 )
                 return@runIo
             }
+            if (!sourceVideoPath.isNullOrBlank()) {
+                NewProjectRules.sourceVideoError(sourceVideoPath)?.let { error ->
+                    emitEffect(ProjectsViewEffect.ShowError("Cannot open project", error))
+                    return@runIo
+                }
+            }
             val video = sourceVideoPath?.takeIf { it.isNotBlank() } ?: manifest.sourceVideo.orEmpty()
             if (!File(video).isFile) {
                 // The other tabs cannot load the project without the video. Thus the project stays closed.
                 analytics.record(AnalyticsEvent.VideoOpenFailed)
-                emitEffect(ProjectsViewEffect.ShowError("Cannot open project", videoMissingMessage(video)))
+                emitEffect(
+                    ProjectsViewEffect.LocateMovedSourceVideo(
+                        manifestPath = manifestPath,
+                        projectName = manifest.name,
+                        oldPath = video,
+                        // The video is often moved together with its folder. Then the old folder is gone.
+                        initialDirectory = File(video).parentFile?.takeIf { it.isDirectory }?.absolutePath ?: lastVideoDir(),
+                    )
+                )
                 loadVisibleStats()
                 return@runIo
             }
@@ -243,6 +270,18 @@ class DefaultProjectsPresenter(
 
     private fun lastVideoDir(): String? = preferences.get(LAST_VIDEO_DIR_KEY, null)
 
+    /** The next new project starts with the same sport. A padel project also keeps its rules for the next one. */
+    private fun rememberMatchSetup(sport: Sport, rules: MatchRulesV1) {
+        preferences.put(LAST_SPORT_KEY, sport.name)
+        if (sport == Sport.PADEL) preferences.put(LAST_PADEL_RULES_KEY, ScoreIO.rulesToJson(rules.normalized()))
+    }
+
+    private fun lastSport(): Sport =
+        Sport.entries.firstOrNull { it.name == preferences.get(LAST_SPORT_KEY, null) } ?: Sport.TENNIS
+
+    private fun lastPadelRules(): MatchRulesV1 =
+        preferences.get(LAST_PADEL_RULES_KEY, null)?.let(ScoreIO::rulesFromJson) ?: Sport.PADEL.defaultRules()
+
     private fun totalPages(itemCount: Int): Int {
         return if (itemCount == 0) 1 else (itemCount + pageSize - 1) / pageSize
     }
@@ -260,12 +299,9 @@ class DefaultProjectsPresenter(
             videoMissingMessage = if (videoMissing) "The video is not on the disk anymore." else null,
             scoredCount = scoredCount,
             pointCount = pointCount,
+            sport = sport.title,
         )
     }
-
-    private fun videoMissingMessage(videoPath: String): String =
-        "The video of the project is not on the disk anymore:\n$videoPath\n\n" +
-            "Put the video back at this location to open the project."
 
     private fun onEventDispatchThread(action: () -> Unit) {
         if (EventQueue.isDispatchThread()) {
@@ -277,6 +313,8 @@ class DefaultProjectsPresenter(
 
     private companion object {
         private const val LAST_VIDEO_DIR_KEY = "lastVideoDir"
+        private const val LAST_SPORT_KEY = "lastSport"
+        private const val LAST_PADEL_RULES_KEY = "lastPadelRules"
         private const val UNKNOWN = "—"
     }
 }

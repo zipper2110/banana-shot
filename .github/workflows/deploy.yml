@@ -1,0 +1,60 @@
+name: Deploy
+
+# Deploys the site and the Workers to Cloudflare. It does not release the app.
+# Select the targets in the run form. All targets are selected by default.
+# The cockpit goes after the analytics and the feedback Workers: it reads their databases,
+# so their migrations must be applied first.
+
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: "Site and www-redirect"
+        type: boolean
+        default: true
+      analytics-worker:
+        description: "Analytics Worker"
+        type: boolean
+        default: true
+      feedback-worker:
+        description: "Feedback Worker"
+        type: boolean
+        default: true
+      cockpit-worker:
+        description: "Cockpit Worker"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    if: inputs.site
+    uses: ./.github/workflows/cloudflare-deploy.yml
+    with:
+      target: site
+    secrets: inherit
+
+  analytics-worker:
+    if: inputs.analytics-worker
+    uses: ./.github/workflows/cloudflare-deploy.yml
+    with:
+      target: analytics-worker
+    secrets: inherit
+
+  feedback-worker:
+    if: inputs.feedback-worker
+    uses: ./.github/workflows/cloudflare-deploy.yml
+    with:
+      target: feedback-worker
+    secrets: inherit
+
+  cockpit-worker:
+    needs: [analytics-worker, feedback-worker]
+    # Run also when the two Workers are not selected (skipped), but not when one of them failed.
+    if: ${{ !cancelled() && inputs.cockpit-worker && !contains(needs.*.result, 'failure') }}
+    uses: ./.github/workflows/cloudflare-deploy.yml
+    with:
+      target: cockpit-worker
+    secrets: inherit

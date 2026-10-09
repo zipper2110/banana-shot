@@ -6,6 +6,7 @@ import org.litvin.scoring.ManualScoreMarks
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoringRules
+import org.litvin.scoring.Sport
 
 /**
  * Task 3.18 — Scoreboard overlay: timeline generation
@@ -36,6 +37,8 @@ data class OverlaySpan(
     val completedSets: List<Pair<Int, Int>> = emptyList(),
     /** The player (1 or 2) who serves, or null when the server is not known. */
     val server: Int? = null,
+    /** The badge of a deciding point, for example "STAR POINT", or null for a normal point. */
+    val badge: String? = null,
 )
 
 data class CommentOverlaySpan(
@@ -60,6 +63,7 @@ object ScoreboardTimelineBuilder {
         rules: MatchRulesV1 = MatchRulesV1(),
         manualMarks: ManualScoreMarks = ManualScoreMarks(),
         serverMarks: Map<String, Outcome> = emptyMap(),
+        sport: Sport = Sport.TENNIS,
     ): List<OverlaySpan> {
         val ordered = points.sortedBy { it.startMs }
         val base = build(
@@ -73,6 +77,7 @@ object ScoreboardTimelineBuilder {
             rules = rules,
             manualMarks = manualMarks,
             serverMarks = serverMarks,
+            sport = sport,
         )
         return base.mapIndexedNotNull { index, span ->
             val point = ordered.getOrNull(index) ?: return@mapIndexedNotNull null
@@ -97,6 +102,7 @@ object ScoreboardTimelineBuilder {
         rules: MatchRulesV1 = MatchRulesV1(),
         manualMarks: ManualScoreMarks = ManualScoreMarks(),
         serverMarks: Map<String, Outcome> = emptyMap(),
+        sport: Sport = Sport.TENNIS,
     ): List<OverlaySpan> {
         if (points.isEmpty()) return emptyList()
         val ordered = points.sortedBy { it.startMs }
@@ -140,6 +146,7 @@ object ScoreboardTimelineBuilder {
         val out = ArrayList<OverlaySpan>(ordered.size)
         val n1 = player1Name.ifBlank { "Player 1" }
         val n2 = player2Name.ifBlank { "Player 2" }
+        val badge = sport.decidingPointBadge(rules.deuce)
         for (i in ordered.indices) {
             if (!shouldEmit[i]) continue
             val start = startsOut[i]
@@ -185,6 +192,7 @@ object ScoreboardTimelineBuilder {
                 setsP2 = st?.setsP2 ?: 0,
                 completedSets = completedSets,
                 server = st?.server,
+                badge = badge?.takeIf { st?.decidingPoint == true },
             )
         }
         return out

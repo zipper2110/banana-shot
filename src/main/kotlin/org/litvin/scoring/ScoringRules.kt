@@ -20,6 +20,8 @@ object ScoringRules {
         val completedSets: List<Pair<Int, Int>>,
         /** The player (1 or 2) who serves this point, or null when the server is not known. */
         val server: Int? = null,
+        /** True when this point wins the game for both players (golden point or star point). */
+        val decidingPoint: Boolean = false,
     )
 
     /**
@@ -50,6 +52,7 @@ object ScoringRules {
                 tbP2 = if (state.isTiebreak) state.p2Pts else 0,
                 completedSets = sets.map { it.p1 to it.p2 },
                 server = timeline.serverOfPoint.getOrNull(i),
+                decidingPoint = ScoringEngine.isDecidingPoint(state, rules),
             )
         }
     }

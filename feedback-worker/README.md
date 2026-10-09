@@ -37,6 +37,9 @@ and the shared fixtures in `feedback-contract/v1`.
 
 ## Deploy
 
+GitHub Actions can do the deploy: run the workflow "Deploy" from `master` and select "Feedback Worker". The workflow runs `npm ci`, the type check, and the tests. Then it applies the D1 migrations and deploys the Worker.
+Setup of the token: see `.github/workflows/cloudflare-deploy.yml`. The steps below are still necessary for a new database and for the secrets.
+
 `wrangler.toml` is in Git with the ID of the deployed database. It is not a secret. The
 first two steps are only for a new database.
 

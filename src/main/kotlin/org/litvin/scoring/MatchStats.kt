@@ -92,6 +92,11 @@ data class MatchStats(
     val matchPointsWon: PerPlayer<Ratio>,
     /** The points played at deuce (40–40 or later) that the player won. Tiebreaks and manual scoring have no deuce points. */
     val deucePointsWon: PerPlayer<Int>,
+    /**
+     * The deciding points (golden points or star points, see [ScoringEngine.isDecidingPoint]) that the player won,
+     * of the deciding points in the range. Both players have the same total.
+     */
+    val decidingPointsWon: PerPlayer<Ratio> = PerPlayer(Ratio(0, 0), Ratio(0, 0)),
     /** The most points in a row that the player won. */
     val longestPointRun: PerPlayer<Int>,
     /** The most games in a row that the player won. */
@@ -127,6 +132,11 @@ data class MatchStats(
                 setPointsWon = chances(scored, winners, timeline, Stake.SET),
                 matchPointsWon = chances(scored, winners, timeline, Stake.MATCH),
                 deucePointsWon = count(scored.filter { isDeucePoint(timeline.stateBefore(it), rules) }) { winners[it] },
+                decidingPointsWon = scored.filter { ScoringEngine.isDecidingPoint(timeline.stateBefore(it), rules) }
+                    .let { deciding ->
+                        fun wonBy(player: Int) = Ratio(deciding.count { winners[it] == player }, deciding.size)
+                        PerPlayer(wonBy(1), wonBy(2))
+                    },
                 longestPointRun = longestRun(scored.map { winners[it]!! }),
                 longestGameRun = longestRun(indices.mapNotNull { timeline.statesAfterPoint[it].lastGameWonBy }),
                 largestPointLead = largestLead(scored.map { winners[it]!! }),
@@ -149,9 +159,13 @@ data class MatchStats(
          */
         fun matchEndIndex(timeline: ScoringEngine.Timeline, rules: MatchRulesV1): Int? {
             if (rules.manualScoring) return null
+            val normalized = rules.normalized()
             val setsToWin = when (rules.structure) {
-                MatchStructure.SETS -> rules.normalized().setsToWin()
+                MatchStructure.SETS -> normalized.setsToWin()
                 MatchStructure.SINGLE_TIEBREAK -> 1
+                MatchStructure.TOTAL_POINTS -> return timeline.statesAfterPoint
+                    .indexOfFirst { it.p1Pts + it.p2Pts >= normalized.totalPoints }
+                    .takeIf { it >= 0 }
                 MatchStructure.GAMES_ONLY, MatchStructure.PLAIN_POINTS -> return null
             }
             return timeline.statesAfterPoint.indexOfFirst { maxOf(it.setsP1, it.setsP2) >= setsToWin }.takeIf { it >= 0 }

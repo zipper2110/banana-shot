@@ -402,6 +402,7 @@ object ExportPlanner {
             rules = score.rules,
             manualMarks = score.manualMarks(),
             serverMarks = score.serverMarks,
+            sport = score.sport,
             exportedPointIds = if (effectiveIdleTrim && overlayPoints.isNotEmpty()) {
                 overlayPoints.map { it.id }.toSet()
             } else {

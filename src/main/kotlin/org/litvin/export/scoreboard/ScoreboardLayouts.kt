@@ -45,7 +45,13 @@ object ScoreboardLayouts {
             playerColors = normalized.showPlayerColors,
             serve = normalized.showServe,
         )
-        return when (normalized.style) {
+        val board = board(display, look, normalized.style)
+        val badge = display.badge?.takeIf { normalized.showDecidingPoint } ?: return board
+        return ScoreboardBadge.add(board, badge, look.accentRgb, normalized.position)
+    }
+
+    private fun board(display: ScoreboardDisplay, look: Look, style: ScoreboardStyleId): ScoreboardScene =
+        when (style) {
             ScoreboardStyleId.BROADCAST -> broadcast(display, look)
             ScoreboardStyleId.CENTER_COURT -> centerCourt(display, look)
             ScoreboardStyleId.COMPACT -> compact(display, look)
@@ -63,7 +69,6 @@ object ScoreboardLayouts {
             ScoreboardStyleId.CHALKBOARD -> ScoreboardTourLayouts.chalkboard(display, look)
             ScoreboardStyleId.SUNSET -> ScoreboardTourLayouts.sunset(display, look)
         }
-    }
 
     /**
      * Broadcast: a dark glass panel with a title bar, set columns with thin rules

@@ -16,8 +16,8 @@ import org.litvin.ui.commons.Palette
  * Column layout of the projects table. The header and each [ProjectRow] use this layout.
  * Thus the cells of all rows align below the column names.
  *
- * The columns are the status icon, the project name, the video path, the duration, the size, the scored points,
- * the favorite points and the row actions. The name and the path share the free width 1 : 1.6.
+ * The columns are the status icon, the project name, the video path, the sport, the duration, the size,
+ * the scored points, the favorite points and the row actions. The name and the path share the free width 1 : 1.6.
  */
 internal object ProjectsTableColumns {
     /** The names of the figure columns, in display order. */
@@ -26,13 +26,16 @@ internal object ProjectsTableColumns {
     const val STATUS = 0
     const val NAME = 1
     const val VIDEO = 2
-    const val DURATION = 3
-    const val SIZE = 4
-    const val SCORED = 5
-    const val FAVORITES = 6
-    const val ACTIONS = 7
+    const val SPORT = 3
+    const val DURATION = 4
+    const val SIZE = 5
+    const val SCORED = 6
+    const val FAVORITES = 7
+    const val ACTIONS = 8
 
-    private val FIXED = mapOf(STATUS to 20, DURATION to 64, SIZE to 76, SCORED to 104, FAVORITES to 48, ACTIONS to 112)
+    private val FIXED = mapOf(
+        STATUS to 20, SPORT to 52, DURATION to 64, SIZE to 76, SCORED to 104, FAVORITES to 48, ACTIONS to 112,
+    )
     private const val NAME_MIN = 140
     private const val NAME_SHARE = 1.0
     private const val VIDEO_SHARE = 1.6
@@ -43,7 +46,7 @@ internal object ProjectsTableColumns {
     const val SCORED_BAR = 44
     const val SCORED_BAR_GAP = 8
 
-    private const val COLUMN_COUNT = 8
+    private const val COLUMN_COUNT = 9
 
     /** The smallest width that shows all columns. */
     val minimumWidth: Int = FIXED.values.sum() + NAME_MIN + COLUMN_GAP * (COLUMN_COUNT - 1) + SIDE_PADDING * 2
@@ -92,6 +95,7 @@ internal object ProjectsTableColumns {
             add(Gap(0, 0))
             add(HeaderText("Project", SwingConstants.LEFT))
             add(HeaderText("Video", SwingConstants.LEFT))
+            add(HeaderText("Sport", SwingConstants.LEFT))
             add(HeaderText(FIGURE_COLUMNS[0], SwingConstants.RIGHT))
             add(HeaderText(FIGURE_COLUMNS[1], SwingConstants.RIGHT))
             add(HeaderText(FIGURE_COLUMNS[2], SwingConstants.RIGHT, SCORED_BAR + SCORED_BAR_GAP))

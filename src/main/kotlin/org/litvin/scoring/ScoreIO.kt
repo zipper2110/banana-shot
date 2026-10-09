@@ -37,8 +37,26 @@ data class ScoreV1(
     val scoreSettingsReviewed: Boolean = false,
     /** The server that the user marked on a point. The engine computes the server of the other points from these marks. */
     val serverMarks: Map<String, Outcome> = emptyMap(),
+    /** The sport of the project. A file without this field is a tennis project. */
+    val sport: Sport = Sport.TENNIS,
+    /**
+     * True when the Projects tab wrote this file for a new project (with the sport and the rules from the "New project"
+     * dialog). The Scoring tab then gives the project the default scoreboard style, as for a project without score.json.
+     */
+    val useDefaultScoreboard: Boolean = false,
 ) {
     fun manualMarks(): ManualScoreMarks = ManualScoreMarks(manualGameWins, manualSetWins)
+
+    companion object {
+        /** The score file of a new project of [sport] with [rules]. The side names are "Team 1" and "Team 2" for padel. */
+        fun newProject(sport: Sport, rules: MatchRulesV1): ScoreV1 = ScoreV1(
+            player1Name = sport.defaultSideName(1),
+            player2Name = sport.defaultSideName(2),
+            rules = rules.normalized(),
+            sport = sport,
+            useDefaultScoreboard = true,
+        )
+    }
 }
 
 object ScoreIO {
@@ -75,6 +93,17 @@ object ScoreIO {
 
     /** Converts scoreboard settings to JSON text, for example to keep them as a user preference. */
     fun scoreboardToJson(settings: ScoreboardSettingsV1): String = mapper.writeValueAsString(settings)
+
+    /** Converts match rules to JSON text, for example to keep them as a user preference. */
+    fun rulesToJson(rules: MatchRulesV1): String = mapper.writeValueAsString(rules)
+
+    /** Reads match rules from [rulesToJson] text. Returns null if the text is not valid. */
+    fun rulesFromJson(json: String): MatchRulesV1? =
+        try {
+            mapper.readValue(json, MatchRulesV1::class.java).normalized()
+        } catch (_: Exception) {
+            null
+        }
 
     /** Reads scoreboard settings from [scoreboardToJson] text. Returns null if the text is not valid. */
     fun scoreboardFromJson(json: String): ScoreboardSettingsV1? =

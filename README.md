@@ -1,6 +1,6 @@
 # BananaShot
 
-A desktop application that helps tennis players turn full‑match recordings into compact, watchable videos. You can remove dead time between points, track the score, and export a final video with a scoreboard overlay.
+A desktop application that helps tennis and padel players turn full‑match recordings into compact, watchable videos. You can remove dead time between points, track the score, and export a final video with a scoreboard overlay.
 
 - Site and download: <https://banana-shot-editor.app/>
 - Releases: [GitHub releases](https://github.com/zipper2110/banana-shot/releases)
@@ -24,6 +24,8 @@ A desktop application that helps tennis players turn full‑match recordings int
 ## Key features
 
 - Projects: create a project from a video. Open, rename, and delete projects.
+- Sports: tennis and padel. A padel project can use the golden point, the
+  star point, and Americano matches. See [docs/padel.md](docs/padel.md).
 - Points: mark the start and the end of each point. Edit points, delete
   points, and mark favorites. Add comments.
 - Scoring: give each point a winner. The app computes the games, sets, and

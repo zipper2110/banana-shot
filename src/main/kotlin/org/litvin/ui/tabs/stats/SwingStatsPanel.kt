@@ -184,7 +184,10 @@ class SwingStatsPanel(
     private fun rebuild() {
         val report = report ?: return
         val score = report.score
-        val names = PerPlayer(displayName(score.player1Name, "Player 1"), displayName(score.player2Name, "Player 2"))
+        val names = PerPlayer(
+            displayName(score.player1Name, score.sport.defaultSideName(1)),
+            displayName(score.player2Name, score.sport.defaultSideName(2)),
+        )
         val colors = PerPlayer(parseColor(score.player1ColorHex), parseColor(score.player2ColorHex))
         header.show(names, colors)
         // One set is the same as the match, so the Match / Set control shows only when there are two sets or more.

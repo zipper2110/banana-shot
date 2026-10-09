@@ -3,7 +3,10 @@ package org.litvin.projects
 import org.litvin.license.ExpiredVersionException
 import org.litvin.license.NewWorkGate
 import org.litvin.points.EdlIO
+import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.ScoreV1
+import org.litvin.scoring.Sport
 import java.awt.Desktop
 import java.io.File
 import java.util.UUID
@@ -25,6 +28,10 @@ interface ProjectsRepository {
      * folder gets a correct Windows file name from the name ([NewProjectRules.folderName]).
      */
     fun createProject(sourceVideoPath: String, name: String): ProjectSummary
+
+    /** Creates a project like [createProject]. The score file of the project gets [sport] and [rules]. */
+    fun createProject(sourceVideoPath: String, name: String, sport: Sport, rules: MatchRulesV1): ProjectSummary =
+        createProject(sourceVideoPath, name)
     fun openProject(path: String, sourceVideoPath: String? = null): ProjectSummary
 
     /** Changes the name in the manifest. The project folder and the manifest file keep their names. */
@@ -62,7 +69,14 @@ class FileProjectsRepository(
         }
     }
 
-    override fun createProject(sourceVideoPath: String, name: String): ProjectSummary {
+    override fun createProject(sourceVideoPath: String, name: String): ProjectSummary =
+        create(sourceVideoPath, name, score = null)
+
+    override fun createProject(sourceVideoPath: String, name: String, sport: Sport, rules: MatchRulesV1): ProjectSummary =
+        create(sourceVideoPath, name, ScoreV1.newProject(sport, rules))
+
+    /** Creates the project folder and the manifest. Writes [score] as score.json when it is not null. */
+    private fun create(sourceVideoPath: String, name: String, score: ScoreV1?): ProjectSummary {
         if (!newWork.allowsNewWork()) throw ExpiredVersionException()
         NewProjectRules.nameError(name)?.let { throw IllegalArgumentException(it) }
         val selected = File(sourceVideoPath)
@@ -90,6 +104,7 @@ class FileProjectsRepository(
             sourceVideo = selected.absolutePath,
         )
         val manifestPath = File(projectDir, "$folderName.trproj").absolutePath
+        score?.let { ScoreIO.writeForProjectDir(projectDir.absolutePath, it) }
         ManifestIO.write(manifestPath, manifest)
         recentsProvider.refresh()
         return summaryFor(manifestPath, manifest)
@@ -120,7 +135,8 @@ class FileProjectsRepository(
         val video = videoPath?.let(::File)?.takeIf { it.isFile }
         val projectDir = EdlIO.projectDirFromManifest(path)
         val points = EdlIO.readForProjectDir(projectDir).points
-        val outcomes = ScoreIO.readForProjectDir(projectDir).outcomes
+        val score = ScoreIO.readForProjectDir(projectDir)
+        val outcomes = score.outcomes
         return ProjectStats(
             videoMissing = videoPath != null && video == null,
             durationMs = video?.let { durationProbe.durationMs(it.absolutePath) },
@@ -128,6 +144,7 @@ class FileProjectsRepository(
             pointCount = points.size,
             scoredCount = points.count { outcomes.containsKey(it.id) },
             favoriteCount = points.count { it.favorite },
+            sport = score.sport,
         )
     }
 

@@ -1,5 +1,6 @@
 package org.litvin.stats
 
+import org.litvin.scoring.DeuceRule
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.MatchStats
 import org.litvin.scoring.MatchStructure
@@ -35,6 +36,8 @@ enum class MatchStat(val key: String, val group: StatGroup, val label: String, v
     SET_POINTS_WON("set_points_won", StatGroup.PRESSURE, "Set points won"),
     MATCH_POINTS_WON("match_points_won", StatGroup.PRESSURE, "Match points won"),
     DEUCE_POINTS_WON("deuce_points_won", StatGroup.PRESSURE, "Deuce points won"),
+    /** The golden points or star points. [StatRows.label] gives the name of the deuce rule. */
+    DECIDING_POINTS_WON("deciding_points_won", StatGroup.PRESSURE, "Deciding points won"),
     AVERAGE_POINT_WON("average_point_won", StatGroup.POINT_LENGTH, "Average point won"),
     SHORT_POINTS_WON("short_points_won", StatGroup.POINT_LENGTH, "Short points won", inVideoByDefault = true),
     LONG_POINTS_WON("long_points_won", StatGroup.POINT_LENGTH, "Long points won", inVideoByDefault = true),
@@ -89,16 +92,25 @@ object StatRows {
     const val NO_MATCH_END = "The match format has no end."
     const val NO_VALUE = "There are not sufficient points."
     const val NO_POINTS_OF_LENGTH = "No scored point has this length."
+    const val NO_DECIDING_POINT = "The deuce rule is advantage. Only the golden point and the star point have deciding points."
 
     fun build(stats: MatchStats, rules: MatchRulesV1, settings: StatsSettingsV1 = StatsSettingsV1()): List<StatRow> {
         val normalized = settings.normalized()
         return MatchStat.entries.map { row(it, stats, rules, normalized) }
     }
 
-    /** The text of a row with its setting, for example "Short points won (≤ 7 s)". */
-    fun label(stat: MatchStat, settings: StatsSettingsV1): String = when (stat) {
+    /**
+     * The text of a row with its setting, for example "Short points won (≤ 7 s)".
+     * With [rules], the deciding points row gets the name of the deuce rule, for example "Golden points won".
+     */
+    fun label(stat: MatchStat, settings: StatsSettingsV1, rules: MatchRulesV1? = null): String = when (stat) {
         MatchStat.SHORT_POINTS_WON -> "${stat.label} (≤ ${settings.normalized().shortPointMaxSeconds} s)"
         MatchStat.LONG_POINTS_WON -> "${stat.label} (≥ ${settings.normalized().longPointMinSeconds} s)"
+        MatchStat.DECIDING_POINTS_WON -> when (rules?.deuce) {
+            DeuceRule.NO_AD -> "Golden points won"
+            DeuceRule.STAR_POINT -> "Star points won"
+            DeuceRule.ADVANTAGE, null -> stat.label
+        }
         else -> stat.label
     }
 
@@ -107,6 +119,8 @@ object StatRows {
         val hasGames = structure == MatchStructure.SETS || structure == MatchStructure.GAMES_ONLY
         val hasSets = structure == MatchStructure.SETS
         val hasEnd = structure == MatchStructure.SETS || structure == MatchStructure.SINGLE_TIEBREAK
+        // A total points match has an end, but no sets.
+        val hasMatchEnd = hasEnd || structure == MatchStructure.TOTAL_POINTS
         val manual = rules.manualScoring
         val serve = stats.serve
         val time = stats.time
@@ -169,7 +183,7 @@ object StatRows {
                 else -> fractions(stats.setPointsWon)
             }
             MatchStat.MATCH_POINTS_WON -> when {
-                !hasEnd -> unavailable(NO_MATCH_END)
+                !hasMatchEnd -> unavailable(NO_MATCH_END)
                 manual -> unavailable(MANUAL_SCORING)
                 else -> fractions(stats.matchPointsWon)
             }
@@ -177,6 +191,12 @@ object StatRows {
                 !hasGames -> unavailable(NO_GAMES)
                 manual -> unavailable(MANUAL_SCORING)
                 else -> counts(stats.deucePointsWon)
+            }
+            MatchStat.DECIDING_POINTS_WON -> when {
+                !hasGames -> unavailable(NO_GAMES)
+                manual -> unavailable(MANUAL_SCORING)
+                rules.deuce == DeuceRule.ADVANTAGE -> unavailable(NO_DECIDING_POINT)
+                else -> fractions(stats.decidingPointsWon)
             }
             MatchStat.LONGEST_POINT_RUN -> counts(stats.longestPointRun).copy(pointIds = stats.keyPoints.longestPointRunStart)
             MatchStat.LONGEST_GAME_RUN -> if (!hasGames) unavailable(NO_GAMES) else counts(stats.longestGameRun)
@@ -192,7 +212,7 @@ object StatRows {
                 lengthShares(time.scoredDurations.filter { it.durationMs <= settings.shortPointMaxSeconds * 1000L })
             MatchStat.LONG_POINTS_WON ->
                 lengthShares(time.scoredDurations.filter { it.durationMs >= settings.longPointMinSeconds * 1000L })
-        }.copy(label = label(stat, settings))
+        }.copy(label = label(stat, settings, rules))
     }
 
     private fun <T, R> PerPlayer<T>.map(transform: (T) -> R): PerPlayer<R> = PerPlayer(transform(p1), transform(p2))

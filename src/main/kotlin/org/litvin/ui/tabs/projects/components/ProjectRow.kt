@@ -105,6 +105,7 @@ internal class ProjectRow(
         val cells = listOf(
             ProjectsTableColumns.STATUS to statusCell(),
             ProjectsTableColumns.VIDEO to PathCell(project.secondary, stats?.videoMissingMessage).apply { name = "projects-video-$id" },
+            ProjectsTableColumns.SPORT to SportCell(stats?.sport).apply { name = "projects-sport-$id" },
             ProjectsTableColumns.DURATION to FigureCell(stats?.duration, skeletonWidth = 44).apply { name = "projects-duration-$id" },
             ProjectsTableColumns.SIZE to FigureCell(stats?.fileSize, skeletonWidth = 56).apply { name = "projects-size-$id" },
             ProjectsTableColumns.SCORED to ScoredCell(stats?.scoredCount, stats?.pointCount, stats?.scoredPoints)
@@ -189,6 +190,7 @@ internal class ProjectRow(
         val STATS_COLUMNS = listOf(
             ProjectsTableColumns.STATUS,
             ProjectsTableColumns.VIDEO,
+            ProjectsTableColumns.SPORT,
             ProjectsTableColumns.DURATION,
             ProjectsTableColumns.SIZE,
             ProjectsTableColumns.SCORED,
@@ -273,6 +275,25 @@ internal open class FigureCell(
                 right -= 3
             }
             figureIcon?.let { it.paintIcon(this, g2, (right - it.iconWidth).toInt(), (height - it.iconHeight) / 2) }
+        } finally {
+            g2.dispose()
+        }
+    }
+}
+
+/** The sport of the project, left-aligned. A null text shows a gray placeholder bar while the presenter loads it. */
+internal class SportCell(text: String?) : JLabel(text.orEmpty()) {
+    private val loading = text == null
+    private val cellFont: Font = ProjectsUi.font(12.5f)
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = ProjectsUi.smooth(g)
+        try {
+            if (loading) {
+                ProjectsUi.paintBox(g2, 0, (height - 10) / 2, 40, 10, 3, Palette.LINE, null)
+            } else {
+                ProjectsUi.drawText(g2, text.orEmpty(), cellFont, Palette.FG_2, 0f, 0f, height.toFloat())
+            }
         } finally {
             g2.dispose()
         }

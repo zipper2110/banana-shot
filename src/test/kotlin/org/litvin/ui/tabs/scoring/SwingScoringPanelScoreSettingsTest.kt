@@ -19,6 +19,7 @@ import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStyleId
+import org.litvin.scoring.Sport
 import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
@@ -103,6 +104,31 @@ class SwingScoringPanelScoreSettingsTest {
         SwingUtilities.invokeAndWait { panel!!.onDeactivated() }
         activateAndFlush()
         assertEquals(1, editor.calls.size, "The next visits do not open the score settings")
+    }
+
+    @Test
+    fun aPadelProjectFromTheProjectsTabGetsTheDefaultStyleAndKeepsItsSport() {
+        val defaultStyle = ScoreboardSettingsV1(style = ScoreboardStyleId.LED_BOARD, title = "Club")
+        val padelRules = MatchRulesV1(deuce = DeuceRule.STAR_POINT)
+        ScoreIO.writeForProjectDir(projectDir.absolutePath, ScoreV1.newProject(Sport.PADEL, padelRules))
+        val editor = RecordingEditor { current -> current.copy(player1Name = "Lebrón / Galán") }
+
+        SwingUtilities.invokeAndWait {
+            panel = createPanel(FixedDefaults(defaultStyle), editor).apply { setProjectManifest(manifestPath) }
+        }
+        val loaded = ScoreIO.readForProjectDir(projectDir.absolutePath)
+        assertEquals(defaultStyle, loaded.scoreboard)
+        assertFalse(loaded.useDefaultScoreboard, "The next load keeps the style of the project")
+
+        activateAndFlush()
+        val shown = editor.calls.single()
+        assertEquals(Sport.PADEL, shown.sport)
+        assertEquals(padelRules, shown.rules)
+        assertEquals("Team 2", shown.player2Name)
+
+        val saved = ScoreIO.readForProjectDir(projectDir.absolutePath)
+        assertEquals(Sport.PADEL, saved.sport)
+        assertEquals("Lebrón / Galán", saved.player1Name)
     }
 
     @Test

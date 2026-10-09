@@ -1,5 +1,8 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.scoring.MatchRulesV1
+import org.litvin.scoring.Sport
+
 interface ProjectsView {
     fun render(state: ProjectsViewState)
     fun renderEffect(effect: ProjectsViewEffect) {}
@@ -47,12 +50,19 @@ data class ProjectStatsState(
     /** The numbers of [scoredPoints], for the progress bar of the Scored column. */
     val scoredCount: Int = 0,
     val pointCount: Int = 0,
+    /** The name of the sport, for example "Padel". */
+    val sport: String = Sport.TENNIS.title,
 )
 
 sealed class ProjectsIntent {
     object ImportNewMatch : ProjectsIntent()
     data class SourceVideoSelected(val path: String) : ProjectsIntent()
-    data class CreateProject(val name: String, val sourceVideoPath: String) : ProjectsIntent()
+    data class CreateProject(
+        val name: String,
+        val sourceVideoPath: String,
+        val sport: Sport = Sport.TENNIS,
+        val rules: MatchRulesV1 = sport.defaultRules(),
+    ) : ProjectsIntent()
     data class OpenProject(val manifestPath: String) : ProjectsIntent()
     data class RenameProject(val manifestPath: String, val name: String) : ProjectsIntent()
 
@@ -65,11 +75,30 @@ sealed class ProjectsIntent {
 sealed class ProjectsViewEffect {
     data class ChooseSourceVideo(val initialDirectory: String?) : ProjectsViewEffect()
 
-    /** Asks the user to confirm or change the name and the video of the new project. */
-    data class ConfirmNewProject(val name: String, val sourceVideoPath: String) : ProjectsViewEffect()
+    /**
+     * Asks the user to confirm or change the name, the video, and the sport of the new project.
+     * [sport] and [padelRules] are the choices of the last new project.
+     */
+    data class ConfirmNewProject(
+        val name: String,
+        val sourceVideoPath: String,
+        val sport: Sport = Sport.TENNIS,
+        val padelRules: MatchRulesV1 = Sport.PADEL.defaultRules(),
+    ) : ProjectsViewEffect()
     data class ChooseMissingSourceVideo(
         val manifestPath: String,
         val projectName: String,
+        val initialDirectory: String?,
+    ) : ProjectsViewEffect()
+
+    /**
+     * The video of the project is not at [oldPath]. Asks the user to locate the video. The chooser opens in
+     * [initialDirectory].
+     */
+    data class LocateMovedSourceVideo(
+        val manifestPath: String,
+        val projectName: String,
+        val oldPath: String,
         val initialDirectory: String?,
     ) : ProjectsViewEffect()
 

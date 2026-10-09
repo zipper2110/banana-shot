@@ -16,6 +16,12 @@ enum class MatchStructure {
 
     /** Points are counted 1, 2, 3 like in a tiebreak, without a points limit. The match has no end. */
     PLAIN_POINTS,
+
+    /**
+     * Points are counted 1, 2, 3 until the sum of both scores is [MatchRulesV1.totalPoints]. The side with more points wins.
+     * Equal scores are a draw. Each side serves [MatchRulesV1.serveTurnPoints] points in a row. Padel Americano uses it.
+     */
+    TOTAL_POINTS,
 }
 
 /** What happens when the game score is 40–40. */
@@ -24,8 +30,14 @@ enum class DeuceRule {
     @JsonEnumDefaultValue
     ADVANTAGE,
 
-    /** At 40–40, the next point wins the game (deciding point). */
+    /** At 40–40, the next point wins the game (deciding point). Padel calls it the golden point. */
     NO_AD,
+
+    /**
+     * Padel (FIP rules since 2026): the first two deuces use advantage. At the third deuce, the next point wins the game.
+     * In points, that deciding point is played at 5–5.
+     */
+    STAR_POINT,
 }
 
 /** How the deciding set is played when the sets are equal. */
@@ -55,6 +67,10 @@ data class MatchRulesV1(
     val tiebreakPoints: Int = 7,
     val finalSet: FinalSetRule = FinalSetRule.FULL_SET,
     val deuce: DeuceRule = DeuceRule.ADVANTAGE,
+    /** [MatchStructure.TOTAL_POINTS]: the points that both sides play together. */
+    val totalPoints: Int = 24,
+    /** [MatchStructure.TOTAL_POINTS]: the points that one side serves in a row. */
+    val serveTurnPoints: Int = 4,
 ) {
     /** The number of sets that wins the match. */
     fun setsToWin(): Int = bestOfSets / 2 + 1
@@ -67,6 +83,8 @@ data class MatchRulesV1(
         bestOfSets = bestOfSets.takeIf { it in BEST_OF_OPTIONS } ?: 3,
         gamesPerSet = gamesPerSet.coerceIn(MIN_GAMES_PER_SET, MAX_GAMES_PER_SET),
         tiebreakPoints = tiebreakPoints.coerceIn(MIN_TIEBREAK_POINTS, MAX_TIEBREAK_POINTS),
+        totalPoints = totalPoints.coerceIn(MIN_TOTAL_POINTS, MAX_TOTAL_POINTS),
+        serveTurnPoints = serveTurnPoints.coerceIn(MIN_SERVE_TURN_POINTS, MAX_SERVE_TURN_POINTS),
     )
 
     /**
@@ -80,6 +98,8 @@ data class MatchRulesV1(
             MatchStructure.SETS -> rules.copy(
                 tiebreakPoints = if (rules.setTiebreak) rules.tiebreakPoints else defaults.tiebreakPoints,
                 finalSet = if (rules.bestOfSets > 1) rules.finalSet else defaults.finalSet,
+                totalPoints = defaults.totalPoints,
+                serveTurnPoints = defaults.serveTurnPoints,
             )
             MatchStructure.GAMES_ONLY -> defaults.copy(
                 manualScoring = rules.manualScoring,
@@ -95,6 +115,12 @@ data class MatchRulesV1(
                 manualScoring = rules.manualScoring,
                 structure = rules.structure,
             )
+            MatchStructure.TOTAL_POINTS -> defaults.copy(
+                manualScoring = rules.manualScoring,
+                structure = rules.structure,
+                totalPoints = rules.totalPoints,
+                serveTurnPoints = rules.serveTurnPoints,
+            )
         }
     }
 
@@ -107,14 +133,30 @@ data class MatchRulesV1(
         const val MAX_GAMES_PER_SET = 12
         const val MIN_TIEBREAK_POINTS = 3
         const val MAX_TIEBREAK_POINTS = 21
+        val TOTAL_POINTS_OPTIONS = listOf(16, 21, 24, 32)
+        val SERVE_TURN_POINTS_OPTIONS = listOf(2, 4)
+        const val MIN_TOTAL_POINTS = 2
+        const val MAX_TOTAL_POINTS = 99
+        const val MIN_SERVE_TURN_POINTS = 1
+        const val MAX_SERVE_TURN_POINTS = 8
     }
 }
 
 /**
- * Popular match formats. Each preset sets the match structure. The deuce rule and manual scoring
- * are separate choices, so a preset keeps them.
+ * Popular match formats. Each preset sets the match structure. The deuce rule, manual scoring, and the points of a
+ * [MatchStructure.TOTAL_POINTS] match are separate choices, so a preset keeps them.
+ *
+ * [sports] are the sports that show the preset. [padelTitle] and [padelDescription] replace the tennis words in padel,
+ * for example "super tiebreak" for "match tiebreak".
  */
-enum class MatchFormatPreset(val title: String, val description: String, private val rules: MatchRulesV1?) {
+enum class MatchFormatPreset(
+    val title: String,
+    val description: String,
+    private val rules: MatchRulesV1?,
+    private val sports: Set<Sport> = Sport.entries.toSet(),
+    private val padelTitle: String = title,
+    private val padelDescription: String = description,
+) {
     BEST_OF_3(
         "Best of 3 sets",
         "Standard match. Sets to 6 games, tiebreak at 6–6.",
@@ -124,11 +166,14 @@ enum class MatchFormatPreset(val title: String, val description: String, private
         "Best of 3 sets, match tiebreak",
         "Sets to 6 games. At one set all, a 10-point match tiebreak decides the match.",
         MatchRulesV1(finalSet = FinalSetRule.MATCH_TIEBREAK),
+        padelTitle = "Best of 3 sets, super tiebreak",
+        padelDescription = "Sets to 6 games. At one set all, a 10-point super tiebreak decides the match.",
     ),
     BEST_OF_5(
         "Best of 5 sets",
         "Grand Slam format. Sets to 6 games, tiebreak at 6–6.",
         MatchRulesV1(bestOfSets = 5),
+        sports = setOf(Sport.TENNIS),
     ),
     ONE_SET(
         "One set",
@@ -150,6 +195,13 @@ enum class MatchFormatPreset(val title: String, val description: String, private
         "Count games without sets. Use it for practice games.",
         MatchRulesV1(structure = MatchStructure.GAMES_ONLY),
     ),
+    AMERICANO(
+        "Americano (total points)",
+        "Count points 1, 2, 3 until both teams together played the total, for example 24 points. " +
+            "The team with more points wins. Equal points are a draw.",
+        MatchRulesV1(structure = MatchStructure.TOTAL_POINTS),
+        sports = setOf(Sport.PADEL),
+    ),
     TIEBREAK(
         "Tiebreak (7 points)",
         "One tiebreak to 7 points with a two-point lead.",
@@ -159,6 +211,7 @@ enum class MatchFormatPreset(val title: String, val description: String, private
         "Match tiebreak (10 points)",
         "One tiebreak to 10 points with a two-point lead.",
         MatchRulesV1(structure = MatchStructure.SINGLE_TIEBREAK, tiebreakPoints = 10),
+        padelTitle = "Super tiebreak (10 points)",
     ),
     PLAIN_POINTS(
         "Plain points (endless tiebreak)",
@@ -172,15 +225,32 @@ enum class MatchFormatPreset(val title: String, val description: String, private
     ),
     ;
 
-    /** Applies this preset to [current]. The deuce rule and manual scoring of [current] stay. [CUSTOM] returns [current]. */
+    fun title(sport: Sport): String = if (sport == Sport.PADEL) padelTitle else title
+
+    fun description(sport: Sport): String = if (sport == Sport.PADEL) padelDescription else description
+
+    /**
+     * Applies this preset to [current]. The deuce rule, manual scoring, and the total points settings of [current]
+     * stay. [CUSTOM] returns [current].
+     */
     fun applyTo(current: MatchRulesV1): MatchRulesV1 =
-        rules?.copy(manualScoring = current.manualScoring, deuce = current.deuce) ?: current
+        rules?.copy(
+            manualScoring = current.manualScoring,
+            deuce = current.deuce,
+            totalPoints = current.totalPoints,
+            serveTurnPoints = current.serveTurnPoints,
+        ) ?: current
 
     companion object {
-        /** Returns the preset that has the same structure as [rules], or [CUSTOM]. */
-        fun of(rules: MatchRulesV1): MatchFormatPreset {
+        /** The presets that [sport] shows, in display order. [CUSTOM] is the last one. */
+        fun forSport(sport: Sport): List<MatchFormatPreset> = entries.filter { sport in it.sports }
+
+        /** Returns the preset of [sport] that has the same structure as [rules], or [CUSTOM]. */
+        fun of(rules: MatchRulesV1, sport: Sport = Sport.TENNIS): MatchFormatPreset {
             val target = rules.canonical()
-            return entries.firstOrNull { preset -> preset.rules != null && preset.applyTo(target).canonical() == target } ?: CUSTOM
+            return forSport(sport).firstOrNull { preset ->
+                preset.rules != null && preset.applyTo(target).canonical() == target
+            } ?: CUSTOM
         }
     }
 }

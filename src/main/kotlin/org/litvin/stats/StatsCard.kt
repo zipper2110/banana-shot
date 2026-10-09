@@ -60,7 +60,10 @@ object StatsCard {
             PerPlayer(NEUTRAL_P1, NEUTRAL_P2)
         }
         return StatsCardContent(
-            names = PerPlayer(score.player1Name.trim().ifEmpty { "Player 1" }, score.player2Name.trim().ifEmpty { "Player 2" }),
+            names = PerPlayer(
+                score.player1Name.trim().ifEmpty { score.sport.defaultSideName(1) },
+                score.player2Name.trim().ifEmpty { score.sport.defaultSideName(2) },
+            ),
             colors = colors,
             title = if (scope == 0) "Match statistics" else "Set $scope statistics",
             score = if (scope == 0) setScores.joinToString("   ") else setScores.getOrElse(scope - 1) { "" },

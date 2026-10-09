@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.projects
 
+import org.litvin.scoring.Sport
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SystemFilePicker
@@ -129,7 +130,12 @@ class SwingProjectsPanel(
             is ProjectsViewEffect.ConfirmNewProject -> {
                 newProjectEditor.edit(
                     parent = this,
-                    initial = NewProjectRequest(effect.name, effect.sourceVideoPath),
+                    initial = NewProjectRequest(
+                        name = effect.name,
+                        sourceVideoPath = effect.sourceVideoPath,
+                        sport = effect.sport,
+                        rules = if (effect.sport == Sport.PADEL) effect.padelRules else effect.sport.defaultRules(),
+                    ),
                     chooseVideo = { dialog, current ->
                         chooseSourceVideo(
                             "Select Source Video",
@@ -139,7 +145,9 @@ class SwingProjectsPanel(
                         )
                     },
                 )?.let { request ->
-                    presenter.onIntent(ProjectsIntent.CreateProject(request.name, request.sourceVideoPath))
+                    presenter.onIntent(
+                        ProjectsIntent.CreateProject(request.name, request.sourceVideoPath, request.sport, request.rules)
+                    )
                 }
             }
             is ProjectsViewEffect.ChooseMissingSourceVideo -> {
@@ -150,6 +158,7 @@ class SwingProjectsPanel(
                     presenter.onIntent(ProjectsIntent.MissingSourceVideoSelected(effect.manifestPath, path))
                 }
             }
+            is ProjectsViewEffect.LocateMovedSourceVideo -> locateMovedSourceVideo(effect)
             is ProjectsViewEffect.ProjectOpened -> onProjectOpened?.invoke(effect.manifestPath)
             is ProjectsViewEffect.ShowError ->
                 if (effect.warning) dialogs.showWarning(this, effect.message, effect.title)
@@ -276,6 +285,20 @@ class SwingProjectsPanel(
     private fun renameProject(project: ProjectCardState) {
         val name = projectNameEditor.edit(this, project.name) ?: return
         if (name != project.name) presenter.onIntent(ProjectsIntent.RenameProject(project.path, name))
+    }
+
+    private fun locateMovedSourceVideo(effect: ProjectsViewEffect.LocateMovedSourceVideo) {
+        val locate = dialogs.confirm(
+            parent = this,
+            message = "The video of the project is not at this location anymore:\n${effect.oldPath}\n\n" +
+                "Locate the video to open the project.",
+            title = "Cannot open project",
+            confirmLabel = "Locate video...",
+        )
+        if (!locate) return
+        chooseSourceVideo("Locate the Video of Project: ${effect.projectName}", effect.initialDirectory)?.let { path ->
+            presenter.onIntent(ProjectsIntent.MissingSourceVideoSelected(effect.manifestPath, path))
+        }
     }
 
     private fun chooseSourceVideo(

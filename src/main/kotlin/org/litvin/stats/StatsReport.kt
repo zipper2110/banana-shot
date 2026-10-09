@@ -4,6 +4,7 @@ import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.scoring.MatchStats
+import org.litvin.scoring.MatchStructure
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
@@ -26,11 +27,14 @@ data class StatsReport(
 
     /**
      * The score of each set, for example "6-4", "7-6" or "[10-7]" for a tiebreak that replaces a set.
-     * A set that is not complete shows its current games.
+     * A set that is not complete shows its current games. A match of points without games shows the points, for
+     * example "13-11" in an Americano match.
      */
     fun setScores(): List<String> = setRanges.mapIndexed { index, range ->
         val completed = timeline.setsAfterPoint[range.last].getOrNull(index)
+        val pointsOnly = score.rules.structure == MatchStructure.TOTAL_POINTS || score.rules.structure == MatchStructure.PLAIN_POINTS
         when {
+            completed == null && pointsOnly -> timeline.statesAfterPoint[range.last].let { "${it.p1Pts}-${it.p2Pts}" }
             completed == null -> timeline.statesAfterPoint[range.last].let { "${it.gamesP1}-${it.gamesP2}" }
             completed.tiebreak && completed.p1 + completed.p2 == 1 -> sets[index].pointsWon.let { "[${it.p1}-${it.p2}]" }
             else -> "${completed.p1}-${completed.p2}"

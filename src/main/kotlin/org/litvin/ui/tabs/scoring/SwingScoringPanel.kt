@@ -30,6 +30,7 @@ import org.litvin.scoring.ManualScoreMarks
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.Sport
 import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoringEngine
@@ -228,10 +229,12 @@ class SwingScoringPanel(
 
     private var selectedPointIndex: Int = -1
 
+    // The sport of the project (score.json). It sets the default side names and the formats of the score settings.
+    private var sport: Sport = Sport.TENNIS
     private var player1Name: String = "Player 1"
     private var player2Name: String = "Player 2"
-    private fun displayNameP1(): String = player1Name.ifBlank { "Player 1" }
-    private fun displayNameP2(): String = player2Name.ifBlank { "Player 2" }
+    private fun displayNameP1(): String = player1Name.ifBlank { sport.defaultSideName(1) }
+    private fun displayNameP2(): String = player2Name.ifBlank { sport.defaultSideName(2) }
 
     private fun players() = ScorePlayers(
         p1Name = displayNameP1(),
@@ -305,8 +308,11 @@ class SwingScoringPanel(
         manualSetWins.clear()
         serverMarks.clear()
 
-        val isNewScore = !ScoreIO.existsForProjectDir(projectDir!!)
+        val scoreExists = ScoreIO.existsForProjectDir(projectDir!!)
         val score = ScoreIO.readForProjectDir(projectDir!!)
+        // The Projects tab can write score.json with the sport and the rules of a new project (see ScoreV1.newProject).
+        val isNewScore = !scoreExists || score.useDefaultScoreboard
+        sport = score.sport
         player1Name = score.player1Name
         player2Name = score.player2Name
         player1ColorHex = score.player1ColorHex
@@ -899,6 +905,7 @@ class SwingScoringPanel(
                     manualSetWins = LinkedHashMap(manualSetWins),
                     scoreSettingsReviewed = scoreSettingsReviewed,
                     serverMarks = LinkedHashMap(serverMarks),
+                    sport = sport,
                 ),
             )
         } catch (t: Throwable) {
@@ -958,6 +965,7 @@ class SwingScoringPanel(
             player1ColorHex = player1ColorHex,
             player2ColorHex = player2ColorHex,
             rules = rules,
+            sport = sport,
         )
         val result = scoreSettingsEditor.edit(this, current)
         if (result != null) {
@@ -966,6 +974,7 @@ class SwingScoringPanel(
             player1ColorHex = result.player1ColorHex
             player2ColorHex = result.player2ColorHex
             rules = result.rules.normalized()
+            sport = result.sport
             scorePanel.setPlayers(players())
             refreshScoring()
             refreshVideoScoreboardOverlay()
@@ -1039,6 +1048,7 @@ class SwingScoringPanel(
                 rules = rules,
                 manualMarks = manualMarks,
                 serverMarks = LinkedHashMap(serverMarks),
+                sport = sport,
             )
             val span = spans.getOrNull(selectedPointIndex)
             if (span == null) {

@@ -1,14 +1,18 @@
 package org.litvin.ui.tabs.projects
 
 import org.junit.jupiter.api.Test
+import org.litvin.ui.commons.FilePicker
+import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.tabs.projects.presenter.ProjectCardState
 import org.litvin.ui.tabs.projects.presenter.ProjectStatsState
 import org.litvin.ui.tabs.projects.presenter.ProjectsIntent
 import org.litvin.ui.tabs.projects.presenter.ProjectsPresenter
 import org.litvin.ui.tabs.projects.presenter.ProjectsView
+import org.litvin.ui.tabs.projects.presenter.ProjectsViewEffect
 import org.litvin.ui.tabs.projects.presenter.ProjectsViewState
 import java.awt.Component
 import java.awt.Container
+import java.io.File
 import javax.swing.AbstractButton
 import javax.swing.JLabel
 import javax.swing.SwingUtilities
@@ -141,6 +145,52 @@ class SwingProjectsPanelTest {
                 ProjectsIntent.GoToPage(1),
                 ProjectsIntent.GoToPage(3),
             ),
+            presenter.intents,
+        )
+    }
+
+    @Test
+    fun locateVideoOpensThePickerInTheGivenFolderAndCancelSendsNothing() {
+        val presenter = RecordingPresenter()
+        val pickerFolders = mutableListOf<File?>()
+        val located = File("E:\\match\\final.mp4")
+        val picker = object : FilePicker {
+            override fun chooseSourceVideo(parent: Component?, title: String, initialDirectory: File?, suggestedFile: File?): File? {
+                pickerFolders += initialDirectory
+                return located
+            }
+
+            override fun chooseExportDestination(parent: Component?, title: String, initialDirectory: File?, suggestedFile: File?) =
+                error("unused")
+        }
+        var answer = false
+        val dialogs = object : UserDialogService {
+            override fun showInfo(parent: Component?, message: String, title: String) = Unit
+            override fun showError(parent: Component?, message: String, title: String) = Unit
+            override fun confirm(parent: Component?, message: String, title: String) = error("unused")
+            override fun confirm(
+                parent: Component?,
+                message: String,
+                title: String,
+                confirmLabel: String,
+                cancelLabel: String,
+                destructive: Boolean,
+            ): Boolean {
+                assertTrue("D:\\video\\a.mp4" in message)
+                assertEquals("Locate video...", confirmLabel)
+                return answer
+            }
+        }
+        val effect = ProjectsViewEffect.LocateMovedSourceVideo("C:\\p\\a\\project.json", "Club final", "D:\\video\\a.mp4", "D:\\video")
+        SwingUtilities.invokeAndWait {
+            val panel = SwingProjectsPanel(presenter, filePicker = picker, dialogs = dialogs)
+            panel.renderEffect(effect)
+            answer = true
+            panel.renderEffect(effect)
+        }
+        assertEquals(listOf<File?>(File("D:\\video")), pickerFolders)
+        assertEquals(
+            listOf<ProjectsIntent>(ProjectsIntent.MissingSourceVideoSelected("C:\\p\\a\\project.json", located.absolutePath)),
             presenter.intents,
         )
     }

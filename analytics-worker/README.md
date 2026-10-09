@@ -33,6 +33,9 @@ The tests use an in-memory D1 (`test/fake-d1.ts`) and the shared fixtures in
 
 ## Deploy
 
+GitHub Actions can do the deploy: run the workflow "Deploy" from `master` and select "Analytics Worker". The workflow runs `npm ci`, the type check, and the tests. Then it applies the D1 migrations and deploys the Worker.
+Setup of the token: see `.github/workflows/cloudflare-deploy.yml`. The steps below are still necessary for a new database and for the secrets.
+
 `wrangler.toml` is in Git with the IDs of the deployed database. They are not secrets. The
 first two steps are only for a new database.
 

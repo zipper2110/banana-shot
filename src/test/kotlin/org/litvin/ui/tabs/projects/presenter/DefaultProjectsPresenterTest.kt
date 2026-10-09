@@ -1,5 +1,9 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.scoring.Sport
+import org.litvin.scoring.MatchStructure
+import org.litvin.scoring.MatchRulesV1
+import org.litvin.scoring.DeuceRule
 import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.analytics.DisabledAnalytics
@@ -168,6 +172,47 @@ class DefaultProjectsPresenterTest {
     }
 
     @Test
+    fun aPadelProjectGetsItsRulesAndTheNextNewProjectStartsWithPadel() {
+        val repository = FakeProjectsRepository()
+        val view = RecordingProjectsView()
+        val presenter = presenter(repository)
+        val video = tempDir.resolve("match.mp4").toFile().apply { writeText("video") }
+        val americano = MatchRulesV1(structure = MatchStructure.TOTAL_POINTS, totalPoints = 32)
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.CreateProject("Americano", video.absolutePath, Sport.PADEL, americano))
+        presenter.onIntent(ProjectsIntent.SourceVideoSelected(video.absolutePath))
+        drainEdt()
+
+        assertEquals(listOf(Sport.PADEL to americano), repository.createdSetups)
+        assertEquals(
+            ProjectsViewEffect.ConfirmNewProject("match", video.absolutePath, Sport.PADEL, americano),
+            view.effects.last(),
+        )
+    }
+
+    @Test
+    fun aTennisProjectKeepsTheLastPadelRulesForTheNextPadelProject() {
+        val repository = FakeProjectsRepository()
+        val view = RecordingProjectsView()
+        val presenter = presenter(repository)
+        val video = tempDir.resolve("match.mp4").toFile().apply { writeText("video") }
+        val goldenPoint = MatchRulesV1(deuce = DeuceRule.NO_AD)
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.CreateProject("Padel", video.absolutePath, Sport.PADEL, goldenPoint))
+        presenter.onIntent(ProjectsIntent.CreateProject("Tennis", video.absolutePath))
+        presenter.onIntent(ProjectsIntent.SourceVideoSelected(video.absolutePath))
+        drainEdt()
+
+        assertEquals(Sport.TENNIS to MatchRulesV1(), repository.createdSetups.last())
+        assertEquals(
+            ProjectsViewEffect.ConfirmNewProject("match", video.absolutePath, Sport.TENNIS, goldenPoint),
+            view.effects.last(),
+        )
+    }
+
+    @Test
     fun incorrectNameOrVideoShowsAnErrorAndCreatesNoProject() {
         val repository = FakeProjectsRepository()
         val view = RecordingProjectsView()
@@ -184,7 +229,7 @@ class DefaultProjectsPresenterTest {
     }
 
     @Test
-    fun openingProjectWithAMissingVideoShowsOneErrorAndKeepsTheProjectClosed() {
+    fun openingProjectWithAMissingVideoAsksToLocateItAndKeepsTheProjectClosed() {
         val missing = tempDir.resolve("gone.mp4").toString()
         val repository = FakeProjectsRepository(
             recents = listOf(ProjectSummary("match.trproj", "Match", missing)),
@@ -199,15 +244,76 @@ class DefaultProjectsPresenterTest {
         presenter.onIntent(ProjectsIntent.OpenProject("match.trproj"))
         drainEdt()
 
-        val error = assertIs<ProjectsViewEffect.ShowError>(view.effects.single())
-        assertEquals("Cannot open project", error.title)
-        assertEquals(true, missing in error.message)
+        assertEquals(
+            ProjectsViewEffect.LocateMovedSourceVideo("match.trproj", "Match", missing, tempDir.toFile().absolutePath),
+            view.effects.single(),
+        )
         assertEquals(emptyList(), repository.openedPaths)
         assertEquals(null, view.states.last().currentProject)
         assertEquals(
             "The video is not on the disk anymore.",
             view.states.last().visibleProjects.single().stats?.videoMissingMessage,
         )
+    }
+
+    @Test
+    fun locatingAVideoWhoseFolderIsGoneStartsInTheLastVideoFolder() {
+        val missing = tempDir.resolve("usb").resolve("gone.mp4").toString()
+        val repository = FakeProjectsRepository(
+            manifests = mutableMapOf("match.trproj" to manifest("Match", sourceVideo = missing)),
+        )
+        val view = RecordingProjectsView()
+        val presenter = presenter(repository, lastVideoDir = "D:\\video")
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.OpenProject("match.trproj"))
+        drainEdt()
+
+        val locate = assertIs<ProjectsViewEffect.LocateMovedSourceVideo>(view.effects.single())
+        assertEquals("D:\\video", locate.initialDirectory)
+    }
+
+    @Test
+    fun locatedVideoOpensTheProjectAndTheManifestKeepsTheNewPath() {
+        val missing = tempDir.resolve("gone.mp4").toString()
+        val repository = FakeProjectsRepository(
+            manifests = mutableMapOf("match.trproj" to manifest("Match", sourceVideo = missing)),
+        )
+        val view = RecordingProjectsView()
+        val presenter = presenter(repository)
+        val moved = videoFile()
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.OpenProject("match.trproj"))
+        presenter.onIntent(ProjectsIntent.MissingSourceVideoSelected("match.trproj", moved))
+        presenter.onIntent(ProjectsIntent.OpenProject("match.trproj"))
+        drainEdt()
+
+        assertEquals(moved, repository.manifests.getValue("match.trproj").sourceVideo)
+        assertEquals(listOf("match.trproj", "match.trproj"), repository.openedPaths)
+        assertEquals(
+            listOf(ProjectsViewEffect.ProjectOpened("match.trproj"), ProjectsViewEffect.ProjectOpened("match.trproj")),
+            view.effects.drop(1),
+        )
+    }
+
+    @Test
+    fun locatedFileThatIsNotAVideoShowsAnErrorAndKeepsTheOldPath() {
+        val missing = tempDir.resolve("gone.mp4").toString()
+        val repository = FakeProjectsRepository(
+            manifests = mutableMapOf("match.trproj" to manifest("Match", sourceVideo = missing)),
+        )
+        val view = RecordingProjectsView()
+        val presenter = presenter(repository)
+        val text = tempDir.resolve("notes.txt").toFile().apply { writeText("notes") }.absolutePath
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.MissingSourceVideoSelected("match.trproj", text))
+        drainEdt()
+
+        assertIs<ProjectsViewEffect.ShowError>(view.effects.single())
+        assertEquals(missing, repository.manifests.getValue("match.trproj").sourceVideo)
+        assertEquals(emptyList(), repository.openedPaths)
     }
 
     @Test
@@ -411,9 +517,14 @@ class DefaultProjectsPresenterTest {
         assertEquals(expected, actual)
     }
 
-    private fun presenter(repository: ProjectsRepository, analytics: Analytics = DisabledAnalytics): DefaultProjectsPresenter {
+    private fun presenter(
+        repository: ProjectsRepository,
+        analytics: Analytics = DisabledAnalytics,
+        lastVideoDir: String? = null,
+    ): DefaultProjectsPresenter {
         val prefs = Preferences.userNodeForPackage(DefaultProjectsPresenterTest::class.java)
             .node("test-${UUID.randomUUID()}")
+        lastVideoDir?.let { prefs.put("lastVideoDir", it) }
         return DefaultProjectsPresenter(
             repository = repository,
             preferences = prefs,
@@ -483,6 +594,12 @@ class DefaultProjectsPresenterTest {
         }
 
         val createdNames = mutableListOf<String>()
+        val createdSetups = mutableListOf<Pair<Sport, MatchRulesV1>>()
+
+        override fun createProject(sourceVideoPath: String, name: String, sport: Sport, rules: MatchRulesV1): ProjectSummary {
+            createdSetups += sport to rules
+            return createProject(sourceVideoPath, name)
+        }
 
         override fun createProject(sourceVideoPath: String, name: String): ProjectSummary {
             createdNames += name

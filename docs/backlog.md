@@ -87,7 +87,35 @@ Do these items after the first public release.
 ### B-14 Padel
 
 - Support padel matches.
-- The list of changes is in `docs/padel/b-14-padel.md`.
+- The first part is in the app (2026-10-08): the Tennis / Padel switch in
+  the "New project" dialog, the golden point, the star point, Americano
+  matches, and the deciding points statistic.
+- The open questions and gaps are in `padel.md`.
+
+### B-43 Padel Americano events
+
+- Decided on 2026-10-08: a separate item. The author does not know yet what
+  users need.
+- The app has one Americano match for each project (structure
+  `TOTAL_POINTS`, see `padel.md`). Each team serves 2 or 4 points in a row.
+- Open questions:
+  - Serve turn: organizers use 2 or 4 serves before the serve goes to the
+    other team. Some events rotate by player, not by team. Are 2 or 4
+    points for each team sufficient?
+  - Events: an Americano or Mexicano event has many short matches with
+    different partners. The points belong to each player, and a
+    leaderboard shows the winner. Do users need one video with many
+    rounds, with the points of each player?
+  - Draw: a draw shows the equal points. Nothing on the scoreboard or in
+    Stats says "Draw".
+
+### B-44 Sport dimension in analytics
+
+- Decided on 2026-10-08: add a new dimension "sport" (tennis or padel), so
+  the cockpit can count padel projects.
+- The event `project_created` has no sport now. The change touches
+  `analytics-contract`, `AnalyticsSchema`, the analytics Worker, and the
+  cockpit.
 
 ### B-15 Intro and outro videos
 
@@ -154,42 +182,6 @@ Do these items after the first public release.
 - Keep a flag in the preferences, so that the dialog shows only one time.
 - Done when: the first start with empty preferences shows the dialog. The
   next start does not show it.
-
-### B-37 Locate a moved source video
-
-- Finding F-02 of the feature audit of 2026-10-05. Decided on 2026-10-05:
-  after the first release.
-- Problem: when the source video is moved, renamed, or on a USB drive with a
-  different drive letter, the project does not open. The app tells the user
-  to put the video back at the old path.
-- The parts for the fix are in the code. `FileProjectsRepository.openProject`
-  writes a new `sourceVideo` path into the manifest. The intent
-  `MissingSourceVideoSelected` opens the project with a new video. Now the
-  app uses them only when the manifest has no video path.
-- Tasks:
-  1. In `DefaultProjectsPresenter.openProject`, when the video is not on the
-     disk, send a new effect instead of `ShowError`. The effect gives the old
-     path and the project name.
-  2. In `SwingProjectsPanel`, show a dialog with the old path and two
-     buttons: "Locate video..." and "Cancel". "Locate video..." opens the
-     file chooser in the folder of the old path. If that folder does not
-     exist, the chooser opens in the last video folder.
-  3. Send `MissingSourceVideoSelected` with the selected file. The project
-     then opens, and the manifest keeps the new path.
-  4. Check the selected video before the project opens. Probe its duration
-     with the existing duration probe. If the last point ends after the end
-     of the video, show a warning: "This video is shorter than the points of
-     the project." The user can continue or select a different file.
-  5. On a project row that shows "The video is not on the disk anymore", add
-     the same "Locate video..." action.
-  6. Update the Projects help text in `HelpCatalog`.
-  7. Add presenter tests: a missing video sends the new effect; a selected
-     video opens the project and changes the manifest; Cancel keeps the
-     project closed; a video that is too short gives the warning.
-- Not in scope: exports in the queue keep the old `sourcePath`. They fail
-  with "Source file missing". The user can start these exports again.
-- Done when: a project whose video was moved to a different folder opens
-  after the user selects the video. The next start opens it with no dialog.
 
 ### B-38 Minor findings of the feature audit
 

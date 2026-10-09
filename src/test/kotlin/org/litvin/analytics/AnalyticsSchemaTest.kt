@@ -53,12 +53,37 @@ class AnalyticsSchemaTest {
         assertEquals(contract("smoke-summary.json").fieldNames().asSequence().toSet(), json.fieldNames().asSequence().toSet())
         assertEquals(
             mapper.readTree("""
-                {"schema_version":2,"notice_version":1,"level":"extended","session_id":"00000000-0000-4000-8000-000000000201",
+                {"schema_version":3,"notice_version":2,"level":"extended","session_id":"00000000-0000-4000-8000-000000000201",
                  "app_version":"1.0.0","os_family":"windows","snapshot":3,"final":true,"duration_s":912,"active_s":640,
                  "counters":{"point_added":31,"tab_s_points":540}}
             """),
             json,
         )
+    }
+
+    @Test
+    fun `the attributes are the attributes of the contract`() {
+        val contract = contract("attributes.json")
+        val values = contract["attributes"].fields().asSequence().associate { (key, list) -> key to list.map { it.textValue() } }
+        assertEquals(values, AnalyticsSchema.ATTRIBUTE_VALUES)
+        assertEquals(contract["arrayAttributes"].map { it.textValue() }.toSet(), AnalyticsSchema.ARRAY_ATTRIBUTES)
+    }
+
+    @Test
+    fun `the summary JSON has the attributes in the form of the contract fixture`() {
+        val fixture = validSummaries().first { it.has("attributes") && it["attributes"].size() == AnalyticsSchema.ATTRIBUTE_VALUES.size }
+        val json = mapper.readTree(SessionSummary(
+            sessionId = "id", level = AnalyticsLevel.EXTENDED, appVersion = "1.1.0", osFamily = "windows", snapshot = 0,
+            final = false, durationS = 0, activeS = 0, counters = emptyMap(),
+            attributes = mapOf("theme" to "mid", "accent" to "custom", "language" to "en", "sport" to listOf("tennis", "padel")),
+        ).toJson())
+        assertEquals(fixture["attributes"], json["attributes"])
+    }
+
+    @Test
+    fun `the summary JSON has no attributes without them`() {
+        val json = mapper.readTree(SessionSummary("id", AnalyticsLevel.ESSENTIAL, "1.1.0", "windows", 0, false, 0, 0, emptyMap()).toJson())
+        assertFalse(json.has("attributes"))
     }
 
     @Test

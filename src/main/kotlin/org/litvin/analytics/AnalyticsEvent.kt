@@ -28,6 +28,15 @@ sealed class AnalyticsEvent {
     data object ColorChanged : AnalyticsEvent()
     data object CropRotateChanged : AnalyticsEvent()
 
+    /**
+     * The current settings of the app. The app records them at the start and after each change. They are session
+     * attributes (`docs/analytics/design.md`, "Attributes"): the summary has the values at the time of the send.
+     */
+    data class Settings(val theme: Theme, val accent: Accent, val language: Language) : AnalyticsEvent()
+
+    /** The user works with a project of [sport]: a project was created or opened, or the sport of a project changed. */
+    data class SportUsed(val sport: Sport) : AnalyticsEvent()
+
     /** An export job started to run. A job cancelled while it waits in the queue does not start. */
     data class ExportStarted(val encoder: Encoder, val options: Set<ExportOption>, val resolution: Resolution) : AnalyticsEvent()
 
@@ -48,6 +57,16 @@ sealed class AnalyticsEvent {
         PROJECTS("projects"), POINTS("points"), COLORS("colors"), CROP_ROTATE("crop_rotate"), SCORING("scoring"),
         STATS("stats"), EXPORT("export")
     }
+
+    enum class Theme(internal val key: String) { DARK("dark"), MID("mid"), LIGHT("light") }
+
+    /** Only the type of the accent. The app never sends the color. */
+    enum class Accent(internal val key: String) { DEFAULT("default"), CUSTOM("custom") }
+
+    /** The language of the app interface. It is not the language of the operating system. */
+    enum class Language(internal val key: String) { EN("en") }
+
+    enum class Sport(internal val key: String) { TENNIS("tennis"), PADEL("padel") }
 
     enum class Encoder(internal val key: String) { SOFTWARE("software"), NVENC("nvenc"), AMF("amf"), QSV("qsv") }
 

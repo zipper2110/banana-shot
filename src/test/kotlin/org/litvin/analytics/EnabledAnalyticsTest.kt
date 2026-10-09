@@ -33,9 +33,9 @@ class EnabledAnalyticsTest {
     fun `sends the first summary at session start with the session bucket`() {
         start()
         val first = transport.next()
-        assertEquals(contractFieldNames(), first.fieldNames().asSequence().toSet())
-        assertEquals(2, first["schema_version"].intValue())
-        assertEquals(1, first["notice_version"].intValue())
+        assertEquals(contractFieldNames() + "attributes", first.fieldNames().asSequence().toSet())
+        assertEquals(3, first["schema_version"].intValue())
+        assertEquals(2, first["notice_version"].intValue())
         assertEquals("extended", first["level"].textValue())
         assertTrue(Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}").matches(first["session_id"].textValue()))
         assertEquals("1.2.3", first["app_version"].textValue())
@@ -244,6 +244,65 @@ class EnabledAnalyticsTest {
     }
 
     @Test
+    fun `an extended summary has the settings and the sports of the session`() {
+        val session = start()
+        assertEquals(mapOf("sport" to emptyList<String>()), attributes(transport.next()))
+
+        session.record(AnalyticsEvent.Settings(AnalyticsEvent.Theme.MID, AnalyticsEvent.Accent.CUSTOM, AnalyticsEvent.Language.EN))
+        session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
+        session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.TENNIS))
+        session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
+        session.sendIfChanged()
+        assertEquals(
+            mapOf("theme" to "mid", "accent" to "custom", "language" to "en", "sport" to listOf("tennis", "padel")),
+            attributes(transport.next()),
+        )
+        // The same sport again is no change.
+        session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.TENNIS))
+        session.sendIfChanged()
+        assertNoSend()
+    }
+
+    @Test
+    fun `a change of a setting causes a send with the new value`() {
+        val session = start()
+        transport.next()
+        session.record(AnalyticsEvent.Settings(AnalyticsEvent.Theme.DARK, AnalyticsEvent.Accent.DEFAULT, AnalyticsEvent.Language.EN))
+        session.sendIfChanged()
+        assertEquals("dark", attributes(transport.next())["theme"])
+
+        session.record(AnalyticsEvent.Settings(AnalyticsEvent.Theme.LIGHT, AnalyticsEvent.Accent.DEFAULT, AnalyticsEvent.Language.EN))
+        session.sendIfChanged()
+        assertEquals("light", attributes(transport.next())["theme"])
+    }
+
+    @Test
+    fun `the essential level sends no attributes and does not keep the sports`() {
+        val session = start(level = AnalyticsLevel.ESSENTIAL)
+        assertFalse(transport.next().has("attributes"))
+        session.record(AnalyticsEvent.Settings(AnalyticsEvent.Theme.LIGHT, AnalyticsEvent.Accent.CUSTOM, AnalyticsEvent.Language.EN))
+        session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
+        session.sendIfChanged()
+        assertNoSend()
+
+        // The settings are the current values. The sports count only from the change to extended, as the counters.
+        session.setLevel(AnalyticsLevel.EXTENDED)
+        session.sendIfChanged()
+        assertEquals(
+            mapOf("theme" to "light", "accent" to "custom", "language" to "en", "sport" to emptyList<String>()),
+            attributes(transport.next()),
+        )
+
+        session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
+        session.setLevel(AnalyticsLevel.ESSENTIAL)
+        session.sendIfChanged()
+        assertFalse(transport.next().has("attributes"))
+        session.setLevel(AnalyticsLevel.EXTENDED)
+        session.sendIfChanged()
+        assertEquals(emptyList<String>(), attributes(transport.next())["sport"])
+    }
+
+    @Test
     fun `clamps duration_s and active_s to 7 days`() {
         val session = start()
         transport.next()
@@ -356,6 +415,11 @@ class EnabledAnalyticsTest {
 
     private fun counters(summary: JsonNode): Map<String, Int> =
         summary["counters"].fields().asSequence().associate { (key, value) -> key to value.intValue() }
+
+    private fun attributes(summary: JsonNode): Map<String, Any> =
+        summary["attributes"].fields().asSequence().associate { (key, value) ->
+            key to if (value.isArray) value.map { it.textValue() } else value.textValue()
+        }
 
     private fun contractFieldNames(): Set<String> =
         mapper.readTree(Path("analytics-contract/v1/smoke-summary.json").readText()).fieldNames().asSequence().toSet()

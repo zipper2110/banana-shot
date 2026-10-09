@@ -127,6 +127,30 @@ describe('app usage', () => {
   });
 });
 
+describe('app usage attributes', () => {
+  it('counts each attribute value of the extended sessions, and each combination of sports', async () => {
+    const env = makeEnv();
+    addSession(env, { receivedAt: at('2026-10-06'), attributes: { theme: 'dark', accent: 'default', language: 'en', sport: ['tennis'] } });
+    addSession(env, { receivedAt: at('2026-10-06'), attributes: { theme: 'dark', accent: 'custom', language: 'en', sport: ['tennis', 'padel'] } });
+    addSession(env, { receivedAt: at('2026-10-05'), attributes: { theme: 'light', language: 'en', sport: ['tennis'] } });
+    addSession(env, { receivedAt: at('2026-10-05'), attributes: { theme: 'mid', sport: [] } });
+    addSession(env, { receivedAt: at('2026-10-06') });
+    addSession(env, { receivedAt: at('2026-10-06'), level: 'essential' });
+    addSession(env, { receivedAt: at('2026-10-06'), version: 'synthetic-smoke', attributes: { theme: 'dark' } });
+    addSession(env, { receivedAt: at('2026-09-29'), attributes: { theme: 'dark' } });
+
+    const usage = await loadAppUsage(env, makePeriod(7, NOW), false);
+
+    const values = (key: string) => usage.attributes.filter(row => row.key === key).map(row => [row.value, row.sessions]);
+    expect(values('theme')).toEqual([['dark', 2], ['light', 1], ['mid', 1]]);
+    expect(values('accent')).toEqual(expect.arrayContaining([['default', 1], ['custom', 1]]));
+    expect(values('language')).toEqual([['en', 3]]);
+    expect(values('sport')).toEqual(expect.arrayContaining([['["tennis"]', 2], ['["tennis","padel"]', 1], ['[]', 1]]));
+    expect(values('sport')).toHaveLength(3);
+    expect(usage.sessionShape).toMatchObject({ sessions: 6, extended_sessions: 5, attribute_sessions: 4 });
+  });
+});
+
 describe('feedback', () => {
   it('lists the reports without the email address and groups the errors by their first line', async () => {
     const env = makeEnv();

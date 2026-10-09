@@ -60,6 +60,8 @@ internal data class SessionSummary(
     val durationS: Int,
     val activeS: Int,
     val counters: Map<String, Int>,
+    /** The session attributes: a text or a list of texts for each key. Null at the essential level. */
+    val attributes: Map<String, Any>? = null,
 ) {
     fun toJson(): String = mapper.writeValueAsString(mapper.createObjectNode().apply {
         put("schema_version", AnalyticsSchema.SCHEMA_VERSION)
@@ -73,6 +75,16 @@ internal data class SessionSummary(
         put("duration_s", durationS)
         put("active_s", activeS)
         putObject("counters").apply { counters.forEach { (key, value) -> put(key, value) } }
+        attributes?.let { values ->
+            putObject("attributes").apply {
+                values.forEach { (key, value) ->
+                    when (value) {
+                        is List<*> -> putArray(key).apply { value.forEach { add(it.toString()) } }
+                        else -> put(key, value.toString())
+                    }
+                }
+            }
+        }
     })
 
     private companion object {

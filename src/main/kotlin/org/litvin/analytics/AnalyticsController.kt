@@ -45,11 +45,13 @@ class AnalyticsController(
     private var closed = false
     @Volatile private var lastTab = AnalyticsEvent.TabShown(null, byUser = false)
     @Volatile private var lastWindow = AnalyticsEvent.WindowActive(false)
+    @Volatile private var lastSettings: AnalyticsEvent.Settings? = null
 
     override fun record(event: AnalyticsEvent) {
         when (event) {
             is AnalyticsEvent.TabShown -> lastTab = event.copy(byUser = false)
             is AnalyticsEvent.WindowActive -> lastWindow = event
+            is AnalyticsEvent.Settings -> lastSettings = event
             else -> Unit
         }
         runCatching { delegate.record(event) }
@@ -85,6 +87,8 @@ class AnalyticsController(
         managed = created
         runCatching { created.record(lastTab) }
         runCatching { created.record(lastWindow) }
+        // A new session after "off" gets the settings that the app recorded at its start.
+        lastSettings?.let { settings -> runCatching { created.record(settings) } }
         delegate = created
     }
 

@@ -18,6 +18,33 @@ deploy_worker() {
   npx wrangler deploy
 }
 
+# Sends the synthetic smoke summary to the deployed analytics Worker and checks the status.
+# The Worker writes all columns for each summary, so a missing migration also gives an error here.
+# With ingestion on, the Worker must return 204. With ingestion off, it must return 410.
+smoke_check_analytics() {
+  local endpoint="${ANALYTICS_ENDPOINT:-}"
+  if [ -z "$endpoint" ]; then
+    echo "::error::The Worker is deployed, but the smoke check cannot run. Set the GitHub variable ANALYTICS_ENDPOINT."
+    exit 1
+  fi
+  local expected=410
+  if grep -Eq '^ANALYTICS_INGESTION_ENABLED *= *"true"' analytics-worker/wrangler.toml; then expected=204; fi
+  # A new Worker version can need some seconds to reach all locations. Try a few times.
+  local attempt status=""
+  for attempt in 1 2 3; do
+    status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$endpoint" \
+      -H 'content-type: application/json' --data @analytics-contract/v1/smoke-summary.json || true)
+    if [ "$status" = "$expected" ]; then
+      echo "Smoke check: $status, as expected."
+      return 0
+    fi
+    echo "Smoke check attempt $attempt: got $status, expected $expected."
+    sleep 10
+  done
+  echo "::error::The deployed analytics Worker returned $status for the smoke summary. Expected $expected."
+  exit 1
+}
+
 case "$target" in
   site)
     # The site has no package.json. It uses the wrangler of analytics-worker (site/README.md).
@@ -26,7 +53,11 @@ case "$target" in
     "$wrangler" deploy --config site/wrangler.toml
     "$wrangler" deploy --config site/www-redirect/wrangler.toml
     ;;
-  analytics-worker) deploy_worker analytics-worker bananashot-analytics ;;
+  analytics-worker)
+    # deploy_worker changes the directory, so run it in a subshell.
+    (deploy_worker analytics-worker bananashot-analytics)
+    smoke_check_analytics
+    ;;
   feedback-worker) deploy_worker feedback-worker bananashot-feedback ;;
   # The cockpit applies only the migrations of its own database. It reads the other two databases.
   cockpit-worker) deploy_worker cockpit-worker bananashot-cockpit ;;

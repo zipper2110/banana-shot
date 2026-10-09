@@ -30,7 +30,7 @@ cannot decide the direction of the app.
 | Level | When | Counters |
 |---|---|---|
 | `essential` | On by default, from the app start. The user can turn it off. | `unclean_exit`, `uncaught_error`, `session_n_<bucket>` |
-| `extended` | Only when the user selects it. It needs the essential level. | All counter keys |
+| `extended` | Only when the user selects it. It needs the essential level. | All counter keys, and the attributes (see "Attributes") |
 | (off) | Only when the user turns off the essential level. | Nothing is sent. |
 
 - Both levels send `duration_s` and `active_s`. They are the session length.
@@ -76,6 +76,10 @@ cannot decide the direction of the app.
   essential level. Thus the tab time is correct after a change to extended.
 - The notice version stays 1. No public release had notice version 1 with
   the old opt-in text.
+- Changed on 2026-10-09 (B-44): the notice version is 2, because the
+  attributes are a new type of data. The app asks each user again. Schema 2
+  summaries must have notice version 1, and schema 3 summaries must have
+  notice version 2.
 
 ## What stays from the first attempt
 
@@ -147,8 +151,8 @@ the most time and hides the wait from the user.
 
 ```json
 {
-  "schema_version": 2,
-  "notice_version": 1,
+  "schema_version": 3,
+  "notice_version": 2,
   "level": "extended",
   "session_id": "7df3a8ca-4d5d-44d1-913d-ae553df3916f",
   "app_version": "1.0.0",
@@ -157,20 +161,26 @@ the most time and hides the wait from the user.
   "final": false,
   "duration_s": 912,
   "active_s": 640,
-  "counters": { "tab_points": 2, "tab_s_points": 540, "point_added": 31 }
+  "counters": { "tab_points": 2, "tab_s_points": 540, "point_added": 31 },
+  "attributes": { "theme": "dark", "accent": "default", "language": "en", "sport": ["tennis", "padel"] }
 }
 ```
 
 - `schema_version` 2 added `level` (2026-10-06). The Worker refuses version 1
   with 410, so that a test build with the old opt-in stops sending.
+- `schema_version` 3 added `attributes` (2026-10-09, B-44). The Worker accepts
+  versions 2 and 3. A version 2 summary cannot have `attributes`.
 - `level` is `essential` or `extended`. An essential summary can contain only
   the essential counter keys (see "Levels").
 - `snapshot` starts at 0 and increases by 1 with each send. The server keeps
   the summary with the highest `snapshot`.
 - `counters` contains only keys from the counter list below. Each value is an
   integer in `0..1000000`. The app does not send a counter with the value 0.
-- There are no other fields. The only strings are `app_version` and
-  `os_family` (`windows`, `macos`, `linux`, `other`).
+- `attributes` is optional. Only an extended summary of schema 3 can have it.
+  See "Attributes".
+- There are no other fields. The only strings are `app_version`,
+  `os_family` (`windows`, `macos`, `linux`, `other`), and the attribute
+  values of the closed lists.
 - `app_version` is `BuildInfo.VERSION`. The app and the Worker accept all
   values of `app_version` (decided on 2026-10-03). Thus a build with an
   unusual version does not lose its data. The request size limit is the only
@@ -181,7 +191,9 @@ the most time and hides the wait from the user.
   - A summary can omit `app_version`. The Worker stores a missing value or
     `null` as `unknown`.
 - The app does not send a clock time, a time zone, a locale, a path, a file
-  name, a project name, a score, a player name, or text from the user.
+  name, a project name, a score, a player name, or text from the user. The
+  `language` attribute is the language of the app interface, not the locale
+  of the computer.
 
 ## Counters
 
@@ -269,6 +281,34 @@ programmatic UI updates, or changes that have no effect.
   start.
 - All exports are MP4, so there is no container counter.
 
+## Attributes
+
+Decided on 2026-10-09 (B-44). The attributes are values of the session, as
+`app_version` and `os_family`. Thus the cockpit can group the sessions by
+them. The list is closed: `analytics-contract/v1/attributes.json`, and the
+lists in `AnalyticsSchema` (app) and `attributes.ts` (Worker). The tests on
+each side check the lists against the file.
+
+| Attribute | Values | Meaning |
+|---|---|---|
+| `theme` | `dark`, `mid`, `light` | The theme setting. |
+| `accent` | `default`, `custom` | `custom` if the user selected an accent color. Never the color. |
+| `language` | `en` | The language of the app interface. Only the languages of the app. |
+| `sport` | An array of `tennis`, `padel` | The sports of the projects that the session created or opened, or of a sport change in the Scoring tab. `[]` if there was no project. |
+
+- Only the extended level sends attributes. A change to essential deletes
+  the sports at once, as the extended counters.
+- `theme`, `accent`, and `language` have the value at the time of the send.
+  No counter for a change. After a change from off to a level, the new session
+  gets the current settings.
+- `sport` is an array, so that a third sport needs no new design. The app
+  sends each sport one time. The Worker refuses a sport two times and stores
+  the array in the order of the list. Thus `["padel", "tennis"]` and
+  `["tennis", "padel"]` are one group in the cockpit.
+- The Worker refuses an unknown attribute or value with 400. To add one,
+  change the three lists, the cockpit names, and the privacy notice. Deploy
+  the Worker before the app release.
+
 ## Code structure
 
 ### Features and the architecture rule
@@ -297,7 +337,9 @@ counter keys. `EnabledAnalytics` converts each event to counter changes.
 | Uncaught errors | The default handler in `SwingMainApp.kt` |
 | Running exports at exit | `windowClosing` in `SwingApplicationFactory`, with data from `RenderQueueManager` |
 | Help opened | `showHelp` in `SwingApplicationFactory` |
-| Project created or opened, video open failed | `DefaultProjectsPresenter` |
+| Project created or opened, video open failed, sport of the project | `DefaultProjectsPresenter` |
+| Sport change of a project | Scoring tab, the score settings result |
+| Theme, accent, language | `SwingApplicationFactory`, at the start and on each theme change |
 | Point added, deleted, favorited | `PointsDispatcher` or the Points tab |
 | Comment added | `CommentDispatcher.create` or the Points tab |
 | Score recorded | Scoring tab |
@@ -357,7 +399,9 @@ CREATE TABLE analytics_session (
   final INTEGER NOT NULL,
   duration_s INTEGER NOT NULL,
   active_s INTEGER NOT NULL,
-  counters TEXT NOT NULL CHECK (json_valid(counters) AND length(counters) <= 4096)
+  counters TEXT NOT NULL CHECK (json_valid(counters) AND length(counters) <= 4096),
+  attributes TEXT NOT NULL DEFAULT '{}'  -- migration 0003
+    CHECK (json_valid(attributes) AND length(attributes) <= 1024)
 );
 ```
 
@@ -367,6 +411,8 @@ CREATE TABLE analytics_session (
 - The Worker rounds `first_received_at` and `last_received_at` down to the
   hour. Thus the server also keeps no exact clock time.
 - The daily cron deletes rows with `last_received_at` older than 90 days.
+- The cockpit and `queries/attributes.sql` group the attributes with
+  `json_each`. An array value groups as its JSON text.
 - SQL files in `analytics-worker/queries/` answer the three questions. Run
   them with `npm run query -- queries/<name>.sql` in `analytics-worker`. There is
   no dashboard. Exclude `app_version = 'synthetic-smoke'`.
@@ -388,7 +434,9 @@ CREATE TABLE analytics_session (
   analytics consent.
 - The consent dialog and the Privacy page link to it. Change the "Collected"
   text of the Privacy page to "Counts of the tabs and features you use,
-  export results, session length, app version, and OS family".
+  export results, session length, app version, and OS family". Since B-44,
+  the text also names the theme, accent, and language settings and the
+  sports of the projects.
 - Change the consent dialog text from "anonymous product events" to
   "anonymous usage counts".
 - The page tells that data already sent stays for a maximum of 90 days after

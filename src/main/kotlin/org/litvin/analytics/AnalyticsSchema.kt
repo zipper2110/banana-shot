@@ -5,9 +5,10 @@ package org.litvin.analytics
  * lists. A test checks both lists against `analytics-contract/v1/counter-keys.json`.
  */
 object AnalyticsSchema {
-    /** Version 2 adds the `level` field. The Worker refuses version 1 with 410. */
-    const val SCHEMA_VERSION = 2
-    const val NOTICE_VERSION = 1
+    /** Version 2 adds the `level` field. The Worker refuses version 1 with 410. Version 3 adds `attributes`. */
+    const val SCHEMA_VERSION = 3
+    /** Version 2 tells about the attributes. The Worker accepts notice version 2 only with schema version 3. */
+    const val NOTICE_VERSION = 2
     const val MAX_COUNTER_VALUE = 1_000_000
     /** 7 days. `duration_s` and `active_s` are clamped to this value. */
     const val MAX_SECONDS = 604_800
@@ -39,6 +40,25 @@ object AnalyticsSchema {
         AnalyticsEvent.Resolution.entries.forEach { add("export_res_${it.key}") }
     }
 
+    /**
+     * The closed lists of the session attributes (`docs/analytics/design.md`, "Attributes"). Only an extended summary
+     * contains them. A test checks the lists against `analytics-contract/v1/attributes.json`.
+     */
+    val ATTRIBUTE_VALUES: Map<String, List<String>> = linkedMapOf(
+        THEME to AnalyticsEvent.Theme.entries.map { it.key },
+        ACCENT to AnalyticsEvent.Accent.entries.map { it.key },
+        LANGUAGE to AnalyticsEvent.Language.entries.map { it.key },
+        SPORT to AnalyticsEvent.Sport.entries.map { it.key },
+    )
+
+    /** Attributes with an array of values. */
+    val ARRAY_ATTRIBUTES: Set<String> = setOf(SPORT)
+
+    const val THEME = "theme"
+    const val ACCENT = "accent"
+    const val LANGUAGE = "language"
+    const val SPORT = "sport"
+
     fun tabOpened(tab: AnalyticsEvent.Tab) = "tab_${tab.key}"
     fun tabSeconds(tab: AnalyticsEvent.Tab) = "tab_s_${tab.key}"
 
@@ -65,6 +85,6 @@ object AnalyticsSchema {
         AnalyticsEvent.ColorChanged -> "color_changed"
         AnalyticsEvent.CropRotateChanged -> "crop_rotate_changed"
         is AnalyticsEvent.TabShown, is AnalyticsEvent.WindowActive, is AnalyticsEvent.ExportStarted,
-        is AnalyticsEvent.ExportFinished -> null
+        is AnalyticsEvent.ExportFinished, is AnalyticsEvent.Settings, is AnalyticsEvent.SportUsed -> null
     }
 }

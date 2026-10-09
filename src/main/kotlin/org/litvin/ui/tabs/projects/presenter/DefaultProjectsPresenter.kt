@@ -104,6 +104,7 @@ class DefaultProjectsPresenter(
             rememberMatchSetup(intent.sport, intent.rules)
             val created = repository.createProject(sourceVideoPath.trim(), name.trim(), intent.sport, intent.rules).toCardState()
             analytics.record(AnalyticsEvent.ProjectCreated)
+            analytics.record(AnalyticsEvent.SportUsed(intent.sport.analyticsSport()))
             val refreshed = repository.getRecents().map { it.toCardState() }
             synchronized(stateLock) {
                 currentProject = created
@@ -156,6 +157,7 @@ class DefaultProjectsPresenter(
 
             val opened = repository.openProject(manifestPath, sourceVideoPath).toCardState()
             analytics.record(AnalyticsEvent.ProjectOpened)
+            recordSportOf(manifestPath)
             val refreshed = repository.getRecents().map { it.toCardState() }
             synchronized(stateLock) {
                 currentProject = opened
@@ -270,6 +272,13 @@ class DefaultProjectsPresenter(
 
     private fun lastVideoDir(): String? = preferences.get(LAST_VIDEO_DIR_KEY, null)
 
+    /** Records the sport of the opened project for the analytics. A project without score.json is tennis. */
+    private fun recordSportOf(manifestPath: String) {
+        val dir = File(manifestPath).absoluteFile.parentFile ?: return
+        val sport = runCatching { ScoreIO.readForProjectDir(dir.absolutePath).sport }.getOrDefault(Sport.TENNIS)
+        analytics.record(AnalyticsEvent.SportUsed(sport.analyticsSport()))
+    }
+
     /** The next new project starts with the same sport. A padel project also keeps its rules for the next one. */
     private fun rememberMatchSetup(sport: Sport, rules: MatchRulesV1) {
         preferences.put(LAST_SPORT_KEY, sport.name)
@@ -317,4 +326,10 @@ class DefaultProjectsPresenter(
         private const val LAST_PADEL_RULES_KEY = "lastPadelRules"
         private const val UNKNOWN = "—"
     }
+}
+
+/** The sport for the analytics. The `when` has no else branch, so that a new sport needs a new analytics value. */
+private fun Sport.analyticsSport(): AnalyticsEvent.Sport = when (this) {
+    Sport.TENNIS -> AnalyticsEvent.Sport.TENNIS
+    Sport.PADEL -> AnalyticsEvent.Sport.PADEL
 }

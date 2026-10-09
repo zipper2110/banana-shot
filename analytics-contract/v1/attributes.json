@@ -1,0 +1,23 @@
+{
+  "attributes": {
+    "theme": [
+      "dark",
+      "mid",
+      "light"
+    ],
+    "accent": [
+      "default",
+      "custom"
+    ],
+    "language": [
+      "en"
+    ],
+    "sport": [
+      "tennis",
+      "padel"
+    ]
+  },
+  "arrayAttributes": [
+    "sport"
+  ]
+}

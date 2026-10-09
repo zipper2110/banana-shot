@@ -33,7 +33,7 @@ The tests use an in-memory D1 (`test/fake-d1.ts`) and the shared fixtures in
 
 ## Deploy
 
-GitHub Actions can do the deploy: run the workflow "Cloudflare deploy" from `master` and select "Analytics Worker". The workflow runs `npm ci`, the type check, and the tests. Then it applies the D1 migrations and deploys the Worker.
+GitHub Actions can do the deploy: run the workflow "Cloudflare deploy" from `master` and select "Analytics Worker". The workflow runs `npm ci`, the type check, and the tests. Then it applies the D1 migrations and deploys the Worker. At the end, it sends the synthetic summary to the GitHub variable `ANALYTICS_ENDPOINT`. It requires `204`, or `410` when `ANALYTICS_INGESTION_ENABLED` is not `"true"`. The job fails if the variable is not set.
 Setup of the token: see `.github/workflows/cloudflare-deploy.yml`. The steps below are still necessary for a new database and for the secrets.
 
 `wrangler.toml` is in Git with the IDs of the deployed database. They are not secrets. The
@@ -44,8 +44,9 @@ first two steps are only for a new database.
 2. Write the database ID in `wrangler.toml`. Keep `binding = "ANALYTICS_DB"`. If `d1 create` offers to add a binding with
    a different name, do not accept it.
 3. Apply the schema: `npx wrangler d1 migrations apply bananashot-analytics --remote`. Do this
-   also for a database that exists: migration `0002` adds the column `level`. Apply it before
-   you deploy the Worker, because the new Worker writes this column.
+   also for a database that exists: migration `0002` adds the column `level`, and migration
+   `0003` adds the column `attributes` (B-44). Apply them before you deploy the Worker, because
+   the new Worker writes these columns.
 4. Set the secret `RATE_LIMIT_KEY`: a new random text of 32 or more characters, for example from
    `openssl rand -hex 32`. Do not use the key of the feedback Worker.
 
@@ -93,5 +94,7 @@ the file with `--command`.
   sessions.
 - `sessions.sql`: session length, app versions, OS families, crashes, and the session buckets. All
   sessions count.
+- `attributes.sql`: the theme, the accent, the language, and the combinations of sports. Only the
+  extended sessions of schema 3 and later.
 
 Do not commit the rate key, data exports, or `.dev.vars`.

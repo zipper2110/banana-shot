@@ -40,6 +40,7 @@ FROM analytics_session WHERE ${IN_PERIOD} GROUP BY os_family ORDER BY sessions D
 
 const SESSION_SHAPE = `SELECT COUNT(*) AS sessions,
   SUM(level = 'extended') AS extended_sessions,
+  SUM(level = 'extended' AND schema_version >= 3) AS attribute_sessions,
   ROUND(AVG(active_s) / 60.0, 1) AS avg_active_min,
   SUM(active_s < 60) AS active_under_1_min,
   SUM(active_s >= 60 AND active_s < 600) AS active_1_to_10_min,
@@ -57,6 +58,15 @@ FROM analytics_session, json_each(analytics_session.counters) AS c
 WHERE ${IN_PERIOD} AND level = 'extended'
   AND c.key NOT LIKE 'session\\_n\\_%' ESCAPE '\\' AND c.key NOT IN ('unclean_exit', 'uncaught_error')
 GROUP BY c.key ORDER BY c.key`;
+
+/**
+ * The session attributes (B-44) of the extended sessions. Only schema 3 and later summaries have them.
+ * An array value (sport) groups as its JSON text, so each combination of sports is one row.
+ */
+const ATTRIBUTES = `SELECT a.key AS key, a.value AS value, COUNT(*) AS sessions
+FROM analytics_session, json_each(analytics_session.attributes) AS a
+WHERE ${IN_PERIOD} AND level = 'extended'
+GROUP BY a.key, a.value ORDER BY a.key, sessions DESC, a.value`;
 
 const RETENTION = 'SELECT ran_at, deleted_count, oldest_received_at FROM analytics_retention_status WHERE id = 1';
 
@@ -78,6 +88,8 @@ export interface AppUsage {
   sessionShape: Record<string, number | null>;
   /** Counter key -> sessions that used it and the total. Only the extended sessions. */
   counters: { key: string; sessions: number; total: number }[];
+  /** Attribute key and value -> extended sessions. An array value is its JSON text, for example '["padel","tennis"]'. */
+  attributes: { key: string; value: string; sessions: number }[];
   encoders: { encoder: string; started: number; completed: number; failed: number; cancelled: number; interrupted: number; speed: number | null }[];
   retention: { ranAt: number; deletedCount: number; oldestReceivedAt: number | null } | null;
 }
@@ -95,12 +107,13 @@ export async function loadAppUsage(env: Env, period: Period, includeDev: boolean
   const db = env.ANALYTICS_DB;
   const dev = includeDev ? 1 : 0;
   const from = Math.min(period.prevStart, period.weeksStart);
-  const [dailyRows, versions, osFamilies, shape, counters, retention] = await Promise.all([
+  const [dailyRows, versions, osFamilies, shape, counters, attributes, retention] = await Promise.all([
     db.prepare(DAILY).bind(dev, from, period.end).all<DailyRow>(),
     db.prepare(VERSIONS).bind(dev, period.start, period.end).all<AppUsage['versions'][number]>(),
     db.prepare(OS_FAMILIES).bind(dev, period.start, period.end).all<AppUsage['osFamilies'][number]>(),
     db.prepare(SESSION_SHAPE).bind(dev, period.start, period.end).first<Record<string, number | null>>(),
     db.prepare(COUNTERS).bind(dev, period.start, period.end).all<AppUsage['counters'][number]>(),
+    db.prepare(ATTRIBUTES).bind(dev, period.start, period.end).all<AppUsage['attributes'][number]>(),
     db.prepare(RETENTION).first<{ ran_at: number; deleted_count: number; oldest_received_at: number | null }>(),
   ]);
 
@@ -125,6 +138,7 @@ export async function loadAppUsage(env: Env, period: Period, includeDev: boolean
     osFamilies: osFamilies.results,
     sessionShape: shape ?? {},
     counters: counters.results,
+    attributes: attributes.results,
     encoders: encoderTable(counters.results),
     retention: retention ? { ranAt: retention.ran_at, deletedCount: retention.deleted_count, oldestReceivedAt: retention.oldest_received_at } : null,
   };

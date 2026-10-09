@@ -99,7 +99,7 @@ release. It gives the release steps in sequence. The open work is in
   "Validate application image".
 - The repository variables `ANALYTICS_ENDPOINT` (`https://<host>/v1/session`),
   `ANALYTICS_PRIVACY_URL` (the notice on the landing site), and
-  `ANALYTICS_NOTICE_VERSION` (`1`) must be set. Without them, the workflow
+  `ANALYTICS_NOTICE_VERSION` (`2`) must be set. Without them, the workflow
   fails at "Validate application image".
 - The release workflow creates a draft release. Check it on the GitHub
   releases page, then click "Publish release".

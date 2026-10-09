@@ -42,7 +42,8 @@ object AnalyticsConsentDialog {
             "the session length, and the number of errors. They tell us how many people use the app."
     internal const val EXTENDED =
         "You can also send extended statistics: anonymous counts of the tabs and features you use, " +
-            "and the export results. They help us decide what to improve next."
+            "the export results, your theme and language settings, and the sports of your projects. " +
+            "They help us decide what to improve next."
 
     /** Shows the question. [onClosed] runs after the window closes, with any answer. */
     fun show(

@@ -44,15 +44,21 @@ See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
       `https://banana-shot-editor.app/privacy/` opens.
 - [ ] The analytics Worker is deployed with the D1 schema in the EU
       jurisdiction and the secret `RATE_LIMIT_KEY`. All migrations are
-      applied (`0002` adds the column `level`).
-- [ ] The deployed Worker knows all counter keys of this release
-      (`analytics-contract/v1/counter-keys.json`). Deploy the Worker before
-      the app release, because the Worker refuses a summary with an unknown
-      key.
+      applied (`0002` adds the column `level`, `0003` adds the column
+      `attributes`).
+- [ ] The deployed Worker knows all counter keys and session attributes
+      of this release (`analytics-contract/v1/counter-keys.json` and
+      `attributes.json`) and accepts schema 3. Deploy the Worker before the
+      app release, because the Worker refuses a summary with an unknown key,
+      attribute, or schema version.
 - [ ] `ANALYTICS_INGESTION_ENABLED` is `true`. The synthetic summary
-      (`analytics-contract/v1/smoke-summary.json`) returns `204`.
+      (`analytics-contract/v1/smoke-summary.json`) returns `204`. The
+      "Cloudflare deploy" workflow does this check after each deploy of the
+      analytics Worker.
 - [ ] The GitHub variables `ANALYTICS_ENDPOINT` (`https://<host>/v1/session`),
       `ANALYTICS_PRIVACY_URL`, and `ANALYTICS_NOTICE_VERSION` are set.
+      `ANALYTICS_NOTICE_VERSION` is `2` (B-44). It must be equal to the
+      notice version on the site page and to `AnalyticsSchema.NOTICE_VERSION`.
       `Validate-AppImage.ps1` refuses a build without them.
 
 ## 3b. Code signing

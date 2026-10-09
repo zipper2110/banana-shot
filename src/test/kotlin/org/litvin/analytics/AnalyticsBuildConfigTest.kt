@@ -27,26 +27,26 @@ class AnalyticsBuildConfigTest {
         val config = AnalyticsBuildConfig.fromProperties(properties(
             endpoint = "https://analytics.example.test/v1/session",
             privacyUrl = "https://tennis.example.test/privacy/analytics/",
-            noticeVersion = "1"
+            noticeVersion = "2"
         ))
 
         val enabled = assertIs<AnalyticsBuildConfig.Enabled>(config)
         assertEquals("https://analytics.example.test/v1/session", enabled.endpoint.toString())
         assertEquals("https://tennis.example.test/privacy/analytics/", enabled.privacyUrl.toString())
-        assertEquals(1, enabled.noticeVersion)
+        assertEquals(2, enabled.noticeVersion)
     }
 
     @Test
     fun `fails closed for partial or unsafe configuration`() {
         listOf(
-            properties(endpoint = "https://analytics.example.test/v1/session", privacyUrl = null, noticeVersion = "1"),
-            properties(endpoint = "http://analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "1"),
-            properties(endpoint = "https://analytics.example.test/v1/session?x=1", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "1"),
-            properties(endpoint = "https://analytics.example.test/v1/sessions", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "1"),
-            properties(endpoint = "https://analytics.example.test/v1/events/batch", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "1"),
-            properties(endpoint = "https://user:password@analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "1"),
-            properties(endpoint = "https://analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/#notice", noticeVersion = "1"),
-            properties(endpoint = "https://analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "2")
+            properties(endpoint = "https://analytics.example.test/v1/session", privacyUrl = null, noticeVersion = "2"),
+            properties(endpoint = "http://analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "2"),
+            properties(endpoint = "https://analytics.example.test/v1/session?x=1", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "2"),
+            properties(endpoint = "https://analytics.example.test/v1/sessions", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "2"),
+            properties(endpoint = "https://analytics.example.test/v1/events/batch", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "2"),
+            properties(endpoint = "https://user:password@analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "2"),
+            properties(endpoint = "https://analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/#notice", noticeVersion = "2"),
+            properties(endpoint = "https://analytics.example.test/v1/session", privacyUrl = "https://tennis.example.test/privacy/analytics/", noticeVersion = "1")
         ).forEach { properties ->
             assertIs<AnalyticsBuildConfig.Disabled>(AnalyticsBuildConfig.fromProperties(properties))
         }

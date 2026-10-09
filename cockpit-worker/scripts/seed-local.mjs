@@ -93,7 +93,18 @@ for (let day = today - 89 * DAY; day <= today; day += DAY) {
         counters[pick(['export_res_1080', 'export_res_1080', 'export_res_1080', 'export_res_720', 'export_res_2160', 'export_res_1440'])] = started;
       }
     }
-    sessions.push(`INSERT INTO analytics_session (session_id, first_received_at, last_received_at, schema_version, notice_version, level, app_version, os_family, snapshot, final, duration_s, active_s, counters) VALUES (${quote(`seed-${id}`)}, ${received}, ${received + HOUR}, 2, 1, ${quote(level)}, ${quote(version)}, ${quote(chance(0.97) ? 'windows' : 'other')}, 3, 1, ${active + int(0, 1800)}, ${active}, ${quote(JSON.stringify(counters))});`);
+    // B-44: version 1.0.1 sends schema 3 with the session attributes (extended level only).
+    const schema = version === '1.0.0' || version === '1.0.0-SNAPSHOT' ? 2 : 3;
+    const attributes = {};
+    if (schema === 3 && level === 'extended') {
+      attributes.theme = pick(['dark', 'dark', 'dark', 'mid', 'light']);
+      attributes.accent = chance(0.2) ? 'custom' : 'default';
+      attributes.language = 'en';
+      attributes.sport = counters.project_created || counters.project_opened
+        ? pick([['tennis'], ['tennis'], ['tennis'], ['padel'], ['tennis', 'padel']])
+        : [];
+    }
+    sessions.push(`INSERT INTO analytics_session (session_id, first_received_at, last_received_at, schema_version, notice_version, level, app_version, os_family, snapshot, final, duration_s, active_s, counters, attributes) VALUES (${quote(`seed-${id}`)}, ${received}, ${received + HOUR}, ${schema}, ${schema - 1}, ${quote(level)}, ${quote(version)}, ${quote(chance(0.97) ? 'windows' : 'other')}, 3, 1, ${active + int(0, 1800)}, ${active}, ${quote(JSON.stringify(counters))}, ${quote(JSON.stringify(attributes))});`);
   }
 }
 sessions.push(`INSERT OR REPLACE INTO analytics_retention_status (id, ran_at, deleted_count, oldest_received_at) VALUES (1, ${today + 3 * HOUR}, 0, ${today - 89 * DAY});`);

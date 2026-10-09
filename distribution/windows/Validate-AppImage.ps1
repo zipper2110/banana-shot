@@ -131,7 +131,7 @@ if ($feedbackEndpoint) {
 }
 
 # The usage analytics (B-9 decision 4). The same rules as AnalyticsBuildConfig.fromProperties in the app.
-$expectedNoticeVersion = "1"
+$expectedNoticeVersion = "2"
 function Get-LauncherProperty([string]$name) {
     $prefix = "-D$name="
     $line = Get-Content -LiteralPath $launcherConfig | Where-Object { $_.Contains($prefix) } | Select-Object -First 1

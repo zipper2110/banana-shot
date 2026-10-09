@@ -118,8 +118,8 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
                 "and a range for the number of sessions. They tell us how many people use the app. " +
                 "Turn them off to send no statistics at all."
         const val ANALYTICS_EXTENDED =
-            "Extended statistics also send counts of the tabs and features you use, and the export results. " +
-                "They need the essential statistics."
+            "Extended statistics also send counts of the tabs and features you use, the export results, " +
+                "the theme and language settings, and the sports of your projects. They need the essential statistics."
         const val ANALYTICS_EXCLUDED =
             "Excluded: video, audio, file names, paths, project names, scores, player names, text that you type, " +
                 "user or device IDs, and error details."

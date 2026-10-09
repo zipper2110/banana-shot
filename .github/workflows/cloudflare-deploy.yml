@@ -31,6 +31,8 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       # Not a secret. The same ID is in cockpit-worker/wrangler.toml.
       CLOUDFLARE_ACCOUNT_ID: 6a013160bcd4459a28817b6a30384998
+      # The smoke check of the analytics Worker sends to this URL. The release build uses the same variable.
+      ANALYTICS_ENDPOINT: ${{ vars.ANALYTICS_ENDPOINT }}
     steps:
       - name: Deploy only from master
         if: github.ref != 'refs/heads/master'

@@ -106,8 +106,8 @@ describe('valid summaries', () => {
       session_id: value.session_id,
       first_received_at: NOW_HOUR,
       last_received_at: NOW_HOUR,
-      schema_version: 2,
-      notice_version: 1,
+      schema_version: value.schema_version,
+      notice_version: value.notice_version,
       level: value.level,
       app_version: appVersionText(value.app_version),
       os_family: value.os_family,
@@ -116,7 +116,14 @@ describe('valid summaries', () => {
       duration_s: value.duration_s,
       active_s: value.active_s,
       counters: JSON.stringify(value.counters),
+      attributes: JSON.stringify(value.attributes ?? {}),
     }]);
+  });
+
+  it('stores the attributes with the array values in the order of the list', async () => {
+    const response = await sendSummary({ schema_version: 3, notice_version: 2, attributes: { sport: ['padel', 'tennis'], theme: 'light' } });
+    expect(response.status).toBe(204);
+    expect(db.sessionRows()[0].attributes).toBe('{"theme":"light","sport":["tennis","padel"]}');
   });
 
   it('does not store the IP address or the headers', async () => {
@@ -146,6 +153,12 @@ describe('snapshots', () => {
     vi.setSystemTime(NOW + HOUR);
     expect((await sendSummary({ snapshot, counters: { point_added: 1 } })).status).toBe(204);
     expect(db.sessionRows()[0]).toMatchObject({ snapshot: 3, last_received_at: NOW_HOUR, counters: '{"point_added":9}' });
+  });
+
+  it('removes the attributes when the level changes to essential', async () => {
+    await sendSummary({ schema_version: 3, notice_version: 2, snapshot: 1, attributes: { theme: 'dark', sport: ['padel'] } });
+    expect((await sendSummary({ schema_version: 3, notice_version: 2, snapshot: 2, level: 'essential', counters: { session_n_1: 1 } })).status).toBe(204);
+    expect(db.sessionRows()[0]).toMatchObject({ level: 'essential', attributes: '{}' });
   });
 
   it('replaces the extended counters when the level changes to essential', async () => {

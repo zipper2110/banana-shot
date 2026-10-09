@@ -65,7 +65,8 @@ class PrivacyPageTest {
         listOf(
             "Essential statistics are on by default: app version, OS family, session length, the number of errors",
             "Turn them off to send no statistics at all",
-            "Extended statistics also send counts of the tabs and features you use, and the export results",
+            "Extended statistics also send counts of the tabs and features you use, the export results",
+            "the theme and language settings, and the sports of your projects",
             "user or device IDs",
             "text that you type",
         ).forEach { assertTrue(it in text, it) }
@@ -148,7 +149,7 @@ class PrivacyPageTest {
     private fun analyticsConfig() = AnalyticsBuildConfig.fromProperties(Properties().apply {
         setProperty(AnalyticsBuildConfig.ENDPOINT_PROPERTY, "https://analytics.example.test/v1/session")
         setProperty(AnalyticsBuildConfig.PRIVACY_URL_PROPERTY, "https://tennis.example.test/privacy/analytics/")
-        setProperty(AnalyticsBuildConfig.NOTICE_VERSION_PROPERTY, "1")
+        setProperty(AnalyticsBuildConfig.NOTICE_VERSION_PROPERTY, org.litvin.analytics.AnalyticsSchema.NOTICE_VERSION.toString())
     }) as AnalyticsBuildConfig.Enabled
 
     private fun analyticsPage(): PrivacyPage {

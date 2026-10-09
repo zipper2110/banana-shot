@@ -1,5 +1,9 @@
 package org.litvin.ui.tabs.scoring
 
+import org.litvin.analytics.Analytics
+import org.litvin.analytics.AnalyticsEvent
+import org.litvin.analytics.DisabledAnalytics
+import org.litvin.analytics.RecordingAnalytics
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.Test
@@ -75,6 +79,19 @@ class SwingScoringPanelScoreSettingsTest {
         assertEquals(emptyList(), dialogs.errors)
         scheduler.shutdownNow()
         projectDir.deleteRecursively()
+    }
+
+    @Test
+    fun aChangeOfTheSportInTheScoreSettingsIsRecordedForTheAnalytics() {
+        val analytics = RecordingAnalytics()
+        val editor = RecordingEditor { current -> current.copy(sport = Sport.PADEL, rules = Sport.PADEL.defaultRules()) }
+        SwingUtilities.invokeAndWait {
+            panel = createPanel(FixedDefaults(ScoreboardSettingsV1()), editor, analytics = analytics).apply { setProjectManifest(manifestPath) }
+        }
+        activateAndFlush()
+
+        assertEquals(1, editor.calls.size)
+        assertEquals(listOf<AnalyticsEvent>(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL)), analytics.events.filterIsInstance<AnalyticsEvent.SportUsed>())
     }
 
     @Test
@@ -229,7 +246,8 @@ class SwingScoringPanelScoreSettingsTest {
         defaults: ScoreboardStyleDefaults,
         editor: ScoreSettingsEditor,
         hints: HintRegistry = HintRegistry.NONE,
-    ) = SwingScoringPanel(FakePlayer(), adjustments, dialogs, defaults, editor, HintController(hints))
+        analytics: Analytics = DisabledAnalytics,
+    ) = SwingScoringPanel(FakePlayer(), adjustments, dialogs, defaults, editor, HintController(hints), analytics = analytics)
 
     private fun reopenWithUnreviewedSettings() {
         ScoreIO.writeForProjectDir(projectDir.absolutePath, ScoreV1(scoreSettingsReviewed = false))

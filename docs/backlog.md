@@ -116,6 +116,20 @@ Do these items after the first public release.
 - The event `project_created` has no sport now. The change touches
   `analytics-contract`, `AnalyticsSchema`, the analytics Worker, and the
   cockpit.
+- Decided on 2026-10-09: no new counter keys. The session summary gets
+  session attributes, as `app_version` and `os_family`, so that the cockpit
+  can group all counters by them. Extended level only.
+  - `theme`: the theme setting (`dark`, `mid`, `light`).
+  - `accent`: `default` or `custom`. Never the color.
+  - `language`: the language of the app interface, from the closed list of
+    the app languages (now only `en`). Not the Windows locale.
+  - `sport`: an array of the sports of the projects that the session opened,
+    for example `["padel", "tennis"]`. An array, so that a third sport needs
+    no new design.
+  - `theme`, `accent`, and `language` have the value at the time of the
+    send. No counter for a change of the language.
+  - The notice version becomes 2, because the attributes are a new type of
+    data. The app asks each user again.
 
 ### B-15 Intro and outro videos
 

@@ -380,8 +380,41 @@
     ranked($('site-devices'), toRows(site.devices));
   }
 
+  const ATTRIBUTE_IDS = ['attr-sport', 'attr-theme', 'attr-accent', 'attr-language'];
+  const ATTRIBUTE_NAMES = {
+    sport: { tennis: 'Tennis', padel: 'Padel' },
+    theme: { dark: 'Dark', mid: 'Mid', light: 'Light' },
+    accent: { default: 'Default', custom: 'Custom' },
+    language: { en: 'English' },
+  };
+
+  /** B-44: the session attributes. Only the extended sessions of schema 3 and later have them. */
+  function renderAttributes(app) {
+    const total = app.sessionShape.attribute_sessions || 0;
+    $('attributes-note').textContent = total
+      ? `Settings and sports: ${format(total)} extended sessions of app versions that send them.`
+      : '';
+    for (const id of ATTRIBUTE_IDS) {
+      const key = id.slice('attr-'.length);
+      const names = ATTRIBUTE_NAMES[key];
+      const rows = app.attributes.filter(row => row.key === key).map(row => {
+        const name = key === 'sport' ? sportsName(row.value, names) : names[row.value] || row.value;
+        return { name, value: row.sessions, label: `${format(row.sessions)} · ${percent(row.sessions, total)}` };
+      });
+      ranked($(id), rows, { max: total, emptyText: 'No sessions with this data in this period.' });
+    }
+  }
+
+  /** A sport value is a JSON array, for example ["padel","tennis"]. An empty array is a session without a project. */
+  function sportsName(value, names) {
+    let sports;
+    try { sports = JSON.parse(value); } catch { return value; }
+    if (!Array.isArray(sports)) return value;
+    return sports.length ? sports.map(sport => names[sport] || sport).join(' + ') : 'No project';
+  }
+
   function renderUsage(data) {
-    const ids = ['usage-daily', 'usage-weekly', 'usage-length', 'usage-number', 'usage-os', 'versions'];
+    const ids = ['usage-daily', 'usage-weekly', 'usage-length', 'usage-number', 'usage-os', 'versions', ...ATTRIBUTE_IDS];
     if (!data.app.ok) return failAll(ids, data.app.error);
     const app = data.app.data;
     const withReturning = rows => rows.map(row => ({ ...row, returning: row.sessions - row.first_sessions }));
@@ -418,6 +451,7 @@
       { name: 'Essential only', value: total - (shape.extended_sessions || 0), label: `${format(total - (shape.extended_sessions || 0))} · ${percent(total - (shape.extended_sessions || 0), total)}`, cls: 'c2' },
     ], { keepZero: true, max: total });
     $('usage-os').replaceChildren(os);
+    renderAttributes(app);
 
     table($('versions'), ['Version', 'Sessions', 'First sessions', 'Crashes', 'Crash-free', 'Uncaught errors', 'Last seen'], app.versions.map(row => {
       const crashFree = row.sessions ? 1 - row.unclean_exits / row.sessions : 1;

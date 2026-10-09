@@ -7,6 +7,7 @@ import org.litvin.WindowsGpuPreference
 import org.litvin.media.MediaScreen
 import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.AppIcon
+import org.litvin.ui.commons.AppTheme
 import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.HintController
@@ -239,6 +240,21 @@ object SwingApplicationFactory {
             val applicationPreferences = services.preferences.node(PreferencesProvider.APPLICATION)
             // One controller for the theme controls of the Projects tab and More > Settings.
             val themeSettings = ThemeController(ThemePreferences(applicationPreferences))
+            // The theme, the accent, and the language are session attributes of the analytics (B-44).
+            fun recordSettings() = analytics.record(
+                AnalyticsEvent.Settings(
+                    theme = when (themeSettings.theme) {
+                        AppTheme.DARK -> AnalyticsEvent.Theme.DARK
+                        AppTheme.MID -> AnalyticsEvent.Theme.MID
+                        AppTheme.LIGHT -> AnalyticsEvent.Theme.LIGHT
+                    },
+                    accent = if (themeSettings.customAccent == null) AnalyticsEvent.Accent.DEFAULT else AnalyticsEvent.Accent.CUSTOM,
+                    // The app has only an English interface (B-11 adds languages).
+                    language = AnalyticsEvent.Language.EN,
+                ),
+            )
+            recordSettings()
+            themeSettings.onChange(::recordSettings)
             val hints = HintController(PreferencesHintRegistry(applicationPreferences))
             val commentStyles = PreferencesCommentStyleDefaults(applicationPreferences)
 

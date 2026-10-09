@@ -1,16 +1,18 @@
+import { validAttributes, type Attributes } from './attributes';
 import { COUNTER_KEYS, ESSENTIAL_COUNTER_KEYS, MAX_COUNTER_VALUE } from './counters';
 
-/** The schema version of this Worker. A higher version is invalid (400). Version 2 added `level`. */
-export const SCHEMA_VERSION = 2;
+/** The schema version of this Worker. A higher version is invalid (400). Version 2 added `level`, version 3 `attributes`. */
+export const SCHEMA_VERSION = 3;
 /** The lowest schema version that the Worker accepts. A lower version gets 410, so that an old app stops sending. */
 export const MIN_SCHEMA_VERSION = 2;
-export const NOTICE_VERSIONS: ReadonlySet<number> = new Set([1]);
+/** The notice version of each schema version. Version 3 sends the attributes, which notice version 2 tells about. */
+export const NOTICE_VERSION_OF_SCHEMA: Readonly<Record<number, number>> = { 2: 1, 3: 2 };
 export const MAX_SNAPSHOT = 1_000_000;
 /** 7 days. The app clamps `duration_s` and `active_s` to this value. */
 export const MAX_SECONDS = 604_800;
 
 const KEYS = ['schema_version', 'notice_version', 'level', 'session_id', 'os_family', 'snapshot', 'final', 'duration_s', 'active_s', 'counters'];
-const OPTIONAL_KEYS = ['app_version'];
+const OPTIONAL_KEYS = ['app_version', 'attributes'];
 const OS_FAMILIES = ['windows', 'macos', 'linux', 'other'];
 /** The level of the statistics. An essential summary can contain only the essential counter keys. */
 const LEVELS: Record<string, ReadonlySet<string>> = { essential: ESSENTIAL_COUNTER_KEYS, extended: COUNTER_KEYS };
@@ -28,6 +30,8 @@ export type Summary = {
   duration_s: number;
   active_s: number;
   counters: Record<string, number>;
+  /** Empty for schema version 2 and for an essential summary. */
+  attributes: Attributes;
 };
 
 export type Validation = { summary: Summary } | { status: 400 | 410 };
@@ -40,17 +44,25 @@ export function validateSummary(value: unknown, minSchemaVersion = MIN_SCHEMA_VE
   if (isInteger(schema, 1, minSchemaVersion - 1)) return { status: 410 };
   if (!exactKeys(value, KEYS, OPTIONAL_KEYS)) return invalid;
   if (!isInteger(schema, minSchemaVersion, SCHEMA_VERSION)) return invalid;
-  if (typeof value.notice_version !== 'number' || !NOTICE_VERSIONS.has(value.notice_version)) return invalid;
+  if (value.notice_version !== NOTICE_VERSION_OF_SCHEMA[schema as number]) return invalid;
   if (typeof value.level !== 'string' || !Object.hasOwn(LEVELS, value.level)) return invalid;
   if (typeof value.session_id !== 'string' || !UUID_V4.test(value.session_id)) return invalid;
   if (typeof value.os_family !== 'string' || !OS_FAMILIES.includes(value.os_family)) return invalid;
   if (!isInteger(value.snapshot, 0, MAX_SNAPSHOT) || typeof value.final !== 'boolean') return invalid;
   if (!isInteger(value.duration_s, 0, MAX_SECONDS) || !isInteger(value.active_s, 0, MAX_SECONDS)) return invalid;
   if (!validCounters(value.counters, LEVELS[value.level])) return invalid;
+  let attributes: Attributes = {};
+  if (Object.hasOwn(value, 'attributes')) {
+    // The attributes are extended data. Schema version 2 does not have them.
+    if (schema === 2 || value.level !== 'extended') return invalid;
+    const valid = validAttributes(value.attributes);
+    if (valid === null) return invalid;
+    attributes = valid;
+  }
   return {
     summary: {
       schema_version: schema as number,
-      notice_version: value.notice_version,
+      notice_version: value.notice_version as number,
       level: value.level as Summary['level'],
       session_id: value.session_id,
       app_version: appVersionText(value.app_version),
@@ -60,6 +72,7 @@ export function validateSummary(value: unknown, minSchemaVersion = MIN_SCHEMA_VE
       duration_s: value.duration_s as number,
       active_s: value.active_s as number,
       counters: value.counters as Record<string, number>,
+      attributes,
     },
   };
 }

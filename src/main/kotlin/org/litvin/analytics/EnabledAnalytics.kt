@@ -18,6 +18,8 @@ import java.util.concurrent.TimeoutException
  *   counter or `active_s` changed. Thus an idle app does not send.
  * - [beginFinalSend] starts the last summary (`final = true`). [close] waits for it until [finalSendLimit] after
  *   [beginFinalSend], and then stops. Without [beginFinalSend], [close] sends nothing.
+ * - The session attributes (`docs/analytics/design.md`, "Attributes") are only in an extended summary. The sports
+ *   count only while the level is extended, as the counters. The settings are the values at the time of the send.
  * - A 410 response stops all sends of this session. There is no retry: the next summary replaces a lost one.
  * - All work runs on one daemon thread. [record] never waits for the network.
  * - The log contains only the count of sends and the status classes, not the body or the session ID.
@@ -40,6 +42,8 @@ internal class EnabledAnalytics(
     private var activeSince: Long? = null
     private var activeNanos = 0L
     private var currentTab: AnalyticsEvent.Tab? = null
+    private var settings: AnalyticsEvent.Settings? = null
+    private val sports = sortedSetOf<AnalyticsEvent.Sport>()
     private var snapshot = 0
     private var lastSent: SentState? = null
     private var finalSend: Future<*>? = null
@@ -68,6 +72,7 @@ internal class EnabledAnalytics(
             addActiveTime()
             this.level = level
             counters.retainOnly(level.counterKeys)
+            if (level != AnalyticsLevel.EXTENDED) sports.clear()
         }
     }
 
@@ -100,6 +105,8 @@ internal class EnabledAnalytics(
                 count("export_res_${event.resolution.key}")
             }
             is AnalyticsEvent.ExportFinished -> recordExportResult(event.encoder.key, event.outcome)
+            is AnalyticsEvent.Settings -> settings = event
+            is AnalyticsEvent.SportUsed -> if (level == AnalyticsLevel.EXTENDED) sports += event.sport
             else -> Unit
         }
     }
@@ -178,6 +185,7 @@ internal class EnabledAnalytics(
         val now = clock.nanoTime()
         val activeS = seconds(activeNanos)
         val values = counters.values()
+        val attributes = attributesNow()
         val summary = SessionSummary(
             sessionId = sessionId,
             level = level,
@@ -188,8 +196,22 @@ internal class EnabledAnalytics(
             durationS = seconds(now - startedAt),
             activeS = activeS,
             counters = values,
+            attributes = attributes,
         )
-        return summary to SentState(level, activeS, values)
+        return summary to SentState(level, activeS, values, attributes)
+    }
+
+    /** The session attributes, or null at the essential level. Call only while holding [lock]. */
+    private fun attributesNow(): Map<String, Any>? {
+        if (level != AnalyticsLevel.EXTENDED) return null
+        return buildMap {
+            settings?.let {
+                put(AnalyticsSchema.THEME, it.theme.key)
+                put(AnalyticsSchema.ACCENT, it.accent.key)
+                put(AnalyticsSchema.LANGUAGE, it.language.key)
+            }
+            put(AnalyticsSchema.SPORT, sports.map { it.key })
+        }
     }
 
     /** Adds the active time since the last call to `active_s` and to the time of the current tab. */
@@ -225,7 +247,12 @@ internal class EnabledAnalytics(
         (nanos.coerceAtLeast(0) / SessionCounters.NANOS_PER_SECOND).coerceAtMost(AnalyticsSchema.MAX_SECONDS.toLong()).toInt()
 
     /** The values that decide if the timer sends. `duration_s` is not one of them. */
-    private data class SentState(val level: AnalyticsLevel, val activeS: Int, val counters: Map<String, Int>)
+    private data class SentState(
+        val level: AnalyticsLevel,
+        val activeS: Int,
+        val counters: Map<String, Int>,
+        val attributes: Map<String, Any>?,
+    )
 
     companion object {
         private val logger = KotlinLogging.logger {}

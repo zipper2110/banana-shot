@@ -35,12 +35,16 @@ let sessionNumber = 0;
 
 export function addSession(env: TestEnv, values: {
   receivedAt: number; version?: string; level?: 'essential' | 'extended'; os?: string; activeS?: number; counters?: Record<string, number>;
+  /** Schema 3 summaries have attributes. Without them, the row is a schema 2 summary. */
+  attributes?: Record<string, string | string[]>;
 }) {
   sessionNumber++;
+  const schema = values.attributes ? 3 : 2;
   env.analytics.db.prepare(`INSERT INTO analytics_session (session_id, first_received_at, last_received_at, schema_version, notice_version, level,
-    app_version, os_family, snapshot, final, duration_s, active_s, counters) VALUES (?, ?, ?, 2, 1, ?, ?, ?, 1, 1, ?, ?, ?)`).run(
-    `session-${sessionNumber}`, values.receivedAt, values.receivedAt, values.level ?? 'extended', values.version ?? '1.0.0',
-    values.os ?? 'windows', (values.activeS ?? 300) + 60, values.activeS ?? 300, JSON.stringify(values.counters ?? {}));
+    app_version, os_family, snapshot, final, duration_s, active_s, counters, attributes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, ?)`).run(
+    `session-${sessionNumber}`, values.receivedAt, values.receivedAt, schema, schema - 1, values.level ?? 'extended', values.version ?? '1.0.0',
+    values.os ?? 'windows', (values.activeS ?? 300) + 60, values.activeS ?? 300, JSON.stringify(values.counters ?? {}),
+    JSON.stringify(values.attributes ?? {}));
 }
 
 let reportNumber = 0;

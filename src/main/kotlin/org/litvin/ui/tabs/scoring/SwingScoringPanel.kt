@@ -978,6 +978,7 @@ class SwingScoringPanel(
             player1ColorHex = result.player1ColorHex
             player2ColorHex = result.player2ColorHex
             rules = result.rules.normalized()
+            if (result.sport != sport) analytics.record(AnalyticsEvent.SportUsed(result.sport.analyticsSport()))
             sport = result.sport
             scorePanel.setPlayers(players())
             refreshScoring()
@@ -1086,4 +1087,10 @@ class SwingScoringPanel(
         /** The serve hint shows when this number of points has a winner. */
         const val SERVE_HINT_POINTS = 3
     }
+}
+
+/** The sport for the analytics. The `when` has no else branch, so that a new sport needs a new analytics value. */
+private fun Sport.analyticsSport(): AnalyticsEvent.Sport = when (this) {
+    Sport.TENNIS -> AnalyticsEvent.Sport.TENNIS
+    Sport.PADEL -> AnalyticsEvent.Sport.PADEL
 }

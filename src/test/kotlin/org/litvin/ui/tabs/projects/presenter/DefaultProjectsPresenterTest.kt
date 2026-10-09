@@ -50,15 +50,22 @@ class DefaultProjectsPresenterTest {
         val presenter = presenter(repository, analytics)
         presenter.attach(RecordingProjectsView())
 
-        presenter.onIntent(ProjectsIntent.CreateProject("New match", video))
+        presenter.onIntent(ProjectsIntent.CreateProject("New match", video, Sport.PADEL))
         presenter.onIntent(ProjectsIntent.OpenProject("match.trproj"))
         presenter.onIntent(ProjectsIntent.OpenProject("lost.trproj"))
         presenter.onIntent(ProjectsIntent.CreateProject("", video))
         presenter.onActivated()
         drainEdt()
 
+        // The opened project has no score.json, so it is a tennis project.
         assertEquals(
-            listOf(AnalyticsEvent.ProjectCreated, AnalyticsEvent.ProjectOpened, AnalyticsEvent.VideoOpenFailed),
+            listOf(
+                AnalyticsEvent.ProjectCreated,
+                AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL),
+                AnalyticsEvent.ProjectOpened,
+                AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.TENNIS),
+                AnalyticsEvent.VideoOpenFailed,
+            ),
             analytics.events,
         )
     }

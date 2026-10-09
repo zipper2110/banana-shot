@@ -1,3 +1,4 @@
+import attributesFile from '../../analytics-contract/v1/attributes.json';
 import keysFile from '../../analytics-contract/v1/counter-keys.json';
 import validFile from '../../analytics-contract/v1/valid-summaries.json';
 import invalidFile from '../../analytics-contract/v1/invalid-summaries.json';
@@ -7,6 +8,8 @@ export type InvalidSummary = { name: string; payload?: unknown; raw?: string };
 
 export const contractCounterKeys: string[] = keysFile.counterKeys;
 export const contractEssentialCounterKeys: string[] = keysFile.essentialCounterKeys;
+export const contractAttributes: Record<string, string[]> = attributesFile.attributes;
+export const contractArrayAttributes: string[] = attributesFile.arrayAttributes;
 export const validSummaries: Record<string, unknown>[] = validFile.validSummaries;
 export const invalidSummaries: InvalidSummary[] = invalidFile.invalidSummaries;
 export const smokeSummary: Record<string, unknown> = smokeFile;

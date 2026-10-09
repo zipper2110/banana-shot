@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { ARRAY_ATTRIBUTES, ATTRIBUTE_VALUES } from '../src/attributes';
 import { COUNTER_KEYS, ESSENTIAL_COUNTER_KEYS } from '../src/counters';
 import { appVersionText, validateSummary } from '../src/validation';
-import { bodyOf, contractCounterKeys, contractEssentialCounterKeys, invalidSummaries, smokeSummary, summary, validSummaries } from './fixtures';
+import { bodyOf, contractArrayAttributes, contractAttributes, contractCounterKeys, contractEssentialCounterKeys, invalidSummaries, smokeSummary, summary, validSummaries } from './fixtures';
 
 const accepted = (value: unknown) => 'summary' in validateSummary(value);
 
@@ -19,6 +20,46 @@ describe('counter keys', () => {
   it('are all in one valid fixture', () => {
     const counts = validSummaries.map(value => Object.keys(value.counters as object).length);
     expect(Math.max(...counts)).toBe(COUNTER_KEYS.size);
+  });
+});
+
+describe('attributes', () => {
+  const v3 = (attributes: unknown, overrides: Record<string, unknown> = {}) =>
+    summary({ schema_version: 3, notice_version: 2, attributes, ...overrides });
+
+  it('are the attributes of the contract', () => {
+    expect(ATTRIBUTE_VALUES).toEqual(contractAttributes);
+    expect([...ARRAY_ATTRIBUTES].sort()).toEqual([...contractArrayAttributes].sort());
+  });
+
+  it('are all in one valid fixture, with all values of each array attribute', () => {
+    const full = validSummaries.find(value => Object.keys((value.attributes ?? {}) as object).length === Object.keys(ATTRIBUTE_VALUES).length);
+    expect(full).toBeDefined();
+    for (const key of ARRAY_ATTRIBUTES) expect(((full!.attributes as Record<string, string[]>)[key]).length).toBe(ATTRIBUTE_VALUES[key].length);
+  });
+
+  it('returns the array values in the order of the list', () => {
+    const result = validateSummary(v3({ sport: ['padel', 'tennis'], theme: 'mid' }));
+    expect('summary' in result && result.summary.attributes).toEqual({ theme: 'mid', sport: ['tennis', 'padel'] });
+  });
+
+  it('returns no attributes for schema version 2, for an essential summary, and for a summary without them', () => {
+    for (const value of [summary(), summary({ schema_version: 3, notice_version: 2 }), summary({ schema_version: 3, notice_version: 2, level: 'essential' })]) {
+      const result = validateSummary(value);
+      expect('summary' in result && result.summary.attributes).toEqual({});
+    }
+  });
+
+  it.each(Object.entries(ATTRIBUTE_VALUES).filter(([key]) => !ARRAY_ATTRIBUTES.has(key)))('accepts each value of %s', (key, values) => {
+    for (const value of values) expect(accepted(v3({ [key]: value }))).toBe(true);
+  });
+
+  it.each(['constructor', '__proto__', 'toString'])('refuses the attribute key "%s"', key => {
+    expect(accepted(JSON.parse(`{"schema_version":3,"notice_version":2,"level":"extended","session_id":"00000000-0000-4000-8000-000000000201","os_family":"windows","snapshot":0,"final":false,"duration_s":0,"active_s":0,"counters":{},"attributes":{"${key}":"dark"}}`))).toBe(false);
+  });
+
+  it('refuses a theme value of the prototype', () => {
+    expect(accepted(v3({ theme: 'constructor' }))).toBe(false);
   });
 });
 
@@ -41,7 +82,7 @@ describe('validateSummary with the contract fixtures', () => {
 describe('fields', () => {
   it('returns the values of a valid summary', () => {
     const value = summary({ snapshot: 3, final: true, duration_s: 912, active_s: 640, counters: { point_added: 31 } });
-    expect(validateSummary(value)).toEqual({ summary: { ...value, app_version: '1.0.0' } });
+    expect(validateSummary(value)).toEqual({ summary: { ...value, app_version: '1.0.0', attributes: {} } });
   });
 
   it.each([
@@ -92,8 +133,15 @@ describe('schema version', () => {
     expect(validateSummary(summary({ schema_version: 1, level: undefined }))).toEqual({ status: 410 });
   });
 
+  it('accepts version 2 with notice version 1, and version 3 with notice version 2', () => {
+    expect(accepted(summary({ schema_version: 2, notice_version: 1 }))).toBe(true);
+    expect(accepted(summary({ schema_version: 3, notice_version: 2 }))).toBe(true);
+    expect(accepted(summary({ schema_version: 2, notice_version: 2 }))).toBe(false);
+    expect(accepted(summary({ schema_version: 3, notice_version: 1 }))).toBe(false);
+  });
+
   it('gives 400 for a version above the current version, 0, or a text', () => {
-    expect(validateSummary(summary({ schema_version: 3 }))).toEqual({ status: 400 });
+    expect(validateSummary(summary({ schema_version: 4, notice_version: 2 }))).toEqual({ status: 400 });
     expect(validateSummary(summary({ schema_version: 0 }))).toEqual({ status: 400 });
     expect(validateSummary(summary({ schema_version: '2' }))).toEqual({ status: 400 });
   });

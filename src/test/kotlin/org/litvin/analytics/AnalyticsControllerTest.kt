@@ -166,6 +166,25 @@ class AnalyticsControllerTest {
     }
 
     @Test
+    fun `a new session after off gets the last settings, but not the sports`() = withPreferences { node ->
+        val sessions = mutableListOf<RecordingSession>()
+        val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, _, _ ->
+            RecordingSession().also { sessions += it }
+        }, FakeHooks())
+        val settings = AnalyticsEvent.Settings(AnalyticsEvent.Theme.LIGHT, AnalyticsEvent.Accent.CUSTOM, AnalyticsEvent.Language.EN)
+        controller.start()
+        controller.record(settings)
+        controller.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
+
+        controller.choose(AnalyticsPreferences.Choice.OFF)
+        controller.choose(AnalyticsPreferences.Choice.EXTENDED)
+
+        assertEquals(2, sessions.size)
+        assertTrue(settings in sessions[1].events)
+        assertFalse(sessions[1].events.any { it is AnalyticsEvent.SportUsed })
+    }
+
+    @Test
     fun `a session that cannot start leaves no open flag and no shutdown hook`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
         val hooks = FakeHooks()
@@ -192,7 +211,7 @@ class AnalyticsControllerTest {
     private fun enabledConfig(): AnalyticsBuildConfig.Enabled = AnalyticsBuildConfig.fromProperties(Properties().apply {
         setProperty(AnalyticsBuildConfig.ENDPOINT_PROPERTY, "https://analytics.example.test/v1/session")
         setProperty(AnalyticsBuildConfig.PRIVACY_URL_PROPERTY, "https://tennis.example.test/privacy/analytics/")
-        setProperty(AnalyticsBuildConfig.NOTICE_VERSION_PROPERTY, "1")
+        setProperty(AnalyticsBuildConfig.NOTICE_VERSION_PROPERTY, AnalyticsSchema.NOTICE_VERSION.toString())
     }) as AnalyticsBuildConfig.Enabled
 
     private fun withPreferences(block: (Preferences) -> Unit) {

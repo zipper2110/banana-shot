@@ -9,6 +9,11 @@ The public site of BananaShot: `https://banana-shot-editor.app/`. B-10 in
 - Each page is `public/<name>/index.html`. The URL is `/<name>/`.
 - `public/assets/site.css` has all styles. The colors come from
   `Palette.kt` of the app.
+- Each page has the Open Graph tags (`og:*`, `twitter:card`) for the link
+  previews in chats and social networks. All pages use the image
+  `public/assets/og-image.jpg`. Its source is in `design/social-preview/`.
+  When you add a page, copy the tags and change the title, the description,
+  and the URL.
 - Each page has its own copy of the header and the footer. When you add a
   page or change a link, change all pages, `404.html`, and `sitemap.xml`.
 

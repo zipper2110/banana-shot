@@ -45,6 +45,8 @@ internal data class ScorePanelState(
     val manual: Boolean = false,
     val manualGame: Outcome? = null,
     val manualSet: Outcome? = null,
+    /** The name of a deciding point, for example "STAR POINT", or null for a normal point. */
+    val decidingPoint: String? = null,
 ) {
     val selected: Boolean get() = index >= 0
 }
@@ -228,7 +230,17 @@ internal class ScorePanel(
         return Rectangle(area.x, area.y + NAV_HEIGHT + SECTION_GAP, area.width, CAPTION_HEIGHT)
     }
 
+    /** The bounds of the deciding point badge at the right end of the "Who won the point?" line, or null. */
+    internal fun decidingBadge(): Rectangle? {
+        val text = state.decidingPoint?.takeIf { state.selected } ?: return null
+        val caption = captionBounds()
+        val y = caption.y + CAPTION_HEIGHT + ROW_GAP * 2 + PlayerScoreRow.HEIGHT * 2 + SECTION_GAP
+        val w = kotlin.math.ceil(UiKit.textWidth(text, whoFont)).toInt() + BADGE_PAD_X * 2
+        return Rectangle(caption.x + caption.width - w, y, w, WHO_HEIGHT)
+    }
+
     override fun getToolTipText(event: MouseEvent): String? {
+        if (decidingBadge()?.contains(event.point) == true) return "The winner of this point wins the game"
         val caption = captionBounds()
         val columns = columns(caption.width)
         return if (event.y in caption.y until caption.y + caption.height && event.x < caption.x + columns.serveX) {
@@ -258,6 +270,11 @@ internal class ScorePanel(
 
             val who = captionBounds().y + CAPTION_HEIGHT + ROW_GAP * 2 + PlayerScoreRow.HEIGHT * 2 + SECTION_GAP
             UiKit.drawText(g2, "WHO WON THE POINT?", whoFont, Palette.FG_3, caption.x.toFloat(), who.toFloat(), WHO_HEIGHT.toFloat())
+            decidingBadge()?.let { badge ->
+                // The same accent tab as the scoreboard badge in the video.
+                UiKit.paintBox(g2, badge.x, badge.y, badge.width, badge.height, 3, Palette.LIME_FILL, null)
+                UiKit.drawText(g2, state.decidingPoint.orEmpty(), whoFont, Palette.ON_LIME, badge.x + BADGE_PAD_X.toFloat(), badge.y.toFloat(), badge.height.toFloat())
+            }
         } finally {
             g2.dispose()
         }
@@ -276,6 +293,7 @@ internal class ScorePanel(
         const val ROW_GAP = 4
         const val WHO_HEIGHT = 15
         const val WHO_GAP = 6
+        const val BADGE_PAD_X = 5
         const val OUTCOME_GAP = 6
         const val PREFERRED_HEIGHT = NAV_HEIGHT + SECTION_GAP + CAPTION_HEIGHT + ROW_GAP * 2 + PlayerScoreRow.HEIGHT * 2 +
             SECTION_GAP + WHO_HEIGHT + WHO_GAP + OutcomeButton.HEIGHT

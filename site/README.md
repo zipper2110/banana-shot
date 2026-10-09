@@ -40,7 +40,7 @@ configuration `site` in `.claude/launch.json`.
 
 ## Deploy
 
-GitHub Actions can do the deploy: run the workflow "Deploy" from `master` and select "Site and www-redirect".
+GitHub Actions can do the deploy: run the workflow "Cloudflare deploy" from `master` and select "Site and www-redirect".
 Setup of the token: see `.github/workflows/cloudflare-deploy.yml`.
 
 To deploy from your computer, use these commands.

@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contact BananaShot</title>
-  <meta name="description" content="How to contact the author of BananaShot: send feedback from the app, or write an email. How to report a problem.">
+  <meta name="description" content="How to contact the author of BananaShot: send a message with the form, send feedback from the app, or write an email. How to report a problem.">
   <link rel="canonical" href="https://banana-shot-editor.app/contact/">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
   <meta property="og:title" content="Contact BananaShot">
-  <meta property="og:description" content="How to contact the author of BananaShot: send feedback from the app, or write an email. How to report a problem.">
+  <meta property="og:description" content="How to contact the author of BananaShot: send a message with the form, send feedback from the app, or write an email. How to report a problem.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://banana-shot-editor.app/contact/">
   <meta property="og:image" content="https://banana-shot-editor.app/assets/og-image.jpg">
@@ -46,10 +46,57 @@
     <h1>Contact</h1>
     <p class="lead">Send a problem, an idea, or a question. Each message goes to the author of BananaShot. Many answers are already in the <a href="/faq/">FAQ</a>.</p>
 
+    <div class="card" id="form">
+      <h2>Send a message</h2>
+      <!-- The same fields as the feedback form of the app (FeedbackDialog.kt), without the app data and the log.
+           feedback.js shows the form and sends it. Without JavaScript, the form stays hidden. -->
+      <form class="feedback" id="feedback-form" data-endpoint="https://bananashot-feedback.banana-shot-feedback.workers.dev/v1/site-feedback" hidden novalidate>
+        <fieldset class="field">
+          <legend>Topic</legend>
+          <div class="segments">
+            <label><input type="radio" name="topic" value="problem"><span>Problem</span></label>
+            <label><input type="radio" name="topic" value="idea"><span>Idea</span></label>
+            <label><input type="radio" name="topic" value="question"><span>Question</span></label>
+            <label><input type="radio" name="topic" value="other"><span>Other</span></label>
+          </div>
+        </fieldset>
+        <div class="field">
+          <label for="feedback-message">Message</label>
+          <textarea id="feedback-message" name="message" rows="7" aria-describedby="feedback-message-error"></textarea>
+          <p class="field-error" id="feedback-message-error"></p>
+        </div>
+        <div class="field">
+          <label for="feedback-email">Your email address <span class="field-hint">optional</span></label>
+          <input id="feedback-email" name="email" type="email" autocomplete="email" maxlength="254" aria-describedby="feedback-email-error feedback-email-note">
+          <p class="field-error" id="feedback-email-error"></p>
+          <p class="field-note" id="feedback-email-note">The author can reply only if you give an address. The reply comes from <span data-email="ppa.rotide-tohs-ananab|tcatnoc">contact [at] banana-shot-editor.app</span>.</p>
+        </div>
+        <!-- People do not see this field. A bot fills it, and then the Worker drops the message. -->
+        <div class="trap" aria-hidden="true">
+          <label for="feedback-trap">Leave this field empty</label>
+          <input id="feedback-trap" name="trap" type="text" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="form-foot">
+          <button type="submit" class="btn btn-primary" id="feedback-send" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            <span>Send</span>
+          </button>
+          <p class="form-status" id="feedback-status" role="status" aria-live="polite"></p>
+        </div>
+        <p class="meta">The form sends only the topic, your message, and your email address. See the <a href="/privacy/#feedback">privacy notice</a>.</p>
+      </form>
+      <div class="sent" id="feedback-sent" hidden tabindex="-1">
+        <h3>Message sent</h3>
+        <p id="feedback-sent-text"></p>
+        <button type="button" class="btn btn-secondary" id="feedback-new">Send another message</button>
+      </div>
+      <noscript><p>The form needs JavaScript. Write an email to the address below.</p></noscript>
+    </div>
+
     <div class="card" id="app">
       <h2>From the app</h2>
       <p>Click the <strong>Feedback</strong> button in the sidebar of the app. Select a topic, write your message, and click <strong>Send</strong>. Error messages also have a <strong>Report this problem</strong> button.</p>
-      <p>The form can attach the log files. Give your email address in the form if you want a reply.</p>
+      <p>The form in the app can attach the log files. For a problem, this is the best way. Give your email address in the form if you want a reply.</p>
     </div>
 
     <div class="card" id="email">
@@ -86,5 +133,6 @@
   </div>
 </footer>
 <script src="/assets/email.js"></script>
+<script src="/assets/feedback.js"></script>
 </body>
 </html>

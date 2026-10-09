@@ -208,6 +208,8 @@ class SwingScoringPanel(
 
     // The score after each point, computed by ScoringEngine
     private var statesAfterPoint: List<MatchState> = emptyList()
+    // True for a golden point or a star point, in the order of [points].
+    private var decidingPoints: List<Boolean> = emptyList()
 
     // False until the score settings open once for this project (see promptScoreSettingsOnFirstVisit)
     private var scoreSettingsReviewed = true
@@ -476,6 +478,7 @@ class SwingScoringPanel(
         val timeline = ScoringEngine.timeline(points, outcomesByPointId, rules, manualMarks, serverMarks)
         statesAfterPoint = timeline.statesAfterPoint
         serverOfPoint = timeline.serverOfPoint
+        decidingPoints = points.indices.map { ScoringEngine.isDecidingPoint(timeline.stateBefore(it), rules) }
         pointsList.setData(
             PointsListData(
                 points = points,
@@ -511,6 +514,7 @@ class SwingScoringPanel(
                 manual = rules.manualScoring,
                 manualGame = manualGameWins[point.id],
                 manualSet = manualSetWins[point.id],
+                decidingPoint = sport.decidingPointBadge(rules.deuce)?.takeIf { decidingPoints.getOrNull(index) == true },
             ),
         )
     }

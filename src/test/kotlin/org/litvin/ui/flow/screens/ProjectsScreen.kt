@@ -1,5 +1,7 @@
 package org.litvin.ui.flow.screens
 
+import org.litvin.scoring.DeuceRule
+import org.litvin.scoring.Sport
 import org.litvin.ui.flow.fakes.FilePickerOutcome
 
 internal class ProjectsScreen(application: ApplicationScreen) : UserFlowScreen(application) {
@@ -9,6 +11,17 @@ internal class ProjectsScreen(application: ApplicationScreen) : UserFlowScreen(a
     fun importMatch(projectName: String? = null): ProjectsScreen = apply {
         startImport()
         projectName?.let { context.driver.setText("new-project-name", it) }
+        context.driver.click("new-project-create")
+    }
+
+    /** Imports the fixture video as a padel project with the [deuce] rule. */
+    fun importPadelMatch(projectName: String, deuce: DeuceRule): ProjectsScreen = apply {
+        startImport()
+        context.driver.setText("new-project-name", projectName)
+        context.driver.click("new-project-sport-${Sport.entries.indexOf(Sport.PADEL)}")
+        assertVisible("new-project-padel-deuce")
+        val rules = Sport.PADEL.deuceRules(Sport.PADEL.defaultRules().deuce)
+        context.driver.click("new-project-padel-deuce-${rules.indexOf(deuce)}")
         context.driver.click("new-project-create")
     }
 

@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "sport": "PADEL",
+  "player1Name": "Lucía / Begoña",
+  "player2Name": "Carla / Inés",
+  "rules": {
+    "structure": "SETS",
+    "bestOfSets": 3,
+    "gamesPerSet": 6,
+    "setTiebreak": true,
+    "tiebreakPoints": 7,
+    "finalSet": "MATCH_TIEBREAK",
+    "deuce": "STAR_POINT"
+  },
+  "serverMarks": {
+    "g1p1": "P1"
+  },
+  "scoreSettingsReviewed": true,
+  "outcomes": {
+    "g1p1": "P1",
+    "g1p2": "P1",
+    "g1p3": "P1",
+    "g1p4": "P2",
+    "g1p5": "P2",
+    "g1p6": "P2",
+    "g1p7": "P1",
+    "g1p8": "P2",
+    "g1p9": "P2",
+    "g1p10": "P1",
+    "g1p11": "P2",
+    "g2p1": "P1",
+    "g2p2": "P1",
+    "g2p3": "P1",
+    "g2p4": "P1",
+    "g3p1": "P1",
+    "g3p2": "P1",
+    "g3p3": "P1",
+    "g3p4": "P2",
+    "g3p5": "P2",
+    "g3p6": "P2",
+    "g3p7": "P1",
+    "g3p8": "P1"
+  }
+}

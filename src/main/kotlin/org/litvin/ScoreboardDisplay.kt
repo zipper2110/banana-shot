@@ -29,7 +29,8 @@ object ScoreboardComponent {
     const val DEFAULT_PLAYER2_RGB = 0xFF6B6B
     val DEFAULT_PLAYER1_HEX = "#%06X".format(DEFAULT_PLAYER1_RGB)
     val DEFAULT_PLAYER2_HEX = "#%06X".format(DEFAULT_PLAYER2_RGB)
-    const val PLAYER_NAME_MAX_CHARS = 20
+    /** The scoring settings accept names of this length. The scoreboard shortens longer names, for example from an old file. */
+    const val PLAYER_NAME_MAX_CHARS = 24
 
     /** The number of completed sets that a scoreboard shows. Older sets are not shown. */
     const val VISIBLE_COMPLETED_SETS = 2

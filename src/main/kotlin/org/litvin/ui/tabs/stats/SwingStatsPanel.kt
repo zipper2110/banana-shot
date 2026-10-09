@@ -257,6 +257,7 @@ class SwingStatsPanel(
     }
 
     private fun updatePreviewPages(report: StatsReport) {
+        preview.sport = report.score.sport
         val content = StatsCard.content(report, settings, scope)
         preview.pages = StatsCard.pages(content)
         val rowCount = content.rows.size

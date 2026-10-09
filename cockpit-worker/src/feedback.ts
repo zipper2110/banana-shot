@@ -5,6 +5,8 @@ const TOPICS = ['problem', 'idea', 'question', 'other'] as const;
 const FILTER = "app_version <> 'synthetic-smoke' AND (? = 1 OR app_version NOT LIKE '%-SNAPSHOT')";
 const MESSAGE_LIMIT = 600;
 const REPORT_LIMIT = 50;
+/** The `app_version` of a report from the contact form of the website (feedback Worker, B-8 decision 27). */
+const SITE_APP_VERSION = 'website';
 
 /** Decision 9: no email address, only "email given". */
 const REPORTS = `SELECT report_id, received_at, topic, substr(message, 1, ${MESSAGE_LIMIT + 1}) AS message,
@@ -31,7 +33,7 @@ export interface Feedback {
   topErrors: { error: string; reports: number }[];
   reports: {
     id: string; receivedAt: number; topic: string; message: string; truncated: boolean; hasEmail: boolean;
-    version: string; os: string; errorLine: string | null; hasLog: boolean; delivered: boolean;
+    version: string; fromSite: boolean; os: string; errorLine: string | null; hasLog: boolean; delivered: boolean;
   }[];
 }
 
@@ -83,6 +85,7 @@ export async function loadFeedback(env: Env, period: Period, includeDev: boolean
       truncated: row.message.length > MESSAGE_LIMIT,
       hasEmail: row.has_email === 1,
       version: row.app_version,
+      fromSite: row.app_version === SITE_APP_VERSION,
       os: `${row.os_name} ${row.os_version}`.trim(),
       errorLine: row.error ? errorLine(row.error) : null,
       hasLog: row.has_log === 1,

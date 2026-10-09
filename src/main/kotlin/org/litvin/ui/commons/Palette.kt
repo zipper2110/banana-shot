@@ -260,6 +260,11 @@ internal object Palette {
     val COURT_HARD = Color(0x3D6B8C)
     val COURT_LINE = withAlpha(Color.WHITE, 70)
     val COURT_LINE_2 = withAlpha(Color.WHITE, 140)
+    /** The blue turf of a padel court. */
+    val COURT_PADEL = Color(0x2C5DA0)
+    /** The glass walls of a padel court: a light tint and a brighter edge. */
+    val COURT_GLASS = withAlpha(Color.WHITE, 36)
+    val COURT_GLASS_EDGE = withAlpha(Color.WHITE, 120)
 
     /** The warm stop of the app mark gradient. */
     val BRAND_GOLD = Color(0xEDE450)

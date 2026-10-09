@@ -33,4 +33,18 @@ same files.
 
 An error body never contains a value from the request.
 
+## The contact form of the website
+
+The site sends to `POST /v1/site-feedback`, not to `/v1/feedback`.
+
+- The body has only `report_id`, `topic`, `message`, the optional `email`, and the
+  optional `trap`. The rules of these fields are the same as above. Other keys give `422`.
+- `trap` is a hidden field of the form. People leave it empty. When it has a value, the
+  Worker returns `201` and drops the report.
+- Only the origin `https://banana-shot-editor.app` can send. Another origin, or no
+  `Origin` header, gives `403` with `{"error": "origin"}`.
+- Each answer has the CORS headers. `OPTIONS` returns `204`, also when the kill switch is off.
+- The Worker keeps the report with `app_version` = `website` and empty OS and Java fields.
+  The site reports and the app reports have the same rate limit.
+
 The fixtures contain no real addresses, paths, or logs.

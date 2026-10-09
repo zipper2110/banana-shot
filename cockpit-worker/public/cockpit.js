@@ -548,7 +548,10 @@
       const [topicName, color] = TOPICS[report.topic] || [report.topic, 4];
       const topic = h('span', 'tag');
       topic.append(h('i', `b${color}`), document.createTextNode(topicName));
-      head.append(topic, h('span', '', dateTime(report.receivedAt)), h('span', '', `v${report.version}`), h('span', '', report.os));
+      head.append(topic, h('span', '', dateTime(report.receivedAt)));
+      // A report from the contact form of the website has no app version and no OS.
+      if (report.fromSite) head.appendChild(h('span', 'tag', 'website'));
+      else head.append(h('span', '', `v${report.version}`), h('span', '', report.os));
       if (report.hasLog) head.appendChild(h('span', 'tag', 'log'));
       if (report.hasEmail) head.appendChild(h('span', 'tag', 'email given'));
       if (!report.delivered) head.appendChild(h('span', 'tag warn', '⚠ not in Telegram'));

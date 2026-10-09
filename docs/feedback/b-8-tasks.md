@@ -40,6 +40,10 @@ Decided on 2026-10-03:
 | 23 | T5: `Validate-AppImage.ps1` refuses an image without a valid endpoint. A local build can give `-AllowNoFeedbackEndpoint`. The release workflow never gives it. |
 | 24 | T2 (changed on 2026-10-03 by the author): after a successful send, the form closes, and a popup shows the thank-you text with the report ID. The popup has only a Close button. The form has no "sent" state and no "New report" button. |
 | 25 | T4 (2026-10-03, the author): a deletion request needs the report ID, or the date and the text of the message. The popup does not let the user copy the ID, so the ID is not required. |
+| 26 | T6 (2026-10-09, the author asked for it): the contact page of the site has a form with the fields of the app form: topic, message, and optional email. It has no app data, no error text, and no log. The app form stays the best way to report a problem, because it can attach the log. |
+| 27 | T6: the site form sends to a separate path `POST /v1/site-feedback` of the same Worker. Only this path has CORS, and only for `https://banana-shot-editor.app`. The path of the app does not change. The Worker keeps a site report with `app_version` = `website`, and Telegram shows "From: the contact form of the website". |
+| 28 | T6 spam: a hidden `trap` field and the shared rate limit (decision 13). A filled trap gets `201`, and the Worker drops the report. Add Cloudflare Turnstile only when spam comes through. |
+| 29 | T6: the site form follows the rules of the app form: "Send" needs a topic and a message (decision 16), and the `report_id` stays until the Worker has the report (decision 17). Without JavaScript, the form stays hidden, and the page shows the email address. |
 
 ## Open questions
 
@@ -54,6 +58,7 @@ None. Write each new decision in "Decisions" at once.
 | T3 | Entry points | T2 | done |
 | T4 | Texts and privacy | T2 | done |
 | T5 | Build, deployment, and release checks | T1–T4 | in-progress |
+| T6 | Contact form on the site | T1 | in-progress |
 
 Status values: `open`, `in-progress`, `done`. When a task is done, write
 the test classes in its "Tests" line. Do not remove the task.
@@ -222,3 +227,21 @@ The steps that make the feature work in a release build.
     fallbacks.
   - Add these checks to `release-checklist.md` (done: steps 3 and 7).
 - Tests: no automatic test. The release workflow runs `Validate-AppImage.ps1`.
+
+### T6 Contact form on the site
+
+A form on `https://banana-shot-editor.app/contact/` that sends a message to
+the author through the feedback Worker (decisions 26–29).
+
+- Status: in-progress. The code and the texts are done. Open: deploy the
+  Worker, then deploy the site, then send one message from the live page.
+- Files: `site/public/contact/index.html`, `site/public/assets/feedback.js`,
+  the form styles in `site/public/assets/site.css`, `SITE_PATH` in
+  `feedback-worker/src/index.ts`, `validateSiteReport` in
+  `feedback-worker/src/validation.ts`.
+- The privacy notice on the site tells what a message from the form contains.
+- The cockpit counts the site reports with the app reports. "Latest reports"
+  shows a `website` tag in place of the version and the OS (`fromSite` in
+  `cockpit-worker/src/feedback.ts`).
+- Tests: `feedback-worker/test/site.test.ts`, the feedback tests in
+  `cockpit-worker/test/sources.test.ts`. The page has no automatic test.

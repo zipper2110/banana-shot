@@ -1,4 +1,4 @@
-name: Deploy
+name: Cloudflare deploy
 
 # Deploys the site and the Workers to Cloudflare. It does not release the app.
 # Select the targets in the run form. All targets are selected by default.

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "points": [
+    {"id":"g1p1","startMs":0,"endMs":8000},
+    {"id":"g1p2","startMs":10000,"endMs":18000},
+    {"id":"g1p3","startMs":20000,"endMs":28000},
+    {"id":"g1p4","startMs":30000,"endMs":38000},
+    {"id":"g1p5","startMs":40000,"endMs":48000},
+    {"id":"g1p6","startMs":50000,"endMs":58000},
+    {"id":"g1p7","startMs":60000,"endMs":68000},
+    {"id":"g1p8","startMs":70000,"endMs":78000},
+    {"id":"g1p9","startMs":80000,"endMs":88000},
+    {"id":"g1p10","startMs":90000,"endMs":98000},
+    {"id":"g1p11","startMs":100000,"endMs":108000},
+    {"id":"g2p1","startMs":110000,"endMs":118000},
+    {"id":"g2p2","startMs":120000,"endMs":128000},
+    {"id":"g2p3","startMs":130000,"endMs":138000},
+    {"id":"g2p4","startMs":140000,"endMs":148000},
+    {"id":"g3p1","startMs":150000,"endMs":158000},
+    {"id":"g3p2","startMs":160000,"endMs":168000},
+    {"id":"g3p3","startMs":170000,"endMs":178000},
+    {"id":"g3p4","startMs":180000,"endMs":188000},
+    {"id":"g3p5","startMs":190000,"endMs":198000},
+    {"id":"g3p6","startMs":200000,"endMs":208000},
+    {"id":"g3p7","startMs":210000,"endMs":218000},
+    {"id":"g3p8","startMs":220000,"endMs":228000}
+  ]
+}

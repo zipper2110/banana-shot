@@ -250,7 +250,7 @@ object HelpCatalog {
                 "A gray row has no value. For example, the serve statistics need a server mark.",
                 "Break points and set points need automatic scoring. Manual scoring does not know which points can win a game or a set.",
                 "The time statistics use the start and end of each marked point. The average time between points is correct only when the video has no cuts.",
-                "Short points won and Long points won compare the points by their length. They are in the Point length group, with Average point won. By default, a short point lasts 10 s or less, and a long point lasts 13 s or more. If your marks start well before the serve, make the limits larger.",
+                "Short points won and Long points won compare the points by their length. They are in the Point length group, with Average point won. By default, a short point lasts 10 s or less, and a long point lasts 13 s or more. In padel, the defaults are 12 s and 18 s, because padel points are usually longer. If your marks start well before the serve, make the limits larger.",
                 "Match duration is the time from the start of the first point with a winner to the end of the last point with a winner. It is not the length of the video.",
                 "The value of the player that leads a row is brighter. The bar under the label compares the two players, as on the statistics card.",
                 "Each group title shows how many of its rows are in the video, for example 2 of 4.",

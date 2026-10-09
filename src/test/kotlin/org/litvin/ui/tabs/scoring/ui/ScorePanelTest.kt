@@ -3,9 +3,12 @@ package org.litvin.ui.tabs.scoring.ui
 import org.junit.jupiter.api.Test
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoringEngine.MatchState
+import java.awt.event.MouseEvent
 import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
@@ -95,6 +98,26 @@ class ScorePanelTest {
             assertEquals(ScoringButton.Kind.LIME, panel.nextButton.kind, "Next is lime when the point has a score")
             assertEquals("E — Point for Sam", panel.player2Button.toolTipText)
             assertEquals("W — No point", panel.noPointButton.toolTipText)
+        }
+    }
+
+    @Test
+    fun aDecidingPointShowsItsBadgeAtTheRightOfTheOutcomeCaption() {
+        SwingUtilities.invokeAndWait {
+            val panel = panel()
+            panel.render(selected)
+            assertNull(panel.decidingBadge())
+
+            panel.render(selected.copy(decidingPoint = "STAR POINT"))
+            val badge = assertNotNull(panel.decidingBadge())
+            assertTrue(badge.x > panel.width / 2 && badge.x + badge.width <= panel.width, "$badge")
+            assertTrue(badge.y + badge.height < panel.player1Button.y, "$badge")
+            val center = MouseEvent(panel, MouseEvent.MOUSE_MOVED, 0L, 0, badge.centerX.toInt(), badge.centerY.toInt(), 0, false)
+            assertEquals("The winner of this point wins the game", panel.getToolTipText(center))
+
+            // Without a selected point, the panel shows no badge.
+            panel.render(ScorePanelState(total = 3, decidingPoint = "STAR POINT"))
+            assertNull(panel.decidingBadge())
         }
     }
 

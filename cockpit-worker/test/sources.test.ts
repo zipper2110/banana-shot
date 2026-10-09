@@ -149,6 +149,17 @@ describe('feedback', () => {
     expect(feedback.reports[2].message).toHaveLength(600);
   });
 
+  it('counts the reports of the site form and marks them', async () => {
+    const env = makeEnv();
+    addReport(env, { receivedAt: at('2026-10-06'), version: 'website', topic: 'question' });
+    addReport(env, { receivedAt: at('2026-10-05') });
+
+    const feedback = await loadFeedback(env, makePeriod(7, NOW), false);
+
+    expect(feedback.byTopic).toMatchObject({ problem: 1, question: 1 });
+    expect(feedback.reports.map(report => report.fromSite)).toEqual([true, false]);
+  });
+
   it('takes the first line with text as the error line', () => {
     expect(errorLine('\n  \n Title \nmore')).toBe('Title');
   });

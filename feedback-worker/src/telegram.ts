@@ -7,15 +7,12 @@ export type TelegramConfig = { token: string; chatId: string };
 
 const topicTitles: Record<Report['topic'], string> = { problem: 'Problem', idea: 'Idea', question: 'Question', other: 'Other' };
 
-/** The lines above the message text: the topic, the ID, the reply address, and the app data. */
+/** The lines above the message text: the topic, the ID, the reply address, and the app data or the source. */
 export function header(report: Report): string {
-  return [
-    `New report: ${topicTitles[report.topic]}`,
-    `ID: ${report.report_id}`,
-    `Reply to: ${report.email ?? 'no address'}`,
-    `App: ${report.app_version} · ${report.os_name} ${report.os_version} · Java ${report.java_version}`,
-    `Log: ${report.log ? 'attached' : 'no'}`,
-  ].join('\n');
+  const lines = [`New report: ${topicTitles[report.topic]}`, `ID: ${report.report_id}`, `Reply to: ${report.email ?? 'no address'}`];
+  if (report.source === 'site') lines.push('From: the contact form of the website');
+  else lines.push(`App: ${report.app_version} · ${report.os_name} ${report.os_version} · Java ${report.java_version}`, `Log: ${report.log ? 'attached' : 'no'}`);
+  return lines.join('\n');
 }
 
 /** The full text of a report: the header, the message, and the error text. */

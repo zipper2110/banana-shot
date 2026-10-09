@@ -13,14 +13,17 @@ import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.projects.ManifestIO
 import org.litvin.projects.ProjectManifestV1
+import org.litvin.scoring.DeuceRule
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
+import org.litvin.scoring.Sport
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.flow.fakes.FakeMediaPlayer
 import org.litvin.ui.tabs.scoring.ui.OutcomeButton
 import org.litvin.ui.tabs.scoring.ui.PlusButton
+import org.litvin.ui.tabs.scoring.ui.ScorePanel
 import org.litvin.ui.tabs.scoring.ui.ScoringButton
 import java.awt.Component
 import java.awt.Container
@@ -33,6 +36,7 @@ import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** The Scoring tab with a fake player: the score panel, the list and the saved score work together. */
@@ -177,6 +181,24 @@ class SwingScoringPanelFlowTest {
     }
 
     @Test
+    fun aPadelGoldenPointShowsItsBadgeInTheScorePanel() {
+        // Six points to 40–40. The seventh point is the golden point.
+        EdlIO.writeForProjectDir(
+            projectDir.absolutePath,
+            EdlV1((1..7).map { PointV1(id = "p$it", startMs = it * 2_000, endMs = it * 2_000 + 1_500) }),
+        )
+        val outcomes = (1..6).associate { "p$it" to if (it % 2 == 1) Outcome.P1 else Outcome.P2 }
+        open(ScoreV1(sport = Sport.PADEL, rules = MatchRulesV1(deuce = DeuceRule.NO_AD), outcomes = outcomes, scoreSettingsReviewed = true))
+        SwingUtilities.invokeAndWait {
+            val scorePanel = assertNotNull(searchScorePanel(panel))
+            panel.selectPoint("p6")
+            assertNull(scorePanel.decidingBadge())
+            panel.selectPoint("p7")
+            assertNotNull(scorePanel.decidingBadge())
+        }
+    }
+
+    @Test
     fun manualScoringUsesThePlusButtons() {
         open(ScoreV1(rules = MatchRulesV1(manualScoring = true), scoreSettingsReviewed = true))
         SwingUtilities.invokeAndWait {
@@ -214,6 +236,12 @@ class SwingScoringPanelFlowTest {
         val found = search(panel, name)
         assertNotNull(found, "No component named $name")
         return found as T
+    }
+
+    private fun searchScorePanel(root: Component): ScorePanel? {
+        if (root is ScorePanel) return root
+        if (root is Container) root.components.forEach { child -> searchScorePanel(child)?.let { return it } }
+        return null
     }
 
     private fun search(root: Component, name: String): Component? {

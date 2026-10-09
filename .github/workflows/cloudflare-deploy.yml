@@ -1,6 +1,6 @@
-name: Cloudflare deploy (shared)
+name: "Cloudflare deploy: shared job (do not run)"
 
-# The shared job of the workflow "Deploy" (deploy.yml). Do not run it directly.
+# The shared job of the workflow "Cloudflare deploy" (deploy.yml). Do not run it directly.
 #
 # Setup: make the environment "cloudflare" in the repository settings. Give it the
 # secret CLOUDFLARE_API_TOKEN. The token needs these permissions:

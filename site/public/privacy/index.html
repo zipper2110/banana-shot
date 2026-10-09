@@ -125,10 +125,10 @@
 
     <!-- ====== Feedback reports ====== -->
     <h2 id="feedback">Feedback reports</h2>
-    <p>You can send a problem, an idea, or a question to the author from the app: the Feedback button in the sidebar, the "Report this problem" button of an error message, the "Tell us" link at the end of each help page, or More &rarr; Contact.</p>
+    <p>You can send a problem, an idea, or a question to the author from the app: the Feedback button in the sidebar, the "Report this problem" button of an error message, the "Tell us" link at the end of each help page, or More &rarr; Contact. You can also send a message with the <a href="/contact/#form">form on the contact page</a> of this site.</p>
 
     <h3>When the app sends a report</h3>
-    <p>The app sends a report only when you click Send in the feedback form. The usage statistics choice does not change this. If you do not send a report, the app sends no feedback data.</p>
+    <p>The app sends a report only when you click Send in the feedback form. The usage statistics choice does not change this. If you do not send a report, the app sends no feedback data. The same is true for the form on the site: it sends data only when you click Send.</p>
 
     <h3>What a report contains</h3>
     <ul>
@@ -139,9 +139,10 @@
       <li>The text of the error message, only if you open the form from an error message. You can remove it before you send.</li>
       <li>The last 2 MB of the log files of the app, only if you select "Attach the log files". The log files contain the names and folders of your videos and projects. They do not contain your videos. Before you send, "Show the data" shows the exact data that the app sends.</li>
     </ul>
+    <p>A message from the form on the site contains only the topic, your message, your email address (only if you give it), and a random report ID. It contains no app data, no error text, and no log files. The site does not keep your email address.</p>
 
     <h3>Where a report goes</h3>
-    <p>The app sends the report over HTTPS to our server on Cloudflare (a Cloudflare Worker with a Cloudflare D1 database). The server sends the report to the author with a Telegram bot. Thus, Telegram also processes the report.</p>
+    <p>The app and the form on the site send the report over HTTPS to our server on Cloudflare (a Cloudflare Worker with a Cloudflare D1 database). The server sends the report to the author with a Telegram bot. Thus, Telegram also processes the report.</p>
 
     <h3>How long the data stays</h3>
     <ul>
@@ -152,7 +153,7 @@
     </ul>
 
     <h3>How to ask for deletion</h3>
-    <p>Write to the <a href="#contact">contact address</a>. Give the report ID, or the date and the text of your message. The app shows the ID after the send. The author then deletes the report on the server and in the Telegram chat.</p>
+    <p>Write to the <a href="#contact">contact address</a>. Give the report ID, or the date and the text of your message. The app and the form on the site show the ID after the send. The author then deletes the report on the server and in the Telegram chat.</p>
 
     <!-- ====== Version check ====== -->
     <h2 id="version-check">Version check and updates</h2>

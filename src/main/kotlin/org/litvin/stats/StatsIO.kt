@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.litvin.JsonFileIO
+import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.Sport
 import java.io.File
 
 /**
@@ -51,11 +53,23 @@ data class StatsSettingsV1(
     companion object {
         const val DEFAULT_SHORT_POINT_MAX_SECONDS = 10
         const val DEFAULT_LONG_POINT_MIN_SECONDS = 13
+        // Padel points are usually longer than tennis points. These values are an estimate, not a measurement (G-13).
+        const val PADEL_SHORT_POINT_MAX_SECONDS = 12
+        const val PADEL_LONG_POINT_MIN_SECONDS = 18
         const val MIN_POINT_LIMIT_SECONDS = 1
         const val MAX_POINT_LIMIT_SECONDS = 120
         const val DEFAULT_CARD_TRANSPARENCY_PERCENT = 18
         /** More transparency makes the text difficult to read on a bright video. */
         const val MAX_CARD_TRANSPARENCY_PERCENT = 80
+
+        /** The settings of a project without stats.json. */
+        fun defaults(sport: Sport): StatsSettingsV1 = when (sport) {
+            Sport.TENNIS -> StatsSettingsV1()
+            Sport.PADEL -> StatsSettingsV1(
+                shortPointMaxSeconds = PADEL_SHORT_POINT_MAX_SECONDS,
+                longPointMinSeconds = PADEL_LONG_POINT_MIN_SECONDS,
+            )
+        }
     }
 }
 
@@ -68,10 +82,10 @@ object StatsIO {
 
     fun statsFilePath(projectDir: String): String = File(projectDir, "stats.json").absolutePath
 
-    /** Returns the default settings when the file does not exist. */
+    /** Returns the default settings of the project sport (from score.json) when the file does not exist. */
     fun readForProjectDir(projectDir: String): StatsSettingsV1 {
         val path = statsFilePath(projectDir)
-        if (!File(path).exists()) return StatsSettingsV1()
+        if (!File(path).exists()) return StatsSettingsV1.defaults(ScoreIO.readForProjectDir(projectDir).sport)
         return JsonFileIO.read(mapper, path, StatsSettingsV1::class.java)
     }
 

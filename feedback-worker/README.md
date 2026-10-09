@@ -11,6 +11,10 @@ author with a Telegram bot. The contract is in `feedback-contract/v1`.
 - The daily cron job deletes the report rows that are older than 90 days. The copy in the
   Telegram chat is the responsibility of the author.
 - When `FEEDBACK_INGESTION_ENABLED` is not `true`, the Worker returns `410`.
+- The contact form of the site sends to `POST /v1/site-feedback`. Only this path has CORS,
+  and only for `https://banana-shot-editor.app`. See `feedback-contract/v1/README.md`.
+  When you change the path or the Worker host, also change `data-endpoint` in
+  `site/public/contact/index.html`.
 
 ## Tests
 
@@ -37,7 +41,7 @@ and the shared fixtures in `feedback-contract/v1`.
 
 ## Deploy
 
-GitHub Actions can do the deploy: run the workflow "Deploy" from `master` and select "Feedback Worker". The workflow runs `npm ci`, the type check, and the tests. Then it applies the D1 migrations and deploys the Worker.
+GitHub Actions can do the deploy: run the workflow "Cloudflare deploy" from `master` and select "Feedback Worker". The workflow runs `npm ci`, the type check, and the tests. Then it applies the D1 migrations and deploys the Worker.
 Setup of the token: see `.github/workflows/cloudflare-deploy.yml`. The steps below are still necessary for a new database and for the secrets.
 
 `wrangler.toml` is in Git with the ID of the deployed database. It is not a secret. The

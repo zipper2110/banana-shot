@@ -70,7 +70,8 @@ class ScoreSettingsDialog private constructor(
 ) : JDialog(owner, "Scoring settings", Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : ScoreSettingsEditor {
-        const val MAX_NAME_LENGTH = 24
+        // The scoreboard shows the full name up to this length.
+        const val MAX_NAME_LENGTH = ScoreboardComponent.PLAYER_NAME_MAX_CHARS
         private const val WIDTH = 560
 
         /** The name length from which the dialog shows the count, for example "21/24". */

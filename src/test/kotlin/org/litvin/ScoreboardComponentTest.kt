@@ -13,7 +13,7 @@ class ScoreboardComponentTest {
                 startMs = 0L,
                 endMs = 1_000L,
                 text = "",
-                p1Name = "Alexandria Very Longname",
+                p1Name = "Alexandria Very Long Surname",
                 p2Name = "Bob",
                 p1ColorHex = "#112233",
                 p2ColorHex = "#445566",
@@ -25,7 +25,7 @@ class ScoreboardComponentTest {
             )
         )
 
-        assertEquals("ALEXANDRIA VERY LON…", display.player1Name)
+        assertEquals("ALEXANDRIA VERY LONG SU…", display.player1Name)
         assertEquals("BOB", display.player2Name)
         assertEquals(0x112233, display.player1Rgb)
         assertEquals(0x445566, display.player2Rgb)
@@ -34,6 +34,17 @@ class ScoreboardComponentTest {
         assertEquals(listOf(3 to 6, 7 to 5), display.completedSets)
         assertTrue(display.player1Leading)
         assertEquals(1, display.pointLeader)
+    }
+
+    @Test
+    fun nameOfMaximumSettingsLengthIsNotShortened() {
+        // 24 characters: the scoring settings accept this length.
+        val team = "Lebrón / Galán Ortega Ab"
+        assertEquals(ScoreboardComponent.PLAYER_NAME_MAX_CHARS, team.length)
+
+        val display = ScoreboardComponent.display(OverlaySpan(startMs = 0L, endMs = 1_000L, text = "", p1Name = team))
+
+        assertEquals("LEBRÓN / GALÁN ORTEGA AB", display.player1Name)
     }
 
     @Test

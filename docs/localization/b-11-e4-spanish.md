@@ -75,6 +75,10 @@ are in the plan, "Epics".
     example "V" for "ventaja").
   - If Spain and Latin America use different terms, the glossary selects a
     term that both understand, and gives the reason.
+  - A "do not translate" list: the brand "BananaShot", the codes ("4K",
+    "1080p", "H.264", "HEVC", "NVENC", "fps"), the key letters (Q, W, E),
+    and the file extensions. A test checks that each such term in an
+    English text is also in its translation.
 - Acceptance:
   - The reviewer of E4-T7 accepts the glossary before the review of the
     texts.
@@ -96,9 +100,22 @@ are in the plan, "Epics".
   - CI shows the list. It does not stop a pull request.
   - The release stops if a shipped language has missing keys.
   - A stale translation stays in use until the reviewer updates it.
+  - Bad records:
+    - A translated key without a record is stale, not current.
+    - A record with a wrong form (for example a cut hash) is stale. The
+      tool tells the key and does not stop.
+    - A change of only the spaces or the punctuation of the English text
+      also makes the key stale. The reviewer decides if the translation
+      changes.
+  - A renamed English key: the old key in the Spanish file is a test
+    failure (E3-T2). The tool tells the old key and the new key, so the
+    author can move the translation. The new key is missing until then.
+  - The check includes the help file of each language.
 - Acceptance:
   - A test changes an English text and sees the key as stale.
   - A test removes a Spanish key and sees the key as missing.
+  - A test removes the record of a Spanish key and sees the key as stale.
+  - A test gives an empty Spanish value and sees the key as missing.
   - The release checklist has the step.
 - Tests: —
 
@@ -127,9 +144,21 @@ are in the plan, "Epics".
     It gets the glossary and the comments of the keys.
   - The records of E4-T3 are in the files.
   - The plural texts have the plural forms of Spanish.
+  - Machine translation often breaks a message. The draft is not accepted
+    until the catalog tests pass. The tests must find these errors:
+    - a translated placeholder name (`{nombreJugador}` in place of
+      `{playerName}`);
+    - translated ICU keywords (`uno` in place of `one`, `plural` changed);
+    - a lost or added apostrophe that changes a quoted part;
+    - added markup, or a lost `<b>` placeholder;
+    - a translated term of the "do not translate" list (E4-T2);
+    - a changed key name.
+  - The draft keeps the key comments and the records of E4-T3.
 - Acceptance:
   - The catalog tests of E3-T2 pass with the Spanish files.
   - The check of E4-T3 shows no missing key.
+  - A test file with each machine translation error above makes the
+    catalog tests fail.
 - Tests: —
 
 ### E4-T6 Legal texts
@@ -145,9 +174,16 @@ are in the plan, "Epics".
     text is binding, the translated texts say so, and link to the English
     notice.
   - A translation does not increase the notice version.
+  - The site stays in English (plan, "Scope"). A link from the Spanish app
+    to the privacy page tells that the page is in English.
+  - The translated consent dialog has the same choices and the same
+    default as the English dialog. A translation cannot change the
+    meaning of a choice.
 - Acceptance:
   - The plan has the decision. E4 is not released without it.
   - The notice version does not change.
+  - The reviewer of E4-T7 confirms that the Spanish choices have the same
+    meaning as the English choices.
 - Tests: —
 
 ### E4-T7 Review by a native speaker
@@ -194,10 +230,18 @@ are in the plan, "Epics".
   - A job without a language (from an older build) uses English, because
     the older build had only English.
   - An older build can read a queue with the new field.
+  - A job with a language that this build does not have (for example from
+    a newer build, or a language that is now hidden) or with a broken
+    value renders in English. The job stays in the queue. It is not lost
+    (see the plan, "Decisions", "Unknown language value").
+  - A job with a language whose texts are incomplete uses the English
+    fallback for the missing texts, and renders.
 - Acceptance:
   - A test queues a job in Spanish, changes the app language to English,
     reads the queue again, and renders the job with the Spanish texts.
   - A test reads a queue file of the current release.
+  - A test reads a queue with the language `pt` and a queue with the
+    language `123`. The jobs stay, and they render in English.
 - Tests: —
 
 ### E4-T10 The app sends the language `es`
@@ -211,9 +255,14 @@ are in the plan, "Epics".
     accept `es` since E2. No deployment is necessary before the release.
   - A language that only reviewers see sends its own code. `qps` sends
     `en`.
+  - With "System" and a Windows language that the app does not have (for
+    example French), `language` is `en`, and `os_language` is `fr`.
+  - With Spanish and some stale or fallback texts, `language` stays `es`.
 - Acceptance:
   - A test: with the app in Spanish, the summary has `"language": "es"`,
     and the feedback report has `"app_language": "es"`.
+  - A test: with Windows in French and "System", the summary has
+    `"language": "en"` and `"os_language": "fr"`.
   - The cockpit shows the first `es` data after the release.
 - Tests: —
 
@@ -234,11 +283,30 @@ are in the plan, "Epics".
     change the language in More, Settings (see "Decisions", "Existing
     users").
   - The Swing and FlatLaf texts show in Spanish.
+  - The notice for existing users:
+    - It shows only if the app language changed because of "System". It
+      does not show to a new user, to a user who selected the language,
+      or to a user whose Windows language the app does not have.
+    - It shows one time. It does not show again after a restart, also if
+      the user closed it with the close button or Escape. If the app
+      stops before the notice shows, it shows at the next start.
+    - It has a button that sets English and restarts the app. The button
+      text is in English ("Use English"), so a user who does not read
+      Spanish can use it.
+  - The user can find the language setting without the ability to read
+    the current language (see the plan, "Decisions", "Path back to
+    English"): the "Language" row has a globe icon and the English word
+    "Language" next to the translated label. The list shows each language
+    in its own language.
 - Acceptance:
   - On a Windows in Spanish, the first start shows Spanish.
   - On a Windows in English, the app shows English, and the user can
     select Spanish. "Restart now" applies it.
   - An existing user with Windows in Spanish sees the notice one time.
+  - A new user with Windows in Spanish does not see the notice.
+  - A user who closes the notice with Escape does not see it again.
+  - "Use English" in the notice restarts the app in English, and the
+    stored value is English (not "System").
   - A language that is not reviewed does not show without the property.
 - Tests: —
 
@@ -255,6 +323,15 @@ are in the plan, "Epics".
       the regional format "Spanish (Spain)";
     - one export with each scoreboard layout and the statistics card;
     - a change of the language to English and back with "Restart now".
+  - The pass also covers the mixed and bad cases:
+    - Windows in Spanish with the regional format "English (United
+      States)": the app is in Spanish, and the dates show only digits;
+    - Windows in English with the regional format "Spanish (Spain)": the
+      app is in English, and the numbers have a decimal comma;
+    - a time code typed with the "," key of the numeric keypad;
+    - a Windows user name with "ñ" or "é" in the install path, and
+      "Restart now";
+    - the notice for existing users, and "Use English" in it.
 - Acceptance:
   - The smoke test passes in Spanish.
 - Tests: — (manual)

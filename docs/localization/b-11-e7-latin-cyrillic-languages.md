@@ -56,11 +56,22 @@ example `E7-L-pt`), and copy the template below.
     `other`.
   - If E3-T1 selected own plural rules, the rules of each new language come
     from the CLDR data.
+  - A plural message with a case that the language does not have (for
+    example `few` in Spanish, often a copy from another language) is a
+    test failure.
+  - A number with decimals uses the CLDR category for decimals. Example:
+    Russian "1,5 секунды" uses `other`, not `one`.
+  - Zero uses the category of the language. Example: French "0 point"
+    uses `one`. Use an explicit `=0` case only when the English text has
+    one too.
 - Acceptance:
   - A catalog test fails for a Russian message with only `one` and
     `other`.
   - A test formats a Russian plural message with 1, 2, 5, and 21, and gets
     the correct form for each number.
+  - The test also uses 0, 11, 12, 22, 25, 101, 111, and 1.5 for Russian
+    and Polish, and 0 and 1.5 for French.
+  - A catalog test fails for a Spanish message with a `few` case.
 - Tests: —
 
 ### E7-T3 Shortcuts with Cyrillic and Greek keyboard layouts
@@ -72,8 +83,21 @@ example `E7-L-pt`), and copy the template below.
 - Requirements:
   - Each shortcut works with the Russian and the Greek keyboard layouts on
     Windows. The shortcut binds the physical key, not the typed character.
+  - No shortcut uses Ctrl+Alt with a letter or a punctuation key. Windows
+    sends AltGr as Ctrl+Alt. Polish, German, Czech, and other layouts type
+    letters with AltGr (for example "ą", "ł", "@", "€"). Such a shortcut
+    acts when the user types the letter.
+  - No shortcut uses a punctuation key ("[", "]", "+", "/", ";"). On many
+    layouts these keys have other characters or need AltGr.
+  - While a text field has the focus, the user can type all letters of
+    the layout, also with AltGr.
 - Acceptance:
   - A source scan test fails for a shortcut that binds a typed character.
+  - The scan test also fails for a shortcut with Ctrl+Alt and for a
+    shortcut with a punctuation key.
+  - The manual check types "ą", "ł", and "€" with AltGr (Polish layout)
+    in a player name and a comment. The letters show, and no shortcut
+    acts.
   - The manual check with the Russian and the Greek layouts is in
     `qa/windows/ui-smoke.md`, and it passes.
 - Tests: —
@@ -90,6 +114,13 @@ example `E7-L-pt`), and copy the template below.
   - The UI font can show all letters of the UI texts of each shipped
     language.
   - If B-13 bundled open fonts, the check uses these fonts.
+  - The check uses all letters of the language (the CLDR exemplar
+    characters), not only the letters of the current texts. Thus player
+    names in the language also show. Examples of gaps in old fonts: the
+    Romanian "ș" and "ț" with a comma below (U+0219, U+021B), and the
+    Vietnamese letters with two accents.
+  - The check uses the letters in the composed form (NFC) and in the
+    decomposed form (NFD), because a user can type both.
 - Acceptance:
   - A font test passes for each shipped language. A font that cannot show
     a language is not in the list of styles for this language.
@@ -113,7 +144,9 @@ example `E7-L-pt`), and copy the template below.
     analytics and the feedback accept it without a deployment. If the code
     is not in the list, change the list first, and deploy the workers
     before the app release.
-  - The Swing and FlatLaf texts show in the language.
+  - The Swing and FlatLaf texts show in the language. If the JDK and
+    FlatLaf have no texts for the language, the catalog gives them. No
+    Swing text shows in English or in the Windows language.
   - `README.md` and the macOS bundle (B-13) list the language.
   - If the author answers feedback in the language, the feedback form
     tells it (E2-T6).
@@ -127,6 +160,11 @@ example `E7-L-pt`), and copy the template below.
   - The Windows smoke test passes in the language.
   - The language shows in the list of More, Settings, and in the video
     language list.
+  - The catalog tests find no plural case that the language does not
+    have, and no case that it needs and does not have.
+  - The detection maps the regional variants of the language to it (for
+    example `pt-BR` and `pt-PT`). If the variants need different texts,
+    the plan, "Decisions", tells which variant ships and why.
 - Tests: —
 
 ## Done when

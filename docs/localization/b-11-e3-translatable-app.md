@@ -100,6 +100,38 @@ Order of the work:
   - Fallback: a missing text in a language uses the English text. The log
     gets one warning for each missing key. A missing English text is a
     test failure, not a runtime case.
+  - Bad catalog files. The catalog tests find these cases. At runtime, the
+    app does not crash and never shows a message key:
+    - An empty translation (`key=`) is a missing text. It uses the English
+      text. Translation tools often write empty values.
+    - A translation that does not parse (for example a missing "}") uses
+      the English text. The log gets one warning.
+    - A duplicate key in one file is a test failure. `Properties` keeps
+      only the last value without a warning.
+    - A key in a language file that is not in the English file is a test
+      failure. It is often an old key after a rename.
+    - A UTF-8 byte order mark at the start of a file does not change the
+      first key. Some editors (for example Notepad) add it.
+    - A file with bytes that are not valid UTF-8 is a test failure. At
+      runtime, the app uses English for this language and logs one error.
+    - A plural or a select message without the `other` case is a test
+      failure.
+    - A translation with HTML markup that the English text does not have
+      is a test failure. A Swing label shows a text that starts with
+      `<html>` as HTML.
+  - Bad arguments at runtime:
+    - A missing argument shows the placeholder name (`{playerName}`) and
+      logs one warning. The app does not throw an exception. A test of the
+      code that makes the call finds the missing argument.
+    - An argument that the message does not use logs one warning.
+  - Numbers in messages:
+    - A number in a message (also `#` in a plural) shows in the display
+      format of E1 (format locale, digits 0–9), not in the format of the
+      app language. The plural category comes from the app language.
+    - Example: the app in English and the format locale `de-DE` give
+      "1.234 points". The format locale `ar-EG` gives the digits 0–9.
+  - The upper case of a translated text (for example a caption) uses the
+    locale of the app language, not `Locale.ROOT`.
   - The app gives the UI instance of `Messages` to the presenters. The
     presenter tests use the English catalog.
   - The library of E3-T1 is in the build and in the third-party notices.
@@ -113,6 +145,12 @@ Order of the work:
   - A test proves the fallback: a language file without a key gives the
     English text and one log warning.
   - A test proves the apostrophe rule and the rule for placeholder values.
+  - A test for each bad file case above: the catalog test fails, and the
+    runtime gives the English text without an exception.
+  - A test formats a plural message with 1234 and the format locales
+    `de-DE` and `ar-EG`, and checks the digits and the group separator.
+  - A test changes a German caption with "ß" and a Turkish caption with
+    "i" to upper case with the locale of the language.
 - Tests: —
 
 ### E3-T3 Test language `qps`
@@ -132,11 +170,22 @@ Order of the work:
   - With `qps` on, the analytics attribute `language` is `en`, and the
     feedback field `app_language` is `en`. `qps` is not a value of the
     language list.
+  - The change does not break the message. It does not change the
+    placeholder names, the ICU keywords (`plural`, `select`, `one`,
+    `other`, `#`), the quoted parts with an apostrophe, or the escape
+    sequences.
+  - Only the system property switches on `qps`. The Windows pseudo-locales
+    (`qps-ploc`, `qps-ploca`, `qps-plocm`) do not switch it on (see the
+    plan, "Decisions", "Windows pseudo-locales").
+  - An unknown value of the property is ignored. The app starts in the
+    normal language and logs one warning.
 - Acceptance:
   - A unit test checks the change, the placeholders, and the letter set of
     the video texts.
   - With the property, the extracted texts show in `qps`.
   - An analytics summary of a `qps` session has `"language": "en"`.
+  - A unit test changes each message of the English catalog to `qps`, and
+    each result parses with ICU and has the same placeholders.
 - Tests: —
 
 ### E3-T4 Hard-coded text test with an allowlist
@@ -158,9 +207,20 @@ Order of the work:
     makes it shorter.
   - The test fails if an allowlist entry is no longer in the code. Thus
     the list does not keep old entries.
+  - The test also finds:
+    - string templates with words, for example `"Set $n"` and
+      `"$name serves"`;
+    - concatenation of a literal with words, for example `"Team " + n`;
+    - a call to `Messages` with a free string in place of a key constant;
+    - a comparison of a display text with a literal, for example
+      `text == "SET"` or `title == "1080p"`;
+    - a component name made from a display text, for example
+      `"export-resolution-" + choice.title.lowercase()`.
 - Acceptance:
   - The test passes with the full allowlist.
   - A new hard-coded text makes the test fail.
+  - A new string template with words, a new text comparison, and a new
+    key as a free string make the test fail.
 - Tests: —
 
 ### E3-T5 UI flow tests with `qps` in CI
@@ -173,8 +233,12 @@ Order of the work:
   - The UI flow tests run one more time in CI with `qps`.
   - The run saves a screenshot of each tab and each dialog that the tests
     open. CI keeps them as an artifact.
+  - The `qps` run must pass, not only make screenshots. A test that passes
+    in English and fails in `qps` shows code that depends on a display
+    text.
 - Acceptance:
   - The CI run has the `qps` screenshots.
+  - All UI flow tests pass in `qps`.
   - The `qps` run adds less than the time of one normal UI flow run. If it
     adds more, it runs only on the main branch and on release tags.
 - Tests: —
@@ -203,6 +267,19 @@ Requirements of each extraction task:
   the log shows, the diagnostics tab, the PowerShell scripts, and the
   technical texts of the feedback report.
 - Write the layout problems that `qps` shows into E3-T22.
+- No code logic depends on a display text of the area (see the plan,
+  section 1, "Rules for the code", and "Current state"). Code does not
+  compare, parse, store, or search a display text. A list or a combo box
+  keeps the enum or the ID, and shows the text. Preferences and project
+  files keep codes, not texts.
+- Component names do not come from a display text.
+- The user does not see the message of an exception. The UI changes each
+  error into a catalog text. An unknown error shows a general catalog text,
+  and the log keeps the details.
+- A text with a user value (a player name, a project name) is one key with
+  a placeholder. The user value can be empty, very long, or in any script.
+  An empty value does not leave a broken sentence (for example
+  "Set won by ."). Use a different key for the empty case if necessary.
 
 Acceptance of each extraction task:
 
@@ -210,6 +287,7 @@ Acceptance of each extraction task:
 - All tests pass. The presenter tests use the English catalog.
 - In `qps`, the area shows no English text (except the brand name
   "BananaShot" and short codes such as "4K").
+- In `qps`, all UI flow tests of the area pass (E3-T5).
 
 The tasks below give the area and the special requirements of the area.
 
@@ -230,6 +308,9 @@ The tasks below give the area and the special requirements of the area.
 - Plan: 3 (area 2)
 - Area: the main window, the sidebar, and the More window (Settings,
   About).
+- Special requirements:
+  - The More window finds a section by an ID, not by its title. Now
+    `MoreDialog.selectSection(title)` compares the title.
 - Tests: —
 
 ### E3-T8 Extract: Projects tab and new-project dialogs
@@ -240,6 +321,11 @@ The tasks below give the area and the special requirements of the area.
 - Special requirements:
   - The project names sort in the order of the app language (for example,
     "Ángel" comes before "Bruno" in Spanish).
+  - Two names that are equal for the collator (for example "Ángel" and
+    "angel") have a fixed order. The order does not change between two
+    starts.
+  - Names with digits, with emoji, or in a script that the collator does
+    not know do not cause an error. They sort after the known letters.
 - Tests: —
 
 ### E3-T9 Extract: Points tab
@@ -247,6 +333,10 @@ The tasks below give the area and the special requirements of the area.
 - Status: open
 - Plan: 3 (area 4)
 - Area: the Points tab and the point dialogs.
+- Special requirements:
+  - The point dialog shows a catalog text for a time code error. Now
+    `EditPointDialog` shows the message of the exception
+    ("Minutes/seconds out of range").
 - Tests: —
 
 ### E3-T10 Extract: Scoring tab and score settings
@@ -256,6 +346,11 @@ The tasks below give the area and the special requirements of the area.
 - Area: the Scoring tab, the score panel ("AFTER THE POINT", "SETS",
   "GAMES"), the score settings dialog, the titles of the match formats,
   and the titles of the scoreboard styles and positions.
+- Special requirements:
+  - The points list does not compare the badge text with `"SET"`
+    (`ScoringPointsList`). It uses the type of the badge.
+  - The tooltip "Set won by {playerName}" is one key for each badge type.
+    Do not make it from "Set" or "Game" and "won by".
 - Tests: —
 
 ### E3-T11 Extract: Statistics tab and statistics names
@@ -268,6 +363,8 @@ The tasks below give the area and the special requirements of the area.
 - Special requirements:
   - The statistics names are shared with the statistics card of the video
     (E3-T17). The `stats` package returns keys or enums.
+  - The group captions of the statistics table use the upper case of the
+    app language, not `uppercase()` without a locale.
 - Tests: —
 
 ### E3-T12 Extract: Colors and Transform tabs
@@ -286,6 +383,12 @@ The tasks below give the area and the special requirements of the area.
   and the advice after a failed export.
 - Special requirements:
   - The export file names stay in English (plan section 5).
+  - The default resolution comes from the resolution level, not from the
+    title `"1080p"` (`ExportVideoOptions.defaultResolution`).
+  - The component names of the resolution buttons come from the level,
+    not from the title (`ExportQualityPanel`).
+  - The saved export settings keep codes. A setting that an older build
+    saved as a text reads correctly.
 - Tests: —
 
 ### E3-T14 Extract: expiry and update texts
@@ -312,6 +415,9 @@ The tasks below give the area and the special requirements of the area.
   - The feedback report that the author gets (sent, copied, or by email)
     keeps its structure and its field names in English. The text of the
     user stays as the user wrote it.
+  - In `qps` (40% longer texts), the consent dialog shows the full text
+    and all choices without a scroll that hides a choice. The choice to
+    turn off the statistics is as easy to see as the choice to accept.
 - Tests: —
 
 ### E3-T16 Extract: help and key names
@@ -324,6 +430,9 @@ The tasks below give the area and the special requirements of the area.
     long. The catalog tests of E3-T2 include it.
   - The key names come from the catalog ("Space", "Shift+Left"). The
     letter keys (Q, W, E) stay the same in all languages.
+  - The app does not show key names from `KeyEvent.getKeyText` or
+    `KeyStroke.toString`. The JDK gives these names in the language of
+    Windows, not in the app language.
 - Tests: —
 
 ### E3-T17 Extract: texts in the video
@@ -346,6 +455,14 @@ The tasks below give the area and the special requirements of the area.
     "i"), not the rules of English.
   - The text overlay "Player 1: pts …": if the app does not use it, remove
     it. If the app uses it, extract it.
+  - The ASS writers escape each translated text, as they escape the user
+    texts now (`{`, `}`, `\`). A translation with `{` or `\N` does not
+    change the style of the video.
+  - A player name in upper case uses the rules of the video language too.
+    Example: the video in Turkish shows "İ" for "i".
+- Acceptance:
+  - A test writes the ASS file with a translation that has `{\b1}` and
+    `\N`. The video shows the characters as text.
 - Tests: —
 
 ### E3-T18 Saved default texts
@@ -372,12 +489,22 @@ The tasks below give the area and the special requirements of the area.
     translation or stays as the brand text. Write the decision in the
     plan, "Decisions".
   - The same rule applies to other saved default texts. Find them.
+    Check the default side names ("Player 1", "Team 1") too.
+  - A title with only spaces is "not set".
+  - If the user types exactly the English default text, the app saves it
+    as "not set". The video then shows the default title in the video
+    language. This is accepted. Write it in the release notes.
+  - A text that the user wrote in another language (for example "Equipo 1")
+    stays as the user wrote it. The app does not translate it.
 - Acceptance:
   - A new project saves no English default text.
   - A test reads an old project file with the English default title and
     gets "not set".
   - A test proves that the reader of the current release opens a project
     with "not set" without an error.
+  - A test does a round trip: the new build saves "not set", the reader of
+    the current release reads and saves the project, and the new build
+    reads "not set" again.
   - In `qps`, the video shows the `qps` placeholder title.
 - Tests: —
 
@@ -392,6 +519,16 @@ The tasks below give the area and the special requirements of the area.
     is still too wide, it is cut with "…".
   - The export, the preview, and the thumbnails use the same fit result.
   - The catalog comment of each video text gives the maximum length.
+  - The cut with "…" does not cut a character in two parts. It cuts at a
+    grapheme boundary (`BreakIterator.getCharacterInstance`). Thus a
+    surrogate pair, an emoji, or a letter with a combining accent stays
+    complete.
+  - If the font has no "…" letter, the cut uses "...".
+  - An empty text does not change the layout and does not cause an error.
+  - If not even "…" fits, the box shows no text. The export does not
+    fail.
+  - The Java2D width and the libass width can be a little different. The
+    fit uses a margin (proposal: 5% of the box width).
   - A fit test renders each scoreboard layout and the statistics card with
     the texts of a given language. It reports each text that needs a
     smaller font or a cut.
@@ -399,6 +536,8 @@ The tasks below give the area and the special requirements of the area.
   - With `qps`, no text goes outside its box in any layout.
   - With English, no text gets a smaller font or a cut, and the video does
     not change.
+  - A unit test cuts a text with "é" as "e" and U+0301, and a text with an
+    emoji at the limit. The result has no broken character.
 - Tests: —
 
 ### E3-T20 Units in the catalog
@@ -409,6 +548,8 @@ The tasks below give the area and the special requirements of the area.
 - Requirements:
   - The units of the display formats ("s", "GB", "MB", "KB", "fps", "%")
     come from the catalog, with the number as a placeholder.
+  - A line never breaks between the number and its unit. The space between
+    them is a no-break space, or the text does not wrap there.
 - Acceptance:
   - In `qps`, the units show in the pseudo-language.
   - In English, the texts do not change.
@@ -441,6 +582,32 @@ The tasks below give the area and the special requirements of the area.
     again. The button does not show.
   - The row stays hidden while English is the only language. The `qps`
     property shows it, with `qps` in the list.
+  - Bad stored values (see the plan, "Decisions", "Unknown language
+    value"):
+    - A stored language that this build does not have (for example from a
+      newer build, or after a downgrade) works as "System". The app does
+      not overwrite the stored value until the user changes the language.
+    - A stored value that is not a language code (empty, a broken text)
+      works as "System". The log gets one warning.
+  - Bad Windows values: an empty display language (`und`) and the Windows
+    pseudo-locales (`qps-ploc`, `qps-ploca`, `qps-plocm`) give English.
+  - The detection can map a language with a script or a region to a
+    separate app language. Example: `zh-TW`, `zh-HK`, and `zh-Hant` must
+    not give Simplified Chinese. A test catalog proves the mapping. E8
+    uses it.
+  - The restart in bad cases:
+    - If the save of the open project fails (for example a full disk or a
+      read-only folder), the restart stops. The user sees the error. The
+      new language applies at the next start.
+    - If the preferences cannot save the choice, the row shows an error,
+      and no restart occurs.
+    - The restart works with an install path that has spaces and non-ASCII
+      letters (for example the Windows user name "José").
+    - Two clicks on "Restart now" start one new process only.
+    - If the old process does not exit in the wait time, the new process
+      shows the normal "already running" message. The user loses no data.
+    - If the new process cannot start, the old process has already saved
+      all data. The next normal start uses the new language.
 - Acceptance:
   - Unit tests for the detection: `es-AR` and `es-MX` give `es` (with a
     test catalog), `fr-FR` gives English, and a stored choice has priority
@@ -449,6 +616,15 @@ The tasks below give the area and the special requirements of the area.
     language, and the new process does not show "already running".
   - A cancel during a running export keeps the export.
   - Without the `qps` property, the row does not show.
+  - Unit tests: a stored value `pt` (not in this build), an empty stored
+    value, and a broken stored value give the "System" result, and the
+    stored value does not change.
+  - Unit tests: `und`, `qps-ploc`, and `Locale.ROOT` give English.
+    `qps-ploc` does not give `qps`.
+  - A test with a failed project save: the restart stops, and the app
+    shows the error.
+  - On Windows, "Restart now" works from an install path with "José" in
+    it.
 - Notes: the update flow (`UpdateAndRestart`) has the close sequence and
   the question about a running export. Use the same sequence. Start the
   Velopack launcher, not the JAR.
@@ -465,6 +641,12 @@ The tasks below give the area and the special requirements of the area.
     chart, statistics table, projects header, sidebar, hint balloons)
     accept longer texts.
   - A word that is wider than its line breaks (German has long nouns).
+  - A dialog with long texts does not become wider than the screen. Its
+    text wraps, and its buttons stay visible at the minimum screen size of
+    the app.
+  - At the minimum window size of the app, no control covers another
+    control in `qps`.
+  - A long tooltip wraps.
   - The fixes include all problems that the extraction tasks wrote here.
 - Acceptance:
   - The `qps` screenshots show no cut text and no text outside its box.
@@ -483,8 +665,28 @@ The tasks below give the area and the special requirements of the area.
     input method (IME) for Chinese and Japanese on Windows.
   - Project names in Cyrillic, Greek, and Chinese give valid folder and
     file names.
+  - Bad project names give a valid name or a clear message, never a lost
+    project:
+    - a name with only characters that Windows does not permit (for
+      example "???") or only spaces uses the fallback name;
+    - a name with emoji keeps the emoji or replaces it, but the folder is
+      valid;
+    - a long name in a script with many bytes for each letter does not
+      make a path longer than the Windows limit;
+    - two names that give the same file name (for example "a?b" and
+      "a*b", or "é" as one character and as "e" with U+0301) do not
+      overwrite each other's files.
+  - While an input method composes a text, or while a text field has the
+    focus, the keyboard shortcuts do not act. Example: Space in a Japanese
+    input method selects a word and does not start the playback.
+  - A user text with emoji or letters that the scoreboard font does not
+    have does not make the export fail.
 - Acceptance:
   - A unit test for the safe file names with non-Latin names passes.
+  - A unit test for the bad names above passes. Two names that give the
+    same file name get two different folders.
+  - A test exports a video with an emoji in a player name. The export
+    does not fail.
   - The manual IME check is in `qa/windows/ui-smoke.md`, and it passes.
 - Tests: —
 

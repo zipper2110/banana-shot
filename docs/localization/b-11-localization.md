@@ -46,6 +46,7 @@ proposal or an accepted decision. The column "Status" tells which.
 | Language change | The change applies at the next start. The setting has a "Restart now" button | proposal |
 | Existing users | The default setting is "System". Thus an existing user with Windows in a new language gets this language after the update. The app tells this one time, and tells where to change it | accepted 2026-10-10 |
 | Language values | One fixed list of language codes: the primary language subtags of the Windows display languages (about 40) plus `other`. The analytics attributes `language` (app language) and `os_language` (Windows language), and the feedback fields `app_language` and `os_language`, all use it. A new app language needs no change of a contract or a worker (see "10. Analytics") | accepted 2026-10-10 |
+| Language attributes level | The essential level sends `language` and `os_language`, not only the extended level. Opt-in data undercounts the users who do not read English well, and these are the users who need a translation. The legitimate interest assessment must cover them before the release. The other attributes stay on the extended level (see "10. Analytics") | accepted 2026-10-10 |
 | Message format | `.properties` files in UTF-8 with the ICU message syntax, read by ICU4J (see "2. Message catalog") | proposal |
 | Translation | Machine translation with a glossary as the first draft. A native speaker who plays tennis or padel reviews each language | proposal |
 | Translation tool | The files stay in the repository. A hosted tool (Weblate or Crowdin) only if volunteer translators come | proposal |
@@ -436,7 +437,9 @@ separate setting.
 
 ## 10. Analytics
 
-- The analytics summary has two language attributes of the extended level:
+- The analytics summary has two language attributes. The essential level
+  and the extended level send them (see "Decisions", "Language attributes
+  level"):
   - `language`: the language of the app interface. It exists now, with only
     the value `en`.
   - `os_language`: the Windows display language. It is new.
@@ -450,16 +453,38 @@ separate setting.
 - The test language `qps` is not a value of the list. When it is on, the app
   sends `language` = `en`. A language that only reviewers see (section 13)
   sends its own code.
-- `os_language` tells which languages to add next. It is a new attribute of
-  the extended level, so:
-  - Change `docs/analytics/design.md`. It says now that the app does not
-    send the locale of the computer. The new text tells that the app sends
-    only the language part of the Windows display language, from the fixed
-    list.
+- Why the essential level: the extended level is opt-in. Few users select
+  it, and they are not typical. A user who does not read English well is
+  less likely to select an opt-in in an English dialog. Thus extended data
+  undercounts the users who need a translation.
+- The contract today rejects all attributes in an essential summary. The
+  contract gets a list of the attributes that the essential level can send:
+  only `language` and `os_language`. `theme`, `accent`, and `sport` stay on
+  the extended level. A change from extended to essential keeps the two
+  language attributes.
+- The essential level rests on legitimate interest (GDPR Article 6(1)(f)).
+  Update `docs/analytics/legitimate-interest.md` before the release:
+  - the purpose and the necessity of the language data (the bias above);
+  - the new risk: a rare language with a rare app version can make one
+    session easy to see in a small user base;
+  - the safeguards: a short list with `other` for rare languages, and the
+    cockpit shows a language only with at least 5 sessions in the period;
+  - the open ePrivacy risk: the app also reads the Windows display
+    language from the device.
+  If the balancing test is negative, the attributes stay on the extended
+  level.
+- `os_language` tells which languages to add next. It is new data on the
+  essential level, so:
+  - Change `docs/analytics/design.md`, "Levels" and "Attributes". It says
+    now that the app does not send the locale of the computer. The new text
+    tells that the app sends only the language part of the Windows display
+    language, from the fixed list, also on the essential level.
   - Change the privacy notice (`docs/analytics/privacy-notice.md` and the
-    site privacy page), the consent dialog, and the Privacy page.
-  - Increase `notice_version`. The app asks for consent again. Later
-    translations of the notice do not increase it (see "Decisions").
+    site privacy page), the first-start dialog, and the Privacy page. They
+    list the two languages under the essential level.
+  - Increase `notice_version`. The app shows the first-start dialog
+    again. Later translations of the notice do not increase it (see
+    "Decisions").
   - Release it some weeks before the first translation, to get data.
 
 ## 11. Texts from servers and other contracts
@@ -550,8 +575,11 @@ separate setting.
 - `CONTRIBUTING.md`: how to add a text, and how to add a language.
 - `docs/release-checklist.md`: the translation check, the rules file
   translations, and the deployment order for a change of a contract.
-- `docs/analytics/design.md` and the privacy notice: `os_language` and the
-  new `language` values.
+- `docs/analytics/design.md` and the privacy notice: `os_language`, the
+  new `language` values, and the two language attributes on the essential
+  level.
+- `docs/analytics/legitimate-interest.md`: the two language attributes on
+  the essential level.
 - `feedback-contract/v1/README.md`: `app_language` and `os_language`.
 - `docs/macos/b-13-macos.md`: the bundle declares the languages of the app
   in `Info.plist` (`CFBundleLocalizations`). Without it, the native dialogs

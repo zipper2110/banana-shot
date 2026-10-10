@@ -20,7 +20,7 @@ A padel player can do all the steps that a tennis player can do:
 |---|---|---|---|
 | Points in a game | 0, 15, 30, 40 | The same | The same engine |
 | Deuce | Advantage or no-ad | Star point (FIP, from 2026). Golden point in many clubs and older leagues. Advantage in some clubs. | Advantage, golden point, star point |
-| Sets | To 6 games, two-game lead | The same | The same engine |
+| Sets | To 6 games, two-game lead | The same. Some leagues play one pro set to 9 games with a tiebreak at 8–8 (FFT formats D1 and D2). | 4, 6, 8, or 9 games. For 9 games, the tiebreak at 8–8 (`earlyTiebreak`). |
 | Set tiebreak | 7 points at 6–6 | The same | The same engine |
 | Deciding set | Full set or a 10-point match tiebreak | Full set, or a 10-point "super tiebreak" | The padel name is "super tiebreak" |
 | Players | Singles (doubles is possible) | Always doubles: two teams of two players | One name field for each team (Q-4, Q-7) |
@@ -71,6 +71,12 @@ star point game ends when one of these conditions is true:
   teams together played the total (16, 21, 24, or 32). The team with more
   points wins. Equal points are a draw. Each team serves 2 or 4 points in a
   row. The points after the end of the match do not count.
+- Pro set to 9 games (G-6): the padel format "Pro set (9 games)". The set
+  ends at 9 games, for example 9–7, or 9–8 after a tiebreak at 8–8. The rule
+  `earlyTiebreak` moves the set tiebreak one game earlier. "Games in a set"
+  has 9 games for tennis and padel. With 9 games, "Set tiebreak" offers
+  "Tiebreak at 8–8", "Tiebreak at 9–9", and "No tiebreak". "No tiebreak" is
+  the other league form: a two-game lead after 8–8.
 - Statistics: a new row "Deciding points won". Its label is "Golden points
   won" or "Star points won". An Americano match shows the points as its
   score (for example "13-11") and has match points, but no sets or games.
@@ -79,7 +85,7 @@ star point game ends when one of these conditions is true:
 - Stats tab: until the video frame loads, the card preview shows a drawn
   padel court (blue, with glass walls) for a padel project
   (`StatsCardPreview`).
-- Scoreboard badge: during a deciding point, all 16 scoreboard styles show
+- Scoreboard badge: during a deciding point, all 17 scoreboard styles show
   a tab in the accent color: "GOLDEN POINT", "STAR POINT", or "DECIDING
   POINT" (tennis no-ad). The tab is under a board at the top of the video
   and above a board at the bottom, so the board does not move. The
@@ -88,8 +94,12 @@ star point game ends when one of these conditions is true:
 - Scoring tab: when the selected point is a deciding point, the score panel
   shows the same badge at the right of "Who won the point?".
 - Team names: the scoring settings and the scoreboard accept 24 characters
-  (`ScoreboardComponent.PLAYER_NAME_MAX_CHARS`). All 16 styles show a
+  (`ScoreboardComponent.PLAYER_NAME_MAX_CHARS`). All 17 styles show a
   24-character team name in full.
+- Scoreboard style "Padel Glass" (G-19): a dark padel-blue board in a light
+  glass frame, a frosted glass band at the top, white court lines, and a
+  padel-ball yellow tile for the leading points. The board is darker than
+  the court blue, so it stands out on a padel video. All sports can use it.
 - Tests: a padel golden project (`src/test/resources/golden/padel/`) and a
   UI-flow test that creates a padel project
   (`ApplicationShellUiFlowIT`).
@@ -142,8 +152,6 @@ star point game ends when one of these conditions is true:
 - G-4 Padel statistics. Padel players look at winners, errors, smashes out
   of the court ("por 3", "por 4"), and wall play. The app has no shot or
   point-ending tags for tennis or padel. This is a separate feature.
-- G-6 Pro set to 9 games. Some padel leagues play a pro set to 9 games. The
-  "Games in a set" control has 4, 6, and 8 games only.
 - G-7 Star point side. At the star point, the receiving team chooses the
   side of the serve. The app does not record it. It has no effect on the
   score.
@@ -153,7 +161,9 @@ star point game ends when one of these conditions is true:
 - G-10 Older versions. Version 1.0.0 reads `STAR_POINT` as advantage and
   `TOTAL_POINTS` as sets, because of the enum defaults. If a user opens a
   padel project in 1.0.0 and the app saves the score, the rule is lost.
-  This is a problem only after a downgrade. A check with the installed
+  1.0.0 also ignores `earlyTiebreak`: it plays the tiebreak of a 9-game
+  pro set at 9–9, and it shows the "Padel Glass" style as "Broadcast"
+  (the enum default). This is a problem only after a downgrade. A check with the installed
   1.0.0 (2026-10-09): it opens a padel `score.json` and an Americano
   `score.json` without an error.
 - G-11 Localization. Padel terms in Spanish ("punto de oro") are part of
@@ -170,9 +180,6 @@ star point game ends when one of these conditions is true:
   (`docs/marketing/strategy.md`). Add padel screenshots and one
   padel FAQ entry (star point, team names). Do the padel release first, then
   Spanish (B-11).
-- G-19 Padel scoreboard style (optional). The 16 styles work for padel.
-  Some style names are tennis names ("Grass Court", "Clay Court"). A padel
-  style, for example "Padel Glass" (blue and white), is possible.
 
 ## Release note draft
 
@@ -180,6 +187,8 @@ star point game ends when one of these conditions is true:
   the golden point, the star point, and Americano matches.
 - A "Star point" or "Golden point" badge on the scoreboard, and the
   "Deciding points won" statistic.
+- A pro set to 9 games with a tiebreak at 8–8.
+- A new scoreboard style "Padel Glass".
 - Do not open a padel project in an older version. An older version reads
   the star point as advantage and an Americano match as sets. If it saves
   the score, the padel rule is lost.

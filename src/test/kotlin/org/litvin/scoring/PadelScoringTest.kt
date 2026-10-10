@@ -197,6 +197,38 @@ class PadelScoringTest {
         }
     }
 
+    @Test
+    fun proSetToNineGamesPlaysTheTiebreakAtEightAll() {
+        val rules = MatchFormatPreset.PRO_SET_9.applyTo(MatchRulesV1())
+        val game = { player: Int -> player.toString().repeat(4) }
+        val toEightAll = (1..8).joinToString("") { game(1) + game(2) }
+
+        // 8–6 is not a win: the set goes to 9 games.
+        val eightSix = timeline(game(1).repeat(8) + game(2).repeat(6), rules).statesAfterPoint.last()
+        assertNull(eightSix.lastSetWonBy)
+        assertEquals(ScoringEngine.SetScore(9, 7, false), timeline(toEightAll.dropLast(8) + game(1) + game(1), rules)
+            .setsAfterPoint.last().single())
+
+        val atEightAll = timeline(toEightAll, rules).statesAfterPoint.last()
+        assertTrue(atEightAll.isTiebreak)
+        val tiebreak = timeline(toEightAll + "2".repeat(7), rules)
+        assertEquals(ScoringEngine.SetScore(8, 9, true), tiebreak.setsAfterPoint.last().single())
+        assertEquals(1, tiebreak.statesAfterPoint.last().setsP2)
+    }
+
+    @Test
+    fun proSetToNineGamesIsAPadelPresetAndTheEarlyTiebreakNeedsATiebreak() {
+        val proSet = MatchRulesV1(bestOfSets = 1, gamesPerSet = 9, earlyTiebreak = true)
+
+        assertEquals(MatchFormatPreset.PRO_SET_9, MatchFormatPreset.of(proSet, Sport.PADEL))
+        assertEquals(MatchFormatPreset.CUSTOM, MatchFormatPreset.of(proSet.copy(earlyTiebreak = false), Sport.PADEL))
+        assertFalse(MatchFormatPreset.PRO_SET_9 in MatchFormatPreset.forSport(Sport.TENNIS))
+        assertEquals(8, proSet.setTiebreakGames())
+        assertFalse(proSet.copy(setTiebreak = false).normalized().earlyTiebreak)
+        assertFalse(MatchRulesV1(gamesPerSet = 1, earlyTiebreak = true).normalized().earlyTiebreak)
+        assertEquals(proSet, ScoreIO.rulesFromJson(ScoreIO.rulesToJson(proSet)))
+    }
+
     private fun timeline(
         winners: String,
         rules: MatchRulesV1,

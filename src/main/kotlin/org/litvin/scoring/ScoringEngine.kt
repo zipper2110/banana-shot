@@ -317,7 +317,7 @@ object ScoringEngine {
             val top = max(gamesP1, gamesP2)
             if (top >= rules.gamesPerSet && lead >= 2) {
                 completeSet(player, SetScore(gamesP1, gamesP2, false))
-            } else if (rules.setTiebreak && gamesP1 == rules.gamesPerSet && gamesP2 == rules.gamesPerSet) {
+            } else if (rules.setTiebreak && gamesP1 == rules.setTiebreakGames() && gamesP2 == rules.setTiebreakGames()) {
                 startTiebreak(rules.tiebreakPoints, replacesSet = false)
             }
         }

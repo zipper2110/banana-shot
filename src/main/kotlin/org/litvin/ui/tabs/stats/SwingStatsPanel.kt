@@ -244,7 +244,7 @@ class SwingStatsPanel(
             "from the start mark to the end mark."
         MatchStat.LONG_POINTS_WON -> "The points that last ${settings.normalized().longPointMinSeconds} s or more, " +
             "from the start mark to the end mark."
-        MatchStat.RETURN_GAMES_WON -> "The service games of the opponent that the player won (breaks)."
+        MatchStat.RETURN_GAMES_WON -> "The games that the opponent served and lost (breaks)."
         MatchStat.DURATION -> "The time from the start of the first point with a winner to the end of the last point " +
             "with a winner. It is not the length of the video."
         else -> null

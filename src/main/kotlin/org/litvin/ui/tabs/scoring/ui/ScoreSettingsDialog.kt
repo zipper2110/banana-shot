@@ -163,8 +163,13 @@ class ScoreSettingsDialog private constructor(
             update { preset.applyTo(it) }
         }
         bestOf.onChange { value -> update { it.copy(bestOfSets = value) } }
-        gamesPerSet.onChange { value -> update { it.copy(gamesPerSet = value) } }
-        setTiebreak.onChange { value -> update { it.copy(setTiebreak = value) } }
+        // A new games count gets its usual tiebreak: early only for the pro set to 9 games.
+        gamesPerSet.onChange { value ->
+            update { it.copy(gamesPerSet = value, earlyTiebreak = value in MatchRulesV1.EARLY_TIEBREAK_GAMES) }
+        }
+        setTiebreak.onChange { value ->
+            update { it.copy(setTiebreak = value != SetTiebreak.NONE, earlyTiebreak = value == SetTiebreak.EARLY) }
+        }
         tiebreakPoints.onChange { value -> update { it.copy(tiebreakPoints = value) } }
         finalSet.onChange { value -> update { it.copy(finalSet = value) } }
         deuce.onChange { value -> update { it.copy(deuce = value) } }
@@ -326,7 +331,11 @@ class ScoreSettingsDialog private constructor(
             gamesPerSet.selected = rules.gamesPerSet
             // The tiebreak choice names the game score, for example "Tiebreak at 6–6".
             setTiebreak.setOptions(setTiebreakOptions(rules.gamesPerSet))
-            setTiebreak.selected = rules.setTiebreak
+            setTiebreak.selected = when {
+                !rules.setTiebreak -> SetTiebreak.NONE
+                rules.earlyTiebreak -> SetTiebreak.EARLY
+                else -> SetTiebreak.AT_GAMES
+            }
             tiebreakPoints.selected = rules.tiebreakPoints
             finalSet.setOptions(finalSetOptions())
             finalSet.selected = rules.finalSet
@@ -406,10 +415,20 @@ class ScoreSettingsDialog private constructor(
         getAccessibleContext().accessibleName = "$player color"
     }
 
-    private fun setTiebreakOptions(games: Int) = listOf(
-        SegmentedChoice.Option(true, "Tiebreak at $games–$games"),
-        SegmentedChoice.Option(false, "No tiebreak", "win by 2 games"),
-    )
+    /** The pro set to 9 games also offers the tiebreak at 8–8. Then the set ends at 9 games, for example 9–8. */
+    private fun setTiebreakOptions(games: Int): List<SegmentedChoice.Option<SetTiebreak>> {
+        val early = if (games in MatchRulesV1.EARLY_TIEBREAK_GAMES) {
+            listOf(SegmentedChoice.Option(SetTiebreak.EARLY, "Tiebreak at ${games - 1}–${games - 1}", "set ends at $games"))
+        } else {
+            emptyList()
+        }
+        return early + listOf(
+            SegmentedChoice.Option(SetTiebreak.AT_GAMES, "Tiebreak at $games–$games"),
+            SegmentedChoice.Option(SetTiebreak.NONE, "No tiebreak", "win by 2 games"),
+        )
+    }
+
+    private enum class SetTiebreak { AT_GAMES, EARLY, NONE }
 }
 
 private const val MANUAL_HINT = "The app counts points only. Use the + buttons in the score panel to mark each game and set win."

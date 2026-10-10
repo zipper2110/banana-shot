@@ -345,6 +345,84 @@ internal object ScoreboardTourLayouts {
         return ScoreboardScene(width, height, items)
     }
 
+    /**
+     * Padel Glass (G-19 of padel.md): a padel-blue board in a light glass frame, as the glass walls of a padel
+     * court. A frosted glass band at the top, white court lines, a frosted point column and an accent tile for the
+     * leading points.
+     */
+    fun padelGlass(display: ScoreboardDisplay, look: Look): ScoreboardScene {
+        val rows = rows(display, look)
+        // Darker than the court blue (Palette.COURT_PADEL), so that the board stands out on a padel video.
+        val blue = 0x143A6B
+        val deep = 0x0D2A50
+        val glass = 0xD6EBFF
+        val lost = 0x9DB8DA
+        val title = look.title?.uppercase(Locale.US)
+        val edge = 2.0
+        val padX = 18.0
+        val glassH = if (title != null) 42.0 else 8.0
+        val rowH = 54.0
+        val nameSize = 25.0
+        val setSize = 26.0
+        val pointSize = 31.0
+        val titleSize = 18.0
+        val titleSpacing = 2.0
+        val nameX = if (look.playerColors) padX + 12.0 + 12.0 else padX
+        val setColW = 48.0
+        val pointColW = 82.0
+        val tileInset = 7.0
+        val columns = display.completedSets.size + 1
+
+        val serveW = serveColumnWidth(display, look, 26.0)
+        val contentW = nameX + nameWidth(rows, SEGOE, nameSize, 140.0) + 18.0 + serveW + columns * setColW + pointColW + edge
+        val titleW = if (title != null) 2 * padX + ScoreboardFonts.textWidth(title, SEGOE, true, titleSize, titleSpacing) else 0.0
+        val width = max(contentW, titleW)
+        val rowsBottom = glassH + 2 * rowH
+        val footerH = if (look.credit != null) 28.0 else 0.0
+        val height = rowsBottom + footerH + edge
+        val pointX = width - edge - pointColW
+        val setsX = pointX - columns * setColW
+        val gamesX = setsX + (columns - 1) * setColW
+        val items = mutableListOf<SceneItem>()
+
+        items += SceneItem.Box(0.0, 0.0, width, height, blue, look.opacity)
+        // The frosted glass band. Without a title, it is a thin strip.
+        items += SceneItem.Box(0.0, 0.0, width, glassH, glass, 0.22)
+        items += SceneItem.Box(0.0, glassH - 1.0, width, 1.0, glass, 0.6)
+        if (title != null) items += centered(padX, glassH / 2, title, SEGOE, titleSize, WHITE, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
+        items += SceneItem.Box(gamesX, glassH, setColW, 2 * rowH, deep, look.opacity * 0.6)
+        items += SceneItem.Box(pointX, glassH, pointColW, 2 * rowH, glass, 0.16)
+        // White court lines: between the rows and before the point column.
+        items += SceneItem.Box(edge, glassH + rowH - 1.0, width - 2 * edge, 2.0, WHITE, 0.8)
+        items += SceneItem.Box(pointX - 1.0, glassH, 2.0, 2 * rowH, WHITE, 0.8)
+
+        rows.forEachIndexed { index, row ->
+            val cy = glassH + index * rowH + rowH / 2
+            if (look.playerColors) items += SceneItem.Box(padX, cy - 6.0, 12.0, 12.0, row.rgb, 1.0, Corners.all(2.0))
+            items += centered(nameX, cy, row.name, SEGOE, nameSize, WHITE, TextAnchor.MIDDLE_LEFT)
+            if (row.serving) items += serveBall(setsX - serveW / 2, cy, 13.0, look.accentRgb)
+            row.sets.indices.forEach { setIndex ->
+                items += setGames(setsX + setIndex * setColW + setColW / 2, cy, row, setIndex, SEGOE, setSize, WHITE, lost)
+            }
+            items += centered(gamesX + setColW / 2, cy, row.games.toString(), SEGOE, setSize, WHITE, TextAnchor.CENTER)
+            if (row.leading) {
+                val tileH = rowH - 2 * tileInset
+                items += SceneItem.Box(pointX + tileInset, cy - tileH / 2, pointColW - 2 * tileInset, tileH, look.accentRgb, 1.0, Corners.all(4.0))
+            }
+            items += centered(
+                pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, if (row.leading) inkOn(look.accentRgb, deep) else WHITE, TextAnchor.CENTER,
+                opacity = if (row.trailing) 0.6 else 1.0,
+            )
+        }
+        if (look.credit != null) {
+            items += SceneItem.Box(0.0, rowsBottom, width, footerH, glass, 0.12)
+            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, SEGOE, 15.0, glass, TextAnchor.CENTER, bold = false, spacing = 0.6)
+        }
+        // The glass frame around the board.
+        items += frame(0.0, 0.0, width, height, edge, glass, 0.85)
+        return ScoreboardScene(width, height, items)
+    }
+
     /** A fixed wobble for the chalk lines, so that each frame of the video draws the same lines. */
     private fun wobble(index: Int, amplitude: Double) = sin(index * 12.9898 + 4.1) * amplitude
 

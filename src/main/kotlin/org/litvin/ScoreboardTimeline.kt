@@ -144,8 +144,9 @@ object ScoreboardTimelineBuilder {
         }
 
         val out = ArrayList<OverlaySpan>(ordered.size)
-        val n1 = player1Name.ifBlank { "Player 1" }
-        val n2 = player2Name.ifBlank { "Player 2" }
+        // A blank name shows the default side name of the sport, for example "Team 1", as the Scoring tab does.
+        val n1 = player1Name.ifBlank { sport.defaultSideName(1) }
+        val n2 = player2Name.ifBlank { sport.defaultSideName(2) }
         val badge = sport.decidingPointBadge(rules.deuce)
         for (i in ordered.indices) {
             if (!shouldEmit[i]) continue

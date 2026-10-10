@@ -286,7 +286,7 @@ class SwingScoringPanel(
 
     private val scoreSettingsButton = ScoringButton("Scoring settings", Material2MZ.TUNE, alignLeft = true).apply {
         name = "score-settings"
-        toolTipText = "Set the player names and colors, the match format, and manual scoring"
+        toolTipText = "Set the names and colors, the sport, the match format, and manual scoring"
         addActionListener { openScoreSettings() }
     }
     private val scoreboardStyleButton = ScoringButton("Scoreboard style", alignLeft = true, glyph = ScoringUi::scoreboardIcon).apply {
@@ -1081,7 +1081,7 @@ class SwingScoringPanel(
 
         const val SCORE_SETTINGS_HINT = "You can change the scoring settings at any time with this button."
         const val SCORING_KEYS_HINT = "Press R to go to the next point and play it. Press Shift+R to go back. Q, W, and E give the point."
-        const val SERVE_MARK_HINT = "Click the racket of the player who serves, on one point. " +
+        const val SERVE_MARK_HINT = "Click the racket of the player or team that serves, on one point. " +
             "The app then tracks the serve for the whole match, and Stats shows the serve and break point statistics."
 
         /** The serve hint shows when this number of points has a winner. */

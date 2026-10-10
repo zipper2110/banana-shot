@@ -30,7 +30,7 @@ A desktop application that helps tennis and padel players turn full‑match reco
   points, and mark favorites. Add comments.
 - Scoring: give each point a winner. The app computes the games, sets, and
   tiebreaks for the selected match format.
-- Scoreboard: 16 scoreboard styles, with a position, player colors, and
+- Scoreboard: 17 scoreboard styles (one for padel), with a position, player colors, and
   other settings.
 - Statistics: statistics of the match and of each set.
 - Colors and Transform: color, crop, and rotation of the video.

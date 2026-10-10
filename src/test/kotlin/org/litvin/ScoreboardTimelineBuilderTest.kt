@@ -2,6 +2,7 @@ package org.litvin
 
 import org.litvin.points.PointV1
 import org.litvin.scoring.Outcome
+import org.litvin.scoring.Sport
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -34,6 +35,16 @@ class ScoreboardTimelineBuilderTest {
         assertTrue(spans[0].text.contains("pts 0"))
         assertTrue(spans[1].text.contains("pts 15"), "Expected P1 points to be 15 before point B")
         assertTrue(spans[2].text.contains("pts 15"), "Carry-forward expected before point C outcome is applied at its end")
+    }
+
+    @Test
+    fun aBlankNameGetsTheDefaultSideNameOfTheSport() {
+        val points = listOf(pts("A", 0, 1_000))
+        val padel = ScoreboardTimelineBuilder.build(points, emptyMap(), idleTrim = false, player1Name = " ", player2Name = "", sport = Sport.PADEL)
+        val tennis = ScoreboardTimelineBuilder.build(points, emptyMap(), idleTrim = false, player1Name = "", player2Name = "Bob")
+
+        assertEquals("Team 1" to "Team 2", padel[0].p1Name to padel[0].p2Name)
+        assertEquals("Player 1" to "Bob", tennis[0].p1Name to tennis[0].p2Name)
     }
 
     @Test

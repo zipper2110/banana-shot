@@ -254,7 +254,7 @@ object HelpCatalog {
                 "Match duration is the time from the start of the first point with a winner to the end of the last point with a winner. It is not the length of the video.",
                 "The value of the player that leads a row is brighter. The bar under the label compares the two players, as on the statistics card.",
                 "Each group title shows how many of its rows are in the video, for example 2 of 4.",
-                "Return games won shows the service games of the opponent that the player won (breaks). Compare it with Service games won.",
+                "Return games won shows the games that the opponent served and lost (breaks). Compare it with Service games won.",
                 "With the golden point or the star point, the Pressure group shows Golden points won or Star points won: the deciding points that each side won.",
                 "The Momentum chart shows the point difference. The line goes up when the first player wins a point, and down when the second player wins a point. A dashed line marks the start of a set.",
                 "When you select it, the Momentum chart is the last page of the statistics card. A set summary shows the chart of its set.",

@@ -21,6 +21,7 @@ enum class ScoreboardStyleId(val title: String) {
     VIOLET("Violet"),
     CHALKBOARD("Chalkboard"),
     SUNSET("Sunset"),
+    PADEL_GLASS("Padel Glass"),
 }
 
 /** The corner of the video that shows the scoreboard. */

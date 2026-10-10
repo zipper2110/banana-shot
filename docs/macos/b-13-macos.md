@@ -294,7 +294,7 @@ work.
 
 #### Candidate fonts
 
-Select the fonts in a design review with screenshots of all 16 styles
+Select the fonts in a design review with screenshots of all 17 styles
 before and after the change. Each candidate has the SIL Open Font License
 (OFL). Verify the license and the weights of each font before you select it.
 

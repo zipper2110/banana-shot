@@ -63,6 +63,11 @@ data class MatchRulesV1(
     val gamesPerSet: Int = 6,
     /** True: a tiebreak is played when the games are equal at [gamesPerSet]. False: the set continues until a two-game lead. */
     val setTiebreak: Boolean = true,
+    /**
+     * True: the set tiebreak is at one game less, for example at 8–8 in a pro set to 9 games. Thus the set ends at
+     * [gamesPerSet] games, for example 9–7 or 9–8 after the tiebreak. Only with [setTiebreak].
+     */
+    val earlyTiebreak: Boolean = false,
     /** The points that win a set tiebreak or a [MatchStructure.SINGLE_TIEBREAK] (with a two-point lead). */
     val tiebreakPoints: Int = 7,
     val finalSet: FinalSetRule = FinalSetRule.FULL_SET,
@@ -75,6 +80,9 @@ data class MatchRulesV1(
     /** The number of sets that wins the match. */
     fun setsToWin(): Int = bestOfSets / 2 + 1
 
+    /** The games of each side at which the set tiebreak starts. */
+    fun setTiebreakGames(): Int = if (earlyTiebreak) gamesPerSet - 1 else gamesPerSet
+
     /** True when the deciding set is a match tiebreak. A one-set match has no deciding set. */
     fun hasMatchTiebreakDecider(): Boolean = finalSet == FinalSetRule.MATCH_TIEBREAK && bestOfSets > 1
 
@@ -82,6 +90,8 @@ data class MatchRulesV1(
     fun normalized(): MatchRulesV1 = copy(
         bestOfSets = bestOfSets.takeIf { it in BEST_OF_OPTIONS } ?: 3,
         gamesPerSet = gamesPerSet.coerceIn(MIN_GAMES_PER_SET, MAX_GAMES_PER_SET),
+        // Only with a set tiebreak. A tiebreak at 0–0 is not possible.
+        earlyTiebreak = earlyTiebreak && setTiebreak && gamesPerSet.coerceIn(MIN_GAMES_PER_SET, MAX_GAMES_PER_SET) > 1,
         tiebreakPoints = tiebreakPoints.coerceIn(MIN_TIEBREAK_POINTS, MAX_TIEBREAK_POINTS),
         totalPoints = totalPoints.coerceIn(MIN_TOTAL_POINTS, MAX_TOTAL_POINTS),
         serveTurnPoints = serveTurnPoints.coerceIn(MIN_SERVE_TURN_POINTS, MAX_SERVE_TURN_POINTS),
@@ -97,6 +107,7 @@ data class MatchRulesV1(
         return when (rules.structure) {
             MatchStructure.SETS -> rules.copy(
                 tiebreakPoints = if (rules.setTiebreak) rules.tiebreakPoints else defaults.tiebreakPoints,
+                earlyTiebreak = rules.setTiebreak && rules.earlyTiebreak,
                 finalSet = if (rules.bestOfSets > 1) rules.finalSet else defaults.finalSet,
                 totalPoints = defaults.totalPoints,
                 serveTurnPoints = defaults.serveTurnPoints,
@@ -127,7 +138,9 @@ data class MatchRulesV1(
     companion object {
         const val MATCH_TIEBREAK_POINTS = 10
         val BEST_OF_OPTIONS = listOf(1, 3, 5)
-        val GAMES_PER_SET_OPTIONS = listOf(4, 6, 8)
+        val GAMES_PER_SET_OPTIONS = listOf(4, 6, 8, 9)
+        /** The games in a set that offer [earlyTiebreak]: the pro set to 9 games with a tiebreak at 8–8 (G-6 of padel.md). */
+        val EARLY_TIEBREAK_GAMES = setOf(9)
         val TIEBREAK_POINTS_OPTIONS = listOf(7, 10)
         const val MIN_GAMES_PER_SET = 1
         const val MAX_GAMES_PER_SET = 12
@@ -184,6 +197,12 @@ enum class MatchFormatPreset(
         "Pro set (8 games)",
         "One set to 8 games, tiebreak at 8–8.",
         MatchRulesV1(bestOfSets = 1, gamesPerSet = 8),
+    ),
+    PRO_SET_9(
+        "Pro set (9 games)",
+        "One set to 9 games, tiebreak at 8–8.",
+        MatchRulesV1(bestOfSets = 1, gamesPerSet = 9, earlyTiebreak = true),
+        sports = setOf(Sport.PADEL),
     ),
     SHORT_SETS(
         "Short sets (4 games)",

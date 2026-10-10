@@ -219,8 +219,12 @@ make the list shorter with each extraction pull request.
 
 ## 5. Formats
 
+- The format locale: the language of the app and the region of the Windows
+  regional settings (`Locale.Category.FORMAT`). Example: Spanish app on a
+  Windows with the region "United States" uses `es-US`. While the app has
+  only English, the format locale is `en` with the Windows region.
 - Dates: `ExportsTable` and `ExpiryMomentFormat` use
-  `DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)` with the app
+  `DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)` with the format
   locale. Times use the 24-hour or 12-hour form of the locale.
 - Numbers in the UI: the decimal separator of the locale ("1,5 s" in
   Spanish). This applies to `formatSeconds`, `RenderFormatting` sizes
@@ -440,28 +444,168 @@ separate setting.
 - `README.md`: the list of the languages.
 - `distribution/THIRD-PARTY-NOTICES.txt`: ICU4J and the bundled fonts.
 
-## Order of the work
+## Parts to cover
 
-1. **Decisions.** The author makes the decisions of the table above.
-2. **Analytics `os_language`** (a few days). Section 10. Release it early to
-   get data.
-3. **Base** (about 1 week). The `i18n` package, the English catalog, the
-   formats (section 5), the locale tests, and the hard-coded text test. No
-   visible change.
-4. **Extraction** (2 to 3 weeks). Section 3, one pull request for each area.
-   Pseudo-localization from the first pull request.
-5. **Language setting** (a few days). Section 4.
-6. **Video language and fonts** (1 to 2 weeks). Section 6. Do the bundled
-   fonts together with B-13 section 5.
-7. **Layout fixes** (about 1 week). Sections 7 and 8, from the `qps`
-   screenshots.
-8. **Contracts** (a few days). Sections 10 and 11. Deploy the workers first.
-9. **Spanish** (1 to 2 weeks, mostly review time). The glossary, the draft,
-   the review, and the smoke test. This is also B-45 P-6.
-10. **Release and beta.** Give the build to a few Spanish-speaking users
-    before the public release notes say "Spanish".
-11. **More languages.** Use the `os_language` data. Each new language needs
-    only steps 9 and 10, plus fonts for a new script.
+Not all parts are necessary for the first language. The table tells when
+each part becomes necessary. The column "Step" refers to "Implementation
+sequence".
+
+| Part | Section | Necessary for | Step |
+|---|---|---|---|
+| Machine formats safe from the default locale | 5 | All languages. It also protects the current English app | 1 |
+| Display formats (dates, numbers, sizes) | 5 | All languages | 1 |
+| Language data in analytics and feedback | 10, 11 | The choice of the next languages. Not necessary for Spanish | 2 |
+| `i18n` package and message catalog | 1, 2 | All languages | 3 |
+| Extraction of the UI texts | 3 | All languages | 3 |
+| Extraction of the video texts from the domain packages | 3, 6 | All languages | 3 |
+| Pseudo-localization and the hard-coded text test | 12 | All languages | 3 |
+| Language setting and detection | 4 | All languages | 4 |
+| Layout fixes for longer texts | 7 | All languages | 3, 4 |
+| Fit of the video texts (smaller font, "…") | 6 | All languages | 4 |
+| New values of the analytics `language` attribute | 10 | Each new language. Without them, the worker rejects the summaries | 4 |
+| Glossary, translation, and review | 13 | Each new language | 4 |
+| Separate video language | 6 | Not necessary. A user can share a video in a different language | 5 |
+| Translated update notes and expiry messages | 11 | Not necessary. The English text is the fallback | 6 |
+| Plural rules with more than 2 forms (ICU) | 2 | Russian, Polish, Czech, Ukrainian, Arabic, and others. Spanish has 2 forms | 3 (syntax), 7 (check) |
+| Shortcuts with Cyrillic and Greek keyboard layouts | 8 | Russian, Ukrainian, Greek, and other non-Latin layouts | 7 |
+| Bundled fonts for Latin, Cyrillic, and Greek | 6 | macOS (B-13). On Windows, the current fonts have these letters (verify "Ink Free") | 7 |
+| Fonts and input methods for CJK and other scripts | 6, 9 | Chinese, Japanese, Korean, Hindi, Thai | 8 |
+| Live language change without restart | 4 | Not necessary | Later |
+| Right-to-left languages | 9 | Arabic, Hebrew | Later |
+| Hosted translation tool | 13 | Not necessary. Only if volunteers come | Later |
+| User-defined shortcuts | 8 | Not necessary. AZERTY users can ask for it | Later |
+
+## Implementation sequence
+
+Each step gives a feature that a user or the author can see, and the step
+prepares the next step. You can release the app after each step.
+
+### Step 1. Regional formats
+
+- **Feature:** the English app shows dates, times, numbers, and file sizes
+  in the format of the Windows region. Example: a user in Spain sees
+  "10 oct 2026" in the exports table and "2,35 GB" for a size.
+- **Work:**
+  - The `i18n` package with `DisplayFormats` and `MachineFormats` only.
+  - Move all formats for the user to `DisplayFormats` (section 5).
+  - Move all formats for FFmpeg, ASS, JSON, and the shaders to
+    `MachineFormats`.
+  - Add the tests with the default locales `de-DE` and `tr-TR`.
+  - Add a test that finds `String.format`, `uppercase`, and `lowercase`
+    calls without a locale.
+- **Prepares:** the format layer of all later steps. It also removes a
+  hidden risk now: a JVM with a German default locale writes "1,5" into an
+  FFmpeg argument.
+- **Size:** a few days.
+
+### Step 2. Language data
+
+- **Feature:** the cockpit shows the Windows languages of the users. The
+  feedback message shows the language of the user. The author can select
+  the next languages from real data.
+- **Work:** section 10 (`os_language`) and section 11 (feedback
+  `app_language` and `os_language`). The privacy notice, the consent dialog,
+  and `notice_version` change. Deploy the workers first.
+- **Prepares:** the choice of the languages for steps 4, 7, and 8. The data
+  needs some weeks, so do this step early. It does not depend on step 1.
+- **Size:** a few days, plus the time for the data.
+
+### Step 3. Translatable app with a test language
+
+- **Feature:** a test language. Reviewers and developers start the app with
+  a system property, and all texts show in the pseudo-language (section 12),
+  also in the exported video. This shows that all texts come from the
+  catalog and that the layout accepts longer texts.
+- **Work:**
+  - The message catalog (section 2) with the English texts. Decide the
+    message syntax here. Use the ICU syntax from the start, so that the
+    plural messages do not change in step 7.
+  - Extraction of all texts, one area in each pull request (section 3).
+  - The domain packages return keys or values, not English texts (section 1,
+    "Rules for the code"). This includes the statistics names, the badges,
+    the default side names, and the export advice.
+  - The hard-coded text test and the catalog tests (section 12).
+  - The UI flow tests run with the test language in CI and save screenshots.
+  - Layout fixes from the screenshots (section 7).
+  - The rule for contributors in `CONTRIBUTING.md`: each new text goes into
+    the catalog.
+- **Prepares:** all translations. After this step, a new language is a new
+  file and not a code change.
+- **Size:** 3 to 4 weeks. This is the largest step. The release after each
+  pull request shows no change for English users.
+
+### Step 4. Spanish
+
+- **Feature:** the app and the exported video in Spanish. The app starts in
+  Spanish on a Windows in Spanish. The user can select the language in
+  More, Settings. The video uses the app language.
+- **Work:**
+  - Language detection and the setting with "Restart now" (section 4).
+  - The fit of the video texts: smaller font, then "…" (section 6, "Fit"),
+    and the fit tests for Spanish.
+  - The analytics value `es` (section 10). Deploy the worker first.
+  - The glossary, the machine draft, and the review by a native speaker
+    (section 13). The padel terms of B-45 P-6.
+  - The check of the missing and the stale texts in CI, and the release
+    check (section 13).
+  - The Windows smoke test in Spanish.
+- **Prepares:** the process for each new language: glossary, draft, review,
+  smoke test, analytics value.
+- **Size:** 1 to 2 weeks, mostly review time.
+
+### Step 5. Video language
+
+- **Feature:** the user selects the language of the video on the Export
+  tab, separately from the app language. Example: a user with the app in
+  Spanish exports a video with English texts for an international club.
+- **Work:** section 6, "Setting". The project keeps the choice. A queued job
+  keeps its language. The preview of the scoreboard and the statistics card
+  uses the video language. The numbers in the video use the format of the
+  video language.
+- **Prepares:** with more languages, each user can select any video
+  language.
+- **Size:** a few days.
+
+### Step 6. Translated notices from the server
+
+- **Feature:** the update notes and the expiry messages show in the
+  language of the app.
+- **Work:** section 11, "Rules file and update notice". The new fields of
+  `release/version-policy.json` and the release checklist.
+- **Prepares:** the translated release notes for each later release.
+- **Size:** 1 to 2 days. You can do it at any time after step 3.
+
+### Step 7. More languages with Latin and Cyrillic letters
+
+- **Feature:** the next languages from the data of step 2. Probable
+  candidates: Portuguese, French, Italian, German, Russian.
+- **Work:**
+  - The process of step 4 for each language.
+  - Plural forms: the tests of the catalog check the plural forms of each
+    language with the CLDR rules.
+  - Shortcuts with Cyrillic and Greek keyboard layouts (section 8).
+  - Font check: all letters of each language in each scoreboard font. If
+    B-13 bundled the open fonts already, check these fonts.
+  - German: the longest texts. Run the fit tests and check the screenshots.
+- **Prepares:** a large part of the users can use the app in their
+  language.
+- **Size:** about 1 week for each language, mostly review time.
+
+### Step 8. Languages with other scripts
+
+- **Feature:** Chinese, Japanese, Korean, or other languages with large
+  character sets, if the data of step 2 shows a need.
+- **Work:** the bundled CJK fonts or fonts on demand (section 6, "Fonts"),
+  the input method tests, line breaks without spaces in `WrapText` and the
+  help, and the process of step 4.
+- **Size:** 1 to 2 weeks for the first language of a new script. Less for
+  the next languages of the same script.
+
+### Later
+
+These parts are not in B-11. Make a new backlog item for each one when the
+users ask for it: live language change, right-to-left languages, a hosted
+translation tool, and user-defined shortcuts.
 
 ## Costs
 
@@ -472,6 +616,8 @@ separate setting.
 - A hosted translation tool: free or paid, only if volunteers come.
 
 ## Done when
+
+B-11 is done after step 6. Steps 7 and 8 continue with each new language.
 
 - The app has a complete Spanish translation, reviewed by a native speaker.
 - At the first start on Windows in Spanish, the app shows Spanish.

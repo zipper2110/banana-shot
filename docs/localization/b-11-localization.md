@@ -39,12 +39,14 @@ proposal.
 | First language | Spanish (Spain and Latin America, also padel). See `docs/marketing/strategy.md` and B-45 P-6 |
 | Next languages | The languages of real users. Get them from a new analytics attribute (see "10. Analytics") |
 | Video language | A separate setting of each export. The default is the app language (see "6. Texts in the exported video") |
+| Format locale | Numbers use the Windows format locale. Dates use the Windows format locale with month names only when its language is the app language (see "5. Formats") |
 | Language change | The change applies at the next start. The setting has a "Restart now" button |
 | Message format | `.properties` files in UTF-8 with the ICU message syntax, read by ICU4J (see "2. Message catalog") |
 | Translation | Machine translation with a glossary as the first draft. A native speaker who plays tennis or padel reviews each language |
 | Translation tool | The files stay in the repository. A hosted tool (Weblate or Crowdin) only if volunteer translators come |
 | Incomplete language | The app does not show a language until 100% of its texts are translated and reviewed |
 | Legal texts | The consent dialog and the Privacy page are translated. The author decides if the English text is the binding version (get legal advice) |
+| Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not |
 | Right-to-left | Not in B-11 |
 
 ## Goal
@@ -55,7 +57,7 @@ A user who does not read English can do all the steps in their language:
   Otherwise it starts in English.
 - The user can change the language in More, Settings.
 - All texts of the app are in the selected language. Dates, numbers, and
-  sizes use the formats of this language.
+  sizes use the Windows regional format (see "5. Formats").
 - The exported video shows the scoreboard and statistics texts in the
   selected video language. All texts fit in their boxes.
 - The update notice and the expiry messages are in the selected language.
@@ -70,16 +72,46 @@ A user who does not read English can do all the steps in their language:
 - Some texts are in the domain packages, not in `ui`. Examples:
   - `stats/StatRows.kt`: the names of the statistics ("Points won on serve").
   - `stats/StatsCard.kt`: "Match statistics", "Set 1 statistics".
-  - `scoring/Sport.kt`: the badges "GOLDEN POINT", "STAR POINT".
+  - `scoring/Sport.kt`: the badges "GOLDEN POINT", "STAR POINT", and
+    `title` and `sideNoun`. The default side name "Team 1" is made from the
+    parts "Team" and "1".
   - `ScoreboardTimeline.kt`: the default names "Player 1", "Team 1".
+  - `scoring/ScoreboardSettingsV1.kt`: the style and position titles, the
+    default title "Your tournament or club" (`DEFAULT_TITLE`), and the credit
+    line "BananaShot app" (`APP_CREDIT`). See "Saved default texts" below.
+  - `scoring/MatchRules.kt`: the titles of the match formats.
+  - `stats/StatRows.kt`: the reasons why a statistic is not available
+    ("There are not sufficient points.").
+  - `export/ExportVideoOptions.kt`, `export/EncoderCapabilities.kt`, and
+    `export/ExportPlanner.kt` (`ExportResolution.label`): the quality,
+    encoder, and resolution names.
   - `export/ExportFailureAdvice.kt`: the advice after a failed export.
+  - `ScoreboardTimeline.kt` and `AssOverlayWriter.kt`: the text overlay
+    "Player 1: pts …". Check if the app still uses it. If not, remove it.
   - `ui/expiry/ExpiryTexts.kt` and `license/EffectiveExpiry.kt` say "English
     only until localization (B-11)".
+- Saved default texts: the project keeps `ScoreboardSettingsV1.title`, and
+  its default is the English text "Your tournament or club". The video shows
+  this text. A Spanish user gets an English title in the video, and old
+  projects keep the English text.
 - Formats use fixed locales: `Locale.US`, `Locale.ROOT`, `Locale.ENGLISH`.
   This is correct for FFmpeg arguments, ASS files, and JSON. It is not
   correct for texts that the user reads, for example the date in
   `ExportsTable.kt` ("d MMM yyyy") and the expiry moment
   (`ExpiryMomentFormat`).
+- Some formats use the default locale: 10 calls of `"…".format(…)` and
+  `String.format(…)` without a locale. Most write hexadecimal colors, which
+  are safe. `ui/commons/CommentDialog.kt` writes a time code with
+  `"%02d:%02d:%02d.%03d".format(…)`, and `Timecode.parse` reads it again.
+  With a Windows regional format in Arabic or Persian, `String.format`
+  writes Arabic-Indic digits (JDK 21 with `ar-EG` gives U+0665 for 5). This
+  is a risk now, also without right-to-left languages in the app.
+- The Kotlin functions `uppercase()` and `lowercase()` without an argument
+  use `Locale.ROOT`. They are safe for machine texts. They are not correct
+  for user texts in Turkish or German.
+- The bundled runtime has `jdk.localedata`
+  (`distribution/windows/Build-AppImage.ps1`). Thus the date and number
+  formats of other locales are available, and the packaging needs no change.
 - The UI font is "Segoe UI". The scoreboard fonts are Windows fonts (Segoe
   UI, Arial Black, Georgia, Trebuchet MS, Tahoma, Consolas, Ink Free). B-13
   section 5 decided to replace the scoreboard fonts with bundled open fonts.
@@ -121,6 +153,12 @@ A user who does not read English can do all the steps in their language:
   placeholders. The word order is different in other languages.
 - Do not put HTML markup in the catalog if possible. When a text needs bold
   parts, use named placeholders for these parts.
+- Do not save a default text in a file. Save "not set" (an empty or null
+  value), and show the text from the catalog. For the scoreboard title, the
+  empty field shows "Your tournament or club" as a placeholder in the
+  language of the app. An old project with the English default text gets
+  "not set" when the app reads it. The author decides if `APP_CREDIT` gets a
+  translation or stays as the brand text.
 - Component names (`name = "more-settings-theme"`) stay in English. Tests
   find components by name, not by text.
 - Do not change the default locale of the JVM. Pass the locale to each
@@ -193,9 +231,13 @@ Leave these texts in English:
 
 A test finds the texts that are still hard-coded. It scans the `ui` package
 for string literals given to `text`, `toolTipText`, `title`, and the
-dialog functions. An allowlist holds the accepted exceptions (for example
-"F1", "4K"). Start the test with all current texts in the allowlist, and
-make the list shorter with each extraction pull request.
+dialog functions. It also scans the other main packages (`stats`,
+`scoring`, `export`, `projects`, `license`, and the root package) for
+string literals in `title`, `label`, `text`, and `const val` texts. Many
+user texts are there (see "Current state"). Log messages and exception
+messages are not in the scan. An allowlist holds the accepted exceptions
+(for example "F1", "4K"). Start the test with all current texts in the
+allowlist, and make the list shorter with each extraction pull request.
 
 ## 4. Language selection
 
@@ -212,6 +254,16 @@ make the list shorter with each extraction pull request.
   The cost is high and the gain is small.
 - The app must do the restart safely: save the open project, and keep the
   export queue (the queue already survives a restart).
+- The restart and the instance lock (B-19): the old process holds the lock
+  until it exits. A new process that starts before this shows "already
+  running" and quits. Thus:
+  - Use the close sequence of `UpdateAndRestart`. It also asks the user
+    when an export runs.
+  - Start the new process with a restart argument. With this argument, the
+    new process tries to get the lock again for some seconds before it
+    shows "already running".
+  - Start the Velopack launcher, not the JAR. Find its path from the
+    install folder.
 - Swing and FlatLaf have their own texts (for example the context menu of a
   text field). Set the locale of these components with the app language.
   FlatLaf has translations for some languages. The native Windows file
@@ -219,26 +271,50 @@ make the list shorter with each extraction pull request.
 
 ## 5. Formats
 
-- The format locale: the language of the app and the region of the Windows
-  regional settings (`Locale.Category.FORMAT`). Example: Spanish app on a
-  Windows with the region "United States" uses `es-US`. While the app has
-  only English, the format locale is `en` with the Windows region.
-- Dates: `ExportsTable` and `ExpiryMomentFormat` use
-  `DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)` with the format
-  locale. Times use the 24-hour or 12-hour form of the locale.
-- Numbers in the UI: the decimal separator of the locale ("1,5 s" in
-  Spanish). This applies to `formatSeconds`, `RenderFormatting` sizes
-  ("2,35 GB"), the transform values, and the percentages.
+- The format locale is the Windows regional format
+  (`Locale.getDefault(Locale.Category.FORMAT)`), for example `es-ES`.
+- Do not make a locale from the app language and the Windows region (for
+  example `en-ES`). The CLDR data does not have most of these locales, and
+  the JDK then uses the `en` formats. Measured on JDK 21:
+
+  | Locale | MEDIUM date | `%.2f` of 2.35 |
+  |---|---|---|
+  | `es-ES` | 10 oct 2026 | 2,35 |
+  | `en-ES` | Oct 10, 2026 | 2.35 |
+  | `en-DE` | 10 Oct 2026 | 2,35 |
+  | `en-US-u-rg-eszzzz` | Oct 10, 2026 | 2.35 |
+
+- Dates:
+  - If the language of the format locale is the app language, use
+    `DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)` with the format
+    locale ("10 oct 2026").
+  - If not, use `FormatStyle.SHORT` with the format locale. It has only
+    digits ("10/10/26" for `es-ES`, "10.10.26" for `de-DE`). Thus an English
+    window does not show Spanish month names.
+  - This applies to `ExportsTable` and `ExpiryMomentFormat`. Times use the
+    24-hour or 12-hour form of the format locale.
+- An alternative is the JDK `HOST` locale provider. It reads the real
+  Windows settings, also the changes of the user. Measure it on Windows
+  before you select it.
+- Numbers in the UI: always use the format locale. Example: the decimal
+  separator of `es-ES` gives "1,5 s". This applies to `formatSeconds`,
+  `RenderFormatting` sizes ("2,35 GB"), the transform values, and the
+  percentages.
 - Numbers for machines: FFmpeg arguments, ASS files, shader parameters, JSON,
   and the analytics payload always use `MachineFormats`. Add a test that runs
   the FFmpeg command builder tests and the ASS writer tests with the default
-  locale set to `de-DE` and `tr-TR`. The output must be the same as with
-  `en-US`.
+  locale set to `de-DE`, `tr-TR`, and `ar-EG`. The output must be the same
+  as with `en-US`. `de-DE` has a decimal comma, `tr-TR` has a different "i",
+  and `ar-EG` has Arabic-Indic digits.
+- Time codes that the user can edit (`CommentDialog`, `EditPointDialog`)
+  are machine formats: ASCII digits and ".". Thus "1,5 s" and "1:23.5" can
+  show in the same window. This is acceptable.
 - Units: "s", "GB", "fps". Put the units in the catalog with the number as a
   placeholder. Some languages put a space or a different symbol.
 - Upper case: the scoreboard titles use `uppercase(Locale.US)`. Use the
   locale of the video language. German "ß" and Turkish "i" change in a
-  different way.
+  different way. The Kotlin `uppercase()` without an argument uses
+  `Locale.ROOT`. It is correct for machine texts, not for user texts.
 - Sort order: sort project names with a `Collator` of the app locale.
 - Time codes (`1:23:45`) and score values (15, 30, 40) stay the same in all
   languages.
@@ -260,7 +336,10 @@ separate setting.
   export of the same project makes the same video.
 - A queued render job keeps the language that was selected when the user
   queued it (`SavedRenderQueue`). A language change after the queue does not
-  change the job.
+  change the job. Do this already in step 4, when the video uses the app
+  language: a language change restarts the app, and the queue survives the
+  restart. `SavedRenderQueue` ignores unknown fields, so older builds can
+  read the queue.
 - The live preview of the scoreboard and of the statistics card uses the
   video language, not the app language.
 
@@ -344,6 +423,9 @@ separate setting.
 - Order: deploy the worker that accepts the new values before the app
   release that sends them. The current worker rejects an unknown language
   (see `invalid-summaries.json`, "unknown language").
+- The test language `qps` and the languages that only reviewers see (section
+  13) are not values of the attribute. When one of them is on, the app sends
+  `en`. Thus the worker does not reject the summaries of the reviewers.
 - Before the first translation, add the attribute `os_language`: the
   primary language subtag of Windows (for example `es`, `ru`), from a fixed
   list of about 40 values, plus `other`. This tells which languages to add
@@ -351,7 +433,8 @@ separate setting.
   - Change `docs/analytics/design.md`, the privacy notice
     (`docs/analytics/privacy-notice.md` and the site privacy page), the
     consent dialog, and the Privacy page.
-  - Increase `notice_version`. The app asks for consent again.
+  - Increase `notice_version`. The app asks for consent again. Later
+    translations of the notice do not increase it (see "Decisions").
   - Release it some weeks before the first translation, to get data.
 
 ## 11. Texts from servers and other contracts
@@ -369,8 +452,9 @@ separate setting.
 
 ### Feedback
 
-- Add the optional field `app_language` to the feedback report
-  (`feedback-contract/v1/report.schema.json`). The schema has
+- Add the optional fields `app_language` and `os_language` to the feedback
+  report (`feedback-contract/v1/report.schema.json`). `os_language` uses the
+  same values as the analytics attribute. The schema has
   `additionalProperties: false`, so deploy the feedback worker first.
 - The Telegram message shows the language. The user can write in their
   language. The author can use machine translation to read and answer.
@@ -395,10 +479,14 @@ separate setting.
   example "Export" to "[Éxƥôŕţ ~~~~]". It makes texts 40% longer and uses
   accented letters. A system property switches it on. It shows hard-coded
   texts, cut texts, and missing letters.
+- The video texts of `qps` use only Latin-1 and Latin Extended-A letters
+  ("É", "ô", "ŕ", "ţ"). A letter such as "ƥ" (Latin Extended-B) is not in
+  some scoreboard fonts, and no planned language uses it. The font tests of
+  section 6 find the font gaps.
 - The UI flow tests (`ui/flow`) run one time with `qps` in CI and save
   screenshots (`UiFlowArtifacts`). A person checks the screenshots for each
   release with new texts.
-- The locale tests of section 5 (`de-DE`, `tr-TR` default locale).
+- The locale tests of section 5 (`de-DE`, `tr-TR`, `ar-EG` default locale).
 - The fit tests and the font tests of section 6.
 - Screenshots for translators: the UI flow tests make screenshots of each
   tab in each language. The reviewer checks the texts in their place.
@@ -438,7 +526,10 @@ separate setting.
   translations, and the worker deploy order.
 - `docs/analytics/design.md` and the privacy notice: `os_language` and the
   new `language` values.
-- `feedback-contract/v1/README.md`: `app_language`.
+- `feedback-contract/v1/README.md`: `app_language` and `os_language`.
+- `docs/macos/b-13-macos.md`: the bundle declares the languages of the app
+  in `Info.plist` (`CFBundleLocalizations`). Without it, the native dialogs
+  and the app menu on macOS stay in English.
 - `docs/licensing/build-expiry-spec.md`: the translated fields.
 - `docs/padel.md`: P-6 points to this plan.
 - `README.md`: the list of the languages.
@@ -458,10 +549,12 @@ sequence".
 | `i18n` package and message catalog | 1, 2 | All languages | 3 |
 | Extraction of the UI texts | 3 | All languages | 3 |
 | Extraction of the video texts from the domain packages | 3, 6 | All languages | 3 |
+| Saved default texts (scoreboard title) | 1 | All languages | 3 |
+| Queued render job keeps its language | 6 | All languages | 4 |
 | Pseudo-localization and the hard-coded text test | 12 | All languages | 3 |
-| Language setting and detection | 4 | All languages | 4 |
+| Language setting, detection, and restart | 4 | All languages | 3 (hidden), 4 (shown) |
 | Layout fixes for longer texts | 7 | All languages | 3, 4 |
-| Fit of the video texts (smaller font, "…") | 6 | All languages | 4 |
+| Fit of the video texts (smaller font, "…") | 6 | All languages | 3 |
 | New values of the analytics `language` attribute | 10 | Each new language. Without them, the worker rejects the summaries | 4 |
 | Glossary, translation, and review | 13 | Each new language | 4 |
 | Separate video language | 6 | Not necessary. A user can share a video in a different language | 5 |
@@ -483,19 +576,26 @@ prepares the next step. You can release the app after each step.
 ### Step 1. Regional formats
 
 - **Feature:** the English app shows dates, times, numbers, and file sizes
-  in the format of the Windows region. Example: a user in Spain sees
-  "10 oct 2026" in the exports table and "2,35 GB" for a size.
+  in the Windows regional format. Example: a user with the regional format
+  "Spanish (Spain)" sees "10/10/26" in the exports table and "2,35 GB" for a
+  size. After step 4, the same user with the app in Spanish sees
+  "10 oct 2026" (section 5).
 - **Work:**
   - The `i18n` package with `DisplayFormats` and `MachineFormats` only.
   - Move all formats for the user to `DisplayFormats` (section 5).
   - Move all formats for FFmpeg, ASS, JSON, and the shaders to
     `MachineFormats`.
-  - Add the tests with the default locales `de-DE` and `tr-TR`.
-  - Add a test that finds `String.format`, `uppercase`, and `lowercase`
-    calls without a locale.
+  - Add the tests with the default locales `de-DE`, `tr-TR`, and `ar-EG`.
+  - Add a test that finds the calls that use the default locale:
+    `"…".format(…)` and `String.format(…)` without a locale, `toUpperCase()`,
+    `toLowerCase()`, and `DateTimeFormatter.ofPattern` and `NumberFormat`
+    without a locale. The Kotlin `uppercase()` and `lowercase()` without an
+    argument use `Locale.ROOT`, so the test accepts them.
+  - Move the time code of `CommentDialog` to `MachineFormats`.
 - **Prepares:** the format layer of all later steps. It also removes a
   hidden risk now: a JVM with a German default locale writes "1,5" into an
-  FFmpeg argument.
+  FFmpeg argument, and a JVM with an Arabic or Persian default locale writes
+  Arabic-Indic digits into a time code.
 - **Size:** a few days.
 
 ### Step 2. Language data
@@ -517,21 +617,36 @@ prepares the next step. You can release the app after each step.
   also in the exported video. This shows that all texts come from the
   catalog and that the layout accepts longer texts.
 - **Work:**
-  - The message catalog (section 2) with the English texts. Decide the
-    message syntax here. Use the ICU syntax from the start, so that the
-    plural messages do not change in step 7.
+  - First, the tools. Do these before the extraction:
+    - The message catalog (section 2) with the English texts. Decide the
+      message syntax here. Use the ICU syntax from the start, so that the
+      plural messages do not change in step 7.
+    - The `qps` switch (section 12). It is not a value of the analytics
+      attribute (section 10).
+    - The hard-coded text test with all current texts in the allowlist, and
+      the catalog tests (section 12).
+
+    Then each extraction pull request shows its result in `qps` and makes
+    the allowlist shorter.
   - Extraction of all texts, one area in each pull request (section 3).
   - The domain packages return keys or values, not English texts (section 1,
     "Rules for the code"). This includes the statistics names, the badges,
-    the default side names, and the export advice.
-  - The hard-coded text test and the catalog tests (section 12).
+    the default side names, the export option names, and the export advice.
+  - The saved default texts: the scoreboard title is "not set" in the file
+    and shows a placeholder from the catalog (section 1).
+  - The fit of the video texts: smaller font, then "…" (section 6, "Fit").
+    `qps` makes the video texts 40% longer, so the video needs the fit in
+    this step.
+  - The language setting, the detection, and "Restart now" (section 4).
+    The setting stays hidden while English is the only language. The `qps`
+    system property shows it, so the restart can be tested.
   - The UI flow tests run with the test language in CI and save screenshots.
   - Layout fixes from the screenshots (section 7).
   - The rule for contributors in `CONTRIBUTING.md`: each new text goes into
     the catalog.
 - **Prepares:** all translations. After this step, a new language is a new
   file and not a code change.
-- **Size:** 3 to 4 weeks. This is the largest step. The release after each
+- **Size:** 4 to 5 weeks. This is the largest step. The release after each
   pull request shows no change for English users.
 
 ### Step 4. Spanish
@@ -540,9 +655,10 @@ prepares the next step. You can release the app after each step.
   Spanish on a Windows in Spanish. The user can select the language in
   More, Settings. The video uses the app language.
 - **Work:**
-  - Language detection and the setting with "Restart now" (section 4).
-  - The fit of the video texts: smaller font, then "…" (section 6, "Fit"),
-    and the fit tests for Spanish.
+  - Show the language setting of step 3.
+  - The fit tests for Spanish (section 6, "Fit").
+  - A queued render job keeps the language that it had when the user
+    queued it (section 6, "Setting").
   - The analytics value `es` (section 10). Deploy the worker first.
   - The glossary, the machine draft, and the review by a native speaker
     (section 13). The padel terms of B-45 P-6.
@@ -551,17 +667,17 @@ prepares the next step. You can release the app after each step.
   - The Windows smoke test in Spanish.
 - **Prepares:** the process for each new language: glossary, draft, review,
   smoke test, analytics value.
-- **Size:** 1 to 2 weeks, mostly review time.
+- **Size:** 1 to 2 weeks, mostly review time. Most of the code work is in
+  step 3, so this step is mostly translation and review.
 
 ### Step 5. Video language
 
 - **Feature:** the user selects the language of the video on the Export
   tab, separately from the app language. Example: a user with the app in
   Spanish exports a video with English texts for an international club.
-- **Work:** section 6, "Setting". The project keeps the choice. A queued job
-  keeps its language. The preview of the scoreboard and the statistics card
-  uses the video language. The numbers in the video use the format of the
-  video language.
+- **Work:** section 6, "Setting". The project keeps the choice. The preview
+  of the scoreboard and the statistics card uses the video language. The
+  numbers in the video use the format of the video language.
 - **Prepares:** with more languages, each user can select any video
   language.
 - **Size:** a few days.
@@ -624,8 +740,8 @@ B-11 is done after step 6. Steps 7 and 8 continue with each new language.
 - The user can change the app language and the video language.
 - A Spanish export shows the Spanish scoreboard and statistics texts, and
   all texts fit.
-- The FFmpeg and ASS tests pass with the default locales `de-DE` and
-  `tr-TR`.
+- The FFmpeg and ASS tests pass with the default locales `de-DE`, `tr-TR`,
+  and `ar-EG`.
 - The hard-coded text test has no UI texts in the allowlist.
 - The analytics, feedback, and rules file contracts know the language.
 - The Windows smoke test passes in Spanish.

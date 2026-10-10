@@ -66,6 +66,7 @@ When item is done, move it under
 ### B-11 Localization
 
 - Translate the user interface into more languages.
+- The plan is in `docs/localization/b-11-localization.md`.
 
 ### B-13 macOS
 

@@ -19,6 +19,7 @@ A desktop application that helps tennis and padel players turn full‑match reco
 - Marketing strategy and the plan for the first users: [docs/marketing/strategy.md](docs/marketing/strategy.md)
 - Padel support and its improvements (B-45): [docs/padel.md](docs/padel.md)
 - Changes for macOS support (B-13): [docs/macos/b-13-macos.md](docs/macos/b-13-macos.md)
+- Plan for more languages in the app (B-11): [docs/localization/b-11-localization.md](docs/localization/b-11-localization.md)
 - Brainstorm and trial plan for AI points detection: [docs/ai-points/ai-points-trial.md](docs/ai-points/ai-points-trial.md)
 
 ## Key features

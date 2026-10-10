@@ -18,7 +18,7 @@
     </licenses>
 
     <properties>
-        <revision>1.0.1-SNAPSHOT</revision>
+        <revision>1.1.0-SNAPSHOT</revision>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.code.style>official</kotlin.code.style>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>

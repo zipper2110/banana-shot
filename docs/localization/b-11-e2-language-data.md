@@ -71,7 +71,11 @@ IDs do not change.
       address and no install ID.
     - Safeguards: the list stays short, and rare languages become `other`.
       The cockpit shows a language only when it has at least 5 sessions in
-      the period. It counts smaller groups as `other`.
+      the period. It counts smaller groups as `other`. The threshold
+      applies to each cell that the cockpit shows, also to a language
+      combined with another value (for example a language and an app
+      version). The cockpit does not show a total and all groups but one,
+      because the hidden group is then the difference.
     - Open risk (ePrivacy Article 5(3)): the app now also reads the Windows
       display language from the device. Add this to the open risk of B-9
       decision 26.
@@ -111,6 +115,13 @@ IDs do not change.
   - The examples cover the levels: an essential summary with the two
     language attributes is valid. An essential summary with `theme` is
     invalid.
+  - The invalid examples also cover: `qps`, `qps-ploc`, an empty string,
+    `null`, a number, an array, a three-letter code (`spa`), the old codes
+    `iw`, `in`, and `ji`, and a value with spaces.
+  - The summaries of the released builds stay valid: an essential summary
+    without attributes, and a summary of an older schema. Thus the old
+    builds continue to send data after the change. The cockpit counts
+    these sessions as "unknown", not as `en` and not as `other`.
   - The smoke summary (essential) has the two language attributes. Thus
     the deployment check covers them.
   - A new `schema_version` is not necessary if the attributes stay one
@@ -121,6 +132,7 @@ IDs do not change.
     `"language": "es"` is valid.
   - The current example "attributes in an essential summary" changes to an
     attribute that is not essential, and stays invalid.
+  - The current valid examples stay valid without a change.
 - Tests: —
 
 ### E2-T2 The analytics worker and the cockpit
@@ -143,8 +155,13 @@ IDs do not change.
 - Acceptance:
   - The worker tests accept the valid examples and reject the invalid
     examples of E2-T1.
+  - The worker accepts the summaries of the released builds (without the
+    language attributes).
   - The cockpit shows the languages with the synthetic data of the tests.
     A language with fewer than 5 sessions shows as `other`.
+  - The cockpit shows sessions without a language attribute as "unknown".
+  - With synthetic data, no cell of the cockpit has fewer than 5 sessions,
+    also for a language combined with an app version.
 - Tests: —
 
 ### E2-T3 The app sends the two language attributes
@@ -158,19 +175,39 @@ IDs do not change.
     (`Locale.getDefault(Locale.Category.DISPLAY)`), and sends its primary
     subtag as `os_language`. A value that is not in the list becomes
     `other`.
+  - The conversion of the subtag:
+    - It uses `Locale.ROOT` for the lower case. With the default locale
+      `tr-TR`, the subtag "IT" gives `it`, not "ıt".
+    - It changes the old codes `iw`, `in`, and `ji` to `he`, `id`, and
+      `yi`, if these are in the list.
+    - It changes `no` to `nb` if the list has `nb` and not `no`.
+    - An empty language (`und`, `Locale.ROOT`), a three-letter code that
+      is not in the list, and the Windows pseudo-locales (`qps-ploc`,
+      `qps-ploca`, `qps-plocm`) give `other`.
+    - It never throws an exception. If the app cannot read the language,
+      it sends `other`.
+  - The app never sends a value that is not in the list. A value outside
+    the list makes the worker reject the full summary, and the counters of
+    the session are lost.
   - The app sends the app language as `language`, from the same list. In
     E2, the value is always `en`.
   - The essential level and the extended level send the two attributes.
     The other attributes stay on the extended level only.
   - A change from extended to essential deletes the extended counters and
     the extended attributes. It keeps the two language attributes.
-  - With the statistics off, the app sends nothing, as now.
+  - With the statistics off, the app sends nothing, as now. A summary that
+    the app made before the user turned off the statistics is not sent.
   - The `analytics` package stays a leaf package. The app start gives it
     the value.
 - Acceptance:
   - With the display language `es-AR`, the summary has
     `"os_language": "es"`.
   - With a language that is not in the list, the summary has `"other"`.
+  - With `qps-ploc`, `und`, and `Locale.ROOT`, the summary has `"other"`.
+  - With the display language `it-IT` and the default locale `tr-TR`, the
+    summary has `"os_language": "it"`.
+  - A test converts each locale of `Locale.getAvailableLocales()`. Each
+    result is a value of the list.
   - An essential summary and an extended summary have `"language": "en"`
     and `os_language`.
   - An essential summary has no `theme`, `accent`, or `sport`.
@@ -205,6 +242,9 @@ IDs do not change.
     the language attributes) and no extended summary, as for each changed
     notice version.
   - A user who turned off the statistics sees no change and sends nothing.
+  - A user who closes the dialog without an answer (with the close button
+    or Escape) sees it again at the next start. Until then, the app sends
+    only the essential level.
   - The build check of the notice version passes with 3.
 - Notes: the notice version is in three places: `AnalyticsSchema`, the
   check in `Build-AppImage.ps1`, and the GitHub variable
@@ -230,10 +270,25 @@ IDs do not change.
     fields.
   - The `feedback` package stays a leaf package. The app start gives it
     the values.
+  - The app uses the same conversion as E2-T3. It never sends a value that
+    is not in the list, because the worker then rejects the full report,
+    and the message of the user is lost.
+  - A report without the fields (from an older build) shows "unknown" for
+    the two languages in the message to the author.
+  - The text of the user can be in any script, with emoji. The message to
+    the author shows it without a change. If the app makes the text
+    shorter, it does not cut a character in two parts (a surrogate pair).
+    The app limit is not larger than the limit of the contract (10,000
+    characters).
 - Acceptance:
   - The worker tests accept a report with and without the new fields, and
     reject a value that is not in the list.
   - The message of the smoke report shows the two languages.
+  - A test sends a report with Cyrillic, Chinese, and emoji text. The
+    worker accepts it, and the message to the author has the same text.
+  - A test makes a text of 10,001 characters with an emoji at the limit.
+    The text that the app sends is valid UTF-16 and the worker accepts
+    it.
 - Tests: —
 
 ### E2-T6 Feedback form: the languages of the answer
@@ -263,6 +318,8 @@ IDs do not change.
   - Then release the app with E2-T3 to E2-T6.
   - The release checklist has the rule "for a change of a contract, deploy
     the workers and the site first, then release the app".
+  - A rollback of the app release is safe. The new workers accept the
+    summaries and the reports of the previous build.
 - Acceptance:
   - The smoke summary (essential, with the two language attributes) and the
     smoke report with the new fields pass on the production workers before

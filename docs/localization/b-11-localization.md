@@ -54,6 +54,11 @@ proposal or an accepted decision. The column "Status" tells which.
 | Legal texts | The consent dialog and the Privacy page are translated. The author decides if the English text is the binding version (get legal advice) | proposal |
 | Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not | proposal |
 | Right-to-left | Not in B-11 | proposal |
+| Calendar | The UI and the video always use the Gregorian calendar, also when the Windows format locale has another calendar (for example `th-TH` with the Buddhist calendar, or `ja-JP-u-ca-japanese`). The year 2026 never shows as 2569 | proposal |
+| Typed decimal separator | A number or a time code that the user types can have "." or ",", in all languages. A Spanish numeric keypad gives ",". The app shows the number in the format locale | proposal |
+| Unknown language value | A stored language, a queued job language, or a project video language that this build does not have is not an error. The app uses the fallback of each case, and does not overwrite the stored value until the user changes it | proposal |
+| Windows pseudo-locales | The Windows test locales `qps-ploc`, `qps-ploca`, and `qps-plocm` are not the app test language `qps`. The app uses English for them, and analytics sends `other` | proposal |
+| Path back to English | A user who gets a language that they cannot read can find the language setting and English without help: the "Language" row has a globe icon and the word "Language" in English next to the translated label | proposal |
 
 ## Goal
 
@@ -127,6 +132,29 @@ A user who does not read English can do all the steps in their language:
 - The feedback report does not tell the language of the app.
 - Shortcuts use letter keys (Q, W, E, R, C, V, A, S, F). The help shows the
   key names in English ("Space", "Shift+Left").
+- Some code compares or stores a display text. These places break when the
+  text is translated:
+  - `ui/tabs/scoring/ui/ScoringPointsList.kt` compares a badge text with
+    `"SET"`.
+  - `ui/tabs/crop/TransformControls.kt` compares a formatted number with
+    `"0.0"` and `"-0.0"`. With a decimal comma, the check fails.
+  - `ui/more/MoreDialog.kt` finds a section by its title
+    (`selectSection(title)`).
+  - `export/ExportVideoOptions.kt` finds the default resolution by its title
+    `"1080p"`.
+  - `ui/tabs/export/ExportQualityPanel.kt` makes a component name from the
+    resolution title.
+- Some code parses a number that the user typed with `toFloatOrNull()`
+  (`ui/commons/SliderValueRow.kt`). It accepts only ".". If the field shows
+  "1,5", the user cannot type the value again in the same form.
+- `Timecode.parse` accepts only "." as the decimal separator. A time code
+  with "," gives an error.
+- `ui/tabs/points/ui/EditPointDialog.kt` shows the message of an exception
+  to the user ("Minutes/seconds out of range"). This text is not in a
+  catalog.
+- Some UI captions use `uppercase()` without a locale (`StatsTable`,
+  `ToolWindowKit`, `ProjectsUi`). `Locale.ROOT` is not correct for a
+  translated caption (German "ß", Turkish "i").
 
 ## 1. Architecture
 
@@ -166,7 +194,13 @@ A user who does not read English can do all the steps in their language:
   "not set" when the app reads it. The author decides if `APP_CREDIT` gets a
   translation or stays as the brand text.
 - Component names (`name = "more-settings-theme"`) stay in English. Tests
-  find components by name, not by text.
+  find components by name, not by text. Do not make a component name from
+  a display text.
+- Code logic never depends on a display text. Do not compare, parse, store,
+  or search a display text. Use an enum, an ID, or a number. Preferences and
+  project files keep codes, not texts.
+- The user never sees the message of an exception. The UI changes each
+  error into a catalog text.
 - Do not change the default locale of the JVM. Pass the locale to each
   format call. A changed default locale can break the FFmpeg arguments and
   the ASS files (decimal comma in place of a decimal point).
@@ -271,6 +305,10 @@ allowlist, and make the list shorter with each extraction pull request.
   running" and quits. Thus:
   - Use the close sequence of `UpdateAndRestart`. It also asks the user
     when an export runs.
+  - If the save of the open project fails, the restart stops. The user
+    sees the error.
+  - The install path can have spaces and non-ASCII letters (for example
+    `C:\Users\José\AppData\Local\BananaShot`).
   - Start the new process with a restart argument. With this argument, the
     new process tries to get the lock again for some seconds before it
     shows "already running".
@@ -347,7 +385,9 @@ separate setting.
   Each shipped language is complete, also its video texts (see
   "Decisions", "Incomplete language").
 - The project keeps the last choice in the export settings. Thus a new
-  export of the same project makes the same video.
+  export of the same project makes the same video. The project saves the
+  video language only when the user selects one. Without a selection, the
+  project follows the app language.
 - A queued render job keeps the language that was selected when the user
   queued it (`SavedRenderQueue`). A language change after the queue does not
   change the job. Do this already in E4, when the video uses the app
@@ -543,6 +583,14 @@ separate setting.
   tab in each language. The reviewer checks the texts in their place.
 - Windows smoke test (`qa/windows/ui-smoke.md`): add one pass on Windows in
   Spanish for each new language.
+
+- Negative cases: each epic file has requirements for the cases that go
+  wrong, not only for the normal case. Examples: a broken or empty
+  translation, an unknown stored language, a locale without data, a typed
+  value in a different format, an older build that reads a new file, and a
+  user who cannot read the selected language. Each such case has a defined
+  result: a fallback, a clear message, or a test failure. It is never a
+  crash, a message key, or a lost project or export.
 
 ## 13. Translation workflow
 

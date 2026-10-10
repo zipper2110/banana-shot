@@ -41,10 +41,26 @@ are in the plan, "Epics".
   - If the saved language is not available (for example the user opens
     the project on a computer with an older build), the app uses the app
     language.
+  - The project saves the video language only when the user selects one.
+    A project without a selection follows the app language. Thus a user
+    who changes the app language from English to Spanish gets Spanish
+    videos, also for a project that they exported before.
+  - A saved language that this build does not have, or a broken value,
+    gives the app language. The app does not overwrite the saved value
+    until the user selects a language (see the plan, "Decisions",
+    "Unknown language value").
+  - If an older build saves the project, the field can be lost. The
+    project then follows the app language. This is accepted.
 - Acceptance:
   - A test saves and reads a project with the video language.
   - A test reads a project of the current release and gets the app
     language.
+  - A test exports a project without a selection, changes the app
+    language, and exports again. The second video uses the new app
+    language.
+  - A test reads a project with the video language `pt` (not in this
+    build) and a project with a broken value. Both give the app language,
+    and a save without a user change keeps the old value.
 - Tests: —
 
 ### E5-T2 "Video language" choice on the Export tab
@@ -59,6 +75,9 @@ are in the plan, "Epics".
     Settings. Each shipped language is complete, also its video texts
     ("Decisions", "Incomplete language").
   - If the app has only one language, the choice does not show.
+  - A language whose video fonts are not available (for example a CJK
+    font that is not downloaded yet, see E8-T2) is not selectable. The
+    list tells the reason.
 - Acceptance:
   - A presenter test checks the default, a change, and the saved value.
   - A UI flow test selects a language.
@@ -78,6 +97,9 @@ are in the plan, "Epics".
 - Acceptance:
   - A test renders the ASS file of a job with the app in Spanish and the
     video in English, and gets the English texts.
+  - A test renders a job whose video language has a missing video text.
+    The video shows the English text for it, and the export does not
+    fail.
 - Tests: —
 
 ### E5-T4 The preview uses the video language
@@ -90,6 +112,8 @@ are in the plan, "Epics".
     thumbnails of the scoreboard styles, use the video language, not the
     app language.
   - A change of the video language updates the preview at once.
+  - Fast changes of the video language never show a preview with texts
+    of two languages. The last selection wins.
 - Acceptance:
   - A test checks that the preview and the export give the same texts for
     the same video language.
@@ -110,10 +134,14 @@ are in the plan, "Epics".
     - If not, use the default format of the video language. Example: video
       in Spanish, regional format "English (United States)": "4,2 s".
   - Score values and time codes stay the same in all languages.
+  - The video always shows the digits 0–9 and the Gregorian calendar, also
+    when the regional format has a digit or a calendar extension (E1-T5).
 - Acceptance:
   - A test renders the statistics card with the three cases: English,
     Spanish with `es-MX`, and Spanish with `en-US`. It checks the decimal
     separator and the percent sign.
+  - A test renders the statistics card with the video in English and the
+    regional format `ar-EG`. The card has only the digits 0–9.
 - Tests: —
 
 ### E5-T6 Checks and documentation

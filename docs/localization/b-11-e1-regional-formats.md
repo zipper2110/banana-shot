@@ -2,28 +2,31 @@
 
 This file holds the tasks of epic E1 of B-11 (localization). The plan is in
 `b-11-localization.md` ("the plan"). The plan has priority. If the plan
-changes, change the tasks too. The rules for the status values are in the
-plan, "Epics".
+changes, change the tasks too. The rules for the tasks and the status values
+are in the plan, "Epics".
 
 ## Epic
 
 - Status: open
 - Plan sections: 1 (`i18n` package), 5 (Formats), 14 (Documentation)
 - Depends on: —
-- Feature: the English app shows dates, times, numbers, and file sizes in
-  the Windows regional format. Example: a user with the regional format
-  "Spanish (Spain)" sees "10/10/26" in the exports table and "2,35 GB" for a
-  size. After E4, the same user with the app in Spanish sees "10 oct 2026".
-- Prepares: the format layer of all later epics. It also removes a hidden
-  risk now: a JVM with a German default locale writes "1,5" into an FFmpeg
-  argument, and a JVM with an Arabic or Persian default locale writes
-  Arabic-Indic digits into a time code.
 - Size: a few days.
+- Value:
+  - The English app shows dates, times, numbers, and file sizes in the
+    Windows regional format of the user. Example: a user with the regional
+    format "Spanish (Spain)" sees "10/10/26" in the exports table and
+    "2,35 GB" for a size. After E4, the same user with the app in Spanish
+    sees "10 oct 2026".
+  - The export becomes safe from the regional format. Now a JVM with a
+    German default locale can write "1,5" into an FFmpeg argument, and a
+    JVM with an Arabic or Persian default locale can write Arabic-Indic
+    digits into a time code. Both break the export.
+- Prepares: the format layer of all later epics.
 
 Not in this epic:
 
-- The message catalog. The units ("s", "GB") stay English strings in
-  `DisplayFormats`. E3-T20 moves them into the catalog.
+- The message catalog. The units ("s", "GB") stay English in this epic.
+  E3-T20 moves them into the catalog.
 - The numbers in the exported video. They keep the current formats until
   E5-T5 gives them the format of the video language.
 
@@ -32,175 +35,186 @@ Not in this epic:
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
 | E1-T1 | `i18n` package and its dependency rule | — | open |
-| E1-T2 | `MachineFormats` and the machine texts | E1-T1 | open |
+| E1-T2 | Machine formats do not use the default locale | E1-T1 | open |
 | E1-T3 | Tests with other default locales | E1-T2 | open |
 | E1-T4 | Test that finds calls with the default locale | E1-T2 | open |
-| E1-T5 | `DisplayFormats` | E1-T1 | open |
-| E1-T6 | Use `DisplayFormats` in the UI | E1-T5 | open |
-| E1-T7 | Measure the `HOST` locale provider on Windows | E1-T5 | open |
+| E1-T5 | Display formats | E1-T1 | open |
+| E1-T6 | The UI shows the display formats | E1-T5 | open |
+| E1-T7 | Decide the locale provider (`HOST` or CLDR) | E1-T5 | open |
 | E1-T8 | Documentation | E1-T1–E1-T7 | open |
 
 ### E1-T1 `i18n` package and its dependency rule
 
 - Status: open
 - Plan: 1 ("New package `org.litvin.i18n`")
-- Work:
-  - Make the package `org.litvin.i18n` in `src/main/kotlin/org/litvin/i18n`.
-  - The package is a leaf, like `shared.util`. It does not depend on
-    another `org.litvin` package.
+- Value: all format and text code has one place. All packages can use it
+  without a dependency cycle.
+- Requirements:
+  - The package `org.litvin.i18n` is a leaf package, like `shared.util`.
+    It does not depend on another `org.litvin` package.
   - All packages can depend on it.
 - Acceptance:
-  - `ArchitectureDependencyHygieneTest` fails when a file in `i18n` imports
-    another `org.litvin` package.
-  - `docs/architecture-rules.md` lists the package and the rule.
+  - The architecture test fails when a file in `i18n` imports another
+    `org.litvin` package.
+  - `docs/architecture-rules.md` gives the package and its rule.
 - Tests: —
 
-### E1-T2 `MachineFormats` and the machine texts
+### E1-T2 Machine formats do not use the default locale
 
 - Status: open
 - Plan: 1, 5 ("Numbers for machines", "Time codes that the user can edit")
-- Work:
-  - Add `MachineFormats` to `i18n`. It always uses `Locale.ROOT`.
-  - Move to `MachineFormats` all formats for FFmpeg arguments, ASS files,
-    shader parameters, JSON, and the analytics payload. Start from the 60
-    uses of `Locale.US`, `Locale.ROOT`, and `Locale.ENGLISH` in
-    `src/main/kotlin`. Examples: `FFmpegCommandBuilder.kt`,
-    `AssOverlayWriter.kt`, `export/scoreboard/ScoreboardAss.kt`,
-    `export/comments/CommentAss.kt`, `media/mpv/MpvShaderParams.kt`,
-    `media/mpv/MpvAssOverlay.kt`, `EdlIO.kt`, `JsonFileIO.kt`.
-  - Move the time codes to `MachineFormats`:
-    - `shared/util/Timecode.kt`, `Timecode.format`: it calls
-      `String.format` without a locale now.
-    - `ui/commons/CommentDialog.kt`: the time code that `Timecode.parse`
-      reads again.
-  - Give `Locale.ROOT` to the hexadecimal color formats
-    (`Palette.kt`, `ColorPickerDialog.kt`, `CommentDialog.kt`,
-    `ScoreboardDisplay.kt`, `ScoreboardSettingsDialog.kt`,
-    `ExportSettingsPreferences.kt`). They are safe now, but the scan test
-    of E1-T4 must accept no exceptions.
-  - Do not change the output. The current tests stay green without a
+- Value: the export, the preview, and the saved files are correct with all
+  Windows regional formats.
+- Requirements:
+  - All texts that a program reads use one fixed format (`MachineFormats`,
+    `Locale.ROOT`): FFmpeg arguments, ASS files, shader parameters, JSON
+    files, the EDL file, the analytics payload, and the time codes.
+  - A time code that the user can edit uses ASCII digits and ".". The app
+    can read each time code that it writes, with all regional formats.
+  - The hexadecimal color texts also give the locale. They are safe now,
+    but E1-T4 must accept no exceptions.
+  - The output does not change. The current tests stay green without a
     change of the expected values.
 - Acceptance:
-  - No format for a machine uses the default locale.
-  - All current tests pass.
+  - No format for a machine uses the default locale. The scan of E1-T4
+    proves it.
+  - All current tests pass without a change of the expected values.
+- Notes: the time code in the comment dialog is a known risk. It uses
+  `String.format` without a locale, and `Timecode.parse` reads it again.
+  Start with it.
 - Tests: —
 
 ### E1-T3 Tests with other default locales
 
 - Status: open
 - Plan: 5 ("Numbers for machines"), 12
-- Work:
-  - Add a JUnit extension or a base class that sets the default locale for
-    one test and sets the old value again after the test.
-  - Run these tests with the default locales `de-DE`, `tr-TR`, and `ar-EG`:
-    - the FFmpeg command builder tests (`FFmpegCommandBuilder*Test`),
-    - the ASS writer tests (`OverlayAssWriterTest`, `ScoreboardAssTest`,
-      `CommentAssTest`, `MpvAssOverlayTest`),
-    - `TimecodeTest` and the JSON tests (`JsonFileIOTest`, `EdlIOTest`).
-  - Each output must be the same as with `en-US`.
+- Value: CI finds a machine format that depends on the default locale
+  before a user finds it.
+- Requirements:
+  - These tests run with the default locales `de-DE` (decimal comma),
+    `tr-TR` (a different "i"), and `ar-EG` (Arabic-Indic digits): the
+    FFmpeg command tests, the ASS file tests, the time code tests, and the
+    JSON and EDL file tests.
+  - The output of each test is the same as with `en-US`.
+  - A test that sets the default locale sets the old value again after
+    the test. It does not change the result of other tests.
 - Acceptance:
-  - The tests fail if a machine format uses the default locale. Prove this
-    one time: remove `Locale.ROOT` from one call and see the failure.
-  - The tests do not change the default locale for the other tests.
+  - The tests pass with the three locales.
+  - If one machine format uses the default locale, a test fails. Prove
+    this one time: remove the locale from one call and see the failure.
 - Tests: —
 
 ### E1-T4 Test that finds calls with the default locale
 
 - Status: open
 - Plan: 5
-- Work:
-  - Add a source scan test for `src/main/kotlin`. It finds these calls:
-    - `"…".format(…)` and `String.format(…)` without a locale,
-    - `toUpperCase()` and `toLowerCase()` without a locale,
-    - `DateTimeFormatter.ofPattern` without a locale,
-    - `NumberFormat` and `DecimalFormat` without a locale.
-  - The Kotlin `uppercase()` and `lowercase()` without an argument use
-    `Locale.ROOT`. The test accepts them.
-  - The test has an allowlist for accepted exceptions. Each entry has a
-    reason.
+- Value: a new format call without a locale cannot go into the code.
+- Requirements:
+  - A source scan test of `src/main/kotlin` finds these calls without a
+    locale: `"…".format(…)`, `String.format(…)`, `toUpperCase()`,
+    `toLowerCase()`, `DateTimeFormatter.ofPattern`, `NumberFormat`, and
+    `DecimalFormat`.
+  - The test accepts the Kotlin `uppercase()` and `lowercase()` without an
+    argument, because they use `Locale.ROOT`.
+  - An allowlist holds the accepted exceptions. Each entry has a reason.
 - Acceptance:
-  - The allowlist is empty, or each entry has a written reason.
   - A new call without a locale makes the test fail.
+  - The allowlist is empty, or each entry has a written reason.
 - Tests: —
 
-### E1-T5 `DisplayFormats`
+### E1-T5 Display formats
 
 - Status: open
-- Plan: 5
-- Work:
-  - Add `DisplayFormats` to `i18n`. It gets the format locale and the app
-    language through the constructor. In E1, the app language is always
-    English.
-  - The format locale is `Locale.getDefault(Locale.Category.FORMAT)`. Do not
-    make a locale from the app language and the Windows region (for example
-    `en-ES`).
+- Plan: 5, "Decisions" ("Format locale", "Digits")
+- Value: one component gives all formats that the user reads. All later
+  epics use it.
+- Requirements:
+  - `DisplayFormats` gets the format locale and the app language. In E1,
+    the app language is always English.
+  - The format locale is the Windows regional format
+    (`Locale.getDefault(Locale.Category.FORMAT)`). Do not make a locale
+    from the app language and the Windows region (for example `en-ES`).
   - Dates: if the language of the format locale is the app language, use
-    `FormatStyle.MEDIUM`. If not, use `FormatStyle.SHORT`.
-  - Times: the 24-hour or 12-hour form of the format locale.
-  - Numbers, percentages, file sizes, and seconds: the format locale.
-  - The units stay English strings in this epic (see "Not in this epic").
-  - `app` makes one instance at the start and gives it to the presenters.
-    Do not change the default locale of the JVM.
-- Acceptance:
-  - Unit tests with the format locales `en-US`, `es-ES`, and `de-DE` give
-    the values of the table in plan section 5.
-  - With `es-ES` and the app in English, a date is "10/10/26", and a size
-    is "2,35 GB".
+    the medium date form of the format locale ("10 oct 2026"). If not, use
+    the short form with only digits ("10/10/26"). Thus an English window
+    does not show Spanish month names.
+  - Times: the 24-hour or the 12-hour form of the format locale.
+  - Numbers, percentages, file sizes, and seconds: the decimal and the
+    group separators of the format locale.
+  - Digits: always the digits 0–9 (see "Decisions", "Digits").
+  - The app makes one instance at the start and gives it to the
+    presenters. The app does not change the default locale of the JVM.
+- Acceptance: unit tests with fixed locales and the app in English give
+  these results (measured on JDK 21).
+
+  | Format locale | Date | Time of 15:45 | 2.35 GB | 64 % |
+  |---|---|---|---|---|
+  | `en-US` | Oct 10, 2026 | 3:45 PM | 2.35 GB | 64% |
+  | `es-ES` | 10/10/26 | 15:45 | 2,35 GB | 64 % |
+  | `es-MX` | 10/10/26 | 15:45 | 2.35 GB | 64% |
+  | `de-DE` | 10.10.26 | 15:45 | 2,35 GB | 64 % |
+  | `ar-EG` | only the digits 0–9 | only the digits 0–9 | only the digits 0–9 | only the digits 0–9 |
+
+- Notes: the JDK puts special spaces into some formats. "3:45 PM" has
+  U+202F (narrow no-break space), and "64 %" has U+00A0 (no-break space).
+  The tests must expect these characters. The UI font must show them.
 - Tests: —
 
-### E1-T6 Use `DisplayFormats` in the UI
+### E1-T6 The UI shows the display formats
 
 - Status: open
 - Plan: 5 ("Dates", "Numbers in the UI")
-- Work:
-  - `ui/tabs/export/ExportsTable.kt`: the date ("d MMM yyyy") and the time
-    ("HH:mm").
-  - `license/EffectiveExpiry.kt`, `ExpiryMomentFormat`: the expiry moment.
-  - `export/RenderFormatting.kt`: `formatSize` and `formatSizeProgress`.
-  - `ui/commons/Durations.kt`: `formatSeconds`.
-  - `ui/tabs/crop/TransformControls.kt`: the transform values.
-  - `ui/tabs/scoring/ui/ScoringPlaybackBar.kt`, the percentages, and the
-    other numbers that the user reads. Find them with the uses of
-    `Locale.US` in `ui` that E1-T2 did not move.
-  - Do not change the time codes that the user can edit. They are machine
+- Value: the user sees the formats of their Windows regional format.
+- Requirements:
+  - These texts use `DisplayFormats`: the date and the time in the exports
+    table, the expiry moment, the file sizes and the size progress of the
+    export, the durations in seconds, the values of the Transform tab, and
+    the percentages and other numbers that the user reads.
+  - The time codes that the user can edit do not change. They are machine
     formats (E1-T2).
-  - Do not change the texts in the exported video (see "Not in this
+  - The texts in the exported video do not change (see "Not in this
     epic").
 - Acceptance:
   - With the regional format "Spanish (Spain)", the exports table shows
-    "10/10/26", and the sizes show "2,35 GB".
+    "10/10/26" and "15:45", and the sizes show "2,35 GB".
   - With the regional format "English (United States)", the app shows the
-    same texts as before this epic, except for the date form of
-    `FormatStyle.MEDIUM` ("Oct 10, 2026").
-  - The presenter tests use a fixed format locale, so they do not depend
-    on the computer that runs them.
+    same texts as before this epic, with two known changes: the date
+    "Oct 10, 2026" in place of "10 Oct 2026", and the 12-hour time
+    "3:45 PM" in place of "15:45". The release notes tell about them.
+  - The presenter tests use a fixed format locale. They do not depend on
+    the computer that runs them.
 - Tests: —
 
-### E1-T7 Measure the `HOST` locale provider on Windows
+### E1-T7 Decide the locale provider (`HOST` or CLDR)
 
 - Status: open
 - Plan: 5 ("An alternative is the JDK `HOST` locale provider")
-- Work:
-  - On Windows, start the app with `-Djava.locale.providers=HOST,CLDR`.
-  - Change the regional format and its custom settings (for example the
-    date form) in Windows.
-  - Compare the formats with the default provider (CLDR).
+- Value: the formats follow the custom changes of the user in Windows (for
+  example a changed date form), if the `HOST` provider does this well.
+- Requirements:
+  - On Windows, compare the formats of the default provider (CLDR) and of
+    `-Djava.locale.providers=HOST,CLDR`. Use a standard regional format and
+    a regional format with custom changes.
+  - Time box: one day. If the result is not clear, keep CLDR.
 - Acceptance:
-  - The plan has a decision: keep CLDR, or use `HOST`. Write the reason.
-  - If the decision is `HOST`, the build scripts give the property, and
-    `Validate-AppImage.ps1` checks it.
+  - The plan, "Decisions", has the decision and the reason.
+  - If the decision is `HOST`, the installed app uses it, and the
+    validation of the app image checks it.
 - Tests: — (manual)
 
 ### E1-T8 Documentation
 
 - Status: open
 - Plan: 14
-- Work:
-  - `docs/architecture-rules.md`: the `i18n` package, `MachineFormats`,
-    `DisplayFormats`, and the rule "do not change the default locale of the
+- Value: a contributor knows which format to use, and does not add a new
+  locale risk.
+- Requirements:
+  - `docs/architecture-rules.md` gives the `i18n` package, the two format
+    components, and the rule "do not change the default locale of the
     JVM".
-  - `CONTRIBUTING.md`: which format to use for a machine and for the user.
-  - The plan, "Current state": write that the formats are done.
+  - `CONTRIBUTING.md` tells which format to use for a machine and for the
+    user.
+  - The plan, "Current state", tells that the formats are done.
 - Acceptance:
   - A contributor can find the format rules in `CONTRIBUTING.md`.
 - Tests: —
@@ -208,6 +222,8 @@ Not in this epic:
 ## Done when
 
 - All tasks are `done`.
-- The FFmpeg and ASS tests pass with the default locales `de-DE`, `tr-TR`,
-  and `ar-EG`.
+- The FFmpeg, ASS, time code, and JSON tests pass with the default locales
+  `de-DE`, `tr-TR`, and `ar-EG`.
 - The scan test of E1-T4 has no unexplained entries in its allowlist.
+- With the regional format "Spanish (Spain)", the English app shows the
+  dates, the times, and the numbers in the Spanish format.

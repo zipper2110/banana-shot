@@ -41,7 +41,10 @@ proposal.
 | Next languages | The languages of real users. Get them from a new analytics attribute (see "10. Analytics") |
 | Video language | A separate setting of each export. The default is the app language (see "6. Texts in the exported video") |
 | Format locale | Numbers use the Windows format locale. Dates use the Windows format locale with month names only when its language is the app language (see "5. Formats") |
+| Digits | The UI and the video always show the digits 0–9, also when the Windows format locale has other digits (for example `ar-EG`). All planned languages use these digits, and the time codes must use them |
+| Video number format | The format locale if its language is the video language. If not, the default format of the video language (see "6. Texts in the exported video") |
 | Language change | The change applies at the next start. The setting has a "Restart now" button |
+| Existing users | The default setting is "System". Thus an existing user with Windows in a new language gets this language after the update. The app tells this one time, and tells where to change it |
 | Message format | `.properties` files in UTF-8 with the ICU message syntax, read by ICU4J (see "2. Message catalog") |
 | Translation | Machine translation with a glossary as the first draft. A native speaker who plays tennis or padel reviews each language |
 | Translation tool | The files stay in the repository. A hosted tool (Weblate or Crowdin) only if volunteer translators come |
@@ -190,6 +193,11 @@ A user who does not read English can do all the steps in their language:
   `scoring.settings.deuceRule.goldenPoint`, `stats.row.servicePointsWon`.
 - Each key has a comment for the translator: where the text shows, what the
   placeholders are, and the maximum length if the space is small.
+- Placeholders have names (`{playerName}`), not numbers.
+- An apostrophe shows as written ("don't", "l'export"). In the JDK
+  `MessageFormat`, an apostrophe starts a quoted part and is lost. ICU4J
+  with the default apostrophe mode keeps it. The own plural rules
+  alternative must give the same result.
 - A Kotlin object holds the keys as constants. A test checks that each
   constant has a text in the English file, and that each key in the file
   has a constant (no unused keys).
@@ -242,7 +250,8 @@ allowlist, and make the list shorter with each extraction pull request.
 
 ## 4. Language selection
 
-- At the first start, the app uses the display language of Windows
+- The default value of the setting is "System". With "System", the app
+  uses the display language of Windows at each start
   (`Locale.getDefault(Locale.Category.DISPLAY)`). If the app does not have
   this language, the app uses English. A regional variant uses the main
   language: `es-AR` and `es-MX` use `es`.
@@ -332,7 +341,9 @@ separate setting.
 ### Setting
 
 - The Export tab gets a "Video language" choice. The default is the app
-  language. The list has only the languages with a complete video glossary.
+  language. The list has the same languages as the app language setting.
+  Each shipped language is complete, also its video texts (see
+  "Decisions", "Incomplete language").
 - The project keeps the last choice in the export settings. Thus a new
   export of the same project makes the same video.
 - A queued render job keeps the language that was selected when the user
@@ -357,6 +368,9 @@ separate setting.
 - Set summaries.
 - The default side names: "Player 1", "Team 1".
 - User texts (player names, comments, project names) are not translated.
+- Numbers in the video ("4.2 s", "64%") use the video number format (see
+  "Decisions"). Example: a Spanish video shows "4,2 s", but "4.2 s" when
+  the Windows regional format is "Spanish (Mexico)".
 
 ### Fit
 
@@ -457,8 +471,9 @@ separate setting.
 ### Feedback
 
 - Add the optional fields `app_language` and `os_language` to the feedback
-  report (`feedback-contract/v1/report.schema.json`). `os_language` uses the
-  same values as the analytics attribute. The schema has
+  report (`feedback-contract/v1/report.schema.json`). Both use the value
+  list of the analytics attribute `os_language`. Thus a new app language
+  needs no change of the feedback contract. The schema has
   `additionalProperties: false`, so deploy the feedback worker first.
 - The Telegram message shows the language. The user can write in their
   language. The author can use machine translation to read and answer.
@@ -590,10 +605,18 @@ release the app after each epic. Each epic has its own file with its tasks.
 
 ### How to use the epic files
 
-- Each epic file has the feature, the dependencies, a summary table of the
+- Each epic file has the value, the dependencies, a summary table of the
   tasks, and the tasks.
-- Each task has a status, the plan sections, the work, the acceptance
-  criteria, and the tests that prove it.
+- Each task has a status, the plan sections, the value, the requirements,
+  the acceptance criteria, and the tests that prove it. Some tasks also
+  have notes.
+  - The value tells why the task is necessary for the user or the author.
+  - The requirements tell what must be true after the task. They do not
+    tell which files to change. The implementer selects the changes.
+  - The acceptance criteria are checks that pass or fail. A task is done
+    only when all of them pass.
+  - The notes give only the code facts that are not easy to find and that
+    can cause a defect (for example a value in three places).
 - The plan has priority. If the plan changes, change the tasks too.
 - Task IDs have the form `E<epic>-T<number>`, for example `E3-T21`. The
   language tasks of E7 and E8 have the form `E7-L-<code>`, for example

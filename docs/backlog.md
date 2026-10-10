@@ -3,20 +3,8 @@
 This file lists the open work. For the steps of a release, see
 `release-checklist.md`.
 
-Remove an item when it is done. To change the order of the work, move an item
-to a different section.
-
-## Pre-release
-
-Do these items before the first public release.
-
-No open items (2026-10-06). The next step is the first release with
-`release-checklist.md`. The manual checks that moved to after the release
-are in B-42.
-
-## Post-release
-
-Do these items after the first public release.
+When item is done, move it under 
+`docs/version-scope/<upcoming-release-version-number>.md` file.
 
 ### B-42 Manual checks after the first release
 
@@ -84,13 +72,13 @@ Do these items after the first public release.
 - Build, package, and test the app on macOS.
 - The list of changes is in `docs/macos/b-13-macos.md`.
 
-### B-14 Padel
+### B-45 Padel improvements
 
-- Support padel matches.
-- The first part is in the app (2026-10-08): the Tennis / Padel switch in
-  the "New project" dialog, the golden point, the star point, Americano
-  matches, and the deciding points statistic.
-- The open questions and gaps are in `padel.md`.
+- The baseline is the padel support of the first release with padel
+  (B-14, done on 2026-10-10). `padel.md` describes the baseline.
+- The tasks P-1 to P-7 are in `padel.md`, section "Improvements".
+- Do P-7 (site and FAQ) after the release with padel support, then P-6
+  (Spanish, with B-11).
 
 ### B-43 Padel Americano events
 
@@ -108,28 +96,6 @@ Do these items after the first public release.
     rounds, with the points of each player?
   - Draw: a draw shows the equal points. Nothing on the scoreboard or in
     Stats says "Draw".
-
-### B-44 Sport dimension in analytics
-
-- Decided on 2026-10-08: add a new dimension "sport" (tennis or padel), so
-  the cockpit can count padel projects.
-- The event `project_created` has no sport now. The change touches
-  `analytics-contract`, `AnalyticsSchema`, the analytics Worker, and the
-  cockpit.
-- Decided on 2026-10-09: no new counter keys. The session summary gets
-  session attributes, as `app_version` and `os_family`, so that the cockpit
-  can group all counters by them. Extended level only.
-  - `theme`: the theme setting (`dark`, `mid`, `light`).
-  - `accent`: `default` or `custom`. Never the color.
-  - `language`: the language of the app interface, from the closed list of
-    the app languages (now only `en`). Not the Windows locale.
-  - `sport`: an array of the sports of the projects that the session opened,
-    for example `["padel", "tennis"]`. An array, so that a third sport needs
-    no new design.
-  - `theme`, `accent`, and `language` have the value at the time of the
-    send. No counter for a change of the language.
-  - The notice version becomes 2, because the attributes are a new type of
-    data. The app asks each user again.
 
 ### B-15 Intro and outro videos
 

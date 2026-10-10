@@ -53,7 +53,7 @@ data class StatsSettingsV1(
     companion object {
         const val DEFAULT_SHORT_POINT_MAX_SECONDS = 10
         const val DEFAULT_LONG_POINT_MIN_SECONDS = 13
-        // Padel points are usually longer than tennis points. These values are an estimate, not a measurement (G-13).
+        // Padel points are usually longer than tennis points. These values are an estimate, not a measurement (P-5 of padel.md).
         const val PADEL_SHORT_POINT_MAX_SECONDS = 12
         const val PADEL_LONG_POINT_MIN_SECONDS = 18
         const val MIN_POINT_LIMIT_SECONDS = 1

@@ -346,7 +346,7 @@ internal object ScoreboardTourLayouts {
     }
 
     /**
-     * Padel Glass (G-19 of padel.md): a padel-blue board in a light glass frame, as the glass walls of a padel
+     * Padel Glass (see padel.md): a padel-blue board in a light glass frame, as the glass walls of a padel
      * court. A frosted glass band at the top, white court lines, a frosted point column and an accent tile for the
      * leading points.
      */

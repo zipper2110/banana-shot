@@ -139,7 +139,7 @@ data class MatchRulesV1(
         const val MATCH_TIEBREAK_POINTS = 10
         val BEST_OF_OPTIONS = listOf(1, 3, 5)
         val GAMES_PER_SET_OPTIONS = listOf(4, 6, 8, 9)
-        /** The games in a set that offer [earlyTiebreak]: the pro set to 9 games with a tiebreak at 8–8 (G-6 of padel.md). */
+        /** The games in a set that offer [earlyTiebreak]: the pro set to 9 games with a tiebreak at 8–8 (see padel.md). */
         val EARLY_TIEBREAK_GAMES = setOf(9)
         val TIEBREAK_POINTS_OPTIONS = listOf(7, 10)
         const val MIN_GAMES_PER_SET = 1

@@ -17,7 +17,7 @@ A desktop application that helps tennis and padel players turn full‑match reco
 - Feedback server: [feedback-worker/README.md](feedback-worker/README.md)
 - Private dashboard of the numbers (cockpit): [cockpit-worker/README.md](cockpit-worker/README.md)
 - Marketing strategy and the plan for the first users: [docs/marketing/strategy.md](docs/marketing/strategy.md)
-- Padel support (B-14): [docs/padel.md](docs/padel.md)
+- Padel support and its improvements (B-45): [docs/padel.md](docs/padel.md)
 - Changes for macOS support (B-13): [docs/macos/b-13-macos.md](docs/macos/b-13-macos.md)
 - Brainstorm and trial plan for AI points detection: [docs/ai-points/ai-points-trial.md](docs/ai-points/ai-points-trial.md)
 

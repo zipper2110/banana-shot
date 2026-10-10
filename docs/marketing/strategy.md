@@ -195,7 +195,8 @@ message.
 ### Group F: players of other sports that count points (later)
 
 - Padel: grows fast in Europe, Latin America, and the Middle East. The score
-  rules are almost the same as tennis. B-14 is planned.
+  rules are almost the same as tennis. The app supports padel since B-14
+  (2026-10-10). The improvements are B-45.
 - Pickleball: very large in the USA. It has a different score system. The
   "plain points" mode works now, but a real pickleball score is better.
 - Table tennis, badminton, squash, beach volleyball: "plain points" works
@@ -275,7 +276,7 @@ Do them in the order of what the first users ask for.
 |---|---|---|---|
 | Video description text after export (site link, "Made with BananaShot") | Viewers of each exported video | Very low | Do first. A "Copy description" button on the Export tab |
 | Vertical clips for Shorts, Reels, TikTok (B-16) | Social media users | Medium | High value: each clip with the credit line is an ad |
-| Padel (B-14) | Padel players: Europe, Latin America, Middle East | Medium | Do after the first 20 to 30 tennis users |
+| Padel (B-14 done, improvements B-45) | Padel players: Europe, Latin America, Middle East | Medium | Do after the first 20 to 30 tennis users |
 | Languages (B-11) | Players who do not read English | Medium, and each language needs care | Start with Spanish (Spain and Latin America, padel too). Then the languages of real users from the cockpit |
 | macOS (B-13) | Mac users, many video people | High | Collect requests first. Count them |
 | Pickleball score | USA, very large and growing | Medium | Ask in pickleball communities if the need is real |
@@ -436,7 +437,7 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
 
 ### Phase 3: reach (months 3 to 12)
 
-- [ ] Padel (B-14), then promote in padel communities in Spanish.
+- [ ] Padel (B-14 is done), then promote in padel communities in Spanish.
 - [ ] Spanish UI (B-11), then the other languages of real users.
 - [ ] macOS (B-13), when the requests show enough demand.
 - [ ] A Product Hunt launch with a ready video and the first reviews.

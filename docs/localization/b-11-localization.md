@@ -33,25 +33,26 @@ Not in the scope:
 ## Decisions
 
 The author must make these decisions before the work starts. Each row gives a
-proposal.
+proposal or an accepted decision. The column "Status" tells which.
 
-| Subject | Proposal |
-|---|---|
-| First language | Spanish (Spain and Latin America, also padel). See `docs/marketing/strategy.md` and B-45 P-6 |
-| Next languages | The languages of real users. Get them from a new analytics attribute (see "10. Analytics") |
-| Video language | A separate setting of each export. The default is the app language (see "6. Texts in the exported video") |
-| Format locale | Numbers use the Windows format locale. Dates use the Windows format locale with month names only when its language is the app language (see "5. Formats") |
-| Digits | The UI and the video always show the digits 0–9, also when the Windows format locale has other digits (for example `ar-EG`). All planned languages use these digits, and the time codes must use them |
-| Video number format | The format locale if its language is the video language. If not, the default format of the video language (see "6. Texts in the exported video") |
-| Language change | The change applies at the next start. The setting has a "Restart now" button |
-| Existing users | The default setting is "System". Thus an existing user with Windows in a new language gets this language after the update. The app tells this one time, and tells where to change it |
-| Message format | `.properties` files in UTF-8 with the ICU message syntax, read by ICU4J (see "2. Message catalog") |
-| Translation | Machine translation with a glossary as the first draft. A native speaker who plays tennis or padel reviews each language |
-| Translation tool | The files stay in the repository. A hosted tool (Weblate or Crowdin) only if volunteer translators come |
-| Incomplete language | The app does not show a language until 100% of its texts are translated and reviewed |
-| Legal texts | The consent dialog and the Privacy page are translated. The author decides if the English text is the binding version (get legal advice) |
-| Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not |
-| Right-to-left | Not in B-11 |
+| Subject | Decision | Status |
+|---|---|---|
+| First language | Spanish (Spain and Latin America, also padel). See `docs/marketing/strategy.md` and B-45 P-6 | proposal |
+| Next languages | The languages of real users. Get them from a new analytics attribute (see "10. Analytics") | proposal |
+| Video language | A separate setting of each export. The default is the app language (see "6. Texts in the exported video") | proposal |
+| Format locale | Numbers use the Windows format locale. Dates use the Windows format locale with month names only when its language is the app language (see "5. Formats") | proposal |
+| Digits | The UI and the video always show the digits 0–9, also when the Windows format locale has other digits (for example `ar-EG`). All planned languages use these digits, and the time codes must use them | accepted 2026-10-10 |
+| Video number format | The format locale if its language is the video language. If not, the default format of the video language (see "6. Texts in the exported video") | accepted 2026-10-10 |
+| Language change | The change applies at the next start. The setting has a "Restart now" button | proposal |
+| Existing users | The default setting is "System". Thus an existing user with Windows in a new language gets this language after the update. The app tells this one time, and tells where to change it | accepted 2026-10-10 |
+| Language values | One fixed list of language codes: the primary language subtags of the Windows display languages (about 40) plus `other`. The analytics attributes `language` (app language) and `os_language` (Windows language), and the feedback fields `app_language` and `os_language`, all use it. A new app language needs no change of a contract or a worker (see "10. Analytics") | accepted 2026-10-10 |
+| Message format | `.properties` files in UTF-8 with the ICU message syntax, read by ICU4J (see "2. Message catalog") | proposal |
+| Translation | Machine translation with a glossary as the first draft. A native speaker who plays tennis or padel reviews each language | proposal |
+| Translation tool | The files stay in the repository. A hosted tool (Weblate or Crowdin) only if volunteer translators come | proposal |
+| Incomplete language | The app does not show a language until 100% of its texts are translated and reviewed | proposal |
+| Legal texts | The consent dialog and the Privacy page are translated. The author decides if the English text is the binding version (get legal advice) | proposal |
+| Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not | proposal |
+| Right-to-left | Not in B-11 | proposal |
 
 ## Goal
 
@@ -435,22 +436,28 @@ separate setting.
 
 ## 10. Analytics
 
-- Add the new values to `AnalyticsEvent.Language`. Add them to
-  `analytics-contract/v1/attributes.json`, to `analytics-worker/src/
-  attributes.ts`, and to the cockpit.
-- Order: deploy the worker that accepts the new values before the app
-  release that sends them. The current worker rejects an unknown language
-  (see `invalid-summaries.json`, "unknown language").
-- The test language `qps` and the languages that only reviewers see (section
-  13) are not values of the attribute. When one of them is on, the app sends
-  `en`. Thus the worker does not reject the summaries of the reviewers.
-- Before the first translation, add the attribute `os_language`: the
-  primary language subtag of Windows (for example `es`, `ru`), from a fixed
-  list of about 40 values, plus `other`. This tells which languages to add
-  next. It is a new attribute of the extended level, so:
-  - Change `docs/analytics/design.md`, the privacy notice
-    (`docs/analytics/privacy-notice.md` and the site privacy page), the
-    consent dialog, and the Privacy page.
+- The analytics summary has two language attributes of the extended level:
+  - `language`: the language of the app interface. It exists now, with only
+    the value `en`.
+  - `os_language`: the Windows display language. It is new.
+- Both attributes use one fixed list of values (see "Decisions", "Language
+  values"): the primary language subtags of the Windows display languages
+  (for example `es`, `ru`), about 40 values, plus `other`. Never a region
+  or a full locale.
+- E2 widens `language` to this list and adds `os_language`, before the
+  first translation. Then the worker and the cockpit accept each later app
+  language. A new language needs no worker deployment before its release.
+- The test language `qps` is not a value of the list. When it is on, the app
+  sends `language` = `en`. A language that only reviewers see (section 13)
+  sends its own code.
+- `os_language` tells which languages to add next. It is a new attribute of
+  the extended level, so:
+  - Change `docs/analytics/design.md`. It says now that the app does not
+    send the locale of the computer. The new text tells that the app sends
+    only the language part of the Windows display language, from the fixed
+    list.
+  - Change the privacy notice (`docs/analytics/privacy-notice.md` and the
+    site privacy page), the consent dialog, and the Privacy page.
   - Increase `notice_version`. The app asks for consent again. Later
     translations of the notice do not increase it (see "Decisions").
   - Release it some weeks before the first translation, to get data.
@@ -542,7 +549,7 @@ separate setting.
 - `docs/architecture-rules.md`: the `i18n` package and the rules of section 1.
 - `CONTRIBUTING.md`: how to add a text, and how to add a language.
 - `docs/release-checklist.md`: the translation check, the rules file
-  translations, and the worker deploy order.
+  translations, and the deployment order for a change of a contract.
 - `docs/analytics/design.md` and the privacy notice: `os_language` and the
   new `language` values.
 - `feedback-contract/v1/README.md`: `app_language` and `os_language`.
@@ -573,7 +580,7 @@ each part becomes necessary. The column "Epic" refers to "Epics".
 | Language setting, detection, and restart | 4 | All languages | E3 (hidden), E4 (shown) |
 | Layout fixes for longer texts | 7 | All languages | E3, E4 |
 | Fit of the video texts (smaller font, "…") | 6 | All languages | E3 |
-| New values of the analytics `language` attribute | 10 | Each new language. Without them, the worker rejects the summaries | E4 |
+| The language list for the analytics `language` attribute | 10 | Each new language. Without it, the worker rejects the summaries. E2 adds all values at one time | E2 |
 | Glossary, translation, and review | 13 | Each new language | E4 |
 | Separate video language | 6 | Not necessary. A user can share a video in a different language | E5 |
 | Translated update notes and expiry messages | 11 | Not necessary. The English text is the fallback | E6 |

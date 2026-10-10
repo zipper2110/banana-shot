@@ -13,7 +13,10 @@ are in the plan, "Epics".
 - Size: a few days, plus some weeks for the data.
 - Value:
   - The author selects the next languages from real data, not from a
-    guess. The cockpit shows the Windows languages of the users.
+    guess. The cockpit shows the Windows languages and the app languages
+    of the users.
+  - A new app language needs no change of a contract or a worker. The
+    contracts accept all languages of the list from this epic on.
   - The author knows the language of each feedback report, and can answer
     in this language.
 - Prepares: the choice of the languages for E4, E7, and E8. The data needs
@@ -26,54 +29,61 @@ new fields before the app release that sends them (E2-T7).
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E2-T1 | The list of language values in the analytics contract | — | open |
+| E2-T1 | The language list in the analytics contract | — | open |
 | E2-T2 | The analytics worker and the cockpit | E2-T1 | open |
-| E2-T3 | The app sends `os_language` | E2-T1 | open |
+| E2-T3 | The app sends the two language attributes | E2-T1 | open |
 | E2-T4 | Privacy notice, consent, and notice version | E2-T1 | open |
 | E2-T5 | Language fields in the feedback report | E2-T1 | open |
 | E2-T6 | Feedback form: the languages of the answer | — | open |
 | E2-T7 | Deployment and release | E2-T1–E2-T6 | open |
 
-### E2-T1 The list of language values in the analytics contract
+### E2-T1 The language list in the analytics contract
 
 - Status: open
-- Plan: 10
+- Plan: 10, "Decisions" ("Language values")
 - Value: one fixed list of language values. The analytics data and the
   feedback reports use it, and it cannot hold free text that identifies a
-  user.
+  user. A new app language needs no contract change.
 - Requirements:
   - The list has the primary language subtags (ISO 639-1, lower case) of
     the Windows display languages, about 40 values, plus `other`.
-  - The list contains all candidates of E7 and E8.
-  - The contract has the new attribute `os_language` of the extended level,
-    with this list.
-  - The contract examples cover the attribute: valid values, and invalid
-    values (an unknown value, a region tag such as `es-ES`, upper case).
+  - The list contains `en` and all candidates of E4, E7, and E8.
+  - Two attributes of the extended level use the list:
+    - `language`, the language of the app interface. It exists now with
+      only `en`. It gets all values of the list.
+    - `os_language`, the Windows display language. It is new.
+  - The contract examples cover the two attributes: valid values, and
+    invalid values (an unknown value, a region tag such as `es-ES`, upper
+    case).
   - A new `schema_version` is not necessary if the attributes stay one
     JSON column. Write the decision in the contract.
 - Acceptance:
   - The contract has the list. Each value is a Windows display language.
-  - The contract examples cover the new attribute.
+  - The contract examples cover the two attributes. A summary with
+    `"language": "es"` is valid.
 - Tests: —
 
 ### E2-T2 The analytics worker and the cockpit
 
 - Status: open
 - Plan: 10
-- Value: the author sees the distribution of the Windows languages.
+- Value: the author sees the distribution of the Windows languages and of
+  the app languages.
 - Requirements:
-  - The analytics worker accepts `os_language` with the values of the
-    contract, and rejects other values. Its test against the contract
-    stays.
+  - The analytics worker accepts `language` and `os_language` with the
+    values of the contract, and rejects other values. Its test against the
+    contract stays.
   - The cockpit shows the number of extended sessions for each
-    `os_language` and each week.
+    `os_language` and each week, and the same for `language`.
+  - The cockpit can show how many users of a Windows language use the app
+    in English. This shows the users that a new translation can help.
 - Acceptance:
   - The worker tests accept the valid examples and reject the invalid
     examples of E2-T1.
   - The cockpit shows the languages with the synthetic data of the tests.
 - Tests: —
 
-### E2-T3 The app sends `os_language`
+### E2-T3 The app sends the two language attributes
 
 - Status: open
 - Plan: 10
@@ -81,8 +91,11 @@ new fields before the app release that sends them (E2-T7).
 - Requirements:
   - The app reads the Windows display language at the start
     (`Locale.getDefault(Locale.Category.DISPLAY)`), and sends its primary
-    subtag. A value that is not in the list becomes `other`.
-  - Only the extended level sends the attribute. The essential level does
+    subtag as `os_language`. A value that is not in the list becomes
+    `other`.
+  - The app sends the app language as `language`, from the same list. In
+    E2, the value is always `en`.
+  - Only the extended level sends the attributes. The essential level does
     not change.
   - The `analytics` package stays a leaf package. The app start gives it
     the value.
@@ -90,7 +103,8 @@ new fields before the app release that sends them (E2-T7).
   - With the display language `es-AR`, the summary has
     `"os_language": "es"`.
   - With a language that is not in the list, the summary has `"other"`.
-  - An essential summary has no `os_language`.
+  - An extended summary has `"language": "en"`.
+  - An essential summary has no `os_language` and no `language`.
   - The app test against the contract passes.
 - Tests: —
 
@@ -103,6 +117,10 @@ new fields before the app release that sends them (E2-T7).
 - Requirements:
   - The analytics design, the privacy notice on the site, and the texts of
     the consent dialog and of the Privacy page name the Windows language.
+  - The analytics design says now that the app does not send the locale of
+    the computer. The new text tells that the app sends only the language
+    part of the Windows display language, from the fixed list, never the
+    region.
   - The notice version increases from 2 to 3. The app asks for consent
     again.
 - Acceptance:
@@ -174,5 +192,8 @@ new fields before the app release that sends them (E2-T7).
 ## Done when
 
 - All tasks are `done`.
-- The cockpit shows the Windows languages of the users.
+- The cockpit shows the Windows languages and the app languages of the
+  users.
+- The analytics and the feedback contracts accept all languages of the
+  list. A new app language needs no deployment.
 - The feedback message shows the app language and the Windows language.

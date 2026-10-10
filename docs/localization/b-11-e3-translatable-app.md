@@ -130,7 +130,8 @@ Order of the work:
   - The video texts of `qps` use only Latin-1 and Latin Extended-A letters
     ("É", "ô", "ŕ", "ţ").
   - With `qps` on, the analytics attribute `language` is `en`, and the
-    feedback field `app_language` is `en`.
+    feedback field `app_language` is `en`. `qps` is not a value of the
+    language list.
 - Acceptance:
   - A unit test checks the change, the placeholders, and the letter set of
     the video texts.

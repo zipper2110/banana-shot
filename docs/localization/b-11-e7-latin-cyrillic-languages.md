@@ -109,8 +109,10 @@ example `E7-L-pt`), and copy the template below.
     screenshots (E4-T4).
   - The catalog and the help of the language come from a machine draft
     with the glossary and the key comments, and then the review.
-  - The analytics contract, the worker, the app, and the cockpit know the
-    value `<code>`. The worker is in production before the app release.
+  - The language code is in the language list of E2-T1. Thus the
+    analytics and the feedback accept it without a deployment. If the code
+    is not in the list, change the list first, and deploy the workers
+    before the app release.
   - The Swing and FlatLaf texts show in the language.
   - `README.md` and the macOS bundle (B-13) list the language.
   - If the author answers feedback in the language, the feedback form

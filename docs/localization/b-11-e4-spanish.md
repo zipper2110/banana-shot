@@ -18,7 +18,7 @@ are in the plan, "Epics".
   - The app starts in Spanish on a Windows in Spanish. The user can change
     the language in More, Settings. The video uses the app language.
 - Prepares: the process for each new language: glossary, draft, review,
-  fit check, smoke test, analytics value. E7 and E8 repeat it.
+  fit check, smoke test. E7 and E8 repeat it.
 
 ## Tasks
 
@@ -33,7 +33,7 @@ are in the plan, "Epics".
 | E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | open |
 | E4-T8 | Fit tests for Spanish | E4-T5 | open |
 | E4-T9 | Queued render job keeps its language | — | open |
-| E4-T10 | Analytics value `es` | — | open |
+| E4-T10 | The app sends the language `es` | — | open |
 | E4-T11 | Show the language setting | E4-T7 | open |
 | E4-T12 | Windows smoke test in Spanish | E4-T11 | open |
 | E4-T13 | Documentation and release | E4-T1–E4-T12 | open |
@@ -200,22 +200,21 @@ are in the plan, "Epics".
   - A test reads a queue file of the current release.
 - Tests: —
 
-### E4-T10 Analytics value `es`
+### E4-T10 The app sends the language `es`
 
 - Status: open
-- Plan: 10
-- Value: the author sees how many users use the app in Spanish. The
-  summaries of Spanish users are not rejected.
+- Plan: 10, "Decisions" ("Language values")
+- Value: the author sees how many users use the app in Spanish.
 - Requirements:
-  - The analytics contract, the worker, the app, and the cockpit know the
-    value `es` of the attribute `language`.
-  - The worker that accepts `es` is in production before the app release.
-    The current worker rejects an unknown language.
-  - `qps` and the languages that only reviewers see send `en`.
+  - With the app in Spanish, the analytics attribute `language` and the
+    feedback field `app_language` are `es`. The contracts and the workers
+    accept `es` since E2. No deployment is necessary before the release.
+  - A language that only reviewers see sends its own code. `qps` sends
+    `en`.
 - Acceptance:
-  - The worker tests accept `es`.
-  - The production worker accepts the smoke summary with `es` before the
-    release.
+  - A test: with the app in Spanish, the summary has `"language": "es"`,
+    and the feedback report has `"app_language": "es"`.
+  - The cockpit shows the first `es` data after the release.
 - Tests: —
 
 ### E4-T11 Show the language setting
@@ -268,10 +267,9 @@ are in the plan, "Epics".
   author.
 - Requirements:
   - `CONTRIBUTING.md` gives the process for a new language: glossary,
-    draft, review, fit check, smoke test, analytics value, deployment
-    order.
-  - The release checklist has the translation check (E4-T3) and the worker
-    deployment order (E4-T10).
+    draft, review, fit check, smoke test. The language code must be in the
+    language list of E2-T1.
+  - The release checklist has the translation check (E4-T3).
   - `README.md` lists the languages.
   - `docs/padel.md` (P-6) points to this epic.
   - The macOS plan (B-13) tells that the bundle must declare the languages

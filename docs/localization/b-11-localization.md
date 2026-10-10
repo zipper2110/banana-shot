@@ -5,7 +5,8 @@ than English. The backlog item is B-11 in `docs/backlog.md`.
 
 The plan comes from a review of the code on 2026-10-10 (version
 `1.0.1-SNAPSHOT`). It is an outline. Each section gives the work, the
-decisions, and the risks. A task list for each phase comes later.
+decisions, and the risks. The tasks are in one file for each epic (see
+"Epics").
 
 ## Scope
 
@@ -336,7 +337,7 @@ separate setting.
   export of the same project makes the same video.
 - A queued render job keeps the language that was selected when the user
   queued it (`SavedRenderQueue`). A language change after the queue does not
-  change the job. Do this already in step 4, when the video uses the app
+  change the job. Do this already in E4, when the video uses the app
   language: a language change restarts the app, and the queue survives the
   restart. `SavedRenderQueue` ignores unknown fields, so older builds can
   read the queue.
@@ -391,6 +392,9 @@ separate setting.
 - Custom-painted parts with text need a check: `ScorePanel` ("AFTER THE
   POINT", "SETS", "GAMES"), `SwingTimelineComponent`, `MomentumChart`,
   `StatsTable`, `ProjectsHeader`, the sidebar, and the hint balloons.
+- The UI font "Segoe UI" has no Chinese, Japanese, or Korean letters. A
+  physical font in Swing does not fall back to another font. A language with
+  these letters needs a different UI font (see E8).
 - Long words do not wrap. German has long nouns. `WrapText` and the help
   must break a long word if it is wider than the line.
 - Test with pseudo-localization (see section 12).
@@ -538,184 +542,76 @@ separate setting.
 ## Parts to cover
 
 Not all parts are necessary for the first language. The table tells when
-each part becomes necessary. The column "Step" refers to "Implementation
-sequence".
+each part becomes necessary. The column "Epic" refers to "Epics".
 
-| Part | Section | Necessary for | Step |
+| Part | Section | Necessary for | Epic |
 |---|---|---|---|
-| Machine formats safe from the default locale | 5 | All languages. It also protects the current English app | 1 |
-| Display formats (dates, numbers, sizes) | 5 | All languages | 1 |
-| Language data in analytics and feedback | 10, 11 | The choice of the next languages. Not necessary for Spanish | 2 |
-| `i18n` package and message catalog | 1, 2 | All languages | 3 |
-| Extraction of the UI texts | 3 | All languages | 3 |
-| Extraction of the video texts from the domain packages | 3, 6 | All languages | 3 |
-| Saved default texts (scoreboard title) | 1 | All languages | 3 |
-| Queued render job keeps its language | 6 | All languages | 4 |
-| Pseudo-localization and the hard-coded text test | 12 | All languages | 3 |
-| Language setting, detection, and restart | 4 | All languages | 3 (hidden), 4 (shown) |
-| Layout fixes for longer texts | 7 | All languages | 3, 4 |
-| Fit of the video texts (smaller font, "…") | 6 | All languages | 3 |
-| New values of the analytics `language` attribute | 10 | Each new language. Without them, the worker rejects the summaries | 4 |
-| Glossary, translation, and review | 13 | Each new language | 4 |
-| Separate video language | 6 | Not necessary. A user can share a video in a different language | 5 |
-| Translated update notes and expiry messages | 11 | Not necessary. The English text is the fallback | 6 |
-| Plural rules with more than 2 forms (ICU) | 2 | Russian, Polish, Czech, Ukrainian, Arabic, and others. Spanish has 2 forms | 3 (syntax), 7 (check) |
-| Shortcuts with Cyrillic and Greek keyboard layouts | 8 | Russian, Ukrainian, Greek, and other non-Latin layouts | 7 |
-| Bundled fonts for Latin, Cyrillic, and Greek | 6 | macOS (B-13). On Windows, the current fonts have these letters (verify "Ink Free") | 7 |
-| Fonts and input methods for CJK and other scripts | 6, 9 | Chinese, Japanese, Korean, Hindi, Thai | 8 |
+| Machine formats safe from the default locale | 5 | All languages. It also protects the current English app | E1 |
+| Display formats (dates, numbers, sizes) | 5 | All languages | E1 |
+| Language data in analytics and feedback | 10, 11 | The choice of the next languages. Not necessary for Spanish | E2 |
+| `i18n` package and message catalog | 1, 2 | All languages | E3 |
+| Extraction of the UI texts | 3 | All languages | E3 |
+| Extraction of the video texts from the domain packages | 3, 6 | All languages | E3 |
+| Saved default texts (scoreboard title) | 1 | All languages | E3 |
+| Queued render job keeps its language | 6 | All languages | E4 |
+| Pseudo-localization and the hard-coded text test | 12 | All languages | E3 |
+| Language setting, detection, and restart | 4 | All languages | E3 (hidden), E4 (shown) |
+| Layout fixes for longer texts | 7 | All languages | E3, E4 |
+| Fit of the video texts (smaller font, "…") | 6 | All languages | E3 |
+| New values of the analytics `language` attribute | 10 | Each new language. Without them, the worker rejects the summaries | E4 |
+| Glossary, translation, and review | 13 | Each new language | E4 |
+| Separate video language | 6 | Not necessary. A user can share a video in a different language | E5 |
+| Translated update notes and expiry messages | 11 | Not necessary. The English text is the fallback | E6 |
+| Plural rules with more than 2 forms (ICU) | 2 | Russian, Polish, Czech, Ukrainian, Arabic, and others. Spanish has 2 forms | E3 (syntax), E7 (check) |
+| Shortcuts with Cyrillic and Greek keyboard layouts | 8 | Russian, Ukrainian, Greek, and other non-Latin layouts | E7 |
+| Bundled fonts for Latin, Cyrillic, and Greek | 6 | macOS (B-13). On Windows, the current fonts have these letters (verify "Ink Free") | E7 |
+| Fonts and input methods for CJK and other scripts | 6, 9 | Chinese, Japanese, Korean, Hindi, Thai | E8 |
 | Live language change without restart | 4 | Not necessary | Later |
 | Right-to-left languages | 9 | Arabic, Hebrew | Later |
 | Hosted translation tool | 13 | Not necessary. Only if volunteers come | Later |
 | User-defined shortcuts | 8 | Not necessary. AZERTY users can ask for it | Later |
 
-## Implementation sequence
+## Epics
 
-Each step gives a feature that a user or the author can see, and the step
-prepares the next step. You can release the app after each step.
+Each step of the implementation is an epic. Each epic gives a feature that a
+user or the author can see, and the epic prepares the next epic. You can
+release the app after each epic. Each epic has its own file with its tasks.
 
-### Step 1. Regional formats
+| Epic | File | Feature | Depends on | Size |
+|---|---|---|---|---|
+| E1 | [b-11-e1-regional-formats.md](b-11-e1-regional-formats.md) | The English app uses the Windows regional format | — | A few days |
+| E2 | [b-11-e2-language-data.md](b-11-e2-language-data.md) | The cockpit and the feedback show the languages of the users | — | A few days, plus the time for the data |
+| E3 | [b-11-e3-translatable-app.md](b-11-e3-translatable-app.md) | All texts come from the catalog. A test language shows it | E1 | 4 to 5 weeks |
+| E4 | [b-11-e4-spanish.md](b-11-e4-spanish.md) | The app and the video in Spanish | E3 (E2 released some weeks before) | 1 to 2 weeks |
+| E5 | [b-11-e5-video-language.md](b-11-e5-video-language.md) | A video language separate from the app language | E4 | A few days |
+| E6 | [b-11-e6-server-notices.md](b-11-e6-server-notices.md) | Translated update notes and expiry messages | E3 | 1 to 2 days |
+| E7 | [b-11-e7-latin-cyrillic-languages.md](b-11-e7-latin-cyrillic-languages.md) | More languages with Latin and Cyrillic letters | E4, E2 | About 1 week for each language |
+| E8 | [b-11-e8-other-scripts.md](b-11-e8-other-scripts.md) | Languages with other scripts (CJK) | E7, E2 | 1 to 2 weeks for a new script |
 
-- **Feature:** the English app shows dates, times, numbers, and file sizes
-  in the Windows regional format. Example: a user with the regional format
-  "Spanish (Spain)" sees "10/10/26" in the exports table and "2,35 GB" for a
-  size. After step 4, the same user with the app in Spanish sees
-  "10 oct 2026" (section 5).
-- **Work:**
-  - The `i18n` package with `DisplayFormats` and `MachineFormats` only.
-  - Move all formats for the user to `DisplayFormats` (section 5).
-  - Move all formats for FFmpeg, ASS, JSON, and the shaders to
-    `MachineFormats`.
-  - Add the tests with the default locales `de-DE`, `tr-TR`, and `ar-EG`.
-  - Add a test that finds the calls that use the default locale:
-    `"…".format(…)` and `String.format(…)` without a locale, `toUpperCase()`,
-    `toLowerCase()`, and `DateTimeFormatter.ofPattern` and `NumberFormat`
-    without a locale. The Kotlin `uppercase()` and `lowercase()` without an
-    argument use `Locale.ROOT`, so the test accepts them.
-  - Move the time code of `CommentDialog` to `MachineFormats`.
-- **Prepares:** the format layer of all later steps. It also removes a
-  hidden risk now: a JVM with a German default locale writes "1,5" into an
-  FFmpeg argument, and a JVM with an Arabic or Persian default locale writes
-  Arabic-Indic digits into a time code.
-- **Size:** a few days.
+### How to use the epic files
 
-### Step 2. Language data
+- Each epic file has the feature, the dependencies, a summary table of the
+  tasks, and the tasks.
+- Each task has a status, the plan sections, the work, the acceptance
+  criteria, and the tests that prove it.
+- The plan has priority. If the plan changes, change the tasks too.
+- Task IDs have the form `E<epic>-T<number>`, for example `E3-T21`. The
+  language tasks of E7 and E8 have the form `E7-L-<code>`, for example
+  `E7-L-pt`.
+- Do not remove a task when it is done. Set its status to `done`, and write
+  the test classes or the test methods in "Tests".
+- Keep the summary table of each epic file up to date when a task status
+  changes. Set the epic status to `done` when all its tasks are done.
+- One pull request can contain one or more tasks of one epic. Each pull
+  request must pass CI.
 
-- **Feature:** the cockpit shows the Windows languages of the users. The
-  feedback message shows the language of the user. The author can select
-  the next languages from real data.
-- **Work:** section 10 (`os_language`) and section 11 (feedback
-  `app_language` and `os_language`). The privacy notice, the consent dialog,
-  and `notice_version` change. Deploy the workers first.
-- **Prepares:** the choice of the languages for steps 4, 7, and 8. The data
-  needs some weeks, so do this step early. It does not depend on step 1.
-- **Size:** a few days, plus the time for the data.
+Status values:
 
-### Step 3. Translatable app with a test language
-
-- **Feature:** a test language. Reviewers and developers start the app with
-  a system property, and all texts show in the pseudo-language (section 12),
-  also in the exported video. This shows that all texts come from the
-  catalog and that the layout accepts longer texts.
-- **Work:**
-  - First, the tools. Do these before the extraction:
-    - The message catalog (section 2) with the English texts. Decide the
-      message syntax here. Use the ICU syntax from the start, so that the
-      plural messages do not change in step 7.
-    - The `qps` switch (section 12). It is not a value of the analytics
-      attribute (section 10).
-    - The hard-coded text test with all current texts in the allowlist, and
-      the catalog tests (section 12).
-
-    Then each extraction pull request shows its result in `qps` and makes
-    the allowlist shorter.
-  - Extraction of all texts, one area in each pull request (section 3).
-  - The domain packages return keys or values, not English texts (section 1,
-    "Rules for the code"). This includes the statistics names, the badges,
-    the default side names, the export option names, and the export advice.
-  - The saved default texts: the scoreboard title is "not set" in the file
-    and shows a placeholder from the catalog (section 1).
-  - The fit of the video texts: smaller font, then "…" (section 6, "Fit").
-    `qps` makes the video texts 40% longer, so the video needs the fit in
-    this step.
-  - The language setting, the detection, and "Restart now" (section 4).
-    The setting stays hidden while English is the only language. The `qps`
-    system property shows it, so the restart can be tested.
-  - The UI flow tests run with the test language in CI and save screenshots.
-  - Layout fixes from the screenshots (section 7).
-  - The rule for contributors in `CONTRIBUTING.md`: each new text goes into
-    the catalog.
-- **Prepares:** all translations. After this step, a new language is a new
-  file and not a code change.
-- **Size:** 4 to 5 weeks. This is the largest step. The release after each
-  pull request shows no change for English users.
-
-### Step 4. Spanish
-
-- **Feature:** the app and the exported video in Spanish. The app starts in
-  Spanish on a Windows in Spanish. The user can select the language in
-  More, Settings. The video uses the app language.
-- **Work:**
-  - Show the language setting of step 3.
-  - The fit tests for Spanish (section 6, "Fit").
-  - A queued render job keeps the language that it had when the user
-    queued it (section 6, "Setting").
-  - The analytics value `es` (section 10). Deploy the worker first.
-  - The glossary, the machine draft, and the review by a native speaker
-    (section 13). The padel terms of B-45 P-6.
-  - The check of the missing and the stale texts in CI, and the release
-    check (section 13).
-  - The Windows smoke test in Spanish.
-- **Prepares:** the process for each new language: glossary, draft, review,
-  smoke test, analytics value.
-- **Size:** 1 to 2 weeks, mostly review time. Most of the code work is in
-  step 3, so this step is mostly translation and review.
-
-### Step 5. Video language
-
-- **Feature:** the user selects the language of the video on the Export
-  tab, separately from the app language. Example: a user with the app in
-  Spanish exports a video with English texts for an international club.
-- **Work:** section 6, "Setting". The project keeps the choice. The preview
-  of the scoreboard and the statistics card uses the video language. The
-  numbers in the video use the format of the video language.
-- **Prepares:** with more languages, each user can select any video
-  language.
-- **Size:** a few days.
-
-### Step 6. Translated notices from the server
-
-- **Feature:** the update notes and the expiry messages show in the
-  language of the app.
-- **Work:** section 11, "Rules file and update notice". The new fields of
-  `release/version-policy.json` and the release checklist.
-- **Prepares:** the translated release notes for each later release.
-- **Size:** 1 to 2 days. You can do it at any time after step 3.
-
-### Step 7. More languages with Latin and Cyrillic letters
-
-- **Feature:** the next languages from the data of step 2. Probable
-  candidates: Portuguese, French, Italian, German, Russian.
-- **Work:**
-  - The process of step 4 for each language.
-  - Plural forms: the tests of the catalog check the plural forms of each
-    language with the CLDR rules.
-  - Shortcuts with Cyrillic and Greek keyboard layouts (section 8).
-  - Font check: all letters of each language in each scoreboard font. If
-    B-13 bundled the open fonts already, check these fonts.
-  - German: the longest texts. Run the fit tests and check the screenshots.
-- **Prepares:** a large part of the users can use the app in their
-  language.
-- **Size:** about 1 week for each language, mostly review time.
-
-### Step 8. Languages with other scripts
-
-- **Feature:** Chinese, Japanese, Korean, or other languages with large
-  character sets, if the data of step 2 shows a need.
-- **Work:** the bundled CJK fonts or fonts on demand (section 6, "Fonts"),
-  the input method tests, line breaks without spaces in `WrapText` and the
-  help, and the process of step 4.
-- **Size:** 1 to 2 weeks for the first language of a new script. Less for
-  the next languages of the same script.
+| Status | Meaning |
+|---|---|
+| `open` | No work started. |
+| `in-progress` | Work started. The task is not complete. |
+| `done` | All acceptance criteria pass. "Tests" names the proof. |
 
 ### Later
 
@@ -733,7 +629,7 @@ translation tool, and user-defined shortcuts.
 
 ## Done when
 
-B-11 is done after step 6. Steps 7 and 8 continue with each new language.
+B-11 is done after E6. E7 and E8 continue with each new language.
 
 - The app has a complete Spanish translation, reviewed by a native speaker.
 - At the first start on Windows in Spanish, the app shows Spanish.

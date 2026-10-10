@@ -67,6 +67,8 @@ When item is done, move it under
 
 - Translate the user interface into more languages.
 - The plan is in `docs/localization/b-11-localization.md`.
+- The work has 8 epics (E1 to E8). Each epic has its own file with its
+  tasks in `docs/localization/` (see "Epics" in the plan).
 
 ### B-13 macOS
 

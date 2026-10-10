@@ -199,7 +199,8 @@ P-7 and P-6: the site first, then Spanish.
   (`StatsIO.PADEL_SHORT_POINT_MAX_SECONDS` and
   `PADEL_LONG_POINT_MIN_SECONDS`).
 - P-6 Spanish. The padel terms in Spanish (for example "punto de oro" for
-  the golden point) are part of B-11. Do it after P-7.
+  the golden point) are part of B-11, epic E4
+  (`docs/localization/b-11-e4-spanish.md`, task E4-T2). Do it after P-7.
 - P-7 Site and FAQ. After the release with padel support:
   - Add the release note (see "Release note of the baseline") to the site
     changelog (`site/public/changelog/index.html`) and to the update

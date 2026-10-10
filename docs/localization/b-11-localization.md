@@ -54,11 +54,11 @@ proposal or an accepted decision. The column "Status" tells which.
 | Legal texts | The consent dialog and the Privacy page are translated. The author decides if the English text is the binding version (get legal advice) | proposal |
 | Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not | proposal |
 | Right-to-left | Not in B-11 | proposal |
-| Calendar | The UI and the video always use the Gregorian calendar, also when the Windows format locale has another calendar (for example `th-TH` with the Buddhist calendar, or `ja-JP-u-ca-japanese`). The year 2026 never shows as 2569 | proposal |
-| Typed decimal separator | A number or a time code that the user types can have "." or ",", in all languages. A Spanish numeric keypad gives ",". The app shows the number in the format locale | proposal |
-| Unknown language value | A stored language, a queued job language, or a project video language that this build does not have is not an error. The app uses the fallback of each case, and does not overwrite the stored value until the user changes it | proposal |
-| Windows pseudo-locales | The Windows test locales `qps-ploc`, `qps-ploca`, and `qps-plocm` are not the app test language `qps`. The app uses English for them, and analytics sends `other` | proposal |
-| Path back to English | A user who gets a language that they cannot read can find the language setting and English without help: the "Language" row has a globe icon and the word "Language" in English next to the translated label | proposal |
+| Calendar | The UI and the video always use the Gregorian calendar, also when the Windows format locale has another calendar (for example `th-TH` with the Buddhist calendar, or `ja-JP-u-ca-japanese`). The year 2026 never shows as 2569 | accepted 2026-10-10 |
+| Typed decimal separator | A number or a time code that the user types can have "." or ",", in all languages. A Spanish numeric keypad gives ",". The app shows the number in the format locale | accepted 2026-10-10 |
+| Unknown language value | A stored language, a queued job language, or a project video language that this build does not have is not an error. The app uses the fallback of each case, and does not overwrite the stored value until the user changes it | accepted 2026-10-10 |
+| Windows pseudo-locales | The Windows test locales `qps-ploc`, `qps-ploca`, and `qps-plocm` are not the app test language `qps`. The app uses English for them, and analytics sends `other` | accepted 2026-10-10 |
+| Path back to English | A user who gets a language that they cannot read can find the language setting and English without help: the "Language" row has a globe icon and the word "Language" in English next to the translated label | accepted 2026-10-10 |
 
 ## Goal
 

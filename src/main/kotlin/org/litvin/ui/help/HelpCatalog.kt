@@ -46,6 +46,7 @@ object HelpCatalog {
                 "Select a page in the list on the left to read the help for a different tab.",
                 "In the sidebar, the Match tabs go in order. Each Match tab uses the data of the tab above it. The Video tabs change the image, and you can use them at any time.",
                 "Click Feedback in the sidebar to report a problem, suggest a feature, or ask a question.",
+                "Select the Dark, Mid, or Light theme and the accent color in More → Settings.",
             ),
             goodToKnow = listOf(
                 "Projects, point marks, comments, adjustments, and scoring are saved in project files.",
@@ -77,7 +78,7 @@ object HelpCatalog {
                 "When you delete a project, the video file stays on the disk.",
                 "You cannot delete the open project.",
                 "The next new project starts with the sport of the last new project. A padel project also starts with the padel rules of the last padel project.",
-                "\"Video not found\" shows in red when the video of a project is not on the disk. To open the project, choose Locate video and select the video at its new location. The project keeps the new location.",
+                "\"Video not found\" shows in red when the video of a project is not on the disk. To open the project, open it and choose Locate video... in the message. Then select the video at its new location. The project keeps the new location.",
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.HELP, "Open Projects help"),

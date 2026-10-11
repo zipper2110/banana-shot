@@ -53,6 +53,15 @@ cannot decide the direction of the app.
 - More → Privacy has two switches: "Send essential statistics" (on by
   default) and "Send extended statistics". When the essential switch is off,
   the extended switch is off and disabled.
+- Decided on 2026-10-11 by the author: each time the user turns off the
+  essential switch, the app asks to keep the statistics on ("A small
+  favor", the same look as the request for the scoreboard credit line). Both
+  requests show the photo of the author (`design/author/README.md`). The
+  buttons are "Keep them on" and "Turn them off". Escape and the close button
+  turn the statistics off, so the objection of the user stays one click. The
+  app asks only when the user turns the switch off. It does not ask again
+  later while the statistics stay off. The scoreboard credit request asks only
+  once.
 - The app records the stored choice `UNDECIDED`, `OFF`, `ESSENTIAL`, or
   `EXTENDED`. `UNDECIDED` and a choice for another notice version send the
   essential level, and the app asks again. An unknown stored value (for example

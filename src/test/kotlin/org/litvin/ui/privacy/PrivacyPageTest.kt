@@ -103,6 +103,66 @@ class PrivacyPageTest {
     }
 
     @Test
+    fun `the user who keeps the statistics after the request stays on the essential level`() {
+        val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+        preferences.record(AnalyticsPreferences.Choice.EXTENDED)
+        val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
+        var asked = 0
+        val page = onEdt {
+            PrivacyPage.withAnalytics(controller, preferences, URI("https://example.test/privacy"), CONTACT, askToKeep = { asked++; true }) { true }
+        }
+        val (essential, extended) = onEdt { find<SwitchBox>(page) }
+
+        onEdt { essential.doClick() }
+        assertEquals(1, asked)
+        assertEquals(AnalyticsPreferences.Choice.EXTENDED, preferences.resolve().choice, "the choice does not change")
+        onEdt {
+            assertTrue(essential.isSelected)
+            assertTrue(extended.isSelected)
+            assertTrue(extended.isEnabled)
+        }
+    }
+
+    @Test
+    fun `the user who refuses the request turns off all statistics`() {
+        val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+        val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
+        val page = onEdt {
+            PrivacyPage.withAnalytics(controller, preferences, URI("https://example.test/privacy"), CONTACT, askToKeep = { false }) { true }
+        }
+        val (essential, _) = onEdt { find<SwitchBox>(page) }
+
+        onEdt { essential.doClick() }
+        assertEquals(AnalyticsPreferences.Choice.OFF, preferences.resolve().choice)
+        assertFalse(onEdt { essential.isSelected })
+    }
+
+    @Test
+    fun `the app asks to keep the statistics each time the user turns them off`() {
+        val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+        val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
+        var asked = 0
+        val page = onEdt {
+            PrivacyPage.withAnalytics(controller, preferences, URI("https://example.test/privacy"), CONTACT, askToKeep = { asked++; false }) { true }
+        }
+        val (essential, _) = onEdt { find<SwitchBox>(page) }
+
+        repeat(2) {
+            onEdt { essential.doClick() }
+            onEdt { essential.doClick() }
+        }
+        assertEquals(2, asked, "the app asks at each off, not at each on")
+    }
+
+    @Test
+    fun `the request tells that the statistics are anonymous and lets the user turn them off`() {
+        listOf("anonymous", "how many people use the app", "Could you keep them on?").forEach {
+            assertTrue(it in KeepStatisticsRequest.TEXT, it)
+        }
+        assertEquals("Turn them off", KeepStatisticsRequest.OFF_BUTTON)
+    }
+
+    @Test
     fun `the Privacy page shows the saved choice off`() {
         val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
         preferences.record(AnalyticsPreferences.Choice.OFF)

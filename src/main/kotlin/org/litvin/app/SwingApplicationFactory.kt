@@ -59,6 +59,7 @@ import org.litvin.ui.more.ContactPage
 import org.litvin.ui.more.MoreDialog
 import org.litvin.ui.more.MoreSection
 import org.litvin.ui.more.SettingsPage
+import org.litvin.ui.privacy.KeepStatisticsRequest
 import org.litvin.ui.privacy.PrivacyLinkOpener
 import org.litvin.ui.privacy.PrivacyPage
 import java.awt.BorderLayout
@@ -142,6 +143,8 @@ object SwingApplicationFactory {
         return AboutInfo(
             appName = AppInfo.NAME,
             version = AppInfo.version,
+            author = AppInfo.AUTHOR,
+            website = URI(AppInfo.WEBSITE),
             documents = listOf(
                 document("License", "legal/LICENSE.txt", "LICENSE"),
                 document("License notice", "legal/LICENSE-NOTICE.txt", "LICENSE-NOTICE"),
@@ -538,7 +541,11 @@ object SwingApplicationFactory {
             sidebar.add(Box.createRigidArea(Dimension(0, 6)))
             val moreDialog = lazy {
                 val privacyPage = if (analyticsController != null && analyticsConfig != null && services.analyticsPreferences != null) {
-                    PrivacyPage.withAnalytics(analyticsController, services.analyticsPreferences, analyticsConfig.privacyUrl, CONTACT_EMAIL)
+                    // Each time the user turns the statistics off, the app author asks to keep them on.
+                    PrivacyPage.withAnalytics(
+                        analyticsController, services.analyticsPreferences, analyticsConfig.privacyUrl, CONTACT_EMAIL,
+                        askToKeep = KeepStatisticsRequest::ask,
+                    )
                 } else {
                     PrivacyPage.withoutAnalytics(CONTACT_EMAIL)
                 }
@@ -557,11 +564,11 @@ object SwingApplicationFactory {
                                 onOpenFolder = ::openWithDesktop,
                             ),
                         ),
-                        MoreSection(PrivacyPage.TITLE, privacyPage),
                         MoreSection(
                             AboutPage.TITLE,
-                            AboutPage(aboutInfo(), onOpenFile = ::openWithDesktop),
+                            AboutPage(aboutInfo(), onOpenFile = ::openWithDesktop, onOpenLink = PrivacyLinkOpener.DesktopBrowser::open),
                         ),
+                        MoreSection(PrivacyPage.TITLE, privacyPage),
                         MoreSection(
                             ContactPage.TITLE,
                             ContactPage(

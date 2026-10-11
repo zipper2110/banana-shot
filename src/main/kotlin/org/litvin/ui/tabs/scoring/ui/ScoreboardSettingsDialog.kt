@@ -8,6 +8,7 @@ import org.litvin.export.scoreboard.ScoreboardLayouts
 import org.litvin.scoring.ScoreboardPosition
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStyleId
+import org.litvin.ui.commons.AuthorPortrait
 import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DialogGroup
 import org.litvin.ui.commons.DialogKit
@@ -202,6 +203,7 @@ class ScoreboardSettingsDialog private constructor(
                 showAppCredit.isSelected = MessageDialog.confirm(
                     this, CREDIT_REQUEST_TITLE, CREDIT_REQUEST_TEXT,
                     confirmLabel = "Keep the label", cancelLabel = "Remove it", glyph = Feather.HEART,
+                    portrait = AuthorPortrait.image,
                 )
             }
             update { it.copy(showAppCredit = showAppCredit.isSelected) }

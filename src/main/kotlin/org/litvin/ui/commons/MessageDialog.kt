@@ -7,7 +7,9 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.Image
 import java.awt.Insets
+import java.awt.RenderingHints
 import java.awt.geom.Ellipse2D
 import javax.swing.BorderFactory
 import javax.swing.JComponent
@@ -41,6 +43,7 @@ internal object MessageDialog {
     /**
      * Asks the user to confirm an action. Returns true after [confirmLabel].
      * For a [destructive] action, the button is red, and the safe button has the focus, so Enter does not do the action.
+     * A [portrait] shows in a large circle in place of the icon.
      */
     fun confirm(
         parent: Component?,
@@ -50,13 +53,14 @@ internal object MessageDialog {
         cancelLabel: String = "Cancel",
         destructive: Boolean = false,
         glyph: Ikon? = null,
+        portrait: Image? = null,
     ): Boolean {
         val buttons = listOf(
             MessageButton(cancelLabel),
             MessageButton(confirmLabel, if (destructive) UiButton.Kind.DANGER else UiButton.Kind.LIME),
         )
         val kind = if (destructive) MessageKind.DANGER else MessageKind.QUESTION
-        return show(parent, kind, title, message, buttons, defaultIndex = if (destructive) 0 else 1, cancelIndex = 0, glyph = glyph) == 1
+        return show(parent, kind, title, message, buttons, defaultIndex = if (destructive) 0 else 1, cancelIndex = 0, glyph = glyph, portrait = portrait) == 1
     }
 
     /**
@@ -73,9 +77,10 @@ internal object MessageDialog {
         cancelIndex: Int,
         glyph: Ikon? = null,
         width: Int = widthFor(message),
+        portrait: Image? = null,
     ): Int {
         var result = cancelIndex
-        val dialog = build(parent, kind, title, message, buttons, defaultIndex, glyph, width) { result = it }
+        val dialog = build(parent, kind, title, message, buttons, defaultIndex, glyph, width, portrait) { result = it }
         dialog.setLocationRelativeTo(parent?.let { SwingUtilities.getWindowAncestor(it) ?: it })
         dialog.isVisible = true
         return result
@@ -91,6 +96,7 @@ internal object MessageDialog {
         defaultIndex: Int,
         glyph: Ikon? = null,
         width: Int = widthFor(message),
+        portrait: Image? = null,
         onClick: (Int) -> Unit,
     ): JDialog {
         val dialog = DialogKit.modal(parent, title)
@@ -104,7 +110,9 @@ internal object MessageDialog {
                 }
             }
         }
-        dialog.contentPane = content(kind, title, bodyParts(message, textWidth(width)), DialogKit.footer(right = swingButtons), width, glyph)
+        dialog.contentPane = content(
+            kind, title, bodyParts(message, textWidth(width, portrait != null)), DialogKit.footer(right = swingButtons), width, glyph, portrait,
+        )
         dialog.rootPane.defaultButton = swingButtons.getOrNull(defaultIndex)
         dialog.isResizable = false
         dialog.pack()
@@ -123,37 +131,50 @@ internal object MessageDialog {
         footer: JComponent,
         dialogWidth: Int = DialogKit.SMALL,
         glyph: Ikon? = null,
+        portrait: Image? = null,
     ): JPanel {
+        val textWidth = textWidth(dialogWidth, portrait != null)
         val text = Stack(pad = Insets(4, 0, 0, 0)).apply {
-            add(WrapText(title, UiKit.font(15f, UiKit.Weight.SEMIBOLD), Palette.FG, 1.35f, textWidth(dialogWidth)), gapAfter = if (parts.isEmpty()) 0 else 8)
+            add(WrapText(title, UiKit.font(15f, UiKit.Weight.SEMIBOLD), Palette.FG, 1.35f, textWidth), gapAfter = if (parts.isEmpty()) 0 else 8)
             parts.forEachIndexed { index, part -> add(part, gapAfter = if (index == parts.lastIndex) 0 else 8) }
         }
-        val body = MessageBody(text, kind, glyph, dialogWidth)
+        val body = MessageBody(text, kind, glyph, portrait, dialogWidth)
         return DialogKit.content(dialogWidth, null, body, footer)
     }
 
-    /** The icon on the left and the text column on the right. */
+    /** The icon or the portrait on the left and the text column on the right. */
     private class MessageBody(
         private val text: Stack,
         private val kind: MessageKind,
         private val glyph: Ikon?,
+        private val portrait: Image?,
         private val dialogWidth: Int,
     ) : JPanel(null), HeightForWidth {
+        private val iconSize = if (portrait != null) PORTRAIT else ICON
+        private val textX = textX(portrait != null)
+
         init {
             isOpaque = false
             add(text)
         }
 
-        override fun heightForWidth(width: Int) = PAD_TOP + max(ICON, text.heightForWidth(width - TEXT_X - DialogKit.PAD_X)) + PAD_BOTTOM
+        override fun heightForWidth(width: Int) = PAD_TOP + max(iconSize, text.heightForWidth(width - textX - DialogKit.PAD_X)) + PAD_BOTTOM
         override fun getPreferredSize() = Dimension(dialogWidth, heightForWidth(if (width > 0) width else dialogWidth))
         override fun doLayout() {
-            val w = width - TEXT_X - DialogKit.PAD_X
-            text.setBounds(TEXT_X, PAD_TOP, w, text.heightForWidth(w))
+            val w = width - textX - DialogKit.PAD_X
+            text.setBounds(textX, PAD_TOP, w, text.heightForWidth(w))
         }
 
         override fun paintComponent(g: Graphics) {
             val g2 = UiKit.smooth(g)
             try {
+                if (portrait != null) {
+                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+                    g2.drawImage(portrait, DialogKit.PAD_X, PAD_TOP, PORTRAIT, PORTRAIT, null)
+                    g2.color = Palette.LINE
+                    g2.draw(Ellipse2D.Double(DialogKit.PAD_X + 0.5, PAD_TOP + 0.5, PORTRAIT - 1.0, PORTRAIT - 1.0))
+                    return
+                }
                 val (fg, tint) = colors(kind)
                 g2.color = tint
                 g2.fill(Ellipse2D.Double(DialogKit.PAD_X.toDouble(), PAD_TOP.toDouble(), ICON.toDouble(), ICON.toDouble()))
@@ -202,7 +223,9 @@ internal object MessageDialog {
 
     private fun widthFor(message: String) = if (message.length > 220) DialogKit.WIDE else DialogKit.SMALL
 
-    private fun textWidth(width: Int) = width - TEXT_X - DialogKit.PAD_X
+    private fun textWidth(width: Int, portrait: Boolean = false) = width - textX(portrait) - DialogKit.PAD_X
+
+    private fun textX(portrait: Boolean) = DialogKit.PAD_X + (if (portrait) PORTRAIT else ICON) + 14
 
     private fun iconOf(kind: MessageKind): Ikon = when (kind) {
         MessageKind.INFO -> Material2AL.INFO
@@ -222,7 +245,7 @@ internal object MessageDialog {
     }
 
     private const val ICON = 30
-    private const val TEXT_X = DialogKit.PAD_X + ICON + 14
+    private const val PORTRAIT = 56
     private const val PAD_TOP = 20
     private const val PAD_BOTTOM = 16
 }

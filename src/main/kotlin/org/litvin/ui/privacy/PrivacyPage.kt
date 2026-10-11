@@ -8,6 +8,7 @@ import org.litvin.analytics.AnalyticsPreferences
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.ui.commons.SectionPage
 import org.litvin.ui.commons.SwitchBox
+import java.awt.Component
 import java.net.URI
 
 /** The Privacy section of the More window. */
@@ -51,12 +52,14 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
         /**
          * The page for a build that sends usage statistics. One switch turns all statistics on and off. The other
          * switch selects the extended statistics. It works only while the essential statistics are on.
+         * [askToKeep] runs when the user turns the essential statistics off. It returns true when the user keeps them on.
          */
         fun withAnalytics(
             controller: AnalyticsController,
             preferences: AnalyticsPreferences,
             privacyUrl: URI,
             contactEmail: String,
+            askToKeep: (Component) -> Boolean = { false },
             linkOpener: PrivacyLinkOpener = PrivacyLinkOpener.DesktopBrowser,
         ): PrivacyPage = PrivacyPage().apply {
             subheading(ANALYTICS_TITLE)
@@ -72,6 +75,10 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
                 addActionListener { controller.choose(if (isSelected) Choice.EXTENDED else Choice.ESSENTIAL) }
             }
             essential.addActionListener {
+                if (!essential.isSelected && askToKeep(essential)) {
+                    essential.isSelected = true
+                    return@addActionListener
+                }
                 extended.isEnabled = essential.isSelected
                 if (!essential.isSelected) extended.isSelected = false
                 controller.choose(if (essential.isSelected) Choice.ESSENTIAL else Choice.OFF)

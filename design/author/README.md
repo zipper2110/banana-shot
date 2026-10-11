@@ -1,5 +1,14 @@
 # Photo of the author
 
+`photo.jpg` is also the source of `src/main/resources/author/portrait.jpg`.
+The app shows it in a circle in the personal requests of the author: keep
+the scoreboard credit line, and keep the essential statistics on.
+
+- The app image is a square crop of the head: the box (790, 115) to
+  (1070, 395) of `photo.jpg`.
+- Size: 168 × 168, JPEG. The popups show it at 56 × 56. Thus, it is sharp at
+  300 % display scale.
+
 `photo.jpg` is the source of `site/public/assets/author.webp`. The home page
 shows this photo in the section "The author".
 

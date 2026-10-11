@@ -6,8 +6,10 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.io.File
+import java.net.URI
 import javax.swing.AbstractButton
 import javax.swing.JLabel
+import javax.swing.JTextArea
 import javax.swing.SwingUtilities
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -118,6 +120,34 @@ class MorePanelTest {
             assertTrue("Missing" !in texts)
         }
     }
+
+    @Test
+    fun `About shows the author and opens the website`() {
+        System.setProperty("java.awt.headless", "true")
+        val opened = mutableListOf<URI>()
+
+        SwingUtilities.invokeAndWait {
+            val page = AboutPage(
+                AboutInfo(
+                    appName = "BananaShot",
+                    version = "1.2.3",
+                    documents = emptyList(),
+                    components = emptyList(),
+                    author = "Dmitrii Litvin",
+                    website = URI("https://example.test/"),
+                ),
+                onOpenFile = { true },
+                onOpenLink = { opened += it; true },
+            )
+            assertEquals("Dmitrii Litvin", (find(page, "more-about-author") as JTextArea).text)
+            assertEquals("https://example.test/", (find(page, "more-about-website") as JTextArea).text)
+            findButton(page, "more-about-open-website")!!.doClick()
+        }
+        assertEquals(listOf(URI("https://example.test/")), opened)
+    }
+
+    private fun find(root: Component, name: String): Component? =
+        if (root.name == name) root else (root as? Container)?.components?.firstNotNullOfOrNull { find(it, name) }
 
     private fun buttons(root: Component): List<AbstractButton> = buildList {
         if (root is AbstractButton) add(root)

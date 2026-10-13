@@ -385,16 +385,16 @@
       data: site.daily, area: false, label: 'Visits and page views per day',
       series: [{ key: 'visits', label: 'Visits', color: 1 }, { key: 'pageViews', label: 'Page views', color: 2 }],
     });
-    const toRows = (list, name = item => item.name) => list.map(item => ({ name: name(item.name), value: item.visits, label: `${format(item.visits)} visits` }));
-    ranked($('site-pages'), site.pages.map(item => ({ name: item.name, value: item.pageViews, label: `${format(item.pageViews)} views` })));
+    const toRows = (list, name = item => item.name) => list.map(item => ({ name: name(item.name), value: item.visits, label: plural(item.visits, 'visit', 'visits') }));
+    ranked($('site-pages'), site.pages.map(item => ({ name: item.name, value: item.pageViews, label: plural(item.pageViews, 'view', 'views') })));
     ranked($('site-referrers'), toRows(site.referrers, name => name || '(direct)'));
     ranked($('site-countries'), toRows(site.countries, countryName));
     ranked($('site-devices'), toRows(site.devices, name => DEVICE_NAMES[name] || name));
 
     const bots = site.bots;
     $('bots-note').textContent = 'Page requests of bots and other programs. They are not in the visits and the page views. '
-      + (bots.countingSince ? `${format(bots.total)} requests in the period. Counting since ${shortDate(bots.countingSince)}.` : 'No bot request yet.');
-    const toRequests = list => list.map(item => ({ name: item.name, value: item.requests, label: `${format(item.requests)} requests` }));
+      + (bots.countingSince ? `${plural(bots.total, 'request', 'requests')} in the period. Counting since ${shortDate(bots.countingSince)}.` : 'No bot request yet.');
+    const toRequests = list => list.map(item => ({ name: item.name, value: item.requests, label: plural(item.requests, 'request', 'requests') }));
     ranked($('bots'), toRequests(bots.byBot));
     ranked($('bot-pages'), toRequests(bots.pages));
   }

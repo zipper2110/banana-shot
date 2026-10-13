@@ -66,6 +66,13 @@ export function addSnapshot(env: TestEnv, day: string, files: Record<string, num
   }
 }
 
+export function addPageView(env: TestEnv, values: {
+  date: string; path?: string; referrer?: string; country?: string; device?: string; views: number; visits: number;
+}) {
+  env.analytics.db.prepare('INSERT INTO site_daily (date, path, referrer, country, device, views, visits) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
+    values.date, values.path ?? '/', values.referrer ?? '', values.country ?? 'XX', values.device ?? 'desktop', values.views, values.visits);
+}
+
 export function basicAuth(password: string): string {
   return `Basic ${btoa(`cockpit:${password}`)}`;
 }

@@ -318,8 +318,8 @@
     const site = data.site.ok ? data.site.data : null;
     const downloadPage = site ? site.pages.find(page => page.name === '/download/' || page.name === '/download') : null;
     const steps = [
-      { name: 'Site visits', note: 'Web Analytics', value: site ? site.totals.visits : null },
-      { name: 'Download page views', note: 'Web Analytics, /download/', value: site ? (downloadPage ? downloadPage.pageViews : 0) : null },
+      { name: 'Site visits', note: 'Own counter', value: site ? site.totals.visits : null },
+      { name: 'Download page views', note: 'Own counter, /download/', value: site ? (downloadPage ? downloadPage.pageViews : 0) : null },
       { name: 'Setup downloads', note: 'GitHub, with updates', value: data.downloads.ok && data.downloads.data.trackingSince ? data.downloads.data.total.setup : null },
       { name: 'First app starts', note: 'Analytics, session 1', value: data.app.ok ? data.app.data.totals.first_sessions : null },
       { name: 'Returning sessions', note: 'Analytics, session 2+', value: data.app.ok ? data.app.data.totals.sessions - data.app.data.totals.first_sessions : null },
@@ -359,25 +359,36 @@
     if (!downloads.releases.length) empty($('releases'), 'No app release on GitHub yet.');
   }
 
+  const COUNTRY_NAMES = (() => {
+    try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch { return null; }
+  })();
+  const DEVICE_NAMES = { desktop: 'Computer', mobile: 'Phone', tablet: 'Tablet' };
+
+  function countryName(code) {
+    if (code === 'XX') return 'Unknown';
+    if (code === 'T1') return 'Tor network';
+    try { return (COUNTRY_NAMES && COUNTRY_NAMES.of(code)) || code; } catch { return code; }
+  }
+
   function renderSite(data) {
     $('site-grid').hidden = !data.site.ok;
     if (!data.site.ok) {
-      $('site-note').textContent = 'Cloudflare Web Analytics.';
+      $('site-note').textContent = 'Own counter of the site.';
       return sourceError($('site-daily'), data.site.error);
     }
     const site = data.site.data;
-    $('site-note').textContent = site.clampedToDays
-      ? `Cloudflare Web Analytics, sampled. Cloudflare refused the long range: these numbers cover only the last ${site.clampedToDays} days.`
-      : 'Cloudflare Web Analytics, sampled.';
+    $('site-note').textContent = site.countingSince
+      ? `Own counter of the site, exact. Counting since ${shortDate(site.countingSince)}.`
+      : 'Own counter of the site, exact. No page view yet.';
     window.Charts.lines($('site-daily'), {
       data: site.daily, area: false, label: 'Visits and page views per day',
       series: [{ key: 'visits', label: 'Visits', color: 1 }, { key: 'pageViews', label: 'Page views', color: 2 }],
     });
-    const toRows = list => list.map(item => ({ name: item.name, value: item.visits, label: `${format(item.visits)} visits` }));
+    const toRows = (list, name = item => item.name) => list.map(item => ({ name: name(item.name), value: item.visits, label: `${format(item.visits)} visits` }));
     ranked($('site-pages'), site.pages.map(item => ({ name: item.name, value: item.pageViews, label: `${format(item.pageViews)} views` })));
-    ranked($('site-referrers'), toRows(site.referrers));
-    ranked($('site-countries'), toRows(site.countries));
-    ranked($('site-devices'), toRows(site.devices));
+    ranked($('site-referrers'), toRows(site.referrers, name => name || '(direct)'));
+    ranked($('site-countries'), toRows(site.countries, countryName));
+    ranked($('site-devices'), toRows(site.devices, name => DEVICE_NAMES[name] || name));
   }
 
   const ATTRIBUTE_IDS = ['attr-sport', 'attr-theme', 'attr-accent', 'attr-language'];
@@ -616,7 +627,8 @@
       items.push(`App usage: analytics Worker (D1), sessions are counted on the day of their first summary. Kept 90 days.${retention ? ` Last clean-up ${ago(retention.ranAt)}.` : ''}`);
     }
     items.push('Feedback: feedback Worker (D1). Kept 90 days. Email addresses are not shown.');
-    items.push('Site and Workers: Cloudflare GraphQL Analytics API.');
+    items.push('Site: own counter of the site, daily totals in the D1 of the analytics Worker.');
+    items.push('Workers: Cloudflare GraphQL Analytics API.');
     const list = h('ul');
     for (const item of items) list.appendChild(h('li', '', item));
     $('sources').replaceChildren(list);

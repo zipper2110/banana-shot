@@ -4,22 +4,7 @@ import { DAY, type Period, dates } from './period';
 const ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql';
 const FALLBACK_DAYS = 30;
 const SAFE_TAG = /^[A-Za-z0-9_-]+$/;
-const SAFE_HOST = /^[a-z0-9.-]+$/;
 const SAFE_SCRIPT = /^[a-z0-9_-]+$/;
-
-export interface Site {
-  /** Set when Cloudflare refused the long range and the numbers cover fewer days (Q1). */
-  clampedToDays: number | null;
-  totals: { visits: number; pageViews: number };
-  prevTotals: { visits: number; pageViews: number } | null;
-  daily: { date: string; visits: number; pageViews: number }[];
-  pages: Ranked[];
-  referrers: Ranked[];
-  countries: Ranked[];
-  devices: Ranked[];
-}
-
-export interface Ranked { name: string; visits: number; pageViews: number }
 
 export interface WorkerHealth {
   clampedToDays: number | null;
@@ -27,7 +12,7 @@ export interface WorkerHealth {
   daily: { date: string; requests: number; errors: number }[];
 }
 
-interface Group { count: number; sum: { visits?: number; requests?: number; errors?: number }; dimensions?: Record<string, string> }
+interface Group { sum: { requests?: number; errors?: number }; dimensions?: Record<string, string> }
 
 type Fetcher = typeof fetch;
 
@@ -92,64 +77,6 @@ async function withFallback<T>(period: Period, load: (start: number, prevStart: 
 
 function range(start: number, end: number): string {
   return `datetime_geq: "${new Date(start).toISOString()}", datetime_lt: "${new Date(end).toISOString()}"`;
-}
-
-function ranked(groups: Group[] | undefined, dimension: string): Ranked[] {
-  return (groups ?? []).map(group => ({
-    name: group.dimensions?.[dimension] || '(none)',
-    visits: group.sum.visits ?? 0,
-    pageViews: group.count,
-  }));
-}
-
-/** The site tag when it is set. Otherwise the host of the site: the account has only this one site. */
-function siteFilter(env: Env): string {
-  if (env.CF_WEB_ANALYTICS_SITE_TAG) {
-    if (!SAFE_TAG.test(env.CF_WEB_ANALYTICS_SITE_TAG)) throw new Error('CF_WEB_ANALYTICS_SITE_TAG has an invalid format.');
-    return `{ siteTag: "${env.CF_WEB_ANALYTICS_SITE_TAG}" }`;
-  }
-  const host = env.SITE_HOST || 'banana-shot-editor.app';
-  if (!SAFE_HOST.test(host)) throw new Error('SITE_HOST has an invalid format.');
-  return `{ requestHost: "${host}" }`;
-}
-
-export async function loadSite(env: Env, period: Period, fetcher: Fetcher = fetch): Promise<Site> {
-  const { account } = config(env);
-  const site = siteFilter(env);
-
-  return withFallback(period, async (start, prevStart) => {
-    const filter = `{ AND: [{ ${range(start, period.end)} }, ${site}] }`;
-    const top = (alias: string, dimension: string) =>
-      `${alias}: rumPageloadEventsAdaptiveGroups(filter: ${filter}, limit: 10, orderBy: [count_DESC]) { count sum { visits } dimensions { ${dimension} } }`;
-    const prev = prevStart === null ? '' : `prev: rumPageloadEventsAdaptiveGroups(filter: { AND: [{ ${range(prevStart, start)} }, ${site}] }, limit: 1) { count sum { visits } }`;
-    const account_ = await query(env, `{ viewer { accounts(filter: { accountTag: "${account}" }) {
-      daily: rumPageloadEventsAdaptiveGroups(filter: ${filter}, limit: 100, orderBy: [date_ASC]) { count sum { visits } dimensions { date } }
-      ${top('pages', 'requestPath')}
-      ${top('referrers', 'refererHost')}
-      ${top('countries', 'countryName')}
-      ${top('devices', 'deviceType')}
-      ${prev}
-    } } }`, fetcher);
-
-    const byDate = new Map((account_.daily ?? []).map(group => [group.dimensions?.date ?? '', group]));
-    const daily = dates(period.start, period.end).map(date => {
-      const group = byDate.get(date);
-      return { date, visits: group?.sum.visits ?? 0, pageViews: group?.count ?? 0 };
-    });
-    const sum = (groups: Group[] | undefined) => ({
-      visits: (groups ?? []).reduce((total, group) => total + (group.sum.visits ?? 0), 0),
-      pageViews: (groups ?? []).reduce((total, group) => total + group.count, 0),
-    });
-    return {
-      totals: sum(account_.daily),
-      prevTotals: prevStart === null ? null : sum(account_.prev),
-      daily,
-      pages: ranked(account_.pages, 'requestPath'),
-      referrers: ranked(account_.referrers, 'refererHost'),
-      countries: ranked(account_.countries, 'countryName'),
-      devices: ranked(account_.devices, 'deviceType'),
-    };
-  });
 }
 
 export async function loadWorkerHealth(env: Env, period: Period, fetcher: Fetcher = fetch): Promise<WorkerHealth> {

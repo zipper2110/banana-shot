@@ -1,10 +1,11 @@
 import { loadAppUsage } from './app-usage';
 import { isAuthorized } from './auth';
-import { loadSite, loadWorkerHealth } from './cloudflare';
+import { loadWorkerHealth } from './cloudflare';
 import { loadDownloads, takeSnapshot } from './downloads';
 import { type Env, section } from './env';
 import { loadFeedback } from './feedback';
 import { makePeriod, parseDays } from './period';
+import { loadSite } from './site';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'cache-control': 'no-store',
@@ -32,7 +33,7 @@ export async function summary(env: Env, url: URL, now: number, fetcher: typeof f
     section(() => loadDownloads(env, period)),
     section(() => loadAppUsage(env, period, includeDev)),
     section(() => loadFeedback(env, period, includeDev)),
-    section(() => loadSite(env, period, fetcher)),
+    section(() => loadSite(env, period)),
     section(() => loadWorkerHealth(env, period, fetcher)),
   ]);
   return {

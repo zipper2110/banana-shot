@@ -4,6 +4,10 @@ The Worker receives the anonymous session summaries of the app (B-9) and keeps o
 session in D1. The design is in `docs/analytics/design.md`. The tasks are in
 `docs/analytics/b-9-tasks.md`.
 
+- `POST /v1/site` counts one page view of the website (`src/site.ts`, `site/README.md`). Only the
+  origin `https://banana-shot-editor.app` can send. The body is `{ "path": "...", "referrer": "..." }`,
+  1 KiB or less. The Worker adds 1 to a daily total in `site_daily`. A bot gets `204`, but the
+  Worker does not count it. This path uses the same rate limit as the summaries.
 - `POST /v1/session` with `Content-Type: application/json` and a body of 8 KiB or less. Other
   paths return `404`. Other methods return `405`.
 - The responses have no body: `204` (stored), `400` (invalid summary), `410` (the kill switch is
@@ -45,7 +49,7 @@ first two steps are only for a new database.
    a different name, do not accept it.
 3. Apply the schema: `npx wrangler d1 migrations apply bananashot-analytics --remote`. Do this
    also for a database that exists: migration `0002` adds the column `level`, and migration
-   `0003` adds the column `attributes` (B-44). Apply them before you deploy the Worker, because
+   `0003` adds the column `attributes` (B-44), and migration `0004` adds the table `site_daily`. Apply them before you deploy the Worker, because
    the new Worker writes these columns.
 4. Set the secret `RATE_LIMIT_KEY`: a new random text of 32 or more characters, for example from
    `openssl rand -hex 32`. Do not use the key of the feedback Worker.

@@ -11,7 +11,7 @@ downloads, app usage, features, exports, errors, and feedback. The decisions and
 | Downloads | GitHub releases API → own D1 `bananashot-cockpit` | An hourly cron saves the totals. The history starts with the first snapshot. |
 | App usage, features, exports, crashes | D1 of the analytics Worker (`ANALYTICS_DB`) | Read only. Totals only. |
 | Feedback, errors in reports | D1 of the feedback Worker (`FEEDBACK_DB`) | Read only. No email addresses on the page. |
-| Site | Cloudflare GraphQL API, Web Analytics | Needs `CF_API_TOKEN` and `CF_ACCOUNT_ID`. Filtered by `SITE_HOST`. |
+| Site | D1 of the analytics Worker (`ANALYTICS_DB`), table `site_daily` | The own page view counter of the site (`site/README.md`). Exact daily totals. Cloudflare Web Analytics samples its data, so the cockpit does not use it. |
 | Worker health | Cloudflare GraphQL API, Workers invocations | Needs `CF_API_TOKEN`, `CF_ACCOUNT_ID`. |
 
 Each source is separate. When one source fails or is not configured, its cards show the reason,
@@ -77,12 +77,11 @@ a new setup.
    npx wrangler secret put COCKPIT_PASSWORD
    ```
 
-4. Site numbers and Worker health (optional, the rest works without them):
+4. Worker health (optional, the rest works without it):
    - In the Cloudflare dashboard, make an API token with the permission
      **Account → Account Analytics → Read** for your account only.
      `npx wrangler secret put CF_API_TOKEN`
    - Write `CF_ACCOUNT_ID` in `wrangler.toml` (Workers & Pages → the account ID on the right).
-   - `SITE_HOST` is `banana-shot-editor.app`. The site numbers are filtered by this host.
 5. Optional: `npx wrangler secret put GITHUB_TOKEN` (a fine-grained token with no
    permissions is enough for a public repository). Without it, GitHub allows 60 requests in one
    hour for each IP address, and Workers share their addresses.

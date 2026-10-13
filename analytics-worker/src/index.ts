@@ -1,5 +1,6 @@
 import { allow, HOUR } from './rate-limit';
 import { runRetention } from './retention';
+import { countPageView, SITE_PATH } from './site';
 import { validateSummary, type Summary } from './validation';
 
 export interface Env {
@@ -26,7 +27,9 @@ const UPSERT = 'INSERT INTO analytics_session (session_id,first_received_at,last
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (env.ANALYTICS_INGESTION_ENABLED !== 'true') return status(410);
-    if (new URL(request.url).pathname !== '/v1/session') return status(404);
+    const path = new URL(request.url).pathname;
+    if (path === SITE_PATH) return countPageView(request, env.ANALYTICS_DB, env.RATE_LIMIT_KEY);
+    if (path !== '/v1/session') return status(404);
     if (request.method !== 'POST') return status(405);
     if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) return status(415);
     if (Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) return status(413);

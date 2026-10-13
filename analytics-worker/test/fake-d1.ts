@@ -7,6 +7,7 @@ export type Row = Record<string, unknown>;
 export class FakeD1 {
   readonly sessions = new Map<string, Row>();
   readonly rates = new Map<string, Row>();
+  readonly siteDays = new Map<string, Row>();
   retentionStatus: Row | null = null;
   fail = false;
 
@@ -70,6 +71,16 @@ export class FakeStatement {
       }
       if ((row.snapshot as number) <= (stored.snapshot as number)) return 0;
       this.db.sessions.set(row.session_id as string, { ...row, first_received_at: stored.first_received_at });
+      return 1;
+    }
+    if (this.sql.startsWith('INSERT INTO site_daily ')
+      && this.sql.endsWith('ON CONFLICT(date,path,referrer,country,device) DO UPDATE SET views = views + 1, visits = visits + excluded.visits')) {
+      const [date, path, referrer, country, device, visits] = this.args as [string, string, string, string, string, number];
+      const key = [date, path, referrer, country, device].join('|');
+      const row = this.db.siteDays.get(key) ?? { date, path, referrer, country, device, views: 0, visits: 0 };
+      row.views = (row.views as number) + 1;
+      row.visits = (row.visits as number) + visits;
+      this.db.siteDays.set(key, row);
       return 1;
     }
     if (this.sql === 'DELETE FROM analytics_session WHERE last_received_at < ?') {

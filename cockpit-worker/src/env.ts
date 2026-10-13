@@ -18,10 +18,6 @@ export interface Env {
   /** Cloudflare API token with "Account Analytics: Read" (secret). */
   CF_API_TOKEN?: string;
   CF_ACCOUNT_ID?: string;
-  /** Optional site tag of Web Analytics. Without it, the site numbers are filtered by SITE_HOST. */
-  CF_WEB_ANALYTICS_SITE_TAG?: string;
-  /** The host of the site. Default `banana-shot-editor.app`. */
-  SITE_HOST?: string;
   /** Comma-separated Worker names for the health section. */
   WORKER_SCRIPTS?: string;
 }

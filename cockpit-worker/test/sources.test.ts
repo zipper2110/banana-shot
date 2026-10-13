@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { loadAppUsage } from '../src/app-usage';
-import { loadSite, loadWorkerHealth } from '../src/cloudflare';
+import { loadWorkerHealth } from '../src/cloudflare';
 import { SETUP_ASSET, dailyIncreases, loadDownloads, takeSnapshot } from '../src/downloads';
 import { errorLine, loadFeedback } from '../src/feedback';
 import { makePeriod } from '../src/period';
-import { NOW, addReport, addSession, addSnapshot, at, makeEnv } from './fixtures';
+import { loadSite } from '../src/site';
+import { NOW, addPageView, addReport, addSession, addSnapshot, at, makeEnv } from './fixtures';
 
 const OTHER = 'BananaShot-1.0.0-full.nupkg';
 
@@ -189,51 +190,52 @@ describe('feedback', () => {
   });
 });
 
+describe('site numbers', () => {
+  it('reads the exact page views and visits of the own counter', async () => {
+    const env = makeEnv();
+    addPageView(env, { date: '2026-09-20', views: 50, visits: 40 });
+    addPageView(env, { date: '2026-09-29', views: 3, visits: 2 });
+    addPageView(env, { date: '2026-10-05', path: '/download/', referrer: 'www.google.com', country: 'DE', views: 4, visits: 4 });
+    addPageView(env, { date: '2026-10-06', referrer: '', device: 'mobile', views: 5, visits: 5 });
+    addPageView(env, { date: '2026-10-06', path: '/download/', referrer: 'banana-shot-editor.app', views: 3, visits: 0 });
+
+    const site = await loadSite(env, makePeriod(7, NOW));
+
+    expect(site.countingSince).toBe('2026-09-20');
+    expect(site.totals).toEqual({ visits: 9, pageViews: 12 });
+    // The previous 7 days: 09-23 to 09-29.
+    expect(site.prevTotals).toEqual({ visits: 2, pageViews: 3 });
+    expect(site.daily).toHaveLength(7);
+    expect(site.daily.at(-1)).toEqual({ date: '2026-10-06', visits: 5, pageViews: 8 });
+    expect(site.daily[0]).toEqual({ date: '2026-09-30', visits: 0, pageViews: 0 });
+    expect(site.pages).toEqual([{ name: '/download/', visits: 4, pageViews: 7 }, { name: '/', visits: 5, pageViews: 5 }]);
+    // A page view inside the site is not a visit, so its referrer is not in the list.
+    expect(site.referrers).toEqual([{ name: '', visits: 5, pageViews: 5 }, { name: 'www.google.com', visits: 4, pageViews: 4 }]);
+    expect(site.countries.map(row => row.name)).toEqual(['XX', 'DE']);
+    expect(site.devices).toEqual([{ name: 'mobile', visits: 5, pageViews: 5 }, { name: 'desktop', visits: 4, pageViews: 7 }]);
+  });
+
+  it('has zeros and no start day before the first page view', async () => {
+    const site = await loadSite(makeEnv(), makePeriod(30, NOW));
+    expect(site.countingSince).toBeNull();
+    expect(site.totals).toEqual({ visits: 0, pageViews: 0 });
+    expect(site.prevTotals).toEqual({ visits: 0, pageViews: 0 });
+    expect(site.daily).toHaveLength(30);
+  });
+});
+
 describe('Cloudflare numbers', () => {
   // A pasted token often ends with a line break.
-  const configured = { CF_API_TOKEN: 'abcdefghijklmnopqrstuvwxyz0123456789ABCD\r\n', CF_ACCOUNT_ID: 'account1', CF_WEB_ANALYTICS_SITE_TAG: 'site1', WORKER_SCRIPTS: 'bananashot-analytics, bad name' };
+  const configured = { CF_API_TOKEN: 'abcdefghijklmnopqrstuvwxyz0123456789ABCD\r\n', CF_ACCOUNT_ID: 'account1', WORKER_SCRIPTS: 'bananashot-analytics, bad name' };
+  const noGroups = () => Response.json({ data: { viewer: { accounts: [{ groups: [] }] } } });
 
   it('refuses a token with an invalid format before it calls Cloudflare', async () => {
     const fetcher = (async () => { throw new Error('must not be called'); }) as typeof fetch;
-    await expect(loadSite(makeEnv({ ...configured, CF_API_TOKEN: 'x' }), makePeriod(7, NOW), fetcher)).rejects.toThrow('CF_API_TOKEN has an invalid format (1 characters)');
+    await expect(loadWorkerHealth(makeEnv({ ...configured, CF_API_TOKEN: 'x' }), makePeriod(7, NOW), fetcher)).rejects.toThrow('CF_API_TOKEN has an invalid format (1 characters)');
   });
 
   it('tells that the source is not configured', async () => {
-    await expect(loadSite(makeEnv(), makePeriod(7, NOW))).rejects.toThrow('Not configured');
-  });
-
-  it('reads the site numbers', async () => {
-    const bodies: string[] = [];
-    const fetcher = (async (_input: RequestInfo, init?: RequestInit) => {
-      bodies.push(String(init?.body));
-      return Response.json({ data: { viewer: { accounts: [{
-        daily: [{ count: 9, sum: { visits: 4 }, dimensions: { date: '2026-10-06' } }],
-        pages: [{ count: 6, sum: { visits: 3 }, dimensions: { requestPath: '/' } }],
-        referrers: [{ count: 2, sum: { visits: 2 }, dimensions: { refererHost: '' } }],
-        countries: [], devices: [],
-        prev: [{ count: 3, sum: { visits: 2 } }],
-      }] } } });
-    }) as typeof fetch;
-
-    const site = await loadSite(makeEnv(configured), makePeriod(7, NOW), fetcher);
-
-    expect(site.totals).toEqual({ visits: 4, pageViews: 9 });
-    expect(site.prevTotals).toEqual({ visits: 2, pageViews: 3 });
-    expect(site.daily.at(-1)).toEqual({ date: '2026-10-06', visits: 4, pageViews: 9 });
-    expect(site.pages).toEqual([{ name: '/', visits: 3, pageViews: 6 }]);
-    expect(site.referrers[0].name).toBe('(none)');
-    expect(site.clampedToDays).toBeNull();
-    expect(bodies[0]).toContain('siteTag: \\"site1\\"');
-  });
-
-  it('filters by the host of the site when no site tag is set', async () => {
-    const bodies: string[] = [];
-    const fetcher = (async (_input: RequestInfo, init?: RequestInit) => {
-      bodies.push(String(init?.body));
-      return Response.json({ data: { viewer: { accounts: [{ daily: [], pages: [], referrers: [], countries: [], devices: [], prev: [] }] } } });
-    }) as typeof fetch;
-    await loadSite(makeEnv({ ...configured, CF_WEB_ANALYTICS_SITE_TAG: undefined }), makePeriod(7, NOW), fetcher);
-    expect(bodies[0]).toContain('requestHost: \\"banana-shot-editor.app\\"');
+    await expect(loadWorkerHealth(makeEnv(), makePeriod(7, NOW))).rejects.toThrow('Not configured');
   });
 
   it('falls back to 30 days when Cloudflare refuses the long range', async () => {
@@ -241,33 +243,32 @@ describe('Cloudflare numbers', () => {
     const fetcher = (async () => {
       calls++;
       if (calls === 1) return Response.json({ data: null, errors: [{ message: 'time range is too large' }] });
-      return Response.json({ data: { viewer: { accounts: [{ daily: [], pages: [], referrers: [], countries: [], devices: [] }] } } });
+      return noGroups();
     }) as typeof fetch;
 
-    const site = await loadSite(makeEnv(configured), makePeriod(90, NOW), fetcher);
+    const health = await loadWorkerHealth(makeEnv(configured), makePeriod(90, NOW), fetcher);
 
-    expect(site.clampedToDays).toBe(30);
-    expect(site.prevTotals).toBeNull();
+    expect(health.clampedToDays).toBe(30);
   });
 
   it('tries a lost connection once more, and tells the time of the failure', async () => {
     let calls = 0;
     const lost = (async () => { calls++; throw new Error('Network connection lost.'); }) as typeof fetch;
-    await expect(loadSite(makeEnv(configured), makePeriod(7, NOW), lost)).rejects.toThrow(/Network connection lost\. \(after \d+\.\d s, try 2\)/);
+    await expect(loadWorkerHealth(makeEnv(configured), makePeriod(7, NOW), lost)).rejects.toThrow(/Network connection lost\. \(after \d+\.\d s, try 2\)/);
     expect(calls).toBe(2);
 
     calls = 0;
     const flaky = (async () => {
       calls++;
       if (calls === 1) throw new Error('Network connection lost.');
-      return Response.json({ data: { viewer: { accounts: [{ daily: [], pages: [], referrers: [], countries: [], devices: [], prev: [] }] } } });
+      return noGroups();
     }) as typeof fetch;
-    expect((await loadSite(makeEnv(configured), makePeriod(7, NOW), flaky)).totals).toEqual({ visits: 0, pageViews: 0 });
+    expect((await loadWorkerHealth(makeEnv(configured), makePeriod(7, NOW), flaky)).scripts).toEqual([{ name: 'bananashot-analytics', requests: 0, errors: 0 }]);
   });
 
   it('shows the error text of a refused request', async () => {
     const refused = (async () => Response.json({ success: false, errors: [{ code: 9106, message: 'Authentication failed (status: 400)' }] }, { status: 400 })) as typeof fetch;
-    await expect(loadSite(makeEnv(configured), makePeriod(7, NOW), refused)).rejects.toThrow('Cloudflare API returned 400: Authentication failed (status: 400)');
+    await expect(loadWorkerHealth(makeEnv(configured), makePeriod(7, NOW), refused)).rejects.toThrow('Cloudflare API returned 400: Authentication failed (status: 400)');
   });
 
   it('sums the Worker requests and errors, and ignores invalid script names', async () => {
@@ -275,8 +276,8 @@ describe('Cloudflare numbers', () => {
     const fetcher = (async (_input: RequestInfo, init?: RequestInit) => {
       bodies.push(String(init?.body));
       return Response.json({ data: { viewer: { accounts: [{ groups: [
-        { count: 0, sum: { requests: 10, errors: 1 }, dimensions: { date: '2026-10-06', scriptName: 'bananashot-analytics' } },
-        { count: 0, sum: { requests: 5, errors: 0 }, dimensions: { date: '2026-10-05', scriptName: 'bananashot-analytics' } },
+        { sum: { requests: 10, errors: 1 }, dimensions: { date: '2026-10-06', scriptName: 'bananashot-analytics' } },
+        { sum: { requests: 5, errors: 0 }, dimensions: { date: '2026-10-05', scriptName: 'bananashot-analytics' } },
       ] }] } } });
     }) as typeof fetch;
 

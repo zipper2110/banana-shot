@@ -107,6 +107,25 @@ for (let day = today - 89 * DAY; day <= today; day += DAY) {
     sessions.push(`INSERT INTO analytics_session (session_id, first_received_at, last_received_at, schema_version, notice_version, level, app_version, os_family, snapshot, final, duration_s, active_s, counters, attributes) VALUES (${quote(`seed-${id}`)}, ${received}, ${received + HOUR}, ${schema}, ${schema - 1}, ${quote(level)}, ${quote(version)}, ${quote(chance(0.97) ? 'windows' : 'other')}, 3, 1, ${active + int(0, 1800)}, ${active}, ${quote(JSON.stringify(counters))}, ${quote(JSON.stringify(attributes))});`);
   }
 }
+// The page views of the site (own counter of the site, table site_daily).
+sessions.push('DELETE FROM site_daily;');
+for (let day = today - 120 * DAY; day <= today; day += DAY) {
+  const date = new Date(day).toISOString().slice(0, 10);
+  const rows = new Map();
+  for (let view = int(5, 40); view > 0; view--) {
+    const path = pick(['/', '/', '/', '/download/', '/download/', '/faq/', '/pricing/', '/changelog/', '/privacy/', '/contact/', '/404']);
+    const external = chance(0.55);
+    const referrer = external ? pick(['', '', 'www.google.com', 'www.reddit.com', 't.me', 'github.com']) : 'banana-shot-editor.app';
+    const key = [date, path, referrer, pick(['DE', 'DE', 'RU', 'US', 'ES', 'XX']), chance(0.7) ? 'desktop' : 'mobile'];
+    const row = rows.get(key.join('|')) ?? { key, views: 0, visits: 0 };
+    row.views++;
+    if (external) row.visits++;
+    rows.set(key.join('|'), row);
+  }
+  for (const { key, views, visits } of rows.values()) {
+    sessions.push(`INSERT INTO site_daily (date, path, referrer, country, device, views, visits) VALUES (${key.map(quote).join(', ')}, ${views}, ${visits});`);
+  }
+}
 sessions.push(`INSERT OR REPLACE INTO analytics_retention_status (id, ran_at, deleted_count, oldest_received_at) VALUES (1, ${today + 3 * HOUR}, 0, ${today - 89 * DAY});`);
 writeFileSync(join(dir, 'analytics.sql'), sessions.join('\n'));
 run('bananashot-analytics', join(dir, 'analytics.sql'));
@@ -149,4 +168,4 @@ snapshots.push(`INSERT INTO job_status (name, ran_at, ok, message) VALUES ('down
 writeFileSync(join(dir, 'cockpit.sql'), snapshots.join('\n'));
 run('bananashot-cockpit', join(dir, 'cockpit.sql'));
 
-console.log(`Seeded ${id} sessions, 34 reports, and the download snapshots.`);
+console.log(`Seeded ${id} sessions, the site page views, 34 reports, and the download snapshots.`);

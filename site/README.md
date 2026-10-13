@@ -62,5 +62,24 @@ query). Deploy it again only when you change it:
 analytics-worker/node_modules/.bin/wrangler deploy --config site/www-redirect/wrangler.toml
 ```
 
+## Page view counter
+
+The cockpit shows the exact page views of the site. Cloudflare Web Analytics
+samples its data, so its numbers are only estimates. Thus the site counts
+page views with its own script:
+
+- `public/assets/count.js` sends one beacon for each page view to the
+  analytics Worker (`POST /v1/site`). The body is the page path and
+  `document.referrer`. Each page loads the script at the end of `<body>`.
+  `404.html` gives the path `/404` in `data-path`.
+- The analytics Worker accepts only the origin `https://banana-shot-editor.app`.
+  It adds 1 to a daily total in the table `site_daily` of its D1 database
+  (migration `0004_site_views.sql`). It keeps only the referrer host, the
+  country code of Cloudflare, and the device type. It does not count bots.
+- When you add a page, add the script tag to it.
+
 Web Analytics uses the automatic setup of Cloudflare. Cloudflare adds the
-beacon script to the pages, so the files have no analytics script.
+beacon script to the pages, so the files have no Web Analytics script. The
+cockpit does not read Web Analytics. When you turn it off in the Cloudflare
+dashboard, remove its paragraph from the "This site" section of the privacy
+page.

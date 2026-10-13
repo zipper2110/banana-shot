@@ -16,8 +16,6 @@ GITHUB_REPO = "zipper2110/banana-shot"
 WORKER_SCRIPTS = "bananashot-analytics,bananashot-feedback,bananashot-cockpit"
 # Write the account ID here (README, "Deploy", step 4).
 CF_ACCOUNT_ID = "6a013160bcd4459a28817b6a30384998"
-# The site numbers are filtered by this host. Optional: CF_WEB_ANALYTICS_SITE_TAG filters by the site tag instead.
-SITE_HOST = "banana-shot-editor.app"
 
 # Secrets (set with `wrangler secret put`, never here):
 #   COCKPIT_PASSWORD, CF_API_TOKEN, GITHUB_TOKEN (optional)

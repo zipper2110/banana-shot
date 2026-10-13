@@ -62,7 +62,8 @@ describe('summary', () => {
     expect(result.period.days).toBe(30);
     expect(result.feedback).toEqual({ ok: false, error: 'D1 is not available' });
     expect(result.app.ok && result.app.data.totals.sessions).toBe(1);
-    expect(result.site.ok).toBe(false);
+    expect(result.site.ok).toBe(true);
+    expect(result.workers.ok).toBe(false);
     expect(result.downloads.ok).toBe(true);
   });
 

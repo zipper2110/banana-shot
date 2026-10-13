@@ -164,7 +164,8 @@
     <!-- ====== This site ====== -->
     <h2 id="website">This site</h2>
     <p>Cloudflare hosts this site. Cloudflare receives your IP address to deliver the pages.</p>
-    <p>The site counts visits with Cloudflare Web Analytics. It does not use cookies or other storage on your device, and it does not follow you to other sites. It records the page address, the address of the page that sent you here, the browser and the device type, and the country. We see only totals, not single visitors.</p>
+    <p>The site counts page views with a small script of its own. For each page view, the script sends the page address and the address of the page that sent you here to our server on Cloudflare (the analytics Worker). The server adds 1 to a daily total for the page, the domain of the site that sent you, the country, and the device type (computer, phone, or tablet). It stores the totals in a Cloudflare D1 database in the EU jurisdiction. The country comes from Cloudflare. The device type comes from the browser identification. The server does not store your IP address, the full browser identification, or the time of day. To limit the number of requests, the server keeps a keyed hash of the address for one hour. The script does not use cookies or other storage on your device. The daily totals have no link to a person, so they do not have a deletion date.</p>
+    <p>The site also counts visits with Cloudflare Web Analytics. It does not use cookies or other storage on your device, and it does not follow you to other sites. It records the page address, the address of the page that sent you here, the browser and the device type, and the country. We see only totals, not single visitors.</p>
     <p>The download button opens a file on GitHub. GitHub then receives your IP address and the standard data of a web request.</p>
 
     <!-- ====== Contact and rights ====== -->
@@ -190,5 +191,6 @@
   </div>
 </footer>
 <script src="/assets/email.js"></script>
+<script src="/assets/count.js" defer></script>
 </body>
 </html>

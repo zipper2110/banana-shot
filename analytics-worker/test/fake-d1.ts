@@ -8,6 +8,7 @@ export class FakeD1 {
   readonly sessions = new Map<string, Row>();
   readonly rates = new Map<string, Row>();
   readonly siteDays = new Map<string, Row>();
+  readonly botDays = new Map<string, Row>();
   retentionStatus: Row | null = null;
   fail = false;
 
@@ -81,6 +82,14 @@ export class FakeStatement {
       row.views = (row.views as number) + 1;
       row.visits = (row.visits as number) + visits;
       this.db.siteDays.set(key, row);
+      return 1;
+    }
+    if (this.sql === 'INSERT INTO site_bot_daily (date,bot,path,requests) VALUES (?,?,?,1) ON CONFLICT(date,bot,path) DO UPDATE SET requests = requests + 1') {
+      const [date, bot, path] = this.args as [string, string, string];
+      const key = [date, bot, path].join('|');
+      const row = this.db.botDays.get(key) ?? { date, bot, path, requests: 0 };
+      row.requests = (row.requests as number) + 1;
+      this.db.botDays.set(key, row);
       return 1;
     }
     if (this.sql === 'DELETE FROM analytics_session WHERE last_received_at < ?') {

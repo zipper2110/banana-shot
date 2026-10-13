@@ -1,6 +1,9 @@
 import { validAttributes, type Attributes } from './attributes';
 import { COUNTER_KEYS, ESSENTIAL_COUNTER_KEYS, MAX_COUNTER_VALUE } from './counters';
 
+/** The largest request body: 8 KiB. A summary with all counter keys is about 2 KiB. */
+export const MAX_BODY_BYTES = 8 * 1024;
+
 /** The schema version of this Worker. A higher version is invalid (400). Version 2 added `level`, version 3 `attributes`. */
 export const SCHEMA_VERSION = 3;
 /** The lowest schema version that the Worker accepts. A lower version gets 410, so that an old app stops sending. */

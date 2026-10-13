@@ -372,6 +372,7 @@
 
   function renderSite(data) {
     $('site-grid').hidden = !data.site.ok;
+    $('bots-grid').hidden = !data.site.ok;
     if (!data.site.ok) {
       $('site-note').textContent = 'Own counter of the site.';
       return sourceError($('site-daily'), data.site.error);
@@ -389,6 +390,13 @@
     ranked($('site-referrers'), toRows(site.referrers, name => name || '(direct)'));
     ranked($('site-countries'), toRows(site.countries, countryName));
     ranked($('site-devices'), toRows(site.devices, name => DEVICE_NAMES[name] || name));
+
+    const bots = site.bots;
+    $('bots-note').textContent = 'Page requests of bots and other programs. They are not in the visits and the page views. '
+      + (bots.countingSince ? `${format(bots.total)} requests in the period. Counting since ${shortDate(bots.countingSince)}.` : 'No bot request yet.');
+    const toRequests = list => list.map(item => ({ name: item.name, value: item.requests, label: `${format(item.requests)} requests` }));
+    ranked($('bots'), toRequests(bots.byBot));
+    ranked($('bot-pages'), toRequests(bots.pages));
   }
 
   const ATTRIBUTE_IDS = ['attr-sport', 'attr-theme', 'attr-accent', 'attr-language'];
@@ -627,7 +635,7 @@
       items.push(`App usage: analytics Worker (D1), sessions are counted on the day of their first summary. Kept 90 days.${retention ? ` Last clean-up ${ago(retention.ranAt)}.` : ''}`);
     }
     items.push('Feedback: feedback Worker (D1). Kept 90 days. Email addresses are not shown.');
-    items.push('Site: own counter of the site, daily totals in the D1 of the analytics Worker.');
+    items.push('Site: own counter of the site, daily totals in the D1 of the analytics Worker. Bots: the site Worker reports each HTML request, and the analytics Worker keeps only the requests of bots.');
     items.push('Workers: Cloudflare GraphQL Analytics API.');
     const list = h('ul');
     for (const item of items) list.appendChild(h('li', '', item));

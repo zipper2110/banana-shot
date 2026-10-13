@@ -52,7 +52,7 @@ analytics-worker/node_modules/.bin/wrangler deploy --config site/wrangler.toml
 ```
 
 `wrangler.toml` connects the domain `banana-shot-editor.app` to the site.
-The site has no Worker code and no secrets.
+The site has a small Worker (`worker.js`, see "Bot counter") and no secrets.
 
 `www-redirect/` is a separate small Worker. It redirects
 `www.banana-shot-editor.app` to the domain without www (301, same path and
@@ -77,6 +77,24 @@ page views with its own script:
   (migration `0004_site_views.sql`). It keeps only the referrer host, the
   country code of Cloudflare, and the device type. It does not count bots.
 - When you add a page, add the script tag to it.
+
+## Bot counter
+
+Most bots do not run scripts, so the beacon does not see them. The beacon
+also ignores the bots that run scripts. Thus bots are counted separately:
+
+- `worker.js` is the Worker of the site. It serves the files with
+  `env.ASSETS`. For each HTML answer, it calls the analytics Worker over the
+  service binding `ANALYTICS` (RPC entrypoint `SiteCounter`) with the path,
+  the status, and the user agent.
+- The analytics Worker finds the bot name from the user agent (`botName` in
+  `analytics-worker/src/site.ts`). It adds 1 to a daily total in
+  `site_bot_daily` (migration `0005_site_bots.sql`). It does not store a
+  request of a person.
+- `run_worker_first` sends only the requests outside `/assets/` to the
+  Worker. A failure of the counter does not change the answer.
+- Deploy the analytics Worker before the site: the site needs the
+  entrypoint `SiteCounter`.
 
 Web Analytics uses the automatic setup of Cloudflare. Cloudflare adds the
 beacon script to the pages, so the files have no Web Analytics script. The

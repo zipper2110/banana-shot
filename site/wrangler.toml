@@ -1,10 +1,14 @@
-# The landing site (B-10): static files only, no Worker code.
+# The landing site (B-10): static files and a small Worker that reports the HTML requests for the bot counter.
 # Deploy from this folder with `wrangler deploy`. See README.md.
 name = "bananashot-site"
+main = "worker.js"
 compatibility_date = "2026-09-03"
 
 [assets]
 directory = "./public"
+binding = "ASSETS"
+# The Worker sees each request except the files in /assets/. Thus most requests go directly to the files.
+run_worker_first = ["/*", "!/assets/*"]
 # /privacy/ serves public/privacy/index.html, and /privacy redirects to /privacy/.
 html_handling = "auto-trailing-slash"
 not_found_handling = "404-page"
@@ -14,3 +18,9 @@ not_found_handling = "404-page"
 [[routes]]
 pattern = "banana-shot-editor.app"
 custom_domain = true
+
+# The bot counter of the analytics Worker (RPC entrypoint SiteCounter). It is not on a public URL.
+[[services]]
+binding = "ANALYTICS"
+service = "bananashot-analytics"
+entrypoint = "SiteCounter"

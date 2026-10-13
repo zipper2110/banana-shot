@@ -17,8 +17,40 @@ const PAGE_PATH = /^\/(?:[a-z0-9-]{1,32}\/){0,3}$/;
 const NOT_FOUND_PATH = '/404';
 const HOST = /^[a-z0-9-]+(?:\.[a-z0-9-]+)*$/;
 const COUNTRY = /^[A-Z0-9]{2}$/;
-/** Programs that are not a person in a browser. Most of them do not run scripts, but some do. */
-const BOT = /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|python|curl|wget/i;
+/**
+ * Bots and other programs, with the name that the cockpit shows. The first match gives the name. Telegram comes
+ * before Twitter, because Telegram writes "like TwitterBot". Most bots do not run scripts, so the site Worker reports
+ * them (see [countBotRequest]).
+ */
+const BOTS: [string, RegExp][] = [
+  ['Googlebot', /Googlebot|Google-InspectionTool|GoogleOther|Storebot-Google/i],
+  ['Google (other)', /AdsBot-Google|Mediapartners-Google|APIs-Google|FeedFetcher-Google|Google-Read-Aloud|Google-Extended|Google-Site-Verification/i],
+  ['Bingbot', /bingbot|BingPreview|msnbot|adidxbot/i],
+  ['YandexBot', /Yandex\w*Bot|YandexImages|YandexWebmaster|YandexFavicons|YandexMetrika/i],
+  ['DuckDuckBot', /DuckDuckBot|DuckAssistBot|DuckDuckGo-Favicons-Bot/i],
+  ['Baiduspider', /Baiduspider/i],
+  ['Applebot', /Applebot/i],
+  ['OpenAI', /GPTBot|ChatGPT-User|OAI-SearchBot/i],
+  ['Anthropic', /ClaudeBot|Claude-User|Claude-SearchBot|anthropic-ai/i],
+  ['Perplexity', /Perplexity/i],
+  ['ByteDance', /Bytespider|TikTokSpider/i],
+  ['Meta', /facebookexternalhit|facebookcatalog|meta-externalagent|meta-externalfetcher|Facebot/i],
+  ['Telegram', /TelegramBot/i],
+  ['Twitter', /Twitterbot/i],
+  ['WhatsApp', /WhatsApp/i],
+  ['Slack', /Slackbot|Slack-ImgProxy/i],
+  ['Discord', /Discordbot/i],
+  ['LinkedIn', /LinkedInBot/i],
+  ['SEO crawler', /AhrefsBot|SemrushBot|MJ12bot|DotBot|PetalBot|SeznamBot|DataForSeoBot|BLEXBot|serpstatbot|Barkrowler/i],
+  ['Uptime monitor', /UptimeRobot|Pingdom|StatusCake|Better Uptime|Site24x7|uptime/i],
+  ['Lighthouse', /Lighthouse|PageSpeed/i],
+  ['Headless browser', /HeadlessChrome|PhantomJS|Puppeteer|Playwright|Selenium/i],
+  ['Script', /curl|wget|python|Go-http-client|okhttp|axios|node-fetch|undici|libwww|httpx|aiohttp|Java\/|Ruby|PHP|Scrapy/i],
+  ['Other bot', /bot|crawl|spider|slurp|scraper|fetcher|preview/i],
+];
+
+const BOT_UPSERT = 'INSERT INTO site_bot_daily (date,bot,path,requests) VALUES (?,?,?,1) '
+  + 'ON CONFLICT(date,bot,path) DO UPDATE SET requests = requests + 1';
 
 export type Device = 'desktop' | 'mobile' | 'tablet';
 
@@ -53,8 +85,8 @@ export async function countPageView(request: Request, db: D1Database, rateLimitK
   try { body = JSON.parse(new TextDecoder().decode(bytes)); } catch { return status(400); }
   const view = parsePageView(body, request, now);
   if (!view) return status(400);
-  // A bot gets the same answer as a browser.
-  if (BOT.test(request.headers.get('user-agent') ?? '')) return status(204);
+  // A bot gets the same answer as a browser. The site Worker counts bots separately.
+  if (botName(request.headers.get('user-agent') ?? '')) return status(204);
   try {
     if (!rateLimitKey) throw new Error('RATE_LIMIT_KEY is not set');
     if (!await allow(db, rateLimitKey, request.headers.get('cf-connecting-ip') ?? 'unknown', now)) return status(429);
@@ -75,12 +107,39 @@ export function parsePageView(body: unknown, request: Request, now: number): Pag
   const country = (request as { cf?: { country?: unknown } }).cf?.country;
   return {
     date: new Date(now).toISOString().slice(0, 10),
-    path: PAGE_PATH.test(path) || path === NOT_FOUND_PATH ? path : '(other)',
+    path: pagePath(path),
     referrer: host,
     country: typeof country === 'string' && COUNTRY.test(country) ? country : 'XX',
     device: deviceType(request.headers.get('user-agent') ?? ''),
     visit: !SITE_HOSTS.includes(host),
   };
+}
+
+function pagePath(path: string): string {
+  return PAGE_PATH.test(path) || path === NOT_FOUND_PATH ? path : '(other)';
+}
+
+/**
+ * The name of the bot or program, or null for a browser. All browsers start the user agent with `Mozilla/5.0`, so
+ * another user agent, or no user agent, is a program.
+ */
+export function botName(userAgent: string): string | null {
+  for (const [name, pattern] of BOTS) if (pattern.test(userAgent)) return name;
+  if (userAgent === '') return 'No user agent';
+  if (!userAgent.startsWith('Mozilla/')) return 'Other program';
+  return null;
+}
+
+/**
+ * Counts one HTML request of the site when it comes from a bot or a program. The site Worker calls it for each HTML
+ * answer (`SiteCounter` in index.ts). [status] 404 counts as the path `/404`. Returns true when it counted.
+ */
+export async function countBotRequest(db: D1Database, path: string, status: number, userAgent: string, now = Date.now()): Promise<boolean> {
+  const bot = botName(userAgent);
+  if (!bot) return false;
+  const date = new Date(now).toISOString().slice(0, 10);
+  await db.prepare(BOT_UPSERT).bind(date, bot, status === 404 ? NOT_FOUND_PATH : pagePath(path)).run();
+  return true;
 }
 
 function referrerHost(referrer: string): string {

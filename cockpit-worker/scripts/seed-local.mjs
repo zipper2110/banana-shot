@@ -126,6 +126,18 @@ for (let day = today - 120 * DAY; day <= today; day += DAY) {
     sessions.push(`INSERT INTO site_daily (date, path, referrer, country, device, views, visits) VALUES (${key.map(quote).join(', ')}, ${views}, ${visits});`);
   }
 }
+// The bot requests of the site (table site_bot_daily).
+sessions.push('DELETE FROM site_bot_daily;');
+for (let day = today - 120 * DAY; day <= today; day += DAY) {
+  const date = new Date(day).toISOString().slice(0, 10);
+  const rows = new Map();
+  for (let request = int(10, 80); request > 0; request--) {
+    const key = [date, pick(['Googlebot', 'Googlebot', 'Bingbot', 'OpenAI', 'Anthropic', 'SEO crawler', 'Script', 'Script', 'Telegram']),
+      pick(['/', '/', '/download/', '/faq/', '/404', '/404', '/404'])].join('|');
+    rows.set(key, (rows.get(key) ?? 0) + 1);
+  }
+  for (const [key, requests] of rows) sessions.push(`INSERT INTO site_bot_daily (date, bot, path, requests) VALUES (${key.split('|').map(quote).join(', ')}, ${requests});`);
+}
 sessions.push(`INSERT OR REPLACE INTO analytics_retention_status (id, ran_at, deleted_count, oldest_received_at) VALUES (1, ${today + 3 * HOUR}, 0, ${today - 89 * DAY});`);
 writeFileSync(join(dir, 'analytics.sql'), sessions.join('\n'));
 run('bananashot-analytics', join(dir, 'analytics.sql'));

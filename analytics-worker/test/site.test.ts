@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import worker, { type Env } from '../src/index';
+import worker, { SiteCounter, type Env } from '../src/index';
 import { HOURLY_LIMIT } from '../src/rate-limit';
-import { MAX_SITE_BODY_BYTES, SITE_ORIGIN, deviceType } from '../src/site';
+import { MAX_SITE_BODY_BYTES, SITE_ORIGIN, botName, deviceType } from '../src/site';
 import { FakeD1 } from './fake-d1';
 
 const NOW = Date.UTC(2026, 9, 13, 23, 59, 0);
@@ -117,5 +117,73 @@ describe('page view counter', () => {
     env.ANALYTICS_INGESTION_ENABLED = 'false';
     expect((await send(view({ path: '/', referrer: '' }))).status).toBe(410);
     expect(rows()).toHaveLength(0);
+  });
+});
+
+describe('bot counter', () => {
+  const counter = () => new SiteCounter({} as ExecutionContext, env);
+  const botRows = () => [...db.botDays.values()];
+
+  it.each([
+    ['Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)', 'Googlebot'],
+    ['Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)', 'Bingbot'],
+    ['Mozilla/5.0 (compatible; YandexBot/3.0; +http://yandex.com/bots)', 'YandexBot'],
+    ['Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)', 'OpenAI'],
+    ['Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)', 'Anthropic'],
+    ['TelegramBot (like TwitterBot)', 'Telegram'],
+    ['WhatsApp/2.23.20.0 A', 'WhatsApp'],
+    ['facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)', 'Meta'],
+    ['Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)', 'SEO crawler'],
+    ['Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0 Safari/537.36', 'Headless browser'],
+    ['curl/8.5.0', 'Script'],
+    ['python-requests/2.32.3', 'Script'],
+    ['Mozilla/5.0 (compatible; SomeNewCrawler/1.0)', 'Other bot'],
+    ['', 'No user agent'],
+    ['Lynx/2.9.0', 'Other program'],
+  ])('names the bot of %s', (userAgent, name) => {
+    expect(botName(userAgent)).toBe(name);
+  });
+
+  it.each([
+    DESKTOP,
+    PHONE,
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0',
+    'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36 YandexSearch/25.10',
+    'Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile DuckDuckGo/5 Safari/537.36',
+  ])('does not take a browser for a bot: %s', userAgent => {
+    expect(botName(userAgent)).toBeNull();
+  });
+
+  it('counts the HTML requests of bots for each day, bot, and page', async () => {
+    await counter().pageRequest('/', 200, 'Mozilla/5.0 (compatible; Googlebot/2.1)');
+    await counter().pageRequest('/', 200, 'Mozilla/5.0 (compatible; Googlebot/2.1)');
+    await counter().pageRequest('/wp-admin/setup.php', 404, 'python-requests/2.32.3');
+    await counter().pageRequest('/download/', 200, 'curl/8.5.0');
+    expect(botRows()).toEqual([
+      { date: '2026-10-13', bot: 'Googlebot', path: '/', requests: 2 },
+      { date: '2026-10-13', bot: 'Script', path: '/404', requests: 1 },
+      { date: '2026-10-13', bot: 'Script', path: '/download/', requests: 1 },
+    ]);
+  });
+
+  it('does not store a request of a person', async () => {
+    await counter().pageRequest('/', 200, DESKTOP);
+    expect(botRows()).toHaveLength(0);
+  });
+
+  it('stores nothing when ingestion is off, and does not throw when the database fails', async () => {
+    env.ANALYTICS_INGESTION_ENABLED = 'false';
+    await counter().pageRequest('/', 200, 'curl/8.5.0');
+    expect(botRows()).toHaveLength(0);
+    env.ANALYTICS_INGESTION_ENABLED = 'true';
+    db.fail = true;
+    await expect(counter().pageRequest('/', 200, 'curl/8.5.0')).resolves.toBeUndefined();
+  });
+
+  it('does not count a page view of the beacon from a bot', async () => {
+    await send(view({ path: '/', referrer: '' }, { userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1)' }));
+    expect(rows()).toHaveLength(0);
+    expect(botRows()).toHaveLength(0);
   });
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import worker, { MAX_BODY_BYTES, type Env } from '../src/index';
+import worker, { type Env } from '../src/index';
 import { HOURLY_LIMIT } from '../src/rate-limit';
-import { appVersionText } from '../src/validation';
+import { MAX_BODY_BYTES, appVersionText } from '../src/validation';
 import { FakeD1 } from './fake-d1';
 import { bodyOf, invalidSummaries, summary, validSummaries } from './fixtures';
 

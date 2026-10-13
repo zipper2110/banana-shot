@@ -73,6 +73,11 @@ export function addPageView(env: TestEnv, values: {
     values.date, values.path ?? '/', values.referrer ?? '', values.country ?? 'XX', values.device ?? 'desktop', values.views, values.visits);
 }
 
+export function addBotRequests(env: TestEnv, values: { date: string; bot: string; path?: string; requests: number }) {
+  env.analytics.db.prepare('INSERT INTO site_bot_daily (date, bot, path, requests) VALUES (?, ?, ?, ?)').run(
+    values.date, values.bot, values.path ?? '/', values.requests);
+}
+
 export function basicAuth(password: string): string {
   return `Basic ${btoa(`cockpit:${password}`)}`;
 }

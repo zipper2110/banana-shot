@@ -1,16 +1,16 @@
+import { WorkerEntrypoint } from 'cloudflare:workers';
 import { allow, HOUR } from './rate-limit';
 import { runRetention } from './retention';
-import { countPageView, SITE_PATH } from './site';
-import { validateSummary, type Summary } from './validation';
+import { countBotRequest, countPageView, SITE_PATH } from './site';
+import { MAX_BODY_BYTES, validateSummary, type Summary } from './validation';
 
+// This module has an RPC entrypoint, so it can export only handlers. The runtime refuses other values. Thus the
+// constants are in other modules.
 export interface Env {
   ANALYTICS_INGESTION_ENABLED: string;
   ANALYTICS_DB: D1Database;
   RATE_LIMIT_KEY?: string;
 }
-
-/** The largest request body: 8 KiB. A summary with all counter keys is about 2 KiB. */
-export const MAX_BODY_BYTES = 8 * 1024;
 
 const status = (code: number) => new Response(null, { status: code });
 
@@ -50,6 +50,22 @@ export default {
     await runRetention(env.ANALYTICS_DB);
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * The RPC entrypoint for the site Worker (service binding `ANALYTICS` in site/wrangler.toml). It is not on the public
+ * URL, so only the site Worker can call it.
+ */
+export class SiteCounter extends WorkerEntrypoint<Env> {
+  /** Counts one HTML request of the site when it comes from a bot. A request of a person is not stored. */
+  async pageRequest(path: string, status: number, userAgent: string): Promise<void> {
+    if (this.env.ANALYTICS_INGESTION_ENABLED !== 'true') return;
+    try {
+      await countBotRequest(this.env.ANALYTICS_DB, path, status, userAgent);
+    } catch (failure) {
+      console.error(`Bot request not stored: ${failure instanceof Error ? failure.message : 'unknown failure'}`);
+    }
+  }
+}
 
 async function store(summary: Summary, request: Request, env: Env): Promise<Response> {
   const db = env.ANALYTICS_DB;

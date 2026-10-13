@@ -16,6 +16,13 @@ export interface Site {
   /** The country code of Cloudflare. `XX` is an unknown country. */
   countries: Ranked[];
   devices: Ranked[];
+  /** The HTML requests of bots and other programs (`site_bot_daily`). They are not in the other numbers. */
+  bots: {
+    countingSince: string | null;
+    total: number;
+    byBot: { name: string; requests: number }[];
+    pages: { name: string; requests: number }[];
+  };
 }
 
 export interface Ranked { name: string; visits: number; pageViews: number }
@@ -30,7 +37,9 @@ export async function loadSite(env: Env, period: Period): Promise<Site> {
   const db = env.ANALYTICS_DB;
   const start = isoDate(period.start);
   const end = isoDate(period.end);
-  const [daily, prev, pages, referrers, countries, devices, first] = await Promise.all([
+  const botTop = (column: string) =>
+    `SELECT ${column} AS name, SUM(requests) AS requests FROM site_bot_daily WHERE date >= ? AND date < ? GROUP BY ${column} ORDER BY requests DESC, name LIMIT ${TOP_LIMIT}`;
+  const [daily, prev, pages, referrers, countries, devices, first, byBot, botPages, botTotal, botFirst] = await Promise.all([
     db.prepare(`SELECT date AS name, SUM(visits) AS visits, SUM(views) AS views ${RANGE} GROUP BY date`).bind(start, end).all<Row>(),
     db.prepare(`SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(views), 0) AS views ${RANGE}`).bind(isoDate(period.prevStart), start).first<Row>(),
     db.prepare(top('path', 'views')).bind(start, end).all<Row>(),
@@ -38,6 +47,10 @@ export async function loadSite(env: Env, period: Period): Promise<Site> {
     db.prepare(top('country', 'visits')).bind(start, end).all<Row>(),
     db.prepare(top('device', 'visits')).bind(start, end).all<Row>(),
     db.prepare('SELECT MIN(date) AS name FROM site_daily').first<{ name: string | null }>(),
+    db.prepare(botTop('bot')).bind(start, end).all<{ name: string; requests: number }>(),
+    db.prepare(botTop('path')).bind(start, end).all<{ name: string; requests: number }>(),
+    db.prepare('SELECT COALESCE(SUM(requests), 0) AS requests FROM site_bot_daily WHERE date >= ? AND date < ?').bind(start, end).first<{ requests: number }>(),
+    db.prepare('SELECT MIN(date) AS name FROM site_bot_daily').first<{ name: string | null }>(),
   ]);
 
   const byDate = new Map(daily.results.map(row => [row.name, row]));
@@ -55,5 +68,6 @@ export async function loadSite(env: Env, period: Period): Promise<Site> {
     referrers: ranked(referrers.results),
     countries: ranked(countries.results),
     devices: ranked(devices.results),
+    bots: { countingSince: botFirst?.name ?? null, total: botTotal?.requests ?? 0, byBot: byBot.results, pages: botPages.results },
   };
 }

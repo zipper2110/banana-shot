@@ -1,5 +1,5 @@
 # Redirects www.banana-shot-editor.app to banana-shot-editor.app (B-10, T8).
-# A separate Worker, so that the main site stays static files only.
+# A separate Worker, so that the Worker of the main site stays small.
 # Deploy: see site/README.md.
 name = "bananashot-www-redirect"
 main = "worker.js"

@@ -5,7 +5,7 @@ import { SETUP_ASSET, dailyIncreases, loadDownloads, takeSnapshot } from '../src
 import { errorLine, loadFeedback } from '../src/feedback';
 import { makePeriod } from '../src/period';
 import { loadSite } from '../src/site';
-import { NOW, addPageView, addReport, addSession, addSnapshot, at, makeEnv } from './fixtures';
+import { NOW, addBotRequests, addPageView, addReport, addSession, addSnapshot, at, makeEnv } from './fixtures';
 
 const OTHER = 'BananaShot-1.0.0-full.nupkg';
 
@@ -221,6 +221,26 @@ describe('site numbers', () => {
     expect(site.totals).toEqual({ visits: 0, pageViews: 0 });
     expect(site.prevTotals).toEqual({ visits: 0, pageViews: 0 });
     expect(site.daily).toHaveLength(30);
+    expect(site.bots).toEqual({ countingSince: null, total: 0, byBot: [], pages: [] });
+  });
+
+  it('reads the bot requests separately', async () => {
+    const env = makeEnv();
+    addPageView(env, { date: '2026-10-06', views: 5, visits: 5 });
+    addBotRequests(env, { date: '2026-09-01', bot: 'Googlebot', requests: 100 });
+    addBotRequests(env, { date: '2026-10-05', bot: 'Googlebot', requests: 7 });
+    addBotRequests(env, { date: '2026-10-06', bot: 'Googlebot', path: '/download/', requests: 2 });
+    addBotRequests(env, { date: '2026-10-06', bot: 'Script', path: '/404', requests: 12 });
+
+    const site = await loadSite(env, makePeriod(7, NOW));
+
+    expect(site.totals).toEqual({ visits: 5, pageViews: 5 });
+    expect(site.bots).toEqual({
+      countingSince: '2026-09-01',
+      total: 21,
+      byBot: [{ name: 'Script', requests: 12 }, { name: 'Googlebot', requests: 9 }],
+      pages: [{ name: '/404', requests: 12 }, { name: '/', requests: 7 }, { name: '/download/', requests: 2 }],
+    });
   });
 });
 

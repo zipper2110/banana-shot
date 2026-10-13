@@ -162,8 +162,17 @@ describe('bot counter', () => {
     await counter().pageRequest('/download/', 200, 'curl/8.5.0');
     expect(botRows()).toEqual([
       { date: '2026-10-13', bot: 'Googlebot', path: '/', requests: 2 },
-      { date: '2026-10-13', bot: 'Script', path: '/404', requests: 1 },
+      { date: '2026-10-13', bot: 'Script', path: '404 /wp-admin/setup.php', requests: 1 },
       { date: '2026-10-13', bot: 'Script', path: '/download/', requests: 1 },
+    ]);
+  });
+
+  it('keeps the requested path of a 404, but only a short path with URL characters', async () => {
+    for (const path of ['/.env', '/.git/config', '/a%20b', `/${'x'.repeat(59)}`, `/${'x'.repeat(60)}`, '/<script>', '/ü']) {
+      await counter().pageRequest(path, 404, 'curl/8.5.0');
+    }
+    expect(botRows().map(row => [row.path, row.requests])).toEqual([
+      ['404 /.env', 1], ['404 /.git/config', 1], ['404 /a%20b', 1], [`404 /${'x'.repeat(59)}`, 1], ['404 (other)', 3],
     ]);
   });
 

@@ -90,7 +90,8 @@ also ignores the bots that run scripts. Thus bots are counted separately:
 - The analytics Worker finds the bot name from the user agent (`botName` in
   `analytics-worker/src/site.ts`). It adds 1 to a daily total in
   `site_bot_daily` (migration `0005_site_bots.sql`). It does not store a
-  request of a person.
+  request of a person. For a 404, the row keeps the requested path, for
+  example `404 /wp-login.php`. A long or unusual path is `404 (other)`.
 - `run_worker_first` sends only the requests outside `/assets/` to the
   Worker. A failure of the counter does not change the answer.
 - Deploy the analytics Worker before the site: the site needs the

@@ -15,6 +15,8 @@ export const MAX_SITE_BODY_BYTES = 1024;
 /** A page of the site, for example `/` or `/download/`. The 404 page sends `/404`. Other paths count as `(other)`. */
 const PAGE_PATH = /^\/(?:[a-z0-9-]{1,32}\/){0,3}$/;
 const NOT_FOUND_PATH = '/404';
+/** A requested path that the bot counter keeps for a 404: printable URL characters only, 60 characters or less. */
+const MISSING_PATH = /^\/[A-Za-z0-9._~%!$&'()*+,;=:@\/-]{0,59}$/;
 const HOST = /^[a-z0-9-]+(?:\.[a-z0-9-]+)*$/;
 const COUNTRY = /^[A-Z0-9]{2}$/;
 /**
@@ -132,14 +134,20 @@ export function botName(userAgent: string): string | null {
 
 /**
  * Counts one HTML request of the site when it comes from a bot or a program. The site Worker calls it for each HTML
- * answer (`SiteCounter` in index.ts). [status] 404 counts as the path `/404`. Returns true when it counted.
+ * answer (`SiteCounter` in index.ts). For a 404, the row keeps the requested path after `404 `, for example
+ * `404 /wp-login.php`, so that the cockpit shows what the bots look for. Returns true when it counted.
  */
 export async function countBotRequest(db: D1Database, path: string, status: number, userAgent: string, now = Date.now()): Promise<boolean> {
   const bot = botName(userAgent);
   if (!bot) return false;
   const date = new Date(now).toISOString().slice(0, 10);
-  await db.prepare(BOT_UPSERT).bind(date, bot, status === 404 ? NOT_FOUND_PATH : pagePath(path)).run();
+  await db.prepare(BOT_UPSERT).bind(date, bot, status === 404 ? missingPath(path) : pagePath(path)).run();
   return true;
+}
+
+/** The row path of a 404: `404 ` and the requested path, or `404 (other)` for a long or unusual path. */
+function missingPath(path: string): string {
+  return `404 ${MISSING_PATH.test(path) ? path : '(other)'}`;
 }
 
 function referrerHost(referrer: string): string {

@@ -86,5 +86,9 @@ class TiebreakTimelineTest {
         assertEquals(6, p2)
         // Sets counter must advance for P1
         assertTrue(postSpan.setsP1 >= 1)
+        // The completed set keeps its tiebreak points, so the scoreboard can show 6⁵.
+        assertEquals(listOf(7 to 5), postSpan.completedSetTiebreaks)
+        val display = ScoreboardComponent.display(postSpan)
+        assertEquals(listOf(7 to 5), display.completedSetTiebreaks)
     }
 }

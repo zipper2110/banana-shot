@@ -31,7 +31,7 @@ A desktop application that helps tennis and padel players turn full‑match reco
   points, and mark favorites. Add comments.
 - Scoring: give each point a winner. The app computes the games, sets, and
   tiebreaks for the selected match format.
-- Scoreboard: 17 scoreboard styles (one for padel), with a position, player colors, and
+- Scoreboard: many scoreboard styles (one for padel), with a position, player colors, and
   other settings.
 - Statistics: statistics of the match and of each set.
 - Colors and Transform: color, crop, and rotation of the video.
@@ -187,6 +187,19 @@ mvn compile exec:java
 
 `exec:java` ignores `-Dexec.mainClass`. To start a different main class, use
 `-Dapp.mainClass=<class>`.
+
+### Scoreboard previews
+
+To see the scoreboard styles without the app, render a preview sheet. Each
+row is one style, and each column is one variant (title and credit, no title,
+padel). The default output is `target/scoreboard-preview/scoreboards.png`.
+
+```bash
+mvn -q test-compile exec:java -Dexec.classpathScope=test -Dapp.mainClass=org.litvin.export.scoreboard.ScoreboardPreviewMainKt "-Dexec.args=--styles=STADIUM,STADIUM_COMPACT"
+```
+
+Leave out `--styles` to render all styles. Use `--out=<file.png>` for a
+different file and `--scale=<number>` for a different size.
 
 ## CI
 - `ci.yml` runs `mvn test` on pushes and pull requests to `main`/`master`.

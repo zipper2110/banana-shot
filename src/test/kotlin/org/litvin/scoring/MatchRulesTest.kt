@@ -58,7 +58,7 @@ class MatchRulesTest {
         assertEquals(4, atFourAll.gamesP2)
 
         val last = tiebreak.statesAfterPoint.last()
-        assertEquals(ScoringEngine.SetScore(4, 5, true), tiebreak.setsAfterPoint.last().single())
+        assertEquals(ScoringEngine.SetScore(4, 5, true, tiebreakP1 = 0, tiebreakP2 = 7), tiebreak.setsAfterPoint.last().single())
         assertEquals(2, last.lastSetWonBy)
         assertEquals(2, last.lastGameWonBy)
         assertFalse(last.isTiebreak)
@@ -88,7 +88,7 @@ class MatchRulesTest {
         val matchPoint = timeline.statesAfterPoint[setsOneAll.length + 9]
         assertEquals(2, matchPoint.setsP1)
         assertEquals(1, matchPoint.setsP2)
-        assertEquals(ScoringEngine.SetScore(1, 0, true), timeline.setsAfterPoint[setsOneAll.length + 9].last())
+        assertEquals(ScoringEngine.SetScore(1, 0, true, tiebreakP1 = 10, tiebreakP2 = 0), timeline.setsAfterPoint[setsOneAll.length + 9].last())
 
         // The match is over: the last point does not count
         val afterMatch = timeline.statesAfterPoint.last()
@@ -105,7 +105,7 @@ class MatchRulesTest {
         val last = timeline.statesAfterPoint.last()
         assertEquals(1, last.setsP1)
         assertEquals(1, last.lastSetWonBy)
-        assertEquals(ScoringEngine.SetScore(1, 0, true), timeline.setsAfterPoint.last().single())
+        assertEquals(ScoringEngine.SetScore(1, 0, true, tiebreakP1 = 8, tiebreakP2 = 6), timeline.setsAfterPoint.last().single())
     }
 
     @Test

@@ -35,6 +35,8 @@ data class OverlaySpan(
     val setsP1: Int = 0,
     val setsP2: Int = 0,
     val completedSets: List<Pair<Int, Int>> = emptyList(),
+    /** The tiebreak points of each completed set, in the order of [completedSets]. Null for a set without a tiebreak. */
+    val completedSetTiebreaks: List<Pair<Int, Int>?> = emptyList(),
     /** The player (1 or 2) who serves, or null when the server is not known. */
     val server: Int? = null,
     /** The badge of a deciding point, for example "STAR POINT", or null for a normal point. */
@@ -192,6 +194,7 @@ object ScoreboardTimelineBuilder {
                 setsP1 = st?.setsP1 ?: 0,
                 setsP2 = st?.setsP2 ?: 0,
                 completedSets = completedSets,
+                completedSetTiebreaks = st?.completedSetTiebreaks ?: emptyList(),
                 server = st?.server,
                 badge = badge?.takeIf { st?.decidingPoint == true },
             )

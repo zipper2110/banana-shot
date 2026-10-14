@@ -34,6 +34,9 @@ object ScoreboardLayouts {
         ScoreboardStyleId.SUNSET -> ScoreboardStyleDefaults(accentRgb = 0xFFB347, backgroundOpacityPercent = 94)
         // The yellow of a padel ball.
         ScoreboardStyleId.PADEL_GLASS -> ScoreboardStyleDefaults(accentRgb = 0xF2E33D, backgroundOpacityPercent = 92)
+        // The blue of tour TV graphics.
+        ScoreboardStyleId.STADIUM -> ScoreboardStyleDefaults(accentRgb = 0x006CD9, backgroundOpacityPercent = 94)
+        ScoreboardStyleId.STADIUM_COMPACT -> ScoreboardStyleDefaults(accentRgb = 0x1F22E8, backgroundOpacityPercent = 94)
     }
 
     fun scene(display: ScoreboardDisplay, settings: ScoreboardSettingsV1): ScoreboardScene {
@@ -71,6 +74,8 @@ object ScoreboardLayouts {
             ScoreboardStyleId.CHALKBOARD -> ScoreboardTourLayouts.chalkboard(display, look)
             ScoreboardStyleId.SUNSET -> ScoreboardTourLayouts.sunset(display, look)
             ScoreboardStyleId.PADEL_GLASS -> ScoreboardTourLayouts.padelGlass(display, look)
+            ScoreboardStyleId.STADIUM -> ScoreboardTourLayouts.stadium(display, look)
+            ScoreboardStyleId.STADIUM_COMPACT -> ScoreboardTourLayouts.stadiumCompact(display, look)
         }
 
     /**

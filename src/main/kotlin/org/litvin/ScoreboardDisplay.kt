@@ -19,6 +19,11 @@ data class ScoreboardDisplay(
     val server: Int = 0,
     /** The badge of a deciding point, for example "STAR POINT", or null. All styles show it in the same way. */
     val badge: String? = null,
+    /**
+     * The tiebreak points of each completed set, in the order of [completedSets]. Null for a set without a tiebreak.
+     * The list can be shorter than [completedSets].
+     */
+    val completedSetTiebreaks: List<Pair<Int, Int>?> = emptyList(),
 ) {
     val player1Leading: Boolean
         get() = pointLeader == 1
@@ -56,6 +61,8 @@ object ScoreboardComponent {
             player1Games = span.gamesP1,
             player2Games = span.gamesP2,
             completedSets = span.completedSets.takeLast(VISIBLE_COMPLETED_SETS),
+            completedSetTiebreaks = span.completedSets.indices.map { span.completedSetTiebreaks.getOrNull(it) }
+                .takeLast(VISIBLE_COMPLETED_SETS),
             pointLeader = when {
                 leader > 0 -> 1
                 leader < 0 -> 2

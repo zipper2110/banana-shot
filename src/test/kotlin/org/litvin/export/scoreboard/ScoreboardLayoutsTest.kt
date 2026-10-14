@@ -74,7 +74,11 @@ class ScoreboardLayoutsTest {
             assertFalse(colors.contains(0x112233) || colors.contains(0x445566), "$style")
             assertTrue(withoutColors.texts().containsAll(listOf("ALICE", "BOB")), "$style")
             assertTrue(withoutColors.width <= withColors.width, "$style")
-            assertTrue(withoutColors.label("ALICE").x < withColors.label("ALICE").x, "$style")
+            // A marker before the name moves the name left. A marker after the name makes the board narrower.
+            assertTrue(
+                withoutColors.label("ALICE").x < withColors.label("ALICE").x || withoutColors.width < withColors.width,
+                "$style",
+            )
         }
     }
 
@@ -140,6 +144,48 @@ class ScoreboardLayoutsTest {
     }
 
     @Test
+    fun stadiumShowsTheLastNameInBoldAndSplitsTheTitleAtTheBar() {
+        val fullNames = display.copy(player1Name = "ALEXANDER ZVEREV", player2Name = "LEE / KIM")
+        val settings = ScoreboardSettingsV1(style = ScoreboardStyleId.STADIUM, title = "Round 4 | Stadium court")
+        val scene = ScoreboardLayouts.scene(fullNames, settings)
+
+        assertFalse(scene.label("ALEXANDER").bold)
+        assertTrue(scene.label("ZVEREV").bold)
+        assertTrue(scene.label("ALEXANDER").x < scene.label("ZVEREV").x)
+        // A team name stays in one bold label.
+        assertTrue(scene.label("LEE / KIM").bold)
+        assertTrue(scene.label("ROUND 4").bold)
+        assertFalse(scene.label("STADIUM COURT").bold)
+
+        // A default name stays in one bold label.
+        val defaultNames = ScoreboardLayouts.scene(display.copy(player1Name = "TEAM 1", player2Name = "TEAM 2"), settings)
+        assertTrue(defaultNames.label("TEAM 1").bold)
+
+        // Stadium Compact shows the complete names as the user typed them, in bold.
+        val compact = ScoreboardLayouts.scene(fullNames, settings.copy(style = ScoreboardStyleId.STADIUM_COMPACT))
+        assertTrue(compact.label("ALEXANDER ZVEREV").bold)
+        assertTrue(compact.texts().contains("LEE / KIM"))
+        assertTrue(compact.width < scene.width)
+    }
+
+    @Test
+    fun theStadiumStylesShowTheTiebreakPointsOfTheSetLoserAfterTheGames() {
+        // A 7–6 set with a 7–5 tiebreak. Bob lost the set and shows 6⁵.
+        val tiebreakSet = display.copy(completedSets = listOf(7 to 6), completedSetTiebreaks = listOf(7 to 5))
+        listOf(ScoreboardStyleId.STADIUM, ScoreboardStyleId.STADIUM_COMPACT).forEach { style ->
+            val scene = ScoreboardLayouts.scene(tiebreakSet, ScoreboardSettingsV1(style = style))
+            val games = scene.label("6")
+            val tiebreak = scene.label("5")
+
+            assertTrue(tiebreak.size < games.size, "$style: the tiebreak points are small")
+            assertTrue(tiebreak.x > games.x, "$style: the tiebreak points are after the games")
+            assertTrue(tiebreak.y < games.y, "$style: the tiebreak points are raised")
+            // The set winner has no tiebreak points.
+            assertEquals(1, scene.texts().count { it == "7" }, "$style")
+        }
+    }
+
+    @Test
     fun aTiedCompletedSetHasNoWinner() {
         val tied = ScoreboardComponent.display(
             OverlaySpan(0L, 1_000L, "", p1Name = "Alice", p2Name = "Bob", gamesP1 = 1, gamesP2 = 2, completedSets = listOf(5 to 5)),
@@ -190,14 +236,14 @@ class ScoreboardLayoutsTest {
     fun everyStyleShowsTheServeBallNextToTheServerUntilTheSettingsHideIt() {
         val serving = display.copy(server = 2)
         ScoreboardStyleId.entries.forEach { style ->
-            val defaults = ScoreboardLayouts.defaults(style)
+            val ballRgb = serveBallRgb(style)
             // Without the title, because some titles have a round accent dot.
             val settings = ScoreboardSettingsV1(style = style, showTitle = false)
             val withServe = ScoreboardLayouts.scene(serving, settings)
             val hidden = ScoreboardLayouts.scene(serving, settings.copy(showServe = false))
             val unknown = ScoreboardLayouts.scene(display, settings)
 
-            val balls = withServe.items.filterIsInstance<SceneItem.Box>().filter { it.isServeBall(defaults.accentRgb) }
+            val balls = withServe.items.filterIsInstance<SceneItem.Box>().filter { it.isServeBall(ballRgb) }
             assertEquals(1, balls.size, "$style: $balls")
             val ball = balls.single()
             // The ball is in the row of player 2 and between the name and the points.
@@ -206,7 +252,7 @@ class ScoreboardLayoutsTest {
                 kotlin.math.abs(ball.y + ball.height / 2 - bob.y) || style == ScoreboardStyleId.TICKER, "$style")
             assertTrue(ball.x >= 0 && ball.x + ball.width <= withServe.width, "$style")
 
-            assertTrue(hidden.items.filterIsInstance<SceneItem.Box>().none { it.isServeBall(defaults.accentRgb) }, "$style")
+            assertTrue(hidden.items.filterIsInstance<SceneItem.Box>().none { it.isServeBall(ballRgb) }, "$style")
             // Without a known server, or with the ball hidden, the board keeps its size.
             assertEquals(unknown.width, hidden.width, "$style")
             assertTrue(withServe.width > unknown.width, "$style")
@@ -227,7 +273,11 @@ class ScoreboardLayoutsTest {
         assertTrue(ballX(2) > scene.label("15").x)
     }
 
-    /** A serve ball is a small circle in the accent color (LED Board: the LED color). */
+    /** The serve ball has the accent color (LED Board: the LED color). The Stadium styles have a yellow dot and a blue accent. */
+    private fun serveBallRgb(style: ScoreboardStyleId): Int =
+        if (style == ScoreboardStyleId.STADIUM || style == ScoreboardStyleId.STADIUM_COMPACT) ScoreboardTourLayouts.STADIUM_YELLOW else ScoreboardLayouts.defaults(style).accentRgb
+
+    /** A serve ball is a small circle in the ball color of the style. */
     private fun SceneItem.Box.isServeBall(accentRgb: Int): Boolean =
         rgb == accentRgb && width == height && width < 20.0 && corners.topLeft == width / 2
 }

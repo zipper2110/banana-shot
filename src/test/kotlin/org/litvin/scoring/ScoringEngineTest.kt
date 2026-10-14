@@ -96,7 +96,7 @@ class ScoringEngineTest {
         assertEquals(0, last.setsP2)
         assertEquals(0, last.gamesP1)
         assertEquals(0, last.gamesP2)
-        assertEquals(ScoringEngine.SetScore(7, 6, true), setsPerPoint.last().single())
+        assertEquals(ScoringEngine.SetScore(7, 6, true, tiebreakP1 = 7, tiebreakP2 = 5), setsPerPoint.last().single())
     }
 
     @Test

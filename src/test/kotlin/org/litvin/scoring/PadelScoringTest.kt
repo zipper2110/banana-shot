@@ -212,7 +212,7 @@ class PadelScoringTest {
         val atEightAll = timeline(toEightAll, rules).statesAfterPoint.last()
         assertTrue(atEightAll.isTiebreak)
         val tiebreak = timeline(toEightAll + "2".repeat(7), rules)
-        assertEquals(ScoringEngine.SetScore(8, 9, true), tiebreak.setsAfterPoint.last().single())
+        assertEquals(ScoringEngine.SetScore(8, 9, true, tiebreakP1 = 0, tiebreakP2 = 7), tiebreak.setsAfterPoint.last().single())
         assertEquals(1, tiebreak.statesAfterPoint.last().setsP2)
     }
 

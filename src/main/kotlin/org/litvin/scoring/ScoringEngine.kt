@@ -32,7 +32,11 @@ object ScoringEngine {
         }
     }
 
-    data class SetScore(val p1: Int, val p2: Int, val tiebreak: Boolean)
+    /**
+     * The games of a completed set. When [tiebreak] is true, [tiebreakP1] and [tiebreakP2] are the tiebreak points,
+     * for example 8–6 for a 7–6 set. A set that the user marks as won in manual scoring has no tiebreak points.
+     */
+    data class SetScore(val p1: Int, val p2: Int, val tiebreak: Boolean, val tiebreakP1: Int = 0, val tiebreakP2: Int = 0)
 
     /** The largest unit that a player wins with a point. The order is from small to large. */
     enum class Stake { NONE, GAME, SET, MATCH }
@@ -326,13 +330,17 @@ object ScoringEngine {
             val lead = abs(p1Pts - p2Pts)
             if (max(p1Pts, p2Pts) < tiebreakTarget || lead < 2) return
             val player = if (p1Pts > p2Pts) 1 else 2
+            // Keep the tiebreak points before the game and the set reset them.
+            val tiebreakP1 = p1Pts
+            val tiebreakP2 = p2Pts
             if (tiebreakReplacesSet) {
                 changeServer()
-                completeSet(player, if (player == 1) SetScore(1, 0, true) else SetScore(0, 1, true))
+                val games = if (player == 1) 1 to 0 else 0 to 1
+                completeSet(player, SetScore(games.first, games.second, true, tiebreakP1, tiebreakP2))
             } else {
                 // The tiebreak winner wins the last game of the set, for example 7–6.
                 markGameWon(player)
-                completeSet(player, SetScore(gamesP1, gamesP2, true))
+                completeSet(player, SetScore(gamesP1, gamesP2, true, tiebreakP1, tiebreakP2))
             }
         }
 

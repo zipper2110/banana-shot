@@ -97,7 +97,7 @@ Scoring:
 
 Scoreboard and export:
 
-- All 17 styles show a 24-character team name in full. A blank team name
+- All styles show a 24-character team name in full. A blank team name
   shows "Team 1" or "Team 2" in the preview and in the export.
 - During a deciding point, all styles show a tab in the accent color:
   "GOLDEN POINT", "STAR POINT", or "DECIDING POINT" (tennis no-ad). The tab

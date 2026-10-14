@@ -36,6 +36,9 @@ object ScoreboardFonts {
         return capCenterY - (capCenterFromTop - assSize / 2.0)
     }
 
+    /** The height of the capital letters and digits for the libass size [assSize]. */
+    fun capHeight(family: String, bold: Boolean, assSize: Double): Double = metrics(family, bold).capHeightShare * assSize
+
     fun textWidth(text: String, family: String, bold: Boolean, assSize: Double, spacing: Double = 0.0): Double {
         if (text.isEmpty()) return 0.0
         val width = awtFont(family, bold, assSize).getStringBounds(text, frc).width

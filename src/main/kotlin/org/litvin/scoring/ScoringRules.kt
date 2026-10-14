@@ -18,6 +18,8 @@ object ScoringRules {
         val tbP1: Int,
         val tbP2: Int,
         val completedSets: List<Pair<Int, Int>>,
+        /** The tiebreak points of each completed set, in the order of [completedSets]. Null for a set without a tiebreak. */
+        val completedSetTiebreaks: List<Pair<Int, Int>?> = emptyList(),
         /** The player (1 or 2) who serves this point, or null when the server is not known. */
         val server: Int? = null,
         /** True when this point wins the game for both players (golden point or star point). */
@@ -51,6 +53,7 @@ object ScoringRules {
                 tbP1 = if (state.isTiebreak) state.p1Pts else 0,
                 tbP2 = if (state.isTiebreak) state.p2Pts else 0,
                 completedSets = sets.map { it.p1 to it.p2 },
+                completedSetTiebreaks = sets.map { if (it.tiebreak) it.tiebreakP1 to it.tiebreakP2 else null },
                 server = timeline.serverOfPoint.getOrNull(i),
                 decidingPoint = ScoringEngine.isDecidingPoint(state, rules),
             )

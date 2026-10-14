@@ -33,6 +33,8 @@ internal data class Look(
 
 /**
  * [wonSets] tells, for each completed set, if this player won it.
+ * [lostTiebreaks] gives, for each completed set, this player's tiebreak points when this player lost the set
+ * in a tiebreak, else null. Scoreboards show them small after the games, for example 6⁶.
  * [serving] is true when this player serves and the board shows the serve.
  */
 internal class Row(
@@ -40,6 +42,7 @@ internal class Row(
     val rgb: Int,
     val sets: List<Int>,
     val wonSets: List<Boolean>,
+    val lostTiebreaks: List<Int?>,
     val games: Int,
     val points: String,
     val leading: Boolean,
@@ -53,6 +56,9 @@ internal fun rows(display: ScoreboardDisplay, look: Look): List<Row> = listOf(
         rgb = display.player1Rgb,
         sets = display.completedSets.map { it.first },
         wonSets = display.completedSets.map { it.first > it.second },
+        lostTiebreaks = display.completedSets.mapIndexed { index, set ->
+            display.completedSetTiebreaks.getOrNull(index)?.first?.takeIf { set.first < set.second }
+        },
         games = display.player1Games,
         points = display.player1PointText,
         leading = display.pointLeader == 1,
@@ -64,6 +70,9 @@ internal fun rows(display: ScoreboardDisplay, look: Look): List<Row> = listOf(
         rgb = display.player2Rgb,
         sets = display.completedSets.map { it.second },
         wonSets = display.completedSets.map { it.second > it.first },
+        lostTiebreaks = display.completedSets.mapIndexed { index, set ->
+            display.completedSetTiebreaks.getOrNull(index)?.second?.takeIf { set.second < set.first }
+        },
         games = display.player2Games,
         points = display.player2PointText,
         leading = display.pointLeader == 2,

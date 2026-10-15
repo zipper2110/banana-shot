@@ -409,3 +409,11 @@ button.btn-primary:disabled:hover { background: var(--lime); }
 .site-footer a { color: var(--fg-2); text-decoration: none; }
 .site-footer a:hover { color: var(--fg-strong); }
 .site-footer p { margin: 0; }
+
+/* The mark of a browser that does not count page views (count.js, ?nocount). Only the author sees it. */
+.nocount-mark {
+  position: fixed; left: 12px; bottom: 12px; z-index: 100;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--yellow-tint); border: 1px solid var(--yellow-line); color: var(--yellow);
+  font-size: 12px; font-weight: 600;
+}

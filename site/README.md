@@ -81,7 +81,8 @@ page views with its own script:
   example `https://banana-shot-editor.app/?nocount`. The script then keeps
   the flag `bananashot-nocount` in `localStorage` and sends nothing from this
   browser. Do this in each browser and on each device. `?nocount=off`
-  removes the flag. A private window does not keep the flag.
+  removes the flag. A private window does not keep the flag. A browser with
+  the flag shows the mark "Not counted" in the bottom-left corner.
 
 ## Bot counter
 

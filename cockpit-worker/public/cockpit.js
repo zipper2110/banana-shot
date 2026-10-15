@@ -55,7 +55,7 @@
   function loadView() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
-      return { days: [7, 30, 90].includes(saved.days) ? saved.days : 30, dev: saved.dev === true };
+      return { days: [1, 7, 30, 90].includes(saved.days) ? saved.days : 30, dev: saved.dev === true };
     } catch {
       return { days: 30, dev: false };
     }
@@ -177,7 +177,8 @@
   function render(data) {
     window.Charts.hideTooltip();
     const days = data.period.days;
-    $('updated').textContent = `Last ${days} days (UTC), compared with the ${days} days before. Updated ${dateTime(data.generatedAt)}.`
+    const scope = days === 1 ? 'Today from 00:00 UTC, compared with yesterday' : `Last ${days} days (UTC), compared with the ${days} days before`;
+    $('updated').textContent = `${scope}. Updated ${dateTime(data.generatedAt)}.`
       + (data.includeDev ? ' Development builds included.' : '');
     renderAlerts(data);
     renderKpis(data);
@@ -279,7 +280,8 @@
       delta.textContent = options.hint || '';
     }
     tile.appendChild(delta);
-    if (spark) {
+    // One day has one point: no line to show.
+    if (spark && spark.length > 1) {
       const box = h('div', 'spark');
       tile.appendChild(box);
       requestAnimationFrame(() => window.Charts.spark(box, spark, options.color || 1));

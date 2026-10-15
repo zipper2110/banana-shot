@@ -1,9 +1,10 @@
 export const DAY = 86_400_000;
-export const ALLOWED_DAYS = [7, 30, 90] as const;
+export const ALLOWED_DAYS = [1, 7, 30, 90] as const;
 export const WEEKS = 12;
 
 /**
- * The selected period: the last `days` UTC days, today included. `prev` is the period of the same length before it.
+ * The selected period: the last `days` UTC days, today included. `days` 1 is only today. `prev` is the period of the
+ * same length before it.
  * All times are milliseconds. `end` is exclusive.
  */
 export interface Period {

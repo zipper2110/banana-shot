@@ -18,7 +18,7 @@ Each source is separate. When one source fails or is not configured, its cards s
 and the other cards work.
 
 - `GET /`: the page (`public/`: plain HTML, CSS, and JavaScript, no build step).
-- `GET /api/summary?days=7|30|90[&dev=1]`: all numbers as JSON. `dev=1` includes the
+- `GET /api/summary?days=1|7|30|90[&dev=1]`: all numbers as JSON. `days=1` is only today (UTC). `dev=1` includes the
   `-SNAPSHOT` versions.
 - `POST /api/snapshot`: takes a download snapshot now.
 - Each request needs the password (HTTP Basic, any user name). Without the secret

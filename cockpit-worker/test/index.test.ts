@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import worker, { summary } from '../src/index';
+import { DAY, startOfDay } from '../src/period';
 import { NOW, addSession, at, basicAuth, makeEnv } from './fixtures';
 
 function get(path: string, authorization?: string, method = 'GET') {
@@ -65,6 +66,21 @@ describe('summary', () => {
     expect(result.site.ok).toBe(true);
     expect(result.workers.ok).toBe(false);
     expect(result.downloads.ok).toBe(true);
+  });
+
+  it('counts only today for the period of 1 day', async () => {
+    const env = makeEnv();
+    addSession(env, { receivedAt: NOW });
+    addSession(env, { receivedAt: NOW - DAY });
+
+    const result = await summary(env, new URL('https://x/api/summary?days=1'), NOW);
+
+    expect(result.period.days).toBe(1);
+    expect(result.period.start).toBe(startOfDay(NOW));
+    expect(result.period.prevStart).toBe(startOfDay(NOW) - DAY);
+    expect(result.app.ok && result.app.data.totals.sessions).toBe(1);
+    expect(result.app.ok && result.app.data.prevTotals.sessions).toBe(1);
+    expect(result.app.ok && result.app.data.daily.length).toBe(1);
   });
 
   it('uses 30 days for an unknown period', async () => {

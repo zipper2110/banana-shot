@@ -396,6 +396,10 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
 - [ ] Add the site link and one line about the app to the descriptions of
       your two match videos. The texts are in `tutorial-video.md`,
       section 5.
+- [ ] When YouTube verifies the BananaShot channel, add the site link to
+      the channel and to its videos. Before the verification, YouTube does
+      not accept links. The texts with the link are in
+      `youtube-channel.md`.
 - [ ] Deploy the cockpit, if it is not deployed yet. Write down the start
       numbers: visits, downloads, installs, exports.
 - [ ] Make a simple sheet (a spreadsheet is enough) of people you contacted:

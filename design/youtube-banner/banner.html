@@ -1,0 +1,74 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- Source of the YouTube channel banner (2048 × 1152). README.md tells how to render it.
+     Add "?guides" to the URL to see the areas that each device shows. -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 2048px; height: 1152px; overflow: hidden; background: #151a21; }
+  body { font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; color: #e6e4e0; position: relative; }
+
+  /* The aurora of the site, as still light. */
+  .aurora { position: absolute; inset: 0; overflow: hidden; }
+  .aurora i { position: absolute; border-radius: 50%; filter: blur(140px); }
+  .aurora .a1 { left: 120px; top: 380px; width: 900px; height: 420px; background: rgba(200, 236, 70, 0.20); }
+  .aurora .a2 { left: 700px; top: 300px; width: 900px; height: 560px; background: rgba(54, 140, 110, 0.30); }
+  .aurora .a3 { left: 1300px; top: 200px; width: 800px; height: 760px; background: rgba(61, 107, 140, 0.45); }
+
+  /* The court frame. The mask hides the scoreboard in the frame and fades the edges into the background. */
+  .frame { position: absolute; left: 1080px; top: 146px; width: 968px; height: 948px; overflow: hidden;
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0, #000 300px),
+      linear-gradient(180deg, transparent 0, transparent 215px, #000 320px, #000 820px, transparent 948px);
+    -webkit-mask-composite: source-in; }
+  .frame img { width: 968px; height: 948px; display: block; }
+
+  /* The scoreboard of the app, drawn again so that it is sharp and inside the safe area. */
+  .score { position: absolute; left: 1205px; top: 440px; width: 420px; font-family: "Segoe UI", sans-serif;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); }
+  .score .tab { display: inline-block; background: #c8ec46; color: #191e09; font-size: 17px; font-weight: 700;
+    letter-spacing: 1.6px; padding: 5px 14px 4px; border-radius: 8px 8px 0 0; }
+  .score .rows { background: rgba(14, 14, 14, 0.92); border-radius: 0 8px 8px 8px; overflow: hidden; }
+  .score .row { display: flex; align-items: center; height: 58px; font-weight: 700; font-size: 25px; color: #f6f5f2; }
+  .score .row + .row { border-top: 1px solid rgba(255, 255, 255, 0.10); }
+  .score .bar { width: 4px; height: 26px; border-radius: 2px; margin: 0 14px 0 14px; }
+  .score .name { flex: 1; letter-spacing: 0.3px; }
+  .score .serve { width: 12px; height: 12px; border-radius: 50%; background: #c8ec46; margin-right: 18px; }
+  .score .sets { width: 40px; text-align: center; }
+  .score .pts { width: 82px; height: 100%; display: flex; align-items: center; justify-content: center;
+    background: #c8ec46; color: #191e09; font-size: 27px; }
+  .score .row + .row .pts { border-top: 1px solid rgba(25, 30, 9, 0.25); }
+
+  /* The text. It stays inside the safe area (1235 × 338 in the center). */
+  .text { position: absolute; left: 440px; top: 407px; height: 338px; width: 720px;
+    display: flex; flex-direction: column; justify-content: center; }
+  .brand { display: flex; align-items: center; gap: 22px; }
+  .brand img { width: 92px; height: 92px; }
+  .brand span { font-weight: 700; font-size: 84px; color: #f6f5f2; letter-spacing: -1.5px; line-height: 1; }
+  h1 { margin-top: 26px; font-weight: 600; font-size: 46px; line-height: 1.1; letter-spacing: -0.6px; color: #c8ec46; }
+  p { margin-top: 14px; font-family: "Segoe UI Variable Text", "Segoe UI", sans-serif; font-size: 28px; color: #a6a49f; }
+
+  /* Guides: the safe area on all devices (1235 × 338) and the desktop band (2048 × 338). */
+  .guide { display: none; position: absolute; pointer-events: none; }
+  .guides .guide { display: block; }
+  .guide.band { left: 0; top: 407px; width: 2048px; height: 338px; border-top: 2px dashed #ff7351; border-bottom: 2px dashed #ff7351; }
+  .guide.safe { left: 406px; top: 407px; width: 1235px; height: 338px; border: 3px solid #f2d64b; }
+</style></head>
+<body>
+  <div class="aurora"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
+  <div class="frame"><img src="../social-preview/frame.webp" alt=""></div>
+  <div class="score">
+    <div class="tab">CITY CLUB : COURT 2</div>
+    <div class="rows">
+      <div class="row"><span class="bar" style="background:#8a6a3e"></span><span class="name">ALEX / EMMA</span><span class="sets">1</span><span class="pts">15</span></div>
+      <div class="row"><span class="bar" style="background:#f2d64b"></span><span class="name">LUCAS / NINA</span><span class="serve"></span><span class="sets">2</span><span class="pts">30</span></div>
+    </div>
+  </div>
+  <div class="text">
+    <div class="brand"><img src="../../site/public/assets/logo.svg" alt=""><span>BananaShot</span></div>
+    <h1>Your match has a story to share</h1>
+    <p>Tennis video editor for Windows</p>
+  </div>
+  <div class="guide band"></div>
+  <div class="guide safe"></div>
+  <script>if (location.search.includes("guides")) document.body.classList.add("guides");</script>
+</body></html>

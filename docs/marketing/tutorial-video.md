@@ -167,7 +167,7 @@ The answers show you what to build next (strategy, section 6).
 Put these lines at the top of each description. YouTube shows only the
 first 2 or 3 lines before "more", so the link must be in line 1 or 2.
 
-### Doubles, full match (https://www.youtube.com/watch?v=MIBRymxQM0A)
+### Doubles, full match (old video: https://www.youtube.com/watch?v=MIBRymxQM0A. The new video on the BananaShot channel is in `youtube-channel.md`.)
 
 ```
 Full doubles match with a live scoreboard and match stats.

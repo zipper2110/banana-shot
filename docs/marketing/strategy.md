@@ -400,8 +400,23 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
       the channel and to its videos. Before the verification, YouTube does
       not accept links. The texts with the link are in
       `youtube-channel.md`.
-- [ ] Deploy the cockpit, if it is not deployed yet. Write down the start
-      numbers: visits, downloads, installs, exports.
+- [x] Deploy the cockpit, if it is not deployed yet. Write down the start
+      numbers: visits, downloads, installs, exports. Done on 2026-10-15:
+      the start numbers are 0 users. The data:
+      - Site (the beacon counts since 2026-10-13): 7 visits. 6 are from
+        Georgia (the author), 1 is from Brazil, with no referrer.
+      - Setup downloads on GitHub: 4 of 1.0.0 and 2 of 1.1.0 (the author and
+        the testers).
+      - App sessions: only 2 first sessions (`session_n_1`), both from
+        development builds. All sessions of the release builds are from
+        installs with 6 or more sessions (the author).
+      - Bots: Googlebot read the site 10 times. Google indexes the site.
+      Count the results of Phase 1 from this date. Your own visits,
+      installs, and exports are not users. To keep them out of the numbers:
+      on the site, open `?nocount` once in each browser (site/README.md,
+      "Page view counter"). In the app, turn off the usage statistics on
+      the Privacy page, on each PC. The development runs on the same
+      Windows user use the same setting.
 - [x] Make a simple sheet (a spreadsheet is enough) of people you contacted:
       name, channel, date, reply, installed, exported, feedback. Done on
       2026-10-14: `contacts.csv`. Git does not track it, because it holds

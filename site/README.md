@@ -77,6 +77,11 @@ page views with its own script:
   (migration `0004_site_views.sql`). It keeps only the referrer host, the
   country code of Cloudflare, and the device type. It does not count bots.
 - When you add a page, add the script tag to it.
+- Your own visits: open any page once with `?nocount` in the address, for
+  example `https://banana-shot-editor.app/?nocount`. The script then keeps
+  the flag `bananashot-nocount` in `localStorage` and sends nothing from this
+  browser. Do this in each browser and on each device. `?nocount=off`
+  removes the flag. A private window does not keep the flag.
 
 ## Bot counter
 

@@ -1,8 +1,19 @@
 // Counts one page view (privacy page, "This site"). It sends the page path and the address of the page that sent the
-// visitor. It sets no cookies and keeps nothing on the device. The 404 page gives its path in data-path.
+// visitor. It sets no cookies. The 404 page gives its path in data-path.
 (function () {
   var script = document.currentScript;
   if (!navigator.sendBeacon || !window.JSON) return;
+  // The author opens a page with ?nocount once in each browser, so that the own visits do not count. ?nocount=off
+  // stops this. Only then does the script keep a flag on the device (site/README.md, "Page view counter").
+  try {
+    var flag = "bananashot-nocount";
+    var nocount = new URLSearchParams(location.search).get("nocount");
+    if (nocount === "off") localStorage.removeItem(flag);
+    else if (nocount !== null) localStorage.setItem(flag, "1");
+    if (localStorage.getItem(flag)) return;
+  } catch (e) {
+    // Blocked storage: count the view.
+  }
   var body = JSON.stringify({
     path: (script && script.getAttribute("data-path")) || location.pathname,
     referrer: document.referrer || ""

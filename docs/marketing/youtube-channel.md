@@ -43,7 +43,7 @@ banner.
 
 ## Videos
 
-### Doubles, full match (https://youtu.be/II78iWwyFRA)
+### Doubles, full match (https://youtu.be/cOuYehEsERM)
 
 The first video on the channel. It replaces the doubles match on the
 personal channel (`tutorial-video.md`, section 5). The title starts with

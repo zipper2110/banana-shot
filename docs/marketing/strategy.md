@@ -402,10 +402,13 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
       `youtube-channel.md`.
 - [ ] Deploy the cockpit, if it is not deployed yet. Write down the start
       numbers: visits, downloads, installs, exports.
-- [ ] Make a simple sheet (a spreadsheet is enough) of people you contacted:
-      name, channel, date, reply, installed, exported, feedback.
-- [ ] Prepare a short answer for the questions that will come: "Mac?",
+- [x] Make a simple sheet (a spreadsheet is enough) of people you contacted:
+      name, channel, date, reply, installed, exported, feedback. Done on
+      2026-10-14: `contacts.csv`. Git does not track it, because it holds
+      the names of real people.
+- [x] Prepare a short answer for the questions that will come: "Mac?",
       "Why the 6 months?", "Why not AI?", "Is it a virus?" (SmartScreen).
+      Done on 2026-10-14: `answers.md`.
 
 ### Phase 1: the first 10 users (weeks 1 to 3)
 

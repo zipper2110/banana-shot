@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import worker, { summary } from '../src/index';
-import { DAY, startOfDay } from '../src/period';
+import { DAY, isoDate, startOfDay } from '../src/period';
 import { NOW, addSession, at, basicAuth, makeEnv } from './fixtures';
 
 function get(path: string, authorization?: string, method = 'GET') {
@@ -81,6 +81,26 @@ describe('summary', () => {
     expect(result.app.ok && result.app.data.totals.sessions).toBe(1);
     expect(result.app.ok && result.app.data.prevTotals.sessions).toBe(1);
     expect(result.app.ok && result.app.data.daily.length).toBe(1);
+  });
+
+  it('ends the period on the day of the parameter end', async () => {
+    const env = makeEnv();
+    const lastDay = startOfDay(NOW) - 10 * DAY;
+    addSession(env, { receivedAt: lastDay + 3_600_000 });
+    addSession(env, { receivedAt: lastDay - DAY + 3_600_000 });
+    addSession(env, { receivedAt: NOW });
+
+    const result = await summary(env, new URL(`https://x/api/summary?days=1&end=${isoDate(lastDay)}`), NOW);
+
+    expect(result.period.start).toBe(lastDay);
+    expect(result.period.end).toBe(lastDay + DAY);
+    expect(result.app.ok && result.app.data.totals.sessions).toBe(1);
+    expect(result.app.ok && result.app.data.prevTotals.sessions).toBe(1);
+  });
+
+  it.each(['2999-01-01', '2026-02-30', 'yesterday'])('ends the period today for the parameter end=%s', async end => {
+    const result = await summary(makeEnv(), new URL(`https://x/api/summary?days=7&end=${end}`), NOW);
+    expect(result.period.end).toBe(startOfDay(NOW) + DAY);
   });
 
   it('uses 30 days for an unknown period', async () => {

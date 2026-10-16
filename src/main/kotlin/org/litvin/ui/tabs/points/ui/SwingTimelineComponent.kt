@@ -57,6 +57,8 @@ class SwingTimelineComponent(
     private val onScrubRequested: (Long) -> Unit = onSeekRequested,
     private val selectedPointIdProvider: () -> String? = { null },
     private val pendingStartProvider: () -> Long? = { null },
+    /** The winner color of a scored point. Null keeps the normal color. */
+    private val winnerColorProvider: (pointId: String) -> java.awt.Color? = { null },
 ) : JComponent() {
 
     private val gutterBg get() = Palette.INSET
@@ -273,6 +275,10 @@ class SwingTimelineComponent(
         g.fill(RoundRectangle2D.Double(GUTTER.toDouble(), top + 7.0, lanesWidth().toDouble(), 8.0, 4.0, 4.0))
     }
 
+    /** A scored point has the winner color. Otherwise a favorite is yellow and a point is green. */
+    private fun markColor(point: PointV1) =
+        winnerColorProvider(point.id) ?: if (point.favorite) Palette.YELLOW else Palette.GREEN
+
     private fun paintMarksTrack(g: Graphics2D, points: List<PointV1>, pxPerMs: Double) {
         val top = marksTrackTop()
         g.color = rowLine
@@ -286,13 +292,12 @@ class SwingTimelineComponent(
                 selected = Rectangle(x1, top + 1, w, TRACK_HEIGHT - 2)
                 return@forEach
             }
-            g.color = if (point.favorite) Palette.YELLOW else Palette.GREEN
+            g.color = markColor(point)
             g.fill(RoundRectangle2D.Double(x1.toDouble(), top + 4.0, w.toDouble(), TRACK_HEIGHT - 8.0, 2.0, 2.0))
         }
         pendingStartProvider()?.let { start -> paintPending(g, start, pxPerMs, top) }
         selected?.let { box ->
-            val favorite = points.firstOrNull { it.id == selectedId }?.favorite == true
-            g.color = if (favorite) Palette.YELLOW else Palette.GREEN
+            g.color = points.firstOrNull { it.id == selectedId }?.let(::markColor) ?: Palette.GREEN
             g.fill(RoundRectangle2D.Double(box.x.toDouble(), box.y.toDouble(), box.width.toDouble(), box.height.toDouble(), 2.0, 2.0))
             g.color = Palette.FG_STRONG
             g.stroke = BasicStroke(1.5f)

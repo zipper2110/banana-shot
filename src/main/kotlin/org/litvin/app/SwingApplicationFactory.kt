@@ -29,11 +29,13 @@ import org.litvin.ui.feedback.presenter.FeedbackRequest
 import org.litvin.ui.help.HelpDialog
 import org.litvin.ui.help.HelpPage
 import org.litvin.ui.help.HelpPreferences
-import org.litvin.ui.tabs.adjustments.SwingColorAdjustmentsPanel
-import org.litvin.ui.tabs.crop.SwingCropRotatePanel
-import org.litvin.ui.tabs.crop.presenter.DefaultCropRotatePresenter
+import org.litvin.ui.tabs.adjustments.SwingAdjustVideoPanel
+import org.litvin.ui.tabs.adjustments.presenter.AdjustSection
+import org.litvin.ui.tabs.adjustments.presenter.DefaultAdjustVideoPresenter
 import org.litvin.ui.tabs.export.ExportSettingsPreferences
 import org.litvin.ui.tabs.export.SwingExportPanel
+import org.litvin.ui.tabs.points.PreferencesAppCreditRequest
+import org.litvin.ui.tabs.points.PreferencesScoreboardStyleDefaults
 import org.litvin.ui.tabs.points.SwingPointsPanel
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
@@ -41,9 +43,6 @@ import org.litvin.ui.commons.PreferencesHintRegistry
 import org.litvin.ui.commons.ThemeController
 import org.litvin.ui.commons.ThemePreferences
 import org.litvin.ui.commons.PreferencesCommentStyleDefaults
-import org.litvin.ui.tabs.scoring.PreferencesAppCreditRequest
-import org.litvin.ui.tabs.scoring.PreferencesScoreboardStyleDefaults
-import org.litvin.ui.tabs.scoring.SwingScoringPanel
 import org.litvin.ui.tabs.stats.SwingStatsPanel
 import org.litvin.ui.tabs.test.SwingTestPanel
 import org.litvin.RenderQueueManager
@@ -89,18 +88,12 @@ object SwingApplicationFactory {
     private const val CARD_PROJECTS = "projects"
     private const val CARD_POINTS = "points"
     private const val CARD_EXPORT = "export"
-    private const val CARD_SCORING = "scoring"
     private const val CARD_STATS = "stats"
-    private const val CARD_ADJ_COLORS = "adjustments"
-    private const val CARD_ADJ_CROP_ROTATE = "adjustments-crop-rotate"
+    private const val CARD_ADJUST_VIDEO = "adjust-video"
     private const val CARD_TEST = "test"
     private const val SIDEBAR_BUTTON_GAP = 6
     private const val SIDEBAR_GROUP_GAP = 28
     private const val HELP_BUTTON_HINT = "Help is always here. Each tab has its own help page. Press F1 on any tab."
-    private const val GO_TO_SCORING_HINT = "When you finish marking, go to Scoring and give each point a winner."
-
-    /** The Scoring hint shows when the project has this number of marked points. */
-    private const val GO_TO_SCORING_POINTS = 4
 
     /**
      * The reply address of the feedback (decision 7 of B-8). When the app domain exists (B-10), change it here to an
@@ -203,11 +196,9 @@ object SwingApplicationFactory {
 
             lateinit var btnProjects: UiStyles.SidebarButton
             lateinit var btnPoints: UiStyles.SidebarButton
-            lateinit var btnColors: UiStyles.SidebarButton
-            lateinit var btnScoring: UiStyles.SidebarButton
+            lateinit var btnAdjustVideo: UiStyles.SidebarButton
             lateinit var btnStats: UiStyles.SidebarButton
             lateinit var btnExport: UiStyles.SidebarButton
-            lateinit var btnCropRotate: UiStyles.SidebarButton
             var btnTest: UiStyles.SidebarButton? = null
 
             // True while the app clicks a sidebar button. The analytics count only the clicks of the user (B-9).
@@ -221,14 +212,14 @@ object SwingApplicationFactory {
                 }
             }
 
-            // Match tabs go in order. Video tabs are settings for the image that the user can change at any time.
+            // Match tabs go in order. The Video tab has settings for the image that the user can change at any time.
             val groupMatch = UiStyles.SidebarGroup("Match").apply { name = "nav-group-match" }
             val groupVideo = UiStyles.SidebarGroup("Video").apply { name = "nav-group-video" }
             val projectGroups = listOf(groupMatch, groupVideo)
 
             fun addItem(button: UiStyles.SidebarButton, container: JPanel = sidebar) {
                 button.alignmentX = 0f
-                button.maximumSize = Dimension(Int.MAX_VALUE, 64)
+                button.maximumSize = Dimension(Int.MAX_VALUE, maxOf(64, button.preferredSize.height))
                 if (container.componentCount > 0) container.add(Box.createRigidArea(Dimension(0, SIDEBAR_BUTTON_GAP)))
                 container.add(button)
             }
@@ -260,6 +251,7 @@ object SwingApplicationFactory {
             themeSettings.onChange(::recordSettings)
             val hints = HintController(PreferencesHintRegistry(applicationPreferences))
             val commentStyles = PreferencesCommentStyleDefaults(applicationPreferences)
+            val scoreboardPreferences = services.preferences.node(PreferencesProvider.SCOREBOARD)
 
             val pointsPanel = SwingPointsPanel(
                 services.mediaPlayers.create(MediaScreen.POINTS),
@@ -269,46 +261,24 @@ object SwingApplicationFactory {
                 hints,
                 analytics,
                 commentStyles,
+                PreferencesScoreboardStyleDefaults(scoreboardPreferences),
+                PreferencesAppCreditRequest(scoreboardPreferences),
             )
             closeActions += pointsPanel::close
 
-            val colorsPanel = SwingColorAdjustmentsPanel(
-                services.mediaPlayers.create(MediaScreen.COLORS),
-                services.adjustments,
-                services.preferences.node(PreferencesProvider.COLOR_ADJUSTMENTS),
-                analytics,
+            val adjustVideoPanel = SwingAdjustVideoPanel(
+                services.mediaPlayers.create(MediaScreen.ADJUST_VIDEO),
+                DefaultAdjustVideoPresenter(services.adjustments, analytics),
             )
-            closeActions += colorsPanel::close
-
-            val cropRotatePanel = SwingCropRotatePanel(
-                services.mediaPlayers.create(MediaScreen.CROP),
-                DefaultCropRotatePresenter(services.adjustments, analytics),
-            )
-            closeActions += cropRotatePanel::dispose
-
-            val scoringPreferences = services.preferences.node(PreferencesProvider.SCORING)
-            val scoringPanel = SwingScoringPanel(
-                services.mediaPlayers.create(MediaScreen.SCORING),
-                services.adjustments,
-                services.dialogs,
-                PreferencesScoreboardStyleDefaults(scoringPreferences),
-                hints = hints,
-                analytics = analytics,
-                commentStyles = commentStyles,
-                appCreditRequest = PreferencesAppCreditRequest(scoringPreferences),
-            )
-            closeActions += scoringPanel::close
-            scoringPanel.onGoToPoint = { pointId ->
-                clickInCode(btnPoints)
-                pointsPanel.selectPoint(pointId)
-            }
+            closeActions += adjustVideoPanel::close
 
             val statsPanel = SwingStatsPanel(
                 services.dialogs,
-                onOpenScoring = { clickInCode(btnScoring) },
+                // The Points tab scores the points.
+                onOpenPoints = { clickInCode(btnPoints) },
                 onOpenPoint = { pointId ->
-                    clickInCode(btnScoring)
-                    scoringPanel.selectPoint(pointId)
+                    clickInCode(btnPoints)
+                    pointsPanel.selectPoint(pointId)
                 },
             )
 
@@ -345,9 +315,8 @@ object SwingApplicationFactory {
             fun currentHelpPage(): HelpPage = when (currentCard) {
                 CARD_PROJECTS -> HelpPage.PROJECTS
                 CARD_POINTS -> HelpPage.POINTS
-                CARD_ADJ_COLORS -> HelpPage.COLORS
-                CARD_ADJ_CROP_ROTATE -> HelpPage.CROP
-                CARD_SCORING -> HelpPage.SCORING
+                // The help has a page for each sub-tab of Colors & Transform.
+                CARD_ADJUST_VIDEO -> if (adjustVideoPanel.section == AdjustSection.TRANSFORM) HelpPage.CROP else HelpPage.COLORS
                 CARD_STATS -> HelpPage.STATISTICS
                 CARD_EXPORT -> HelpPage.EXPORT
                 else -> HelpPage.OVERVIEW
@@ -356,9 +325,8 @@ object SwingApplicationFactory {
             fun analyticsTab(card: String): AnalyticsEvent.Tab? = when (card) {
                 CARD_PROJECTS -> AnalyticsEvent.Tab.PROJECTS
                 CARD_POINTS -> AnalyticsEvent.Tab.POINTS
-                CARD_ADJ_COLORS -> AnalyticsEvent.Tab.COLORS
-                CARD_ADJ_CROP_ROTATE -> AnalyticsEvent.Tab.CROP_ROTATE
-                CARD_SCORING -> AnalyticsEvent.Tab.SCORING
+                // Colors & Transform reports its open sub-tab with the keys of the older Colors and Transform tabs.
+                CARD_ADJUST_VIDEO -> DefaultAdjustVideoPresenter.analyticsTab(adjustVideoPanel.section)
                 CARD_STATS -> AnalyticsEvent.Tab.STATS
                 CARD_EXPORT -> AnalyticsEvent.Tab.EXPORT
                 else -> null
@@ -376,29 +344,21 @@ object SwingApplicationFactory {
                 when (currentCard) {
                     CARD_PROJECTS -> projectsPanel.onDeactivated()
                     CARD_POINTS -> pointsPanel.onDeactivated()
-                    CARD_ADJ_COLORS -> colorsPanel.onDeactivated()
-                    CARD_ADJ_CROP_ROTATE -> cropRotatePanel.onDeactivated()
-                    CARD_SCORING -> scoringPanel.onDeactivated()
+                    CARD_ADJUST_VIDEO -> adjustVideoPanel.onDeactivated()
                     CARD_TEST -> testPanel?.onDeactivated()
                 }
-                // The Scoring hint points at the Scoring button while the Points tab is open. Scoring is the action that it teaches.
-                if (card == CARD_SCORING) hints.dismiss(HintId.GO_TO_SCORING) else hints.hide(HintId.GO_TO_SCORING)
                 cardLayout.show(cards, card)
                 when (card) {
                     CARD_PROJECTS -> projectsPanel.onActivated()
                     CARD_POINTS -> pointsPanel.onActivated()
-                    CARD_ADJ_COLORS -> colorsPanel.onActivated()
-                    CARD_ADJ_CROP_ROTATE -> cropRotatePanel.onActivated()
-                    CARD_SCORING -> scoringPanel.onActivated()
+                    CARD_ADJUST_VIDEO -> adjustVideoPanel.onActivated()
                     CARD_STATS -> statsPanel.onActivated()
                     CARD_EXPORT -> exportPanel.onActivated()
                     CARD_TEST -> testPanel?.onActivated()
                 }
                 btnProjects.active = card == CARD_PROJECTS
                 btnPoints.active = card == CARD_POINTS
-                btnColors.active = card == CARD_ADJ_COLORS
-                btnCropRotate.active = card == CARD_ADJ_CROP_ROTATE
-                btnScoring.active = card == CARD_SCORING
+                btnAdjustVideo.active = card == CARD_ADJUST_VIDEO
                 btnStats.active = card == CARD_STATS
                 btnExport.active = card == CARD_EXPORT
                 btnTest?.active = card == CARD_TEST
@@ -421,16 +381,12 @@ object SwingApplicationFactory {
                 onProjectOpened = { path ->
                     projectOpen = true
                     pointsPanel.setProjectManifest(path)
-                    colorsPanel.setProjectManifest(path)
-                    cropRotatePanel.setProjectManifest(path)
-                    scoringPanel.setProjectManifest(path)
+                    adjustVideoPanel.setProjectManifest(path)
                     statsPanel.setProjectManifest(path)
                     exportPanel.setProjectManifest(path)
                     testPanel?.setProjectManifest(path)
                     btnPoints.isVisible = true
-                    btnColors.isVisible = true
-                    btnCropRotate.isVisible = true
-                    btnScoring.isVisible = true
+                    btnAdjustVideo.isVisible = true
                     btnStats.isVisible = true
                     btnTest?.isVisible = true
                     projectGroups.forEach { it.isVisible = true }
@@ -447,9 +403,7 @@ object SwingApplicationFactory {
 
             cards.add(projectsPanel, CARD_PROJECTS)
             cards.add(pointsPanel, CARD_POINTS)
-            cards.add(colorsPanel, CARD_ADJ_COLORS)
-            cards.add(cropRotatePanel, CARD_ADJ_CROP_ROTATE)
-            cards.add(scoringPanel, CARD_SCORING)
+            cards.add(adjustVideoPanel, CARD_ADJUST_VIDEO)
             cards.add(statsPanel, CARD_STATS)
             cards.add(exportPanel, CARD_EXPORT)
             if (testPanel != null) cards.add(testPanel, CARD_TEST)
@@ -465,30 +419,17 @@ object SwingApplicationFactory {
                 goTo(CARD_POINTS, byUser = !navigatingInCode)
             }.apply { name = "nav-points" }
             addItem(btnPoints, groupMatch)
-            btnScoring = UiStyles.sidebarButton("Scoring", UiStyles.targetIcon()) {
-                showTitle("Scoring")
-                goTo(CARD_SCORING, byUser = !navigatingInCode)
-            }.apply { name = "nav-scoring" }
-            addItem(btnScoring, groupMatch)
-            pointsPanel.onMarkedPointCount = { count ->
-                if (count >= GO_TO_SCORING_POINTS) hints.show(HintId.GO_TO_SCORING, btnScoring, GO_TO_SCORING_HINT)
-            }
             btnStats = UiStyles.sidebarButton("Stats", UiStyles.statsIcon()) {
                 showTitle("Statistics")
                 goTo(CARD_STATS, byUser = !navigatingInCode)
             }.apply { name = "nav-stats" }
             addItem(btnStats, groupMatch)
             addGroup(groupVideo)
-            btnColors = UiStyles.sidebarButton("Colors", UiStyles.colorsIcon()) {
-                showTitle("Color")
-                goTo(CARD_ADJ_COLORS, byUser = !navigatingInCode)
-            }.apply { name = "nav-colors" }
-            addItem(btnColors, groupVideo)
-            btnCropRotate = UiStyles.sidebarButton("Transform", UiStyles.cropRotateIcon()) {
-                showTitle("Transform")
-                goTo(CARD_ADJ_CROP_ROTATE, byUser = !navigatingInCode)
-            }.apply { name = "nav-crop" }
-            addItem(btnCropRotate, groupVideo)
+            btnAdjustVideo = UiStyles.sidebarButton("Colors &\nTransform", UiStyles.cropRotateIcon()) {
+                showTitle("Colors & Transform")
+                goTo(CARD_ADJUST_VIDEO, byUser = !navigatingInCode)
+            }.apply { name = "nav-adjust-video" }
+            addItem(btnAdjustVideo, groupVideo)
             // addItem adds the usual button gap before Export. Together they make the same gap as between the groups.
             sidebar.add(Box.createRigidArea(Dimension(0, SIDEBAR_GROUP_GAP - SIDEBAR_BUTTON_GAP)))
             btnExport = UiStyles.sidebarButton("Export", UiStyles.exportIcon()) {
@@ -593,9 +534,7 @@ object SwingApplicationFactory {
             })
 
             btnPoints.isVisible = false
-            btnColors.isVisible = false
-            btnCropRotate.isVisible = false
-            btnScoring.isVisible = false
+            btnAdjustVideo.isVisible = false
             btnStats.isVisible = false
             projectGroups.forEach { it.isVisible = false }
 
@@ -605,9 +544,7 @@ object SwingApplicationFactory {
                 val projectTabs = !expired && projectOpen
                 btnProjects.isVisible = !expired
                 btnPoints.isVisible = projectTabs
-                btnColors.isVisible = projectTabs
-                btnCropRotate.isVisible = projectTabs
-                btnScoring.isVisible = projectTabs
+                btnAdjustVideo.isVisible = projectTabs
                 btnStats.isVisible = projectTabs
                 btnTest?.isVisible = projectTabs
                 projectGroups.forEach { it.isVisible = projectTabs }

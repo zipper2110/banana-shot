@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Share Tab Mockups</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  body { overflow: auto; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.01em; }
+  h2 { font-size: 17px; margin: 40px 0 12px; }
+  .lede { color: var(--fg-2); font-size: 14px; max-width: 720px; margin: 0; line-height: 1.6; }
+  .scope { margin-top: 16px; display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border: 1px solid var(--lime-line); border-radius: 6px; color: var(--green); font-size: 13px; background: var(--lime-tint); }
+  ul.plain, ol.plain { margin: 0; padding-left: 20px; line-height: 1.7; }
+  .options { display: grid; gap: 12px; margin-top: 24px; }
+  .option { display: grid; grid-template-columns: 1fr 260px; gap: 20px; padding: 18px 20px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; text-decoration: none; color: inherit; }
+  .option:hover { border-color: #3c3c3c; }
+  .option.main { border-color: var(--lime-line); }
+  .option-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .option-head h3 { margin: 0; font-size: 16px; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--lime); color: #142000; }
+  .badge.alt { background: #2a2a2a; color: var(--fg-2); }
+  .option p { margin: 0 0 10px; color: var(--fg-2); line-height: 1.55; }
+  .option ul { margin: 0; padding-left: 18px; line-height: 1.6; font-size: 12.5px; }
+  .side { border-left: 1px solid var(--line); padding-left: 20px; font-size: 12.5px; line-height: 1.6; }
+  .side dt { color: var(--fg-3); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; margin-top: 8px; }
+  .side dt:first-child { margin-top: 0; }
+  .side dd { margin: 0; }
+  .open { display: inline-flex; margin-top: 12px; color: var(--lime); font-weight: 600; font-size: 13px; }
+  .q { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; line-height: 1.6; }
+  .q b { display: block; }
+  .q span { color: var(--fg-2); font-size: 12.5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  td { color: var(--fg-2); }
+  td:first-child { color: var(--fg); font-weight: 500; white-space: nowrap; }
+  .table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  code { font-family: Consolas, ui-monospace, monospace; font-size: 12px; color: var(--sage); }
+  @media (max-width: 720px) {
+    .option { grid-template-columns: 1fr; }
+    .side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Share tab — mockups</h1>
+  <p class="lede">
+    The Share tab (B-46 in <code>docs/backlog.md</code>) makes a YouTube thumbnail for the open project.
+    Each mockup is an HTML page with the app sidebar and real frames of the doubles match.
+    Use the "Mockup state" switch at the top of each page to see the other states.
+  </p>
+  <div class="scope">✓ The scope is B-46: only the thumbnail. The vertical clips of B-16 come later on the same tab.</div>
+
+  <div class="options">
+    <a class="option main" href="final.html">
+      <div>
+        <div class="option-head"><h3>Final · Layout styles</h3><span class="badge">Current</span></div>
+        <p>The base is option A: the preview at the left, the edit fields at the right. Changes from the review of 2026-10-15:</p>
+        <ul>
+          <li>The thumbnail is the only product. The description is not on the tab.</li>
+          <li>No scoreboard on the thumbnail. Six layout styles under the preview: Big words, Versus, Match card, Split, Broadcast, Poster. Each style has its own placement and colors.</li>
+          <li>Each style card shows the current frame and texts, so the user compares the styles at once.</li>
+          <li>The fields have preset values. Each field tells where its preset comes from. A field that the style does not use is gray.</li>
+          <li>The side column has two tabs: Texts and Colors. The preview and the Save block (with the small YouTube preview) are always visible. Only the tab content scrolls.</li>
+          <li>Colors: one system of six color roles for all styles. A color set gives a value to each role. The user can then change each role with a swatch or any color.</li>
+        </ul>
+        <span class="open">Open the final design →</span>
+      </div>
+      <dl class="side">
+        <dt>Swing effort</dt><dd>Medium. Six Java2D layout renderers with a text fit and six color roles, seven thumbnail components, two side tabs, the fields, and the color swatches (<code>JColorChooser</code> for "Other color").</dd>
+        <dt>ffmpeg</dt><dd>One frame for each change of the point or the moment. All style cards use the same frame.</dd>
+      </dl>
+    </a>
+  </div>
+
+  <h2>Fields and presets</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Field</th><th>Preset</th><th>Styles</th></tr>
+    <tr><td>Video type</td><td>"Best points" when the project has favorites, else "Full match"</td><td>—</td></tr>
+    <tr><td>Large words</td><td>"FULL MATCH" or "BEST POINTS", from the video type</td><td>All</td></tr>
+    <tr><td>Match type</td><td>"DOUBLES", "SINGLES" or "PADEL", from the match</td><td>Big words, Split, Poster</td></tr>
+    <tr><td>Players</td><td>The names of the players or teams, from the project</td><td>Versus, Match card, Broadcast, Poster</td></tr>
+    <tr><td>League or event</td><td>The text of the last thumbnail. Empty for the first thumbnail</td><td>Match card, Split, Broadcast</td></tr>
+    <tr><td>Court</td><td>The scoreboard title of the project</td><td>Match card, Broadcast</td></tr>
+    <tr><td>Date</td><td>The date of the video file</td><td>Match card, Poster</td></tr>
+  </table></div>
+
+  <h2>Color roles</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Role</th><th>Parts</th><th>Styles</th></tr>
+    <tr><td>Text</td><td>Texts on the video frame: match type, players, Poster words</td><td>Big words, Versus, Poster</td></tr>
+    <tr><td>Accent</td><td>Large words, tags, card edge, "vs", the Split panel</td><td>All</td></tr>
+    <tr><td>Text on accent</td><td>Words on a tag, texts on the Split panel. "Auto" by default</td><td>Versus, Split, Broadcast</td></tr>
+    <tr><td>Panel</td><td>The card, the player bar</td><td>Match card, Broadcast</td></tr>
+    <tr><td>Text on panel</td><td>Texts on the card or the bar. "Auto" by default. Broadcast uses it for the info bar too</td><td>Match card, Broadcast</td></tr>
+    <tr><td>Shade</td><td>The dark (or light) area behind the texts, with a strength from 0 to 150 %</td><td>Big words, Versus, Broadcast, Poster</td></tr>
+  </table></div>
+  <p class="lede" style="margin-top:10px">Color sets: Lime, Broadcast, Sunset, Ocean, Red, Light. Each style has a default set (Broadcast for the Broadcast style, Lime for the others). "Auto" makes a text dark or white, from the contrast with the color under it.</p>
+
+  <h2>Open points (not decided)</h2>
+  <div class="q"><b>1. A file name for each video type</b>
+    <span><code>…-full-match.png</code> and <code>…-best-points.png</code>. One name makes the second save replace the first.</span></div>
+  <div class="q"><b>2. The small preview "As in YouTube search"</b>
+    <span>The thumbnail at the width of the side column, with the video length. The badge shows only in the app, not in the PNG.</span></div>
+  <div class="q"><b>3. The league remembered from the last thumbnail</b>
+    <span>No project data has a league. A player often plays in the same league, so the app keeps the last text.</span></div>
+  <div class="q"><b>4. No "BananaShot app" text on the thumbnail</b>
+    <span>Without the scoreboard, the thumbnail has no credit line. The app promises "no watermark", so the mockup adds nothing.</span></div>
+
+  <div class="q"><b>5. The colors stay with each style</b>
+    <span>A color set or a role change applies to the current style only. The other styles keep their colors, and "Use the style colors" goes back to the default set. Not decided: does the app keep the colors for the next project?</span></div>
+
+  <h2>States in the final mockup</h2>
+  <ul class="plain">
+    <li><b>First thumbnail:</b> "League or event" is empty. The styles do not show it.</li>
+    <li><b>Long names:</b> the texts become smaller to fit. Broadcast puts each team in its own row. A note tells the user that short words are easier to read.</li>
+    <li><b>No favorites:</b> the video type is "Full match", and the app selects a point near the middle of the match.</li>
+    <li><b>Frame read error:</b> the preview shows a message. "Save thumbnail" is disabled.</li>
+  </ul>
+
+  <h2>Earlier round</h2>
+  <ul class="plain">
+    <li><a href="option-a.html" style="color:var(--sage)">Option A</a> (selected as the base) and <a href="option-b.html" style="color:var(--sage)">option B</a> show a scoreboard and a description. Both are not in the scope now.</li>
+  </ul>
+</div>
+</body>
+</html>

@@ -13,6 +13,7 @@ import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JLabel
 import javax.swing.JPanel
+import kotlin.math.ceil
 import kotlin.math.max
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.PlayButton
@@ -23,22 +24,24 @@ import org.litvin.ui.commons.SpeedControl
 
 /**
  * The playback bar under the video: the current time and the speed on the left, the seek and play buttons in the
- * center, and Comment on the right. It has playback controls only; the mark buttons are in [MarkPanel].
+ * center, and Comment on the right. It has playback controls only; the mark buttons are in the point bar above it.
  */
 internal class PlaybackBar(
     onTogglePlay: () -> Unit,
     onNudge: (deltaMs: Long) -> Unit,
     onAddComment: () -> Unit,
     onSpeedIndex: (index: Int) -> Unit,
+    /** The Frame step toggle. */
+    onToggleFrameStep: () -> Unit = {},
 ) : JPanel() {
 
-    private val nowLabel = JLabel(Timecode.format(0)).apply {
+    private val nowLabel = TimeLabel(Timecode.format(0)).apply {
         name = "points-current-time"
         font = UiKit.font(15f)
         foreground = Palette.FG
         toolTipText = "Current time"
     }
-    private val totalLabel = JLabel("").apply {
+    private val totalLabel = TimeLabel("", prefix = "/ ").apply {
         font = UiKit.font(12f)
         foreground = Palette.FG_3
     }
@@ -82,6 +85,11 @@ internal class PlaybackBar(
         isFocusable = false
     }
 
+    val frameStep = FrameStepToggle().apply {
+        name = "points-frame-step"
+        addActionListener { onToggleFrameStep() }
+    }
+
     init {
         isOpaque = true
         background = Palette.OVERLAY
@@ -94,6 +102,7 @@ internal class PlaybackBar(
         add(speed)
         add(transport)
         add(commentButton)
+        add(frameStep)
         playButton.addActionListener { onTogglePlay() }
         seekButtons.forEach { button -> button.addActionListener { onNudge(button.deltaMs) } }
         commentButton.addActionListener { onAddComment() }
@@ -130,9 +139,9 @@ internal class PlaybackBar(
 
         override fun preferredLayoutSize(parent: Container): Dimension {
             val insets = parent.insets
-            val content = listOf(clock, speed, transport, commentButton).maxOf { it.preferredSize.height }
+            val content = listOf(clock, speed, transport, commentButton, frameStep).maxOf { it.preferredSize.height }
             val left = clock.preferredSize.width + SPEED_GAP + speed.preferredSize.width
-            val side = max(left, commentButton.preferredSize.width)
+            val side = max(left, rightGroupWidth())
             return Dimension(insets.left + insets.right + side * 2 + transport.preferredSize.width + GRID_GAP * 2, insets.top + insets.bottom + content)
         }
 
@@ -143,8 +152,7 @@ internal class PlaybackBar(
             seekButtons.forEach { it.showDirection = showDirection }
 
             val height = parent.height - insets.top - insets.bottom
-            fun place(component: Component, x: Int, w: Int) {
-                val h = component.preferredSize.height
+            fun place(component: Component, x: Int, w: Int, h: Int = component.preferredSize.height) {
                 component.setBounds(x, insets.top + (height - h) / 2, w, h)
             }
             val center = transport.preferredSize.width
@@ -156,8 +164,14 @@ internal class PlaybackBar(
             place(clock, insets.left, clockWidth)
             if (speed.isVisible) place(speed, insets.left + clockWidth + SPEED_GAP, speed.preferredSize.width)
             val button = commentButton.preferredSize.width
-            place(commentButton, max(centerX + center + GRID_GAP, parent.width - insets.right - button), button)
+            val groupX = max(centerX + center + GRID_GAP, parent.width - insets.right - rightGroupWidth())
+            place(commentButton, groupX, button)
+            // Frame step has the height of Comment, so the two buttons line up.
+            place(frameStep, groupX + button + RIGHT_GAP, frameStep.preferredSize.width, commentButton.preferredSize.height)
         }
+
+        /** Comment and the Frame step toggle, at the right end of the bar. */
+        private fun rightGroupWidth() = commentButton.preferredSize.width + RIGHT_GAP + frameStep.preferredSize.width
 
         /**
          * Selects the first form of the clock and the speed that fits in [space]. The widths come from the preferred
@@ -180,12 +194,30 @@ internal class PlaybackBar(
         }
     }
 
+    /**
+     * A time label with the width of its widest time, so that the next parts of the bar (the video length and the speed)
+     * do not move while the time changes. An empty label has no width.
+     */
+    private class TimeLabel(text: String, private val prefix: String = "") : JLabel(text) {
+        override fun getPreferredSize(): Dimension {
+            val size = super.getPreferredSize()
+            if (text.isNullOrEmpty()) return size
+            // The widest digit in each place of the time, for example "88:88:88.8" in most fonts.
+            val digits = text.removePrefix(prefix)
+            val widest = ('0'..'9').maxBy { UiKit.textWidth(it.toString(), font) }
+            val sample = prefix + digits.map { if (it.isDigit()) widest else it }.joinToString("")
+            val textWidth = ceil(UiKit.textWidth(sample, font)).toInt() + 2
+            return Dimension(max(size.width, textWidth + insets.left + insets.right), size.height)
+        }
+    }
+
     private companion object {
         const val GRID_GAP = 16
         const val TRANSPORT_GAP = 6
         const val PLAY_MARGIN = 8
         const val CLOCK_GAP = 8
         const val SPEED_GAP = 8
+        const val RIGHT_GAP = 8
         const val HIDE_DIRECTION_BELOW = 880
     }
 }

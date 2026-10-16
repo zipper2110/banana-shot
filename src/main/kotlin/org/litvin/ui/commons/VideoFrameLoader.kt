@@ -6,7 +6,7 @@ import org.litvin.FFmpegCommandBuilder
 import org.litvin.FfmpegColorAdjustmentStrategy
 import org.litvin.ToneRange
 import org.litvin.adjustments.AdjustmentsV1
-import org.litvin.adjustments.GeometryPlan
+import org.litvin.adjustments.GeometryTimeline
 import org.litvin.export.ExportResolutionProbe
 import org.litvin.export.SourceToneRangeProbe
 import java.awt.image.BufferedImage
@@ -69,10 +69,10 @@ class VideoFrameLoader(
             val layout = ApplicationLayout.current()
             // The crop needs the source size, as in the export. Probe it only when the project has a crop or a rotation.
             val sourceSize = request.adjustments
-                .takeIf { !GeometryPlan.of(it, FRAME_WIDTH, FRAME_WIDTH * 9 / 16).isIdentity }
+                .takeIf { GeometryTimeline.hasGeometry(it, FRAME_WIDTH, FRAME_WIDTH * 9 / 16) }
                 ?.let { ExportResolutionProbe.probe(request.sourcePath, layout.ffprobeExecutable) }
             val toneRange = request.adjustments
-                .takeIf { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
+                .takeIf { adj -> org.litvin.adjustments.ColorTimeline.allColors(adj).any { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments } }
                 ?.let { SourceToneRangeProbe.probe(request.sourcePath, layout.ffprobeExecutable) }
                 ?: ToneRange.LIMITED
             val output = File.createTempFile("video-frame", ".png")

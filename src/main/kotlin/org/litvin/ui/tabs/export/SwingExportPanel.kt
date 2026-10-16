@@ -122,7 +122,7 @@ class SwingExportPanel(
     private val favoritesCard = contentCards.favorites
     private var lastContentCard: ChoiceCard = pointsCard
     private val scoreboardCheck = IncludeTile("export-scoreboard", "Scoreboard").apply {
-        toolTipText = "Burn in a scoreboard overlay that updates after each point. Uses the data of the Scoring tab."
+        toolTipText = "Burn in a scoreboard overlay that updates after each point. Uses the scores of the Points tab."
     }
     private val commentsCheck = IncludeTile("export-comments", "Comments").apply {
         toolTipText = "Burn the comments from the Points tab into the video as centered lower-third text."

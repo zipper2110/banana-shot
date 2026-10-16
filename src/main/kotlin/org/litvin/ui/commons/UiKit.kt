@@ -23,7 +23,7 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /**
- * Fonts and small painted parts that the redesigned tabs share (Points, Scoring, Colors, Transform).
+ * Fonts and small painted parts that the redesigned tabs share (Points, Colors, Transform).
  * The colors are in [Palette].
  */
 internal object UiKit {
@@ -136,7 +136,7 @@ internal data class KeyChipStyle(
         /** The chips on the seek buttons: a lighter border and white text. */
         val SEEK = KeyChipStyle(fill = Palette.CARD, border = Palette.LINE_5, text = Palette.FG, fixedWidth = 18)
 
-        /** The small chips of a compact button, for example Previous and Next of the Scoring tab. */
+        /** The small chips of a compact button, for example Previous and Next of the Points tab. */
         val SMALL = KeyChipStyle(height = 16, fontSize = 10f)
     }
 }

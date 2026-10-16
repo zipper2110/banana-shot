@@ -33,7 +33,11 @@
   const TOPICS = { problem: ['Problem', 2], idea: ['Idea', 1], question: ['Question', 3], other: ['Other', 4] };
   const ENCODERS = { software: 'CPU', nvenc: 'NVIDIA', amf: 'AMD', qsv: 'Intel' };
 
+  const DAY = 86400000;
+
   let view = loadView();
+  /** The last day of the period as `YYYY-MM-DD`, or null for today. The page always opens on today. */
+  let lastDay = null;
   let latest = null;
   let topicFilter = '';
   let reportLimit = 10;
@@ -63,6 +67,26 @@
 
   function saveView() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(view)); } catch { /* The view is a convenience only. */ }
+  }
+
+  function isoDate(time) { return new Date(time).toISOString().slice(0, 10); }
+
+  function todayUtc() { return isoDate(Date.now()); }
+
+  function longDate(time) {
+    return new Date(time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+
+  /** Sets the last day of the period. A day from today on means today. */
+  function setLastDay(date) {
+    lastDay = date && date < todayUtc() ? date : null;
+    syncControls();
+    load();
+  }
+
+  function stepPeriod(direction) {
+    const current = Date.parse(`${lastDay || todayUtc()}T00:00:00Z`);
+    setLastDay(isoDate(current + direction * view.days * DAY));
   }
 
   function percent(part, whole, digits = 0) {
@@ -151,7 +175,7 @@
     button.disabled = true;
     $('updated').textContent = 'Loading…';
     try {
-      const response = await fetch(api(`/api/summary?days=${view.days}${view.dev ? '&dev=1' : ''}`), { cache: 'no-store' });
+      const response = await fetch(api(`/api/summary?days=${view.days}${lastDay ? `&end=${lastDay}` : ''}${view.dev ? '&dev=1' : ''}`), { cache: 'no-store' });
       if (!response.ok) throw new Error(`The server returned ${response.status}.`);
       latest = await response.json();
       render(latest);
@@ -170,14 +194,23 @@
       button.setAttribute('aria-pressed', String(button.dataset.topic === topicFilter));
     }
     $('dev').checked = view.dev;
+    const today = todayUtc();
+    $('last-day').max = today;
+    $('last-day').value = lastDay || today;
+    $('later').disabled = !lastDay;
+    $('to-today').hidden = !lastDay;
   }
 
   // ---------- Rendering ----------
 
   function render(data) {
     window.Charts.hideTooltip();
-    const days = data.period.days;
-    const scope = days === 1 ? 'Today from 00:00 UTC, compared with yesterday' : `Last ${days} days (UTC), compared with the ${days} days before`;
+    const { days, start, end } = data.period;
+    const toToday = isoDate(end - DAY) === isoDate(data.generatedAt);
+    let scope;
+    if (toToday) scope = days === 1 ? 'Today from 00:00 UTC, compared with yesterday' : `Last ${days} days (UTC), compared with the ${days} days before`;
+    else if (days === 1) scope = `${longDate(start)} (UTC), compared with the day before`;
+    else scope = `${days} days from ${longDate(start)} to ${longDate(end - DAY)} (UTC), compared with the ${days} days before`;
     $('updated').textContent = `${scope}. Updated ${dateTime(data.generatedAt)}.`
       + (data.includeDev ? ' Development builds included.' : '');
     renderAlerts(data);
@@ -666,6 +699,13 @@
     view.dev = event.target.checked;
     saveView();
     load();
+  });
+  $('earlier').addEventListener('click', () => stepPeriod(-1));
+  $('later').addEventListener('click', () => stepPeriod(1));
+  $('to-today').addEventListener('click', () => setLastDay(null));
+  $('last-day').addEventListener('change', event => {
+    // An empty or partly typed date has no value: keep the period.
+    if (event.target.value) setLastDay(event.target.value);
   });
   $('refresh').addEventListener('click', load);
   $('snapshot').addEventListener('click', async () => {

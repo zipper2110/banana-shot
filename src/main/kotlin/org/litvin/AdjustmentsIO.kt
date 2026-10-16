@@ -27,6 +27,32 @@ data class WhiteBalanceV1(
 )
 
 /**
+ * A change point of the crop and rotation (B-47): from [atMs] in the source video, the geometry uses these values.
+ * The change is a blend that ends at [atMs]. [GeometryTimeline] gives the values for each time.
+ */
+data class GeometryKeyV1(
+    val atMs: Long = 0L,
+    val zoom: Float = 1.0f,
+    val panX: Float = 0.0f,
+    val panY: Float = 0.0f,
+    val rotationDeg: Float = 0.0f,
+)
+
+/**
+ * A color change point (B-47): from [atMs] in the source video, the colors use these values.
+ * The change is a linear blend that ends at [atMs]. [ColorTimeline] gives the values for each time.
+ */
+data class ColorKeyV1(
+    val atMs: Long = 0L,
+    val brightness: Float = 1.0f,
+    val contrast: Float = 1.0f,
+    val saturation: Float = 1.0f,
+    val shadows: Float = 0.0f,
+    val highlights: Float = 0.0f,
+    val temperature: Float = 0.0f,
+)
+
+/**
  * Adjustments model (v1). All fields optional with identity defaults.
  */
 data class AdjustmentsV1(
@@ -43,6 +69,14 @@ data class AdjustmentsV1(
     val panX: Float = 0.0f,        // normalized [-1.0, +1.0]
     val panY: Float = 0.0f,        // normalized [-1.0, +1.0]
     val rotationDeg: Float = 0.0f, // [-180.0, +180.0]
+    // Change points of the geometry, sorted by time. The geometry above applies before the first change point.
+    @field:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    val geometryKeys: List<GeometryKeyV1> = emptyList(),
+    // Color change points, sorted by time. The colors above apply before the first color change point.
+    @field:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    val colorKeys: List<ColorKeyV1> = emptyList(),
 
     val version: Int = 1,
 ) {
@@ -55,7 +89,7 @@ data class AdjustmentsV1(
         // Avoid clobbering known fields if Jackson routes them here for any reason
         when (key) {
             "brightness", "contrast", "saturation", "shadows", "highlights", "whiteBalance",
-            "zoom", "panX", "panY", "rotationDeg", "version" -> return
+            "zoom", "panX", "panY", "rotationDeg", "geometryKeys", "colorKeys", "version" -> return
             else -> unknowns[key] = value
         }
     }

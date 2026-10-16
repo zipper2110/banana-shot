@@ -91,6 +91,8 @@ object ScoringEngine {
      * - In a [MatchStructure.TOTAL_POINTS] match, each side serves [MatchRulesV1.serveTurnPoints] points in a row.
      * - A mark sets the server of its point. The next points of the same game (or tiebreak) continue from the mark.
      * - The points before the first mark get the servers that lead to the first mark.
+     *
+     * Overrides: [ManualScoreMarks.overrides] sets parts of the score after a point. The next points count from it.
      */
     fun timeline(
         points: List<PointV1>,
@@ -125,6 +127,7 @@ object ScoringEngine {
                 manualMarks.gameWins[point.id]?.playerNumber()?.let(match::markGameWon)
                 manualMarks.setWins[point.id]?.playerNumber()?.let(match::markSetWon)
             }
+            manualMarks.overrides[point.id]?.let(match::applyOverride)
             states += match.snapshot()
             sets += match.completedSets.toList()
         }
@@ -273,6 +276,61 @@ object ScoringEngine {
         /** After a game, the other player serves. After a tiebreak, the player who received first serves. */
         private fun changeServer() {
             gameServer = otherPlayer(gameServer)
+        }
+
+        /**
+         * Sets the parts of the score that [override] has. The sets and the games also set the phase of the match:
+         * a set tiebreak, a match tiebreak, or the end of the match. The flags of the point (game or set won) stay.
+         */
+        fun applyOverride(override: ScoreOverrideV1) {
+            override.sets?.let { sets ->
+                completedSets.clear()
+                sets.forEach { set ->
+                    val tiebreak = set.tiebreakP1 != null && set.tiebreakP2 != null
+                    completedSets += SetScore(set.p1, set.p2, tiebreak, set.tiebreakP1 ?: 0, set.tiebreakP2 ?: 0)
+                }
+                setsP1 = sets.count { it.p1 > it.p2 }
+                setsP2 = sets.count { it.p2 > it.p1 }
+            }
+            override.games?.let { games ->
+                gamesP1 = games.p1.coerceAtLeast(0)
+                gamesP2 = games.p2.coerceAtLeast(0)
+            }
+            if (override.sets != null || override.games != null) refreshPhase()
+            override.points?.let { points ->
+                p1Pts = points.p1.coerceAtLeast(0)
+                p2Pts = points.p2.coerceAtLeast(0)
+                if (rules.structure == MatchStructure.TOTAL_POINTS && !rules.manualScoring) refreshTotalPoints()
+            }
+        }
+
+        /** After a change of the sets or the games: the match ends, a tiebreak starts, or the match goes on. */
+        private fun refreshPhase() {
+            if (rules.manualScoring || rules.structure != MatchStructure.SETS) return
+            val setsToWin = rules.setsToWin()
+            ended = max(setsP1, setsP2) >= setsToWin
+            matchWonBy = if (!ended) null else if (setsP1 > setsP2) 1 else 2
+            when {
+                ended -> isTiebreak = false
+                rules.hasMatchTiebreakDecider() && setsP1 == setsToWin - 1 && setsP2 == setsToWin - 1 -> {
+                    isTiebreak = true
+                    tiebreakTarget = MatchRulesV1.MATCH_TIEBREAK_POINTS
+                    tiebreakReplacesSet = true
+                }
+                rules.setTiebreak && gamesP1 == rules.setTiebreakGames() && gamesP2 == rules.setTiebreakGames() -> {
+                    isTiebreak = true
+                    tiebreakTarget = rules.tiebreakPoints
+                    tiebreakReplacesSet = false
+                }
+                else -> isTiebreak = false
+            }
+        }
+
+        /** [MatchStructure.TOTAL_POINTS]: after a change of the points, the match ends at the total points or goes on. */
+        private fun refreshTotalPoints() {
+            ended = false
+            matchWonBy = null
+            checkTotalPoints()
         }
 
         fun markSetWon(player: Int) {

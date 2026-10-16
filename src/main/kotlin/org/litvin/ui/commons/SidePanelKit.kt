@@ -28,7 +28,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /*
- * The parts of the right panel of the Colors and Transform tabs: a header with a status and "Reset all",
+ * The parts of the right panel of the Colors and Transform sub-tabs of Colors & Transform: a header with a status and "Reset all",
  * a scrollable column of cards, group cards with slider rows, and the slider that fills from its default value.
  * The layout comes from design/colors-redesign/option-a.html and design/transform-redesign/option-a.html.
  */

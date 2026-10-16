@@ -60,7 +60,7 @@ class NativeSmokeIT {
 
     private fun checkBrightnessPreview(context: UiFlowContext, application: ApplicationScreen, projectDirectory: Path) {
         application.colors.open()
-        val player = loadedPlayer(context, MediaScreen.COLORS)
+        val player = loadedPlayer(context, MediaScreen.ADJUST_VIDEO)
         val before = stableCapture(context, player, "colors-before")
 
         application.colors.setBrightness(BRIGHTNESS_SLIDER)
@@ -83,7 +83,7 @@ class NativeSmokeIT {
 
     private fun checkRotationPreview(context: UiFlowContext, application: ApplicationScreen, projectDirectory: Path) {
         application.crop.open()
-        val player = loadedPlayer(context, MediaScreen.CROP)
+        val player = loadedPlayer(context, MediaScreen.ADJUST_VIDEO)
         val before = stableCapture(context, player, "crop-before")
 
         application.crop.setRotationDegrees(ROTATION_DEGREES)

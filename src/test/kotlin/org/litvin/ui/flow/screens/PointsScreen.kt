@@ -2,7 +2,10 @@ package org.litvin.ui.flow.screens
 
 import org.litvin.points.EdlIO
 import org.litvin.points.CommentV1
+import org.litvin.scoring.Outcome
+import org.litvin.scoring.ScoreIO
 import org.litvin.shared.util.Timecode
+import org.litvin.ui.commons.AppShortcut
 import org.litvin.ui.commons.AppShortcuts
 import java.nio.file.Path
 import javax.swing.KeyStroke
@@ -12,7 +15,27 @@ internal class PointsScreen(application: ApplicationScreen) : UserFlowScreen(app
 
     fun assertReady() = assertVisible("points-point-start")
 
-    fun markPoint(startMs: Long, endMs: Long): PointsScreen = apply {
+    fun markPoint(startMs: Long, endMs: Long): PointsScreen = mark(startMs, endMs, AppShortcuts.POINT_END)
+
+    /** Marks a point and ends it with the key of its outcome (Q, W, or E). The key also gives the outcome. */
+    fun markScoredPoint(startMs: Long, endMs: Long, outcome: Outcome): PointsScreen = mark(
+        startMs,
+        endMs,
+        when (outcome) {
+            Outcome.P1 -> AppShortcuts.SCORE_PLAYER_1
+            Outcome.NONE -> AppShortcuts.SCORE_NO_POINT
+            Outcome.P2 -> AppShortcuts.SCORE_PLAYER_2
+        },
+    )
+
+    fun assertOutcomePersisted(projectDirectory: Path, pointId: String, expected: Outcome) {
+        application.eventually("outcome $expected for $pointId to be persisted") {
+            val actual = ScoreIO.readForProjectDir(projectDirectory.toString()).outcomes[pointId]
+            if (actual != expected) throw AssertionError("Persisted outcome for $pointId was $actual, expected $expected")
+        }
+    }
+
+    private fun mark(startMs: Long, endMs: Long, endKey: AppShortcut): PointsScreen = apply {
         require(startMs >= 0) { "point start must not be negative" }
         require(endMs > startMs) { "point end must be after its start" }
         val player = context.mediaPlayers.players.firstOrNull()
@@ -26,7 +49,7 @@ internal class PointsScreen(application: ApplicationScreen) : UserFlowScreen(app
         application.eventually("points playhead to reach $endMs ms") {
             context.driver.requireText("points-current-time", formatTime(endMs))
         }
-        context.driver.press(KeyStroke.getKeyStroke(AppShortcuts.POINT_END.keyStroke))
+        context.driver.press(KeyStroke.getKeyStroke(endKey.keyStroke))
     }
 
     fun assertPointCount(marked: Int, favorites: Int = 0, comments: Int = 0) {

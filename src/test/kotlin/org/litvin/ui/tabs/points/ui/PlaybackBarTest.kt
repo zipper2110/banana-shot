@@ -30,7 +30,10 @@ class PlaybackBarTest {
             val transportCenter = transport.x + transport.width / 2
             assertTrue(abs(transportCenter - bar.width / 2) <= 1, "transport center=$transportCenter, bar width=${bar.width}")
             assertEquals(16, clock.x)
-            assertEquals(bar.width - 16, comment.x + comment.width)
+            assertEquals(bar.width - 16, bar.frameStep.x + bar.frameStep.width)
+            assertTrue(comment.x + comment.width < bar.frameStep.x, "Comment is left of Frame step")
+            assertEquals(comment.height, bar.frameStep.height)
+            assertEquals(comment.y, bar.frameStep.y)
             assertEquals("00:21:56.3", (bar.findByName("points-current-time") as JLabel).text)
             assertTrue(bar.labels().any { it.text == "/ 01:36:01.0" && it.isVisible })
 
@@ -38,6 +41,24 @@ class PlaybackBarTest {
             assertTrue(speed.isVisible && !speed.compact, "a wide bar shows the full speed control")
             assertTrue(speed.x >= clock.x + clock.width, "speed x=${speed.x}, clock right=${clock.x + clock.width}")
             assertTrue(speed.x + speed.width <= transport.x, "speed right=${speed.x + speed.width}, transport x=${transport.x}")
+        }
+    }
+
+    @Test
+    fun theSpeedControlStaysInPlaceWhileTheTimeChanges() {
+        SwingUtilities.invokeAndWait {
+            val bar = PlaybackBar(onTogglePlay = {}, onNudge = {}, onAddComment = {}, onSpeedIndex = {})
+            bar.setTime(1_111_100, 5_761_000)
+            bar.setSize(1400, bar.preferredSize.height)
+            bar.layoutRecursively()
+            val speed = bar.descendants().filterIsInstance<SpeedControl>().single()
+            val speedX = speed.x
+
+            for (time in listOf(0L, 4_444_400L, 5_088_800L, 5_761_000L)) {
+                bar.setTime(time, 5_761_000)
+                bar.layoutRecursively()
+                assertEquals(speedX, speed.x, "speed x at time $time")
+            }
         }
     }
 

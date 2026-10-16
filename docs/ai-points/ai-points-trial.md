@@ -4,6 +4,9 @@ Written on 2026-10-08. This file is a brainstorm, not a decision. It has
 the possible shapes of the feature, the expected results, and a cheap test
 of the approach. There is no backlog item for it yet.
 
+The current process of Claude (review by eye, run 1 on 2026-10-15) is in
+[claude-process.md](claude-process.md).
+
 ## 1. The idea
 
 - The user now marks the start and the end of each point by hand. A 2-hour
@@ -140,10 +143,29 @@ Raw values per second are noisy. Add simple rules after the model:
    first ball hit is the serve. The last hit is the end of the rally. Ball
    hits are short, loud peaks that ffmpeg can find without a model.
 
+Target boundaries (user decision, 2026-10-15). An exact match is not
+necessary:
+
+- Start: at the latest, just after the racket hits the ball on the serve.
+  Ideally, at the start of the ball toss.
+- End: include all valid bounces and the first invalid bounce (for
+  example an out), so that the viewer sees what happened. The point does
+  not end until the ball hits the ground. Then add about 3 s, before the
+  next point starts.
+
 ### 4.4 Hard cases
 
-- A fault on the first serve, then the second serve. This is one point. The
-  gap between the serves is short, so rule 3 joins them.
+- A fault on the first serve, then the second serve. This is one point.
+  A parameter controls the start of this point (user decision,
+  2026-10-15):
+  - "Include the first-serve fault": the point starts at the first-serve
+    toss. Rule 3 joins the two serves, because the gap between them is
+    short.
+  - "Skip the first-serve fault" (the user's own choice): the point
+    starts at the second-serve toss. The point always includes the second
+    serve, also when the second serve is a fault (a double fault).
+  - The hand project "Dima-Yana = Iliya-Marina" uses "skip": 18 of 20
+    points after a fault start at the second serve (within 1.6 s).
 - A let on the serve: the same.
 - Players on the next court. The camera sees them in the background.
 - Ball pickups that look like play. Players hit balls to each other.

@@ -85,7 +85,7 @@ data class StatRow(
 
 /** Makes the table rows from [MatchStats]. The rows for the video are a subset of these rows. */
 object StatRows {
-    const val NEEDS_SERVER = "Mark the server of one point in the Scoring tab."
+    const val NEEDS_SERVER = "Mark the server of one point in the Points tab."
     const val MANUAL_SCORING = "Manual scoring does not know which points can win a game or a set."
     const val NO_SETS = "The match format has no sets."
     const val NO_GAMES = "The match format has no games."

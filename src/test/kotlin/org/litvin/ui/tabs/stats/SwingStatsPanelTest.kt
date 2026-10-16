@@ -58,15 +58,15 @@ class SwingStatsPanelTest {
     }
 
     @Test
-    fun withoutScoredPointsTheTabOffersTheScoringTab() {
+    fun withoutScoredPointsTheTabOffersThePointsTab() {
         writeProject("")
         var opened = 0
 
         onEdt {
-            val panel = openPanel(onOpenScoring = { opened++ })
+            val panel = openPanel(onOpenPoints = { opened++ })
 
             assertEquals("No scored points", panel.label("stats-empty").text)
-            panel.find<AbstractButton>("stats-open-scoring")!!.doClick()
+            panel.find<AbstractButton>("stats-open-points")!!.doClick()
             assertEquals(1, opened)
         }
     }
@@ -295,8 +295,8 @@ class SwingStatsPanelTest {
         mouseListeners.forEach { it.mouseClicked(event) }
     }
 
-    private fun openPanel(onOpenScoring: () -> Unit = {}, onOpenPoint: (String) -> Unit = {}): SwingStatsPanel =
-        SwingStatsPanel(noDialogs(), onOpenScoring, onOpenPoint).apply {
+    private fun openPanel(onOpenPoints: () -> Unit = {}, onOpenPoint: (String) -> Unit = {}): SwingStatsPanel =
+        SwingStatsPanel(noDialogs(), onOpenPoints, onOpenPoint).apply {
             setProjectManifest(File(projectDir, "match.trproj").path)
             onActivated()
         }

@@ -14,22 +14,25 @@ import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
+import kotlin.math.ceil
 
 /**
- * The columns of the points table: #, Start, End, Length, ★ and the row actions.
- * The widths come from the design: 34 px, 70 px, 70 px, the rest, 24 px and 54 px, with 5 px gaps.
+ * The columns of the points table: #, Start, Length, the marks, ★ and the row actions.
+ * The widths: 34 px, 70 px, 50 px, the rest, 24 px and 54 px, with 5 px gaps.
+ * The marks (game, set and serve) are at the right end of their column.
  */
 internal data class TableColumns(val width: Int) {
     val number = PAD_LEFT
     val start = number + 34 + GAP
-    val end = start + 70 + GAP
-    val length = end + 70 + GAP
+    val length = start + 70 + GAP
+    val lengthRight = length + 50
     val actionsRight = width - PAD_RIGHT
     val actions = actionsRight - ACTIONS
     val star = actions - GAP - STAR
-    val lengthRight = star - GAP
+    val marksRight = star - GAP
 
     companion object {
         const val PAD_LEFT = 14
@@ -61,7 +64,6 @@ internal class TableHeaderRow : JComponent() {
             fun caption(text: String, x: Float) = UiKit.drawText(g2, text, captionFont, Palette.FG_3, x, top, h)
             caption("#", columns.number.toFloat())
             caption("START", columns.start.toFloat())
-            caption("END", columns.end.toFloat())
             caption("LENGTH", columns.lengthRight - UiKit.textWidth("LENGTH", captionFont))
             // A star icon, because some fonts have no "★" glyph.
             starIcon.paintIcon(this, g2, columns.star + (TableColumns.STAR - starIcon.iconWidth) / 2, (height - starIcon.iconHeight) / 2)
@@ -116,7 +118,7 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, HEIGHT)
     override fun getMinimumSize() = Dimension(0, HEIGHT)
 
-    protected fun paintRowBackground(g2: Graphics2D, rest: Color?, bar: Color?) {
+    protected fun paintRowBackground(g2: Graphics2D, rest: Color?, bar: Color?, barWidth: Int = BAR) {
         val fill = when {
             selected && selectable -> Palette.SELECTED
             hovered -> Palette.ROW_HOVER
@@ -130,7 +132,7 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
         g2.fillRect(0, height - 1, width, 1)
         if (bar != null) {
             g2.color = bar
-            g2.fillRect(0, 0, 3, height)
+            g2.fillRect(0, 0, barWidth, height)
         }
     }
 
@@ -148,14 +150,42 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
 
     companion object {
         const val HEIGHT = 45
+
+        /** The width of the selection bar and the comment color bar at the left edge. */
+        const val BAR = 3
+
+        /** The width of the winner color strip of a scored point. */
+        const val WINNER_STRIP = 8
     }
 }
 
-/** One marked point: number, start, end, length, the favorite star, and Edit and Delete on hover. */
+/**
+ * The game, set and serve marks of a point.
+ * [milestone] is "SET" or "GAME". A null [serveColor] means that the point has no serve mark.
+ */
+internal data class PointMarks(
+    val milestone: String? = null,
+    val milestoneColor: Color = Palette.FG,
+    /** The text color on [milestoneColor]. */
+    val milestoneOnColor: Color = Palette.BG,
+    val milestoneTip: String = "",
+    val serveColor: Color? = null,
+    /** True when the racket stands on a light disc, because [serveColor] is dark. */
+    val serveOnBadge: Boolean = false,
+    val serveTip: String = "",
+    /** True when the point has a score that the user typed (Override score). */
+    val overridden: Boolean = false,
+)
+
+/** One marked point: number, start, length, the marks, the favorite star, and Edit and Delete on hover. */
 internal class PointRow(
     visualIndex: Int,
     private val number: Int,
     val point: PointDto,
+    /** The winner color strip. */
+    private val stripColor: () -> Color? = { null },
+    /** The game, set and serve marks. */
+    private val marks: () -> PointMarks? = { null },
     onToggleFavorite: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -175,8 +205,13 @@ internal class PointRow(
 
     private val textFont get() = UiKit.font(12.5f)
     private val numberFont get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
+    private val badgeFont get() = UiKit.trackedFont(9.5f, 0.05, UiKit.Weight.BOLD)
+    private val racketIcons = HashMap<Color, javax.swing.Icon>()
+    private val overrideIcon by lazy { UiKit.icon(Material2AL.EDIT, OVERRIDE, Palette.LIME) }
 
     init {
+        // The row shows the tooltips of the marks (see getToolTipText).
+        toolTipText = ""
         add(favoriteButton)
         add(editButton)
         add(deleteButton)
@@ -204,17 +239,83 @@ internal class PointRow(
         val g2 = UiKit.smooth(g)
         try {
             val showSelection = selected
-            paintRowBackground(g2, null, if (showSelection) Palette.LIME else null)
+            val strip = stripColor()
+            if (strip != null) paintRowBackground(g2, null, strip, WINNER_STRIP)
+            else paintRowBackground(g2, null, if (showSelection) Palette.LIME else null)
+            // A scored point keeps its winner strip; the selection shows as a lime outline.
+            if (showSelection && strip != null) UiKit.paintBox(g2, 0, 0, width, height, 0, null, Palette.LIME_LINE)
             val columns = TableColumns(width)
             val h = height - 1f
             UiKit.drawText(g2, number.toString(), numberFont, if (showSelection) Palette.LIME else Palette.FG_2, columns.number.toFloat(), 0f, h)
             UiKit.drawText(g2, Timecode.format(point.startMs), textFont, Palette.FG, columns.start.toFloat(), 0f, h)
-            UiKit.drawText(g2, point.endMs?.let(Timecode::format) ?: "—", textFont, Palette.FG, columns.end.toFloat(), 0f, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
             UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), 0f, h)
+            marks()?.let { paintMarks(g2, it, columns.marksRight) }
         } finally {
             g2.dispose()
         }
+    }
+
+    private fun badgeWidth(text: String) = ceil(UiKit.textWidth(text, badgeFont)).toInt() + 10
+
+    private fun racketWidth(marks: PointMarks) = if (marks.serveOnBadge) RACKET_BADGE else RACKET
+
+    /** The GAME or SET badge at the right end of the marks column, and the serve racket before it. */
+    private fun paintMarks(g2: Graphics2D, marks: PointMarks, marksRight: Int) {
+        var right = marksRight
+        marks.milestone?.let { text ->
+            val w = badgeWidth(text)
+            val x = right - w
+            val y = (height - BADGE_HEIGHT) / 2
+            // SET is the outline badge: the player color on its contrast color. GAME is the filled badge.
+            if (text == "SET") {
+                UiKit.paintBox(g2, x, y, w, BADGE_HEIGHT, 3, marks.milestoneOnColor, marks.milestoneColor)
+                UiKit.drawText(g2, text, badgeFont, marks.milestoneColor, x + 5f, y.toFloat(), BADGE_HEIGHT.toFloat())
+            } else {
+                UiKit.paintBox(g2, x, y, w, BADGE_HEIGHT, 3, marks.milestoneColor, null)
+                UiKit.drawText(g2, text, badgeFont, marks.milestoneOnColor, x + 5f, y.toFloat(), BADGE_HEIGHT.toFloat())
+            }
+            right = x - MARK_GAP
+        }
+        marks.serveColor?.let { color ->
+            val side = racketWidth(marks)
+            val x = right - side
+            if (marks.serveOnBadge) {
+                g2.color = Palette.NEUTRAL_LIGHT
+                g2.fillOval(x, (height - side) / 2, side, side)
+            }
+            val icon = racketIcons.getOrPut(color) { UiKit.icon(Material2MZ.SPORTS_TENNIS, RACKET, color) }
+            icon.paintIcon(this, g2, x + (side - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
+            right = x - MARK_GAP
+        }
+        if (marks.overridden) {
+            overrideIcon.paintIcon(this, g2, right - OVERRIDE, (height - overrideIcon.iconHeight) / 2)
+        }
+    }
+
+    override fun getToolTipText(event: MouseEvent): String? {
+        val marks = marks() ?: return null
+        var right = TableColumns(width).marksRight
+        marks.milestone?.let { text ->
+            val left = right - badgeWidth(text)
+            if (event.x in left..right) return marks.milestoneTip
+            right = left - MARK_GAP
+        }
+        if (marks.serveColor != null) {
+            val left = right - racketWidth(marks)
+            if (event.x in left..right) return marks.serveTip
+            right = left - MARK_GAP
+        }
+        if (marks.overridden && event.x in (right - OVERRIDE)..right) return "The score after this point is typed (Override score)"
+        return null
+    }
+
+    private companion object {
+        const val BADGE_HEIGHT = 16
+        const val MARK_GAP = 4
+        const val RACKET = 15
+        const val RACKET_BADGE = 21
+        const val OVERRIDE = 14
     }
 }
 

@@ -3,7 +3,9 @@ package org.litvin.media.mpv
 import org.litvin.FfmpegColorAdjustmentStrategy
 import org.litvin.ToneRange
 import org.litvin.adjustments.AdjustmentsV1
+import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.GeometryPlan
+import org.litvin.adjustments.GeometryTimeline
 import org.litvin.adjustments.CropRect
 import java.util.Locale
 import kotlin.math.abs
@@ -29,10 +31,12 @@ internal object MpvShaderParams {
 
     /**
      * [cropEditing] true keeps the full rotated frame (no crop), for the Crop/Rotate editor.
+     * [timeMs] is the source time of the frame. It selects the geometry and the colors of the change points (B-47).
      */
-    fun build(adjustments: AdjustmentsV1, video: MpvVideoInfo?, cropEditing: Boolean = false): String {
+    fun build(adjustments: AdjustmentsV1, video: MpvVideoInfo?, cropEditing: Boolean = false, timeMs: Long = 0L): String {
         val fullRange = video?.colorLevels.equals("full", ignoreCase = true)
-        val color = FfmpegColorAdjustmentStrategy.map(adjustments, if (fullRange) ToneRange.FULL else ToneRange.LIMITED)
+        val colors = ColorTimeline.at(adjustments, timeMs)
+        val color = FfmpegColorAdjustmentStrategy.map(colors, if (fullRange) ToneRange.FULL else ToneRange.LIMITED)
         val contrast = if (color.hasEqualizerAdjustments) round4(color.contrast) else 1.0
         val saturation = if (color.hasEqualizerAdjustments) round4(color.saturation) else 1.0
         val brightnessLift = if (color.hasToneAdjustments) round4(color.brightnessLift) else 0.0
@@ -41,7 +45,7 @@ internal object MpvShaderParams {
         val cbShift = if (color.hasTemperatureAdjustments) round4(color.cbShift) else 0.0
         val crShift = if (color.hasTemperatureAdjustments) round4(color.crShift) else 0.0
 
-        val plan = GeometryPlan.of(adjustments, video?.width ?: 0, video?.height ?: 0)
+        val plan = GeometryTimeline.planAt(adjustments, timeMs, video?.width ?: 0, video?.height ?: 0)
         val rotation = plan.rotationDeg
         val crop = if (cropEditing) GeometryPlan.FULL_FRAME else plan.crop
         val geometryActive = plan.hasRotation || crop != GeometryPlan.FULL_FRAME

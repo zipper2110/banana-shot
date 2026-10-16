@@ -15,7 +15,6 @@ class HelpCatalogTest {
                 HelpPage.COLORS,
                 HelpPage.CROP,
                 HelpPage.POINTS,
-                HelpPage.SCORING,
                 HelpPage.STATISTICS,
                 HelpPage.EXPORT,
             ),
@@ -40,13 +39,12 @@ class HelpCatalogTest {
     @Test
     fun editingPagesUseSharedShortcutDefinitions() {
         val points = HelpCatalog.content(HelpPage.POINTS).shortcuts.map { it.shortcut }
-        val scoring = HelpCatalog.content(HelpPage.SCORING).shortcuts.map { it.shortcut }
         val crop = HelpCatalog.content(HelpPage.CROP).shortcuts.map { it.shortcut }
 
         assertTrue(AppShortcuts.POINT_START in points)
         assertTrue(AppShortcuts.SHIFT_LEFT in points)
-        assertTrue(AppShortcuts.SCORE_PLAYER_1 in scoring)
-        assertTrue(AppShortcuts.TOGGLE_FRAME_STEP in scoring)
+        assertTrue(AppShortcuts.SCORE_PLAYER_1 in points)
+        assertTrue(AppShortcuts.TOGGLE_FRAME_STEP in points)
         assertTrue(AppShortcuts.SHIFT_UP in crop)
     }
 }

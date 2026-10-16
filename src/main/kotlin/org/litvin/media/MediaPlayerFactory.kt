@@ -7,9 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 enum class MediaScreen {
     POINTS,
-    COLORS,
-    CROP,
-    SCORING,
+    ADJUST_VIDEO,
     TEST,
 }
 

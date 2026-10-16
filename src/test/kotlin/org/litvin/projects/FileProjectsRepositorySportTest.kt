@@ -32,7 +32,7 @@ class FileProjectsRepositorySportTest {
         assertEquals("Team 1", score.player1Name)
         assertEquals("Team 2", score.player2Name)
         assertTrue(score.useDefaultScoreboard)
-        assertFalse(score.scoreSettingsReviewed, "The Scoring tab still asks for the team names")
+        assertFalse(score.scoreSettingsReviewed, "The Points tab still asks for the team names")
         assertEquals(Sport.PADEL, repository.stats(created.path).sport)
     }
 

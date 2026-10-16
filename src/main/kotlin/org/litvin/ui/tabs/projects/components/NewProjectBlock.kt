@@ -96,13 +96,13 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
     private val steps = listOf(
         WorkflowStep("Import a match video", listOf("Projects" to UiStyles.folderIcon(13))),
         WorkflowStep("Mark the points", listOf("Points" to UiStyles.pointsIcon(13))),
-        WorkflowStep("Score each point", listOf("Scoring" to UiStyles.targetIcon(13))),
+        WorkflowStep("Score each point", listOf("Points" to UiStyles.pointsIcon(13))),
         WorkflowStep("Review the statistics", listOf("Stats" to UiStyles.statsIcon(13))),
         WorkflowStep("Export the video", listOf("Export" to UiStyles.exportIcon(13))),
     )
     private val optional = WorkflowStep(
         "Tune the image at any time",
-        listOf("Colors" to UiStyles.colorsIcon(13), "Transform" to UiStyles.cropRotateIcon(13)),
+        listOf("Colors & Transform" to UiStyles.cropRotateIcon(13)),
     )
     private val stepFont = ProjectsUi.font(12.5f)
     private val numberFont = ProjectsUi.font(11f, ProjectsUi.Weight.BOLD)
@@ -121,7 +121,7 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
 
     override fun getToolTipText(event: MouseEvent): String? =
-        if (event.y >= optionalTop) "Optionally tune the color and frame the video with Transform. You can do this at any time." else null
+        if (event.y >= optionalTop) "Optionally tune the colors and frame the video in Colors & Transform. You can do this at any time." else null
 
     override fun paintComponent(g: Graphics) {
         val g2 = ProjectsUi.smooth(g)

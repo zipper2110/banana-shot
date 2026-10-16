@@ -18,10 +18,11 @@ class EditingAcrossTabsUiFlowIT {
             .openRecent(project.manifest.id)
 
         application.points.assertReady()
-        application.points.markPoint(1_000, 2_000)
+        application.points.markScoredPoint(1_000, 2_000, Outcome.P1)
             .addComment(1_250, "2", "Ball was in")
         val pointId = application.points.assertSinglePointPersisted(project.directory, 1_000, 2_000)
         application.points.assertCommentPersisted(project.directory, 1, 1_250, 2_000, "Ball was in", "#FFFFFF")
+        application.points.assertOutcomePersisted(project.directory, pointId, Outcome.P1)
 
         application.colors.open()
             .setBrightness(20)
@@ -35,16 +36,13 @@ class EditingAcrossTabsUiFlowIT {
         application.points.open()
             .assertCommentPersisted(project.directory, 1, 1_250, 2_000, "Ball was in", "#FFFFFF")
 
-        application.scoring.open()
         application.crop.assertTransformPersisted(
             project.directory,
             brightness = 1.2f,
             zoom = 1.25f,
             rotationDegrees = 15f,
         )
-        application.scoring.awardPointToPlayer1()
-            .assertOutcomePersisted(project.directory, pointId, Outcome.P1)
-        application.scoring.assertVisibleScore("15")
+        application.points.assertOutcomePersisted(project.directory, pointId, Outcome.P1)
 
         context.mediaPlayers.assertEditingFlowEvents()
     }

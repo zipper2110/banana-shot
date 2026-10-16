@@ -263,7 +263,7 @@ internal class MomentumRow(private val chart: MomentumChart, private val check: 
     }
 
     companion object {
-        const val HELP = "Click the chart to open a point in the Scoring tab."
+        const val HELP = "Click the chart to open a point in the Points tab."
         private const val PAD_X = 12
         private const val PAD_TOP = 12
         private const val PAD_BOTTOM = 8
@@ -461,7 +461,7 @@ internal class LimitsRow(private val box: LimitsBox) : JPanel(null), HeightForWi
 
 /**
  * A value of the table: the main text, and the detail in a smaller, muted line under it.
- * A value that comes from one point has a play icon, and a click opens the point in the Scoring tab.
+ * A value that comes from one point has a play icon, and a click opens the point in the Points tab.
  */
 internal class ValueCell(
     componentName: String,
@@ -514,7 +514,7 @@ internal class ValueCell(
             }
             this.pointId = pointId
             // A tooltip adds a mouse listener, so only a value with a point has one.
-            toolTipText = if (pointId != null) "Open this point in the Scoring tab." else null
+            toolTipText = if (pointId != null) "Open this point in the Points tab." else null
             cursor = Cursor.getPredefinedCursor(if (pointId != null) Cursor.HAND_CURSOR else Cursor.DEFAULT_CURSOR)
         }
         main.foreground = if (hover) Palette.FG_STRONG else color

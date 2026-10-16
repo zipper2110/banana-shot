@@ -1,0 +1,301 @@
+# start end side winner conf note   (G = green+black team, Y = yellow+white team)
+G1 serve=G(black woman) near
+5:26.0 5:30.5 D Y low  ball bounced short in G service box, green stops
+5:45.0 5:51.0 A Y mid  woman lunges at baseline 5:49.2, misses
+6:04.5 6:16.0 D G mid  green volley 6:15 (H), far team stops
+6:25.5 6:32.0 A G low  woman smash 6:31 (H), then all relax
+6:42.0 6:56.5 D Y mid  far white woman volley 6:55.5 lands in G court
+7:03.0 7:09.5 A Y low  end not seen; game logic: ends change after -> game over -> Y wins 4-2
+G1 -> Y (1-0 Y)
+G2 serve=Y (white woman) near
+7:52.5 7:58.0 D G low  net volleys yellow vs far green; yellow crouches 7:58 (ball at his feet?)
+8:07.5 8:19.0 A G mid  ball rolls in Y court 8:17, white woman does not play it
+8:28.0 8:49.0 D ? low  1st serve 8:28.5 fault?, 2nd serve 8:35 (H); net play yellow right; end 8:49
+8:56.0 9:05.0 A ? low  woman mid court hits 9:04.2, then relaxed
+9:40.0 9:44.0 D G mid  return lands in Y court 9:42 past yellow, ball rolls to woman
+9:53.5 9:57.0 A ? low  short point, end 9:57
+10:18.5 10:24.0 D ? low  woman smash 10:23, then ball at her feet 10:24.8
+10:41.0 10:48.0 A ? low  1st serve 10:41 fault?, 2nd 10:45; yellow + woman meet at net 10:52
+   (9:12-9:35 no point: yellow waits at net, no serve)
+11:05.5 11:14.0 D ? low  rally, woman near right hits 11:09, ends ~11:14
+11:27.0 11:35.0 A ? low  serve 11:28 (H), end ~11:35
+G2 -> ? (10 points, deuce game)
+G3 serve=G far; Y near receives (yellow D right, woman A left). Ends change after G3 (14:06-14:23).
+12:00.5 12:06.0 D ? low  yellow returns 12:02 H, short rally
+12:15.5 12:24.0 A ? low  woman returns 12:17 H, rally
+12:47.5 12:53.5 D ? low  yellow ret ~12:49, far woman lunge volley 12:51
+13:12.0 13:21.5 A ? low  woman hits 13:14, far green at net 13:20; yellow picks balls 13:22 (13:26 H = yellow feeds ball, not a point)
+13:42.5 14:01.5 D ? low  1st serve fault (yellow hits it back 13:44), 2nd serve ~13:49, rally H 13:58, end 14:01
+G3 has 5 points -> 4-1 game
+G4 serve=Y far (yellow tosses); G near receives (woman D right/off-frame, green A left)
+14:35.0 14:48.0 D ? low  toss 14:36 fault?, 2nd toss 14:42, H 14:44, rally to ~14:47
+14:56.0 15:15.0 A ? low  toss 14:57 fault (green hits back 14:59), 2nd 15:04, green ret 15:05, rally, green overhead 15:13; G pair meet at net 15:18
+15:27.0 15:34.0 D ? low  toss 15:28, H 15:30
+15:42.0 16:00.0 A ? low  toss 15:42.5 fault (green hits back 15:44), 2nd ~15:48.5, green H 15:49.5, rally, H 15:57.5; G pair meet at net 16:02-16:03
+16:25.0 16:35.0 D ? low  toss 16:26, H 16:28, rally; far woman at net
+16:43.0 16:49.0 A Y? low toss 16:44, green moves 16:46; green hand on head 16:48
+17:05.5 17:13.0 D ? low  toss 17:06, green hits 17:07, rally
+17:27.5 17:37.0 A ? low  toss 17:28 (fault?), 2nd toss 17:33, short
+17:51.5 18:05.0 ? ? low  toss 17:52 (far right), green hits 17:54; toss 18:01, green H 18:03; end 18:05. side conflict: 9 points in G4 is impossible -> recheck
+G5 serve=G near (woman serves); green at net
+18:23.0 18:35.0 D ? low  woman serves off-frame right?, green at net, rally to ~18:35
+18:50.5 19:12.0 A ? low  woman toss 18:51 (fault?), 2nd 18:59, rally to ~19:11
+   (18:50.5 point ends ~19:15 green at net bends)
+19:34.5 20:00.0 D ? low  woman toss 19:35 right, long rally, green and woman at net, end ~19:59
+20:25.5 20:37.5 A ? low  woman toss 20:26 left, green at net, end 20:37 (woman bends)
+20:42.0 20:49.0 D ? low  woman toss 20:42 right, short
+21:02.0 21:11.0 A G low  woman toss 21:02 left, rally; G pair high-five 21:12 -> game end
+G5 -> G (6 points). End change 21:13-21:35 -> Y near
+G6 serve=Y near (white woman). yellow at net
+21:43.0 21:52.0 D ? low  server off-frame right, yellow ready at net left; woman picks ball 21:53
+22:14.5 22:24.0 A ? low  woman toss 22:15 left, rally
+   (22:14.5 point ends ~22:26)
+22:31.0 22:38.0 D ? low  server off-frame right, yellow volley at net 22:35
+22:53.0 23:10.0 A ? low  woman toss 22:53, long rally, yellow+woman at net
+23:17.0 23:25.0 D ? low  server off-frame, yellow at net, H 23:23
+23:41.0 23:51.0 A ? low  woman toss 23:41, rally, H 23:50; Y pair meet 23:53
+24:05.0 24:23.0 D ? low  server off-frame, yellow volleys at net 24:09-24:22
+24:32.0 24:45.0 A ? low  woman toss 24:32, rally, yellow at net
+24:52.0 25:11.0 D ? low  server off-frame, rally, woman comes to net 25:03
+25:19.0 25:36.0 A ? low  toss 25:19 fault?, 2nd 25:26, rally
+25:43.0 25:56.0 D ? low  server off-frame, yellow at net
+26:09.5 26:22.0 A G mid  woman toss 26:10, yellow dives at net 26:21 and misses; Y pair talk 26:25-26:37
+G6 -> G (12 points, game won by 2 on G break)
+G7 serve=G far; Y near: yellow D right baseline, woman at net left
+27:01.0 27:07.0 D ? low  far serve 27:02, yellow return 27:03
+27:38.0 27:48.0 A ? low  woman returns 27:40, rally (27:12-27:23 unclear, maybe nothing)
+27:49.0 27:57.0 D ? low  yellow returns 27:50, at net
+27:59.0 28:12.0 A ? low  woman volleys at net 28:03-28:09
+28:25.0 28:36.0 D ? low  yellow return ~28:26, rally at net
+G7 5 points? End change 28:36-28:50 -> G near
+G8 serve=Y far (yellow); G near: green A? (left), woman right
+29:04.0 29:23.0 ? ? low  far toss 29:05, green ret 29:09, net rally, green bends 29:21
+29:29.5 29:48.0 ? G mid  toss 29:30 fault?, 2nd 29:35, green H 29:36, rally; G pair high-five 29:52
+30:13.5 30:24.0 ? ? low  toss 30:14, green H 30:16, rally
+30:46.5 30:58.0 ? ? low  green H 30:48, rally, woman near right
+31:25.5 31:35.0 ? ? low  green H 31:27, rally at net; ALL FOUR meet at net 31:36-31:48 -> end of set 1? (8 games -> 6:2?)
+=== SET 2 (?) G1 serve=G near (woman); green at net
+32:12.5 32:24.0 ? ? low  toss 32:13, H 32:20, rally
+32:45.5 32:59.0 ? ? low  toss 32:46, woman H 32:55, rally
+33:02.0 33:24.0 ? ? low  toss 33:02, H 33:06, long rally, Y far at net 33:24
+33:34.0 33:56.0 ? ? low  toss 33:34, H 33:39, net rally, G pair at net 33:54
+34:16.5 34:30.0 ? ? low  toss 34:17 fault?, 2nd 34:22, rally
+S2G1 5 points. End change 34:36-34:48 -> Y near. (35:00-35:20 Y off court, pause)
+S2G2 serve=Y near (white woman); yellow at net
+35:21.0 35:32.0 D ? low  server off-frame, H 35:25, woman overhead 35:29
+35:36.0 35:49.0 A ? low  toss 35:37, rally at net
+36:07.5 36:19.0 D ? low  server off-frame, rally 36:09-36:17
+36:30.0 36:42.0 A ? low  toss 36:30, rally
+36:50.0 37:08.0 D ? low  server off-frame, net rally yellow vs green; Y pair meet 37:09-37:12
+37:37.0 37:58.0 ? ? low  yellow near serves? (yellow toss 37:40 right), rally, H 37:57
+S2G3 serve=G far (?); Y near
+38:27.5 38:37.0 ? ? low  woman returns 38:29, rally
+38:58.0 39:06.0 ? ? low  yellow return 38:59 H, net rally
+39:29.0 39:38.0 ? ? low  yellow return ~39:30, rally
+39:48.0 40:05.0 ? ? low  rally, yellow at right baseline, H 39:53
+40:13.0 40:23.0 ? ? low  rally, woman left baseline
+40:30.5 40:38.0 ? ? low  far serve, woman lunges 40:33
+S2G3 end change 40:45-41:10 -> G near
+S2G4 serve=Y far; G near
+41:36.0 41:43.0 ? ? low  green ret H 41:38
+41:53.5 42:03.0 ? ? low  toss 41:54, green ret H 41:55, rally
+42:12.5 42:27.0 ? ? low  green ret 42:14, net rally
+42:45.5 42:57.0 ? ? low  green ret H 42:47, rally
+43:15.5 43:23.0 ? ? low  green ret ~43:21, short; green walks to net 43:24
+   (S2G4 continues: Y far still serves)
+43:36.0 44:02.0 ? ? low  long rally, green at net
+44:32.5 44:48.0 ? ? low  far woman toss 44:33, rally
+45:02.0 45:12.0 ? ? low  far woman toss 45:02, H 45:04, rally
+45:28.5 45:40.0 ? G low  far toss 45:29, rally; G pair high-five 45:47 -> game end
+S2G5 serve=G near
+46:28.5 46:45.0 ? ? low  green toss 46:29 (fault?), 2nd 46:37, rally
+46:54.0 47:05.0 ? ? low  H 46:55, green hits 47:01, rally
+47:15.0 47:23.0 ? ? low  H 47:16, net rally
+47:33.0 47:40.0 ? ? low  near woman toss 47:33 left, green volleys at net, picks ball 47:40
+47:47.5 47:56.0 ? ? low  H 47:48 serve, net rally; G pair talk 47:58-48:05
+48:24.0 48:33.0 ? ? low  far serve, green ret H 48:25, rally
+48:46.5 48:57.0 ? ? low  far toss 48:47, green H 48:49, net rally
+49:25.5 49:50.0 ? ? low  green serve 49:26 (fault?), 2nd 49:42, H 49:45, rally; G high-five 49:56
+50:04.5 50:24.0 ? ? low  green serve 50:05 (fault?), 2nd 50:14, H 50:17, rally; G meet at net 50:25-50:30
+50:39.5 50:48.0 ? ? low  far toss 50:40, green ret 50:41, rally, H 50:46
+ALL FOUR meet at net 50:50-51:05 -> end of set 2. Break 51:10-52:15 (empty court).
+=== SET 3
+S3G1 serve=Y near? Y near
+52:26.0 52:35.0 ? ? low  yellow hits 52:27, rally, H 52:33
+52:48.0 53:00.0 ? ? low  rally, woman left, H 52:54, net play; Y meet 53:00
+53:12.0 53:27.0 ? ? low  rally, far green, yellow volley 53:18
+53:30.0 53:40.0 ? ? low  rally, Y high-five 53:39-53:40
+53:47.0 53:53.0 ? ? low  woman H 53:49, rally
+54:01.0 54:20.0 ? ? low  far serve, woman returns 54:03, rally
+54:43.0 55:13.0 ? ? low  far serve, long rally, H 55:07, 55:10; Y meet at net 55:15; ALL FOUR meet 55:20-55:30 (handshakes?) then change ends
+S3G2 serve=Y far (yellow); G near
+55:56.5 56:09.0 ? ? low  far toss 55:57, green ret 55:59, net rally
+56:23.0 56:39.0 ? ? low  green ret 56:24, rally, H 56:32
+56:58.0 57:21.0 ? ? low  far toss 56:58, long rally, green at net; ends 57:21
+57:47.0 58:00.0 ? G low  H 57:48 green ret, net rally; green raises arms 57:58-58:00 (won?)
+58:31.5 58:47.0 ? ? low  green ret 58:32, rally, net play
+58:57.5 59:11.0 ? ? low  far woman serve, green ret H 58:59, rally
+59:18.0 59:23.0 ? ? low  far toss 59:18, green runs right 59:21 (short point / ace?)
+59:33.5 59:40.0 ? ? low  far toss 59:34, green H 59:35
+59:50.5 60:03.0 ? ? low  far toss 59:51, H 59:53, rally, green 60:00
+60:11.0 60:17.0 ? ? low  far serve, green hits low 60:13, ball rolls
+60:29.0 60:37.0 ? ? low  green ret 60:30, net; G pair meet 60:40 -> game end
+S3G3 serve=G near (green)
+60:51.0 60:56.5 ? ? low  green serve ~60:52 H, short
+61:00.5 61:09.0 ? ? low  green toss 61:01, rally, H 61:06
+61:19.0 61:31.0 ? ? low  green toss 61:19 fault?, 2nd 61:25 H 61:26, rally; green picks ball 61:31
+61:48.5 62:02.0 ? ? low  green toss 61:49, rally, H 62:00
+62:17.5 62:23.0 ? ? low  green toss 62:18, H 62:19, short; G meet 62:24
+62:41.5 62:46.5 ? ? low  green toss 62:42 (fault?), short
+62:47.5 62:53.0 ? ? low  green toss 62:48, H 62:49, short
+63:21.0 63:34.0 ? ? low  green toss 63:21 H 63:22 fault?, 2nd 63:29 H, rally; G meet 63:35
+   end change 63:36-64:08
+S3G4 serve=Y near (yellow)
+64:21.0 64:28.0 ? ? low  yellow toss 64:21 fault?, 2nd 64:24 H 64:26, short
+64:30.0 64:47.0 ? ? low  yellow toss 64:30 H 64:31, rally to ~64:46
+64:56.5 65:10.0 ? ? low  toss 64:57 fault?, 2nd 65:00 H 65:01, rally
+65:20.5 65:35.0 ? ? low  yellow toss 65:21 H, rally, H 65:33-34
+65:41.0 65:58.0 ? ? low  yellow toss 65:41 H 65:42 fault?, 2nd 65:47 H, rally
+65:59.0 66:29.0 ? ? low  yellow serve right ~65:59?, long rally, woman near left hits 66:12-66:17, yellow 66:22-66:28
+66:38.0 66:58.0 ? ? low  rally, H 66:42, 66:45, 66:50; net play to 66:58
+67:00.0 67:18.0 ? ? low  rally, H 67:09, 67:13, 67:16
+67:24.0 67:43.0 ? ? low  rally, yellow at right, net play
+67:46.0 68:01.0 ? ? low  rally, H 67:51, 67:56
+68:24.0 68:47.0 ? ? low  far serve 68:26?, rally, H 68:34, 68:37, 68:44, 68:46
+68:48.0 68:58.0 ? Y low  rally, H 68:52; Y pair meet 68:59-69:01 (high-five)
+69:13.0 69:25.0 ? ? low  rally, yellow H 69:21
+69:29.0 69:40.0 ? ? low  rally, H 69:35, woman bends 69:38 (picks ball)
+69:41.0 69:52.0 ? ? low  rally, yellow at right
+70:00.0 70:15.0 ? ? low  rally, H 70:03, yellow at net
+70:23.0 70:41.0 ? ? low  rally, H 70:33-70:37, yellow falls/crouches 70:40
+70:59.0 71:11.0 ? ? low  rally, H 71:00, 71:04, net play
+71:18.0 71:30.0 ? ? low  rally, H 71:21
+71:36.0 71:45.0 ? Y low  rally, H 71:37; Y pair meet 71:45-71:47
+71:57.0 72:04.0 ? Y low  rally, H 72:03; Y pair meet 72:04-72:13 (long talk) -> game end?
+72:23.0 72:47.0 ? ? low  long net rally, H 72:24-72:40, end ~72:47
+72:54.5 73:00.0 ? ? low  woman toss 72:55 (near, Y serves), H 72:56, short
+73:05.0 73:20.0 ? ? low  woman toss 73:05 H 73:06, rally, H 73:13-73:20
+73:21.0 73:26.0 ? ? low  woman toss 73:21, short, H 73:24
+73:47.5 74:22.0 ? ? low  woman toss 73:48? H 73:48-49 fault?, 2nd 73:57 H 73:58, long rally to ~74:21
+74:30.0 74:47.0 ? ? low  rally, H 74:31-74:46
+74:48.0 74:54.0 ? ? low  woman toss 74:49 H 74:50 (fault?), short
+74:55.0 75:16.0 ? ? low  woman toss 74:56 (2nd serve), rally, net play to ~75:16
+   (75:17-75:46 no point: players walk, wait)
+75:46.0 75:59.0 ? ? low  far serve, yellow H 75:47 return?, rally, H 75:52, 75:57, 75:59
+76:30.0 76:36.0 ? ? low  far serve, yellow at net, short; yellow walks back 76:35
+76:51.0 77:10.0 ? ? low  far serve, yellow return 76:52-53 H, rally, H 77:05, 77:08
+77:12.0 77:18.0 ? ? low  rally end, H 77:13, 77:16
+77:26.0 77:34.0 ? ? low  far serve?, woman ret 77:27, H 77:33
+   (77:36-78:10 woman near ret? H 77:40 woman, 77:47 — maybe a point 77:39-77:48)
+77:39.0 77:48.0 ? ? low  woman hits 77:40 H, H 77:47; uncertain point
+78:13.0 78:37.0 ? Y low  far serve, woman ret ~78:22 H 78:24, rally, H 78:28; Y pair high-five 78:39-78:41
+78:52.5 79:11.0 ? ? low  yellow (near) toss 78:53 fault?, 2nd 78:58-59, H 79:01, rally to 79:11
+79:16.0 79:20.0 ? ? low  yellow toss 79:16 H 79:17, short
+79:21.0 79:36.0 ? ? low  yellow toss 79:22 (fault?), 2nd 79:27 H 79:28, rally
+79:40.0 79:47.0 ? ? low  rally, far woman H 79:41-43, yellow near
+79:57.5 80:12.0 ? ? low  yellow toss 79:58 H 79:59, rally, H 80:02-80:04, 2nd? 80:07 toss
+   NOTE: from ~79:30 the far team is no longer G (green/black). New far players (woman white top?). From ~85:40 a new pair (red-shirt man + dark-dress woman) plays near vs Y far.
+80:16.5 80:24.0 ? ? low  yellow toss 80:17 H 80:18-19, rally
+80:26.0 80:31.0 ? ? low  yellow toss 80:26-27 H, short (fault?)
+80:33.0 80:47.0 ? ? low  yellow toss 80:33 H 80:34, rally H 80:37-80:44
+80:50.0 81:11.0 ? ? low  yellow toss 80:50 H 80:51, rally, H 80:53-80:59; yellow to net 81:05-81:11
+   (81:12-81:44 yellow alone / walks; 81:46-81:59 yellow hits balls -> warm-up/practice?)
+   (82:00-82:57 yellow hits alone / warm-up with new far team in pink)
+=== NEW OPPONENTS from ~82:30: Y (yellow + white woman) near vs P (pink-shirt team) far
+82:58.0 83:12.0 ? ? low  far serve, yellow ret 82:59, rally, H 83:05
+83:14.0 83:26.0 ? ? low  yellow toss 83:14, rally with all at net, end ~83:26
+83:38.0 83:47.0 ? ? low  far serve, yellow ret 83:40, rally
+83:48.0 84:00.0 ? ? low  woman H 83:48, rally
+84:03.0 84:12.0 ? ? low  woman hits 84:04, H 84:06, yellow volleys 84:09-84:11
+84:23.0 84:31.0 ? ? low  rally, H 84:25, 84:28-29
+84:51.0 84:58.0 ? ? low  rally, H 84:56; Y pair meet 84:57 then change ends 85:00-85:40
+=== from 85:40 P (red-shirt man + dark-dress woman) near, Y far
+86:02.0 86:22.0 ? ? low  far serve, red ret H 86:09, rally to ~86:21
+86:34.0 86:56.0 ? ? low  far serve ~86:35 H 86:36, rally H 86:45-86:46, end ~86:55; P pair meet 86:56
+87:06.0 87:14.0 ? ? low  far serve, red ret H 87:08, rally
+87:26.0 87:36.0 ? ? low  far serve, red H 87:28, rally H 87:33-87:35
+87:47.0 88:14.0 ? ? low  far serve ~87:48, long rally, H 87:57, 88:01-02, end ~88:13; P pair meet 88:24-88:42 (long talk, game end?)
+88:43.5 88:58.0 ? ? low  red near serves 88:44 H (fault?), 88:49-50 H 2nd?, rally H 88:54-55; P meet 89:02 (high-five)
+89:42.0 90:14.0 ? ? low  red toss 89:43-45 H (fault?), 2nd 89:55-56 H, rally, H 90:01-02, P at net, end ~90:13
+90:23.5 90:30.0 ? ? low  red serve 90:24 H (fault?), short
+90:33.0 90:44.0 ? ? low  red serve 90:34 H, rally H 90:38, 90:41, 90:43
+90:50.0 90:59.0 ? ? low  red serve 90:51 H, rally H 90:54; P meet 90:59-91:02
+91:16.0 91:24.0 ? ? low  red serve 91:17 H, rally H 91:18-91:20
+   (91:24-91:56 change of ends? P move; Y far)
+92:04.0 92:18.0 ? ? low  far serve, red ret H 92:09, rally H 92:14, red bends 92:16
+92:34.0 92:49.0 ? ? low  far serve, red ret H 92:41, rally, red at net 92:45-92:49
+92:57.0 93:05.0 ? ? low  far serve, red ret H 92:59-93:00, rally
+93:16.0 93:30.0 ? ? low  far serve H 93:17, rally, red H 93:21-93:25, net play; P meet 93:30-93:31 (high-five)
+93:47.0 94:00.0 ? ? low  far serve, red ret 93:49, rally H 93:54, red at net 93:58-94:00
+   (94:00-94:23 P pick balls, walk)
+94:24.0 94:36.0 ? ? low  far serve? H 94:24, rally, red at net 94:27-94:36
+94:42.0 94:55.0 ? ? low  near woman serves 94:42-43 H, rally H 94:44-94:53
+95:05.0 95:13.0 ? ? low  woman serve? H 95:06, rally red at net H 95:10-95:12
+95:24.5 95:41.0 ? ? low  woman toss 95:25 H, 2nd? 95:30 H, rally red at net 95:32-95:36; P high-five 95:39 (P won?)
+   (95:42-95:59 end change? P walk)
+96:00.0 96:08.0 ? ? low  rally red near left, H 96:01, 96:04
+96:20.0 96:33.0 ? ? low  far serve, red ret H 96:21, rally, red H 96:30-31
+96:36.0 96:42.0 ? ? low  rally continues? red at net 96:38-96:41 (maybe same point)
+96:45.0 97:02.0 ? ? low  rally H 96:48, 96:53, red near 96:58-97:00 H
+97:13.0 97:30.0 ? ? low  far serve?, red ret 97:17, rally, net 97:26-97:29
+97:36.0 97:51.0 ? P low  far serve, red ret, rally H 97:47; P high-five 97:52-97:53
+98:02.0 98:19.0 ? P low  far serve 98:03, red ret H 98:14, rally; P high-five 98:21-98:22
+   (98:24-98:47 change of ends / ball pickup)
+98:51.0 98:57.0 ? ? low  red near serve 98:52 H (fault?), short
+98:59.0 99:12.0 ? ? low  red serve 99:00-01 H, rally, woman at net 99:05-99:11
+99:18.0 99:23.0 ? ? low  red serve 99:19-21 H, short
+99:26.0 99:31.0 ? ? low  red serve 99:27 H, short
+99:39.0 99:43.0 ? ? low  red serve 99:39-40 H (fault?), short
+99:44.0 99:59.0 ? ? low  red serve 99:44-45 H, rally, woman at net 99:51-99:58; P meet 100:00-100:02
+100:07.0 100:21.0 ? ? low  red serve 100:08 H (fault?), 2nd 100:13 H, rally; P meet 100:21-100:22
+100:27.0 100:33.0 ? ? low  red serve 100:28 H (fault?), short
+100:36.0 100:40.0 ? ? low  red serve 100:37 H, short
+100:46.0 100:59.0 ? ? low  red serve 100:47 H, rally, woman at net 100:51-100:58; P meet 100:59-101:01
+   (101:04-101:12 red picks balls)
+101:16.0 101:22.0 ? ? low  red serve 101:16-17, short
+101:31.0 101:35.0 ? ? low  red serve 101:32 H, short
+102:06.5 102:18.0 ? ? low  red serve 102:07-08 H, rally, woman at net 102:11-102:17; P meet 102:18-102:22
+102:30.0 102:35.0 ? ? low  red serve 102:31-32 H (after bounce 102:24), short
+102:42.0 102:49.0 ? ? low  red serve 102:43, rally 102:44-102:48; P meet 102:50-102:52
+102:57.0 103:03.0 ? ? low  red serve 102:58-59 H (fault?), short
+103:05.0 103:22.0 ? ? low  red serve 103:05-06, 2nd 103:14 H, rally woman at net 103:16-103:22
+103:32.0 103:36.0 ? ? low  red serve 103:33 H, short
+103:45.0 103:57.0 ? ? low  red serve 103:46 H, rally 103:48-103:56
+   NOTE: 101:50-104:00 red serves many times in a row; maybe a tiebreak or a long deuce game
+104:02.0 104:07.0 ? ? low  red serve 104:03-05 H (fault?), short
+104:10.0 104:22.0 ? ? low  red serve 104:10-11, rally woman at net 104:14-104:20
+104:24.0 104:28.0 ? ? low  red serve 104:25-26 H (fault?), short
+104:30.0 104:36.0 ? ? low  red serve 104:31, short
+104:38.0 104:42.0 ? ? low  red serve 104:39-40 H, short; red walks to net for ball 104:43
+104:52.0 104:56.0 ? ? low  red serve 104:52-53 H (fault?), short
+104:58.0 105:11.0 ? ? low  red serve 104:59, rally H 105:01-105:06, woman at net
+   (105:12-105:25 P pick balls, meet)
+105:26.0 105:30.0 ? ? low  red serve 105:26-28 H (fault?), short
+105:32.0 105:37.0 ? ? low  red serve 105:33-34 H, short
+105:41.0 105:45.0 ? ? low  red serve 105:41-42 (fault?), short
+105:47.0 105:54.0 ? ? low  red serve 105:47-48 H, rally; P high-five 105:55
+105:59.0 106:23.0 ? ? low  rally, red at net 106:00-106:07, back to baseline, H? long
+106:25.0 106:44.0 ? ? low  far serve, red ret 106:32-33, rally, end ~106:43
+106:49.0 107:04.0 ? ? low  far serve, red hits 106:56-57 H, rally to ~107:04
+107:07.0 107:20.0 ? ? low  far serve, red ret H 107:08, rally, red at net 107:14
+107:23.0 107:40.0 ? ? low  far serve, red ret H 107:25, rally H 107:31, net 107:34-107:38
+   (107:42-107:51 P pick balls)
+107:52.0 108:12.0 ? ? low  red at net left, rally, H 108:00-108:11; P high-five 108:15-108:17
+   (108:18-108:35 change of ends? P walk to net side; then woman near alone)
+108:44.0 108:51.0 ? ? low  near woman toss 108:45-47, red at net right, short
+108:54.0 109:06.0 ? ? low  woman serve 108:55-56, rally to ~109:05
+109:12.0 109:36.0 ? ? low  woman serve ~109:13-14, rally, red at net 109:18-109:27, woman H 109:30-109:35
+   (109:36-110:19 no play: woman waits, P talk 109:54-110:00, ball bounces)
+110:20.0 110:46.0 ? ? low  woman serve 110:20, red to net, rally H 110:27-110:32, woman 110:34-110:41
+110:56.0 111:11.0 ? ? low  rally? red at net left/middle 110:56-111:11, woman near right 111:03-111:04
+111:20.0 111:36.0 ? ? low  woman serve 111:21-22 H, red at net, rally to ~111:35
+111:40.0 111:56.0 ? ? low  rally, red at net 111:42-111:52, woman 111:49 H
+112:00.0 112:06.0 ? ? low  woman serves 112:00-01, red at net; P walk/meet 112:08-112:15 (end of game?)
+   (112:15-112:23 change of ends?)
+112:26.0 112:36.0 ? ? low  far serve 112:26, red ret 112:28-29, red to net, rally
+112:39.0 112:47.0 ? ? low  far serve, red ret H 112:40, rally
+112:55.0 113:19.0 ? ? low  far serve ~112:55, rally, red to net 113:05-113:18
+113:29.0 113:44.0 ? ? low  far serve, red ret H 113:30, rally to 113:41 H, red picks up ball 113:46
+113:48.0 113:53.0 ? ? low  short point? red ready 113:48, H 113:50, far yellow moves
+114:00.0 114:17.0 ? ? low  serve H 114:01, long rally H 114:06-114:16
+114:26.0 114:33.0 ? ? low  red ready, H 114:29, H 114:31 red lunges; LAST POINT, all walk to net 114:36, handshake 114:44-114:51

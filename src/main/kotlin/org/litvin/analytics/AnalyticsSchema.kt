@@ -28,6 +28,9 @@ object AnalyticsSchema {
         addAll(ESSENTIAL_KEYS)
         AnalyticsEvent.Tab.entries.forEach { add(tabOpened(it)) }
         AnalyticsEvent.Tab.entries.forEach { add(tabSeconds(it)) }
+        // The keys of the removed Scoring tab. The app does not send them now. Older app versions still send them,
+        // so the Worker must accept them, and the lists keep them.
+        addAll(listOf("tab_scoring", "tab_s_scoring"))
         addAll(listOf(
             "project_created", "project_opened", "video_open_failed", "point_added", "point_deleted",
             "point_favorited", "comment_added", "score_recorded", "color_changed", "crop_rotate_changed", "help_opened",

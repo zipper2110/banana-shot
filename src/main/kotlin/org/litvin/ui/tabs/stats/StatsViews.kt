@@ -19,7 +19,7 @@ import kotlin.math.max
  * The view of the tab when it has no statistics to show: no project, no scored points, or a read error.
  * The box is in the center of the tab.
  */
-internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout()) {
+internal class StatsEmptyView(onOpenPoints: () -> Unit) : JPanel(GridBagLayout()) {
     enum class Kind { NO_PROJECT, NO_SCORED_POINTS, ERROR }
 
     private var kind = Kind.NO_PROJECT
@@ -31,23 +31,23 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
     val text = WrapText("", UiKit.font(13f), Palette.FG_2, SwingConstants.CENTER, lineSpacing = 1.5f).apply {
         name = "stats-empty-text"
     }
-    val openScoring = StatsButton("Open Scoring", Material2AL.ASSIGNMENT_TURNED_IN, lime = true).apply {
-        name = "stats-open-scoring"
-        addActionListener { onOpenScoring() }
+    val openPoints = StatsButton("Open Points", Material2AL.ASSIGNMENT_TURNED_IN, lime = true).apply {
+        name = "stats-open-points"
+        addActionListener { onOpenPoints() }
     }
     private val box = object : JPanel(null) {
         init {
             isOpaque = false
             add(title)
             add(text)
-            add(openScoring)
+            add(openPoints)
         }
 
         private val textWidth get() = BOX_WIDTH - PAD * 2
 
         override fun getPreferredSize(): Dimension {
             var h = PAD + ICON_BOX + ICON_GAP + title.preferredSize.height + TITLE_GAP + text.heightForWidth(textWidth)
-            if (openScoring.isVisible) h += BUTTON_GAP + openScoring.preferredSize.height
+            if (openPoints.isVisible) h += BUTTON_GAP + openPoints.preferredSize.height
             return Dimension(BOX_WIDTH, h + PAD)
         }
 
@@ -59,8 +59,8 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
             val textHeight = text.heightForWidth(textWidth)
             text.setBounds(PAD, y, textWidth, textHeight)
             y += textHeight + BUTTON_GAP
-            val button = openScoring.preferredSize
-            openScoring.setBounds((width - button.width) / 2, y, button.width, button.height)
+            val button = openPoints.preferredSize
+            openPoints.setBounds((width - button.width) / 2, y, button.width, button.height)
         }
 
         override fun paintComponent(g: Graphics) {
@@ -99,7 +99,7 @@ internal class StatsEmptyView(onOpenScoring: () -> Unit) : JPanel(GridBagLayout(
         val error = kind == Kind.ERROR
         text.font = if (error) Font("Consolas", Font.PLAIN, 12) else UiKit.font(13f)
         text.color = if (error) Palette.RED_TEXT else Palette.FG_2
-        openScoring.isVisible = kind == Kind.NO_SCORED_POINTS
+        openPoints.isVisible = kind == Kind.NO_SCORED_POINTS
         box.revalidate()
         repaint()
     }

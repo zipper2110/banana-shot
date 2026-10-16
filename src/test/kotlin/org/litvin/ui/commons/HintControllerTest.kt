@@ -97,7 +97,7 @@ class HintControllerTest {
     fun theBalloonGoesWhenItsAnchorGoesOffTheScreen() {
         onEdt {
             hints.show(HintId.POINT_ROW, first, "row")
-            hints.show(HintId.GO_TO_SCORING, second, "scoring")
+            hints.show(HintId.HELP_BUTTON, second, "scoring")
         }
         onEdt {
             frame!!.contentPane.remove(first)

@@ -140,12 +140,12 @@ object UiStyles {
         }
     }
 
-    /** Sidebar button with custom hover/active styling and an icon. */
+    /** Sidebar button with custom hover/active styling and an icon. A "\n" in [text] breaks the label into lines. */
     fun sidebarButton(text: String, icon: Icon, onClick: () -> Unit): SidebarButton = SidebarButton(text, icon).apply {
         addActionListener { onClick() }
     }
 
-    class SidebarButton(text: String, icon: Icon) : JButton(text) {
+    class SidebarButton(text: String, icon: Icon) : JButton(labelOf(text)) {
         var active: Boolean = false
             set(value) { field = value; repaint() }
 
@@ -170,9 +170,14 @@ object UiStyles {
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             foreground = Palette.FG
             border = BorderFactory.createEmptyBorder(8, 0, 8, 0)
-            preferredSize = Dimension(180, 56)
-            minimumSize = Dimension(0, 56)
-            maximumSize = Dimension(Int.MAX_VALUE, 56)
+            // Each more line of the label makes the button one text line higher.
+            val lines = text.lines().size
+            val height = BUTTON_HEIGHT + (lines - 1) * getFontMetrics(font).height
+            preferredSize = Dimension(180, height)
+            minimumSize = Dimension(0, height)
+            maximumSize = Dimension(Int.MAX_VALUE, height)
+            // A screen reader must not read the HTML of a label with more lines.
+            if (lines > 1) getAccessibleContext().accessibleName = text.replace('\n', ' ')
         }
         override fun paintComponent(g: Graphics) {
             val g2 = g as Graphics2D
@@ -250,17 +255,27 @@ object UiStyles {
             const val BADGE_PADDING = 5
             const val BADGE_RING = 2
             val BADGE_FONT = Font(Font.SANS_SERIF, Font.BOLD, 10)
+
+            /** The height of a button with a label of one line. */
+            const val BUTTON_HEIGHT = 56
+
+            /** Centered HTML lines for a label with a "\n". A label of one line stays plain text. */
+            fun labelOf(text: String): String =
+                if ('\n' !in text) {
+                    text
+                } else {
+                    text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                        .lines().joinToString("<br>", "<html><center>", "</center></html>")
+                }
         }
     }
 
     // Small, simple icons for sidebar
     fun folderIcon(size: Int = 20): Icon = ikon(Material2MZ.SOURCE, size, Palette.LIME)
 
-    fun colorsIcon(size: Int = 20): Icon = ikon(Material2AL.COLOR_LENS, size, Palette.LIME)
+    fun cropRotateIcon(size: Int = 20): Icon = ikon(Material2AL.CROP_ROTATE, size, Palette.LIME)
 
     fun exportIcon(size: Int = 20): Icon = ikon(Feather.FILM, size, Palette.LIME)
-
-    fun cropRotateIcon(size: Int = 20): Icon = ikon(Material2AL.CROP_ROTATE, size, Palette.LIME)
 
     fun pointsIcon(size: Int = 20): Icon = ikon(Material2MZ.SPORTS_TENNIS, size, Palette.LIME)
 

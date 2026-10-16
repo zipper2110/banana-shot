@@ -29,7 +29,7 @@ private fun requireExpiredWindow(context: UiFlowContext) {
     context.driver.requireShowing("nav-export")
     context.driver.requireShowing("nav-projects", false)
     context.driver.requireShowing("nav-points", false)
-    context.driver.requireShowing("nav-scoring", false)
+    context.driver.requireShowing("nav-stats", false)
 }
 
 private fun requireNormalWindow(context: UiFlowContext) {

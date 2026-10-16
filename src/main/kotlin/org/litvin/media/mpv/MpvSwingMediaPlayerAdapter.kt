@@ -9,6 +9,8 @@ import com.sun.jna.win32.W32APIOptions
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.ApplicationLayout
 import org.litvin.adjustments.AdjustmentsV1
+import org.litvin.adjustments.ColorTimeline
+import org.litvin.adjustments.GeometryTimeline
 import org.litvin.media.OverlayShape
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
@@ -450,7 +452,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         } else {
             null
         }
-        val opts = MpvShaderParams.build(adjustments, video, cropEditing)
+        val opts = MpvShaderParams.build(adjustments, video, cropEditing, lastKnownTimeMs)
         if (opts == appliedShaderOpts) return
         appliedShaderOpts = opts
         mpv.setProperty("glsl-shader-opts", opts)
@@ -563,7 +565,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                 // The duration property change can arrive after this event. Read it now for onReady.
                 core?.getProperty("duration")?.toDoubleOrNull()?.let { durationMs = (it * 1000.0).roundToLong() }
                 // A seek while the file loaded only set lastKnownTimeMs, because mpv had no file. Send it now.
-                // Example: "Go to point" in the Scoring tab opens the Points tab and seeks while the video loads.
+                // Example: "Open point" in the Stats tab opens the Points tab and seeks while the video loads.
                 val target = lastKnownTimeMs
                 if (target != loadStartMs) {
                     pendingSeekMs = target
@@ -619,6 +621,9 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                     pendingSeekMs = null
                 }
                 lastKnownTimeMs = ms
+                // With change points (B-47), the geometry and the colors follow the time. The same options are not set again.
+                val timed = GeometryTimeline.hasKeys(adjustments) || ColorTimeline.hasKeys(adjustments)
+                if (timed) SwingUtilities.invokeLater { applyShaderOptions() }
                 onTimeChanged?.invoke(ms)
             }
             "duration" -> if (format == LibMpv.FORMAT_DOUBLE) {

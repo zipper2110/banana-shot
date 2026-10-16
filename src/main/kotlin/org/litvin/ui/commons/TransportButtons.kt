@@ -117,8 +117,8 @@ internal class SeekButton(
 }
 
 /**
- * The size and the texts of a [PlayButton]. [LARGE] is the button of the Points and Scoring tabs.
- * [COMPACT] is the button of the playback bar of the Colors and Transform tabs.
+ * The size and the texts of a [PlayButton]. [LARGE] is the button of the Points tab.
+ * [COMPACT] is the button of the playback bar of the Colors & Transform tab.
  */
 internal data class PlayButtonStyle(
     val size: Int,

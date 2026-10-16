@@ -1,5 +1,8 @@
 package org.litvin
 
+import org.litvin.adjustments.ColorTimeline
+import org.litvin.adjustments.GeometryPlan
+import org.litvin.adjustments.GeometryTimeline
 import org.litvin.points.PointV1
 
 /**
@@ -120,29 +123,102 @@ object FFmpegCommandBuilder {
         knownHeight: Int?,
         outWidth: Int,
         outHeight: Int,
+        atMs: Long = 0L,
     ): String? {
         if (adj == null) return null
         val sourceWidth = knownWidth?.takeIf { it > 0 }
         val sourceHeight = knownHeight?.takeIf { it > 0 }
-        val knownSize = sourceWidth != null && sourceHeight != null
-        val plan = org.litvin.adjustments.GeometryPlan.of(adj, sourceWidth ?: outWidth, sourceHeight ?: outHeight)
+        val plan = GeometryTimeline.planAt(adj, atMs, sourceWidth ?: outWidth, sourceHeight ?: outHeight)
+        return planFilter(plan, sourceWidth, sourceHeight)
+    }
+
+    private fun planFilter(plan: GeometryPlan, sourceWidth: Int?, sourceHeight: Int?): String? {
         if (plan.isIdentity) return null
-        fun fmt(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.6f", d)
         val filters = mutableListOf<String>()
         if (plan.hasRotation) {
-            filters += "rotate=${fmt(Math.toRadians(plan.rotationDeg))}:ow=iw:oh=ih:c=black"
+            filters += "rotate=${fmt6(Math.toRadians(plan.rotationDeg))}:ow=iw:oh=ih:c=black"
         }
         if (plan.hasCrop) {
-            filters += if (knownSize) {
-                val (w, h, x, y) = plan.cropPixels(sourceWidth!!, sourceHeight!!).toList()
+            filters += if (sourceWidth != null && sourceHeight != null) {
+                val (w, h, x, y) = plan.cropPixels(sourceWidth, sourceHeight).toList()
                 "crop=$w:$h:$x:$y"
             } else {
                 val c = plan.crop
-                "crop=w=iw*${fmt(c.width)}:h=ih*${fmt(c.height)}:x=iw*${fmt(c.x)}:y=ih*${fmt(c.y)}"
+                "crop=w=iw*${fmt6(c.width)}:h=ih*${fmt6(c.height)}:x=iw*${fmt6(c.x)}:y=ih*${fmt6(c.y)}"
             }
         }
         return filters.joinToString(",")
     }
+
+    /**
+     * The geometry of the change points (B-47) for the source span [startMs, endMs), and the scale to exactly
+     * [outWidth] x [outHeight]. In the filter, t = 0 is the source time [timeOffsetMs].
+     *
+     * Without a blend in the span, the geometry is fixed. In a blend, the angle and the crop change at each frame:
+     * rotate takes the angle as an expression of t. The crop size of FFmpeg cannot change during the stream, so a
+     * scale with eval=frame makes the crop rectangle [outWidth] x [outHeight] pixels, and a crop of that fixed size
+     * cuts it out. The crop filter keeps in_w of the first frame, so x and y use the scaled size directly.
+     */
+    private fun timedGeometry(
+        adj: org.litvin.adjustments.AdjustmentsV1,
+        startMs: Long,
+        endMs: Long,
+        timeOffsetMs: Long,
+        knownWidth: Int?,
+        knownHeight: Int?,
+        outWidth: Int,
+        outHeight: Int,
+    ): List<String> {
+        val sourceWidth = knownWidth?.takeIf { it > 0 }
+        val sourceHeight = knownHeight?.takeIf { it > 0 }
+        val width = sourceWidth ?: outWidth
+        val height = sourceHeight ?: outHeight
+        val scale = "scale=$outWidth:$outHeight"
+        val blends = GeometryTimeline.blendsIn(adj, width, height, startMs, endMs)
+        if (blends.isEmpty()) {
+            val plan = GeometryTimeline.planAt(adj, startMs, width, height)
+            return listOfNotNull(planFilter(plan, sourceWidth, sourceHeight), scale, "setsar=1")
+        }
+        val time = "(t+${(timeOffsetMs / 1000.0).formatSecs()})"
+        // The plans in time order: the plan before the first blend, then the end plan of each blend.
+        // The angles are unwrapped, so that each blend takes the shorter direction.
+        val plans = listOf(blends.first().from) + blends.map { it.to }
+        val angles = mutableListOf(plans.first().rotationDeg)
+        blends.forEach { blend -> angles += angles.last() + GeometryTimeline.rotationDelta(blend.from, blend.to) }
+
+        fun piecewise(values: List<Double>): String {
+            var expression = fmt6(values.last())
+            for (index in blends.indices.reversed()) {
+                val blend = blends[index]
+                val from = values[index]
+                val to = values[index + 1]
+                val start = (blend.startMs / 1000.0).formatSecs()
+                val end = (blend.endMs / 1000.0).formatSecs()
+                val length = ((blend.endMs - blend.startMs) / 1000.0).formatSecs()
+                val s = "clip(($time-$start)/$length,0,1)"
+                val mixed = "${fmt6(from)}+${fmt6(to - from)}*$s*$s*(3-2*$s)"
+                expression = "if(lt($time,$start),${fmt6(from)},if(lt($time,$end),$mixed,$expression))"
+            }
+            return expression
+        }
+
+        val filters = mutableListOf<String>()
+        if (angles.any { kotlin.math.abs(it) >= 0.001 }) {
+            filters += "rotate=a='(${piecewise(angles)})*PI/180':ow=iw:oh=ih:c=black"
+        }
+        val cropWidth = piecewise(plans.map { it.crop.width })
+        val cropHeight = piecewise(plans.map { it.crop.height })
+        val scaledWidth = "ceil($outWidth/($cropWidth)/2)*2"
+        val scaledHeight = "ceil($outHeight/($cropHeight)/2)*2"
+        filters += "scale=w='$scaledWidth':h='$scaledHeight':eval=frame"
+        val x = "min((${piecewise(plans.map { it.crop.x })})*$scaledWidth,$scaledWidth-$outWidth)"
+        val y = "min((${piecewise(plans.map { it.crop.y })})*$scaledHeight,$scaledHeight-$outHeight)"
+        filters += "crop=w=$outWidth:h=$outHeight:x='$x':y='$y'"
+        filters += "setsar=1"
+        return filters
+    }
+
+    private fun fmt6(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.6f", d)
 
     /**
      * The arguments that write one frame of the source to an image file, for example a PNG.
@@ -161,9 +237,9 @@ object FFmpegCommandBuilder {
     ): List<String> {
         val height = width * 9 / 16
         val filters = listOfNotNull(
-            geometryFilter(adjustments, sourceWidth, sourceHeight, width, height),
+            geometryFilter(adjustments, sourceWidth, sourceHeight, width, height, atMs - STILL_FRAME_OFFSET_MS),
             "scale=$width:-2",
-            colorFilter(adjustments, toneRange),
+            colorFilter(adjustments?.let { ColorTimeline.at(it, atMs - STILL_FRAME_OFFSET_MS) }, toneRange),
         )
         val seekSecs = ((atMs - STILL_FRAME_OFFSET_MS).coerceAtLeast(0) / 1000.0).formatSecs()
         return listOf(
@@ -240,8 +316,74 @@ object FFmpegCommandBuilder {
         var aMap = "[aout]"
 
         fun buildColorFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? = colorFilter(adj, p.toneRange)
+        // A freeze shows the geometry of its frame. Without change points, the time has no effect.
+        val geometryAtMs = freeze?.let { it.atMs?.minus(STILL_FRAME_OFFSET_MS) ?: Long.MAX_VALUE } ?: 0L
         fun buildGeometryFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? =
-            geometryFilter(adj, p.sourceWidth, p.sourceHeight, p.outWidth, p.outHeight)
+            geometryFilter(adj, p.sourceWidth, p.sourceHeight, p.outWidth, p.outHeight, geometryAtMs)
+
+        // With change points (B-47), each part of the video gets the geometry and the colors of its time,
+        // and an exact output size, before the concat.
+        val timedAdjustments = p.adjustments
+            ?.takeIf { freeze == null && (GeometryTimeline.hasKeys(it) || ColorTimeline.hasKeys(it)) }
+        val exactOutHeight = if (p.outHeight > 0 && p.outHeight % 2 == 0) p.outHeight else p.outWidth * 9 / 16 / 2 * 2
+        fun timedFilters(adj: org.litvin.adjustments.AdjustmentsV1, startMs: Long, endMs: Long): List<String> =
+            timedGeometry(adj, startMs, endMs, startMs, p.sourceWidth, p.sourceHeight, p.outWidth, exactOutHeight)
+
+        // A color fade reads its part of the source from one more input, without audio. These inputs come
+        // after the other inputs.
+        val baseInputCount = when {
+            freeze != null -> 1
+            segmentInputs -> p.keeps.size
+            p.sourceHasAudio -> 1
+            else -> 2
+        }
+        val extraInputs = mutableListOf<String>()
+        fun addVideoInput(startMs: Long, endMs: Long): Int {
+            val index = baseInputCount + extraInputs.count { it == "-i" }
+            extraInputs += listOf("-an", "-ss", (startMs / 1000.0).formatSecs())
+            if (endMs != Long.MAX_VALUE) extraInputs += listOf("-t", ((endMs - startMs) / 1000.0).formatSecs())
+            extraInputs += listOf("-i", p.sourcePath)
+            return index
+        }
+
+        /**
+         * The video of the source span [startMs, endMs) from input [spanInput], as the label [label].
+         * A hold has fixed colors. A fade splits its part into the old and the new colors and fades between them.
+         */
+        fun timedSpan(
+            adj: org.litvin.adjustments.AdjustmentsV1,
+            startMs: Long,
+            endMs: Long,
+            spanInput: Int,
+            label: String,
+        ): List<String> {
+            fun chain(piece: ColorTimeline.Piece, input: Int, out: String): List<String> {
+                val filters = listOf("setpts=PTS-STARTPTS") + timedFilters(adj, piece.startMs, piece.endMs)
+                val base = "[$input:v]" + filters.joinToString(",")
+                return when (piece) {
+                    is ColorTimeline.Piece.Hold ->
+                        listOf(base + buildColorFilter(piece.colors)?.let { ",$it" }.orEmpty() + "[$out]")
+                    is ColorTimeline.Piece.Fade -> {
+                        val seconds = ((piece.endMs - piece.startMs) / 1000.0).formatSecs()
+                        listOf(
+                            "$base,split[${out}a][${out}b]",
+                            "[${out}a]${buildColorFilter(piece.from) ?: "null"}[${out}from]",
+                            "[${out}b]${buildColorFilter(piece.to) ?: "null"}[${out}to]",
+                            "[${out}from][${out}to]xfade=transition=fade:duration=$seconds:offset=0[$out]",
+                        )
+                    }
+                }
+            }
+            val pieces = ColorTimeline.pieces(adj, startMs, endMs)
+            if (pieces.size == 1) return chain(pieces.single(), spanInput, label)
+            // Each piece reads its own part of the source. The span input still gives the audio.
+            val parts = mutableListOf<String>()
+            pieces.forEachIndexed { index, piece ->
+                parts += chain(piece, addVideoInput(piece.startMs, piece.endMs), "${label}p$index")
+            }
+            parts += pieces.indices.joinToString("") { "[${label}p$it]" } + "concat=n=${pieces.size}:v=1:a=0[$label]"
+            return parts
+        }
 
         val geometry = buildGeometryFilter(p.adjustments)
         // After a crop, "-2" keeps the aspect of the crop rectangle. The crop snaps to even source pixels,
@@ -268,7 +410,7 @@ object FFmpegCommandBuilder {
             )
             geometry?.let { video += it }
             video += scale
-            buildColorFilter(p.adjustments)?.let { video += it }
+            buildColorFilter(p.adjustments?.let { ColorTimeline.at(it, geometryAtMs) })?.let { video += it }
             p.subtitlesAssPath?.let { video += "subtitles='${escapeForFilterPath(it)}'" }
             // The source audio keeps its sample rate and channels, so the AAC settings match the other passes.
             val audio = if (p.sourceHasAudio) {
@@ -286,7 +428,11 @@ object FFmpegCommandBuilder {
             p.keeps.forEachIndexed { idx, keep ->
                 val vLbl = "v$idx"
                 val aLbl = "a$idx"
-                parts += "[$idx:v]setpts=PTS-STARTPTS[$vLbl]"
+                parts += if (timedAdjustments != null) {
+                    timedSpan(timedAdjustments, keep.startMs.toLong(), keep.endMs.toLong(), idx, vLbl)
+                } else {
+                    listOf("[$idx:v]setpts=PTS-STARTPTS[$vLbl]")
+                }
                 parts += if (p.sourceHasAudio) {
                     "[$idx:a]asetpts=PTS-STARTPTS[$aLbl]"
                 } else {
@@ -299,10 +445,15 @@ object FFmpegCommandBuilder {
             // Concat and scale after concat
             parts += vLabels.joinToString(separator = "") + "concat=n=" + p.keeps.size + ":v=1:a=0[vcat]"
             // Output scaled video into an intermediate label; we may append subtitles next
-            parts += "[vcat]" + listOfNotNull(geometry, scale).joinToString(",") + "[vsc]"
+            parts += if (timedAdjustments != null) {
+                // Each segment already has its geometry and the output size.
+                "[vcat]null[vsc]"
+            } else {
+                "[vcat]" + listOfNotNull(geometry, scale).joinToString(",") + "[vsc]"
+            }
             parts += aLabels.joinToString(separator = "") + "concat=n=${p.keeps.size}:v=0:a=1" + aMap
             // Apply color adjustments after scale to match preview, before subtitles
-            val color = buildColorFilter(p.adjustments)
+            val color = if (timedAdjustments != null) null else buildColorFilter(p.adjustments)
             var baseLabel = "[vsc]"
             if (color != null) {
                 parts += "$baseLabel$color[vclr]"
@@ -326,7 +477,19 @@ object FFmpegCommandBuilder {
                 vMap = baseLabel
             }
             filterComplex = parts.joinToString(";")
+        } else if (timedAdjustments != null) {
+            // The whole video with change points: the first input gives the audio, and the pieces the video.
+            val parts = timedSpan(timedAdjustments, 0L, Long.MAX_VALUE, 0, "vspan").toMutableList()
+            val subPath = p.subtitlesAssPath
+            if (subPath != null) {
+                parts += "[vspan]subtitles='${escapeForFilterPath(subPath)}'$vMap"
+            } else {
+                vMap = "[vspan]"
+            }
+            aMap = if (p.sourceHasAudio) "0:a:0" else "1:a:0"
+            filterComplex = parts.joinToString(";")
         }
+        args += extraInputs
 
         // Video options
         args += listOf("-c:v", videoCodec)
@@ -385,6 +548,7 @@ object FFmpegCommandBuilder {
         // Filters
         if (filterComplex != null) {
             args += listOf("-filter_complex", filterComplex, "-map", vMap, "-map", aMap)
+            if (timedAdjustments != null && !segmentInputs && !p.sourceHasAudio) args += "-shortest"
         } else {
             // simple scale, optionally followed by color adjustments and subtitles burn-in
             val sub = p.subtitlesAssPath

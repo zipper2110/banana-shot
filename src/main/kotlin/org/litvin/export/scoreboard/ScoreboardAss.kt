@@ -11,7 +11,7 @@ data class BoardPlacement(val x: Double, val y: Double, val scale: Double)
 /**
  * Converts a [ScoreboardScene] to ASS event texts (the Text field of a Dialogue line).
  *
- * The export writes these texts into the ASS file for FFmpeg. The scoring preview sends the same
+ * The export writes these texts into the ASS file for FFmpeg. The Points tab preview sends the same
  * texts to the mpv `osd-overlay` command. Both use libass, so the board looks the same.
  * Every event sets all of its override tags, so the event style has no effect on the result.
  */

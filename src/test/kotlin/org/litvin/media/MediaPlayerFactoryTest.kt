@@ -21,7 +21,7 @@ class MediaPlayerFactoryTest {
         val factory = PreviewMediaPlayerFactory(playerCreator = { created.removeFirst() })
 
         val managedPlayer = factory.create(MediaScreen.POINTS)
-        factory.create(MediaScreen.CROP)
+        factory.create(MediaScreen.ADJUST_VIDEO)
         managedPlayer.close()
         managedPlayer.close()
         factory.close()
@@ -46,7 +46,7 @@ class MediaPlayerFactoryTest {
         )
         var result: Result<SwingMediaPlayer>? = null
         val creator = Thread({
-            result = runCatching { factory.create(MediaScreen.SCORING) }
+            result = runCatching { factory.create(MediaScreen.POINTS) }
             finished.countDown()
         }, "media-factory-race-test")
 

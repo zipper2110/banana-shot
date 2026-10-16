@@ -245,13 +245,6 @@ internal object Palette {
 
     val PLAYHEAD by token { RED }
 
-    // ---- Scoring ----
-
-    /** The racket of the serve button, and its fill and border. */
-    val RACKET by onBackground(dark = 0xC2DB43, light = 0x5A7010)
-    val SERVE_FILL by surface(0x3A3F24)
-    val SERVE_LINE by surface(0x59622C)
-
     // ---- Pictures of a court (previews that stand in for a video frame) ----
 
     val COURT_GRASS = Color(0x3A6E46)

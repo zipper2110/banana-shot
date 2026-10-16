@@ -71,7 +71,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             else -> "The points won are equal."
         }
         return "<html>Point ${point.number}, set ${point.set}: $winner won the point.<br>$lead<br>" +
-            "Click to open the point in the Scoring tab.</html>"
+            "Click to open the point in the Points tab.</html>"
     }
 
     override fun paintComponent(graphics: Graphics) {

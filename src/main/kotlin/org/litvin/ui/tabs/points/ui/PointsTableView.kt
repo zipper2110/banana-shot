@@ -32,7 +32,7 @@ import javax.swing.SwingUtilities
 
 /**
  * The points table of the side column: one row for each marked point and each comment, in time order.
- * A click on a row selects it and seeks to its start. The pending point is not a row; [MarkPanel] shows it.
+ * A click on a row selects it and seeks to its start. The pending point is not a row; [PointStartButton] shows it.
  */
 class PointsTableView(
     private val actions: PointsActions,
@@ -46,6 +46,12 @@ class PointsTableView(
     }
 
     private val rows = mutableListOf<TableRow>()
+
+    /** The winner color of a point, or null for a point without a score. */
+    var winnerColor: (pointId: String) -> java.awt.Color? = { null }
+
+    /** The game, set and serve marks of a point, or null for a point without marks. */
+    internal var pointMarks: (pointId: String) -> PointMarks? = { null }
     private var lastState: PointsViewState? = null
     private var hoveredRow: TableRow? = null
 
@@ -155,6 +161,8 @@ class PointsTableView(
                         visualIndex = visualIndex,
                         number = number,
                         point = event.point,
+                        stripColor = { winnerColor(event.point.id) },
+                        marks = { pointMarks(event.point.id) },
                         onToggleFavorite = { actions.toggleFavorite(event.point.id) },
                         onEdit = { EditPointDialog.show(this, event.point, number, actions) },
                         onDelete = {

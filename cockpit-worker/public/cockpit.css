@@ -91,6 +91,16 @@ button { font: inherit; color: inherit; }
 .segmented button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 600; }
 .segmented.small button { padding: 3px 10px; font-size: 13px; }
 
+.stepper { display: inline-flex; align-items: center; gap: 4px; }
+.stepper .ghost:disabled { opacity: 0.4; cursor: default; }
+.stepper input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+}
 .switch { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); cursor: pointer; user-select: none; }
 .switch input { accent-color: var(--s1); width: 15px; height: 15px; margin: 0; }
 

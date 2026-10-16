@@ -352,11 +352,11 @@ object RenderQueueManager {
                 // The crop/rotate geometry needs the source aspect. Probe the size only when the geometry is used.
                 val jobAdjustments = job.adjustments
                 val sourceSize = jobAdjustments
-                    .takeIf { !org.litvin.adjustments.GeometryPlan.of(it, job.outWidth, job.outHeight).isIdentity }
+                    .takeIf { org.litvin.adjustments.GeometryTimeline.hasGeometry(it, job.outWidth, job.outHeight) }
                     ?.let { org.litvin.export.ExportResolutionProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable) }
                 // The brightness and shadows/highlights curve needs the black and white codes of the source. Probe them only when the curve is used.
                 val toneRange = jobAdjustments
-                    .takeIf { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
+                    .takeIf { adj -> org.litvin.adjustments.ColorTimeline.allColors(adj).any { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments } }
                     ?.let { org.litvin.export.SourceToneRangeProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable) }
                     ?: ToneRange.LIMITED
                 // A source without audio gets silent audio. Without it, the filter graph refers to a missing stream.

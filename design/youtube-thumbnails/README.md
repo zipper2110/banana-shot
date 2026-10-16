@@ -23,7 +23,39 @@ ffmpeg -ss 1800 -i "$F" -frames:v 1 -vf scale=2560:-2 -q:v 2 doubles-frame.jpg
 ffmpeg -ss 1800 -i "$F" -frames:v 1 -vf crop=900:330:96:96 doubles-scoreboard.png
 ```
 
+## highlights: the doubles highlights
+
+- The same layout as `doubles`, with "BEST POINTS". "HIGHLIGHTS" in big
+  letters is too wide: it covers the player.
+- `highlights-frame.jpg` is the frame at 4:02 of the export
+  `D:\Dima-Yana = Iliya-Marina-favs-balanced-4K.mp4`.
+- This scoreboard has fewer columns, so its crop is narrower (805 px).
+
+```bash
+F="D:/Dima-Yana = Iliya-Marina-favs-balanced-4K.mp4"
+ffmpeg -ss 242.0 -i "$F" -frames:v 1 -vf scale=2560:-2 -q:v 2 highlights-frame.jpg
+ffmpeg -ss 242.0 -i "$F" -frames:v 1 -vf crop=805:330:96:96 highlights-scoreboard.png
+```
+
+## singles: the singles full match
+
+- The same layout as `doubles`, with "SINGLES".
+- `singles-frame.jpg` is the frame at 16:30 of the export
+  `D:\Dima - Vika-points-best-4K.mp4`. The frame is zoomed 1.33×, so
+  that the player is bigger. The zoom also removes the scoreboard of the
+  frame and the black corner at the bottom right.
+- `singles-scoreboard.png` has the same scale as in `doubles`. The names
+  are short, so the scoreboard is smaller.
+
+```bash
+F="D:/Dima - Vika-points-best-4K.mp4"
+ffmpeg -ss 990.0 -i "$F" -frames:v 1 -vf crop=2880:1620:400:480,scale=2560:-2 -q:v 2 singles-frame.jpg
+ffmpeg -ss 990.0 -i "$F" -frames:v 1 -vf crop=615:265:96:96 singles-scoreboard.png
+```
+
 ## Render a thumbnail
+
+Change `doubles` to the name of the thumbnail.
 
 ```bash
 "/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu \

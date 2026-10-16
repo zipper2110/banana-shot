@@ -14,7 +14,6 @@ internal class ApplicationScreen(
     val points = PointsScreen(this)
     val colors = ColorsScreen(this)
     val crop = CropScreen(this)
-    val scoring = ScoringScreen(this)
     val export = ExportScreen(this)
 
     fun assertProjectsOnlyNavigation() {
@@ -91,7 +90,7 @@ internal class ApplicationScreen(
             context.driver.requireShowing("nav-export")
             // Feedback also shows with no open project (T3 of B-8).
             context.driver.requireShowing("nav-feedback")
-            listOf("nav-points", "nav-colors", "nav-crop", "nav-scoring", "nav-stats")
+            listOf("nav-points", "nav-adjust-video", "nav-stats")
                 .forEach { name -> context.driver.requireShowing(name, projectNavigationVisible) }
         }
     }
@@ -109,12 +108,19 @@ internal abstract class UserFlowScreen(
 ) {
     protected val context: UiFlowContext get() = application.context
 
-    protected fun open(navigationName: String, visibleComponentName: String) {
+    /** Opens a tab. [sectionName] is the button of a sub-tab to click after the tab shows, for example on Colors & Transform. */
+    protected fun open(navigationName: String, visibleComponentName: String, sectionName: String? = null) {
         // The project tabs show only after a project opens, and the project opens after the click on Open.
         application.eventually("$navigationName to become visible") {
             context.driver.requireShowing(navigationName)
         }
         context.driver.click(navigationName)
+        if (sectionName != null) {
+            application.eventually("$sectionName to become visible") {
+                context.driver.requireShowing(sectionName)
+            }
+            context.driver.click(sectionName)
+        }
         application.eventually("$visibleComponentName to become visible") {
             context.driver.requireShowing(visibleComponentName)
         }

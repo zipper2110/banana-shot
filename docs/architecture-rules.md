@@ -16,7 +16,7 @@ Top‑level feature and shared packages:
 - `org.litvin.feedback` — feedback reports (B-8): the report and its JSON, the log data, the sender, the endpoint setting.
 - `org.litvin.shared.util` — cross‑cutting utilities and primitives (timecode, debouncers, pagination, OS tweaks, etc.).
 - `org.litvin.ui` — UI layer only.
-  - `org.litvin.ui.tabs.{projects,points,scoring,adjustments,crop,export}` — tab UIs per feature (plus `test`, a diagnostics tab wired in only when the test flag is enabled).
+  - `org.litvin.ui.tabs.{projects,points,stats,adjustments,export}` — tab UIs per feature (`adjustments` is the Colors & Transform tab with the Colors and Transform sub-tabs) (plus `test`, a diagnostics tab wired in only when the test flag is enabled).
   - `org.litvin.ui.commons` — shared UI widgets/components/styles with no tab dependency.
   - `org.litvin.ui.help` — help catalog and dialog.
   - `org.litvin.ui.privacy` — analytics consent dialog and the Privacy page of the More window.
@@ -99,8 +99,8 @@ For a feature `Foo` (e.g., Scoring, Points):
 - State is immutable (`data class FooViewState(…)`). Avoid mutable UI‑driven state outside this object.
 
 ### Reference implementation
-`projects` is the worked example; `crop` is the same shape in miniature. Read those rather than a sketch:
-- Contracts — [`ProjectsContracts.kt`](../src/main/kotlin/org/litvin/ui/tabs/projects/presenter/ProjectsContracts.kt), [`CropRotateContracts.kt`](../src/main/kotlin/org/litvin/ui/tabs/crop/presenter/CropRotateContracts.kt)
+`projects` is the worked example; `adjustments` is the same shape in miniature. Read those rather than a sketch:
+- Contracts — [`ProjectsContracts.kt`](../src/main/kotlin/org/litvin/ui/tabs/projects/presenter/ProjectsContracts.kt), [`AdjustVideoContracts.kt`](../src/main/kotlin/org/litvin/ui/tabs/adjustments/presenter/AdjustVideoContracts.kt)
 - Presenter — [`DefaultProjectsPresenter.kt`](../src/main/kotlin/org/litvin/ui/tabs/projects/presenter/DefaultProjectsPresenter.kt)
 - View wiring (`attach`/`detach` from `addNotify`/`removeNotify`) — [`SwingProjectsPanel.kt`](../src/main/kotlin/org/litvin/ui/tabs/projects/SwingProjectsPanel.kt)
 - Presenter test against a fake view — [`DefaultProjectsPresenterTest.kt`](../src/test/kotlin/org/litvin/ui/tabs/projects/presenter/DefaultProjectsPresenterTest.kt)
@@ -146,7 +146,7 @@ For a feature `Foo` (e.g., Scoring, Points):
 Known debt, to be paid down opportunistically rather than in a single sweep:
 - The root `org.litvin` package still holds ~20 classes that belong in feature packages — FFmpeg/render/overlay pieces (`export`), scoreboard styling and timeline (`scoring`), `Pagination`/`JsonFileIO`/`SessionSettings` (`shared.util`), `GeometryViewportPanel` (`ui`).
 - Several files already declare a feature package while still sitting in the `org/litvin/` directory (e.g. `Timecode.kt`, `EdlIO.kt`, `ScoreIO.kt`, `PointsDispatcher.kt`). Move the file when you next touch it.
-- Only `projects` and `crop` are on MVP. `points` and `scoring` use an older container pattern — action interfaces (`PointsActions`, `ScoringActions`) plus a `ViewState` snapshot pushed to leaf components, with no presenter — and their contracts sit in the tab package rather than `.presenter`. `adjustments` and `export` have no contracts at all. New tabs follow the `projects`/`crop` shape.
+- Only `projects` and `adjustments` are on MVP. `points` uses an older container pattern — action interfaces (`PointsActions`) plus a `ViewState` snapshot pushed to leaf components, with no presenter — and its contracts sit in the tab package rather than `.presenter`. `export` has no contracts at all. New tabs follow the `projects`/`adjustments` shape.
 - `RulesEngine` is superseded by `scoring.ScoringEngine` and is now referenced only from tests; fold the remaining coverage into `ScoringEngineTest` and delete it.
 
 ### Migration checklist (per tab)

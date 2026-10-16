@@ -134,4 +134,85 @@ class FFmpegCommandBuilderGeometryTest {
         assertTrue(vf(build(adjustments)).contains("crop=$w:$h:$x:$y,"), vf(build(adjustments)))
         assertTrue(listOf(w, h, x, y).all { it % 2 == 0 }, "even pixels: $w $h $x $y")
     }
+
+    private val changePoints = AdjustmentsV1(
+        geometryKeys = listOf(org.litvin.adjustments.GeometryKeyV1(atMs = 5_000, zoom = 1.5f, rotationDeg = 2.0f)),
+    )
+
+    private fun buildKeeps(adjustments: AdjustmentsV1, keeps: List<PointV1>) = FFmpegCommandBuilder.build(
+        FFmpegCommandBuilder.BuildParams(
+            sourcePath = "input.mp4",
+            outputPath = "out.mp4",
+            preset = preset,
+            outWidth = 1920,
+            outHeight = 1080,
+            idleTrim = true,
+            keeps = keeps,
+            adjustments = adjustments,
+            sourceWidth = 3840,
+            sourceHeight = 2160,
+        )
+    ).args
+
+    @Test
+    fun `with change points each segment gets the geometry of its time before the concat`() {
+        val args = buildKeeps(
+            changePoints,
+            listOf(PointV1(id = "A", startMs = 0, endMs = 3_000), PointV1(id = "B", startMs = 6_000, endMs = 8_000)),
+        )
+        val graph = args[args.indexOf("-filter_complex") + 1]
+
+        assertTrue(graph.contains("[0:v]setpts=PTS-STARTPTS,scale=1920:1080,setsar=1[v0]"), graph)
+        assertTrue(graph.contains("[1:v]setpts=PTS-STARTPTS,rotate=0.034907:ow=iw:oh=ih:c=black,crop="), graph)
+        assertTrue(graph.contains("[vcat]null[vsc]"), graph)
+        assertFalse(graph.contains("eval=frame"), graph)
+    }
+
+    @Test
+    fun `a segment with a blend changes the angle and the crop at each frame`() {
+        val args = buildKeeps(changePoints, listOf(PointV1(id = "A", startMs = 3_000, endMs = 7_000)))
+        val graph = args[args.indexOf("-filter_complex") + 1]
+        val segment = graph.substringBefore("[v0]")
+
+        assertTrue(segment.contains("rotate=a='("), segment)
+        assertTrue(segment.contains("(t+3.000)"), segment)
+        assertTrue(segment.contains("lt((t+3.000),4.000)"), segment)
+        assertTrue(segment.contains(":eval=frame,crop=w=1920:h=1080:"), segment)
+        assertTrue(segment.endsWith("setsar=1"), segment)
+    }
+
+    @Test
+    fun `a still frame uses the geometry of its time`() {
+        val before = FFmpegCommandBuilder.stillFrameArgs("in.mp4", 1_000, "out.png", 1280, changePoints, 3840, 2160)
+        val after = FFmpegCommandBuilder.stillFrameArgs("in.mp4", 9_000, "out.png", 1280, changePoints, 3840, 2160)
+
+        assertFalse(before[before.indexOf("-vf") + 1].contains("rotate="))
+        assertTrue(after[after.indexOf("-vf") + 1].startsWith("rotate=0.034907"), after.toString())
+    }
+
+    private val colorPoint = AdjustmentsV1(colorKeys = listOf(org.litvin.adjustments.ColorKeyV1(atMs = 5_000, brightness = 1.3f)))
+
+    @Test
+    fun `a segment with a color blend fades between the old and the new colors`() {
+        val args = buildKeeps(colorPoint, listOf(PointV1(id = "A", startMs = 3_000, endMs = 7_000)))
+        val graph = args[args.indexOf("-filter_complex") + 1]
+
+        // The keep input gives the audio. Three more inputs without audio give the hold, the fade and the hold.
+        assertEquals(listOf("-an", "-ss", "3.000", "-t", "1.000", "-i"), args.subList(args.indexOf("-an"), args.indexOf("-an") + 6))
+        assertEquals(4, args.count { it == "-i" })
+        assertTrue(graph.contains("[2:v]setpts=PTS-STARTPTS,scale=1920:1080,setsar=1,split[v0p1a][v0p1b]"), graph)
+        assertTrue(graph.contains("[v0p1from][v0p1to]xfade=transition=fade:duration=1.000:offset=0[v0p1]"), graph)
+        assertTrue(graph.contains("[v0p0][v0p1][v0p2]concat=n=3:v=1:a=0[v0]"), graph)
+        assertTrue(graph.contains("[0:a]asetpts=PTS-STARTPTS[a0]"), graph)
+    }
+
+    @Test
+    fun `the whole video with color change points maps the audio of the first input`() {
+        val args = build(colorPoint)
+
+        assertFalse(args.contains("-vf"))
+        assertEquals("0:a:0", args[args.lastIndexOf("-map") + 1])
+        val lastInput = args.subList(args.lastIndexOf("-ss"), args.lastIndexOf("-i"))
+        assertEquals(listOf("-ss", "5.000"), lastInput, "The last piece has no length")
+    }
 }

@@ -20,8 +20,8 @@ import javax.swing.JSlider
 import kotlin.math.ceil
 
 /**
- * The right panel of the Colors tab: a header with the changed count and "Reset all",
- * the Light and Color cards with the six sliders, and a footer.
+ * The Colors sub-tab of the Colors & Transform tab: a header with the changed count and "Reset all",
+ * and the Light and Color cards with the six sliders.
  * When the player cannot show a live color preview, a yellow notice shows above the cards
  * and each slider tooltip tells it.
  */
@@ -46,10 +46,9 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
     val changedCount: Int get() = rows.values.count { it.isChanged }
 
     init {
-        name = "adj-color-right"
+        name = "adjust-colors"
         isOpaque = true
         background = Palette.BG
-        border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
         preferredSize = Dimension(PANEL_WIDTH, 600)
         minimumSize = Dimension(PANEL_WIDTH, 360)
 
@@ -67,39 +66,11 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
 
         add(header, BorderLayout.NORTH)
         add(column.inScrollPane(), BorderLayout.CENTER)
-        add(Footer(), BorderLayout.SOUTH)
         refreshStatus()
     }
 
     /** Updates the header text and the Reset all style after a slider change. */
     private fun refreshStatus() = header.showChanged(changedCount, rows.size)
-
-    /** "Saved to the project. Export uses these values." with a save icon, under a line. */
-    private class Footer : JComponent() {
-        private val saveIcon = UiKit.icon(Material2OutlinedMZ.SAVE, 15, Palette.FG_3)
-        private val textFont = UiKit.font(11.5f)
-
-        init {
-            name = "colors-footer"
-            toolTipText = FOOTER_TEXT
-        }
-
-        override fun getPreferredSize() = Dimension(PANEL_WIDTH, FOOTER_HEIGHT)
-
-        override fun paintComponent(g: Graphics) {
-            val g2 = UiKit.smooth(g)
-            try {
-                g2.color = Palette.LINE
-                g2.fillRect(0, 0, width, 1)
-                val top = 1
-                val inner = height - top
-                saveIcon.paintIcon(this, g2, PAD_X, top + (inner - saveIcon.iconHeight) / 2)
-                UiKit.drawText(g2, FOOTER_TEXT, textFont, Palette.FG_3, (PAD_X + saveIcon.iconWidth + 8).toFloat(), top.toFloat(), inner.toFloat())
-            } finally {
-                g2.dispose()
-            }
-        }
-    }
 
     companion object {
         const val PANEL_WIDTH = SIDE_PANEL_WIDTH
@@ -108,10 +79,6 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
         const val UNSUPPORTED_TIP =
             "Live preview for this control may not be available on this system; values will still be saved for export."
         const val NOTICE_TEXT = "Live preview may not be available on this system. The values are still saved for export."
-        const val FOOTER_TEXT = "Saved to the project. Export uses these values."
-
-        private const val PAD_X = 16
-        private const val FOOTER_HEIGHT = 37
     }
 }
 

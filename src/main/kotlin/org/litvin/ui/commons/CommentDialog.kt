@@ -26,7 +26,7 @@ data class CommentInput(
 )
 
 /**
- * Modal editor for creating or changing a source-time-pinned comment. The Points tab and the Scoring tab use it.
+ * Modal editor for creating or changing a source-time-pinned comment. The Points tab uses it.
  * [namePrefix] starts the names of the fields, for example "points" gives "points-comment-text".
  */
 object CommentDialog {

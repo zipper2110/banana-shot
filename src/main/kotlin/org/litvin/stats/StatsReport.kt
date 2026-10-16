@@ -13,7 +13,7 @@ import org.litvin.scoring.ScoringEngine
 /** The statistics of a project: for the full match, and for each set. */
 data class StatsReport(
     val score: ScoreV1,
-    /** The points in time order, as the Scoring tab uses them. */
+    /** The points in time order, as the scoring uses them. */
     val points: List<PointV1>,
     val timeline: ScoringEngine.Timeline,
     val match: MatchStats,

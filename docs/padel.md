@@ -65,10 +65,10 @@ Projects:
   (preferences `lastSport` and `lastPadelRules` of the Projects node).
 - A padel project gets `score.json` when the project is created. The file
   has `sport: PADEL`, the rules, and the names "Team 1" and "Team 2". The
-  flag `useDefaultScoreboard` makes the Scoring tab apply the default
-  scoreboard style, as for a project without `score.json`. The Scoring tab
-  still opens the scoring settings on the first visit, so the user can type
-  the team names.
+  flag `useDefaultScoreboard` makes the Points tab apply the default
+  scoreboard style, as for a project without `score.json`. The Points tab
+  still opens the scoring settings before the first score, so the user can
+  type the team names.
 - The Projects list has a Sport column. A project without `score.json` is
   tennis.
 

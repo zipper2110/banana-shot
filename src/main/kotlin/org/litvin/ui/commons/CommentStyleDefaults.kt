@@ -5,7 +5,7 @@ import java.util.prefs.Preferences
 
 /**
  * The style of a new comment: the last style that the user saved in the comment dialog, in any project.
- * The Points tab and the Scoring tab share it.
+ * The Points tab uses it.
  */
 interface CommentStyleDefaults {
     /** Returns the last saved style, or [CommentStyle.OUTLINE] when the user did not save a style yet. */

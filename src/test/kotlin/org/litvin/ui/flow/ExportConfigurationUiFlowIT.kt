@@ -19,11 +19,9 @@ class ExportConfigurationUiFlowIT {
         val application = ApplicationScreen(context)
 
         application.projects.open().openRecent(project.manifest.id)
-        application.points.markPoint(1_000, 2_000)
+        application.points.markScoredPoint(1_000, 2_000, Outcome.P1)
         val pointId = application.points.assertSinglePointPersisted(project.directory, 1_000, 2_000)
-        application.scoring.open()
-            .awardPointToPlayer1()
-            .assertOutcomePersisted(project.directory, pointId, Outcome.P1)
+        application.points.assertOutcomePersisted(project.directory, pointId, Outcome.P1)
 
         application.export.open()
             .initialize(output)
@@ -39,11 +37,9 @@ class ExportConfigurationUiFlowIT {
         val application = ApplicationScreen(context)
 
         application.projects.open().openRecent(project.manifest.id)
-        application.points.markPoint(1_000, 2_000)
+        application.points.markScoredPoint(1_000, 2_000, Outcome.NONE)
         val pointId = application.points.assertSinglePointPersisted(project.directory, 1_000, 2_000)
-        application.scoring.open()
-            .awardNoPoint()
-            .assertOutcomePersisted(project.directory, pointId, Outcome.NONE)
+        application.points.assertOutcomePersisted(project.directory, pointId, Outcome.NONE)
 
         application.export.open()
             .initialize(output)

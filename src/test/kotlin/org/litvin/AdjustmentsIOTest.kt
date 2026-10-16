@@ -80,4 +80,20 @@ class AdjustmentsIOTest {
         assertTrue(txt.contains("\"foo\""))
         assertTrue(txt.contains("\"bar\""))
     }
+
+    @Test
+    fun changePoints_roundTrip_andNoListWithoutChangePoints() {
+        val tmpDir: Path = Files.createTempDirectory("adj_keys_")
+        val adjPath = tmpDir.resolve("adjustments.json").toFile().absolutePath
+        val adj = AdjustmentsV1(
+            rotationDeg = 1.0f,
+            geometryKeys = listOf(org.litvin.adjustments.GeometryKeyV1(atMs = 12_345, zoom = 1.2f, panX = 0.1f, panY = -0.2f, rotationDeg = 3.5f)),
+        )
+
+        AdjustmentsIO.write(adjPath, adj)
+        assertEquals(adj.geometryKeys, AdjustmentsIO.read(adjPath).geometryKeys)
+
+        AdjustmentsIO.write(adjPath, AdjustmentsV1())
+        assertTrue(!File(adjPath).readText().contains("geometryKeys"), "An empty list is not written")
+    }
 }

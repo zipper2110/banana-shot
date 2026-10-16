@@ -134,8 +134,8 @@ A user who does not read English can do all the steps in their language:
   key names in English ("Space", "Shift+Left").
 - Some code compares or stores a display text. These places break when the
   text is translated:
-  - `ui/tabs/scoring/ui/ScoringPointsList.kt` compares a badge text with
-    `"SET"`.
+  - `ui/tabs/points/PointsScoring.kt` and `ui/tabs/points/ui/PointsTableRows.kt`
+    compare a badge text with `"SET"`.
   - `ui/tabs/crop/TransformControls.kt` compares a formatted number with
     `"0.0"` and `"-0.0"`. With a decimal comma, the check fails.
   - `ui/more/MoreDialog.kt` finds a section by its title
@@ -257,7 +257,7 @@ Areas, in a proposed order:
 2. App shell, sidebar, and the More window (`SwingMainApp`, `ui/more`).
 3. Projects tab and the new-project dialogs, with the padel rules.
 4. Points tab.
-5. Scoring tab and the score settings dialog.
+5. The scoring controls of the Points tab and the score settings dialog.
 6. Statistics tab and the statistics names (`stats/StatRows.kt`).
 7. Colors and Transform tabs.
 8. Export tab, the queue, the exports table, and `ExportFailureAdvice`.
@@ -445,8 +445,8 @@ separate setting.
 
 - Use layouts that grow with the text. Do not set fixed widths for buttons,
   labels, and table columns with text.
-- Custom-painted parts with text need a check: `ScorePanel` ("AFTER THE
-  POINT", "SETS", "GAMES"), `SwingTimelineComponent`, `MomentumChart`,
+- Custom-painted parts with text need a check: `ScoreButtons`,
+  `PointsTableRows`, `SwingTimelineComponent`, `MomentumChart`,
   `StatsTable`, `ProjectsHeader`, the sidebar, and the hint balloons.
 - The UI font "Segoe UI" has no Chinese, Japanese, or Korean letters. A
   physical font in Swing does not fall back to another font. A language with

@@ -243,8 +243,8 @@ class SwingApplicationFactoryTest {
             }
 
             click("projects-open-${projectFixture.project.id}")
-            click("nav-scoring")
-            click("nav-scoring")
+            click("nav-stats")
+            click("nav-stats")
             click("nav-help")
 
             val tabs = session.events().filterIsInstance<AnalyticsEvent.TabShown>()
@@ -252,7 +252,7 @@ class SwingApplicationFactoryTest {
                 listOf(
                     AnalyticsEvent.TabShown(AnalyticsEvent.Tab.PROJECTS, byUser = false),
                     AnalyticsEvent.TabShown(AnalyticsEvent.Tab.POINTS, byUser = false),
-                    AnalyticsEvent.TabShown(AnalyticsEvent.Tab.SCORING, byUser = true),
+                    AnalyticsEvent.TabShown(AnalyticsEvent.Tab.STATS, byUser = true),
                 ),
                 tabs.drop(tabs.size - 3),
             )

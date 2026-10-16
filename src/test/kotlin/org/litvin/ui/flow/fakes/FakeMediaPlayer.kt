@@ -154,16 +154,16 @@ class FakeMediaPlayerFactory : MediaPlayerFactory {
 
     fun assertEditingFlowEvents() {
         val snapshot = calls
-        val requiredScreens = setOf(MediaScreen.POINTS, MediaScreen.COLORS, MediaScreen.SCORING)
+        val requiredScreens = setOf(MediaScreen.POINTS, MediaScreen.ADJUST_VIDEO)
         val loadedScreens = snapshot.filter { it.action == "load" }.mapTo(linkedSetOf()) { it.screen }
         check(loadedScreens.containsAll(requiredScreens)) {
             "Expected media loads for $requiredScreens, recorded $snapshot"
         }
-        check(snapshot.any { it.screen == MediaScreen.COLORS && it.action == "play" }) {
-            "Expected Colors playback to start, recorded $snapshot"
+        check(snapshot.any { it.screen == MediaScreen.ADJUST_VIDEO && it.action == "play" }) {
+            "Expected Colors & Transform playback to start, recorded $snapshot"
         }
-        check(snapshot.any { it.screen == MediaScreen.COLORS && it.action == "pause" }) {
-            "Expected Colors playback to pause, recorded $snapshot"
+        check(snapshot.any { it.screen == MediaScreen.ADJUST_VIDEO && it.action == "pause" }) {
+            "Expected Colors & Transform playback to pause, recorded $snapshot"
         }
         check(snapshot.any { it.action == "seek" }) {
             "Expected at least one fake-media seek, recorded $snapshot"

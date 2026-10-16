@@ -33,7 +33,7 @@ data class ScoreV1(
     val manualGameWins: Map<String, Outcome> = emptyMap(),
     /** Set wins that the user marked by hand. The engine uses them only in manual scoring. */
     val manualSetWins: Map<String, Outcome> = emptyMap(),
-    /** True after the Scoring tab showed the score settings for this project one time. */
+    /** True after the Points tab showed the score settings for this project one time. */
     val scoreSettingsReviewed: Boolean = false,
     /** The server that the user marked on a point. The engine computes the server of the other points from these marks. */
     val serverMarks: Map<String, Outcome> = emptyMap(),
@@ -41,11 +41,13 @@ data class ScoreV1(
     val sport: Sport = Sport.TENNIS,
     /**
      * True when the Projects tab wrote this file for a new project (with the sport and the rules from the "New project"
-     * dialog). The Scoring tab then gives the project the default scoreboard style, as for a project without score.json.
+     * dialog). The Points tab then gives the project the default scoreboard style, as for a project without score.json.
      */
     val useDefaultScoreboard: Boolean = false,
+    /** The scores that the user typed for the end of a point (see [ScoreOverrideV1]). */
+    val scoreOverrides: Map<String, ScoreOverrideV1> = emptyMap(),
 ) {
-    fun manualMarks(): ManualScoreMarks = ManualScoreMarks(manualGameWins, manualSetWins)
+    fun manualMarks(): ManualScoreMarks = ManualScoreMarks(manualGameWins, manualSetWins, scoreOverrides)
 
     companion object {
         /** The score file of a new project of [sport] with [rules]. The side names are "Team 1" and "Team 2" for padel. */

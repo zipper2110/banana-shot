@@ -17,15 +17,13 @@ import org.litvin.projects.ProjectSummary
 import org.litvin.projects.ProjectsRepository
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.UserDialogService
-import org.litvin.ui.tabs.adjustments.SwingColorAdjustmentsPanel
-import org.litvin.ui.tabs.crop.SwingCropRotatePanel
-import org.litvin.ui.tabs.crop.presenter.DefaultCropRotatePresenter
+import org.litvin.ui.tabs.adjustments.SwingAdjustVideoPanel
+import org.litvin.ui.tabs.adjustments.presenter.DefaultAdjustVideoPresenter
 import org.litvin.ui.tabs.export.ExportSettingsPreferences
 import org.litvin.ui.tabs.export.SwingExportPanel
 import org.litvin.ui.tabs.points.SwingPointsPanel
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
-import org.litvin.ui.tabs.scoring.SwingScoringPanel
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.image.BufferedImage
@@ -50,13 +48,11 @@ class FeatureBoundaryWiringTest {
         val render = RecordingRenderService()
         val completed = EmptyCompletedRendersRepository
         val preferences = MemoryPreferences()
-        val players = List(4) { FakeSwingMediaPlayer() }
+        val players = List(2) { FakeSwingMediaPlayer() }
 
         var points: SwingPointsPanel? = null
-        var colors: SwingColorAdjustmentsPanel? = null
-        var scoring: SwingScoringPanel? = null
+        var adjustVideo: SwingAdjustVideoPanel? = null
         var export: SwingExportPanel? = null
-        var crop: SwingCropRotatePanel? = null
         SwingUtilities.invokeAndWait {
             val presenter = DefaultProjectsPresenter(
                 repository = EmptyProjectsRepository,
@@ -65,9 +61,7 @@ class FeatureBoundaryWiringTest {
             )
             SwingProjectsPanel(presenter, picker, dialogs)
             points = SwingPointsPanel(players[0], adjustments, autosaveExecutor, dialogs)
-            colors = SwingColorAdjustmentsPanel(players[1], adjustments, preferences)
-            scoring = SwingScoringPanel(players[2], adjustments, dialogs)
-            crop = SwingCropRotatePanel(players[3], DefaultCropRotatePresenter(adjustments))
+            adjustVideo = SwingAdjustVideoPanel(players[1], DefaultAdjustVideoPresenter(adjustments))
             export = SwingExportPanel(
                 ExportSettingsPreferences(preferences),
                 render,
@@ -86,12 +80,8 @@ class FeatureBoundaryWiringTest {
         SwingUtilities.invokeAndWait {
             points!!.close()
             points!!.close()
-            colors!!.close()
-            colors!!.close()
-            scoring!!.close()
-            scoring!!.close()
-            crop!!.dispose()
-            crop!!.dispose()
+            adjustVideo!!.close()
+            adjustVideo!!.close()
             export!!.close()
             export!!.close()
         }

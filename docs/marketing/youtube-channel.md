@@ -90,6 +90,18 @@ With BananaShot, you can mark the points, keep score, and export your match with
 After the tutorial is published, add this line under the link:
 `How I made this video (3 min): <link to the tutorial>`
 
+### Singles, highlights (https://youtu.be/fh4CVislaJY)
+
+The second video on the channel. It replaces the singles highlights on the
+personal channel (`tutorial-video.md`, section 5). The site links to this
+video.
+
+Title:
+
+```
+Tennis Singles Highlights | Dima vs Vika | Batumi
+```
+
 ## Keywords
 
 Settings > Channel > Basic info > Keywords:

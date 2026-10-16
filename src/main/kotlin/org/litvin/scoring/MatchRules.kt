@@ -274,8 +274,12 @@ enum class MatchFormatPreset(
     }
 }
 
-/** Game and set wins that the user marked by hand in manual scoring. The maps use point ids as keys. */
+/**
+ * Game and set wins that the user marked by hand in manual scoring, and the scores that the user typed for the end of
+ * a point. The maps use point ids as keys. The engine uses [overrides] in all scoring modes.
+ */
 data class ManualScoreMarks(
     val gameWins: Map<String, Outcome> = emptyMap(),
     val setWins: Map<String, Outcome> = emptyMap(),
+    val overrides: Map<String, ScoreOverrideV1> = emptyMap(),
 )

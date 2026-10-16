@@ -8,7 +8,7 @@ class SessionSettingsTest {
     @Test
     fun playbackSpeedPresetsIncludeOnePointFiveAndDefaultToNormalSpeed() {
         assertContentEquals(
-            floatArrayOf(2.0f, 1.5f, 1.25f, 1.0f, 0.5f),
+            floatArrayOf(2.0f, 1.5f, 1.25f, 1.0f, 0.5f, 0.25f),
             SessionSettings.speedPresets,
         )
         assertEquals(1.0f, SessionSettings.toRate(SessionSettings.playbackSpeedIndex))

@@ -4,7 +4,7 @@ import { loadWorkerHealth } from './cloudflare';
 import { loadDownloads, takeSnapshot } from './downloads';
 import { type Env, section } from './env';
 import { loadFeedback } from './feedback';
-import { makePeriod, parseDays } from './period';
+import { makePeriod, parseDays, parseLastDay } from './period';
 import { loadSite } from './site';
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -27,7 +27,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 export async function summary(env: Env, url: URL, now: number, fetcher: typeof fetch = fetch) {
-  const period = makePeriod(parseDays(url.searchParams.get('days')), now);
+  const period = makePeriod(parseDays(url.searchParams.get('days')), now, parseLastDay(url.searchParams.get('end'), now));
   const includeDev = url.searchParams.get('dev') === '1';
   const [downloads, app, feedback, site, workers] = await Promise.all([
     section(() => loadDownloads(env, period)),

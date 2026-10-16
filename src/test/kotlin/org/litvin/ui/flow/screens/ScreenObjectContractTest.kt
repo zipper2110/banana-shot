@@ -16,7 +16,6 @@ class ScreenObjectContractTest {
             PointsScreen::class.java,
             ColorsScreen::class.java,
             CropScreen::class.java,
-            ScoringScreen::class.java,
             ExportScreen::class.java,
         )
         val leakedReturnTypes = screenTypes

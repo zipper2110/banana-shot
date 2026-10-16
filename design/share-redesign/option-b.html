@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Share Tab Option B</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Option B: two cards (Thumbnail and Description) side by side. A strip of points at the bottom selects
+     the frame, as a film strip. The thumbnail text fields are under the preview, in the Thumbnail card. */
+  .tab { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
+  .typebar { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .typebar .lbl { font-weight: 600; }
+  .cards { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 12px; padding: 12px 16px; min-height: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 0; min-width: 0; }
+  .thumb-card { align-items: stretch; }
+  .preview-wrap { width: min(100%, calc((100vh - 470px) * 16 / 9)); align-self: center; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+  .fields .buttons { display: flex; gap: 6px; }
+  .foot { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-2); }
+  .foot code { font-family: Consolas, ui-monospace, monospace; color: var(--sage); }
+  .foot .right { margin-left: auto; }
+  .desc-card .textarea { flex: 1; min-height: 160px; }
+
+  /* The point strip */
+  .strip { border-top: 1px solid var(--line); background: var(--panel); padding: 10px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .strip-head { display: flex; align-items: center; gap: 14px; }
+  .strip-head .moment { display: flex; align-items: center; gap: 10px; flex: 1; max-width: 520px; margin-left: auto; }
+  .strip-head .moment .time { font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .seg.small > button { padding: 3px 12px; font-size: 12px; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .chip { flex: none; width: 132px; border-radius: 5px; border: 1px solid var(--line-2); background: var(--raised); cursor: pointer; padding: 0; text-align: left; overflow: hidden; }
+  .chip:hover { border-color: #4a4a4a; }
+  .chip.is-selected { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime); }
+  .chip .img { position: relative; height: 74px; background-size: cover; background-position: center; }
+  .chip .img .star { position: absolute; right: 4px; top: 4px; font-size: 16px; text-shadow: 0 1px 3px #000; }
+  .chip .img .n { position: absolute; left: 4px; bottom: 4px; font-size: 11px; font-weight: 700; background: rgba(0,0,0,.75); padding: 1px 5px; border-radius: 3px; }
+  .chip .lab { padding: 4px 6px 5px; font-size: 11px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip.is-selected .lab { color: var(--fg); }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main class="tab">
+      <div class="typebar">
+        <span class="lbl">Video type</span>
+        <div class="seg" id="type">
+          <button data-type="full">Full match<small>All marked points</small></button>
+          <button data-type="best">Best points<small>The favorites</small></button>
+        </div>
+        <span class="hint">It sets the words on the thumbnail and in the description.</span>
+      </div>
+
+      <div class="cards">
+        <section class="card thumb-card">
+          <div class="section-title"><span class="material-symbols-outlined">image</span>Thumbnail <span class="right faint">1280 × 720 PNG</span></div>
+          <div class="preview-wrap"><div class="thumb-box" id="preview"></div></div>
+          <div class="fields">
+            <div class="field">
+              <label for="small"><span class="swatch" style="--sw:#f6f5f2"></span>Small line (white)</label>
+              <input class="input upper" id="small" maxlength="24">
+            </div>
+            <div class="field">
+              <label for="big"><span class="swatch" style="--sw:#c8ec46"></span>Large line (lime)</label>
+              <input class="input upper" id="big" maxlength="24">
+            </div>
+            <div class="buttons">
+              <button class="btn btn-lime" id="save"><span class="material-symbols-outlined">save</span>Save</button>
+              <button class="btn btn-ghost btn-icon" id="open" title="Open folder"><span class="material-symbols-outlined">folder_open</span></button>
+            </div>
+          </div>
+          <div class="foot"><span id="file"></span><span class="right" id="text-reset"></span></div>
+        </section>
+
+        <section class="card desc-card">
+          <div class="section-title"><span class="material-symbols-outlined">notes</span>Description <span class="right" id="desc-state"></span></div>
+          <textarea class="textarea" id="desc" spellcheck="false"></textarea>
+          <label class="check-label" id="result-label"><input type="checkbox" class="check-input" id="result"><span class="check"></span>Show the result</label>
+          <div class="hint" id="result-hint"></div>
+          <button class="btn" id="copy" style="align-self:flex-start"><span class="material-symbols-outlined">content_copy</span>Copy</button>
+        </section>
+      </div>
+
+      <section class="strip">
+        <div class="strip-head">
+          <div class="section-title"><span class="material-symbols-outlined">sports_tennis</span>Frame</div>
+          <div class="seg small" id="filter">
+            <button data-f="fav">Favorites</button>
+            <button data-f="all">All points</button>
+          </div>
+          <span class="hint" id="strip-note"></span>
+          <div class="moment">
+            <span class="muted" style="font-size:12.5px">Moment</span>
+            <input type="range" id="pos" min="0" max="1000" value="500">
+            <span class="time" id="time"></span>
+          </div>
+        </div>
+        <div class="chips scroll" id="chips"></div>
+      </section>
+    </main>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+  const S = Mock.state;
+  const $ = (id) => document.getElementById(id);
+  let filter = 'fav';
+  Mock.shell('b');
+
+  function render() {
+    document.querySelectorAll('#type button').forEach((b) => b.classList.toggle('is-selected', b.dataset.type === S.type));
+    Mock.mountThumb($('preview'), { ytBadge: true });
+
+    // Strip
+    const all = Mock.points().map((p, i) => ({ p, i }));
+    const hasFav = all.some((x) => x.p.fav);
+    if (!hasFav) filter = 'all';
+    document.querySelectorAll('#filter button').forEach((b) => {
+      b.classList.toggle('is-selected', b.dataset.f === filter);
+      b.disabled = b.dataset.f === 'fav' && !hasFav;
+    });
+    const notes = [];
+    if (!hasFav) notes.push('No point has a star.');
+    if (!Mock.scored()) notes.push('The points have no score. The scoreboard shows only the names.');
+    $('strip-note').textContent = notes.join(' ');
+    const list = filter === 'fav' ? all.filter((x) => x.p.fav) : all;
+    const idx = Mock.pointIndex();
+    $('chips').innerHTML = list.map(({ p, i }) =>
+      `<button class="chip ${i === idx ? 'is-selected' : ''}" data-i="${i}" title="${Mock.esc(Mock.pointLabel(p))}">` +
+      `<div class="img" style="background-image:url(frame-${p.frame}.jpg)"><span class="n">${p.n}</span>` +
+      `${p.fav ? Mock.icon('star', 'star') : ''}</div><div class="lab">${Mock.esc(Mock.scoreLabel(p))}</div></button>`).join('');
+    $('chips').querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => Mock.set({ point: Number(c.dataset.i), pos: .5, saved: null })));
+    const p = Mock.current();
+    $('pos').value = Math.round(S.pos * 1000);
+    $('pos').style.setProperty('--fill', (S.pos * 100) + '%');
+    $('time').textContent = `${Mock.clockTenths(p.len * S.pos)} of ${Mock.clockTenths(p.len)}`;
+
+    // Thumbnail text and file
+    if (document.activeElement !== $('small')) $('small').value = Mock.smallText();
+    if (document.activeElement !== $('big')) $('big').value = Mock.bigText();
+    const edited = S.small != null || S.big != null;
+    const shrunk = Mock.fit().shrunk ? '<span style="color:var(--yellow)">The text is long, so the app made it smaller.</span> ' : '';
+    $('text-reset').innerHTML = shrunk + (edited ? '<button class="link" id="reset-text">Use the preset words</button>' : '');
+    if (edited) $('reset-text').onclick = () => Mock.set({ small: null, big: null });
+    $('file').innerHTML = S.saved
+      ? `<span class="ok-line">${Mock.icon('check_circle')}Saved <code>${Mock.esc(S.saved)}</code> in the export folder.</span>`
+      : `The file name is <code>${Mock.esc(Mock.fileName())}</code>.`;
+    $('save').disabled = S.mode === 'error';
+
+    // Description
+    if (document.activeElement !== $('desc')) $('desc').value = Mock.description();
+    $('result').checked = S.showResult && Mock.scored();
+    $('result').disabled = !Mock.scored();
+    $('result-label').style.opacity = Mock.scored() ? 1 : .4;
+    $('result-hint').textContent = Mock.scored()
+      ? 'Turn it off if the viewers must not know the winner before they watch.'
+      : 'Score the points in the Scoring tab to show the result.';
+    $('desc-state').innerHTML = S.description != null
+      ? '<button class="link" id="reset-desc">Make the text again</button>' : '';
+    if (S.description != null) $('reset-desc').onclick = () => Mock.set({ description: null });
+  }
+
+  document.querySelectorAll('#type button').forEach((b) => b.addEventListener('click', () => Mock.set({ type: b.dataset.type, saved: null, description: null })));
+  document.querySelectorAll('#filter button').forEach((b) => b.addEventListener('click', () => {
+    filter = b.dataset.f;
+    if (filter === 'fav' && !Mock.current().fav) Mock.set({ point: Mock.points().findIndex((p) => p.fav), pos: .5 }); else Mock.render();
+  }));
+  $('pos').addEventListener('input', (e) => Mock.set({ pos: e.target.value / 1000, saved: null }));
+  $('small').addEventListener('input', (e) => Mock.set({ small: e.target.value, saved: null }));
+  $('big').addEventListener('input', (e) => Mock.set({ big: e.target.value, saved: null }));
+  $('save').addEventListener('click', () => { Mock.set({ saved: Mock.fileName() }); Mock.toast('Saved the thumbnail'); });
+  $('open').addEventListener('click', () => Mock.toast('Opens the export folder in Explorer', 'folder_open'));
+  $('desc').addEventListener('input', (e) => Mock.set({ description: e.target.value }));
+  $('result').addEventListener('change', (e) => Mock.set({ showResult: e.target.checked, description: null }));
+  $('copy').addEventListener('click', () => Mock.toast('Copied the description'));
+
+  Mock.onRender(render);
+  render();
+</script>
+</body>
+</html>

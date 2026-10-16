@@ -107,6 +107,136 @@ When item is done, move it under
 ### B-16 Social media features
 
 - Add features for social media use.
+- Decided on 2026-10-15: these features go on the Share tab (B-46). The
+  vertical clips for Shorts, Reels, and TikTok come there later.
+
+### B-46 Share tab: YouTube thumbnail
+
+- Decided on 2026-10-15. A new tab "Share" makes a YouTube thumbnail for
+  the open project. The thumbnail is the only product of B-46. The
+  vertical clips of B-16 come later on the same tab.
+- Decided on 2026-10-15: the video description ("Copy description" of the
+  marketing strategy) is not part of B-46. Its place is not decided.
+- Why a separate tab and not a part of Export:
+  - The sidebar shows the tab all the time. A button inside Export is easy
+    to miss.
+  - Export makes the video file, and its queue is for all projects (B-32).
+    The thumbnail needs one project: a frame and the match data.
+  - The thumbnail does not need a finished export. The user can make it
+    before the export or while the export runs.
+- User value: YouTube uses a random frame as the default thumbnail. This
+  frame often shows the time between points. A frame of a point with large
+  words is better. Today the user needs ffmpeg and an image editor for
+  this.
+- The tab:
+  - Its sidebar item is "Share", after Export. It shows only when a
+    project is open, the same as the Match and Video groups.
+  - Layout of the tab (option A of `design/share-redesign/`): the preview
+    of the thumbnail at the left, the edit fields at the right.
+  - Decided on 2026-10-15: the right side has two tabs, "Texts" and
+    "Colors". The preview and the Save block are always visible.
+  - It has a Help page "Share", and a step in the workflow list of the
+    Projects tab.
+- The thumbnail:
+  - A frame of the video. The user selects a point and a moment in the
+    point. The crop, rotation, and color adjustments apply to the frame,
+    as in the export.
+  - Decided on 2026-10-15: no scoreboard on the thumbnail.
+  - Decided on 2026-10-15: the user selects one of several layout styles.
+    A layout style sets the placement and the colors of the texts. The
+    texts can show the players, the league, the court, and other match
+    data.
+  - Decided on 2026-10-15: the video type ("Full match" or "Best points")
+    sets the preset of the large words. The app fills as many fields as
+    possible with preset values, so that the user saves time and sees the
+    look of each layout at once.
+  - Decided on 2026-10-15: the user can change the colors of the layout
+    style. Each color of the style can change, in one system of color
+    roles for all styles.
+  - Nothing goes in the bottom-right corner, because YouTube shows the
+    video length there.
+  - "Save" writes a PNG (1280 × 720, less than 2 MB) to the export folder.
+    "Open folder" shows the file.
+- Out of scope: free placement of the texts, user fonts;
+  vertical covers for Shorts and Reels (with the vertical clips of B-16);
+  upload to YouTube; automatic selection of the "best" frame; translated
+  preset words (later, with B-11 E5).
+- Parts to use:
+  - `VideoFrameLoader` reads a frame with the project adjustments. It is
+    already 1280 px wide.
+  - The texts use Segoe UI Black and Segoe UI, the same fonts as the
+    scoreboard layouts (`SEGOE_BLACK`, `SEGOE`).
+- The layout styles and the fields are in `design/share-redesign/`.
+- Done when: the Share tab shows for an open project, and Help has a
+  "Share" page. The user makes a thumbnail in each layout style for a
+  project with and without favorites. The PNG is 1280 × 720 and less than
+  2 MB. It shows the selected frame with the adjustments and the texts of
+  the layout.
+
+### B-47 Change points for the crop and rotation
+
+- Decided on 2026-10-16. During a recording, wind can move the phone. Then
+  one angle is not correct for the full video. The user can add change
+  points on the Transform tab.
+- A change point has a time in the video, and its own angle, zoom, and
+  pan. The user can add a change point at any time, also during a point.
+- Before the first change point, the video uses the usual Transform values.
+- Decided on 2026-10-16: the change is a blend of 1 second. The blend ends
+  at the change point. Reason: the user sets the values while the editor
+  shows the frame at the change point, so this frame must get the exact
+  values.
+- Editing: the Transform controls edit the last change point at or before
+  the playhead (or the usual values before the first change point). While
+  the user edits, the editor shows these values without the blend.
+- The preview, the export, and the still frames (statistics card, Share
+  thumbnail) use the same values for each time.
+- Storage: a list `geometryKeys` in `adjustments.json`. An older app
+  ignores the list and uses the usual values.
+- Done when: a project with two change points exports with the correct
+  angle before, during, and after each blend, and the preview shows the
+  same angles.
+- Decided on 2026-10-16: the Colors tab gets change points too, for light
+  that changes during a match (clouds, sunset). The color change points
+  are a separate list `colorKeys`. Reason: the wind and the light change
+  at different times.
+- A color change point has all six color values. The blend is also 1
+  second and ends at the change point. The color blend is linear: the
+  export fades from the old colors to the new colors, because FFmpeg
+  cannot change the tone curve at each frame. The preview uses the same
+  linear blend.
+- The Colors tab edits the last color change point at or before the
+  playhead. While the user edits, the preview shows these colors without
+  the blend.
+- Decided on 2026-10-16 (replaces the separate lists above): one "Colors &
+  Transform" tab replaces the Colors tab and the Transform tab. It stays
+  in the Video group of the sidebar. The right panel has two sub-tabs, Colors and Transform. Each sub-tab has its own
+  "Reset all" button. The change points do not depend on the sub-tab: a
+  change point has the colors and the transform. Add, Remove, Previous,
+  and Next work on both. The file keeps the two lists `colorKeys` and
+  `geometryKeys`, and the app keeps the same times in the two lists.
+  Reason: one list is easier to understand than two lists in one tab.
+- The site (`site/public`: the demos and the changelog) and the tutorial
+  video show the Colors tab and the Transform tab. Update them at the
+  release of the Colors & Transform tab, as in B-48.
+
+### B-48 Site: the Points tab replaces the Scoring tab
+
+- Version 1.2.0 removes the Scoring tab. The Points tab has the scoring
+  controls now.
+- Decided on 2026-10-16: update the site at the 1.2.0 release, not before.
+  Reason: until then, the site describes version 1.1.0, which has the
+  Scoring tab.
+- Change these parts of `site/public`:
+  - `index.html`: the scoring demo and its `aria-label` show the Scoring
+    tab. Make the demo a copy of the Points tab with the scoring controls.
+  - `assets/demos/scoring.js`, `assets/demos.css`, and the tab list in
+    `assets/demos/core.js`.
+  - `privacy/index.html`: the list of counted tabs names Scoring, and the
+    text says "Point outcomes recorded in Scoring". Older versions still
+    send the Scoring tab keys. Check if the change needs a new notice
+    version (`AnalyticsSchema.NOTICE_VERSION`).
+- Done when: the deployed site shows no Scoring tab, except in the
+  changelog of older versions.
 
 ### B-17 Audio noise reduction
 

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Share Tab Final Design</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Final design. Base: option A (the preview at the left, the edit fields at the right).
+     Changes from the review of 2026-10-15:
+       - the thumbnail is the only product. The description is not on the tab,
+       - no scoreboard on the thumbnail. The user selects a layout style. Each style has its own placement and colors,
+       - the fields have preset values from the project, so that each style looks complete at once,
+       - the video type is the first field. It sets the preset of the large words,
+       - colors: one system of six color roles for all styles (Text, Accent, Text on accent, Panel, Text on panel, Shade).
+         A color set gives a value to each role. The user can change each role after the set. Each style keeps its own colors,
+       - the side column has two tabs, Texts and Colors. The preview at the left and the Save block at the bottom
+         of the side column are always visible. Only the content of a tab scrolls. */
+  .tab { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; min-width: 0; }
+
+  /* The left side does not scroll: the preview becomes smaller in a low window. */
+  .left { padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; overflow: hidden; }
+  .fitw { width: min(100%, calc((100vh - 390px) * 16 / 9)); }
+  .pick { display: grid; grid-template-columns: 60px minmax(0, 1fr); align-items: center; gap: 6px 10px; }
+  .pick .lbl { color: var(--fg-2); font-size: 12.5px; }
+  .pick .ctrl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .pick .ctrl .select { flex: 1; min-width: 0; }
+  .pick .time { font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 112px; text-align: right; }
+  .note-line { grid-column: 2; }
+
+  /* The layout styles: one card for each style, with the current frame and texts */
+  .styles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .style { border: 1px solid var(--line-2); border-radius: 5px; background: var(--raised); padding: 0; cursor: pointer; overflow: hidden; text-align: left; }
+  .style:hover { border-color: #4a4a4a; }
+  .style.is-selected { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime); }
+  .style .thumb-box { border-radius: 0; box-shadow: none; }
+  .style .name { display: block; padding: 4px 7px 5px; font-size: 11.5px; color: var(--fg-2); }
+  .style.is-selected .name { color: var(--fg); font-weight: 600; }
+
+  .side { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  .side-body { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .block { display: flex; flex-direction: column; gap: 10px; }
+  .block + .block { border-top: 1px solid var(--line); padding-top: 14px; }
+  .seg.full { display: flex; }
+  .seg.full > button { flex: 1; }
+  .field > label .src { margin-left: auto; font-size: 11px; color: var(--fg-3); }
+  .field > label .src.edited { color: var(--yellow); }
+  .field.off { opacity: .4; }
+  .field.off > label .src::after { content: " · not in this style"; }
+  .teams { display: grid; grid-template-columns: 1fr; gap: 6px; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main class="tab">
+      <section class="left scroll">
+        <div class="section-title fitw"><span class="material-symbols-outlined">image</span>Thumbnail <span class="right faint">1280 × 720 PNG</span></div>
+        <div class="fitw"><div class="thumb-box" id="preview"></div></div>
+        <div class="pick fitw">
+          <span class="lbl">Point</span>
+          <div class="ctrl">
+            <button class="btn btn-icon btn-sm" id="prev" title="Previous point"><span class="material-symbols-outlined">chevron_left</span></button>
+            <select class="select" id="point"></select>
+            <button class="btn btn-icon btn-sm" id="next" title="Next point"><span class="material-symbols-outlined">chevron_right</span></button>
+            <label class="check-label" style="margin-left:6px"><input type="checkbox" class="check-input" id="favonly"><span class="check"></span>Only favorites</label>
+          </div>
+          <span class="lbl">Moment</span>
+          <div class="ctrl">
+            <input type="range" id="pos" min="0" max="1000" value="500">
+            <span class="time" id="time"></span>
+          </div>
+          <div class="note-line" id="pick-note"></div>
+        </div>
+        <div class="styles fitw" id="styles"></div>
+      </section>
+
+      <aside class="side">
+        <div class="side-tabs" id="side-tabs">
+          <button data-tab="texts"><span class="material-symbols-outlined">title</span>Texts</button>
+          <button data-tab="colors"><span class="material-symbols-outlined">palette</span>Colors</button>
+        </div>
+
+        <div class="side-body scroll" id="tab-texts">
+          <div class="block">
+            <div class="section-title" style="min-height:0"><span class="right" id="reset"></span></div>
+            <div class="field">
+              <label>Video type</label>
+              <div class="seg full" id="type">
+                <button data-type="full">Full match</button>
+                <button data-type="best">Best points</button>
+              </div>
+            </div>
+            <div id="fields" class="block" style="gap:10px"></div>
+            <div id="fit-note"></div>
+            <div class="hint">An empty field does not show on the thumbnail.</div>
+          </div>
+        </div>
+
+        <div class="side-body scroll" id="tab-colors">
+          <div class="block">
+            <div class="section-title">Color set <span class="right" id="color-reset"></span></div>
+            <div class="sets" id="sets"></div>
+          </div>
+          <div class="block" id="roles"></div>
+          <div class="hint">"Auto" makes the text dark or white, so that it stays readable on the color under it.</div>
+        </div>
+
+        <div class="save-box">
+          <div class="mini"><div class="thumb-box" id="mini"></div></div>
+          <div class="about"><span>As in YouTube search, with the video length.</span><span id="file"></span></div>
+          <div class="buttons">
+            <button class="btn btn-lime" id="save"><span class="material-symbols-outlined">save</span>Save thumbnail</button>
+            <button class="btn btn-ghost" id="open"><span class="material-symbols-outlined">folder_open</span>Open folder</button>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+</div>
+<script src="layouts.js"></script>
+<script>
+  const S = Mock.state;
+  const $ = (id) => document.getElementById(id);
+  let favOnly = false;
+  Mock.shell();
+
+  // The fields are made one time, so that the text cursor stays in the field while the user types.
+  $('fields').innerHTML = Mock.FIELDS.filter((f) => f.key !== 'team2').map((f) => {
+    const input = (k) => `<input class="input" id="f-${k}" maxlength="${Mock.field(k).max}" placeholder="${Mock.esc(Mock.field(k).placeholder || '')}">`;
+    if (f.key === 'team1') {
+      return `<div class="field" id="w-team1"><label>Players <span class="src" id="s-team1"></span></label>` +
+        `<div class="teams">${input('team1')}${input('team2')}</div></div>`;
+    }
+    return `<div class="field" id="w-${f.key}"><label for="f-${f.key}">${f.label} <span class="src" id="s-${f.key}"></span></label>${input(f.key)}</div>`;
+  }).join('');
+  Mock.FIELDS.forEach((f) => $('f-' + f.key).addEventListener('input', (e) => {
+    Mock.set({ values: { ...S.values, [f.key]: e.target.value }, saved: null });
+  }));
+
+  function visible() {
+    const all = Mock.points().map((p, i) => ({ p, i }));
+    return favOnly ? all.filter((x) => x.p.fav) : all;
+  }
+
+  function render() {
+    const shrunk = Mock.mountThumb($('preview'), S.layout, {});
+    Mock.mountThumb($('mini'), S.layout, { ytBadge: true });
+
+    // Layout styles
+    if (!$('styles').children.length) {
+      $('styles').innerHTML = Mock.LAYOUTS.map((l) =>
+        `<button class="style" data-id="${l.id}"><div class="thumb-box"></div><span class="name">${l.name}</span></button>`).join('');
+      $('styles').querySelectorAll('.style').forEach((b) => b.addEventListener('click', () => Mock.set({ layout: b.dataset.id, saved: null })));
+    }
+    $('styles').querySelectorAll('.style').forEach((b) => {
+      b.classList.toggle('is-selected', b.dataset.id === S.layout);
+      Mock.mountThumb(b.querySelector('.thumb-box'), b.dataset.id, {});
+    });
+
+    // Point and moment
+    const hasFav = Mock.points().some((p) => p.fav);
+    if (!hasFav) favOnly = false;
+    $('favonly').checked = favOnly;
+    $('favonly').disabled = !hasFav;
+    $('favonly').parentElement.style.opacity = hasFav ? 1 : .4;
+    const idx = Mock.pointIndex();
+    $('point').innerHTML = visible().map(({ p, i }) =>
+      `<option value="${i}" ${i === idx ? 'selected' : ''}>${p.fav ? '★ ' : ''}${Mock.esc(Mock.pointLabel(p))}</option>`).join('');
+    const p = Mock.current();
+    $('pos').value = Math.round(S.pos * 1000);
+    $('pos').style.setProperty('--fill', (S.pos * 100) + '%');
+    $('time').textContent = `${Mock.clockTenths(p.len * S.pos)} of ${Mock.clockTenths(p.len)}`;
+    $('pick-note').innerHTML = hasFav ? '' :
+      `<div class="note">${Mock.icon('info')}<p>No point has a star. The app selected a point near the middle of the match.</p></div>`;
+
+    // Fields
+    document.querySelectorAll('#type button').forEach((b) => b.classList.toggle('is-selected', b.dataset.type === S.type));
+    const used = Mock.layout().fields;
+    Mock.FIELDS.forEach((f) => {
+      const el = $('f-' + f.key);
+      if (document.activeElement !== el) el.value = Mock.value(f.key);
+    });
+    Mock.FIELDS.filter((f) => f.key !== 'team2').forEach((f) => {
+      const keys = f.key === 'team1' ? ['team1', 'team2'] : [f.key];
+      const isEdited = keys.some((k) => Mock.edited(k));
+      const empty = keys.every((k) => Mock.value(k).trim() === '');
+      const src = $('s-' + f.key);
+      src.textContent = isEdited ? 'Edited' : empty ? 'No preset' : f.source;
+      src.classList.toggle('edited', isEdited);
+      $('w-' + f.key).classList.toggle('off', !keys.some((k) => used.includes(k)));
+    });
+    const anyEdited = Mock.FIELDS.some((f) => Mock.edited(f.key));
+    $('reset').innerHTML = anyEdited ? '<button class="link" id="reset-all">Use the presets</button>' : '';
+    if (anyEdited) $('reset-all').onclick = () => Mock.set({ values: {} });
+    $('fit-note').innerHTML = shrunk
+      ? `<div class="note">${Mock.icon('text_fields')}<p>A text is long, so the app made it smaller. Short words are easier to read.</p></div>` : '';
+
+    // Save
+    $('file').innerHTML = S.saved
+      ? `<div class="ok-line">${Mock.icon('check_circle')}Saved in the export folder.</div>`
+      : `<code>${Mock.esc(Mock.fileName())}</code>`;
+
+    // Side tabs
+    document.querySelectorAll('#side-tabs button').forEach((b) => b.classList.toggle('is-selected', b.dataset.tab === S.tab));
+    $('tab-texts').hidden = S.tab !== 'texts';
+    $('tab-colors').hidden = S.tab !== 'colors';
+    $('save').disabled = S.mode === 'error';
+  }
+
+  document.querySelectorAll('#type button').forEach((b) => b.addEventListener('click', () => {
+    const values = { ...S.values };
+    delete values.head; // The video type sets the large words again.
+    Mock.set({ type: b.dataset.type, values, saved: null });
+  }));
+  $('point').addEventListener('change', (e) => Mock.set({ point: Number(e.target.value), pos: .5, saved: null }));
+  function step(d) {
+    const list = visible().map((x) => x.i);
+    const at = Math.max(0, list.indexOf(Mock.pointIndex()));
+    Mock.set({ point: list[Math.min(list.length - 1, Math.max(0, at + d))], pos: .5, saved: null });
+  }
+  $('prev').addEventListener('click', () => step(-1));
+  $('next').addEventListener('click', () => step(1));
+  $('favonly').addEventListener('change', (e) => {
+    favOnly = e.target.checked;
+    const list = visible().map((x) => x.i);
+    if (!list.includes(Mock.pointIndex())) Mock.set({ point: list[0], pos: .5 }); else Mock.render();
+  });
+  $('pos').addEventListener('input', (e) => Mock.set({ pos: e.target.value / 1000, saved: null }));
+  $('save').addEventListener('click', () => { Mock.set({ saved: Mock.fileName() }); Mock.toast('Saved the thumbnail'); });
+  $('open').addEventListener('click', () => Mock.toast('Opens the export folder in Explorer', 'folder_open'));
+
+  document.querySelectorAll('#side-tabs button').forEach((b) => b.addEventListener('click', () => Mock.set({ tab: b.dataset.tab })));
+
+  // Colors. The tab shows the color sets, then one row for each color role of the style.
+  $('sets').innerHTML = Mock.COLOR_SETS.map((c) =>
+    `<button class="set" data-id="${c.id}"><span class="dots">${[c.acc, c.pan, c.text].map((x) => `<i style="--c:${x}"></i>`).join('')}</span>${c.name}</button>`).join('');
+  $('sets').querySelectorAll('.set').forEach((b) => b.addEventListener('click', () => Mock.applySet(b.dataset.id)));
+
+  // The role rows are made again only when the style changes, so that a drag of the slider is not interrupted.
+  let rolesFor = null;
+  function buildRoles() {
+    const l = Mock.layout();
+    $('roles').innerHTML = Mock.ROLES.filter((r) => l.use[r.key]).map((r) => {
+      const auto = r.auto ? `<button class="sw auto" data-role="${r.key}" data-hex="auto" title="Dark or white, from the contrast">Auto</button>` : '';
+      const sws = r.swatches.map(([hex, name]) => `<button class="sw" style="--c:${hex}" data-role="${r.key}" data-hex="${hex}" title="${name}"></button>`).join('');
+      const custom = `<label class="sw custom" title="Other color"><input type="color" data-role="${r.key}"></label>`;
+      const k = r.strength ? `<div class="strength"><span>Strength</span><input type="range" id="k" min="0" max="150" step="5"><span id="k-val"></span></div>` : '';
+      return `<div class="role"><div class="role-head"><span>${r.name}</span><span class="use">${Mock.esc(l.use[r.key])}</span></div>` +
+        `<div class="row">${auto}${sws}${custom}</div>${k}</div>`;
+    }).join('');
+    $('roles').querySelectorAll('.sw[data-hex]').forEach((b) => b.addEventListener('click', () => Mock.setColor(b.dataset.role, b.dataset.hex)));
+    $('roles').querySelectorAll('input[type=color]').forEach((i) => i.addEventListener('input', (e) => Mock.setColor(i.dataset.role, e.target.value)));
+    if ($('k')) $('k').addEventListener('input', (e) => Mock.setColor('k', e.target.value / 100));
+    rolesFor = l.id;
+  }
+
+  function renderColors() {
+    if (rolesFor !== S.layout) buildRoles();
+    const set = Mock.activeSet(S.layout);
+    const custom = Mock.customized(S.layout);
+    $('sets').querySelectorAll('.set').forEach((b) => b.classList.toggle('is-selected', b.dataset.id === set.id && !custom));
+    $('roles').querySelectorAll('.row').forEach((row) => {
+      const role = row.querySelector('[data-role]').dataset.role;
+      const value = Mock.roleValue(S.layout, role);
+      let known = false;
+      row.querySelectorAll('.sw[data-hex]').forEach((b) => {
+        const on = b.dataset.hex.toLowerCase() === String(value).toLowerCase();
+        b.classList.toggle('is-selected', on);
+        known = known || on;
+      });
+      const pick = row.querySelector('.custom');
+      pick.classList.toggle('is-selected', !known);
+      pick.style.background = known ? '' : value;
+      if (value !== 'auto') pick.querySelector('input').value = value;
+    });
+    if ($('k')) {
+      const k = Mock.strength(S.layout);
+      if (document.activeElement !== $('k')) $('k').value = Math.round(k * 100);
+      $('k').style.setProperty('--fill', (k * 100 / 1.5) + '%');
+      $('k-val').textContent = Math.round(k * 100) + '%';
+    }
+    const edited = Mock.colorsEdited(S.layout);
+    $('color-reset').innerHTML = custom
+      ? `<span style="color:var(--yellow)">Changed</span> · <button class="link" id="reset-colors">Use the style colors</button>`
+      : edited ? '<button class="link" id="reset-colors">Use the style colors</button>' : '';
+    if (edited) $('reset-colors').onclick = () => Mock.resetColors();
+  }
+
+  Mock.onRender(() => { render(); renderColors(); });
+  // Wait for the fonts, because the text fit measures the text.
+  document.fonts.ready.then(Mock.render);
+  Mock.render();
+</script>
+</body>
+</html>

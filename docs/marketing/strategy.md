@@ -274,7 +274,7 @@ Do them in the order of what the first users ask for.
 
 | Lever | New users | Cost | Recommendation |
 |---|---|---|---|
-| Video description text after export (site link, "Made with BananaShot") | Viewers of each exported video | Very low | Do first. A "Copy description" button on the Export tab |
+| Video description text after export (site link, "Made with BananaShot") | Viewers of each exported video | Very low | Do first. A "Copy description" button. The place in the app is not decided (not part of B-46) |
 | Vertical clips for Shorts, Reels, TikTok (B-16) | Social media users | Medium | High value: each clip with the credit line is an ad |
 | Padel (B-14 done, improvements B-45) | Padel players: Europe, Latin America, Middle East | Medium | Do after the first 20 to 30 tennis users |
 | Languages (B-11) | Players who do not read English | Medium, and each language needs care | Start with Spanish (Spain and Latin America, padel too). Then the languages of real users from the cockpit |
@@ -441,7 +441,7 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
 
 - [ ] Publish one video each week on your channel: a match, a tutorial, or a
       feature.
-- [ ] Add the "Copy description" text after the export (section 6).
+- [ ] Add the "Copy description" text (section 6). The place in the app is not decided.
 - [ ] Add 2 or 3 short quotes of real users to the home page (with their
       permission).
 - [ ] Write 3 to 5 how-to pages on the site. Examples: "How to add a

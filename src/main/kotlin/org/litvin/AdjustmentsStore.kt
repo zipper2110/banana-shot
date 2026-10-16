@@ -113,7 +113,33 @@ class AdjustmentsSession(
             zoom = m.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM),
             panX = m.panX.coerceIn(-1.0f, 1.0f),
             panY = m.panY.coerceIn(-1.0f, 1.0f),
-            rotationDeg = m.rotationDeg.coerceIn(-180.0f, 180.0f)
+            rotationDeg = m.rotationDeg.coerceIn(-180.0f, 180.0f),
+            geometryKeys = m.geometryKeys
+                .map { key ->
+                    key.copy(
+                        atMs = key.atMs.coerceAtLeast(0L),
+                        zoom = key.zoom.coerceIn(AdjustmentsV1.MIN_ZOOM, AdjustmentsV1.MAX_ZOOM),
+                        panX = key.panX.coerceIn(-1.0f, 1.0f),
+                        panY = key.panY.coerceIn(-1.0f, 1.0f),
+                        rotationDeg = key.rotationDeg.coerceIn(-180.0f, 180.0f),
+                    )
+                }
+                .distinctBy { it.atMs }
+                .sortedBy { it.atMs },
+            colorKeys = m.colorKeys
+                .map { key ->
+                    key.copy(
+                        atMs = key.atMs.coerceAtLeast(0L),
+                        brightness = key.brightness.coerceIn(0.0f, 2.0f),
+                        contrast = key.contrast.coerceIn(0.0f, 2.0f),
+                        saturation = key.saturation.coerceIn(0.0f, 3.0f),
+                        shadows = key.shadows.coerceIn(-1.0f, 1.0f),
+                        highlights = key.highlights.coerceIn(-1.0f, 1.0f),
+                        temperature = key.temperature.coerceIn(-1.0f, 1.0f),
+                    )
+                }
+                .distinctBy { it.atMs }
+                .sortedBy { it.atMs },
         )
     }
 

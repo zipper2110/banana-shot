@@ -13,7 +13,7 @@ import kotlin.math.roundToInt
  * Converts a comment to ASS event texts (the Text field of a Dialogue line) in the lower third of the frame.
  * [CommentStyle] selects the look: an outlined text, a rounded card, or a pill for each line.
  *
- * The export writes these texts into the ASS file for FFmpeg. The Points and Scoring previews send the same
+ * The export writes these texts into the ASS file for FFmpeg. The Points preview sends the same
  * texts to the mpv `osd-overlay` command. Both use libass, so a comment looks the same in the preview and the export.
  * Every event sets all of its override tags, so the event style has no effect on the result.
  */

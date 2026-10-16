@@ -7,16 +7,13 @@ enum class HintId(val key: String) {
     /** The Help button, after the user closes the Overview help at the first start. */
     HELP_BUTTON("help-button"),
 
-    /** The Scoring button in the sidebar, after 4 marked points. */
-    GO_TO_SCORING("go-to-scoring"),
-
     /** The first point row of the Points tab: the hover actions of a row. */
     POINT_ROW("point-row"),
 
     /** The Scoring settings button, after the automatic Scoring settings dialog. */
     SCORE_SETTINGS("score-settings"),
 
-    /** The Next button of the Scoring tab: the R and Shift+R keys. */
+    /** The Next button of the Points tab: the R and Shift+R keys. */
     SCORING_KEYS("scoring-keys"),
 
     /** The serve button of player 1: one serve mark gives the serve statistics. */

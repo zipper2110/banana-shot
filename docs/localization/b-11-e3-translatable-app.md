@@ -39,9 +39,9 @@ Order of the work:
 | E3-T7 | Extract: app shell, sidebar, and More | E3-T2 | open |
 | E3-T8 | Extract: Projects tab and new-project dialogs | E3-T2 | open |
 | E3-T9 | Extract: Points tab | E3-T2 | open |
-| E3-T10 | Extract: Scoring tab and score settings | E3-T2 | open |
+| E3-T10 | Extract: scoring controls and score settings | E3-T2 | open |
 | E3-T11 | Extract: Statistics tab and statistics names | E3-T2 | open |
-| E3-T12 | Extract: Colors and Transform tabs | E3-T2 | open |
+| E3-T12 | Extract: Colors & Transform tab | E3-T2 | open |
 | E3-T13 | Extract: Export tab, queue, and exports table | E3-T2 | open |
 | E3-T14 | Extract: expiry and update texts | E3-T2 | open |
 | E3-T15 | Extract: privacy, consent, and feedback | E3-T2 | open |
@@ -339,16 +339,17 @@ The tasks below give the area and the special requirements of the area.
     ("Minutes/seconds out of range").
 - Tests: —
 
-### E3-T10 Extract: Scoring tab and score settings
+### E3-T10 Extract: scoring controls and score settings
 
 - Status: open
 - Plan: 3 (area 5), "Current state"
-- Area: the Scoring tab, the score panel ("AFTER THE POINT", "SETS",
-  "GAMES"), the score settings dialog, the titles of the match formats,
-  and the titles of the scoreboard styles and positions.
+- Area: the scoring controls of the Points tab (the outcome buttons, the
+  serve button, Override score), the score settings dialog, the titles of
+  the match formats, and the titles of the scoreboard styles and
+  positions.
 - Special requirements:
-  - The points list does not compare the badge text with `"SET"`
-    (`ScoringPointsList`). It uses the type of the badge.
+  - The points table does not compare the badge text with `"SET"`
+    (`PointsScoring`, `PointsTableRows`). It uses the type of the badge.
   - The tooltip "Set won by {playerName}" is one key for each badge type.
     Do not make it from "Set" or "Game" and "won by".
 - Tests: —
@@ -367,11 +368,11 @@ The tasks below give the area and the special requirements of the area.
     app language, not `uppercase()` without a locale.
 - Tests: —
 
-### E3-T12 Extract: Colors and Transform tabs
+### E3-T12 Extract: Colors & Transform tab
 
 - Status: open
 - Plan: 3 (area 7)
-- Area: the Colors tab and the Transform tab.
+- Area: the Colors & Transform tab with its Colors and Transform sub-tabs.
 - Tests: —
 
 ### E3-T13 Extract: Export tab, queue, and exports table

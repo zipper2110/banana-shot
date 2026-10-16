@@ -13,7 +13,7 @@ import java.util.Locale
 /**
  * Task 3.19 — Helper to generate an ASS subtitles file for the scoreboard overlay.
  *
- * The scoreboard comes from [ScoreboardLayouts] and [ScoreboardAss]. The scoring preview sends the
+ * The scoreboard comes from [ScoreboardLayouts] and [ScoreboardAss]. The Points tab preview sends the
  * same ASS events to mpv, so the preview and the export look the same.
  * Each span writes all board events with the same start and end, so the board changes atomically
  * at point boundaries. The layer number keeps the drawing order.

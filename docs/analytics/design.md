@@ -237,8 +237,15 @@ loses all of its sessions.
 | `tab_<tab>` | The user opened the tab with a sidebar click. |
 | `tab_s_<tab>` | Active seconds (see `active_s`) while the tab was the current tab. |
 
-`<tab>` is one of: `projects`, `points`, `colors`, `crop_rotate`, `scoring`,
-`stats`, `export`. The Test tab is not counted.
+`<tab>` is one of: `projects`, `points`, `colors`, `crop_rotate`, `stats`,
+`export`. The Test tab is not counted. Decided on 2026-10-16: the Colors &
+Transform tab has no key of its own. `colors` and `crop_rotate` are its Colors
+and Transform sub-tabs. A sidebar click on Colors & Transform counts the open
+sub-tab, and a click on a sub-tab counts that sub-tab. Reason: the schema
+and the Worker do not change, and the counts stay comparable with older
+versions. The keys `tab_scoring` and
+`tab_s_scoring` are of the removed Scoring tab. The app does not send them
+now. The Worker still accepts them, because older app versions send them.
 
 `tab_<tab>` does not count tab changes that the app makes: the Projects tab at
 start, and the move to Points after a project opens. `tab_s_<tab>` counts the
@@ -256,7 +263,7 @@ the current tab at each tab change and before each send.
 | `point_deleted` | A point was deleted. |
 | `point_favorited` | A point was marked as a favorite. |
 | `comment_added` | A rally comment was added. |
-| `score_recorded` | A point outcome was recorded in Scoring. |
+| `score_recorded` | A point outcome was recorded in the Points tab. |
 | `color_changed` | The user changed a color adjustment. |
 | `crop_rotate_changed` | The user changed crop or rotation. |
 | `help_opened` | The Help window was opened. |
@@ -303,7 +310,7 @@ each side check the lists against the file.
 | `theme` | `dark`, `mid`, `light` | The theme setting. |
 | `accent` | `default`, `custom` | `custom` if the user selected an accent color. Never the color. |
 | `language` | `en` | The language of the app interface. Only the languages of the app. |
-| `sport` | An array of `tennis`, `padel` | The sports of the projects that the session created or opened, or of a sport change in the Scoring tab. `[]` if there was no project. |
+| `sport` | An array of `tennis`, `padel` | The sports of the projects that the session created or opened, or of a sport change in the score settings of the Points tab. `[]` if there was no project. |
 
 - Only the extended level sends attributes. A change to essential deletes
   the sports at once, as the extended counters.
@@ -347,12 +354,12 @@ counter keys. `EnabledAnalytics` converts each event to counter changes.
 | Running exports at exit | `windowClosing` in `SwingApplicationFactory`, with data from `RenderQueueManager` |
 | Help opened | `showHelp` in `SwingApplicationFactory` |
 | Project created or opened, video open failed, sport of the project | `DefaultProjectsPresenter` |
-| Sport change of a project | Scoring tab, the score settings result |
+| Sport change of a project | Points tab, the score settings result |
 | Theme, accent, language | `SwingApplicationFactory`, at the start and on each theme change |
 | Point added, deleted, favorited | `PointsDispatcher` or the Points tab |
 | Comment added | `CommentDispatcher.create` or the Points tab |
-| Score recorded | Scoring tab |
-| Color, crop or rotation changed | The Colors and Crop/Rotate tabs, user input only |
+| Score recorded | Points tab |
+| Color, crop or rotation changed | The Colors and Transform sub-tabs of Colors & Transform, user input only |
 | Export started and result | `RenderQueueManager`: `RUNNING` and `finishRequest`. Use a small listener with only the facts above, not `RenderJob`. |
 
 ### Desktop classes

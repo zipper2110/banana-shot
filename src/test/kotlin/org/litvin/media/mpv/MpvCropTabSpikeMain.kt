@@ -3,9 +3,10 @@ package org.litvin.media.mpv
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.projects.ManifestIO
 import org.litvin.projects.ProjectManifestV1
-import org.litvin.ui.tabs.crop.SwingCropRotatePanel
-import org.litvin.ui.tabs.crop.presenter.CropRotateIntent
-import org.litvin.ui.tabs.crop.presenter.DefaultCropRotatePresenter
+import org.litvin.ui.tabs.adjustments.SwingAdjustVideoPanel
+import org.litvin.ui.tabs.adjustments.presenter.AdjustSection
+import org.litvin.ui.tabs.adjustments.presenter.AdjustVideoIntent
+import org.litvin.ui.tabs.adjustments.presenter.DefaultAdjustVideoPresenter
 import java.awt.Rectangle
 import java.awt.Robot
 import java.io.File
@@ -15,7 +16,7 @@ import javax.swing.JFrame
 import javax.swing.SwingUtilities
 
 /**
- * Manual spike harness for the live Crop/Rotate tab (not a unit test). It does not move the mouse.
+ * Manual spike harness for the Transform sub-tab of the live Colors & Transform tab (not a unit test). It does not move the mouse.
  *
  * Run: mvn -q test-compile exec:java -Dexec.classpathScope=test
  *        -Dapp.mainClass=org.litvin.media.mpv.MpvCropTabSpikeMainKt -Dexec.args="<video> <output dir>"
@@ -32,13 +33,13 @@ fun main(args: Array<String>) {
 
     val scheduler = Executors.newSingleThreadScheduledExecutor()
     val adjustments = AdjustmentsSession(scheduler)
-    val presenter = DefaultCropRotatePresenter(adjustments)
+    val presenter = DefaultAdjustVideoPresenter(adjustments)
     lateinit var frame: JFrame
-    lateinit var panel: SwingCropRotatePanel
+    lateinit var panel: SwingAdjustVideoPanel
     lateinit var player: MpvSwingMediaPlayerAdapter
     SwingUtilities.invokeAndWait {
         player = MpvSwingMediaPlayerAdapter()
-        panel = SwingCropRotatePanel(player, presenter)
+        panel = SwingAdjustVideoPanel(player, presenter)
         frame = JFrame("Crop tab spike").apply {
             contentPane.add(panel)
             setSize(1500, 860)
@@ -50,6 +51,7 @@ fun main(args: Array<String>) {
     SwingUtilities.invokeAndWait {
         panel.setProjectManifest(manifest.absolutePath)
         panel.onActivated()
+        presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.TRANSFORM))
     }
     Thread.sleep(2500)
 
@@ -62,7 +64,7 @@ fun main(args: Array<String>) {
     shot("1-default")
 
     SwingUtilities.invokeAndWait {
-        presenter.onIntent(CropRotateIntent.ChangeTransform(adjustments.get().copy(rotationDeg = 8.0f, zoom = 1.5f, panX = 0.4f, panY = -0.3f)))
+        presenter.onIntent(AdjustVideoIntent.ChangeTransform(adjustments.get().copy(rotationDeg = 8.0f, zoom = 1.5f, panX = 0.4f, panY = -0.3f)))
     }
     Thread.sleep(1200)
     shot("2-rotated-zoomed")
@@ -77,7 +79,7 @@ fun main(args: Array<String>) {
     shot("4-after-resize")
 
     SwingUtilities.invokeAndWait {
-        panel.dispose()
+        panel.close()
         frame.dispose()
     }
     adjustments.close()

@@ -3,8 +3,8 @@ export const ALLOWED_DAYS = [1, 7, 30, 90] as const;
 export const WEEKS = 12;
 
 /**
- * The selected period: the last `days` UTC days, today included. `days` 1 is only today. `prev` is the period of the
- * same length before it.
+ * The selected period: `days` UTC days that end with the day `lastDay` (included). Without `lastDay`, the period ends
+ * today. `days` 1 is only that day. `prev` is the period of the same length before it.
  * All times are milliseconds. `end` is exclusive.
  */
 export interface Period {
@@ -16,16 +16,24 @@ export interface Period {
   weeksStart: number;
 }
 
-export function makePeriod(days: number, now: number): Period {
-  const tomorrow = startOfDay(now) + DAY;
-  const start = tomorrow - days * DAY;
-  const thisMonday = startOfWeek(now);
-  return { days, start, end: tomorrow, prevStart: start - days * DAY, weeksStart: thisMonday - (WEEKS - 1) * 7 * DAY };
+export function makePeriod(days: number, now: number, lastDay = startOfDay(now)): Period {
+  const end = lastDay + DAY;
+  const start = end - days * DAY;
+  const lastMonday = startOfWeek(lastDay);
+  return { days, start, end, prevStart: start - days * DAY, weeksStart: lastMonday - (WEEKS - 1) * 7 * DAY };
 }
 
 export function parseDays(value: string | null): number {
   const days = Number(value);
   return (ALLOWED_DAYS as readonly number[]).includes(days) ? days : 30;
+}
+
+/** The UTC day of the date `YYYY-MM-DD`. Today for no date, an invalid date, or a date after today. */
+export function parseLastDay(value: string | null, now: number): number {
+  const today = startOfDay(now);
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return today;
+  const day = parseDate(value);
+  return Number.isNaN(day) || isoDate(day) !== value || day > today ? today : day;
 }
 
 export function startOfDay(time: number): number {

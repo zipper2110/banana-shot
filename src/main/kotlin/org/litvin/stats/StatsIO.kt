@@ -13,7 +13,7 @@ import java.io.File
 /**
  * The statistics setup of a project. It is stored in stats.json in the project directory.
  *
- * The file is separate from score.json, because the Scoring tab writes score.json from its own copy of the data.
+ * The file is separate from score.json, because the Points tab writes score.json from its own copy of the data.
  */
 data class StatsSettingsV1(
     val version: Int = 1,

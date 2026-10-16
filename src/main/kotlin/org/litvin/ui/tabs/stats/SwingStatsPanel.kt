@@ -43,8 +43,9 @@ import javax.swing.ScrollPaneConstants
  */
 class SwingStatsPanel(
     private val dialogs: UserDialogService,
-    private val onOpenScoring: () -> Unit = {},
-    /** Opens the point with this id in the Scoring tab. */
+    /** Opens the Points tab, where the user scores the points. */
+    private val onOpenPoints: () -> Unit = {},
+    /** Opens the point with this id in the Points tab. */
     private val onOpenPoint: (String) -> Unit = {},
     /** The Match / Set control moves between many card frames, so the cache keeps more frames than the default. */
     private val frameLoader: VideoFrameLoader = VideoFrameLoader(cacheSize = 8),
@@ -75,7 +76,7 @@ class SwingStatsPanel(
     )
     private val preview = StatsCardPreview()
     private val cardColumn = StatsCardColumn(preview, ::showPreviewPage, ::setCardTransparency)
-    private val emptyView = StatsEmptyView { onOpenScoring() }
+    private val emptyView = StatsEmptyView { onOpenPoints() }
 
     init {
         background = Palette.BG
@@ -110,7 +111,7 @@ class SwingStatsPanel(
             return showEmpty(
                 StatsEmptyView.Kind.NO_SCORED_POINTS,
                 "No scored points",
-                "Score the points in the Scoring tab. The statistics then show here.",
+                "Score the points in the Points tab. The statistics then show here.",
             )
         }
         if (scope > loaded.sets.size) scope = 0

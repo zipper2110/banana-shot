@@ -90,7 +90,7 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
 
     companion object {
         /** The labels of SessionSettings.speedPresets, from high to low. */
-        val LABELS = arrayOf("2×", "1.5×", "1.25×", "1×", "0.5×")
+        val LABELS = arrayOf("2×", "1.5×", "1.25×", "1×", "0.5×", "0.25×")
         const val CAPTION = "Speed"
         val KEYS = listOf("↑", "↓")
         const val GAP = 6

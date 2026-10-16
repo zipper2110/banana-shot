@@ -16,7 +16,7 @@ import javax.swing.SwingConstants
 import kotlin.math.max
 
 /**
- * The playback bar under the video of the Colors and Transform tabs: the play button, the current time,
+ * The playback bar under the video of the Colors & Transform tab: the play button, the current time,
  * the seek bar and the video length, in one row.
  * The components are named "<namePrefix>-play-pause", "-current-time", "-total-time" and "-seek".
  */
@@ -44,18 +44,21 @@ internal class VideoPlaybackBar(
         foreground = Palette.FG_3
         toolTipText = "Video length"
     }
+    private val seekUi = SeekSliderUI()
+
     val seekSlider: JSlider = JSlider(0, SEEK_STEPS, 0).apply {
         name = "$namePrefix-seek"
         toolTipText = "Seek"
         isOpaque = false
         // Space must stay the play hotkey, so the seek bar never keeps the focus.
         isFocusable = false
-        setUI(SeekSliderUI())
+        setUI(seekUi)
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
     private var totalMs = 0L
     private var updatingFromPlayer = false
+    private var markersMs: List<Long> = emptyList()
 
     init {
         name = barName
@@ -83,9 +86,26 @@ internal class VideoPlaybackBar(
         playButton.playing = playing
     }
 
+    /** Shows marks on the seek bar at these times, for example the change points of the Colors & Transform tab. */
+    fun setMarkers(timesMs: List<Long>) {
+        if (markersMs == timesMs) return
+        markersMs = timesMs
+        updateMarkers()
+    }
+
+    private fun updateMarkers() {
+        val values = if (totalMs > 0) markersMs.map { (SEEK_STEPS * (it.coerceIn(0L, totalMs).toDouble() / totalMs)).toInt() } else emptyList()
+        if (seekUi.markers == values) return
+        seekUi.markers = values
+        seekSlider.repaint()
+    }
+
     /** Shows the playhead time and moves the seek bar. It does not call the seek callback. */
     fun setTime(currentMs: Long, totalMs: Long) {
-        this.totalMs = max(0, totalMs)
+        if (this.totalMs != max(0, totalMs)) {
+            this.totalMs = max(0, totalMs)
+            updateMarkers()
+        }
         val total = format(this.totalMs)
         if (totalLabel.text != total) totalLabel.text = total
         // While the user drags the seek bar, the drag controls the time label.
@@ -153,8 +173,11 @@ internal class VideoPlaybackBar(
     }
 }
 
-/** The seek bar: a thin track that is lime up to the knob, and a lime knob with a dark ring. */
+/** The seek bar: a thin track that is lime up to the knob, yellow marks, and a lime knob with a dark ring. */
 internal class SeekSliderUI : FlatSliderUI() {
+    /** Slider values with a yellow mark on the track. */
+    var markers: List<Int> = emptyList()
+
     override fun getThumbSize(): Dimension = Dimension(KNOB, KNOB)
 
     override fun paintFocus(g: Graphics) = Unit
@@ -168,6 +191,12 @@ internal class SeekSliderUI : FlatSliderUI() {
             g2.fill(RoundRectangle2D.Double(0.0, y, slider.width.toDouble(), TRACK, TRACK, TRACK))
             g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(0.0, y, fill, TRACK, TRACK, TRACK))
+            g2.color = Palette.YELLOW
+            val markTop = trackRect.y + (trackRect.height - MARK_HEIGHT) / 2.0
+            markers.forEach { value ->
+                val x = xPositionForValue(value) - MARK_WIDTH / 2
+                g2.fill(RoundRectangle2D.Double(x, markTop, MARK_WIDTH, MARK_HEIGHT, MARK_WIDTH, MARK_WIDTH))
+            }
         } finally {
             g2.dispose()
         }
@@ -192,6 +221,8 @@ internal class SeekSliderUI : FlatSliderUI() {
     private companion object {
         const val KNOB = 16
         const val TRACK = 4.0
+        const val MARK_WIDTH = 3.0
+        const val MARK_HEIGHT = 12.0
         val TRACK_BG get() = Palette.LINE_3
     }
 }

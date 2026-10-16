@@ -63,7 +63,7 @@ data class TimeStats(
 /** The duration of a point that has a winner. [winner] is 1 or 2. */
 data class ScoredDuration(val durationMs: Long, val winner: Int)
 
-/** The points that some statistics come from. The Stats tab opens them in the Scoring tab. */
+/** The points that some statistics come from. The Stats tab opens them in the Points tab. */
 data class KeyPoints(
     /** The first point of the longest point run of each player. Null when the player won no point. */
     val longestPointRunStart: PerPlayer<String?> = PerPlayer(null, null),

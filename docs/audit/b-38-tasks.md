@@ -24,7 +24,7 @@ decision in "Decisions" at once.
 |---|---|---|
 | Q1 | T1 | Delete a point: ask for a confirmation, or delete at once and give an undo (Ctrl+Z, or an "Undo" link in a status message)? |
 | Q2 | T3 | Scoreboard checkbox: keep the choice of the user for each project, as the other checkboxes do? Or set it from the score data only for a project that has no saved choice? |
-| Q3 | T4 | Points tab precision: add only a frame step (the same key as in the Scoring tab), or also a timeline zoom? |
+| Q3 | T4 | Points tab precision: the Points tab now has a frame step (F). Is this enough, or add a timeline zoom too? |
 | Q4 | T7 | Scoreboard sets: show all completed sets, or let the user select the number in the scoreboard style? |
 | Q5 | T8 | Final result: show the final score after the match point until the end of the last point, or for a fixed time (for example 5 s)? |
 | Q6 | T9 | Deciding set: add a rule "10-point tiebreak at 6–6 in the deciding set" and use it in the "Best of 5 sets" preset? Or only change the preset text? |
@@ -54,8 +54,8 @@ the test classes in its "Tests" line. Do not remove the task.
 ## T1 Safe delete of a point (F-04)
 
 - The Delete key and the row Delete button remove a point at once. During
-  playback, the selection follows the playhead. The next visit of the
-  Scoring tab also removes the outcome and the marks of the point.
+  playback, the selection follows the playhead. The score then ignores the
+  outcome and the marks of the point.
 - Delete in the Edit dialog asks for a confirmation. The workaround now:
   mark the point again and give it a winner again.
 - Make the three delete paths (key, row button, Edit dialog) behave the
@@ -84,10 +84,9 @@ the test classes in its "Tests" line. Do not remove the task.
 
 ## T4 Precise marking in the Points tab (F-07)
 
-- The Points tab moves the playhead only by 1 s or 5 s. The Scoring tab has
-  a frame step (F). The scope depends on Q3.
-- Use the frame step code of the Scoring tab. Use the same keys in both
-  tabs. Update the help text in `HelpCatalog`.
+- The Points tab has a frame step (F): with Frame step on, Left and Right
+  step one frame while paused. The rest of the scope depends on Q3.
+- Update the help text in `HelpCatalog`.
 - Code: `ui/tabs/points/ui/Keybindings.kt:44-58`,
   `ui/tabs/points/ui/SwingTimelineComponent.kt:195`.
 - Tests:
@@ -105,7 +104,7 @@ the test classes in its "Tests" line. Do not remove the task.
 
 ## T6 Show a failed save of the adjustments (F-09)
 
-- `AdjustmentsStore` ignores a save error. The Points and Scoring tabs show
+- `AdjustmentsStore` ignores a save error. The Points tab shows
   "Autosave failed" for the same problem.
 - This is one case of B-39 (silent errors). Fix it here, and mark it in the
   B-39 list.
@@ -167,9 +166,9 @@ the test classes in its "Tests" line. Do not remove the task.
 - After a point has an outcome, the user cannot remove it. "No point"
   counts as scored in the "Scored x/y" figures.
 - Add an action that clears the outcome (for example Backspace, and a
-  button in the score panel). Update the help text.
-- Code: `ui/tabs/scoring/SwingScoringPanel.kt:777-788`,
-  `ui/tabs/scoring/ui/ScorePanel.kt:105-113`.
+  button in the point bar of the Points tab). Update the help text.
+- Code: `ui/tabs/points/PointsScoring.kt` (`setOutcome`),
+  `ui/tabs/points/ui/ScoreButtons.kt`.
 - Tests:
 
 ## T13 Comments between points in "Only points" (F-17)

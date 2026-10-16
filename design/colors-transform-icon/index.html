@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colors &amp; Transform icon</title>
+<!--
+  Three options for a custom sidebar icon of the Colors & Transform tab.
+  Each icon is a 24 x 24 SVG with a 2 px stroke, like the Material icons of the sidebar.
+  The sidebar mock uses the sizes and the colors of UiStyles.SidebarButton (20 px icon, lime, 81 px sidebar).
+  Open this file directly from disk (file://).
+-->
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e0e0e;
+    --panel: #161616;
+    --card: #1a1a1a;
+    --raised: #202020;
+    --row-hover: #1f2419;
+    --line: #262626;
+    --line-2: #363636;
+    --fg: #e4e4e4;
+    --fg-strong: #ffffff;
+    --fg-2: #adaaaa;
+    --fg-3: #6a6a6a;
+    --lime: #a1fe00;
+    --font: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--font); padding: 28px 32px 40px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .lead { color: var(--fg-2); margin: 0 0 24px; max-width: 760px; }
+  .options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .option { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .option.ref { opacity: .75; }
+  .option h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .option h2 small { color: var(--fg-3); font-weight: 400; margin-left: 6px; }
+  .option p { color: var(--fg-2); margin: 0; font-size: 13px; min-height: 60px; }
+  .stage { display: flex; gap: 18px; align-items: flex-start; }
+  .big { width: 112px; height: 112px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; color: var(--lime); }
+  .big svg { width: 72px; height: 72px; }
+  .sizes { display: flex; flex-direction: column; gap: 10px; color: var(--lime); }
+  .sizes div { display: flex; align-items: center; gap: 10px; color: var(--fg-3); font-size: 12px; }
+  .sizes svg { color: var(--lime); }
+
+  /* The sidebar of the app: 81 px, buttons of 56 px (two-line labels are higher), group captions. */
+  .sidebar { width: 81px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 0; display: flex; flex-direction: column; gap: 6px; }
+  .group { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); text-align: center; margin-top: 14px; }
+  .btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 0; border-radius: 10px; color: var(--fg); font-size: 13px; text-align: center; line-height: 1.25; }
+  .btn svg { width: 20px; height: 20px; color: var(--lime); }
+  .btn.active { background: var(--row-hover); color: var(--fg-strong); }
+  .btn.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 3px; background: var(--lime); }
+  .light { --panel: #f4f4f1; --line: #dcdcd6; --fg: #2a2a2a; --fg-strong: #000; --fg-3: #8a8a85; --lime: #4f7f00; --row-hover: #e6ecd9; }
+  .pair { display: flex; gap: 12px; }
+  svg { display: block; }
+  .ico { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .fill { fill: currentColor; stroke: none; }
+</style>
+</head>
+<body>
+
+<!-- The icons. Each symbol is 24 x 24 with a 2 px stroke. -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <!-- A: crop marks with a color drop in the frame -->
+    <symbol id="icon-a" viewBox="0 0 24 24">
+      <g class="ico">
+        <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+        <path d="M2 6h14a2 2 0 0 1 2 2v14"/>
+      </g>
+      <path class="fill" d="M12 8.6c1.5 1.9 2.5 3.2 2.5 4.4a2.5 2.5 0 0 1-5 0c0-1.2 1-2.5 2.5-4.4z"/>
+    </symbol>
+
+    <!-- B: a tilted frame with a light/dark disc in the center -->
+    <symbol id="icon-b" viewBox="0 0 24 24">
+      <g class="ico">
+        <rect x="3.5" y="5.5" width="17" height="13" rx="2" transform="rotate(-12 12 12)"/>
+        <circle cx="12" cy="12" r="3.6"/>
+      </g>
+      <path class="fill" d="M12 8.4a3.6 3.6 0 0 0 0 7.2z"/>
+    </symbol>
+
+    <!-- C: a light/dark disc in a rotate arrow -->
+    <symbol id="icon-c" viewBox="0 0 24 24">
+      <g class="ico">
+        <path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8"/>
+        <path d="M21 3v5h-5"/>
+        <circle cx="12" cy="12" r="4"/>
+      </g>
+      <path class="fill" d="M12 8a4 4 0 0 0 0 8z"/>
+    </symbol>
+
+    <!-- Now: Material "tune" (sliders) -->
+    <symbol id="icon-tune" viewBox="0 0 24 24">
+      <path class="fill" d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/>
+    </symbol>
+
+    <!-- Sidebar neighbours, simplified -->
+    <symbol id="icon-points" viewBox="0 0 24 24"><g class="ico"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5L20 20"/></g></symbol>
+    <symbol id="icon-stats" viewBox="0 0 24 24"><g class="ico"><path d="M6 20V10M12 20V4M18 20v-7"/></g></symbol>
+    <symbol id="icon-export" viewBox="0 0 24 24"><g class="ico"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></g></symbol>
+  </defs>
+</svg>
+
+<h1>Colors &amp; Transform: icon options</h1>
+<p class="lead">Each icon joins a color sign and a transform sign, so the user sees both sub-tabs in one picture. The sidebar shows each icon at the real size (20 px) in the dark and the light theme. The last card is the icon of the current build, for comparison.</p>
+
+<div class="options">
+  <section class="option">
+    <h2>A. Crop and drop</h2>
+    <p>Crop marks, as in the crop tool of phone photo editors, with a color drop in the frame.</p>
+    <div class="stage">
+      <div class="big"><svg><use href="#icon-a"/></svg></div>
+      <div class="sizes">
+        <div><svg width="24" height="24"><use href="#icon-a"/></svg>24</div>
+        <div><svg width="20" height="20"><use href="#icon-a"/></svg>20</div>
+        <div><svg width="16" height="16"><use href="#icon-a"/></svg>16</div>
+        <div><svg width="13" height="13"><use href="#icon-a"/></svg>13</div>
+      </div>
+    </div>
+    <div class="pair">
+      <div class="sidebar" data-icon="icon-a"></div>
+      <div class="sidebar light" data-icon="icon-a"></div>
+    </div>
+  </section>
+
+  <section class="option">
+    <h2>B. Tilted frame</h2>
+    <p>A frame that is turned a little, like a video that the user straightens, with a light and dark disc for the colors.</p>
+    <div class="stage">
+      <div class="big"><svg><use href="#icon-b"/></svg></div>
+      <div class="sizes">
+        <div><svg width="24" height="24"><use href="#icon-b"/></svg>24</div>
+        <div><svg width="20" height="20"><use href="#icon-b"/></svg>20</div>
+        <div><svg width="16" height="16"><use href="#icon-b"/></svg>16</div>
+        <div><svg width="13" height="13"><use href="#icon-b"/></svg>13</div>
+      </div>
+    </div>
+    <div class="pair">
+      <div class="sidebar" data-icon="icon-b"></div>
+      <div class="sidebar light" data-icon="icon-b"></div>
+    </div>
+  </section>
+
+  <section class="option">
+    <h2>C. Rotate and contrast</h2>
+    <p>The rotate arrow of photo editors around a light and dark disc. It is the simplest shape at small sizes.</p>
+    <div class="stage">
+      <div class="big"><svg><use href="#icon-c"/></svg></div>
+      <div class="sizes">
+        <div><svg width="24" height="24"><use href="#icon-c"/></svg>24</div>
+        <div><svg width="20" height="20"><use href="#icon-c"/></svg>20</div>
+        <div><svg width="16" height="16"><use href="#icon-c"/></svg>16</div>
+        <div><svg width="13" height="13"><use href="#icon-c"/></svg>13</div>
+      </div>
+    </div>
+    <div class="pair">
+      <div class="sidebar" data-icon="icon-c"></div>
+      <div class="sidebar light" data-icon="icon-c"></div>
+    </div>
+  </section>
+
+  <section class="option ref">
+    <h2>Now<small>Material “tune”</small></h2>
+    <p>Sliders. Users know it as “Adjust”, but it does not show the crop or the rotation.</p>
+    <div class="stage">
+      <div class="big"><svg><use href="#icon-tune"/></svg></div>
+      <div class="sizes">
+        <div><svg width="24" height="24"><use href="#icon-tune"/></svg>24</div>
+        <div><svg width="20" height="20"><use href="#icon-tune"/></svg>20</div>
+        <div><svg width="16" height="16"><use href="#icon-tune"/></svg>16</div>
+        <div><svg width="13" height="13"><use href="#icon-tune"/></svg>13</div>
+      </div>
+    </div>
+    <div class="pair">
+      <div class="sidebar" data-icon="icon-tune"></div>
+      <div class="sidebar light" data-icon="icon-tune"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Fills each sidebar mock: Points and Stats in Match, the tab in Video, then Export.
+  const button = (icon, label, active) =>
+    `<div class="btn${active ? " active" : ""}"><svg><use href="#${icon}"/></svg><span>${label}</span></div>`;
+  document.querySelectorAll(".sidebar").forEach(sidebar => {
+    sidebar.innerHTML =
+      '<div class="group">Match</div>' +
+      button("icon-points", "Points") +
+      button("icon-stats", "Stats") +
+      '<div class="group">Video</div>' +
+      button(sidebar.dataset.icon, "Colors &amp;<br>Transform", true) +
+      '<div class="group">&nbsp;</div>' +
+      button("icon-export", "Export");
+  });
+</script>
+</body>
+</html>

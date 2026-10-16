@@ -1,8 +1,8 @@
 package org.litvin.export.scoreboard
 
 /**
- * A scoreboard drawing that does not depend on the output. The export (FFmpeg + libass), the scoring
- * preview (mpv + libass) and the settings dialog (Java2D) all draw the same scene.
+ * A scoreboard drawing that does not depend on the output. The export (FFmpeg + libass), the Points
+ * tab preview (mpv + libass) and the settings dialog (Java2D) all draw the same scene.
  *
  * The coordinates are board units: one unit is one pixel of a 1080p frame at 100 % size.
  * The origin is the top-left corner of the board. Items are drawn in list order.

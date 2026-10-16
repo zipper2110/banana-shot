@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Share Tab Option A</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* Option A: the thumbnail preview fills the left side. A side column at the right holds the thumbnail text
+     and the description. The video type is in a bar above both sides, because it changes both. */
+  .tab { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; min-width: 0; }
+  .typebar { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .typebar .lbl { font-weight: 600; }
+  .typebar .hint { margin-left: 2px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
+
+  .left { padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; }
+  .preview-wrap { width: min(100%, calc((100vh - 400px) * 16 / 9)); }
+  /* Under the preview: the point controls and the buttons at the left, the small preview at the right. */
+  .under { width: min(100%, calc((100vh - 400px) * 16 / 9)); display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 10px 20px; }
+  .under .controls { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .pick { display: grid; grid-template-columns: 60px minmax(0, 1fr); align-items: center; gap: 6px 10px; }
+  .pick .lbl { color: var(--fg-2); font-size: 12.5px; }
+  .pick .ctrl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .pick .ctrl .select { flex: 1; min-width: 0; }
+  .pick .time { font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 112px; text-align: right; }
+  .note-line { grid-column: 2; }
+  .actions { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .actions .buttons { display: flex; gap: 8px; }
+  .actions .file { font-size: 12px; color: var(--fg-2); }
+  .actions .file code { font-family: Consolas, ui-monospace, monospace; color: var(--sage); }
+
+  .side { border-left: 1px solid var(--line); background: var(--panel); padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+  .block { display: flex; flex-direction: column; gap: 10px; }
+  .block + .block { border-top: 1px solid var(--line); padding-top: 14px; }
+  .row-buttons { display: flex; align-items: center; gap: 10px; }
+  .edited { font-size: 11.5px; color: var(--yellow); display: inline-flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+<div id="mock-bar"></div>
+<div class="window">
+  <div id="titlebar"></div>
+  <div class="app">
+    <nav id="nav"></nav>
+    <main class="tab">
+      <div class="typebar">
+        <span class="lbl">Video type</span>
+        <div class="seg" id="type">
+          <button data-type="full">Full match<small>All marked points</small></button>
+          <button data-type="best">Best points<small>The favorites</small></button>
+        </div>
+        <span class="hint">It sets the words on the thumbnail and in the description.</span>
+      </div>
+      <div class="cols">
+        <section class="left scroll">
+          <div class="section-title"><span class="material-symbols-outlined">image</span>Thumbnail <span class="right faint">1280 × 720 PNG</span></div>
+          <div class="preview-wrap"><div class="thumb-box" id="preview"></div></div>
+          <div class="under">
+            <div class="controls">
+            <div class="pick">
+              <span class="lbl">Point</span>
+              <div class="ctrl">
+                <button class="btn btn-icon btn-sm" id="prev" title="Previous point"><span class="material-symbols-outlined">chevron_left</span></button>
+                <select class="select" id="point"></select>
+                <button class="btn btn-icon btn-sm" id="next" title="Next point"><span class="material-symbols-outlined">chevron_right</span></button>
+                <label class="check-label" style="margin-left:6px"><input type="checkbox" class="check-input" id="favonly"><span class="check"></span>Only favorites</label>
+              </div>
+              <span class="lbl">Moment</span>
+              <div class="ctrl">
+                <input type="range" id="pos" min="0" max="1000" value="500">
+                <span class="time" id="time"></span>
+              </div>
+              <div class="note-line" id="pick-note"></div>
+            </div>
+            <div class="actions">
+              <div class="buttons">
+                <button class="btn btn-lime" id="save"><span class="material-symbols-outlined">save</span>Save thumbnail</button>
+                <button class="btn btn-ghost" id="open"><span class="material-symbols-outlined">folder_open</span>Open folder</button>
+              </div>
+              <div class="file" id="file"></div>
+            </div>
+            </div>
+            <div class="mini">
+              <div class="thumb-box" id="mini"></div>
+              <div class="cap">As in YouTube search (240 px)</div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="side scroll">
+          <div class="block">
+            <div class="section-title"><span class="material-symbols-outlined">title</span>Thumbnail text <span class="right" id="text-reset"></span></div>
+            <div class="field">
+              <label for="small"><span class="swatch" style="--sw:#f6f5f2"></span>Small line (white)</label>
+              <input class="input upper" id="small" maxlength="24">
+            </div>
+            <div class="field">
+              <label for="big"><span class="swatch" style="--sw:#c8ec46"></span>Large line (lime)</label>
+              <input class="input upper" id="big" maxlength="24">
+            </div>
+            <div id="fit-note"></div>
+            <div class="hint">Use 2 or 3 short words. The text must be readable in the small preview.</div>
+          </div>
+
+          <div class="block">
+            <div class="section-title"><span class="material-symbols-outlined">notes</span>Description <span class="right" id="desc-state"></span></div>
+            <textarea class="textarea" id="desc" rows="10" spellcheck="false"></textarea>
+            <label class="check-label" id="result-label"><input type="checkbox" class="check-input" id="result"><span class="check"></span>Show the result</label>
+            <div class="hint" id="result-hint"></div>
+            <div class="row-buttons">
+              <button class="btn" id="copy"><span class="material-symbols-outlined">content_copy</span>Copy</button>
+              <span class="hint">Paste the text in the YouTube description.</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+  const S = Mock.state;
+  const $ = (id) => document.getElementById(id);
+  let favOnly = false;
+  Mock.shell('a');
+
+  function visible() {
+    const all = Mock.points().map((p, i) => ({ p, i }));
+    return favOnly ? all.filter((x) => x.p.fav) : all;
+  }
+
+  function render() {
+    document.querySelectorAll('#type button').forEach((b) => b.classList.toggle('is-selected', b.dataset.type === S.type));
+    Mock.mountThumb($('preview'), {});
+    Mock.mountThumb($('mini'), { ytBadge: true });
+
+    // Point and moment
+    const hasFav = Mock.points().some((p) => p.fav);
+    if (!hasFav) favOnly = false;
+    $('favonly').checked = favOnly;
+    $('favonly').disabled = !hasFav;
+    $('favonly').parentElement.style.opacity = hasFav ? 1 : .4;
+    const list = visible();
+    const idx = Mock.pointIndex();
+    $('point').innerHTML = list.map(({ p, i }) =>
+      `<option value="${i}" ${i === idx ? 'selected' : ''}>${p.fav ? '★ ' : ''}${Mock.esc(Mock.pointLabel(p))}</option>`).join('');
+    const p = Mock.current();
+    $('pos').value = Math.round(S.pos * 1000);
+    $('pos').style.setProperty('--fill', (S.pos * 100) + '%');
+    $('time').textContent = `${Mock.clockTenths(p.len * S.pos)} of ${Mock.clockTenths(p.len)}`;
+    const notes = [];
+    if (!hasFav) notes.push('No point has a star. The app selected a point near the middle of the match.');
+    if (!Mock.scored()) notes.push('The points have no score. The scoreboard shows only the names.');
+    $('pick-note').innerHTML = notes.map((n) => `<div class="note">${Mock.icon('info')}<p>${n}</p></div>`).join('');
+
+    // Save
+    $('file').innerHTML = S.saved
+      ? `<div class="ok-line">${Mock.icon('check_circle')}Saved <code>${Mock.esc(S.saved)}</code> in the export folder.</div>`
+      : `The file name is <code>${Mock.esc(Mock.fileName())}</code>.`;
+    $('save').disabled = S.mode === 'error';
+
+    // Text
+    if (document.activeElement !== $('small')) $('small').value = Mock.smallText();
+    if (document.activeElement !== $('big')) $('big').value = Mock.bigText();
+    const edited = S.small != null || S.big != null;
+    $('text-reset').innerHTML = edited ? '<button class="link" id="reset-text">Use the preset words</button>' : '';
+    if (edited) $('reset-text').onclick = () => Mock.set({ small: null, big: null });
+    $('fit-note').innerHTML = Mock.fit().shrunk
+      ? `<div class="note">${Mock.icon('text_fields')}<p>The text is long, so the app made it smaller. Short words are easier to read.</p></div>` : '';
+
+    // Description
+    if (document.activeElement !== $('desc')) $('desc').value = Mock.description();
+    $('result').checked = S.showResult && Mock.scored();
+    $('result').disabled = !Mock.scored();
+    $('result-label').style.opacity = Mock.scored() ? 1 : .4;
+    $('result-hint').textContent = Mock.scored()
+      ? 'Turn it off if the viewers must not know the winner before they watch.'
+      : 'Score the points in the Scoring tab to show the result.';
+    $('desc-state').innerHTML = S.description != null
+      ? `<span class="edited">${Mock.icon('edit')}Edited</span> <button class="link" id="reset-desc">Make the text again</button>` : '';
+    if (S.description != null) $('reset-desc').onclick = () => Mock.set({ description: null });
+  }
+
+  document.querySelectorAll('#type button').forEach((b) => b.addEventListener('click', () => Mock.set({ type: b.dataset.type, saved: null, description: null })));
+  $('point').addEventListener('change', (e) => Mock.set({ point: Number(e.target.value), pos: .5, saved: null }));
+  function step(d) {
+    const list = visible().map((x) => x.i);
+    const at = Math.max(0, list.indexOf(Mock.pointIndex()));
+    const next = list[Math.min(list.length - 1, Math.max(0, at + d))];
+    Mock.set({ point: next, pos: .5, saved: null });
+  }
+  $('prev').addEventListener('click', () => step(-1));
+  $('next').addEventListener('click', () => step(1));
+  $('favonly').addEventListener('change', (e) => {
+    favOnly = e.target.checked;
+    const list = visible().map((x) => x.i);
+    if (!list.includes(Mock.pointIndex())) Mock.set({ point: list[0], pos: .5 }); else Mock.render();
+  });
+  $('pos').addEventListener('input', (e) => Mock.set({ pos: e.target.value / 1000, saved: null }));
+  $('small').addEventListener('input', (e) => Mock.set({ small: e.target.value, saved: null }));
+  $('big').addEventListener('input', (e) => Mock.set({ big: e.target.value, saved: null }));
+  $('save').addEventListener('click', () => { Mock.set({ saved: Mock.fileName() }); Mock.toast('Saved the thumbnail'); });
+  $('open').addEventListener('click', () => Mock.toast('Opens the export folder in Explorer', 'folder_open'));
+  $('desc').addEventListener('input', (e) => Mock.set({ description: e.target.value }));
+  $('result').addEventListener('change', (e) => Mock.set({ showResult: e.target.checked, description: null }));
+  $('copy').addEventListener('click', () => Mock.toast('Copied the description'));
+
+  Mock.onRender(render);
+  render();
+</script>
+</body>
+</html>

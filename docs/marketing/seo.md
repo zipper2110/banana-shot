@@ -122,10 +122,13 @@ Put each group on one page. Do not put the same group on two pages.
 - [x] Add facts to the download page: the latest version, the date, and the
       file size. AI answers like exact facts. Done on 2026-10-17. The
       release checklist has the rule to change them.
-- [ ] GitHub repository: add a one-sentence description with the site link.
+- [x] GitHub repository: add a one-sentence description with the site link.
       Add the topics `tennis`, `video-editor`, `scoreboard`, `padel`,
       `windows`. The README must start with one plain sentence about what
-      the app does.
+      the app does. Done on 2026-10-17: the description, the website link,
+      and 12 topics (also `video-editing`, `sports-video`, `match-video`,
+      `highlights`, `desktop-app`, `kotlin`, `ffmpeg`). The README already
+      had a plain first sentence and the site link.
 
 ## 6. Phase B: pages that answer questions (months 1 to 3)
 

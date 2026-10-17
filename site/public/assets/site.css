@@ -294,6 +294,28 @@ main > .section-noai .section-head { margin-bottom: 48px; }
 .card > :first-child { margin-top: 0; }
 .meta { color: var(--fg-2); font-size: 0.9rem; }
 
+/* Guide pages (/guides/). */
+.guide .guide-demo { margin: 24px 0 32px; }
+.guide-list { list-style: none; padding: 0 !important; }
+.guide-list li { margin-bottom: 16px; }
+.guide-list a { font-weight: 600; font-size: 1.1rem; }
+.guide-list p { margin: 4px 0 0; color: var(--fg-2); }
+/* A comparison table. On a phone, the cells get smaller so that all columns fit. The box scrolls sideways only below 320 px. */
+.table-scroll { overflow-x: auto; margin: 16px 0 24px; border: 1px solid var(--glass-edge); border-radius: var(--radius-sm); background: var(--glass); }
+.compare { width: 100%; min-width: 300px; border-collapse: collapse; font-size: 0.92rem; }
+.compare th, .compare td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.compare tr:last-child th, .compare tr:last-child td { border-bottom: 0; }
+.compare thead th { color: var(--fg-strong); font-weight: 600; }
+.compare tbody th { color: var(--fg-2); font-weight: 500; width: 24%; }
+.compare .ours { background: var(--lime-tint); }
+.compare thead .ours { color: var(--lime); }
+@media (max-width: 600px) {
+  .compare { font-size: 0.8rem; hyphens: auto; }
+  .compare th, .compare td { padding: 8px 6px; }
+  .compare tbody th { width: auto; }
+}
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 /* The contact form. The inputs and the topic choice look like the feedback form of the app (DialogControls.kt). */
 .feedback { margin: 0; }
 .field { border: 0; padding: 0; margin: 0 0 20px; min-width: 0; }

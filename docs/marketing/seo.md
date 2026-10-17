@@ -151,7 +151,23 @@ Phase 2.
 
 ### Pages in order
 
-1. How to add a scoreboard to a tennis video.
+1. How to add a scoreboard to a tennis video. Done on 2026-10-18:
+   `/guides/tennis-video-scoreboard/`. Decisions:
+   - The guides are under `/guides/`. The page `/guides/` lists them. The
+     footer of each page has the link "Guides" after FAQ. The header does
+     not change, because seven items do not fit in one line at 360 px
+     (decision 32 in `docs/site/b-10-tasks.md`).
+   - The page shows the scoring demo of the home page as its picture. Real
+     screenshots or frames of the author can replace it later.
+   - The page names general editors (DaVinci Resolve, Premiere Pro, CapCut,
+     Shotcut) but no other tennis apps, and gives no prices. Thus no fact
+     on the page can become old.
+   - The page has an `Article` JSON-LD block. Its author is the `Person` of
+     the home page.
+   - An "At a glance" table compares the three ways. Where a fact is not
+     the same for all phone apps, the cell says "Depends on the app". On a
+     phone, the cells get smaller so that the BananaShot column stays
+     visible (`.compare` in `site.css`).
 2. How to cut the dead time from a tennis match video.
 3. How to record a tennis match with a phone (camera position, mount,
    settings, battery, file size). This page brings people before they need

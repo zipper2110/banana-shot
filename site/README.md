@@ -16,6 +16,9 @@ The public site of BananaShot: `https://banana-shot-editor.app/`. B-10 in
   and the URL.
 - Each page has its own copy of the header and the footer. When you add a
   page or change a link, change all pages, `404.html`, and `sitemap.xml`.
+- The guides are in `public/guides/<name>/index.html`. When you add a guide,
+  add it to the list on `public/guides/index.html` and to `sitemap.xml`.
+  The rules for the text are in `docs/marketing/seo.md`, section 6.
 
 ## Rules
 

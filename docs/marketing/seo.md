@@ -112,11 +112,16 @@ Put each group on one page. Do not put the same group on two pages.
       them. For the FAQ, the Google test shows "No items detected", because
       Google shows FAQ results only for official sites. The JSON-LD of the
       live FAQ is valid JSON with all 16 questions.
-- [ ] Add the missing search words to the home page where they fit
+- [x] Add the missing search words to the home page where they fit
       naturally: "highlights", "score overlay", "dead time". Follow the site
-      copy style. Do not fill the page with keywords.
-- [ ] Add facts to the download page: the latest version, the date, and the
-      file size. AI answers like exact facts.
+      copy style. Do not fill the page with keywords. Done on 2026-10-17:
+      the meta description, the JSON-LD description, "How it works", step 4,
+      and the scoreboard feature. The meta description and the JSON-LD do
+      not say "short video", because a video with only the points is often
+      20 to 30 minutes long (decision 38 in `docs/site/b-10-tasks.md`).
+- [x] Add facts to the download page: the latest version, the date, and the
+      file size. AI answers like exact facts. Done on 2026-10-17. The
+      release checklist has the rule to change them.
 - [ ] GitHub repository: add a one-sentence description with the site link.
       Add the topics `tennis`, `video-editor`, `scoreboard`, `padel`,
       `windows`. The README must start with one plain sentence about what

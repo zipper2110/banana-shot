@@ -194,7 +194,9 @@ If a check fails, fix the cause and start again at step 5.
       date (YYYY-MM-DD) of the new version, and deploy the site. For the
       first release, replace "coming soon" of 1.0.0. Also change
       `softwareVersion` in the JSON-LD of `site/public/index.html`, and the
-      `<lastmod>` of the home page and the changelog in `sitemap.xml`.
+      version, the date, and the size of the setup file on
+      `site/public/download/index.html`. Change the `<lastmod>` of these
+      pages and the changelog in `sitemap.xml`.
 - [ ] Site: "Download for Windows" on `https://banana-shot-editor.app/download/`
       downloads `BananaShot-win-Setup.exe` of the new release. Before the
       first release, this link returns 404.

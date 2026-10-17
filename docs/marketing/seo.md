@@ -105,8 +105,13 @@ Put each group on one page. Do not put the same group on two pages.
       "Search data").
 - [x] Add `<lastmod>` to each URL in `sitemap.xml`. Done on 2026-10-17. The
       rule is in `site/README.md` and in `docs/release-checklist.md`.
-- [ ] Deploy the site. Then test the home page and the FAQ in the Google
-      Rich Results Test and the Schema.org validator.
+- [x] Deploy the site. Then test the home page and the FAQ in the Google
+      Rich Results Test and the Schema.org validator. Done on 2026-10-17:
+      the home page has 1 valid item (Software App). The only issue is the
+      optional `aggregateRating`. Do not add ratings until real users give
+      them. For the FAQ, the Google test shows "No items detected", because
+      Google shows FAQ results only for official sites. The JSON-LD of the
+      live FAQ is valid JSON with all 16 questions.
 - [ ] Add the missing search words to the home page where they fit
       naturally: "highlights", "score overlay", "dead time". Follow the site
       copy style. Do not fill the page with keywords.

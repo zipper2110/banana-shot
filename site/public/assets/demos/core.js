@@ -46,11 +46,63 @@ window.Demos = (function () {
   var NEVER = new Promise(function () {});
 
   // The navigation column of the app. "active" is the index of the open tab:
-  // 0 Projects, 1 Points, 2 Scoring, 3 Statistics, 4 Adjustments, 5 Crop, 6 Export.
+  // 0 Projects, 1 Points, 2 Statistics, 3 Colors & Transform, 4 Thumbnail, 5 Export.
+  // A line separates the groups: Projects, Match (1 and 2), Video (3 and 4), and Export.
   function nav(active) {
     var html = '<div class="ui-nav"><img src="/assets/logo.svg" alt="">';
-    for (var i = 0; i < 7; i++) html += '<i class="' + (i === active ? "on" : "") + '"></i>';
+    for (var i = 0; i < 6; i++) {
+      if (i === 1 || i === 3 || i === 5) html += "<hr>";
+      html += '<i class="' + (i === active ? "on" : "") + '"></i>';
+    }
     return html + "</div>";
+  }
+
+  var PLAY_ICON = '<span class="ui-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>';
+
+  // The parts of the Points tab copies (points.js, scoring.js, comments.js, hero.js).
+
+  // The point bar under the video: "Point start", the serve mark, the winner buttons, and "Override score".
+  // The winner buttons have the classes "pt-p1", "pt-none", and "pt-p2".
+  function pointBar() {
+    function key(k) { return '<kbd>' + k + "</kbd>"; }
+    return '<div class="pt-bar">' +
+      '<span class="pt-start">Point start<em class="ui-num"></em>' + key("Enter") + "</span>" +
+      '<span class="pt-btn pt-serve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.3 2.7-6 6-6M16 14l2 2 4-4"/></svg>' + key("S") + "</span>" +
+      '<span class="pt-btn pt-p1" style="--w:' + PLAYERS[0].color + '">' + PLAYERS[0].name + " scored" + key("Q") + "</span>" +
+      '<span class="pt-btn pt-none" style="--w:#5a5a5a">No score' + key("W") + "</span>" +
+      '<span class="pt-btn pt-p2" style="--w:' + PLAYERS[1].color + '">' + PLAYERS[1].name + " scored" + key("E") + "</span>" +
+      '<span class="pt-btn pt-over">Override score</span>' +
+      "</div>";
+  }
+
+  // The playback bar under the point bar: the time, the speed, the transport buttons, "Comment", and "Frame step".
+  function playBar(now) {
+    return '<div class="ui-playbar">' +
+      '<div class="pt-left"><span class="ui-now ui-num">' + (now || "") + '</span><span class="pt-speed">1×</span></div>' +
+      '<div class="ui-transport"><span class="ui-seek">−5s</span><span class="ui-seek">−1s</span>' + PLAY_ICON +
+        '<span class="ui-seek">+1s</span><span class="ui-seek">+5s</span></div>' +
+      '<div class="pt-right"><span class="ui-addc">Comment</span><span class="pt-step"><i></i>Frame step</span></div>' +
+      "</div>";
+  }
+
+  // The top of the right column: the point number, the favorite star, and Previous and Next.
+  function pointHead(number, total, favorite) {
+    return '<div class="pt-head"><b class="ui-num">Point <span class="pt-num">' + number + "</span> / " + total +
+      '<i class="pt-fav' + (favorite ? " on" : "") + '">' + (favorite ? "★" : "☆") + "</i></b>" +
+      '<div class="pt-nav"><span class="pt-prev">Previous</span><span class="pt-next">Next</span></div></div>';
+  }
+
+  // The head of the list of the right column: "Points & events" and the counts.
+  function listHead(marked, favorites, comments) {
+    function count(cls, n, text) { return '<span><em class="' + cls + '">' + n + "</em> " + text + "</span>"; }
+    return '<div class="ui-list-head"><b>Points &amp; events</b><div class="ui-counts">' +
+      count("pt-marked", marked, "marked") + count("pt-favs", favorites, "favorites") + count("pt-comments", comments, "comments") +
+      "</div></div>";
+  }
+
+  // The buttons at the bottom of the right column.
+  function pointsFoot() {
+    return '<div class="pt-foot"><span class="pt-settings">Scoring settings</span><span class="pt-style">Scoreboard style</span></div>';
   }
 
   function watchVisibility(element, onVisible) {
@@ -194,6 +246,7 @@ window.Demos = (function () {
 
   return {
     STAGE_W: STAGE_W, STAGE_H: STAGE_H, PLAYERS: PLAYERS, reduceMotion: reduceMotion,
-    icon: icon, nav: nav, stage: stage, register: register
+    icon: icon, nav: nav, stage: stage, register: register,
+    pointBar: pointBar, playBar: playBar, pointHead: pointHead, listHead: listHead, pointsFoot: pointsFoot
   };
 })();

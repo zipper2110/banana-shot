@@ -1,5 +1,6 @@
-// Feature 5, "Color and framing": a copy of the Adjustments tab and the Crop tab.
-// The full tabs. The user moves the sliders one by one, and the video changes with each slider.
+// Feature 5, "Color and framing": a copy of the Colors & Transform tab.
+// The full tab. The user moves the sliders one by one, and the video changes with each slider.
+// The Colors sub-tab comes first, then the Transform sub-tab. At the end, the user adds a change point.
 (function (D) {
   "use strict";
 
@@ -21,6 +22,7 @@
     { key: "fine", label: "Fine rotation", min: -5, max: 5, end: 0.6, mid: true, unit: "°", digits: 1 }
   ];
   var TILT = -3.6; // The camera of the recording is not level.
+  var CHANGE_AT = "00:41:30"; // The change point goes at the playhead.
 
   // The look of the video for the slider values. The start values give a dark, flat, and tilted image.
   function filterFor(v) {
@@ -45,7 +47,7 @@
 
   function build(demo, views) {
     var ui = D.stage(demo,
-      D.nav(4) +
+      D.nav(3) +
       '<div class="pc-video"><div class="pc-frame"><img class="pc-after" src="/assets/frames/picture.webp" loading="lazy" alt=""></div><div class="pc-grid"></div></div>' +
       '<div class="pc-bar">' +
         '<div class="sc-scrub ui-num"><span>00:41:30</span><div class="sc-track"><i></i></div><span>01:52:40</span></div>' +
@@ -54,15 +56,20 @@
           '<span class="ui-seek">+1s</span><span class="ui-seek">+5s</span></div>' +
       '</div>' +
       '<div class="pc-panel">' +
-        '<div class="pc-page pc-adjust"><div class="pc-head"><h4>Adjustments<span>Light and color of the video</span></h4><span class="ui-btn">Reset</span></div>' + sliders(ADJUST) + '</div>' +
-        '<div class="pc-page pc-crop"><div class="pc-head"><h4>Crop<span>Zoom, move, and rotate the image</span></h4><span class="ui-btn">Reset</span></div>' + sliders(CROP) + '</div>' +
+        '<div class="pc-tabs"><span class="pc-tab-adjust">Colors</span><span class="pc-tab-crop">Transform</span></div>' +
+        '<div class="pc-page pc-adjust"><div class="pc-head"><h4>Color grade<span class="pc-status"></span></h4><span class="ui-btn">Reset all</span></div>' + sliders(ADJUST) + '</div>' +
+        '<div class="pc-page pc-crop"><div class="pc-head"><h4>Transform<span class="pc-status"></span></h4><span class="ui-btn">Reset all</span></div>' + sliders(CROP) + '</div>' +
+        '<div class="pc-change"><div class="ui-cap">Change points</div><b class="pc-change-status"></b>' +
+          '<div class="pc-change-btns"><span class="ui-btn pc-add">+ Add here</span><span class="ui-btn off">Remove</span><span class="ui-btn off">‹</span><span class="ui-btn off">›</span></div>' +
+          '<p>Did the light change or did the phone move? Add a change point there. It blends over 1 second.</p></div>' +
       '</div>',
       views);
 
     var all = ADJUST.concat(CROP);
     var values = {};
     var frame = ui.q(".pc-frame"), after = ui.q(".pc-after"), grid = ui.q(".pc-grid");
-    var navItems = ui.qa(".ui-nav i");
+    var tabs = { adjust: ui.q(".pc-tab-adjust"), crop: ui.q(".pc-tab-crop") };
+    var changeStatus = ui.q(".pc-change-status"), addButton = ui.q(".pc-add");
 
     function spec(key) { return all.filter(function (s) { return s.key === key; })[0]; }
     function line(key) { return ui.q('.pc-line[data-key="' + key + '"]'); }
@@ -82,6 +89,15 @@
       var shown = rounded.toFixed(s.digits || 0);
       el.querySelector(".val").textContent = (rounded > 0 && s.mid ? "+" : "") + shown + (s.unit || "");
       el.classList.toggle("changed", value !== startOf(s));
+      showStatus(key);
+    }
+
+    // "All at default" or "2 of 6 changed" in the head of the sub-tab of the slider.
+    function showStatus(key) {
+      var list = ADJUST.indexOf(spec(key)) >= 0 ? ADJUST : CROP;
+      var changed = list.filter(function (s) { return values[s.key] !== undefined && values[s.key] !== startOf(s); }).length;
+      ui.q(list === ADJUST ? ".pc-adjust .pc-status" : ".pc-crop .pc-status").textContent =
+        changed === 0 ? "All at default" : changed + " of " + list.length + " changed";
     }
 
     // Moves the sliders to their end values together in "ms" milliseconds.
@@ -99,21 +115,34 @@
     }
 
     function showPage(name) {
-      ui.q(".pc-adjust").classList.toggle("on", name === "adjust");
-      ui.q(".pc-crop").classList.toggle("on", name === "crop");
-      navItems.forEach(function (el, i) { el.classList.toggle("on", i === (name === "adjust" ? 4 : 5)); });
+      ["adjust", "crop"].forEach(function (page) {
+        ui.q(".pc-" + page).classList.toggle("on", name === page);
+        tabs[page].classList.toggle("on", name === page);
+      });
     }
 
-    // Opens the Crop tab with a click on its icon.
+    // Opens the Transform sub-tab with a click.
     async function openCrop() {
-      await ui.press(navItems[5]);
+      await ui.press(tabs.crop);
       showPage("crop");
+    }
+
+    function setChangePoint(added) {
+      changeStatus.textContent = added ? "Change point 1 of 1, at " + CHANGE_AT : "No change points";
+      changeStatus.classList.toggle("on", added);
+    }
+
+    // Adds a change point at the playhead.
+    async function addChangePoint() {
+      await ui.press(addButton);
+      setChangePoint(true);
     }
 
     function reset() {
       all.forEach(function (s) { setValue(s.key, startOf(s)); });
       render();
       showPage("adjust");
+      setChangePoint(false);
       grid.classList.remove("show");
     }
 
@@ -123,7 +152,7 @@
     }
 
     return {
-      ui: ui, slide: slide, openCrop: openCrop, grid: grid,
+      ui: ui, slide: slide, openCrop: openCrop, addChangePoint: addChangePoint, grid: grid,
       reset: reset, showEnd: showEnd
     };
   }
@@ -152,7 +181,7 @@
       // The full app: a clear video.
       ui.camera("wide");
       await ui.sleep(1300);
-      // The Crop tab: rotate, then zoom and move.
+      // The Transform sub-tab: rotate, then zoom and move.
       // The camera stays wide, so that the full video shows the rotation and the crop.
       await pc.openCrop();
       await ui.sleep(650);
@@ -165,8 +194,12 @@
       await pc.slide(["zoom"], 900);
       await pc.slide(["panX", "panY"], 600);
       await ui.sleep(400);
+      // A change point for a later part of the match, when the phone moved.
+      await pc.addChangePoint();
+      ui.label("crop", "The phone moved? Add a change point");
+      await ui.sleep(1900);
       ui.hideLabel();
-      await ui.sleep(1800);
+      await ui.sleep(600);
     }
 
     ui.run(pc.reset, play, pc.showEnd);

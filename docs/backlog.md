@@ -110,25 +110,6 @@ When item is done, move it under
 - Decided on 2026-10-15: these features go on the Share tab (B-46). The
   vertical clips for Shorts, Reels, and TikTok come there later.
 
-### B-48 Site: the Points tab replaces the Scoring tab
-
-- Version 1.2.0 removes the Scoring tab. The Points tab has the scoring
-  controls now.
-- Decided on 2026-10-16: update the site at the 1.2.0 release, not before.
-  Reason: until then, the site describes version 1.1.0, which has the
-  Scoring tab.
-- Change these parts of `site/public`:
-  - `index.html`: the scoring demo and its `aria-label` show the Scoring
-    tab. Make the demo a copy of the Points tab with the scoring controls.
-  - `assets/demos/scoring.js`, `assets/demos.css`, and the tab list in
-    `assets/demos/core.js`.
-  - `privacy/index.html`: the list of counted tabs names Scoring, and the
-    text says "Point outcomes recorded in Scoring". Older versions still
-    send the Scoring tab keys. Check if the change needs a new notice
-    version (`AnalyticsSchema.NOTICE_VERSION`).
-- Done when: the deployed site shows no Scoring tab, except in the
-  changelog of older versions.
-
 ### B-17 Audio noise reduction
 
 - Remove background noise from the audio in the exported video. Examples are

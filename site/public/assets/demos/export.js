@@ -31,7 +31,7 @@
 
   function build(demo, views) {
     var ui = D.stage(demo,
-      D.nav(6) +
+      D.nav(5) +
       '<div class="ex-config">' +
         '<div class="ex-scroll">' +
           '<div class="ex-step"><i>1</i>Content</div>' +

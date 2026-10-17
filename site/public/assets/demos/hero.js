@@ -6,7 +6,9 @@
 
   // The timeline shows 10 minutes of the match: 0:36:00 to 0:46:00. 824 px for 600 s.
   var T0 = 2160, T1 = 2760, TRACK_W = 824;
+  // [start, end, favorite]. WINNERS has the index of the player who won each point.
   var POINTS = [[2172, 2190], [2215, 2241, true], [2268, 2280], [2310, 2338], [2371, 2389], [2405, 2430], [2444, 2461], [2490, 2516]];
+  var WINNERS = [0, 1, 0, 0, 1, 0, 1, 0];
   var FIRST_NUMBER = 22; // The number of the first point in the window.
   var NOW = 2516;
 
@@ -22,10 +24,9 @@
     }).join("");
     var rows = POINTS.map(function (p, i) {
       var last = i === POINTS.length - 1;
-      return '<div class="ui-row ui-num' + (last ? " sel" : "") + '"><span class="n">' + (FIRST_NUMBER + i) + "</span><span>" + short(p[0]) +
+      return '<div class="ui-row won ui-num' + (last ? " sel" : "") + '" style="--w:' + D.PLAYERS[WINNERS[i]].color + '"><span class="n">' + (FIRST_NUMBER + i) + "</span><span>" + short(p[0]) +
         '</span><span class="len">' + (p[1] - p[0]) + ' s</span><span class="star">' + (p[2] ? "★" : "") + "</span></div>";
     }).join("");
-    var last = POINTS[POINTS.length - 1];
     var players = [["J. Park", "6", "3", "40"], ["M. Silva", "4", "2", "15"]];
 
     var ui = D.stage(demo,
@@ -38,24 +39,14 @@
         }).join("") +
         "</div>" +
       "</div>" +
-      '<div class="ui-playbar">' +
-        '<span class="ui-now ui-num">' + short(NOW) + ".0</span>" +
-        '<div class="ui-transport"><span class="ui-seek">−5s</span><span class="ui-seek">−1s</span>' +
-          '<span class="ui-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>' +
-          '<span class="ui-seek">+1s</span><span class="ui-seek">+5s</span></div>' +
-        '<span class="ui-addc">Comment</span>' +
-      "</div>" +
+      D.pointBar() +
+      D.playBar(short(NOW) + ".0") +
       '<div class="ui-side">' +
-        '<div class="ui-mark">' +
-          '<div class="ui-mark-head">Mark a point</div>' +
-          '<div class="ui-steps">' +
-            '<div class="ui-step done"><div class="ui-step-top"><span class="ui-n">1</span>Point start</div><div class="ui-val ui-num">' + short(last[0]) + "</div></div>" +
-            '<div class="ui-step done"><div class="ui-step-top"><span class="ui-n">2</span>Point end</div><div class="ui-val ui-num">' + short(last[1]) + "</div></div>" +
-          "</div>" +
-        "</div>" +
-        '<div class="ui-list-head"><b>Points</b><div class="ui-counts"><span><em>74</em> marked</span><span><em>9</em> favorites</span></div></div>' +
+        D.pointHead(FIRST_NUMBER + POINTS.length - 1, 74, false) +
+        D.listHead(74, 9, 6) +
         '<div class="ui-thead"><span>#</span><span>Start</span><span style="text-align:right">Length</span><span></span></div>' +
         '<div class="ui-rows">' + rows + "</div>" +
+        D.pointsFoot() +
       "</div>" +
       '<div class="ui-tl">' +
         '<div class="ui-ruler">' + ruler + "</div>" +

@@ -30,34 +30,52 @@
 .ui-nav img { width: 26px; height: 26px; margin-bottom: 8px; }
 .ui-nav i { display: block; width: 30px; height: 30px; border-radius: 7px; background: var(--card); }
 .ui-nav i.on { background: var(--lime-tint); box-shadow: inset 0 0 0 1px var(--lime-edge); }
+.ui-nav hr { width: 22px; margin: 2px 0; border: 0; border-top: 1px solid var(--line-2); }
 
-.ui-video { position: absolute; left: 48px; top: 0; width: 632px; height: 356px; overflow: hidden; background: #000; }
+.ui-video { position: absolute; left: 48px; top: 0; width: 632px; height: 310px; overflow: hidden; background: #000; }
 .ui-video img, .ui-photo { width: 100%; height: 100%; object-fit: cover; transform-origin: 62% 45%; animation: ui-pan 16s ease-in-out infinite alternate; }
 @keyframes ui-pan { from { transform: scale(1); } to { transform: scale(1.08); } }
 
-.ui-playbar { position: absolute; left: 48px; top: 356px; width: 632px; height: 52px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 12px; background: var(--overlay, #1c1c1c); border-top: 1px solid var(--line); }
+.ui-playbar { position: absolute; left: 48px; top: 358px; width: 632px; height: 50px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 10px; background: var(--overlay, #1c1c1c); border-top: 1px solid var(--line); }
 .ui-now { font-size: 13px; }
+.pt-left, .pt-right { display: flex; align-items: center; gap: 6px; }
+.pt-right { justify-self: end; }
+.pt-speed { height: 26px; padding: 0 8px; display: grid; place-items: center; border-radius: 5px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11px; color: var(--fg-2); }
+.pt-step { height: 28px; padding: 0 8px; display: flex; align-items: center; gap: 6px; border-radius: 5px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11px; color: var(--fg-2); white-space: nowrap; }
+.pt-step i { width: 10px; height: 10px; border-radius: 2px; border: 1.5px solid #5a5a5a; }
 .ui-transport { display: flex; align-items: center; gap: 5px; }
 .ui-seek { height: 28px; padding: 0 8px; display: grid; place-items: center; border-radius: 5px; background: #292929; border: 1px solid #474747; font-size: 11px; font-weight: 600; }
-.ui-play { width: 40px; height: 40px; margin: 0 4px; display: grid; place-items: center; border-radius: 50%; background: var(--lime); color: var(--on-lime); }
+.ui-play { width: 38px; height: 38px; margin: 0 4px; display: grid; place-items: center; border-radius: 50%; background: var(--lime); color: var(--on-lime); }
 .ui-play svg { width: 18px; height: 18px; }
 .ui-addc { justify-self: end; height: 28px; padding: 0 10px; display: flex; align-items: center; border-radius: 5px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11px; color: var(--fg-2); }
 
+/* The point bar of the Points tab (core.js, pointBar). --w is the color of the winner. */
+.pt-bar { position: absolute; left: 48px; top: 310px; width: 632px; height: 48px; display: grid; grid-template-columns: 128px 50px 1fr 0.8fr 1fr auto; gap: 5px; align-items: center; padding: 0 10px; background: var(--overlay, #1c1c1c); border-top: 1px solid var(--line); }
+.pt-bar kbd { margin-left: auto; padding: 1px 4px; border-radius: 3px; border: 1px solid #4a4a4a; background: #2a2a2a; font: 600 9px/1.2 var(--font); color: var(--fg-2); }
+.pt-start, .pt-btn { position: relative; height: 32px; display: flex; align-items: center; gap: 6px; padding: 0 7px 0 10px; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s; }
+.pt-start { border-color: rgba(200, 236, 70, 0.65); box-shadow: inset 0 0 0 1px rgba(200, 236, 70, 0.2); }
+.pt-start em { font-style: normal; color: var(--lime); }
+.pt-start.pending { background: linear-gradient(var(--lime-tint), var(--lime-tint)), var(--raised); box-shadow: none; }
+.pt-btn::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--w); }
+.pt-serve, .pt-over { color: var(--fg-2); }
+.pt-serve::before, .pt-over::before { display: none; }
+.pt-serve { padding: 0 6px; gap: 4px; }
+.pt-serve svg { width: 15px; height: 15px; flex: none; }
+.pt-btn.hit { background: var(--w); border-color: var(--w); color: #fff; }
+.pt-btn.hit kbd { background: rgba(0, 0, 0, 0.25); border-color: rgba(255, 255, 255, 0.35); color: #fff; }
+
+/* The right column of the Points tab: the point head, the list, and the buttons at the bottom. */
+.pt-head { flex: none; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.pt-head b { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--fg-strong); }
+.pt-fav { font-style: normal; font-weight: 400; color: var(--fg-3); }
+.pt-fav.on { color: var(--yellow); }
+.pt-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+.pt-nav span, .pt-foot span { height: 28px; display: grid; place-items: center; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11px; color: var(--fg-2); transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s; }
+.pt-nav .pt-next { background: var(--lime); border-color: var(--lime); color: var(--on-lime); font-weight: 700; }
+.pt-foot { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); }
+
 .ui-side { position: absolute; left: 680px; top: 0; width: 280px; height: 408px; display: flex; flex-direction: column; background: var(--bg); border-left: 1px solid var(--line); }
-.ui-mark { margin: 10px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
-.ui-mark-head { display: flex; align-items: center; margin-bottom: 8px; font-size: 13px; font-weight: 600; }
-.ui-pending { margin-left: auto; font-size: 10.5px; font-weight: 400; color: var(--fg-3); }
-.ui-steps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.ui-step { display: grid; gap: 5px; padding: 8px; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); transition: border-color 0.15s, background 0.15s, transform 0.1s; }
-.ui-step-top { display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
-.ui-n { width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-2); color: var(--fg-2); font-size: 10px; font-weight: 700; }
-.ui-val { font-size: 14px; font-weight: 600; color: var(--fg-3); }
-.ui-step.next { border-color: rgba(200, 236, 70, 0.6); box-shadow: inset 0 0 0 1px rgba(200, 236, 70, 0.2); }
-.ui-step.next .ui-n { border-color: var(--lime); color: var(--lime); }
-.ui-step.done { background: linear-gradient(var(--lime-tint), var(--lime-tint)), var(--raised); }
-.ui-step.done .ui-n { background: var(--lime); border-color: var(--lime); color: var(--on-lime); }
-.ui-step.done .ui-val { color: var(--lime); }
-.ui-list-head { padding: 2px 12px 8px; }
+.ui-list-head { padding: 10px 12px 8px; }
 .ui-list-head b { display: block; margin-bottom: 4px; font-size: 14px; font-weight: 600; color: var(--fg-strong); }
 .ui-counts { display: flex; gap: 10px; font-size: 11px; color: var(--fg-2); }
 .ui-counts em { font-style: normal; font-weight: 600; color: var(--fg); }
@@ -68,8 +86,9 @@
 .ui-row .n { font-weight: 700; color: var(--fg-2); }
 .ui-row .len { text-align: right; color: var(--fg-3); }
 .ui-row .star { color: var(--yellow); text-align: center; }
-.ui-row.sel { background: #232323; }
-.ui-row.sel::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--lime); }
+.ui-row.sel { background: #232323; box-shadow: inset 0 0 0 1px rgba(200, 236, 70, 0.55); }
+/* A scored point has a strip with the color of the winner (--w). */
+.ui-row.won::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--w); }
 .ui-row.sel .n { color: var(--lime); }
 /* The new point: it pops up and stays highlighted. */
 .ui-row.new { background: rgba(200, 236, 70, 0.16); box-shadow: inset 0 0 0 1px rgba(200, 236, 70, 0.6); animation: ui-row-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
@@ -175,57 +194,14 @@
 .sb.pos-bl { left: 3%; top: 96%; transform: translateY(-100%); }
 .sb.pos-br { left: 97%; top: 96%; transform: translate(-100%, -100%); }
 
-/* The copy of the Scoring tab. */
-.sc-video { position: absolute; left: 48px; top: 0; width: 592px; height: 452px; overflow: hidden; background: #000; }
-.sc-video img { width: 100%; height: 100%; object-fit: cover; transform-origin: 62% 45%; animation: ui-pan 16s ease-in-out infinite alternate; transition: filter 0.2s; }
-.sc-video.seek img { filter: brightness(0.35); }
-.sc-video .sb { font-size: 12px; }
-.sc-bar { position: absolute; left: 48px; top: 452px; width: 592px; height: 88px; padding: 10px 14px 0; background: var(--inset); border-top: 1px solid var(--line); }
+/* The scrub bar of the Colors & Transform copy. */
 .sc-scrub { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--fg-3); }
 .sc-track { position: relative; flex: 1; height: 6px; border-radius: 3px; background: var(--raised); }
 .sc-track i { position: absolute; left: 0; top: 0; bottom: 0; width: 40%; border-radius: 3px; background: var(--lime); }
-.sc-bar .ui-transport { justify-content: center; margin-top: 8px; }
-
-.sc-side { position: absolute; left: 640px; top: 0; width: 320px; height: 540px; display: flex; flex-direction: column; background: var(--bg); border-left: 1px solid var(--line); }
-.sc-panel { margin: 10px; padding: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
-.sc-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; margin-bottom: 10px; font-size: 11px; color: var(--fg-3); }
-.sc-nav b { font-size: 14px; color: var(--fg-strong); }
-.sc-nav span:last-child { text-align: right; }
-.sc-table { margin-bottom: 10px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.sc-thead, .sc-trow { display: grid; grid-template-columns: 1fr 38px 44px 46px; align-items: center; padding: 0 8px; }
-.sc-thead { height: 20px; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-3); background: var(--inset); }
-.sc-thead span:not(:first-child), .sc-trow span:not(:first-child) { text-align: center; }
-.sc-trow { height: 28px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 600; }
-.sc-trow .who { display: flex; align-items: center; gap: 7px; }
-.sc-trow .who b, .sc-btn b, .sc-row .who b { width: 4px; height: 14px; border-radius: 2px; }
-.sc-trow .set { color: var(--fg-3); }
-.sc-trow .pts { justify-self: center; min-width: 32px; padding: 3px 0; border-radius: 4px; color: var(--fg-2); transition: color 0.3s, background 0.3s; }
-.sc-trow.lead .pts { color: var(--lime); background: rgba(200, 236, 70, 0.14); }
-.sc-trow .flash { animation: sb-flash 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.sc-ask { margin-bottom: 6px; font-size: 11.5px; font-weight: 600; color: var(--fg-2); }
-.sc-btns { display: grid; grid-template-columns: 1fr 0.8fr 1fr; gap: 6px; }
-.sc-btn { height: 40px; display: flex; align-items: center; justify-content: center; gap: 7px; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); font-size: 12px; font-weight: 600; white-space: nowrap; transition: transform 0.1s, background 0.15s, border-color 0.15s; }
-.sc-btn.none { color: var(--fg-3); }
-.sc-head { padding: 2px 12px 8px; }
-.sc-head div { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.sc-head b { font-size: 14px; font-weight: 600; color: var(--fg-strong); }
-.sc-head span { font-size: 11px; color: var(--fg-2); }
-.sc-head em { font-style: normal; font-weight: 600; color: var(--fg); }
-.sc-progress { height: 4px; border-radius: 2px; background: var(--raised); }
-.sc-progress i { display: block; height: 100%; border-radius: 2px; background: var(--lime); transition: width 0.3s; }
-.sc-rows { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
-.sc-row { position: relative; flex: none; height: 40px; display: grid; grid-template-columns: 30px 1fr 56px; align-items: center; padding: 0 12px; border-bottom: 1px solid #191919; font-size: 11.5px; }
-.sc-row .n { font-weight: 700; color: var(--fg-2); }
-.sc-row .who { display: flex; align-items: center; gap: 7px; }
-.sc-row:not(.won) .who { color: var(--fg-3); }
-.sc-row .score { text-align: right; color: var(--fg-3); }
-.sc-row.cur { background: #232323; }
-.sc-row.cur::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--lime); }
-.sc-row.cur .n { color: var(--lime); }
-.sc-row.new { background: rgba(200, 236, 70, 0.16); box-shadow: inset 0 0 0 1px rgba(200, 236, 70, 0.6); animation: ui-row-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.sc-row.new .n, .sc-row.new .score { color: var(--lime); }
-.sc-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; border-top: 1px solid var(--line); }
-.sc-foot span { height: 32px; display: grid; place-items: center; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11.5px; color: var(--fg-2); transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s; }
+/* The scoreboard of the Scoring demo is larger. */
+.ui-video.sc-board .sb { font-size: 12px; }
+.ui-video.sc-board img { transition: filter 0.2s; }
+.ui-video.sc-board.seek img { filter: brightness(0.35); }
 
 /* ---- Shared controls of the copies ---- */
 .ui-btn { display: inline-grid; place-items: center; height: 30px; padding: 0 12px; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11.5px; font-weight: 600; color: var(--fg); white-space: nowrap; transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s; }
@@ -343,7 +319,7 @@
 .ui-play.playing svg { display: none; }
 .ui-play.playing::before { content: ""; width: 12px; height: 14px; border-left: 4px solid currentColor; border-right: 4px solid currentColor; box-sizing: border-box; }
 
-/* ---- Feature 5: a copy of the Adjustments and the Crop tabs ---- */
+/* ---- Feature 5: a copy of the Colors & Transform tab ---- */
 .pc-video { position: absolute; left: 48px; top: 0; width: 552px; height: 452px; overflow: hidden; background: #000; }
 .pc-frame { position: absolute; inset: 0; }
 .pc-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -355,7 +331,7 @@
 .pc-bar { position: absolute; left: 48px; top: 452px; width: 552px; height: 88px; padding: 10px 14px 0; background: var(--inset); border-top: 1px solid var(--line); }
 .pc-bar .ui-transport { justify-content: center; margin-top: 8px; }
 .pc-panel { position: absolute; left: 600px; top: 0; width: 360px; height: 540px; padding: 0 12px; background: var(--bg); border-left: 1px solid var(--line); }
-.pc-head { display: flex; align-items: center; justify-content: space-between; height: 54px; }
+.pc-head { display: flex; align-items: center; justify-content: space-between; height: 50px; }
 .pc-head h4 { margin: 0; font-size: 15px; color: var(--fg-strong); }
 .pc-head h4 span { display: block; font-size: 11px; font-weight: 400; color: var(--fg-3); }
 .pc-group { margin-bottom: 10px; padding: 6px 0 8px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
@@ -365,6 +341,17 @@
 .pc-line.changed::before { content: ""; position: absolute; left: 0; top: 7px; height: 20px; width: 2px; border-radius: 0 2px 2px 0; background: var(--lime); }
 .pc-page { display: none; }
 .pc-page.on { display: block; }
+.pc-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 10px 0 0; padding: 2px; border-radius: 7px; background: var(--inset); border: 1px solid var(--line-2); }
+.pc-tabs span { height: 26px; display: grid; place-items: center; border-radius: 5px; font-size: 11.5px; font-weight: 600; color: var(--fg-2); transition: transform 0.1s, background 0.15s, color 0.15s; }
+.pc-tabs span.on { background: var(--raised); color: var(--fg-strong); box-shadow: inset 0 0 0 1px var(--lime-edge); }
+.pc-change { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 8px 12px 10px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.pc-change .ui-cap { padding: 0; }
+.pc-change b { display: block; margin: 6px 0 8px; font-size: 12px; font-weight: 600; color: var(--fg); transition: color 0.2s; }
+.pc-change b.on { color: var(--lime); }
+.pc-change-btns { display: flex; gap: 5px; }
+.pc-change-btns .ui-btn { height: 26px; padding: 0 9px; font-size: 11px; }
+.pc-change-btns .ui-btn.off { color: var(--fg-3); }
+.pc-change p { margin: 8px 0 0; font-size: 10.5px; line-height: 1.4; color: var(--fg-3); }
 
 /* ---- Feature 6: a copy of the Export tab ---- */
 .ex-config { position: absolute; left: 48px; top: 0; width: 380px; height: 540px; display: flex; flex-direction: column; background: var(--card); border-right: 1px solid var(--line); }

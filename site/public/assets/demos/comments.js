@@ -34,16 +34,13 @@
         '<div class="cm-dialog"><h5>Add comment<span class="cm-at ui-num"></span></h5><div class="cm-field"></div>' +
         '<div class="cm-btns"><span class="ui-btn">Cancel</span><span class="ui-btn lime cm-add">Add</span></div></div>' +
       '</div>' +
-      '<div class="ui-playbar">' +
-        '<span class="ui-now ui-num"></span>' +
-        '<div class="ui-transport"><span class="ui-seek">−5s</span><span class="ui-seek">−1s</span>' +
-          '<span class="ui-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>' +
-          '<span class="ui-seek">+1s</span><span class="ui-seek">+5s</span></div>' +
-        '<span class="ui-addc">Comment</span>' +
-      '</div>' +
+      D.pointBar() +
+      D.playBar() +
       '<div class="ui-side">' +
-        '<div class="ui-list-head" style="padding-top:12px"><b>Comments</b><div class="ui-counts"><span><em class="cm-count"></em> comments</span></div></div>' +
+        D.pointHead(29, 74, false) +
+        D.listHead(74, 9, "") +
         '<div class="cm-list"></div>' +
+        D.pointsFoot() +
       '</div>' +
       '<div class="ui-tl">' +
         '<div class="ui-ruler">' + ruler + '</div>' +
@@ -54,7 +51,7 @@
       views);
 
     var now = ui.q(".ui-now"), playhead = ui.q(".ui-ph"), playButton = ui.q(".ui-play");
-    var caption = ui.q(".cm-cap"), list = ui.q(".cm-list"), lane = ui.q(".cm-lane"), count = ui.q(".cm-count");
+    var caption = ui.q(".cm-cap"), list = ui.q(".cm-list"), lane = ui.q(".cm-lane"), count = ui.q(".pt-comments");
     var time = T0;
 
     function setTime(t) {

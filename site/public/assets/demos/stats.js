@@ -55,7 +55,7 @@
     });
 
     var ui = D.stage(demo,
-      D.nav(3) +
+      D.nav(2) +
       '<div class="st-left">' +
         '<div class="st-thead">' +
           '<div class="p1"><b style="background:' + PLAYERS[0].color + '"></b>' + PLAYERS[0].name + '</div>' +

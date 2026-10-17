@@ -59,8 +59,8 @@ A desktop application that helps tennis and padel players turn full‑match reco
 
 ## Project status
 
-- Version 1.1.0 came out on 2026-10-11. The first public release, 1.0.0,
-  came out on 2026-10-06. The development version is `1.2.0-SNAPSHOT`.
+- Version 1.2.0 came out on 2026-10-17. The first public release, 1.0.0,
+  came out on 2026-10-06. The development version is `1.3.0-SNAPSHOT`.
 - The app is for Windows x64 only. macOS is a post-release item (B-13). The
   list of changes is in [docs/macos/b-13-macos.md](docs/macos/b-13-macos.md).
 - The open work is in [docs/backlog.md](docs/backlog.md).

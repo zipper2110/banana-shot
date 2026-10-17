@@ -277,6 +277,8 @@ object UiStyles {
 
     fun exportIcon(size: Int = 20): Icon = ikon(Feather.FILM, size, Palette.LIME)
 
+    fun thumbnailIcon(size: Int = 20): Icon = ikon(Material2AL.IMAGE, size, Palette.LIME)
+
     fun pointsIcon(size: Int = 20): Icon = ikon(Material2MZ.SPORTS_TENNIS, size, Palette.LIME)
 
     fun statsIcon(size: Int = 20): Icon = ikon(Material2AL.BAR_CHART, size, Palette.LIME)

@@ -212,6 +212,7 @@ class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayou
             HelpPage.COLORS -> Material2AL.COLOR_LENS
             HelpPage.CROP -> Material2AL.CROP_ROTATE
             HelpPage.EXPORT -> Feather.FILM
+            HelpPage.SHARE -> Material2AL.IMAGE
         }
 
         /** The group captions of the sidebar. */

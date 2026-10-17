@@ -44,6 +44,8 @@ import org.litvin.ui.commons.ThemeController
 import org.litvin.ui.commons.ThemePreferences
 import org.litvin.ui.commons.PreferencesCommentStyleDefaults
 import org.litvin.ui.tabs.stats.SwingStatsPanel
+import org.litvin.ui.tabs.share.SwingSharePanel
+import org.litvin.share.PreferencesShareDefaults
 import org.litvin.ui.tabs.test.SwingTestPanel
 import org.litvin.RenderQueueManager
 import org.litvin.analytics.Analytics
@@ -89,6 +91,7 @@ object SwingApplicationFactory {
     private const val CARD_POINTS = "points"
     private const val CARD_EXPORT = "export"
     private const val CARD_STATS = "stats"
+    private const val CARD_SHARE = "share"
     private const val CARD_ADJUST_VIDEO = "adjust-video"
     private const val CARD_TEST = "test"
     private const val SIDEBAR_BUTTON_GAP = 6
@@ -199,6 +202,7 @@ object SwingApplicationFactory {
             lateinit var btnAdjustVideo: UiStyles.SidebarButton
             lateinit var btnStats: UiStyles.SidebarButton
             lateinit var btnExport: UiStyles.SidebarButton
+            lateinit var btnShare: UiStyles.SidebarButton
             var btnTest: UiStyles.SidebarButton? = null
 
             // True while the app clicks a sidebar button. The analytics count only the clicks of the user (B-9).
@@ -282,8 +286,9 @@ object SwingApplicationFactory {
                 },
             )
 
+            val exportSettings = ExportSettingsPreferences(services.preferences.node(PreferencesProvider.EXPORT))
             val exportPanel = SwingExportPanel(
-                ExportSettingsPreferences(services.preferences.node(PreferencesProvider.EXPORT)),
+                exportSettings,
                 services.renderService,
                 services.adjustments,
                 services.completedRenders,
@@ -293,6 +298,15 @@ object SwingApplicationFactory {
                 hints,
             )
             closeActions += exportPanel::close
+
+            // The thumbnail goes to the folder of the last export (B-46).
+            val sharePanel = SwingSharePanel(
+                services.dialogs,
+                PreferencesShareDefaults(services.preferences.node(PreferencesProvider.SHARE)),
+                exportFolder = exportSettings::loadOutputDirectory,
+                onOpenPoints = { clickInCode(btnPoints) },
+            )
+            closeActions += sharePanel::close
 
             val testEnabled = System.getProperty("test") == "true"
             val testPanel = if (testEnabled) SwingTestPanel() else null
@@ -319,6 +333,7 @@ object SwingApplicationFactory {
                 CARD_ADJUST_VIDEO -> if (adjustVideoPanel.section == AdjustSection.TRANSFORM) HelpPage.CROP else HelpPage.COLORS
                 CARD_STATS -> HelpPage.STATISTICS
                 CARD_EXPORT -> HelpPage.EXPORT
+                CARD_SHARE -> HelpPage.SHARE
                 else -> HelpPage.OVERVIEW
             }
 
@@ -329,6 +344,7 @@ object SwingApplicationFactory {
                 CARD_ADJUST_VIDEO -> DefaultAdjustVideoPresenter.analyticsTab(adjustVideoPanel.section)
                 CARD_STATS -> AnalyticsEvent.Tab.STATS
                 CARD_EXPORT -> AnalyticsEvent.Tab.EXPORT
+                CARD_SHARE -> AnalyticsEvent.Tab.THUMBNAIL
                 else -> null
             }
 
@@ -345,6 +361,7 @@ object SwingApplicationFactory {
                     CARD_PROJECTS -> projectsPanel.onDeactivated()
                     CARD_POINTS -> pointsPanel.onDeactivated()
                     CARD_ADJUST_VIDEO -> adjustVideoPanel.onDeactivated()
+                    CARD_SHARE -> sharePanel.onDeactivated()
                     CARD_TEST -> testPanel?.onDeactivated()
                 }
                 cardLayout.show(cards, card)
@@ -354,6 +371,7 @@ object SwingApplicationFactory {
                     CARD_ADJUST_VIDEO -> adjustVideoPanel.onActivated()
                     CARD_STATS -> statsPanel.onActivated()
                     CARD_EXPORT -> exportPanel.onActivated()
+                    CARD_SHARE -> sharePanel.onActivated()
                     CARD_TEST -> testPanel?.onActivated()
                 }
                 btnProjects.active = card == CARD_PROJECTS
@@ -361,6 +379,7 @@ object SwingApplicationFactory {
                 btnAdjustVideo.active = card == CARD_ADJUST_VIDEO
                 btnStats.active = card == CARD_STATS
                 btnExport.active = card == CARD_EXPORT
+                btnShare.active = card == CARD_SHARE
                 btnTest?.active = card == CARD_TEST
                 currentCard = card
                 analytics.record(AnalyticsEvent.TabShown(analyticsTab(card), byUser))
@@ -384,10 +403,12 @@ object SwingApplicationFactory {
                     adjustVideoPanel.setProjectManifest(path)
                     statsPanel.setProjectManifest(path)
                     exportPanel.setProjectManifest(path)
+                    sharePanel.setProjectManifest(path)
                     testPanel?.setProjectManifest(path)
                     btnPoints.isVisible = true
                     btnAdjustVideo.isVisible = true
                     btnStats.isVisible = true
+                    btnShare.isVisible = true
                     btnTest?.isVisible = true
                     projectGroups.forEach { it.isVisible = true }
                     sidebar.revalidate()
@@ -406,6 +427,7 @@ object SwingApplicationFactory {
             cards.add(adjustVideoPanel, CARD_ADJUST_VIDEO)
             cards.add(statsPanel, CARD_STATS)
             cards.add(exportPanel, CARD_EXPORT)
+            cards.add(sharePanel, CARD_SHARE)
             if (testPanel != null) cards.add(testPanel, CARD_TEST)
 
             btnProjects = UiStyles.sidebarButton("Projects", UiStyles.folderIcon()) {
@@ -430,6 +452,12 @@ object SwingApplicationFactory {
                 goTo(CARD_ADJUST_VIDEO, byUser = !navigatingInCode)
             }.apply { name = "nav-adjust-video" }
             addItem(btnAdjustVideo, groupVideo)
+            // The Thumbnail tab makes a YouTube thumbnail for the open project, so it shows only with a project (B-46).
+            btnShare = UiStyles.sidebarButton("Thumbnail", UiStyles.thumbnailIcon()) {
+                showTitle("Thumbnail")
+                goTo(CARD_SHARE, byUser = !navigatingInCode)
+            }.apply { name = "nav-share" }
+            addItem(btnShare, groupVideo)
             // addItem adds the usual button gap before Export. Together they make the same gap as between the groups.
             sidebar.add(Box.createRigidArea(Dimension(0, SIDEBAR_GROUP_GAP - SIDEBAR_BUTTON_GAP)))
             btnExport = UiStyles.sidebarButton("Export", UiStyles.exportIcon()) {
@@ -536,6 +564,7 @@ object SwingApplicationFactory {
             btnPoints.isVisible = false
             btnAdjustVideo.isVisible = false
             btnStats.isVisible = false
+            btnShare.isVisible = false
             projectGroups.forEach { it.isVisible = false }
 
             // Expired mode (E8-S1): only the Export tab shows. It uses the same mechanism that hides the tabs when no
@@ -546,6 +575,7 @@ object SwingApplicationFactory {
                 btnPoints.isVisible = projectTabs
                 btnAdjustVideo.isVisible = projectTabs
                 btnStats.isVisible = projectTabs
+                btnShare.isVisible = projectTabs
                 btnTest?.isVisible = projectTabs
                 projectGroups.forEach { it.isVisible = projectTabs }
                 sidebar.revalidate()

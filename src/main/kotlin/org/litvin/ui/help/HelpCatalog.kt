@@ -10,6 +10,7 @@ enum class HelpPage(val title: String) {
     STATISTICS("Statistics"),
     COLORS("Colors"),
     CROP("Transform"),
+    SHARE("Thumbnail"),
     EXPORT("Export"),
 }
 
@@ -39,6 +40,7 @@ object HelpCatalog {
                 "Review the match statistics, and select the statistics for the video.",
                 "Optionally tune the colors and frame the video in Colors & Transform. You can do this at any time.",
                 "Choose export settings and export the finished video.",
+                "Make a YouTube thumbnail for the video in the Thumbnail tab. You can do this before or during the export.",
             ),
             actions = listOf(
                 "Press F1 on a tab to open the help for that tab.",
@@ -281,6 +283,43 @@ object HelpCatalog {
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.HELP, "Open Export help"),
+            ),
+        ),
+        HelpContent(
+            page = HelpPage.SHARE,
+            summary = "Make a YouTube thumbnail for the video: a frame of a point with large words.",
+            workflow = listOf(
+                "Under Video type on the Texts tab, select Full match or Best points. The video type sets the large words and the name of the file.",
+                "Select a point. The point list starts at the first favorite point. Select Only favorites to see only the points with a star.",
+                "Click or drag on the strip of frames to select the moment. Use the arrow buttons or the Left and Right arrow keys to move one frame.",
+                "Move the Zoom slider to make the players larger. Then drag the preview to move the frame.",
+                "Select a style under the preview. Each style card shows your frame and your texts in that style.",
+                "Change the texts on the Texts tab, and the colors on the Colors tab.",
+                "Select Save thumbnail. The app writes a PNG of 1280 × 720 to the export folder.",
+            ),
+            actions = listOf(
+                "Select Final score under Large words to show the score of the match. The app never shows the score by default.",
+                "Select Use the presets to remove your text changes.",
+                "Select Left or Right (Top or Bottom for Broadcast) above the style cards to move the texts.",
+                "On the Colors tab, select a color set, then change each color if necessary. Auto makes a text dark or white, so that it stays readable.",
+                "Select Use the style colors to go back to the colors of the style.",
+                "Select Open folder to open the export folder. When the file exists, the folder opens with the file selected.",
+            ),
+            goodToKnow = listOf(
+                "The fields have presets from the project: the player names, the match type, the scoreboard title as the court, and the date of the video file. League or event keeps the text of your last thumbnail.",
+                "An empty field does not show on the thumbnail. The Texts tab shows only the fields of the selected style. The other fields keep their texts for the other styles.",
+                "The crop, the rotation, and the color adjustments apply to the frame, as in the export.",
+                "The zoom stops when the frame has less than 1280 pixels of the video: at 150% for a 1080p video, and at 200% for a 4K video.",
+                "Each video type has its own file, for example \"…-best-points.png\". A second save replaces the file. The Save block shows when you saved each file, and if the thumbnail changed since then.",
+                "The small preview above Save thumbnail shows the thumbnail with the video length. YouTube search shows it a little larger. The PNG has no length badge, because YouTube adds it. No text goes in the bottom-right corner.",
+                "A note tells you when a text is long or small. A text that is smaller than 32 pixels in the PNG is hard to read in YouTube search.",
+                "YouTube accepts a thumbnail of 2 MB or less. When a frame has much fine detail, the app makes the frame a little softer, so that the file stays below 2 MB.",
+                "The project keeps the thumbnail settings. The next project starts with your last style, its colors, and its text position.",
+            ),
+            shortcuts = listOf(
+                HelpShortcut(AppShortcuts.LEFT, "One frame back"),
+                HelpShortcut(AppShortcuts.RIGHT, "One frame forward"),
+                HelpShortcut(AppShortcuts.HELP, "Open Thumbnail help"),
             ),
         ),
     )

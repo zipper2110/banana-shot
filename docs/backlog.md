@@ -131,6 +131,10 @@ When item is done, move it under
 - The tab:
   - Its sidebar item is "Share", after Export. It shows only when a
     project is open, the same as the Match and Video groups.
+  - Decided on 2026-10-17: for now the tab has the name "Thumbnail", and
+    its sidebar item is in the Video group, after Colors & Transform. The
+    Help page has the name "Thumbnail" and is in the same place. The name
+    "Share" can come back when the tab gets the vertical clips of B-16.
   - Layout of the tab (option A of `design/share-redesign/`): the preview
     of the thumbnail at the left, the edit fields at the right.
   - Decided on 2026-10-15: the right side has two tabs, "Texts" and
@@ -150,20 +154,55 @@ When item is done, move it under
     sets the preset of the large words. The app fills as many fields as
     possible with preset values, so that the user saves time and sees the
     look of each layout at once.
+  - Decided on 2026-10-17: the Texts tab shows only the fields of the
+    selected style. The other fields are hidden, and they keep their texts
+    for the other styles.
   - Decided on 2026-10-15: the user can change the colors of the layout
     style. Each color of the style can change, in one system of color
     roles for all styles.
   - Nothing goes in the bottom-right corner, because YouTube shows the
     video length there.
+  - Decided on 2026-10-17: the user can zoom into the frame (100 to 200 %)
+    and drag the preview to move it, so that the players are larger. The
+    zoom stops when the frame has less than 1280 px of the video (150 % for
+    a 1080p video, 200 % for 4K).
+  - Decided on 2026-10-17: a strip of 10 frames of the point selects the
+    moment. A click or a drag on the strip sets the exact moment. Two
+    buttons and the arrow keys move one frame back or forward.
+  - Decided on 2026-10-17: each style has two text positions (left or
+    right; bottom or top for Broadcast). Poster has one position.
+  - Decided on 2026-10-17: in Split at the right, the texts align at the
+    right, 56 px from the right edge (the same margin as at the left).
+  - Decided on 2026-10-17: "Final score" is a second choice for the large
+    words. It is never the default, because many users do not want to
+    show the result.
+  - Decided on 2026-10-17: a note tells the user when a text is too small
+    for YouTube search (less than 32 px in the PNG).
+  - Decided on 2026-10-17: the app keeps the last style, its colors, and
+    its text position for the next project. The texts and the final score
+    do not go to the next project.
   - "Save" writes a PNG (1280 × 720, less than 2 MB) to the export folder.
     "Open folder" shows the file.
+  - Decided on 2026-10-17: one file name for each video type
+    (`…-full-match.png`, `…-best-points.png`).
+  - Decided on 2026-10-17: the Save block shows one line for each video
+    type: the time of the saved file, "changed since", or "not saved". It
+    does not show the file name (only in the tooltip). The button is
+    "Replace thumbnail" when the file exists. "Open folder" selects the
+    file.
+  - Decided on 2026-10-17: the project stores the Share settings: the video
+    type, the point, the moment, the zoom and its position, the style, the
+    text position and the colors of each style, the edited texts, and the
+    time of each saved file. If the stored point is not in the project any
+    more, the app uses the default point.
 - Out of scope: free placement of the texts, user fonts;
   vertical covers for Shorts and Reels (with the vertical clips of B-16);
   upload to YouTube; automatic selection of the "best" frame; translated
   preset words (later, with B-11 E5).
 - Parts to use:
   - `VideoFrameLoader` reads a frame with the project adjustments. It is
-    already 1280 px wide.
+    already 1280 px wide. The zoom needs the frame at the resolution of
+    the video, so the loader needs a size option.
   - The texts use Segoe UI Black and Segoe UI, the same fonts as the
     scoreboard layouts (`SEGOE_BLACK`, `SEGOE`).
 - The layout styles and the fields are in `design/share-redesign/`.

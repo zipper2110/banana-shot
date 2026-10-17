@@ -384,3 +384,33 @@ details[open] .chev { transform: rotate(180deg); }
 .save-box .about code { font-family: Consolas, ui-monospace, monospace; color: var(--sage); word-break: break-all; font-size: 11px; }
 .save-box .buttons { grid-column: 1 / -1; display: flex; gap: 8px; }
 .save-box .buttons #save { flex: 1; }
+
+/* ---------- Text positions. The first position of each style is in the rules above. ---------- */
+.thumb .L-words.at-left .shade { background: radial-gradient(ellipse 720px 420px at 320px 400px, rgba(var(--sh), calc(.62 * var(--k))), rgba(var(--sh), 0) 100%); }
+.thumb .L-words.at-left .words { right: auto; left: 56px; text-align: left; }
+.thumb .L-versus.at-right .shade { background: linear-gradient(270deg, rgba(var(--sh), calc(.86 * var(--k))) 0, rgba(var(--sh), calc(.55 * var(--k))) 42%, rgba(var(--sh), 0) 68%); }
+.thumb .L-versus.at-right .tag { left: auto; right: 56px; }
+.thumb .L-versus.at-right .names { left: auto; right: 56px; text-align: right; }
+.thumb .L-card.at-right .card { left: auto; right: 48px; border-left: 0; border-right: 10px solid var(--acc); }
+/* Split at the right: the league goes higher, so that it stays out of the bottom-right corner. */
+.thumb .L-split.at-right .panel { left: auto; right: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 20% 100%); }
+.thumb .L-split.at-right .text { left: 760px; }
+.thumb .L-split.at-right .event { left: 830px; top: 560px; }
+.thumb .L-tv.at-top .shade { background: linear-gradient(180deg, rgba(var(--sh), calc(.55 * var(--k))) 0, rgba(var(--sh), 0) 45%); }
+.thumb .L-tv.at-top .stack { bottom: auto; top: 56px; }
+
+/* ---------- Preset choices under a field ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font: inherit; font-size: 11px; padding: 2px 9px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--raised); color: var(--fg-2); cursor: pointer; }
+.chip:hover { color: var(--fg); border-color: #4a4a4a; }
+.chip.is-selected { color: var(--fg); border-color: var(--lime-line); background: var(--raised-2); }
+
+/* ---------- The frames of the point (the Moment row) ---------- */
+/* A click or a drag on the strip sets the exact moment. The line shows the moment. */
+.strip { position: relative; flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 1px;
+  border-radius: 4px; overflow: hidden; cursor: pointer; user-select: none; }
+.strip .cell { aspect-ratio: 16 / 9; background: #000; }
+.strip img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: .75; pointer-events: none; }
+.strip .head { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: var(--lime); box-shadow: 0 0 0 1px #101010; pointer-events: none; }
+.thumb-box.can-drag { cursor: grab; }
+.thumb-box.can-drag:active { cursor: grabbing; }

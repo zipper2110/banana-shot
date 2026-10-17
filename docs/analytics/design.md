@@ -238,7 +238,9 @@ loses all of its sessions.
 | `tab_s_<tab>` | Active seconds (see `active_s`) while the tab was the current tab. |
 
 `<tab>` is one of: `projects`, `points`, `colors`, `crop_rotate`, `stats`,
-`export`. The Test tab is not counted. Decided on 2026-10-16: the Colors &
+`export`, `thumbnail`. The Test tab is not counted. The key `thumbnail` is of
+the Thumbnail tab (B-46). The Worker must accept it before an app release
+sends it. Decided on 2026-10-16: the Colors &
 Transform tab has no key of its own. `colors` and `crop_rotate` are its Colors
 and Transform sub-tabs. A sidebar click on Colors & Transform counts the open
 sub-tab, and a click on a sub-tab counts that sub-tab. Reason: the schema

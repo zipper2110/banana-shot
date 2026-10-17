@@ -10,7 +10,7 @@
 
   const TABS = {
     projects: 'Projects', points: 'Points', colors: 'Colors', crop_rotate: 'Crop and rotate',
-    scoring: 'Scoring', stats: 'Statistics', export: 'Export',
+    scoring: 'Scoring', stats: 'Statistics', export: 'Export', thumbnail: 'Thumbnail',
   };
   const ACTIONS = {
     project_created: 'Project created', project_opened: 'Project opened', point_added: 'Point added',

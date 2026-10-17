@@ -3,7 +3,7 @@
  * with another key, and an essential summary with a key that is not essential. A test checks both lists against
  * analytics-contract/v1/counter-keys.json.
  */
-const TABS = ['projects', 'points', 'colors', 'crop_rotate', 'scoring', 'stats', 'export'];
+const TABS = ['projects', 'points', 'colors', 'crop_rotate', 'scoring', 'stats', 'export', 'thumbnail'];
 const ENCODERS = ['software', 'nvenc', 'amf', 'qsv'];
 const EXPORT_RESULTS = ['started', 'completed', 'failed', 'cancelled', 'interrupted', 'run_s', 'video_s'];
 const FAIL_REASONS = ['source_missing', 'output_write', 'process_start', 'ffmpeg_exit', 'other'];

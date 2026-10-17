@@ -99,6 +99,7 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
         WorkflowStep("Score each point", listOf("Points" to UiStyles.pointsIcon(13))),
         WorkflowStep("Review the statistics", listOf("Stats" to UiStyles.statsIcon(13))),
         WorkflowStep("Export the video", listOf("Export" to UiStyles.exportIcon(13))),
+        WorkflowStep("Make a YouTube thumbnail", listOf("Thumbnail" to UiStyles.thumbnailIcon(13))),
     )
     private val optional = WorkflowStep(
         "Tune the image at any time",

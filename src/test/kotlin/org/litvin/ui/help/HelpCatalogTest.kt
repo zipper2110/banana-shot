@@ -17,6 +17,7 @@ class HelpCatalogTest {
                 HelpPage.POINTS,
                 HelpPage.STATISTICS,
                 HelpPage.EXPORT,
+                HelpPage.SHARE,
             ),
             HelpCatalog.pages.map { it.page },
         )

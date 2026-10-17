@@ -67,11 +67,23 @@
           <li>The side column has two tabs: Texts and Colors. The preview and the Save block (with the small YouTube preview) are always visible. Only the tab content scrolls.</li>
           <li>Colors: one system of six color roles for all styles. A color set gives a value to each role. The user can then change each role with a swatch or any color.</li>
         </ul>
+        <p style="margin-top:10px">Changes from the review of 2026-10-17:</p>
+        <ul>
+          <li>Zoom: the user can zoom into the frame (100 to 200 %) and drag the preview to move it, so that the players are larger. All styles use the same frame, zoom, and position.</li>
+          <li>Moment: a strip of 10 frames of the point replaces the slider. A click or a drag on the strip sets the exact moment. Two buttons and the arrow keys move one frame back or forward.</li>
+          <li>Text position: each style has two positions (Left or Right, Bottom or Top for Broadcast). Poster has one position. The switch is above the style cards, because it belongs to the style. No position puts a text in the bottom-right corner.</li>
+          <li>Final score: a choice under "Large words". The user must select it. The default words never show the score, because many users do not want to show the result.</li>
+          <li>Zoom limit: 150 % for a 1080p video, 200 % for 4K. The frame always has at least 1280 px of the video, so it stays sharp.</li>
+          <li>Save block: one line for each video type ("Saved yesterday 21:35", "changed since", or "not saved"). The file name is only in the tooltip. "Save thumbnail" becomes "Replace thumbnail" when the file exists. "Open folder" selects the file.</li>
+          <li>The project stores the Share settings. The mockup state "Reopened project" shows them.</li>
+          <li>Small texts: a note in the Save block tells the user when a text is less than 32 px in the PNG. At the width of YouTube search, such a text is less than 9 px high.</li>
+        </ul>
         <span class="open">Open the final design →</span>
       </div>
       <dl class="side">
         <dt>Swing effort</dt><dd>Medium. Six Java2D layout renderers with a text fit and six color roles, seven thumbnail components, two side tabs, the fields, and the color swatches (<code>JColorChooser</code> for "Other color").</dd>
-        <dt>ffmpeg</dt><dd>One frame for each change of the point or the moment. All style cards use the same frame.</dd>
+        <dt>ffmpeg</dt><dd>One frame for each change of the point or the moment. All style cards use the same frame. The strip needs 10 small frames for each point.</dd>
+        <dt>Frame size</dt><dd>The zoom needs the frame at the resolution of the video. <code>VideoFrameLoader</code> reads only 1280 px now. The zoom stops when the frame has less than 1280 px of the video.</dd>
       </dl>
     </a>
   </div>
@@ -80,7 +92,7 @@
   <div class="table-wrap"><table>
     <tr><th>Field</th><th>Preset</th><th>Styles</th></tr>
     <tr><td>Video type</td><td>"Best points" when the project has favorites, else "Full match"</td><td>—</td></tr>
-    <tr><td>Large words</td><td>"FULL MATCH" or "BEST POINTS", from the video type</td><td>All</td></tr>
+    <tr><td>Large words</td><td>"FULL MATCH" or "BEST POINTS", from the video type. A second choice, "Final score", puts the score of the match (for example "7–6 4–6 11–9"). It is never the default</td><td>All</td></tr>
     <tr><td>Match type</td><td>"DOUBLES", "SINGLES" or "PADEL", from the match</td><td>Big words, Split, Poster</td></tr>
     <tr><td>Players</td><td>The names of the players or teams, from the project</td><td>Versus, Match card, Broadcast, Poster</td></tr>
     <tr><td>League or event</td><td>The text of the last thumbnail. Empty for the first thumbnail</td><td>Match card, Split, Broadcast</td></tr>
@@ -101,25 +113,38 @@
   <p class="lede" style="margin-top:10px">Color sets: Lime, Broadcast, Sunset, Ocean, Red, Light. Each style has a default set (Broadcast for the Broadcast style, Lime for the others). "Auto" makes a text dark or white, from the contrast with the color under it.</p>
 
   <h2>Open points (not decided)</h2>
-  <div class="q"><b>1. A file name for each video type</b>
-    <span><code>…-full-match.png</code> and <code>…-best-points.png</code>. One name makes the second save replace the first.</span></div>
-  <div class="q"><b>2. The small preview "As in YouTube search"</b>
+  <div class="q"><b>1. The small preview "As in YouTube search"</b>
     <span>The thumbnail at the width of the side column, with the video length. The badge shows only in the app, not in the PNG.</span></div>
-  <div class="q"><b>3. The league remembered from the last thumbnail</b>
+  <div class="q"><b>2. The league remembered from the last thumbnail</b>
     <span>No project data has a league. A player often plays in the same league, so the app keeps the last text.</span></div>
-  <div class="q"><b>4. No "BananaShot app" text on the thumbnail</b>
+  <div class="q"><b>3. No "BananaShot app" text on the thumbnail</b>
     <span>Without the scoreboard, the thumbnail has no credit line. The app promises "no watermark", so the mockup adds nothing.</span></div>
 
-  <div class="q"><b>5. The colors stay with each style</b>
-    <span>A color set or a role change applies to the current style only. The other styles keep their colors, and "Use the style colors" goes back to the default set. Not decided: does the app keep the colors for the next project?</span></div>
+
+  <h2>Decided on 2026-10-17</h2>
+  <div class="q"><b>A file name for each video type</b>
+    <span><code>…-full-match.png</code> and <code>…-best-points.png</code>. One name makes the second save replace the first.</span></div>
+  <div class="q"><b>The project stores the Share settings</b>
+    <span>The video type, the point, the moment, the zoom and its position, the style, the text position and the colors of each style, the edited texts, and the time of each saved file.
+      When the user opens the project again, the tab shows the same thumbnail. If the stored point is not in the project any more, the app uses the default point.</span></div>
+  <div class="q"><b>No file name in the Save block</b>
+    <span>The user needs to know if the file is saved and where it is. A line for each video type and "Open folder" (it selects the file) tell this. The long file name is only in the tooltip.</span></div>
+  <div class="q"><b>The colors and the position stay with each style, also for the next project</b>
+    <span>A color set, a role change, or a text position applies to the current style only. "Use the style colors" goes back to the default set.
+      The app keeps the last style, its colors, and its position for the next project, because a channel needs the same look on all videos.
+      The texts do not go to the next project. The final score is never kept.</span></div>
 
   <h2>States in the final mockup</h2>
   <ul class="plain">
     <li><b>First thumbnail:</b> "League or event" is empty. The styles do not show it.</li>
     <li><b>Long names:</b> the texts become smaller to fit. Broadcast puts each team in its own row. A note tells the user that short words are easier to read.</li>
     <li><b>No favorites:</b> the video type is "Full match", and the app selects a point near the middle of the match.</li>
+    <li><b>Reopened project:</b> the tab shows the stored settings and the two saved files. The button is "Replace thumbnail".</li>
+    <li><b>1080p video:</b> the zoom stops at 150 %. A hint tells why.</li>
     <li><b>Frame read error:</b> the preview shows a message. "Save thumbnail" is disabled.</li>
   </ul>
+
+  <p class="lede" style="margin-top:10px">A hash in the URL sets more states, for example <code>final.html#layout=split&amp;place=right</code> or <code>#zoom=1.5</code>.</p>
 
   <h2>Earlier round</h2>
   <ul class="plain">

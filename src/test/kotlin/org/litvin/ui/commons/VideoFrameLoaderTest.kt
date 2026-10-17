@@ -55,6 +55,36 @@ class VideoFrameLoaderTest {
         assertTrue(onEventThread)
     }
 
+    @Test
+    fun theLoaderReadsBmpImagesThatFollowOneAnother() {
+        val bytes = java.io.ByteArrayOutputStream()
+        listOf(4, 6).forEach { width -> javax.imageio.ImageIO.write(BufferedImage(width, 2, BufferedImage.TYPE_3BYTE_BGR), "bmp", bytes) }
+
+        val images = VideoFrameLoader.readBmpImages(bytes.toByteArray().inputStream())
+
+        assertEquals(listOf(4, 6), images.map { it.width })
+        assertEquals(emptyList(), VideoFrameLoader.readBmpImages(ByteArray(0).inputStream()))
+    }
+
+    @Test
+    fun theLoaderReadsTheKeyFramesOfARangeOnce() {
+        var reads = 0
+        val loader = VideoFrameLoader(extractKeyFrames = { range ->
+            reads++
+            listOf(KeyFrame(range.startMs + 500, BufferedImage(16, 9, BufferedImage.TYPE_INT_RGB)))
+        }) { null }
+        val range = KeyFramesRequest("match.mp4", 10_000, 16_000, AdjustmentsV1(), 320)
+
+        repeat(2) {
+            val done = CountDownLatch(1)
+            var frames: List<KeyFrame> = emptyList()
+            loader.loadKeyFrames(range) { frames = it; done.countDown() }
+            assertTrue(done.await(5, TimeUnit.SECONDS))
+            assertEquals(listOf(10_500L), frames.map { it.atMs })
+        }
+        assertEquals(1, reads)
+    }
+
     private fun loadAndWait(loader: VideoFrameLoader, request: VideoFrameRequest = this.request): BufferedImage? {
         val done = CountDownLatch(1)
         var result: BufferedImage? = null

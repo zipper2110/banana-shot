@@ -4,6 +4,7 @@ import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.GeometryPlan
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.points.PointV1
+import kotlin.math.roundToLong
 
 /**
  * Task 3.7 — FFmpeg command builder (v1)
@@ -220,10 +221,16 @@ object FFmpegCommandBuilder {
 
     private fun fmt6(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.6f", d)
 
+    /** The output path that sends the images to the standard output as BMP files, one after the other. */
+    const val PIPE = "-"
+
+    private val BMP_PIPE_OUTPUT = listOf("-f", "image2pipe", "-c:v", "bmp", PIPE)
+
     /**
      * The arguments that write one frame of the source to an image file, for example a PNG.
      * The frame gets the crop, rotation and color adjustments of the export, and the width [width].
      * [atMs] is the source time just after the frame, as in [FreezeFrame.atMs].
+     * With [outputPath] [PIPE], ffmpeg sends the frame to the standard output as a BMP image. This is faster than a PNG file.
      */
     fun stillFrameArgs(
         sourcePath: String,
@@ -242,11 +249,50 @@ object FFmpegCommandBuilder {
             colorFilter(adjustments?.let { ColorTimeline.at(it, atMs - STILL_FRAME_OFFSET_MS) }, toneRange),
         )
         val seekSecs = ((atMs - STILL_FRAME_OFFSET_MS).coerceAtLeast(0) / 1000.0).formatSecs()
+        val output = if (outputPath == PIPE) BMP_PIPE_OUTPUT else listOf("-update", "1", outputPath)
         return listOf(
             "-y", "-v", "error", "-ss", seekSecs, "-i", sourcePath,
-            "-frames:v", "1", "-vf", filters.joinToString(","), "-update", "1", outputPath,
-        )
+            "-frames:v", "1", "-vf", filters.joinToString(","),
+        ) + output
     }
+
+    /**
+     * The arguments that send the key frames of the source from [startMs] to [endMs] to the standard output as BMP images.
+     * ffmpeg decodes only the key frames, so this is fast also for a 4K video: one key frame for each second for most cameras.
+     * The "showinfo" filter writes the time of each frame to the error output (see [keyFrameTimeMs]).
+     * The frames get the adjustments of the middle of the range.
+     */
+    fun keyFramesArgs(
+        sourcePath: String,
+        startMs: Long,
+        endMs: Long,
+        width: Int,
+        adjustments: org.litvin.adjustments.AdjustmentsV1? = null,
+        sourceWidth: Int? = null,
+        sourceHeight: Int? = null,
+        toneRange: ToneRange = ToneRange.LIMITED,
+    ): List<String> {
+        val height = width * 9 / 16
+        val middleMs = (startMs + endMs) / 2
+        val filters = listOfNotNull(
+            geometryFilter(adjustments, sourceWidth, sourceHeight, width, height, middleMs),
+            "scale=$width:-2",
+            colorFilter(adjustments?.let { ColorTimeline.at(it, middleMs) }, toneRange),
+            "showinfo",
+        )
+        val start = startMs.coerceAtLeast(0)
+        return listOf(
+            "-hide_banner", "-nostats", "-v", "info", "-skip_frame", "nokey",
+            "-ss", (start / 1000.0).formatSecs(), "-t", ((endMs - start).coerceAtLeast(1) / 1000.0).formatSecs(), "-i", sourcePath,
+            "-vf", filters.joinToString(","), "-fps_mode", "passthrough",
+        ) + BMP_PIPE_OUTPUT
+    }
+
+    private val SHOWINFO_TIME = Regex("""pts_time:(-?[0-9.]+)""")
+
+    /** The time of a frame in a "showinfo" line of [keyFramesArgs], from the start of the range. Null for other lines. */
+    fun keyFrameTimeMs(line: String): Long? =
+        SHOWINFO_TIME.find(line)?.groupValues?.get(1)?.toDoubleOrNull()?.let { (it * 1000).roundToLong() }
 
     /** The still frame is this time before [FreezeFrame.atMs], so it is the last frame of the point. */
     private const val STILL_FRAME_OFFSET_MS = 40L

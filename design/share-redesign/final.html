@@ -16,21 +16,43 @@
        - colors: one system of six color roles for all styles (Text, Accent, Text on accent, Panel, Text on panel, Shade).
          A color set gives a value to each role. The user can change each role after the set. Each style keeps its own colors,
        - the side column has two tabs, Texts and Colors. The preview at the left and the Save block at the bottom
-         of the side column are always visible. Only the content of a tab scrolls. */
+         of the side column are always visible. Only the content of a tab scrolls.
+     Changes from the review of 2026-10-17:
+       - the user can zoom into the frame and drag the preview to move it, so that the players are larger,
+       - a strip of frames of the point selects the moment. A click or a drag on the strip sets the exact moment.
+         Two buttons (and the arrow keys) move one frame,
+       - each style has a text position (left or right, top or bottom for Broadcast). Poster has one position.
+         The position switch is above the style cards, because it belongs to the style,
+       - the large words can show the final score. The user must select it, because many users do not want to show the score,
+       - a note tells the user when a text is too small for YouTube search,
+       - the zoom stops when the frame has less than 1280 px of the video (150 % for a 1080p video, 200 % for 4K),
+       - the Save block shows the saved file of each video type, not the file name. The file name is in the tooltip,
+       - the project stores the Share settings. "Reopened project" shows them. */
   .tab { display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; min-width: 0; }
 
   /* The left side does not scroll: the preview becomes smaller in a low window. */
   .left { padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; overflow: hidden; }
-  .fitw { width: min(100%, calc((100vh - 390px) * 16 / 9)); }
+  .fitw { width: min(100%, calc((100vh - 445px) * 16 / 9)); }
   .pick { display: grid; grid-template-columns: 60px minmax(0, 1fr); align-items: center; gap: 6px 10px; }
   .pick .lbl { color: var(--fg-2); font-size: 12.5px; }
   .pick .ctrl { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .pick .ctrl .select { flex: 1; min-width: 0; }
   .pick .time { font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 112px; text-align: right; }
+  .pick .step { display: flex; align-items: center; gap: 2px; flex: none; }
+  .pick .step .time { min-width: 92px; text-align: center; }
+  .pick #zoom-hint { white-space: nowrap; }
+  .files { display: flex; flex-direction: column; gap: 2px; }
+  .files div { display: flex; align-items: center; gap: 5px; color: var(--fg-3); }
+  .files div.current { color: var(--fg); }
+  .files .material-symbols-outlined { font-size: 15px; }
+  .files .ok { color: var(--green); }
+  .files .old { color: var(--yellow); }
   .note-line { grid-column: 2; }
 
   /* The layout styles: one card for each style, with the current frame and texts */
-  .styles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .style-head { display: flex; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); min-height: 38px; }
+  .style-head .section-title { flex: 1; }
+  .styles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
   .style { border: 1px solid var(--line-2); border-radius: 5px; background: var(--raised); padding: 0; cursor: pointer; overflow: hidden; text-align: left; }
   .style:hover { border-color: #4a4a4a; }
   .style.is-selected { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime); }
@@ -44,6 +66,8 @@
   .block + .block { border-top: 1px solid var(--line); padding-top: 14px; }
   .seg.full { display: flex; }
   .seg.full > button { flex: 1; }
+  #place > button { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; padding: 3px 12px; }
+  #place .material-symbols-outlined { font-size: 17px; }
   .field > label .src { margin-left: auto; font-size: 11px; color: var(--fg-3); }
   .field > label .src.edited { color: var(--yellow); }
   .field.off { opacity: .4; }
@@ -59,7 +83,7 @@
     <nav id="nav"></nav>
     <main class="tab">
       <section class="left scroll">
-        <div class="section-title fitw"><span class="material-symbols-outlined">image</span>Thumbnail <span class="right faint">1280 × 720 PNG</span></div>
+        <div class="section-title fitw"><span class="material-symbols-outlined">image</span>Thumbnail <span class="right faint" id="size-note">1280 × 720 PNG</span></div>
         <div class="fitw"><div class="thumb-box" id="preview"></div></div>
         <div class="pick fitw">
           <span class="lbl">Point</span>
@@ -71,10 +95,25 @@
           </div>
           <span class="lbl">Moment</span>
           <div class="ctrl">
-            <input type="range" id="pos" min="0" max="1000" value="500">
-            <span class="time" id="time"></span>
+            <div class="strip" id="strip"></div>
+            <div class="step">
+              <button class="btn btn-icon btn-sm" id="frame-prev" title="One frame back"><span class="material-symbols-outlined">keyboard_arrow_left</span></button>
+              <span class="time" id="time"></span>
+              <button class="btn btn-icon btn-sm" id="frame-next" title="One frame forward"><span class="material-symbols-outlined">keyboard_arrow_right</span></button>
+            </div>
+          </div>
+          <span class="lbl">Zoom</span>
+          <div class="ctrl">
+            <input type="range" id="zoom" min="100" max="200" step="5" value="100">
+            <span class="hint" id="zoom-hint"></span>
+            <span class="time" id="zoom-val"></span>
           </div>
           <div class="note-line" id="pick-note"></div>
+        </div>
+        <div class="style-head fitw">
+          <span class="section-title">Style</span>
+          <span class="hint" id="place-hint"></span>
+          <div class="seg" id="place"></div>
         </div>
         <div class="styles fitw" id="styles"></div>
       </section>
@@ -96,7 +135,6 @@
               </div>
             </div>
             <div id="fields" class="block" style="gap:10px"></div>
-            <div id="fit-note"></div>
             <div class="hint">An empty field does not show on the thumbnail.</div>
           </div>
         </div>
@@ -112,7 +150,8 @@
 
         <div class="save-box">
           <div class="mini"><div class="thumb-box" id="mini"></div></div>
-          <div class="about"><span>As in YouTube search, with the video length.</span><span id="file"></span></div>
+          <div class="about"><span>As in YouTube search, with the video length.</span><div class="files" id="files"></div></div>
+          <div id="fit-note" style="grid-column: 1 / -1"></div>
           <div class="buttons">
             <button class="btn btn-lime" id="save"><span class="material-symbols-outlined">save</span>Save thumbnail</button>
             <button class="btn btn-ghost" id="open"><span class="material-symbols-outlined">folder_open</span>Open folder</button>
@@ -136,7 +175,8 @@
       return `<div class="field" id="w-team1"><label>Players <span class="src" id="s-team1"></span></label>` +
         `<div class="teams">${input('team1')}${input('team2')}</div></div>`;
     }
-    return `<div class="field" id="w-${f.key}"><label for="f-${f.key}">${f.label} <span class="src" id="s-${f.key}"></span></label>${input(f.key)}</div>`;
+    const chips = f.key === 'head' ? '<div class="chips" id="head-chips"></div>' : '';
+    return `<div class="field" id="w-${f.key}"><label for="f-${f.key}">${f.label} <span class="src" id="s-${f.key}"></span></label>${input(f.key)}${chips}</div>`;
   }).join('');
   Mock.FIELDS.forEach((f) => $('f-' + f.key).addEventListener('input', (e) => {
     Mock.set({ values: { ...S.values, [f.key]: e.target.value }, saved: null });
@@ -148,7 +188,7 @@
   }
 
   function render() {
-    const shrunk = Mock.mountThumb($('preview'), S.layout, {});
+    const { shrunk, small } = Mock.mountThumb($('preview'), S.layout, {});
     Mock.mountThumb($('mini'), S.layout, { ytBadge: true });
 
     // Layout styles
@@ -172,9 +212,39 @@
     $('point').innerHTML = visible().map(({ p, i }) =>
       `<option value="${i}" ${i === idx ? 'selected' : ''}>${p.fav ? '★ ' : ''}${Mock.esc(Mock.pointLabel(p))}</option>`).join('');
     const p = Mock.current();
-    $('pos').value = Math.round(S.pos * 1000);
-    $('pos').style.setProperty('--fill', (S.pos * 100) + '%');
+    $('strip').innerHTML = Array.from({ length: Mock.STRIP }, (_, i) =>
+      `<div class="cell"><img src="frame-${Mock.frameAt((i + .5) / Mock.STRIP)}.jpg" alt=""></div>`).join('') +
+      `<div class="head" style="left:${S.pos * 100}%"></div>`;
     $('time').textContent = `${Mock.clockTenths(p.len * S.pos)} of ${Mock.clockTenths(p.len)}`;
+
+    // Zoom
+    const maxZoom = Mock.maxZoom();
+    $('zoom').max = Math.round(maxZoom * 100);
+    $('zoom').value = Math.round(S.zoom * 100);
+    $('zoom').style.setProperty('--fill', ((S.zoom - 1) / (maxZoom - 1) * 100) + '%');
+    $('zoom-hint').textContent = maxZoom < 2 ? `Max ${Math.round(maxZoom * 100)} % for a 1080p video, so that the frame stays sharp` : '';
+    $('zoom-val').textContent = Math.round(S.zoom * 100) + ' %';
+    $('preview').classList.toggle('can-drag', S.zoom > 1);
+    $('size-note').textContent = S.zoom > 1 ? 'Drag the preview to move the frame · 1280 × 720 PNG' : '1280 × 720 PNG';
+
+    // Text position
+    const places = Mock.layout().places;
+    $('place').hidden = places.length < 2;
+    $('place').innerHTML = places.length < 2 ? '' : places.map((pl) =>
+      `<button data-place="${pl}" class="${pl === Mock.placeOf(S.layout) ? 'is-selected' : ''}">${Mock.icon(Mock.PLACES[pl][1])}${Mock.PLACES[pl][0]}</button>`).join('');
+    $('place').querySelectorAll('button').forEach((b) => b.addEventListener('click', () =>
+      Mock.set({ place: { ...S.place, [S.layout]: b.dataset.place }, saved: null })));
+    $('place-hint').textContent = places.length < 2 ? 'This style has one text position' : 'Text position';
+
+    // Preset choices of the large words. The final score shows only when the user selects it,
+    // because many users do not want to show the result before the video.
+    const head = Mock.value('head');
+    const [typeWords, score] = Mock.choices('head');
+    $('head-chips').innerHTML =
+      `<button class="chip ${head === typeWords ? 'is-selected' : ''}" data-v="${Mock.esc(typeWords)}">${Mock.esc(typeWords)}</button>` +
+      `<button class="chip ${head === score ? 'is-selected' : ''}" data-v="${Mock.esc(score)}" title="Shows the final score of the match on the thumbnail">Final score</button>`;
+    $('head-chips').querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () =>
+      Mock.set({ values: { ...S.values, head: b.dataset.v }, saved: null })));
     $('pick-note').innerHTML = hasFav ? '' :
       `<div class="note">${Mock.icon('info')}<p>No point has a star. The app selected a point near the middle of the match.</p></div>`;
 
@@ -190,20 +260,30 @@
       const isEdited = keys.some((k) => Mock.edited(k));
       const empty = keys.every((k) => Mock.value(k).trim() === '');
       const src = $('s-' + f.key);
-      src.textContent = isEdited ? 'Edited' : empty ? 'No preset' : f.source;
+      src.textContent = isEdited ? 'Edited' : empty ? 'No preset'
+        : f.key === 'head' && Mock.value('head') === Mock.SCORE ? 'The final score' : f.source;
       src.classList.toggle('edited', isEdited);
       $('w-' + f.key).classList.toggle('off', !keys.some((k) => used.includes(k)));
     });
     const anyEdited = Mock.FIELDS.some((f) => Mock.edited(f.key));
     $('reset').innerHTML = anyEdited ? '<button class="link" id="reset-all">Use the presets</button>' : '';
     if (anyEdited) $('reset-all').onclick = () => Mock.set({ values: {} });
-    $('fit-note').innerHTML = shrunk
-      ? `<div class="note">${Mock.icon('text_fields')}<p>A text is long, so the app made it smaller. Short words are easier to read.</p></div>` : '';
+    const noteText = shrunk && small ? 'A text is long, so the app made it too small for YouTube search. Use shorter words.'
+      : small ? 'Some texts of this style are small. They are hard to read in YouTube search. Look at the small preview.'
+      : shrunk ? 'A text is long, so the app made it smaller. Short words are easier to read.' : '';
+    $('fit-note').innerHTML = noteText ? `<div class="note">${Mock.icon('text_fields')}<p>${noteText}</p></div>` : '';
 
     // Save
-    $('file').innerHTML = S.saved
-      ? `<div class="ok-line">${Mock.icon('check_circle')}Saved in the export folder.</div>`
-      : `<code>${Mock.esc(Mock.fileName())}</code>`;
+    // One line for each video type. The current type is first. The tooltip shows the file name.
+    const typeName = { full: 'Full match', best: 'Best points' };
+    $('files').innerHTML = [S.type, S.type === 'full' ? 'best' : 'full'].map((t) => {
+      const f = S.files[t];
+      const icon = !f ? Mock.icon('radio_button_unchecked') : f.changed && t === S.type
+        ? Mock.icon('schedule', 'old') : Mock.icon('check_circle', 'ok');
+      const text = !f ? 'not saved' : f.changed && t === S.type ? `${f.at}, changed since` : f.at;
+      return `<div class="${t === S.type ? 'current' : ''}" title="${Mock.esc(Mock.fileName(t))} in the export folder">${icon}${typeName[t]} · ${text}</div>`;
+    }).join('');
+    $('save').innerHTML = Mock.icon('save') + (S.files[S.type] ? 'Replace thumbnail' : 'Save thumbnail');
 
     // Side tabs
     document.querySelectorAll('#side-tabs button').forEach((b) => b.classList.toggle('is-selected', b.dataset.tab === S.tab));
@@ -230,9 +310,55 @@
     const list = visible().map((x) => x.i);
     if (!list.includes(Mock.pointIndex())) Mock.set({ point: list[0], pos: .5 }); else Mock.render();
   });
-  $('pos').addEventListener('input', (e) => Mock.set({ pos: e.target.value / 1000, saved: null }));
-  $('save').addEventListener('click', () => { Mock.set({ saved: Mock.fileName() }); Mock.toast('Saved the thumbnail'); });
-  $('open').addEventListener('click', () => Mock.toast('Opens the export folder in Explorer', 'folder_open'));
+  // One frame at 30 frames per second
+  function stepFrame(d) {
+    const len = Mock.current().len;
+    Mock.set({ pos: Math.min(1, Math.max(0, S.pos + d / (len * 30))), saved: null });
+  }
+  $('frame-prev').addEventListener('click', () => stepFrame(-1));
+  $('frame-next').addEventListener('click', () => stepFrame(1));
+  // The arrow keys move one frame, when the focus is not in a text field.
+  window.addEventListener('keydown', (e) => {
+    if (e.target.closest('input, select, textarea')) return;
+    if (e.key === 'ArrowLeft') stepFrame(-1);
+    if (e.key === 'ArrowRight') stepFrame(1);
+  });
+
+  // A click or a drag on the strip sets the exact moment.
+  let scrub = false;
+  function scrubTo(e) {
+    const r = $('strip').getBoundingClientRect();
+    Mock.set({ pos: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), saved: null });
+  }
+  $('strip').addEventListener('mousedown', (e) => { scrub = true; scrubTo(e); });
+  window.addEventListener('mousemove', (e) => { if (scrub) scrubTo(e); });
+  window.addEventListener('mouseup', () => { scrub = false; });
+  $('zoom').addEventListener('input', (e) => Mock.set({ zoom: e.target.value / 100, saved: null }));
+
+  // A drag on the zoomed preview moves the frame.
+  let drag = null;
+  $('preview').addEventListener('mousedown', (e) => {
+    if (S.zoom > 1) drag = { x: e.clientX, y: e.clientY, panX: S.panX, panY: S.panY };
+  });
+  window.addEventListener('mouseup', () => { drag = null; });
+  window.addEventListener('mousemove', (e) => {
+    if (!drag) return;
+    const scale = $('preview').clientWidth / 1280;
+    const clamp = (v) => Math.min(1, Math.max(0, v));
+    Mock.set({
+      panX: clamp(drag.panX - (e.clientX - drag.x) / scale / ((S.zoom - 1) * 1280)),
+      panY: clamp(drag.panY - (e.clientY - drag.y) / scale / ((S.zoom - 1) * 720)),
+      saved: null,
+    });
+  });
+  $('save').addEventListener('click', () => {
+    const now = new Date();
+    const at = `today ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+    Mock.set({ files: { ...S.files, [S.type]: { at } } });
+    Mock.toast('Saved the thumbnail');
+  });
+  $('open').addEventListener('click', () => Mock.toast(S.files[S.type]
+    ? 'Opens the export folder in Explorer and selects the file' : 'Opens the export folder in Explorer', 'folder_open'));
 
   document.querySelectorAll('#side-tabs button').forEach((b) => b.addEventListener('click', () => Mock.set({ tab: b.dataset.tab })));
 

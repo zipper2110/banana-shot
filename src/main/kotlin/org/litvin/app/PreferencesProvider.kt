@@ -17,6 +17,9 @@ fun interface PreferencesProvider {
         const val SCOREBOARD = "scoreboard"
         const val ANALYTICS = "analytics"
 
+        /** The Share values for the next project: the last thumbnail style, its colors, and the league (B-46). */
+        const val SHARE = "share"
+
         /** The saved time and the expired flag of `build-expiry-spec.md`. */
         const val LICENSE = "license"
 
@@ -39,6 +42,7 @@ private object ProductionPreferencesProvider : PreferencesProvider {
      */
     private val fixedPaths = mapOf(
         PreferencesProvider.SCOREBOARD to "/org/litvin/ui/tabs/scoring",
+        PreferencesProvider.SHARE to "/org/litvin/ui/tabs/share",
     )
 
     override fun node(key: String): Preferences {

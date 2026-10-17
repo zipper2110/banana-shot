@@ -55,7 +55,7 @@ sealed class AnalyticsEvent {
 
     enum class Tab(internal val key: String) {
         PROJECTS("projects"), POINTS("points"), COLORS("colors"), CROP_ROTATE("crop_rotate"),
-        STATS("stats"), EXPORT("export")
+        STATS("stats"), EXPORT("export"), THUMBNAIL("thumbnail")
     }
 
     enum class Theme(internal val key: String) { DARK("dark"), MID("mid"), LIGHT("light") }

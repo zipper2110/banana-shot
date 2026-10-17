@@ -282,6 +282,11 @@ class ComponentNameContractTest {
             "export-initialize",
             "export-cancel",
             "export-progress",
+            "nav-share",
+            "share-preview",
+            "share-strip",
+            "share-zoom",
+            "share-save",
         )
     }
 }

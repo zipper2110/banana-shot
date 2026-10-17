@@ -94,4 +94,31 @@ class FFmpegCommandBuilderFreezeTest {
         assertTrue(args.valueOf("-vf").startsWith("scale=1280:-2,lutyuv=y='round(val+10.9500)'"), args.valueOf("-vf"))
         assertEquals("frame.png", args.last())
     }
+
+    @Test
+    fun aStillFrameForThePipeIsABmpImageOnTheStandardOutput() {
+        val args = FFmpegCommandBuilder.stillFrameArgs("input.mp4", atMs = 125_000, outputPath = FFmpegCommandBuilder.PIPE, width = 1280)
+
+        assertEquals("image2pipe", args.valueOf("-f"))
+        assertEquals("bmp", args.valueOf("-c:v"))
+        assertEquals("-", args.last())
+    }
+
+    @Test
+    fun theKeyFramesOfAPointComeFromOneProcessWithTheirTimes() {
+        val adjustments = org.litvin.adjustments.AdjustmentsV1(brightness = 1.2f)
+
+        val args = FFmpegCommandBuilder.keyFramesArgs("input.mp4", startMs = 700_300, endMs = 706_300, width = 320, adjustments = adjustments)
+
+        assertEquals("nokey", args.valueOf("-skip_frame"))
+        assertEquals("700.300", args.valueOf("-ss"))
+        assertEquals("6.000", args.valueOf("-t"))
+        assertTrue(args.valueOf("-vf").startsWith("scale=320:-2,lutyuv="), args.valueOf("-vf"))
+        assertTrue(args.valueOf("-vf").endsWith(",showinfo"), args.valueOf("-vf"))
+        assertEquals("-", args.last())
+
+        val line = "[Parsed_showinfo_1 @ 000001] n:   0 pts:  53143 pts_time:0.590478 duration:   1500 iskey:1"
+        assertEquals(590L, FFmpegCommandBuilder.keyFrameTimeMs(line))
+        assertEquals(null, FFmpegCommandBuilder.keyFrameTimeMs("[Parsed_showinfo_1 @ 000001] color_range:tv"))
+    }
 }

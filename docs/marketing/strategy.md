@@ -228,7 +228,7 @@ time of the author. Fit is how many target users are there.
 | Software catalogs (AlternativeTo, Softpedia, MajorGeeks, Microsoft Store, winget) | Low | Low to Medium | Week 3 | Each listing is a permanent link and a small, steady flow |
 | Show HN (Hacker News) | Low | Low (few players) | Month 2 | Good for the story ("Kotlin, Swing, libmpv, FFmpeg"). Brings developers, few players |
 | Product Hunt | Medium | Low | Month 2 to 3 | Prepare well. One chance per product |
-| Site SEO and how-to articles | Medium | Medium, slow | Month 1 to 6 | Answers to "how to add a scoreboard to a tennis video" |
+| Site SEO and how-to articles | Medium | Medium, slow | Month 1 to 6 | Answers to "how to add a scoreboard to a tennis video". Outline: `seo.md` |
 | Instagram, TikTok, Shorts | High | Medium | Month 2 | Needs vertical clips (B-16) to work well |
 | X (Twitter) | Low | Low | Optional | Few amateur tennis players. Useful only to talk to other indie developers |
 | Paid ads | Money | Unknown | Not now | Test only after the site converts well |

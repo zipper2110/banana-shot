@@ -26,6 +26,27 @@ The public site of BananaShot: `https://banana-shot-editor.app/`. B-10 in
   (`PrivacyPage.kt`, `AnalyticsConsentDialog`). The maintainer notes are in
   `docs/analytics/privacy-notice.md` and `docs/feedback/privacy-notice.md`.
 - At each release, add the version to `public/changelog/index.html`.
+  Also change `softwareVersion` in the JSON-LD of `public/index.html`.
+
+## Search data
+
+The plan is in `docs/marketing/seo.md`.
+
+- `public/index.html` has JSON-LD (structured data) for the app, the
+  author, and the site. When a fact on the page changes (the price, the
+  system, the formats, the features), change the JSON-LD too.
+- `public/faq/index.html` has a FAQPage JSON-LD block. A script makes it
+  from the questions on the page. Do not edit the block by hand. After each
+  change of the FAQ, run from the repository root:
+
+  ```bash
+  node site/tools/faq-jsonld.mjs
+  ```
+
+  The script needs the markup `<details id="..."><summary>...</summary><div>...</div></details>`
+  for each question.
+- `public/sitemap.xml` has a `<lastmod>` date for each page. When you
+  change the text of a page, set its date to the day of the change.
 
 ## Preview
 

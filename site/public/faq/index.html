@@ -21,6 +21,143 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#151a21">
   <link rel="stylesheet" href="/assets/site.css">
+  <!-- Made by site/tools/faq-jsonld.mjs. Do not edit by hand. -->
+  <script type="application/ld+json" id="faq-jsonld">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What does BananaShot do?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "BananaShot makes a short video from a full recording of a tennis match. You mark the start and the end of each point. Then you click the player who won each point. The export keeps only the points and adds a scoreboard. You can also add comments, match statistics, and color corrections."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is BananaShot free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. Now all features are free, and you do not need an account. The pricing page tells about a possible Pro version."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which video files can I open? Is 4K 60fps supported?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "MP4, MOV, MKV, AVI, M4V, and WMV. Most phones, action cameras, and video cameras record one of these formats. The export makes an MP4 file. Yes, 4K 60fps video is supported. Big files are not a problem: a 50 GB recording of a full match opens in about a second, because the app reads it from your disk."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the app change my original video?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. The app only reads your recording. Your marks, scores, and settings go into a project file. The export writes a new video file."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the app upload my videos?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. All editing and export occur on your PC. The app does not send your videos to a server. The privacy notice tells which data the app can send, and when."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which match formats can the app score?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Best of 1, 3, or 5 sets, a match tiebreak instead of the last set, a pro set, games only, and plain points. You can also select the deuce rule. Fully manual scoring lets you give each set, game, or point by hand."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use it for padel or other sports?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, you can score padel since version 1.1.0, with advantage, golden point, star point, or Americano. With manual scoring or plain points, you can use the app for other sports that count points."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is there a version for macOS or Linux?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Not now. The app works on Windows 10 and Windows 11, 64-bit. A macOS version is planned."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the app work without the internet?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. You can edit and export without a connection. When it can, the app checks for updates on GitHub."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why does Windows show \"Windows protected your PC\"?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "BananaShot is new, and Windows trusts a new app only after many downloads. The setup file is signed, so Windows shows the publisher. Click More info, then click Run anyway. The app is signed, so it also works when Smart App Control is on."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why does each version stop working after 6 months?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Each version of BananaShot works for 6 months after its build date. This makes sure that all users get the fixes and the new features. It also lets the author change the terms of later versions. From 30 days before the end date, the app shows a warning. The update is free and takes one click: Update and restart. Your projects and settings stay. After the end date, the app opens only the Export tab. Exports that run or wait in the queue continue. To open your projects again, install the newest version."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Where are my projects?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The projects and the settings are in the folder %APPDATA%\\BananaShot. An update or an uninstall does not delete this folder."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "A project shows \"Video not found\". What can I do?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The project refers to a video file that is not at its old location. Put the video back in the same folder, with the same name. Then open the project again."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "The export fails. What can I do?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "On the Export tab, select Advanced, and then select the encoder Software (x264). It is slower, but it works on all PCs. A hardware encoder can fail after an update of the graphics driver. If the export fails again, select a lower resolution or a lower FPS. If the export still fails, send a report from the app (see below). Attach the log files."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why is the file size different from the estimate?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "The app estimates the size before the export. Fast motion needs more data, so the real size can be larger or smaller."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I report a problem or suggest a feature?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use the Feedback button in the sidebar of the app. Select a topic, write your message, and click Send. You can attach the log files. To get a reply, give your email address. Error messages also have a Report this problem button. You can also write an email to contact [at] banana-shot-editor.app. The contact page tells what to put in a problem report."
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>

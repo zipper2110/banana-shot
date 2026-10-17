@@ -69,18 +69,24 @@ Put each group on one page. Do not put the same group on two pages.
 
 ## 5. Phase A: the base (this week, 2 to 4 hours)
 
-- [ ] Register the site in Google Search Console. Send `sitemap.xml`.
-- [ ] Register the site in Bing Webmaster Tools. Import the data from
-      Google Search Console. Send `sitemap.xml`.
-- [ ] In the Cloudflare dashboard, open "AI Crawl Control" (or "Bots") for
+- [x] Register the site in Google Search Console. Send `sitemap.xml`.
+      Done on 2026-10-17, as a Domain property (DNS verification).
+- [x] Register the site in Bing Webmaster Tools. Import the data from
+      Google Search Console. Send `sitemap.xml`. Done on 2026-10-17.
+- [x] In the Cloudflare dashboard, open "AI Crawl Control" (or "Bots") for
       the domain. Make sure that it does not block the AI crawlers of
       search: `OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`,
       `Claude-SearchBot`, `Claude-User`, and Bingbot. Make sure that the
       "managed robots.txt" does not add rules. Then open
       `https://banana-shot-editor.app/robots.txt` and compare it with the
-      file in the repository.
-- [ ] Turn on "Crawler Hints" in Cloudflare. It tells Bing and other engines
-      about changed pages (IndexNow).
+      file in the repository. Done on 2026-10-17: in 7 days, Cloudflare
+      allowed all 153 requests of AI crawlers (Google, Apple, OpenAI, Meta,
+      Microsoft, and more). 0 requests were blocked. "Bot Preference Sync"
+      is off, and the live `robots.txt` is the same as the file in the
+      repository. Decision: allow all AI crawlers, also the crawlers for
+      training. For a new free app, to be known is more important.
+- [x] Turn on "Crawler Hints" in Cloudflare. It tells Bing and other engines
+      about changed pages (IndexNow). Done on 2026-10-17.
 - [x] Add JSON-LD to the home page. Done on 2026-10-17: `WebSite`,
       `Person` (the author, `sameAs` GitHub), and `SoftwareApplication`
       (price 0, Windows 10 and 11, version, download URL, features,

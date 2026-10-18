@@ -74,6 +74,19 @@
         "license": "https://github.com/zipper2110/banana-shot/blob/master/LICENSE",
         "author": { "@id": "https://banana-shot-editor.app/#author" },
         "sameAs": ["https://github.com/zipper2110/banana-shot"]
+      },
+      {
+        "@type": "VideoObject",
+        "@id": "https://banana-shot-editor.app/#tutorial",
+        "name": "How I edit my tennis matches: no dead time, live scoreboard, free",
+        "description": "A tutorial for BananaShot. A one-hour match recording becomes a 17-minute video with only the points and a live scoreboard: open the recording, set up the players, mark and score the points, choose the scoreboard style, correct the picture, and export.",
+        "thumbnailUrl": "https://banana-shot-editor.app/assets/frames/video-tutorial.webp",
+        "uploadDate": "2026-10-18T12:19:22-07:00",
+        "duration": "PT8M12S",
+        "embedUrl": "https://www.youtube-nocookie.com/embed/ZyeuGv_1Ofo",
+        "url": "https://www.youtube.com/watch?v=ZyeuGv_1Ofo",
+        "author": { "@id": "https://banana-shot-editor.app/#author" },
+        "about": { "@id": "https://banana-shot-editor.app/#app" }
       }
     ]
   }
@@ -147,6 +160,16 @@
         </li>
       </ol>
       <p class="steps-note">Is the video too dark, or is the camera not level? You can also correct the colors, rotate the video, and crop it.</p>
+      <!-- The tutorial. A click loads the YouTube player in place (assets/video-embed.js). Until the click, the page
+           loads nothing from YouTube. Without the script, the link opens the video on YouTube. -->
+      <figure class="video video-tutorial">
+        <a class="video-play" href="https://www.youtube.com/watch?v=ZyeuGv_1Ofo" data-youtube="ZyeuGv_1Ofo" target="_blank" rel="noopener" aria-label="Play the tutorial video">
+          <img src="/assets/frames/video-tutorial.webp" alt="" width="1280" height="720" loading="lazy">
+          <span class="video-btn" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+        </a>
+        <figcaption><b>Watch the tutorial</b><span>8 minutes: a real match, from the recording to the export</span></figcaption>
+      </figure>
+      <p class="video-note">The player loads from YouTube when you click Play.</p>
     </div>
   </section>
 
@@ -347,6 +370,7 @@
 <script src="/assets/demos/comments.js" defer></script>
 <script src="/assets/demos/picture.js" defer></script>
 <script src="/assets/demos/export.js" defer></script>
+<script src="/assets/video-embed.js" defer></script>
 <script src="/assets/count.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,252 @@
+1
+00:00:02,000 --> 00:00:08,900
+Hi everyone. My name is Dima, and I'm the author of the BananaShot app.
+
+2
+00:00:09,000 --> 00:00:16,900
+Let me show you how to turn your match recording into a great video
+
+3
+00:00:17,000 --> 00:00:24,900
+with a scoreboard and with the time between the points cut out. For example,
+
+4
+00:00:25,000 --> 00:00:36,900
+like this video on my YouTube channel: it has a nice scoreboard, and the time between the points is gone.
+
+5
+00:00:37,000 --> 00:00:40,900
+Let's look at the app.
+
+6
+00:00:41,000 --> 00:00:47,900
+We start by importing our match, our video.
+
+7
+00:00:48,000 --> 00:00:55,900
+Click Import new match and select the video files.
+
+8
+00:00:56,000 --> 00:01:02,900
+Give the project a name, so that it's clear what it is,
+
+9
+00:01:03,000 --> 00:01:11,900
+for example, like this. The sport is tennis. And create the project.
+
+10
+00:01:12,000 --> 00:01:19,900
+The app asks for the names of the players and their colors. Let me type the names
+
+11
+00:01:20,000 --> 00:01:26,900
+and quickly cover them here in the video. You can see that
+
+12
+00:01:27,000 --> 00:01:32,900
+I play in a green shirt, so I choose green for myself.
+
+13
+00:01:33,000 --> 00:01:39,900
+And for my opponent, I choose gray.
+
+14
+00:01:40,000 --> 00:01:49,900
+Here you can also change the format of the automatic scoring, or choose fully manual scoring.
+
+15
+00:01:50,000 --> 00:01:56,900
+What's next? Next, I need to find the moment where my
+
+16
+00:01:57,000 --> 00:02:04,900
+match starts. I can quickly scroll along the timeline like this. Here the previous match ends.
+
+17
+00:02:05,000 --> 00:02:15,900
+And here is the warm-up. And it looks like the match is about to start.
+
+18
+00:02:16,000 --> 00:02:22,900
+Here we find the start. Let's see.
+
+19
+00:02:23,000 --> 00:02:31,900
+I look for the moment when the first point starts, and I press the Point start button, or Enter on the keyboard.
+
+20
+00:02:32,000 --> 00:02:39,900
+The point starts. I can watch how it goes.
+
+21
+00:02:40,000 --> 00:02:43,900
+Here, you see, the first serve goes into the net.
+
+22
+00:02:44,000 --> 00:02:55,900
+I move the start of the point to the current moment. I just press the same button again, because I don't want to keep the first serve that went into the net.
+
+23
+00:02:56,000 --> 00:03:04,900
+So the point has started. Oops, I lost the point. I stop the video
+
+24
+00:03:05,000 --> 00:03:13,900
+and mark that Vika won this point. The scoreboard shows up right away.
+
+25
+00:03:14,000 --> 00:03:19,900
+And if we play the video again, you can see that after the point she has 15, and I have zero.
+
+26
+00:03:20,000 --> 00:03:25,900
+Let's mark one more point.
+
+27
+00:03:26,000 --> 00:03:33,900
+You see, I can move the video forward and back with the left and right arrow keys.
+
+28
+00:03:34,000 --> 00:03:43,900
+I find the moment when Vika starts to serve. I press Point start, Enter again.
+
+29
+00:03:44,000 --> 00:03:51,900
+And I won the point. I can click "Dima scored" or press Q. The point goes to me.
+
+30
+00:03:52,000 --> 00:03:56,900
+The scoreboard shows 15-15.
+
+31
+00:03:57,000 --> 00:04:04,900
+We can go on and mark the whole video like this. We can also choose the scoreboard style.
+
+32
+00:04:05,000 --> 00:04:08,900
+There are different scoreboard styles. For example, this one.
+
+33
+00:04:09,000 --> 00:04:13,900
+We can put the scoreboard in a different position. For example, on the left.
+
+34
+00:04:14,000 --> 00:04:22,900
+We can choose any scoreboard that we like, for example, this one, and adjust it,
+
+35
+00:04:23,000 --> 00:04:29,900
+for example, change the size, the transparency, the colors, or something else.
+
+36
+00:04:30,000 --> 00:04:39,900
+Also, if the video is a bit tilted, like here, or we don't like the colors, we can always edit it a little.
+
+37
+00:04:40,000 --> 00:04:44,900
+We go to the Colors & Transform tab.
+
+38
+00:04:45,000 --> 00:04:56,900
+Here we can change the colors, the brightness, the contrast, and make the colors less or more saturated.
+
+39
+00:04:57,000 --> 00:05:05,900
+We can also crop or rotate the video. For example, I want to zoom in a bit. I can do it like this.
+
+40
+00:05:06,000 --> 00:05:11,900
+And I can fine-tune the rotation with this slider.
+
+41
+00:05:12,000 --> 00:05:19,900
+I check the baseline. Yes, this looks right. Now, if we go back here, our video
+
+42
+00:05:20,000 --> 00:05:30,900
+already has these settings: the crop and the colors.
+
+43
+00:05:31,000 --> 00:05:41,900
+So we mark the whole video. And here I have a video with all the points marked. You can see that there are a lot of them.
+
+44
+00:05:42,000 --> 00:05:47,900
+There are 98 here. And at the end of the video, we see the final score.
+
+45
+00:05:48,000 --> 00:05:57,900
+When the video is ready, I can first look at the statistics of the points and the serves.
+
+46
+00:05:58,000 --> 00:06:05,900
+And I can choose which of them go into the final video, as a card like this.
+
+47
+00:06:06,000 --> 00:06:11,900
+When I'm ready, I go to the Export tab and export my videos.
+
+48
+00:06:12,000 --> 00:06:18,900
+Here I can choose what to export and how. For example, I can export the full video,
+
+49
+00:06:19,000 --> 00:06:26,900
+or only the points, or only my favorite points that I marked.
+
+50
+00:06:27,000 --> 00:06:34,900
+I can turn on or off the scoreboard, the comments, which you can also add to the video in
+
+51
+00:06:35,000 --> 00:06:39,900
+the editor, and the statistics.
+
+52
+00:06:40,000 --> 00:06:48,900
+Next, I choose the quality: the original quality or a lower one.
+
+53
+00:06:49,000 --> 00:06:56,900
+And I can fine-tune it, down to the bitrate and the encoder.
+
+54
+00:06:57,000 --> 00:07:09,900
+When I'm ready, I click Start export and choose the video file to export to. The app creates a new file.
+
+55
+00:07:10,000 --> 00:07:13,900
+The export starts.
+
+56
+00:07:14,000 --> 00:07:20,900
+And for the same project, I can choose other options. For example,
+
+57
+00:07:21,000 --> 00:07:26,900
+here I changed it to points. I can add it to the queue.
+
+58
+00:07:27,000 --> 00:07:33,900
+Then my second video starts when the first one is done. I can leave the computer on overnight, or I can
+
+59
+00:07:34,000 --> 00:07:42,900
+go and work on another project, and the export of this project goes on.
+
+60
+00:07:43,000 --> 00:07:49,900
+That's how BananaShot works. The app also has a Feedback button.
+
+61
+00:07:50,000 --> 00:07:55,900
+Here you can leave any ideas or questions.
+
+62
+00:07:56,000 --> 00:08:06,900
+You can leave your contact for a reply if you want. I'll be very grateful for all your opinions and wishes.
+
+63
+00:08:07,000 --> 00:08:11,900
+See you soon. Bye, everyone!
+

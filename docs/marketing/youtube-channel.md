@@ -87,8 +87,8 @@ With BananaShot, you can mark the points, keep score, and export your match with
 #tennis #tennisdoubles #tennismatch
 ```
 
-After the tutorial is published, add this line under the link:
-`How I made this video (3 min): <link to the tutorial>`
+After the verification, also add this line under the link:
+`How I made this video (8 min): https://youtu.be/ZyeuGv_1Ofo`
 
 ### Singles, highlights (https://youtu.be/fh4CVislaJY)
 
@@ -100,6 +100,18 @@ Title:
 
 ```
 Tennis Singles Highlights | Dima vs Vika | Batumi
+```
+
+### Tutorial (https://youtu.be/ZyeuGv_1Ofo)
+
+Published on 2026-10-18. It is 8 minutes long. The main voice track is
+English. The title and the description are in English. The texts and the
+open items are in `tutorial-video.md`.
+
+Title:
+
+```
+How I edit my tennis matches: no dead time, live scoreboard, free
 ```
 
 ## Keywords

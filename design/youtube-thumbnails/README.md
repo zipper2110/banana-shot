@@ -63,3 +63,20 @@ Change `doubles` to the name of the thumbnail.
   --screenshot="C:/w/banana-shot/design/youtube-thumbnails/doubles.png" \
   "file:///C:/w/banana-shot/design/youtube-thumbnails/doubles.html"
 ```
+
+## tutorial: the tutorial video
+
+- The layout is different: a tilted app window at the left, and
+  "1 HOUR → 17 MIN" at the right. The numbers are the real numbers of the
+  match in the tutorial.
+- The background is `singles-frame.jpg` with blur, so that the app window
+  is the subject.
+- `tutorial-app.jpg` is the app window from the frame that YouTube took
+  from the tutorial (1280 × 720), without the Windows taskbar. A frame of
+  the original screen recording is sharper.
+- The site uses the same image as the poster of the tutorial:
+  `site/public/assets/frames/video-tutorial.webp`.
+
+```bash
+ffmpeg -i tutorial.png -c:v libwebp -quality 80 ../../site/public/assets/frames/video-tutorial.webp
+```

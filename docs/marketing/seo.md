@@ -214,6 +214,23 @@ change all guides (`site/README.md`).
 - Give the YouTube video chapters. Google often shows YouTube videos in
   answers to "how to" questions.
 
+Done on 2026-10-18 (https://youtu.be/ZyeuGv_1Ofo). Decisions:
+
+- The home page shows the tutorial under "How it works". It shows a still
+  image first (`assets/frames/video-tutorial.webp`). A click loads the
+  player from youtube-nocookie.com in place (`assets/video-embed.js`).
+  Until the click, the page loads nothing from YouTube. The privacy notice
+  says this ("This site").
+- The home page has a `VideoObject` block for the tutorial.
+- The guides only link to the video. They do not embed the player. The
+  links are in "Cut the dead time", "Add a scoreboard", and "Record a
+  match with a phone".
+- The YouTube description has 10 chapters.
+- [ ] After the deploy, test the home page in the Google Rich Results Test.
+      Google can ignore a player that loads only after a click. Then the
+      `VideoObject` item does not show as a video result, but the block
+      does no harm.
+
 ## 7. Phase C: mentions on other sites (all the time)
 
 AI engines learn about a product from other sites. This phase uses the

@@ -390,9 +390,13 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
       of a match and the scoreboard. Use it on all pages. Links in chats and
       on Reddit then show a match, not an icon. Done on 2026-10-08:
       `site/public/assets/og-image.jpg`. Deploy the site to publish it.
-- [ ] Record the 3-minute tutorial video. Put it on the home page and on
+- [x] Record the 3-minute tutorial video. Put it on the home page and on
       YouTube. The shot list, the spoken text, and the YouTube texts are in
-      `tutorial-video.md`.
+      `tutorial-video.md`. Done on 2026-10-18:
+      https://youtu.be/ZyeuGv_1Ofo (8 minutes). The main voice track is
+      English. A Russian track can be added. The home page
+      plays it, and three guides link to it. The open items are in
+      `tutorial-video.md`, "After the video is published".
 - [ ] Add the site link and one line about the app to the descriptions of
       your two match videos. The texts are in `tutorial-video.md`,
       section 5.
@@ -497,7 +501,8 @@ reply.
 > the result, [link, unlisted]. It is 35 minutes instead of 1 hour 50.
 >
 > If you like it, you can use this video. The app is free, with no account
-> and no upload: banana-shot-editor.app. I am happy to help with your first
+> and no upload: banana-shot-editor.app. Here is how it works (8 min):
+> https://youtu.be/ZyeuGv_1Ofo. I am happy to help with your first
 > project, and I want to hear what is missing.
 >
 > Dmitri
@@ -507,8 +512,9 @@ reply.
 > Hi [name]! Remember our match on [date]? I made an app that turns a match
 > recording into a short video with the score. Here is ours: [link].
 >
-> Next time you record a match, try it. It is free. I can show you how in 10
-> minutes. And tell me honestly what is bad. I want to make it better.
+> Next time you record a match, try it. It is free. Here is how it works
+> (8 min): https://youtu.be/ZyeuGv_1Ofo. Or I can show you in 10 minutes.
+> And tell me honestly what is bad. I want to make it better.
 
 ### To a coach
 
@@ -535,7 +541,8 @@ reply.
 > by tennis rules and adds a scoreboard and stats. A 2-hour match becomes
 > about 30 minutes.
 >
-> Here is one of my doubles matches made with it: [link].
+> Here is one of my doubles matches made with it: [link]. And here is how
+> I edit a match, step by step (8 min): https://youtu.be/ZyeuGv_1Ofo
 >
 > It is free, with no account, and the video stays on your PC. Windows only
 > for now (Mac is planned). Site: banana-shot-editor.app

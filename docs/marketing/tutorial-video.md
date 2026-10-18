@@ -1,6 +1,8 @@
 # Tutorial video: the recording kit
 
 Phase 0 of `strategy.md`, the tutorial video item. Written on 2026-10-08.
+Published on 2026-10-18: https://youtu.be/ZyeuGv_1Ofo. The open items are in
+"After the video is published", at the end of this file.
 
 The tutorial is the main asset for Phase 1. Each message to a friend, a
 YouTuber, a coach, or a forum links to it. It answers "how much work is it?"
@@ -186,13 +188,40 @@ https://banana-shot-editor.app/
 After you publish the tutorial, add one more line to both videos:
 
 ```
-How I made this video (3 min): <link to the tutorial>
+How I made this video (8 min): https://youtu.be/ZyeuGv_1Ofo
 ```
 
 ## After the video is published
 
-- [ ] Add the tutorial link to the home page of the site, near "How it
-      works".
-- [ ] Use the link in each message template of `strategy.md`, section 9.
-- [ ] Note the publish date. Check the views and the site visits from
-      YouTube in the cockpit after one week.
+Published on 2026-10-18: https://youtu.be/ZyeuGv_1Ofo. The video is 8
+minutes, not 3. The main audio track is English, so YouTube makes English
+automatic subtitles. The author recorded the voice in Russian first. The
+first upload (2026-10-18) had the Russian voice as the main track. Then
+YouTube used Russian for all viewers who do not speak English, and it made
+only Russian subtitles. Thus the author uploaded the video again with the
+English track as the main track.
+
+- [x] Add the tutorial link to the home page of the site, near "How it
+      works". Done on 2026-10-18: the home page plays the video under the
+      steps. Three guides link to it (`seo.md`, "The tutorial video").
+- [x] Use the link in each message template of `strategy.md`, section 9.
+      Done on 2026-10-18. The coach template has no link: show the app in
+      person.
+- [x] Note the publish date: 2026-10-18.
+- [ ] Add the Russian voice as an extra audio track (YouTube Studio >
+      Languages > Add language > Russian > Audio). Then tactic 7 of
+      `strategy.md` can use the video.
+- [ ] Check the English automatic subtitles. If they are poor, upload
+      `tutorial-video-en.srt` (Upload file > With timing). That file is a
+      translation of the Russian voice, so change the words where the
+      English track is different.
+- [ ] Add the pinned comment (section 4).
+- [ ] Add a Russian title and description (YouTube Studio > Languages >
+      Russian > Title & description). Then the video is easier to find in
+      Russian.
+- [ ] The description says "17 scoreboard styles". The site says 19. Make
+      them the same.
+- [ ] Add the "How I made this video" line to the two match videos, after
+      YouTube verifies the channel (`youtube-channel.md`).
+- [ ] Check the views and the site visits from YouTube in the cockpit on
+      2026-10-25.

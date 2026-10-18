@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BananaShot FAQ</title>
-  <meta name="description" content="Answers to frequent questions about BananaShot: video files, install, updates, the 6-month version period, export problems, and contact.">
+  <meta name="description" content="Answers to frequent questions about BananaShot: video files and cameras, install, updates, export problems, and contact.">
   <link rel="canonical" href="https://banana-shot-editor.app/faq/">
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
   <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
   <meta property="og:title" content="BananaShot FAQ">
-  <meta property="og:description" content="Answers to frequent questions about BananaShot: video files, install, updates, the 6-month version period, export problems, and contact.">
+  <meta property="og:description" content="Answers to frequent questions about BananaShot: video files and cameras, install, updates, export problems, and contact.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://banana-shot-editor.app/faq/">
   <meta property="og:image" content="https://banana-shot-editor.app/assets/og-image.jpg">
@@ -49,6 +49,22 @@
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "MP4, MOV, MKV, AVI, M4V, and WMV. Most phones, action cameras, and video cameras record one of these formats. The export makes an MP4 file. Yes, 4K 60fps video is supported. Big files are not a problem: a 50 GB recording of a full match opens in about a second, because the app reads it from your disk."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I use a video from any phone or camera?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. You can use a video from any phone (iPhone or Android), any action camera, or any video camera. Any resolution, frame rate, and length works. You don't need a special app or device to record."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does the camera need a special position, light, or zoom?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. You mark the points, so the app doesn't need to see the court in a certain way. Behind the baseline, at the side, or in a corner; indoors or outdoors; zoomed in or wide: any video works. Many AI apps need a set camera position or zoom to find the points. BananaShot doesn't. If the video is too dark or the camera is not level, you can correct the colors, rotate the video, and crop it. For tips on a video that's nice to watch, see how to record a match with a phone."
         }
       },
       {
@@ -105,14 +121,6 @@
         "acceptedAnswer": {
           "@type": "Answer",
           "text": "BananaShot is new, and Windows trusts a new app only after many downloads. The setup file is signed, so Windows shows the publisher. Click More info, then click Run anyway. The app is signed, so it also works when Smart App Control is on."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Why does each version stop working after 6 months?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Each version of BananaShot works for 6 months after its build date. This makes sure that all users get the fixes and the new features. It also lets the author change the terms of later versions. From 30 days before the end date, the app shows a warning. The update is free and takes one click: Update and restart. Your projects and settings stay. After the end date, the app opens only the Export tab. Exports that run or wait in the queue continue. To open your projects again, install the newest version."
         }
       },
       {
@@ -204,6 +212,21 @@
       </div>
     </details>
 
+    <details id="any-camera">
+      <summary>Can I use a video from any phone or camera?</summary>
+      <div>
+        <p>Yes. You can use a video from any phone (iPhone or Android), any action camera, or any video camera. Any resolution, frame rate, and length works. You don't need a special app or device to record.</p>
+      </div>
+    </details>
+
+    <details id="camera-position">
+      <summary>Does the camera need a special position, light, or zoom?</summary>
+      <div>
+        <p>No. You mark the points, so the app doesn't need to see the court in a certain way. Behind the baseline, at the side, or in a corner; indoors or outdoors; zoomed in or wide: any video works. Many AI apps need a set camera position or zoom to find the points. BananaShot doesn't.</p>
+        <p>If the video is too dark or the camera is not level, you can correct the colors, rotate the video, and crop it. For tips on a video that's nice to watch, see <a href="/guides/record-tennis-match-with-phone/">how to record a match with a phone</a>.</p>
+      </div>
+    </details>
+
     <details id="original">
       <summary>Does the app change my original video?</summary>
       <div>
@@ -253,15 +276,6 @@
       <div>
         <p>BananaShot is new, and Windows trusts a new app only after many downloads. The setup file is signed, so Windows shows the publisher. Click <strong>More info</strong>, then click <strong>Run anyway</strong>.</p>
         <p>The app is signed, so it also works when Smart App Control is on.</p>
-      </div>
-    </details>
-
-    <details id="expiry">
-      <summary>Why does each version stop working after 6 months?</summary>
-      <div>
-        <p>Each version of BananaShot works for 6 months after its build date. This makes sure that all users get the fixes and the new features. It also lets the author change the terms of later versions.</p>
-        <p>From 30 days before the end date, the app shows a warning. The update is free and takes one click: <strong>Update and restart</strong>. Your projects and settings stay.</p>
-        <p>After the end date, the app opens only the Export tab. Exports that run or wait in the queue continue. To open your projects again, install the newest version.</p>
       </div>
     </details>
 
@@ -328,7 +342,7 @@
   </div>
 </footer>
 <script>
-  // Open the question that the address names, for example /faq/#expiry.
+  // Open the question that the address names, for example /faq/#report.
   function openFromHash() {
     var target = location.hash && document.getElementById(location.hash.slice(1));
     if (target && target.tagName === "DETAILS") { target.open = true; target.scrollIntoView({ block: "start" }); }

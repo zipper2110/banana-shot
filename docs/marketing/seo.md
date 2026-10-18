@@ -168,15 +168,43 @@ Phase 2.
      the same for all phone apps, the cell says "Depends on the app". On a
      phone, the cells get smaller so that the BananaShot column stays
      visible (`.compare` in `site.css`).
-2. How to cut the dead time from a tennis match video.
-3. How to record a tennis match with a phone (camera position, mount,
-   settings, battery, file size). This page brings people before they need
-   an editor.
-4. How to make a highlights video of a tennis match.
-5. Free alternatives to SwingVision for Windows. Compare honestly: what each
-   app does better. Include general editors and Tennis Studio. Check the
-   facts and the prices on the date of the page.
-6. Padel match video with a score (when the padel scoring is ready to show).
+2. How to cut the dead time from a tennis match video. Done on 2026-10-18:
+   `/guides/cut-dead-time-tennis-video/`.
+3. How to record a tennis match with a phone. Done on 2026-10-18:
+   `/guides/record-tennis-match-with-phone/`. It uses the setup of the
+   author: a phone on the back fence or on a tripod behind the baseline.
+   The storage number (about 50 GB for a two-hour match in 4K 60fps) is the
+   same as on the home page and the FAQ.
+4. How to make a highlights video of a tennis match. Done on 2026-10-18:
+   `/guides/tennis-highlights-video/`. It links to the singles highlights
+   of the author on YouTube.
+5. SwingVision alternatives for Windows. Done on 2026-10-18:
+   `/guides/swingvision-alternatives-windows/`. The page shows the date of
+   the check. Sources, checked on 2026-10-18:
+   - SwingVision: the US App Store page. Apple devices only (iPhone, iPad,
+     Mac). Pro: $179.99 per year (the listing also shows two different
+     monthly prices, so the page gives only the yearly price).
+   - Rallytics: `https://rallytics.app/`. Windows and Mac, AI rally
+     detection, a low-resolution copy goes to the analysis, 2 free hours,
+     packs from $4.99, $89.99 per year. No score on its site.
+   - Tennis Studio: the Microsoft Store listing `9mwj0rtzbmqm`. Cut, crop,
+     rotate, score overlay from the Garmin watch app or by hand. No price
+     was readable, so the page links to the store.
+   - The test of the author (October 2026), shown on the page as "In my
+     test": Rallytics often froze, its interface is hard to use, and it
+     has only the cut (no score, no color correction, no crop or
+     rotation). Tennis Studio is basic and cost $8; its scoreboard has one
+     style; it can crop and rotate, but has no color correction. Both have
+     a slower way to mark and change points, a less flexible export, and
+     no thumbnail tool.
+   Check these facts again every 6 months, or when a user reports a change.
+   Change the date on the page and in the JSON-LD (`dateModified`).
+6. How to make a padel match video with a scoreboard. Done on 2026-10-18:
+   `/guides/padel-match-video-scoreboard/`.
+
+All guides have a "More guides" list at the end. Each guide has the same
+head, header, and footer as the first guide. When you change one of them,
+change all guides (`site/README.md`).
 
 ### The tutorial video
 

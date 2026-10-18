@@ -100,6 +100,16 @@ When item is done, move it under
   - Draw: a draw shows the equal points. Nothing on the scoreboard or in
     Stats says "Draw".
 
+### B-49 A match from several video files
+
+- Let a project use several video files of one match, one after the other.
+  Action cameras and some phones split a long recording into several
+  files. Now a project uses one video file, so the user must join the files
+  first with another tool.
+- The site does not tell about this limit now (decided on 2026-10-18). When
+  the feature is done, add it to the FAQ answer "Can I use a video from any
+  phone or camera?" (`site/public/faq/index.html`, `#any-camera`).
+
 ### B-15 Intro and outro videos
 
 - Let the user add an intro video and an outro video to the exported video.

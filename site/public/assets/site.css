@@ -309,6 +309,8 @@ main > .section-noai .section-head { margin-bottom: 48px; }
 .compare tbody th { color: var(--fg-2); font-weight: 500; width: 24%; }
 .compare .ours { background: var(--lime-tint); }
 .compare thead .ours { color: var(--lime); }
+/* A table with many columns keeps a minimum width and scrolls in its box. Put the BananaShot column first. */
+.compare.wide { min-width: 600px; }
 @media (max-width: 600px) {
   .compare { font-size: 0.8rem; hyphens: auto; }
   .compare th, .compare td { padding: 8px 6px; }

@@ -82,7 +82,7 @@ Write them down. You need them for the spoken text and the description.
 | 4 | 0:45 to 1:25 | Points tab. Play the video. Press C at the serve, V when the point ends. Do 3 or 4 points. Show the key overlay. Mark one favorite with A. Then use the arrow keys or a higher speed to skip the dead time. | "Step two: mark the points. Press C when the serve starts, and V when the point ends. That's it. Between points, I speed up the video or skip with the arrow keys. Press A to mark a great point as a favorite." |
 | 5 | 1:25 to 1:35 | Open the prepared project with all points marked. | "I marked the whole match like this. It took me about [X3]." |
 | 6 | 1:35 to 2:15 | Points tab, scoring. The scoring settings: names, colors, best of 3. Then score 3 or 4 points with Q and E, and R for the next point. Press S once to mark the server. | "Step three: the score. Set the names and the format, for example best of three sets. Then play each point and press Q or E for the player who won it. R goes to the next point. The app counts games, sets, and tiebreaks by the tennis rules. No AI guesses, so the score is always right." |
-| 7 | 2:15 to 2:30 | Statistics tab: the momentum chart and the serve stats. Scoreboard style: show 2 or 3 styles quickly. | "You also get match stats, and you can choose from 17 scoreboard styles." |
+| 7 | 2:15 to 2:30 | Statistics tab: the momentum chart and the serve stats. Scoreboard style: show 2 or 3 styles quickly. | "You also get match stats, and you can choose from 19 scoreboard styles." |
 | 8 | 2:30 to 2:55 | Export tab: Only points, Scoreboard on, Statistics card on, Balanced, Start export. Show the progress. | "Step four: export. Choose only the points, or only your favorites for a highlight video. Turn on the scoreboard and the stats card. Then export." |
 | 9 | 2:55 to 3:15 | The finished video again. Then the site address on the screen. | "And that's the result: [X1] became [X2]. BananaShot is free, with no account and no watermark. It's for Windows for now. The link is in the description. If you try it, tell me what to improve. I read every message." |
 
@@ -142,7 +142,7 @@ BananaShot:
 - Free. No account, no ads, no watermark.
 - Works offline. Your video stays on your PC.
 - No AI: you decide each cut, and the score is always right.
-- Scoreboard (17 styles), match statistics, comments on the video,
+- Scoreboard (19 styles), match statistics, comments on the video,
   color correction, crop and rotation.
 - Opens MP4, MOV, MKV, AVI, M4V, and WMV. Handles big 4K 60fps files: no
   upload, no wait. Exports up to 4K 60fps.
@@ -199,7 +199,7 @@ automatic subtitles. The author recorded the voice in Russian first. The
 first upload (2026-10-18) had the Russian voice as the main track. Then
 YouTube used Russian for all viewers who do not speak English, and it made
 only Russian subtitles. Thus the author uploaded the video again with the
-English track as the main track.
+English track as the main track. The first upload is private now.
 
 - [x] Add the tutorial link to the home page of the site, near "How it
       works". Done on 2026-10-18: the home page plays the video under the
@@ -208,20 +208,19 @@ English track as the main track.
       Done on 2026-10-18. The coach template has no link: show the app in
       person.
 - [x] Note the publish date: 2026-10-18.
-- [ ] Add the Russian voice as an extra audio track (YouTube Studio >
-      Languages > Add language > Russian > Audio). Then tactic 7 of
-      `strategy.md` can use the video.
-- [ ] Check the English automatic subtitles. If they are poor, upload
-      `tutorial-video-en.srt` (Upload file > With timing). That file is a
-      translation of the Russian voice, so change the words where the
-      English track is different.
+- [x] Upload the thumbnail: `design/youtube-thumbnails/tutorial.png`.
+      Done on 2026-10-18.
+- [x] Check the English automatic subtitles. Done on 2026-10-18: the
+      author fixed the errors in YouTube Studio.
+      `tutorial-video-en.srt` is not used.
+- [x] Make the number of scoreboard styles the same as on the site. Done
+      on 2026-10-18: the description says 19.
 - [ ] Add the pinned comment (section 4).
-- [ ] Add a Russian title and description (YouTube Studio > Languages >
-      Russian > Title & description). Then the video is easier to find in
-      Russian.
-- [ ] The description says "17 scoreboard styles". The site says 19. Make
-      them the same.
 - [ ] Add the "How I made this video" line to the two match videos, after
       YouTube verifies the channel (`youtube-channel.md`).
 - [ ] Check the views and the site visits from YouTube in the cockpit on
       2026-10-25.
+
+Decision on 2026-10-18: no Russian audio track, title, or description for
+now. Add them when tactic 7 of `strategy.md` (Russian-speaking chats)
+starts.

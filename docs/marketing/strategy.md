@@ -394,7 +394,7 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
       YouTube. The shot list, the spoken text, and the YouTube texts are in
       `tutorial-video.md`. Done on 2026-10-18:
       https://youtu.be/ZyeuGv_1Ofo (8 minutes). The main voice track is
-      English. A Russian track can be added. The home page
+      English. The home page
       plays it, and three guides link to it. The open items are in
       `tutorial-video.md`, "After the video is published".
 - [ ] Add the site link and one line about the app to the descriptions of

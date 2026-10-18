@@ -224,7 +224,10 @@ channels of `strategy.md`. It adds these rules for search:
   that cuts the dead time and adds a scoreboard". AI engines connect the
   name with the problem.
 - Add the app to AlternativeTo as an alternative to SwingVision, Tennis
-  Studio, and general editors. Use the same description everywhere.
+  Studio, and general editors. Use the same description everywhere. The
+  texts are in `alternativeto.md`. Submitted on 2026-10-18, as an
+  alternative to SwingVision,
+  Rallytics, and Tennis Studio.
 - Add the app to winget, the Microsoft Store, and 2 or 3 software catalogs.
 - Each exported video and each YouTube description links to the site.
 - Ask tennis bloggers who write "best tennis apps" lists to look at the app.

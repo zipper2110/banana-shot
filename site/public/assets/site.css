@@ -194,6 +194,11 @@ main > section:last-child { padding-bottom: 128px; }
   .feature-row:nth-child(even) .feature-text { order: 0; }
 }
 
+/* ---- Home: the tutorial. A line separates it from the feature rows. ---- */
+.section-tutorial .wrap { border-top: 1px solid var(--line-2); padding-top: 112px; }
+.section-tutorial .video-tutorial { margin-top: 0; }
+@media (max-width: 880px) { .section-tutorial { padding-top: 88px; } .section-tutorial .wrap { padding-top: 72px; } }
+
 /* ---- Home: the advantage sections. Each one is a soft band of its own color, each item is a tile. ---- */
 /* Local and safe: the court blue. No AI: the accent. */
 main > .section-local { --tint: 61, 107, 140; --dot: var(--court-text); }

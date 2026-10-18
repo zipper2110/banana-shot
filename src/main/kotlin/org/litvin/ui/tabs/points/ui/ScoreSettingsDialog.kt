@@ -79,7 +79,7 @@ class ScoreSettingsDialog private constructor(
 
         override fun edit(parent: Component, current: ScoreSettings): ScoreSettings? {
             val dialog = ScoreSettingsDialog(SwingUtilities.getWindowAncestor(parent), current)
-            dialog.setLocationRelativeTo(parent)
+            DialogKit.centerOnScreen(dialog)
             dialog.isVisible = true
             return dialog.result
         }

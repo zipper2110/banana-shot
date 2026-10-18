@@ -80,3 +80,10 @@ Change `doubles` to the name of the thumbnail.
 ```bash
 ffmpeg -i tutorial.png -c:v libwebp -quality 80 ../../site/public/assets/frames/video-tutorial.webp
 ```
+
+### tutorial-ru: the Russian version
+
+- The same layout as `tutorial`, with "КАК МОНТИРОВАТЬ" and
+  "1 ЧАС → 17 МИН".
+- YouTube Studio lets you set a separate thumbnail for each language.
+  Set this file as the thumbnail of the Russian version.

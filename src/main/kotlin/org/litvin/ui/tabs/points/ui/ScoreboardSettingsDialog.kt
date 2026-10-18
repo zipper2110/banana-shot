@@ -113,7 +113,7 @@ class ScoreboardSettingsDialog private constructor(
             val dialog = ScoreboardSettingsDialog(
                 SwingUtilities.getWindowAncestor(parent), initial.normalized(), previewSample, loadFrame, takeCreditRequest, onPreview,
             )
-            dialog.setLocationRelativeTo(parent)
+            DialogKit.centerOnScreen(dialog)
             dialog.isVisible = true
             return dialog.result
         }
@@ -278,7 +278,7 @@ class ScoreboardSettingsDialog private constructor(
     private fun fitToScreen(packedHeight: Int): Dimension {
         val height = max(DIALOG_HEIGHT, packedHeight)
         return runCatching {
-            val config = GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+            val config = graphicsConfiguration ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
             val insets = toolkit.getScreenInsets(config)
             Dimension(
                 min(DIALOG_WIDTH, config.bounds.width - insets.left - insets.right - 40),

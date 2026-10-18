@@ -295,6 +295,26 @@ internal object DialogKit {
         if (dialog.height > screen) dialog.setSize(dialog.width, max(300, screen))
     }
 
+    /**
+     * Puts [dialog] in the middle of the screen of its owner. The taskbar is not part of the area,
+     * so a dialog that fits on the screen is fully visible. Set the dialog size first.
+     */
+    fun centerOnScreen(dialog: Window) {
+        val config = dialog.owner?.graphicsConfiguration ?: dialog.graphicsConfiguration
+        if (config == null) {
+            dialog.setLocationRelativeTo(null)
+            return
+        }
+        val bounds = config.bounds
+        val insets = runCatching { dialog.toolkit.getScreenInsets(config) }.getOrDefault(Insets(0, 0, 0, 0))
+        val areaWidth = bounds.width - insets.left - insets.right
+        val areaHeight = bounds.height - insets.top - insets.bottom
+        dialog.setLocation(
+            bounds.x + insets.left + max(0, (areaWidth - dialog.width) / 2),
+            bounds.y + insets.top + max(0, (areaHeight - dialog.height) / 2),
+        )
+    }
+
     const val INPUT_HEIGHT = 34
 }
 

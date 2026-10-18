@@ -12,6 +12,7 @@ internal class ProjectsScreen(application: ApplicationScreen) : UserFlowScreen(a
         startImport()
         projectName?.let { context.driver.setText("new-project-name", it) }
         context.driver.click("new-project-create")
+        closeFirstScoreSettings()
     }
 
     /** Imports the fixture video as a padel project with the [deuce] rule. */
@@ -23,11 +24,18 @@ internal class ProjectsScreen(application: ApplicationScreen) : UserFlowScreen(a
         val rules = Sport.PADEL.deuceRules(Sport.PADEL.defaultRules().deuce)
         context.driver.click("new-project-padel-deuce-${rules.indexOf(deuce)}")
         context.driver.click("new-project-create")
+        closeFirstScoreSettings()
     }
 
     fun cancelNewProjectDialog(): ProjectsScreen = apply {
         startImport()
         context.driver.click("new-project-cancel")
+    }
+
+    /** A new project opens the Points tab, and the Scoring settings open the first time. Cancel keeps the values. */
+    private fun closeFirstScoreSettings() {
+        assertVisible("score-settings-cancel")
+        context.driver.click("score-settings-cancel")
     }
 
     private fun startImport() {

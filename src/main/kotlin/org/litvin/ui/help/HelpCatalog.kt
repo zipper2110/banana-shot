@@ -156,7 +156,7 @@ object HelpCatalog {
             workflow = listOf(
                 "Move the playhead to the beginning of a point and click Point start (or press Enter).",
                 "At the end of the point, click the player who won the point, or No score (or press Q, W, or E). This ends the point and gives it the outcome.",
-                "Before the first score of a project, the scoring settings open. Enter the player names and colors, and select the match format.",
+                "The first time you open the Points tab for a project, the scoring settings open. Enter the player names and colors, and select the match format.",
                 "Press R to go to the next point and play it. Press Shift+R to go back.",
                 "Move the playhead to the moment you want to explain and click Comment.",
                 "On the Export tab, select Scoreboard in Include in the video to burn the score into the exported video.",

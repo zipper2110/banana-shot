@@ -37,6 +37,7 @@ import org.litvin.ui.tabs.points.ui.ScoringButton
 import org.litvin.ui.tabs.points.ui.ScorePlayers
 import org.litvin.ui.tabs.points.ui.ScoringUi
 import java.awt.Color
+import java.awt.EventQueue
 import java.awt.GridLayout
 import java.awt.image.BufferedImage
 import javax.swing.BorderFactory
@@ -176,9 +177,14 @@ internal class PointsScoring(
         }
     }
 
-    /** The tab is on the screen: the serve hint can show. */
+    /**
+     * The tab is on the screen: the serve hint can show. The first time the tab opens for a project,
+     * the Scoring settings open, so that the user sets the names and the format.
+     */
     fun onActivated() {
         showServeMarkHint()
+        // Open the dialog after the tab is on the screen.
+        EventQueue.invokeLater { if (isActive()) promptScoreSettings() }
     }
 
     /** Removes the hints of the scoring controls from the screen. They show again at their next trigger. */
@@ -276,21 +282,21 @@ internal class PointsScoring(
 
     /**
      * Gives [outcome] to the point with [pointId]. The point becomes the selected point.
-     * Before the first score of a project, the Scoring settings open, so that the user sets the names and the format.
+     * When the user did not see the Scoring settings of the project yet, they open before the score.
      */
     fun score(outcome: Outcome, pointId: String) {
         if (points.none { it.id == pointId }) return
         selectedId = pointId
-        promptScoreSettingsOnFirstScore()
+        promptScoreSettings()
         setOutcome(outcome)
         showServeMarkHint()
     }
 
     /**
-     * The Scoring settings open before the first score of a project.
+     * Opens the Scoring settings one time for each project: when the tab first opens, or before the first score.
      * When the dialog closes, a balloon points at the Scoring settings button.
      */
-    private fun promptScoreSettingsOnFirstScore() {
+    private fun promptScoreSettings() {
         if (projectDir == null || score.scoreSettingsReviewed) return
         // Set the flag first, so that a Cancel does not open the dialog again.
         change { it.copy(scoreSettingsReviewed = true) }

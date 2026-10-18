@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- Source of tutorial-ru.png (1280 × 720), the Russian thumbnail of the tutorial. The layout is the same as tutorial.html. README.md tells how to render it.
+     The court is the frame of singles.html. The app window is a frame of the tutorial. -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 720px; overflow: hidden; background: #151a21; }
+  body { position: relative; font-family: "Segoe UI Black", "Segoe UI", sans-serif; }
+  .frame { position: absolute; inset: 0; width: 1280px; height: 720px; filter: blur(7px) saturate(0.85) brightness(0.72); transform: scale(1.04); }
+  /* A dark area at the right, so that the text stays readable on the court. */
+  .shade { position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(10, 14, 20, 0.15) 0, rgba(10, 14, 20, 0.35) 45%, rgba(10, 14, 20, 0.82) 70%); }
+  /* The app window, as a tilted card at the left. */
+  .app { position: absolute; left: 30px; top: 158px; width: 760px; border-radius: 12px;
+    border: 3px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.65), 0 0 0 10px rgba(200, 236, 70, 0.14);
+    transform: perspective(1400px) rotateY(12deg) rotateZ(-2deg); transform-origin: left center; }
+  .tag { position: absolute; left: 40px; top: 46px; padding: 10px 22px 12px; border-radius: 12px;
+    background: #c8ec46; color: #191e09; font-size: 44px; font-weight: 900; letter-spacing: 1px; line-height: 1;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+  .text { position: absolute; right: 52px; top: 150px; text-align: right; font-weight: 900; line-height: 0.95;
+    text-shadow: 0 4px 18px rgba(0, 0, 0, 0.6); }
+  .text .from { font-size: 96px; color: #f6f5f2; letter-spacing: 0; }
+  .text .arrow { display: block; width: 70px; height: 78px; margin: 14px 8px 10px auto; }
+  .text .to { font-size: 150px; color: #c8ec46; letter-spacing: -2px; }
+</style></head>
+<body>
+  <img class="frame" src="singles-frame.jpg" alt="">
+  <div class="shade"></div>
+  <img class="app" src="tutorial-app.jpg" alt="">
+  <div class="tag">КАК МОНТИРОВАТЬ</div>
+  <div class="text">
+    <div class="from">1 ЧАС</div>
+    <svg class="arrow" viewBox="0 0 70 78" aria-hidden="true"><path d="M24 0h22v44h20L35 78 4 44h20z" fill="#f6f5f2"/></svg>
+    <div class="to">17<br>МИН</div>
+  </div>
+</body></html>

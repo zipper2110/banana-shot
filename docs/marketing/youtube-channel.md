@@ -70,8 +70,8 @@ With BananaShot, you can mark the points, keep score, and export your match with
 #tennis #tennisdoubles #tennismatch
 ```
 
-- [ ] After the verification, replace the description with the version
-      below. It has the link in line 2.
+- [x] After the verification, replace the description with the version
+      below. It has the link in line 2. Done by 2026-10-18.
 
 Description with the link:
 

@@ -216,8 +216,13 @@ English track as the main track. The first upload is private now.
 - [x] Make the number of scoreboard styles the same as on the site. Done
       on 2026-10-18: the description says 19.
 - [ ] Add the pinned comment (section 4).
-- [ ] Add the "How I made this video" line to the two match videos, after
-      YouTube verifies the channel (`youtube-channel.md`).
+- [ ] Add the "How I made this video" line to the two match videos
+      (`youtube-channel.md`). YouTube verified the channel, so links work
+      now.
+- [ ] Fix the description of the singles highlights
+      (https://youtu.be/fh4CVislaJY). On 2026-10-18 it is a copy of the
+      doubles text: "doubles, favorite points", "Dima / Yana vs Iliya /
+      Marina". The title says "Singles Highlights | Dima vs Vika".
 - [ ] Check the views and the site visits from YouTube in the cockpit on
       2026-10-25.
 

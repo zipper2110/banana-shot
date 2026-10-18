@@ -397,13 +397,13 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
       English. The home page
       plays it, and three guides link to it. The open items are in
       `tutorial-video.md`, "After the video is published".
-- [ ] Add the site link and one line about the app to the descriptions of
+- [x] Add the site link and one line about the app to the descriptions of
       your two match videos. The texts are in `tutorial-video.md`,
-      section 5.
-- [ ] When YouTube verifies the BananaShot channel, add the site link to
+      section 5. Done by 2026-10-18.
+- [x] When YouTube verifies the BananaShot channel, add the site link to
       the channel and to its videos. Before the verification, YouTube does
       not accept links. The texts with the link are in
-      `youtube-channel.md`.
+      `youtube-channel.md`. Done by 2026-10-18.
 - [x] Deploy the cockpit, if it is not deployed yet. Write down the start
       numbers: visits, downloads, installs, exports. Done on 2026-10-15:
       the start numbers are 0 users. The data:
@@ -452,7 +452,7 @@ Tactics 1 and 2 alone can give 5 users in one or two weeks.
       scoreboard to a tennis video", "How to record a tennis match with a
       phone", "How to cut the dead time from a match video".
 - [ ] Add the app to AlternativeTo, the Microsoft Store, winget, and 2 or 3
-      software catalogs.
+      software catalogs. AlternativeTo: submitted on 2026-10-18 (`seo.md`).
 - [ ] Open the social accounts of B-34 (YouTube and Instagram first) when
       you can answer messages there.
 - [ ] Post a "Show HN" with the technical story.

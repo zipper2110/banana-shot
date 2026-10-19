@@ -29,6 +29,16 @@ class DisplayFormatsTest {
     }
 
     @Test
+    fun `a percentage follows the regional format`() {
+        DisplayFormats.formatLocale = Locale.US
+        assertEquals("64%", DisplayFormats.percent(64))
+        DisplayFormats.formatLocale = Locale.forLanguageTag("es-ES")
+        assertEquals("64 %", DisplayFormats.percent(64))
+        DisplayFormats.formatLocale = Locale.forLanguageTag("es-MX")
+        assertEquals("64%", DisplayFormats.percent(64))
+    }
+
+    @Test
     fun `a regional format with other digits gets the digits 0 to 9`() {
         DisplayFormats.formatLocale = Locale.forLanguageTag("ar-EG")
         assertEquals("42", DisplayFormats.integer(42))
@@ -51,7 +61,7 @@ class DisplayFormatsTest {
         assertEquals("Oct 19, 2026", DisplayFormats.date(date))
         DisplayFormats.formatLocale = Locale.forLanguageTag("es-ES")
         assertEquals("19/10/26", DisplayFormats.date(date))
-        I18n.install(Messages.of(AppLanguage.SPANISH))
+        I18n.install(Messages.of(AppLanguage.SPANISH_SPAIN))
         assertEquals("19 oct 2026", DisplayFormats.date(date))
     }
 
@@ -64,7 +74,7 @@ class DisplayFormatsTest {
     @Test
     fun `upper case uses the rules of the app language`() {
         assertEquals("STRASSE", DisplayFormats.upper("straße"))
-        I18n.install(Messages.of(AppLanguage.SPANISH))
+        I18n.install(Messages.of(AppLanguage.SPANISH_SPAIN))
         assertEquals("PÁDEL", DisplayFormats.upper("pádel"))
     }
 }

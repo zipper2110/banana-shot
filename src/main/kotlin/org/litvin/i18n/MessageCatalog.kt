@@ -12,8 +12,8 @@ import java.util.Properties
  * Reads the catalog files of a language from the class path (B-11 plan, section 2).
  *
  * Each language has the files `i18n/messages<suffix>.properties` and `i18n/help<suffix>.properties`. English has no
- * suffix, and Spanish has `_es`. The files are UTF-8. A byte order mark at the start does not change the first key.
- * A file with bytes that are not valid UTF-8 gives no texts for this language, and the log gets one error.
+ * suffix, Spanish of Spain has `_es`, and Latin American Spanish has `_es_419`. The files are UTF-8. A byte order
+ * mark at the start does not change the first key. A file with bytes that are not valid UTF-8 gives no texts for this language, and the log gets one error.
  */
 object MessageCatalog {
     private val logger = KotlinLogging.logger {}
@@ -22,9 +22,15 @@ object MessageCatalog {
     val BASE_NAMES = listOf("messages", "help")
 
     fun resourcePath(baseName: String, language: AppLanguage): String =
-        if (language == AppLanguage.SOURCE) "i18n/$baseName.properties" else "i18n/${baseName}_${language.code}.properties"
+        if (language == AppLanguage.SOURCE) "i18n/$baseName.properties"
+        else "i18n/${baseName}_${language.code.replace('-', '_')}.properties"
 
-    /** All texts of [language]. A missing file gives no texts. */
+    /** The texts of [language] and of its parents. A text of [language] has priority over the text of a parent. */
+    fun loadWithParents(language: AppLanguage): Map<String, String> = buildMap {
+        language.chain.asReversed().forEach { putAll(load(it)) }
+    }
+
+    /** The texts of the own files of [language], without the parents. A missing file gives no texts. */
     fun load(language: AppLanguage): Map<String, String> = buildMap {
         BASE_NAMES.forEach { baseName ->
             val path = resourcePath(baseName, language)

@@ -125,7 +125,7 @@ Statistics:
 Other:
 
 - The help pages and the README tell about padel. The tagline
-  (`AppInfo.TAGLINE`) is "Tennis & Padel Video Editor".
+  (catalog key `app.tagline`) is "Tennis & Padel Video Editor".
 - The usage statistics have the session attribute `sport` (B-44,
   `docs/analytics/design.md`).
 - Tests: a padel golden project (`src/test/resources/golden/padel/`) and a

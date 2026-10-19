@@ -4,7 +4,6 @@ import org.litvin.license.BuildInfo
 
 object AppInfo {
     const val NAME = "BananaShot"
-    const val TAGLINE = "Tennis & Padel Video Editor"
     const val AUTHOR = "Dmitrii Litvin"
     const val WEBSITE = "https://banana-shot-editor.app/"
 

@@ -1,6 +1,8 @@
 package org.litvin.ui.tabs.projects.components
 
 import org.litvin.AppInfo
+import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.tr
 import org.litvin.ui.commons.AnimatedAppMark
 import java.awt.Component
 import java.awt.Dimension
@@ -20,7 +22,7 @@ class ProjectsHeader : JPanel() {
         layout = BoxLayout(this, BoxLayout.X_AXIS)
         val titleText = Box.createVerticalBox().apply {
             add(BrandText(AppInfo.NAME.uppercase(), ProjectsUi.trackedFont(20f, 0.06, ProjectsUi.Weight.BOLD), 24, true))
-            add(BrandText(AppInfo.TAGLINE.uppercase(), ProjectsUi.trackedFont(11f, 0.12), 15, false))
+            add(BrandText(DisplayFormats.upper(tr("app.tagline")), ProjectsUi.trackedFont(11f, 0.12), 15, false))
             alignmentY = Component.CENTER_ALIGNMENT
         }
         add(AnimatedAppMark(LOGO_SIZE).apply {

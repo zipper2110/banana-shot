@@ -67,7 +67,7 @@ data class EffectiveExpiry(
 object ExpiryMomentFormat {
     fun format(moment: Instant, zone: ZoneId = ZoneId.systemDefault()): String {
         val language = I18n.language
-        val pattern = if (language == AppLanguage.SPANISH) "d 'de' MMMM 'de' yyyy, HH:mm" else "d MMMM yyyy, HH:mm"
+        val pattern = if (language.baseCode == AppLanguage.SPANISH_SPAIN.baseCode) "d 'de' MMMM 'de' yyyy, HH:mm" else "d MMMM yyyy, HH:mm"
         return DateTimeFormatter.ofPattern(pattern, language.locale).format(moment.atZone(zone))
     }
 }

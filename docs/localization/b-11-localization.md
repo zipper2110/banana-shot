@@ -63,7 +63,10 @@ proposal or an accepted decision. The column "Status" tells which.
 | Text holder | One global object `I18n` holds the texts of the start language. `main` installs it before the first window. Without `install`, the texts are English (tests). A constant with a text is a getter, so that it reads the installed language | accepted 2026-10-19 |
 | Test locale | The unit tests and the UI-flow tests run with English and the `en-US` formats (`argLine` of surefire and failsafe in `pom.xml`). A developer PC with other regional formats gives the same results | accepted 2026-10-19 |
 | Technical texts | Exception details, FFmpeg failure details, and the fields of the feedback report stay in English. The author reads the report. The text around a technical detail is translated | accepted 2026-10-19 |
-| Spanish variant | One Spanish catalog for Spain and Latin America: "vídeo", the "tú" imperative, «…» quotes. The terms are in `glossary.md`. The reviewer of E4-T7 can change them | proposal |
+| Spanish variants | Two app languages: "Español (España)" (`es`) and "Español (Latinoamérica)" (`es-419`). The `es-419` catalog files have only the texts that are different ("video", "computadora", "presiona", "Enter"). All other texts come from `es`. Windows `es-ES`, `es-GQ`, and `es` give Spain. All other Spanish locales give Latin America. Both use the "tú" imperative and «…» quotes. The terms are in `glossary.md` | accepted 2026-10-19 |
+| Score word AD | The advantage score shows "AD" in all languages. TV graphics and scoreboards use it also in Spanish | accepted 2026-10-19 |
+| Tagline | The tagline under the app name is translated (key `app.tagline`) | accepted 2026-10-19 |
+| Credit line | The credit line "BananaShot app" at the bottom of the scoreboard and the statistics card stays English in all languages. It is a brand text (`APP_CREDIT`) | accepted 2026-10-19 |
 | Analytics language before E2 | The analytics worker accepts only `en` until E2 widens the language list. Until then the app sends `en` also when the app language is Spanish | accepted 2026-10-19 |
 
 ## Goal
@@ -197,8 +200,8 @@ A user who does not read English can do all the steps in their language:
   value), and show the text from the catalog. For the scoreboard title, the
   empty field shows "Your tournament or club" as a placeholder in the
   language of the app. An old project with the English default text gets
-  "not set" when the app reads it. The author decides if `APP_CREDIT` gets a
-  translation or stays as the brand text.
+  "not set" when the app reads it. `APP_CREDIT` stays English as the brand
+  text (see "Decisions", "Credit line").
 - Component names (`name = "more-settings-theme"`) stay in English. Tests
   find components by name, not by text. Do not make a component name from
   a display text.
@@ -408,9 +411,8 @@ separate setting.
 - Scoreboard: the deciding-point badges (`Sport.kt`: "GOLDEN POINT", "STAR
   POINT", "DECIDING POINT"), the titles of the layouts, "SET" and "GAME"
   marks, and the tiebreak marks.
-- The score words. "AD" is common in many languages, but some players use a
-  local word (for example "V" for "ventaja" in Spanish). The native reviewer
-  of each language decides. Keep the digits.
+- The score words: "AD" stays in all languages (see "Decisions", "Score word
+  AD"). Keep the digits.
 - Statistics card: the title ("Match statistics", "Set 2 statistics"), the
   names of the statistics, "Point difference", and the momentum chart texts.
 - Set summaries.

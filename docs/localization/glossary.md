@@ -23,14 +23,22 @@ Rules for all languages:
 | PNG, MP4 | File types |
 | Q, W, E, R, S, C, V, F1 | Key letters of the shortcuts |
 | VS, vs | The word between the names on a thumbnail. Spanish uses the same word |
-| Ad, AD | The advantage score on the scoreboard. The reviewer decides if it stays (see "Open questions") |
+| Ad, AD | The advantage score on the scoreboard. It is the same in all languages |
 | YouTube, Windows, GitHub, Cloudflare, Telegram, Smart App Control | Product names |
 
-## Spanish (`es`)
+## Spanish (`es`, `es-419`)
 
-The Spanish catalog is for Spain and for Latin America. When the two use
-different words, the table selects a word that both understand, and the
-"Note" column gives the reason.
+The app has two Spanish variants:
+
+- "Español (España)" (`es`): the files `*_es.properties`. They have all
+  texts.
+- "Español (Latinoamérica)" (`es-419`): the files `*_es_419.properties`. They
+  have only the texts that are different from Spain. All other texts come
+  from the Spain files. When you change a Spain text that has a word of the
+  table "Words of each variant", change the Latin American text too.
+
+The tables below are for both variants, except the table "Words of each
+variant".
 
 Style:
 
@@ -40,8 +48,12 @@ Style:
   los puntos", "Selecciona un estilo".
 - The app is "la app".
 - Spanish quotes are «…».
-- A number and the percent sign have a space: "75 %". The compact values in
-  the statistics table keep "64%" (see "Open questions").
+- In a catalog text, a number and the percent sign have a no-break space:
+  "{percent} %" (RAE rule).
+- A percentage that the code formats (the statistics values, the export
+  progress) follows the Windows regional format, not the app language
+  (E1-T5): "64 %" for `es-ES`, "64%" for `es-MX`. The zoom field of the
+  Transform controls keeps "150%", because its parser reads the unit.
 
 ### Sport terms
 
@@ -61,7 +73,7 @@ Style:
 | break point | punto de break | |
 | set point, match point | punto de set, punto de partido | |
 | player | jugador | Default name "Jugador 1" |
-| team (padel) | equipo | Default name "Equipo 1". Padel players also say "pareja". The app uses "equipo", the same word as in the Americano rules |
+| team (padel) | pareja | Default name "Pareja 1". Padel players in Spain and in Latin America say "pareja". The feminine form needs feminine words: "la pareja que saca", "las dos parejas juntas" |
 | singles, doubles | individual, dobles | Thumbnail match type |
 | padel, tennis | pádel, tenis | |
 | Americano | Americano | |
@@ -74,7 +86,7 @@ Style:
 
 | English | Spanish | Note |
 |---|---|---|
-| video | vídeo | Spain writes "vídeo", Latin America writes "video". The catalog uses "vídeo" (see "Open questions") |
+| video | vídeo, video | See "Words of each variant" |
 | project | proyecto | |
 | export (noun, verb) | exportación, exportar | |
 | scoreboard | marcador | |
@@ -119,6 +131,19 @@ these controls use a short form. The help uses the same short form.
 | Make a YouTube thumbnail | Haz la miniatura | Step 6 of the new-project workflow |
 | Tune the image at any time | Ajusta la imagen | Optional step of the new-project workflow |
 
+### Words of each variant
+
+| English | Spain (`es`) | Latin America (`es-419`) |
+|---|---|---|
+| video | vídeo | video |
+| computer | ordenador | computadora (feminine: "esta computadora") |
+| press (a key) | pulsa, mantén pulsada | presiona, mantén presionada |
+| Enter (key) | Intro | Enter |
+| mouse | ratón | mouse |
+| phone | móvil | celular |
+| expired, expires | ha caducado, caduca | venció, vence |
+| live (preview) | en directo | en vivo |
+
 ### Tab names
 
 | English | Spanish |
@@ -132,11 +157,5 @@ these controls use a short form. The help uses the same short form.
 
 ### Open questions
 
-The reviewer of E4-T7 decides these points:
-
-- "vídeo" (Spain) or "video" (Latin America).
-- "equipo" or "pareja" for a padel team.
-- The advantage score "Ad" on the scoreboard and in the score controls.
-- "64%" or "64 %" in the compact statistics values.
-- The tagline "Tennis & Padel Video Editor" under the logo stays English. The
-  owner decides if it is a brand text or a translated text.
+The reviewers of E4-T7 check all texts. If possible, one reviewer is from
+Spain and one is from Latin America. There are no open term questions now.

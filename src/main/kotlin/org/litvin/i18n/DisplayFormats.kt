@@ -77,10 +77,18 @@ object DisplayFormats {
             .withChronology(IsoChronology.INSTANCE).format(value)
 
     private fun formatter(withNames: FormatStyle, digitsOnly: FormatStyle, time: Boolean): DateTimeFormatter {
-        val style = if (formatLocale.language == I18n.language.code) withNames else digitsOnly
+        val style = if (formatLocale.language == I18n.language.baseCode) withNames else digitsOnly
         val base = if (time) DateTimeFormatter.ofLocalizedDateTime(style, FormatStyle.SHORT) else DateTimeFormatter.ofLocalizedDate(style)
         return base.withLocale(numberLocale).withDecimalStyle(DecimalStyle.STANDARD).withChronology(IsoChronology.INSTANCE)
     }
+
+    /**
+     * A whole percentage in the form of the format locale, for example "64%" (`en-US`, `es-MX`) or "64 %" with a
+     * no-break space (`es-ES`, `de-DE`).
+     */
+    fun percent(value: Int): String = (NumberFormat.getPercentInstance(numberLocale) as DecimalFormat).apply {
+        decimalFormatSymbols = symbols()
+    }.format(value / 100.0)
 
     /** The upper case of a translated text, with the rules of the app language (German "ß", Turkish "i"). */
     fun upper(text: String): String = text.uppercase(I18n.language.locale)

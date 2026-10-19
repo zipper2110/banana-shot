@@ -14,7 +14,7 @@ class MessagesTest {
     @Test
     fun `a missing or broken translation uses the English text`() {
         val english = mapOf("a" to "Apple", "b" to "{count} items", "c" to "Cherry")
-        val messages = Messages(AppLanguage.SPANISH, mapOf("a" to "Manzana", "b" to "{count, plural, one {#}"), english)
+        val messages = Messages(AppLanguage.SPANISH_SPAIN, mapOf("a" to "Manzana", "b" to "{count, plural, one {#}"), english)
         assertEquals("Manzana", messages.text("a"))
         assertEquals("3 items", messages.text("b", mapOf("count" to 3)))
         assertEquals("Cherry", messages.text("c"))
@@ -37,9 +37,9 @@ class MessagesTest {
     @Test
     fun `tr uses the installed language`() {
         assertEquals("Exports", tr("export.table.title"))
-        I18n.install(Messages.of(AppLanguage.SPANISH))
+        I18n.install(Messages.of(AppLanguage.SPANISH_SPAIN))
         assertEquals("Exportaciones", tr("export.table.title"))
-        assertEquals(AppLanguage.SPANISH, I18n.language)
+        assertEquals(AppLanguage.SPANISH_SPAIN, I18n.language)
     }
 
     @Test

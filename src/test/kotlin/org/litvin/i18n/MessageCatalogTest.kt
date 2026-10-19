@@ -12,13 +12,26 @@ import kotlin.test.assertFailsWith
  */
 class MessageCatalogTest {
     private val english = MessageCatalog.load(AppLanguage.SOURCE)
-    private val translations = AppLanguage.entries.filter { it != AppLanguage.SOURCE }.associateWith { MessageCatalog.load(it) }
+    private val translations = AppLanguage.entries.filter { it != AppLanguage.SOURCE }.associateWith { MessageCatalog.loadWithParents(it) }
 
     @Test
     fun `each language has the same keys as English`() {
         translations.forEach { (language, texts) ->
             assertEquals(emptySet<String>(), english.keys - texts.keys, "Keys without a ${language.code} text")
             assertEquals(emptySet<String>(), texts.keys - english.keys, "${language.code} keys that English does not have")
+        }
+    }
+
+    /** A regional variant has only the texts that are different from its parent. */
+    @Test
+    fun `a regional variant changes only some texts of its parent`() {
+        AppLanguage.entries.forEach { language ->
+            val parent = language.parent ?: return@forEach
+            val own = MessageCatalog.load(language)
+            val parentTexts = MessageCatalog.loadWithParents(parent)
+            assertTrue(own.isNotEmpty(), "${language.code} has no own texts")
+            assertEquals(emptySet<String>(), own.keys - english.keys, "${language.code} keys that English does not have")
+            assertEquals(emptyList<String>(), own.filter { (key, text) -> parentTexts[key] == text }.keys.sorted(), "${language.code} texts equal to the parent")
         }
     }
 
@@ -116,11 +129,20 @@ class MessageCatalogTest {
 
     @Test
     fun `the Spanish catalog has texts in Spanish`() {
-        val spanish = Messages.of(AppLanguage.SPANISH)
+        val spanish = Messages.of(AppLanguage.SPANISH_SPAIN)
         assertEquals("Exportaciones", spanish.text("export.table.title"))
         assertEquals("1 punto", spanish.text("export.points", mapOf("count" to 1)))
         assertEquals("3 puntos", spanish.text("export.points", mapOf("count" to 3)))
         assertTrue(spanish.text("help.points.summary").startsWith("Marca"))
+    }
+
+    @Test
+    fun `Latin American Spanish uses its own words and the other Spanish texts`() {
+        val latinAmerica = Messages.of(AppLanguage.SPANISH_LATIN_AMERICA)
+        assertEquals("Editor de video de tenis y pádel", latinAmerica.text("app.tagline"))
+        assertEquals("Enter", latinAmerica.text("key.enter"))
+        assertEquals("Exportaciones", latinAmerica.text("export.table.title"))
+        assertEquals("Editor de vídeo de tenis y pádel", Messages.of(AppLanguage.SPANISH_SPAIN).text("app.tagline"))
     }
 
     private fun mainSources(): Sequence<String> =

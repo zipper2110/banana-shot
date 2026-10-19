@@ -75,7 +75,7 @@ class Messages(
         /** The texts of [language] from the bundled catalog, with the English fallback. */
         fun of(language: AppLanguage, pseudo: Boolean = false): Messages {
             val english = MessageCatalog.load(AppLanguage.SOURCE)
-            val texts = if (language == AppLanguage.SOURCE) english else MessageCatalog.load(language)
+            val texts = if (language == AppLanguage.SOURCE) english else MessageCatalog.loadWithParents(language)
             return Messages(language, texts, english, pseudo)
         }
     }
@@ -86,7 +86,8 @@ class Messages(
  * `one` and `other`. A later language with more forms (E7) adds its rule here.
  */
 object PluralRules {
-    fun category(language: AppLanguage, amount: Double): String = when (language) {
-        AppLanguage.ENGLISH, AppLanguage.SPANISH -> if (amount == 1.0) "one" else MessagePattern.OTHER
+    fun category(language: AppLanguage, amount: Double): String = when (language.baseCode) {
+        "en", "es" -> if (amount == 1.0) "one" else MessagePattern.OTHER
+        else -> error("No plural rule for ${language.code}")
     }
 }

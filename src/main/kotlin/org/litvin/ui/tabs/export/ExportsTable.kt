@@ -292,7 +292,7 @@ internal class ExportsTable(
             size.show(info.size, null)
             val percentValue = (job.progress * 100).toInt().coerceIn(0, 100)
             progress.value = percentValue
-            percent.setText("${DisplayFormats.integer(percentValue)}%", ExportUi.font(12f, Weight.BOLD), Palette.FG)
+            percent.setText(DisplayFormats.percent(percentValue), ExportUi.font(12f, Weight.BOLD), Palette.FG)
             cancelButton.isEnabled = job.status == RenderStatus.RUNNING || job.status == RenderStatus.QUEUED
             when (job.status) {
                 RenderStatus.QUEUED -> {

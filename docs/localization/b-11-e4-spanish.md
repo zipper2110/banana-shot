@@ -71,10 +71,11 @@ are in the plan, "Epics".
     padel terms of B-45 P-6.
   - The app terms: favorite, project, export, scoreboard, Transform, and the
     names of the tabs.
-  - The score words: the reviewer decides if "AD" stays or changes (for
-    example "V" for "ventaja").
-  - If Spain and Latin America use different terms, the glossary selects a
-    term that both understand, and gives the reason.
+  - The score words: "AD" stays (plan, "Decisions", "Score word AD").
+  - Spain and Latin America are two app languages (plan, "Decisions",
+    "Spanish variants"). If they use different terms, the glossary gives the
+    term of each variant. The Latin American catalog files
+    (`*_es_419.properties`) have only the different texts.
   - A "do not translate" list: the brand "BananaShot", the codes ("4K",
     "1080p", "H.264", "HEVC", "NVENC", "fps"), the key letters (Q, W, E),
     and the file extensions. A test checks that each such term in an

@@ -23,9 +23,26 @@ class LanguageSettingsTest {
     fun `without a choice the app follows the Windows display language`() {
         assertNull(settings.choice)
         assertEquals(
-            LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.SYSTEM),
+            LanguageSettings.Resolution(AppLanguage.SPANISH_LATIN_AMERICA, LanguageSettings.Source.SYSTEM),
             settings.resolve(systemLocale = Locale.forLanguageTag("es-AR"), property = null),
         )
+    }
+
+    @Test
+    fun `Spanish of Spain and Equatorial Guinea gives Spain, all other Spanish gives Latin America`() {
+        assertEquals(AppLanguage.SPANISH_SPAIN, LanguageSettings.systemLanguage(Locale.forLanguageTag("es-ES")))
+        assertEquals(AppLanguage.SPANISH_SPAIN, LanguageSettings.systemLanguage(Locale.forLanguageTag("es-GQ")))
+        assertEquals(AppLanguage.SPANISH_SPAIN, LanguageSettings.systemLanguage(Locale.forLanguageTag("es")))
+        assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, LanguageSettings.systemLanguage(Locale.forLanguageTag("es-MX")))
+        assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, LanguageSettings.systemLanguage(Locale.forLanguageTag("es-US")))
+        assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, LanguageSettings.systemLanguage(Locale.forLanguageTag("es-419")))
+    }
+
+    @Test
+    fun `a saved Latin American choice keeps its tag`() {
+        settings.save(AppLanguage.SPANISH_LATIN_AMERICA)
+        assertEquals("es-419", node.get(LanguageSettings.KEY, null))
+        assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, settings.choice)
     }
 
     @Test
@@ -54,7 +71,7 @@ class LanguageSettingsTest {
     fun `an unknown saved value works as system and stays saved`() {
         node.put(LanguageSettings.KEY, "fr")
         assertNull(settings.choice)
-        assertEquals(AppLanguage.SPANISH, settings.resolve(Locale.forLanguageTag("es-MX"), property = null).language)
+        assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, settings.resolve(Locale.forLanguageTag("es-MX"), property = null).language)
         assertEquals("fr", node.get(LanguageSettings.KEY, null))
     }
 
@@ -62,23 +79,25 @@ class LanguageSettingsTest {
     fun `the property has priority and qps switches on the test language`() {
         settings.save(AppLanguage.ENGLISH)
         assertEquals(
-            LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.PROPERTY),
+            LanguageSettings.Resolution(AppLanguage.SPANISH_SPAIN, LanguageSettings.Source.PROPERTY),
             settings.resolve(Locale.US, property = "es"),
         )
         assertEquals(
             LanguageSettings.Resolution(AppLanguage.ENGLISH, LanguageSettings.Source.PROPERTY, pseudo = true),
             settings.resolve(Locale.US, property = "QPS"),
         )
+        assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, settings.resolve(Locale.US, property = "es-MX").language)
+        assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, settings.resolve(Locale.US, property = "es_419").language)
         assertEquals(LanguageSettings.Source.STORED, settings.resolve(Locale.US, property = "xx").source)
     }
 
     @Test
     fun `the notice of an automatic change shows one time for each language`() {
-        val automatic = LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.SYSTEM)
+        val automatic = LanguageSettings.Resolution(AppLanguage.SPANISH_SPAIN, LanguageSettings.Source.SYSTEM)
         assertTrue(settings.needsSystemLanguageNotice(automatic))
-        settings.noticeShown(AppLanguage.SPANISH)
+        settings.noticeShown(AppLanguage.SPANISH_SPAIN)
         assertFalse(settings.needsSystemLanguageNotice(automatic))
-        assertFalse(settings.needsSystemLanguageNotice(LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.STORED)))
+        assertFalse(settings.needsSystemLanguageNotice(LanguageSettings.Resolution(AppLanguage.SPANISH_SPAIN, LanguageSettings.Source.STORED)))
         assertFalse(settings.needsSystemLanguageNotice(LanguageSettings.Resolution(AppLanguage.ENGLISH, LanguageSettings.Source.SYSTEM)))
     }
 }

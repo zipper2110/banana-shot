@@ -64,7 +64,8 @@ class LanguageSettings(private val preferences: Preferences) {
         val forced = property?.trim()?.lowercase(Locale.ROOT)
         if (!forced.isNullOrEmpty()) {
             if (forced == PseudoLocalization.CODE) return Resolution(AppLanguage.SOURCE, Source.PROPERTY, pseudo = true)
-            AppLanguage.ofCode(forced)?.let { return Resolution(it, Source.PROPERTY) }
+            (AppLanguage.ofCode(forced) ?: AppLanguage.forLocale(Locale.forLanguageTag(forced.replace('_', '-'))))
+                ?.let { return Resolution(it, Source.PROPERTY) }
             logger.warn { "The property $PROPERTY has the unknown value '$property'. The app ignores it." }
         }
         choice?.let { return Resolution(it, Source.STORED) }
@@ -77,13 +78,13 @@ class LanguageSettings(private val preferences: Preferences) {
         const val SYSTEM = "system"
         const val PROPERTY = "bananashot.language"
 
-        private val LANGUAGE_CODE = Regex("[a-z]{2,3}")
+        private val LANGUAGE_CODE = Regex("[a-z]{2,3}([-_][a-z0-9]{2,8})*", RegexOption.IGNORE_CASE)
 
         /**
-         * The app language for a Windows display language: the primary subtag decides, so `es-AR` and `es-MX` give
-         * Spanish. A language that the app does not have, an empty locale (`und`), and the Windows pseudo-locales
-         * (`qps-ploc`) give English.
+         * The app language for a Windows display language (see [AppLanguage.forLocale]): `es-ES` gives Spanish of
+         * Spain, and `es-MX` or `es-AR` give Latin American Spanish. A language that the app does not have, an empty
+         * locale (`und`), and the Windows pseudo-locales (`qps-ploc`) give English.
          */
-        fun systemLanguage(locale: Locale): AppLanguage = AppLanguage.ofCode(locale.language) ?: AppLanguage.SOURCE
+        fun systemLanguage(locale: Locale): AppLanguage = AppLanguage.forLocale(locale) ?: AppLanguage.SOURCE
     }
 }

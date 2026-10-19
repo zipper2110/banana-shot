@@ -262,12 +262,12 @@ object StatRows {
     private fun count(value: Int) = StatValue(value.toString())
 
     /** A percentage first, for example "64%" with the detail "32/50". */
-    private fun share(ratio: Ratio) = StatValue(ratio.percent?.let { "$it%" } ?: "—", "${ratio.won}/${ratio.total}")
+    private fun share(ratio: Ratio) = StatValue(ratio.percent?.let(DisplayFormats::percent) ?: "—", "${ratio.won}/${ratio.total}")
 
     /** A fraction first, for example "3/7" with the detail "43%". */
     private fun fraction(ratio: Ratio) = StatValue("${ratio.won}/${ratio.total}", percent(ratio))
 
-    private fun percent(ratio: Ratio): String? = ratio.percent?.let { "$it%" }
+    private fun percent(ratio: Ratio): String? = ratio.percent?.let(DisplayFormats::percent)
 
     /** "12.3 s", with the decimal separator of the format locale. */
     fun seconds(ms: Long): String = "${DisplayFormats.decimal(ms / 1000.0, 1)} s"

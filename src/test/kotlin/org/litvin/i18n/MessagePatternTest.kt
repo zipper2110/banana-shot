@@ -36,8 +36,8 @@ class MessagePatternTest {
     @Test
     fun `a Spanish plural uses the Spanish categories`() {
         val pattern = "{count, plural, one {# punto} other {# puntos}}"
-        assertEquals("1 punto", format(pattern, "count" to 1, language = AppLanguage.SPANISH))
-        assertEquals("5 puntos", format(pattern, "count" to 5, language = AppLanguage.SPANISH))
+        assertEquals("1 punto", format(pattern, "count" to 1, language = AppLanguage.SPANISH_SPAIN))
+        assertEquals("5 puntos", format(pattern, "count" to 5, language = AppLanguage.SPANISH_SPAIN))
     }
 
     @Test

@@ -7,11 +7,20 @@ export type TelegramConfig = { token: string; chatId: string };
 
 const topicTitles: Record<Report['topic'], string> = { problem: 'Problem', idea: 'Idea', question: 'Question', other: 'Other' };
 
-/** The lines above the message text: the topic, the ID, the reply address, and the app data or the source. */
+/**
+ * The lines above the message text: the topic, the ID, the reply address, and the app data or the source. The app
+ * data has the app language and the Windows language. A report of an older build shows "unknown".
+ */
 export function header(report: Report): string {
   const lines = [`New report: ${topicTitles[report.topic]}`, `ID: ${report.report_id}`, `Reply to: ${report.email ?? 'no address'}`];
   if (report.source === 'site') lines.push('From: the contact form of the website');
-  else lines.push(`App: ${report.app_version} · ${report.os_name} ${report.os_version} · Java ${report.java_version}`, `Log: ${report.log ? 'attached' : 'no'}`);
+  else {
+    lines.push(
+      `App: ${report.app_version} · ${report.os_name} ${report.os_version} · Java ${report.java_version}`,
+      `Language: app ${report.app_language ?? 'unknown'} · Windows ${report.os_language ?? 'unknown'}`,
+      `Log: ${report.log ? 'attached' : 'no'}`,
+    );
+  }
   return lines.join('\n');
 }
 

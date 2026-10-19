@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_MESSAGE, validateReport } from '../src/validation';
+import analyticsAttributes from '../../analytics-contract/v1/attributes.json';
+import schema from '../../feedback-contract/v1/report.schema.json';
+import { LANGUAGES, MAX_MESSAGE, validateReport } from '../src/validation';
 import { bodyOf, invalidReports, report, validReports } from './fixtures';
 
 describe('validateReport with the contract fixtures', () => {
@@ -30,5 +32,35 @@ describe('limits', () => {
 
   it('refuses an email address above 254 characters', () => {
     expect(validateReport(report({ email: `${'a'.repeat(242)}@example.test` }))).toBeNull();
+  });
+});
+
+describe('language fields', () => {
+  it('use the language list of the analytics contract, also in the schema', () => {
+    expect(LANGUAGES).toEqual(analyticsAttributes.attributes.os_language);
+    expect(schema.properties.app_language.enum).toEqual(LANGUAGES);
+    expect(schema.properties.os_language.enum).toEqual(LANGUAGES);
+  });
+
+  it('are optional', () => {
+    expect(validateReport(report())).not.toBeNull();
+    expect(validateReport(report({ app_language: 'es', os_language: 'es' }))).not.toBeNull();
+  });
+
+  it.each(LANGUAGES)('accept the value %s', code => {
+    expect(validateReport(report({ app_language: code, os_language: code }))).not.toBeNull();
+  });
+
+  it.each(['de-DE', 'DE', 'xx', 'spa', 'iw', '', ' es', 'constructor'])('refuse the value "%s"', code => {
+    expect(validateReport(report({ os_language: code }))).toBeNull();
+    expect(validateReport(report({ app_language: code }))).toBeNull();
+  });
+});
+
+describe('text in other scripts', () => {
+  it('accepts a text of 10,000 UTF-16 characters that ends with an emoji', () => {
+    const message = 'x'.repeat(MAX_MESSAGE - 2) + '🎾';
+    expect(message).toHaveLength(MAX_MESSAGE);
+    expect(validateReport(report({ message, error: message }))?.message).toBe(message);
   });
 });

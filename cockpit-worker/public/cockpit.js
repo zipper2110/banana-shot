@@ -434,13 +434,55 @@
     ranked($('bot-pages'), toRequests(bots.pages));
   }
 
-  const ATTRIBUTE_IDS = ['attr-sport', 'attr-theme', 'attr-accent', 'attr-language'];
+  const ATTRIBUTE_IDS = ['attr-sport', 'attr-theme', 'attr-accent'];
   const ATTRIBUTE_NAMES = {
     sport: { tennis: 'Tennis', padel: 'Padel' },
     theme: { dark: 'Dark', mid: 'Mid', light: 'Light' },
     accent: { default: 'Default', custom: 'Custom' },
-    language: { en: 'English' },
   };
+  const LANGUAGE_IDS = ['lang-os', 'lang-app', 'lang-os-of-english', 'lang-os-weekly', 'lang-app-weekly'];
+  const LANGUAGE_NAMES = (() => { try { return new Intl.DisplayNames(['en'], { type: 'language' }); } catch { return null; } })();
+
+  function languageName(code) {
+    if (code === 'other') return 'Other';
+    if (code === 'unknown') return 'Unknown';
+    try { return (LANGUAGE_NAMES && LANGUAGE_NAMES.of(code)) || code; } catch { return code; }
+  }
+
+  /** B-11 E2: the language groups. The Worker sends only groups with at least 5 sessions. */
+  function renderLanguages(app) {
+    const languages = app.languages;
+    const groupRows = groups => {
+      const total = groups.reduce((sum, group) => sum + group.sessions, 0);
+      return groups.map(group => ({ name: languageName(group.value), value: group.sessions, label: `${format(group.sessions)} · ${percent(group.sessions, total)}` }));
+    };
+    const emptyText = 'No language group with 5 or more sessions in this period.';
+    ranked($('lang-os'), groupRows(languages.os), { emptyText });
+    ranked($('lang-app'), groupRows(languages.app), { emptyText });
+    ranked($('lang-os-of-english'), groupRows(languages.osOfEnglish), { emptyText });
+    weeklyLanguages($('lang-os-weekly'), languages.os, languages.weeklyOs);
+    weeklyLanguages($('lang-app-weekly'), languages.app, languages.weeklyApp);
+  }
+
+  /** Stacked columns: the 3 largest languages of the period, then "Other" (all other shown groups) and "Unknown". */
+  function weeklyLanguages(container, periodGroups, weeklyGroups) {
+    const top = periodGroups.map(group => group.value).filter(value => value !== 'other' && value !== 'unknown').slice(0, 3);
+    const series = [
+      ...top.map((value, index) => ({ key: value, label: languageName(value), color: index + 1 })),
+      { key: 'other', label: 'Other', color: 4 },
+      { key: 'unknown', label: 'Unknown', color: 5 },
+    ];
+    const data = weeklyGroups.map(week => {
+      const item = { date: week.date, other: 0, unknown: 0 };
+      for (const value of top) item[value] = 0;
+      for (const group of week.groups) {
+        const key = top.includes(group.value) || group.value === 'unknown' ? group.value : 'other';
+        item[key] += group.sessions;
+      }
+      return item;
+    });
+    window.Charts.columns(container, { data, series, formatTitle: weekTitle, label: 'Sessions per week and language' });
+  }
 
   /** B-44: the session attributes. Only the extended sessions of schema 3 and later have them. */
   function renderAttributes(app) {
@@ -468,7 +510,7 @@
   }
 
   function renderUsage(data) {
-    const ids = ['usage-daily', 'usage-weekly', 'usage-length', 'usage-number', 'usage-os', 'versions', ...ATTRIBUTE_IDS];
+    const ids = ['usage-daily', 'usage-weekly', 'usage-length', 'usage-number', 'usage-os', 'versions', ...ATTRIBUTE_IDS, ...LANGUAGE_IDS];
     if (!data.app.ok) return failAll(ids, data.app.error);
     const app = data.app.data;
     const withReturning = rows => rows.map(row => ({ ...row, returning: row.sessions - row.first_sessions }));
@@ -506,6 +548,7 @@
     ], { keepZero: true, max: total });
     $('usage-os').replaceChildren(os);
     renderAttributes(app);
+    renderLanguages(app);
 
     table($('versions'), ['Version', 'Sessions', 'First sessions', 'Crashes', 'Crash-free', 'Uncaught errors', 'Last seen'], app.versions.map(row => {
       const crashFree = row.sessions ? 1 - row.unclean_exits / row.sessions : 1;

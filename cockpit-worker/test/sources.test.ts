@@ -5,7 +5,7 @@ import { SETUP_ASSET, dailyIncreases, loadDownloads, takeSnapshot } from '../src
 import { errorLine, loadFeedback } from '../src/feedback';
 import { makePeriod } from '../src/period';
 import { loadSite } from '../src/site';
-import { NOW, addBotRequests, addPageView, addReport, addSession, addSnapshot, at, makeEnv } from './fixtures';
+import { DAY, NOW, type TestEnv, addBotRequests, addPageView, addReport, addSession, addSnapshot, at, makeEnv } from './fixtures';
 
 const OTHER = 'BananaShot-1.0.0-full.nupkg';
 
@@ -145,10 +145,70 @@ describe('app usage attributes', () => {
     const values = (key: string) => usage.attributes.filter(row => row.key === key).map(row => [row.value, row.sessions]);
     expect(values('theme')).toEqual([['dark', 2], ['light', 1], ['mid', 1]]);
     expect(values('accent')).toEqual(expect.arrayContaining([['default', 1], ['custom', 1]]));
-    expect(values('language')).toEqual([['en', 3]]);
+    expect(values('language')).toEqual([]);
     expect(values('sport')).toEqual(expect.arrayContaining([['["tennis"]', 2], ['["tennis","padel"]', 1], ['[]', 1]]));
     expect(values('sport')).toHaveLength(3);
     expect(usage.sessionShape).toMatchObject({ sessions: 6, extended_sessions: 5, attribute_sessions: 4 });
+  });
+});
+
+describe('app usage languages', () => {
+  const add = (env: TestEnv, count: number, values: Parameters<typeof addSession>[1]) => {
+    for (let i = 0; i < count; i++) addSession(env, values);
+  };
+
+  it('counts the languages of all levels, puts small languages into "other", and hides small groups', async () => {
+    const env = makeEnv();
+    const day = at('2026-10-06');
+    add(env, 6, { receivedAt: day, level: 'essential', attributes: { language: 'en', os_language: 'en' } });
+    add(env, 3, { receivedAt: day, level: 'extended', attributes: { theme: 'dark', language: 'en', os_language: 'es' } });
+    add(env, 3, { receivedAt: day, level: 'essential', attributes: { language: 'es', os_language: 'es' } });
+    add(env, 3, { receivedAt: day, level: 'essential', attributes: { language: 'en', os_language: 'de' } });
+    add(env, 2, { receivedAt: day, level: 'essential', attributes: { language: 'en', os_language: 'fr' } });
+    add(env, 5, { receivedAt: day, level: 'extended', attributes: { theme: 'dark', language: 'en' } });
+    add(env, 2, { receivedAt: day, level: 'essential' });
+    add(env, 9, { receivedAt: day, version: 'synthetic-smoke', level: 'essential', attributes: { language: 'en', os_language: 'ja' } });
+
+    const usage = await loadAppUsage(env, makePeriod(7, NOW), false);
+    const pairs = (groups: { value: string; sessions: number }[]) => groups.map(group => [group.value, group.sessions]);
+
+    // de (3) and fr (2) are rare: they show only as "other". 'unknown' has 5 + 2 sessions.
+    expect(pairs(usage.languages.os)).toEqual([['unknown', 7], ['en', 6], ['es', 6], ['other', 5]]);
+    // es has 3 sessions: it goes into "other", and "other" has fewer than 5 sessions, so it does not show.
+    expect(pairs(usage.languages.app)).toEqual([['en', 19]]);
+    expect(pairs(usage.languages.osOfEnglish)).toEqual([['other', 8], ['en', 6], ['unknown', 5]]);
+    const week = usage.languages.weeklyOs.find(item => item.date === '2026-10-05');
+    expect(pairs(week!.groups)).toEqual(pairs(usage.languages.os));
+    expect(usage.languages.weeklyOs).toHaveLength(12);
+  });
+
+  it('never gives a group with fewer than 5 sessions, also for each week', async () => {
+    const env = makeEnv();
+    const codes = ['en', 'es', 'de', 'fr', 'pt', 'it', 'ru', 'ja', 'zh', 'other'];
+    for (let index = 0; index < 120; index++) {
+      const os = codes[(index * 7) % codes.length];
+      addSession(env, {
+        receivedAt: at('2026-10-06') - (index % 40) * DAY, level: index % 3 ? 'essential' : 'extended',
+        version: index % 2 ? '1.2.0' : '1.1.0',
+        attributes: index % 11 ? { language: index % 4 ? 'en' : 'es', os_language: os } : { language: 'en' },
+      });
+    }
+
+    const usage = await loadAppUsage(env, makePeriod(30, NOW), false);
+    const all = [
+      usage.languages.os, usage.languages.app, usage.languages.osOfEnglish,
+      ...usage.languages.weeklyOs.map(week => week.groups), ...usage.languages.weeklyApp.map(week => week.groups),
+    ].flat();
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.every(group => group.sessions >= 5)).toBe(true);
+  });
+
+  it('gives no language groups for a small user base', async () => {
+    const env = makeEnv();
+    add(env, 4, { receivedAt: at('2026-10-06'), level: 'essential', attributes: { language: 'en', os_language: 'es' } });
+    const usage = await loadAppUsage(env, makePeriod(7, NOW), false);
+    expect(usage.languages.os).toEqual([]);
+    expect(usage.languages.app).toEqual([]);
   });
 });
 

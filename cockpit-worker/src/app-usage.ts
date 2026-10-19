@@ -65,8 +65,26 @@ GROUP BY c.key ORDER BY c.key`;
  */
 const ATTRIBUTES = `SELECT a.key AS key, a.value AS value, COUNT(*) AS sessions
 FROM analytics_session, json_each(analytics_session.attributes) AS a
-WHERE ${IN_PERIOD} AND level = 'extended'
+WHERE ${IN_PERIOD} AND level = 'extended' AND a.key NOT IN ('language', 'os_language')
 GROUP BY a.key, a.value ORDER BY a.key, sessions DESC, a.value`;
+
+/**
+ * B-11 E2: the app language and the Windows display language of all sessions (essential and extended), for each day.
+ * A session of an older app version has no language attribute: its value is 'unknown'. Only `languageGroups` may give
+ * these counts to the page, because a group must have at least 5 sessions.
+ */
+const LANGUAGES = `SELECT date(first_received_at / 1000, 'unixepoch') AS day,
+  COALESCE(json_extract(attributes, '$.os_language'), 'unknown') AS os_language,
+  COALESCE(json_extract(attributes, '$.language'), 'unknown') AS language,
+  COUNT(*) AS sessions
+FROM analytics_session WHERE ${IN_PERIOD} GROUP BY day, os_language, language`;
+
+/** The smallest group of sessions that the cockpit shows for a language (docs/analytics/legitimate-interest.md). */
+export const MIN_LANGUAGE_SESSIONS = 5;
+export const UNKNOWN_LANGUAGE = 'unknown';
+export const OTHER_LANGUAGE = 'other';
+
+interface LanguageDayRow { day: string; os_language: string; language: string; sessions: number }
 
 const RETENTION = 'SELECT ran_at, deleted_count, oldest_received_at FROM analytics_retention_status WHERE id = 1';
 
@@ -91,7 +109,23 @@ export interface AppUsage {
   /** Attribute key and value -> extended sessions. An array value is its JSON text, for example '["padel","tennis"]'. */
   attributes: { key: string; value: string; sessions: number }[];
   encoders: { encoder: string; started: number; completed: number; failed: number; cancelled: number; interrupted: number; speed: number | null }[];
+  /** B-11 E2: the language groups of all sessions. Each group has at least 5 sessions. */
+  languages: Languages;
   retention: { ranAt: number; deletedCount: number; oldestReceivedAt: number | null } | null;
+}
+
+export interface LanguageGroup { value: string; sessions: number }
+
+export interface Languages {
+  /** The Windows display languages in the period. */
+  os: LanguageGroup[];
+  /** The app languages in the period. */
+  app: LanguageGroup[];
+  /** The Windows display languages of the sessions with the app in English: the users that a translation can help. */
+  osOfEnglish: LanguageGroup[];
+  /** The groups of each of the 12 weeks. */
+  weeklyOs: { date: string; groups: LanguageGroup[] }[];
+  weeklyApp: { date: string; groups: LanguageGroup[] }[];
 }
 
 const ZERO: Totals = {
@@ -107,13 +141,14 @@ export async function loadAppUsage(env: Env, period: Period, includeDev: boolean
   const db = env.ANALYTICS_DB;
   const dev = includeDev ? 1 : 0;
   const from = Math.min(period.prevStart, period.weeksStart);
-  const [dailyRows, versions, osFamilies, shape, counters, attributes, retention] = await Promise.all([
+  const [dailyRows, versions, osFamilies, shape, counters, attributes, languageRows, retention] = await Promise.all([
     db.prepare(DAILY).bind(dev, from, period.end).all<DailyRow>(),
     db.prepare(VERSIONS).bind(dev, period.start, period.end).all<AppUsage['versions'][number]>(),
     db.prepare(OS_FAMILIES).bind(dev, period.start, period.end).all<AppUsage['osFamilies'][number]>(),
     db.prepare(SESSION_SHAPE).bind(dev, period.start, period.end).first<Record<string, number | null>>(),
     db.prepare(COUNTERS).bind(dev, period.start, period.end).all<AppUsage['counters'][number]>(),
     db.prepare(ATTRIBUTES).bind(dev, period.start, period.end).all<AppUsage['attributes'][number]>(),
+    db.prepare(LANGUAGES).bind(dev, Math.min(period.start, period.weeksStart), period.end).all<LanguageDayRow>(),
     db.prepare(RETENTION).first<{ ran_at: number; deleted_count: number; oldest_received_at: number | null }>(),
   ]);
 
@@ -140,6 +175,7 @@ export async function loadAppUsage(env: Env, period: Period, includeDev: boolean
     counters: counters.results,
     attributes: attributes.results,
     encoders: encoderTable(counters.results),
+    languages: languageTables(languageRows.results, period),
     retention: retention ? { ranAt: retention.ran_at, deletedCount: retention.deleted_count, oldestReceivedAt: retention.oldest_received_at } : null,
   };
 }
@@ -159,4 +195,39 @@ function encoderTable(counters: AppUsage['counters']): AppUsage['encoders'] {
       speed: runS > 0 ? Math.round(100 * videoS / runS) / 100 : null,
     };
   }).sort((a, b) => b.started - a.started);
+}
+
+function languageTables(rows: LanguageDayRow[], period: Period): Languages {
+  const inPeriod = rows.filter(row => parseDate(row.day) >= period.start);
+  const sum = (list: LanguageDayRow[], key: (row: LanguageDayRow) => string) => {
+    const counts = new Map<string, number>();
+    for (const row of list) counts.set(key(row), (counts.get(key(row)) ?? 0) + row.sessions);
+    return languageGroups(counts);
+  };
+  const weekly = (key: (row: LanguageDayRow) => string) => weeks(period).map(date =>
+    ({ date, groups: sum(rows.filter(row => weekOf(row.day) === date), key) }));
+  return {
+    os: sum(inPeriod, row => row.os_language),
+    app: sum(inPeriod, row => row.language),
+    osOfEnglish: sum(inPeriod.filter(row => row.language === 'en'), row => row.os_language),
+    weeklyOs: weekly(row => row.os_language),
+    weeklyApp: weekly(row => row.language),
+  };
+}
+
+/**
+ * The safeguard of the language data (docs/analytics/legitimate-interest.md): a language with fewer than 5 sessions
+ * goes into 'other'. Then a group with fewer than 5 sessions ('other' or 'unknown') is not shown. Thus no shown group
+ * has fewer than 5 sessions, and no rare language shows with its name.
+ */
+export function languageGroups(counts: ReadonlyMap<string, number>): LanguageGroup[] {
+  const merged = new Map<string, number>();
+  for (const [value, sessions] of counts) {
+    const name = sessions < MIN_LANGUAGE_SESSIONS && value !== UNKNOWN_LANGUAGE ? OTHER_LANGUAGE : value;
+    merged.set(name, (merged.get(name) ?? 0) + sessions);
+  }
+  return [...merged]
+    .filter(([, sessions]) => sessions >= MIN_LANGUAGE_SESSIONS)
+    .map(([value, sessions]) => ({ value, sessions }))
+    .sort((a, b) => b.sessions - a.sessions || a.value.localeCompare(b.value));
 }

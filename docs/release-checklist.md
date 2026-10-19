@@ -34,10 +34,20 @@ See `feedback-worker/README.md` and `docs/feedback/b-8-tasks.md`.
 - [ ] The GitHub variable `FEEDBACK_ENDPOINT` is the URL of the Worker
       (`https://<host>/v1/feedback`). `Validate-AppImage.ps1` refuses a build
       without it.
+- [ ] The deployed feedback Worker accepts all fields of this release
+      (`feedback-contract/v1/report.schema.json`). The schema refuses unknown
+      fields, so deploy the Worker before the app release. Since B-11 E2 the
+      smoke report has `app_language` and `os_language`, and the author chat
+      shows the line "Language: app en · Windows other".
 
 ## 3a. Analytics Worker and privacy notice
 
 See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
+
+- [ ] For a change of a contract (`analytics-contract`, `feedback-contract`),
+      deploy the Workers, the cockpit, and the site first. Then release the
+      app. A rollback of the app is then safe, because the new Workers also
+      accept the data of the previous build.
 
 - [ ] The privacy notice (`site/public/privacy/index.html`) has the
       effective date, and the site is deployed. The URL
@@ -48,7 +58,7 @@ See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
       `attributes`).
 - [ ] The deployed Worker knows all counter keys and session attributes
       of this release (`analytics-contract/v1/counter-keys.json` and
-      `attributes.json`) and accepts schema 3. Deploy the Worker before the
+      `attributes.json`) and accepts schema 4. Deploy the Worker before the
       app release, because the Worker refuses a summary with an unknown key,
       attribute, or schema version.
 - [ ] `ANALYTICS_INGESTION_ENABLED` is `true`. The synthetic summary
@@ -57,8 +67,10 @@ See `analytics-worker/README.md` and `docs/analytics/b-9-tasks.md`.
       analytics Worker.
 - [ ] The GitHub variables `ANALYTICS_ENDPOINT` (`https://<host>/v1/session`),
       `ANALYTICS_PRIVACY_URL`, and `ANALYTICS_NOTICE_VERSION` are set.
-      `ANALYTICS_NOTICE_VERSION` is `2` (B-44). It must be equal to the
-      notice version on the site page and to `AnalyticsSchema.NOTICE_VERSION`.
+      `ANALYTICS_NOTICE_VERSION` is `3` (B-11 E2). It must be equal to the
+      notice version on the site page, to `AnalyticsSchema.NOTICE_VERSION`,
+      and to `$expectedNoticeVersion` in `Build-AppImage.ps1` and
+      `Validate-AppImage.ps1`.
       `Validate-AppImage.ps1` refuses a build without them.
 
 ## 3b. Code signing

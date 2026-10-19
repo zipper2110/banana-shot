@@ -161,6 +161,13 @@ describe('snapshots', () => {
     expect(db.sessionRows()[0]).toMatchObject({ level: 'essential', attributes: '{}' });
   });
 
+  it('keeps only the language attributes when the level of schema version 4 changes to essential', async () => {
+    const v4 = { schema_version: 4, notice_version: 3 };
+    await sendSummary({ ...v4, snapshot: 1, attributes: { theme: 'dark', language: 'en', os_language: 'es', sport: ['padel'] } });
+    expect((await sendSummary({ ...v4, snapshot: 2, level: 'essential', attributes: { language: 'en', os_language: 'es' } })).status).toBe(204);
+    expect(db.sessionRows()[0]).toMatchObject({ level: 'essential', attributes: '{"language":"en","os_language":"es"}' });
+  });
+
   it('replaces the extended counters when the level changes to essential', async () => {
     await sendSummary({ snapshot: 1, counters: { session_n_1: 1, point_added: 4, tab_s_points: 60 } });
     expect((await sendSummary({ snapshot: 2, level: 'essential', counters: { session_n_1: 1 } })).status).toBe(204);

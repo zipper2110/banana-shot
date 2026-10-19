@@ -7,7 +7,7 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 10 (Analytics), 11 ("Feedback"), 14 (Documentation),
   "Decisions" ("Language values", "Language attributes level")
 - Depends on: — (it does not depend on E1)
@@ -36,13 +36,13 @@ Order of the work:
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E2-T8 | Legitimate interest assessment for the language attributes | — | open |
-| E2-T1 | The language list and the essential attributes in the analytics contract | — | open |
-| E2-T2 | The analytics worker and the cockpit | E2-T1 | open |
-| E2-T3 | The app sends the two language attributes | E2-T1 | open |
-| E2-T4 | Privacy notice, consent dialog, and notice version | E2-T1, E2-T8 | open |
-| E2-T5 | Language fields in the feedback report | E2-T1 | open |
-| E2-T6 | Feedback form: the languages of the answer | — | open |
+| E2-T8 | Legitimate interest assessment for the language attributes | — | in-progress |
+| E2-T1 | The language list and the essential attributes in the analytics contract | — | done |
+| E2-T2 | The analytics worker and the cockpit | E2-T1 | done |
+| E2-T3 | The app sends the two language attributes | E2-T1 | done |
+| E2-T4 | Privacy notice, consent dialog, and notice version | E2-T1, E2-T8 | in-progress |
+| E2-T5 | Language fields in the feedback report | E2-T1 | done |
+| E2-T6 | Feedback form: the languages of the answer | — | done |
 | E2-T7 | Deployment and release | E2-T1–E2-T6, E2-T8 | open |
 
 E2-T8 is the first task, but it keeps its number, so that the other task
@@ -50,7 +50,7 @@ IDs do not change.
 
 ### E2-T8 Legitimate interest assessment for the language attributes
 
-- Status: open
+- Status: in-progress
 - Plan: 10, "Decisions" ("Language attributes level")
 - Value: the essential level stays lawful with the new attributes. The
   essential level is on by default and rests on legitimate interest (GDPR
@@ -86,11 +86,11 @@ IDs do not change.
   - If the result of the balancing test is negative, the two attributes
     stay on the extended level. Then change this epic and the plan before
     the other tasks continue.
-- Tests: — (decision)
+- Tests: — (decision). Claude wrote the draft on 2026-10-19 in `docs/analytics/legitimate-interest.md`. The review of the author is open.
 
 ### E2-T1 The language list and the essential attributes in the analytics contract
 
-- Status: open
+- Status: done
 - Plan: 10, "Decisions" ("Language values", "Language attributes level")
 - Value: one fixed list of language values. The analytics data and the
   feedback reports use it, and it cannot hold free text that identifies a
@@ -133,11 +133,11 @@ IDs do not change.
   - The current example "attributes in an essential summary" changes to an
     attribute that is not essential, and stays invalid.
   - The current valid examples stay valid without a change.
-- Tests: —
+- Tests: `analytics-worker/test/validation.test.ts` (contract fixtures, "attributes"), `AnalyticsSchemaTest`. Decision: schema version 4 with notice version 3 (plan, "Decisions", "Analytics schema for E2").
 
 ### E2-T2 The analytics worker and the cockpit
 
-- Status: open
+- Status: done
 - Plan: 10
 - Value: the author sees the distribution of the Windows languages and of
   the app languages.
@@ -162,11 +162,11 @@ IDs do not change.
   - The cockpit shows sessions without a language attribute as "unknown".
   - With synthetic data, no cell of the cockpit has fewer than 5 sessions,
     also for a language combined with an app version.
-- Tests: —
+- Tests: `analytics-worker/test/validation.test.ts`, `analytics-worker/test/index.test.ts` ("keeps only the language attributes …"), `cockpit-worker/test/sources.test.ts` ("app usage languages").
 
 ### E2-T3 The app sends the two language attributes
 
-- Status: open
+- Status: done
 - Plan: 10
 - Value: the data comes from all users who did not turn off the
   statistics.
@@ -214,11 +214,11 @@ IDs do not change.
   - After a change from extended to essential, the next summary has the two
     language attributes and no other attributes.
   - The app test against the contract passes.
-- Tests: —
+- Tests: `AnalyticsLanguageTest`, `EnabledAnalyticsTest` ("the essential level sends only the language attributes …"), `AnalyticsSchemaTest`. With the app in Spanish, the app sends `es` (E4-T10).
 
 ### E2-T4 Privacy notice, consent dialog, and notice version
 
-- Status: open
+- Status: in-progress
 - Plan: 10, "Decisions" ("Notice version", "Language attributes level")
 - Value: the users know about the new data and its level before the app
   sends it. They can turn off the statistics.
@@ -250,11 +250,11 @@ IDs do not change.
   check in `Build-AppImage.ps1`, and the GitHub variable
   `ANALYTICS_NOTICE_VERSION` (B-9 decision 17). Change all three in the
   same release.
-- Tests: —
+- Tests: `PrivacyPageTest`, `AnalyticsBuildConfigTest`. Open: the GitHub variable `ANALYTICS_NOTICE_VERSION` must be `3` before the release, and the review of E2-T8.
 
 ### E2-T5 Language fields in the feedback report
 
-- Status: open
+- Status: done
 - Plan: 11 ("Feedback")
 - Value: the author knows the language of the user, and can answer in it.
 - Requirements:
@@ -289,11 +289,11 @@ IDs do not change.
   - A test makes a text of 10,001 characters with an emoji at the limit.
     The text that the app sends is valid UTF-16 and the worker accepts
     it.
-- Tests: —
+- Tests: `feedback-worker/test/validation.test.ts` ("language fields", "text in other scripts"), `feedback-worker/test/telegram.test.ts`, `FeedbackReportTest`. The Worker does not store the languages in D1. Only the message to the author has them.
 
 ### E2-T6 Feedback form: the languages of the answer
 
-- Status: open
+- Status: done
 - Plan: 11 ("Feedback")
 - Value: a user who does not write English knows that they can write in
   their language.
@@ -304,7 +304,7 @@ IDs do not change.
     English or Spanish."
 - Acceptance:
   - The form shows the text. A presenter test checks it.
-- Tests: —
+- Tests: `FeedbackPanelTest` ("the form tells that the user can write in any language"). Decision: plan, "Decisions", "Feedback answer languages". The text is in the subtitle of the form.
 
 ### E2-T7 Deployment and release
 

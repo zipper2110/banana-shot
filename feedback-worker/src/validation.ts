@@ -13,9 +13,23 @@ export type Report = {
   java_version: string;
   error?: string;
   log?: string;
+  /** The app language. An older build does not send it. */
+  app_language?: string;
+  /** The Windows display language. An older build does not send it. */
+  os_language?: string;
   /** Set only by the Worker: `site` for a report from the contact form of the website. Not a key of the JSON. */
   source?: 'site';
 };
+
+/**
+ * The language values of `app_language` and `os_language` (B-11 E2): the list of the analytics contract
+ * (`analytics-contract/v1/attributes.json`). A test checks this list against the analytics contract and the schema.
+ */
+export const LANGUAGES: readonly string[] = [
+  'ar', 'bg', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'eu', 'fi', 'fr', 'gl', 'he', 'hi', 'hr', 'hu', 'id', 'it',
+  'ja', 'ko', 'lt', 'lv', 'ms', 'nb', 'nl', 'pl', 'pt', 'ro', 'ru', 'sk', 'sl', 'sr', 'sv', 'th', 'tr', 'uk', 'vi', 'zh',
+  'other',
+];
 
 export const MAX_MESSAGE = 10_000;
 export const MAX_LOG_BASE64 = 2_900_000;
@@ -24,7 +38,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const base64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const required = ['report_id', 'topic', 'message', 'app_version', 'os_name', 'os_version', 'java_version'];
-const optional = ['email', 'error', 'log'];
+const optional = ['email', 'error', 'log', 'app_language', 'os_language'];
 
 /** Returns the report, or null when the value is not a valid report. */
 export function validateReport(value: unknown): Report | null {
@@ -38,6 +52,7 @@ export function validateReport(value: unknown): Report | null {
   if (!['app_version', 'os_name', 'os_version', 'java_version'].every(key => text(r[key], 1, 100))) return null;
   if (Object.hasOwn(r, 'email') && !(text(r.email, 3, 254) && email.test(r.email as string))) return null;
   if (Object.hasOwn(r, 'error') && !text(r.error, 1, MAX_MESSAGE)) return null;
+  if (!['app_language', 'os_language'].every(key => !Object.hasOwn(r, key) || (typeof r[key] === 'string' && LANGUAGES.includes(r[key] as string)))) return null;
   if (Object.hasOwn(r, 'log') && !(text(r.log, 4, MAX_LOG_BASE64) && base64.test(r.log as string) && isGzip(r.log as string))) return null;
   return r as Report;
 }

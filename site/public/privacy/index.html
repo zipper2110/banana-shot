@@ -60,9 +60,9 @@
       <p>This site counts visits without cookies. See <a href="#website">This site</a>.</p>
     </div>
 
-    <!-- ====== Usage statistics: notice version 2. Increase the version when a new type of data is collected. ====== -->
+    <!-- ====== Usage statistics: notice version 3. Increase the version when a new type of data is collected. ====== -->
     <h2 id="analytics">Usage statistics</h2>
-    <p class="meta">Notice version 2. Effective from: 2026-10-09.</p>
+    <p class="meta">Notice version 3. Effective from: 2026-10-19.</p>
 
     <p>BananaShot sends anonymous usage statistics. There are two levels:</p>
     <ul>
@@ -83,6 +83,7 @@
       <li>The number of the summary in the session, and if it is the last summary.</li>
       <li>The session length in seconds, and the seconds while the app window was active.</li>
       <li>The version of this notice.</li>
+      <li>The language of the app, and the display language of Windows. Each is only a language code from a fixed list, for example "es" for Spanish, never the country or the region. A language that is not in the list is "other". Thus we can see which languages to translate the app into.</li>
       <li>These counts:
         <ul>
           <li>A range for the number of sessions on this computer (1, 2 to 5, 6 to 20, or more than 20). Thus we can tell new users from users who come back, without a user ID.</li>
@@ -91,7 +92,7 @@
         </ul>
       </li>
     </ul>
-    <p>Why the essential statistics are on by default: BananaShot is a small project. These numbers are the only way for us to know if people use the app and if a new version is stable. They are a legitimate interest of the author (GDPR Article 6(1)(f)). We keep them to the minimum: they contain no feature use and nothing about your videos or projects. You have the right to object (GDPR Article 21): turn them off as described <a href="#turn-off">below</a>.</p>
+    <p>Why the essential statistics are on by default: BananaShot is a small project. These numbers are the only way for us to know if people use the app and if a new version is stable. They are a legitimate interest of the author (GDPR Article 6(1)(f)). The two languages are in the essential statistics because users who do not read English well are the users who need a translation, and they select optional statistics less often. We show a language in our statistics only when at least 5 sessions have it. We keep the essential statistics to the minimum: they contain no feature use and nothing about your videos or projects. You have the right to object (GDPR Article 21): turn them off as described <a href="#turn-off">below</a>.</p>
 
     <h3 id="extended">Extended statistics (optional)</h3>
     <p>If you select the extended statistics, the summary also contains these counts and settings. The extended statistics need the essential statistics.</p>
@@ -101,14 +102,14 @@
       <li>Points added, deleted, and marked as favorites. Comments added. The points that you score (the number, not the scores).</li>
       <li>Changes of the colors, and changes of the crop or rotation.</li>
       <li>Help windows opened.</li>
-      <li>The theme (dark, mid, or light), if you selected your own accent color (not the color), and the language of the app.</li>
+      <li>The theme (dark, mid, or light), and if you selected your own accent color (not the color).</li>
       <li>The sports of the projects that you created or opened in the session (tennis, padel).</li>
       <li>Exports for each encoder type (software, NVIDIA, AMD, Intel): started, completed, failed, cancelled, and interrupted at exit. The total export time and the total video length of the completed exports, in seconds. The failures by cause (source missing, output not writable, process start, encoder error, other). The export options in use (scoreboard, comments, stats card, favorites only, idle trim). The output size (720p, 1080p, 1440p, 2160p, or other).</li>
     </ul>
     <p>The legal basis of the extended statistics is your consent (GDPR Article 6(1)(a)). You can withdraw it at any time.</p>
 
     <h3>What the app does not send</h3>
-    <p>Your videos, audio, or frames. File names, folder names, or paths. Project names, player names, scores, or comments. Text that you type. A user ID, a device ID, or an install ID. Error messages or log files. The clock time, the time zone, or the language setting of your computer.</p>
+    <p>Your videos, audio, or frames. File names, folder names, or paths. Project names, player names, scores, or comments. Text that you type. A user ID, a device ID, or an install ID. Error messages or log files. The clock time, the time zone, the country or region setting of your computer, or the full language setting (only the language code above).</p>
 
     <h3>Where the data goes</h3>
     <p>The app sends the summary over HTTPS to our server on Cloudflare (a Cloudflare Worker). Cloudflare processes the data for us. The server stores the summary in a Cloudflare D1 database in the EU jurisdiction. The server keeps the receive times only to the hour.</p>
@@ -137,6 +138,7 @@
       <li>The topic (problem, idea, question, or other) and your message.</li>
       <li>A random report ID that the app makes for each report.</li>
       <li>The app version, the name and version of Windows, and the Java version.</li>
+      <li>The language of the app and the display language of Windows, as language codes from the fixed list of the usage statistics. Thus the author can answer in your language. You can write in any language.</li>
       <li>Your email address, only if you give it. The author can reply only to this address. The app keeps it on your computer for the next report. You can delete it in the form.</li>
       <li>The text of the error message, only if you open the form from an error message. You can remove it before you send.</li>
       <li>The last 2 MB of the log files of the app, only if you select "Attach the log files". The log files contain the names and folders of your videos and projects. They do not contain your videos. Before you send, "Show the data" shows the exact data that the app sends.</li>

@@ -29,7 +29,7 @@ cannot decide the direction of the app.
 
 | Level | When | Counters |
 |---|---|---|
-| `essential` | On by default, from the app start. The user can turn it off. | `unclean_exit`, `uncaught_error`, `session_n_<bucket>` |
+| `essential` | On by default, from the app start. The user can turn it off. | `unclean_exit`, `uncaught_error`, `session_n_<bucket>`, and the attributes `language` and `os_language` (since schema 4, B-11 E2) |
 | `extended` | Only when the user selects it. It needs the essential level. | All counter keys, and the attributes (see "Attributes") |
 | (off) | Only when the user turns off the essential level. | Nothing is sent. |
 
@@ -89,6 +89,10 @@ cannot decide the direction of the app.
   attributes are a new type of data. The app asks each user again. Schema 2
   summaries must have notice version 1, and schema 3 summaries must have
   notice version 2.
+- Changed on 2026-10-19 (B-11 E2): the notice version is 3, because the
+  essential level now sends the app language and the Windows display
+  language. The app asks each user again. Schema 4 summaries must have
+  notice version 3. A user who turned off the statistics sees no change.
 
 ## What stays from the first attempt
 
@@ -160,8 +164,8 @@ the most time and hides the wait from the user.
 
 ```json
 {
-  "schema_version": 3,
-  "notice_version": 2,
+  "schema_version": 4,
+  "notice_version": 3,
   "level": "extended",
   "session_id": "7df3a8ca-4d5d-44d1-913d-ae553df3916f",
   "app_version": "1.0.0",
@@ -171,22 +175,28 @@ the most time and hides the wait from the user.
   "duration_s": 912,
   "active_s": 640,
   "counters": { "tab_points": 2, "tab_s_points": 540, "point_added": 31 },
-  "attributes": { "theme": "dark", "accent": "default", "language": "en", "sport": ["tennis", "padel"] }
+  "attributes": { "theme": "dark", "accent": "default", "language": "en", "os_language": "es", "sport": ["tennis", "padel"] }
 }
 ```
 
 - `schema_version` 2 added `level` (2026-10-06). The Worker refuses version 1
   with 410, so that a test build with the old opt-in stops sending.
-- `schema_version` 3 added `attributes` (2026-10-09, B-44). The Worker accepts
-  versions 2 and 3. A version 2 summary cannot have `attributes`.
+- `schema_version` 3 added `attributes` (2026-10-09, B-44). A version 2
+  summary cannot have `attributes`.
+- `schema_version` 4 added `os_language`, and the language attributes on the
+  essential level (2026-10-19, B-11 E2). The Worker accepts versions 2, 3,
+  and 4. The Worker keeps one notice version for each schema version, so the
+  new notice version needs a new schema version. The attributes stay in one
+  JSON column, so the database does not change.
 - `level` is `essential` or `extended`. An essential summary can contain only
   the essential counter keys (see "Levels").
 - `snapshot` starts at 0 and increases by 1 with each send. The server keeps
   the summary with the highest `snapshot`.
 - `counters` contains only keys from the counter list below. Each value is an
   integer in `0..1000000`. The app does not send a counter with the value 0.
-- `attributes` is optional. Only an extended summary of schema 3 can have it.
-  See "Attributes".
+- `attributes` is optional. Schema 3: only an extended summary can have it.
+  Schema 4: an essential summary can have only `language` and
+  `os_language`. See "Attributes".
 - There are no other fields. The only strings are `app_version`,
   `os_family` (`windows`, `macos`, `linux`, `other`), and the attribute
   values of the closed lists.
@@ -201,8 +211,10 @@ the most time and hides the wait from the user.
     `null` as `unknown`.
 - The app does not send a clock time, a time zone, a locale, a path, a file
   name, a project name, a score, a player name, or text from the user. The
-  `language` attribute is the language of the app interface, not the locale
-  of the computer.
+  `language` attribute is the language of the app interface. The
+  `os_language` attribute is only the language part of the Windows display
+  language, from a fixed list. The app never sends the region or the full
+  locale of the computer.
 
 ## Counters
 
@@ -311,11 +323,32 @@ each side check the lists against the file.
 |---|---|---|
 | `theme` | `dark`, `mid`, `light` | The theme setting. |
 | `accent` | `default`, `custom` | `custom` if the user selected an accent color. Never the color. |
-| `language` | `en` | The language of the app interface. Only the languages of the app. |
+| `language` | The language list (below) | The language of the app interface. Both Spanish variants send `es`. The test language `qps` sends `en`. |
+| `os_language` | The language list (below) | The Windows display language (`Locale.getDefault(Locale.Category.DISPLAY)`). Schema 4 and later. |
 | `sport` | An array of `tennis`, `padel` | The sports of the projects that the session created or opened, or of a sport change in the score settings of the Points tab. `[]` if there was no project. |
 
-- Only the extended level sends attributes. A change to essential deletes
-  the sports at once, as the extended counters.
+- The language list (B-11 E2, decided on 2026-10-10): the primary language
+  subtags (ISO 639-1, lower case) of the Windows display languages, and
+  `other`. It has `ar`, `bg`, `ca`, `cs`, `da`, `de`, `el`, `en`, `es`, `et`,
+  `eu`, `fi`, `fr`, `gl`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `ko`,
+  `lt`, `lv`, `ms`, `nb`, `nl`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sr`,
+  `sv`, `th`, `tr`, `uk`, `vi`, `zh`, and `other`. Thus a new app language
+  needs no change of the contract or the Worker. The feedback report uses
+  the same list.
+- The app converts a locale to a value of the list with `Locale.ROOT` for the
+  lower case. The old codes `iw` and `in` give `he` and `id`, and `no` gives
+  `nb`. A language that is not in the list, an empty language (`und`), and
+  the Windows pseudo-locales (`qps-ploc`) give `other`. The app never sends a
+  value outside the list, because the Worker then refuses the full summary.
+- Both levels send `language` and `os_language` (since schema 4). The legal
+  basis of the essential level is legitimate interest
+  (`legitimate-interest.md`). The other attributes need the extended level.
+  A change to essential deletes the other attributes and the sports at once,
+  as the extended counters. The two language attributes stay.
+- The cockpit shows a language only when it has at least 5 sessions in the
+  period (or in the week). Smaller languages count as `other`. A group with
+  fewer than 5 sessions does not show. Sessions of older builds have no
+  language: the cockpit shows them as "unknown".
 - `theme`, `accent`, and `language` have the value at the time of the send.
   No counter for a change. After a change from off to a level, the new session
   gets the current settings.
@@ -453,8 +486,9 @@ CREATE TABLE analytics_session (
 - The consent dialog and the Privacy page link to it. Change the "Collected"
   text of the Privacy page to "Counts of the tabs and features you use,
   export results, session length, app version, and OS family". Since B-44,
-  the text also names the theme, accent, and language settings and the
-  sports of the projects.
+  the text also names the theme and accent settings and the sports of the
+  projects. Since B-11 E2, the essential text names the app language and the
+  Windows language.
 - Change the consent dialog text from "anonymous product events" to
   "anonymous usage counts".
 - The page tells that data already sent stays for a maximum of 90 days after

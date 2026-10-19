@@ -89,6 +89,15 @@ class FeedbackPanelTest {
     }
 
     @Test
+    fun `the form tells that the user can write in any language`() {
+        System.setProperty("java.awt.headless", "true")
+        SwingUtilities.invokeAndWait {
+            val texts = all(panel(presenter(withSender = true))).mapNotNull { (it as? javax.swing.JLabel)?.text ?: (it as? org.litvin.ui.commons.WrapText)?.text }
+            assertTrue(texts.any { "You can write in any language." in it }, texts.joinToString("\n"))
+        }
+    }
+
+    @Test
     fun `a longer status makes the form taller and asks the window for a new size`() {
         System.setProperty("java.awt.headless", "true")
         val presenter = presenter(withSender = true, result = FeedbackSendResult.Failed(FeedbackFailure.NO_CONNECTION))

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deliver, fullText, header, TELEGRAM_TEXT_LIMIT } from '../src/telegram';
 import { validateReport, type Report } from '../src/validation';
 import { FakeTelegram } from './fake-telegram';
+import smokeReport from '../../feedback-contract/v1/smoke-report.json';
 import { LOG, report } from './fixtures';
 
 const config = { token: '123:token', chatId: '42' };
@@ -23,8 +24,22 @@ describe('the message text', () => {
       'ID: 00000000-0000-4000-8000-000000000201',
       'Reply to: user@example.test',
       'App: 1.0.0 · Windows 11 10.0 · Java 21.0.4',
+      'Language: app unknown · Windows unknown',
       'Log: no',
     ].join('\n'));
+  });
+
+  it('shows the app language and the Windows language', () => {
+    expect(header(valid({ app_language: 'es', os_language: 'other' }))).toContain('Language: app es · Windows other');
+  });
+
+  it('shows the two languages of the smoke report', () => {
+    expect(header(validateReport(smokeReport)!)).toContain('Language: app en · Windows other');
+  });
+
+  it('keeps a text in other scripts and with emoji without a change', () => {
+    const message = 'Привет, 你好 🎾👍🏽 — ¿Cómo marco un punto?';
+    expect(fullText(valid({ message }))).toContain(`\n\n${message}`);
   });
 
   it('tells when the user gave no address', () => {

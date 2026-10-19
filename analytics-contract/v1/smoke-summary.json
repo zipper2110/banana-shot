@@ -1,6 +1,6 @@
 {
-  "schema_version": 2,
-  "notice_version": 1,
+  "schema_version": 4,
+  "notice_version": 3,
   "level": "essential",
   "session_id": "00000000-0000-4000-8000-0000000005e0",
   "app_version": "synthetic-smoke",
@@ -9,5 +9,9 @@
   "final": false,
   "duration_s": 0,
   "active_s": 0,
-  "counters": {}
+  "counters": {},
+  "attributes": {
+    "language": "en",
+    "os_language": "other"
+  }
 }

@@ -42,7 +42,9 @@ for (let day = today - 89 * DAY; day <= today; day += DAY) {
   for (let index = 0; index < count; index++) {
     id++;
     const received = day + int(6, 22) * HOUR;
-    const version = sinceRelease < 0 ? '1.0.0-SNAPSHOT' : (day > today - 14 * DAY && chance(0.7) ? '1.0.1' : chance(0.04) ? '1.1.0-SNAPSHOT' : '1.0.0');
+    const version = sinceRelease < 0 ? '1.0.0-SNAPSHOT'
+      : day > today - 7 * DAY && chance(0.6) ? '1.2.0'
+      : day > today - 14 * DAY && chance(0.7) ? '1.0.1' : chance(0.04) ? '1.1.0-SNAPSHOT' : '1.0.0';
     const level = chance(0.78) ? 'extended' : 'essential';
     const first = chance(sinceRelease < 7 ? 0.5 : 0.22);
     const counters = {};
@@ -94,15 +96,20 @@ for (let day = today - 89 * DAY; day <= today; day += DAY) {
       }
     }
     // B-44: version 1.0.1 sends schema 3 with the session attributes (extended level only).
-    const schema = version === '1.0.0' || version === '1.0.0-SNAPSHOT' ? 2 : 3;
+    // B-11 E2: version 1.2.0 sends schema 4 with the language attributes also on the essential level.
+    const schema = version === '1.0.0' || version === '1.0.0-SNAPSHOT' ? 2 : version === '1.2.0' ? 4 : 3;
     const attributes = {};
-    if (schema === 3 && level === 'extended') {
+    if (schema >= 3 && level === 'extended') {
       attributes.theme = pick(['dark', 'dark', 'dark', 'mid', 'light']);
       attributes.accent = chance(0.2) ? 'custom' : 'default';
       attributes.language = 'en';
       attributes.sport = counters.project_created || counters.project_opened
         ? pick([['tennis'], ['tennis'], ['tennis'], ['padel'], ['tennis', 'padel']])
         : [];
+    }
+    if (schema === 4) {
+      attributes.os_language = pick(['en', 'en', 'en', 'en', 'es', 'es', 'de', 'fr', 'pt', 'it', 'ru', 'nl', 'other']);
+      attributes.language = attributes.os_language === 'es' && chance(0.7) ? 'es' : 'en';
     }
     sessions.push(`INSERT INTO analytics_session (session_id, first_received_at, last_received_at, schema_version, notice_version, level, app_version, os_family, snapshot, final, duration_s, active_s, counters, attributes) VALUES (${quote(`seed-${id}`)}, ${received}, ${received + HOUR}, ${schema}, ${schema - 1}, ${quote(level)}, ${quote(version)}, ${quote(chance(0.97) ? 'windows' : 'other')}, 3, 1, ${active + int(0, 1800)}, ${active}, ${quote(JSON.stringify(counters))}, ${quote(JSON.stringify(attributes))});`);
   }

@@ -10,6 +10,7 @@ export const contractCounterKeys: string[] = keysFile.counterKeys;
 export const contractEssentialCounterKeys: string[] = keysFile.essentialCounterKeys;
 export const contractAttributes: Record<string, string[]> = attributesFile.attributes;
 export const contractArrayAttributes: string[] = attributesFile.arrayAttributes;
+export const contractEssentialAttributes: string[] = attributesFile.essentialAttributes;
 export const validSummaries: Record<string, unknown>[] = validFile.validSummaries;
 export const invalidSummaries: InvalidSummary[] = invalidFile.invalidSummaries;
 export const smokeSummary: Record<string, unknown> = smokeFile;

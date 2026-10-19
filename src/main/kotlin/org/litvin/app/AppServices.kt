@@ -37,11 +37,13 @@ import org.litvin.ui.commons.VideoErrorPanel
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsController
+import org.litvin.analytics.AnalyticsEvent
 import org.litvin.analytics.AnalyticsPreferences
 import org.litvin.analytics.AnalyticsTransport
 import org.litvin.analytics.JdkAnalyticsTransport
 import org.litvin.license.BuildInfo
 import java.net.URI
+import java.util.Locale
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -191,14 +193,23 @@ data class AppServices(
  * parameters, and the tests give fakes. No property or environment variable turns off the expiry.
  */
 /**
- * The analytics controller of the app (B-9). The summaries contain [BuildInfo.VERSION]. The transport uses the proxy
- * of Windows and the trust of E5-S4, as the feedback sender does. It follows no redirect.
+ * The analytics controller of the app (B-9). The summaries contain [BuildInfo.VERSION] and the Windows display
+ * language. The transport uses the proxy of Windows and the trust of E5-S4, as the feedback sender does. It follows no
+ * redirect.
  */
 internal fun productionAnalyticsController(
     config: AnalyticsBuildConfig,
     preferences: AnalyticsPreferences,
     transport: (AnalyticsBuildConfig.Enabled) -> AnalyticsTransport = ::productionAnalyticsTransport,
-): AnalyticsController = AnalyticsController.create(config, preferences, BuildInfo.VERSION, transport)
+): AnalyticsController = AnalyticsController.create(config, preferences, BuildInfo.VERSION, osLanguage(), transport)
+
+/**
+ * The Windows display language as a value of the fixed language list (B-11 E2). The analytics summary sends it as
+ * `os_language`, and the feedback report as `os_language`. A language that is not in the list gives "other". It never
+ * throws.
+ */
+internal fun osLanguage(): AnalyticsEvent.Language =
+    runCatching { AnalyticsEvent.Language.of(Locale.getDefault(Locale.Category.DISPLAY)) }.getOrDefault(AnalyticsEvent.Language.OTHER)
 
 private fun productionAnalyticsTransport(config: AnalyticsBuildConfig.Enabled): AnalyticsTransport =
     JdkAnalyticsTransport(config.endpoint) {

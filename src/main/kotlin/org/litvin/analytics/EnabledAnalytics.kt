@@ -18,8 +18,9 @@ import java.util.concurrent.TimeoutException
  *   counter or `active_s` changed. Thus an idle app does not send.
  * - [beginFinalSend] starts the last summary (`final = true`). [close] waits for it until [finalSendLimit] after
  *   [beginFinalSend], and then stops. Without [beginFinalSend], [close] sends nothing.
- * - The session attributes (`docs/analytics/design.md`, "Attributes") are only in an extended summary. The sports
- *   count only while the level is extended, as the counters. The settings are the values at the time of the send.
+ * - The session attributes (`docs/analytics/design.md`, "Attributes"): both levels send the app language and the
+ *   Windows display language ([osLanguage]). Only an extended summary has the other attributes. The sports count only
+ *   while the level is extended, as the counters. The settings are the values at the time of the send.
  * - A 410 response stops all sends of this session. There is no retry: the next summary replaces a lost one.
  * - All work runs on one daemon thread. [record] never waits for the network.
  * - The log contains only the count of sends and the status classes, not the body or the session ID.
@@ -28,6 +29,7 @@ internal class EnabledAnalytics(
     private val transport: AnalyticsTransport,
     private val appVersion: String,
     private val osFamily: String,
+    private val osLanguage: AnalyticsEvent.Language,
     start: AnalyticsPreferences.SessionStart,
     private var level: AnalyticsLevel,
     private val clock: AnalyticsClock = SystemAnalyticsClock,
@@ -201,16 +203,19 @@ internal class EnabledAnalytics(
         return summary to SentState(level, activeS, values, attributes)
     }
 
-    /** The session attributes, or null at the essential level. Call only while holding [lock]. */
-    private fun attributesNow(): Map<String, Any>? {
-        if (level != AnalyticsLevel.EXTENDED) return null
+    /** The session attributes of the current level. Call only while holding [lock]. */
+    private fun attributesNow(): Map<String, Any> {
+        val extended = level == AnalyticsLevel.EXTENDED
         return buildMap {
             settings?.let {
-                put(AnalyticsSchema.THEME, it.theme.key)
-                put(AnalyticsSchema.ACCENT, it.accent.key)
+                if (extended) {
+                    put(AnalyticsSchema.THEME, it.theme.key)
+                    put(AnalyticsSchema.ACCENT, it.accent.key)
+                }
                 put(AnalyticsSchema.LANGUAGE, it.language.key)
             }
-            put(AnalyticsSchema.SPORT, sports.map { it.key })
+            put(AnalyticsSchema.OS_LANGUAGE, osLanguage.key)
+            if (extended) put(AnalyticsSchema.SPORT, sports.map { it.key })
         }
     }
 
@@ -251,7 +256,7 @@ internal class EnabledAnalytics(
         val level: AnalyticsLevel,
         val activeS: Int,
         val counters: Map<String, Int>,
-        val attributes: Map<String, Any>?,
+        val attributes: Map<String, Any>,
     )
 
     companion object {

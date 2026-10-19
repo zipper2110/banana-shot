@@ -34,8 +34,8 @@ class EnabledAnalyticsTest {
         start()
         val first = transport.next()
         assertEquals(contractFieldNames() + "attributes", first.fieldNames().asSequence().toSet())
-        assertEquals(3, first["schema_version"].intValue())
-        assertEquals(2, first["notice_version"].intValue())
+        assertEquals(4, first["schema_version"].intValue())
+        assertEquals(3, first["notice_version"].intValue())
         assertEquals("extended", first["level"].textValue())
         assertTrue(Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}").matches(first["session_id"].textValue()))
         assertEquals("1.2.3", first["app_version"].textValue())
@@ -246,7 +246,7 @@ class EnabledAnalyticsTest {
     @Test
     fun `an extended summary has the settings and the sports of the session`() {
         val session = start()
-        assertEquals(mapOf("sport" to emptyList<String>()), attributes(transport.next()))
+        assertEquals(mapOf("os_language" to "es", "sport" to emptyList<String>()), attributes(transport.next()))
 
         session.record(AnalyticsEvent.Settings(AnalyticsEvent.Theme.MID, AnalyticsEvent.Accent.CUSTOM, AnalyticsEvent.Language.EN))
         session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
@@ -254,7 +254,7 @@ class EnabledAnalyticsTest {
         session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
         session.sendIfChanged()
         assertEquals(
-            mapOf("theme" to "mid", "accent" to "custom", "language" to "en", "sport" to listOf("tennis", "padel")),
+            mapOf("theme" to "mid", "accent" to "custom", "language" to "en", "os_language" to "es", "sport" to listOf("tennis", "padel")),
             attributes(transport.next()),
         )
         // The same sport again is no change.
@@ -277,11 +277,14 @@ class EnabledAnalyticsTest {
     }
 
     @Test
-    fun `the essential level sends no attributes and does not keep the sports`() {
+    fun `the essential level sends only the language attributes and does not keep the sports`() {
         val session = start(level = AnalyticsLevel.ESSENTIAL)
-        assertFalse(transport.next().has("attributes"))
+        assertEquals(mapOf("os_language" to "es"), attributes(transport.next()))
         session.record(AnalyticsEvent.Settings(AnalyticsEvent.Theme.LIGHT, AnalyticsEvent.Accent.CUSTOM, AnalyticsEvent.Language.EN))
         session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
+        session.sendIfChanged()
+        assertEquals(mapOf("language" to "en", "os_language" to "es"), attributes(transport.next()))
+        session.record(AnalyticsEvent.Settings(AnalyticsEvent.Theme.DARK, AnalyticsEvent.Accent.DEFAULT, AnalyticsEvent.Language.EN))
         session.sendIfChanged()
         assertNoSend()
 
@@ -289,14 +292,15 @@ class EnabledAnalyticsTest {
         session.setLevel(AnalyticsLevel.EXTENDED)
         session.sendIfChanged()
         assertEquals(
-            mapOf("theme" to "light", "accent" to "custom", "language" to "en", "sport" to emptyList<String>()),
+            mapOf("theme" to "dark", "accent" to "default", "language" to "en", "os_language" to "es", "sport" to emptyList<String>()),
             attributes(transport.next()),
         )
 
+        // A change to essential removes the other attributes and keeps the two language attributes.
         session.record(AnalyticsEvent.SportUsed(AnalyticsEvent.Sport.PADEL))
         session.setLevel(AnalyticsLevel.ESSENTIAL)
         session.sendIfChanged()
-        assertFalse(transport.next().has("attributes"))
+        assertEquals(mapOf("language" to "en", "os_language" to "es"), attributes(transport.next()))
         session.setLevel(AnalyticsLevel.EXTENDED)
         session.sendIfChanged()
         assertEquals(emptyList<String>(), attributes(transport.next())["sport"])
@@ -400,7 +404,7 @@ class EnabledAnalyticsTest {
         finalSendLimit: Duration = Duration.ofSeconds(2),
         level: AnalyticsLevel = AnalyticsLevel.EXTENDED,
     ): EnabledAnalytics = EnabledAnalytics(
-        transport, "1.2.3", "windows", sessionStart, level, clock, executor,
+        transport, "1.2.3", "windows", AnalyticsEvent.Language.ofCode("es"), sessionStart, level, clock, executor,
         sendInterval = Duration.ofDays(1), finalSendLimit = finalSendLimit,
     ).also { sessions += it }
 

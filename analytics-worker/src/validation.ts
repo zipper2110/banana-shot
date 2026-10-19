@@ -1,15 +1,21 @@
-import { validAttributes, type Attributes } from './attributes';
+import { ESSENTIAL_ATTRIBUTES, SCHEMA_4_ATTRIBUTES, validAttributes, type Attributes } from './attributes';
 import { COUNTER_KEYS, ESSENTIAL_COUNTER_KEYS, MAX_COUNTER_VALUE } from './counters';
 
 /** The largest request body: 8 KiB. A summary with all counter keys is about 2 KiB. */
 export const MAX_BODY_BYTES = 8 * 1024;
 
-/** The schema version of this Worker. A higher version is invalid (400). Version 2 added `level`, version 3 `attributes`. */
-export const SCHEMA_VERSION = 3;
+/**
+ * The schema version of this Worker. A higher version is invalid (400). Version 2 added `level`, version 3 `attributes`,
+ * and version 4 the language attributes on the essential level (B-11 E2).
+ */
+export const SCHEMA_VERSION = 4;
 /** The lowest schema version that the Worker accepts. A lower version gets 410, so that an old app stops sending. */
 export const MIN_SCHEMA_VERSION = 2;
-/** The notice version of each schema version. Version 3 sends the attributes, which notice version 2 tells about. */
-export const NOTICE_VERSION_OF_SCHEMA: Readonly<Record<number, number>> = { 2: 1, 3: 2 };
+/**
+ * The notice version of each schema version. Version 3 sends the attributes, which notice version 2 tells about.
+ * Version 4 sends the language attributes also on the essential level, which notice version 3 tells about.
+ */
+export const NOTICE_VERSION_OF_SCHEMA: Readonly<Record<number, number>> = { 2: 1, 3: 2, 4: 3 };
 export const MAX_SNAPSHOT = 1_000_000;
 /** 7 days. The app clamps `duration_s` and `active_s` to this value. */
 export const MAX_SECONDS = 604_800;
@@ -33,7 +39,7 @@ export type Summary = {
   duration_s: number;
   active_s: number;
   counters: Record<string, number>;
-  /** Empty for schema version 2 and for an essential summary. */
+  /** Empty for schema version 2. An essential summary has only the essential attributes. */
   attributes: Attributes;
 };
 
@@ -56,9 +62,9 @@ export function validateSummary(value: unknown, minSchemaVersion = MIN_SCHEMA_VE
   if (!validCounters(value.counters, LEVELS[value.level])) return invalid;
   let attributes: Attributes = {};
   if (Object.hasOwn(value, 'attributes')) {
-    // The attributes are extended data. Schema version 2 does not have them.
-    if (schema === 2 || value.level !== 'extended') return invalid;
-    const valid = validAttributes(value.attributes);
+    const allowed = allowedAttributes(schema as number, value.level);
+    if (allowed === null) return invalid;
+    const valid = validAttributes(value.attributes, allowed);
     if (valid === null) return invalid;
     attributes = valid;
   }
@@ -78,6 +84,17 @@ export function validateSummary(value: unknown, minSchemaVersion = MIN_SCHEMA_VE
       attributes,
     },
   };
+}
+
+/**
+ * The attribute keys that a summary can contain, or null when it can contain no attributes. Schema version 2 has no
+ * attributes. Schema version 3 has them only on the extended level, and not `os_language`. Schema version 4 has the
+ * essential attributes on the essential level, and all attributes on the extended level.
+ */
+function allowedAttributes(schema: number, level: string): ((key: string) => boolean) | null {
+  if (schema === 3) return level === 'extended' ? key => !SCHEMA_4_ATTRIBUTES.has(key) : null;
+  if (schema >= 4) return level === 'extended' ? () => true : key => ESSENTIAL_ATTRIBUTES.has(key);
+  return null;
 }
 
 /** Accept all app version values, so that no build loses its data. A missing or null value is "unknown". */

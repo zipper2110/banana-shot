@@ -9,6 +9,15 @@ same files.
 - `invalid-reports.json` contains reports that the Worker refuses with `422`. An item
   has a `payload` (a JSON value) or a `raw` body (a text that is not valid JSON).
 
+## Language fields
+
+`app_language` (the language of the app) and `os_language` (the Windows display language) are
+optional (B-11 E2). Both use the language list of the analytics contract
+(`analytics-contract/v1/attributes.json`, the values of `os_language`): a primary language subtag
+in lower case, or `other`. Never a region or a full locale. Thus a new app language needs no change
+of this contract. A test of the Worker checks that the schema has the same list. A report without
+these fields comes from an older build. The message to the author then shows "unknown".
+
 ## Rules that the schema cannot show
 
 - `message` must contain one or more characters that are not white space.

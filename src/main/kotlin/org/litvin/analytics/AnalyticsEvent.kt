@@ -1,5 +1,7 @@
 package org.litvin.analytics
 
+import java.util.Locale
+
 /**
  * The facts that features record. Features never see counter keys: [EnabledAnalytics] changes each event into counter
  * changes (`docs/analytics/design.md`, "Counters"). Feature packages can import only [Analytics] and this class with
@@ -31,6 +33,7 @@ sealed class AnalyticsEvent {
     /**
      * The current settings of the app. The app records them at the start and after each change. They are session
      * attributes (`docs/analytics/design.md`, "Attributes"): the summary has the values at the time of the send.
+     * [language] is the language of the app interface, not the language of the operating system.
      */
     data class Settings(val theme: Theme, val accent: Accent, val language: Language) : AnalyticsEvent()
 
@@ -63,8 +66,42 @@ sealed class AnalyticsEvent {
     /** Only the type of the accent. The app never sends the color. */
     enum class Accent(internal val key: String) { DEFAULT("default"), CUSTOM("custom") }
 
-    /** The language of the app interface. It is not the language of the operating system. */
-    enum class Language(internal val key: String) { EN("en") }
+    /**
+     * A language of the fixed list (B-11 E2, `analytics-contract/v1/attributes.json`): the primary language subtag
+     * (ISO 639-1) of a Windows display language, or [OTHER]. The app language (`language`) and the Windows display
+     * language (`os_language`) use it. It is never a region or a full locale, so it cannot hold free text.
+     */
+    @JvmInline
+    value class Language private constructor(internal val key: String) {
+        companion object {
+            /** The values of the list. A test checks it against the contract. */
+            val CODES: List<String> = listOf(
+                "ar", "bg", "ca", "cs", "da", "de", "el", "en", "es", "et", "eu", "fi", "fr", "gl", "he", "hi", "hr",
+                "hu", "id", "it", "ja", "ko", "lt", "lv", "ms", "nb", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sr",
+                "sv", "th", "tr", "uk", "vi", "zh", "other",
+            )
+
+            val EN = Language("en")
+            val OTHER = Language("other")
+
+            /** The old ISO 639 codes that a locale can still have, and the Norwegian macrolanguage. */
+            private val REPLACED_CODES = mapOf("iw" to "he", "in" to "id", "ji" to "yi", "no" to "nb")
+
+            /**
+             * The value for the primary language of [locale]. A language that is not in the list, an empty
+             * language (`und`), and the Windows pseudo-locales (`qps-ploc`) give [OTHER]. It never throws.
+             */
+            fun of(locale: Locale?): Language = runCatching { ofCode(locale?.language) }.getOrDefault(OTHER)
+
+            /** The value for a primary language subtag, for example "es". Case does not matter. */
+            fun ofCode(code: String?): Language {
+                // Locale.ROOT: with the default locale tr-TR, the subtag "IT" must give "it", not a dotless i.
+                val lower = code?.trim()?.lowercase(Locale.ROOT) ?: return OTHER
+                val current = REPLACED_CODES[lower] ?: lower
+                return if (current in CODES) Language(current) else OTHER
+            }
+        }
+    }
 
     enum class Sport(internal val key: String) { TENNIS("tennis"), PADEL("padel") }
 

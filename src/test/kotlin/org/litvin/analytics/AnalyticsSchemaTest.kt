@@ -49,13 +49,14 @@ class AnalyticsSchemaTest {
             durationS = 912,
             activeS = 640,
             counters = mapOf("point_added" to 31, "tab_s_points" to 540),
+            attributes = mapOf("os_language" to "es"),
         ).toJson())
         assertEquals(contract("smoke-summary.json").fieldNames().asSequence().toSet(), json.fieldNames().asSequence().toSet())
         assertEquals(
             mapper.readTree("""
-                {"schema_version":3,"notice_version":2,"level":"extended","session_id":"00000000-0000-4000-8000-000000000201",
+                {"schema_version":4,"notice_version":3,"level":"extended","session_id":"00000000-0000-4000-8000-000000000201",
                  "app_version":"1.0.0","os_family":"windows","snapshot":3,"final":true,"duration_s":912,"active_s":640,
-                 "counters":{"point_added":31,"tab_s_points":540}}
+                 "counters":{"point_added":31,"tab_s_points":540},"attributes":{"os_language":"es"}}
             """),
             json,
         )
@@ -67,6 +68,21 @@ class AnalyticsSchemaTest {
         val values = contract["attributes"].fields().asSequence().associate { (key, list) -> key to list.map { it.textValue() } }
         assertEquals(values, AnalyticsSchema.ATTRIBUTE_VALUES)
         assertEquals(contract["arrayAttributes"].map { it.textValue() }.toSet(), AnalyticsSchema.ARRAY_ATTRIBUTES)
+        assertEquals(contract["essentialAttributes"].map { it.textValue() }.toSet(), AnalyticsSchema.ESSENTIAL_ATTRIBUTES)
+    }
+
+    @Test
+    fun `the language values are the list of the contract, with en and other`() {
+        assertEquals(AnalyticsEvent.Language.CODES, AnalyticsSchema.ATTRIBUTE_VALUES[AnalyticsSchema.LANGUAGE])
+        assertEquals(AnalyticsEvent.Language.CODES, AnalyticsSchema.ATTRIBUTE_VALUES[AnalyticsSchema.OS_LANGUAGE])
+        assertTrue("en" in AnalyticsEvent.Language.CODES && "other" in AnalyticsEvent.Language.CODES)
+    }
+
+    @Test
+    fun `the essential summaries of the contract have only the essential attributes`() {
+        validSummaries().filter { it["level"].textValue() == "essential" && it.has("attributes") }.forEach { summary ->
+            summary["attributes"].fieldNames().forEach { assertTrue(it in AnalyticsSchema.ESSENTIAL_ATTRIBUTES, it) }
+        }
     }
 
     @Test
@@ -75,7 +91,9 @@ class AnalyticsSchemaTest {
         val json = mapper.readTree(SessionSummary(
             sessionId = "id", level = AnalyticsLevel.EXTENDED, appVersion = "1.1.0", osFamily = "windows", snapshot = 0,
             final = false, durationS = 0, activeS = 0, counters = emptyMap(),
-            attributes = mapOf("theme" to "mid", "accent" to "custom", "language" to "en", "sport" to listOf("tennis", "padel")),
+            attributes = mapOf(
+                "theme" to "dark", "accent" to "default", "language" to "en", "os_language" to "pt", "sport" to listOf("tennis", "padel"),
+            ),
         ).toJson())
         assertEquals(fixture["attributes"], json["attributes"])
     }

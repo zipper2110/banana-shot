@@ -68,6 +68,8 @@ proposal or an accepted decision. The column "Status" tells which.
 | Tagline | The tagline under the app name is translated (key `app.tagline`) | accepted 2026-10-19 |
 | Credit line | The credit line "BananaShot app" at the bottom of the scoreboard and the statistics card stays English in all languages. It is a brand text (`APP_CREDIT`) | accepted 2026-10-19 |
 | Analytics language before E2 | The analytics worker accepts only `en` until E2 widens the language list. Until then the app sends `en` also when the app language is Spanish | accepted 2026-10-19 |
+| Feedback answer languages | The author answers feedback in all languages, with machine translation. The feedback form tells the user that they can write in their language (E2-T6) | accepted 2026-10-19 |
+| Analytics schema for E2 | Schema version 4 with notice version 3. Version 4 lets the essential level send `language` and `os_language`. The Worker keeps one notice version for each schema version, so a new notice version needs a new schema version. The attributes stay in one JSON column, so the database does not change | accepted 2026-10-19 |
 
 ## Goal
 

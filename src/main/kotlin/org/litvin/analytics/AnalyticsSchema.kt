@@ -5,10 +5,17 @@ package org.litvin.analytics
  * lists. A test checks both lists against `analytics-contract/v1/counter-keys.json`.
  */
 object AnalyticsSchema {
-    /** Version 2 adds the `level` field. The Worker refuses version 1 with 410. Version 3 adds `attributes`. */
-    const val SCHEMA_VERSION = 3
-    /** Version 2 tells about the attributes. The Worker accepts notice version 2 only with schema version 3. */
-    const val NOTICE_VERSION = 2
+    /**
+     * Version 2 adds the `level` field. The Worker refuses version 1 with 410. Version 3 adds `attributes`. Version 4
+     * adds `os_language`, and the essential level sends the language attributes (B-11 E2).
+     */
+    const val SCHEMA_VERSION = 4
+    /**
+     * Version 2 tells about the attributes. Version 3 tells about the language attributes on the essential level. The
+     * Worker accepts notice version 3 only with schema version 4. The check in `Build-AppImage.ps1` and the GitHub
+     * variable `ANALYTICS_NOTICE_VERSION` have the same value.
+     */
+    const val NOTICE_VERSION = 3
     const val MAX_COUNTER_VALUE = 1_000_000
     /** 7 days. `duration_s` and `active_s` are clamped to this value. */
     const val MAX_SECONDS = 604_800
@@ -44,22 +51,29 @@ object AnalyticsSchema {
     }
 
     /**
-     * The closed lists of the session attributes (`docs/analytics/design.md`, "Attributes"). Only an extended summary
-     * contains them. A test checks the lists against `analytics-contract/v1/attributes.json`.
+     * The closed lists of the session attributes (`docs/analytics/design.md`, "Attributes"). A test checks the lists
+     * against `analytics-contract/v1/attributes.json`.
      */
     val ATTRIBUTE_VALUES: Map<String, List<String>> = linkedMapOf(
         THEME to AnalyticsEvent.Theme.entries.map { it.key },
         ACCENT to AnalyticsEvent.Accent.entries.map { it.key },
-        LANGUAGE to AnalyticsEvent.Language.entries.map { it.key },
+        LANGUAGE to AnalyticsEvent.Language.CODES,
+        OS_LANGUAGE to AnalyticsEvent.Language.CODES,
         SPORT to AnalyticsEvent.Sport.entries.map { it.key },
     )
 
     /** Attributes with an array of values. */
     val ARRAY_ATTRIBUTES: Set<String> = setOf(SPORT)
 
+    /** The attributes of the essential level. The extended level sends all attributes. */
+    val ESSENTIAL_ATTRIBUTES: Set<String> = setOf(LANGUAGE, OS_LANGUAGE)
+
     const val THEME = "theme"
     const val ACCENT = "accent"
+    /** The language of the app interface. */
     const val LANGUAGE = "language"
+    /** The Windows display language. */
+    const val OS_LANGUAGE = "os_language"
     const val SPORT = "sport"
 
     fun tabOpened(tab: AnalyticsEvent.Tab) = "tab_${tab.key}"

@@ -17,7 +17,8 @@ session in D1. The design is in `docs/analytics/design.md`. The tasks are in
   off, or the schema version is too old), `413`, `415`, `429` (rate limit), `503` (D1 failure).
 - The summary format and the closed counter key lists are in `analytics-contract/v1`. The Worker
   refuses a summary with an unknown counter key, and an essential summary with a key that is not
-  essential. A summary of schema version 1 (no `level`) gets `410`. Thus, deploy the Worker with the new keys before
+  essential. An essential summary of schema version 4 can contain only the language attributes
+  `language` and `os_language` (B-11 E2). A summary of schema version 1 (no `level`) gets `410`. Thus, deploy the Worker with the new keys before
   an app release that sends them.
 - The Worker keeps the summary with the highest `snapshot` for each session. It rounds the
   receive times down to the hour.

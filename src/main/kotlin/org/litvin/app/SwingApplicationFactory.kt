@@ -121,7 +121,11 @@ object SwingApplicationFactory {
         sender = services.feedbackSender,
         readLog = FeedbackLog(services.paths.logs)::read,
         preferences = FeedbackPreferences(services.preferences.node(PreferencesProvider.APPLICATION)),
-        system = FeedbackSystemInfo.current(AppInfo.version),
+        system = FeedbackSystemInfo.current(
+            AppInfo.version,
+            appLanguage = AnalyticsEvent.Language.ofCode(I18n.language.baseCode).key,
+            osLanguage = osLanguage().key,
+        ),
         contactEmail = CONTACT_EMAIL,
         copyToClipboard = { text -> Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null) },
         openMail = { uri -> runCatching { Desktop.getDesktop().mail(uri) }.isSuccess },
@@ -342,9 +346,9 @@ object SwingApplicationFactory {
                         AppTheme.LIGHT -> AnalyticsEvent.Theme.LIGHT
                     },
                     accent = if (themeSettings.customAccent == null) AnalyticsEvent.Accent.DEFAULT else AnalyticsEvent.Accent.CUSTOM,
-                    // The analytics worker accepts only "en" until B-11 E2 widens the language list. Thus the app sends
-                    // "en" also when the interface is in another language (E4-T10 changes it after E2).
-                    language = AnalyticsEvent.Language.EN,
+                    // The primary subtag of the app language: "es" for both Spanish variants. The test language qps
+                    // is English with changed texts, so it sends "en" (B-11 E2, E4-T10).
+                    language = AnalyticsEvent.Language.ofCode(I18n.language.baseCode),
                 ),
             )
             recordSettings()

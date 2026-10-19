@@ -12,3 +12,7 @@ The Privacy page in More of the app has a short version of this text
 When the report contract (`feedback-contract`) gets a new field, or the
 retention of the Worker changes, update the "Feedback reports" section of the
 site page.
+
+- Since B-11 E2 (2026-10-19), a report also has the app language and the
+  Windows display language (`app_language`, `os_language`). The site page
+  and the Privacy page in the app name them.

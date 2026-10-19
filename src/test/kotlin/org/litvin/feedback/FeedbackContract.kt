@@ -15,7 +15,12 @@ object FeedbackContract {
     private val uuid = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
     private val base64 = Regex("^[A-Za-z0-9+/]+={0,2}$")
     private val required = setOf("report_id", "topic", "message", "app_version", "os_name", "os_version", "java_version")
-    private val optional = setOf("email", "error", "log")
+    private val optional = setOf("email", "error", "log", "app_language", "os_language")
+
+    /** The language list of the schema (B-11 E2). It is the list of the analytics contract. */
+    val languages: List<String> by lazy {
+        read("report.schema.json").path("properties").path("os_language").path("enum").map { it.asText() }
+    }
 
     fun validReports(): List<JsonNode> = read("valid-reports.json").path("validReports").toList()
 
@@ -38,6 +43,7 @@ object FeedbackContract {
         if (!listOf("app_version", "os_name", "os_version", "java_version").all { text(it, 1, FeedbackRules.MAX_INFO) }) return false
         if (report.has("email") && !(report.path("email").isTextual && FeedbackRules.isValidEmail(report.path("email").asText()))) return false
         if (report.has("error") && !text("error", 1, FeedbackRules.MAX_MESSAGE)) return false
+        if (!listOf("app_language", "os_language").all { !report.has(it) || (report.path(it).isTextual && report.path(it).asText() in languages) }) return false
         if (report.has("log")) {
             val log = report.path("log").asText()
             if (!text("log", 4, 2_900_000) || !base64.matches(log)) return false

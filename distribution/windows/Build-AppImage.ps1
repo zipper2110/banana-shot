@@ -60,7 +60,7 @@ $AnalyticsEndpoint = "$AnalyticsEndpoint".Trim()
 $AnalyticsPrivacyUrl = "$AnalyticsPrivacyUrl".Trim()
 $AnalyticsNoticeVersion = "$AnalyticsNoticeVersion".Trim()
 # The same rules as AnalyticsBuildConfig.fromProperties in the app. Validate-AppImage.ps1 has the same values.
-$expectedNoticeVersion = "2"
+$expectedNoticeVersion = "3"
 $analyticsEndpointPattern = '^https://[^/@?#\s]+/v1/session$'
 $analyticsPrivacyUrlPattern = '^https://[^/@?#\s]+(/[^?#\s]*)?$'
 $analyticsValues = @($AnalyticsEndpoint, $AnalyticsPrivacyUrl, $AnalyticsNoticeVersion) | Where-Object { $_ }

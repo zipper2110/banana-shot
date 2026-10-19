@@ -147,7 +147,7 @@ class DefaultFeedbackPresenter(
         val text = plainText(state)
         val body = if (text.length <= MAIL_BODY_LIMIT) text else {
             copyToClipboard(text)
-            text.take(MAIL_BODY_LIMIT) + "\n\n[" + tr("feedback.mail.tooLong") + "]"
+            FeedbackRules.cut(text, MAIL_BODY_LIMIT) + "\n\n[" + tr("feedback.mail.tooLong") + "]"
         }
         val subject = "BananaShot: " + (state.topic?.title ?: "Feedback")
         val opened = openMail(URI("mailto:$contactEmail?subject=${encode(subject)}&body=${encode(body)}"))

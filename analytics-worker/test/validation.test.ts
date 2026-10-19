@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { ARRAY_ATTRIBUTES, ATTRIBUTE_VALUES } from '../src/attributes';
+import { ARRAY_ATTRIBUTES, ATTRIBUTE_VALUES, ESSENTIAL_ATTRIBUTES, LANGUAGES } from '../src/attributes';
 import { COUNTER_KEYS, ESSENTIAL_COUNTER_KEYS } from '../src/counters';
 import { appVersionText, validateSummary } from '../src/validation';
-import { bodyOf, contractArrayAttributes, contractAttributes, contractCounterKeys, contractEssentialCounterKeys, invalidSummaries, smokeSummary, summary, validSummaries } from './fixtures';
+import { bodyOf, contractArrayAttributes, contractAttributes, contractEssentialAttributes, contractCounterKeys, contractEssentialCounterKeys, invalidSummaries, smokeSummary, summary, validSummaries } from './fixtures';
 
 const accepted = (value: unknown) => 'summary' in validateSummary(value);
 
@@ -27,9 +27,41 @@ describe('attributes', () => {
   const v3 = (attributes: unknown, overrides: Record<string, unknown> = {}) =>
     summary({ schema_version: 3, notice_version: 2, attributes, ...overrides });
 
+  const v4 = (attributes: unknown, overrides: Record<string, unknown> = {}) =>
+    summary({ schema_version: 4, notice_version: 3, attributes, ...overrides });
+
   it('are the attributes of the contract', () => {
     expect(ATTRIBUTE_VALUES).toEqual(contractAttributes);
     expect([...ARRAY_ATTRIBUTES].sort()).toEqual([...contractArrayAttributes].sort());
+    expect([...ESSENTIAL_ATTRIBUTES].sort()).toEqual([...contractEssentialAttributes].sort());
+  });
+
+  it('have one language list for the app language and the Windows language, with "en" and "other"', () => {
+    expect(ATTRIBUTE_VALUES.language).toEqual(ATTRIBUTE_VALUES.os_language);
+    expect(LANGUAGES).toContain('en');
+    expect(LANGUAGES).toContain('es');
+    expect(LANGUAGES).toContain('other');
+    expect(LANGUAGES.every(code => code === 'other' || /^[a-z]{2}$/.test(code))).toBe(true);
+    expect(new Set(LANGUAGES).size).toBe(LANGUAGES.length);
+  });
+
+  it('accept the language attributes in an essential summary of schema version 4, and no other attribute', () => {
+    for (const key of Object.keys(ATTRIBUTE_VALUES)) {
+      const value = ARRAY_ATTRIBUTES.has(key) ? [] : ATTRIBUTE_VALUES[key][0];
+      expect(accepted(v4({ [key]: value }, { level: 'essential' }))).toBe(ESSENTIAL_ATTRIBUTES.has(key));
+      expect(accepted(v4({ [key]: value }))).toBe(true);
+    }
+  });
+
+  it('return the language attributes of an essential summary', () => {
+    const result = validateSummary(v4({ os_language: 'es', language: 'en' }, { level: 'essential' }));
+    expect('summary' in result && result.summary.attributes).toEqual({ language: 'en', os_language: 'es' });
+  });
+
+  it('refuse os_language in schema version 3, and all attributes in an essential summary of schema version 3', () => {
+    expect(accepted(v3({ os_language: 'es' }))).toBe(false);
+    expect(accepted(v3({ language: 'es' }))).toBe(true);
+    expect(accepted(v3({ language: 'en' }, { level: 'essential' }))).toBe(false);
   });
 
   it('are all in one valid fixture, with all values of each array attribute', () => {
@@ -51,7 +83,7 @@ describe('attributes', () => {
   });
 
   it.each(Object.entries(ATTRIBUTE_VALUES).filter(([key]) => !ARRAY_ATTRIBUTES.has(key)))('accepts each value of %s', (key, values) => {
-    for (const value of values) expect(accepted(v3({ [key]: value }))).toBe(true);
+    for (const value of values) expect(accepted(v4({ [key]: value }))).toBe(true);
   });
 
   it.each(['constructor', '__proto__', 'toString'])('refuses the attribute key "%s"', key => {
@@ -133,15 +165,18 @@ describe('schema version', () => {
     expect(validateSummary(summary({ schema_version: 1, level: undefined }))).toEqual({ status: 410 });
   });
 
-  it('accepts version 2 with notice version 1, and version 3 with notice version 2', () => {
+  it('accepts version 2 with notice version 1, version 3 with notice version 2, and version 4 with notice version 3', () => {
     expect(accepted(summary({ schema_version: 2, notice_version: 1 }))).toBe(true);
     expect(accepted(summary({ schema_version: 3, notice_version: 2 }))).toBe(true);
+    expect(accepted(summary({ schema_version: 4, notice_version: 3 }))).toBe(true);
     expect(accepted(summary({ schema_version: 2, notice_version: 2 }))).toBe(false);
     expect(accepted(summary({ schema_version: 3, notice_version: 1 }))).toBe(false);
+    expect(accepted(summary({ schema_version: 3, notice_version: 3 }))).toBe(false);
+    expect(accepted(summary({ schema_version: 4, notice_version: 2 }))).toBe(false);
   });
 
   it('gives 400 for a version above the current version, 0, or a text', () => {
-    expect(validateSummary(summary({ schema_version: 4, notice_version: 2 }))).toEqual({ status: 400 });
+    expect(validateSummary(summary({ schema_version: 5, notice_version: 3 }))).toEqual({ status: 400 });
     expect(validateSummary(summary({ schema_version: 0 }))).toEqual({ status: 400 });
     expect(validateSummary(summary({ schema_version: '2' }))).toEqual({ status: 400 });
   });

@@ -122,14 +122,18 @@ class AnalyticsController(
     }
 
     companion object {
-        /** The production controller: each session sends with [transport]. */
+        /**
+         * The production controller: each session sends with [transport]. [osLanguage] is the Windows display
+         * language. The app start reads it, so that this package does not read the device.
+         */
         fun create(
             config: AnalyticsBuildConfig,
             preferences: AnalyticsPreferences,
             appVersion: String,
+            osLanguage: AnalyticsEvent.Language,
             transport: (AnalyticsBuildConfig.Enabled) -> AnalyticsTransport,
         ): AnalyticsController = AnalyticsController(config, preferences, { enabled, start, level ->
-            EnabledAnalytics(transport(enabled), appVersion, enabled.osFamily, start, level)
+            EnabledAnalytics(transport(enabled), appVersion, enabled.osFamily, osLanguage, start, level)
         })
     }
 }

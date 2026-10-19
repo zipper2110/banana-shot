@@ -60,7 +60,7 @@ internal data class SessionSummary(
     val durationS: Int,
     val activeS: Int,
     val counters: Map<String, Int>,
-    /** The session attributes: a text or a list of texts for each key. Null at the essential level. */
+    /** The session attributes: a text or a list of texts for each key. Null for no `attributes` field. */
     val attributes: Map<String, Any>? = null,
 ) {
     fun toJson(): String = mapper.writeValueAsString(mapper.createObjectNode().apply {

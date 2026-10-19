@@ -24,12 +24,15 @@ reason: the essential level is on by default, and it rests on legitimate
 interest. Update `docs/analytics/legitimate-interest.md` first. Increase the notice version if the new
 key collects a new type of data. The app then asks the user again.
 
-- Notice version: 2 (B-44, 2026-10-09). Version 2 adds the session
-  attributes: the theme, the accent (default or custom), the app language,
-  and the sports of the projects. Version 1 was effective from 6 October 2026
-  (B-10 decision 29).
-- Effective date: 9 October 2026. It is on the site page ("Effective from").
-  When the notice version changes, write the new date.
+- Notice version: 3 (B-11 E2, 2026-10-19). Version 3 moves the app language
+  to the essential level and adds the Windows display language there. Both
+  are codes of a fixed language list, never a region.
+- Version 2 (B-44, 2026-10-09) added the session attributes: the theme, the
+  accent (default or custom), the app language, and the sports of the
+  projects. Version 1 was effective from 6 October 2026 (B-10 decision 29).
+- Effective date: 19 October 2026. It is on the site page ("Effective from").
+  When the notice version changes, write the new date. If the site deploy of
+  version 3 is later, change the date to the deploy date.
 
 The "Version check and updates" section of the same page tells about the
 request to GitHub (`docs/licensing/build-expiry-spec.md`). That request is

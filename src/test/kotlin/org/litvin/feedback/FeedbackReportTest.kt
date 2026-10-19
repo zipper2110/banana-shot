@@ -100,6 +100,45 @@ class FeedbackReportTest {
     }
 
     @Test
+    fun `the language fields follow the contract and are optional`() {
+        val withLanguages = FeedbackReport(id, FeedbackTopic.PROBLEM, "m", null, system.copy(appLanguage = "es", osLanguage = "other"), null, null)
+        val json = mapper.readTree(withLanguages.toJson())
+        assertEquals("es", json["app_language"].textValue())
+        assertEquals("other", json["os_language"].textValue())
+        assertTrue(FeedbackContract.isValid(json))
+        val without = mapper.readTree(report().toJson())
+        assertFalse(without.has("app_language") || without.has("os_language"))
+    }
+
+    @Test
+    fun `the language list of the feedback schema is the list of the analytics contract`() {
+        val analytics = mapper.readTree(kotlin.io.path.Path("analytics-contract/v1/attributes.json").toFile())
+        assertEquals(analytics["attributes"]["os_language"].map { it.textValue() }, FeedbackContract.languages)
+        assertEquals(org.litvin.analytics.AnalyticsEvent.Language.CODES, FeedbackContract.languages)
+    }
+
+    @Test
+    fun `a text in other scripts and with emoji stays the same`() {
+        val message = "Привет, 你好 🎾👍🏽 — ¿Cómo marco un punto?"
+        val json = mapper.readTree(report(message = message).toJson())
+        assertEquals(message, json["message"].textValue())
+        assertTrue(FeedbackContract.isValid(json))
+    }
+
+    @Test
+    fun `a cut never splits an emoji`() {
+        val text = "x".repeat(FeedbackRules.MAX_MESSAGE - 1) + "🎾" + "y"
+        assertEquals(FeedbackRules.MAX_MESSAGE + 2, text.length)
+        val error = FeedbackRules.errorText(text)!!
+        assertEquals(FeedbackRules.MAX_MESSAGE - 1, error.length)
+        assertFalse(Character.isHighSurrogate(error.last()))
+        assertTrue(FeedbackContract.isValid(report(error = error).toJson()))
+        assertEquals("ab", FeedbackRules.cut("ab🎾", 3))
+        assertEquals("ab🎾", FeedbackRules.cut("ab🎾", 4))
+        assertEquals("", FeedbackRules.cut("🎾", 1))
+    }
+
+    @Test
     fun `email check`() {
         assertTrue(FeedbackRules.isValidEmail("a.b+c@sub.example.test"))
         listOf("", "a@b", "a b@c.de", "@c.de", "a@.").forEach { assertFalse(FeedbackRules.isValidEmail(it), it) }

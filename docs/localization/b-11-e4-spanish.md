@@ -33,7 +33,7 @@ are in the plan, "Epics".
 | E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | open |
 | E4-T8 | Fit tests for Spanish | E4-T5 | open |
 | E4-T9 | Queued render job keeps its language | — | open |
-| E4-T10 | The app sends the language `es` | — | open |
+| E4-T10 | The app sends the language `es` | — | in-progress |
 | E4-T11 | Show the language setting | E4-T7 | in-progress |
 | E4-T12 | Windows smoke test in Spanish | E4-T11 | open |
 | E4-T13 | Documentation and release | E4-T1–E4-T12 | open |
@@ -247,7 +247,7 @@ are in the plan, "Epics".
 
 ### E4-T10 The app sends the language `es`
 
-- Status: open
+- Status: in-progress
 - Plan: 10, "Decisions" ("Language values")
 - Value: the author sees how many users use the app in Spanish.
 - Requirements:
@@ -265,7 +265,9 @@ are in the plan, "Epics".
   - A test: with Windows in French and "System", the summary has
     `"language": "en"` and `"os_language": "fr"`.
   - The cockpit shows the first `es` data after the release.
-- Tests: —
+- Tests: the code is in E2-T3 and E2-T5 (`SwingApplicationFactory` sends
+  the primary subtag of the app language). Open: the acceptance tests with
+  the app in Spanish, and the first `es` data in the cockpit.
 
 ### E4-T11 Show the language setting
 

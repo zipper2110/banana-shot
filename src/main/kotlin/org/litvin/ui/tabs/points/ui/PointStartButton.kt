@@ -9,6 +9,7 @@ import kotlin.math.ceil
 import org.litvin.ui.commons.KeyChips
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
+import org.litvin.i18n.tr
 
 /**
  * The Point start button at the left end of the point bar under the video: a title, the start time of the
@@ -48,9 +49,9 @@ internal class PointStartButton(onStart: () -> Unit) : JButton() {
         pending = nextPending
         value = nextValue
         toolTipText = if (pending) {
-            "The point started at $value. Press Q, W, or E at the end of the point to give the winner."
+            tr("points.pointStart.pending.tooltip", "time" to value)
         } else {
-            "Set point start at the playhead [Enter]"
+            tr("points.pointStart.tooltip", "key" to tr("key.enter"))
         }
         repaint()
     }
@@ -92,8 +93,8 @@ internal class PointStartButton(onStart: () -> Unit) : JButton() {
         const val HEIGHT = 40
         private const val PAD_X = 12
         private const val GAP = 10
-        private const val TITLE = "Point start"
-        private const val KEY = "Enter"
+        private val TITLE: String get() = tr("points.pointStart")
+        private val KEY: String get() = tr("key.enter")
         private const val TIME_SAMPLE = "00:00:00.0"
     }
 }

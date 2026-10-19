@@ -40,6 +40,7 @@ import javax.swing.SwingConstants
 import javax.swing.Timer
 import kotlin.math.ceil
 import kotlin.math.max
+import org.litvin.i18n.tr
 
 /*
  * Small parts of the Stats tab. The values come from design/stats-redesign/final.html and its shared.css.
@@ -178,7 +179,7 @@ internal class InVideoCheck(componentName: String) : JCheckBox() {
         rolloverIcon = CheckIcon(checked = false, hover = true)
         selectedIcon = CheckIcon(checked = true, hover = false)
         rolloverSelectedIcon = selectedIcon
-        getAccessibleContext().accessibleName = "In video"
+        getAccessibleContext().accessibleName = tr("stats.table.inVideo")
     }
 
     override fun getPreferredSize() = Dimension(SIZE + PAD * 2, SIZE + PAD * 2)
@@ -346,7 +347,8 @@ internal class ScopeControl(private val onSelect: (Int) -> Unit) : JPanel(null) 
             scores = setScores
             removeAll()
             group = ButtonGroup()
-            val entries = listOf("Match" to "All sets") + setScores.mapIndexed { index, score -> "Set ${index + 1}" to score }
+            val entries = listOf(tr("stats.scope.match") to tr("stats.scope.allSets")) +
+                setScores.mapIndexed { index, score -> tr("override.set", "number" to index + 1) to score }
             entries.forEachIndexed { index, (title, small) ->
                 val button = ScopeButton("stats-scope-$index", title, small)
                 button.addActionListener { onSelect(index) }
@@ -419,8 +421,8 @@ internal class LimitStepper(
         actionMap.put("stepUp", action { step(1) })
         actionMap.put("stepDown", action { step(-1) })
     }
-    private val minus = StepButton(Material2MZ.REMOVE, "Decrease") { step(-1) }
-    private val plus = StepButton(Material2AL.ADD, "Increase") { step(1) }
+    private val minus = StepButton(Material2MZ.REMOVE, tr("stats.limits.decrease")) { step(-1) }
+    private val plus = StepButton(Material2AL.ADD, tr("stats.limits.increase")) { step(1) }
     private var current = initial
 
     /** The value. A new value from the code counts as a change from the user. */

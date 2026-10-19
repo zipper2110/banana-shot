@@ -12,6 +12,8 @@ import javax.swing.JButton
 import javax.swing.Timer
 import kotlin.math.ceil
 import kotlin.math.max
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * A seek button: a lime direction icon, the step ("−5s") and a key chip for each key of its hotkey.
@@ -129,8 +131,8 @@ internal data class PlayButtonStyle(
     val pauseTooltip: String,
 ) {
     companion object {
-        val LARGE = PlayButtonStyle(56, 28, 8.5f, Palette.ON_LIME_MUTED, "SPACE — Play", "SPACE — Pause")
-        val COMPACT = PlayButtonStyle(48, 26, 8f, Palette.ON_LIME_MUTED, "SPACE - Play", "SPACE - Pause")
+        val LARGE get() = PlayButtonStyle(56, 28, 8.5f, Palette.ON_LIME_MUTED, tr("playback.play.tooltip"), tr("playback.pause.tooltip"))
+        val COMPACT get() = PlayButtonStyle(48, 26, 8f, Palette.ON_LIME_MUTED, tr("playback.play.tooltip"), tr("playback.pause.tooltip"))
     }
 }
 
@@ -189,6 +191,6 @@ internal class PlayButton(private val style: PlayButtonStyle = PlayButtonStyle.L
     }
 
     private companion object {
-        const val KEY = "SPACE"
+        val KEY: String get() = DisplayFormats.upper(tr("key.space"))
     }
 }

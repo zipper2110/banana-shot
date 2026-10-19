@@ -41,6 +41,7 @@ import javax.swing.WindowConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.text.JTextComponent
+import org.litvin.i18n.tr
 
 /** Opens the feedback form. One form exists for the window, so the draft stays while the form is closed. */
 class FeedbackLauncher(private val owner: Window?, private val presenter: FeedbackPresenter) {
@@ -66,7 +67,7 @@ class FeedbackLauncher(private val owner: Window?, private val presenter: Feedba
  * a popup over the owner tells that the author has the report.
  */
 internal class FeedbackDialog(owner: Window?, private val presenter: FeedbackPresenter) :
-    JDialog(owner, "Send feedback", Dialog.ModalityType.MODELESS) {
+    JDialog(owner, tr("feedback.title"), Dialog.ModalityType.MODELESS) {
     private val panel = FeedbackPanel(
         presenter,
         onClose = { isVisible = false },
@@ -103,7 +104,7 @@ internal class FeedbackDialog(owner: Window?, private val presenter: FeedbackPre
     }
 }
 
-internal const val SENT_TITLE = "Report sent"
+internal val SENT_TITLE: String get() = tr("feedback.sent")
 
 /** The popup after a successful send: the text with the report ID and only a Close button. Enter and Esc close it. */
 internal fun showSent(owner: Window?, text: String) {
@@ -112,7 +113,7 @@ internal fun showSent(owner: Window?, text: String) {
         MessageKind.HINT,
         SENT_TITLE,
         text,
-        listOf(MessageButton("Close", UiButton.Kind.LIME)),
+        listOf(MessageButton(tr("common.close"), UiButton.Kind.LIME)),
         defaultIndex = 0,
         cancelIndex = 0,
         glyph = Material2AL.CHECK,
@@ -134,7 +135,7 @@ internal class FeedbackPanel(
     /** True while [render] changes the inputs, so the listeners do not send the change back. */
     private var rendering = false
 
-    private val topic = SegmentedChoice("feedback-topic", FeedbackTopic.entries.map { SegmentedChoice.Option(it, it.title) }).apply {
+    private val topic = SegmentedChoice("feedback-topic", FeedbackTopic.entries.map { SegmentedChoice.Option(it, it.label) }).apply {
         onChange { presenter.onIntent(FeedbackIntent.SelectTopic(it)) }
     }
     private val message = JTextArea(7, 40).apply {
@@ -149,13 +150,13 @@ internal class FeedbackPanel(
         onEdit { presenter.onIntent(FeedbackIntent.EditEmail(text)) }
     }
     private val emailError = DialogKit.errorLine("feedback-email-error")
-    private val attachLog = SwitchBox("Attach the log files").apply {
+    private val attachLog = SwitchBox(tr("feedback.attachLog")).apply {
         name = "feedback-attach-log"
         addActionListener { if (!rendering) presenter.onIntent(FeedbackIntent.SetAttachLog(isSelected)) }
     }
-    private val showData = UiButton("Show the data", Material2MZ.VISIBILITY, UiButton.Kind.GHOST, buttonHeight = UiButton.SMALL_HEIGHT).apply {
+    private val showData = UiButton(tr("feedback.showData"), Material2MZ.VISIBILITY, UiButton.Kind.GHOST, buttonHeight = UiButton.SMALL_HEIGHT).apply {
         name = "feedback-show-data"
-        toolTipText = "Show the exact data that the app sends"
+        toolTipText = tr("feedback.showData.tooltip")
         addActionListener { presenter.onIntent(FeedbackIntent.ShowData) }
     }
     private val errorText = JTextArea(3, 40).apply {
@@ -169,23 +170,23 @@ internal class FeedbackPanel(
     private val system = paragraph("", "feedback-system")
     private val status = paragraph("", "feedback-status")
 
-    private val copyReport = UiButton("Copy report", Material2AL.CONTENT_COPY).apply {
+    private val copyReport = UiButton(tr("feedback.copy"), Material2AL.CONTENT_COPY).apply {
         name = "feedback-copy"
         addActionListener { presenter.onIntent(FeedbackIntent.CopyReport) }
     }
-    private val writeEmail = UiButton("Write an email", Material2MZ.MAIL_OUTLINE).apply {
+    private val writeEmail = UiButton(tr("feedback.writeEmail"), Material2MZ.MAIL_OUTLINE).apply {
         name = "feedback-write-email"
         addActionListener { presenter.onIntent(FeedbackIntent.WriteEmail) }
     }
-    private val close = UiButton("Close").apply {
+    private val close = UiButton(tr("common.close")).apply {
         name = "feedback-close"
         addActionListener { onClose() }
     }
-    private val send = UiButton("Send", Material2MZ.SEND, UiButton.Kind.LIME).apply {
+    private val send = UiButton(tr("feedback.send"), Material2MZ.SEND, UiButton.Kind.LIME).apply {
         name = "feedback-send"
         addActionListener { presenter.onIntent(FeedbackIntent.Send) }
     }
-    private val tryAgain = UiButton("Try again", Material2MZ.REFRESH, UiButton.Kind.LIME).apply {
+    private val tryAgain = UiButton(tr("feedback.tryAgain"), Material2MZ.REFRESH, UiButton.Kind.LIME).apply {
         name = "feedback-try-again"
         addActionListener { presenter.onIntent(FeedbackIntent.Send) }
     }
@@ -193,17 +194,17 @@ internal class FeedbackPanel(
     init {
         name = "feedback-panel"
         errorPanel = DialogKit.field(
-            "Error text",
+            tr("feedback.errorText"),
             JPanel(BorderLayout(8, 0)).apply {
                 isOpaque = false
                 add(DialogKit.inputBox(errorText, boxHeight = 64), BorderLayout.CENTER)
-                add(UiButton("Remove", buttonHeight = UiButton.SMALL_HEIGHT).apply {
+                add(UiButton(tr("common.remove"), buttonHeight = UiButton.SMALL_HEIGHT).apply {
                     name = "feedback-remove-error"
-                    toolTipText = "Do not send the error text"
+                    toolTipText = tr("feedback.errorText.remove")
                     addActionListener { presenter.onIntent(FeedbackIntent.RemoveError) }
                 }, BorderLayout.EAST)
             },
-            note = "The app sends it with the report",
+            note = tr("feedback.errorText.note"),
         )
         val logRow = JPanel(BorderLayout(8, 0)).apply {
             isOpaque = false
@@ -214,10 +215,10 @@ internal class FeedbackPanel(
             }, BorderLayout.EAST)
         }
         val form = DialogKit.form(
-            DialogKit.field("Topic", topic),
-            DialogKit.field("Message", DialogKit.inputBox(message, boxHeight = 150, padding = 6) { messageError.text.isNotBlank() }),
+            DialogKit.field(tr("feedback.topic"), topic),
+            DialogKit.field(tr("feedback.message"), DialogKit.inputBox(message, boxHeight = 150, padding = 6) { messageError.text.isNotBlank() }),
             messageError,
-            DialogKit.field("Your email address", DialogKit.inputBox(email) { emailError.text.isNotBlank() }, note = "optional"),
+            DialogKit.field(tr("feedback.email"), DialogKit.inputBox(email) { emailError.text.isNotBlank() }, note = tr("feedback.optional")),
             replyNote,
             emailError,
             logRow,
@@ -230,7 +231,7 @@ internal class FeedbackPanel(
         add(
             DialogKit.content(
                 DialogKit.WIDE,
-                DialogKit.head("Send feedback", "Tell about a problem, an idea, or a question. The author reads each report.", DialogKit.WIDE),
+                DialogKit.head(tr("feedback.title"), tr("feedback.subtitle"), DialogKit.WIDE),
                 form,
                 DialogKit.footer(left = listOf(copyReport, writeEmail), right = listOf(close, send, tryAgain)),
             ),
@@ -255,7 +256,7 @@ internal class FeedbackPanel(
             messageError.text = state.messageError ?: " "
             emailError.text = state.emailError ?: " "
             replyNote.runs = listOf(TextRun(replyNote(state.contactEmail), UiKit.font(12f), Palette.FG_3))
-            system.runs = listOf(TextRun("The app adds: BananaShot ${state.systemSummary}", UiKit.font(12f), Palette.FG_3))
+            system.runs = listOf(TextRun(tr("feedback.appAdds", "system" to "BananaShot ${state.systemSummary}"), UiKit.font(12f), Palette.FG_3))
             status.runs = listOf(TextRun(state.status.ifEmpty { " " }, UiKit.font(12.5f), if (state.statusIsError) Palette.RED_TEXT else Palette.FG_2))
             status.name = "feedback-status"
 
@@ -263,7 +264,7 @@ internal class FeedbackPanel(
             showData.isEnabled = state.showDataEnabled
             send.isVisible = state.canSendOnline && !state.showTryAgain
             send.isEnabled = state.sendEnabled
-            send.text = if (state.phase == FeedbackPhase.SENDING) "Sending…" else "Send"
+            send.text = if (state.phase == FeedbackPhase.SENDING) tr("feedback.sending") else tr("feedback.send")
             tryAgain.isVisible = state.showTryAgain
             copyReport.isVisible = state.showFallbacks
             writeEmail.isVisible = state.showFallbacks
@@ -305,11 +306,8 @@ internal class FeedbackPanel(
     }
 
     private companion object {
-        fun replyNote(contactEmail: String) =
-            "The author can reply only if you give an address. The reply comes from $contactEmail. " +
-                "The app remembers your address for the next report."
-        const val LOG_NOTE = "The log files help to find the cause of a problem. They contain the names and folders of your videos " +
-            "and projects. They do not contain your videos."
+        fun replyNote(contactEmail: String) = tr("feedback.replyNote", "email" to contactEmail)
+        val LOG_NOTE: String get() = tr("feedback.logNote")
 
         fun paragraph(text: String, componentName: String, secondary: Boolean = false): WrapText =
             WrapText(text, UiKit.font(12f), if (secondary) Palette.FG_3 else Palette.FG_2, 1.45f, DialogKit.WIDE - DialogKit.PAD_X * 2).apply {
@@ -319,7 +317,7 @@ internal class FeedbackPanel(
 }
 
 /** The exact data that the app sends, in a read-only text area. */
-private class DataWindow(owner: Window?, text: String) : JDialog(owner, "The data that the app sends", Dialog.ModalityType.APPLICATION_MODAL) {
+private class DataWindow(owner: Window?, text: String) : JDialog(owner, tr("feedback.data.title"), Dialog.ModalityType.APPLICATION_MODAL) {
     init {
         name = "feedback-data-window"
         defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
@@ -341,13 +339,13 @@ private class DataWindow(owner: Window?, text: String) : JDialog(owner, "The dat
         }
         contentPane = JPanel(BorderLayout()).apply {
             background = Palette.OVERLAY
-            add(JLabel("The app sends only this data. It sends it only when you click Send.").apply {
+            add(JLabel(tr("feedback.data.note")).apply {
                 font = UiKit.font(12.5f)
                 foreground = Palette.FG_2
                 border = BorderFactory.createEmptyBorder(12, DialogKit.PAD_X, 8, DialogKit.PAD_X)
             }, BorderLayout.NORTH)
             add(scroll, BorderLayout.CENTER)
-            add(DialogKit.footer(right = listOf(UiButton("Close", kind = UiButton.Kind.LIME).apply {
+            add(DialogKit.footer(right = listOf(UiButton(tr("common.close"), kind = UiButton.Kind.LIME).apply {
                 name = "feedback-data-close"
                 addActionListener { dispose() }
             })), BorderLayout.SOUTH)

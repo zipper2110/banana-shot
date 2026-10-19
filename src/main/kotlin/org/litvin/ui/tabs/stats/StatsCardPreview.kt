@@ -17,6 +17,7 @@ import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import javax.swing.JComponent
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
 
 /**
  * Shows one page of the statistics card in a 16:9 frame, as the exported video shows it.
@@ -53,7 +54,7 @@ class StatsCardPreview : JComponent() {
         }
 
     /** The text that shows when the card has no pages. */
-    var emptyText: String = "Select at least one row with a value."
+    var emptyText: String = tr("stats.card.empty")
 
     init {
         name = "stats-preview"

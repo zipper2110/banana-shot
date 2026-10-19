@@ -29,6 +29,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.ScrollPaneConstants
+import org.litvin.i18n.tr
 
 /**
  * The Stats tab: the match statistics of the project, for the full match or for one set.
@@ -84,7 +85,7 @@ class SwingStatsPanel(
         body.add(statsView(), CARD_STATS)
         body.add(emptyView, CARD_EMPTY)
         add(body, BorderLayout.CENTER)
-        showEmpty(StatsEmptyView.Kind.NO_PROJECT, "No project", "Open a project in the Projects tab.")
+        showEmpty(StatsEmptyView.Kind.NO_PROJECT, tr("stats.empty.noProject"), tr("stats.empty.noProject.text"))
     }
 
     fun setProjectManifest(path: String?) {
@@ -98,20 +99,20 @@ class SwingStatsPanel(
 
     /** Reads the project again and shows the latest statistics. */
     fun onActivated() {
-        val dir = projectDir ?: return showEmpty(StatsEmptyView.Kind.NO_PROJECT, "No project", "Open a project in the Projects tab.")
+        val dir = projectDir ?: return showEmpty(StatsEmptyView.Kind.NO_PROJECT, tr("stats.empty.noProject"), tr("stats.empty.noProject.text"))
         val loaded = try {
             settings = StatsIO.readForProjectDir(dir)
             StatsReport.load(dir)
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot read the statistics of $dir" }
-            return showEmpty(StatsEmptyView.Kind.ERROR, "Cannot read the statistics", failure.message ?: failure.toString())
+            return showEmpty(StatsEmptyView.Kind.ERROR, tr("stats.error.read"), failure.message ?: failure.toString())
         }
         report = loaded
         if (!loaded.hasScoredPoints) {
             return showEmpty(
                 StatsEmptyView.Kind.NO_SCORED_POINTS,
-                "No scored points",
-                "Score the points in the Points tab. The statistics then show here.",
+                tr("stats.empty.noScoredPoints"),
+                tr("stats.empty.noScoredPoints.text"),
             )
         }
         if (scope > loaded.sets.size) scope = 0
@@ -196,10 +197,9 @@ class SwingStatsPanel(
         table.showScopes(report.setScores(), scope)
         val stats = if (scope == 0) report.match else report.sets[scope - 1]
         coverage.lines = listOfNotNull(
-            "Based on ${stats.scoredPoints} of ${stats.points} points. The other points have no winner."
+            tr("stats.coverage.scored", "scored" to stats.scoredPoints, "total" to stats.points)
                 .takeIf { stats.scoredPoints < stats.points },
-            (if (report.pointsAfterMatchEnd == 1) "The statistics do not use the point after the end of the match."
-            else "The statistics do not use the ${report.pointsAfterMatchEnd} points after the end of the match.")
+            tr("stats.coverage.afterEnd", "count" to report.pointsAfterMatchEnd)
                 .takeIf { report.pointsAfterMatchEnd > 0 },
         )
         table.chart.names = names
@@ -241,13 +241,10 @@ class SwingStatsPanel(
 
     /** A longer explanation of a row, or null when the label is sufficient. */
     private fun description(stat: MatchStat): String? = when (stat) {
-        MatchStat.SHORT_POINTS_WON -> "The points that last ${settings.normalized().shortPointMaxSeconds} s or less, " +
-            "from the start mark to the end mark."
-        MatchStat.LONG_POINTS_WON -> "The points that last ${settings.normalized().longPointMinSeconds} s or more, " +
-            "from the start mark to the end mark."
-        MatchStat.RETURN_GAMES_WON -> "The games that the opponent served and lost (breaks)."
-        MatchStat.DURATION -> "The time from the start of the first point with a winner to the end of the last point " +
-            "with a winner. It is not the length of the video."
+        MatchStat.SHORT_POINTS_WON -> tr("stats.description.short", "seconds" to settings.normalized().shortPointMaxSeconds)
+        MatchStat.LONG_POINTS_WON -> tr("stats.description.long", "seconds" to settings.normalized().longPointMinSeconds)
+        MatchStat.RETURN_GAMES_WON -> tr("stats.description.returnGames")
+        MatchStat.DURATION -> tr("stats.description.duration")
         else -> null
     }
 
@@ -263,8 +260,8 @@ class SwingStatsPanel(
         preview.pages = StatsCard.pages(content)
         val rowCount = content.rows.size
         cardColumn.showSummary(
-            "${content.title} · $rowCount ${if (rowCount == 1) "row" else "rows"}" +
-                if (content.momentum != null) " and the momentum chart" else "",
+            if (content.momentum != null) tr("stats.card.summary.momentum", "title" to content.title, "count" to rowCount)
+            else tr("stats.card.summary", "title" to content.title, "count" to rowCount),
         )
         showPreviewPage(preview.page)
     }
@@ -315,7 +312,7 @@ class SwingStatsPanel(
             settings = updated
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
-            dialogs.showError(this, failure.message ?: failure.toString(), "Cannot save the statistics setup")
+            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
         }
         // The rows update in place, so the steppers keep the focus.
         showRows()
@@ -336,7 +333,7 @@ class SwingStatsPanel(
             StatsIO.writeForProjectDir(dir, settings)
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
-            dialogs.showError(this, failure.message ?: failure.toString(), "Cannot save the statistics setup")
+            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
         }
     }
 
@@ -350,7 +347,7 @@ class SwingStatsPanel(
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
             table.momentumCheck.isSelected = !selected
-            dialogs.showError(this, failure.message ?: failure.toString(), "Cannot save the statistics setup")
+            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
         }
     }
 
@@ -366,7 +363,7 @@ class SwingStatsPanel(
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
             check.isSelected = !selected
-            dialogs.showError(this, failure.message ?: failure.toString(), "Cannot save the statistics setup")
+            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
         }
     }
 

@@ -32,13 +32,14 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.WindowConstants
+import org.litvin.i18n.tr
 
 /**
  * The Help window. It does not block the app. The layout comes from design/dialogs-redesign/help.html:
  * the page list with the icons and the groups of the sidebar on the left, and the page on the right.
  * [onTellUs] opens the feedback form with the topic "Question" (T3 of B-8). Without it, the pages have no such line.
  */
-class HelpDialog(owner: Window?, onTellUs: (() -> Unit)? = null) : JDialog(owner, "${AppInfo.NAME} Help", ModalityType.MODELESS) {
+class HelpDialog(owner: Window?, onTellUs: (() -> Unit)? = null) : JDialog(owner, tr("help.window.title", "app" to AppInfo.NAME), ModalityType.MODELESS) {
     private val helpPanel = HelpPanel(onTellUs)
 
     init {
@@ -66,7 +67,7 @@ class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayou
     private val navigation = ToolNav(
         "help-navigation",
         HelpPage.entries.map { page -> ToolNavItem(page, page.title, iconOf(page), captionOf(page)) },
-        markerText = "This tab",
+        markerText = tr("help.thisTab"),
     ) { renderPage(it) }
     private val page = ToolPage().apply { name = "help-content" }
     private val scroll = page.inScrollPane()
@@ -103,17 +104,17 @@ class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayou
         column.add(ToolPage.title(help.title), gapAfter = 6)
         column.add(WrapText(content.summary, UiKit.font(15f), Palette.FG_2, 1.55f, ToolPage.MAX_WIDTH), gapAfter = 20)
 
-        section(column, "Main workflow", Material2MZ.TIMELINE, content.workflow.mapIndexed { index, step ->
+        section(column, tr("help.section.workflow"), Material2MZ.TIMELINE, content.workflow.mapIndexed { index, step ->
             LeadRow(StepNumber(index + 1), bodyText(step), 26, 10, Insets(6, 0, 6, 0))
         })
-        section(column, "Available actions", Material2MZ.TOUCH_APP, content.actions.map { action ->
+        section(column, tr("help.section.actions"), Material2MZ.TOUCH_APP, content.actions.map { action ->
             LeadRow(bulletIcon(Material2AL.CHEVRON_RIGHT, Palette.FG_3), bodyText(action), 18, 8, Insets(5, 0, 5, 0))
         })
-        section(column, "Good to know", Material2AL.LIGHTBULB, content.goodToKnow.map { fact ->
+        section(column, tr("help.section.notes"), Material2AL.LIGHTBULB, content.goodToKnow.map { fact ->
             LeadRow(bulletIcon(Material2AL.INFO, Palette.SAGE), bodyText(fact), 18, 8, Insets(5, 0, 5, 0))
         })
         if (content.shortcuts.isNotEmpty()) {
-            section(column, "Keyboard shortcuts", Material2AL.KEYBOARD, listOf(shortcutTable(content.shortcuts)))
+            section(column, tr("help.section.shortcuts"), Material2AL.KEYBOARD, listOf(shortcutTable(content.shortcuts)))
         }
         onTellUs?.let { column.add(tellUsRow(it)) }
 
@@ -134,13 +135,13 @@ class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayou
         name = "help-tell-us-row"
         isOpaque = false
         (layout as FlowLayout).alignOnBaseline = true
-        add(JLabel("Is something not clear?").apply {
+        add(JLabel(tr("help.notClear")).apply {
             font = UiKit.font(14f)
             foreground = Palette.FG_2
         })
-        add(UiButton("Tell us.", kind = UiButton.Kind.GHOST, fontSize = 14f).apply {
+        add(UiButton(tr("help.tellUs"), kind = UiButton.Kind.GHOST, fontSize = 14f).apply {
             name = "help-tell-us"
-            toolTipText = "Send a question to the author"
+            toolTipText = tr("help.tellUs.tooltip")
             addActionListener { onClick() }
         })
     }
@@ -217,8 +218,8 @@ class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayou
 
         /** The group captions of the sidebar. */
         fun captionOf(page: HelpPage): String? = when (page) {
-            HelpPage.POINTS -> "Match"
-            HelpPage.COLORS -> "Video"
+            HelpPage.POINTS -> tr("nav.group.match")
+            HelpPage.COLORS -> tr("nav.group.video")
             HelpPage.EXPORT -> " "
             else -> null
         }

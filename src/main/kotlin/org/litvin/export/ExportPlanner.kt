@@ -17,6 +17,7 @@ import org.litvin.stats.SetSummaryCard
 import org.litvin.stats.StatsCardVideo
 import org.litvin.stats.StatsSettingsV1
 import java.io.File
+import org.litvin.i18n.tr
 
 data class ExportResolution(
     val label: String,
@@ -209,10 +210,10 @@ object ExportPlanner {
         validPoints: List<PointV1>,
     ): ExportReadiness {
         if (!hasProject) {
-            return ExportReadiness(false, "Open a project first (Projects -> Open).")
+            return ExportReadiness(false, tr("export.readiness.noProject"))
         }
         if (!sourceVideoExists) {
-            return ExportReadiness(false, "Source video not found. Set it in Projects/Points.")
+            return ExportReadiness(false, tr("export.readiness.noSource"))
         }
         if (!idleTrim) return ExportReadiness(true)
 
@@ -220,11 +221,11 @@ object ExportPlanner {
         return when {
             favoriteOnly && keptPoints.isEmpty() -> ExportReadiness(
                 false,
-                "No valid favorite points are available. Mark a point as favorite, or select Only points.",
+                tr("export.readiness.noFavorites"),
             )
             keptPoints.isEmpty() -> ExportReadiness(
                 false,
-                "The project has no valid points. Mark points on the Points tab, or select Full video.",
+                tr("export.readiness.noPoints"),
             )
             else -> ExportReadiness(true)
         }

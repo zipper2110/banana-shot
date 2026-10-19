@@ -10,6 +10,7 @@ import java.awt.geom.Rectangle2D
 import java.awt.geom.RoundRectangle2D
 import javax.swing.JButton
 import javax.swing.JPanel
+import org.litvin.i18n.tr
 
 /**
  * The Dark / Mid / Light control. Each option is a small picture of the app in the colors of its theme: a sidebar,
@@ -46,7 +47,7 @@ internal class ThemeSwitch(componentName: String, private val settings: ThemeSet
         private val colors = Palette.previewColors(theme.background)
 
         init {
-            toolTipText = "${theme.title} theme"
+            toolTipText = tr("theme.tooltip", "theme" to theme.title)
             getAccessibleContext().accessibleName = toolTipText
             isContentAreaFilled = false
             isBorderPainted = false

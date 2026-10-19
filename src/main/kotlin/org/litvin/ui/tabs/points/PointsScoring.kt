@@ -47,6 +47,8 @@ import java.awt.geom.Rectangle2D
 import javax.swing.AbstractAction
 import javax.swing.JComponent
 import javax.swing.KeyStroke
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The scoring of the Points tab.
@@ -93,9 +95,9 @@ internal class PointsScoring(
         onOverrideScore = { openOverride() },
     )
 
-    private val scoreSettingsButton = ScoringButton("Scoring settings", Material2MZ.TUNE, alignLeft = true).apply {
+    private val scoreSettingsButton = ScoringButton(tr("points.scoringSettings"), Material2MZ.TUNE, alignLeft = true).apply {
         name = "points-score-settings"
-        toolTipText = "Set the names and colors, the sport, the match format, and manual scoring"
+        toolTipText = tr("points.scoringSettings.tooltip")
         addActionListener { openScoreSettings() }
     }
 
@@ -108,9 +110,9 @@ internal class PointsScoring(
             BorderFactory.createEmptyBorder(10, 12, 10, 12),
         )
         add(scoreSettingsButton)
-        add(ScoringButton("Scoreboard style", alignLeft = true, glyph = ScoringUi::scoreboardIcon).apply {
+        add(ScoringButton(tr("points.scoreboardStyle"), alignLeft = true, glyph = ScoringUi::scoreboardIcon).apply {
             name = "points-scoreboard-style"
-            toolTipText = "Set the scoreboard style, title, position, and size"
+            toolTipText = tr("points.scoreboardStyle.tooltip")
             addActionListener { openScoreboardStyle() }
         })
     }
@@ -227,10 +229,10 @@ internal class PointsScoring(
         if (index < 0) return null
         val players = players()
         val state = states.getOrNull(index)
-        // A point that wins the set also wins a game, so it shows SET only.
+        // A point that wins the set also wins a game, so it shows SET only. The Boolean is true for a set.
         val milestone = when {
-            state?.lastSetWonBy != null -> "SET" to state.lastSetWonBy
-            state?.lastGameWonBy != null -> "GAME" to state.lastGameWonBy
+            state?.lastSetWonBy != null -> true to state.lastSetWonBy
+            state?.lastGameWonBy != null -> false to state.lastGameWonBy
             else -> null
         }
         val server = when (score.serverMarks[pointId]) {
@@ -241,15 +243,19 @@ internal class PointsScoring(
         val overridden = score.scoreOverrides[pointId]?.isEmpty() == false
         if (milestone == null && server == null && !overridden) return null
         return PointMarks(
-            milestone = milestone?.first,
+            milestone = milestone?.let { (set, _) ->
+                DisplayFormats.upper(if (set) tr("points.badge.set") else tr("points.badge.game"))
+            },
+            milestoneIsSet = milestone?.first == true,
             milestoneColor = milestone?.let { players.color(it.second) } ?: Palette.FG,
             milestoneOnColor = milestone?.let { ScoringUi.onPlayer(players.color(it.second)) } ?: Palette.BG,
-            milestoneTip = milestone?.let { (text, player) ->
-                "${if (text == "SET") "Set" else "Game"} won by ${players.name(player)}"
+            milestoneTip = milestone?.let { (set, player) ->
+                if (set) tr("points.badge.set.tooltip", "name" to players.name(player))
+                else tr("points.badge.game.tooltip", "name" to players.name(player))
             }.orEmpty(),
             serveColor = server?.let(players::color),
             serveOnBadge = server?.let { ScoringUi.needsBadge(players.color(it)) } ?: false,
-            serveTip = server?.let { "Serve marked: ${players.name(it)} serves" }.orEmpty(),
+            serveTip = server?.let { tr("points.serveMark.tooltip", "name" to players.name(it)) }.orEmpty(),
             overridden = overridden,
         )
     }
@@ -561,10 +567,9 @@ internal class PointsScoring(
         /** The most sets that Override score offers in manual scoring. */
         const val MAX_SETS = 5
 
-        const val SCORE_SETTINGS_HINT = "You can change the scoring settings at any time with this button."
-        const val SCORING_KEYS_HINT = "Press R to go to the next point and play it. Press Shift+R to go back. Q, W, and E give the point."
-        const val SERVE_MARK_HINT = "Press S or click this button on one point to mark the player or team that serves. " +
-            "The app then tracks the serve for the whole match, and Stats shows the serve and break point statistics."
+        val SCORE_SETTINGS_HINT: String get() = tr("points.hint.scoreSettings")
+        val SCORING_KEYS_HINT: String get() = tr("points.hint.scoringKeys")
+        val SERVE_MARK_HINT: String get() = tr("points.hint.serveMark")
 
         /** The serve hint shows when this number of points has a winner. */
         const val SERVE_HINT_POINTS = 3

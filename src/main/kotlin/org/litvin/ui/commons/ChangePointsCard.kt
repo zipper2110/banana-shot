@@ -10,6 +10,7 @@ import java.awt.FlowLayout
 import javax.swing.BorderFactory
 import javax.swing.JLabel
 import javax.swing.JPanel
+import org.litvin.i18n.tr
 
 /**
  * The change points of a tab (B-47) and the playhead. The active change point is the last one at or before the
@@ -30,7 +31,7 @@ data class ChangePointsState(val times: List<Long> = emptyList(), val playheadMs
  * "-previous", "-next" and "-hint".
  */
 internal class ChangePointsCard private constructor(private val parts: Parts) :
-    GroupCard("${parts.namePrefix}-group-change-points", "Change points", Material2MZ.TIMELINE, parts.rows, ROW_HEIGHT) {
+    GroupCard("${parts.namePrefix}-group-change-points", tr("changePoints.title"), Material2MZ.TIMELINE, parts.rows, ROW_HEIGHT) {
 
     constructor(
         namePrefix: String,
@@ -51,9 +52,9 @@ internal class ChangePointsCard private constructor(private val parts: Parts) :
         val times = state.times
         val index = state.activeIndex
         parts.status.text = when {
-            times.isEmpty() -> "No change points"
-            index < 0 -> "Usual values, before the first change point"
-            else -> "Change point ${index + 1} of ${times.size}, at ${format(times[index])}"
+            times.isEmpty() -> tr("changePoints.none")
+            index < 0 -> tr("changePoints.beforeFirst")
+            else -> tr("changePoints.current", "number" to index + 1, "count" to times.size, "time" to format(times[index]))
         }
         parts.status.foreground = if (index >= 0) Palette.YELLOW else Palette.FG_2
         parts.add.isEnabled = state.canAdd
@@ -76,10 +77,10 @@ internal class ChangePointsCard private constructor(private val parts: Parts) :
             font = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
             foreground = Palette.FG_2
         }
-        val add = button("add", "Add here", Material2AL.ADD, "Add a change point at the playhead", onAdd)
-        val remove = button("remove", "Remove", Material2AL.DELETE, "Remove the change point that the controls edit", onRemove)
-        val previous = button("previous", "", Material2AL.CHEVRON_LEFT, "Go to the previous change point", onPrevious)
-        val next = button("next", "", Material2AL.CHEVRON_RIGHT, "Go to the next change point", onNext)
+        val add = button("add", tr("changePoints.add"), Material2AL.ADD, tr("changePoints.add.tooltip"), onAdd)
+        val remove = button("remove", tr("changePoints.remove"), Material2AL.DELETE, tr("changePoints.remove.tooltip"), onRemove)
+        val previous = button("previous", "", Material2AL.CHEVRON_LEFT, tr("changePoints.previous.tooltip"), onPrevious)
+        val next = button("next", "", Material2AL.CHEVRON_RIGHT, tr("changePoints.next.tooltip"), onNext)
 
         private val buttons = JPanel(FlowLayout(FlowLayout.LEFT, BUTTON_GAP, (ROW_HEIGHT - UiButton.SMALL_HEIGHT) / 2)).apply {
             isOpaque = false

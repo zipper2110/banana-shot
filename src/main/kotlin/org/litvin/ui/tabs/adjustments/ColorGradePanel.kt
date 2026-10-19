@@ -18,6 +18,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSlider
 import kotlin.math.ceil
+import org.litvin.i18n.tr
 
 /**
  * The Colors sub-tab of the Colors & Transform tab: a header with the changed count and "Reset all",
@@ -30,10 +31,10 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
         ColorRow(control, first = ColorControl.entries.first { it.group == control.group } == control)
     }
 
-    val resetButton = ResetAllButton("colors-reset", "Reset Color Grade to defaults")
+    val resetButton = ResetAllButton("colors-reset", tr("adjust.colorGrade.reset"))
 
     private val statusLabel = JLabel().apply { name = "colors-status" }
-    private val header = SidePanelHeader("Color grade", statusLabel, resetButton)
+    private val header = SidePanelHeader(tr("adjust.colorGrade"), statusLabel, resetButton)
 
     private val notice = LivePreviewNotice().apply {
         name = "colors-live-preview-notice"
@@ -76,9 +77,8 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
         const val PANEL_WIDTH = SIDE_PANEL_WIDTH
 
         /** The tooltip note that each slider gets when the player cannot show a live color preview. */
-        const val UNSUPPORTED_TIP =
-            "Live preview for this control may not be available on this system; values will still be saved for export."
-        const val NOTICE_TEXT = "Live preview may not be available on this system. The values are still saved for export."
+        val UNSUPPORTED_TIP: String get() = tr("adjust.livePreview.tooltip")
+        val NOTICE_TEXT: String get() = tr("adjust.livePreview.notice")
     }
 }
 

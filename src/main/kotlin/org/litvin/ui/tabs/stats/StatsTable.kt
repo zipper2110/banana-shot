@@ -35,6 +35,8 @@ import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 import kotlin.math.max
 import kotlin.math.min
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The columns of the table: the value of player 1, the statistic, the value of player 2 and "In video".
@@ -137,7 +139,7 @@ internal class StatsTableHeader : JPanel(null) {
             }
             dot(left + PAD, colors.p1)
             dot(names.p2.x - DOT_GAP - DOT, colors.p2)
-            val statistic = "Statistic"
+            val statistic = tr("stats.table.statistic")
             val statisticFont = UiKit.font(15f)
             UiKit.drawText(
                 g2, statistic, statisticFont, Palette.FG,
@@ -145,7 +147,7 @@ internal class StatsTableHeader : JPanel(null) {
             )
             g2.translate(left, 0)
             paintLane(g2, cols.lane, cols.end, height - 1)
-            val caption = "IN VIDEO"
+            val caption = DisplayFormats.upper(tr("stats.table.inVideo"))
             val captionWidth = laneIcon.iconWidth + 4 + UiKit.textWidth(caption, CAPTION_FONT)
             val x = cols.lane + (StatsColumns.LANE - captionWidth) / 2f
             laneIcon.paintIcon(this, g2, x.toInt(), (height - 1 - laneIcon.iconHeight) / 2)
@@ -245,7 +247,7 @@ internal class MomentumRow(private val chart: MomentumChart, private val check: 
             paintLane(g2, cols.lane, width, height)
             val titleFont = UiKit.font(13f, UiKit.Weight.BOLD)
             val helpFont = UiKit.font(11.5f)
-            val title = "Momentum"
+            val title = tr("stats.group.momentum")
             val baseline = UiKit.baseline(titleFont, PAD_TOP.toFloat(), TITLE.toFloat())
             g2.font = titleFont
             g2.color = Palette.SAGE
@@ -263,7 +265,7 @@ internal class MomentumRow(private val chart: MomentumChart, private val check: 
     }
 
     companion object {
-        const val HELP = "Click the chart to open a point in the Points tab."
+        val HELP: String get() = tr("stats.momentum.help")
         private const val PAD_X = 12
         private const val PAD_TOP = 12
         private const val PAD_BOTTOM = 8
@@ -288,9 +290,9 @@ internal class GroupHeaderRow(val group: StatGroup) : JPanel(null), HeightForWid
     }
 
     fun showCount(selected: Int, total: Int) {
-        countText = "$selected of $total"
+        countText = tr("stats.table.groupCount", "selected" to selected, "total" to total)
         hasSelected = selected > 0
-        getAccessibleContext().accessibleName = "${group.title}, $countText in the video"
+        getAccessibleContext().accessibleName = tr("stats.table.groupCount.accessible", "group" to group.title, "count" to countText)
         repaint()
     }
 
@@ -303,7 +305,7 @@ internal class GroupHeaderRow(val group: StatGroup) : JPanel(null), HeightForWid
         try {
             val cols = StatsColumns.of(width)
             paintLane(g2, cols.lane, width, height)
-            val title = group.title.uppercase()
+            val title = DisplayFormats.upper(group.title)
             val titleWidth = UiKit.textWidth(title, TITLE_FONT)
             val lineTop = PAD_TOP.toFloat()
             val free = (cols.lane - PAD_X * 2 - titleWidth - GAP * 2).coerceAtLeast(0f)
@@ -346,8 +348,8 @@ internal class GroupHeaderRow(val group: StatGroup) : JPanel(null), HeightForWid
 internal class LimitsBox(shortLimit: LimitStepper, longLimit: LimitStepper) : JPanel(null) {
     private val items: List<List<JComponent>> = listOf(
         listOf(JLabel(UiKit.icon(Material2MZ.TUNE, 16, Palette.SAGE))),
-        listOf(text("Short point: up to"), shortLimit, text("s")),
-        listOf(text("Long point:"), longLimit, text("s or more")),
+        listOf(text(tr("stats.limits.short")), shortLimit, text(tr("stats.limits.short.unit"))),
+        listOf(text(tr("stats.limits.long")), longLimit, text(tr("stats.limits.long.unit"))),
     )
 
     init {
@@ -424,7 +426,7 @@ internal class LimitsBox(shortLimit: LimitStepper, longLimit: LimitStepper) : JP
     }
 
     companion object {
-        const val TOOLTIP = "Set the limits for your marks. Some marks start before the serve or end after the point."
+        val TOOLTIP: String get() = tr("stats.limits.tooltip")
         private const val PAD_X = 12
         private const val PAD_Y = 7
         private const val LINE = 24
@@ -514,7 +516,7 @@ internal class ValueCell(
             }
             this.pointId = pointId
             // A tooltip adds a mouse listener, so only a value with a point has one.
-            toolTipText = if (pointId != null) "Open this point in the Points tab." else null
+            toolTipText = if (pointId != null) tr("stats.value.open.tooltip") else null
             cursor = Cursor.getPredefinedCursor(if (pointId != null) Cursor.HAND_CURSOR else Cursor.DEFAULT_CURSOR)
         }
         main.foreground = if (hover) Palette.FG_STRONG else color
@@ -641,8 +643,7 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
             }
         }
         check.isSelected = inVideo
-        check.toolTipText = if (row.available) "Show this row in the exported video." else
-            "Show this row in the exported video. The video leaves out the row while it has no value."
+        check.toolTipText = if (row.available) tr("stats.inVideo.tooltip") else tr("stats.inVideo.noValue.tooltip")
         selected = inVideo
         revalidate()
         repaint()
@@ -762,7 +763,7 @@ internal class StatsTable(
     val scopeRow = ScopeRow(scope)
     val chart = MomentumChart(onOpenPoint)
     val momentumCheck = InVideoCheck("stats-in-video-momentum").apply {
-        toolTipText = "Add a page with this chart to the statistics card of the exported video."
+        toolTipText = tr("stats.momentum.inVideo.tooltip")
         addActionListener { onMomentumInVideo(isSelected) }
     }
     val shortLimit = LimitStepper(

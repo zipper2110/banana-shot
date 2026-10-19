@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import org.litvin.i18n.tr
 
 /**
  * Task 3.8 — Render job model and global queue manager (MVP)
@@ -278,7 +279,7 @@ object RenderQueueManager {
                 val srcFile = java.io.File(job.sourcePath)
                 if (!srcFile.exists()) {
                     job.status = RenderStatus.FAILED
-                    job.failureReason = "Source file missing: ${job.sourcePath}"
+                    job.failureReason = tr("export.failure.sourceMissing", "path" to job.sourcePath)
                     failRun(job, RenderFailReason.SOURCE_MISSING)
                     job.stderrTail = null
                     job.updatedAtEpochMs = System.currentTimeMillis()
@@ -297,7 +298,11 @@ object RenderQueueManager {
                     probe.delete()
                 } catch (ex: Throwable) {
                     job.status = RenderStatus.FAILED
-                    job.failureReason = "Cannot write to output directory: ${outDir.absolutePath} — ${ex.javaClass.simpleName}: ${ex.message}"
+                    job.failureReason = tr(
+                        "export.failure.outputDirectory",
+                        "path" to outDir.absolutePath,
+                        "detail" to "${ex.javaClass.simpleName}: ${ex.message}",
+                    )
                     failRun(job, RenderFailReason.OUTPUT_WRITE)
                     job.stderrTail = null
                     job.updatedAtEpochMs = System.currentTimeMillis()
@@ -575,7 +580,10 @@ object RenderQueueManager {
                             } catch (_: Throwable) {
                                 null
                             }
-                            job.failureReason = "Failed to finalize output file move: ${moveFailure.javaClass.simpleName}: ${moveFailure.message}"
+                            job.failureReason = tr(
+                                "export.failure.move",
+                                "detail" to "${moveFailure.javaClass.simpleName}: ${moveFailure.message}",
+                            )
                             failRun(job, RenderFailReason.OUTPUT_WRITE)
                             if (partOut.exists()) partOut.delete()
                             try { java.io.File(partOut.absolutePath + ".ass").delete() } catch (_: Throwable) { }
@@ -591,9 +599,9 @@ object RenderQueueManager {
                         job.stderrTail = tailCopy
                         val brief = tailCopy.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.lastOrNull()
                         job.failureReason = if (brief != null) {
-                            "ffmpeg exited with code $exit — $brief"
+                            tr("export.failure.ffmpeg", "code" to exit.toString(), "detail" to brief)
                         } else {
-                            "ffmpeg exited with code $exit (see logs)"
+                            tr("export.failure.ffmpeg.noDetail", "code" to exit.toString())
                         }
                         logger.error { "ffmpeg exited with code $exit for job ${job.id}. Stderr tail:\n$tailCopy" }
                         notifyObservers()

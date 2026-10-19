@@ -29,6 +29,7 @@ import javax.swing.JViewport
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
 import javax.swing.SwingUtilities
+import org.litvin.i18n.tr
 
 /**
  * The points table of the side column: one row for each marked point and each comment, in time order.
@@ -260,7 +261,7 @@ class PointsTableView(
     }
 
     private companion object {
-        const val EMPTY_TEXT = "No marked points yet."
+        val EMPTY_TEXT: String get() = tr("points.empty")
         const val EMPTY_HEIGHT = 80
     }
 }

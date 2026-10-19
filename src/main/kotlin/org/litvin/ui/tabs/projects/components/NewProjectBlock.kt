@@ -19,15 +19,16 @@ import javax.swing.JPanel
 import javax.swing.ToolTipManager
 import kotlin.math.ceil
 import org.litvin.ui.commons.Palette
+import org.litvin.i18n.tr
 
 /**
  * The "New project" block of the start panel: the workflow of the app in short steps, and the "Import new match" button.
  * The steps come from the Overview help page. Each step shows the tab where the user does it.
  */
 internal class NewProjectBlock(contentWidth: Int, onImportNewMatch: () -> Unit) : JPanel() {
-    val importButton: JButton = ProjectsButton("Import new match", Material2AL.ADD, ProjectsButton.Kind.LIME, 38, 13f).apply {
+    val importButton: JButton = ProjectsButton(tr("projects.import"), Material2AL.ADD, ProjectsButton.Kind.LIME, 38, 13f).apply {
         name = "projects-import-match"
-        toolTipText = "Select a match video and create a new project"
+        toolTipText = tr("projects.import.tooltip")
         stretch = true
         alignmentX = Component.LEFT_ALIGNMENT
         addActionListener { onImportNewMatch() }
@@ -39,7 +40,7 @@ internal class NewProjectBlock(contentWidth: Int, onImportNewMatch: () -> Unit) 
         alignmentX = Component.LEFT_ALIGNMENT
         border = BorderFactory.createEmptyBorder(PADDING, PADDING, PADDING, PADDING)
         val innerWidth = contentWidth - 2 * PADDING
-        add(WrapLabel("From a match video to a finished video:", ProjectsUi.font(12f), Palette.FG_2, innerWidth, 1.4f))
+        add(WrapLabel(tr("projects.workflow.intro"), ProjectsUi.font(12f), Palette.FG_2, innerWidth, 1.4f))
         add(Gap(0, 10).leftAligned())
         add(WorkflowSteps(innerWidth))
         add(Gap(0, 14).leftAligned())
@@ -94,16 +95,16 @@ private object Chips {
  */
 private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
     private val steps = listOf(
-        WorkflowStep("Import a match video", listOf("Projects" to UiStyles.folderIcon(13))),
-        WorkflowStep("Mark the points", listOf("Points" to UiStyles.pointsIcon(13))),
-        WorkflowStep("Score each point", listOf("Points" to UiStyles.pointsIcon(13))),
-        WorkflowStep("Review the statistics", listOf("Stats" to UiStyles.statsIcon(13))),
-        WorkflowStep("Export the video", listOf("Export" to UiStyles.exportIcon(13))),
-        WorkflowStep("Make a YouTube thumbnail", listOf("Thumbnail" to UiStyles.thumbnailIcon(13))),
+        WorkflowStep(tr("projects.workflow.import"), listOf(tr("nav.projects") to UiStyles.folderIcon(13))),
+        WorkflowStep(tr("projects.workflow.mark"), listOf(tr("nav.points") to UiStyles.pointsIcon(13))),
+        WorkflowStep(tr("projects.workflow.score"), listOf(tr("nav.points") to UiStyles.pointsIcon(13))),
+        WorkflowStep(tr("projects.workflow.review"), listOf(tr("nav.stats") to UiStyles.statsIcon(13))),
+        WorkflowStep(tr("projects.workflow.export"), listOf(tr("nav.export") to UiStyles.exportIcon(13))),
+        WorkflowStep(tr("projects.workflow.thumbnail"), listOf(tr("nav.thumbnail") to UiStyles.thumbnailIcon(13))),
     )
     private val optional = WorkflowStep(
-        "Tune the image at any time",
-        listOf("Colors & Transform" to UiStyles.cropRotateIcon(13)),
+        tr("projects.workflow.tune"),
+        listOf(tr("tab.adjust") to UiStyles.cropRotateIcon(13)),
     )
     private val stepFont = ProjectsUi.font(12.5f)
     private val numberFont = ProjectsUi.font(11f, ProjectsUi.Weight.BOLD)
@@ -122,7 +123,7 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
 
     override fun getToolTipText(event: MouseEvent): String? =
-        if (event.y >= optionalTop) "Optionally tune the colors and frame the video in Colors & Transform. You can do this at any time." else null
+        if (event.y >= optionalTop) tr("projects.workflow.tune.tooltip") else null
 
     override fun paintComponent(g: Graphics) {
         val g2 = ProjectsUi.smooth(g)
@@ -159,7 +160,7 @@ private class WorkflowSteps(private val contentWidth: Int) : JComponent() {
             g2.drawOval(0, circleY, CIRCLE - 1, CIRCLE - 1)
             scheduleIcon.paintIcon(this, g2, (CIRCLE - scheduleIcon.iconWidth) / 2, circleY + (CIRCLE - scheduleIcon.iconHeight) / 2)
             ProjectsUi.drawText(g2, optional.text, stepFont, Palette.FG_2, textX, top.toFloat(), ROW.toFloat())
-            val note = " (optional)"
+            val note = " " + tr("projects.workflow.optional")
             val noteX = textX + ProjectsUi.textWidth(optional.text, stepFont)
             ProjectsUi.drawText(g2, note, stepFont, Palette.FG_3, noteX, top.toFloat(), ROW.toFloat())
             paintChips(g2, optional, textX.toInt(), top + ROW + 5, false)

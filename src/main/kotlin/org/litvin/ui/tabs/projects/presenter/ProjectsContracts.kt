@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.projects.presenter
 
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Sport
+import org.litvin.i18n.tr
 
 interface ProjectsView {
     fun render(state: ProjectsViewState)
@@ -24,7 +25,7 @@ data class ProjectsViewState(
     val canGoPrevious: Boolean = false,
     val canGoNext: Boolean = false,
     val isPaginationVisible: Boolean = false,
-    val emptyListMessage: String = "Click \"Import new match\" to create one.",
+    val emptyListMessage: String = tr("projects.empty.text"),
 )
 
 data class ProjectCardState(

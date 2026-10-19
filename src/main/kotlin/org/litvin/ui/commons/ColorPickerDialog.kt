@@ -34,6 +34,8 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The color picker of the app, in place of JColorChooser: design/dialogs-redesign/color-picker.html.
@@ -74,7 +76,7 @@ internal object ColorPickerDialog {
         val picker = Picker(Color(initial.rgb and 0xFFFFFF))
         if (onLiveChange != null) picker.onChange = onLiveChange
         if (custom) picker.showCustom()
-        val ok = UiButton("OK", kind = UiButton.Kind.LIME).apply {
+        val ok = UiButton(tr("common.ok"), kind = UiButton.Kind.LIME).apply {
             name = "color-picker-ok"
             addActionListener {
                 onOk(picker.color)
@@ -82,13 +84,13 @@ internal object ColorPickerDialog {
                 dialog.dispose()
             }
         }
-        val cancel = UiButton("Cancel").apply {
+        val cancel = UiButton(tr("common.cancel")).apply {
             name = "color-picker-cancel"
             addActionListener { dialog.dispose() }
         }
-        val reset = UiButton("Reset", Feather.ROTATE_CCW, UiButton.Kind.QUIET).apply {
+        val reset = UiButton(tr("colorPicker.reset"), Feather.ROTATE_CCW, UiButton.Kind.QUIET).apply {
             name = "color-picker-reset"
-            toolTipText = "Go back to the current color"
+            toolTipText = tr("colorPicker.reset.tooltip")
             addActionListener { picker.setColor(picker.initial) }
         }
         picker.onConfirm = { ok.doClick() }
@@ -129,7 +131,7 @@ internal object ColorPickerDialog {
         private val compare = Compare()
         private val view = SegmentedChoice(
             "color-picker-view",
-            listOf(SegmentedChoice.Option("swatches", "Swatches"), SegmentedChoice.Option("custom", "Custom")),
+            listOf(SegmentedChoice.Option("swatches", tr("colorPicker.swatches")), SegmentedChoice.Option("custom", tr("colorPicker.custom"))),
         )
         private val cards = CardLayout()
         private val panes = JPanel(cards).apply { isOpaque = false }
@@ -166,11 +168,11 @@ internal object ColorPickerDialog {
             view.selected = "swatches"
             view.onChange { cards.show(panes, it) }
 
-            val recentCaption = JLabel("RECENT").apply {
+            val recentCaption = JLabel(DisplayFormats.upper(tr("colorPicker.recent"))).apply {
                 font = UiKit.trackedFont(10.5f, 0.1, UiKit.Weight.BOLD)
                 foreground = Palette.FG_3
             }
-            val recentEmpty = JLabel("The colors that you select show here.").apply {
+            val recentEmpty = JLabel(tr("colorPicker.recent.empty")).apply {
                 font = UiKit.font(12f)
                 foreground = Palette.FG_3
                 preferredSize = Dimension(0, 26)
@@ -183,7 +185,7 @@ internal object ColorPickerDialog {
 
             val hexRow = JPanel(null).apply {
                 isOpaque = false
-                val label = JLabel("Hex").apply {
+                val label = JLabel(tr("colorPicker.hex")).apply {
                     font = UiKit.font(11f)
                     foreground = Palette.FG_3
                 }
@@ -259,16 +261,29 @@ internal object ColorPickerDialog {
         private fun fields(): List<Pair<String, Int>> {
             val c = color
             return when (model) {
-                "RGB" -> listOf("Red" to c.red, "Green" to c.green, "Blue" to c.blue)
-                "HSV" -> listOf("Hue" to h.roundToInt() % 360, "Saturation" to (s * 100).roundToInt(), "Value" to (v * 100).roundToInt())
+                "RGB" -> listOf(tr("colorPicker.red") to c.red, tr("colorPicker.green") to c.green, tr("colorPicker.blue") to c.blue)
+                "HSV" -> listOf(
+                    tr("colorPicker.hue") to h.roundToInt() % 360,
+                    tr("colorPicker.saturation") to (s * 100).roundToInt(),
+                    tr("colorPicker.value") to (v * 100).roundToInt(),
+                )
                 "HSL" -> {
                     val (_, sl, l) = hsl(c)
-                    listOf("Hue" to h.roundToInt() % 360, "Saturation" to (sl * 100).roundToInt(), "Lightness" to (l * 100).roundToInt())
+                    listOf(
+                        tr("colorPicker.hue") to h.roundToInt() % 360,
+                        tr("colorPicker.saturation") to (sl * 100).roundToInt(),
+                        tr("colorPicker.lightness") to (l * 100).roundToInt(),
+                    )
                 }
                 else -> {
                     val k = 1f - max(c.red, max(c.green, c.blue)) / 255f
                     fun part(x: Int) = if (k >= 1f) 0 else (((1f - x / 255f - k) / (1f - k)) * 100).roundToInt()
-                    listOf("Cyan" to part(c.red), "Magenta" to part(c.green), "Yellow" to part(c.blue), "Black" to (k * 100).roundToInt())
+                    listOf(
+                        tr("colorPicker.cyan") to part(c.red),
+                        tr("colorPicker.magenta") to part(c.green),
+                        tr("colorPicker.yellow") to part(c.blue),
+                        tr("colorPicker.black") to (k * 100).roundToInt(),
+                    )
                 }
             }
         }
@@ -339,7 +354,7 @@ internal object ColorPickerDialog {
                 }
 
             init {
-                toolTipText = "Current color. Click to use it again."
+                toolTipText = tr("colorPicker.current.tooltip")
                 addMouseListener(object : MouseAdapter() {
                     override fun mouseClicked(e: MouseEvent) {
                         if (e.x < width / 2) setColor(initial)
@@ -356,8 +371,8 @@ internal object ColorPickerDialog {
                 try {
                     val clip = RoundRectangle2D.Double(0.0, 0.0, width.toDouble(), height.toDouble(), 12.0, 12.0)
                     g2.clip(clip)
-                    chip(g2, 0, width / 2, initial, "CURRENT")
-                    chip(g2, width / 2, width - width / 2, newColor, "NEW")
+                    chip(g2, 0, width / 2, initial, DisplayFormats.upper(tr("colorPicker.current")))
+                    chip(g2, width / 2, width - width / 2, newColor, DisplayFormats.upper(tr("colorPicker.new")))
                     g2.clip = null
                     UiKit.paintBox(g2, 0, 0, width, height, 6, null, Palette.LINE_2)
                 } finally {
@@ -427,7 +442,7 @@ internal object ColorPickerDialog {
             init {
                 isFocusable = true
                 cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                toolTipText = "Hue"
+                toolTipText = tr("colorPicker.hue")
                 val mouse = object : MouseAdapter() {
                     override fun mousePressed(e: MouseEvent) {
                         requestFocusInWindow()

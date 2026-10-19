@@ -44,6 +44,7 @@ import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
+import org.litvin.i18n.tr
 
 /**
  * Passive Swing view for the Projects tab.
@@ -65,7 +66,7 @@ class SwingProjectsPanel(
     private val listCards = CardLayout()
     private val listArea = JPanel(listCards).apply { isOpaque = false }
     private val emptyListSlot = JPanel(BorderLayout()).apply { isOpaque = false }
-    private val hint = JLabel("Click a row to open the project").apply {
+    private val hint = JLabel(tr("projects.list.hint")).apply {
         name = "projects-list-hint"
         font = ProjectsUi.font(12f)
         foreground = Palette.FG_3
@@ -123,7 +124,7 @@ class SwingProjectsPanel(
     override fun renderEffect(effect: ProjectsViewEffect) {
         when (effect) {
             is ProjectsViewEffect.ChooseSourceVideo -> {
-                chooseSourceVideo("Select Source Video", effect.initialDirectory)?.let { path ->
+                chooseSourceVideo(tr("projects.chooseVideo"), effect.initialDirectory)?.let { path ->
                     presenter.onIntent(ProjectsIntent.SourceVideoSelected(path))
                 }
             }
@@ -138,7 +139,7 @@ class SwingProjectsPanel(
                     ),
                     chooseVideo = { dialog, current ->
                         chooseSourceVideo(
-                            "Select Source Video",
+                            tr("projects.chooseVideo"),
                             File(current).parent ?: File(effect.sourceVideoPath).parent,
                             suggestedFile = File(current),
                             parent = dialog,
@@ -152,7 +153,7 @@ class SwingProjectsPanel(
             }
             is ProjectsViewEffect.ChooseMissingSourceVideo -> {
                 chooseSourceVideo(
-                    "Select Source Video for Project: ${effect.projectName}",
+                    tr("projects.chooseVideoFor", "project" to effect.projectName),
                     effect.initialDirectory,
                 )?.let { path ->
                     presenter.onIntent(ProjectsIntent.MissingSourceVideoSelected(effect.manifestPath, path))
@@ -167,9 +168,12 @@ class SwingProjectsPanel(
     }
 
     private fun buildListSection(): JComponent {
-        val title = JLabel("Recent projects").apply {
+        val title = JLabel(tr("projects.recent")).apply {
             font = ProjectsUi.font(18f, ProjectsUi.Weight.SEMIBOLD)
             foreground = Palette.FG
+            // A few pixels more than the measured text, so that the last letter is never cut.
+            preferredSize = Dimension(preferredSize.width + 4, preferredSize.height)
+            minimumSize = preferredSize
         }
         val head = JPanel().apply {
             isOpaque = false
@@ -183,7 +187,7 @@ class SwingProjectsPanel(
             add(Box.createVerticalStrut(30))
             themeSettings?.let { settings ->
                 add(Box.createHorizontalStrut(28))
-                add(JLabel("App theme").apply {
+                add(JLabel(tr("projects.appTheme")).apply {
                     font = ProjectsUi.font(12.5f)
                     foreground = Palette.FG_3
                     // A few pixels more than the measured text, so that the last letter is never cut.
@@ -290,13 +294,12 @@ class SwingProjectsPanel(
     private fun locateMovedSourceVideo(effect: ProjectsViewEffect.LocateMovedSourceVideo) {
         val locate = dialogs.confirm(
             parent = this,
-            message = "The video of the project is not at this location anymore:\n${effect.oldPath}\n\n" +
-                "Locate the video to open the project.",
-            title = "Cannot open project",
-            confirmLabel = "Locate video...",
+            message = tr("projects.videoMoved.text", "path" to effect.oldPath),
+            title = tr("projects.error.open"),
+            confirmLabel = tr("projects.videoMoved.locate"),
         )
         if (!locate) return
-        chooseSourceVideo("Locate the Video of Project: ${effect.projectName}", effect.initialDirectory)?.let { path ->
+        chooseSourceVideo(tr("projects.locateVideoFor", "project" to effect.projectName), effect.initialDirectory)?.let { path ->
             presenter.onIntent(ProjectsIntent.MissingSourceVideoSelected(effect.manifestPath, path))
         }
     }

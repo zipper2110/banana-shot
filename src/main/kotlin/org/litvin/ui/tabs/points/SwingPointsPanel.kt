@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.*
 import kotlin.math.abs
 import kotlin.math.max
+import org.litvin.i18n.tr
 
 /**
  * Swing Points editor panel. The layout comes from design/points-redesign/final.html:
@@ -140,7 +141,7 @@ class SwingPointsPanel(
             cardsView.repaint()
             timeline.repaint()
         },
-        onError = { message -> dialogs.showError(this, message, "Scoring failed") },
+        onError = { message -> dialogs.showError(this, message, tr("points.error.scoring")) },
         onOverlayChanged = { refreshOverlay() },
         onOutcomeRequest = { outcome -> endPointWithWinner(outcome) },
         loadFrame = { onLoaded ->
@@ -217,7 +218,7 @@ class SwingPointsPanel(
         } catch (t: Throwable) {
             if (!loadErrorShown) {
                 loadErrorShown = true
-                dialogs.showError(this, t.message ?: t.toString(), "Failed to load project")
+                dialogs.showError(this, t.message ?: t.toString(), tr("points.error.load"))
 
             }
         }
@@ -322,7 +323,7 @@ class SwingPointsPanel(
                 EdlIO.writeForProjectDir(snapshot.projectDir, snapshot.edl)
             } catch (t: Throwable) {
                 // Surface error on EDT
-                EventQueue.invokeLater { dialogs.showError(this, t.message ?: t.toString(), "Autosave failed") }
+                EventQueue.invokeLater { dialogs.showError(this, t.message ?: t.toString(), tr("points.error.autosave")) }
             }
         })
 
@@ -556,8 +557,8 @@ class SwingPointsPanel(
             if (src.isNullOrBlank() || !File(src).exists()) {
                 dialogs.showError(
                     this,
-                    "Select source video for project: **${manifest.name}**",
-                    "Source video missing",
+                    tr("points.error.videoMissing", "name" to manifest.name),
+                    tr("points.error.videoMissing.title"),
                 )
                 return
             }
@@ -570,7 +571,7 @@ class SwingPointsPanel(
             loadErrorShown = false
             ensurePlayerLoaded()
         } catch (t: Throwable) {
-            dialogs.showError(this, t.message ?: t.toString(), "Failed to load project")
+            dialogs.showError(this, t.message ?: t.toString(), tr("points.error.load"))
         }
     }
 
@@ -612,7 +613,7 @@ class SwingPointsPanel(
         try {
             loadEdl(EdlIO.readForProjectDir(dir))
         } catch (t: Throwable) {
-            dialogs.showError(this, t.message ?: t.toString(), "Failed to refresh points and events")
+            dialogs.showError(this, t.message ?: t.toString(), tr("points.error.refresh"))
             return
         }
 
@@ -765,7 +766,7 @@ class SwingPointsPanel(
     private fun Long.toCommentIntOrNull(): Int? = takeIf { it in 0..Int.MAX_VALUE.toLong() }?.toInt()
 
     private fun showCommentRangeError() {
-        dialogs.showWarning(this, "Comment times must fit within the supported video timeline.", "Invalid comment")
+        dialogs.showWarning(this, tr("points.error.commentRange"), tr("points.error.commentRange.title"))
     }
 
     private fun jumpToSelected() {
@@ -1014,7 +1015,6 @@ class SwingPointsPanel(
         /** A point stays active while the playhead is this close to it. */
         const val NEAR_POINT_MS = 2_000L
 
-        const val POINT_ROW_HINT = "Click a row to go to the start of the point. " +
-            "Hover on a row to show Favorite, Edit, and Delete."
+        val POINT_ROW_HINT: String get() = tr("points.hint.pointRow")
     }
 }

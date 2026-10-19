@@ -1,5 +1,6 @@
 package org.litvin.points.components
 
+import org.litvin.i18n.tr
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.points.CommentDefaultsV1
 import org.litvin.points.CommentStyle
@@ -63,7 +64,7 @@ class CommentDispatcher {
     ): CommentV1? {
         val requestedColor = colorHex?.let(EdlIO::normalizeColorHex)
         if (colorHex != null && requestedColor == null) {
-            notifyUser("Comment color must use #RRGGBB format")
+            notifyUser(tr("dispatch.comment.color"))
             return null
         }
         val color = requestedColor ?: defaults.colorHex
@@ -87,13 +88,13 @@ class CommentDispatcher {
     fun update(id: Int, patch: CommentPatch): Boolean {
         val index = comments.indexOfFirst { it.id == id }
         if (index < 0) {
-            notifyUser("Comment #$id was not found")
+            notifyUser(tr("dispatch.comment.notFound"))
             return false
         }
         val existing = comments[index]
         val requestedColor = patch.colorHex?.let(EdlIO::normalizeColorHex)
         if (patch.colorHex != null && requestedColor == null) {
-            notifyUser("Comment color must use #RRGGBB format")
+            notifyUser(tr("dispatch.comment.color"))
             return false
         }
         val updated = existing.copy(
@@ -115,7 +116,7 @@ class CommentDispatcher {
     fun delete(id: Int): Boolean {
         val index = comments.indexOfFirst { it.id == id }
         if (index < 0) {
-            notifyUser("Comment #$id was not found")
+            notifyUser(tr("dispatch.comment.notFound"))
             return false
         }
         comments.removeAt(index)
@@ -127,10 +128,10 @@ class CommentDispatcher {
 
     private fun isValid(startMs: Int, durationMs: Int, text: String, colorHex: String): Boolean {
         val message = when {
-            startMs < 0 -> "Comment start time cannot be negative"
-            durationMs <= 0 -> "Comment duration must be greater than zero"
-            text.isBlank() -> "Comment text cannot be blank"
-            EdlIO.normalizeColorHex(colorHex) == null -> "Comment color must use #RRGGBB format"
+            startMs < 0 -> tr("dispatch.comment.negativeStart")
+            durationMs <= 0 -> tr("dispatch.comment.duration")
+            text.isBlank() -> tr("dispatch.comment.blank")
+            EdlIO.normalizeColorHex(colorHex) == null -> tr("dispatch.comment.color")
             else -> null
         }
         if (message == null) return true

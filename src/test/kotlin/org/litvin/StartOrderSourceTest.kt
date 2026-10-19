@@ -31,7 +31,7 @@ class StartOrderSourceTest {
     fun `main exits for a Velopack hook before the lock and before the services`() {
         val proxy = mainBody.indexOf("java.net.useSystemProxies")
         val hook = mainBody.indexOf("VelopackHooks.isHookProcess(args)")
-        val lock = mainBody.indexOf("takeInstanceLock()")
+        val lock = mainBody.indexOf("takeInstanceLock(")
         val services = mainBody.indexOf("AppServices.production()")
 
         assertTrue(proxy in 0 until hook, "The proxy property comes before the hook check.")
@@ -41,7 +41,7 @@ class StartOrderSourceTest {
 
     @Test
     fun `main starts the expiry check after the lock and the services, and before the main window`() {
-        val lock = mainBody.indexOf("takeInstanceLock()")
+        val lock = mainBody.indexOf("takeInstanceLock(")
         val services = mainBody.indexOf("AppServices.production()")
         val expiry = mainBody.indexOf("services.expiry.start()")
         val dateCheck = mainBody.indexOf("services.expiry.runDateCheck()")

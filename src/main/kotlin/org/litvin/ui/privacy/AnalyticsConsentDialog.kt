@@ -23,6 +23,7 @@ import java.awt.event.WindowEvent
 import java.net.URI
 import javax.swing.JDialog
 import javax.swing.JLabel
+import org.litvin.i18n.tr
 
 /**
  * The question about the level of the usage statistics at the app start. It does not block the app.
@@ -31,19 +32,14 @@ import javax.swing.JLabel
 object AnalyticsConsentDialog {
     private const val WIDTH = DialogKit.MEDIUM
     private const val TEXT_WIDTH = WIDTH - 84
-    private const val TITLE = "Usage statistics"
-    internal const val ESSENTIAL_BUTTON = "Essential only"
-    internal const val EXTENDED_BUTTON = "Send extended"
-    internal const val LATER = "You can change this later, or turn off all statistics, in More → Privacy."
+    private val TITLE: String get() = tr("privacy.analytics.title")
+    internal val ESSENTIAL_BUTTON: String get() = tr("consent.essential")
+    internal val EXTENDED_BUTTON: String get() = tr("consent.extended")
+    internal val LATER: String get() = tr("consent.later")
 
     /** The paragraphs. They must agree with the privacy notice (site/public/privacy/index.html). */
-    internal val ESSENTIAL =
-        "By default, ${AppInfo.NAME} sends essential, anonymous usage statistics: the app version, the OS family, " +
-            "the session length, and the number of errors. They tell us how many people use the app."
-    internal const val EXTENDED =
-        "You can also send extended statistics: anonymous counts of the tabs and features you use, " +
-            "the export results, your theme and language settings, and the sports of your projects. " +
-            "They help us decide what to improve next."
+    internal val ESSENTIAL: String get() = tr("consent.essential.text", "app" to AppInfo.NAME)
+    internal val EXTENDED: String get() = tr("consent.extended.text")
 
     /** Shows the question. [onClosed] runs after the window closes, with any answer. */
     fun show(
@@ -76,13 +72,13 @@ object AnalyticsConsentDialog {
 
         val fact = LeadRow(
             JLabel(UiKit.icon(Material2AL.BLOCK, 16, Palette.RED)).apply { preferredSize = Dimension(18, 19) },
-            WrapText("We never collect video, project names, paths, scores, or personal details.", UiKit.font(12.5f), Palette.FG_2, 1.5f, TEXT_WIDTH),
+            WrapText(tr("consent.never"), UiKit.font(12.5f), Palette.FG_2, 1.5f, TEXT_WIDTH),
             18,
             8,
         )
         // The address shows only when the app cannot open the browser, so the user can copy it.
         val copyLine = Stack(gap = 4).apply {
-            add(WrapText("Copy this URL:", UiKit.font(12f), Palette.FG_3, 1.4f, TEXT_WIDTH))
+            add(WrapText(tr("consent.copyUrl"), UiKit.font(12f), Palette.FG_3, 1.4f, TEXT_WIDTH))
             add(PathBox(privacyUrl.toString()))
             isVisible = false
         }
@@ -95,7 +91,7 @@ object AnalyticsConsentDialog {
             later,
         )
 
-        val read = UiButton("Read privacy notice", Material2MZ.OPEN_IN_NEW, UiButton.Kind.GHOST).apply {
+        val read = UiButton(tr("consent.read"), Material2MZ.OPEN_IN_NEW, UiButton.Kind.GHOST).apply {
             addActionListener {
                 if (!linkOpener.open(privacyUrl) && !copyLine.isVisible) {
                     copyLine.isVisible = true

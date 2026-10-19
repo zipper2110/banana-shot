@@ -11,6 +11,7 @@ import java.net.URI
 import java.net.URLEncoder
 import java.util.UUID
 import java.util.concurrent.Executor
+import org.litvin.i18n.tr
 
 /**
  * The feedback form (T2 of B-8). It keeps the draft while the dialog is closed, so the user does not lose the text.
@@ -103,7 +104,7 @@ class DefaultFeedbackPresenter(
         val sender = sender ?: return
         val draft = state
         preferences.email = draft.email
-        update(draft.copy(phase = FeedbackPhase.SENDING, status = "Sending the report…", statusIsError = false))
+        update(draft.copy(phase = FeedbackPhase.SENDING, status = tr("feedback.status.sending"), statusIsError = false))
         val id = reportId
         background.execute {
             val result = runCatching { sender.send(report(draft, logFor(id, draft.attachLog))) }
@@ -139,20 +140,20 @@ class DefaultFeedbackPresenter(
 
     private fun copyReport() {
         copyToClipboard(plainText(state))
-        update(state.copy(status = "The report is on the clipboard. Paste it in an email to $contactEmail.", statusIsError = false))
+        update(state.copy(status = tr("feedback.status.copied", "email" to contactEmail), statusIsError = false))
     }
 
     private fun writeEmail() {
         val text = plainText(state)
         val body = if (text.length <= MAIL_BODY_LIMIT) text else {
             copyToClipboard(text)
-            text.take(MAIL_BODY_LIMIT) + "\n\n[The text is too long for this email. The full report is on the clipboard. Paste it here.]"
+            text.take(MAIL_BODY_LIMIT) + "\n\n[" + tr("feedback.mail.tooLong") + "]"
         }
         val subject = "BananaShot: " + (state.topic?.title ?: "Feedback")
         val opened = openMail(URI("mailto:$contactEmail?subject=${encode(subject)}&body=${encode(body)}"))
         update(
-            if (opened) state.copy(status = "Your email app opened with the report. Send the email from there.", statusIsError = false)
-            else state.copy(status = "The app cannot open your email app. Copy the report and send it to $contactEmail.", statusIsError = true),
+            if (opened) state.copy(status = tr("feedback.status.mailOpened"), statusIsError = false)
+            else state.copy(status = tr("feedback.status.mailFailed", "email" to contactEmail), statusIsError = true),
         )
     }
 
@@ -205,9 +206,9 @@ class DefaultFeedbackPresenter(
     private fun derive(s: FeedbackViewState): FeedbackViewState {
         val email = s.email.trim()
         val emailError = if (email.isEmpty() || FeedbackRules.isValidEmail(email)) null
-        else "Write the full address, for example name@example.com, or leave the field empty."
+        else tr("feedback.error.email")
         val messageError = if (s.message.length > FeedbackRules.MAX_MESSAGE)
-            "The message is too long: ${s.message.length} of ${FeedbackRules.MAX_MESSAGE} characters." else null
+            tr("feedback.error.tooLong", "length" to s.message.length, "max" to FeedbackRules.MAX_MESSAGE) else null
         val complete = s.topic != null && s.message.isNotBlank() && messageError == null && emailError == null
         val editable = s.phase == FeedbackPhase.EDITING || s.phase == FeedbackPhase.FAILED
         val tryAgain = s.phase == FeedbackPhase.FAILED && failure?.canTryAgain == true && complete
@@ -225,23 +226,24 @@ class DefaultFeedbackPresenter(
     }
 
     private fun thanks(id: UUID, email: String): String = buildString {
-        append("Thank you. The author has your report. Report ID: $id.")
-        if (email.isBlank()) append(" You gave no email address, so the author cannot reply.")
-        else append(" The author can reply to ${email.trim()}.")
+        append(tr("feedback.thanks", "id" to id.toString()))
+        append(" ")
+        if (email.isBlank()) append(tr("feedback.thanks.noEmail"))
+        else append(tr("feedback.thanks.email", "email" to email.trim()))
     }
 
     private companion object {
         /** An email app can refuse a longer `mailto:` link. */
         const val MAIL_BODY_LIMIT = 1500
-        const val NO_ENDPOINT = "This version of the app cannot send reports. Copy the report or write an email."
+        val NO_ENDPOINT: String get() = tr("feedback.status.noEndpoint")
 
         fun failureText(failure: FeedbackFailure): String = when (failure) {
-            FeedbackFailure.NO_CONNECTION -> "The app cannot connect to the server. Check the internet connection and try again."
-            FeedbackFailure.SERVER -> "The server cannot take the report now. Try again later."
-            FeedbackFailure.DISABLED -> "The server does not take reports now. Copy the report or write an email."
-            FeedbackFailure.RATE_LIMITED -> "Too many reports came from your network in this hour. Try again later or write an email."
-            FeedbackFailure.REFUSED -> "The server refused the report. Copy the report or write an email."
-        } + " The app keeps your text."
+            FeedbackFailure.NO_CONNECTION -> tr("feedback.failure.connection")
+            FeedbackFailure.SERVER -> tr("feedback.failure.server")
+            FeedbackFailure.DISABLED -> tr("feedback.failure.disabled")
+            FeedbackFailure.RATE_LIMITED -> tr("feedback.failure.rateLimited")
+            FeedbackFailure.REFUSED -> tr("feedback.failure.refused")
+        } + " " + tr("feedback.failure.keepsText")
 
         fun encode(text: String): String = URLEncoder.encode(text, Charsets.UTF_8).replace("+", "%20")
     }

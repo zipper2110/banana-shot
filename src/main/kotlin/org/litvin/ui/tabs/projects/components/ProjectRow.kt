@@ -27,6 +27,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
+import org.litvin.i18n.tr
 
 /**
  * One row of the projects table: the status icon, the name, the video path, the figures and the row actions.
@@ -60,9 +61,9 @@ internal class ProjectRow(
     private val openButton: JButton? = if (isCurrent) {
         null
     } else {
-        ProjectsButton("Open", buttonHeight = 26, fontSize = 12f, limeHover = true).apply {
+        ProjectsButton(tr("common.open"), buttonHeight = 26, fontSize = 12f, limeHover = true).apply {
             name = "projects-open-${project.id}"
-            toolTipText = "Open the project and continue in the Points tab. A click on the row also opens it."
+            toolTipText = tr("projects.row.open.tooltip")
             addActionListener { onOpen() }
         }
     }
@@ -146,7 +147,7 @@ internal class ProjectRow(
     private fun statusCell(): JComponent {
         val missingMessage = project.stats?.videoMissingMessage
         val (ikon: Ikon, color: Color, tip: String?) = when {
-            isCurrent -> Triple(Material2MZ.PLAY_CIRCLE_FILLED, Palette.LIME, "Open project")
+            isCurrent -> Triple(Material2MZ.PLAY_CIRCLE_FILLED, Palette.LIME, tr("projects.row.current"))
             missingMessage != null -> Triple(Material2OutlinedMZ.VIDEOCAM_OFF, Palette.RED, missingMessage)
             !project.hasVideo -> Triple(Material2OutlinedAL.DESCRIPTION, Palette.FG_3, null)
             else -> Triple(Material2OutlinedMZ.MOVIE, Palette.FG_3, null)
@@ -160,16 +161,16 @@ internal class ProjectRow(
 
     private fun actions(project: ProjectCardState, onRename: () -> Unit, onDelete: () -> Unit): JComponent {
         val iconColor = { if (hovered) Palette.FG_2 else Palette.FG_3 }
-        val rename = ProjectsIconButton(Material2AL.EDIT, "Rename project", restColor = iconColor).apply {
+        val rename = ProjectsIconButton(Material2AL.EDIT, tr("projects.rename.tooltip"), restColor = iconColor).apply {
             name = "projects-rename-${project.id}"
             addActionListener { onRename() }
         }
-        val delete = ProjectsIconButton(Material2AL.DELETE, "Delete project", restColor = iconColor).apply {
+        val delete = ProjectsIconButton(Material2AL.DELETE, tr("projects.delete.title"), restColor = iconColor).apply {
             name = "projects-delete-${project.id}"
             addActionListener { onDelete() }
             if (isCurrent) {
                 isEnabled = false
-                toolTipText = "You cannot delete the open project."
+                toolTipText = tr("projects.delete.open")
             }
         }
         return JPanel().apply {
@@ -239,7 +240,7 @@ internal class PathCell(private val path: String, private val missingMessage: St
     }
 
     private companion object {
-        const val MISSING = "Video not found"
+        val MISSING: String get() = tr("projects.row.videoMissing")
     }
 }
 
@@ -322,7 +323,7 @@ internal class ScoredCell(
     private val figureFont = ProjectsUi.font(12.5f)
 
     init {
-        if (scored != null && total != null) toolTipText = "$scored of $total points have a score"
+        if (scored != null && total != null) toolTipText = tr("projects.row.scored.tooltip", "scored" to scored, "total" to total)
     }
 
     override fun paintComponent(g: Graphics) {

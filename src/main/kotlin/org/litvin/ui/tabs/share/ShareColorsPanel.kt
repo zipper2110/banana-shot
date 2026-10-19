@@ -27,6 +27,8 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSlider
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The Colors tab of the side column: the color sets, then one row for each color role of the style.
@@ -41,8 +43,8 @@ internal class ShareColorsPanel(
     private val onResetColors: () -> Unit,
 ) : Stack(pad = Insets(14, 16, 16, 16), gap = 12) {
     private val setButtons = ThumbnailColorSets.all.map { set -> ColorSetButton(set).apply { addActionListener { onSet(set.id) } } }
-    private val changed = ShareUi.label("Changed", 12f, Palette.YELLOW)
-    private val reset = LinkButton("share-reset-colors", "Use the style colors")
+    private val changed = ShareUi.label(tr("share.colors.changed"), 12f, Palette.YELLOW)
+    private val reset = LinkButton("share-reset-colors", tr("share.colors.reset"))
     private val roles = Stack(gap = 12)
     private var rolesFor: ThumbnailStyle? = null
     private val rows = HashMap<ColorRole, RoleRow>()
@@ -54,7 +56,7 @@ internal class ShareColorsPanel(
         name = "share-colors"
         add(JPanel(BorderLayout()).apply {
             isOpaque = false
-            add(ShareUi.sectionTitle("Color set"), BorderLayout.WEST)
+            add(ShareUi.sectionTitle(tr("share.colors.set")), BorderLayout.WEST)
             add(JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
                 isOpaque = false
                 add(changed)
@@ -67,7 +69,7 @@ internal class ShareColorsPanel(
         }, gapAfter = 14)
         add(Divider(), gapAfter = 14)
         add(roles)
-        add(WrapText("\"Auto\" makes the text dark or white, so that it stays readable on the color under it.", UiKit.font(11.5f), Palette.FG_3, 1.4f, 300))
+        add(WrapText(tr("share.colors.autoNote"), UiKit.font(11.5f), Palette.FG_3, 1.4f, 300))
         reset.addActionListener { onResetColors() }
     }
 
@@ -100,7 +102,7 @@ internal class ShareColorsPanel(
                 updating = false
             }
         }
-        strengthValue?.text = "${(k * 100).roundToInt()}%"
+        strengthValue?.text = "${DisplayFormats.integer((k * 100).roundToInt())}%"
         changed.isVisible = customized
         reset.isVisible = look?.colorsEdited == true
         revalidate()
@@ -109,12 +111,12 @@ internal class ShareColorsPanel(
 
     /** One role: its name, the parts that use it, the swatches, and "Other color". The shade has a strength slider. */
     private inner class RoleRow(private val role: ColorRole, use: String) : Stack(gap = 5) {
-        private val auto = if (role.auto) ColorSwatch("share-role-${role.key}-auto", "Dark or white, from the contrast", null) else null
+        private val auto = if (role.auto) ColorSwatch("share-role-${role.key}-auto", tr("share.colors.auto.tooltip"), null) else null
         private val swatches = ThumbnailColorSets.swatches(role).map { named ->
-            ColorSwatch("share-role-${role.key}-${named.name.lowercase().replace(' ', '-')}", named.name, Color(named.rgb)) to named.rgb
+            ColorSwatch("share-role-${role.key}-${named.id}", named.name, Color(named.rgb)) to named.rgb
         }
         private val custom = ColorSwatch(
-            "share-role-${role.key}-other", "Other color", null, custom = true,
+            "share-role-${role.key}-other", tr("share.colors.other"), null, custom = true,
             colorWheel = ThumbnailColorSets.swatches(ColorRole.ACCENT).take(7).map { Color(it.rgb) },
         )
         private var value: String = ThumbnailLooks.AUTO
@@ -148,7 +150,7 @@ internal class ShareColorsPanel(
         private fun strengthRow(): JComponent {
             val slider = DefaultFillSliderUI.slider(0, (ThumbnailLooks.MAX_STRENGTH * 100).roundToInt(), 100).apply {
                 name = "share-shade-strength"
-                getAccessibleContext().accessibleName = "Shade strength"
+                getAccessibleContext().accessibleName = tr("share.colors.strength.accessible")
                 addChangeListener {
                     if (!updating) onStrength(value / 100.0, valueIsAdjusting)
                 }
@@ -158,7 +160,7 @@ internal class ShareColorsPanel(
             strengthValue = value
             return JPanel(BorderLayout(8, 0)).apply {
                 isOpaque = false
-                add(ShareUi.label("Strength", 11.5f, Palette.FG_2), BorderLayout.WEST)
+                add(ShareUi.label(tr("share.colors.strength"), 11.5f, Palette.FG_2), BorderLayout.WEST)
                 add(slider, BorderLayout.CENTER)
                 add(value, BorderLayout.EAST)
             }

@@ -4,6 +4,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.AppInfo
 import org.litvin.ApplicationLayout
 import org.litvin.WindowsSecurityBlock
+import org.litvin.i18n.tr
 import java.awt.Component
 import java.io.File
 import java.io.IOException
@@ -28,62 +29,25 @@ data class VideoProblem(
     companion object {
         private val APP = AppInfo.NAME
 
-        val NOT_FOUND = VideoProblem(
-            "The video file is not found.",
-            "$APP could not find the file. The file was moved, renamed, or deleted, " +
-                "or the drive with the file is not connected.\n\n" +
-                "Put the file back or connect the drive, then try again.",
-        )
-        val STILL_WRITING = VideoProblem(
-            "A different program is still writing this file.",
-            "A different program is writing to this file now, for example a copy in File Explorer. " +
-                "$APP can open the video only after that program closes the file.\n\n" +
-                "Wait until the copy is finished, then try again.",
-        )
-        val TRUNCATED = VideoProblem(
-            "This video cannot be played.",
-            "The end of the file is missing: the file is smaller than its own header says. " +
-                "This occurs when a copy stopped before the end.\n\n" +
-                "Copy the video from the device again.",
-        )
-        val UNWRITTEN_END = VideoProblem(
-            "This video cannot be played.",
-            "The last part of the file contains only zeros. A copy sets the full file size first " +
-                "and then writes the data, so the copy of this file stopped before the end.\n\n" +
-                "Copy the video from the device again.",
-        )
-        val NOT_FINALIZED = VideoProblem(
-            "This recording was not finished correctly.",
-            "The file contains video data, but the index that a video player needs is missing. " +
-                "The device writes the index when the recording stops. This occurs when the recording stopped " +
-                "unexpectedly, for example because the phone turned off or the camera app closed.\n\n" +
-                "A new copy does not help, because the file on the device has the same problem. " +
-                "A video repair tool can sometimes recover the video.",
-        )
-        val UNREADABLE = VideoProblem(
-            "This video cannot be played.",
-            "$APP could not open the file. The file is damaged, or its format is not supported.\n\n" +
-                "Make sure that the video plays in a different video player. " +
-                "If it does not play, copy the video from the device again. If it plays, report the problem.",
-            reportable = true,
-        )
-        val PREVIEW_BLOCKED = VideoProblem(
-            "Windows blocked the video player.",
-            "Windows security, for example Smart App Control, blocked a file of the video player in $APP. " +
-                "Thus $APP cannot show videos.\n\n" +
-                "Install the latest version of $APP from the website. If the problem continues, report it.",
-            reportable = true,
-        )
-        val PREVIEW_FAILED = VideoProblem(
-            "The video player cannot start.",
-            "The video player in $APP did not start. The problem is in $APP, not in your video.\n\n" +
-                "Restart $APP. If the problem continues, report it.",
-            reportable = true,
-        )
-        val NO_VIDEO = VideoProblem(
-            "This file has no video.",
-            "The file has no video stream. For example, it can be an audio file.\n\nSelect a different file.",
-        )
+        // The problems are getters, so that the texts are in the app language.
+        val NOT_FOUND: VideoProblem
+            get() = VideoProblem(tr("video.notFound"), tr("video.notFound.text", "app" to APP))
+        val STILL_WRITING: VideoProblem
+            get() = VideoProblem(tr("video.stillWriting"), tr("video.stillWriting.text", "app" to APP))
+        val TRUNCATED: VideoProblem
+            get() = VideoProblem(tr("video.cannotPlay"), tr("video.truncated.text", "app" to APP))
+        val UNWRITTEN_END: VideoProblem
+            get() = VideoProblem(tr("video.cannotPlay"), tr("video.unwrittenEnd.text", "app" to APP))
+        val NOT_FINALIZED: VideoProblem
+            get() = VideoProblem(tr("video.notFinalized"), tr("video.notFinalized.text", "app" to APP))
+        val UNREADABLE: VideoProblem
+            get() = VideoProblem(tr("video.cannotPlay"), tr("video.unreadable.text", "app" to APP), reportable = true)
+        val PREVIEW_BLOCKED: VideoProblem
+            get() = VideoProblem(tr("video.previewBlocked"), tr("video.previewBlocked.text", "app" to APP), reportable = true)
+        val PREVIEW_FAILED: VideoProblem
+            get() = VideoProblem(tr("video.previewFailed"), tr("video.previewFailed.text", "app" to APP), reportable = true)
+        val NO_VIDEO: VideoProblem
+            get() = VideoProblem(tr("video.noVideo"), tr("video.noVideo.text", "app" to APP))
 
         /**
          * Returns the problem that the checks prove, or null when they find no problem.

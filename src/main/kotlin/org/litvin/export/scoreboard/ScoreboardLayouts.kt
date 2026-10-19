@@ -1,10 +1,10 @@
 package org.litvin.export.scoreboard
 
+import org.litvin.i18n.DisplayFormats
 import org.litvin.ScoreboardComponent
 import org.litvin.ScoreboardDisplay
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStyleId
-import java.util.Locale
 import kotlin.math.max
 
 /** The default colors of a style. The settings can change the accent color and the background opacity. */
@@ -84,7 +84,7 @@ object ScoreboardLayouts {
      */
     private fun broadcast(display: ScoreboardDisplay, look: Look): ScoreboardScene {
         val rows = rows(display, look)
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 10.0
         val padX = 22.0
         val headerH = if (title != null) 46.0 else 0.0
@@ -175,7 +175,7 @@ object ScoreboardLayouts {
     private fun centerCourt(display: ScoreboardDisplay, look: Look): ScoreboardScene {
         val rows = rows(display, look)
         val navy = 0x13233F
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 8.0
         val headerH = if (title != null) 40.0 else 0.0
         val rowH = 56.0
@@ -245,7 +245,7 @@ object ScoreboardLayouts {
     /** Compact: a slim two-row bar with an accent point column and an optional title tab. */
     private fun compact(display: ScoreboardDisplay, look: Look): ScoreboardScene {
         val rows = rows(display, look)
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 6.0
         val tabH = if (title != null) 26.0 else 0.0
         val rowH = 42.0

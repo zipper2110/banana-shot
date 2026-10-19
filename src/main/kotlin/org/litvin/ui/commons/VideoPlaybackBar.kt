@@ -14,6 +14,7 @@ import javax.swing.JPanel
 import javax.swing.JSlider
 import javax.swing.SwingConstants
 import kotlin.math.max
+import org.litvin.i18n.tr
 
 /**
  * The playback bar under the video of the Colors & Transform tab: the play button, the current time,
@@ -29,26 +30,26 @@ internal class VideoPlaybackBar(
 
     val playButton = PlayButton(PlayButtonStyle.COMPACT).apply {
         name = "$namePrefix-play-pause"
-        getAccessibleContext().accessibleName = "Play or Pause"
+        getAccessibleContext().accessibleName = tr("playback.playPause")
     }
 
     private val nowLabel = JLabel(format(0)).apply {
         name = "$namePrefix-current-time"
         font = UiKit.font(13f)
         foreground = Palette.FG
-        toolTipText = "Current time"
+        toolTipText = tr("playback.currentTime")
     }
     private val totalLabel = JLabel(format(0), SwingConstants.RIGHT).apply {
         name = "$namePrefix-total-time"
         font = UiKit.font(13f)
         foreground = Palette.FG_3
-        toolTipText = "Video length"
+        toolTipText = tr("playback.videoLength")
     }
     private val seekUi = SeekSliderUI()
 
     val seekSlider: JSlider = JSlider(0, SEEK_STEPS, 0).apply {
         name = "$namePrefix-seek"
-        toolTipText = "Seek"
+        toolTipText = tr("playback.seek")
         isOpaque = false
         // Space must stay the play hotkey, so the seek bar never keeps the focus.
         isFocusable = false

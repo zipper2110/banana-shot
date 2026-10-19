@@ -5,6 +5,7 @@ import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.ui.commons.SectionPage
 import java.io.File
 import java.net.URI
+import org.litvin.i18n.tr
 
 /**
  * The Contact section of the More window.
@@ -21,41 +22,35 @@ internal class ContactPage(
 ) : SectionPage(TITLE) {
     init {
         name = "more-contact"
-        paragraph("Send a problem, an idea, or a question to the author. The form can attach the log files.")
-        buttonRow(secondaryButton("Send feedback", Material2MZ.SEND) { onSendFeedback() }.apply { name = "more-contact-feedback" })
-        paragraph(
-            "Give your email address in the form if you want a reply. The author replies from the address below.",
-            secondary = true,
-        )
+        paragraph(tr("contact.text"))
+        buttonRow(secondaryButton(tr("contact.sendFeedback"), Material2MZ.SEND) { onSendFeedback() }.apply { name = "more-contact-feedback" })
+        paragraph(tr("contact.reply"), secondary = true)
 
-        subheading("Email")
-        paragraph("You can also write an email.")
-        valueRow("Email", email).name = "more-contact-email"
+        subheading(tr("contact.email"))
+        paragraph(tr("contact.email.text"))
+        valueRow(tr("contact.email"), email).name = "more-contact-email"
         lateinit var emailStatus: StatusLine
-        buttonRow(secondaryButton("Write an email", Material2AL.EDIT) {
-            emailStatus.text = if (onOpenLink(URI("mailto:$email"))) "" else "The app cannot open your email app. Copy the address above."
+        buttonRow(secondaryButton(tr("contact.writeEmail"), Material2AL.EDIT) {
+            emailStatus.text = if (onOpenLink(URI("mailto:$email"))) "" else tr("contact.writeEmail.failed")
         }.apply { name = "more-contact-write" })
         emailStatus = statusLine()
 
-        subheading("Report a problem by email")
-        paragraph("Tell what you did, what happened, and what you expected. Add the app version and the version of Windows.")
-        valueRow("Version", version).name = "more-contact-version"
-        paragraph("Attach the log files to the email. The log files help to find the cause of the problem.")
-        paragraph(
-            "The log files contain the names and folders of your videos and projects. " +
-                "They do not contain your videos. Open the files to see all the data before you send them.",
-            secondary = true,
-        )
-        valueRow("Log folder", logFolder.absolutePath).name = "more-contact-log-folder"
+        subheading(tr("contact.report"))
+        paragraph(tr("contact.report.text"))
+        valueRow(tr("about.version"), version).name = "more-contact-version"
+        paragraph(tr("contact.report.attach"))
+        paragraph(tr("contact.report.logContents"), secondary = true)
+        valueRow(tr("contact.logFolder"), logFolder.absolutePath).name = "more-contact-log-folder"
         lateinit var folderStatus: StatusLine
-        buttonRow(secondaryButton("Open log folder", Material2AL.FOLDER_OPEN) {
+        buttonRow(secondaryButton(tr("contact.openLogFolder"), Material2AL.FOLDER_OPEN) {
             logFolder.mkdirs()
-            folderStatus.text = if (onOpenFolder(logFolder)) "" else "The app cannot open the log folder."
+            folderStatus.text = if (onOpenFolder(logFolder)) "" else tr("contact.openLogFolder.failed")
         }.apply { name = "more-contact-open-log-folder" })
         folderStatus = statusLine()
     }
 
     companion object {
-        const val TITLE = "Contact"
+        const val ID = "contact"
+        val TITLE: String get() = tr("more.contact")
     }
 }

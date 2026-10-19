@@ -26,6 +26,7 @@ import javax.swing.Scrollable
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import org.litvin.i18n.tr
 
 /*
  * The parts of the right panel of the Colors and Transform sub-tabs of Colors & Transform: a header with a status and "Reset all",
@@ -40,7 +41,7 @@ internal const val SIDE_PANEL_WIDTH = 400
  * The quiet or normal "Reset all" button. It is quiet (no fill, gray text) when all values are at the default.
  * It stays enabled in both styles.
  */
-internal class ResetAllButton(name: String, tooltip: String) : JButton("Reset all") {
+internal class ResetAllButton(name: String, tooltip: String) : JButton(tr("sidePanel.resetAll")) {
     private val iconNormal = UiKit.icon(Feather.ROTATE_CCW, 14, Palette.FG)
     private val iconQuiet = UiKit.icon(Feather.ROTATE_CCW, 14, Palette.FG_3)
 
@@ -127,7 +128,7 @@ internal class SidePanelHeader(title: String, private val status: JLabel, privat
 
     /** Shows "All at default" or "N of M changed" in the status, and makes "Reset all" quiet when nothing changed. */
     fun showChanged(changed: Int, total: Int) {
-        status.text = if (changed == 0) "All at default" else "$changed of $total changed"
+        status.text = if (changed == 0) tr("sidePanel.allDefault") else tr("sidePanel.changed", "changed" to changed, "total" to total)
         status.foreground = if (changed == 0) Palette.FG_3 else Palette.SAGE
         (resetButton as? ResetAllButton)?.quiet = changed == 0
     }

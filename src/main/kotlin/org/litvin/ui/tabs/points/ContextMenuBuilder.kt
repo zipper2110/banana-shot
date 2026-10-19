@@ -4,6 +4,7 @@ import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
 import javax.swing.event.PopupMenuEvent
 import javax.swing.event.PopupMenuListener
+import org.litvin.i18n.tr
 
 /**
  * Builds context/pop-up menus for Points tab views (table, cards, etc.).
@@ -25,10 +26,10 @@ class ContextMenuBuilder {
         onDeleteSelected: () -> Unit,
     ): JPopupMenu {
         val menu = JPopupMenu()
-        val jump = JMenuItem("Go to start").apply {
+        val jump = JMenuItem(tr("points.menu.goToStart")).apply {
             addActionListener { actions.jumpToSelected() }
         }
-        val del = JMenuItem("Delete").apply {
+        val del = JMenuItem(tr("common.delete")).apply {
             addActionListener { onDeleteSelected() }
         }
         // Initial enable state reflecting current selection rules

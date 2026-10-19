@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.tr
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.points.CommentV1
@@ -245,9 +247,9 @@ class SwingTimelineComponent(
                 UiKit.drawText(g, count, countFont, Palette.FG_3, x, top.toFloat(), rowHeight.toFloat())
             }
         }
-        label(videoIcon, "VIDEO", "", videoTrackTop(), TRACK_HEIGHT)
-        label(marksIcon, "MARKS", markCount.toString(), marksTrackTop(), TRACK_HEIGHT)
-        label(commentsIcon, "COMMENTS", if (commentCount > 0) commentCount.toString() else "", commentsTrackTop(), commentHeight)
+        label(videoIcon, DisplayFormats.upper(tr("timeline.video")), "", videoTrackTop(), TRACK_HEIGHT)
+        label(marksIcon, DisplayFormats.upper(tr("timeline.marks")), markCount.toString(), marksTrackTop(), TRACK_HEIGHT)
+        label(commentsIcon, DisplayFormats.upper(tr("timeline.comments")), if (commentCount > 0) commentCount.toString() else "", commentsTrackTop(), commentHeight)
     }
 
     private fun paintRuler(g: Graphics2D, total: Long) {

@@ -48,6 +48,8 @@ import javax.swing.SwingUtilities
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The right side of the Export tab: one table with the active export, the export queue and the completed exports.
@@ -64,23 +66,23 @@ internal class ExportsTable(
         onOpenFolder = { activeOutputPath?.let { openFolder(it, this, dialogs) } },
         onCancel = onCancelActive,
     ).apply { isVisible = false }
-    private val activeEmpty = EmptyRow(Material2OutlinedAL.HOURGLASS_EMPTY, "No active exports")
-    private val activeGroup = Group("Active", withCount = false)
-    private val queueGroup = Group("Export queue", withCount = true)
+    private val activeEmpty = EmptyRow(Material2OutlinedAL.HOURGLASS_EMPTY, tr("export.table.noActive"))
+    private val activeGroup = Group(tr("export.table.active"), withCount = false)
+    private val queueGroup = Group(tr("export.table.queue"), withCount = true)
     private val queueRows = Stack(0)
-    private val completedGroup = Group("Completed", withCount = true) {
-        GhostButton("Clear list", Material2OutlinedAL.DELETE_SWEEP).apply {
-            toolTipText = "Remove all entries from this list. The exported files stay on the disk."
+    private val completedGroup = Group(tr("export.table.completed"), withCount = true) {
+        GhostButton(tr("export.table.clear"), Material2OutlinedAL.DELETE_SWEEP).apply {
+            toolTipText = tr("export.table.clear.tooltip")
             addActionListener { clearCompleted() }
         }
     }
     private val completedRows = Stack(0)
-    private val completedEmpty = EmptyRow(Material2OutlinedAL.CHECK_CIRCLE_OUTLINE, "No completed exports")
+    private val completedEmpty = EmptyRow(Material2OutlinedAL.CHECK_CIRCLE_OUTLINE, tr("export.table.noCompleted"))
 
-    private val runningStat = Stat("running")
-    private val failedStat = Stat("failed", Palette.YELLOW)
-    private val queueStat = Stat("in the queue")
-    private val completedStat = Stat("completed")
+    private val runningStat = Stat("export.stat.running")
+    private val failedStat = Stat("export.stat.failed", Palette.YELLOW)
+    private val queueStat = Stat("export.stat.queued")
+    private val completedStat = Stat("export.stat.completed")
 
     private val body = TableBody()
     private val sticky: StickyTable
@@ -172,9 +174,9 @@ internal class ExportsTable(
     private fun clearCompleted() {
         if (dialogs.confirm(
                 this,
-                "Clear the list of completed exports? The exported files stay on the disk.",
-                "Clear completed exports",
-                confirmLabel = "Clear list",
+                tr("export.table.clear.question"),
+                tr("export.table.clear.title"),
+                confirmLabel = tr("export.table.clear"),
                 destructive = true,
             )
         ) {
@@ -188,12 +190,12 @@ internal class ExportsTable(
         val prefix = "export-queued-${job.id}"
         return DataRow().apply {
             setCells(
-                status = StatusPill("Queued · ${index + 1}", StatusPill.Kind.QUEUED),
+                status = StatusPill(tr("export.status.queued", "number" to index + 1), StatusPill.Kind.QUEUED),
                 file = fileCell(info, "$prefix-path"),
                 content = textCell(info.content, Palette.FG),
                 video = textCell(info.video, Palette.FG_2),
                 size = valueCell(job.expectedBytes?.let { "~" + RenderFormatting.formatSize(it) } ?: DASH, null),
-                time = valueCell("Waiting", null, Palette.FG_3),
+                time = valueCell(tr("export.status.waiting"), null, Palette.FG_3),
                 actions = actions(
                     IconButton(Material2AL.FOLDER_OPEN, OPEN_FOLDER).apply {
                         name = "$prefix-open-folder"
@@ -204,10 +206,10 @@ internal class ExportsTable(
                         addActionListener {
                             if (dialogs.confirm(
                                     this@ExportsTable,
-                                    "Cancel the queued export?",
-                                    "Cancel queued export",
-                                    confirmLabel = "Cancel export",
-                                    cancelLabel = "Keep export",
+                                    tr("export.cancelQueued.question"),
+                                    tr("export.cancelQueued.title"),
+                                    confirmLabel = CANCEL_EXPORT,
+                                    cancelLabel = tr("export.cancelQueued.keep"),
                                     destructive = true,
                                 )
                             ) {
@@ -226,12 +228,15 @@ internal class ExportsTable(
         val finished = item.createdAtEpochMs.takeIf { it > 0 }?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()) }
         return DataRow().apply {
             setCells(
-                status = StatusPill("Done", StatusPill.Kind.DONE),
+                status = StatusPill(tr("export.status.done"), StatusPill.Kind.DONE),
                 file = fileCell(info, "$prefix-path"),
                 content = textCell(info.content, Palette.FG),
                 video = textCell(info.video, Palette.FG_2),
-                size = valueCell(RenderFormatting.formatSize(item.bytesWritten), item.expectedBytes?.let { "of ~" + RenderFormatting.formatSize(it) }),
-                time = valueCell(finished?.format(TIME_FORMAT) ?: DASH, finished?.format(DATE_FORMAT)),
+                size = valueCell(
+                    RenderFormatting.formatSize(item.bytesWritten),
+                    item.expectedBytes?.let { tr("export.size.of", "size" to "~" + RenderFormatting.formatSize(it)) },
+                ),
+                time = valueCell(finished?.let(DisplayFormats::time) ?: DASH, finished?.let(DisplayFormats::date)),
                 actions = actions(
                     IconButton(Material2AL.FOLDER_OPEN, OPEN_FOLDER).apply {
                         name = "$prefix-open-folder"
@@ -244,7 +249,7 @@ internal class ExportsTable(
 
     /** The active export. The table updates this row for each progress step, so it keeps its components. */
     private inner class ActiveRow(onOpenFolder: () -> Unit, onCancel: () -> Unit) : DataRow() {
-        private val pill = StatusPill("Running", StatusPill.Kind.RUNNING)
+        private val pill = StatusPill(tr("export.status.running"), StatusPill.Kind.RUNNING)
         private val file = FileCell().apply { nameText.name = "export-active-path" }
         private val content = textCell("", Palette.FG).apply { name = "export-active-content" }
         private val video = textCell("", Palette.FG_2).apply { name = "export-active-video" }
@@ -287,37 +292,41 @@ internal class ExportsTable(
             size.show(info.size, null)
             val percentValue = (job.progress * 100).toInt().coerceIn(0, 100)
             progress.value = percentValue
-            percent.setText("$percentValue%", ExportUi.font(12f, Weight.BOLD), Palette.FG)
+            percent.setText("${DisplayFormats.integer(percentValue)}%", ExportUi.font(12f, Weight.BOLD), Palette.FG)
             cancelButton.isEnabled = job.status == RenderStatus.RUNNING || job.status == RenderStatus.QUEUED
             when (job.status) {
                 RenderStatus.QUEUED -> {
-                    pill.set("Starting", StatusPill.Kind.RUNNING)
+                    pill.set(tr("export.status.starting"), StatusPill.Kind.RUNNING)
                     tone = Tone.LIVE
                     time.show(DASH, null)
                     extra = progressRow
                 }
                 RenderStatus.RUNNING -> {
-                    pill.set("Running", StatusPill.Kind.RUNNING)
+                    pill.set(tr("export.status.running"), StatusPill.Kind.RUNNING)
                     tone = Tone.LIVE
                     val eta = job.etaSeconds
-                    if (eta != null) time.show(RenderFormatting.formatDuration(eta * 1000), "left") else time.show("calculating…", null, Palette.FG_2)
+                    if (eta != null) {
+                        time.show(RenderFormatting.formatDuration(eta * 1000), tr("export.time.left"))
+                    } else {
+                        time.show(tr("export.time.calculating"), null, Palette.FG_2)
+                    }
                     extra = progressRow
                 }
                 RenderStatus.COMPLETED -> {
-                    pill.set("Done", StatusPill.Kind.DONE)
+                    pill.set(tr("export.status.done"), StatusPill.Kind.DONE)
                     tone = Tone.NORMAL
                     time.show(DASH, null)
                     extra = progressRow
                 }
                 RenderStatus.FAILED -> {
-                    pill.set("Failed", StatusPill.Kind.FAILED)
+                    pill.set(tr("export.status.failed"), StatusPill.Kind.FAILED)
                     tone = Tone.FAILED
                     time.show(DASH, null)
-                    errorBox.show(job.failureReason ?: "Unknown error", ExportFailureAdvice.of(job))
+                    errorBox.show(job.failureReason ?: tr("export.error.unknown"), ExportFailureAdvice.of(job))
                     extra = errorBox
                 }
                 RenderStatus.CANCELED -> {
-                    pill.set("Canceled", StatusPill.Kind.QUEUED)
+                    pill.set(tr("export.status.canceled"), StatusPill.Kind.QUEUED)
                     tone = Tone.NORMAL
                     time.show(DASH, null)
                     extra = null
@@ -519,9 +528,12 @@ internal class ExportsTable(
 
     /** The column captions of the table. */
     private class HeadRow : JPanel(null) {
-        private val captions = listOf("Status", "File", "Content", "Video", "Size", "Time", "").mapIndexed { index, caption ->
+        private val captions = listOf(
+            tr("export.column.status"), tr("export.column.file"), tr("export.column.content"), tr("export.column.video"),
+            tr("export.column.size"), tr("export.column.time"), "",
+        ).mapIndexed { index, caption ->
             WrapText(
-                caption.uppercase(Locale.ROOT),
+                DisplayFormats.upper(caption),
                 ExportUi.trackedFont(11f, 0.06),
                 Palette.FG_3,
                 align = if (index == 4 || index == 5) WrapText.Align.RIGHT else WrapText.Align.LEFT,
@@ -568,7 +580,7 @@ internal class ExportsTable(
 
     /** The title "Exports" and the counts of the exports on the right. */
     private class HeaderBar(stats: List<Stat>) : JPanel(null) {
-        private val titleText = WrapText("Exports", ExportUi.font(14f, Weight.SEMIBOLD), Palette.FG)
+        private val titleText = WrapText(tr("export.table.title"), ExportUi.font(14f, Weight.SEMIBOLD), Palette.FG)
         private val statsRow = JPanel().apply {
             isOpaque = false
             layout = BoxLayout(this, BoxLayout.X_AXIS)
@@ -606,15 +618,18 @@ internal class ExportsTable(
         }
     }
 
-    /** One count in the header, for example "7 completed". A count of 0 hides it, unless it must always show. */
-    private class Stat(private val label: String, private val numberColor: Color = Palette.FG) {
+    /**
+     * One count in the header, for example "7 completed". A count of 0 hides it, unless it must always show.
+     * [labelKey] is a catalog text with the plural forms of the word.
+     */
+    private class Stat(private val labelKey: String, private val numberColor: Color = Palette.FG) {
         val text = WrapText(emptyList())
         val gap: Component = Box.createHorizontalStrut(14)
 
         fun show(count: Int, always: Boolean = false) {
             text.runs = listOf(
-                TextRun(count.toString(), ExportUi.font(12f, Weight.SEMIBOLD), numberColor),
-                TextRun(" $label", ExportUi.font(12f), Palette.FG_2),
+                TextRun(DisplayFormats.integer(count), ExportUi.font(12f, Weight.SEMIBOLD), numberColor),
+                TextRun(" " + tr(labelKey, "count" to count), ExportUi.font(12f), Palette.FG_2),
             )
             val visible = always || count > 0
             text.isVisible = visible
@@ -665,11 +680,9 @@ internal class ExportsTable(
 
     companion object {
         private const val DASH = "—"
-        private const val OPEN_FOLDER = "Open folder"
-        private const val CANCEL_EXPORT = "Cancel export"
+        private val OPEN_FOLDER: String get() = tr("export.openFolder")
+        private val CANCEL_EXPORT: String get() = tr("export.cancel")
         private val CELL_FONT = ExportUi.font(12f)
-        private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH)
-        private val DATE_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH)
 
         /** Opens the folder of [outputPath] in the file manager. */
         fun openFolder(outputPath: String, parent: Component, dialogs: UserDialogService) {
@@ -681,7 +694,7 @@ internal class ExportsTable(
                     Runtime.getRuntime().exec(arrayOf("explorer.exe", dir.absolutePath))
                 }
             } catch (t: Throwable) {
-                dialogs.showError(parent, t.message ?: t.toString(), "Failed to open folder")
+                dialogs.showError(parent, t.message ?: t.toString(), tr("export.error.openFolder"))
             }
         }
 
@@ -1036,7 +1049,7 @@ internal class ErrorBox : JPanel(null), HeightForWidth {
     /** Shows the error [reason], and the [advice] on a new line when there is one. */
     fun show(reason: String, advice: String? = null) {
         message.runs = listOfNotNull(
-            TextRun("Error:", ExportUi.font(12f, Weight.BOLD), TEXT),
+            TextRun(tr("export.error.label"), ExportUi.font(12f, Weight.BOLD), TEXT),
             TextRun(" $reason", ExportUi.font(12f), TEXT),
             advice?.let { TextRun("\n$it", ExportUi.font(12f), TEXT) },
         )

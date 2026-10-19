@@ -19,6 +19,8 @@ import javax.swing.Scrollable
 import javax.swing.SwingConstants
 import kotlin.math.max
 import kotlin.math.min
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The right side of the tab: the statistics card as the exported video shows it, the page buttons,
@@ -30,7 +32,7 @@ internal class StatsCardColumn(
     onPage: (Int) -> Unit,
     onTransparency: (percent: Int, adjusting: Boolean) -> Unit,
 ) : JPanel(null), Scrollable {
-    private val title = JLabel("In the video").apply {
+    private val title = JLabel(tr("stats.card.inVideo")).apply {
         font = UiKit.font(15f, UiKit.Weight.BOLD)
         foreground = Palette.FG
     }
@@ -39,11 +41,11 @@ internal class StatsCardColumn(
         font = UiKit.font(12f)
         foreground = Palette.FG_2
     }
-    val previous = StatsButton("Previous page", Material2AL.CHEVRON_LEFT).apply {
+    val previous = StatsButton(tr("stats.card.previousPage"), Material2AL.CHEVRON_LEFT).apply {
         name = "stats-preview-previous"
         addActionListener { onPage(preview.page - 1) }
     }
-    val next = StatsButton("Next page", Material2AL.CHEVRON_RIGHT, iconAfter = true).apply {
+    val next = StatsButton(tr("stats.card.nextPage"), Material2AL.CHEVRON_RIGHT, iconAfter = true).apply {
         name = "stats-preview-next"
         addActionListener { onPage(preview.page + 1) }
     }
@@ -52,7 +54,7 @@ internal class StatsCardColumn(
         font = UiKit.font(12.5f)
         foreground = Palette.FG_2
     }
-    private val transparencyCaption = JLabel("Card transparency").apply {
+    private val transparencyCaption = JLabel(tr("stats.card.transparency")).apply {
         font = UiKit.font(12.5f)
         foreground = Palette.FG
         toolTipText = TRANSPARENCY_TIP
@@ -69,12 +71,12 @@ internal class StatsCardColumn(
         toolTipText = TRANSPARENCY_TIP
         value = StatsSettingsV1.DEFAULT_CARD_TRANSPARENCY_PERCENT
         addChangeListener {
-            transparencyValue.text = "$value %"
+            transparencyValue.text = "${DisplayFormats.integer(value)} %"
             if (!showingTransparency) onTransparency(value, valueIsAdjusting)
         }
     }
-    private val solid = scaleLabel("Solid card", SwingConstants.LEFT)
-    private val moreVideo = scaleLabel("More video", SwingConstants.RIGHT)
+    private val solid = scaleLabel(tr("stats.card.solid"), SwingConstants.LEFT)
+    private val moreVideo = scaleLabel(tr("stats.card.moreVideo"), SwingConstants.RIGHT)
     private val about = AboutSection()
 
     /** True while the column sets the slider value from the settings. */
@@ -102,7 +104,7 @@ internal class StatsCardColumn(
 
     /** Shows the page label and the page buttons. A card with one page has no page buttons. */
     fun showPage(page: Int, count: Int) {
-        pageLabel.text = "Page ${page + 1} of $count"
+        pageLabel.text = tr("stats.card.page", "number" to page + 1, "count" to count)
         val paged = count > 1
         if (previous.isVisible != paged) {
             listOf(previous, pageLabel, next).forEach { it.isVisible = paged }
@@ -121,7 +123,7 @@ internal class StatsCardColumn(
         } finally {
             showingTransparency = false
         }
-        transparencyValue.text = "$percent %"
+        transparencyValue.text = "${DisplayFormats.integer(percent)} %"
     }
 
     private val viewportHeight get() = (parent as? JViewport)?.height?.takeIf { it > 0 } ?: height.takeIf { it > 0 } ?: 700
@@ -239,7 +241,8 @@ internal class StatsCardColumn(
         var open = true
             set(value) {
                 field = value
-                getAccessibleContext().accessibleName = if (value) "Close $TEXT" else "Open $TEXT"
+                getAccessibleContext().accessibleName = if (value) tr("stats.card.help.close", "text" to TEXT)
+                else tr("stats.card.help.open", "text" to TEXT)
                 repaint()
             }
 
@@ -267,20 +270,20 @@ internal class StatsCardColumn(
         }
 
         private companion object {
-            const val TEXT = "How the card works"
+            val TEXT: String get() = tr("stats.card.help")
             const val ICON = 17
             val FONT = UiKit.font(12.5f)
         }
     }
 
     companion object {
-        const val TRANSPARENCY_TIP = "How much of the video shows through the card. The exported video uses the same value."
-        val HELP = listOf(
-            "The exported video shows this card after the last point.",
-            "The card shows the rows that you select and that have a value, ${StatsCard.ROWS_PER_PAGE} rows on each page. " +
-                "A group of rows stays on one page when possible.",
-            "When you select In video for the momentum chart, the last page shows the chart.",
-        )
+        val TRANSPARENCY_TIP: String get() = tr("stats.card.transparency.tooltip")
+        val HELP: List<String>
+            get() = listOf(
+                tr("stats.card.help.1"),
+                tr("stats.card.help.2", "count" to StatsCard.ROWS_PER_PAGE),
+                tr("stats.card.help.3"),
+            )
         private const val PAD_X = 20
         private const val PAD_TOP = 16
         private const val PAD_BOTTOM = 20

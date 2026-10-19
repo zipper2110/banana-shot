@@ -3,14 +3,13 @@ package org.litvin.export
 import org.litvin.AppInfo
 import org.litvin.RenderJob
 import org.litvin.WindowsSecurityBlock
+import org.litvin.i18n.tr
 
 /** What the user can do after a failed export. */
 object ExportFailureAdvice {
-    const val HARDWARE_ENCODER =
-        "The export used a hardware encoder. Select Advanced and then Software (x264), and export again. " +
-            "The software encoder is slower, but it works on all PCs."
+    val HARDWARE_ENCODER: String get() = tr("export.advice.hardware")
 
-    val FFMPEG_BLOCKED = "Windows blocked FFmpeg, the video encoder of ${AppInfo.NAME}."
+    val FFMPEG_BLOCKED: String get() = tr("export.advice.blocked", "app" to AppInfo.NAME)
 
     /**
      * The advice for a failed [job], or null when the app has no advice.
@@ -28,11 +27,12 @@ object ExportFailureAdvice {
         val technical = "${cause.javaClass.simpleName}: ${cause.message}"
         val windowsError = WindowsSecurityBlock.createProcessError(cause)
         if (!WindowsSecurityBlock.isBlockError(windowsError)) {
-            return "Failed to start FFmpeg: $technical. Run ${AppInfo.NAME} distribution diagnostics for details."
+            return tr("export.advice.startFailed", "detail" to technical, "app" to AppInfo.NAME)
         }
-        return "$FFMPEG_BLOCKED Windows security, for example Smart App Control, blocked the file. " +
-            "Thus ${AppInfo.NAME} cannot export videos.\n\n" +
-            "Install the latest version of ${AppInfo.NAME} from the website. If the problem continues, report it.\n\n" +
-            "Windows error $windowsError."
+        return listOf(
+            FFMPEG_BLOCKED + " " + tr("export.advice.blocked.cause", "app" to AppInfo.NAME),
+            tr("export.advice.blocked.action", "app" to AppInfo.NAME),
+            tr("export.advice.blocked.code", "code" to windowsError.toString()),
+        ).joinToString("\n\n")
     }
 }

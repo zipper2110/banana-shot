@@ -4,14 +4,15 @@ import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import java.awt.Component
+import org.litvin.i18n.tr
 
 /**
  * The messages and confirmations of the app. The new methods have default bodies, so a fake of the tests
  * needs only the first three methods.
  */
 interface UserDialogService {
-    fun showInfo(parent: Component?, message: String, title: String = "Info")
-    fun showError(parent: Component?, message: String, title: String = "Error")
+    fun showInfo(parent: Component?, message: String, title: String = tr("dialog.info.title"))
+    fun showError(parent: Component?, message: String, title: String = tr("dialog.error.title"))
     fun confirm(parent: Component?, message: String, title: String): Boolean
 
     /** A message about an action that the app cannot do now. The user did nothing wrong with the data. */
@@ -25,7 +26,7 @@ interface UserDialogService {
         showError(parent, message, title)
 
     /** A short tip about how to use the app. */
-    fun showHint(parent: Component?, message: String, title: String = "Hint") = showInfo(parent, message, title)
+    fun showHint(parent: Component?, message: String, title: String = tr("dialog.hint.title")) = showInfo(parent, message, title)
 
     /**
      * Asks the user to confirm an action with a button that names the action, for example "Overwrite".
@@ -36,7 +37,7 @@ interface UserDialogService {
         message: String,
         title: String,
         confirmLabel: String,
-        cancelLabel: String = "Cancel",
+        cancelLabel: String = tr("common.cancel"),
         destructive: Boolean = false,
     ): Boolean = confirm(parent, message, title)
 }
@@ -50,7 +51,7 @@ class SwingUserDialogService : UserDialogService {
 
     override fun showReportableError(parent: Component?, message: String, title: String, onReport: (() -> Unit)?) {
         if (onReport == null) return showError(parent, message, title)
-        val buttons = listOf(MessageButton("Report this problem"), MessageButton("OK", UiButton.Kind.LIME))
+        val buttons = listOf(MessageButton(tr("dialog.reportProblem")), MessageButton(tr("common.ok"), UiButton.Kind.LIME))
         val clicked = MessageDialog.show(parent, MessageKind.ERROR, title, message, buttons, defaultIndex = 1, cancelIndex = 1)
         if (clicked == 0) onReport()
     }
@@ -62,7 +63,7 @@ class SwingUserDialogService : UserDialogService {
         MessageDialog.show(parent, MessageKind.HINT, title, message)
 
     override fun confirm(parent: Component?, message: String, title: String): Boolean =
-        MessageDialog.confirm(parent, title, message, confirmLabel = "OK")
+        MessageDialog.confirm(parent, title, message, confirmLabel = tr("common.ok"))
 
     override fun confirm(
         parent: Component?,
@@ -76,8 +77,8 @@ class SwingUserDialogService : UserDialogService {
     /** A cancel action shows a cancel icon, and an overwrite shows a warning icon. A delete keeps the delete icon. */
     private fun glyphFor(confirmLabel: String, destructive: Boolean): Ikon? = when {
         !destructive -> null
-        confirmLabel.startsWith("Cancel") -> Material2AL.CANCEL
-        confirmLabel == "Overwrite" -> Material2MZ.WARNING
+        confirmLabel.startsWith(tr("common.cancel")) -> Material2AL.CANCEL
+        confirmLabel == tr("common.overwrite") -> Material2MZ.WARNING
         else -> null
     }
 }

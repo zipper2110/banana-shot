@@ -33,6 +33,7 @@ import javax.swing.SwingConstants
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
 
 /** Fonts and small parts of the Share tab. The layout comes from design/share-redesign/final.html. */
 internal object ShareUi {
@@ -203,7 +204,7 @@ internal class MomentStrip(private val onSeek: (Double, Boolean) -> Unit) : JCom
 
     init {
         name = "share-strip"
-        toolTipText = "Click or drag to select the moment"
+        toolTipText = tr("share.strip.tooltip")
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         val mouse = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) = seek(e, false)
@@ -481,7 +482,7 @@ internal class ColorSwatch(
     private companion object {
         const val SIZE = 22
         const val RING = 4
-        const val AUTO = "Auto"
+        val AUTO: String get() = tr("override.part.auto")
     }
 }
 

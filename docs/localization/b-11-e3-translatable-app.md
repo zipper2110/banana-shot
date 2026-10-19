@@ -7,7 +7,7 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 1, 2, 3, 4, 6 ("Fit"), 7, 8, 9, 12, 14
 - Depends on: E1 (`i18n` package and display formats)
 - Size: 4 to 5 weeks. This is the largest epic.
@@ -30,34 +30,34 @@ Order of the work:
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E3-T1 | Decide the message library (ICU4J or own plural rules) | — | open |
-| E3-T2 | Message catalog and `Messages` | E3-T1 | open |
-| E3-T3 | Test language `qps` | E3-T2 | open |
+| E3-T1 | Decide the message library (ICU4J or own plural rules) | — | in-progress |
+| E3-T2 | Message catalog and `Messages` | E3-T1 | in-progress |
+| E3-T3 | Test language `qps` | E3-T2 | in-progress |
 | E3-T4 | Hard-coded text test with an allowlist | E3-T2 | open |
 | E3-T5 | UI flow tests with `qps` in CI | E3-T3 | open |
-| E3-T6 | Extract: common widgets and dialogs | E3-T2 | open |
-| E3-T7 | Extract: app shell, sidebar, and More | E3-T2 | open |
-| E3-T8 | Extract: Projects tab and new-project dialogs | E3-T2 | open |
-| E3-T9 | Extract: Points tab | E3-T2 | open |
-| E3-T10 | Extract: scoring controls and score settings | E3-T2 | open |
-| E3-T11 | Extract: Statistics tab and statistics names | E3-T2 | open |
-| E3-T12 | Extract: Colors & Transform tab | E3-T2 | open |
-| E3-T13 | Extract: Export tab, queue, and exports table | E3-T2 | open |
-| E3-T14 | Extract: expiry and update texts | E3-T2 | open |
-| E3-T15 | Extract: privacy, consent, and feedback | E3-T2 | open |
-| E3-T16 | Extract: help and key names | E3-T2 | open |
-| E3-T17 | Extract: texts in the video | E3-T2 | open |
-| E3-T18 | Saved default texts | E3-T10, E3-T17 | open |
+| E3-T6 | Extract: common widgets and dialogs | E3-T2 | in-progress |
+| E3-T7 | Extract: app shell, sidebar, and More | E3-T2 | in-progress |
+| E3-T8 | Extract: Projects tab and new-project dialogs | E3-T2 | in-progress |
+| E3-T9 | Extract: Points tab | E3-T2 | in-progress |
+| E3-T10 | Extract: scoring controls and score settings | E3-T2 | in-progress |
+| E3-T11 | Extract: Statistics tab and statistics names | E3-T2 | in-progress |
+| E3-T12 | Extract: Colors & Transform tab | E3-T2 | in-progress |
+| E3-T13 | Extract: Export tab, queue, and exports table | E3-T2 | in-progress |
+| E3-T14 | Extract: expiry and update texts | E3-T2 | in-progress |
+| E3-T15 | Extract: privacy, consent, and feedback | E3-T2 | in-progress |
+| E3-T16 | Extract: help and key names | E3-T2 | in-progress |
+| E3-T17 | Extract: texts in the video | E3-T2 | in-progress |
+| E3-T18 | Saved default texts | E3-T10, E3-T17 | in-progress |
 | E3-T19 | Fit of the video texts | E3-T17 | open |
-| E3-T20 | Units in the catalog | E3-T2 | open |
-| E3-T21 | Language setting, detection, and restart (hidden) | E3-T2 | open |
-| E3-T22 | Layout fixes for longer texts | E3-T5, E3-T6–E3-T16 | open |
+| E3-T20 | Units in the catalog | E3-T2 | in-progress |
+| E3-T21 | Language setting, detection, and restart (hidden) | E3-T2 | in-progress |
+| E3-T22 | Layout fixes for longer texts | E3-T5, E3-T6–E3-T16 | in-progress |
 | E3-T23 | User texts in any script | — | open |
 | E3-T24 | Documentation and the empty allowlist | E3-T1–E3-T23 | open |
 
 ### E3-T1 Decide the message library
 
-- Status: open
+- Status: in-progress
 - Plan: 2 ("Format"), "Costs"
 - Value: correct plural forms in all later languages, at a known cost in
   installer size.
@@ -76,7 +76,7 @@ Order of the work:
 
 ### E3-T2 Message catalog and `Messages`
 
-- Status: open
+- Status: in-progress
 - Plan: 1, 2
 - Value: one source for all texts of the app. A translator gets the text,
   its place, and its placeholders. The app never shows a key.
@@ -155,7 +155,7 @@ Order of the work:
 
 ### E3-T3 Test language `qps`
 
-- Status: open
+- Status: in-progress
 - Plan: 12 ("Pseudo-localization"), 10
 - Value: a developer or a reviewer sees at once which texts are still hard
   coded, which texts are cut, and which letters are missing.
@@ -293,7 +293,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T6 Extract: common widgets and dialogs
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 1), 4 (Swing and FlatLaf texts)
 - Area: the shared widgets and dialogs (message dialogs, file pickers,
   hints, transport buttons, speed control).
@@ -304,7 +304,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T7 Extract: app shell, sidebar, and More
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 2)
 - Area: the main window, the sidebar, and the More window (Settings,
   About).
@@ -315,7 +315,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T8 Extract: Projects tab and new-project dialogs
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 3), 5 ("Sort order")
 - Area: the Projects tab, the new-project dialogs, and the padel rules.
 - Special requirements:
@@ -330,7 +330,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T9 Extract: Points tab
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 4)
 - Area: the Points tab and the point dialogs.
 - Special requirements:
@@ -341,7 +341,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T10 Extract: scoring controls and score settings
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 5), "Current state"
 - Area: the scoring controls of the Points tab (the outcome buttons, the
   serve button, Override score), the score settings dialog, the titles of
@@ -356,7 +356,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T11 Extract: Statistics tab and statistics names
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 6), "Current state"
 - Area: the Statistics tab, the statistics table, the momentum chart, the
   names of the statistics, and the reasons why a statistic is not
@@ -370,14 +370,14 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T12 Extract: Colors & Transform tab
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 7)
 - Area: the Colors & Transform tab with its Colors and Transform sub-tabs.
 - Tests: —
 
 ### E3-T13 Extract: Export tab, queue, and exports table
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 8), "Current state"
 - Area: the Export tab, the queue, the exports table, the names of the
   qualities, encoders, and resolutions, the cut mode and content texts,
@@ -394,7 +394,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T14 Extract: expiry and update texts
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 9)
 - Area: the expiry bar, the expired dialog, the update texts, and the
   texts of the `license` package.
@@ -406,7 +406,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T15 Extract: privacy, consent, and feedback
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 10)
 - Area: the consent dialog, the Privacy page, and the feedback form.
 - Special requirements:
@@ -423,7 +423,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T16 Extract: help and key names
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 11), 8
 - Area: the help and the key names in the help and in the hints.
 - Special requirements:
@@ -438,7 +438,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T17 Extract: texts in the video
 
-- Status: open
+- Status: in-progress
 - Plan: 3 (area 12), 6 ("Texts to translate")
 - Area: the scoreboard (badges such as "GOLDEN POINT", layout titles,
   "SET" and "GAME" marks, tiebreak marks, score words such as "AD"), the
@@ -468,7 +468,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T18 Saved default texts
 
-- Status: open
+- Status: in-progress
 - Plan: 1 ("Rules for the code"), "Current state" ("Saved default texts")
 - Value: a project shows its default texts in the current language. Now
   the English default title goes into each project file and into each
@@ -543,7 +543,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T20 Units in the catalog
 
-- Status: open
+- Status: in-progress
 - Plan: 5 ("Units")
 - Value: a language can use its own unit symbols and spaces.
 - Requirements:
@@ -558,7 +558,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T21 Language setting, detection, and restart (hidden)
 
-- Status: open
+- Status: in-progress
 - Plan: 4
 - Value: the user gets the language of Windows without an action, and can
   change it. The setting stays hidden until E4 adds a real language.
@@ -633,7 +633,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T22 Layout fixes for longer texts
 
-- Status: open
+- Status: in-progress
 - Plan: 7
 - Value: a translation that is 40% longer than English shows completely.
 - Requirements:
@@ -649,6 +649,19 @@ The tasks below give the area and the special requirements of the area.
     control in `qps`.
   - A long tooltip wraps.
   - The fixes include all problems that the extraction tasks wrote here.
+- Known problems in `qps` (Projects and Points tabs, 1440 × 900):
+  - The sidebar names "Projects", "Thumbnail", and "Feedback" are cut.
+  - The steps of the new-project workflow are cut.
+  - The projects table: the "Open" button is cut.
+  - The points table: the "Start" and "Length" column names touch.
+  - The counts under "Points & events": the comment count is not visible.
+  - The outcome buttons, the speed box, the "Frame step" toggle, and the
+    "Scoring settings" and "Scoreboard style" buttons are cut.
+  - The timeline: the "COMMENTS" track name covers its count.
+- Done for Spanish: the projects table moves a long "Scored" column name
+  over the bar. The "Recent projects" title gets 4 px more. Spanish uses
+  short forms for the controls with a fixed width (see the glossary, "Short
+  forms").
 - Acceptance:
   - The `qps` screenshots show no cut text and no text outside its box.
   - In English, the screenshots of the UI flow tests do not change, or

@@ -2,12 +2,13 @@ package org.litvin.projects
 
 import org.litvin.shared.util.SafeFileName
 import java.io.File
+import org.litvin.i18n.tr
 
 /** Rules for the name and the source video of a new project. */
 object NewProjectRules {
     val VIDEO_EXTENSIONS = listOf("mp4", "mov", "mkv", "avi", "m4v", "wmv")
     const val MAX_NAME_LENGTH = 80
-    const val DEFAULT_NAME = "Untitled Match"
+    val DEFAULT_NAME: String get() = tr("projects.defaultName")
     private const val FALLBACK_FOLDER_NAME = "Project"
 
     /** Returns the file name of the video without the extension. */
@@ -21,8 +22,8 @@ object NewProjectRules {
     fun nameError(name: String): String? {
         val trimmed = name.trim()
         return when {
-            trimmed.isEmpty() -> "Type a project name."
-            trimmed.length > MAX_NAME_LENGTH -> "Use a maximum of $MAX_NAME_LENGTH characters in the project name."
+            trimmed.isEmpty() -> tr("projects.name.error.empty")
+            trimmed.length > MAX_NAME_LENGTH -> tr("projects.name.error.long", "max" to MAX_NAME_LENGTH)
             else -> null
         }
     }
@@ -33,13 +34,13 @@ object NewProjectRules {
     /** Returns an error message for a path that is not a supported video file, or null for a correct path. */
     fun sourceVideoError(path: String): String? {
         val trimmed = path.trim()
-        if (trimmed.isEmpty()) return "Select the match video."
+        if (trimmed.isEmpty()) return tr("projects.video.error.empty")
         val file = File(trimmed)
         return when {
-            !file.isFile -> "The video file does not exist."
+            !file.isFile -> tr("projects.video.error.missing")
             file.extension.lowercase() !in VIDEO_EXTENSIONS ->
-                "Select a video file (${VIDEO_EXTENSIONS.joinToString(", ") { it.uppercase() }})."
-            file.length() == 0L -> "The video file is empty."
+                tr("projects.video.error.type", "types" to VIDEO_EXTENSIONS.joinToString(", ") { it.uppercase() })
+            file.length() == 0L -> tr("projects.video.error.emptyFile")
             else -> null
         }
     }

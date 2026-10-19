@@ -14,6 +14,7 @@ import org.litvin.projects.ManifestIO
 import java.awt.EventQueue
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import org.litvin.i18n.tr
 
 /**
  * The presenter of the Colors & Transform tab. It keeps the colors, the transform, and the change points in the shared
@@ -219,11 +220,11 @@ class DefaultAdjustVideoPresenter(
         val source = try {
             ManifestIO.read(manifestPath).sourceVideo?.let { File(it) }
         } catch (t: Throwable) {
-            postEffect(AdjustVideoViewEffect.ShowError(t.message ?: "Could not read the project."))
+            postEffect(AdjustVideoViewEffect.ShowError(t.message ?: tr("adjust.error.read")))
             null
         }
         if (source != null && !source.exists()) {
-            postEffect(AdjustVideoViewEffect.ShowError("Project source video is missing."))
+            postEffect(AdjustVideoViewEffect.ShowError(tr("adjust.error.videoMissing")))
         }
         updateState { it.copy(adjustments = adjustments.get(), sourceVideo = source?.takeIf { file -> file.exists() }) }
         countedColors = colorsOf(state.editing)

@@ -7,7 +7,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
 
 /**
  * The effective expiry: the earliest of the build expiry and the `stopsOn` of each rule that matches the app
@@ -59,12 +60,16 @@ data class EffectiveExpiry(
     }
 }
 
-/** Formats an expiry moment in the local time zone with the hour, for example "29 March 2027, 16:00". */
+/**
+ * Formats an expiry moment in the local time zone with the hour, in the app language, for example
+ * "29 March 2027, 16:00" or "29 de marzo de 2027, 16:00".
+ */
 object ExpiryMomentFormat {
-    // English only until localization (B-11).
-    private val FORMAT = DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", Locale.ENGLISH)
-
-    fun format(moment: Instant, zone: ZoneId = ZoneId.systemDefault()): String = FORMAT.format(moment.atZone(zone))
+    fun format(moment: Instant, zone: ZoneId = ZoneId.systemDefault()): String {
+        val language = I18n.language
+        val pattern = if (language == AppLanguage.SPANISH) "d 'de' MMMM 'de' yyyy, HH:mm" else "d MMMM yyyy, HH:mm"
+        return DateTimeFormatter.ofPattern(pattern, language.locale).format(moment.atZone(zone))
+    }
 }
 
 /**

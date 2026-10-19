@@ -7,7 +7,7 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 4, 6 ("Setting", "Fit"), 10, 12, 13, 14
 - Depends on: E3. E2 must be released some weeks before (for the data, not
   for the code).
@@ -25,16 +25,16 @@ are in the plan, "Epics".
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
 | E4-T1 | Find the reviewer | — | open |
-| E4-T2 | Spanish glossary | — | open |
+| E4-T2 | Spanish glossary | — | in-progress |
 | E4-T3 | Check of the missing and the stale texts | — | open |
 | E4-T4 | Screenshots for translators | E3-T5 | open |
-| E4-T5 | Machine draft | E4-T2, E4-T3 | open |
+| E4-T5 | Machine draft | E4-T2, E4-T3 | in-progress |
 | E4-T6 | Legal texts | E4-T5 | open |
 | E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | open |
 | E4-T8 | Fit tests for Spanish | E4-T5 | open |
 | E4-T9 | Queued render job keeps its language | — | open |
 | E4-T10 | The app sends the language `es` | — | open |
-| E4-T11 | Show the language setting | E4-T7 | open |
+| E4-T11 | Show the language setting | E4-T7 | in-progress |
 | E4-T12 | Windows smoke test in Spanish | E4-T11 | open |
 | E4-T13 | Documentation and release | E4-T1–E4-T12 | open |
 
@@ -59,7 +59,7 @@ are in the plan, "Epics".
 
 ### E4-T2 Spanish glossary
 
-- Status: open
+- Status: in-progress
 - Plan: 13 ("A glossary for each language"), 6 ("The score words")
 - Value: each term has one translation in all texts. The draft and the
   review use the same terms.
@@ -135,7 +135,7 @@ are in the plan, "Epics".
 
 ### E4-T5 Machine draft
 
-- Status: open
+- Status: in-progress
 - Plan: 13 ("First draft")
 - Value: the reviewer corrects a full draft and does not translate from
   the start.
@@ -268,7 +268,7 @@ are in the plan, "Epics".
 
 ### E4-T11 Show the language setting
 
-- Status: open
+- Status: in-progress
 - Plan: 4, 13 ("New languages"), "Decisions" ("Incomplete language",
   "Existing users")
 - Value: Spanish users get the app in Spanish without an action, and all

@@ -19,6 +19,7 @@ import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.Scrollable
 import javax.swing.ScrollPaneConstants
+import org.litvin.i18n.tr
 
 /**
  * The start panel on the left of the Projects tab: the brand, the current project, the "New project" block
@@ -43,11 +44,11 @@ internal class StartPanel(onImportNewMatch: () -> Unit) : JPanel(BorderLayout())
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             add(ProjectsHeader())
             add(Gap(0, BLOCK_GAP).leftAligned())
-            add(Caption("Current project").leftAligned())
+            add(Caption(tr("projects.current")).leftAligned())
             add(Gap(0, 8).leftAligned())
             add(currentSlot)
             add(Gap(0, BLOCK_GAP).leftAligned())
-            add(Caption("New project").leftAligned())
+            add(Caption(tr("projects.new.title")).leftAligned())
             add(Gap(0, 8).leftAligned())
             add(newProject)
         }
@@ -122,7 +123,7 @@ private class SaveNote(contentWidth: Int) : JPanel(BorderLayout(10, 0)) {
         }, BorderLayout.WEST)
         add(
             WrapLabel(
-                "The app saves all changes automatically across all tabs. No need to save anything manually.",
+                tr("projects.autosave"),
                 ProjectsUi.font(13f),
                 Palette.FG_2,
                 contentWidth - 34,

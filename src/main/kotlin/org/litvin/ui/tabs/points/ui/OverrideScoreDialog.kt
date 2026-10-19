@@ -32,6 +32,8 @@ import javax.swing.event.DocumentListener
 import javax.swing.text.AbstractDocument
 import javax.swing.text.AttributeSet
 import javax.swing.text.DocumentFilter
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The score after a point, as the app computes it without the override of that point.
@@ -70,7 +72,7 @@ internal data class OverrideScoreInput(
  * Save returns the override (an empty override removes it); Cancel returns null.
  */
 internal class OverrideScoreDialog(owner: Window?, private val input: OverrideScoreInput) :
-    JDialog(owner, "Override score", Dialog.ModalityType.APPLICATION_MODAL) {
+    JDialog(owner, tr("points.override"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object {
         private const val WIDTH = 520
@@ -92,8 +94,8 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
             private set
         val status = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply { isOpaque = false }
         private val label = JLabel().apply { font = UiKit.font(11.5f) }
-        private val reset = UiButton("Reset", kind = UiButton.Kind.QUIET, buttonHeight = 22, fontSize = 11.5f).apply {
-            toolTipText = "Use the computed $title again"
+        private val reset = UiButton(tr("override.part.reset"), kind = UiButton.Kind.QUIET, buttonHeight = 22, fontSize = 11.5f).apply {
+            toolTipText = tr("override.part.reset.tooltip", "part" to title)
         }
         var onReset: () -> Unit = {}
 
@@ -120,18 +122,19 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
         }
 
         private fun refresh() {
-            label.text = if (typed) "Typed" else "Auto"
+            label.text = if (typed) tr("override.part.typed") else tr("override.part.auto")
             label.foreground = if (typed) Palette.LIME else Palette.FG_3
-            label.toolTipText = if (typed) "The $title stay as you typed them" else "The $title follow the points before"
+            label.toolTipText = if (typed) tr("override.part.typed.tooltip", "part" to title)
+            else tr("override.part.auto.tooltip", "part" to title)
             reset.isVisible = typed
             status.revalidate()
             status.repaint()
         }
     }
 
-    internal val setsPart = Part("sets")
-    internal val gamesPart = Part("games")
-    internal val pointsPart = Part("points")
+    internal val setsPart = Part(tr("override.part.sets"))
+    internal val gamesPart = Part(tr("override.part.games"))
+    internal val pointsPart = Part(tr("override.part.points"))
 
     /** The games of each set: one field for each side. */
     internal val setFields = mutableListOf<Pair<JTextField, JTextField>>()
@@ -145,13 +148,13 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
 
     private var updating = false
     private val grid = JPanel(GridBagLayout()).apply { isOpaque = false }
-    private val addSet = UiButton("+ Set", kind = UiButton.Kind.QUIET, buttonHeight = 26, fontSize = 12f).apply {
+    private val addSet = UiButton(tr("override.addSet"), kind = UiButton.Kind.QUIET, buttonHeight = 26, fontSize = 12f).apply {
         name = "override-add-set"
-        toolTipText = "Add a set"
+        toolTipText = tr("override.addSet.tooltip")
     }
-    private val removeSet = UiButton("− Set", kind = UiButton.Kind.QUIET, buttonHeight = 26, fontSize = 12f).apply {
+    private val removeSet = UiButton(tr("override.removeSet"), kind = UiButton.Kind.QUIET, buttonHeight = 26, fontSize = 12f).apply {
         name = "override-remove-set"
-        toolTipText = "Remove the last set"
+        toolTipText = tr("override.removeSet.tooltip")
     }
 
     // The tiebreak points of the sets that the dialog shows. A set keeps them while its games stay the same.
@@ -200,25 +203,24 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
         refreshPointsMode()
         showPoints(current.points ?: input.computed.points)
 
-        val saveButton = UiButton("Save", kind = UiButton.Kind.LIME).apply {
+        val saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply {
             name = "override-save"
             addActionListener { save() }
         }
-        val cancelButton = UiButton("Cancel").apply {
+        val cancelButton = UiButton(tr("common.cancel")).apply {
             name = "override-cancel"
             addActionListener { dispose() }
         }
-        val clearButton = UiButton("Reset all", kind = UiButton.Kind.QUIET).apply {
+        val clearButton = UiButton(tr("override.resetAll"), kind = UiButton.Kind.QUIET).apply {
             name = "override-reset-all"
-            toolTipText = "Use the computed score for this point"
+            toolTipText = tr("override.resetAll.tooltip")
             addActionListener {
                 result = ScoreOverrideV1()
                 dispose()
             }
         }
         val help = WrapText(
-            "This is the score after point ${input.pointNumber}. The next points count from it. " +
-                "A part that you change stays as you typed it. An Auto part follows the points before it.",
+            tr("override.help", "number" to input.pointNumber),
             UiKit.font(12f), Palette.FG_2, 1.5f, WIDTH - DialogKit.PAD_X * 2,
         )
         val body = Stack(pad = Insets(8, DialogKit.PAD_X, 14, DialogKit.PAD_X), gap = 14).apply {
@@ -227,7 +229,7 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
         }
         contentPane = DialogKit.content(
             WIDTH,
-            DialogKit.head("Override score"),
+            DialogKit.head(tr("points.override")),
             body,
             DialogKit.footer(left = listOf(clearButton), right = listOf(cancelButton, saveButton)),
         )
@@ -369,7 +371,7 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
         if (input.showSets) {
             val first = column
             setFields.forEachIndexed { i, (f1, f2) ->
-                at(column, 1, caption("Set ${i + 1}", Palette.FG_3))
+                at(column, 1, caption(tr("override.set", "number" to i + 1), Palette.FG_3))
                 at(column, 2, cell(f1))
                 at(column, 3, cell(f2))
                 column++
@@ -390,17 +392,17 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
                 insets = Insets(0, 0, 6, 6)
             })
             column++
-            at(first, 0, caption("SETS"), width = column - first)
+            at(first, 0, caption(DisplayFormats.upper(tr("override.sets"))), width = column - first)
             at(first, 4, setsPart.status, width = column - first)
         }
         if (input.showGames) {
-            at(column, 0, caption("GAMES"), left = 12)
+            at(column, 0, caption(DisplayFormats.upper(tr("override.games"))), left = 12)
             at(column, 2, cell(gamesFields.first), left = 12)
             at(column, 3, cell(gamesFields.second), left = 12)
             at(column, 4, gamesPart.status, left = 12)
             column++
         }
-        at(column, 0, caption("POINTS"), left = 12)
+        at(column, 0, caption(DisplayFormats.upper(tr("override.points"))), left = 12)
         if (tiebreakPoints) {
             at(column, 2, cell(pointsFields.first), left = 12)
             at(column, 3, cell(pointsFields.second), left = 12)

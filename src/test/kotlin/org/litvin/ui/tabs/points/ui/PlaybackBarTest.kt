@@ -105,9 +105,9 @@ class PlaybackBarTest {
         SwingUtilities.invokeAndWait {
             val bar = PlaybackBar(onTogglePlay = {}, onNudge = {}, onAddComment = {}, onSpeedIndex = {})
             val play = bar.findByName("points-play-pause") as PlayButton
-            assertEquals("SPACE — Play", play.toolTipText)
+            assertEquals("Space — Play", play.toolTipText)
             bar.setPlaying(true)
-            assertEquals("SPACE — Pause", play.toolTipText)
+            assertEquals("Space — Pause", play.toolTipText)
         }
     }
 

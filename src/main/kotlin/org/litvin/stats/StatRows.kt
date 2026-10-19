@@ -8,48 +8,90 @@ import org.litvin.scoring.PerPlayer
 import org.litvin.scoring.Ratio
 import org.litvin.scoring.ScoredDuration
 import java.util.Locale
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /** The groups of the statistics table, in display order. */
-enum class StatGroup(val title: String) {
-    OVERVIEW("Overview"),
-    SERVE("Serve"),
-    PRESSURE("Pressure"),
-    POINT_LENGTH("Point length"),
-    MOMENTUM("Momentum"),
-    TIME("Time"),
+enum class StatGroup {
+    OVERVIEW,
+    SERVE,
+    PRESSURE,
+    POINT_LENGTH,
+    MOMENTUM,
+    TIME,
+    ;
+
+    val title: String
+        get() = when (this) {
+            OVERVIEW -> tr("stats.group.overview")
+            SERVE -> tr("stats.group.serve")
+            PRESSURE -> tr("stats.group.pressure")
+            POINT_LENGTH -> tr("stats.group.pointLength")
+            MOMENTUM -> tr("stats.group.momentum")
+            TIME -> tr("stats.group.time")
+        }
 }
 
 /**
  * The statistics that the app can show, in display order.
  * [key] is stored in stats.json. Do not change a key after a release.
  */
-enum class MatchStat(val key: String, val group: StatGroup, val label: String, val inVideoByDefault: Boolean = false) {
-    POINTS_WON("points_won", StatGroup.OVERVIEW, "Points won", inVideoByDefault = true),
-    GAMES_WON("games_won", StatGroup.OVERVIEW, "Games won"),
-    SETS_WON("sets_won", StatGroup.OVERVIEW, "Sets won"),
-    SERVICE_POINTS_WON("service_points_won", StatGroup.SERVE, "Points won on serve", inVideoByDefault = true),
-    RETURN_POINTS_WON("return_points_won", StatGroup.SERVE, "Points won on return"),
-    SERVICE_GAMES_WON("service_games_won", StatGroup.SERVE, "Service games won", inVideoByDefault = true),
-    RETURN_GAMES_WON("return_games_won", StatGroup.SERVE, "Return games won"),
-    BREAK_POINTS_WON("break_points_won", StatGroup.PRESSURE, "Break points won", inVideoByDefault = true),
-    BREAK_POINTS_SAVED("break_points_saved", StatGroup.PRESSURE, "Break points saved"),
-    SET_POINTS_WON("set_points_won", StatGroup.PRESSURE, "Set points won"),
-    MATCH_POINTS_WON("match_points_won", StatGroup.PRESSURE, "Match points won"),
-    DEUCE_POINTS_WON("deuce_points_won", StatGroup.PRESSURE, "Deuce points won"),
+enum class MatchStat(val key: String, val group: StatGroup, val inVideoByDefault: Boolean = false) {
+    POINTS_WON("points_won", StatGroup.OVERVIEW, inVideoByDefault = true),
+    GAMES_WON("games_won", StatGroup.OVERVIEW),
+    SETS_WON("sets_won", StatGroup.OVERVIEW),
+    SERVICE_POINTS_WON("service_points_won", StatGroup.SERVE, inVideoByDefault = true),
+    RETURN_POINTS_WON("return_points_won", StatGroup.SERVE),
+    SERVICE_GAMES_WON("service_games_won", StatGroup.SERVE, inVideoByDefault = true),
+    RETURN_GAMES_WON("return_games_won", StatGroup.SERVE),
+    BREAK_POINTS_WON("break_points_won", StatGroup.PRESSURE, inVideoByDefault = true),
+    BREAK_POINTS_SAVED("break_points_saved", StatGroup.PRESSURE),
+    SET_POINTS_WON("set_points_won", StatGroup.PRESSURE),
+    MATCH_POINTS_WON("match_points_won", StatGroup.PRESSURE),
+    DEUCE_POINTS_WON("deuce_points_won", StatGroup.PRESSURE),
     /** The golden points or star points. [StatRows.label] gives the name of the deuce rule. */
-    DECIDING_POINTS_WON("deciding_points_won", StatGroup.PRESSURE, "Deciding points won"),
-    AVERAGE_POINT_WON("average_point_won", StatGroup.POINT_LENGTH, "Average point won"),
-    SHORT_POINTS_WON("short_points_won", StatGroup.POINT_LENGTH, "Short points won", inVideoByDefault = true),
-    LONG_POINTS_WON("long_points_won", StatGroup.POINT_LENGTH, "Long points won", inVideoByDefault = true),
-    LONGEST_POINT_RUN("longest_point_run", StatGroup.MOMENTUM, "Most points in a row"),
-    LONGEST_GAME_RUN("longest_game_run", StatGroup.MOMENTUM, "Most games in a row"),
-    LARGEST_POINT_LEAD("largest_point_lead", StatGroup.MOMENTUM, "Largest point lead"),
-    DURATION("duration", StatGroup.TIME, "Match duration", inVideoByDefault = true),
-    PLAYING_TIME("playing_time", StatGroup.TIME, "Playing time"),
-    AVERAGE_POINT("average_point", StatGroup.TIME, "Average point"),
-    LONGEST_POINT("longest_point", StatGroup.TIME, "Longest point"),
-    AVERAGE_GAP("average_gap", StatGroup.TIME, "Average time between points"),
+    DECIDING_POINTS_WON("deciding_points_won", StatGroup.PRESSURE),
+    AVERAGE_POINT_WON("average_point_won", StatGroup.POINT_LENGTH),
+    SHORT_POINTS_WON("short_points_won", StatGroup.POINT_LENGTH, inVideoByDefault = true),
+    LONG_POINTS_WON("long_points_won", StatGroup.POINT_LENGTH, inVideoByDefault = true),
+    LONGEST_POINT_RUN("longest_point_run", StatGroup.MOMENTUM),
+    LONGEST_GAME_RUN("longest_game_run", StatGroup.MOMENTUM),
+    LARGEST_POINT_LEAD("largest_point_lead", StatGroup.MOMENTUM),
+    DURATION("duration", StatGroup.TIME, inVideoByDefault = true),
+    PLAYING_TIME("playing_time", StatGroup.TIME),
+    AVERAGE_POINT("average_point", StatGroup.TIME),
+    LONGEST_POINT("longest_point", StatGroup.TIME),
+    AVERAGE_GAP("average_gap", StatGroup.TIME),
     ;
+
+    /** The name of the statistic in the app language. */
+    val label: String
+        get() = when (this) {
+            POINTS_WON -> tr("stats.row.pointsWon")
+            GAMES_WON -> tr("stats.row.gamesWon")
+            SETS_WON -> tr("stats.row.setsWon")
+            SERVICE_POINTS_WON -> tr("stats.row.servicePointsWon")
+            RETURN_POINTS_WON -> tr("stats.row.returnPointsWon")
+            SERVICE_GAMES_WON -> tr("stats.row.serviceGamesWon")
+            RETURN_GAMES_WON -> tr("stats.row.returnGamesWon")
+            BREAK_POINTS_WON -> tr("stats.row.breakPointsWon")
+            BREAK_POINTS_SAVED -> tr("stats.row.breakPointsSaved")
+            SET_POINTS_WON -> tr("stats.row.setPointsWon")
+            MATCH_POINTS_WON -> tr("stats.row.matchPointsWon")
+            DEUCE_POINTS_WON -> tr("stats.row.deucePointsWon")
+            DECIDING_POINTS_WON -> tr("stats.row.decidingPointsWon")
+            AVERAGE_POINT_WON -> tr("stats.row.averagePointWon")
+            SHORT_POINTS_WON -> tr("stats.row.shortPointsWon")
+            LONG_POINTS_WON -> tr("stats.row.longPointsWon")
+            LONGEST_POINT_RUN -> tr("stats.row.longestPointRun")
+            LONGEST_GAME_RUN -> tr("stats.row.longestGameRun")
+            LARGEST_POINT_LEAD -> tr("stats.row.largestPointLead")
+            DURATION -> tr("stats.row.duration")
+            PLAYING_TIME -> tr("stats.row.playingTime")
+            AVERAGE_POINT -> tr("stats.row.averagePoint")
+            LONGEST_POINT -> tr("stats.row.longestPoint")
+            AVERAGE_GAP -> tr("stats.row.averageGap")
+        }
 
     companion object {
         fun ofKey(key: String): MatchStat? = entries.firstOrNull { it.key == key }
@@ -85,14 +127,14 @@ data class StatRow(
 
 /** Makes the table rows from [MatchStats]. The rows for the video are a subset of these rows. */
 object StatRows {
-    const val NEEDS_SERVER = "Mark the server of one point in the Points tab."
-    const val MANUAL_SCORING = "Manual scoring does not know which points can win a game or a set."
-    const val NO_SETS = "The match format has no sets."
-    const val NO_GAMES = "The match format has no games."
-    const val NO_MATCH_END = "The match format has no end."
-    const val NO_VALUE = "There are not sufficient points."
-    const val NO_POINTS_OF_LENGTH = "No scored point has this length."
-    const val NO_DECIDING_POINT = "The deuce rule is advantage. Only the golden point and the star point have deciding points."
+    val NEEDS_SERVER: String get() = tr("stats.reason.needsServer")
+    val MANUAL_SCORING: String get() = tr("stats.reason.manualScoring")
+    val NO_SETS: String get() = tr("stats.reason.noSets")
+    val NO_GAMES: String get() = tr("stats.reason.noGames")
+    val NO_MATCH_END: String get() = tr("stats.reason.noMatchEnd")
+    val NO_VALUE: String get() = tr("stats.reason.noValue")
+    val NO_POINTS_OF_LENGTH: String get() = tr("stats.reason.noPointsOfLength")
+    val NO_DECIDING_POINT: String get() = tr("stats.reason.noDecidingPoint")
 
     fun build(stats: MatchStats, rules: MatchRulesV1, settings: StatsSettingsV1 = StatsSettingsV1()): List<StatRow> {
         val normalized = settings.normalized()
@@ -107,8 +149,8 @@ object StatRows {
         MatchStat.SHORT_POINTS_WON -> "${stat.label} (≤ ${settings.normalized().shortPointMaxSeconds} s)"
         MatchStat.LONG_POINTS_WON -> "${stat.label} (≥ ${settings.normalized().longPointMinSeconds} s)"
         MatchStat.DECIDING_POINTS_WON -> when (rules?.deuce) {
-            DeuceRule.NO_AD -> "Golden points won"
-            DeuceRule.STAR_POINT -> "Star points won"
+            DeuceRule.NO_AD -> tr("stats.row.goldenPointsWon")
+            DeuceRule.STAR_POINT -> tr("stats.row.starPointsWon")
             DeuceRule.ADVANTAGE, null -> stat.label
         }
         else -> stat.label
@@ -227,8 +269,8 @@ object StatRows {
 
     private fun percent(ratio: Ratio): String? = ratio.percent?.let { "$it%" }
 
-    /** "12.3 s" */
-    fun seconds(ms: Long): String = String.format(Locale.US, "%.1f s", ms / 1000.0)
+    /** "12.3 s", with the decimal separator of the format locale. */
+    fun seconds(ms: Long): String = "${DisplayFormats.decimal(ms / 1000.0, 1)} s"
 
     /** "42:07" or "1:42:07" */
     fun clock(ms: Long): String {

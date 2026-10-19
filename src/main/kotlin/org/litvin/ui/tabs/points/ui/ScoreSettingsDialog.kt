@@ -37,6 +37,7 @@ import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.text.AbstractDocument
+import org.litvin.i18n.tr
 
 /** The values that the "Scoring settings" dialog edits. */
 data class ScoreSettings(
@@ -67,7 +68,7 @@ fun interface ScoreSettingsEditor {
 class ScoreSettingsDialog private constructor(
     owner: Window?,
     initial: ScoreSettings,
-) : JDialog(owner, "Scoring settings", Dialog.ModalityType.APPLICATION_MODAL) {
+) : JDialog(owner, tr("points.scoringSettings"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : ScoreSettingsEditor {
         // The scoreboard shows the full name up to this length.
@@ -119,34 +120,38 @@ class ScoreSettingsDialog private constructor(
     }
     private val bestOf = SegmentedChoice(
         "score-settings-sets",
-        listOf(SegmentedChoice.Option(1, "One set"), SegmentedChoice.Option(3, "Best of 3"), SegmentedChoice.Option(5, "Best of 5")),
+        listOf(
+            SegmentedChoice.Option(1, tr("scoreSettings.sets.one")),
+            SegmentedChoice.Option(3, tr("scoreSettings.sets.bestOf", "count" to 3)),
+            SegmentedChoice.Option(5, tr("scoreSettings.sets.bestOf", "count" to 5)),
+        ),
     )
     private val gamesPerSet = SegmentedChoice(
         "score-settings-games-per-set",
-        MatchRulesV1.GAMES_PER_SET_OPTIONS.map { SegmentedChoice.Option(it, "$it games") },
+        MatchRulesV1.GAMES_PER_SET_OPTIONS.map { SegmentedChoice.Option(it, tr("scoreSettings.games", "count" to it)) },
     )
     private val setTiebreak = SegmentedChoice("score-settings-set-tiebreak", setTiebreakOptions(rules.gamesPerSet))
     private val tiebreakPoints = SegmentedChoice(
         "score-settings-tiebreak-points",
-        MatchRulesV1.TIEBREAK_POINTS_OPTIONS.map { SegmentedChoice.Option(it, "$it points") },
+        MatchRulesV1.TIEBREAK_POINTS_OPTIONS.map { SegmentedChoice.Option(it, tr("rules.serveTurn.points", "count" to it)) },
     )
     private val finalSet = SegmentedChoice("score-settings-final-set", finalSetOptions())
     private val deuce = SegmentedChoice("score-settings-deuce", deuceOptions())
     private val totalPoints = SegmentedChoice(
         "score-settings-total-points",
-        MatchRulesV1.TOTAL_POINTS_OPTIONS.map { SegmentedChoice.Option(it, "$it points") },
+        MatchRulesV1.TOTAL_POINTS_OPTIONS.map { SegmentedChoice.Option(it, tr("rules.serveTurn.points", "count" to it)) },
     )
     private val serveTurn = SegmentedChoice(
         "score-settings-serve-turn",
-        MatchRulesV1.SERVE_TURN_POINTS_OPTIONS.map { SegmentedChoice.Option(it, "$it points") },
+        MatchRulesV1.SERVE_TURN_POINTS_OPTIONS.map { SegmentedChoice.Option(it, tr("rules.serveTurn.points", "count" to it)) },
     )
-    private val manualScoring = SwitchBox("Fully manual scoring").apply {
+    private val manualScoring = SwitchBox(tr("scoreSettings.manual")).apply {
         name = "score-settings-manual"
-        toolTipText = "The app counts points only. You mark each game and set win."
+        toolTipText = tr("scoreSettings.manual.tooltip")
     }
     private val manualHint = WrapText(MANUAL_HINT, UiKit.font(12f), Palette.FG_2, 1.5f, WIDTH)
 
-    private val formatGroup = DialogGroup("Match format", Material2MZ.RULE, "score-settings-format-group")
+    private val formatGroup = DialogGroup(tr("scoreSettings.formatGroup"), Material2MZ.RULE, "score-settings-format-group")
 
     /** The label of each rule control, so that a disabled rule also dims its label. */
     private val ruleLabels = mutableMapOf<Component, JLabel>()
@@ -177,11 +182,11 @@ class ScoreSettingsDialog private constructor(
         serveTurn.onChange { value -> update { it.copy(serveTurnPoints = value) } }
         manualScoring.addActionListener { update { it.copy(manualScoring = manualScoring.isSelected) } }
         player1ColorButton.addActionListener {
-            chooseColor("${sport.defaultSideName(1)} color", player1Color)?.let { player1Color = it }
+            chooseColor(tr("scoreSettings.sideColor", "side" to sport.defaultSideName(1)), player1Color)?.let { player1Color = it }
             syncControls()
         }
         player2ColorButton.addActionListener {
-            chooseColor("${sport.defaultSideName(2)} color", player2Color)?.let { player2Color = it }
+            chooseColor(tr("scoreSettings.sideColor", "side" to sport.defaultSideName(2)), player2Color)?.let { player2Color = it }
             syncControls()
         }
         listOf(player1Name to player1Count, player2Name to player2Count).forEach { (field, count) ->
@@ -193,11 +198,11 @@ class ScoreSettingsDialog private constructor(
             showCount(field, count)
         }
 
-        val saveButton = UiButton("Save", kind = UiButton.Kind.LIME).apply {
+        val saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply {
             name = "score-settings-save"
             addActionListener { save() }
         }
-        val cancelButton = UiButton("Cancel").apply {
+        val cancelButton = UiButton(tr("common.cancel")).apply {
             name = "score-settings-cancel"
             addActionListener { dispose() }
         }
@@ -209,10 +214,10 @@ class ScoreSettingsDialog private constructor(
         }
         contentPane = DialogKit.content(
             WIDTH,
-            DialogKit.head("Scoring settings"),
+            DialogKit.head(tr("points.scoringSettings")),
             DialogKit.scrollBody(body),
             DialogKit.footer(
-                left = listOf(DialogKit.keysHint("Enter" to "save", "Esc" to "cancel")),
+                left = listOf(DialogKit.keysHint(tr("key.enter") to tr("scoreSettings.keys.save"), tr("key.escape") to tr("scoreSettings.keys.cancel"))),
                 right = listOf(cancelButton, saveButton),
             ),
         )
@@ -225,23 +230,23 @@ class ScoreSettingsDialog private constructor(
         player1Name.requestFocusInWindow()
     }
 
-    private fun playersGroup() = DialogGroup("Players", Material2AL.GROUP).apply {
+    private fun playersGroup() = DialogGroup(tr("scoreSettings.players"), Material2AL.GROUP).apply {
         player1Label = row(sport.defaultSideName(1), playerRow(player1ColorButton, player1Name, player1Count))
         player2Label = row(sport.defaultSideName(2), playerRow(player2ColorButton, player2Name, player2Count))
     }
 
     private fun formatGroup() = formatGroup.apply {
-        row("Sport", sportChoice)
-        ruleLabels[format] = row("Format", format)
+        row(tr("projects.new.sport"), sportChoice)
+        ruleLabels[format] = row(tr("rules.format"), format)
         text(formatDescription, indent = true, lineAbove = true, top = 8)
-        ruleLabels[bestOf] = row("Sets", bestOf)
-        ruleLabels[gamesPerSet] = row("Games in a set", gamesPerSet)
-        ruleLabels[setTiebreak] = row("Set tiebreak", setTiebreak)
-        ruleLabels[tiebreakPoints] = row("Tiebreak to", tiebreakPoints)
-        ruleLabels[finalSet] = row("Deciding set", finalSet)
-        ruleLabels[deuce] = row("Deuce", deuce)
-        ruleLabels[totalPoints] = row("Total points", totalPoints)
-        ruleLabels[serveTurn] = row("Serve turn", serveTurn)
+        ruleLabels[bestOf] = row(tr("scoreSettings.sets"), bestOf)
+        ruleLabels[gamesPerSet] = row(tr("scoreSettings.gamesPerSet"), gamesPerSet)
+        ruleLabels[setTiebreak] = row(tr("scoreSettings.setTiebreak"), setTiebreak)
+        ruleLabels[tiebreakPoints] = row(tr("scoreSettings.tiebreakPoints"), tiebreakPoints)
+        ruleLabels[finalSet] = row(tr("scoreSettings.finalSet"), finalSet)
+        ruleLabels[deuce] = row(tr("rules.deuce"), deuce)
+        ruleLabels[totalPoints] = row(tr("rules.totalPoints"), totalPoints)
+        ruleLabels[serveTurn] = row(tr("rules.serveTurn"), serveTurn)
     }
 
     /** The formats of the current sport. */
@@ -257,11 +262,11 @@ class ScoreSettingsDialog private constructor(
 
     /** Padel calls the match tiebreak the super tiebreak. */
     private fun finalSetOptions() = listOf(
-        SegmentedChoice.Option(FinalSetRule.FULL_SET, "Full set"),
+        SegmentedChoice.Option(FinalSetRule.FULL_SET, tr("scoreSettings.finalSet.full")),
         SegmentedChoice.Option(
             FinalSetRule.MATCH_TIEBREAK,
-            if (sport == Sport.PADEL) "Super tiebreak" else "Match tiebreak",
-            "${MatchRulesV1.MATCH_TIEBREAK_POINTS} points",
+            if (sport == Sport.PADEL) tr("scoreSettings.finalSet.superTiebreak") else tr("scoreSettings.finalSet.matchTiebreak"),
+            tr("rules.serveTurn.points", "count" to MatchRulesV1.MATCH_TIEBREAK_POINTS),
         ),
     )
 
@@ -289,13 +294,13 @@ class ScoreSettingsDialog private constructor(
         }
         player1Label?.text = value.defaultSideName(1)
         player2Label?.text = value.defaultSideName(2)
-        player1ColorButton.getAccessibleContext().accessibleName = "${value.defaultSideName(1)} color"
-        player2ColorButton.getAccessibleContext().accessibleName = "${value.defaultSideName(2)} color"
+        player1ColorButton.getAccessibleContext().accessibleName = tr("scoreSettings.sideColor", "side" to value.defaultSideName(1))
+        player2ColorButton.getAccessibleContext().accessibleName = tr("scoreSettings.sideColor", "side" to value.defaultSideName(2))
         fillFormats()
         syncControls()
     }
 
-    private fun manualGroup() = DialogGroup("Manual scoring", Material2MZ.TOUCH_APP).apply {
+    private fun manualGroup() = DialogGroup(tr("scoreSettings.manualGroup"), Material2MZ.TOUCH_APP).apply {
         wide(manualScoring)
         text(manualHint, top = 2)
     }
@@ -364,7 +369,7 @@ class ScoreSettingsDialog private constructor(
             formatDescription.runs = listOf(
                 TextRun(preset.description(sport), UiKit.font(12f), if (automatic) Palette.FG_2 else Palette.FG_3),
             )
-            formatGroup.aside.text = if (automatic) "" else "Not used in manual scoring"
+            formatGroup.aside.text = if (automatic) "" else tr("scoreSettings.formatGroup.manual")
             manualHint.runs = listOf(TextRun(MANUAL_HINT, UiKit.font(12f), if (rules.manualScoring) Palette.FG_2 else Palette.FG_3))
 
             player1ColorButton.color = colorOf(player1Color)
@@ -411,24 +416,30 @@ class ScoreSettingsDialog private constructor(
 
     private fun colorButton(componentName: String, player: String, hex: String) = SwatchButton(colorOf(hex)).apply {
         name = componentName
-        toolTipText = "Pick the $player color for the buttons and the scoreboard"
-        getAccessibleContext().accessibleName = "$player color"
+        toolTipText = tr("scoreSettings.sideColor.tooltip", "side" to player)
+        getAccessibleContext().accessibleName = tr("scoreSettings.sideColor", "side" to player)
     }
 
     /** The pro set to 9 games also offers the tiebreak at 8–8. Then the set ends at 9 games, for example 9–8. */
     private fun setTiebreakOptions(games: Int): List<SegmentedChoice.Option<SetTiebreak>> {
         val early = if (games in MatchRulesV1.EARLY_TIEBREAK_GAMES) {
-            listOf(SegmentedChoice.Option(SetTiebreak.EARLY, "Tiebreak at ${games - 1}–${games - 1}", "set ends at $games"))
+            listOf(
+                SegmentedChoice.Option(
+                    SetTiebreak.EARLY,
+                    tr("scoreSettings.setTiebreak.at", "games" to games - 1),
+                    tr("scoreSettings.setTiebreak.endsAt", "games" to games),
+                ),
+            )
         } else {
             emptyList()
         }
         return early + listOf(
-            SegmentedChoice.Option(SetTiebreak.AT_GAMES, "Tiebreak at $games–$games"),
-            SegmentedChoice.Option(SetTiebreak.NONE, "No tiebreak", "win by 2 games"),
+            SegmentedChoice.Option(SetTiebreak.AT_GAMES, tr("scoreSettings.setTiebreak.at", "games" to games)),
+            SegmentedChoice.Option(SetTiebreak.NONE, tr("scoreSettings.setTiebreak.none"), tr("scoreSettings.setTiebreak.none.sub")),
         )
     }
 
     private enum class SetTiebreak { AT_GAMES, EARLY, NONE }
 }
 
-private const val MANUAL_HINT = "The app counts points only. Use Override score to set the games and sets after a point."
+private val MANUAL_HINT: String get() = tr("scoreSettings.manual.hint")

@@ -17,6 +17,7 @@ import java.io.File
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.prefs.Preferences
+import org.litvin.i18n.tr
 
 class DefaultProjectsPresenter(
     private val repository: ProjectsRepository,
@@ -66,7 +67,7 @@ class DefaultProjectsPresenter(
     }
 
     private fun refreshRecents() {
-        runIo("Failed to load projects") {
+        runIo(tr("projects.error.load")) {
             val refreshed = repository.getRecents().map { it.toCardState() }
             synchronized(stateLock) {
                 recents = refreshed
@@ -93,11 +94,11 @@ class DefaultProjectsPresenter(
     private fun createProject(intent: ProjectsIntent.CreateProject) {
         val name = intent.name
         val sourceVideoPath = intent.sourceVideoPath
-        runIo("Failed to create project") {
+        runIo(tr("projects.error.create")) {
             // The dialog also validates. This check stops a request that skips the dialog.
             val error = NewProjectRules.nameError(name) ?: NewProjectRules.sourceVideoError(sourceVideoPath)
             if (error != null) {
-                emitEffect(ProjectsViewEffect.ShowError("Failed to create project", error))
+                emitEffect(ProjectsViewEffect.ShowError(tr("projects.error.create"), error))
                 return@runIo
             }
             rememberVideoDir(sourceVideoPath)
@@ -120,7 +121,7 @@ class DefaultProjectsPresenter(
     private fun openProject(manifestPath: String, sourceVideoPath: String? = null) {
         if (manifestPath.isBlank()) return
         sourceVideoPath?.let(::rememberVideoDir)
-        runIo("Failed to open project") {
+        runIo(tr("projects.error.openFailed")) {
             val manifest = repository.readManifest(manifestPath)
             if (sourceVideoPath.isNullOrBlank() && manifest.sourceVideo.isNullOrBlank()) {
                 emitEffect(
@@ -134,7 +135,7 @@ class DefaultProjectsPresenter(
             }
             if (!sourceVideoPath.isNullOrBlank()) {
                 NewProjectRules.sourceVideoError(sourceVideoPath)?.let { error ->
-                    emitEffect(ProjectsViewEffect.ShowError("Cannot open project", error))
+                    emitEffect(ProjectsViewEffect.ShowError(tr("projects.error.open"), error))
                     return@runIo
                 }
             }
@@ -172,9 +173,9 @@ class DefaultProjectsPresenter(
 
     private fun renameProject(manifestPath: String, name: String) {
         if (manifestPath.isBlank()) return
-        runIo("Failed to rename project") {
+        runIo(tr("projects.error.rename")) {
             NewProjectRules.nameError(name)?.let { error ->
-                emitEffect(ProjectsViewEffect.ShowError("Failed to rename project", error))
+                emitEffect(ProjectsViewEffect.ShowError(tr("projects.error.rename"), error))
                 return@runIo
             }
             val renamed = repository.renameProject(manifestPath, name.trim()).toCardState()
@@ -190,9 +191,9 @@ class DefaultProjectsPresenter(
 
     private fun deleteProject(manifestPath: String) {
         if (manifestPath.isBlank()) return
-        runIo("Failed to delete project") {
+        runIo(tr("projects.error.delete")) {
             if (synchronized(stateLock) { currentProject?.path == manifestPath }) {
-                emitEffect(ProjectsViewEffect.ShowError("Cannot delete project", "You cannot delete the open project.", warning = true))
+                emitEffect(ProjectsViewEffect.ShowError(tr("projects.error.deleteOpen"), tr("projects.delete.open"), warning = true))
                 return@runIo
             }
             repository.deleteProject(manifestPath)
@@ -211,7 +212,7 @@ class DefaultProjectsPresenter(
             currentPage = page.coerceIn(1, totalPages(recents.size))
         }
         renderState()
-        runIo("Failed to load projects") { loadVisibleStats() }
+        runIo(tr("projects.error.load")) { loadVisibleStats() }
     }
 
     /** Reads the figures of the projects on the current page. Each project that changes causes one render. */
@@ -305,7 +306,7 @@ class DefaultProjectsPresenter(
             fileSize = fileSizeBytes?.let(RenderFormatting::formatSize) ?: UNKNOWN,
             scoredPoints = "$scoredCount/$pointCount",
             favoritePoints = favoriteCount.toString(),
-            videoMissingMessage = if (videoMissing) "The video is not on the disk anymore." else null,
+            videoMissingMessage = if (videoMissing) tr("projects.row.videoMissing.tooltip") else null,
             scoredCount = scoredCount,
             pointCount = pointCount,
             sport = sport.title,

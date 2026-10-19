@@ -42,6 +42,7 @@ import java.util.concurrent.CompletableFuture
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 import java.util.concurrent.atomic.AtomicBoolean
+import org.litvin.i18n.tr
 
 /**
  * Phase 4 — Export pipeline (Swing)
@@ -114,24 +115,24 @@ class SwingExportPanel(
     // Left controls: content of the video
     private val contentCards = ExportContentCards()
     private val fullVideoCard = contentCards.fullVideo.apply {
-        toolTipText = "Export the complete source video, with the time between points."
+        toolTipText = tr("export.content.full.tooltip")
     }
     private val pointsCard = contentCards.points.apply {
-        toolTipText = "Export only the marked points. The time between points is cut."
+        toolTipText = tr("export.content.points.tooltip")
     }
     private val favoritesCard = contentCards.favorites
     private var lastContentCard: ChoiceCard = pointsCard
-    private val scoreboardCheck = IncludeTile("export-scoreboard", "Scoreboard").apply {
-        toolTipText = "Burn in a scoreboard overlay that updates after each point. Uses the scores of the Points tab."
+    private val scoreboardCheck = IncludeTile("export-scoreboard", tr("export.include.scoreboard")).apply {
+        toolTipText = tr("export.include.scoreboard.tooltip")
     }
-    private val commentsCheck = IncludeTile("export-comments", "Comments").apply {
-        toolTipText = "Burn the comments from the Points tab into the video as centered lower-third text."
+    private val commentsCheck = IncludeTile("export-comments", tr("export.include.comments")).apply {
+        toolTipText = tr("export.include.comments.tooltip")
     }
-    private val statsCardCheck = IncludeTile("export-stats-card", "Statistics card").apply {
-        toolTipText = "Add a card with the match statistics after the last point. Select the statistics in the Stats tab."
+    private val statsCardCheck = IncludeTile("export-stats-card", tr("export.include.statsCard")).apply {
+        toolTipText = tr("export.include.statsCard.tooltip")
     }
-    private val setSummariesCheck = IncludeTile("export-set-summaries", "Set summaries").apply {
-        toolTipText = "Add a card with the statistics of each set after the last point of the set. Select the statistics in the Stats tab."
+    private val setSummariesCheck = IncludeTile("export-set-summaries", tr("export.include.setSummaries")).apply {
+        toolTipText = tr("export.include.setSummaries.tooltip")
     }
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
     private val initButton = StartExportButton(START_EXPORT).apply {
@@ -158,15 +159,15 @@ class SwingExportPanel(
         }
         val steps = ScrollableStack(0).apply {
             border = EmptyBorder(18, 20, 20, 20)
-            add(StepHeader(1, "Content"))
+            add(StepHeader(1, tr("export.step.content")))
             add(VGap(10))
             add(contentCards)
             add(VGap(22))
-            add(StepHeader(2, "Include in the video"))
+            add(StepHeader(2, tr("export.step.include")))
             add(VGap(10))
             add(checks)
             add(VGap(22))
-            add(StepHeader(3, "Quality and file size", qualityPanel.modeControl))
+            add(StepHeader(3, tr("export.step.quality"), qualityPanel.modeControl))
             add(VGap(10))
             add(qualityPanel)
         }
@@ -211,8 +212,8 @@ class SwingExportPanel(
                 lastContentCard.isSelected = true
                 dialogs.showWarning(
                     this,
-                    "Only favorites needs at least one valid favorite point. Mark a point with a star on the Points tab.",
-                    "Favorite export unavailable",
+                    tr("export.favorites.needed"),
+                    tr("export.favorites.unavailable"),
                 )
             } else {
                 lastContentCard = favoritesCard
@@ -223,7 +224,7 @@ class SwingExportPanel(
             // If user tries to enable scoreboard with no scored points, prevent and explain
             if (scoreboardCheck.isSelected && !hasAnyScoredPoints()) {
                 scoreboardCheck.isSelected = false
-                dialogs.showWarning(this, "Cannot include scoreboard: there are no scored points in the current project.", "Scoreboard unavailable")
+                dialogs.showWarning(this, tr("export.scoreboard.unavailable.text"), tr("export.scoreboard.unavailable"))
             }
         }
         commentsCheck.addActionListener {
@@ -235,8 +236,8 @@ class SwingExportPanel(
                 statsCardCheck.isSelected = false
                 dialogs.showWarning(
                     this,
-                    "Cannot include the statistics card: no selected statistic has a value. Select the statistics in the Stats tab.",
-                    "Statistics card unavailable",
+                    tr("export.statsCard.unavailable.text"),
+                    tr("export.statsCard.unavailable"),
                 )
             }
             currentProjectDir()?.let { settingsPreferences.saveIncludeStatsCard(it, statsCardCheck.isSelected) }
@@ -270,8 +271,8 @@ class SwingExportPanel(
                 if (cur?.status == RenderStatus.COMPLETED) refreshCompletedFromStore()
                 if (cur?.status == RenderStatus.FAILED && lastFailureNotifiedJobId != cur.id) {
                     lastFailureNotifiedJobId = cur.id
-                    val message = listOfNotNull(cur.failureReason ?: "Unknown error", ExportFailureAdvice.of(cur)).joinToString("\n\n")
-                    showReportableError(message, "Export failed")
+                    val message = listOfNotNull(cur.failureReason ?: tr("export.error.unknown"), ExportFailureAdvice.of(cur)).joinToString("\n\n")
+                    showReportableError(message, tr("export.error.failed"))
                 }
             }
         }
@@ -287,10 +288,10 @@ class SwingExportPanel(
     private fun cancelActiveExport() {
         if (dialogs.confirm(
                 this,
-                "Cancel the current export? The partly written file is deleted.",
-                "Cancel export",
-                confirmLabel = "Cancel export",
-                cancelLabel = "Keep exporting",
+                tr("export.cancelCurrent.question"),
+                tr("export.cancel"),
+                confirmLabel = tr("export.cancel"),
+                cancelLabel = tr("export.cancelCurrent.keep"),
                 destructive = true,
             )
         ) {
@@ -341,7 +342,7 @@ class SwingExportPanel(
         if (!readiness.enabled) {
             dialogs.showWarning(
                 this,
-                readiness.disabledReason ?: "Export cannot start right now.",
+                readiness.disabledReason ?: tr("export.readiness.notNow"),
                 INIT_BLOCKED_TITLE,
             )
             updateFavoriteOnlyAvailability()
@@ -354,12 +355,12 @@ class SwingExportPanel(
         val manifest = try {
             if (manifestPath.isNullOrBlank()) null else ManifestIO.read(manifestPath)
         } catch (t: Throwable) {
-            showReportableError(t.message ?: t.toString(), "Failed to read manifest")
+            showReportableError(t.message ?: t.toString(), tr("export.error.manifest"))
             return
         }
         val source = manifest?.sourceVideo
         if (source.isNullOrBlank() || !File(source).exists()) {
-            dialogs.showError(this, "Select source video", "Source video missing")
+            dialogs.showError(this, tr("export.error.selectSource"), tr("points.error.videoMissing.title"))
             return
         }
 
@@ -374,13 +375,13 @@ class SwingExportPanel(
             favoriteOnly = favoriteOnly,
         )
         if (favoriteOnly && keeps.isEmpty()) {
-            dialogs.showWarning(this, "Cannot export only favorite points: no valid favorite points are available.", "Favorite export unavailable")
+            dialogs.showWarning(this, tr("export.favorites.none"), tr("export.favorites.unavailable"))
             updateFavoriteOnlyAvailability()
             updateInitButtonState()
             return
         }
         if (idleTrim && keeps.isEmpty()) {
-            if (!dialogs.confirm(this, "The project has no valid points. Export the full video?", "No points", confirmLabel = "Export full video")) return
+            if (!dialogs.confirm(this, tr("export.noPoints.question"), tr("export.noPoints"), confirmLabel = tr("export.noPoints.confirm"))) return
         }
         val quality = qualityPanel.selection()
         val target = quality.target
@@ -402,7 +403,7 @@ class SwingExportPanel(
         )
         val chosen = filePicker.chooseExportDestination(
             parent = this,
-            title = "Save Export As…",
+            title = tr("export.saveAs"),
             initialDirectory = initialDir,
             suggestedFile = suggestedFile,
         ) ?: return
@@ -413,7 +414,14 @@ class SwingExportPanel(
 
         // The file dialog asked to replace the file that the user selected. Ask here only for a name that the app changed.
         if (out != chosen && out.exists()) {
-            if (!dialogs.confirm(this, "File exists. Overwrite?\n\n${out.path}", "Confirm overwrite", confirmLabel = "Overwrite", destructive = true)) return
+            if (!dialogs.confirm(
+                    this,
+                    tr("export.overwrite.question") + "\n\n" + out.path,
+                    tr("export.overwrite.title"),
+                    confirmLabel = tr("common.overwrite"),
+                    destructive = true,
+                )
+            ) return
         }
 
         val score = try {
@@ -451,8 +459,8 @@ class SwingExportPanel(
         renderService.enqueue(plan.job)
         dialogs.showInfo(
             this,
-            if (queued) "Export queued: ${out.name}. It starts when the current exports end." else "Export started: ${out.name}",
-            if (queued) "Export queued" else "Export started",
+            if (queued) tr("export.queued.text", "name" to out.name) else tr("export.started.text", "name" to out.name),
+            if (queued) tr("export.queued") else tr("export.started"),
         )
     }
 
@@ -516,9 +524,9 @@ class SwingExportPanel(
             lastContentCard = pointsCard
         }
         favoritesCard.toolTipText = when {
-            !available -> "Requires an open project."
-            validFavoriteCount() > 0 -> "Export only the points that are marked with a star."
-            else -> "No valid favorite points are available. Mark a point with a star on the Points tab."
+            !available -> tr("export.favorites.tooltip.noProject")
+            validFavoriteCount() > 0 -> tr("export.favorites.tooltip")
+            else -> tr("export.favorites.tooltip.none")
         }
     }
 
@@ -548,9 +556,9 @@ class SwingExportPanel(
         val card = currentStatsCard()
         statsCardCheck.setNote(
             when {
-                card != null -> "${card.durationMs / 1000} s, " + if (card.pages.size == 1) "1 page" else "${card.pages.size} pages"
-                hasAnyScoredPoints() -> "No selected statistics"
-                else -> "No scored points"
+                card != null -> tr("export.statsCard.note", "seconds" to card.durationMs / 1000, "count" to card.pages.size)
+                hasAnyScoredPoints() -> tr("export.note.noStatistics")
+                else -> tr("stats.empty.noScoredPoints")
             },
         )
         val saved = currentProjectDir()?.let(settingsPreferences::loadIncludeStatsCard)
@@ -583,14 +591,14 @@ class SwingExportPanel(
         setSummariesCheck.isEnabled = summaries.isNotEmpty()
         setSummariesCheck.setNote(
             when {
-                !idleTrimSelected() -> "Only for Only points and Only favorites"
+                !idleTrimSelected() -> tr("export.setSummaries.onlyPoints")
                 summaries.isNotEmpty() -> {
                     val seconds = summaries.sumOf { it.card.durationMs } / 1000
-                    (if (summaries.size == 1) "1 set" else "${summaries.size} sets") + ", $seconds s"
+                    tr("export.setSummaries.note", "count" to summaries.size, "seconds" to seconds)
                 }
-                !hasAnyScoredPoints() -> "No scored points"
-                currentStatsCard() == null -> "No selected statistics"
-                else -> "No completed set in the video"
+                !hasAnyScoredPoints() -> tr("stats.empty.noScoredPoints")
+                currentStatsCard() == null -> tr("export.note.noStatistics")
+                else -> tr("export.setSummaries.noSet")
             },
         )
     }
@@ -668,8 +676,8 @@ class SwingExportPanel(
         scoreboardCheck.setNote(
             when {
                 summary == null -> ""
-                summary.pointCount == 0 -> "No points"
-                else -> "${summary.scoredCount}/${summary.pointCount} points scored"
+                summary.pointCount == 0 -> tr("export.noPoints")
+                else -> tr("export.scored", "scored" to summary.scoredCount, "total" to summary.pointCount)
             },
             ok = summary?.allScored == true,
         )
@@ -706,7 +714,7 @@ class SwingExportPanel(
             validPoints = validPoints,
         )
     } catch (_: Throwable) {
-        ExportReadiness(false, "Export is not available because of an unexpected error.")
+        ExportReadiness(false, tr("export.readiness.error"))
     }
 
     // The button stays clickable even when an export cannot start; clicking it explains why.
@@ -734,11 +742,11 @@ class SwingExportPanel(
         const val LEFT_WIDTH = 440
         const val LEFT_SETTINGS = "settings"
         const val LEFT_NO_PROJECT = "no-project"
-        const val START_EXPORT = "Start export"
-        const val ENQUEUE_EXPORT = "Enqueue export"
-        const val INIT_BUTTON_TOOLTIP = "Choose an output file and start the export."
-        const val EXPORT_QUEUE_HINT = "You can continue to edit while the export runs. More exports can go into a queue."
-        const val INIT_BLOCKED_TITLE = "Cannot start export"
+        val START_EXPORT: String get() = tr("export.start")
+        val ENQUEUE_EXPORT: String get() = tr("export.enqueue")
+        val INIT_BUTTON_TOOLTIP: String get() = tr("export.start.tooltip")
+        val EXPORT_QUEUE_HINT: String get() = tr("export.hint.queue")
+        val INIT_BLOCKED_TITLE: String get() = tr("export.start.blocked")
     }
 }
 
@@ -751,9 +759,9 @@ private class NoProjectNotice : JPanel(GridBagLayout()) {
         val text = JPanel().apply {
             isOpaque = false
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            add(line("No project is open", ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG))
+            add(line(tr("export.noProject"), ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG))
             add(Box.createVerticalStrut(8))
-            add(line("Open a project to set up a new export.", ExportUi.font(13f), Palette.FG_2))
+            add(line(tr("export.noProject.text"), ExportUi.font(13f), Palette.FG_2))
         }
         add(text, GridBagConstraints().apply {
             fill = GridBagConstraints.HORIZONTAL
@@ -792,7 +800,7 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
 
     /** Shows the size, for example "~9.72 GB", and the settings, for example "Only points · 4K · 60 fps". */
     fun show(size: String, details: String) {
-        sizeText.setText(if (size == "unknown") "Size unknown" else size, ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG)
+        sizeText.setText(if (size == tr("export.unknown")) tr("export.sizeUnknown") else size, ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG)
         detailText.setText(details, ExportUi.font(12f), Palette.FG_2)
         revalidate()
         repaint()

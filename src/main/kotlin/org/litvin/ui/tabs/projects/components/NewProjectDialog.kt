@@ -26,6 +26,7 @@ import javax.swing.JTextField
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import org.litvin.i18n.tr
 
 /**
  * The name, the source video, the sport, and the match rules of a new project.
@@ -67,7 +68,7 @@ class NewProjectDialog private constructor(
     initial: NewProjectRequest,
     private val chooseVideo: (dialog: Component, currentPath: String) -> String?,
     private val videoCheck: VideoReadCheck,
-) : JDialog(owner, "New project", Dialog.ModalityType.APPLICATION_MODAL) {
+) : JDialog(owner, tr("projects.new.title"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : NewProjectEditor {
         private val videoCheck = FfprobeVideoReadCheck()
@@ -102,12 +103,12 @@ class NewProjectDialog private constructor(
 
     /** True while the video check runs. */
     private var checking = false
-    private val browseButton = UiButton("Browse…", buttonHeight = 34).apply {
+    private val browseButton = UiButton(tr("projects.new.browse"), buttonHeight = 34).apply {
         name = "new-project-browse"
-        toolTipText = "Select a different match video"
+        toolTipText = tr("projects.new.browse.tooltip")
         addActionListener { browse() }
     }
-    private val createButton = UiButton("Create project", Material2AL.ADD, UiButton.Kind.LIME).apply {
+    private val createButton = UiButton(tr("projects.new.create"), Material2AL.ADD, UiButton.Kind.LIME).apply {
         name = "new-project-create"
         addActionListener { create() }
     }
@@ -130,14 +131,14 @@ class NewProjectDialog private constructor(
         name = "new-project-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
-        val cancelButton = UiButton("Cancel").apply {
+        val cancelButton = UiButton(tr("common.cancel")).apply {
             name = "new-project-cancel"
             addActionListener { dispose() }
         }
 
         contentPane = DialogKit.content(
             DialogKit.WIDE,
-            DialogKit.head("New project"),
+            DialogKit.head(tr("projects.new.title")),
             form(),
             DialogKit.footer(right = listOf(cancelButton, createButton)),
         )
@@ -165,12 +166,12 @@ class NewProjectDialog private constructor(
             add(browseButton, BorderLayout.EAST)
         }
         return DialogKit.form(
-            DialogKit.field("Project name", DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
+            DialogKit.field(tr("projects.name"), DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
             nameError,
-            DialogKit.field("Match video", videoRow, note = "The app never changes the video file."),
+            DialogKit.field(tr("projects.new.video"), videoRow, note = tr("projects.new.video.note")),
             videoError,
             videoExplanation,
-            DialogKit.field("Sport", sportChoice),
+            DialogKit.field(tr("projects.new.sport"), sportChoice),
             padelRules.component,
             gap = 6,
         )
@@ -214,7 +215,7 @@ class NewProjectDialog private constructor(
         val request = currentRequest()
         checking = true
         createButton.isEnabled = false
-        createButton.text = "Checking video…"
+        createButton.text = tr("projects.new.checking")
         Thread({
             val problem = videoCheck.problem(request.sourceVideoPath)
             SwingUtilities.invokeLater { onVideoChecked(request, problem) }
@@ -223,7 +224,7 @@ class NewProjectDialog private constructor(
 
     private fun onVideoChecked(request: NewProjectRequest, problem: VideoProblem?) {
         checking = false
-        createButton.text = "Create project"
+        createButton.text = tr("projects.new.create")
         if (!isDisplayable) return
         // The user changed a field during the check. The next click checks the new values.
         if (request != currentRequest()) {

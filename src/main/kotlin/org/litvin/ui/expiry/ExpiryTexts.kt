@@ -9,49 +9,43 @@ import org.litvin.license.check.CheckState
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import org.litvin.i18n.tr
 
 /**
  * The texts of the expiry user interface (build-expiry-spec.md, "User interface"). Each text uses [AppInfo.NAME],
- * because the name can change. English only until localization (B-11).
+ * because the name can change. The texts are in the catalog (B-11).
  */
 internal object ExpiryTexts {
     private val name get() = AppInfo.NAME
 
-    val EXPIRED_TITLE get() = "This version of $name has expired"
+    val EXPIRED_TITLE get() = tr("expiry.expired.title", "app" to name)
 
     /** The dialog text when the rule has no `message`. */
-    val EXPIRED_DEFAULT
-        get() = "This version of $name has expired. Update to the new version to continue. " +
-            "Your projects stay on your computer. Exports that you started before continue."
+    val EXPIRED_DEFAULT get() = tr("expiry.expired.default", "app" to name)
 
     /** The banner text. The user cannot close the banner. */
-    val EXPIRED_BANNER get() = "Update to the new version to continue. Exports that you started before continue."
+    val EXPIRED_BANNER get() = tr("expiry.expired.banner")
 
-    const val CHECKING = "Checking…"
+    val CHECKING get() = tr("expiry.checking")
 
-    val NO_CONNECTION
-        get() = "$name cannot connect to the update server. It checks again every minute. " +
-            "If the date is wrong, correct the clock and connect to the internet."
+    val NO_CONNECTION get() = tr("expiry.noConnection", "app" to name)
 
     /** The "cannot connect" text of the "Clock behind" notice. */
-    val NO_CONNECTION_SHORT get() = "$name cannot connect to the update server."
+    val NO_CONNECTION_SHORT get() = tr("expiry.noConnection.short", "app" to name)
 
-    const val CHECKING_DATE_TITLE = "Checking the date…"
+    val CHECKING_DATE_TITLE get() = tr("expiry.checkingDate.title")
 
-    val CHECKING_DATE get() = "$name checks the date on the update server. This takes a maximum of 15 seconds."
+    val CHECKING_DATE get() = tr("expiry.checkingDate", "app" to name)
 
-    const val CLOCK_BEHIND_TITLE = "The clock of this computer is behind"
+    val CLOCK_BEHIND_TITLE get() = tr("expiry.clockBehind.title")
 
-    val CLOCK_BEHIND
-        get() = "The date on this computer is earlier than the date that $name used before. " +
-            "Check the clock of the computer and connect to the internet. " +
-            "Until then, each start of $name uses 12 hours of the time that is left for this version."
+    val CLOCK_BEHIND get() = tr("expiry.clockBehind", "app" to name)
 
-    const val WRONG_CLOCK_TITLE = "The clock of this computer is wrong"
+    val WRONG_CLOCK_TITLE get() = tr("expiry.wrongClock.title")
 
-    const val WARNING_TITLE = "This version expires soon"
+    val WARNING_TITLE get() = tr("expiry.warning.title")
 
-    const val UPDATE_TITLE = "A new version is available"
+    val UPDATE_TITLE get() = tr("expiry.update.title")
 
     /** The state of the online check in the banner and the dialog. "Still expired" has no extra text. */
     fun checkState(check: CheckState): String? = when (check) {
@@ -69,7 +63,7 @@ internal object ExpiryTexts {
 
     /** The date that the app used, in local time with the hour. */
     fun dateUsed(currentTime: Instant, zone: ZoneId = ZoneId.systemDefault()): String =
-        "The date that $name used: ${ExpiryMomentFormat.format(currentTime, zone)}."
+        tr("expiry.dateUsed", "app" to name, "date" to ExpiryMomentFormat.format(currentTime, zone))
 
     /** "Version 1.4.0 is available." when `latest.version` is newer than [appVersion]. Else null. */
     fun newVersion(rules: VersionRules?, appVersion: String = AppInfo.version): String? {
@@ -78,45 +72,38 @@ internal object ExpiryTexts {
         return if (newer) versionAvailable(latest.version) else null
     }
 
-    fun versionAvailable(version: String) = "Version $version is available."
+    fun versionAvailable(version: String) = tr("expiry.versionAvailable", "version" to version)
 
     /** The expiry warning: the moment in local time with the hour. */
     fun warning(expiry: EffectiveExpiry, zone: ZoneId = ZoneId.systemDefault()): String =
-        "This version works until ${ExpiryMomentFormat.format(expiry.moment, zone)}. Update to the new version."
+        tr("expiry.warning", "date" to ExpiryMomentFormat.format(expiry.moment, zone))
 
     /**
      * The wrong clock notice. [wrongClock] is the system time minus the server time. [days] is
      * [org.litvin.license.check.ExpiryState.wrongClockDays].
      */
-    fun wrongClock(wrongClock: Duration, days: Long): String {
-        val direction = if (wrongClock.isNegative) "behind" else "ahead"
-        val count = if (days == 1L) "1 day" else "$days days"
-        return "The clock of this computer is $count $direction. Correct the clock. " +
-            "If you do not, $name can stop while the computer is offline."
-    }
+    fun wrongClock(wrongClock: Duration, days: Long): String =
+        tr(if (wrongClock.isNegative) "expiry.wrongClock.behind" else "expiry.wrongClock.ahead", "count" to days, "app" to name)
 
-    const val UPDATE_AND_RESTART = "Update and restart"
-    const val DOWNLOAD_UPDATE = "Manually download update"
-    const val CHECK_NOW = "Check now"
-    const val LATER = "Later"
-    const val CLOSE = "Close"
+    val UPDATE_AND_RESTART get() = tr("expiry.updateAndRestart")
+    val DOWNLOAD_UPDATE get() = tr("expiry.downloadUpdate")
+    val CHECK_NOW get() = tr("expiry.checkNow")
+    val LATER get() = tr("expiry.later")
+    val CLOSE get() = tr("common.close")
 
     /** The text of "Update and restart" before the first bytes arrive. */
-    const val DOWNLOADING = "Downloading…"
+    val DOWNLOADING get() = tr("expiry.downloading")
 
     /** The text of "Update and restart" while the download runs. */
     fun downloading(bytes: Long, totalBytes: Long?): String =
-        if (totalBytes != null && totalBytes > 0) "Downloading… ${(bytes * 100 / totalBytes).coerceIn(0, 100)}%"
-        else "Downloading… ${bytes / (1024 * 1024)} MB"
+        if (totalBytes != null && totalBytes > 0) tr("expiry.downloading.percent", "percent" to (bytes * 100 / totalBytes).coerceIn(0, 100))
+        else tr("expiry.downloading.size", "size" to bytes / (1024 * 1024))
 
-    const val EXPORT_RUNS_TITLE = "Update and restart"
+    val EXPORT_RUNS_TITLE get() = UPDATE_AND_RESTART
 
-    const val EXPORT_RUNS =
-        "An export runs now. After the update, the running export starts again from the beginning. " +
-            "The queued exports continue."
+    val EXPORT_RUNS get() = tr("expiry.exportRuns")
 
-    const val DOWNLOAD_FAILED_TITLE = "The download failed"
+    val DOWNLOAD_FAILED_TITLE get() = tr("expiry.downloadFailed.title")
 
-    fun downloadFailed(reason: String) =
-        "The download of the new version failed: $reason\n\nTry again later, or click \"$DOWNLOAD_UPDATE\" to download it in the browser."
+    fun downloadFailed(reason: String) = tr("expiry.downloadFailed", "reason" to reason, "button" to DOWNLOAD_UPDATE)
 }

@@ -85,6 +85,8 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.22.2</version>
                 <configuration>
+                    <!-- The tests use fixed English formats, also on a PC with other regional formats (B-11). -->
+                    <argLine>-Duser.language=en -Duser.country=US -Duser.language.format=en -Duser.country.format=US</argLine>
                     <systemPropertyVariables>
                         <!-- BuildInfoTest compares BuildInfo.VERSION with this value. -->
                         <bananashot.test.projectVersion>${project.version}</bananashot.test.projectVersion>
@@ -94,6 +96,9 @@
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>2.22.2</version>
+                <configuration>
+                    <argLine>-Duser.language=en -Duser.country=US -Duser.language.format=en -Duser.country.format=US</argLine>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>

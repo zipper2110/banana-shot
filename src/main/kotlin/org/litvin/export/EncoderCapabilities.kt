@@ -1,36 +1,23 @@
 package org.litvin.export
 
 import org.litvin.FFmpegCapabilities
+import org.litvin.i18n.tr
 
 /** The H.264 encoders that the export can use. [jobLabel] is the value that FFmpegCommandBuilder reads. */
 enum class ExportEncoder(
     val id: String,
     val title: String,
     val jobLabel: String,
-    val description: String,
+    private val descriptionKey: String,
     val hardware: Boolean,
 ) {
-    NVENC(
-        "h264_nvenc", "NVIDIA NVENC", "H.264 (NVENC)",
-        "For PCs with an NVIDIA GeForce or RTX graphics card. Fast: the graphics card encodes the video.",
-        hardware = true,
-    ),
-    AMF(
-        "h264_amf", "AMD AMF", "H.264 (AMF)",
-        "For PCs with AMD Radeon graphics. Fast: the graphics card encodes the video.",
-        hardware = true,
-    ),
-    QSV(
-        "h264_qsv", "Intel Quick Sync", "H.264 (QSV)",
-        "For PCs with Intel graphics. Fast: the graphics part of the Intel processor encodes the video.",
-        hardware = true,
-    ),
-    SOFTWARE(
-        "libx264", "Software (x264)", "H.264 (libx264)",
-        "Works on all PCs. Only the processor encodes the video, so it is the slowest, but the most reliable.",
-        hardware = false,
-    ),
+    NVENC("h264_nvenc", "NVIDIA NVENC", "H.264 (NVENC)", "export.encoder.nvenc", hardware = true),
+    AMF("h264_amf", "AMD AMF", "H.264 (AMF)", "export.encoder.amf", hardware = true),
+    QSV("h264_qsv", "Intel Quick Sync", "H.264 (QSV)", "export.encoder.qsv", hardware = true),
+    SOFTWARE("libx264", "Software (x264)", "H.264 (libx264)", "export.encoder.software", hardware = false),
     ;
+
+    val description: String get() = tr(descriptionKey)
 
     companion object {
         fun fromId(id: String?): ExportEncoder? = entries.firstOrNull { it.id == id }

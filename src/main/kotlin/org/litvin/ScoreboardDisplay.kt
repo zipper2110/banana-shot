@@ -1,6 +1,7 @@
 package org.litvin
 
-import java.util.Locale
+import org.litvin.scoring.Sport
+import org.litvin.i18n.DisplayFormats
 
 /** The values that a scoreboard shows for one score state. All scoreboard styles use this model. */
 data class ScoreboardDisplay(
@@ -41,8 +42,8 @@ object ScoreboardComponent {
     const val VISIBLE_COMPLETED_SETS = 2
 
     fun display(span: OverlaySpan): ScoreboardDisplay {
-        val rawP1 = (span.p1Name ?: "Player 1").ifBlank { "Player 1" }
-        val rawP2 = (span.p2Name ?: "Player 2").ifBlank { "Player 2" }
+        val rawP1 = span.p1Name.orEmpty().ifBlank { Sport.TENNIS.defaultSideName(1) }
+        val rawP2 = span.p2Name.orEmpty().ifBlank { Sport.TENNIS.defaultSideName(2) }
         val leader = if (span.isTiebreak) {
             compareValues(span.tbP1, span.tbP2)
         } else {
@@ -51,8 +52,8 @@ object ScoreboardComponent {
         }
 
         return ScoreboardDisplay(
-            player1Name = ellipsize(rawP1.trim().uppercase(Locale.US), PLAYER_NAME_MAX_CHARS),
-            player2Name = ellipsize(rawP2.trim().uppercase(Locale.US), PLAYER_NAME_MAX_CHARS),
+            player1Name = ellipsize(rawP1.trim().let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
+            player2Name = ellipsize(rawP2.trim().let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
             player1Rgb = parseHexRgbOrDefault(span.p1ColorHex, DEFAULT_PLAYER1_RGB),
             player2Rgb = parseHexRgbOrDefault(span.p2ColorHex, DEFAULT_PLAYER2_RGB),
             player1PointText = if (span.isTiebreak) span.tbP1.toString() else pointsLabel(span.p1Pts, span.p2Pts),

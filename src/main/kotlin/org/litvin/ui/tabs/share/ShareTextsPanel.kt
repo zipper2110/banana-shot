@@ -21,6 +21,7 @@ import javax.swing.event.DocumentListener
 import javax.swing.text.AbstractDocument
 import javax.swing.text.AttributeSet
 import javax.swing.text.DocumentFilter
+import org.litvin.i18n.tr
 
 /** What the Texts tab shows for one field. [source]: where the value comes from, or "Edited". */
 internal data class FieldState(val value: String, val source: String, val edited: Boolean, val used: Boolean)
@@ -54,10 +55,10 @@ internal class ShareTextsPanel(
     private val rows = HashMap<ThumbnailField, JComponent>()
     private val sources = HashMap<ThumbnailField, JLabel>()
     private val typeChip = ChipButton("share-head-type", "")
-    private val scoreChip = ChipButton("share-head-score", "Final score").apply {
-        toolTipText = "Shows the final score of the match on the thumbnail"
+    private val scoreChip = ChipButton("share-head-score", tr("share.finalScore")).apply {
+        toolTipText = tr("share.finalScore.tooltip")
     }
-    private val usePresets = LinkButton("share-use-presets", "Use the presets")
+    private val usePresets = LinkButton("share-use-presets", tr("share.usePresets"))
     private var updating = false
 
     init {
@@ -67,7 +68,7 @@ internal class ShareTextsPanel(
             preferredSize = Dimension(0, 18)
             add(usePresets, BorderLayout.EAST)
         }, gapAfter = 4)
-        add(captioned("Video type", null, typeChoice))
+        add(captioned(tr("share.videoType"), null, typeChoice))
         typeChoice.onChange { onType(it) }
         usePresets.addActionListener { onUsePresets() }
 
@@ -87,12 +88,12 @@ internal class ShareTextsPanel(
             isOpaque = false
             add(box(ThumbnailField.TEAM1))
             add(box(ThumbnailField.TEAM2))
-        }, caption = "Players"))
+        }, caption = tr("scoreSettings.players")))
         add(textField(ThumbnailField.EVENT, box(ThumbnailField.EVENT)))
         add(textField(ThumbnailField.COURT, box(ThumbnailField.COURT)))
         add(textField(ThumbnailField.DATE, box(ThumbnailField.DATE)))
-        add(ShareUi.hint("An empty field does not show on the thumbnail."))
-        inputs.getValue(ThumbnailField.EVENT).toolTipText = "For example: Club league, round 3"
+        add(ShareUi.hint(tr("share.emptyField")))
+        inputs.getValue(ThumbnailField.EVENT).toolTipText = tr("share.field.event.tooltip")
     }
 
     private fun input(field: ThumbnailField) = JTextField().apply {
@@ -148,9 +149,9 @@ internal class ShareTextsPanel(
             val used = states.any { it.used }
             val empty = states.all { it.value.isBlank() }
             val text = when {
-                edited -> "Edited"
-                empty -> "No preset"
-                field == ThumbnailField.HEAD && state.headIsScore -> "The final score"
+                edited -> tr("share.source.edited")
+                empty -> tr("share.source.none")
+                field == ThumbnailField.HEAD && state.headIsScore -> tr("share.source.finalScore")
                 else -> field.source
             }
             source.text = text
@@ -163,7 +164,11 @@ internal class ShareTextsPanel(
         typeChip.chosen = !state.headIsScore && head == state.typeWords
         scoreChip.isEnabled = state.finalScore != null
         scoreChip.chosen = state.headIsScore
-        scoreChip.toolTipText = if (state.finalScore == null) "The project has no scored points" else "Shows the final score of the match on the thumbnail: ${state.finalScore}"
+        scoreChip.toolTipText = if (state.finalScore == null) {
+            tr("share.finalScore.none")
+        } else {
+            tr("share.finalScore.tooltip.value", "score" to state.finalScore)
+        }
         usePresets.isVisible = state.anyEdited
         revalidate()
         repaint()

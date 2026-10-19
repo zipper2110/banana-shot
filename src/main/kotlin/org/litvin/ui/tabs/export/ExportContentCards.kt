@@ -4,6 +4,7 @@ import org.litvin.export.ExportPointSummary
 import org.litvin.export.RenderFormatting
 import javax.swing.ButtonGroup
 import org.litvin.ui.commons.Palette
+import org.litvin.i18n.tr
 
 /**
  * The content choice as three radio cards. Each card shows the length of the exported video
@@ -17,9 +18,9 @@ internal class ExportContentCards : Stack(6) {
     private class Entry(val card: ChoiceCard, val title: String, val summary: String, val hasCount: Boolean)
 
     private val entries = listOf(
-        Entry(fullVideo, "Full video", "The complete video, with the time between points", hasCount = false),
-        Entry(points, "Only points", "The marked points, without the time between them", hasCount = true),
-        Entry(favorites, "Only favorites", "Only the points that are marked with a star", hasCount = true),
+        Entry(fullVideo, tr("export.content.full"), tr("export.content.full.summary"), hasCount = false),
+        Entry(points, tr("export.content.points"), tr("export.content.points.summary"), hasCount = true),
+        Entry(favorites, tr("export.content.favorites"), tr("export.content.favorites.summary"), hasCount = true),
     )
 
     init {
@@ -53,8 +54,7 @@ internal class ExportContentCards : Stack(6) {
         val unit = when {
             !entry.hasCount -> ""
             count == null -> DASH
-            count == 1 -> "1 point"
-            else -> "$count points"
+            else -> tr("export.points", "count" to count)
         }
         card.metaUnit.setText(unit, card.metaUnit.runs.first().font, if (count == 0) Palette.YELLOW else Palette.FG_2)
         card.getAccessibleContext().accessibleName = listOf(entry.title, entry.summary, length ?: DASH, unit)

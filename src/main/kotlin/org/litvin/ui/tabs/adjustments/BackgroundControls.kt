@@ -12,6 +12,7 @@ import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
 import javax.swing.JPanel
+import org.litvin.i18n.tr
 
 /**
  * The row of the fill color: the areas outside the rotated video get this color in the preview and in the export.
@@ -20,7 +21,7 @@ import javax.swing.JPanel
 internal class BackgroundRow(onPick: () -> Unit) : JPanel(null) {
     val swatch = SwatchButton(Color(AdjustmentsV1.DEFAULT_BACKGROUND_RGB)).apply {
         name = "crop-background"
-        toolTipText = "Choose the fill color"
+        toolTipText = tr("adjust.fill.tooltip")
         getAccessibleContext().accessibleName = LABEL
         addActionListener { onPick() }
     }
@@ -69,7 +70,7 @@ internal class BackgroundRow(onPick: () -> Unit) : JPanel(null) {
     }
 
     private companion object {
-        const val LABEL = "Fill color"
+        val LABEL: String get() = tr("adjust.fill")
         const val MIN_WIDTH = 200
         const val ROW_HEIGHT = 48
         const val HEX_GAP = 10
@@ -78,4 +79,4 @@ internal class BackgroundRow(onPick: () -> Unit) : JPanel(null) {
 
 /** The "BACKGROUND" card with the fill color row. */
 internal class BackgroundCard(val row: BackgroundRow) :
-    GroupCard("crop-group-background", "Background", Material2OutlinedAL.FORMAT_COLOR_FILL, listOf(row), row.preferredSize.height)
+    GroupCard("crop-group-background", tr("scoreboard.background"), Material2OutlinedAL.FORMAT_COLOR_FILL, listOf(row), row.preferredSize.height)

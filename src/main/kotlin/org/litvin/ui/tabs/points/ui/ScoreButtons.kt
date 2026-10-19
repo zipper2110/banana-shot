@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.points.ui
 
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.ScoreboardComponent
+import org.litvin.scoring.Sport
 import java.awt.AlphaComposite
 import java.awt.Color
 import java.awt.Cursor
@@ -14,11 +15,12 @@ import org.litvin.ui.commons.KeyChipStyle
 import org.litvin.ui.commons.KeyChips
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
+import org.litvin.i18n.tr
 
 /** The names and colors of the two players. */
 internal data class ScorePlayers(
-    val p1Name: String = "Player 1",
-    val p2Name: String = "Player 2",
+    val p1Name: String = Sport.TENNIS.defaultSideName(1),
+    val p2Name: String = Sport.TENNIS.defaultSideName(2),
     val p1Color: Color = Color(ScoreboardComponent.DEFAULT_PLAYER1_RGB),
     val p2Color: Color = Color(ScoreboardComponent.DEFAULT_PLAYER2_RGB),
 ) {
@@ -51,7 +53,8 @@ internal class OutcomeButton(private val player: Int, private val key: String) :
     fun setPlayer(name: String, color: Color) {
         text = name
         this.color = color
-        toolTipText = if (player == 0) "$key — No point" else "$key — Point for $name"
+        toolTipText = if (player == 0) tr("points.outcome.none.short", "key" to key)
+        else tr("points.outcome.for", "key" to key, "name" to name)
         repaint()
     }
 

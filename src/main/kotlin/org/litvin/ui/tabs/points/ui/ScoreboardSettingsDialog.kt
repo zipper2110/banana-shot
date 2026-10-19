@@ -60,6 +60,7 @@ import javax.swing.text.AbstractDocument
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
 
 /**
  * Modal "Scoreboard style" dialog. It sets up the scoreboard: style, title, player colors, serve ball, app credit line,
@@ -76,7 +77,7 @@ class ScoreboardSettingsDialog private constructor(
     loadFrame: ((BufferedImage?) -> Unit) -> Unit,
     private val takeCreditRequest: () -> Boolean,
     private val onPreview: (ScoreboardSettingsV1) -> Unit,
-) : JDialog(owner, "Scoreboard style", Dialog.ModalityType.APPLICATION_MODAL) {
+) : JDialog(owner, tr("points.scoreboardStyle"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object {
         private const val DIALOG_WIDTH = 1120
@@ -87,10 +88,8 @@ class ScoreboardSettingsDialog private constructor(
         private const val THUMBNAIL_SCALE = 0.42
         private const val THUMBNAIL_MAX_WIDTH = 150.0
         private const val THUMBNAIL_MAX_HEIGHT = 54.0
-        internal const val CREDIT_REQUEST_TITLE = "A small favor"
-        internal const val CREDIT_REQUEST_TEXT = "Hey there! I make BananaShot in my free time, and it's free for you. " +
-            "If you like it, could you keep this small label in your videos? " +
-            "It helps other players find the app, and it costs you nothing. Thanks! ;)"
+        internal val CREDIT_REQUEST_TITLE: String get() = tr("scoreboard.credit.title")
+        internal val CREDIT_REQUEST_TEXT: String get() = tr("scoreboard.credit.text")
 
         /**
          * Shows the dialog and waits until it closes. Returns the new settings after Save,
@@ -124,7 +123,7 @@ class ScoreboardSettingsDialog private constructor(
     private var updatingControls = false
 
     private val styleCards = ScoreboardStyleId.entries.associateWith { StyleCard(it) }
-    private val styleGroup = DialogGroup("Style", Material2MZ.STYLE, "scoreboard-style-group")
+    private val styleGroup = DialogGroup(tr("scoreboard.style"), Material2MZ.STYLE, "scoreboard-style-group")
     private val positionChoice = SegmentedChoice(
         "scoreboard-position",
         ScoreboardPosition.entries.map { position ->
@@ -140,49 +139,49 @@ class ScoreboardSettingsDialog private constructor(
     private val titleField = JTextField(16).apply {
         name = "scoreboard-title"
         (document as? AbstractDocument)?.documentFilter = MaxLengthFilter(ScoreboardSettingsV1.MAX_TITLE_LENGTH)
-        toolTipText = "The text in the title bar of the scoreboard"
-        getAccessibleContext().accessibleName = "Title"
+        toolTipText = tr("scoreboard.title.tooltip")
+        getAccessibleContext().accessibleName = tr("scoreboard.title")
     }
-    private val showTitle = SwitchBox("Title").apply {
+    private val showTitle = SwitchBox(tr("scoreboard.title")).apply {
         name = "scoreboard-show-title"
     }
-    private val showPlayerColors = SwitchBox("Player colors").apply {
+    private val showPlayerColors = SwitchBox(tr("scoreboard.playerColors")).apply {
         name = "scoreboard-show-player-colors"
-        toolTipText = "Show the color of each player next to the name"
+        toolTipText = tr("scoreboard.playerColors.tooltip")
     }
-    private val showServe = SwitchBox("Serve indicator").apply {
+    private val showServe = SwitchBox(tr("scoreboard.serve")).apply {
         name = "scoreboard-show-serve"
-        toolTipText = "Show a ball next to the player who serves. Mark the server on the Points tab"
+        toolTipText = tr("scoreboard.serve.tooltip")
     }
-    private val showDecidingPoint = SwitchBox("Golden / star point badge").apply {
+    private val showDecidingPoint = SwitchBox(tr("scoreboard.decidingPoint")).apply {
         name = "scoreboard-show-deciding-point"
-        toolTipText = "During a golden point or a star point, show a badge next to the scoreboard"
+        toolTipText = tr("scoreboard.decidingPoint.tooltip")
     }
-    private val showAppCredit = SwitchBox("“${ScoreboardSettingsV1.APP_CREDIT}” line").apply {
+    private val showAppCredit = SwitchBox(tr("scoreboard.appCredit", "credit" to ScoreboardSettingsV1.APP_CREDIT)).apply {
         name = "scoreboard-show-app-credit"
-        toolTipText = "Show a line with the app name at the bottom of the scoreboard"
+        toolTipText = tr("scoreboard.appCredit.tooltip")
     }
     private val sizeRow = SliderValueRow(
-        "scoreboard-size", "Size", "The size of the scoreboard",
+        "scoreboard-size", tr("scoreboard.size"), tr("scoreboard.size.tooltip"),
         ScoreboardSettingsV1.MIN_SIZE_PERCENT, ScoreboardSettingsV1.MAX_SIZE_PERCENT, ScoreboardSettingsV1().sizePercent,
         emptyList(), "${ScoreboardSettingsV1.MIN_SIZE_PERCENT} %", null, "${ScoreboardSettingsV1.MAX_SIZE_PERCENT} %",
         percentFormat(), first = false,
     )
     private val sizeSlider = sizeRow.slider
     private val opacityRow = SliderValueRow(
-        "scoreboard-opacity", "Background", "The opacity of the scoreboard background",
+        "scoreboard-opacity", tr("scoreboard.background"), tr("scoreboard.background.tooltip"),
         ScoreboardSettingsV1.MIN_OPACITY_PERCENT, 100, ScoreboardLayouts.defaults(initial.style).backgroundOpacityPercent,
         emptyList(), "${ScoreboardSettingsV1.MIN_OPACITY_PERCENT} %", null, "100 %",
         percentFormat(), first = false,
     )
     private val opacitySlider = opacityRow.slider
-    private val accentButton = UiButton("Change…").apply {
+    private val accentButton = UiButton(tr("comment.color.change")).apply {
         name = "scoreboard-accent"
-        toolTipText = "Choose the accent color of the scoreboard"
+        toolTipText = tr("scoreboard.accent.tooltip")
     }
-    private val accentDefault = UiButton("Reset to default", kind = UiButton.Kind.QUIET).apply {
+    private val accentDefault = UiButton(tr("scoreboard.accent.default"), kind = UiButton.Kind.QUIET).apply {
         name = "scoreboard-accent-default"
-        toolTipText = "Use the color of the style"
+        toolTipText = tr("scoreboard.accent.default.tooltip")
     }
     private val accentNote = WrapText("", UiKit.font(11.5f), Palette.FG_3, 1.45f, SIDE_WIDTH - 28)
     private val framePreview = FramePreview()
@@ -202,7 +201,7 @@ class ScoreboardSettingsDialog private constructor(
             if (!showAppCredit.isSelected && takeCreditRequest()) {
                 showAppCredit.isSelected = MessageDialog.confirm(
                     this, CREDIT_REQUEST_TITLE, CREDIT_REQUEST_TEXT,
-                    confirmLabel = "Keep the label", cancelLabel = "Remove it", glyph = Feather.HEART,
+                    confirmLabel = tr("scoreboard.credit.keep"), cancelLabel = tr("scoreboard.credit.remove"), glyph = Feather.HEART,
                     portrait = AuthorPortrait.image,
                 )
             }
@@ -214,25 +213,25 @@ class ScoreboardSettingsDialog private constructor(
         sizeSlider.addChangeListener { update { it.copy(sizePercent = sizeSlider.value) } }
         opacitySlider.addChangeListener { update { it.copy(backgroundOpacityPercent = opacitySlider.value) } }
         accentButton.addActionListener {
-            val chosen = ColorPickerDialog.pick(this, "Choose accent color", Color(accentRgb()))
+            val chosen = ColorPickerDialog.pick(this, tr("scoreboard.accent.pick"), Color(accentRgb()))
             if (chosen != null) update { it.copy(accentColorHex = ColorPickerDialog.hex(chosen)) }
         }
         accentDefault.addActionListener { update { it.copy(accentColorHex = null) } }
 
-        val saveButton = UiButton("Save", kind = UiButton.Kind.LIME).apply {
+        val saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply {
             name = "scoreboard-save"
             addActionListener {
                 result = settings.normalized()
                 dispose()
             }
         }
-        val cancelButton = UiButton("Cancel").apply {
+        val cancelButton = UiButton(tr("common.cancel")).apply {
             name = "scoreboard-cancel"
             addActionListener { cancel() }
         }
-        val resetButton = UiButton("Reset to defaults", Feather.ROTATE_CCW, UiButton.Kind.QUIET).apply {
+        val resetButton = UiButton(tr("scoreboard.reset"), Feather.ROTATE_CCW, UiButton.Kind.QUIET).apply {
             name = "scoreboard-reset"
-            toolTipText = "Use the default style, title, position, size and colors"
+            toolTipText = tr("scoreboard.reset.tooltip")
             addActionListener { update { ScoreboardSettingsV1() } }
         }
 
@@ -311,18 +310,18 @@ class ScoreboardSettingsDialog private constructor(
         isOpaque = false
         (layout as FlowLayout).alignOnBaseline = true
         border = BorderFactory.createEmptyBorder(16, DialogKit.PAD_X, 6, DialogKit.PAD_X)
-        add(JLabel("Scoreboard style").apply {
+        add(JLabel(tr("points.scoreboardStyle")).apply {
             font = UiKit.font(15f, UiKit.Weight.SEMIBOLD)
             foreground = Palette.FG
         })
-        add(JLabel("   The video shows each change at once. Cancel restores the saved style.").apply {
+        add(JLabel("   " + tr("scoreboard.preview.note")).apply {
             font = UiKit.font(12f)
             foreground = Palette.FG_3
         })
     }
 
     private fun sidePanel(): JComponent {
-        val onBoard = DialogGroup("On the board", Material2MZ.TEXT_FIELDS, labelWidth = 92).apply {
+        val onBoard = DialogGroup(tr("scoreboard.onBoard"), Material2MZ.TEXT_FIELDS, labelWidth = 92).apply {
             wide(showTitle)
             indented(DialogKit.inputBox(titleField, 32), left = 54)
             wide(showPlayerColors, line = true)
@@ -330,12 +329,12 @@ class ScoreboardSettingsDialog private constructor(
             wide(showDecidingPoint)
             wide(showAppCredit)
         }
-        val place = DialogGroup("Place and size", Material2MZ.PICTURE_IN_PICTURE, labelWidth = 92).apply {
-            row("Position", positionChoice)
+        val place = DialogGroup(tr("scoreboard.placeAndSize"), Material2MZ.PICTURE_IN_PICTURE, labelWidth = 92).apply {
+            row(tr("scoreboard.position"), positionChoice)
             custom(sizeRow)
             custom(opacityRow)
         }
-        val accent = DialogGroup("Accent color", Material2MZ.PALETTE, labelWidth = 92).apply {
+        val accent = DialogGroup(tr("scoreboard.accent"), Material2MZ.PALETTE, labelWidth = 92).apply {
             wide(JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
                 isOpaque = false
                 (layout as FlowLayout).hgap = 0
@@ -404,8 +403,8 @@ class ScoreboardSettingsDialog private constructor(
             val styleHex = "#%06X".format(defaults.accentRgb and 0xFFFFFF)
             accentNote.runs = listOf(
                 TextRun(
-                    if (settings.normalized().accentColorHex != null) "Own color. The ${settings.style.title} style color is $styleHex."
-                    else "The color of the ${settings.style.title} style.",
+                    if (settings.normalized().accentColorHex != null) tr("scoreboard.accent.own", "style" to settings.style.title, "color" to styleHex)
+                    else tr("scoreboard.accent.style", "style" to settings.style.title),
                     UiKit.font(11.5f),
                     Palette.FG_3,
                 ),

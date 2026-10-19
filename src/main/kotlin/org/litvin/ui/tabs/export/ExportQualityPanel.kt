@@ -15,6 +15,7 @@ import org.litvin.ui.tabs.export.ExportUi.Weight
 import java.awt.Dimension
 import javax.swing.ButtonGroup
 import javax.swing.JPanel
+import org.litvin.i18n.tr
 
 /** The video settings and the encoder that the next export uses. */
 data class ExportQualitySelection(
@@ -38,8 +39,8 @@ internal class ExportQualityPanel(
     /** Called when a setting or an estimate changes, so that the footer can show the new values. */
     var onChange: (() -> Unit)? = null
 
-    private val simpleTab = SegmentButton("export-mode-simple", "Simple", compact = true)
-    private val advancedTab = SegmentButton("export-mode-advanced", "Advanced", compact = true)
+    private val simpleTab = SegmentButton("export-mode-simple", tr("export.mode.simple"), compact = true)
+    private val advancedTab = SegmentButton("export-mode-advanced", tr("export.mode.advanced"), compact = true)
     val modeControl = SegmentedControl().apply {
         addSegment(simpleTab)
         addSegment(advancedTab)
@@ -48,11 +49,11 @@ internal class ExportQualityPanel(
     // Simple mode
     private val simpleTiles = ExportSimplePreset.entries.associateWith { QualityTile("export-quality-${it.id}") }
     private val spec = SpecTable()
-    private val resolutionSpec = spec.row("Resolution")
+    private val resolutionSpec = spec.row(tr("export.resolution"))
     private val fpsSpec = spec.row("FPS")
-    private val bitrateSpec = spec.row("Bitrate")
-    private val sizeSpec = spec.row("File size")
-    private val timeSpec = spec.row("Export time")
+    private val bitrateSpec = spec.row(tr("export.bitrate"))
+    private val sizeSpec = spec.row(tr("export.fileSize"))
+    private val timeSpec = spec.row(tr("export.exportTime"))
     private val simpleEncoderText = encoderLine("export-simple-encoder")
     private val simplePanel = Stack(0)
 
@@ -96,16 +97,16 @@ internal class ExportQualityPanel(
         simplePanel.add(VGap(8))
         simplePanel.add(simpleEncoderText)
 
-        advancedPanel.add(field("Resolution", resolutionControl))
+        advancedPanel.add(field(tr("export.resolution"), resolutionControl))
         advancedPanel.add(VGap(14))
-        advancedPanel.add(field("Frame rate", frameRateControl))
+        advancedPanel.add(field(tr("export.frameRate"), frameRateControl))
         advancedPanel.add(VGap(14))
         val scale = GridRows(2, 0, 0).apply {
-            add(WrapText("Worst quality", ExportUi.font(11f), Palette.FG_3).apply { name = "export-bitrate-worst" })
-            add(WrapText("Best quality", ExportUi.font(11f), Palette.FG_3, align = WrapText.Align.RIGHT).apply { name = "export-bitrate-best" })
+            add(WrapText(tr("export.bitrate.worst"), ExportUi.font(11f), Palette.FG_3).apply { name = "export-bitrate-worst" })
+            add(WrapText(tr("export.bitrate.best"), ExportUi.font(11f), Palette.FG_3, align = WrapText.Align.RIGHT).apply { name = "export-bitrate-best" })
         }
         advancedPanel.add(Stack(0).apply {
-            add(FieldHead("Bitrate", bitrateValueText))
+            add(FieldHead(tr("export.bitrate"), bitrateValueText))
             add(VGap(6))
             add(bitrateSlider)
             add(scale)
@@ -114,7 +115,7 @@ internal class ExportQualityPanel(
         })
         advancedPanel.add(VGap(14))
         advancedPanel.add(Stack(0).apply {
-            add(FieldHead("Encoder"))
+            add(FieldHead(tr("export.encoder")))
             add(VGap(6))
             add(encoderControl)
             add(VGap(6))
@@ -224,7 +225,7 @@ internal class ExportQualityPanel(
         frameRateButtons = frameRateChoices.map { choice ->
             val note = when {
                 !choice.isSource -> null
-                source.variableFrameRate -> "$ORIGINAL, variable"
+                source.variableFrameRate -> tr("export.original.variable")
                 else -> ORIGINAL
             }
             val button = SegmentButton(frameRateButtonName(choice), choice.title).apply {
@@ -243,9 +244,9 @@ internal class ExportQualityPanel(
         bitrateSlider.value = range.maxK
         bitrateNoteText.setText(
             if (range.estimated) {
-                "The bitrate of the original video is not known. The maximum is a typical camera bitrate."
+                tr("export.bitrate.estimated")
             } else {
-                "The maximum is the bitrate of the original video."
+                tr("export.bitrate.source")
             },
             ExportUi.font(11f),
             Palette.FG_3,
@@ -277,16 +278,16 @@ internal class ExportQualityPanel(
         )
         val averageRate = source.averageFrameRate?.takeIf { source.variableFrameRate }
         fpsSpec.set(
-            target.frameRate?.displayFps ?: "unknown",
+            target.frameRate?.displayFps ?: tr("export.unknown"),
             ORIGINAL.takeIf { target.frameRate != null },
-            note = averageRate?.let { "The original frame rate is variable: ${it.displayFps} fps on average." },
+            note = averageRate?.let { tr("export.frameRate.variable", "fps" to it.displayFps) },
         )
         when {
             source.bitrate == null -> bitrateSpec.set(ExportVideoOptions.formatBitrate(target.bitrateK))
             preset.bitrateFactor >= 1.0 -> bitrateSpec.set(ExportVideoOptions.formatBitrate(target.bitrateK), ORIGINAL)
             else -> bitrateSpec.set(
                 ExportVideoOptions.formatBitrate(target.bitrateK),
-                "${(preset.bitrateFactor * 100).toInt()}% of $ORIGINAL",
+                tr("export.bitrate.percentOfOriginal", "percent" to (preset.bitrateFactor * 100).toInt()),
                 mutedTag = true,
             )
         }
@@ -299,7 +300,7 @@ internal class ExportQualityPanel(
         val regular = ExportUi.font(12.5f)
         bitrateValueText.runs = listOf(
             TextRun(ExportVideoOptions.formatBitrate(bitrateSlider.value), bold, Palette.FG),
-            TextRun(" · file size ", regular, Palette.FG),
+            TextRun(" · ${tr("export.bitrate.fileSize")} ", regular, Palette.FG),
             TextRun(estimatedSize(bitrateSlider.value), bold, Palette.FG),
         )
     }
@@ -309,9 +310,9 @@ internal class ExportQualityPanel(
         encoderControl.removeSegments()
         if (capabilities == null) {
             simpleEncoderText.runs = listOf(
-                TextRun("Detecting GPUs and encoders…\nUntil the detection ends, the export uses the software encoder.", ENCODER_FONT, Palette.FG_2),
+                TextRun(tr("export.encoder.detecting") + "\n" + tr("export.encoder.detecting.note"), ENCODER_FONT, Palette.FG_2),
             )
-            advancedGpuText.runs = listOf(TextRun("Detecting GPUs and encoders…", ENCODER_FONT, Palette.FG_2))
+            advancedGpuText.runs = listOf(TextRun(tr("export.encoder.detecting"), ENCODER_FONT, Palette.FG_2))
             encoderButtons = emptyList()
             encoderControl.isVisible = false
             encoderDescriptionText.isVisible = false
@@ -322,16 +323,16 @@ internal class ExportQualityPanel(
         val gpus = gpuRuns(capabilities.gpuNames)
         advancedGpuText.runs = gpus
         simpleEncoderText.runs = listOf(
-            TextRun("Selected encoder:", ENCODER_BOLD_FONT, Palette.FG),
+            TextRun(tr("export.encoder.selected"), ENCODER_BOLD_FONT, Palette.FG),
             TextRun(" ${best.title}", ENCODER_FONT, Palette.FG_2),
         ) + (if (best.hardware) emptyList() else listOf(
-            TextRun("\nNo hardware encoder works on this PC, so the processor encodes the video.", ENCODER_FONT, Palette.FG_2),
+            TextRun("\n" + tr("export.encoder.noHardware"), ENCODER_FONT, Palette.FG_2),
         )) + TextRun("\n", ENCODER_FONT, Palette.FG_2) + gpus
 
         val selected = capabilities.options.firstOrNull { it.id == chosenEncoderId } ?: best
         encoderButtons = capabilities.options.map { encoder ->
             val button = SegmentButton("export-encoder-${encoder.id}", encoder.title).apply {
-                setSmall(listOf(if (encoder == best) "Best for this PC" to true else " " to false))
+                setSmall(listOf(if (encoder == best) tr("export.encoder.best") to true else " " to false))
                 toolTipText = encoder.description
                 isSelected = encoder == selected
                 addActionListener {
@@ -358,15 +359,15 @@ internal class ExportQualityPanel(
 
     /** "Detected GPUs:" and the GPU names in one line. */
     private fun gpuRuns(gpuNames: List<String>): List<TextRun> {
-        val heading = if (gpuNames.size == 1) "Detected GPU:" else "Detected GPUs:"
+        val heading = tr("export.gpus", "count" to gpuNames.size)
         return listOf(
             TextRun(heading, ENCODER_BOLD_FONT, Palette.FG),
-            TextRun(" " + gpuNames.ifEmpty { listOf("none") }.joinToString(", "), ENCODER_FONT, Palette.FG_2),
+            TextRun(" " + gpuNames.ifEmpty { listOf(tr("export.gpus.none")) }.joinToString(", "), ENCODER_FONT, Palette.FG_2),
         )
     }
 
     private fun estimatedSize(bitrateK: Int): String =
-        outputDurationMs?.let { "~" + RenderFormatting.formatSize(ExportVideoOptions.estimatedBytes(bitrateK, it)) } ?: "unknown"
+        outputDurationMs?.let { "~" + RenderFormatting.formatSize(ExportVideoOptions.estimatedBytes(bitrateK, it)) } ?: tr("export.unknown")
 
     private fun resolutionButtonName(choice: ExportResolutionChoice): String =
         "export-resolution-" + if (choice.level == null) "source" else choice.title.lowercase()
@@ -411,7 +412,7 @@ internal class ExportQualityPanel(
     }
 
     private companion object {
-        const val ORIGINAL = "original"
+        val ORIGINAL: String get() = tr("export.original")
         val ENCODER_FONT = ExportUi.font(11.5f)
         val ENCODER_BOLD_FONT = ExportUi.font(11.5f, Weight.SEMIBOLD)
     }

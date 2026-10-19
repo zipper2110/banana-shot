@@ -15,6 +15,7 @@ import javax.swing.JDialog
 import javax.swing.JPanel
 import javax.swing.JTextArea
 import javax.swing.JTextField
+import org.litvin.i18n.tr
 
 /** The values of a comment in [CommentDialog]. The start is in source time; the color uses the #RRGGBB format. */
 data class CommentInput(
@@ -40,9 +41,14 @@ object CommentDialog {
 
     /** The choices of the Style switch. The order is the order of the buttons "<prefix>-comment-style-<index>". */
     private val STYLE_OPTIONS = listOf(
-        SegmentedChoice.Option(CommentStyle.OUTLINE, "Outline", sub = "text only", tooltip = "Colored text with an outline and a shadow"),
-        SegmentedChoice.Option(CommentStyle.CARD, "Card", sub = "text on a box", tooltip = "Colored text on a rounded dark or light box"),
-        SegmentedChoice.Option(CommentStyle.PILL, "Pill", sub = "colored box", tooltip = "Each line on a rounded box of the comment color"),
+        SegmentedChoice.Option(
+            CommentStyle.OUTLINE,
+            tr("comment.style.outline"),
+            sub = tr("comment.style.outline.sub"),
+            tooltip = tr("comment.style.outline.tooltip"),
+        ),
+        SegmentedChoice.Option(CommentStyle.CARD, tr("comment.style.card"), sub = tr("comment.style.card.sub"), tooltip = tr("comment.style.card.tooltip")),
+        SegmentedChoice.Option(CommentStyle.PILL, tr("comment.style.pill"), sub = tr("comment.style.pill.sub"), tooltip = tr("comment.style.pill.tooltip")),
     )
 
     fun showCreate(
@@ -71,14 +77,14 @@ object CommentDialog {
     ): JDialog = build(
         parent,
         namePrefix,
-        "Add comment",
+        tr("comment.add.title"),
         CommentInput(initialStartMs, DEFAULT_DURATION_MS, "", defaultColor, defaultStyle),
         onSave,
     )
 
     /** Builds the packed "Edit comment" dialog without showing it. */
     internal fun buildEdit(parent: Component, namePrefix: String, id: Int, comment: CommentInput, onSave: (CommentInput) -> Unit): JDialog =
-        build(parent, namePrefix, "Edit comment #$id", comment, onSave)
+        build(parent, namePrefix, tr("comment.edit.title", "number" to id.toString()), comment, onSave)
 
     private fun JDialog.showOver(parent: Component) {
         setLocationRelativeTo(parent)
@@ -100,25 +106,25 @@ object CommentDialog {
         }
         val start = JTextField(formatTimestamp(initial.startMs)).apply {
             name = "$namePrefix-comment-start"
-            toolTipText = "hh:mm:ss.mmm, mm:ss.mmm, or seconds"
+            toolTipText = tr("comment.start.tooltip")
         }
         val duration = JTextField(formatDurationField(initial.durationMs)).apply {
             name = "$namePrefix-comment-duration"
-            toolTipText = "How long the comment stays on screen, in seconds"
+            toolTipText = tr("comment.duration.tooltip")
         }
         var colorHex = initial.colorHex
-        val color = UiButton("Change…").apply {
+        val color = UiButton(tr("comment.color.change")).apply {
             name = "$namePrefix-comment-color"
             swatch = colorFor(colorHex)
             toolTipText = colorHex
         }
         val style = SegmentedChoice("$namePrefix-comment-style", STYLE_OPTIONS).apply { selected = initial.style }
         val error = DialogKit.errorLine()
-        val saveButton = UiButton("Save", kind = UiButton.Kind.LIME).apply { name = "$namePrefix-comment-save" }
-        val cancelButton = UiButton("Cancel")
+        val saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply { name = "$namePrefix-comment-save" }
+        val cancelButton = UiButton(tr("common.cancel"))
 
         color.addActionListener {
-            ColorPickerDialog.pick(dialog, "Choose comment color", colorFor(colorHex))?.let { chosen ->
+            ColorPickerDialog.pick(dialog, tr("comment.color.pick"), colorFor(colorHex))?.let { chosen ->
                 colorHex = "#%06X".format(chosen.rgb and 0xFFFFFF)
                 color.swatch = chosen
                 color.toolTipText = colorHex
@@ -132,7 +138,7 @@ object CommentDialog {
             } else {
                 val parsed = parseFields(start.text, duration.text, text.text, colorHex, style.selected ?: initial.style)
                 if (parsed == null) {
-                    error.text = "Text color must use the #RRGGBB format."
+                    error.text = tr("comment.error.color")
                 } else {
                     save(parsed)
                     dialog.dispose()
@@ -153,13 +159,13 @@ object CommentDialog {
             DialogKit.SMALL,
             DialogKit.head(title),
             DialogKit.form(
-                DialogKit.field("Text", textBox),
+                DialogKit.field(tr("comment.text"), textBox),
                 DialogKit.pair(
-                    DialogKit.field("Start", DialogKit.inputBox(start)),
-                    DialogKit.field("Duration", DialogKit.inputBox(duration), note = "seconds"),
+                    DialogKit.field(tr("comment.start"), DialogKit.inputBox(start)),
+                    DialogKit.field(tr("comment.duration"), DialogKit.inputBox(duration), note = tr("comment.duration.note")),
                 ),
-                DialogKit.field("Text color", colorRow),
-                DialogKit.field("Style", style),
+                DialogKit.field(tr("comment.color"), colorRow),
+                DialogKit.field(tr("comment.style"), style),
                 error,
             ),
             DialogKit.footer(left = emptyList(), right = listOf(cancelButton, saveButton)),
@@ -179,20 +185,20 @@ object CommentDialog {
 
     /** Returns a message for the first invalid field, or null when every field is usable. */
     private fun firstProblem(start: String, durationSeconds: String, text: String): String? {
-        if (text.isBlank()) return "Enter the comment text."
+        if (text.isBlank()) return tr("comment.error.text")
         val startMs = runCatching { Timecode.parse(start) }.getOrNull()
-            ?: return "Start must use the hh:mm:ss.mmm format."
-        if (startMs < 0) return "Start cannot be negative."
+            ?: return tr("comment.error.start")
+        if (startMs < 0) return tr("comment.error.startNegative")
         val durationMs = runCatching {
-            BigDecimal(durationSeconds.trim()).movePointRight(3).setScale(0, RoundingMode.HALF_UP).longValueExact()
-        }.getOrNull() ?: return "Duration must be a number of seconds."
-        if (durationMs <= 0) return "Duration must be greater than zero."
+            BigDecimal(typedSeconds(durationSeconds)).movePointRight(3).setScale(0, RoundingMode.HALF_UP).longValueExact()
+        }.getOrNull() ?: return tr("comment.error.duration")
+        if (durationMs <= 0) return tr("comment.error.durationZero")
         return null
     }
 
     private fun parseFields(start: String, durationSeconds: String, text: String, color: String, style: CommentStyle): CommentInput? = try {
         val startMs = Timecode.parse(start)
-        val durationMs = BigDecimal(durationSeconds.trim())
+        val durationMs = BigDecimal(typedSeconds(durationSeconds))
             .movePointRight(3)
             .setScale(0, RoundingMode.HALF_UP)
             .longValueExact()
@@ -208,6 +214,9 @@ object CommentDialog {
     private fun normalizeColorHex(color: String): String? =
         COLOR_HEX.matchEntire(color.trim())?.let { "#${it.groupValues[1].uppercase(Locale.ROOT)}" }
 
+    /** A number of seconds that the user typed. "1,5" and "1.5" are the same (B-11, "Typed decimal separator"). */
+    private fun typedSeconds(text: String): String = text.trim().replace(',', '.')
+
     private fun colorFor(hex: String): Color = runCatching { Color.decode(hex) }.getOrDefault(Palette.PURE_WHITE)
     private fun formatDurationField(durationMs: Long): String = BigDecimal(durationMs).movePointLeft(3).stripTrailingZeros().toPlainString()
     private fun formatTimestamp(totalMs: Long): String {
@@ -215,6 +224,7 @@ object CommentDialog {
         val minutes = (totalMs % 3_600_000L) / 60_000L
         val seconds = (totalMs % 60_000L) / 1_000L
         val milliseconds = totalMs % 1_000L
-        return "%02d:%02d:%02d.%03d".format(hours, minutes, seconds, milliseconds)
+        // A machine format: the field reads it again with Timecode.parse, so the digits must be 0-9 in all locales.
+        return String.format(Locale.ROOT, "%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds)
     }
 }

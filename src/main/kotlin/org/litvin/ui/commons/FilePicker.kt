@@ -4,6 +4,7 @@ import com.formdev.flatlaf.util.SystemFileChooser
 import org.litvin.projects.NewProjectRules
 import java.awt.Component
 import java.io.File
+import org.litvin.i18n.tr
 
 interface FilePicker {
     fun chooseSourceVideo(
@@ -39,7 +40,7 @@ class SystemFilePicker : FilePicker {
         val chooser = chooser(title, initialDirectory, suggestedFile).apply {
             fileSelectionMode = SystemFileChooser.FILES_ONLY
             isAcceptAllFileFilterUsed = false
-            fileFilter = SystemFileChooser.FileNameExtensionFilter("Video files", *NewProjectRules.VIDEO_EXTENSIONS.toTypedArray())
+            fileFilter = SystemFileChooser.FileNameExtensionFilter(tr("filePicker.videoFiles"), *NewProjectRules.VIDEO_EXTENSIONS.toTypedArray())
         }
         return if (chooser.showOpenDialog(parent) == SystemFileChooser.APPROVE_OPTION) chooser.selectedFile else null
     }
@@ -54,7 +55,7 @@ class SystemFilePicker : FilePicker {
         val extension = suggestedFile?.extension?.lowercase()?.takeIf { it.isNotBlank() }
         if (extension != null) {
             // The dialog adds the extension when the user types a name without it, and then asks to replace an existing file.
-            chooser.fileFilter = SystemFileChooser.FileNameExtensionFilter("${extension.uppercase()} video", extension)
+            chooser.fileFilter = SystemFileChooser.FileNameExtensionFilter(tr("filePicker.typedVideo", "type" to extension.uppercase()), extension)
             chooser.putPlatformProperty(SystemFileChooser.WINDOWS_DEFAULT_EXTENSION, extension)
         }
         return if (chooser.showSaveDialog(parent) == SystemFileChooser.APPROVE_OPTION) chooser.selectedFile else null

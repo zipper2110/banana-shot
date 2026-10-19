@@ -1,8 +1,8 @@
 package org.litvin.export.scoreboard
 
+import org.litvin.i18n.DisplayFormats
 import org.litvin.ScoreboardDisplay
 import org.litvin.export.comments.CommentAss
-import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -29,7 +29,7 @@ internal object ScoreboardTourLayouts {
         val tile = 0x26262C
         val magenta = 0xFF2D95
         val muted = 0x5E5E66
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val rowH = 54.0
         val gap = 4.0
         // Each block leans by this value for each unit of height, so the left edges make one line.
@@ -126,7 +126,7 @@ internal object ScoreboardTourLayouts {
         val lavender = 0xF1ECF8
         val rule = 0xE4DCEF
         val lost = 0xA89DB9
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 10.0
         val rowH = 54.0
         val bandH = 4.0
@@ -280,7 +280,7 @@ internal object ScoreboardTourLayouts {
         val cell = 0x3A1F45
         val lost = 0x8C6F93
         val peach = 0xFFE2C6
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         // The first band is as high as the corner radius, so the round corners stay inside it.
         val radius = 6.0
         val padX = 18.0
@@ -360,7 +360,7 @@ internal object ScoreboardTourLayouts {
         val deep = 0x0D2A50
         val glass = 0xD6EBFF
         val lost = 0x9DB8DA
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val edge = 2.0
         val padX = 18.0
         val glassH = if (title != null) 42.0 else 8.0
@@ -448,7 +448,7 @@ internal object ScoreboardTourLayouts {
         val body = 0x0A0C1C
         val yellow = STADIUM_YELLOW
         val lost = 0xA3A7B4
-        val titleParts = look.title?.uppercase(Locale.US)?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        val titleParts = look.title?.let(DisplayFormats::upper)?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
         val titleMain = titleParts.firstOrNull()
         val titleSub = titleParts.drop(1).joinToString(" ").ifEmpty { null }
         val radius = 6.0

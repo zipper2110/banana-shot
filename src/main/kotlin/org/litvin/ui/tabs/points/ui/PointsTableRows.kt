@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.litvin.i18n.DisplayFormats
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.shared.util.Timecode
@@ -18,6 +19,7 @@ import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
 import kotlin.math.ceil
+import org.litvin.i18n.tr
 
 /**
  * The columns of the points table: #, Start, Length, the marks, ★ and the row actions.
@@ -63,8 +65,9 @@ internal class TableHeaderRow : JComponent() {
             val h = height - 2f
             fun caption(text: String, x: Float) = UiKit.drawText(g2, text, captionFont, Palette.FG_3, x, top, h)
             caption("#", columns.number.toFloat())
-            caption("START", columns.start.toFloat())
-            caption("LENGTH", columns.lengthRight - UiKit.textWidth("LENGTH", captionFont))
+            caption(DisplayFormats.upper(tr("points.column.start")), columns.start.toFloat())
+            val length = DisplayFormats.upper(tr("points.column.length"))
+            caption(length, columns.lengthRight - UiKit.textWidth(length, captionFont))
             // A star icon, because some fonts have no "★" glyph.
             starIcon.paintIcon(this, g2, columns.star + (TableColumns.STAR - starIcon.iconWidth) / 2, (height - starIcon.iconHeight) / 2)
         } finally {
@@ -161,10 +164,12 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
 
 /**
  * The game, set and serve marks of a point.
- * [milestone] is "SET" or "GAME". A null [serveColor] means that the point has no serve mark.
+ * [milestone] is the "SET" or "GAME" badge text, and [milestoneIsSet] tells which one it is.
+ * A null [serveColor] means that the point has no serve mark.
  */
 internal data class PointMarks(
     val milestone: String? = null,
+    val milestoneIsSet: Boolean = false,
     val milestoneColor: Color = Palette.FG,
     /** The text color on [milestoneColor]. */
     val milestoneOnColor: Color = Palette.BG,
@@ -196,12 +201,12 @@ internal class PointRow(
 
     val favoriteButton = RowIconButton(
         if (point.favorite) Material2MZ.STAR else Material2MZ.STAR_BORDER,
-        "Favorite [A]",
+        tr("points.favorite.tooltip", "key" to "A"),
         color = if (point.favorite) Palette.YELLOW else Palette.FG_3,
         side = 22,
     ).apply { name = "favorite-point-${point.id}" }
-    val editButton = RowIconButton(Material2AL.EDIT, "Edit times/label").apply { name = "edit-point-${point.id}" }
-    val deleteButton = RowIconButton(Material2AL.CLOSE, "Delete point", danger = true).apply { name = "delete-point-${point.id}" }
+    val editButton = RowIconButton(Material2AL.EDIT, tr("points.row.edit.tooltip")).apply { name = "edit-point-${point.id}" }
+    val deleteButton = RowIconButton(Material2AL.CLOSE, tr("pointEdit.delete.title"), danger = true).apply { name = "delete-point-${point.id}" }
 
     private val textFont get() = UiKit.font(12.5f)
     private val numberFont get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
@@ -268,7 +273,7 @@ internal class PointRow(
             val x = right - w
             val y = (height - BADGE_HEIGHT) / 2
             // SET is the outline badge: the player color on its contrast color. GAME is the filled badge.
-            if (text == "SET") {
+            if (marks.milestoneIsSet) {
                 UiKit.paintBox(g2, x, y, w, BADGE_HEIGHT, 3, marks.milestoneOnColor, marks.milestoneColor)
                 UiKit.drawText(g2, text, badgeFont, marks.milestoneColor, x + 5f, y.toFloat(), BADGE_HEIGHT.toFloat())
             } else {
@@ -306,7 +311,7 @@ internal class PointRow(
             if (event.x in left..right) return marks.serveTip
             right = left - MARK_GAP
         }
-        if (marks.overridden && event.x in (right - OVERRIDE)..right) return "The score after this point is typed (Override score)"
+        if (marks.overridden && event.x in (right - OVERRIDE)..right) return tr("points.row.override.tooltip")
         return null
     }
 
@@ -327,13 +332,13 @@ internal class CommentRow(
     onDelete: () -> Unit,
 ) : TableRow(visualIndex, comment.startMs) {
 
-    override val title = "Comment #${comment.id}"
+    override val title = tr("points.row.comment", "number" to comment.id)
     override val selectable = false
 
     private val color: Color = runCatching { Color.decode(comment.colorHex) }.getOrDefault(Palette.FG)
     private val bubble = UiKit.icon(Material2AL.CHAT_BUBBLE, 14, color)
-    val editButton = RowIconButton(Material2AL.EDIT, "Edit comment").apply { name = "edit-comment-${comment.id}" }
-    val deleteButton = RowIconButton(Material2AL.CLOSE, "Delete comment", danger = true).apply { name = "delete-comment-${comment.id}" }
+    val editButton = RowIconButton(Material2AL.EDIT, tr("points.row.editComment.tooltip")).apply { name = "edit-comment-${comment.id}" }
+    val deleteButton = RowIconButton(Material2AL.CLOSE, tr("points.row.deleteComment.tooltip"), danger = true).apply { name = "delete-comment-${comment.id}" }
 
     init {
         toolTipText = Html.wrappedTooltip(comment.text)

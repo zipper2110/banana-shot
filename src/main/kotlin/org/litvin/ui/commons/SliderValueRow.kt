@@ -19,6 +19,8 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import kotlin.math.ceil
 import kotlin.math.max
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The format of the value of a slider row.
@@ -37,7 +39,8 @@ internal class SliderValueFormat(
          * ("+", "-" or "−") and [unit] at the end.
          */
         fun parse(text: String, unit: String): Float? {
-            val number = text.trim().replace('−', '-').removeSuffix(unit).trim().toFloatOrNull() ?: return null
+            // The user can type "." or "," as the decimal separator in all languages.
+            val number = DisplayFormats.parseDecimal(text.trim().replace('−', '-').removeSuffix(unit))?.toFloat() ?: return null
             return number.takeIf { it.isFinite() }
         }
     }
@@ -68,7 +71,7 @@ internal class SliderValueField(
         border = BorderFactory.createEmptyBorder()
         putClientProperty("JComponent.outline", null)
         putClientProperty("JTextField.showClearButton", false)
-        getAccessibleContext().accessibleName = "$label value"
+        getAccessibleContext().accessibleName = tr("slider.value.accessible", "label" to label)
         // Space types into the field. It must not also play or pause the video.
         getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("SPACE"), "valueFieldSpace")
         actionMap.put("valueFieldSpace", object : AbstractAction() {

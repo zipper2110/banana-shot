@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.stats
 
 import org.litvin.scoring.PerPlayer
+import org.litvin.scoring.Sport
 import org.litvin.stats.Momentum
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
@@ -22,6 +23,7 @@ import javax.swing.JComponent
 import javax.swing.ToolTipManager
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
 
 /**
  * The point difference over the match or one set. The area above the middle line has the color of
@@ -35,7 +37,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
             cursor = if (value.points.isEmpty()) Cursor.getDefaultCursor() else Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             repaint()
         }
-    var names: PerPlayer<String> = PerPlayer("Player 1", "Player 2")
+    var names: PerPlayer<String> = PerPlayer(Sport.TENNIS.defaultSideName(1), Sport.TENNIS.defaultSideName(2))
     var colors: PerPlayer<Color> = PerPlayer(Palette.FG, Palette.FG_2)
 
     /** The position in [Momentum.points] under the mouse, or -1. */
@@ -66,12 +68,12 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
         val point = momentum.points[index]
         val winner = if (point.winner == 1) names.p1 else names.p2
         val lead = when {
-            point.difference > 0 -> "${names.p1} leads by ${points(point.difference)}."
-            point.difference < 0 -> "${names.p2} leads by ${points(-point.difference)}."
-            else -> "The points won are equal."
+            point.difference > 0 -> tr("stats.momentum.leads", "name" to names.p1, "count" to point.difference)
+            point.difference < 0 -> tr("stats.momentum.leads", "name" to names.p2, "count" to -point.difference)
+            else -> tr("stats.momentum.equal")
         }
-        return "<html>Point ${point.number}, set ${point.set}: $winner won the point.<br>$lead<br>" +
-            "Click to open the point in the Points tab.</html>"
+        val title = tr("stats.momentum.point", "number" to point.number, "set" to point.set, "name" to winner)
+        return "<html>$title<br>$lead<br>${tr("stats.momentum.open")}</html>"
     }
 
     override fun paintComponent(graphics: Graphics) {
@@ -108,7 +110,7 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
                 val lineX = x(start)
                 g.color = Palette.FG_3
                 g.draw(Line2D.Double(lineX, plot.y, lineX, plot.maxY))
-                val label = "Set ${points[start].set}"
+                val label = tr("override.set", "number" to points[start].set)
                 g.color = Palette.FG_2
                 g.drawString(label, (lineX - metrics.stringWidth(label) / 2).toFloat(), (plot.y - 6).toFloat())
             }
@@ -176,7 +178,6 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
         repaint()
     }
 
-    private fun points(count: Int) = if (abs(count) == 1) "1 point" else "$count points"
 
     private companion object {
         // The chart gets the width of the table, so its preferred width is small.

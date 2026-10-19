@@ -11,6 +11,7 @@ import javax.swing.SwingConstants
 import kotlin.math.ceil
 import kotlin.math.max
 import org.litvin.ui.commons.Palette
+import org.litvin.i18n.tr
 
 /**
  * Column layout of the projects table. The header and each [ProjectRow] use this layout.
@@ -21,7 +22,8 @@ import org.litvin.ui.commons.Palette
  */
 internal object ProjectsTableColumns {
     /** The names of the figure columns, in display order. */
-    val FIGURE_COLUMNS = listOf("Duration", "Size", "Scored", "Fav.")
+    val FIGURE_COLUMNS: List<String>
+        get() = listOf(tr("projects.column.duration"), tr("projects.column.size"), tr("projects.column.scored"), tr("projects.column.favorites"))
 
     const val STATUS = 0
     const val NAME = 1
@@ -93,9 +95,9 @@ internal object ProjectsTableColumns {
             background = Palette.BG
             name = "projects-table-header"
             add(Gap(0, 0))
-            add(HeaderText("Project", SwingConstants.LEFT))
-            add(HeaderText("Video", SwingConstants.LEFT))
-            add(HeaderText("Sport", SwingConstants.LEFT))
+            add(HeaderText(tr("projects.column.project"), SwingConstants.LEFT))
+            add(HeaderText(tr("projects.column.video"), SwingConstants.LEFT))
+            add(HeaderText(tr("projects.column.sport"), SwingConstants.LEFT))
             add(HeaderText(FIGURE_COLUMNS[0], SwingConstants.RIGHT))
             add(HeaderText(FIGURE_COLUMNS[1], SwingConstants.RIGHT))
             add(HeaderText(FIGURE_COLUMNS[2], SwingConstants.RIGHT, SCORED_BAR + SCORED_BAR_GAP))
@@ -123,7 +125,12 @@ internal object ProjectsTableColumns {
             val g2 = ProjectsUi.smooth(g)
             try {
                 val textWidth = ProjectsUi.textWidth(shown, headerFont)
-                val x = if (align == SwingConstants.RIGHT) width - rightInset - textWidth else 0f
+                // A long name (for example in Spanish) does not fit beside the inset. It then moves over the inset.
+                val x = when {
+                    align != SwingConstants.RIGHT -> 0f
+                    textWidth <= width - rightInset -> width - rightInset - textWidth
+                    else -> maxOf(0f, width - textWidth)
+                }
                 ProjectsUi.drawText(g2, shown, headerFont, Palette.FG_3, x, 0f, height.toFloat())
             } finally {
                 g2.dispose()

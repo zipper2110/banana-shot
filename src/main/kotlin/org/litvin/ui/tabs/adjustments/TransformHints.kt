@@ -18,6 +18,7 @@ import java.awt.geom.RoundRectangle2D
 import javax.swing.JPanel
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
 
 /** A part of a hint text: plain or bold text, or a keyboard key chip. */
 internal sealed interface HintPart {
@@ -41,25 +42,32 @@ internal data class TransformHint(val ikon: Ikon, val parts: List<HintPart>) {
         private fun t(text: String) = HintPart.Text(text)
         private fun k(label: String) = HintPart.Key(label)
 
-        /** The mouse and key hints. The texts come from the Transform help (HelpCatalog.kt). */
-        val ALL = listOf(
-            TransformHint(Material2OutlinedMZ.OPEN_WITH, listOf(b("Drag inside the rectangle"), t(" to move it."))),
-            TransformHint(
-                Material2OutlinedAL.ASPECT_RATIO,
-                listOf(b("Drag a square handle"), t(" to resize. The aspect ratio and the center stay.")),
-            ),
-            TransformHint(
-                Material2OutlinedMZ.ROTATE_RIGHT,
-                listOf(b("Drag the round handle"), t(" to rotate. Hold "), k("Shift"), t(" to snap to 90°.")),
-            ),
-            TransformHint(
-                Material2OutlinedAL.KEYBOARD,
-                listOf(
-                    b("Click the video, then"), t(" "), k("←"), k("↑"), k("→"), k("↓"),
-                    t(" move 1 px. "), k("Shift"), t(" moves 10 px."),
+        /**
+         * The mouse and key hints. The texts come from the Transform help (HelpCatalog.kt).
+         * The catalog texts have no space at the start or end, so the code adds the spaces between the parts.
+         */
+        val ALL: List<TransformHint>
+            get() = listOf(
+                TransformHint(Material2OutlinedMZ.OPEN_WITH, listOf(b(tr("adjust.hint.move")), t(" " + tr("adjust.hint.move.rest")))),
+                TransformHint(
+                    Material2OutlinedAL.ASPECT_RATIO,
+                    listOf(b(tr("adjust.hint.resize")), t(" " + tr("adjust.hint.resize.rest"))),
                 ),
-            ),
-        )
+                TransformHint(
+                    Material2OutlinedMZ.ROTATE_RIGHT,
+                    listOf(
+                        b(tr("adjust.hint.rotate")), t(" " + tr("adjust.hint.rotate.rest") + " "), k(tr("key.shift")),
+                        t(" " + tr("adjust.hint.rotate.snap")),
+                    ),
+                ),
+                TransformHint(
+                    Material2OutlinedAL.KEYBOARD,
+                    listOf(
+                        b(tr("adjust.hint.keys")), t(" "), k("←"), k("↑"), k("→"), k("↓"),
+                        t(" " + tr("adjust.hint.keys.move") + " "), k(tr("key.shift")), t(" " + tr("adjust.hint.keys.fast")),
+                    ),
+                ),
+            )
     }
 }
 
@@ -173,7 +181,7 @@ internal class TransformHints(private val hints: List<TransformHint> = Transform
     }
 
     companion object {
-        const val CAPTION = "On the video"
+        val CAPTION: String get() = tr("adjust.hints.caption")
         private const val MIN_WIDTH = 200
         private const val DEFAULT_WIDTH = 376
         private const val PAD_X = 14

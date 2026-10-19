@@ -12,11 +12,16 @@ import java.awt.Graphics2D
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /** The two groups of the Transform panel. */
-internal enum class TransformGroup(val title: String, val ikon: Ikon) {
-    CROP("Crop", Material2OutlinedAL.CROP),
-    ROTATION("Rotation", Material2OutlinedMZ.ROTATE_90_DEGREES_CCW),
+internal enum class TransformGroup(private val titleKey: String, val ikon: Ikon) {
+    CROP("adjust.group.crop", Material2OutlinedAL.CROP),
+    ROTATION("adjust.rotation", Material2OutlinedMZ.ROTATE_90_DEGREES_CCW),
+    ;
+
+    val title: String get() = tr(titleKey)
 }
 
 /**
@@ -25,31 +30,60 @@ internal enum class TransformGroup(val title: String, val ikon: Ikon) {
  * slider values with a small tick (the ±90° snap angles of Rotation).
  */
 internal enum class TransformControl(
-    val label: String,
     val componentName: String,
-    val tooltip: String,
     val min: Int,
     val max: Int,
     val default: Int,
     val unit: String,
-    val low: String,
-    val mid: String?,
-    val high: String,
     val minorTicks: List<Int>,
     val group: TransformGroup,
 ) {
-    ZOOM("Zoom", "crop-zoom", "Zoom", 100, 250, 100, "%", "100%", null, "250%", emptyList(), TransformGroup.CROP),
-    PAN_X("Pan X", "crop-pan-x", "Pan X", -100, 100, 0, "", "Left", "Center", "Right", emptyList(), TransformGroup.CROP),
-    PAN_Y("Pan Y", "crop-pan-y", "Pan Y", -100, 100, 0, "", "Down", "Center", "Up", emptyList(), TransformGroup.CROP),
-    ROTATION(
-        "Rotation", "crop-rotation", "Rotation", -360, 360, 0, "°", "−180°", "0°", "+180°",
-        listOf(-180, 180), TransformGroup.ROTATION,
-    ),
-    FINE_ROTATION(
-        "Fine rotation", "crop-rotation-fine", "Fine Rotation", -50, 50, 0, "°", "−5°", "0°", "+5°",
-        emptyList(), TransformGroup.ROTATION,
-    ),
+    ZOOM("crop-zoom", 100, 250, 100, "%", emptyList(), TransformGroup.CROP),
+    PAN_X("crop-pan-x", -100, 100, 0, "", emptyList(), TransformGroup.CROP),
+    PAN_Y("crop-pan-y", -100, 100, 0, "", emptyList(), TransformGroup.CROP),
+    ROTATION("crop-rotation", -360, 360, 0, "°", listOf(-180, 180), TransformGroup.ROTATION),
+    FINE_ROTATION("crop-rotation-fine", -50, 50, 0, "°", emptyList(), TransformGroup.ROTATION),
     ;
+
+    val label: String
+        get() = when (this) {
+            ZOOM -> tr("adjust.zoom")
+            PAN_X -> tr("adjust.panX")
+            PAN_Y -> tr("adjust.panY")
+            ROTATION -> tr("adjust.rotation")
+            FINE_ROTATION -> tr("adjust.fineRotation")
+        }
+
+    val tooltip: String
+        get() = when (this) {
+            FINE_ROTATION -> tr("adjust.fineRotation.tooltip")
+            else -> label
+        }
+
+    val low: String
+        get() = when (this) {
+            ZOOM -> "${DisplayFormats.integer(100)}%"
+            PAN_X -> tr("adjust.left")
+            PAN_Y -> tr("adjust.down")
+            ROTATION -> "−180°"
+            FINE_ROTATION -> "−5°"
+        }
+
+    val mid: String?
+        get() = when (this) {
+            ZOOM -> null
+            PAN_X, PAN_Y -> tr("adjust.center")
+            ROTATION, FINE_ROTATION -> "0°"
+        }
+
+    val high: String
+        get() = when (this) {
+            ZOOM -> "${DisplayFormats.integer(250)}%"
+            PAN_X -> tr("adjust.right")
+            PAN_Y -> tr("adjust.up")
+            ROTATION -> "+180°"
+            FINE_ROTATION -> "+5°"
+        }
 
     /** The text of the value field for a slider value, for example "140", "+24", "-24", "+2.5" or "0.0". */
     fun toText(value: Int): String = when (this) {
@@ -72,9 +106,11 @@ internal enum class TransformControl(
         }
     }
 
+    /** One decimal with the decimal separator of the format locale. */
     private fun signedDecimal(value: Float): String {
-        val text = String.format(Locale.US, "%.1f", value)
-        return if (value > 0 && text != "0.0") "+$text" else if (text == "-0.0") "0.0" else text
+        val text = DisplayFormats.decimal(value.toDouble(), 1, 1, grouping = false)
+        val zero = DisplayFormats.decimal(0.0, 1, 1, grouping = false)
+        return if (value > 0 && text != zero) "+$text" else if (text == "-$zero") zero else text
     }
 }
 
@@ -122,17 +158,20 @@ internal class TransformGroupCard(val group: TransformGroup, val rows: List<Tran
     }
 
     private companion object {
-        const val ANGLE_LABEL = "Angle"
+        val ANGLE_LABEL: String get() = tr("adjust.angle")
         const val ANGLE_GAP = 4
-        const val ZERO_ANGLE = "0.0°"
+        val ZERO_ANGLE: String get() = signedDegrees(0f)
     }
 }
 
-/** An angle with its sign and one decimal: "+2.3°", "−2.3°" (with a minus sign, not a hyphen) or "0.0°". */
+/**
+ * An angle with its sign and one decimal: "+2.3°", "−2.3°" (with a minus sign, not a hyphen) or "0.0°".
+ * The decimal separator is the one of the format locale.
+ */
 internal fun signedDegrees(value: Float): String {
-    val text = String.format(Locale.US, "%.1f", abs(value))
+    val text = DisplayFormats.decimal(abs(value).toDouble(), 1, 1, grouping = false)
     return when {
-        text == "0.0" -> "0.0°"
+        text == DisplayFormats.decimal(0.0, 1, 1, grouping = false) -> "$text°"
         value > 0 -> "+$text°"
         else -> "−$text°"
     }

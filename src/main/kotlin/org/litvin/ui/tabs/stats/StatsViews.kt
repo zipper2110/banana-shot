@@ -14,6 +14,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 import kotlin.math.max
+import org.litvin.i18n.tr
 
 /**
  * The view of the tab when it has no statistics to show: no project, no scored points, or a read error.
@@ -31,7 +32,7 @@ internal class StatsEmptyView(onOpenPoints: () -> Unit) : JPanel(GridBagLayout()
     val text = WrapText("", UiKit.font(13f), Palette.FG_2, SwingConstants.CENTER, lineSpacing = 1.5f).apply {
         name = "stats-empty-text"
     }
-    val openPoints = StatsButton("Open Points", Material2AL.ASSIGNMENT_TURNED_IN, lime = true).apply {
+    val openPoints = StatsButton(tr("stats.empty.openPoints"), Material2AL.ASSIGNMENT_TURNED_IN, lime = true).apply {
         name = "stats-open-points"
         addActionListener { onOpenPoints() }
     }

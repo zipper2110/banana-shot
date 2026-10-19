@@ -1,7 +1,7 @@
 package org.litvin.export.scoreboard
 
+import org.litvin.i18n.DisplayFormats
 import org.litvin.ScoreboardDisplay
-import java.util.Locale
 import kotlin.math.max
 
 /**
@@ -88,7 +88,7 @@ internal object ScoreboardMoreLayouts {
         val clay = 0xB5532D
         val dark = 0x8E3D1F
         val deep = 0x6E2E16
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 6.0
         val headerH = if (title != null) 42.0 else 0.0
         val rowH = 56.0
@@ -148,7 +148,7 @@ internal object ScoreboardMoreLayouts {
         val rows = rows(display, look)
         val blue = 0x1C4E96
         val green = 0x2E7A4E
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 4.0
         val headerH = if (title != null) 40.0 else 0.0
         val rowH = 56.0
@@ -209,7 +209,7 @@ internal object ScoreboardMoreLayouts {
         val board = 0x0B0B0B
         val tile = 0x1C1C1C
         val led = look.accentRgb
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val border = 3.0
         val padX = 16.0
         val headerH = if (title != null) 42.0 else 0.0
@@ -268,7 +268,7 @@ internal object ScoreboardMoreLayouts {
     /** Minimal: outlined text on a faint rounded shade. The background opacity sets the shade. */
     fun minimal(display: ScoreboardDisplay, look: Look): ScoreboardScene {
         val rows = rows(display, look)
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val outline = 1.4
         val radius = 10.0
         val padX = 18.0
@@ -329,7 +329,7 @@ internal object ScoreboardMoreLayouts {
         val tileHigh = 0x262B33
         val light = 0xF2F4F7
         val ink = 0x0B0F0D
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val gap = 4.0
         val radius = 6.0
         val titleH = if (title != null) 34.0 else 0.0
@@ -398,7 +398,7 @@ internal object ScoreboardMoreLayouts {
         val rows = rows(display, look)
         val bar = 0x101418
         val ink = 0x0B0F0D
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 6.0
         val tabH = if (title != null) 28.0 else 0.0
         val barH = 56.0
@@ -476,7 +476,7 @@ internal object ScoreboardMoreLayouts {
         val brown = 0x2B1A12
         val cream = 0xF6E7C8
         val stripes = listOf(0xD9502B, 0xE8893B, 0xF2C14E)
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val radius = 10.0
         val padX = 18.0
         val headerH = if (title != null) 46.0 else 0.0
@@ -537,7 +537,7 @@ internal object ScoreboardMoreLayouts {
     fun boldBlock(display: ScoreboardDisplay, look: Look): ScoreboardScene {
         val rows = rows(display, look)
         val ink = 0x0A0A0A
-        val title = look.title?.uppercase(Locale.US)
+        val title = look.title?.let(DisplayFormats::upper)
         val headerH = if (title != null) 44.0 else 0.0
         val accentBarH = 4.0
         val rowH = 56.0

@@ -15,6 +15,8 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import kotlin.math.ceil
 import org.litvin.ui.commons.Palette
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * A label that shows its text on as many lines as necessary.
@@ -59,7 +61,7 @@ internal class WrapLabel(
 
 /** The lime "OPEN" tag with a dot, the `.tag` element of the design. */
 internal class OpenTag : JComponent() {
-    private val text = "OPEN"
+    private val text = DisplayFormats.upper(tr("projects.current.openTag"))
     private val tagFont = ProjectsUi.trackedFont(10.5f, 0.04, ProjectsUi.Weight.BOLD)
 
     override fun getPreferredSize() = Dimension(7 + 6 + 4 + ceil(ProjectsUi.textWidth(text, tagFont)).toInt() + 8, 18)
@@ -139,11 +141,11 @@ internal class CurrentProjectCard(
                 add(RenameFoot(onRename))
             }
         } else {
-            add(shifted(WrapLabel("No open project", ProjectsUi.font(14f, ProjectsUi.Weight.SEMIBOLD), Palette.FG_2, innerWidth, 1.3f)
+            add(shifted(WrapLabel(tr("projects.current.none"), ProjectsUi.font(14f, ProjectsUi.Weight.SEMIBOLD), Palette.FG_2, innerWidth, 1.3f)
                 .apply { name = "projects-current-name" }))
             add(Gap(0, 6).leftAligned())
             add(shifted(WrapLabel(
-                "Import a new match below, or open a project from the list.",
+                tr("projects.current.none.text"),
                 ProjectsUi.font(12f),
                 Palette.FG_3,
                 innerWidth,
@@ -182,9 +184,9 @@ internal class CurrentProjectCard(
             isOpaque = false
             alignmentX = Component.LEFT_ALIGNMENT
             border = BorderFactory.createEmptyBorder(11, 0, 0, 0)
-            add(ProjectsButton("Rename", Material2AL.EDIT, ProjectsButton.Kind.GHOST, 26, 12f).apply {
+            add(ProjectsButton(tr("projects.rename"), Material2AL.EDIT, ProjectsButton.Kind.GHOST, 26, 12f).apply {
                 name = "projects-current-rename"
-                toolTipText = "Rename project"
+                toolTipText = tr("projects.rename.tooltip")
                 addActionListener { onRename() }
             }, BorderLayout.WEST)
             maximumSize = Dimension(Int.MAX_VALUE, preferredSize.height)

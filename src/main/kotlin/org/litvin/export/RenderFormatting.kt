@@ -2,6 +2,8 @@ package org.litvin.export
 
 import org.litvin.ExportQualityProfiles
 import java.util.Locale
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 object RenderFormatting {
     fun formatSize(bytes: Long): String {
@@ -9,18 +11,18 @@ object RenderFormatting {
         val mb = kb * 1000
         val gb = mb * 1000
         return when {
-            bytes >= gb -> String.format(Locale.US, "%.2f GB", bytes / gb)
-            bytes >= mb -> String.format(Locale.US, "%.2f MB", bytes / mb)
-            bytes >= kb -> String.format(Locale.US, "%.2f KB", bytes / kb)
+            bytes >= gb -> "${DisplayFormats.decimal(bytes / gb, 2)} GB"
+            bytes >= mb -> "${DisplayFormats.decimal(bytes / mb, 2)} MB"
+            bytes >= kb -> "${DisplayFormats.decimal(bytes / kb, 2)} KB"
             else -> "$bytes B"
         }
     }
 
     /** How the source video was cut for an export. The names are the same as the Content options. */
     fun formatCutMode(idleTrim: Boolean, favoriteOnly: Boolean): String = when {
-        !idleTrim -> "Full video"
-        favoriteOnly -> "Only favorites"
-        else -> "Only points"
+        !idleTrim -> tr("export.content.full")
+        favoriteOnly -> tr("export.content.favorites")
+        else -> tr("export.content.points")
     }
 
     /** The content settings of an export, for example "Only points (12 points) · Scoreboard: on · Comments: off". */
@@ -31,11 +33,11 @@ object RenderFormatting {
         includeScoreboard: Boolean,
         includeComments: Boolean,
     ): String {
-        val points = pointCount?.takeIf { idleTrim }?.let { " (${formatCount(it, "point")})" }.orEmpty()
+        val points = pointCount?.takeIf { idleTrim }?.let { " (${tr("export.points", "count" to it)})" }.orEmpty()
         return listOf(
             formatCutMode(idleTrim, favoriteOnly) + points,
-            "Scoreboard: ${onOff(includeScoreboard)}",
-            "Comments: ${onOff(includeComments)}",
+            tr("export.summary.scoreboard", "state" to onOff(includeScoreboard)),
+            tr("export.summary.comments", "state" to onOff(includeComments)),
         ).joinToString(SEPARATOR)
     }
 
@@ -62,7 +64,7 @@ object RenderFormatting {
         return listOfNotNull(
             formatPreset(presetId),
             resolution,
-            formatFrameRate(frameRate) ?: "Original FPS",
+            formatFrameRate(frameRate) ?: tr("export.originalFps"),
             videoBitrateK?.let(ExportVideoOptions::formatBitrate),
             encoderLabel,
         ).joinToString(SEPARATOR)
@@ -71,16 +73,20 @@ object RenderFormatting {
     /** Name of the quality preset, for example "Balanced". Null when the id is not known. */
     fun formatPreset(presetId: String?): String? {
         val id = ExportQualityProfiles.normalizedId(presetId) ?: return null
-        return ExportQualityProfiles.all().firstOrNull { it.id == id }?.label
+        return when (id) {
+            "best" -> tr("export.preset.best")
+            "balanced" -> tr("export.preset.balanced")
+            "fast" -> tr("export.preset.fast")
+            "custom" -> tr("format.custom")
+            else -> null
+        }
     }
 
     /** The written size and the expected size, for example "120.50 MB / ~480.00 MB". Without an expected size, only the written size. */
     fun formatSizeProgress(bytesWritten: Long, expectedBytes: Long?): String =
         formatSize(bytesWritten) + expectedBytes?.let { " / ~" + formatSize(it) }.orEmpty()
 
-    private fun formatCount(count: Int, noun: String): String = if (count == 1) "1 $noun" else "$count ${noun}s"
-
-    private fun onOff(value: Boolean): String = if (value) "on" else "off"
+    private fun onOff(value: Boolean): String = if (value) tr("export.on") else tr("export.off")
 
     private const val SEPARATOR = " · "
 
@@ -106,9 +112,9 @@ object RenderFormatting {
         val m = (totalSeconds % 3600) / 60
         val s = totalSeconds % 60
         return buildList {
-            if (h > 0) add("${h}h")
-            if (h > 0 || m > 0) add("${m}min")
-            add("${s}sec")
+            if (h > 0) add(tr("export.duration.hours", "count" to h))
+            if (h > 0 || m > 0) add(tr("export.duration.minutes", "count" to m))
+            add(tr("export.duration.seconds", "count" to s))
         }.joinToString(" ")
     }
 }

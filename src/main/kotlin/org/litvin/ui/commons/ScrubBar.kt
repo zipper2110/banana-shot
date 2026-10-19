@@ -19,10 +19,11 @@ import javax.swing.JPanel
 import javax.swing.JSlider
 import javax.swing.plaf.basic.BasicSliderUI
 import kotlin.math.min
+import org.litvin.i18n.tr
 
 class ScrubBar(
     private val onUserScrub: (targetMs: Long) -> Unit,
-    tooltip: String = "Seek",
+    tooltip: String = tr("playback.seek"),
     private val rightAccessory: JComponent? = null,
     sliderMaximum: Int = 10000,
     sliderComponentName: String? = null,

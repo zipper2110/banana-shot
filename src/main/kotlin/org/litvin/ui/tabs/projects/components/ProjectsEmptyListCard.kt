@@ -9,6 +9,7 @@ import java.awt.Graphics
 import java.awt.Graphics2D
 import javax.swing.JComponent
 import org.litvin.ui.commons.Palette
+import org.litvin.i18n.tr
 
 /**
  * The list area on the first start: an icon, "No projects yet", the [message], and a lime hint that points
@@ -52,8 +53,8 @@ class ProjectsEmptyListCard(private val message: String) : JComponent() {
     }
 
     private companion object {
-        const val TITLE = "No projects yet"
-        const val HINT = "\"Import new match\" is in the New project panel"
+        val TITLE: String get() = tr("projects.empty.title")
+        val HINT: String get() = tr("projects.empty.hint")
         const val CONTENT_HEIGHT = 40 + 10 + 22 + 4 + 18 + 14 + 20
     }
 }

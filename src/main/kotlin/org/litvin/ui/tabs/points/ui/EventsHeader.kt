@@ -13,16 +13,18 @@ import javax.swing.JPanel
 import kotlin.math.ceil
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /** The "Points & events" title with the counts of marked points, favorites and comments. */
 internal class EventsHeader : JPanel(null) {
-    val markedCount = CountLabel(UiKit.icon(Material2AL.FLAG, 14, Palette.LIME), "marked", "Marked points").apply {
+    val markedCount = CountLabel(UiKit.icon(Material2AL.FLAG, 14, Palette.LIME), "points.count.marked", tr("points.count.marked.tooltip")).apply {
         name = "points-point-count"
     }
-    val favoriteCount = CountLabel(UiKit.icon(Material2MZ.STAR, 14, Palette.YELLOW), "favorites", "Favorite points").apply {
+    val favoriteCount = CountLabel(UiKit.icon(Material2MZ.STAR, 14, Palette.YELLOW), "points.count.favorites", tr("points.count.favorites.tooltip")).apply {
         name = "points-favorite-count"
     }
-    val commentCount = CountLabel(UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, Palette.FG_2), "comments", "Comments").apply {
+    val commentCount = CountLabel(UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, Palette.FG_2), "points.count.comments", tr("points.count.comments.tooltip")).apply {
         name = "points-comment-count"
     }
     private val counts = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
@@ -60,7 +62,7 @@ internal class EventsHeader : JPanel(null) {
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            UiKit.drawText(g2, "Points & events", titleFont, Palette.FG, insets.left.toFloat(), insets.top.toFloat(), TITLE_HEIGHT.toFloat())
+            UiKit.drawText(g2, tr("points.events.title"), titleFont, Palette.FG, insets.left.toFloat(), insets.top.toFloat(), TITLE_HEIGHT.toFloat())
         } finally {
             g2.dispose()
         }
@@ -75,13 +77,16 @@ internal class EventsHeader : JPanel(null) {
 /**
  * One count of the header: an icon, the number in bold and a word, for example "128 marked".
  * It is a [JLabel], so its text is the plain sentence and the UI tests can read it.
+ * [nounKey] is a catalog text with the plural forms of the word.
  */
-internal class CountLabel(private val countIcon: Icon, private val noun: String, tooltip: String) : JLabel() {
+internal class CountLabel(private val countIcon: Icon, private val nounKey: String, tooltip: String) : JLabel() {
+    private var noun = ""
     var count: Int = -1
         set(value) {
             if (field == value) return
             field = value
-            text = "$value $noun"
+            noun = tr(nounKey, "count" to value)
+            text = "${DisplayFormats.integer(value)} $noun"
             revalidate()
             repaint()
         }

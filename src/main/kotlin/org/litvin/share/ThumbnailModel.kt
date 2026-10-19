@@ -1,17 +1,27 @@
 package org.litvin.share
 
 import java.util.Locale
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The parts of a YouTube thumbnail of the Share tab (B-46): the video type, the text fields, the layout styles,
  * the text positions, and the color roles. The design is in design/share-redesign/final.html.
  */
 
-/** The video type sets the preset of the large words and the name of the PNG file. */
-enum class ThumbnailVideoType(val key: String, val title: String, val words: String, val fileSuffix: String) {
-    FULL_MATCH("full", "Full match", "FULL MATCH", "full-match"),
-    BEST_POINTS("best", "Best points", "BEST POINTS", "best-points"),
+/**
+ * The video type sets the preset of the large words and the name of the PNG file.
+ * The constructors of the enums in this file get catalog keys for the texts.
+ */
+enum class ThumbnailVideoType(val key: String, private val titleKey: String, val fileSuffix: String) {
+    FULL_MATCH("full", "share.type.full", "full-match"),
+    BEST_POINTS("best", "share.type.best", "best-points"),
     ;
+
+    val title: String get() = tr(titleKey)
+
+    /** The preset of the large words: the title in upper case, for example "FULL MATCH". */
+    val words: String get() = DisplayFormats.upper(title)
 
     companion object {
         fun byKey(key: String?): ThumbnailVideoType? = entries.firstOrNull { it.key == key }
@@ -19,15 +29,18 @@ enum class ThumbnailVideoType(val key: String, val title: String, val words: Str
 }
 
 /** The text fields of the thumbnail. A layout style shows a field only when the field is not empty. */
-enum class ThumbnailField(val key: String, val label: String, val source: String, val maxLength: Int) {
-    HEAD("head", "Large words", "From the video type", 24),
-    KIND("kind", "Match type", "From the match", 24),
-    TEAM1("team1", "Player or team 1", "From the players", 40),
-    TEAM2("team2", "Player or team 2", "From the players", 40),
-    EVENT("event", "League or event", "From your last thumbnail", 40),
-    COURT("court", "Court", "From the scoreboard title", 40),
-    DATE("date", "Date", "From the video file", 24),
+enum class ThumbnailField(val key: String, private val labelKey: String, private val sourceKey: String, val maxLength: Int) {
+    HEAD("head", "share.field.head", "share.source.type", 24),
+    KIND("kind", "share.field.kind", "share.source.match", 24),
+    TEAM1("team1", "share.field.team1", "share.source.players", 40),
+    TEAM2("team2", "share.field.team2", "share.source.players", 40),
+    EVENT("event", "share.field.event", "share.source.last", 40),
+    COURT("court", "share.field.court", "share.source.scoreboard", 40),
+    DATE("date", "share.field.date", "share.source.file", 24),
     ;
+
+    val label: String get() = tr(labelKey)
+    val source: String get() = tr(sourceKey)
 
     companion object {
         fun byKey(key: String): ThumbnailField? = entries.firstOrNull { it.key == key }
@@ -35,13 +48,15 @@ enum class ThumbnailField(val key: String, val label: String, val source: String
 }
 
 /** A position of the texts in a layout style. No position puts a text in the bottom-right corner (the video length). */
-enum class TextPlace(val key: String, val title: String) {
-    LEFT("left", "Left"),
-    RIGHT("right", "Right"),
-    TOP("top", "Top"),
-    BOTTOM("bottom", "Bottom"),
-    CENTER("center", "Center"),
+enum class TextPlace(val key: String, private val titleKey: String) {
+    LEFT("left", "adjust.left"),
+    RIGHT("right", "adjust.right"),
+    TOP("top", "share.place.top"),
+    BOTTOM("bottom", "share.place.bottom"),
+    CENTER("center", "adjust.center"),
     ;
+
+    val title: String get() = tr(titleKey)
 
     companion object {
         fun byKey(key: String?): TextPlace? = entries.firstOrNull { it.key == key }
@@ -52,25 +67,34 @@ enum class TextPlace(val key: String, val title: String) {
  * The color roles. All styles use the same roles, and each style uses some of them.
  * A role with [auto] can be "Auto": the app selects dark or white, from the contrast with the color under it.
  */
-enum class ColorRole(val key: String, val title: String, val auto: Boolean = false) {
-    TEXT("text", "Text"),
-    ACCENT("acc", "Accent"),
-    ON_ACCENT("onAcc", "Text on accent", auto = true),
-    PANEL("pan", "Panel"),
-    ON_PANEL("onPan", "Text on panel", auto = true),
-    SHADE("shade", "Shade"),
+enum class ColorRole(val key: String, private val titleKey: String, val auto: Boolean = false) {
+    TEXT("text", "share.role.text"),
+    ACCENT("acc", "share.role.accent"),
+    ON_ACCENT("onAcc", "share.role.onAccent", auto = true),
+    PANEL("pan", "share.role.panel"),
+    ON_PANEL("onPan", "share.role.onPanel", auto = true),
+    SHADE("shade", "share.role.shade"),
     ;
+
+    val title: String get() = tr(titleKey)
 
     companion object {
         fun byKey(key: String): ColorRole? = entries.firstOrNull { it.key == key }
     }
 }
 
-/** A named color of the swatch rows. [rgb] is 0xRRGGBB. */
-data class NamedColor(val rgb: Int, val name: String)
+/** A named color of the swatch rows. [rgb] is 0xRRGGBB. [nameKey] is the catalog key of the name. */
+data class NamedColor(val rgb: Int, private val nameKey: String) {
+    val name: String get() = tr(nameKey)
 
-/** A color set gives a value to each role. The "Text on" roles are always Auto in a set. */
-data class ColorSet(val id: String, val name: String, val text: Int, val accent: Int, val panel: Int, val shade: Int) {
+    /** The color in component names, for example "light-gray". It does not change with the language. */
+    val id: String get() = nameKey.substringAfterLast('.').replace(Regex("([a-z])([A-Z])"), "$1-$2").lowercase()
+}
+
+/** A color set gives a value to each role. The "Text on" roles are always Auto in a set. [nameKey] is a catalog key. */
+data class ColorSet(val id: String, private val nameKey: String, val text: Int, val accent: Int, val panel: Int, val shade: Int) {
+    val name: String get() = tr(nameKey)
+
     fun color(role: ColorRole): Int? = when (role) {
         ColorRole.TEXT -> text
         ColorRole.ACCENT -> accent
@@ -81,42 +105,42 @@ data class ColorSet(val id: String, val name: String, val text: Int, val accent:
 }
 
 object ThumbnailColorSets {
-    val LIME = ColorSet("lime", "Lime", 0xFFFFFF, 0xC8EC46, 0x0E1014, 0x0A0E14)
-    val BROADCAST = ColorSet("tv", "Broadcast", 0xFFFFFF, 0xFFD54A, 0x0B1E3A, 0x0A0E14)
+    val LIME = ColorSet("lime", "share.color.lime", 0xFFFFFF, 0xC8EC46, 0x0E1014, 0x0A0E14)
+    val BROADCAST = ColorSet("tv", "style.broadcast", 0xFFFFFF, 0xFFD54A, 0x0B1E3A, 0x0A0E14)
     val all: List<ColorSet> = listOf(
         LIME,
         BROADCAST,
-        ColorSet("sunset", "Sunset", 0xFFFFFF, 0xFF8A3D, 0x3A0D14, 0x3A0D14),
-        ColorSet("ocean", "Ocean", 0xFFFFFF, 0x3DD6F5, 0x0B1E3A, 0x0B1E3A),
-        ColorSet("red", "Red", 0xFFFFFF, 0xFF4D4D, 0x0E1014, 0x0A0E14),
-        ColorSet("light", "Light", 0x141414, 0x4D8BFF, 0xFFFFFF, 0xFFFFFF),
+        ColorSet("sunset", "style.sunset", 0xFFFFFF, 0xFF8A3D, 0x3A0D14, 0x3A0D14),
+        ColorSet("ocean", "share.set.ocean", 0xFFFFFF, 0x3DD6F5, 0x0B1E3A, 0x0B1E3A),
+        ColorSet("red", "share.color.red", 0xFFFFFF, 0xFF4D4D, 0x0E1014, 0x0A0E14),
+        ColorSet("light", "share.set.light", 0x141414, 0x4D8BFF, 0xFFFFFF, 0xFFFFFF),
     )
 
     fun byId(id: String?): ColorSet? = all.firstOrNull { it.id == id }
 
     private val ink = listOf(
-        NamedColor(0xFFFFFF, "White"), NamedColor(0x141414, "Black"), NamedColor(0x0B1E3A, "Navy"),
-        NamedColor(0xC8EC46, "Lime"), NamedColor(0xFFD54A, "Yellow"),
+        NamedColor(0xFFFFFF, "share.color.white"), NamedColor(0x141414, "share.color.black"), NamedColor(0x0B1E3A, "share.color.navy"),
+        NamedColor(0xC8EC46, "share.color.lime"), NamedColor(0xFFD54A, "share.color.yellow"),
     )
 
     /** The swatches of the Colors tab for each role. "Other color" can select any color. */
     fun swatches(role: ColorRole): List<NamedColor> = when (role) {
         ColorRole.TEXT -> listOf(
-            NamedColor(0xFFFFFF, "White"), NamedColor(0xD9D9D9, "Light gray"), NamedColor(0x141414, "Black"),
-            NamedColor(0xC8EC46, "Lime"), NamedColor(0xFFD54A, "Yellow"),
+            NamedColor(0xFFFFFF, "share.color.white"), NamedColor(0xD9D9D9, "share.color.lightGray"), NamedColor(0x141414, "share.color.black"),
+            NamedColor(0xC8EC46, "share.color.lime"), NamedColor(0xFFD54A, "share.color.yellow"),
         )
         ColorRole.ACCENT -> listOf(
-            NamedColor(0xC8EC46, "Lime"), NamedColor(0xFFD54A, "Yellow"), NamedColor(0xFF8A3D, "Orange"),
-            NamedColor(0xFF4D4D, "Red"), NamedColor(0xFF5FA2, "Pink"), NamedColor(0x3DD6F5, "Cyan"),
-            NamedColor(0x4D8BFF, "Blue"), NamedColor(0xFFFFFF, "White"),
+            NamedColor(0xC8EC46, "share.color.lime"), NamedColor(0xFFD54A, "share.color.yellow"), NamedColor(0xFF8A3D, "share.color.orange"),
+            NamedColor(0xFF4D4D, "share.color.red"), NamedColor(0xFF5FA2, "share.color.pink"), NamedColor(0x3DD6F5, "share.color.cyan"),
+            NamedColor(0x4D8BFF, "share.color.blue"), NamedColor(0xFFFFFF, "share.color.white"),
         )
         ColorRole.PANEL -> listOf(
-            NamedColor(0x0E1014, "Black"), NamedColor(0x0B1E3A, "Navy"), NamedColor(0x0F2A1C, "Dark green"),
-            NamedColor(0x3A0D14, "Dark red"), NamedColor(0x24123D, "Purple"), NamedColor(0xFFFFFF, "White"),
+            NamedColor(0x0E1014, "share.color.black"), NamedColor(0x0B1E3A, "share.color.navy"), NamedColor(0x0F2A1C, "share.color.darkGreen"),
+            NamedColor(0x3A0D14, "share.color.darkRed"), NamedColor(0x24123D, "share.color.purple"), NamedColor(0xFFFFFF, "share.color.white"),
         )
         ColorRole.SHADE -> listOf(
-            NamedColor(0x0A0E14, "Black"), NamedColor(0x0B1E3A, "Navy"), NamedColor(0x0F2A1C, "Dark green"),
-            NamedColor(0x3A0D14, "Dark red"), NamedColor(0xFFFFFF, "White"),
+            NamedColor(0x0A0E14, "share.color.black"), NamedColor(0x0B1E3A, "share.color.navy"), NamedColor(0x0F2A1C, "share.color.darkGreen"),
+            NamedColor(0x3A0D14, "share.color.darkRed"), NamedColor(0xFFFFFF, "share.color.white"),
         )
         ColorRole.ON_ACCENT, ColorRole.ON_PANEL -> ink
     }
@@ -129,55 +153,60 @@ object ThumbnailColorSets {
  */
 enum class ThumbnailStyle(
     val key: String,
-    val title: String,
+    private val titleKey: String,
     val fields: Set<ThumbnailField>,
     val defaultSet: ColorSet,
     val places: List<TextPlace>,
-    val roles: Map<ColorRole, String>,
+    private val roleKeys: Map<ColorRole, String>,
 ) {
     WORDS(
-        "words", "Big words", setOf(ThumbnailField.HEAD, ThumbnailField.KIND), ThumbnailColorSets.LIME,
+        "words", "share.style.words", setOf(ThumbnailField.HEAD, ThumbnailField.KIND), ThumbnailColorSets.LIME,
         listOf(TextPlace.RIGHT, TextPlace.LEFT),
-        mapOf(ColorRole.TEXT to "Match type", ColorRole.ACCENT to "Large words", ColorRole.SHADE to "Behind the words"),
+        mapOf(ColorRole.TEXT to "share.field.kind", ColorRole.ACCENT to "share.field.head", ColorRole.SHADE to "share.use.behindWords"),
     ),
     VERSUS(
-        "versus", "Versus", setOf(ThumbnailField.HEAD, ThumbnailField.TEAM1, ThumbnailField.TEAM2), ThumbnailColorSets.LIME,
+        "versus", "share.style.versus", setOf(ThumbnailField.HEAD, ThumbnailField.TEAM1, ThumbnailField.TEAM2), ThumbnailColorSets.LIME,
         listOf(TextPlace.LEFT, TextPlace.RIGHT),
         mapOf(
-            ColorRole.TEXT to "Players", ColorRole.ACCENT to "Tag and \"VS\"", ColorRole.ON_ACCENT to "Words on the tag",
-            ColorRole.SHADE to "At the side",
+            ColorRole.TEXT to "scoreSettings.players", ColorRole.ACCENT to "share.use.tagVsUpper", ColorRole.ON_ACCENT to "share.use.tagWords",
+            ColorRole.SHADE to "share.use.side",
         ),
     ),
     CARD(
-        "card", "Match card",
+        "card", "share.style.card",
         setOf(ThumbnailField.HEAD, ThumbnailField.EVENT, ThumbnailField.COURT, ThumbnailField.DATE, ThumbnailField.TEAM1, ThumbnailField.TEAM2),
         ThumbnailColorSets.LIME,
         listOf(TextPlace.LEFT, TextPlace.RIGHT),
-        mapOf(ColorRole.ACCENT to "Edge, league, large words", ColorRole.PANEL to "Card", ColorRole.ON_PANEL to "Players, court, date"),
+        mapOf(ColorRole.ACCENT to "share.use.edge", ColorRole.PANEL to "share.use.card", ColorRole.ON_PANEL to "share.use.playersCourtDate"),
     ),
     SPLIT(
-        "split", "Split", setOf(ThumbnailField.HEAD, ThumbnailField.KIND, ThumbnailField.EVENT), ThumbnailColorSets.LIME,
+        "split", "share.style.split", setOf(ThumbnailField.HEAD, ThumbnailField.KIND, ThumbnailField.EVENT), ThumbnailColorSets.LIME,
         listOf(TextPlace.LEFT, TextPlace.RIGHT),
-        mapOf(ColorRole.ACCENT to "Panel", ColorRole.ON_ACCENT to "All texts"),
+        mapOf(ColorRole.ACCENT to "share.role.panel", ColorRole.ON_ACCENT to "share.use.allTexts"),
     ),
     BROADCAST(
-        "tv", "Broadcast",
+        "tv", "style.broadcast",
         setOf(ThumbnailField.HEAD, ThumbnailField.TEAM1, ThumbnailField.TEAM2, ThumbnailField.EVENT, ThumbnailField.COURT),
         ThumbnailColorSets.BROADCAST,
         listOf(TextPlace.BOTTOM, TextPlace.TOP),
         mapOf(
-            ColorRole.ACCENT to "Tag and \"vs\"", ColorRole.ON_ACCENT to "Words on the tag",
-            ColorRole.PANEL to "Player bar, info text", ColorRole.ON_PANEL to "Players, info bar", ColorRole.SHADE to "Behind the bars",
+            ColorRole.ACCENT to "share.use.tagVs", ColorRole.ON_ACCENT to "share.use.tagWords",
+            ColorRole.PANEL to "share.use.playerBar", ColorRole.ON_PANEL to "share.use.playersInfo", ColorRole.SHADE to "share.use.behindBars",
         ),
     ),
     POSTER(
-        "poster", "Poster",
+        "poster", "share.style.poster",
         setOf(ThumbnailField.HEAD, ThumbnailField.KIND, ThumbnailField.DATE, ThumbnailField.TEAM1, ThumbnailField.TEAM2),
         ThumbnailColorSets.LIME,
         listOf(TextPlace.CENTER),
-        mapOf(ColorRole.TEXT to "Large words, players", ColorRole.ACCENT to "Match type, date, \"vs\"", ColorRole.SHADE to "Top and bottom"),
+        mapOf(ColorRole.TEXT to "share.use.wordsPlayers", ColorRole.ACCENT to "share.use.kindDateVs", ColorRole.SHADE to "share.use.topBottom"),
     ),
     ;
+
+    val title: String get() = tr(titleKey)
+
+    /** The color roles of the style, with the parts that use each role, in the app language. */
+    val roles: Map<ColorRole, String> get() = roleKeys.mapValues { tr(it.value) }
 
     companion object {
         fun byKey(key: String?): ThumbnailStyle? = entries.firstOrNull { it.key == key }

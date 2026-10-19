@@ -6,6 +6,7 @@ import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.Color
 import kotlin.math.max
+import org.litvin.i18n.tr
 
 /**
  * The chip at the top-left corner of the video. It tells if the arrow keys move the crop rectangle.
@@ -16,10 +17,10 @@ import kotlin.math.max
  * The text widths come from the AWT metrics of the same font.
  */
 internal object VideoFocusChip {
-    const val HINT = "Click the video to move the crop with the arrow keys"
+    val HINT: String get() = tr("adjust.focusChip.hint")
     val ARROWS = listOf("←", "↑", "→", "↓")
-    const val MOVE_TEXT = "move 1 px ·"
-    const val SHIFT_KEY = "Shift"
+    val MOVE_TEXT: String get() = tr("adjust.focusChip.move")
+    val SHIFT_KEY: String get() = tr("key.shift")
     const val FAST_TEXT = "10 px"
 
     private const val FONT = "Segoe UI"

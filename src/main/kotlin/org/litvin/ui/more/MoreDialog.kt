@@ -19,12 +19,16 @@ import javax.swing.JDialog
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.WindowConstants
+import org.litvin.i18n.tr
 
-/** One section of the More window. The list on the left shows [title]. The right side shows [content]. */
-data class MoreSection(val title: String, val content: JComponent)
+/**
+ * One section of the More window. The list on the left shows [title]. The right side shows [content].
+ * Code finds a section by its [id], not by its title, because the title is translated (B-11).
+ */
+data class MoreSection(val title: String, val content: JComponent, val id: String = title)
 
 /** The window that the More button opens. It has the sections that are not a part of one tab. */
-class MoreDialog(owner: Window?, sections: List<MoreSection>) : JDialog(owner, "More", ModalityType.MODELESS) {
+class MoreDialog(owner: Window?, sections: List<MoreSection>) : JDialog(owner, tr("more.title"), ModalityType.MODELESS) {
     private val morePanel = MorePanel(sections)
 
     init {
@@ -38,9 +42,9 @@ class MoreDialog(owner: Window?, sections: List<MoreSection>) : JDialog(owner, "
     val selectedTitle: String
         get() = morePanel.selectedTitle
 
-    /** Shows the window. If [title] is not null, the window shows that section. */
-    fun open(title: String? = null) {
-        if (title != null) morePanel.selectSection(title)
+    /** Shows the window. If [sectionId] is not null, the window shows that section. */
+    fun open(sectionId: String? = null) {
+        if (sectionId != null) morePanel.selectSection(sectionId)
         if (!isVisible) isVisible = true
         toFront()
         requestFocus()
@@ -53,34 +57,39 @@ class MorePanel(private val sections: List<MoreSection>) : JPanel(BorderLayout()
     private val cardLayout = CardLayout()
     private val content = JPanel(cardLayout)
 
-    var selectedTitle: String = sections.first().title
+    /** The ID of the selected section. */
+    var selectedId: String = sections.first().id
         private set
+
+    /** The title of the selected section. */
+    val selectedTitle: String get() = sections.first { it.id == selectedId }.title
 
     init {
         require(sections.isNotEmpty()) { "The More window needs at least one section" }
         background = Palette.BG
-        navigation = ToolNav("more-navigation", sections.map { ToolNavItem(it.title, it.title, iconOf(it.title)) }) { showSection(it) }
+        navigation = ToolNav("more-navigation", sections.map { ToolNavItem(it.id, it.title, iconOf(it.id)) }) { showSection(it) }
 
         content.name = "more-content"
         content.background = Palette.PANEL
-        sections.forEach { section -> content.add(scrollOf(section.content), section.title) }
+        sections.forEach { section -> content.add(scrollOf(section.content), section.id) }
 
         add(navigation, BorderLayout.WEST)
         add(content, BorderLayout.CENTER)
-        selectSection(sections.first().title)
+        selectSection(sections.first().id)
     }
 
     fun sectionTitles(): List<String> = sections.map { it.title }
 
-    fun selectSection(title: String) {
-        if (sections.none { it.title == title }) return
-        navigation.selected = title
-        showSection(title)
+    /** Shows the section with [id]. An unknown ID has no effect. */
+    fun selectSection(id: String) {
+        if (sections.none { it.id == id }) return
+        navigation.selected = id
+        showSection(id)
     }
 
-    private fun showSection(title: String) {
-        selectedTitle = title
-        cardLayout.show(content, title)
+    private fun showSection(id: String) {
+        selectedId = id
+        cardLayout.show(content, id)
     }
 
     private fun scrollOf(component: JComponent): JScrollPane =
@@ -91,12 +100,15 @@ class MorePanel(private val sections: List<MoreSection>) : JPanel(BorderLayout()
             applyDarkScrollbar(this, Palette.PANEL)
         }
 
-    private companion object {
-        fun iconOf(title: String): Ikon = when (title) {
-            SettingsPage.TITLE -> Material2MZ.SETTINGS
-            "Privacy" -> Material2MZ.SECURITY
-            AboutPage.TITLE -> Material2AL.INFO
-            ContactPage.TITLE -> Material2MZ.MAIL_OUTLINE
+    companion object {
+        /** The ID of the Privacy section. The `ui.privacy` package makes the page. */
+        const val PRIVACY_ID = "privacy"
+
+        private fun iconOf(id: String): Ikon = when (id) {
+            SettingsPage.ID -> Material2MZ.SETTINGS
+            PRIVACY_ID -> Material2MZ.SECURITY
+            AboutPage.ID -> Material2AL.INFO
+            ContactPage.ID -> Material2MZ.MAIL_OUTLINE
             else -> Material2AL.ARTICLE
         }
     }

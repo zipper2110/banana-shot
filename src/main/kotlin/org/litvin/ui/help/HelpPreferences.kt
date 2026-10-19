@@ -11,6 +11,9 @@ object HelpPreferences {
         return true
     }
 
+    /** True when the Overview help showed at an earlier start. A new user has false. */
+    fun wasOverviewShown(preferences: Preferences): Boolean = preferences.getBoolean(OVERVIEW_SHOWN_KEY, false)
+
     /** Makes the Overview help open again at the next start of the app. */
     fun resetFirstLaunchOverview(preferences: Preferences) {
         preferences.remove(OVERVIEW_SHOWN_KEY)

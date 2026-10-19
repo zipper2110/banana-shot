@@ -8,19 +8,20 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingConstants
 import org.litvin.ui.commons.Palette
+import org.litvin.i18n.tr
 
 /** The pager next to the "Recent projects" title: the previous page button, "Page 1 / 3", and the next page button. */
 class ProjectsPaginationBar(
     private val onPrevious: () -> Unit,
     private val onNext: () -> Unit,
 ) : JPanel() {
-    private val prevButton = ProjectsIconButton(Material2AL.CHEVRON_LEFT, "Previous page", bordered = true, iconSize = 18).apply {
+    private val prevButton = ProjectsIconButton(Material2AL.CHEVRON_LEFT, tr("projects.page.previous"), bordered = true, iconSize = 18).apply {
         name = "projects-page-previous"
     }
-    private val nextButton = ProjectsIconButton(Material2AL.CHEVRON_RIGHT, "Next page", bordered = true, iconSize = 18).apply {
+    private val nextButton = ProjectsIconButton(Material2AL.CHEVRON_RIGHT, tr("projects.page.next"), bordered = true, iconSize = 18).apply {
         name = "projects-page-next"
     }
-    private val pageLabel = JLabel("Page 1 / 1", SwingConstants.CENTER).apply {
+    private val pageLabel = JLabel(tr("projects.page", "page" to 1, "pages" to 1), SwingConstants.CENTER).apply {
         name = "projects-page-label"
         font = ProjectsUi.font(12f)
         foreground = Palette.FG_2
@@ -42,7 +43,7 @@ class ProjectsPaginationBar(
     override fun getMaximumSize(): Dimension = preferredSize
 
     fun render(currentPage: Int, totalPages: Int, canGoPrevious: Boolean, canGoNext: Boolean, isVisible: Boolean) {
-        pageLabel.text = "Page $currentPage / $totalPages"
+        pageLabel.text = tr("projects.page", "page" to currentPage, "pages" to totalPages)
         // The label keeps a minimum width, so the buttons do not move when the page number changes.
         val labelWidth = maxOf(LABEL_MIN_WIDTH, pageLabel.getFontMetrics(pageLabel.font).stringWidth(pageLabel.text) + 8)
         pageLabel.preferredSize = Dimension(labelWidth, 26)

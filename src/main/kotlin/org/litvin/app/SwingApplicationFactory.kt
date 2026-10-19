@@ -60,6 +60,15 @@ import org.litvin.ui.more.ContactPage
 import org.litvin.ui.more.MoreDialog
 import org.litvin.ui.more.MoreSection
 import org.litvin.ui.more.SettingsPage
+import org.litvin.ui.more.LanguageSetting
+import org.litvin.ui.more.MorePanel
+import org.litvin.ui.commons.MessageButton
+import org.litvin.ui.commons.UiButton
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.LanguageSettings
+import org.litvin.i18n.Messages
+import io.github.oshai.kotlinlogging.KotlinLogging
+import java.util.Locale
 import org.litvin.ui.privacy.KeepStatisticsRequest
 import org.litvin.ui.privacy.PrivacyLinkOpener
 import org.litvin.ui.privacy.PrivacyPage
@@ -85,8 +94,11 @@ import javax.swing.JComponent
 import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.KeyStroke
+import org.litvin.i18n.tr
+import org.litvin.i18n.I18n
 
 object SwingApplicationFactory {
+    private val logger = KotlinLogging.logger {}
     private const val CARD_PROJECTS = "projects"
     private const val CARD_POINTS = "points"
     private const val CARD_EXPORT = "export"
@@ -96,7 +108,7 @@ object SwingApplicationFactory {
     private const val CARD_TEST = "test"
     private const val SIDEBAR_BUTTON_GAP = 6
     private const val SIDEBAR_GROUP_GAP = 28
-    private const val HELP_BUTTON_HINT = "Help is always here. Each tab has its own help page. Press F1 on any tab."
+    private val HELP_BUTTON_HINT get() = tr("nav.help.hint")
 
     /**
      * The reply address of the feedback (decision 7 of B-8). When the app domain exists (B-10), change it here to an
@@ -142,16 +154,95 @@ object SwingApplicationFactory {
             author = AppInfo.AUTHOR,
             website = URI(AppInfo.WEBSITE),
             documents = listOf(
-                document("License", "legal/LICENSE.txt", "LICENSE"),
-                document("License notice", "legal/LICENSE-NOTICE.txt", "LICENSE-NOTICE"),
-                document("Third-party notices", "legal/THIRD-PARTY-NOTICES.txt", "distribution/THIRD-PARTY-NOTICES.txt"),
+                document(tr("about.document.license"), "legal/LICENSE.txt", "LICENSE"),
+                document(tr("about.document.licenseNotice"), "legal/LICENSE-NOTICE.txt", "LICENSE-NOTICE"),
+                document(tr("about.document.thirdParty"), "legal/THIRD-PARTY-NOTICES.txt", "distribution/THIRD-PARTY-NOTICES.txt"),
             ),
             components = listOf(
                 "Java" to "${System.getProperty("java.version")} (${System.getProperty("java.vendor")})",
-                "libmpv" to (layout.mpvDirectory?.path ?: "Not found"),
+                "libmpv" to (layout.mpvDirectory?.path ?: tr("about.notFound")),
                 "FFmpeg" to layout.ffmpegExecutable,
             ),
         )
+    }
+
+    /** The language row of More > Settings. [restart] restarts the app with the launcher (B-11, E3-T21). */
+    private fun languageSetting(settings: LanguageSettings, restartLauncher: File?, restart: (File) -> Unit): LanguageSetting {
+        val resolution = SwingMainApp.languageResolution ?: LanguageSettings.Resolution(I18n.language, LanguageSettings.Source.SYSTEM)
+        return object : LanguageSetting {
+            override val choice: AppLanguage? get() = settings.choice
+            override val running: AppLanguage = resolution.language
+            override val systemLanguage: AppLanguage = LanguageSettings.systemLanguage(Locale.getDefault(Locale.Category.DISPLAY))
+            override fun save(choice: AppLanguage?): Boolean = runCatching { settings.save(choice) }
+                .onFailure { logger.warn(it) { "Cannot save the language setting." } }
+                .isSuccess
+            override val restart: (() -> Unit)? = restartLauncher?.let { launcher -> { restart(launcher) } }
+        }
+    }
+
+    @Volatile
+    private var restarting = false
+
+    /**
+     * Restarts the app after a language change. It uses the close sequence of "Update and restart": the user confirms
+     * the stop of a running export, the app saves the project and the export queue, then the new process starts and
+     * this process exits. If the close fails, the app does not start again: the user sees the error, and the new
+     * language applies at the next normal start.
+     */
+    private fun restartApp(frame: JFrame, launcher: File, exportRuns: () -> Boolean, exit: () -> Unit, closeSequence: () -> Unit) {
+        if (restarting) return
+        if (exportRuns() && !MessageDialog.confirm(frame, tr("restart.exportRuns.title"), tr("restart.exportRuns.text"), tr("settings.language.restart"))) {
+            return
+        }
+        restarting = true
+        frame.isVisible = false
+        val closed = try {
+            closeSequence()
+            true
+        } catch (failure: Exception) {
+            logger.error(failure) { "The close sequence before the restart failed. The app does not start again." }
+            MessageDialog.show(null, MessageKind.ERROR, tr("restart.failed.title"), tr("restart.failed.text"))
+            false
+        }
+        if (closed) {
+            try {
+                AppRestart.start(launcher)
+                logger.info { "Started $launcher for the restart. The app exits." }
+            } catch (failure: Exception) {
+                logger.error(failure) { "The restart with $launcher failed." }
+            }
+        }
+        exit()
+    }
+
+    /**
+     * The notice after an automatic language change (E4-T11): the app follows Windows, and Windows has a language that
+     * the app now has. It shows one time. A new user does not see it. "Use English" is in English, so that a user who
+     * cannot read the new language can use it.
+     */
+    private fun showLanguageNotice(frame: JFrame, settings: LanguageSettings, firstStart: Boolean, setting: LanguageSetting) {
+        val resolution = SwingMainApp.languageResolution ?: return
+        if (!settings.needsSystemLanguageNotice(resolution)) return
+        settings.noticeShown(resolution.language)
+        if (firstStart) return
+        EventQueue.invokeLater {
+            val useEnglish = Messages.english().text("language.notice.useEnglish")
+            val clicked = MessageDialog.show(
+                frame,
+                MessageKind.INFO,
+                tr("language.notice.title"),
+                tr("language.notice.text", "language" to resolution.language.nativeName),
+                listOf(MessageButton(useEnglish), MessageButton(tr("common.ok"), UiButton.Kind.LIME)),
+                defaultIndex = 1,
+                cancelIndex = 1,
+            )
+            if (clicked == 0 && setting.save(AppLanguage.ENGLISH)) {
+                val restart = setting.restart
+                if (restart != null) restart() else {
+                    MessageDialog.show(frame, MessageKind.INFO, useEnglish, Messages.english().text("settings.language.closeAndStart"))
+                }
+            }
+        }
     }
 
     fun create(
@@ -217,8 +308,8 @@ object SwingApplicationFactory {
             }
 
             // Match tabs go in order. The Video tab has settings for the image that the user can change at any time.
-            val groupMatch = UiStyles.SidebarGroup("Match").apply { name = "nav-group-match" }
-            val groupVideo = UiStyles.SidebarGroup("Video").apply { name = "nav-group-video" }
+            val groupMatch = UiStyles.SidebarGroup(tr("nav.group.match")).apply { name = "nav-group-match" }
+            val groupVideo = UiStyles.SidebarGroup(tr("nav.group.video")).apply { name = "nav-group-video" }
             val projectGroups = listOf(groupMatch, groupVideo)
 
             fun addItem(button: UiStyles.SidebarButton, container: JPanel = sidebar) {
@@ -236,6 +327,10 @@ object SwingApplicationFactory {
             val cards = JPanel(CardLayout())
             val cardLayout = cards.layout as CardLayout
             val applicationPreferences = services.preferences.node(PreferencesProvider.APPLICATION)
+            // Read before the first-launch overview claims it: a new user gets no notice of a language change (B-11).
+            val firstStart = !HelpPreferences.wasOverviewShown(applicationPreferences)
+            val languageSettings = LanguageSettings(applicationPreferences)
+            lateinit var languageSetting: LanguageSetting
             // One controller for the theme controls of the Projects tab and More > Settings.
             val themeSettings = ThemeController(ThemePreferences(applicationPreferences))
             // The theme, the accent, and the language are session attributes of the analytics (B-44).
@@ -247,7 +342,8 @@ object SwingApplicationFactory {
                         AppTheme.LIGHT -> AnalyticsEvent.Theme.LIGHT
                     },
                     accent = if (themeSettings.customAccent == null) AnalyticsEvent.Accent.DEFAULT else AnalyticsEvent.Accent.CUSTOM,
-                    // The app has only an English interface (B-11 adds languages).
+                    // The analytics worker accepts only "en" until B-11 E2 widens the language list. Thus the app sends
+                    // "en" also when the interface is in another language (E4-T10 changes it after E2).
                     language = AnalyticsEvent.Language.EN,
                 ),
             )
@@ -313,7 +409,7 @@ object SwingApplicationFactory {
             if (testPanel != null) closeActions += testPanel::onDeactivated
             lateinit var projectsPanel: SwingProjectsPanel
 
-            var tabTitle = "Projects"
+            var tabTitle = tr("tab.projects")
             var projectName: String? = null
             var projectOpen = false
             fun updateTitle() {
@@ -413,7 +509,7 @@ object SwingApplicationFactory {
                     projectGroups.forEach { it.isVisible = true }
                     sidebar.revalidate()
                     sidebar.repaint()
-                    showTitle("Points")
+                    showTitle(tr("tab.points"))
                     goTo(CARD_POINTS)
                 }
                 onCurrentProjectNameChanged = { name ->
@@ -430,38 +526,38 @@ object SwingApplicationFactory {
             cards.add(sharePanel, CARD_SHARE)
             if (testPanel != null) cards.add(testPanel, CARD_TEST)
 
-            btnProjects = UiStyles.sidebarButton("Projects", UiStyles.folderIcon()) {
-                showTitle("Projects")
+            btnProjects = UiStyles.sidebarButton(tr("nav.projects"), UiStyles.folderIcon()) {
+                showTitle(tr("tab.projects"))
                 goTo(CARD_PROJECTS, byUser = !navigatingInCode)
             }.apply { name = "nav-projects" }
             addItem(btnProjects)
             addGroup(groupMatch)
-            btnPoints = UiStyles.sidebarButton("Points", UiStyles.pointsIcon()) {
-                showTitle("Points")
+            btnPoints = UiStyles.sidebarButton(tr("nav.points"), UiStyles.pointsIcon()) {
+                showTitle(tr("tab.points"))
                 goTo(CARD_POINTS, byUser = !navigatingInCode)
             }.apply { name = "nav-points" }
             addItem(btnPoints, groupMatch)
-            btnStats = UiStyles.sidebarButton("Stats", UiStyles.statsIcon()) {
-                showTitle("Statistics")
+            btnStats = UiStyles.sidebarButton(tr("nav.stats"), UiStyles.statsIcon()) {
+                showTitle(tr("tab.statistics"))
                 goTo(CARD_STATS, byUser = !navigatingInCode)
             }.apply { name = "nav-stats" }
             addItem(btnStats, groupMatch)
             addGroup(groupVideo)
-            btnAdjustVideo = UiStyles.sidebarButton("Colors &\nTransform", UiStyles.cropRotateIcon()) {
-                showTitle("Colors & Transform")
+            btnAdjustVideo = UiStyles.sidebarButton(tr("nav.adjust"), UiStyles.cropRotateIcon()) {
+                showTitle(tr("tab.adjust"))
                 goTo(CARD_ADJUST_VIDEO, byUser = !navigatingInCode)
             }.apply { name = "nav-adjust-video" }
             addItem(btnAdjustVideo, groupVideo)
             // The Thumbnail tab makes a YouTube thumbnail for the open project, so it shows only with a project (B-46).
-            btnShare = UiStyles.sidebarButton("Thumbnail", UiStyles.thumbnailIcon()) {
-                showTitle("Thumbnail")
+            btnShare = UiStyles.sidebarButton(tr("nav.thumbnail"), UiStyles.thumbnailIcon()) {
+                showTitle(tr("tab.thumbnail"))
                 goTo(CARD_SHARE, byUser = !navigatingInCode)
             }.apply { name = "nav-share" }
             addItem(btnShare, groupVideo)
             // addItem adds the usual button gap before Export. Together they make the same gap as between the groups.
             sidebar.add(Box.createRigidArea(Dimension(0, SIDEBAR_GROUP_GAP - SIDEBAR_BUTTON_GAP)))
-            btnExport = UiStyles.sidebarButton("Export", UiStyles.exportIcon()) {
-                showTitle("Export")
+            btnExport = UiStyles.sidebarButton(tr("nav.export"), UiStyles.exportIcon()) {
+                showTitle(tr("tab.export"))
                 goTo(CARD_EXPORT, byUser = !navigatingInCode)
             }.apply { name = "nav-export" }
             addItem(btnExport)
@@ -470,7 +566,7 @@ object SwingApplicationFactory {
             fun showExportCount(count: Int) {
                 btnExport.badgeCount = count
                 btnExport.accessibleContext.accessibleDescription =
-                    if (count > 0) "$count running or queued export(s)" else null
+                    if (count > 0) tr("nav.export.count", "count" to count) else null
             }
             exportPanel.onActiveExportCountChanged = ::showExportCount
             showExportCount(exportPanel.activeExportCount)
@@ -488,20 +584,20 @@ object SwingApplicationFactory {
                 hints.dismiss(HintId.HELP_BUTTON)
                 showHelp(currentHelpPage())
             }
-            val btnHelp = UiStyles.sidebarButton("Help", UiStyles.helpIcon()) {
+            val btnHelp = UiStyles.sidebarButton(tr("nav.help"), UiStyles.helpIcon()) {
                 openContextHelp()
             }.apply {
                 name = "nav-help"
-                toolTipText = "F1 - Help"
+                toolTipText = tr("nav.help.tooltip")
                 alignmentX = 0f
                 maximumSize = Dimension(Int.MAX_VALUE, 64)
             }
             // The Feedback button is always visible, also with no open project (T3 of B-8).
-            sidebar.add(UiStyles.sidebarButton("Feedback", UiStyles.feedbackIcon()) {
+            sidebar.add(UiStyles.sidebarButton(tr("nav.feedback"), UiStyles.feedbackIcon()) {
                 feedback.open()
             }.apply {
                 name = "nav-feedback"
-                toolTipText = "Send a problem, an idea, or a question to the author"
+                toolTipText = tr("nav.feedback.tooltip")
                 alignmentX = 0f
                 maximumSize = Dimension(Int.MAX_VALUE, 64)
             })
@@ -531,13 +627,16 @@ object SwingApplicationFactory {
                                     HelpPreferences.resetFirstLaunchOverview(applicationPreferences)
                                 },
                                 onOpenFolder = ::openWithDesktop,
+                                language = languageSetting,
                             ),
+                            SettingsPage.ID,
                         ),
                         MoreSection(
                             AboutPage.TITLE,
                             AboutPage(aboutInfo(), onOpenFile = ::openWithDesktop, onOpenLink = PrivacyLinkOpener.DesktopBrowser::open),
+                            AboutPage.ID,
                         ),
-                        MoreSection(PrivacyPage.TITLE, privacyPage),
+                        MoreSection(PrivacyPage.TITLE, privacyPage, MorePanel.PRIVACY_ID),
                         MoreSection(
                             ContactPage.TITLE,
                             ContactPage(
@@ -548,15 +647,16 @@ object SwingApplicationFactory {
                                 onOpenLink = PrivacyLinkOpener.DesktopBrowser::open,
                                 onOpenFolder = ::openWithDesktop,
                             ),
+                            ContactPage.ID,
                         ),
                     ),
                 )
             }
-            sidebar.add(UiStyles.sidebarButton("More", UiStyles.moreIcon()) {
+            sidebar.add(UiStyles.sidebarButton(tr("nav.more"), UiStyles.moreIcon()) {
                 moreDialog.value.open()
             }.apply {
                 name = "nav-more"
-                toolTipText = "Settings, privacy, and information about the app"
+                toolTipText = tr("nav.more.tooltip")
                 alignmentX = 0f
                 maximumSize = Dimension(Int.MAX_VALUE, 64)
             })
@@ -582,10 +682,10 @@ object SwingApplicationFactory {
                 sidebar.repaint()
                 exportPanel.newExportRefused = expired
                 if (expired) {
-                    showTitle("Export")
+                    showTitle(tr("tab.export"))
                     goTo(CARD_EXPORT)
                 } else {
-                    showTitle("Projects")
+                    showTitle(tr("tab.projects"))
                     goTo(CARD_PROJECTS)
                 }
             }
@@ -596,6 +696,13 @@ object SwingApplicationFactory {
                 if (RenderQueueManager.runListener === renderAnalytics) RenderQueueManager.runListener = null
                 RenderQueueManager.runningExports().forEach(renderAnalytics::interrupted)
                 analyticsController?.beginFinalSend()
+            }
+
+            languageSetting = languageSetting(languageSettings, restartLauncher = AppRestart.launcher()) { launcher ->
+                restartApp(frame, launcher, exportRuns = { exportPanel.activeExportCount > 0 }, exit = onWindowClosed) {
+                    beginAnalyticsExit()
+                    handle.close()
+                }
             }
 
             val updateRunner = UpdateRunner(
@@ -716,14 +823,13 @@ object SwingApplicationFactory {
                 MessageDialog.show(
                     frame,
                     MessageKind.INFO,
-                    "GPU preference set",
-                    "We set a Windows preference for this app to use the dedicated/external GPU on future launches.\n\n" +
-                        "**Please restart the application now.**\n\n" +
-                        "If it still uses the integrated GPU, open Windows Graphics Settings → Graphics performance preference, or NVIDIA/AMD control panel, and force the high‑performance GPU for javaw.exe (or your packaged EXE).",
+                    tr("gpu.title"),
+                    tr("gpu.text"),
                     DialogKit.WIDE,
                 )
             }
             if (show && !askConsent) showFirstLaunchOverview()
+            if (show) showLanguageNotice(frame, languageSettings, firstStart, languageSetting)
 
             return handle
         } catch (failure: Throwable) {

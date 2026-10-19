@@ -198,9 +198,9 @@ class SwingAdjustVideoPanelTest {
             assertEquals(listOf(2_880_500L), seeks)
             assertEquals("00:48:00", (bar.find("colors-current-time") as JLabel).text)
 
-            assertEquals("SPACE - Play", bar.playButton.toolTipText)
+            assertEquals("Space — Play", bar.playButton.toolTipText)
             bar.setPlaying(true)
-            assertEquals("SPACE - Pause", bar.playButton.toolTipText)
+            assertEquals("Space — Pause", bar.playButton.toolTipText)
         }
     }
 

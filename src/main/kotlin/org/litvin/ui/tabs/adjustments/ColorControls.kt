@@ -6,37 +6,41 @@ import org.litvin.ui.commons.GroupCard
 import org.litvin.ui.commons.SliderValueFormat
 import org.litvin.ui.commons.SliderValueRow
 import org.litvin.ui.commons.UiKit
+import org.litvin.i18n.tr
 
 /** The two groups of the Color grade panel. */
-internal enum class ColorGroup(val title: String, val ikon: Ikon) {
-    LIGHT("Light", Material2OutlinedMZ.WB_SUNNY),
-    COLOR("Color", Material2OutlinedMZ.PALETTE),
+internal enum class ColorGroup(private val titleKey: String, val ikon: Ikon) {
+    LIGHT("adjust.group.light", Material2OutlinedMZ.WB_SUNNY),
+    COLOR("adjust.group.color", Material2OutlinedMZ.PALETTE),
+    ;
+
+    val title: String get() = tr(titleKey)
 }
 
 /**
  * The six color controls in the order of the panel. Each runs from -100 to +100 with 0 as the default.
- * [low] and [high] are the small labels under the ends of the slider.
+ * [low] and [high] are the small labels under the ends of the slider. The constructor gets catalog keys.
  */
 internal enum class ColorControl(
-    val label: String,
+    private val labelKey: String,
     val componentName: String,
-    val low: String,
-    val high: String,
-    val tooltip: String,
+    private val lowKey: String,
+    private val highKey: String,
+    private val tooltipKey: String,
     val group: ColorGroup,
 ) {
-    BRIGHTNESS("Brightness", "colors-brightness", "Darker", "Brighter", "Brightness [-100..+100], default 0. Changes all tones by the same amount.", ColorGroup.LIGHT),
-    CONTRAST("Contrast", "colors-contrast", "Flatter", "Stronger", "Contrast [-100..+100], default 0", ColorGroup.LIGHT),
-    SHADOWS(
-        "Shadows", "colors-shadows", "Deeper", "Lifted",
-        "Shadows [-100..+100], default 0. Positive lifts dark areas, negative deepens them. Mid tones do not change.", ColorGroup.LIGHT,
-    ),
-    HIGHLIGHTS(
-        "Highlights", "colors-highlights", "Darker", "Brighter",
-        "Highlights [-100..+100], default 0. Negative pulls bright areas down, positive brightens them. Mid tones do not change.", ColorGroup.LIGHT,
-    ),
-    SATURATION("Saturation", "colors-saturation", "Gray", "Vivid", "Saturation [-100..+100], default 0", ColorGroup.COLOR),
-    TEMPERATURE("Temperature", "colors-temperature", "Cooler", "Warmer", "Temperature [-100..+100], default 0. Positive adds a warm (orange) cast, negative adds a cool (blue) cast.", ColorGroup.COLOR),
+    BRIGHTNESS("adjust.brightness", "colors-brightness", "adjust.darker", "adjust.brighter", "adjust.brightness.tooltip", ColorGroup.LIGHT),
+    CONTRAST("adjust.contrast", "colors-contrast", "adjust.flatter", "adjust.stronger", "adjust.contrast.tooltip", ColorGroup.LIGHT),
+    SHADOWS("adjust.shadows", "colors-shadows", "adjust.deeper", "adjust.lifted", "adjust.shadows.tooltip", ColorGroup.LIGHT),
+    HIGHLIGHTS("adjust.highlights", "colors-highlights", "adjust.darker", "adjust.brighter", "adjust.highlights.tooltip", ColorGroup.LIGHT),
+    SATURATION("adjust.saturation", "colors-saturation", "adjust.gray", "adjust.vivid", "adjust.saturation.tooltip", ColorGroup.COLOR),
+    TEMPERATURE("adjust.temperature", "colors-temperature", "adjust.cooler", "adjust.warmer", "adjust.temperature.tooltip", ColorGroup.COLOR),
+    ;
+
+    val label: String get() = tr(labelKey)
+    val low: String get() = tr(lowKey)
+    val high: String get() = tr(highKey)
+    val tooltip: String get() = tr(tooltipKey)
 }
 
 /**

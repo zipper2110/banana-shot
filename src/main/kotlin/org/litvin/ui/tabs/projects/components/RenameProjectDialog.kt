@@ -11,6 +11,7 @@ import javax.swing.JTextField
 import javax.swing.SwingUtilities
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import org.litvin.i18n.tr
 
 /** Opens the "Rename project" dialog and returns the new name, or null after Cancel. Tests replace the dialog with a fake. */
 fun interface ProjectNameEditor {
@@ -25,7 +26,7 @@ fun interface ProjectNameEditor {
 class RenameProjectDialog private constructor(
     owner: Window?,
     currentName: String,
-) : JDialog(owner, "Rename project", Dialog.ModalityType.APPLICATION_MODAL) {
+) : JDialog(owner, tr("projects.rename.tooltip"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : ProjectNameEditor {
         override fun edit(parent: Component, currentName: String): String? {
@@ -40,7 +41,7 @@ class RenameProjectDialog private constructor(
 
     private val nameField = JTextField(currentName, 36).apply { name = "rename-project-name" }
     private val nameError = DialogKit.errorLine("rename-project-name-error")
-    private val renameButton = UiButton("Rename", kind = UiButton.Kind.LIME).apply {
+    private val renameButton = UiButton(tr("projects.rename"), kind = UiButton.Kind.LIME).apply {
         name = "rename-project-save"
         addActionListener { rename() }
     }
@@ -49,16 +50,16 @@ class RenameProjectDialog private constructor(
         name = "rename-project-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
-        val cancelButton = UiButton("Cancel").apply {
+        val cancelButton = UiButton(tr("common.cancel")).apply {
             name = "rename-project-cancel"
             addActionListener { dispose() }
         }
 
         contentPane = DialogKit.content(
             DialogKit.SMALL,
-            DialogKit.head("Rename project"),
+            DialogKit.head(tr("projects.rename.tooltip")),
             DialogKit.form(
-                DialogKit.field("Project name", DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
+                DialogKit.field(tr("projects.name"), DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
                 nameError,
                 gap = 6,
             ),

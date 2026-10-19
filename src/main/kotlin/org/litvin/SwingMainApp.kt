@@ -3,6 +3,10 @@ package org.litvin
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.app.AppDataPaths
+import org.litvin.app.AppRestart
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.LanguageSettings
+import org.litvin.i18n.Messages
 import org.litvin.app.AppServices
 import org.litvin.app.InstanceLock
 import org.litvin.app.PreferencesProvider
@@ -18,18 +22,27 @@ import java.awt.EventQueue
 import java.awt.Font
 import java.awt.GraphicsEnvironment
 import java.awt.Toolkit
+import javax.swing.JComponent
 import javax.swing.UIManager
+import org.litvin.i18n.tr
+import org.litvin.i18n.I18n
 
 object SwingMainApp {
     private val logger = KotlinLogging.logger {}
 
-    private val ALREADY_RUNNING_MESSAGE =
-        "${AppInfo.NAME} is already running. Use the open window. If you cannot see it, look in the taskbar."
+    private val ALREADY_RUNNING_MESSAGE get() = tr("app.alreadyRunning", "app" to AppInfo.NAME)
 
-    private const val UNEXPECTED_ERROR = "Unexpected error"
+    private val UNEXPECTED_ERROR get() = tr("app.unexpectedError")
+
+    private val STARTUP_ERROR get() = tr("app.startupError")
 
     @Volatile
     private var instanceLock: InstanceLock? = null
+
+    /** The language of this start (B-11). The main window reads it for the Language row and the notice. */
+    @Volatile
+    var languageResolution: LanguageSettings.Resolution? = null
+        private set
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -51,6 +64,8 @@ object SwingMainApp {
             "${AppInfo.NAME} ${AppInfo.version} started on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, " +
                 "Java ${System.getProperty("java.version")}."
         }
+        // The language comes before all texts. It does not change the default locale of the JVM (B-11 plan, section 1).
+        installLanguage()
         try {
             // The saved theme sets the seed colors of the Palette before the app makes a component.
             val (theme, accent) = runCatching {
@@ -60,6 +75,7 @@ object SwingMainApp {
             }.getOrDefault(AppTheme.DEFAULT to AppTheme.DEFAULT.accent)
             Theme.start(theme, accent)
             UIManager.put("defaultFont", Font("Segoe UI", Font.PLAIN, 14))
+            applySwingLocale()
         } catch (failure: Exception) {
             logger.warn(failure) { "Failed to initialize FlatLaf look and feel." }
         }
@@ -67,7 +83,7 @@ object SwingMainApp {
         configureDisplayScaling()
         configureTextRendering()
 
-        if (!takeInstanceLock()) {
+        if (!takeInstanceLock(AppRestart.isRestart(args))) {
             kotlin.system.exitProcess(0)
         }
 
@@ -75,7 +91,7 @@ object SwingMainApp {
             AppServices.production()
         } catch (failure: Throwable) {
             logger.error(failure) { "Application startup failed." }
-            SwingUserDialogService().showError(null, failure.message ?: failure.toString(), "Startup error")
+            SwingUserDialogService().showError(null, failure.message ?: failure.toString(), STARTUP_ERROR)
             return
         }
 
@@ -88,7 +104,7 @@ object SwingMainApp {
             }
         } catch (failure: Throwable) {
             logger.error(failure) { "The expiry check at start failed." }
-            SwingUserDialogService().showError(null, failure.message ?: failure.toString(), "Startup error")
+            SwingUserDialogService().showError(null, failure.message ?: failure.toString(), STARTUP_ERROR)
             runCatching { services.close() }
             return
         }
@@ -114,7 +130,7 @@ object SwingMainApp {
                 )
             } catch (failure: Throwable) {
                 logger.error(failure) { "Application startup failed." }
-                services.dialogs.showError(null, failure.message ?: failure.toString(), "Startup error")
+                services.dialogs.showError(null, failure.message ?: failure.toString(), STARTUP_ERROR)
                 try {
                     services.close()
                 } catch (cleanupFailure: Throwable) {
@@ -125,12 +141,44 @@ object SwingMainApp {
     }
 
     /**
-     * Takes the lock of B-19 before the app reads or writes its state. Returns false when another
-     * instance runs: then the user sees a message, and the process must quit.
+     * Reads the language setting and installs the texts of the language (B-11). A failure gives English.
      */
-    private fun takeInstanceLock(): Boolean {
+    private fun installLanguage() {
+        val resolution = try {
+            LanguageSettings(PreferencesProvider.production().node(PreferencesProvider.APPLICATION)).resolve()
+        } catch (failure: Exception) {
+            logger.warn(failure) { "Cannot read the language setting. The app uses English." }
+            LanguageSettings.Resolution(AppLanguage.SOURCE, LanguageSettings.Source.SYSTEM)
+        }
+        languageResolution = resolution
+        I18n.install(Messages.of(resolution.language, pseudo = resolution.pseudo))
+        logger.info { "The app language is ${resolution.language.code} (${resolution.source}${if (resolution.pseudo) ", qps" else ""})." }
+    }
+
+    /** The texts of Swing and FlatLaf follow the app language. The default locale of the JVM does not change. */
+    private fun applySwingLocale() {
+        val locale = I18n.language.locale
+        JComponent.setDefaultLocale(locale)
+        UIManager.getLookAndFeelDefaults().defaultLocale = locale
+        UIManager.getDefaults().defaultLocale = locale
+    }
+
+    /**
+     * Takes the lock of B-19 before the app reads or writes its state. Returns false when another
+     * instance runs: then the user sees a message, and the process must quit. After a restart ([restart]), the
+     * old process can still hold the lock for some seconds, so the new process waits for it.
+     */
+    private fun takeInstanceLock(restart: Boolean): Boolean {
         val lockFile = AppDataPaths.production().instanceLock
-        return when (val result = InstanceLock.acquire(lockFile)) {
+        var result = InstanceLock.acquire(lockFile)
+        if (restart) {
+            val end = System.currentTimeMillis() + AppRestart.LOCK_WAIT_MILLIS
+            while (result == InstanceLock.Result.HeldByOtherInstance && System.currentTimeMillis() < end) {
+                Thread.sleep(250)
+                result = InstanceLock.acquire(lockFile)
+            }
+        }
+        return when (result) {
             is InstanceLock.Result.Acquired -> {
                 // Keep the lock reachable. If the channel is collected, Windows releases the lock.
                 instanceLock = result.lock

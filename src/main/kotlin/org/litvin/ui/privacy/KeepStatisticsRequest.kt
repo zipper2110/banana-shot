@@ -5,6 +5,7 @@ import org.litvin.AppInfo
 import org.litvin.ui.commons.AuthorPortrait
 import org.litvin.ui.commons.MessageDialog
 import java.awt.Component
+import org.litvin.i18n.tr
 
 /**
  * The request from the app author to keep the essential statistics on. It has the same look as the request to keep
@@ -12,12 +13,10 @@ import java.awt.Component
  * user stays the default answer.
  */
 object KeepStatisticsRequest {
-    internal const val TITLE = "A small favor"
-    internal val TEXT = "Hey there! I make ${AppInfo.NAME} in my free time. The essential statistics are anonymous: " +
-        "no videos, names, scores, or files. They only show me how many people use the app and if it crashes. " +
-        "Could you keep them on? Thanks! ;)"
-    internal const val KEEP_BUTTON = "Keep them on"
-    internal const val OFF_BUTTON = "Turn them off"
+    internal val TITLE: String get() = tr("keepStats.title")
+    internal val TEXT: String get() = tr("keepStats.text", "app" to AppInfo.NAME)
+    internal val KEEP_BUTTON: String get() = tr("keepStats.keep")
+    internal val OFF_BUTTON: String get() = tr("keepStats.off")
 
     /** Shows the request and waits. Returns true when the user keeps the statistics on. */
     fun ask(parent: Component): Boolean = MessageDialog.confirm(

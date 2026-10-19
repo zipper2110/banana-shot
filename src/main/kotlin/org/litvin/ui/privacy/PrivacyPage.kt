@@ -10,6 +10,7 @@ import org.litvin.ui.commons.SectionPage
 import org.litvin.ui.commons.SwitchBox
 import java.awt.Component
 import java.net.URI
+import org.litvin.i18n.tr
 
 /** The Privacy section of the More window. */
 internal class PrivacyPage private constructor() : SectionPage(TITLE) {
@@ -22,32 +23,15 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
      * (T4 of B-8). The analytics choice does not change the feedback.
      */
     private fun feedbackSection(contactEmail: String) {
-        subheading("Feedback reports")
-        paragraph(
-            "The app sends a report only when you click Send in the feedback form. " +
-                "The usage statistics choice does not change this.",
-        ).name = "more-privacy-feedback"
-        paragraph(
-            "A report contains the topic, your message, the app version, the version of Windows, and the Java version. " +
-                "It also contains your email address if you give it, the error text if you send the report from an error " +
-                "message, and the end of the log files if you select \"Attach the log files\". The log files contain " +
-                "the names and folders of your videos and projects, but not the videos.",
-        )
-        paragraph(
-            "The report goes to our server on Cloudflare. The server sends it to the author through Telegram. " +
-                "The server keeps the report text for 90 days. It does not keep the log files or your IP address. " +
-                "The copy in the Telegram chat of the author stays until the author deletes it.",
-            secondary = true,
-        )
-        paragraph(
-            "To ask for the deletion of a report, write to $contactEmail. Give the report ID, or the date and " +
-                "the text of your message.",
-            secondary = true,
-        )
+        subheading(tr("privacy.feedback.title"))
+        paragraph(tr("privacy.feedback.when")).name = "more-privacy-feedback"
+        paragraph(tr("privacy.feedback.contents", "attach" to tr("feedback.attachLog")))
+        paragraph(tr("privacy.feedback.server"), secondary = true)
+        paragraph(tr("privacy.feedback.delete", "email" to contactEmail), secondary = true)
     }
 
     companion object {
-        const val TITLE = "Privacy"
+        val TITLE: String get() = tr("privacy.title")
 
         /**
          * The page for a build that sends usage statistics. One switch turns all statistics on and off. The other
@@ -89,8 +73,8 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
             paragraph(ANALYTICS_EXTENDED)
             paragraph(ANALYTICS_EXCLUDED, secondary = true)
             buttonRow(
-                secondaryButton("Privacy notice", Material2MZ.OPEN_IN_NEW) { linkOpener.open(privacyUrl) },
-                secondaryButton("Contact", Material2MZ.MAIL_OUTLINE) { linkOpener.open(URI("mailto:$contactEmail")) },
+                secondaryButton(tr("privacy.notice"), Material2MZ.OPEN_IN_NEW) { linkOpener.open(privacyUrl) },
+                secondaryButton(tr("privacy.contact"), Material2MZ.MAIL_OUTLINE) { linkOpener.open(URI("mailto:$contactEmail")) },
             )
             versionCheck()
             feedbackSection(contactEmail)
@@ -99,7 +83,7 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
         /** The page for a build that cannot send usage statistics. */
         fun withoutAnalytics(contactEmail: String): PrivacyPage = PrivacyPage().apply {
             subheading(ANALYTICS_TITLE)
-            paragraph("This version of the app does not send usage statistics. Your videos and projects stay on this computer.")
+            paragraph(tr("privacy.noAnalytics"))
             versionCheck()
             feedbackSection(contactEmail)
         }
@@ -113,32 +97,23 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
             VERSION_CHECK_TEXT.forEach { paragraph(it) }
         }
 
-        const val VERSION_CHECK_TITLE = "Version check and updates"
+        val VERSION_CHECK_TITLE: String get() = tr("privacy.versionCheck.title")
 
-        const val ANALYTICS_TITLE = "Usage statistics"
-        const val ESSENTIAL_SWITCH = "Send essential statistics"
-        const val EXTENDED_SWITCH = "Send extended statistics"
+        val ANALYTICS_TITLE: String get() = tr("privacy.analytics.title")
+        val ESSENTIAL_SWITCH: String get() = tr("privacy.essential.switch")
+        val EXTENDED_SWITCH: String get() = tr("privacy.extended.switch")
 
         /** The short version of the analytics notice (site/public/privacy/index.html, "Usage statistics"). Keep the two in agreement. */
-        const val ANALYTICS_ESSENTIAL =
-            "Essential statistics are on by default: app version, OS family, session length, the number of errors, " +
-                "and a range for the number of sessions. They tell us how many people use the app. " +
-                "Turn them off to send no statistics at all."
-        const val ANALYTICS_EXTENDED =
-            "Extended statistics also send counts of the tabs and features you use, the export results, " +
-                "the theme and language settings, and the sports of your projects. They need the essential statistics."
-        const val ANALYTICS_EXCLUDED =
-            "Excluded: video, audio, file names, paths, project names, scores, player names, text that you type, " +
-                "user or device IDs, and error details."
+        val ANALYTICS_ESSENTIAL: String get() = tr("privacy.essential")
+        val ANALYTICS_EXTENDED: String get() = tr("privacy.extended")
+        val ANALYTICS_EXCLUDED: String get() = tr("privacy.excluded")
 
-        val VERSION_CHECK_TEXT = listOf(
-            "${AppInfo.NAME} reads a small file from GitHub when it starts and from time to time while it runs. " +
-                "The file tells if this version still works and if a new version is available.",
-            "The request sends no user ID and no usage statistics. GitHub receives your IP address and the standard " +
-                "data of a web request.",
-            "\"Update and restart\" downloads the setup file of the new version from GitHub. This request also sends " +
-                "no user ID.",
-            "The version check is necessary for the license, so you cannot turn it off. It is not part of the usage statistics.",
-        )
+        val VERSION_CHECK_TEXT: List<String>
+            get() = listOf(
+                tr("privacy.versionCheck.reads", "app" to AppInfo.NAME),
+                tr("privacy.versionCheck.request"),
+                tr("privacy.versionCheck.update", "button" to tr("expiry.updateAndRestart")),
+                tr("privacy.versionCheck.required"),
+            )
     }
 }

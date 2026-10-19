@@ -3,12 +3,22 @@ package org.litvin.export
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /** Rough quality grade of a resolution or frame rate choice. */
-enum class ExportQualityLevel(val label: String) {
-    LOW("low"),
-    MEDIUM("medium"),
-    HIGH("high"),
+enum class ExportQualityLevel {
+    LOW,
+    MEDIUM,
+    HIGH,
+    ;
+
+    val label: String
+        get() = when (this) {
+            LOW -> tr("export.level.low")
+            MEDIUM -> tr("export.level.medium")
+            HIGH -> tr("export.level.high")
+        }
 }
 
 /** One resolution button of the Advanced mode. */
@@ -40,15 +50,33 @@ data class ExportBitrateRange(
 /** The three quality choices of the Simple mode. */
 enum class ExportSimplePreset(
     val id: String,
-    val title: String,
-    val summary: String,
-    val exportTime: String,
     val bitrateFactor: Double,
 ) {
-    BEST("best", "Original quality", "Largest file, slowest export", "slow", 1.0),
-    BALANCED("balanced", "Balanced", "Good quality, smaller file", "medium", 0.75),
-    FAST("fast", "Fast export", "Lower quality, smallest file", "fast", 0.5),
+    BEST("best", 1.0),
+    BALANCED("balanced", 0.75),
+    FAST("fast", 0.5),
     ;
+
+    val title: String
+        get() = when (this) {
+            BEST -> tr("export.preset.best")
+            BALANCED -> tr("export.preset.balanced")
+            FAST -> tr("export.preset.fast")
+        }
+
+    val summary: String
+        get() = when (this) {
+            BEST -> tr("export.preset.best.summary")
+            BALANCED -> tr("export.preset.balanced.summary")
+            FAST -> tr("export.preset.fast.summary")
+        }
+
+    val exportTime: String
+        get() = when (this) {
+            BEST -> tr("export.time.slow")
+            BALANCED -> tr("export.time.medium")
+            FAST -> tr("export.time.fast")
+        }
 
     companion object {
         fun fromId(id: String?): ExportSimplePreset? = entries.firstOrNull { it.id == id }
@@ -212,7 +240,7 @@ object ExportVideoOptions {
 
     fun formatBitrate(bitrateK: Int): String {
         val megabits = bitrateK / 1000.0
-        return if (megabits < 10.0) String.format(Locale.US, "%.1f Mbit/s", megabits) else "${megabits.roundToInt()} Mbit/s"
+        return if (megabits < 10.0) "${DisplayFormats.decimal(megabits, 1)} Mbit/s" else "${megabits.roundToInt()} Mbit/s"
     }
 
     /** Keeps the aspect ratio of the source. The width is even because H.264 needs even dimensions. */

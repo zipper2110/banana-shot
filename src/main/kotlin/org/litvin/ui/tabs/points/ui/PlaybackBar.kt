@@ -21,6 +21,7 @@ import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.SeekButton
 import org.litvin.ui.commons.SpeedControl
+import org.litvin.i18n.tr
 
 /**
  * The playback bar under the video: the current time and the speed on the left, the seek and play buttons in the
@@ -35,11 +36,14 @@ internal class PlaybackBar(
     onToggleFrameStep: () -> Unit = {},
 ) : JPanel() {
 
+    /** A seek tooltip, for example "Seek back 5 seconds [Shift+Left]". */
+    private fun seekTip(key: String, seconds: Int, keyName: String) = tr(key, "seconds" to seconds, "key" to keyName)
+
     private val nowLabel = TimeLabel(Timecode.format(0)).apply {
         name = "points-current-time"
         font = UiKit.font(15f)
         foreground = Palette.FG
-        toolTipText = "Current time"
+        toolTipText = tr("playback.currentTime")
     }
     private val totalLabel = TimeLabel("", prefix = "/ ").apply {
         font = UiKit.font(12f)
@@ -54,10 +58,10 @@ internal class PlaybackBar(
     }
 
     private val seekButtons = listOf(
-        SeekButton("−5s", -5_000, listOf("⇧", "←"), Feather.CHEVRONS_LEFT, "Seek back 5 seconds [Shift+Left]", "points-seek-back-5s"),
-        SeekButton("−1s", -1_000, listOf("←"), Feather.CHEVRON_LEFT, "Seek back 1 second [Left]", "points-seek-back-1s"),
-        SeekButton("+1s", 1_000, listOf("→"), Feather.CHEVRON_RIGHT, "Seek forward 1 second [Right]", "points-seek-forward-1s"),
-        SeekButton("+5s", 5_000, listOf("⇧", "→"), Feather.CHEVRONS_RIGHT, "Seek forward 5 seconds [Shift+Right]", "points-seek-forward-5s"),
+        SeekButton("−5s", -5_000, listOf("⇧", "←"), Feather.CHEVRONS_LEFT, seekTip("points.seekBack.tooltip", 5, tr("key.withShift", "key" to tr("key.left"))), "points-seek-back-5s"),
+        SeekButton("−1s", -1_000, listOf("←"), Feather.CHEVRON_LEFT, seekTip("points.seekBack.tooltip", 1, tr("key.left")), "points-seek-back-1s"),
+        SeekButton("+1s", 1_000, listOf("→"), Feather.CHEVRON_RIGHT, seekTip("points.seekForward.tooltip", 1, tr("key.right")), "points-seek-forward-1s"),
+        SeekButton("+5s", 5_000, listOf("⇧", "→"), Feather.CHEVRONS_RIGHT, seekTip("points.seekForward.tooltip", 5, tr("key.withShift", "key" to tr("key.right"))), "points-seek-forward-5s"),
     )
     private val playButton = PlayButton().apply { name = "points-play-pause" }
     private val transport = JPanel().apply {
@@ -78,9 +82,9 @@ internal class PlaybackBar(
         playButton.alignmentY = CENTER_ALIGNMENT
     }
     val speed = SpeedControl("points-speed", onSpeedIndex)
-    private val commentButton = UiButton("Comment", Material2AL.ADD_COMMENT, buttonHeight = 40).apply {
+    private val commentButton = UiButton(tr("points.comment"), Material2AL.ADD_COMMENT, buttonHeight = 40).apply {
         name = "points-add-comment"
-        toolTipText = "Add a comment at the playhead. To show the comments in the exported video, select Comments in the Export tab."
+        toolTipText = tr("points.comment.tooltip")
         // Space must stay the play hotkey, so the bar buttons never keep the focus.
         isFocusable = false
     }

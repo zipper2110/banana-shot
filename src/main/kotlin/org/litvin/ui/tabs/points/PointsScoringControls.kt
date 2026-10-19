@@ -27,6 +27,7 @@ import javax.swing.SwingConstants
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
+import org.litvin.i18n.tr
 
 /** What the point controls show. A negative [index] means that no point is selected. */
 internal data class PointControlsState(
@@ -67,24 +68,24 @@ internal class PointsScoringControls(
 ) : JPanel(null) {
 
     val previousButton = ScoringButton(
-        "Previous", keys = listOf("⇧", "R"), buttonHeight = HEIGHT, padding = 10, keyStyle = KeyChipStyle.SMALL,
+        tr("points.previous"), keys = listOf("⇧", "R"), buttonHeight = HEIGHT, padding = 10, keyStyle = KeyChipStyle.SMALL,
     ).apply {
         name = "points-previous-point"
-        toolTipText = "Shift+R — Previous Point"
+        toolTipText = tr("points.previous.tooltip", "key" to tr("key.withShift", "key" to "R"))
     }
     val nextButton = ScoringButton(
-        "Next", keys = listOf("R"), buttonHeight = HEIGHT, padding = 10, keyStyle = KeyChipStyle.SMALL,
+        tr("points.next"), keys = listOf("R"), buttonHeight = HEIGHT, padding = 10, keyStyle = KeyChipStyle.SMALL,
     ).apply {
         name = "points-next-point"
-        toolTipText = "R — Next Point"
+        toolTipText = tr("points.next.tooltip", "key" to "R")
     }
-    val pointLabel = JLabel("No point selected", SwingConstants.LEFT).apply {
+    val pointLabel = JLabel(tr("points.current.none"), SwingConstants.LEFT).apply {
         name = "points-current-point-label"
         font = UiKit.font(13f, UiKit.Weight.SEMIBOLD)
     }
     val favoriteButton = FavoriteButton(STAR).apply {
         name = "points-current-point-favorite"
-        toolTipText = "Favorite [A]"
+        toolTipText = tr("points.favorite.tooltip", "key" to "A")
     }
     val overrideButton = ScoringButton(
         OVERRIDE_TEXT, Material2AL.EDIT, buttonHeight = HEIGHT, padding = 10,
@@ -128,18 +129,18 @@ internal class PointsScoringControls(
 
     fun setPlayers(players: ScorePlayers) {
         this.players = players
-        player1Button.setPlayer("${players.p1Name} scored", players.p1Color)
-        player2Button.setPlayer("${players.p2Name} scored", players.p2Color)
-        noPointButton.setPlayer("No score", Palette.LINE_6)
+        player1Button.setPlayer(tr("points.outcome.scored", "name" to players.p1Name), players.p1Color)
+        player2Button.setPlayer(tr("points.outcome.scored", "name" to players.p2Name), players.p2Color)
+        noPointButton.setPlayer(tr("points.outcome.noScore"), Palette.LINE_6)
         // setPlayer gives "Point for ..." tooltips, so the buttons get their own tooltips.
-        player1Button.toolTipText = outcomeTip("Q", "${players.p1Name} won the point")
-        player2Button.toolTipText = outcomeTip("E", "${players.p2Name} won the point")
-        noPointButton.toolTipText = outcomeTip("W", "Nobody won the point, for example a let or a replay. The score does not change")
+        player1Button.toolTipText = outcomeTip("Q", tr("points.outcome.won.tooltip", "name" to players.p1Name))
+        player2Button.toolTipText = outcomeTip("E", tr("points.outcome.won.tooltip", "name" to players.p2Name))
+        noPointButton.toolTipText = outcomeTip("W", tr("points.outcome.none.tooltip"))
         render(state)
     }
 
     private fun outcomeTip(key: String, text: String) =
-        "<html>$key — $text.<br>While a point is pending, the key also sets the end of the point.</html>"
+        "<html>$key — $text.<br>${tr("points.outcome.pending.tooltip")}</html>"
 
     fun render(state: PointControlsState) {
         this.state = state
@@ -149,15 +150,15 @@ internal class PointsScoringControls(
         nextButton.kind = if (state.selected && state.outcome != null) ScoringButton.Kind.LIME else ScoringButton.Kind.SECONDARY
         when {
             state.pending -> {
-                pointLabel.text = "Pending point"
+                pointLabel.text = tr("points.current.pending")
                 pointLabel.foreground = Palette.FG_2
             }
             state.selected -> {
-                pointLabel.text = "Point ${state.index + 1} / ${state.total}"
+                pointLabel.text = tr("points.current", "number" to state.index + 1, "total" to state.total)
                 pointLabel.foreground = Palette.FG
             }
             else -> {
-                pointLabel.text = "No point selected"
+                pointLabel.text = tr("points.current.none")
                 pointLabel.foreground = Palette.FG_3
             }
         }
@@ -167,9 +168,9 @@ internal class PointsScoringControls(
         // A lime pencil: the point has a score that the user typed.
         overrideButton.iconTint = if (state.overridden && overrideButton.isEnabled) Palette.LIME else null
         overrideButton.toolTipText = if (state.overridden) {
-            "Override score: this point has a score that you typed. Click to change it"
+            tr("points.override.typed.tooltip")
         } else {
-            "Override score: type the score after this point"
+            tr("points.override.tooltip")
         }
         renderServe(state)
         // A pending point gets its winner from these buttons, so they are the next step.
@@ -191,9 +192,9 @@ internal class PointsScoringControls(
         serveButton.isEnabled = active && state.canScore
         serveButton.color = server?.let(players::color)
         serveButton.toolTipText = when {
-            server == null -> "S — mark the server of this point. The app then tracks the serve for the whole match"
-            state.serverMarked -> "${players.name(server)} serves (marked on this point). S — switch the server"
-            else -> "${players.name(server)} serves (computed from your serve marks). S — switch the server"
+            server == null -> tr("points.serve.none.tooltip", "key" to "S")
+            state.serverMarked -> tr("points.serve.marked.tooltip", "name" to players.name(server), "key" to "S")
+            else -> tr("points.serve.computed.tooltip", "name" to players.name(server), "key" to "S")
         }
     }
 
@@ -237,7 +238,7 @@ internal class PointsScoringControls(
         private const val GROUP_GAP = 16
         private const val OUTCOME_GAP = 6
         private const val OUTCOME_MIN = 110
-        private const val OVERRIDE_TEXT = "Override score"
+        private val OVERRIDE_TEXT: String get() = tr("points.override")
     }
 }
 

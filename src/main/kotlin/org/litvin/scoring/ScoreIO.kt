@@ -23,8 +23,8 @@ enum class Outcome { P1, P2, NONE }
 data class ScoreV1(
     val outcomes: Map<String, Outcome> = emptyMap(),
     val version: Int = 1,
-    val player1Name: String = "Player 1",
-    val player2Name: String = "Player 2",
+    val player1Name: String = Sport.TENNIS.defaultSideName(1),
+    val player2Name: String = Sport.TENNIS.defaultSideName(2),
     val player1ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER1_HEX,
     val player2ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER2_HEX,
     val scoreboard: ScoreboardSettingsV1 = ScoreboardSettingsV1(),

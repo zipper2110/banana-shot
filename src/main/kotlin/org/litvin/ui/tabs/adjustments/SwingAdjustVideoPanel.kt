@@ -40,6 +40,7 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
+import org.litvin.i18n.tr
 
 /**
  * The Colors & Transform tab: the video with the playback bar on the left, and the right panel with two sub-tabs,
@@ -96,8 +97,8 @@ class SwingAdjustVideoPanel(
 
     private val changePointsCard = ChangePointsCard(
         namePrefix = "adjust",
-        hint = "Did the light change or did the phone move?<br>" +
-            "Add a change point there. It blends over ${ColorTimeline.BLEND_MS / 1000} second.",
+        hint = tr("adjust.changePoints.question") + "<br>" +
+            tr("adjust.changePoints.hint", "seconds" to ColorTimeline.BLEND_MS / 1000),
         onAdd = { presenter.onIntent(AdjustVideoIntent.AddChangePoint) },
         onRemove = { presenter.onIntent(AdjustVideoIntent.RemoveChangePoint) },
         onPrevious = { presenter.onIntent(AdjustVideoIntent.GoToPreviousChangePoint) },
@@ -114,8 +115,8 @@ class SwingAdjustVideoPanel(
     private val sectionChoice = SegmentedChoice(
         "adjust-section",
         listOf(
-            SegmentedChoice.Option(AdjustSection.COLORS, "Colors"),
-            SegmentedChoice.Option(AdjustSection.TRANSFORM, "Transform"),
+            SegmentedChoice.Option(AdjustSection.COLORS, tr("adjust.colors")),
+            SegmentedChoice.Option(AdjustSection.TRANSFORM, tr("adjust.transform")),
         ),
     ).apply {
         selected = AdjustSection.COLORS
@@ -475,7 +476,7 @@ class SwingAdjustVideoPanel(
     }
 
     companion object {
-        const val FOOTER_TEXT = "Saved to the project. Export uses these values."
+        val FOOTER_TEXT: String get() = tr("adjust.footer")
 
         private const val PAD_X = 16
         private const val FOOTER_HEIGHT = 37

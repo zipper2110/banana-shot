@@ -1,38 +1,73 @@
 package org.litvin.scoring
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
+import org.litvin.i18n.tr
+import org.litvin.i18n.I18n
 
 /** The look of the scoreboard. The scoring preview and the export use the same style. */
-enum class ScoreboardStyleId(val title: String) {
+enum class ScoreboardStyleId {
     @JsonEnumDefaultValue
-    BROADCAST("Broadcast"),
-    CENTER_COURT("Center Court"),
-    COMPACT("Compact"),
-    GRASS_COURT("Grass Court"),
-    CLAY_COURT("Clay Court"),
-    HARD_COURT("Hard Court"),
-    LED_BOARD("LED Board"),
-    MINIMAL("Minimal"),
-    TILES("Tiles"),
-    TICKER("Ticker"),
-    RETRO("Retro"),
-    BOLD_BLOCK("Bold Block"),
-    NEXT_GEN("Next Gen"),
-    VIOLET("Violet"),
-    CHALKBOARD("Chalkboard"),
-    SUNSET("Sunset"),
-    PADEL_GLASS("Padel Glass"),
-    STADIUM("Stadium"),
-    STADIUM_COMPACT("Stadium Compact"),
+    BROADCAST,
+    CENTER_COURT,
+    COMPACT,
+    GRASS_COURT,
+    CLAY_COURT,
+    HARD_COURT,
+    LED_BOARD,
+    MINIMAL,
+    TILES,
+    TICKER,
+    RETRO,
+    BOLD_BLOCK,
+    NEXT_GEN,
+    VIOLET,
+    CHALKBOARD,
+    SUNSET,
+    PADEL_GLASS,
+    STADIUM,
+    STADIUM_COMPACT,
+    ;
+
+    val title: String
+        get() = when (this) {
+            BROADCAST -> tr("style.broadcast")
+            CENTER_COURT -> tr("style.centerCourt")
+            COMPACT -> tr("style.compact")
+            GRASS_COURT -> tr("style.grassCourt")
+            CLAY_COURT -> tr("style.clayCourt")
+            HARD_COURT -> tr("style.hardCourt")
+            LED_BOARD -> tr("style.ledBoard")
+            MINIMAL -> tr("style.minimal")
+            TILES -> tr("style.tiles")
+            TICKER -> tr("style.ticker")
+            RETRO -> tr("style.retro")
+            BOLD_BLOCK -> tr("style.boldBlock")
+            NEXT_GEN -> tr("style.nextGen")
+            VIOLET -> tr("style.violet")
+            CHALKBOARD -> tr("style.chalkboard")
+            SUNSET -> tr("style.sunset")
+            PADEL_GLASS -> tr("style.padelGlass")
+            STADIUM -> tr("style.stadium")
+            STADIUM_COMPACT -> tr("style.stadiumCompact")
+        }
 }
 
 /** The corner of the video that shows the scoreboard. */
-enum class ScoreboardPosition(val title: String) {
+enum class ScoreboardPosition {
     @JsonEnumDefaultValue
-    TOP_LEFT("Top left"),
-    TOP_RIGHT("Top right"),
-    BOTTOM_LEFT("Bottom left"),
-    BOTTOM_RIGHT("Bottom right"),
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+    ;
+
+    val title: String
+        get() = when (this) {
+            TOP_LEFT -> tr("position.topLeft")
+            TOP_RIGHT -> tr("position.topRight")
+            BOTTOM_LEFT -> tr("position.bottomLeft")
+            BOTTOM_RIGHT -> tr("position.bottomRight")
+        }
 }
 
 /**
@@ -66,7 +101,16 @@ data class ScoreboardSettingsV1(
     )
 
     companion object {
-        const val DEFAULT_TITLE = "Your tournament or club"
+        /**
+         * The title of a new project. A project saves it as a user text. Thus an older project keeps the English text,
+         * and a project from a Spanish start keeps the Spanish text (see [defaultTitles]).
+         */
+        val DEFAULT_TITLE: String get() = tr("video.defaultTitle")
+
+        /** [DEFAULT_TITLE] in all app languages. */
+        fun defaultTitles(): Set<String> = I18n.inAllLanguages("video.defaultTitle")
+
+        /** The credit line of the scoreboard. It is the brand text, the same in all languages. */
         const val APP_CREDIT = "BananaShot app"
         const val MAX_TITLE_LENGTH = 40
         const val MIN_SIZE_PERCENT = 50

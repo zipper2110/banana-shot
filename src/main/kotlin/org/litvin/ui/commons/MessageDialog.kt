@@ -18,6 +18,7 @@ import javax.swing.JPanel
 import javax.swing.JTextArea
 import javax.swing.SwingUtilities
 import kotlin.math.max
+import org.litvin.i18n.tr
 
 /** The kind of a message. It sets the icon and its color. */
 enum class MessageKind { INFO, HINT, WARNING, ERROR, QUESTION, DANGER }
@@ -33,7 +34,7 @@ internal data class MessageButton(val label: String, val kind: UiButton.Kind = U
  * and a paragraph that is only a file path shows in a box with a monospace font.
  */
 internal object MessageDialog {
-    private val OK = listOf(MessageButton("OK", UiButton.Kind.LIME))
+    private val OK get() = listOf(MessageButton(tr("common.ok"), UiButton.Kind.LIME))
 
     /** Shows a message with an OK button and waits until the user closes it. */
     fun show(parent: Component?, kind: MessageKind, title: String, message: String, width: Int = widthFor(message)) {
@@ -50,7 +51,7 @@ internal object MessageDialog {
         title: String,
         message: String,
         confirmLabel: String,
-        cancelLabel: String = "Cancel",
+        cancelLabel: String = tr("common.cancel"),
         destructive: Boolean = false,
         glyph: Ikon? = null,
         portrait: Image? = null,

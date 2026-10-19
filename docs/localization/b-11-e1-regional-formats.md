@@ -7,7 +7,7 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 1 (`i18n` package), 5 (Formats), 14 (Documentation)
 - Depends on: —
 - Size: a few days.
@@ -34,18 +34,18 @@ Not in this epic:
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E1-T1 | `i18n` package and its dependency rule | — | open |
+| E1-T1 | `i18n` package and its dependency rule | — | in-progress |
 | E1-T2 | Machine formats do not use the default locale | E1-T1 | open |
 | E1-T3 | Tests with other default locales | E1-T2 | open |
 | E1-T4 | Test that finds calls with the default locale | E1-T2 | open |
-| E1-T5 | Display formats | E1-T1 | open |
-| E1-T6 | The UI shows the display formats | E1-T5 | open |
+| E1-T5 | Display formats | E1-T1 | in-progress |
+| E1-T6 | The UI shows the display formats | E1-T5 | in-progress |
 | E1-T7 | Decide the locale provider (`HOST` or CLDR) | E1-T5 | open |
 | E1-T8 | Documentation | E1-T1–E1-T7 | open |
 
 ### E1-T1 `i18n` package and its dependency rule
 
-- Status: open
+- Status: in-progress
 - Plan: 1 ("New package `org.litvin.i18n`")
 - Value: all format and text code has one place. All packages can use it
   without a dependency cycle.
@@ -164,7 +164,7 @@ Not in this epic:
 
 ### E1-T5 Display formats
 
-- Status: open
+- Status: in-progress
 - Plan: 5, "Decisions" ("Format locale", "Digits")
 - Value: one component gives all formats that the user reads. All later
   epics use it.
@@ -217,7 +217,7 @@ Not in this epic:
 
 ### E1-T6 The UI shows the display formats
 
-- Status: open
+- Status: in-progress
 - Plan: 5 ("Dates", "Numbers in the UI")
 - Value: the user sees the formats of their Windows regional format.
 - Requirements:

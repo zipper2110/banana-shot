@@ -1,6 +1,7 @@
 package org.litvin.scoring
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
+import org.litvin.i18n.tr
 
 /** The unit that the match is played in. */
 enum class MatchStructure {
@@ -159,94 +160,66 @@ data class MatchRulesV1(
  * Popular match formats. Each preset sets the match structure. The deuce rule, manual scoring, and the points of a
  * [MatchStructure.TOTAL_POINTS] match are separate choices, so a preset keeps them.
  *
- * [sports] are the sports that show the preset. [padelTitle] and [padelDescription] replace the tennis words in padel,
+ * [sports] are the sports that show the preset. In padel, [title] and [description] use the padel words,
  * for example "super tiebreak" for "match tiebreak".
  */
 enum class MatchFormatPreset(
-    val title: String,
-    val description: String,
     private val rules: MatchRulesV1?,
     private val sports: Set<Sport> = Sport.entries.toSet(),
-    private val padelTitle: String = title,
-    private val padelDescription: String = description,
 ) {
-    BEST_OF_3(
-        "Best of 3 sets",
-        "Standard match. Sets to 6 games, tiebreak at 6–6.",
-        MatchRulesV1(),
-    ),
-    BEST_OF_3_MATCH_TIEBREAK(
-        "Best of 3 sets, match tiebreak",
-        "Sets to 6 games. At one set all, a 10-point match tiebreak decides the match.",
-        MatchRulesV1(finalSet = FinalSetRule.MATCH_TIEBREAK),
-        padelTitle = "Best of 3 sets, super tiebreak",
-        padelDescription = "Sets to 6 games. At one set all, a 10-point super tiebreak decides the match.",
-    ),
-    BEST_OF_5(
-        "Best of 5 sets",
-        "Grand Slam format. Sets to 6 games, tiebreak at 6–6.",
-        MatchRulesV1(bestOfSets = 5),
-        sports = setOf(Sport.TENNIS),
-    ),
-    ONE_SET(
-        "One set",
-        "One set to 6 games, tiebreak at 6–6.",
-        MatchRulesV1(bestOfSets = 1),
-    ),
-    PRO_SET(
-        "Pro set (8 games)",
-        "One set to 8 games, tiebreak at 8–8.",
-        MatchRulesV1(bestOfSets = 1, gamesPerSet = 8),
-    ),
-    PRO_SET_9(
-        "Pro set (9 games)",
-        "One set to 9 games, tiebreak at 8–8.",
-        MatchRulesV1(bestOfSets = 1, gamesPerSet = 9, earlyTiebreak = true),
-        sports = setOf(Sport.PADEL),
-    ),
-    SHORT_SETS(
-        "Short sets (4 games)",
-        "Best of 3 sets to 4 games, tiebreak at 4–4.",
-        MatchRulesV1(gamesPerSet = 4),
-    ),
-    GAMES_ONLY(
-        "Games only",
-        "Count games without sets. Use it for practice games.",
-        MatchRulesV1(structure = MatchStructure.GAMES_ONLY),
-    ),
-    AMERICANO(
-        "Americano (total points)",
-        "Count points 1, 2, 3 until both teams together played the total, for example 24 points. " +
-            "The team with more points wins. Equal points are a draw.",
-        MatchRulesV1(structure = MatchStructure.TOTAL_POINTS),
-        sports = setOf(Sport.PADEL),
-    ),
-    TIEBREAK(
-        "Tiebreak (7 points)",
-        "One tiebreak to 7 points with a two-point lead.",
-        MatchRulesV1(structure = MatchStructure.SINGLE_TIEBREAK, tiebreakPoints = 7),
-    ),
-    MATCH_TIEBREAK(
-        "Match tiebreak (10 points)",
-        "One tiebreak to 10 points with a two-point lead.",
-        MatchRulesV1(structure = MatchStructure.SINGLE_TIEBREAK, tiebreakPoints = 10),
-        padelTitle = "Super tiebreak (10 points)",
-    ),
-    PLAIN_POINTS(
-        "Plain points (endless tiebreak)",
-        "Count points 1, 2, 3 like in a tiebreak, without a points limit. The match has no end.",
-        MatchRulesV1(structure = MatchStructure.PLAIN_POINTS),
-    ),
-    CUSTOM(
-        "Custom",
-        "Your own combination of the rules below.",
-        null,
-    ),
+    BEST_OF_3(MatchRulesV1()),
+    BEST_OF_3_MATCH_TIEBREAK(MatchRulesV1(finalSet = FinalSetRule.MATCH_TIEBREAK)),
+    BEST_OF_5(MatchRulesV1(bestOfSets = 5), sports = setOf(Sport.TENNIS)),
+    ONE_SET(MatchRulesV1(bestOfSets = 1)),
+    PRO_SET(MatchRulesV1(bestOfSets = 1, gamesPerSet = 8)),
+    PRO_SET_9(MatchRulesV1(bestOfSets = 1, gamesPerSet = 9, earlyTiebreak = true), sports = setOf(Sport.PADEL)),
+    SHORT_SETS(MatchRulesV1(gamesPerSet = 4)),
+    GAMES_ONLY(MatchRulesV1(structure = MatchStructure.GAMES_ONLY)),
+    AMERICANO(MatchRulesV1(structure = MatchStructure.TOTAL_POINTS), sports = setOf(Sport.PADEL)),
+    TIEBREAK(MatchRulesV1(structure = MatchStructure.SINGLE_TIEBREAK, tiebreakPoints = 7)),
+    MATCH_TIEBREAK(MatchRulesV1(structure = MatchStructure.SINGLE_TIEBREAK, tiebreakPoints = 10)),
+    PLAIN_POINTS(MatchRulesV1(structure = MatchStructure.PLAIN_POINTS)),
+    CUSTOM(null),
     ;
 
-    fun title(sport: Sport): String = if (sport == Sport.PADEL) padelTitle else title
+    /** The tennis title. */
+    val title: String get() = title(Sport.TENNIS)
 
-    fun description(sport: Sport): String = if (sport == Sport.PADEL) padelDescription else description
+    /** The tennis description. */
+    val description: String get() = description(Sport.TENNIS)
+
+    fun title(sport: Sport): String = when (this) {
+        BEST_OF_3 -> tr("format.bestOf3")
+        BEST_OF_3_MATCH_TIEBREAK -> if (sport == Sport.PADEL) tr("format.bestOf3SuperTiebreak") else tr("format.bestOf3MatchTiebreak")
+        BEST_OF_5 -> tr("format.bestOf5")
+        ONE_SET -> tr("format.oneSet")
+        PRO_SET -> tr("format.proSet8")
+        PRO_SET_9 -> tr("format.proSet9")
+        SHORT_SETS -> tr("format.shortSets")
+        GAMES_ONLY -> tr("format.gamesOnly")
+        AMERICANO -> tr("format.americano")
+        TIEBREAK -> tr("format.tiebreak")
+        MATCH_TIEBREAK -> if (sport == Sport.PADEL) tr("format.superTiebreak") else tr("format.matchTiebreak")
+        PLAIN_POINTS -> tr("format.plainPoints")
+        CUSTOM -> tr("format.custom")
+    }
+
+    fun description(sport: Sport): String = when (this) {
+        BEST_OF_3 -> tr("format.bestOf3.description")
+        BEST_OF_3_MATCH_TIEBREAK ->
+            if (sport == Sport.PADEL) tr("format.bestOf3SuperTiebreak.description") else tr("format.bestOf3MatchTiebreak.description")
+        BEST_OF_5 -> tr("format.bestOf5.description")
+        ONE_SET -> tr("format.oneSet.description")
+        PRO_SET -> tr("format.proSet8.description")
+        PRO_SET_9 -> tr("format.proSet9.description")
+        SHORT_SETS -> tr("format.shortSets.description")
+        GAMES_ONLY -> tr("format.gamesOnly.description")
+        AMERICANO -> tr("format.americano.description")
+        TIEBREAK -> tr("format.tiebreak.description")
+        MATCH_TIEBREAK -> tr("format.matchTiebreak.description")
+        PLAIN_POINTS -> tr("format.plainPoints.description")
+        CUSTOM -> tr("format.custom.description")
+    }
 
     /**
      * Applies this preset to [current]. The deuce rule, manual scoring, and the total points settings of [current]

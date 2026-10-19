@@ -16,6 +16,7 @@ import org.litvin.ui.commons.WrapText
 import java.awt.Component
 import javax.swing.JComboBox
 import javax.swing.JLabel
+import org.litvin.i18n.tr
 
 /**
  * The padel rules of the "New project" dialog: the match format, the deuce rule, and the points of an Americano match.
@@ -24,7 +25,7 @@ import javax.swing.JLabel
  */
 internal class PadelRulesGroup(initial: MatchRulesV1) {
     /** The card with the rules. */
-    val component = DialogGroup("Padel match", Material2MZ.RULE, "new-project-padel")
+    val component = DialogGroup(tr("projects.padel.title"), Material2MZ.RULE, "new-project-padel")
 
     /** A combo box item with a display text. */
     private data class Choice(val value: MatchFormatPreset, val label: String) {
@@ -63,17 +64,17 @@ internal class PadelRulesGroup(initial: MatchRulesV1) {
     )
     private val serveTurn = SegmentedChoice(
         "new-project-padel-serve-turn",
-        MatchRulesV1.SERVE_TURN_POINTS_OPTIONS.map { SegmentedChoice.Option(it, "$it points") },
+        MatchRulesV1.SERVE_TURN_POINTS_OPTIONS.map { SegmentedChoice.Option(it, tr("rules.serveTurn.points", "count" to it)) },
     )
 
     init {
-        component.aside.text = "You can change it later"
-        component.aside.toolTipText = "The Scoring settings show the same rules."
-        labels[format] = component.row("Format", format)
+        component.aside.text = tr("projects.padel.later")
+        component.aside.toolTipText = tr("projects.padel.later.tooltip")
+        labels[format] = component.row(tr("rules.format"), format)
         component.text(formatDescription, indent = true)
-        labels[deuce] = component.row("Deuce", deuce)
-        labels[totalPoints] = component.row("Total points", totalPoints)
-        labels[serveTurn] = component.row("Serve turn", serveTurn)
+        labels[deuce] = component.row(tr("rules.deuce"), deuce)
+        labels[totalPoints] = component.row(tr("rules.totalPoints"), totalPoints)
+        labels[serveTurn] = component.row(tr("rules.serveTurn"), serveTurn)
 
         format.addActionListener {
             val preset = (format.selectedItem as? Choice)?.value ?: return@addActionListener

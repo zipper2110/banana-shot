@@ -1,0 +1,84 @@
+package org.litvin.i18n
+
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import java.util.Locale
+import java.util.UUID
+import java.util.prefs.Preferences
+
+class LanguageSettingsTest {
+    private val node = Preferences.userRoot().node("/org/litvin/test/i18n/${UUID.randomUUID()}")
+    private val settings = LanguageSettings(node)
+
+    @AfterEach
+    fun removeNode() {
+        node.removeNode()
+    }
+
+    @Test
+    fun `without a choice the app follows the Windows display language`() {
+        assertNull(settings.choice)
+        assertEquals(
+            LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.SYSTEM),
+            settings.resolve(systemLocale = Locale.forLanguageTag("es-AR"), property = null),
+        )
+    }
+
+    @Test
+    fun `a Windows language that the app does not have gives English`() {
+        assertEquals(AppLanguage.ENGLISH, LanguageSettings.systemLanguage(Locale.forLanguageTag("de-DE")))
+        assertEquals(AppLanguage.ENGLISH, LanguageSettings.systemLanguage(Locale.forLanguageTag("qps-ploc")))
+        assertEquals(AppLanguage.ENGLISH, LanguageSettings.systemLanguage(Locale.ROOT))
+    }
+
+    @Test
+    fun `a saved choice has priority over Windows`() {
+        settings.save(AppLanguage.ENGLISH)
+        assertEquals("en", node.get(LanguageSettings.KEY, null))
+        val resolution = settings.resolve(systemLocale = Locale.forLanguageTag("es-ES"), property = null)
+        assertEquals(LanguageSettings.Resolution(AppLanguage.ENGLISH, LanguageSettings.Source.STORED), resolution)
+    }
+
+    @Test
+    fun `the system choice is saved as system`() {
+        settings.save(null)
+        assertEquals(LanguageSettings.SYSTEM, node.get(LanguageSettings.KEY, null))
+        assertNull(settings.choice)
+    }
+
+    @Test
+    fun `an unknown saved value works as system and stays saved`() {
+        node.put(LanguageSettings.KEY, "fr")
+        assertNull(settings.choice)
+        assertEquals(AppLanguage.SPANISH, settings.resolve(Locale.forLanguageTag("es-MX"), property = null).language)
+        assertEquals("fr", node.get(LanguageSettings.KEY, null))
+    }
+
+    @Test
+    fun `the property has priority and qps switches on the test language`() {
+        settings.save(AppLanguage.ENGLISH)
+        assertEquals(
+            LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.PROPERTY),
+            settings.resolve(Locale.US, property = "es"),
+        )
+        assertEquals(
+            LanguageSettings.Resolution(AppLanguage.ENGLISH, LanguageSettings.Source.PROPERTY, pseudo = true),
+            settings.resolve(Locale.US, property = "QPS"),
+        )
+        assertEquals(LanguageSettings.Source.STORED, settings.resolve(Locale.US, property = "xx").source)
+    }
+
+    @Test
+    fun `the notice of an automatic change shows one time for each language`() {
+        val automatic = LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.SYSTEM)
+        assertTrue(settings.needsSystemLanguageNotice(automatic))
+        settings.noticeShown(AppLanguage.SPANISH)
+        assertFalse(settings.needsSystemLanguageNotice(automatic))
+        assertFalse(settings.needsSystemLanguageNotice(LanguageSettings.Resolution(AppLanguage.SPANISH, LanguageSettings.Source.STORED)))
+        assertFalse(settings.needsSystemLanguageNotice(LanguageSettings.Resolution(AppLanguage.ENGLISH, LanguageSettings.Source.SYSTEM)))
+    }
+}

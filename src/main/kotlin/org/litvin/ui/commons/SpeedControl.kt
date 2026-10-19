@@ -6,6 +6,8 @@ import java.awt.Graphics
 import javax.swing.JComboBox
 import javax.swing.JPanel
 import kotlin.math.ceil
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * "Speed", the speed list, and the Up and Down key chips. A [compact] control shows the list only.
@@ -20,7 +22,7 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
         }
     }.apply {
         name = listName
-        toolTipText = "Use Up/Down to change speed"
+        toolTipText = tr("speed.tooltip")
         font = UiKit.font(12.5f)
         // Up and Down must stay the speed hotkeys of the tab, so the list never keeps the focus.
         isFocusable = false
@@ -43,7 +45,7 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
 
     init {
         isOpaque = false
-        toolTipText = "Use Up/Down to change speed"
+        toolTipText = tr("speed.tooltip")
         add(combo)
         combo.addActionListener { if (!updating) onSpeedIndex(combo.selectedIndex) }
     }
@@ -90,8 +92,9 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
 
     companion object {
         /** The labels of SessionSettings.speedPresets, from high to low. */
-        val LABELS = arrayOf("2×", "1.5×", "1.25×", "1×", "0.5×", "0.25×")
-        const val CAPTION = "Speed"
+        val LABELS: Array<String>
+            get() = arrayOf(2.0, 1.5, 1.25, 1.0, 0.5, 0.25).map { tr("speed.factor", "factor" to DisplayFormats.decimal(it, 0, 2)) }.toTypedArray()
+        val CAPTION: String get() = tr("speed.caption")
         val KEYS = listOf("↑", "↓")
         const val GAP = 6
         const val KEY_GAP = 3

@@ -80,6 +80,8 @@ import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /** The facts of the source video that the Share tab needs: the size for the zoom limit, and the frame rate for a frame step. */
 data class ShareSourceFacts(val width: Int, val height: Int, val framesPerSecond: Double?)
@@ -138,8 +140,8 @@ class SwingSharePanel(
     // ---------- Components ----------
     private val sizeNote = ShareUi.label("1280 × 720 PNG", 12f, Palette.FG_3)
     private val preview = ThumbnailView("share-preview")
-    private val prevPoint = RowIconButton(Material2AL.CHEVRON_LEFT, "Previous point").apply { name = "share-prev-point" }
-    private val nextPoint = RowIconButton(Material2AL.CHEVRON_RIGHT, "Next point").apply { name = "share-next-point" }
+    private val prevPoint = RowIconButton(Material2AL.CHEVRON_LEFT, tr("share.prevPoint")).apply { name = "share-prev-point" }
+    private val nextPoint = RowIconButton(Material2AL.CHEVRON_RIGHT, tr("share.nextPoint")).apply { name = "share-next-point" }
     private val favoriteIcon = UiKit.icon(Material2MZ.STAR, 14, Palette.YELLOW)
     private val pointCombo = JComboBox<SharePoint>().apply {
         name = "share-point"
@@ -156,20 +158,20 @@ class SwingSharePanel(
             }
         }
     }
-    private val favoritesSwitch = SwitchBox("Only favorites", 12.5f).apply { name = "share-favorites-only" }
+    private val favoritesSwitch = SwitchBox(tr("export.content.favorites"), 12.5f).apply { name = "share-favorites-only" }
     private val strip = MomentStrip(::seekStrip)
-    private val framePrev = RowIconButton(Material2AL.KEYBOARD_ARROW_LEFT, "One frame back (Left arrow)").apply { name = "share-frame-prev" }
-    private val frameNext = RowIconButton(Material2AL.KEYBOARD_ARROW_RIGHT, "One frame forward (Right arrow)").apply { name = "share-frame-next" }
+    private val framePrev = RowIconButton(Material2AL.KEYBOARD_ARROW_LEFT, tr("share.frameBack")).apply { name = "share-frame-prev" }
+    private val frameNext = RowIconButton(Material2AL.KEYBOARD_ARROW_RIGHT, tr("share.frameForward")).apply { name = "share-frame-next" }
     private val momentTime = ShareUi.label("", 12f, Palette.FG_2).apply {
         name = "share-moment-time"
         horizontalAlignment = SwingConstants.CENTER
     }
     private val zoom = DefaultFillSliderUI.slider(100, 200, 100).apply {
         name = "share-zoom"
-        getAccessibleContext().accessibleName = "Zoom"
+        getAccessibleContext().accessibleName = tr("adjust.zoom")
     }
     private val zoomHint = ShareUi.hint()
-    private val zoomValue = ShareUi.label("100 %", 12f, Palette.FG_2).apply { horizontalAlignment = SwingConstants.RIGHT }
+    private val zoomValue = ShareUi.label("${DisplayFormats.integer(100)} %", 12f, Palette.FG_2).apply { horizontalAlignment = SwingConstants.RIGHT }
     private val pickNote = NoteBox("share-pick-note", Material2AL.INFO)
     private val placeHint = ShareUi.hint()
     private val placeChoice = SegmentedChoice<TextPlace>("share-place", emptyList())
@@ -195,11 +197,11 @@ class SwingSharePanel(
     private val currentLine = FileLine("share-file-current")
     private val otherLine = FileLine("share-file-other")
     private val fitNote = NoteBox("share-fit-note", Material2MZ.TEXT_FIELDS)
-    private val saveButton = UiButton("Save thumbnail", Material2MZ.SAVE, UiButton.Kind.LIME).apply {
+    private val saveButton = UiButton(tr("share.save"), Material2MZ.SAVE, UiButton.Kind.LIME).apply {
         name = "share-save"
         stretch = true
     }
-    private val openButton = UiButton("Open folder", Material2AL.FOLDER_OPEN, UiButton.Kind.GHOST).apply { name = "share-open-folder" }
+    private val openButton = UiButton(tr("export.openFolder"), Material2AL.FOLDER_OPEN, UiButton.Kind.GHOST).apply { name = "share-open-folder" }
 
     private val cards = CardLayout()
     private val body = JPanel(cards)
@@ -212,7 +214,7 @@ class SwingSharePanel(
         body.add(shareView(), CARD_SHARE)
         body.add(emptyView, CARD_EMPTY)
         add(body, BorderLayout.CENTER)
-        showEmpty("No project", "Open a project in the Projects tab.", withButton = false)
+        showEmpty(tr("stats.empty.noProject"), tr("stats.empty.noProject.text"), withButton = false)
 
         prevPoint.addActionListener { stepPoint(-1) }
         nextPoint.addActionListener { stepPoint(1) }
@@ -283,19 +285,19 @@ class SwingSharePanel(
     fun onActivated() {
         val dir = projectDir
         val manifest = manifestPath
-        if (dir == null || manifest == null) return showEmpty("No project", "Open a project in the Projects tab.", withButton = false)
+        if (dir == null || manifest == null) return showEmpty(tr("stats.empty.noProject"), tr("stats.empty.noProject.text"), withButton = false)
         val loaded = try {
             shareDefaults = defaults.load()
             adjustments = AdjustmentsIO.readForProjectDir(dir)
             ShareProject.load(dir, manifest)
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot read the project for the Thumbnail tab: $dir" }
-            return showEmpty("Cannot read the project", failure.message ?: failure.toString(), withButton = false)
+            return showEmpty(tr("share.error.read"), failure.message ?: failure.toString(), withButton = false)
         }
         if (project == null) settings = readSettings(dir)
         project = loaded
         if (loaded.points.isEmpty()) {
-            return showEmpty("No points", "Mark the points in the Points tab. Then select a point for the thumbnail here.", withButton = true)
+            return showEmpty(tr("export.noPoints"), tr("share.empty.noPoints.text"), withButton = true)
         }
         cards.show(body, CARD_SHARE)
         probeIfNeeded(loaded)
@@ -427,7 +429,7 @@ class SwingSharePanel(
     }
 
     private fun pickColor(role: ColorRole, current: java.awt.Color) {
-        val picked = ColorPickerDialog.pick(this, "${role.title} color", current) ?: return
+        val picked = ColorPickerDialog.pick(this, tr("scoreSettings.sideColor", "side" to role.title), current) ?: return
         changeLook { look -> look.copy(colors = look.colors + (role.key to ThumbnailLooks.hex(picked.rgb))) }
     }
 
@@ -516,19 +518,23 @@ class SwingSharePanel(
         zoom.maximum = (maxZoom * 100).roundToInt()
         zoom.isEnabled = maxZoom > 1.0
         if (!zoom.valueIsAdjusting) zoom.value = (view().zoom * 100).roundToInt()
-        zoomValue.text = "${(view().zoom * 100).roundToInt()} %"
+        zoomValue.text = "${DisplayFormats.integer((view().zoom * 100).roundToInt())} %"
         zoomHint.text = when {
             facts == null -> ""
-            maxZoom < MAX_ZOOM -> "Max ${(maxZoom * 100).roundToInt()} % for a ${facts?.height}p video, so that the frame stays sharp"
+            maxZoom < MAX_ZOOM -> tr("share.zoom.max", "percent" to (maxZoom * 100).roundToInt(), "height" to facts?.height.toString())
             else -> ""
         }
         zoomHint.toolTipText = zoomHint.text.ifEmpty { null }
-        sizeNote.text = if (view().zoom > 1.0) "Drag the preview to move the frame · 1280 × 720 PNG" else "1280 × 720 PNG"
-        pickNote.text = if (project.hasFavorites) "" else "No point has a star. The app selected a point near the middle of the match."
+        sizeNote.text = if (view().zoom > 1.0) tr("share.zoom.drag") + " · 1280 × 720 PNG" else "1280 × 720 PNG"
+        pickNote.text = if (project.hasFavorites) "" else tr("share.pick.noFavorites")
     }
 
     private fun momentText(point: SharePoint, moment: Long) =
-        "${ShareProject.clockTenths(moment - point.startMs)} of ${ShareProject.clockTenths(point.lengthMs)}"
+        tr(
+            "share.moment",
+            "time" to ShareProject.clockTenths(moment - point.startMs),
+            "length" to ShareProject.clockTenths(point.lengthMs),
+        )
 
     private var currentLayout: ThumbnailLayout? = null
 
@@ -563,7 +569,7 @@ class SwingSharePanel(
         placeChoice.setOptions(places.map { SegmentedChoice.Option(it, it.title) })
         placeChoice.selected = ThumbnailLooks.place(style, look(style))
         placeChoice.isVisible = places.size > 1
-        placeHint.text = if (places.size > 1) "Text position" else "This style has one text position"
+        placeHint.text = if (places.size > 1) tr("share.place") else tr("share.place.one")
     }
 
     private fun textsState(project: ShareProject): TextsState {
@@ -594,23 +600,26 @@ class SwingSharePanel(
             val saved = settings.saved[lineType.key]?.takeIf { File(it.path).isFile }
             val current = lineType == type
             val file = saved?.let { File(it.path) } ?: project.thumbnailFile(folder, lineType)
-            val tooltip = "${file.name} in ${file.parentFile?.absolutePath ?: "the export folder"}"
+            val tooltip = tr("share.file.tooltip", "name" to file.name, "folder" to (file.parentFile?.absolutePath ?: tr("share.file.exportFolder")))
             when {
-                saved == null -> line.show("${lineType.title} · not saved", Material2MZ.RADIO_BUTTON_UNCHECKED, Palette.FG_3, current, tooltip)
+                saved == null -> line.show("${lineType.title} · ${tr("share.file.notSaved")}", Material2MZ.RADIO_BUTTON_UNCHECKED, Palette.FG_3, current, tooltip)
                 current && saved.signature != signature ->
-                    line.show("${lineType.title} · ${savedTime(saved.savedAtMs)}, changed since", Material2MZ.SCHEDULE, Palette.YELLOW, current, tooltip)
+                    line.show(
+                        "${lineType.title} · ${tr("share.file.changed", "time" to savedTime(saved.savedAtMs))}",
+                        Material2MZ.SCHEDULE, Palette.YELLOW, current, tooltip,
+                    )
                 else -> line.show("${lineType.title} · ${savedTime(saved.savedAtMs)}", Material2AL.CHECK_CIRCLE, Palette.LIME, current, tooltip)
             }
         }
-        saveButton.text = if (project.thumbnailFile(folder, type).isFile) "Replace thumbnail" else "Save thumbnail"
+        saveButton.text = if (project.thumbnailFile(folder, type).isFile) tr("share.replace") else tr("share.save")
         saveButton.isEnabled = frame != null && !frameLoading && !frameFailed
         saveButton.toolTipText = project.thumbnailFile(folder, type).absolutePath
         val layout = currentLayout
         fitNote.text = when {
             layout == null -> ""
-            layout.shrunk && layout.small -> "A text is long, so the app made it too small for YouTube search. Use shorter words."
-            layout.small -> "Some texts of this style are small. They are hard to read in YouTube search. Look at the small preview."
-            layout.shrunk -> "A text is long, so the app made it smaller. Short words are easier to read."
+            layout.shrunk && layout.small -> tr("share.fit.tooSmall")
+            layout.small -> tr("share.fit.small")
+            layout.shrunk -> tr("share.fit.shrunk")
             else -> ""
         }
     }
@@ -618,11 +627,11 @@ class SwingSharePanel(
     private fun savedTime(ms: Long): String {
         val time = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault())
         val today = Instant.ofEpochMilli(now()).atZone(ZoneId.systemDefault()).toLocalDate()
-        val clock = time.format(TIME_FORMAT)
+        val clock = DisplayFormats.time(time)
         return when (time.toLocalDate()) {
-            today -> "today $clock"
-            today.minusDays(1) -> "yesterday $clock"
-            else -> "${time.toLocalDate().format(DAY_FORMAT)} $clock"
+            today -> tr("share.time.today", "time" to clock)
+            today.minusDays(1) -> tr("share.time.yesterday", "time" to clock)
+            else -> "${DisplayFormats.date(time.toLocalDate())} $clock"
         }
     }
 
@@ -750,13 +759,13 @@ class SwingSharePanel(
             if (bytes > ThumbnailPng.MAX_BYTES) {
                 dialogs.showWarning(
                     this,
-                    "The thumbnail is ${"%.1f".format(Locale.ENGLISH, bytes / 1024.0 / 1024.0)} MB. YouTube accepts 2 MB or less. Select another moment or a larger zoom.",
-                    "Large thumbnail",
+                    tr("share.large.text", "size" to DisplayFormats.decimal(bytes / 1024.0 / 1024.0, 1)),
+                    tr("share.large"),
                 )
             }
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save the thumbnail $file" }
-            dialogs.showError(this, failure.message ?: failure.toString(), "Cannot save the thumbnail")
+            dialogs.showError(this, failure.message ?: failure.toString(), tr("share.error.save"))
             return
         } finally {
             cursor = Cursor.getDefaultCursor()
@@ -780,7 +789,7 @@ class SwingSharePanel(
                 java.awt.Desktop.getDesktop().open(file.absoluteFile.parentFile)
             }
         } catch (failure: Exception) {
-            dialogs.showError(this, failure.message ?: failure.toString(), "Cannot open the folder")
+            dialogs.showError(this, failure.message ?: failure.toString(), tr("export.error.openFolder"))
         }
     }
 
@@ -828,11 +837,11 @@ class SwingSharePanel(
      * All parts have the width of the preview.
      */
     private inner class LeftColumn : JPanel(null) {
-        private val title = ShareUi.sectionTitle("Thumbnail", Material2AL.IMAGE)
-        private val pointLabel = ShareUi.label("Point")
-        private val momentLabel = ShareUi.label("Moment")
-        private val zoomLabel = ShareUi.label("Zoom")
-        private val styleTitle = ShareUi.sectionTitle("Style")
+        private val title = ShareUi.sectionTitle(tr("tab.thumbnail"), Material2AL.IMAGE)
+        private val pointLabel = ShareUi.label(tr("share.pointLabel"))
+        private val momentLabel = ShareUi.label(tr("share.momentLabel"))
+        private val zoomLabel = ShareUi.label(tr("adjust.zoom"))
+        private val styleTitle = ShareUi.sectionTitle(tr("scoreboard.style"))
         private val styles = styleCards.values.toList()
 
         init {
@@ -936,8 +945,8 @@ class SwingSharePanel(
     /** The Texts and Colors tabs at the top of the side column. */
     private class SideTabs(private val onSelect: (String) -> Unit) : JPanel(java.awt.GridLayout(1, 2, 4, 0)) {
         private val buttons = listOf(
-            TabButton(SIDE_TEXTS, "Texts", Material2MZ.TITLE),
-            TabButton(SIDE_COLORS, "Colors", Material2MZ.PALETTE),
+            TabButton(SIDE_TEXTS, tr("share.texts"), Material2MZ.TITLE),
+            TabButton(SIDE_COLORS, tr("adjust.colors"), Material2MZ.PALETTE),
         )
 
         var selected: String = SIDE_TEXTS
@@ -1053,7 +1062,7 @@ class SwingSharePanel(
         private const val DEFAULT_FPS = 30.0
         /** The strip cells are small. The preview also shows these frames, for a short time, while its frame loads. */
         private const val STRIP_FRAME_WIDTH = 320
-        private const val FRAME_ERROR = "The app cannot read this frame of the video.\nSelect another point or another moment."
+        private val FRAME_ERROR: String get() = tr("share.frameError") + "\n" + tr("share.frameError.action")
 
         private const val PAD = 16
         private const val GAP = 10
@@ -1068,8 +1077,7 @@ class SwingSharePanel(
         private const val CARD_NAME_H = 24
         private const val MIN_W = 480
 
-        private val TIME_FORMAT = DateTimeFormatter.ofPattern("H:mm", Locale.ENGLISH)
-        private val DAY_FORMAT = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
+
     }
 }
 
@@ -1088,7 +1096,7 @@ private class ShareEmptyView(onOpenPoints: () -> Unit) : JPanel(java.awt.GridBag
         horizontalAlignment = SwingConstants.CENTER
     }
     private val text = WrapText("", UiKit.font(13f), Palette.FG_2, 1.5f, 380)
-    private val button = UiButton("Open the Points tab", Material2MZ.SPORTS_TENNIS).apply { name = "share-open-points" }
+    private val button = UiButton(tr("share.openPoints"), Material2MZ.SPORTS_TENNIS).apply { name = "share-open-points" }
 
     init {
         name = "share-empty"

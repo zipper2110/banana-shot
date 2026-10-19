@@ -9,6 +9,8 @@ import org.litvin.export.scoreboard.ScoreboardScene
 import org.litvin.export.scoreboard.TextAnchor
 import org.litvin.scoring.PerPlayer
 import org.litvin.scoring.ScoreboardSettingsV1
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
 
 /**
  * The content of a statistics card: who played, the score, and the rows that the card shows.
@@ -65,7 +67,7 @@ object StatsCard {
                 score.player2Name.trim().ifEmpty { score.sport.defaultSideName(2) },
             ),
             colors = colors,
-            title = if (scope == 0) "Match statistics" else "Set $scope statistics",
+            title = if (scope == 0) tr("stats.card.match") else tr("stats.card.set", "number" to scope),
             score = if (scope == 0) setScores.joinToString("   ") else setScores.getOrElse(scope - 1) { "" },
             rows = StatRows.build(stats, score.rules.normalized(), settings).filter { it.available && settings.inVideo(it.stat) },
             credit = ScoreboardSettingsV1.APP_CREDIT.takeIf { scoreboard.showAppCredit },
@@ -150,7 +152,7 @@ object StatsCard {
         val nameWidth = panelWidth * 0.3
         items += label(inner, top + 78, content.names.p1, NAME_SIZE, content.colors.p1, TextAnchor.MIDDLE_LEFT, maxWidth = nameWidth)
         items += label(innerRight, top + 78, content.names.p2, NAME_SIZE, content.colors.p2, TextAnchor.MIDDLE_RIGHT, maxWidth = nameWidth)
-        items += label(center, top + 50, content.title.uppercase(), 26.0, MUTED, TextAnchor.CENTER, bold = false, spacing = 3.0)
+        items += label(center, top + 50, DisplayFormats.upper(content.title), 26.0, MUTED, TextAnchor.CENTER, bold = false, spacing = 3.0)
         items += label(center, top + 100, content.score, 44.0, WHITE, TextAnchor.CENTER, maxWidth = panelWidth - 2 * nameWidth - 2 * PADDING)
         items += SceneItem.Box(inner, top + HEADER_HEIGHT - 22, innerRight - inner, 2.0, WHITE, opacity = 0.16)
 
@@ -200,7 +202,7 @@ object StatsCard {
         fun x(position: Double) = area.left + position * (area.right - area.left) / points.size
         fun y(difference: Double) = zeroY - difference * unit
 
-        items += label(area.right, labelBottom, "Point difference", 26.0, MUTED, TextAnchor.MIDDLE_RIGHT, bold = false)
+        items += label(area.right, labelBottom, tr("stats.card.pointDifference"), 26.0, MUTED, TextAnchor.MIDDLE_RIGHT, bold = false)
         val p1Label = label(area.left, labelTop, "${content.names.p1} +${lead.p1}", 30.0, content.colors.p1, TextAnchor.MIDDLE_LEFT,
             maxWidth = (area.right - area.left) * 0.3)
         items += p1Label
@@ -216,7 +218,7 @@ object StatsCard {
                 items += SceneItem.Box(lineX - 1, dashY, 2.0, minOf(DASH, plotBottom - dashY), MUTED, opacity = 0.7)
                 dashY += DASH + DASH_GAP
             }
-            val text = "Set ${points[start].set}"
+            val text = tr("override.set", "number" to points[start].set)
             val halfWidth = ScoreboardFonts.textWidth(text, SEGOE, false, 26.0) / 2
             if (lineX - halfWidth > p1LabelRight + 20) {
                 items += label(lineX, plotTop - 18, text, 26.0, MUTED, TextAnchor.CENTER, bold = false)

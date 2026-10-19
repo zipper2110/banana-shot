@@ -1,5 +1,6 @@
 package org.litvin.ui.expiry
 
+import org.litvin.i18n.tr
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
@@ -77,8 +78,8 @@ internal class NoticeRow(
     private val closeButton = onClose?.let {
         UiButton("", Material2AL.CLOSE, UiButton.Kind.GHOST, buttonHeight = 28).apply {
             name = "$rowName-close"
-            toolTipText = "Close"
-            accessibleContext.accessibleName = "Close"
+            toolTipText = tr("common.close")
+            accessibleContext.accessibleName = tr("common.close")
             addActionListener { it() }
         }
     }

@@ -19,6 +19,7 @@ import javax.swing.JPanel
 import javax.swing.JSlider
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import org.litvin.i18n.tr
 
 /**
  * The Transform sub-tab of the Colors & Transform tab: a header with the changed count and "Reset all",
@@ -46,10 +47,10 @@ class CropTransformControls(
 
     internal val backgroundRow = BackgroundRow { pickBackground() }
 
-    internal val resetButton = ResetAllButton("crop-reset", "Reset Transform").apply { addActionListener { onResetTransform() } }
+    internal val resetButton = ResetAllButton("crop-reset", tr("adjust.transform.reset")).apply { addActionListener { onResetTransform() } }
 
     private val statusLabel = JLabel().apply { name = "crop-status" }
-    private val header = SidePanelHeader("Transform", statusLabel, resetButton)
+    private val header = SidePanelHeader(tr("adjust.transform"), statusLabel, resetButton)
 
     private val zoomSlider = slider(TransformControl.ZOOM)
     private val panXSlider = slider(TransformControl.PAN_X)
@@ -106,7 +107,7 @@ class CropTransformControls(
     /** Opens the color picker. The preview shows each color before OK, and Cancel restores the old color. */
     private fun pickBackground() {
         val before = backgroundRow.rgb
-        val picked = ColorPickerDialog.pick(this, "Fill color", Color(before)) { color -> emitBackground(color.rgb) }
+        val picked = ColorPickerDialog.pick(this, tr("adjust.fill"), Color(before)) { color -> emitBackground(color.rgb) }
         if (picked != null) emitBackground(picked.rgb)
     }
 

@@ -11,6 +11,7 @@ import java.awt.GridBagLayout
 import javax.swing.Box
 import javax.swing.JLabel
 import javax.swing.JPanel
+import org.litvin.i18n.tr
 
 /**
  * Shows in the video area when the video does not open: an icon, the problem, an explanation
@@ -42,9 +43,9 @@ internal class VideoErrorPanel(onRetry: () -> Unit) : JPanel(GridBagLayout()), V
         name = "video-error-explanation"
     }
 
-    private val report = UiButton("Report this problem", Material2AL.FEEDBACK).apply {
+    private val report = UiButton(tr("dialog.reportProblem"), Material2AL.FEEDBACK).apply {
         name = "video-error-report"
-        toolTipText = "Send a report with the log files"
+        toolTipText = tr("videoError.report.tooltip")
         isVisible = false
     }
     private val reportGap = Box.createHorizontalStrut(8).apply { isVisible = false }
@@ -55,9 +56,9 @@ internal class VideoErrorPanel(onRetry: () -> Unit) : JPanel(GridBagLayout()), V
         name = "video-error"
         isOpaque = true
         background = Palette.VIDEO_BG
-        val retry = UiButton("Retry", Material2MZ.REFRESH).apply {
+        val retry = UiButton(tr("videoError.retry"), Material2MZ.REFRESH).apply {
             name = "video-error-retry"
-            toolTipText = "Open the video again"
+            toolTipText = tr("videoError.retry.tooltip")
             addActionListener { onRetry() }
         }
         report.addActionListener {

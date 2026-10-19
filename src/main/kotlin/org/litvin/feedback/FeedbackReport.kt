@@ -4,13 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import java.util.Base64
 import java.util.UUID
+import org.litvin.i18n.tr
 
 /** The topic of a report. [wireName] is the value of the contract (`feedback-contract/v1`). */
-enum class FeedbackTopic(val wireName: String, val title: String) {
-    PROBLEM("problem", "Problem"),
-    IDEA("idea", "Idea"),
-    QUESTION("question", "Question"),
-    OTHER("other", "Other"),
+/** [title] is English, because the report is for the author. [label] is the name in the app language. */
+enum class FeedbackTopic(val wireName: String, val title: String, private val labelKey: String) {
+    PROBLEM("problem", "Problem", "feedback.topic.problem"),
+    IDEA("idea", "Idea", "feedback.topic.idea"),
+    QUESTION("question", "Question", "feedback.topic.question"),
+    OTHER("other", "Other", "feedback.topic.other"),
+    ;
+
+    val label: String get() = tr(labelKey)
 }
 
 /** The data that the app adds to each report. Each value has a maximum of [FeedbackRules.MAX_INFO] characters. */

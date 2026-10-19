@@ -25,6 +25,7 @@ import javax.swing.JPanel
 import javax.swing.JWindow
 import javax.swing.SwingUtilities
 import javax.swing.border.EmptyBorder
+import org.litvin.i18n.tr
 
 /**
  * A balloon hint that points at an anchor component. The balloon has a message and a close button.
@@ -78,7 +79,7 @@ class HintBalloon(
         add(label, BorderLayout.CENTER)
         val close = JButton(UiStyles.closeIcon()).apply {
             name = "hint-balloon-close"
-            toolTipText = "Close. Do not show this hint again"
+            toolTipText = tr("hint.close.tooltip")
             isFocusPainted = false
             isBorderPainted = false
             isContentAreaFilled = false

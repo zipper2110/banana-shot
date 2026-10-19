@@ -22,6 +22,7 @@ import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.math.ceil
 import org.litvin.ui.commons.Palette
+import org.litvin.i18n.DisplayFormats
 
 /**
  * Fonts and small painted parts of the Projects tab. The colors are in [Palette].
@@ -162,7 +163,7 @@ internal object ProjectsUi {
 /** A caption in small capital letters above a block of the start panel, the `.caption` element of the design. */
 internal class Caption(text: String) : JComponent() {
     private val captionFont = ProjectsUi.trackedFont(10.5f, 0.1, ProjectsUi.Weight.SEMIBOLD)
-    private val shown = text.uppercase()
+    private val shown = DisplayFormats.upper(text)
 
     override fun getPreferredSize() = Dimension(ceil(ProjectsUi.textWidth(shown, captionFont)).toInt() + 4, 16)
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)

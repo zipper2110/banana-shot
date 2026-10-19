@@ -60,7 +60,7 @@ class PointsDispatcherTest {
         // Should not set pending start
         assertNull(d.getPendingStart())
         val msg = d.consumeUserMessage()
-        assertTrue(msg != null && msg.contains("inside an existing point"), "Expect hint about inside existing interval, but was: $msg")
+        assertTrue(msg != null && msg.contains("inside a point"), "Expect hint about inside existing interval, but was: $msg")
     }
 
     @Test
@@ -88,13 +88,13 @@ class PointsDispatcherTest {
         d.onPointEnd(2250)
         assertEquals(2, d.getCompletedPoints().size)
         msg = d.consumeUserMessage()
-        assertTrue(msg != null && msg.contains("duration"), "Expect duration hint, but was: $msg")
+        assertTrue(msg != null && msg.contains("200 ms"), "Expect duration hint, but was: $msg")
 
         // Negative or zero duration: End <= Start rejected (outside all points)
         d.onPointStart(4500)
         d.onPointEnd(4400)
         assertEquals(2, d.getCompletedPoints().size)
         msg = d.consumeUserMessage()
-        assertTrue(msg != null && msg.contains("End must be > Start"), "Expect invalid end/start hint, but was: $msg")
+        assertTrue(msg != null && msg.contains("The end must be after the start"), "Expect invalid end/start hint, but was: $msg")
     }
 }

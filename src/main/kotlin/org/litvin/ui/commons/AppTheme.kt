@@ -2,13 +2,21 @@ package org.litvin.ui.commons
 
 import java.awt.Color
 import java.util.prefs.Preferences
+import org.litvin.i18n.tr
 
 /** A theme that the user can select in More > Settings. Each theme sets the seed colors of [Palette]. */
-enum class AppTheme(val id: String, val title: String, val accent: Color, val background: Color) {
-    DARK("dark", "Dark", Palette.DEFAULT_ACCENT, Palette.DEFAULT_BACKGROUND),
-    MID("mid", "Mid", Palette.DEFAULT_ACCENT, Palette.MID_BACKGROUND),
-    LIGHT("light", "Light", Palette.LIGHT_ACCENT, Palette.LIGHT_BACKGROUND),
+enum class AppTheme(val id: String, val accent: Color, val background: Color) {
+    DARK("dark", Palette.DEFAULT_ACCENT, Palette.DEFAULT_BACKGROUND),
+    MID("mid", Palette.DEFAULT_ACCENT, Palette.MID_BACKGROUND),
+    LIGHT("light", Palette.LIGHT_ACCENT, Palette.LIGHT_BACKGROUND),
     ;
+
+    val title: String
+        get() = when (this) {
+            DARK -> tr("theme.dark")
+            MID -> tr("theme.mid")
+            LIGHT -> tr("theme.light")
+        }
 
     companion object {
         val DEFAULT = DARK

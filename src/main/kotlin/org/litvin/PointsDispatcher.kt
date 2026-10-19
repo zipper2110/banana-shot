@@ -1,5 +1,6 @@
 package org.litvin.points.components
 
+import org.litvin.i18n.tr
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.points.EdlIO
 import org.litvin.points.PointV1
@@ -42,13 +43,13 @@ class PointsDispatcher {
     fun updatePoint(id: String, newStartMsRaw: Long, newEndMsRaw: Long, newLabel: String?): Boolean {
         val idx = points.indexOfFirst { it.id == id }
         if (idx < 0) {
-            notifyUser("Point not found: $id")
+            notifyUser(tr("dispatch.point.notFound", "id" to id))
             return false
         }
         val s = Timecode.roundTo10ms(newStartMsRaw)
         val e = Timecode.roundTo10ms(newEndMsRaw)
         if (s < 0 || e < 0 || e <= s || (e - s) < 200) {
-            notifyUser("Invalid edit: ensure 0 ≤ start < end and duration ≥ 200 ms")
+            notifyUser(tr("dispatch.point.invalidEdit"))
             return false
         }
         // Overlap check against all other points (half-open [s,e))
@@ -57,7 +58,7 @@ class PointsDispatcher {
             s < p.endMs && p.startMs < e
         }
         if (overlaps) {
-            notifyUser("Edit blocked: overlaps with another point. Adjust boundaries.")
+            notifyUser(tr("dispatch.point.editOverlap"))
             return false
         }
         val old = points[idx]
@@ -76,7 +77,7 @@ class PointsDispatcher {
         // Block placing a Start inside an existing interval [start, end)
         val insideExisting = points.any { p -> t >= p.startMs && t < p.endMs }
         if (insideExisting) {
-            notifyUser("Cannot place Start at ${t} ms: it's inside an existing point interval")
+            notifyUser(tr("dispatch.point.startInside"))
             return
         }
         // Assign a stable id at the moment pending row is created (2.16). If pending exists, keep the same id.
@@ -104,19 +105,19 @@ class PointsDispatcher {
         val s = pendingStartMs
         if (s == null) {
             // No-op per spec (gentle hint)
-            notifyUser("Set a Start first (press C) before setting End")
+            notifyUser(tr("dispatch.point.noStart"))
             return false
         }
         val e = Timecode.roundTo10ms(timeMs)
         val duration = e - s
         if (e <= s || duration < 200) {
             // Invalid; keep pending and show hint
-            notifyUser("Invalid point: End must be > Start and duration ≥ 200 ms")
+            notifyUser(tr("dispatch.point.invalid"))
             return false
         }
         // Validation 2.7: reject overlaps with existing points; adjacent allowed via half-open rule
         if (overlapsExisting(s, e)) {
-            notifyUser("Overlap blocked for [$s, $e). Adjust boundaries to avoid overlaps.")
+            notifyUser(tr("dispatch.point.overlap"))
             return false
         }
         val id = pendingId ?: EdlIO.generateId()

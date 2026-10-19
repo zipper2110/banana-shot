@@ -16,6 +16,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import org.litvin.i18n.tr
+import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.I18n
 
 /** A point of the project for the Share tab. [number] starts at 1. [scoreLabel] is null when the project has no scored points. */
 data class SharePoint(
@@ -30,7 +33,7 @@ data class SharePoint(
     val middleMs: Long get() = startMs + lengthMs / 2
 
     /** "Point 11 · 6:42 · Set 1 · 2–2", for the point list. */
-    val label: String get() = listOfNotNull("Point $number", ShareProject.clock(startMs), scoreLabel).joinToString(" · ")
+    val label: String get() = listOfNotNull(tr("share.point", "number" to number), ShareProject.clock(startMs), scoreLabel).joinToString(" · ")
 }
 
 /**
@@ -66,27 +69,29 @@ data class ShareProject(
         ThumbnailField.TEAM2 to sideName(score.player2Name, 2),
         ThumbnailField.EVENT to event.orEmpty().trim().take(ThumbnailField.EVENT.maxLength),
         ThumbnailField.COURT to court(),
-        ThumbnailField.DATE to (videoDate?.format(DATE_FORMAT) ?: ""),
+        ThumbnailField.DATE to (videoDate?.let(::thumbnailDate) ?: ""),
     )
 
     /** "PADEL" for padel. For tennis, "DOUBLES" when the names are teams such as "Dima / Yana", else "SINGLES". */
-    fun matchKind(): String = when (sport) {
-        Sport.PADEL -> "PADEL"
-        Sport.TENNIS -> if (isTeam(score.player1Name) && isTeam(score.player2Name)) "DOUBLES" else "SINGLES"
-    }
+    fun matchKind(): String = DisplayFormats.upper(
+        when (sport) {
+            Sport.PADEL -> tr("sport.padel")
+            Sport.TENNIS -> if (isTeam(score.player1Name) && isTeam(score.player2Name)) tr("share.kind.doubles") else tr("share.kind.singles")
+        },
+    )
 
     private fun isTeam(name: String) = TEAM_SEPARATORS.any { it in name }
 
     /** The name of a side, or empty when the user did not type a name. */
     private fun sideName(name: String, side: Int): String {
         val trimmed = name.trim()
-        val defaults = setOf(sport.defaultSideName(side), Sport.TENNIS.defaultSideName(side), Sport.PADEL.defaultSideName(side))
+        val defaults = Sport.TENNIS.defaultSideNames(side) + Sport.PADEL.defaultSideNames(side)
         return if (trimmed in defaults) "" else trimmed.take(ThumbnailField.TEAM1.maxLength)
     }
 
     private fun court(): String {
         val title = score.scoreboard.title.trim()
-        return if (title == ScoreboardSettingsV1.DEFAULT_TITLE) "" else title.take(ThumbnailField.COURT.maxLength)
+        return if (title in ScoreboardSettingsV1.defaultTitles()) "" else title.take(ThumbnailField.COURT.maxLength)
     }
 
     /** The length of the exported video: the points for "Full match", the favorite points for "Best points". */
@@ -100,8 +105,14 @@ data class ShareProject(
         File(folder, "${SafeFileName.of(name, "thumbnail")}-${type.fileSuffix}.png")
 
     companion object {
-        private val TEAM_SEPARATORS = listOf("/", "&", "+", " and ")
-        private val DATE_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH)
+        private val TEAM_SEPARATORS = listOf("/", "&", "+", " and ", " y ")
+
+        /**
+         * The date on the thumbnail, for example "19 Oct 2026". The thumbnail is a text of the video, so the month
+         * name is in the app language (B-11: the video language is the app language until E5).
+         */
+        fun thumbnailDate(date: LocalDate): String =
+            date.format(DateTimeFormatter.ofPattern("d MMM yyyy", I18n.language.locale)).replace(".", "")
 
         fun load(projectDir: String, manifestPath: String): ShareProject {
             val manifest = ManifestIO.read(manifestPath)
@@ -134,7 +145,7 @@ data class ShareProject(
             val state = report.timeline.stateBefore(index)
             return when (report.score.rules.structure) {
                 MatchStructure.TOTAL_POINTS, MatchStructure.PLAIN_POINTS -> "${state.p1Pts}–${state.p2Pts}"
-                else -> "Set ${state.setsP1 + state.setsP2 + 1} · ${state.gamesP1}–${state.gamesP2}"
+                else -> tr("override.set", "number" to state.setsP1 + state.setsP2 + 1) + " · ${state.gamesP1}–${state.gamesP2}"
             }
         }
 

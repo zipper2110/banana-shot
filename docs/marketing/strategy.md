@@ -242,6 +242,12 @@ time of the author. Fit is how many target users are there.
 - YouTube, other channels: see group B and the template in section 9. Do
   not post links in comments of other channels. It looks like spam, and
   YouTube hides it.
+  Post comments from the personal account (@leetvin), not from the
+  BananaShot channel. On 2026-10-19, YouTube removed two comments of the
+  BananaShot channel at once, without a link. The same day, a comment from
+  the personal account stayed. The BananaShot channel is new and has no
+  comment history. The list of channels is `youtube-outreach.csv` (not in
+  Git).
 - Reddit: read the rules of each subreddit. Most subreddits remove posts of
   new accounts that only promote. Take part in threads for one to two weeks
   first. Then post one honest "I made this for myself" post with a video.

@@ -658,7 +658,16 @@ The tasks below give the area and the special requirements of the area.
   - The outcome buttons, the speed box, the "Frame step" toggle, and the
     "Scoring settings" and "Scoreboard style" buttons are cut.
   - The timeline: the "COMMENTS" track name covers its count.
-- Done for Spanish: the projects table moves a long "Scored" column name
+- Known problems in all languages at 1200 × 800 (the window of the UI-flow
+  tests):
+  - The Points tab: the outcome buttons are cut ("Team 1 sc…"), and the
+    "Comment" button and the "Frame step" toggle are cut at the right edge.
+  - The exports table: the "Content" column breaks a word that is wider
+    than the column ("Scoreboard" / ": on", "Comentario" / "s: sí").
+  - The More window opens the Settings and Contact pages scrolled down. The
+    first heading of the page is not visible.
+- Done for Spanish: the note next to a dialog field name gets the free
+  width of the row. The projects table moves a long "Scored" column name
   over the bar. The "Recent projects" title gets 4 px more. Spanish uses
   short forms for the controls with a fixed width (see the glossary, "Short
   forms").

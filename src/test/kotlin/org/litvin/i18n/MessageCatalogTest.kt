@@ -35,6 +35,16 @@ class MessageCatalogTest {
         }
     }
 
+    /** The table "Words of each variant" of `docs/localization/glossary.md`. */
+    @Test
+    fun `Latin American Spanish has no words of Spain`() {
+        val texts = MessageCatalog.loadWithParents(AppLanguage.SPANISH_LATIN_AMERICA)
+        val failures = texts.mapNotNull { (key, text) ->
+            SPAIN_WORDS.find(text)?.let { "$key: ${it.value}" }
+        }
+        assertEquals(emptyList<String>(), failures.sorted(), "Add a Latin American text to *_es_419.properties")
+    }
+
     @Test
     fun `each text parses`() {
         val failures = (listOf(AppLanguage.SOURCE to english) + translations.toList()).flatMap { (language, texts) ->
@@ -139,10 +149,10 @@ class MessageCatalogTest {
     @Test
     fun `Latin American Spanish uses its own words and the other Spanish texts`() {
         val latinAmerica = Messages.of(AppLanguage.SPANISH_LATIN_AMERICA)
-        assertEquals("Editor de video de tenis y pádel", latinAmerica.text("app.tagline"))
+        assertEquals("Videos de tenis y pádel", latinAmerica.text("app.tagline"))
         assertEquals("Enter", latinAmerica.text("key.enter"))
         assertEquals("Exportaciones", latinAmerica.text("export.table.title"))
-        assertEquals("Editor de vídeo de tenis y pádel", Messages.of(AppLanguage.SPANISH_SPAIN).text("app.tagline"))
+        assertEquals("Vídeos de tenis y pádel", Messages.of(AppLanguage.SPANISH_SPAIN).text("app.tagline"))
     }
 
     private fun mainSources(): Sequence<String> =
@@ -159,6 +169,10 @@ class MessageCatalogTest {
         val TR_CALL = Regex("""(?<![\w.])(?:tr|I18n\.inAllLanguages)\(\s*"([^"$]+)"""")
         val LITERAL = Regex(""""([A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+)"""")
         val MARKUP = Regex("<[^>]+>")
+        val SPAIN_WORDS = Regex(
+            "(?<![\\p{L}])(vídeos?|ordenador(es)?|pulsa|pulsada|pulsar|Intro|ratón|móvil|caducado|caduca|en directo)(?![\\p{L}])",
+            RegexOption.IGNORE_CASE,
+        )
         val KEPT_TERMS = listOf("BananaShot", "4K", "1080p", "H\\.264", "HEVC", "NVENC", "x264", "fps", "FPS", "PNG", "\\{app\\}")
             .map { Regex("(?<![A-Za-z0-9])$it(?![A-Za-z0-9])") }
     }

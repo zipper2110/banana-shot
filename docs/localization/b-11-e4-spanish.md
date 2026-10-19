@@ -35,7 +35,7 @@ are in the plan, "Epics".
 | E4-T9 | Queued render job keeps its language | — | open |
 | E4-T10 | The app sends the language `es` | — | in-progress |
 | E4-T11 | Show the language setting | E4-T7 | in-progress |
-| E4-T12 | Windows smoke test in Spanish | E4-T11 | open |
+| E4-T12 | Windows smoke test in Spanish | E4-T11 | in-progress |
 | E4-T13 | Documentation and release | E4-T1–E4-T12 | open |
 
 ### E4-T1 Find the reviewer
@@ -315,7 +315,7 @@ are in the plan, "Epics".
 
 ### E4-T12 Windows smoke test in Spanish
 
-- Status: open
+- Status: in-progress
 - Plan: 11 ("Installer and Windows"), 12
 - Value: the full flow works for a real Spanish user on a real Windows.
 - Requirements:

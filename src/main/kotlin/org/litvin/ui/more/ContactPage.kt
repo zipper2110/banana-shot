@@ -28,7 +28,7 @@ internal class ContactPage(
 
         subheading(tr("contact.email"))
         paragraph(tr("contact.email.text"))
-        valueRow(tr("contact.email"), email).name = "more-contact-email"
+        valueRow(tr("contact.email.label"), email).name = "more-contact-email"
         lateinit var emailStatus: StatusLine
         buttonRow(secondaryButton(tr("contact.writeEmail"), Material2AL.EDIT) {
             emailStatus.text = if (onOpenLink(URI("mailto:$email"))) "" else tr("contact.writeEmail.failed")

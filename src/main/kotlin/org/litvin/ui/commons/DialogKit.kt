@@ -123,19 +123,18 @@ internal object DialogKit {
     /** A caption above an input, with an optional small note such as "optional". */
     fun field(caption: String, input: JComponent, note: String? = null): JComponent = JPanel(BorderLayout(0, 5)).apply {
         isOpaque = false
-        add(JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+        add(JPanel(BorderLayout(0, 0)).apply {
             isOpaque = false
-            (layout as FlowLayout).alignOnBaseline = true
             add(JLabel(caption).apply {
                 font = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
                 foreground = Palette.FG_2
-            })
+            }, BorderLayout.WEST)
+            // The note gets all the free width of the row, because the painted text can be wider than the measured
+            // text, and a translation can be longer than the English text.
             if (note != null) add(JLabel("  $note").apply {
                 font = UiKit.font(11f)
                 foreground = Palette.FG_3
-                // Some slack, because the painted text can be a little wider than the measured text.
-                preferredSize = Dimension(preferredSize.width + 4, preferredSize.height)
-            })
+            }, BorderLayout.CENTER)
         }, BorderLayout.NORTH)
         add(input, BorderLayout.CENTER)
     }

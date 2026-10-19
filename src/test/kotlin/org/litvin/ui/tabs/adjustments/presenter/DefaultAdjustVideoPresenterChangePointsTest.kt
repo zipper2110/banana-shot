@@ -55,6 +55,36 @@ class DefaultAdjustVideoPresenterChangePointsTest {
     }
 
     @Test
+    fun `the video size converts an older project and keeps a rotation free of black corners`() = onEdt {
+        adjustments.set(AdjustmentsV1(rotationDeg = 5.0f, version = 1))
+        presenter.attach(view)
+        presenter.onActivated()
+        presenter.onIntent(AdjustVideoIntent.VideoSizeKnown(1920, 1080))
+
+        val fit5 = org.litvin.adjustments.CropGeometryMath.fitZoom(1920.0, 1080.0, 5.0)
+        assertEquals(AdjustmentsV1.CURRENT_VERSION, adjustments.get().version)
+        assertEquals(fit5, adjustments.get().zoom, 0.001f)
+
+        presenter.onIntent(AdjustVideoIntent.ChangeTransform(view.state.editing.copy(rotationDeg = 0.0f)))
+        assertEquals(1.0f, adjustments.get().zoom)
+    }
+
+    @Test
+    fun `the fill color applies to the whole video and not to a change point`() = onEdt {
+        presenter.attach(view)
+        presenter.onActivated()
+        presenter.onIntent(AdjustVideoIntent.PlayheadMoved(10_000))
+        presenter.onIntent(AdjustVideoIntent.AddChangePoint)
+        presenter.onIntent(AdjustVideoIntent.ChangeBackground("#336699"))
+        presenter.onIntent(AdjustVideoIntent.ResetTransform)
+
+        assertEquals("#336699", adjustments.get().backgroundColor)
+        assertEquals(0x336699, view.state.editing.backgroundRgb)
+        presenter.onIntent(AdjustVideoIntent.PlayheadMoved(0))
+        assertEquals(0x336699, view.state.editing.backgroundRgb)
+    }
+
+    @Test
     fun `a change point has the colors and the transform`() = onEdt {
         presenter.attach(view)
         presenter.onActivated()

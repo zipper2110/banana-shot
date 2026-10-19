@@ -50,6 +50,22 @@ class CropTransformControlsTest {
     }
 
     @Test
+    fun backgroundRowShowsTheFillColor() {
+        headless()
+
+        SwingUtilities.invokeAndWait {
+            val controls = CropTransformControls(onChanged = {}, onResetTransform = {})
+            assertEquals("#000000", controls.backgroundRow.hexText)
+
+            controls.render(AdjustmentsV1(backgroundColor = "#336699"))
+
+            assertEquals(0x336699, controls.backgroundRow.rgb)
+            assertEquals("#336699", controls.backgroundRow.hexText)
+            assertEquals(0x336699, controls.backgroundRow.swatch.color.rgb and 0xFFFFFF)
+        }
+    }
+
+    @Test
     fun rotationSlidersCoverOneEightyAndFiveDegrees() {
         headless()
 

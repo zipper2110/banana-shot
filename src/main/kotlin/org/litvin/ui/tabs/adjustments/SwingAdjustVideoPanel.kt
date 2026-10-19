@@ -70,10 +70,13 @@ class SwingAdjustVideoPanel(
     // True while the user holds the left mouse button on the video to compare with the original colors.
     private var showingOriginal = false
 
+    // The video size that the presenter knows. A new project resets it.
+    private var reportedVideoSize: Dimension? = null
+
     // True while the view sets the sliders from the state, so the slider listeners do not send it back.
     private var updatingFromState = false
 
-    private val editor = CropEditorOverlay(player) { adjustments ->
+    private val editor = CropEditorOverlay(player, onVideoBoundsChanged = { reportVideoSize() }) { adjustments ->
         presenter.onIntent(AdjustVideoIntent.ChangeTransform(adjustments))
     }
 
@@ -88,6 +91,7 @@ class SwingAdjustVideoPanel(
     private val transformControls = CropTransformControls(
         onChanged = { adjustments -> presenter.onIntent(AdjustVideoIntent.ChangeTransform(adjustments)) },
         onResetTransform = { presenter.onIntent(AdjustVideoIntent.ResetTransform) },
+        onBackgroundChanged = { color -> presenter.onIntent(AdjustVideoIntent.ChangeBackground(color)) },
     )
 
     private val changePointsCard = ChangePointsCard(
@@ -219,6 +223,7 @@ class SwingAdjustVideoPanel(
     }
 
     fun setProjectManifest(path: String) {
+        reportedVideoSize = null
         presenter.onIntent(AdjustVideoIntent.LoadProject(path))
     }
 
@@ -263,6 +268,7 @@ class SwingAdjustVideoPanel(
         applyPreview()
         changePointsCard.render(state.changePoints)
         playbackBar.setMarkers(state.changePointTimes)
+        reportVideoSize()
         val source = state.sourceVideo
         if (source != null && source != loadedMediaFile && source != pendingMediaFile) {
             pendingMediaFile = source
@@ -373,8 +379,17 @@ class SwingAdjustVideoPanel(
                 if (duration > 0) playbackBar.setTime(player.currentTimeMs(), duration)
                 applyPreview()
                 updatePlayPauseUi()
+                reportVideoSize()
             }
         }
+    }
+
+    /** Tells the presenter the video size, after the current event, when it changed. */
+    private fun reportVideoSize() {
+        val size = player.videoSize() ?: return
+        if (size == reportedVideoSize) return
+        reportedVideoSize = size
+        EventQueue.invokeLater { presenter.onIntent(AdjustVideoIntent.VideoSizeKnown(size.width, size.height)) }
     }
 
     /** On the Colors sub-tab, the original colors show while the left mouse button is down on the video. */

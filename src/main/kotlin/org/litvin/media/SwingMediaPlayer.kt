@@ -3,6 +3,7 @@ package org.litvin.media
 import org.litvin.adjustments.AdjustmentsV1
 import java.awt.Color
 import java.awt.Component
+import java.awt.Dimension
 import java.awt.geom.Rectangle2D
 import java.io.File
 
@@ -46,6 +47,9 @@ interface SwingMediaPlayer : AutoCloseable {
      * False shows the export result (rotation and crop). Engines without this feature ignore it.
      */
     fun setCropEditing(enabled: Boolean) {}
+
+    /** The size of the loaded video in source pixels, or null when it is not known. */
+    fun videoSize(): Dimension? = null
 
     /** The area of [component] that shows the video, in component pixels. Null when it is not known. */
     fun videoBounds(): Rectangle2D.Double? = null

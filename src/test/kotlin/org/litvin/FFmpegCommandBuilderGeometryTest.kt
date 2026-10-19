@@ -43,8 +43,8 @@ class FFmpegCommandBuilderGeometryTest {
     }
 
     @Test
-    fun `rotation adds rotate and the inscribed crop before the scale filter`() {
-        val filter = vf(build(AdjustmentsV1(rotationDeg = 5.0f)))
+    fun `rotation of an older project adds rotate and the inscribed crop before the scale filter`() {
+        val filter = vf(build(AdjustmentsV1(rotationDeg = 5.0f, version = 1)))
 
         assertTrue(filter.startsWith("rotate=0.087266:ow=iw:oh=ih:c=black,crop=3334:1876:252:142,"), filter)
         assertTrue(filter.indexOf("crop=") < filter.indexOf("scale="), filter)
@@ -75,6 +75,13 @@ class FFmpegCommandBuilderGeometryTest {
     }
 
     @Test
+    fun `rotation at 100 percent zoom keeps the full frame with the corners in the fill color`() {
+        val filter = vf(build(AdjustmentsV1(rotationDeg = 5.0f)))
+
+        assertEquals("rotate=0.087266:ow=iw:oh=ih:c=black,scale=1920:1080", filter)
+    }
+
+    @Test
     fun `a crop scales to the exact output size`() {
         // 15 degrees on 720x486 crops 532x360. With "scale=720:-2" the height was 488, not 486.
         val args = FFmpegCommandBuilder.build(
@@ -85,7 +92,7 @@ class FFmpegCommandBuilderGeometryTest {
                 outWidth = 720,
                 outHeight = 486,
                 idleTrim = false,
-                adjustments = AdjustmentsV1(rotationDeg = 15.0f),
+                adjustments = AdjustmentsV1(rotationDeg = 15.0f, version = 1),
                 sourceWidth = 720,
                 sourceHeight = 486,
             )
@@ -131,8 +138,44 @@ class FFmpegCommandBuilderGeometryTest {
         assertEquals(plan.crop.height, shader.getValue("tr_crop_h"), 1e-6)
         assertEquals(plan.rotationDeg, shader.getValue("tr_rotation_deg"), 1e-6)
         val (w, h, x, y) = plan.cropPixels(3840, 2160).toList()
-        assertTrue(vf(build(adjustments)).contains("crop=$w:$h:$x:$y,"), vf(build(adjustments)))
+        // Pan Y 0.6 moves the crop past the top edge, so the canvas gets room above and below the frame.
+        val padY = -y
+        assertTrue(padY > 0, "crop y: $y")
+        val filter = vf(build(adjustments))
+        assertTrue(filter.startsWith("rotate=0.130900:ow=iw:oh=ih+${2 * padY}:c=black,crop=$w:$h:$x:0,"), filter)
         assertTrue(listOf(w, h, x, y).all { it % 2 == 0 }, "even pixels: $w $h $x $y")
+    }
+
+    @Test
+    fun `the canvas around the rotated frame gets the fill color`() {
+        val adjustments = AdjustmentsV1(rotationDeg = 10.0f, panX = -1.0f, backgroundColor = "#336699")
+        val plan = GeometryPlan.of(adjustments, 3840, 2160)
+        val (w, h, x, y) = plan.cropPixels(3840, 2160).toList()
+        val padX = -x
+
+        assertTrue(padX > 0, "crop x: $x")
+        assertEquals("rotate=0.174533:ow=iw+${2 * padX}:oh=ih:c=0x336699,crop=$w:$h:0:$y,scale=1920:1080", vf(build(adjustments)))
+    }
+
+    @Test
+    fun `without the source size the canvas uses fractions of the frame`() {
+        val adjustments = AdjustmentsV1(rotationDeg = 10.0f, panX = -1.0f)
+        val args = FFmpegCommandBuilder.build(
+            FFmpegCommandBuilder.BuildParams(
+                sourcePath = "input.mp4",
+                outputPath = "out.mp4",
+                preset = preset,
+                outWidth = 1920,
+                outHeight = 1080,
+                idleTrim = false,
+                adjustments = adjustments,
+            )
+        ).args
+        val filter = vf(args)
+
+        assertTrue(filter.startsWith("rotate=0.174533:ow=trunc(iw*"), filter)
+        assertTrue(filter.contains(":oh=ih:c=black,crop=w=iw*"), filter)
+        assertTrue(Regex(":x=iw\\*-?0\\.000000:").containsMatchIn(filter), filter)
     }
 
     private val changePoints = AdjustmentsV1(
@@ -179,6 +222,19 @@ class FFmpegCommandBuilderGeometryTest {
         assertTrue(segment.contains("lt((t+3.000),4.000)"), segment)
         assertTrue(segment.contains(":eval=frame,crop=w=1920:h=1080:"), segment)
         assertTrue(segment.endsWith("setsar=1"), segment)
+    }
+
+    @Test
+    fun `a blend into a crop past the frame edge rotates into a larger canvas`() {
+        val adjustments = AdjustmentsV1(
+            geometryKeys = listOf(org.litvin.adjustments.GeometryKeyV1(atMs = 5_000, rotationDeg = 10.0f, panY = 1.0f)),
+            backgroundColor = "#FFFFFF",
+        )
+        val args = buildKeeps(adjustments, listOf(PointV1(id = "A", startMs = 3_000, endMs = 7_000)))
+        val segment = args[args.indexOf("-filter_complex") + 1].substringBefore("[v0]")
+
+        assertTrue(Regex(":ow=iw:oh=ih\\+\\d+:c=0xFFFFFF,").containsMatchIn(segment), segment)
+        assertTrue(segment.contains(":eval=frame,crop=w=1920:h=1080:"), segment)
     }
 
     @Test

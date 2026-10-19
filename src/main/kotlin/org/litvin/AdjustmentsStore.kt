@@ -114,6 +114,9 @@ class AdjustmentsSession(
             panX = m.panX.coerceIn(-1.0f, 1.0f),
             panY = m.panY.coerceIn(-1.0f, 1.0f),
             rotationDeg = m.rotationDeg.coerceIn(-180.0f, 180.0f),
+            backgroundColor = parseBackground(m.backgroundColor)
+                ?.takeIf { it != AdjustmentsV1.DEFAULT_BACKGROUND_RGB }
+                ?.let(::backgroundHex),
             geometryKeys = m.geometryKeys
                 .map { key ->
                     key.copy(

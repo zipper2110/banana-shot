@@ -120,6 +120,7 @@ object HelpCatalog {
                 "Drag inside the crop rectangle to move it, drag handles to resize it, and drag the round handle to rotate.",
                 "Click the video before you use the arrow keys to move the crop rectangle.",
                 "Use the Zoom, Pan X, Pan Y, Rotation, and Fine rotation sliders or type exact values.",
+                "Click the swatch in Background to choose the fill color of the areas outside the rotated video.",
             ),
             actions = listOf(
                 "Use Reset all on the Transform sub-tab to restore all transform controls to their defaults. The colors do not change.",
@@ -129,6 +130,9 @@ object HelpCatalog {
             ),
             goodToKnow = listOf(
                 "Resizing keeps the aspect ratio and the center of the crop rectangle.",
+                "After a rotation, the video shows the corners of the rotated frame. You can move the crop rectangle past the frame edges to include them, and you can make it as large as the frame. The empty areas get the fill color.",
+                "A rotation zooms in, so that no empty corners show. If you made the crop rectangle larger than that, a rotation does not change its size.",
+                "The fill color applies to the whole video. Reset all does not change it.",
                 "Fine rotation adds up to 5 degrees to the Rotation value in steps of 0.1 degree. The Rotation group shows the total angle.",
                 "The rotation handle snaps to 0, 90, and 180 degrees when the angle is within 2 degrees of them.",
                 "Arrow-key nudging works while the video has the focus. The chip at the top-left corner of the video shows it.",

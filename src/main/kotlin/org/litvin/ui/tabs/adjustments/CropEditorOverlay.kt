@@ -20,14 +20,17 @@ import org.litvin.ui.commons.Palette
 /**
  * Crop/Rotate editor on the live video of the Transform sub-tab.
  *
- * While [active], the player shows the rotated full frame (crop editing mode). This class draws the crop rectangle,
- * the dim mask, the resize handles, and the rotation handle through [SwingMediaPlayer.setEditorOverlay].
- * It also draws the [VideoFocusChip], which tells if the arrow keys move the crop rectangle.
- * It reads the mouse on [SwingMediaPlayer.component]. All coordinates are component pixels, and the
- * content box is the video area that [SwingMediaPlayer.videoBounds] gives.
+ * While [active], the player shows the rotated full frame (crop editing mode). With a rotation, the player also
+ * shows the corners of the rotated frame around it, so the video area is larger than the frame
+ * ([CropGeometryMath.editorViewScale]). The crop rectangle can go past the frame edges into that area.
+ * This class draws the crop rectangle, the dim mask, the resize handles, and the rotation handle through
+ * [SwingMediaPlayer.setEditorOverlay]. It also draws the [VideoFocusChip], which tells if the arrow keys move
+ * the crop rectangle. It reads the mouse on [SwingMediaPlayer.component]. All coordinates are component pixels,
+ * and the content box is the video area that [SwingMediaPlayer.videoBounds] gives.
  */
 class CropEditorOverlay(
     private val player: SwingMediaPlayer,
+    private val onVideoBoundsChanged: () -> Unit = {},
     private val onAdjustmentsChanged: (AdjustmentsV1) -> Unit,
 ) {
     private enum class HitTarget {
@@ -57,7 +60,7 @@ class CropEditorOverlay(
             }
 
             override fun mousePressed(e: MouseEvent) {
-                if (!active) return
+                if (!active || !editable) return
                 val content = player.videoBounds() ?: return
                 dragTarget = hitTest(e.x.toDouble(), e.y.toDouble())
                 dragStartPoint = Point2D.Double(e.x.toDouble(), e.y.toDouble())
@@ -84,7 +87,10 @@ class CropEditorOverlay(
         }
         target.addMouseListener(adapter)
         target.addMouseMotionListener(adapter)
-        player.onVideoBoundsChanged = { redraw() }
+        player.onVideoBoundsChanged = {
+            redraw()
+            onVideoBoundsChanged()
+        }
     }
 
     /** False on the Colors sub-tab: the editor draws nothing and ignores the mouse and the arrow keys. */
@@ -111,14 +117,20 @@ class CropEditorOverlay(
         redraw()
     }
 
+    /**
+     * False while the values have an older version: the presenter converts them when it knows the video size.
+     * The mouse and the arrow keys would otherwise write values of the current rules into an older project.
+     */
+    private val editable: Boolean get() = adjustments.version >= AdjustmentsV1.CURRENT_VERSION
+
     /** Moves the crop rectangle by [dx], [dy] component pixels. */
     fun nudge(dx: Int, dy: Int) {
-        if (!active) return
+        if (!active || !editable) return
         val content = player.videoBounds() ?: return
         val current = overlayRect(content)
         val moved = CropGeometryMath.clampInside(
             current.copy(x = current.x + dx, y = current.y + dy),
-            frameBounds(content),
+            moveBounds(content),
             aspect(content),
         )
         emit(modelFrom(content, moved))
@@ -133,12 +145,13 @@ class CropEditorOverlay(
 
     private fun handleDrag(e: MouseEvent) {
         val content = player.videoBounds() ?: return
-        val bounds = frameBounds(content)
+        val bounds = moveBounds(content)
         val aspect = aspect(content)
         val dx = e.x - dragStartPoint.x
         val dy = e.y - dragStartPoint.y
         if (dragTarget == HitTarget.ROTATE) {
-            val center = overlayRect(content).let { it.x + it.width / 2.0 to it.y + it.height / 2.0 }
+            // The video area changes its scale with the angle, so the center comes from the start of the drag.
+            val center = dragStartRect.let { it.x + it.width / 2.0 to it.y + it.height / 2.0 }
             val angle = Math.toDegrees(atan2(e.y - center.second, e.x - center.first)).toFloat() + 90.0f
             val snapped = CropGeometryMath.snapRotation(angle, (e.modifiersEx and InputEvent.SHIFT_DOWN_MASK) != 0)
             emit(dragStartAdjustments.copy(rotationDeg = snapped))
@@ -182,8 +195,9 @@ class CropEditorOverlay(
     }
 
     private fun modelFrom(content: Rectangle2D.Double, rect: CropRect): AdjustmentsV1 {
-        val local = rect.copy(x = rect.x - content.x, y = rect.y - content.y)
-        return CropGeometryMath.modelFromOverlay(content.width, content.height, local, adjustments)
+        val frame = frameBounds(content)
+        val local = rect.copy(x = rect.x - frame.x, y = rect.y - frame.y)
+        return CropGeometryMath.modelFromOverlay(frame.width, frame.height, local, adjustments)
             .copy(rotationDeg = adjustments.rotationDeg)
     }
 
@@ -266,16 +280,28 @@ class CropEditorOverlay(
 
     /** The crop rectangle in component pixels, fitted to the rotated frame as the export fits it. */
     private fun overlayRect(content: Rectangle2D.Double): CropRect {
-        val model = CropGeometryMath.overlayFromModel(content.width, content.height, adjustments)
-        return fitToRotatedFrame(model.copy(x = model.x + content.x, y = model.y + content.y), content)
+        val frame = frameBounds(content)
+        val model = CropGeometryMath.overlayFromModel(frame.width, frame.height, adjustments)
+        return model.copy(x = model.x + frame.x, y = model.y + frame.y)
     }
 
-    /** The size limit comes from the rotated frame. The position limit is the content box. */
+    /** The size limit comes from the rotated frame. The position limit is the bounding box of the rotated frame. */
     private fun fitToRotatedFrame(rect: CropRect, content: Rectangle2D.Double): CropRect =
-        CropGeometryMath.fitToRotatedFrame(rect, frameBounds(content), adjustments.rotationDeg.toDouble(), aspect(content))
+        CropGeometryMath.fitToRotatedFrame(rect, frameBounds(content), rotation(), aspect(content))
 
-    private fun frameBounds(content: Rectangle2D.Double): CropRect =
-        CropRect(content.x, content.y, content.width, content.height)
+    /** The bounding box of the rotated frame. The crop rectangle can move anywhere inside it. */
+    private fun moveBounds(content: Rectangle2D.Double): CropRect =
+        CropGeometryMath.rotatedBounds(frameBounds(content), rotation())
+
+    /** The frame in the content box. With a rotation, the content box also shows the area around the frame. */
+    private fun frameBounds(content: Rectangle2D.Double): CropRect {
+        val scale = CropGeometryMath.editorViewScale(content.width, content.height, rotation())
+        val width = content.width / scale
+        val height = content.height / scale
+        return CropRect(content.centerX - width / 2.0, content.centerY - height / 2.0, width, height)
+    }
+
+    private fun rotation(): Double = adjustments.rotationDeg.toDouble()
 
     private fun handleRects(overlay: CropRect, size: Double): List<Pair<HitTarget, CropRect>> {
         val half = size / 2.0

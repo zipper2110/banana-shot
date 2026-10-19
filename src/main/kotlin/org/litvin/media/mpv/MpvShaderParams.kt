@@ -30,7 +30,8 @@ internal object MpvShaderParams {
     private const val EPSILON = 1e-6
 
     /**
-     * [cropEditing] true keeps the full rotated frame (no crop), for the Crop/Rotate editor.
+     * [cropEditing] true keeps the full rotated frame (no crop), for the Crop/Rotate editor. With a rotation, the
+     * editor also shows the corners of the rotated frame around the frame ([GeometryPlan.editorView]).
      * [timeMs] is the source time of the frame. It selects the geometry and the colors of the change points (B-47).
      */
     fun build(adjustments: AdjustmentsV1, video: MpvVideoInfo?, cropEditing: Boolean = false, timeMs: Long = 0L): String {
@@ -47,7 +48,12 @@ internal object MpvShaderParams {
 
         val plan = GeometryTimeline.planAt(adjustments, timeMs, video?.width ?: 0, video?.height ?: 0)
         val rotation = plan.rotationDeg
-        val crop = if (cropEditing) GeometryPlan.FULL_FRAME else plan.crop
+        val crop = when {
+            !cropEditing -> plan.crop
+            video == null -> GeometryPlan.FULL_FRAME
+            else -> GeometryPlan.editorView(rotation, video.width, video.height)
+        }
+        val background = adjustments.backgroundRgb
         val geometryActive = plan.hasRotation || crop != GeometryPlan.FULL_FRAME
         val colorActive = color.hasEqualizerAdjustments || color.hasToneAdjustments || color.hasTemperatureAdjustments
         val (kr, kb) = matrixCoefficients(video?.colorMatrix)
@@ -66,6 +72,9 @@ internal object MpvShaderParams {
             "tr_crop_y" to fmt(crop.y),
             "tr_crop_w" to fmt(crop.width),
             "tr_crop_h" to fmt(crop.height),
+            "tr_bg_r" to fmt(((background shr 16) and 0xFF) / 255.0),
+            "tr_bg_g" to fmt(((background shr 8) and 0xFF) / 255.0),
+            "tr_bg_b" to fmt((background and 0xFF) / 255.0),
             "tr_kr" to fmt(kr),
             "tr_kb" to fmt(kb),
             "tr_full_range" to if (fullRange) "1" else "0",

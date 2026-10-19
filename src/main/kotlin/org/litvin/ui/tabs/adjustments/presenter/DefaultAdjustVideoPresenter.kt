@@ -5,6 +5,7 @@ import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.ChangePoints
 import org.litvin.adjustments.ColorTimeline
+import org.litvin.adjustments.CropGeometryMath
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsEvent
@@ -41,6 +42,9 @@ class DefaultAdjustVideoPresenter(
     private var projectDir: String? = null
     private var state = AdjustVideoViewState()
 
+    /** The size of the source video, or null before the player knows it. */
+    private var videoSize: Pair<Int, Int>? = null
+
     /** The open sub-tab. The app reports it as the shown tab to the analytics. */
     val section: AdjustSection get() = state.section
 
@@ -62,6 +66,7 @@ class DefaultAdjustVideoPresenter(
         }
         updateState { it.copy(adjustments = adjustments.get()) }
         countedColors = colorsOf(state.editing)
+        convertOlderGeometry()
     }
 
     override fun onDeactivated() {
@@ -93,7 +98,7 @@ class DefaultAdjustVideoPresenter(
                     panX = incoming.panX.coerceIn(-1.0f, 1.0f),
                     panY = incoming.panY.coerceIn(-1.0f, 1.0f),
                     rotationDeg = incoming.rotationDeg.coerceIn(-180.0f, 180.0f),
-                )
+                ).let { next -> keepCornersOut(state.editing, next) }
                 val at = state.playheadMs
                 updateState { it.copy(adjustments = GeometryTimeline.withEdited(it.adjustments, at, edited)) }
                 noteTransformChange { previous -> GeometryTimeline.withEdited(previous, at, edited) }
@@ -101,6 +106,16 @@ class DefaultAdjustVideoPresenter(
             AdjustVideoIntent.ResetTransform -> {
                 val at = state.playheadMs
                 noteTransformChange { previous -> GeometryTimeline.withEdited(previous, at, AdjustmentsV1()) }
+            }
+            is AdjustVideoIntent.VideoSizeKnown -> {
+                if (intent.width <= 0 || intent.height <= 0) return
+                videoSize = intent.width to intent.height
+                convertOlderGeometry()
+            }
+            is AdjustVideoIntent.ChangeBackground -> {
+                val color = intent.color
+                updateState { it.copy(adjustments = it.adjustments.copy(backgroundColor = color)) }
+                noteTransformChange { previous -> previous.copy(backgroundColor = color) }
             }
             is AdjustVideoIntent.PlayheadMoved -> movePlayhead(intent.ms)
             AdjustVideoIntent.AddChangePoint -> {
@@ -115,6 +130,23 @@ class DefaultAdjustVideoPresenter(
             AdjustVideoIntent.GoToPreviousChangePoint -> state.previousChangePointMs?.let { seekTo(it) }
             AdjustVideoIntent.GoToNextChangePoint -> state.nextChangePointMs?.let { seekTo(it) }
         }
+    }
+
+    /** The zoom of a transform change, so that a rotation of an auto-fitted crop shows no black corners. */
+    private fun keepCornersOut(previous: AdjustmentsV1, next: AdjustmentsV1): AdjustmentsV1 {
+        val (width, height) = videoSize ?: return next
+        return CropGeometryMath.keepCornersOut(previous, next, width.toDouble(), height.toDouble())
+    }
+
+    /**
+     * Converts the geometry of an older project to the current version, when the video size is known.
+     * The crop rectangles stay the same, so this is not a change of the user.
+     */
+    private fun convertOlderGeometry() {
+        val (width, height) = videoSize ?: return
+        if (adjustments.get().version >= AdjustmentsV1.CURRENT_VERSION) return
+        adjustments.set { previous -> CropGeometryMath.withCurrentVersion(previous, width.toDouble(), height.toDouble()) }
+        updateState { it.copy(adjustments = adjustments.get()) }
     }
 
     private fun selectSection(section: AdjustSection) {
@@ -182,6 +214,7 @@ class DefaultAdjustVideoPresenter(
 
     private fun loadProject(manifestPath: String) {
         projectDir = File(manifestPath).parentFile?.absolutePath
+        videoSize = null
         projectDir?.let { adjustments.load(it) }
         val source = try {
             ManifestIO.read(manifestPath).sourceVideo?.let { File(it) }

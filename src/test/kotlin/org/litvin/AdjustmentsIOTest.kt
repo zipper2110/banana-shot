@@ -43,12 +43,26 @@ class AdjustmentsIOTest {
     }
 
     @Test
+    fun roundTrip_backgroundColor() {
+        val tmpDir: Path = Files.createTempDirectory("adj_bg_")
+        val adjPath = tmpDir.resolve("adjustments.json").toFile().absolutePath
+
+        AdjustmentsIO.write(adjPath, AdjustmentsV1(backgroundColor = "#336699"))
+        val readBack = AdjustmentsIO.read(adjPath)
+
+        assertEquals("#336699", readBack.backgroundColor)
+        assertEquals(0x336699, readBack.backgroundRgb)
+        assertEquals(0x000000, AdjustmentsV1().backgroundRgb)
+        assertEquals(0x000000, AdjustmentsV1(backgroundColor = "not a color").backgroundRgb)
+    }
+
+    @Test
     fun read_missingFile_returnsIdentityDefaults() {
         val tmpDir: Path = Files.createTempDirectory("adj_missing_")
         val adjPath = tmpDir.resolve("does_not_exist.json").toFile().absolutePath
 
         val readBack = AdjustmentsIO.read(adjPath)
-        assertEquals(1, readBack.version)
+        assertEquals(AdjustmentsV1.CURRENT_VERSION, readBack.version)
         assertEquals(1.0f, readBack.brightness)
         assertEquals(1.0f, readBack.contrast)
         assertEquals(1.0f, readBack.saturation)

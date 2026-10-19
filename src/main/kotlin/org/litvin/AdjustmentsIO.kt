@@ -77,8 +77,13 @@ data class AdjustmentsV1(
     @field:JsonInclude(JsonInclude.Include.NON_EMPTY)
     @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val colorKeys: List<ColorKeyV1> = emptyList(),
+    // The fill color of the areas outside the rotated video, as "#RRGGBB". Null is black.
+    // It does not change at the change points.
+    val backgroundColor: String? = null,
 
-    val version: Int = 1,
+    // The version of the geometry rules (CropGeometryMath). Version 1 keeps the crop inside the frame and limits
+    // its size with a rotation. Files of version 1 keep their crop until the Transform tab converts them.
+    val version: Int = CURRENT_VERSION,
 ) {
     // Preserve unknown JSON properties for forward compatibility.
     @JsonIgnore
@@ -89,7 +94,7 @@ data class AdjustmentsV1(
         // Avoid clobbering known fields if Jackson routes them here for any reason
         when (key) {
             "brightness", "contrast", "saturation", "shadows", "highlights", "whiteBalance",
-            "zoom", "panX", "panY", "rotationDeg", "geometryKeys", "colorKeys", "version" -> return
+            "zoom", "panX", "panY", "rotationDeg", "geometryKeys", "colorKeys", "backgroundColor", "version" -> return
             else -> unknowns[key] = value
         }
     }
@@ -104,8 +109,29 @@ data class AdjustmentsV1(
          */
         const val MIN_ZOOM = 1.0f
         const val MAX_ZOOM = 2.5f
+
+        /** The version of new adjustments: the crop can go past the frame edges and grow to the frame size. */
+        const val CURRENT_VERSION = 2
+
+        /** The fill color when [backgroundColor] is null. */
+        const val DEFAULT_BACKGROUND_RGB = 0x000000
     }
+
+    /** The fill color as 0xRRGGBB. A value that is not "#RRGGBB" gives black. */
+    @get:JsonIgnore
+    val backgroundRgb: Int
+        get() = parseBackground(backgroundColor) ?: DEFAULT_BACKGROUND_RGB
 }
+
+/** The 0xRRGGBB value of a "#RRGGBB" text, or null when the text has another form. */
+fun parseBackground(text: String?): Int? {
+    val digits = text?.trim()?.removePrefix("#") ?: return null
+    if (digits.length != 6) return null
+    return digits.toIntOrNull(16)
+}
+
+/** The "#RRGGBB" text of a 0xRRGGBB value. */
+fun backgroundHex(rgb: Int): String = "#%06X".format(rgb and 0xFFFFFF)
 
 object AdjustmentsIO {
     private val mapper: ObjectMapper = ObjectMapper()

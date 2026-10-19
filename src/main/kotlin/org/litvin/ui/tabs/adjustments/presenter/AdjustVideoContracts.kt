@@ -55,6 +55,15 @@ sealed class AdjustVideoIntent {
     data object ResetColors : AdjustVideoIntent()
     data class ChangeTransform(val adjustments: AdjustmentsV1) : AdjustVideoIntent()
     data object ResetTransform : AdjustVideoIntent()
+
+    /**
+     * The size of the source video in pixels. The presenter converts the geometry of an older project with it,
+     * and keeps a rotation free of black corners ([org.litvin.adjustments.CropGeometryMath.keepCornersOut]).
+     */
+    data class VideoSizeKnown(val width: Int, val height: Int) : AdjustVideoIntent()
+
+    /** The fill color outside the rotated video, as "#RRGGBB", or null for black. It applies to the whole video. */
+    data class ChangeBackground(val color: String?) : AdjustVideoIntent()
     data class PlayheadMoved(val ms: Long) : AdjustVideoIntent()
     data object AddChangePoint : AdjustVideoIntent()
     data object RemoveChangePoint : AdjustVideoIntent()

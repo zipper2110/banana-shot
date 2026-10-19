@@ -1,6 +1,7 @@
 package org.litvin
 
 import org.litvin.adjustments.ColorTimeline
+import org.litvin.adjustments.CropRect
 import org.litvin.adjustments.GeometryPlan
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.points.PointV1
@@ -115,7 +116,8 @@ object FFmpegCommandBuilder {
         return "lutyuv=y=$y:u=${shifted(values.cbShift)}:v=${shifted(values.crShift)}"
     }
 
-    // Rotate (clockwise, same frame size, black corners) and crop, before the scale filter.
+    // Rotate (clockwise, same frame size, corners in the fill color) and crop, before the scale filter.
+    // A crop that goes past the frame edges gets a larger canvas with the fill color around the frame.
     // With a known source size, the crop uses the same even pixels as the preview shader.
     // Without it, the crop uses fractions of the frame (iw/ih) and the output size gives the aspect.
     private fun geometryFilter(
@@ -130,25 +132,93 @@ object FFmpegCommandBuilder {
         val sourceWidth = knownWidth?.takeIf { it > 0 }
         val sourceHeight = knownHeight?.takeIf { it > 0 }
         val plan = GeometryTimeline.planAt(adj, atMs, sourceWidth ?: outWidth, sourceHeight ?: outHeight)
-        return planFilter(plan, sourceWidth, sourceHeight)
+        return planFilter(plan, sourceWidth, sourceHeight, fillColor(adj))
     }
 
-    private fun planFilter(plan: GeometryPlan, sourceWidth: Int?, sourceHeight: Int?): String? {
+    private fun planFilter(plan: GeometryPlan, sourceWidth: Int?, sourceHeight: Int?, fill: String): String? {
         if (plan.isIdentity) return null
+        val (padX, padY) = plan.padding
+        val canvas = Canvas.around(padX, padY, sourceWidth, sourceHeight)
         val filters = mutableListOf<String>()
-        if (plan.hasRotation) {
-            filters += "rotate=${fmt6(Math.toRadians(plan.rotationDeg))}:ow=iw:oh=ih:c=black"
-        }
+        canvas.filter(if (plan.hasRotation) fmt6(Math.toRadians(plan.rotationDeg)) else null, fill)?.let { filters += it }
         if (plan.hasCrop) {
             filters += if (sourceWidth != null && sourceHeight != null) {
                 val (w, h, x, y) = plan.cropPixels(sourceWidth, sourceHeight).toList()
-                "crop=$w:$h:$x:$y"
+                "crop=$w:$h:${x + canvas.padXPixels}:${y + canvas.padYPixels}"
             } else {
-                val c = plan.crop
+                val c = canvas.of(plan.crop)
                 "crop=w=iw*${fmt6(c.width)}:h=ih*${fmt6(c.height)}:x=iw*${fmt6(c.x)}:y=ih*${fmt6(c.y)}"
             }
         }
         return filters.joinToString(",")
+    }
+
+    /** The fill color of the areas outside the rotated frame, in the FFmpeg color syntax. */
+    private fun fillColor(adj: org.litvin.adjustments.AdjustmentsV1): String {
+        val rgb = adj.backgroundRgb and 0xFFFFFF
+        return if (rgb == 0) "black" else "0x%06X".format(rgb)
+    }
+
+    /**
+     * The frame with room on each side for a crop that goes past the frame edges. [width] and [height] are the
+     * FFmpeg expressions of the canvas size, and [scaleX] and [scaleY] are the canvas size relative to the frame.
+     * With a known source size, the room is [padXPixels] and [padYPixels] even pixels on each side.
+     */
+    private class Canvas(
+        val width: String,
+        val height: String,
+        val scaleX: Double,
+        val scaleY: Double,
+        val padXPixels: Int = 0,
+        val padYPixels: Int = 0,
+    ) {
+        private val padded: Boolean get() = width != "iw" || height != "ih"
+
+        /** [crop] as a fraction of the canvas in place of the frame. */
+        fun of(crop: CropRect): CropRect = CropRect(
+            (crop.x + (scaleX - 1.0) / 2.0) / scaleX,
+            (crop.y + (scaleY - 1.0) / 2.0) / scaleY,
+            crop.width / scaleX,
+            crop.height / scaleY,
+        )
+
+        /**
+         * Rotates by [angle] (radians, or an "a=" option) into the canvas, or only pads the frame without a rotation.
+         * Both keep the frame center at the canvas center and fill the new areas with [fill].
+         */
+        fun filter(angle: String?, fill: String): String? = when {
+            angle != null -> "rotate=$angle:ow=$width:oh=$height:c=$fill"
+            padded -> "pad=w=$width:h=$height:x=(ow-iw)/2:y=(oh-ih)/2:color=$fill"
+            else -> null
+        }
+
+        companion object {
+            /** A canvas with [padX] and [padY] (fractions of the frame) on each side. */
+            fun around(padX: Double, padY: Double, sourceWidth: Int?, sourceHeight: Int?): Canvas {
+                if (sourceWidth != null && sourceHeight != null) {
+                    fun evenPixels(fraction: Double, size: Int) =
+                        Math.ceil(fraction * size / 2.0 - 1e-6).toInt().coerceAtLeast(0) * 2
+                    val x = evenPixels(padX, sourceWidth)
+                    val y = evenPixels(padY, sourceHeight)
+                    return Canvas(
+                        width = if (x == 0) "iw" else "iw+${2 * x}",
+                        height = if (y == 0) "ih" else "ih+${2 * y}",
+                        scaleX = (sourceWidth + 2.0 * x) / sourceWidth,
+                        scaleY = (sourceHeight + 2.0 * y) / sourceHeight,
+                        padXPixels = x,
+                        padYPixels = y,
+                    )
+                }
+                val scaleX = 1.0 + 2.0 * padX
+                val scaleY = 1.0 + 2.0 * padY
+                return Canvas(
+                    width = if (padX == 0.0) "iw" else "trunc(iw*${fmt6(scaleX)}/2)*2",
+                    height = if (padY == 0.0) "ih" else "trunc(ih*${fmt6(scaleY)}/2)*2",
+                    scaleX = scaleX,
+                    scaleY = scaleY,
+                )
+            }
+        }
     }
 
     /**
@@ -178,12 +248,20 @@ object FFmpegCommandBuilder {
         val blends = GeometryTimeline.blendsIn(adj, width, height, startMs, endMs)
         if (blends.isEmpty()) {
             val plan = GeometryTimeline.planAt(adj, startMs, width, height)
-            return listOfNotNull(planFilter(plan, sourceWidth, sourceHeight), scale, "setsar=1")
+            return listOfNotNull(planFilter(plan, sourceWidth, sourceHeight, fillColor(adj)), scale, "setsar=1")
         }
         val time = "(t+${(timeOffsetMs / 1000.0).formatSecs()})"
         // The plans in time order: the plan before the first blend, then the end plan of each blend.
         // The angles are unwrapped, so that each blend takes the shorter direction.
-        val plans = listOf(blends.first().from) + blends.map { it.to }
+        val framePlans = listOf(blends.first().from) + blends.map { it.to }
+        // One canvas for all plans, with room for each crop that goes past the frame edges.
+        val canvas = Canvas.around(
+            framePlans.maxOf { it.padding.first },
+            framePlans.maxOf { it.padding.second },
+            sourceWidth,
+            sourceHeight,
+        )
+        val plans = framePlans.map { GeometryPlan(it.rotationDeg, canvas.of(it.crop)) }
         val angles = mutableListOf(plans.first().rotationDeg)
         blends.forEach { blend -> angles += angles.last() + GeometryTimeline.rotationDelta(blend.from, blend.to) }
 
@@ -204,9 +282,8 @@ object FFmpegCommandBuilder {
         }
 
         val filters = mutableListOf<String>()
-        if (angles.any { kotlin.math.abs(it) >= 0.001 }) {
-            filters += "rotate=a='(${piecewise(angles)})*PI/180':ow=iw:oh=ih:c=black"
-        }
+        val angle = if (angles.any { kotlin.math.abs(it) >= 0.001 }) "a='(${piecewise(angles)})*PI/180'" else null
+        canvas.filter(angle, fillColor(adj))?.let { filters += it }
         val cropWidth = piecewise(plans.map { it.crop.width })
         val cropHeight = piecewise(plans.map { it.crop.height })
         val scaledWidth = "ceil($outWidth/($cropWidth)/2)*2"

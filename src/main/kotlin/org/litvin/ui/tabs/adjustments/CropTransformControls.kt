@@ -2,13 +2,16 @@ package org.litvin.ui.tabs.adjustments
 
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.CropGeometryMath
+import org.litvin.adjustments.backgroundHex
 import org.litvin.ui.commons.CardColumn
+import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ResetAllButton
 import org.litvin.ui.commons.SIDE_PANEL_WIDTH
 import org.litvin.ui.commons.SidePanelHeader
 import org.litvin.ui.commons.UiKit
 import java.awt.BorderLayout
+import java.awt.Color
 import javax.swing.BorderFactory
 import javax.swing.JComponent
 import javax.swing.JLabel
@@ -19,16 +22,19 @@ import kotlin.math.roundToInt
 
 /**
  * The Transform sub-tab of the Colors & Transform tab: a header with the changed count and "Reset all",
- * the Crop and Rotation cards with the five sliders, and a card with the mouse and key hints.
+ * the Crop and Rotation cards with the five sliders, the Background card with the fill color, and a card with
+ * the mouse and key hints.
  * The layout comes from design/transform-redesign/option-a.html.
  *
  * Each slider has a value field. A valid number in the field moves the slider at once.
  * Up and Down in the field change the value by one step.
  * Rotation is split across a coarse slider (0.5° steps) and a fine one (0.1° steps). Their sum is the angle.
+ * [onBackgroundChanged] gets the fill color as "#RRGGBB", or null for black. "Reset all" does not change it.
  */
 class CropTransformControls(
     private val onChanged: (AdjustmentsV1) -> Unit,
     private val onResetTransform: () -> Unit,
+    private val onBackgroundChanged: (String?) -> Unit = {},
 ) : JPanel(BorderLayout()) {
     internal val rows: Map<TransformControl, TransformRow> = TransformControl.entries.associateWith { control ->
         TransformRow(control, first = TransformControl.entries.first { it.group == control.group } == control)
@@ -37,6 +43,8 @@ class CropTransformControls(
     private val cards: Map<TransformGroup, TransformGroupCard> = TransformGroup.entries.associateWith { group ->
         TransformGroupCard(group, rows.values.filter { it.control.group == group })
     }
+
+    internal val backgroundRow = BackgroundRow { pickBackground() }
 
     internal val resetButton = ResetAllButton("crop-reset", "Reset Transform").apply { addActionListener { onResetTransform() } }
 
@@ -70,6 +78,7 @@ class CropTransformControls(
 
         val column = CardColumn().apply {
             TransformGroup.entries.forEach { add(cards.getValue(it)) }
+            add(BackgroundCard(backgroundRow))
             add(TransformHints())
         }
 
@@ -87,10 +96,24 @@ class CropTransformControls(
             panXSlider.value = (adjustments.panX * 100.0f).toInt().coerceIn(-100, 100)
             panYSlider.value = (adjustments.panY * 100.0f).toInt().coerceIn(-100, 100)
             renderRotation(adjustments.rotationDeg)
+            backgroundRow.rgb = adjustments.backgroundRgb
         } finally {
             updating = false
         }
         refreshStatus()
+    }
+
+    /** Opens the color picker. The preview shows each color before OK, and Cancel restores the old color. */
+    private fun pickBackground() {
+        val before = backgroundRow.rgb
+        val picked = ColorPickerDialog.pick(this, "Fill color", Color(before)) { color -> emitBackground(color.rgb) }
+        if (picked != null) emitBackground(picked.rgb)
+    }
+
+    private fun emitBackground(rgb: Int) {
+        val value = rgb and 0xFFFFFF
+        backgroundRow.rgb = value
+        onBackgroundChanged(if (value == AdjustmentsV1.DEFAULT_BACKGROUND_RGB) null else backgroundHex(value))
     }
 
     private fun bindRow(row: TransformRow) {

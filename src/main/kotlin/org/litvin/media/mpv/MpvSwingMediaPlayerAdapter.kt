@@ -21,6 +21,7 @@ import java.awt.Canvas
 import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -430,7 +431,13 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     }
 
     override fun applyGeometryAdjustments(adj: AdjustmentsV1): Boolean {
-        adjustments = adjustments.copy(zoom = adj.zoom, panX = adj.panX, panY = adj.panY, rotationDeg = adj.rotationDeg)
+        adjustments = adjustments.copy(
+            zoom = adj.zoom,
+            panX = adj.panX,
+            panY = adj.panY,
+            rotationDeg = adj.rotationDeg,
+            backgroundColor = adj.backgroundColor,
+        )
         applyShaderOptions()
         return true
     }
@@ -475,6 +482,12 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         mpv.setProperty("video-margin-ratio-bottom", vertical.toString())
         mpv.setProperty("video-margin-ratio-left", horizontal.toString())
         mpv.setProperty("video-margin-ratio-right", horizontal.toString())
+    }
+
+    override fun videoSize(): Dimension? {
+        val width = videoWidth
+        val height = videoHeight
+        return if (fileLoaded && width > 0 && height > 0) Dimension(width, height) else null
     }
 
     override fun videoBounds(): Rectangle2D.Double? {

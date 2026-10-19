@@ -82,6 +82,8 @@ real numbers from the cockpit when you have them.
 
 ### Competitors and alternatives
 
+The full grouped list is in `docs/marketing/competitors.md`.
+
 | Alternative | What it does | Weak point that BananaShot fixes |
 |---|---|---|
 | Do nothing (upload the raw video) | Free, no work | Nobody watches 2 hours of ball pickups |
@@ -248,6 +250,16 @@ time of the author. Fit is how many target users are there.
   the personal account stayed. The BananaShot channel is new and has no
   comment history. The list of channels is `youtube-outreach.csv` (not in
   Git).
+- Video watchlist: `video-watchlist.csv` (not in Git) keeps the match
+  videos of all sports that you find, before you decide on them. It is
+  wider than the outreach list. Values:
+  - State: `Raw` (no cuts, no score), `Trimmed` (cuts, no score),
+    `Trimmed + score`, `Score only` (score, no cuts), `Edited` (other
+    work, for example comments or slow motion).
+  - Tool: the app that made the video, or `?`.
+  - Decision: `Undecided`, `Contact` (offer the app; then move it to the
+    outreach list), `Learn` (a feature that the app does not have),
+    `Approach` (a way to approach this type of author), `Skip`.
 - Reddit: read the rules of each subreddit. Most subreddits remove posts of
   new accounts that only promote. Take part in threads for one to two weeks
   first. Then post one honest "I made this for myself" post with a video.

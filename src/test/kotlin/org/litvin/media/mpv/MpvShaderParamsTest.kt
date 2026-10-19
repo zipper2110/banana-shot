@@ -15,6 +15,27 @@ class MpvShaderParamsTest {
         opts.split(",").associate { it.substringBefore("=") to it.substringAfter("=") }
 
     @Test
+    fun `the fill color goes to the shader as R'G'B' fractions`() {
+        val values = parse(MpvShaderParams.build(AdjustmentsV1(rotationDeg = 5.0f, backgroundColor = "#FF8000"), video))
+
+        assertEquals("1.000000", values["tr_bg_r"])
+        assertEquals(String.format(java.util.Locale.US, "%.6f", 128 / 255.0), values["tr_bg_g"])
+        assertEquals("0.000000", values["tr_bg_b"])
+    }
+
+    @Test
+    fun `the editor shows the corners of the rotated frame around the frame`() {
+        val straight = parse(MpvShaderParams.build(AdjustmentsV1(zoom = 1.5f), video, cropEditing = true))
+        val rotated = parse(MpvShaderParams.build(AdjustmentsV1(rotationDeg = 90.0f), video, cropEditing = true))
+
+        assertEquals("0.000000", straight["tr_crop_x"])
+        assertEquals("1.000000", straight["tr_crop_w"])
+        // At 90°, the 16:9 frame stands upright, so the editor shows 16/9 of the frame height.
+        assertEquals(16.0 / 9.0, rotated.getValue("tr_crop_h").toDouble(), 1e-6)
+        assertEquals((1.0 - 16.0 / 9.0) / 2.0, rotated.getValue("tr_crop_y").toDouble(), 1e-6)
+    }
+
+    @Test
     fun `identity adjustments disable the shader pass`() {
         val values = parse(MpvShaderParams.build(AdjustmentsV1(), video))
 
@@ -63,8 +84,17 @@ class MpvShaderParamsTest {
     }
 
     @Test
-    fun `rotation alone activates the pass and keeps the full inscribed crop`() {
+    fun `rotation alone activates the pass and keeps the full frame`() {
         val values = parse(MpvShaderParams.build(AdjustmentsV1(rotationDeg = 5.0f), video))
+
+        assertEquals("1", values["tr_active"])
+        assertEquals("0.000000", values["tr_crop_x"])
+        assertEquals("1.000000", values["tr_crop_w"])
+    }
+
+    @Test
+    fun `rotation of an older project keeps the full inscribed crop`() {
+        val values = parse(MpvShaderParams.build(AdjustmentsV1(rotationDeg = 5.0f, version = 1), video))
 
         assertEquals("1", values["tr_active"])
         assertEquals(5.0, values.getValue("tr_rotation_deg").toDouble(), 1e-9)

@@ -74,7 +74,7 @@
 0.0
 
 //!PARAM tr_crop_x
-//!DESC Crop left edge, as a fraction of the frame width.
+//!DESC Crop left edge, as a fraction of the frame width. It can be below 0 or go past 1.
 //!TYPE DYNAMIC float
 0.0
 
@@ -92,6 +92,21 @@
 //!DESC Crop height, as a fraction of the frame height.
 //!TYPE DYNAMIC float
 1.0
+
+//!PARAM tr_bg_r
+//!DESC Red of the fill color outside the rotated frame, as R' (0..1).
+//!TYPE DYNAMIC float
+0.0
+
+//!PARAM tr_bg_g
+//!DESC Green of the fill color outside the rotated frame, as G' (0..1).
+//!TYPE DYNAMIC float
+0.0
+
+//!PARAM tr_bg_b
+//!DESC Blue of the fill color outside the rotated frame, as B' (0..1).
+//!TYPE DYNAMIC float
+0.0
 
 //!PARAM tr_kr
 //!DESC Kr of the source Y'CbCr matrix. BT.709 is 0.2126.
@@ -193,12 +208,10 @@ vec4 hook() {
     vec2 src = vec2(ca * d.x + sa * d.y, -sa * d.x + ca * d.y);
     vec2 uv = src / size + 0.5;
 
-    vec3 black = codes_to_rgb(tr_full_range == 1 ? vec3(0.0, 128.0, 128.0) / 255.0
-                                                  : vec3(16.0, 128.0, 128.0) / 255.0,
-                              tr_kr, tr_kb);
+    // Outside the source frame, the export fills with the fill color (rotate c= and pad color=).
     vec4 color = HOOKED_tex(uv);
     if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))))
-        color = vec4(black, 1.0);
+        color = vec4(tr_bg_r, tr_bg_g, tr_bg_b, 1.0);
 
     // Color. Same integer math as vf_eq.c and vf_lut.c, on 8-bit code values.
     vec3 codes = clamp(floor(rgb_to_codes(color.rgb, tr_kr, tr_kb) * 255.0 + 0.5), 0.0, 255.0);

@@ -20,6 +20,7 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
     PORTUGUESE_BRAZIL("pt", "Português (Brasil)"),
     PORTUGUESE_PORTUGAL("pt-PT", "Português (Portugal)", parent = PORTUGUESE_BRAZIL),
     FRENCH("fr", "Français"),
+    GERMAN("de", "Deutsch"),
     ;
 
     val locale: Locale get() = Locale.forLanguageTag(code)
@@ -52,7 +53,8 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
          * United States, and so on) gives [SPANISH_LATIN_AMERICA]. Russian of all countries gives [RUSSIAN].
          * Portuguese of Brazil gives [PORTUGUESE_BRAZIL]. Portuguese of all other countries (Portugal, Angola,
          * Mozambique, and so on) gives [PORTUGUESE_PORTUGAL]. French of all countries (France, Belgium, Switzerland,
-         * Canada, and so on) gives [FRENCH].
+         * Canada, and so on) gives [FRENCH]. German of all countries (Germany, Austria, Switzerland, and so on) gives
+         * [GERMAN].
          */
         fun forLocale(locale: Locale): AppLanguage? = when (locale.language) {
             ENGLISH.baseCode -> ENGLISH
@@ -60,6 +62,7 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
             RUSSIAN.baseCode -> RUSSIAN
             PORTUGUESE_BRAZIL.baseCode -> if (locale.country in BRAZIL_COUNTRIES) PORTUGUESE_BRAZIL else PORTUGUESE_PORTUGAL
             FRENCH.baseCode -> FRENCH
+            GERMAN.baseCode -> GERMAN
             else -> null
         }
     }

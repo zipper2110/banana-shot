@@ -66,6 +66,14 @@ class LanguageSettingsTest {
     }
 
     @Test
+    fun `German of all countries gives German`() {
+        listOf("de", "de-DE", "de-AT", "de-CH", "de-LI", "de-LU", "de-BE").forEach { tag ->
+            assertEquals(AppLanguage.GERMAN, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        assertEquals(AppLanguage.GERMAN, settings.resolve(Locale.US, property = "de-AT").language)
+    }
+
+    @Test
     fun `a saved Latin American choice keeps its tag`() {
         settings.save(AppLanguage.SPANISH_LATIN_AMERICA)
         assertEquals("es-419", node.get(LanguageSettings.KEY, null))
@@ -74,7 +82,7 @@ class LanguageSettingsTest {
 
     @Test
     fun `a Windows language that the app does not have gives English`() {
-        assertEquals(AppLanguage.ENGLISH, LanguageSettings.systemLanguage(Locale.forLanguageTag("de-DE")))
+        assertEquals(AppLanguage.ENGLISH, LanguageSettings.systemLanguage(Locale.forLanguageTag("it-IT")))
         assertEquals(AppLanguage.ENGLISH, LanguageSettings.systemLanguage(Locale.forLanguageTag("qps-ploc")))
         assertEquals(AppLanguage.ENGLISH, LanguageSettings.systemLanguage(Locale.ROOT))
     }

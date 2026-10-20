@@ -7,6 +7,7 @@ import org.litvin.scoring.PerPlayer
 import org.litvin.ui.commons.HeightForWidth
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
+import org.litvin.ui.commons.splitToWidth
 import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.Color
@@ -124,12 +125,15 @@ internal class WrapText(
         for (paragraph in text.split('\n')) {
             var line = ""
             for (word in paragraph.split(' ').filter { it.isNotEmpty() }) {
-                val candidate = if (line.isEmpty()) word else "$line $word"
-                if (line.isNotEmpty() && UiKit.textWidth(candidate, font) > width) {
-                    lines += line
-                    line = word
-                } else {
-                    line = candidate
+                // A word that is wider than the line breaks at a character (a long German compound noun).
+                splitToWidth(word, font, width.toFloat()).forEachIndexed { index, part ->
+                    val candidate = if (line.isEmpty()) part else if (index == 0) "$line $part" else "$line$part"
+                    if (line.isNotEmpty() && UiKit.textWidth(candidate, font) > width) {
+                        lines += line
+                        line = part
+                    } else {
+                        line = candidate
+                    }
                 }
             }
             lines += line

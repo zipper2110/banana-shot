@@ -60,22 +60,33 @@ internal open class WrapText(
     private fun lines(width: Int): List<List<Piece>> {
         val lines = mutableListOf(mutableListOf<Piece>())
         var x = 0f
-        pieces.forEach { piece ->
-            if (piece.newLine) {
+        pieces.forEach { whole ->
+            if (whole.newLine) {
                 lines += mutableListOf<Piece>()
                 x = 0f
                 return@forEach
             }
-            val visible = UiKit.textWidth(piece.text.trimEnd(), piece.run.font)
-            if (x > 0f && x + visible > width) {
-                lines += mutableListOf<Piece>()
-                x = 0f
+            fitted(whole, width).forEach { piece ->
+                val visible = UiKit.textWidth(piece.text.trimEnd(), piece.run.font)
+                if (x > 0f && x + visible > width) {
+                    lines += mutableListOf<Piece>()
+                    x = 0f
+                }
+                lines.last() += piece
+                x += piece.width
             }
-            lines.last() += piece
-            x += piece.width
         }
         return lines
     }
+
+    /** The piece, or its parts when the word is wider than [width] (for example a long German compound noun). */
+    private fun fitted(piece: Piece, width: Int): List<Piece> =
+        splitToWidth(piece.text, piece.run.font, width.toFloat()).let { parts ->
+            if (parts.size == 1) listOf(piece) else parts.map { Piece(it, piece.run, UiKit.textWidth(it, piece.run.font), false) }
+        }
+
+    /** The text of each line at [width], for tests. */
+    internal fun lineTexts(width: Int): List<String> = lines(width).map { line -> line.joinToString("") { it.text }.trimEnd() }
 
     override fun heightForWidth(width: Int): Int = ceil(lines(width).size * lineHeight).toInt()
 
@@ -100,6 +111,29 @@ internal open class WrapText(
         }
     }
 }
+
+/**
+ * Splits a word that is wider than [width] into parts that fit (B-11 section 7). A part has at least one character,
+ * so a very narrow width does not loop. A space at the end of [text] stays on the last part and does not count.
+ * A word that fits, and any word when [width] is zero or less, gives one part.
+ */
+internal fun splitToWidth(text: String, font: Font, width: Float): List<String> {
+    if (width <= 0f || UiKit.textWidth(text.trimEnd(), font) <= width) return listOf(text)
+    val parts = mutableListOf<String>()
+    var start = 0
+    while (start < text.length) {
+        var end = nextCharEnd(text, start)
+        while (end < text.length && UiKit.textWidth(text.substring(start, nextCharEnd(text, end)).trimEnd(), font) <= width) {
+            end = nextCharEnd(text, end)
+        }
+        parts += text.substring(start, end)
+        start = end
+    }
+    return parts
+}
+
+/** The index after the character at [index]. A surrogate pair is one character. */
+private fun nextCharEnd(text: String, index: Int): Int = index + Character.charCount(text.codePointAt(index))
 
 /**
  * The height of [component] at [width]. It uses [HeightForWidth] when the component has it,

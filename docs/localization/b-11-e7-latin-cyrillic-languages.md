@@ -29,7 +29,7 @@ B-11 is done after E6. This epic continues with each new language.
 | E7-L-ru | Russian | E7-T1–E7-T4 | in-progress |
 | E7-L-pt | Portuguese (Brazil and Portugal) | E7-T1–E7-T4 | in-progress |
 | E7-L-fr | French | E7-T1–E7-T4, E7-L-pt | in-progress |
-| E7-L-de | German | E7-T1–E7-T4, E7-L-fr | open |
+| E7-L-de | German | E7-T1–E7-T4, E7-L-fr | in-progress |
 | E7-L-`<code>` | One task for each language (see the template) | E7-T1–E7-T4 | — |
 
 When E7-T1 selects a language, add a row `E7-L-<code>` to this table (for
@@ -86,7 +86,7 @@ example `E7-L-pt`), and copy the template below.
   language", "the plural check finds a missing and an extra category"),
   `MessagePatternTest` ("a Russian plural uses the four Russian
   categories").
-- Notes: Russian and French are done. Polish has no rule in `PluralRules`
+- Notes: Russian, French, and German are done. Polish has no rule in `PluralRules`
   yet. Add its rule and test numbers with the language.
   The CLDR rules of the selected languages are different for 0 and for
   decimals:
@@ -291,7 +291,7 @@ example `E7-L-pt`), and copy the template below.
 
 ### E7-L-de German
 
-- Status: open
+- Status: in-progress
 - Plan: "Decisions" ("Form of address"), 7, 13, and the process of E4
   (`CONTRIBUTING.md`)
 - Value: the users in Germany, Austria, and Switzerland can use the app and
@@ -310,7 +310,25 @@ example `E7-L-pt`), and copy the template below.
   - A test wraps a German compound noun that is wider than the line. No
     line is wider than the width.
   - A test gives German for `de-DE`, `de-AT`, and `de-CH`.
-- Tests: —
+- Tests: `MessageCatalogTest` ("the German catalog has texts in German",
+  "German texts use the German quotes", and the checks of all languages),
+  `LanguageSettingsTest` ("German of all countries gives German"),
+  `MessagePatternTest` ("a German plural uses one only for 1"),
+  `EffectiveExpiryTest` ("the moment shows in German with the day mark"),
+  `WrapTextTest`, `ScoreboardFontCoverageTest`.
+- Notes:
+  - Done on 2026-10-20: the machine draft of `messages_de.properties` and
+    `help_de.properties`, the glossary, the detection, the plural rule
+    (as English), and the expiry date format ("29. März 2027, 16:00"). The
+    language list of E2-T1 already has `de`.
+  - `WrapText` in `ui.commons` (the help and most texts) and `WrapText` of
+    the Stats tab break a word that is wider than the line. `WrapText` of
+    the Export tab did this already.
+  - The video badge "ENTSCHEIDUNGSPUNKT" has 18 letters. The catalog
+    comment allows about 16.
+  - Open: the review by a native speaker, the sidebar width in the app,
+    the Windows smoke test in German, and the open parts of E7-T3 and
+    E7-T4.
 
 ### Template: E7-L-`<code>` `<Language>`
 

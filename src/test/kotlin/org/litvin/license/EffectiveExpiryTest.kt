@@ -127,6 +127,16 @@ class EffectiveExpiryTest {
     }
 
     @Test
+    fun `the moment shows in German with the day mark`() {
+        I18n.install(Messages.of(AppLanguage.GERMAN))
+        try {
+            assertEquals("29. März 2027, 16:00", ExpiryMomentFormat.format(Instant.parse("2027-03-30T00:00:00Z"), ZoneOffset.ofHours(-8)))
+        } finally {
+            I18n.install(Messages.english())
+        }
+    }
+
+    @Test
     fun `the moment shows in Russian with the genitive month and the year mark`() {
         I18n.install(Messages.of(AppLanguage.RUSSIAN))
         try {

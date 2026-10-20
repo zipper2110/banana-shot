@@ -536,10 +536,125 @@ Style:
 
 ### German (`de`)
 
-- One variant for all countries, with "ß".
-- Sentences use "du", in lower case: "Wähle", "Markiere".
-- Buttons and menu items use the infinitive: "Exportieren", "Speichern".
-- Quotes are „…".
+One variant for all countries (files `*_de.properties`), with "ß". Windows
+`de-DE`, `de-AT`, `de-CH`, and all other German locales give it.
+
+Style:
+
+- Sentences that tell the user what to do use the "du" imperative: "Wähle",
+  "Markiere". "du" and "dein" are in lower case.
+- Buttons and menu items use the infinitive: "Exportieren", "Thumbnail
+  speichern".
+- Quotes are „…“ (U+201E and U+201C). `MessageCatalogTest` ("German texts
+  use the German quotes") finds other quotes and the straight apostrophe.
+- A name of a tab or a button in a sentence has no quotes, as in English:
+  "Wähle Nur Punkte", "im Tab Punkte".
+- A score uses a colon: "40:40", "Tiebreak bei 6:6".
+- A percentage and a unit have a space: "{percent} %", "12 s", "2 MB".
+- The number sign is "Nr.": "Punkt Nr. {number} bearbeiten".
+- Plurals have `one` and `other`. `one` is only for 1 without decimals
+  ("0 Punkte", "1,5 Sekunden"). The dative plural has "-n": "führt mit
+  3 Punkten".
+- Long compound nouns are normal. The UI breaks a word that is wider than
+  the line (plan section 7), but prefer a short word in a narrow control.
+
+#### Sport terms
+
+| English | German | Note |
+|---|---|---|
+| point | Punkt | Plural "Punkte" |
+| game | Spiel | Plural "Spiele". The badge "SPIEL" |
+| set | Satz | Plural "Sätze" |
+| tiebreak | Tiebreak | Also "Match-Tiebreak" and "Super-Tiebreak" |
+| deuce | Einstand | The deuce rule: "Einstandsregel" |
+| advantage | Vorteil | "No-ad" = "Ohne Vorteil" |
+| golden point | Golden Point | German padel uses the English name |
+| star point | Star Point | |
+| deciding point | Entscheidungspunkt | The video badge "ENTSCHEIDUNGSPUNKT" (18 letters) |
+| deciding set | Entscheidungssatz | |
+| serve, server | Aufschlag, Aufschläger | "{name} schlägt auf" |
+| return | Return | "Return games won" = "Returnspiele gewonnen" |
+| break point, set point, match point | Breakball, Satzball, Matchball | "Break points won" = "Breakbälle genutzt", "Break points saved" = "Breakbälle abgewehrt" |
+| player | Spieler | Default name "Spieler 1" |
+| team (padel) | Team | Default name "Team 1" |
+| singles, doubles | Einzel, Doppel | Thumbnail match type |
+| match | Match | Neuter: "das Match", "des Matchs" |
+| padel, tennis | Padel, Tennis | |
+| Americano | Americano | |
+| pro set | Pro-Satz | |
+| best of 3 sets | Best of 3 Sätze | |
+| momentum | Momentum | |
+| no point (outcome) | Kein Punkt | |
+| scored (a point with a winner) | gewertet | "Score each point" = "Punkte werten" |
+
+#### App terms
+
+| English | German | Note |
+|---|---|---|
+| video | Video | Neuter |
+| project | Projekt | |
+| export (noun, verb) | Export, exportieren | |
+| scoreboard | Spielstandsanzeige | |
+| score (the numbers) | Spielstand | "Final score" = "Endstand" |
+| Override score | Spielstand korrigieren | |
+| Scoring settings | Spielstand-Einstellungen | |
+| Scoreboard style | Stil der Spielstandsanzeige | |
+| favorite | Favorit | "Only favorites" = "Nur Favoriten" |
+| comment | Kommentar | |
+| thumbnail | Thumbnail | The YouTube word in German |
+| statistics card | Statistikkarte | |
+| set summary | Satzübersicht | |
+| change point | Änderungsmarke | Not "Punkt", because "Punkt" is a tennis point |
+| Transform | Ausschnitt | The tab "Colors & Transform" = "Farben & Ausschnitt" |
+| crop rectangle | Zuschnitt-Rechteck | |
+| playhead | Abspielposition | |
+| seek bar | Fortschrittsleiste | |
+| timeline | Zeitleiste | |
+| frame | Bild, Einzelbild | "Frame step" = "Einzelbild" |
+| frame rate | Bildrate | |
+| encoder | Encoder | |
+| bitrate | Bitrate | |
+| queue | Warteschlange | |
+| log files | Logdateien | |
+| feedback (sidebar) | Feedback | |
+| Settings | Einstellungen | |
+| More | Mehr | |
+| Help | Hilfe | |
+| email | E-Mail | |
+| theme | Design | |
+| Shift, Enter, Space, Delete, Esc | Umschalt, Enter, Leertaste, Entf, Esc | The names on German keyboards. "Shift+R" = "Umschalt+R" |
+
+#### Short forms
+
+| English | German | Control |
+|---|---|---|
+| Colors & Transform (sidebar) | Farben & / Ausschnitt | Sidebar button on two lines |
+| Stats (sidebar) | Statistik | Sidebar button |
+| {name} scored | Punkt: {name} | Outcome buttons of the Points tab |
+| Add here | Hier setzen | Change points card |
+
+#### Tab names
+
+| English | German |
+|---|---|
+| Projects | Projekte |
+| Points | Punkte |
+| Stats (sidebar), Statistics | Statistik |
+| Colors & Transform | Farben & Ausschnitt |
+| Thumbnail | Thumbnail |
+| Export | Export |
+
+#### Open questions for the reviewer
+
+- "Spielstandsanzeige" for the scoreboard. Other options: "Scoreboard",
+  "Anzeigetafel".
+- "Entscheidungspunkt" for the deciding point, also as the video badge.
+- "Thumbnail" or "Miniaturbild".
+- "Ausschnitt" for Transform, and "Änderungsmarke" for a change point.
+- "Breakbälle genutzt" (break points won) and "Breakbälle abgewehrt" (break
+  points saved).
+- The timeline track "KOMMENTARE" is longer than "COMMENTS". Check that it
+  fits.
 
 ### Japanese (`ja`)
 

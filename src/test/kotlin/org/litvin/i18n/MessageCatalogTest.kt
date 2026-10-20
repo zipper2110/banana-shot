@@ -222,6 +222,29 @@ class MessageCatalogTest {
         assertTrue(french.text("help.points.summary").startsWith("Marquez"))
     }
 
+    @Test
+    fun `the German catalog has texts in German`() {
+        val german = Messages.of(AppLanguage.GERMAN)
+        assertEquals("Exporte", german.text("export.table.title"))
+        assertEquals("0 Punkte", german.text("export.points", mapOf("count" to 0)))
+        assertEquals("1 Punkt", german.text("export.points", mapOf("count" to 1)))
+        assertEquals("Team 1", german.text("sport.padel.side", mapOf("number" to 1)))
+        assertEquals("Projekt „X“ löschen?", german.text("projects.delete.question", mapOf("project" to "X")))
+        assertTrue(german.text("help.points.summary").startsWith("Markiere"))
+    }
+
+    /**
+     * B-11 E7-L-de: German uses „…“ quotes, not the English or the French quotes. A straight apostrophe before a
+     * placeholder starts an ICU quote.
+     */
+    @Test
+    fun `German texts use the German quotes`() {
+        val failures = MessageCatalog.loadWithParents(AppLanguage.GERMAN).toSortedMap().mapNotNull { (key, text) ->
+            GERMAN_QUOTES.find(text)?.let { "$key: ${it.value}" }
+        }
+        assertEquals(emptyList<String>(), failures)
+    }
+
     /**
      * B-11 E7-L-fr: French has a no-break space before ":", ";", "?", "!", and "%", and inside « … ». A normal space
      * can break the line before the mark. A straight apostrophe before a placeholder starts an ICU quote, so French uses
@@ -287,6 +310,8 @@ class MessageCatalogTest {
 
         /** A normal space before a high mark or after «, no space before ";", "?", "!", or », or a straight apostrophe. */
         val FRENCH_SPACING = Regex(" [:;?!%»]|« |[^\\s\\u00A0][;?!»]|«[^\\u00A0]|'")
+        /** A quote that German does not use: straight, English opening, French, or a straight apostrophe. */
+        val GERMAN_QUOTES = Regex("[\"”«»']")
         val BRAZIL_WORDS = Regex(
             "(?<![\\p{L}])(tela|arquivos?|placar(es)?|salvar|baixar|excluir|usuários?|configurações|pressione|celular|esportes?|tênis|abas?|games?|saque|você)(?![\\p{L}])",
             RegexOption.IGNORE_CASE,

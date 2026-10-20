@@ -82,15 +82,15 @@ class Messages(
 }
 
 /**
- * The plural categories of the CLDR data for the shipped languages (B-11 E7-T2). English, Spanish, Portuguese, and
- * French have the categories `one` and `other`. Russian has `one`, `few`, `many`, and `other`. A later language adds
+ * The plural categories of the CLDR data for the shipped languages (B-11 E7-T2). English, Spanish, Portuguese,
+ * French, and German have the categories `one` and `other`. Russian has `one`, `few`, `many`, and `other`. A later language adds
  * its rule here. The CLDR case `many` of Spanish, Portuguese, and French is only for compact numbers ("1 M"), and the
  * app has none.
  *
  * The rules cover the numbers that the app shows: integers and numbers with decimals. A number with decimals uses
  * the CLDR category of a visible fraction: `other` in English and Russian ("1.5 seconds", "1,5 секунды").
  * Portuguese of Brazil and French use `one` for 0, 1, and all numbers between them and 2 ("0 ponto", "0 point",
- * "1,5 seconde"). Portuguese of Portugal uses `one` only for 1, as English. Thus the rule depends on the variant, not
+ * "1,5 seconde"). Portuguese of Portugal and German use `one` only for 1, as English ("0 Punkte", "1,5 Sekunden"). Thus the rule depends on the variant, not
  * only on the language.
  */
 object PluralRules {
@@ -109,7 +109,7 @@ object PluralRules {
     }
 
     /** The languages with only `one` and `other`. */
-    private val ONE_OTHER = setOf("en", "es", "pt", "fr")
+    private val ONE_OTHER = setOf("en", "es", "pt", "fr", "de")
 
     /** CLDR: one is i = 0 or 1. Thus `one` is for 0, 1, and the numbers with decimals below 2. */
     private val ZERO_AND_ONE = setOf(AppLanguage.PORTUGUESE_BRAZIL, AppLanguage.FRENCH)

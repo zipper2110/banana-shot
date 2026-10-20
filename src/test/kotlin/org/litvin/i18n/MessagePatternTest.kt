@@ -64,6 +64,17 @@ class MessagePatternTest {
         assertEquals(MessagePattern.OTHER, PluralRules.category(AppLanguage.FRENCH, 2.5))
     }
 
+    /** B-11 E7-T2: German uses `one` only for 1 without decimals, as English ("0 Punkte", "1,5 Sekunden"). */
+    @Test
+    fun `a German plural uses one only for 1`() {
+        val pattern = "{count, plural, one {# Punkt} other {# Punkte}}"
+        assertEquals("0 Punkte", format(pattern, "count" to 0, language = AppLanguage.GERMAN))
+        assertEquals("1 Punkt", format(pattern, "count" to 1, language = AppLanguage.GERMAN))
+        assertEquals("2 Punkte", format(pattern, "count" to 2, language = AppLanguage.GERMAN))
+        assertEquals(MessagePattern.OTHER, PluralRules.category(AppLanguage.GERMAN, 1.5))
+        assertEquals(setOf(PluralRules.ONE, MessagePattern.OTHER), PluralRules.categories(AppLanguage.GERMAN))
+    }
+
     /** B-11 E7-T2: the CLDR rule of Russian, also for 0, the teens, and a number with decimals. */
     @Test
     fun `a Russian plural uses the four Russian categories`() {

@@ -38,7 +38,10 @@ proposal or an accepted decision. The column "Status" tells which.
 | Subject | Decision | Status |
 |---|---|---|
 | First language | Spanish (Spain and Latin America, also padel). See `docs/marketing/strategy.md` and B-45 P-6 | proposal |
-| Next languages | The languages of real users. Get them from a new analytics attribute (see "10. Analytics") | proposal |
+| Next languages | The author selected the languages after Russian on 2026-10-20, before the data of E2 (E7-T1, E8-T1). The order: Portuguese, French, and German in E7, then Japanese and Chinese in E8. The Latin languages come first because they use the shared tasks of E7 and need no new script. E8 first does the shared CJK tasks (E8-T2 to E8-T5). Later languages come from the `os_language` data (see "10. Analytics") | accepted 2026-10-20 |
+| Portuguese variants | Two app languages: "Português (Brasil)" (`pt`) and "Português (Portugal)" (`pt-PT`). The `pt` catalog is Brazilian Portuguese. The `pt-PT` catalog files have only the texts that are different (for example "ecrã", "ficheiro", "transferir", "guardar", and "a exportar" for "exportando"). Windows `pt-BR` and `pt` give Brazil. `pt-PT` and all other Portuguese locales (`pt-AO`, `pt-MZ`, and others) give Portugal. Both variants use the imperative without a pronoun ("Selecione"). The analytics value is `pt` for both, as `es` for both Spanish variants. The tasks are in E7 (`E7-L-pt`) | accepted 2026-10-20 |
+| Chinese scripts | Two app languages: "简体中文" (`zh-Hans`) and "繁體中文" (`zh-Hant`). Each has a full catalog, not a parent and a child, because many terms are different (for example "视频" and "影片", "项目" and "專案", "文件" and "檔案"). Simplified Chinese comes first. The Traditional draft starts as a conversion of the Simplified texts with the Taiwan terms, and then gets its own review. `zh-CN`, `zh-SG`, `zh-Hans`, and `zh` give Simplified Chinese. `zh-TW`, `zh-HK`, `zh-MO`, and `zh-Hant` give Traditional Chinese. The analytics value is `zh` for both. The tasks are in E8 (`E8-L-zh-Hans`, `E8-L-zh-Hant`) | accepted 2026-10-20 |
+| Form of address | The informal form where the users of the language expect it from a sports app: German "du", Simplified and Traditional Chinese "你". French uses "vous". Portuguese uses the imperative without a pronoun ("Selecione"). Japanese uses the polite です/ます form in sentences, and short noun forms on buttons. The details are in `glossary.md` | accepted 2026-10-20 |
 | Video language | A separate setting of each export. The default is the app language (see "6. Texts in the exported video") | proposal |
 | Format locale | Numbers use the Windows format locale. Dates use the Windows format locale with month names only when its language is the app language (see "5. Formats") | proposal |
 | Digits | The UI and the video always show the digits 0–9, also when the Windows format locale has other digits (for example `ar-EG`). All planned languages use these digits, and the time codes must use them | accepted 2026-10-10 |
@@ -70,6 +73,7 @@ proposal or an accepted decision. The column "Status" tells which.
 | Analytics language before E2 | The analytics worker accepts only `en` until E2 widens the language list. Until then the app sends `en` also when the app language is Spanish | accepted 2026-10-19 |
 | Feedback answer languages | The author answers feedback in all languages, with machine translation. The feedback form tells the user that they can write in their language (E2-T6) | accepted 2026-10-19 |
 | Analytics schema for E2 | Schema version 4 with notice version 3. Version 4 lets the essential level send `language` and `os_language`. The Worker keeps one notice version for each schema version, so a new notice version needs a new schema version. The attributes stay in one JSON column, so the database does not change | accepted 2026-10-19 |
+| Russian | The author selected Russian as the second language on 2026-10-20, before the data of E2 (E7-T1). One variant for all countries. The "вы" imperative, «…» quotes, "розыгрыш" for a marked point and "очко" for a score point. The terms are in `glossary.md`. The tasks are in E7 (`E7-L-ru`) | accepted 2026-10-20 |
 
 ## Goal
 
@@ -395,10 +399,14 @@ separate setting.
   language. The list has the same languages as the app language setting.
   Each shipped language is complete, also its video texts (see
   "Decisions", "Incomplete language").
-- The project keeps the last choice in the export settings. Thus a new
-  export of the same project makes the same video. The project saves the
-  video language only when the user selects one. Without a selection, the
-  project follows the app language.
+- The project keeps the last choice in the export settings (the field
+  `videoLanguage` of the project manifest). Thus a new export of the same
+  project makes the same video. The project saves the video language only
+  when the user selects one. Without a selection, the project follows the
+  app language.
+- The code makes the video texts in a block with the video language
+  (`I18n.inVideo`). In the block, `tr`, the upper case, and the number
+  formats use the video language (E5).
 - A queued render job keeps the language that was selected when the user
   queued it (`SavedRenderQueue`). A language change after the queue does not
   change the job. Do this already in E4, when the video uses the app

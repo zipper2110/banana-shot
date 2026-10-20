@@ -288,7 +288,8 @@ object SwingApplicationFactory {
 
             val sidebar = JPanel().apply {
                 UiStyles.styleSidebarContainer(this)
-                preferredSize = Dimension(81, 0)
+                val labels = listOf("nav.projects", "nav.points", "nav.stats", "nav.adjust", "nav.thumbnail", "nav.export", "nav.help", "nav.feedback", "nav.more")
+                preferredSize = Dimension(UiStyles.sidebarWidth(labels.map { tr(it) }), 0)
                 foreground = Palette.FG
             }
 

@@ -1,5 +1,8 @@
 package org.litvin.license
 
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
+import org.litvin.i18n.Messages
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -101,6 +104,36 @@ class EffectiveExpiryTest {
         assertEquals("29 March 2027, 16:00", ExpiryMomentFormat.format(moment, ZoneOffset.ofHours(-8)))
         assertEquals("30 March 2027, 02:00", ExpiryMomentFormat.format(moment, ZoneId.of("Europe/Berlin")))
         assertEquals("30 March 2027, 00:00", ExpiryMomentFormat.format(moment, ZoneOffset.UTC))
+    }
+
+    @Test
+    fun `the moment shows in Portuguese with the month in lower case`() {
+        I18n.install(Messages.of(AppLanguage.PORTUGUESE_PORTUGAL))
+        try {
+            assertEquals("29 de março de 2027, 16:00", ExpiryMomentFormat.format(Instant.parse("2027-03-30T00:00:00Z"), ZoneOffset.ofHours(-8)))
+        } finally {
+            I18n.install(Messages.english())
+        }
+    }
+
+    @Test
+    fun `the moment shows in French with the month in lower case`() {
+        I18n.install(Messages.of(AppLanguage.FRENCH))
+        try {
+            assertEquals("29 mars 2027 à 16:00", ExpiryMomentFormat.format(Instant.parse("2027-03-30T00:00:00Z"), ZoneOffset.ofHours(-8)))
+        } finally {
+            I18n.install(Messages.english())
+        }
+    }
+
+    @Test
+    fun `the moment shows in Russian with the genitive month and the year mark`() {
+        I18n.install(Messages.of(AppLanguage.RUSSIAN))
+        try {
+            assertEquals("29 марта 2027 г., 16:00", ExpiryMomentFormat.format(Instant.parse("2027-03-30T00:00:00Z"), ZoneOffset.ofHours(-8)))
+        } finally {
+            I18n.install(Messages.english())
+        }
     }
 
     @Test

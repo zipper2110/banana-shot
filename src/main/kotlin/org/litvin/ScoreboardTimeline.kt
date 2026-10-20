@@ -146,9 +146,9 @@ object ScoreboardTimelineBuilder {
         }
 
         val out = ArrayList<OverlaySpan>(ordered.size)
-        // A blank name shows the default side name of the sport, for example "Team 1", as the Points tab does.
-        val n1 = player1Name.ifBlank { sport.defaultSideName(1) }
-        val n2 = player2Name.ifBlank { sport.defaultSideName(2) }
+        // A blank name or a default name shows the default side name of the sport in the video language, for example "Team 1".
+        val n1 = sport.videoSideName(player1Name, 1)
+        val n2 = sport.videoSideName(player2Name, 2)
         val badge = sport.decidingPointBadge(rules.deuce)
         for (i in ordered.indices) {
             if (!shouldEmit[i]) continue

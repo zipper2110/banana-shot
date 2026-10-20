@@ -29,6 +29,9 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.ScrollPaneConstants
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
+import org.litvin.projects.ProjectVideoLanguage
 import org.litvin.i18n.tr
 
 /**
@@ -59,6 +62,9 @@ class SwingStatsPanel(
     private var frameRequest: VideoFrameRequest? = null
     private var report: StatsReport? = null
     private var settings = StatsSettingsV1()
+
+    /** The language of the texts in the video. The card preview shows it (B-11 E5-T4). */
+    private var videoLanguage: AppLanguage = I18n.language
 
     /** 0 is the full match. 1 and more are the sets. */
     private var scope = 0
@@ -100,6 +106,7 @@ class SwingStatsPanel(
     /** Reads the project again and shows the latest statistics. */
     fun onActivated() {
         val dir = projectDir ?: return showEmpty(StatsEmptyView.Kind.NO_PROJECT, tr("stats.empty.noProject"), tr("stats.empty.noProject.text"))
+        videoLanguage = ProjectVideoLanguage.read(manifestPath)
         val loaded = try {
             settings = StatsIO.readForProjectDir(dir)
             StatsReport.load(dir)
@@ -256,8 +263,10 @@ class SwingStatsPanel(
 
     private fun updatePreviewPages(report: StatsReport) {
         preview.sport = report.score.sport
-        val content = StatsCard.content(report, settings, scope)
-        preview.pages = StatsCard.pages(content)
+        val (content, pages) = I18n.inVideo(videoLanguage) {
+            StatsCard.content(report, settings, scope).let { it to StatsCard.pages(it) }
+        }
+        preview.pages = pages
         val rowCount = content.rows.size
         cardColumn.showSummary(
             if (content.momentum != null) tr("stats.card.summary.momentum", "title" to content.title, "count" to rowCount)

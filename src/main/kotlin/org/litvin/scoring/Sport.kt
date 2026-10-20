@@ -45,6 +45,15 @@ enum class Sport {
         PADEL -> I18n.inAllLanguages("sport.padel.side", "number" to side)
     }
 
+    /**
+     * The name of side [side] in the video: [name], or [defaultSideName] when [name] is blank or a default name of an
+     * app language. Thus a project from a Spanish start shows "Player 1" in an English video (B-11 E5-T3).
+     */
+    fun videoSideName(name: String, side: Int): String {
+        val trimmed = name.trim()
+        return if (trimmed.isEmpty() || trimmed in defaultSideNames(side)) defaultSideName(side) else name
+    }
+
     /** The deuce rules that the score settings offer. A [current] rule that the sport does not use stays in the list. */
     fun deuceRules(current: DeuceRule): List<DeuceRule> {
         val rules = when (this) {

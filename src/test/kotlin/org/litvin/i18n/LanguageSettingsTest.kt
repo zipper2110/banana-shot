@@ -39,6 +39,33 @@ class LanguageSettingsTest {
     }
 
     @Test
+    fun `Russian of all countries gives Russian`() {
+        listOf("ru", "ru-RU", "ru-BY", "ru-KZ", "ru-KG", "ru-MD", "ru-UA").forEach { tag ->
+            assertEquals(AppLanguage.RUSSIAN, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        assertEquals(AppLanguage.RUSSIAN, settings.resolve(Locale.US, property = "ru-RU").language)
+    }
+
+    @Test
+    fun `Portuguese of Brazil gives Brazil and all other Portuguese gives Portugal`() {
+        listOf("pt-BR", "pt").forEach { tag ->
+            assertEquals(AppLanguage.PORTUGUESE_BRAZIL, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        listOf("pt-PT", "pt-AO", "pt-MZ", "pt-CV", "pt-LU").forEach { tag ->
+            assertEquals(AppLanguage.PORTUGUESE_PORTUGAL, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        assertEquals(AppLanguage.PORTUGUESE_PORTUGAL, settings.resolve(Locale.US, property = "pt_PT").language)
+    }
+
+    @Test
+    fun `French of all countries gives French`() {
+        listOf("fr", "fr-FR", "fr-BE", "fr-CH", "fr-CA", "fr-LU", "fr-SN").forEach { tag ->
+            assertEquals(AppLanguage.FRENCH, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        assertEquals(AppLanguage.FRENCH, settings.resolve(Locale.US, property = "fr-CA").language)
+    }
+
+    @Test
     fun `a saved Latin American choice keeps its tag`() {
         settings.save(AppLanguage.SPANISH_LATIN_AMERICA)
         assertEquals("es-419", node.get(LanguageSettings.KEY, null))
@@ -69,10 +96,10 @@ class LanguageSettingsTest {
 
     @Test
     fun `an unknown saved value works as system and stays saved`() {
-        node.put(LanguageSettings.KEY, "fr")
+        node.put(LanguageSettings.KEY, "eo")
         assertNull(settings.choice)
         assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, settings.resolve(Locale.forLanguageTag("es-MX"), property = null).language)
-        assertEquals("fr", node.get(LanguageSettings.KEY, null))
+        assertEquals("eo", node.get(LanguageSettings.KEY, null))
     }
 
     @Test

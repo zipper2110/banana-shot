@@ -377,6 +377,7 @@ class SavedRenderQueueTest {
                 brightness = 1.1f, contrast = 1.2f, saturation = 1.3f, shadows = 0.1f, highlights = -0.1f,
                 whiteBalance = WhiteBalanceV1(0.2f), zoom = 1.5f, panX = 0.3f, panY = -0.3f, rotationDeg = 2f,
             ),
+            videoLanguage = "es-419",
             status = RenderStatus.RUNNING,
             progress = 0.4,
             etaSeconds = 30,

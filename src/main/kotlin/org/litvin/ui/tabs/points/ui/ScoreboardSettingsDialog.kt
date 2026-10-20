@@ -60,6 +60,8 @@ import javax.swing.text.AbstractDocument
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
 import org.litvin.i18n.tr
 
 /**
@@ -77,6 +79,7 @@ class ScoreboardSettingsDialog private constructor(
     loadFrame: ((BufferedImage?) -> Unit) -> Unit,
     private val takeCreditRequest: () -> Boolean,
     private val onPreview: (ScoreboardSettingsV1) -> Unit,
+    private val videoLanguage: AppLanguage,
 ) : JDialog(owner, tr("points.scoreboardStyle"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object {
@@ -99,6 +102,7 @@ class ScoreboardSettingsDialog private constructor(
          * Until the frame is there, the previews show a drawn court.
          * [takeCreditRequest] returns true when the dialog must ask the user to keep the app credit line,
          * and then marks the request as done. The dialog asks when the user turns the line off.
+         * The previews show the texts in [videoLanguage] (B-11 E5-T4).
          */
         fun show(
             parent: Component,
@@ -106,11 +110,12 @@ class ScoreboardSettingsDialog private constructor(
             sample: ScoreboardDisplay,
             loadFrame: ((BufferedImage?) -> Unit) -> Unit = {},
             takeCreditRequest: () -> Boolean = { false },
+            videoLanguage: AppLanguage = I18n.language,
             onPreview: (ScoreboardSettingsV1) -> Unit = {},
         ): ScoreboardSettingsV1? {
             val previewSample = if (sample.server == 0) sample.copy(server = 1) else sample
             val dialog = ScoreboardSettingsDialog(
-                SwingUtilities.getWindowAncestor(parent), initial.normalized(), previewSample, loadFrame, takeCreditRequest, onPreview,
+                SwingUtilities.getWindowAncestor(parent), initial.normalized(), previewSample, loadFrame, takeCreditRequest, onPreview, videoLanguage,
             )
             DialogKit.centerOnScreen(dialog)
             dialog.isVisible = true
@@ -412,7 +417,7 @@ class ScoreboardSettingsDialog private constructor(
             styleCards.forEach { (style, card) ->
                 // A style card shows that style with the other current settings.
                 val cardSettings = settings.copy(style = style, backgroundOpacityPercent = null, sizePercent = 100)
-                val scene = ScoreboardLayouts.scene(sample, cardSettings)
+                val scene = I18n.inVideo(videoLanguage) { ScoreboardLayouts.scene(sample, cardSettings) }
                 // Wide or tall styles get a smaller thumbnail, so that every card has the same size.
                 val scale = minOf(THUMBNAIL_SCALE, THUMBNAIL_MAX_WIDTH / scene.width, THUMBNAIL_MAX_HEIGHT / scene.height)
                 card.thumbnail = ScoreboardSceneImage.render(scene, scale)
@@ -610,7 +615,7 @@ class ScoreboardSettingsDialog private constructor(
                 }
 
                 val current = settings.normalized()
-                val scene = ScoreboardLayouts.scene(sample, current)
+                val scene = I18n.inVideo(videoLanguage) { ScoreboardLayouts.scene(sample, current) }
                 val placement = ScoreboardAss.place(scene, current, 0.0, 0.0, w, h)
                 ScoreboardSceneImage.draw(g2, scene, placement.x, placement.y, placement.scale)
             } finally {

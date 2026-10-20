@@ -77,7 +77,7 @@ internal class StepHeader(number: Int, title: String, private val trailing: JCom
     }
 
     override fun heightForWidth(width: Int): Int =
-        max(MIN_HEIGHT, max(titleText.heightForWidth(titleWidth(width)), trailing?.heightAt(TRAILING_WIDTH) ?: 0))
+        max(MIN_HEIGHT, max(titleText.heightForWidth(titleWidth(width)), trailing?.heightAt(trailingWidth) ?: 0))
 
     override fun getPreferredSize() = Dimension(300, heightForWidth(if (width > 0) width else 380))
 
@@ -86,12 +86,15 @@ internal class StepHeader(number: Int, title: String, private val trailing: JCom
         val titleHeight = titleText.heightForWidth(titleWidth(width))
         titleText.setBounds(BADGE + GAP, (height - titleHeight) / 2, titleWidth(width), titleHeight)
         trailing?.let {
-            val h = it.heightAt(TRAILING_WIDTH)
-            it.setBounds(width - TRAILING_WIDTH, (height - h) / 2, TRAILING_WIDTH, h)
+            val h = it.heightAt(trailingWidth)
+            it.setBounds(width - trailingWidth, (height - h) / 2, trailingWidth, h)
         }
     }
 
-    private fun titleWidth(width: Int) = (width - BADGE - GAP - (if (trailing != null) TRAILING_WIDTH + GAP else 0)).coerceAtLeast(0)
+    private fun titleWidth(width: Int) = (width - BADGE - GAP - (if (trailing != null) trailingWidth + GAP else 0)).coerceAtLeast(0)
+
+    /** The width of [trailing]: [TRAILING_WIDTH], or more when a translated text needs it (B-11 E3-T22). */
+    private val trailingWidth: Int get() = max(TRAILING_WIDTH, trailing?.preferredSize?.width ?: 0)
 
     private companion object {
         const val BADGE = 22
@@ -444,8 +447,13 @@ internal class SegmentedControl : JPanel(null), HeightForWidth {
         return INSET * 2 + (segments.maxOfOrNull { it.heightForWidth(w) } ?: 0)
     }
 
+    /**
+     * All segments have the same width, so the natural width gives each segment the width of the widest one. Thus a
+     * long title next to a short one does not wrap (Russian "Просто" and "Расширенно").
+     */
     override fun getPreferredSize(): Dimension {
-        val natural = segments.sumOf { it.preferredSize.width } + GAP * (segments.size - 1).coerceAtLeast(0) + INSET * 2
+        val widest = segments.maxOfOrNull { it.preferredSize.width } ?: 0
+        val natural = widest * segments.size + GAP * (segments.size - 1).coerceAtLeast(0) + INSET * 2
         return Dimension(natural, heightForWidth(if (width > 0) width else natural))
     }
 

@@ -43,7 +43,7 @@ object ScoreboardLayouts {
         val normalized = settings.normalized()
         val defaults = defaults(normalized.style)
         val look = Look(
-            title = normalized.title.takeIf { normalized.showTitle && it.isNotBlank() },
+            title = normalized.videoTitle().takeIf { normalized.showTitle && it.isNotBlank() },
             accentRgb = ScoreboardComponent.parseHexRgbOrDefault(normalized.accentColorHex, defaults.accentRgb),
             opacity = (normalized.backgroundOpacityPercent ?: defaults.backgroundOpacityPercent) / 100.0,
             credit = ScoreboardSettingsV1.APP_CREDIT.takeIf { normalized.showAppCredit },

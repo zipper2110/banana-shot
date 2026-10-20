@@ -63,8 +63,8 @@ object StatsCard {
         }
         return StatsCardContent(
             names = PerPlayer(
-                score.player1Name.trim().ifEmpty { score.sport.defaultSideName(1) },
-                score.player2Name.trim().ifEmpty { score.sport.defaultSideName(2) },
+                score.sport.videoSideName(score.player1Name, 1).trim(),
+                score.sport.videoSideName(score.player2Name, 2).trim(),
             ),
             colors = colors,
             title = if (scope == 0) tr("stats.card.match") else tr("stats.card.set", "number" to scope),

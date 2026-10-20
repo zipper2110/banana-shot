@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.tr
 
 /**
@@ -63,6 +64,8 @@ data class RenderJob(
     val setSummaries: List<org.litvin.stats.SetSummaryCard> = emptyList(),
     // The color, crop and rotate adjustments when the user queued the export. A later change or project switch does not change them.
     val adjustments: org.litvin.adjustments.AdjustmentsV1 = org.litvin.adjustments.AdjustmentsV1(),
+    // The language code of the video texts when the user queued the export (B-11 E4-T9). See [videoTextLanguage].
+    val videoLanguage: String? = null,
     // Runtime fields
     var status: RenderStatus = RenderStatus.QUEUED,
     var progress: Double = 0.0,          // 0.0 .. 1.0
@@ -74,6 +77,13 @@ data class RenderJob(
     val createdAtEpochMs: Long = System.currentTimeMillis(),
     var updatedAtEpochMs: Long = System.currentTimeMillis(),
 )
+
+/**
+ * The language of the video texts of the job. A job from an older build has no language and uses English, because the
+ * older build had only English. A language that this build does not have, or a broken value, also gives English. The
+ * saved queue keeps the value (plan, "Decisions", "Unknown language value").
+ */
+val RenderJob.videoTextLanguage: AppLanguage get() = AppLanguage.ofCode(videoLanguage) ?: AppLanguage.SOURCE
 
 /** Simple snapshot for observers */
 data class ActiveQueueSnapshot(

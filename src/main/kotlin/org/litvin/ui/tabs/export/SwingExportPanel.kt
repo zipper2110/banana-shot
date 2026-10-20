@@ -20,6 +20,8 @@ import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.projects.ManifestIO
+import org.litvin.projects.ProjectVideoLanguage
+import org.litvin.i18n.AppLanguage
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
@@ -103,6 +105,7 @@ class SwingExportPanel(
         updateCommentsDefault()
         updateStatsCardDefault()
         updateSetSummariesDefault()
+        updateVideoLanguage()
     }
     // Project context (manifest path) — optional; user can still pick output file.
     private var manifestPath: String? = null
@@ -134,6 +137,7 @@ class SwingExportPanel(
     private val setSummariesCheck = IncludeTile("export-set-summaries", tr("export.include.setSummaries")).apply {
         toolTipText = tr("export.include.setSummaries.tooltip")
     }
+    private val videoLanguageRow = VideoLanguageRow(::onVideoLanguageSelected)
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
     private val initButton = StartExportButton(START_EXPORT).apply {
         name = "export-initialize"
@@ -166,6 +170,10 @@ class SwingExportPanel(
             add(StepHeader(2, tr("export.step.include")))
             add(VGap(10))
             add(checks)
+            if (videoLanguageRow.isVisible) {
+                add(VGap(12))
+                add(videoLanguageRow)
+            }
             add(VGap(22))
             add(StepHeader(3, tr("export.step.quality"), qualityPanel.modeControl))
             add(VGap(10))
@@ -308,6 +316,23 @@ class SwingExportPanel(
         updateInitButtonState()
         updateScoreboardDefault()
         updateCommentsDefault()
+        updateVideoLanguage()
+    }
+
+    /** Shows the video language of the project: the saved language, or the app language (B-11 E5-T1). */
+    private fun updateVideoLanguage() {
+        videoLanguageRow.language = ProjectVideoLanguage.read(manifestPath)
+    }
+
+    /** The project keeps the language that the user selects, so that a new export makes the same video. */
+    private fun onVideoLanguageSelected(language: AppLanguage) {
+        val path = manifestPath ?: return
+        try {
+            ProjectVideoLanguage.save(path, language)
+        } catch (t: Throwable) {
+            logger.warn(t) { "Cannot save the video language of $path" }
+            showReportableError(t.message ?: t.toString(), tr("export.videoLanguage.saveFailed"))
+        }
     }
 
     /** The export settings need an open project. Without a project, the left column shows a notice. */
@@ -452,6 +477,7 @@ class SwingExportPanel(
                 includeSetSummaries = setSummariesCheck.isEnabled && setSummariesCheck.isSelected,
                 statsSettings = readCurrentStatsSettings(),
                 adjustments = adjustments.get(),
+                videoLanguage = videoLanguageRow.language,
             )
         )
 

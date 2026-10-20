@@ -29,6 +29,9 @@ class MessagePattern private constructor(internal val parts: List<Part>) {
     /** The names of all arguments, also in the plural and the select cases. */
     val argumentNames: Set<String> by lazy { buildSet { collectNames(parts, this) } }
 
+    /** The case keys of each plural part, also of a plural in a case (B-11 E7-T2). */
+    val pluralCases: List<Set<String>> by lazy { buildList { collectPlurals(parts, this) } }
+
     /** True when the pattern has a plural or a select part. */
     val hasCases: Boolean get() = parts.any { it is Part.Plural || it is Part.Select }
 
@@ -108,6 +111,19 @@ class MessagePattern private constructor(internal val parts: List<Part>) {
 
         private fun exactKey(amount: Double): String =
             if (amount == Math.rint(amount)) amount.toLong().toString() else amount.toString()
+
+        private fun collectPlurals(parts: List<Part>, into: MutableList<Set<String>>) {
+            parts.forEach { part ->
+                when (part) {
+                    is Part.Plural -> {
+                        into += part.cases.keys
+                        part.cases.values.forEach { collectPlurals(it, into) }
+                    }
+                    is Part.Select -> part.cases.values.forEach { collectPlurals(it, into) }
+                    else -> Unit
+                }
+            }
+        }
 
         private fun collectNames(parts: List<Part>, into: MutableSet<String>) {
             parts.forEach { part ->

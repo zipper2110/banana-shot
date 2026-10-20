@@ -7,14 +7,15 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 6 ("Fonts"), 7, 9, 13
 - Depends on: E7 (the shared tasks E7-T1 to E7-T4), E2 (the data)
 - Size: 1 to 2 weeks for the first language of a new script. Less for the
   next languages of the same script.
 - Value: users of Chinese, Japanese, Korean, or other languages with large
-  character sets can use the app in their language, if the data of E2
-  shows a need.
+  character sets can use the app in their language. The author selected
+  Japanese, Simplified Chinese, and Traditional Chinese on 2026-10-20 (plan,
+  "Decisions", "Next languages", "Chinese scripts").
 
 Not in this epic: right-to-left languages (plan section 9).
 
@@ -22,11 +23,14 @@ Not in this epic: right-to-left languages (plan section 9).
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E8-T1 | Select the language | E2 | open |
+| E8-T1 | Select the language | E2 | in-progress |
 | E8-T2 | Video fonts for the script | E8-T1 | open |
 | E8-T3 | UI font for the script | E8-T1 | open |
 | E8-T4 | Line breaks without spaces | E8-T1 | open |
 | E8-T5 | Input method tests | E8-T1 | open |
+| E8-L-ja | Japanese | E8-T2–E8-T5 | open |
+| E8-L-zh-Hans | Simplified Chinese | E8-T2–E8-T5 | open |
+| E8-L-zh-Hant | Traditional Chinese | E8-L-zh-Hans | open |
 | E8-L-`<code>` | One task for each language (template of E7) | E8-T2–E8-T5 | — |
 
 When E8-T1 selects a language, add a row `E8-L-<code>` to this table, and
@@ -54,6 +58,9 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - If the language is Chinese, a test proves that `zh-TW` does not give
     Simplified Chinese.
 - Tests: — (decision)
+- Notes: on 2026-10-20 the author selected Japanese, Simplified Chinese,
+  and Traditional Chinese, before the data of E2. Simplified Chinese comes
+  before Traditional Chinese. The reviewers are not known yet.
 
 ### E8-T2 Video fonts for the script
 
@@ -88,6 +95,15 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
     and a stopped download. In each case, the app does not use the file,
     and no export makes empty boxes.
 - Tests: —
+- Notes: Japanese and Chinese use the same Unicode code points for many
+  characters (Han unification), but the correct shapes are different. Thus
+  the video font follows the video language: a Japanese font for `ja`, a
+  Simplified Chinese font for `zh-Hans`, and a Traditional Chinese font for
+  `zh-Hant`. A single CJK font shows the wrong shapes for two of the three.
+  The scoreboard styles now use Windows fonts (Arial Black, Georgia,
+  Trebuchet MS, Ink Free). The Windows CJK fonts (Yu Gothic, Microsoft
+  YaHei, Microsoft JhengHei) are an option to examine before a bundled or
+  downloaded font.
 
 ### E8-T3 UI font for the script
 
@@ -110,6 +126,9 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - A test with a missing UI font gives the "Dialog" font and no empty
     boxes.
 - Tests: —
+- Notes: as in E8-T2, the UI font follows the app language: for example
+  Yu Gothic UI for `ja`, Microsoft YaHei UI for `zh-Hans`, and Microsoft
+  JhengHei UI for `zh-Hant`.
 
 ### E8-T4 Line breaks without spaces
 
@@ -158,6 +177,70 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The manual check includes Enter during the composition in a dialog,
     and a time code typed in full-width mode.
 - Tests: — (manual)
+
+### E8-L-ja Japanese
+
+- Status: open
+- Plan: "Decisions" ("Form of address"), 7, 13, and the process of E4
+  (`CONTRIBUTING.md`)
+- Value: the users in Japan can use the app and share videos in Japanese.
+- Requirements:
+  - The template of E7.
+  - The polite です/ます form in sentences. Buttons and menu items use
+    short noun forms ("エクスポート", "保存").
+  - Japanese quotes are 「…」. Japanese has no plural forms, so each plural
+    message has only `other`.
+  - The Japanese video font and UI font (E8-T2, E8-T3).
+- Acceptance:
+  - The template of E7.
+  - The screenshots show no Chinese character shapes in the Japanese UI
+    and video.
+  - A test gives Japanese for `ja-JP` and `ja`.
+- Tests: —
+
+### E8-L-zh-Hans Simplified Chinese
+
+- Status: open
+- Plan: "Decisions" ("Chinese scripts", "Form of address"), 7, 13, and
+  the process of E4 (`CONTRIBUTING.md`)
+- Value: the users in mainland China and Singapore can use the app in
+  Chinese. YouTube is blocked in mainland China, so these users share the
+  videos on other platforms (for example Bilibili, Douyin, or WeChat).
+- Requirements:
+  - The template of E7.
+  - The "你" form. Simplified Chinese quotes are “…”. Chinese has no
+    plural forms, so each plural message has only `other`.
+  - The help and the texts do not say that YouTube is the only place to
+    share a video. Check the thumbnail texts ("YouTube thumbnail").
+  - A reviewer from mainland China.
+- Acceptance:
+  - The template of E7.
+  - A test gives Simplified Chinese for `zh-CN`, `zh-SG`, `zh-Hans`, and
+    `zh`.
+- Tests: —
+
+### E8-L-zh-Hant Traditional Chinese
+
+- Status: open
+- Plan: "Decisions" ("Chinese scripts", "Form of address"), 7, 13, and
+  the process of E4 (`CONTRIBUTING.md`)
+- Value: the users in Taiwan, Hong Kong, and Macau can use the app in
+  Chinese.
+- Requirements:
+  - The template of E7.
+  - A full catalog, not a child of `zh-Hans`. The draft is a conversion of
+    the reviewed Simplified texts with the Taiwan terms (for example
+    "影片", "專案", "檔案"). A conversion of only the characters is not
+    sufficient.
+  - Traditional Chinese quotes are 「…」.
+  - The glossary has its own section for `zh-Hant`.
+  - A reviewer from Taiwan. If possible, a second reviewer from Hong Kong
+    checks the terms.
+- Acceptance:
+  - The template of E7.
+  - A test gives Traditional Chinese for `zh-TW`, `zh-HK`, `zh-MO`, and
+    `zh-Hant`, and never Simplified Chinese.
+- Tests: —
 
 ## Done when
 

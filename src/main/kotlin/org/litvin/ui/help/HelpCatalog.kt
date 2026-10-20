@@ -268,6 +268,7 @@ object HelpCatalog {
                 tr("help.export.workflow.2"),
                 tr("help.export.workflow.3"),
                 tr("help.export.workflow.4"),
+                tr("help.export.workflow.videoLanguage"),
                 tr("help.export.workflow.5"),
                 tr("help.export.workflow.6"),
                 tr("help.export.workflow.7"),

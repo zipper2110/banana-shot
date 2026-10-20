@@ -92,6 +92,12 @@ data class ScoreboardSettingsV1(
     val backgroundOpacityPercent: Int? = null,
     val accentColorHex: String? = null,
 ) {
+    /**
+     * The title in the video. A [DEFAULT_TITLE] of an app language shows in the video language, because the user did
+     * not write it (B-11 E5-T3). A function, so that the project file does not get it as a field.
+     */
+    fun videoTitle(): String = if (title.trim() in defaultTitles()) DEFAULT_TITLE else title
+
     /** Returns a copy with all values in their allowed ranges. */
     fun normalized(): ScoreboardSettingsV1 = copy(
         title = title.trim().take(MAX_TITLE_LENGTH),

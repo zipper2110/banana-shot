@@ -17,6 +17,8 @@ import org.litvin.stats.SetSummaryCard
 import org.litvin.stats.StatsCardVideo
 import org.litvin.stats.StatsSettingsV1
 import java.io.File
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
 import org.litvin.i18n.tr
 
 data class ExportResolution(
@@ -81,6 +83,8 @@ data class ExportRenderPlanRequest(
     val statsSettings: StatsSettingsV1 = StatsSettingsV1(),
     /** The color, crop and rotate adjustments of the project when the user queues the export. */
     val adjustments: AdjustmentsV1 = AdjustmentsV1(),
+    /** The language of the texts in the video (B-11 E5). */
+    val videoLanguage: AppLanguage = I18n.language,
 )
 
 object ExportPlanner {
@@ -249,7 +253,15 @@ object ExportPlanner {
             .filter { summary -> summary.pointIds.any { it in keptIds } }
     }
 
-    fun buildRenderPlan(request: ExportRenderPlanRequest): ExportRenderPlan {
+    /**
+     * The plan of an export. The scoreboard texts, the statistics card, and the set summaries get the texts of the
+     * video language now, so a queued job keeps its texts after a change of the app language (B-11 E4-T9).
+     */
+    fun buildRenderPlan(request: ExportRenderPlanRequest): ExportRenderPlan = I18n.inVideo(request.videoLanguage) {
+        buildPlanTexts(request)
+    }
+
+    private fun buildPlanTexts(request: ExportRenderPlanRequest): ExportRenderPlan {
         val allValidPoints = validateEdl(request.edl)
         val keptPoints = selectedKeepPoints(
             validPoints = allValidPoints,
@@ -321,6 +333,7 @@ object ExportPlanner {
             statsCard = statsCard,
             setSummaries = setSummaries,
             adjustments = request.adjustments,
+            videoLanguage = request.videoLanguage.code,
         )
 
         return ExportRenderPlan(

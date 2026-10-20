@@ -62,12 +62,18 @@ data class EffectiveExpiry(
 
 /**
  * Formats an expiry moment in the local time zone with the hour, in the app language, for example
- * "29 March 2027, 16:00" or "29 de marzo de 2027, 16:00".
+ * "29 March 2027, 16:00", "29 de marzo de 2027, 16:00", "29 de março de 2027, 16:00", "29 марта 2027 г., 16:00", or
+ * "29 mars 2027 à 16:00".
  */
 object ExpiryMomentFormat {
     fun format(moment: Instant, zone: ZoneId = ZoneId.systemDefault()): String {
         val language = I18n.language
-        val pattern = if (language.baseCode == AppLanguage.SPANISH_SPAIN.baseCode) "d 'de' MMMM 'de' yyyy, HH:mm" else "d MMMM yyyy, HH:mm"
+        val pattern = when (language.baseCode) {
+            AppLanguage.SPANISH_SPAIN.baseCode, AppLanguage.PORTUGUESE_BRAZIL.baseCode -> "d 'de' MMMM 'de' yyyy, HH:mm"
+            AppLanguage.RUSSIAN.baseCode -> "d MMMM yyyy 'г.', HH:mm"
+            AppLanguage.FRENCH.baseCode -> "d MMMM yyyy 'à' HH:mm"
+            else -> "d MMMM yyyy, HH:mm"
+        }
         return DateTimeFormatter.ofPattern(pattern, language.locale).format(moment.atZone(zone))
     }
 }

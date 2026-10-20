@@ -13,6 +13,7 @@ import org.litvin.adjustments.WhiteBalanceV1
 import org.litvin.export.CompletedRendersRepository
 import org.litvin.export.EncoderCapabilities
 import org.litvin.export.RenderService
+import org.litvin.i18n.AppLanguage
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
@@ -27,9 +28,11 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.prefs.AbstractPreferences
 import javax.swing.JButton
+import javax.swing.JComboBox
 import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SwingExportPanelTest {
@@ -137,6 +140,68 @@ class SwingExportPanelTest {
             SwingUtilities.invokeAndWait { panel?.close() }
             adjustments.close()
             scheduler.shutdownNow()
+        }
+    }
+
+    /** B-11 E5-T2: the "Video language" choice. */
+    @Test
+    fun theVideoLanguageStartsAtTheAppLanguageAndTheProjectKeepsTheSelection(@TempDir root: File) {
+        val scheduler = ScheduledThreadPoolExecutor(1)
+        val adjustments = AdjustmentsSession(scheduler, saveDelayMs = 60_000L)
+        val render = RecordingRenderService()
+        val manifestA = createProject(root, "a", AdjustmentsV1())
+        val manifestB = createProject(root, "b", AdjustmentsV1())
+        var panel: SwingExportPanel? = null
+        try {
+            SwingUtilities.invokeAndWait {
+                adjustments.load(File(manifestA).parent)
+                panel = newPanel(render, adjustments, root)
+                panel!!.setProjectManifest(manifestA)
+                @Suppress("UNCHECKED_CAST")
+                val combo = findNamed(panel!!, "export-video-language") as JComboBox<Any>
+                assertTrue(isShownInPanel(combo, panel!!))
+                assertEquals(AppLanguage.entries.map { it.nativeName }, (0 until combo.itemCount).map { combo.getItemAt(it).toString() })
+                assertEquals("English", combo.selectedItem.toString())
+                assertNull(ManifestIO.read(manifestA).videoLanguage)
+
+                combo.selectedIndex = AppLanguage.entries.indexOf(AppLanguage.SPANISH_SPAIN)
+                assertEquals("es", ManifestIO.read(manifestA).videoLanguage)
+                findButton(panel!!, "export-initialize").doClick()
+
+                // Another project has no selection. The first project shows its selection again.
+                panel!!.setProjectManifest(manifestB)
+                assertEquals("English", combo.selectedItem.toString())
+                assertNull(ManifestIO.read(manifestB).videoLanguage)
+                panel!!.setProjectManifest(manifestA)
+                assertEquals(AppLanguage.SPANISH_SPAIN.nativeName, combo.selectedItem.toString())
+            }
+
+            assertEquals("es", render.jobs.single().videoLanguage)
+        } finally {
+            SwingUtilities.invokeAndWait { panel?.close() }
+            adjustments.close()
+            scheduler.shutdownNow()
+        }
+    }
+
+    @Test
+    fun withOnlyOneLanguageTheVideoLanguageRowDoesNotShow() {
+        SwingUtilities.invokeAndWait {
+            assertFalse(VideoLanguageRow({}, listOf(AppLanguage.ENGLISH)).isVisible)
+            assertTrue(VideoLanguageRow({}).isVisible)
+        }
+    }
+
+    @Test
+    fun aChangeOfTheVideoLanguageInCodeIsNotASelection() {
+        SwingUtilities.invokeAndWait {
+            val selections = mutableListOf<AppLanguage>()
+            val row = VideoLanguageRow({ selections += it })
+
+            row.language = AppLanguage.SPANISH_LATIN_AMERICA
+
+            assertEquals(AppLanguage.SPANISH_LATIN_AMERICA, row.language)
+            assertEquals(emptyList(), selections)
         }
     }
 

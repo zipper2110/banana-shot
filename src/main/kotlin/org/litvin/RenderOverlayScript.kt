@@ -1,5 +1,6 @@
 package org.litvin
 
+import org.litvin.i18n.I18n
 import java.io.File
 
 /** Creates the temporary ASS overlay file used by a single render job. */
@@ -10,14 +11,17 @@ object RenderOverlayScript {
         if (scoreboardSpans.isEmpty() && commentSpans.isEmpty()) return null
 
         return File(partOutput.absolutePath + ".ass").also { file ->
-            AssOverlayWriter.write(
-                file = file,
-                scoreboardSpans = scoreboardSpans,
-                commentSpans = commentSpans,
-                outWidth = job.outWidth,
-                outHeight = job.outHeight,
-                settings = job.scoreboardSettings,
-            )
+            // The scoreboard texts use the language of the job, not the app language of this start.
+            I18n.inVideo(job.videoTextLanguage) {
+                AssOverlayWriter.write(
+                    file = file,
+                    scoreboardSpans = scoreboardSpans,
+                    commentSpans = commentSpans,
+                    outWidth = job.outWidth,
+                    outHeight = job.outHeight,
+                    settings = job.scoreboardSettings,
+                )
+            }
         }
     }
 }

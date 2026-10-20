@@ -32,7 +32,7 @@ are in the plan, "Epics".
 | E4-T6 | Legal texts | E4-T5 | open |
 | E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | open |
 | E4-T8 | Fit tests for Spanish | E4-T5 | open |
-| E4-T9 | Queued render job keeps its language | — | open |
+| E4-T9 | Queued render job keeps its language | — | done |
 | E4-T10 | The app sends the language `es` | — | in-progress |
 | E4-T11 | Show the language setting | E4-T7 | in-progress |
 | E4-T12 | Windows smoke test in Spanish | E4-T11 | in-progress |
@@ -220,7 +220,7 @@ are in the plan, "Epics".
 
 ### E4-T9 Queued render job keeps its language
 
-- Status: open
+- Status: done
 - Plan: 6 ("Setting")
 - Value: a video in the queue renders in the language that the user saw
   when they queued it. A language change restarts the app, and the queue
@@ -243,7 +243,10 @@ are in the plan, "Epics".
   - A test reads a queue file of the current release.
   - A test reads a queue with the language `pt` and a queue with the
     language `123`. The jobs stay, and they render in English.
-- Tests: —
+- Notes: done with E5-T3. The job keeps its video texts and the language
+  code (`RenderJob.videoLanguage`).
+- Tests: `VideoLanguageExportTest` (the queued job, the unknown and broken
+  languages, the queue file of the current release).
 
 ### E4-T10 The app sends the language `es`
 

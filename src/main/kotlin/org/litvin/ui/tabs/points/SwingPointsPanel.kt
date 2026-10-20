@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.*
 import kotlin.math.abs
 import kotlin.math.max
+import org.litvin.projects.ProjectVideoLanguage
 import org.litvin.i18n.tr
 
 /**
@@ -165,7 +166,7 @@ class SwingPointsPanel(
         active = true
         playbackBar.frameStep.on = SessionSettings.frameStepWhenPaused
         refreshPointsFromProject()
-        scoring.load(projectDir)
+        scoring.load(projectDir, ProjectVideoLanguage.read(manifestPath))
         scoring.onActivated()
         ensurePlayerLoaded()
         player.activatePreview("points activated")
@@ -564,7 +565,7 @@ class SwingPointsPanel(
             }
             // Load EDL if present
             loadEdl(EdlIO.readForProjectDir(projectDir!!))
-            scoring.load(projectDir)
+            scoring.load(projectDir, ProjectVideoLanguage.read(manifestPath))
             // Defer the media load until the component becomes displayable
             pendingMediaFile = File(src)
             isMediaLoaded = false

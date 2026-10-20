@@ -16,6 +16,10 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
     ENGLISH("en", "English"),
     SPANISH_SPAIN("es", "Español (España)"),
     SPANISH_LATIN_AMERICA("es-419", "Español (Latinoamérica)", parent = SPANISH_SPAIN),
+    RUSSIAN("ru", "Русский"),
+    PORTUGUESE_BRAZIL("pt", "Português (Brasil)"),
+    PORTUGUESE_PORTUGAL("pt-PT", "Português (Portugal)", parent = PORTUGUESE_BRAZIL),
+    FRENCH("fr", "Français"),
     ;
 
     val locale: Locale get() = Locale.forLanguageTag(code)
@@ -33,6 +37,9 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
         /** The countries that use the Spanish of Spain. All other countries get the Latin American variant. */
         private val SPAIN_COUNTRIES = setOf("", "ES", "GQ")
 
+        /** The countries that use the Portuguese of Brazil. All other countries get the Portuguese of Portugal. */
+        private val BRAZIL_COUNTRIES = setOf("", "BR")
+
         /** The language with the tag [code] (case does not matter, "_" works as "-"), or null. */
         fun ofCode(code: String?): AppLanguage? {
             val normalized = code?.trim()?.replace('_', '-')?.lowercase(Locale.ROOT) ?: return null
@@ -42,11 +49,17 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
         /**
          * The app language for a Windows display language, or null when the app does not have it. Spanish of Spain
          * and of Equatorial Guinea gives [SPANISH_SPAIN]. Spanish of all other countries (Mexico, Argentina, the
-         * United States, and so on) gives [SPANISH_LATIN_AMERICA].
+         * United States, and so on) gives [SPANISH_LATIN_AMERICA]. Russian of all countries gives [RUSSIAN].
+         * Portuguese of Brazil gives [PORTUGUESE_BRAZIL]. Portuguese of all other countries (Portugal, Angola,
+         * Mozambique, and so on) gives [PORTUGUESE_PORTUGAL]. French of all countries (France, Belgium, Switzerland,
+         * Canada, and so on) gives [FRENCH].
          */
         fun forLocale(locale: Locale): AppLanguage? = when (locale.language) {
             ENGLISH.baseCode -> ENGLISH
             SPANISH_SPAIN.baseCode -> if (locale.country in SPAIN_COUNTRIES) SPANISH_SPAIN else SPANISH_LATIN_AMERICA
+            RUSSIAN.baseCode -> RUSSIAN
+            PORTUGUESE_BRAZIL.baseCode -> if (locale.country in BRAZIL_COUNTRIES) PORTUGUESE_BRAZIL else PORTUGUESE_PORTUGAL
+            FRENCH.baseCode -> FRENCH
             else -> null
         }
     }

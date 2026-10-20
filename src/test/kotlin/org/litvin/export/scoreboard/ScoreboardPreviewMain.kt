@@ -3,8 +3,13 @@ package org.litvin.export.scoreboard
 import org.litvin.OverlaySpan
 import org.litvin.ScoreboardComponent
 import org.litvin.ScoreboardDisplay
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
+import org.litvin.i18n.Messages
+import org.litvin.scoring.DeuceRule
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStyleId
+import org.litvin.scoring.Sport
 import org.litvin.ui.commons.ScoreboardSceneImage
 import java.awt.Color
 import java.awt.Font
@@ -27,19 +32,24 @@ import javax.imageio.ImageIO
  * - `--out=<file.png>`: the output file. The default is `target/scoreboard-preview/scoreboards.png`.
  * - `--styles=<ID,ID>`: the [ScoreboardStyleId] names. The default is all styles.
  * - `--scale=<number>`: the board scale. 1.0 is the size on a 1080p video. The default is 1.0.
+ * - `--language=<code>`: the language of the video texts, for example `ru`. The default is English.
  */
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
     val options = args.associate { arg ->
-        require(arg.startsWith("--") && "=" in arg) { "Unknown argument: $arg. Use --out=, --styles= or --scale=." }
+        require(arg.startsWith("--") && "=" in arg) { "Unknown argument: $arg. Use --out=, --styles=, --scale= or --language=." }
         arg.removePrefix("--").substringBefore('=') to arg.substringAfter('=')
     }
-    val unknown = options.keys - setOf("out", "styles", "scale")
-    require(unknown.isEmpty()) { "Unknown options: $unknown. Use --out=, --styles= or --scale=." }
+    val unknown = options.keys - setOf("out", "styles", "scale", "language")
+    require(unknown.isEmpty()) { "Unknown options: $unknown. Use --out=, --styles=, --scale= or --language=." }
     val out = File(options["out"] ?: "target/scoreboard-preview/scoreboards.png")
     val styles = options["styles"]?.split(',')?.map { ScoreboardStyleId.valueOf(it.trim().uppercase()) }
         ?: ScoreboardStyleId.entries
     val scale = options["scale"]?.toDouble() ?: 1.0
+    options["language"]?.let { code ->
+        val language = requireNotNull(AppLanguage.ofCode(code)) { "Unknown language: $code. Use one of ${AppLanguage.entries.map { it.code }}." }
+        I18n.install(Messages.of(language))
+    }
 
     out.absoluteFile.parentFile.mkdirs()
     ImageIO.write(ScoreboardPreviewSheet.render(styles, scale), "png", out)
@@ -82,13 +92,31 @@ object ScoreboardPreviewSheet {
             endMs = 1L,
             text = "",
             p1Name = "Lee / Kim",
-            p2Name = "Team 2",
+            p2Name = Sport.PADEL.defaultSideName(2),
             p1Pts = 3,
             p2Pts = 3,
             gamesP1 = 3,
             gamesP2 = 4,
             server = 1,
-            badge = "GOLDEN POINT",
+            badge = Sport.PADEL.decidingPointBadge(DeuceRule.NO_AD),
+        ),
+    )
+
+    /** Tennis at a deciding point (no-ad), with the default names. The badge is the longest badge in most languages. */
+    private val tennisDecidingPoint = ScoreboardComponent.display(
+        OverlaySpan(
+            startMs = 0L,
+            endMs = 1L,
+            text = "",
+            p1Name = Sport.TENNIS.defaultSideName(1),
+            p2Name = Sport.TENNIS.defaultSideName(2),
+            p1Pts = 3,
+            p2Pts = 3,
+            gamesP1 = 5,
+            gamesP2 = 5,
+            completedSets = listOf(6 to 4),
+            server = 2,
+            badge = Sport.TENNIS.decidingPointBadge(DeuceRule.NO_AD),
         ),
     )
 
@@ -96,6 +124,7 @@ object ScoreboardPreviewSheet {
         Variant("Title and credit", fullNames) { it.copy(title = "Round 4 | Stadium court") },
         Variant("No title, no credit", fullNames) { it.copy(showTitle = false, showAppCredit = false) },
         Variant("Padel, golden point, no colors", padelTeams) { it.copy(showTitle = false, showAppCredit = false, showPlayerColors = false) },
+        Variant("Default title, deciding point", tennisDecidingPoint) { it.copy(title = ScoreboardSettingsV1.DEFAULT_TITLE) },
     )
 
     private const val GAP = 24

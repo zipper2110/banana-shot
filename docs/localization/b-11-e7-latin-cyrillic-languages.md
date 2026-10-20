@@ -7,13 +7,14 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 2 (plural forms), 6 ("Fonts", "Fit"), 8, 12, 13
 - Depends on: E4 (the process for a new language), E2 (the data)
 - Size: about 1 week for each language, mostly review time.
 - Value: a large part of the users can use the app in their language. The
-  data of E2 selects the languages. Probable candidates: Portuguese,
-  French, Italian, German, Russian.
+  author selected Russian, Portuguese, French, and German on 2026-10-20
+  (plan, "Decisions", "Next languages"). The data of E2 selects the later
+  languages.
 
 B-11 is done after E6. This epic continues with each new language.
 
@@ -21,10 +22,14 @@ B-11 is done after E6. This epic continues with each new language.
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E7-T1 | Select the languages | E2 | open |
-| E7-T2 | Plural forms with the CLDR rules | — | open |
-| E7-T3 | Shortcuts with Cyrillic and Greek keyboard layouts | — | open |
-| E7-T4 | Font check for each language | — | open |
+| E7-T1 | Select the languages | E2 | in-progress |
+| E7-T2 | Plural forms with the CLDR rules | — | in-progress |
+| E7-T3 | Shortcuts with Cyrillic and Greek keyboard layouts | — | in-progress |
+| E7-T4 | Font check for each language | — | in-progress |
+| E7-L-ru | Russian | E7-T1–E7-T4 | in-progress |
+| E7-L-pt | Portuguese (Brazil and Portugal) | E7-T1–E7-T4 | in-progress |
+| E7-L-fr | French | E7-T1–E7-T4, E7-L-pt | in-progress |
+| E7-L-de | German | E7-T1–E7-T4, E7-L-fr | open |
 | E7-L-`<code>` | One task for each language (see the template) | E7-T1–E7-T4 | — |
 
 When E7-T1 selects a language, add a row `E7-L-<code>` to this table (for
@@ -32,7 +37,7 @@ example `E7-L-pt`), and copy the template below.
 
 ### E7-T1 Select the languages
 
-- Status: open
+- Status: in-progress
 - Plan: "Decisions" ("Next languages"), 10
 - Value: the translation work goes to the languages with the most users.
 - Requirements:
@@ -43,10 +48,15 @@ example `E7-L-pt`), and copy the template below.
 - Acceptance:
   - The plan, "Decisions", has the list, the order, and the data.
 - Tests: — (decision)
+- Notes: the author selected Russian on 2026-10-20, before the 4 weeks of
+  data (plan, "Decisions", "Russian"). On the same day the author selected
+  Portuguese, French, and German in this order, also before the data (plan,
+  "Decisions", "Next languages"). The reviewers are not known yet. Later
+  languages wait for the data.
 
 ### E7-T2 Plural forms with the CLDR rules
 
-- Status: open
+- Status: in-progress
 - Plan: 2 ("Message syntax"), 12
 - Value: texts with a number are correct in languages with more than two
   plural forms ("1 punto", but Russian "1 очко", "2 очка", "5 очков").
@@ -72,11 +82,25 @@ example `E7-L-pt`), and copy the template below.
   - The test also uses 0, 11, 12, 22, 25, 101, 111, and 1.5 for Russian
     and Polish, and 0 and 1.5 for French.
   - A catalog test fails for a Spanish message with a `few` case.
-- Tests: —
+- Tests: `MessageCatalogTest` ("each plural has the categories of its
+  language", "the plural check finds a missing and an extra category"),
+  `MessagePatternTest` ("a Russian plural uses the four Russian
+  categories").
+- Notes: Russian and French are done. Polish has no rule in `PluralRules`
+  yet. Add its rule and test numbers with the language.
+  The CLDR rules of the selected languages are different for 0 and for
+  decimals:
+  - `pt` (Brazil) and `fr`: `one` for 0, 1, and 1.5 (i = 0 or 1).
+  - `pt-PT` and `de`: `one` only for 1 without decimals (i = 1 and v = 0).
+    Thus `pt-PT` needs its own rule, also as a child of `pt`.
+  - `ja`, `zh-Hans`, `zh-Hant`: only `other` (E8).
+  - CLDR also gives `fr`, `pt`, and `es` a `many` case for millions in
+    compact notation. The app has no compact numbers, so the Spanish rule
+    has no `many`. Do the same for `fr` and `pt`.
 
 ### E7-T3 Shortcuts with Cyrillic and Greek keyboard layouts
 
-- Status: open
+- Status: in-progress
 - Plan: 8
 - Value: a user with a Russian, Ukrainian, or Greek keyboard layout can use
   all shortcuts without a change of the layout.
@@ -101,10 +125,14 @@ example `E7-L-pt`), and copy the template below.
   - The manual check with the Russian and the Greek layouts is in
     `qa/windows/ui-smoke.md`, and it passes.
 - Tests: —
+- Notes: on 2026-10-20 all shortcuts bind key codes (`AppShortcuts`,
+  `KeyStroke.getKeyStroke("Q")`). No code reads the typed character, and no
+  shortcut uses Ctrl+Alt or a punctuation key. The scan test and the manual
+  check are open.
 
 ### E7-T4 Font check for each language
 
-- Status: open
+- Status: in-progress
 - Plan: 6 ("Fonts")
 - Value: no text of a shipped language shows empty boxes or a different
   font in the UI or in the video.
@@ -126,6 +154,162 @@ example `E7-L-pt`), and copy the template below.
     a language is not in the list of styles for this language.
   - On Windows, the "Ink Free" style shows Cyrillic and Greek letters, or
     the style is not available for these languages.
+- Tests: `ScoreboardFontCoverageTest` (NFC only).
+- Notes: on 2026-10-20 all scoreboard fonts show all Russian and Spanish
+  letters in NFC, also "Ink Free". The NFD check fails: Arial Black,
+  Georgia, Trebuchet MS, and Ink Free have no combining accents (U+0301,
+  U+0303, U+0306, U+0308). A typed "е" + U+0308 shows a box in these
+  styles. A possible fix: change the user texts to NFC before the video
+  draws them. Greek is not checked yet.
+
+### E7-L-ru Russian
+
+- Status: in-progress
+- Plan: 13, and the process of E4 (`CONTRIBUTING.md`)
+- Value: the users of Russian can use the app and share videos in Russian.
+- Requirements: the template below.
+- Acceptance: the template below.
+- Tests: `MessageCatalogTest` ("the Russian catalog has texts in Russian"
+  and the checks of all languages), `LanguageSettingsTest` ("Russian of all
+  countries gives Russian"), `EffectiveExpiryTest` ("the moment shows in
+  Russian with the genitive month and the year mark").
+- Notes:
+  - Done on 2026-10-20: the machine draft of `messages_ru.properties` and
+    `help_ru.properties`, the glossary, the detection, the plural rule, and
+    the expiry date format ("29 марта 2027 г., 16:00"). The language list of
+    E2-T1 already has `ru`.
+  - The sidebar is wider when a label does not fit (`UiStyles.sidebarWidth`).
+    "Розыгрыши" needs 91 px. English and Spanish keep 81 px.
+  - The JDK and FlatLaf have no Russian texts. The app uses no Swing
+    dialog with a JDK text (no `JOptionPane`, no `JFileChooser`), and the
+    file dialog is the Windows dialog. Thus no English Swing text shows.
+  - `ScoreboardPreviewMain --language=ru` shows the video texts of all
+    styles. They fit.
+  - Open: the review by a native speaker, the Windows smoke test in
+    Russian, and the open parts of E7-T3 and E7-T4.
+
+### E7-L-pt Portuguese (Brazil and Portugal)
+
+- Status: in-progress
+- Plan: "Decisions" ("Portuguese variants", "Form of address"), 13, and
+  the process of E4 (`CONTRIBUTING.md`)
+- Value: the users in Brazil and Portugal can use the app and share videos
+  in Portuguese. Padel is very popular in Portugal.
+- Requirements:
+  - The template below, for each variant.
+  - Two app languages, as Spanish (E4): `pt` (Brazil) has all texts.
+    `pt-PT` has only the texts that are different. All other texts come
+    from `pt`.
+  - The detection gives Brazil for `pt-BR` and `pt`, and Portugal for
+    `pt-PT` and all other Portuguese locales.
+  - A reviewer from Brazil reviews `pt`. A reviewer from Portugal reviews
+    `pt-PT`, and also checks the `pt` texts that `pt-PT` uses.
+  - The glossary has one Portuguese section with a column for each
+    variant, as the Spanish section.
+  - The `pt-PT` plural rule (E7-T2).
+- Acceptance:
+  - The template below, for each variant.
+  - A test gives Brazil for `pt-BR` and Portugal for `pt-PT` and `pt-AO`.
+  - A plural test formats 0 and 1.5 in `pt` (`one`) and in `pt-PT`
+    (`other`).
+- Tests: `MessageCatalogTest` ("the Portuguese catalogs have texts of
+  Brazil and of Portugal", "Portuguese of Portugal has no words of Brazil",
+  and the checks of all languages), `LanguageSettingsTest` ("Portuguese of
+  Brazil gives Brazil and all other Portuguese gives Portugal"),
+  `MessagePatternTest` ("the Portuguese plural of Brazil and of Portugal
+  differ for 0 and decimals"), `EffectiveExpiryTest` ("the moment shows in
+  Portuguese with the month in lower case"), `ScoreboardFontCoverageTest`.
+- Notes:
+  - Done on 2026-10-20: the machine draft of `messages_pt.properties` and
+    `help_pt.properties`, the `pt-PT` files, the glossary, the detection,
+    the plural rules, and the expiry date format ("29 de março de 2027,
+    16:00"). The language list of E2-T1 already has `pt`.
+  - `PluralRules` has a rule for `pt` (Brazil) and uses the English rule
+    for `pt-PT`. It is the first rule that depends on the variant.
+  - The `pt-PT` files come from a word list (the glossary, "Words of each
+    variant") and a manual check of each changed text. They have 318
+    message texts and 140 help texts.
+  - The sidebar uses "Cor e enquadr." on two lines. The full word
+    "enquadramento" needs 98 px and makes the sidebar 114 px wide.
+  - `ScoreboardPreviewMain --language=pt` shows the video texts of all
+    styles. They fit.
+  - Open: the review by a native speaker from Brazil and from Portugal,
+    the Windows smoke test in both variants, and the open parts of E7-T3
+    and E7-T4.
+
+### E7-L-fr French
+
+- Status: in-progress
+- Plan: "Decisions" ("Form of address"), 13, and the process of E4
+  (`CONTRIBUTING.md`)
+- Value: the users in France, Belgium, Switzerland, and Canada can use the
+  app and share videos in French.
+- Requirements:
+  - The template below.
+  - One variant for all countries. The reviewer checks that no text uses a
+    word that only France uses, if a common word exists.
+  - French typography: a no-break space before ":", ";", "?", and "!", and
+    inside « … ». A normal space can break the line before the mark.
+  - The French plural rule (E7-T2).
+  - The AZERTY layout: the shortcuts use key codes (plan section 8). The
+    help and the hints name the key letters of the shortcuts, so check that
+    the names are correct on AZERTY.
+- Acceptance:
+  - The template below.
+  - A catalog test fails for a French text with a normal space before
+    ":", "?", or "!", or inside « … ».
+  - A test gives French for `fr-FR`, `fr-BE`, `fr-CH`, and `fr-CA`.
+- Tests: `MessageCatalogTest` ("the French catalog has texts in French",
+  "French texts use the French spacing and apostrophe", "the French spacing
+  check finds a normal space, a missing space, and a straight apostrophe",
+  and the checks of all languages), `LanguageSettingsTest` ("French of all
+  countries gives French"), `MessagePatternTest` ("a French plural uses one
+  for 0 and for decimals below 2"), `EffectiveExpiryTest` ("the moment
+  shows in French with the month in lower case"),
+  `ScoreboardFontCoverageTest`.
+- Notes:
+  - Done on 2026-10-20: the machine draft of `messages_fr.properties` and
+    `help_fr.properties`, the glossary, the detection, the plural rule, and
+    the expiry date format ("29 mars 2027 à 16:00"). The language list of
+    E2-T1 already has `fr`.
+  - The catalog uses U+00A0 for all French no-break spaces, also before
+    ";", "?", and "!" (not the narrow U+202F). All scoreboard fonts show
+    U+00A0.
+  - The texts use the typographic apostrophe (’). A straight apostrophe
+    before a placeholder starts an ICU quote.
+  - AZERTY: the shortcuts bind the Windows virtual key codes. On a Latin
+    layout, the code of a letter key is the letter on the key. Thus the
+    names Q, W, E, R, S, C, V, and F in the help are correct on AZERTY.
+    On AZERTY, the keys Q, W, and E are not side by side (Q and W are at
+    the left of the middle row and of the bottom row). The reviewer tells
+    if this is a problem.
+  - `ScoreboardPreviewMain --language=fr` shows the video texts of all
+    styles. They fit.
+  - Open: the review by a native speaker, the sidebar width in the app,
+    the Windows smoke test in French, and the open parts of E7-T3 and
+    E7-T4.
+
+### E7-L-de German
+
+- Status: open
+- Plan: "Decisions" ("Form of address"), 7, 13, and the process of E4
+  (`CONTRIBUTING.md`)
+- Value: the users in Germany, Austria, and Switzerland can use the app and
+  share videos in German.
+- Requirements:
+  - The template below.
+  - One variant for all countries, with "ß". Swiss German writes "ss", but
+    the Swiss users read "ß".
+  - The "du" form (plan, "Decisions", "Form of address").
+  - German has the longest texts and long compound nouns. `WrapText` and
+    the help break a word that is wider than the line (plan section 7).
+  - The video texts fit in each scoreboard style
+    (`ScoreboardPreviewMain --language=de`).
+- Acceptance:
+  - The template below.
+  - A test wraps a German compound noun that is wider than the line. No
+    line is wider than the width.
+  - A test gives German for `de-DE`, `de-AT`, and `de-CH`.
 - Tests: —
 
 ### Template: E7-L-`<code>` `<Language>`

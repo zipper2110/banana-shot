@@ -7,7 +7,7 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 6 ("Setting"), "Decisions" ("Video number format")
 - Depends on: E4
 - Size: a few days.
@@ -21,16 +21,28 @@ are in the plan, "Epics".
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E5-T1 | The project keeps the video language | — | open |
-| E5-T2 | "Video language" choice on the Export tab | E5-T1 | open |
-| E5-T3 | The render uses the selected language | E5-T1 | open |
-| E5-T4 | The preview uses the video language | E5-T1 | open |
-| E5-T5 | Numbers in the video | E5-T3, E5-T4 | open |
-| E5-T6 | Checks and documentation | E5-T1–E5-T5 | open |
+| E5-T1 | The project keeps the video language | — | done |
+| E5-T2 | "Video language" choice on the Export tab | E5-T1 | in-progress |
+| E5-T3 | The render uses the selected language | E5-T1 | done |
+| E5-T4 | The preview uses the video language | E5-T1 | done |
+| E5-T5 | Numbers in the video | E5-T3, E5-T4 | done |
+| E5-T6 | Checks and documentation | E5-T1–E5-T5 | in-progress |
+
+Notes for all tasks:
+
+- The code that makes a video text runs in `I18n.inVideo(language) { … }`.
+  In this block, `tr`, `DisplayFormats.upper`, and the number formats use
+  the video language. The block is bound to the thread. Thus the plan's
+  "one `Messages` instance for each video language" needs no change of the
+  domain code, which reads its texts with `tr`. A video text that the code
+  makes outside of a block has the app language.
+- A block must not contain a modal dialog: all texts of the dialog then get
+  the video language. `ScoreboardSettingsDialog` gets the language and
+  makes only its previews in a block.
 
 ### E5-T1 The project keeps the video language
 
-- Status: open
+- Status: done
 - Plan: 6 ("Setting")
 - Value: a new export of the same project makes the same video.
 - Requirements:
@@ -61,11 +73,16 @@ are in the plan, "Epics".
   - A test reads a project with the video language `pt` (not in this
     build) and a project with a broken value. Both give the app language,
     and a save without a user change keeps the old value.
-- Tests: —
+- Notes: the field is `videoLanguage` in the project manifest (`.trproj`),
+  not in the preferences. Thus the language goes with the project folder.
+  `ProjectVideoLanguage` reads and saves it. Each manifest change of the
+  app is a copy of the read manifest, so an unknown value stays.
+- Tests: `ProjectVideoLanguageTest`,
+  `VideoLanguageExportTest.an export without a selection uses the app language of the time of the export`.
 
 ### E5-T2 "Video language" choice on the Export tab
 
-- Status: open
+- Status: in-progress
 - Plan: 6 ("Setting")
 - Value: the user selects the video language where they make the video.
 - Requirements:
@@ -81,11 +98,19 @@ are in the plan, "Epics".
 - Acceptance:
   - A presenter test checks the default, a change, and the saved value.
   - A UI flow test selects a language.
-- Tests: —
+- Notes:
+  - The Export tab has no presenter. `SwingExportPanelTest` checks the
+    default, a change, the saved value, and the language of the queued
+    job.
+  - Open: the UI flow test. The font check starts with E8-T2, because all
+    current languages use the same fonts.
+- Tests: `SwingExportPanelTest.theVideoLanguageStartsAtTheAppLanguageAndTheProjectKeepsTheSelection`,
+  `SwingExportPanelTest.withOnlyOneLanguageTheVideoLanguageRowDoesNotShow`,
+  `SwingExportPanelTest.aChangeOfTheVideoLanguageInCodeIsNotASelection`.
 
 ### E5-T3 The render uses the selected language
 
-- Status: open
+- Status: done
 - Plan: 6 ("Setting")
 - Value: the exported video shows the texts in the selected language.
 - Requirements:
@@ -100,11 +125,21 @@ are in the plan, "Epics".
   - A test renders a job whose video language has a missing video text.
     The video shows the English text for it, and the export does not
     fail.
-- Tests: —
+- Notes:
+  - `ExportPlanner.buildRenderPlan` makes the scoreboard spans, the
+    statistics card, and the set summaries in the video language when the
+    user queues the export. The job keeps these texts and the language code
+    (`RenderJob.videoLanguage`). The ASS writer runs in the language of the
+    job (`RenderOverlayScript`), for the upper case and the default title.
+  - A default side name or a default title of any app language shows in the
+    video language (`Sport.videoSideName`,
+    `ScoreboardSettingsV1.videoTitle`). A name or a title that the user
+    typed does not change.
+- Tests: `VideoLanguageExportTest`.
 
 ### E5-T4 The preview uses the video language
 
-- Status: open
+- Status: done
 - Plan: 6 ("Setting")
 - Value: the user sees the video texts before the export.
 - Requirements:
@@ -117,11 +152,16 @@ are in the plan, "Epics".
 - Acceptance:
   - A test checks that the preview and the export give the same texts for
     the same video language.
-- Tests: —
+- Notes: the previews are on the Points tab, in the Scoreboard style
+  dialog, and on the Stats tab. Each tab reads the language of the project
+  when it opens, so a change on the Export tab shows at the next tab open.
+  The texts of one preview come from one block, so a preview never has two
+  languages.
+- Tests: `VideoLanguageExportTest.the preview and the export show the same texts for the same video language`.
 
 ### E5-T5 Numbers in the video
 
-- Status: open
+- Status: done
 - Plan: 6 ("Setting"), "Decisions" ("Video number format")
 - Value: the people who watch the video see numbers in the format of their
   language, not in the format of the computer that made the video.
@@ -142,11 +182,14 @@ are in the plan, "Epics".
     separator and the percent sign.
   - A test renders the statistics card with the video in English and the
     regional format `ar-EG`. The card has only the digits 0–9.
-- Tests: —
+- Notes: the rule is in `DisplayFormats` (the number locale in a video
+  block).
+- Tests: `VideoLanguageExportTest.the statistics card shows the numbers in the video number format`,
+  `VideoLanguageTest`.
 
 ### E5-T6 Checks and documentation
 
-- Status: open
+- Status: in-progress
 - Plan: 12, 14
 - Value: the separate video language stays correct in later releases.
 - Requirements:
@@ -156,6 +199,10 @@ are in the plan, "Epics".
   - The help of the Export tab tells about the choice, in all languages.
 - Acceptance:
   - The smoke test passes.
+- Notes:
+  - Done: the help of the Export tab (`help.export.workflow.videoLanguage`,
+    English and Spanish) and step 6 of `qa/windows/ui-smoke.md`.
+  - Open: the fit tests wait for E3-T19. The smoke test did not run yet.
 - Tests: —
 
 ## Done when

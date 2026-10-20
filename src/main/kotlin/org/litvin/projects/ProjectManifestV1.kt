@@ -10,6 +10,7 @@ package org.litvin.projects
  * - lastOpenedAt: ISO-8601 UTC timestamp string
  * - version: manifest schema version (always 1 for v1)
  * - sourceVideo: optional absolute path to the selected source video file
+ * - videoLanguage: optional language code of the texts in the video (B-11 E5). See [ProjectVideoLanguage].
  */
 data class ProjectManifestV1(
     val id: String,
@@ -18,4 +19,5 @@ data class ProjectManifestV1(
     val lastOpenedAt: String,
     val version: Int = 1,
     val sourceVideo: String? = null,
+    val videoLanguage: String? = null,
 )

@@ -97,6 +97,22 @@ object UiStyles {
     }
 
     /**
+     * The width of the sidebar for the button [labels] of the app language (B-11 E3-T22). It is 81 px, or wider when
+     * the widest line of a label does not fit into a group. Russian "Розыгрыши" needs more than 81 px.
+     */
+    fun sidebarWidth(labels: List<String>): Int {
+        val button = JButton()
+        val metrics = button.getFontMetrics(button.font)
+        val widest = labels.flatMap { it.lines() }.maxOfOrNull { metrics.stringWidth(it) } ?: 0
+        return maxOf(SIDEBAR_MIN_WIDTH, widest + SIDEBAR_TEXT_MARGIN)
+    }
+
+    private const val SIDEBAR_MIN_WIDTH = 81
+
+    /** The side borders of a group (2 × 3 px) and a free space of 5 px on each side of the text. */
+    private const val SIDEBAR_TEXT_MARGIN = 16
+
+    /**
      * A group of sidebar buttons. A thin rounded outline goes around the buttons, and the [title] is set into the top line
      * of the outline. The outline and the small spaced caption make the title different from the button labels.
      */

@@ -47,6 +47,8 @@ import java.awt.geom.Rectangle2D
 import javax.swing.AbstractAction
 import javax.swing.JComponent
 import javax.swing.KeyStroke
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
 
@@ -122,6 +124,9 @@ internal class PointsScoring(
     private fun style(): ScoreboardSettingsV1 = previewStyle ?: score.scoreboard
 
     private var projectDir: String? = null
+
+    // The language of the texts in the video. The scoreboard on the video shows it (B-11 E5-T4).
+    private var videoLanguage: AppLanguage = I18n.language
     private var score = ScoreV1()
     private var points: List<PointV1> = emptyList()
     private var selectedId: String? = null
@@ -150,7 +155,9 @@ internal class PointsScoring(
         val span = if (first == null || timeMs < first) null else spans.lastOrNull { it.startMs <= timeMs }
         if (span == shownSpan && (span == null) == (scene == null)) return
         shownSpan = span
-        scene = span?.let { runCatching { ScoreboardLayouts.scene(ScoreboardComponent.display(it), style()) }.getOrNull() }
+        scene = span?.let {
+            runCatching { I18n.inVideo(videoLanguage) { ScoreboardLayouts.scene(ScoreboardComponent.display(it), style()) } }.getOrNull()
+        }
         onOverlayChanged()
     }
 
@@ -166,10 +173,11 @@ internal class PointsScoring(
 
     /**
      * Reads score.json of the project again, for example when the tab opens. A new project gets the scoreboard style
-     * that the user saved last.
+     * that the user saved last. The scoreboard on the video shows the texts in [videoLanguage].
      */
-    fun load(dir: String?) {
+    fun load(dir: String?, videoLanguage: AppLanguage = I18n.language) {
         projectDir = dir
+        this.videoLanguage = videoLanguage
         val exists = dir != null && ScoreIO.existsForProjectDir(dir)
         score = readScore() ?: ScoreV1()
         refresh()
@@ -424,17 +432,19 @@ internal class PointsScoring(
      * A saved style also becomes the user's default style for new projects.
      */
     private fun openScoreboardStyle() {
-        val sample = ScoreboardComponent.display(
-            shownSpan ?: OverlaySpan(
-                startMs = 0L, endMs = 1L, text = "",
-                p1Name = players().p1Name, p2Name = players().p2Name,
-                p1ColorHex = score.player1ColorHex, p2ColorHex = score.player2ColorHex,
-                p1Pts = 3, p2Pts = 1, gamesP1 = 4, gamesP2 = 3, completedSets = listOf(6 to 4),
-            ),
-        )
+        val sample = I18n.inVideo(videoLanguage) {
+            ScoreboardComponent.display(
+                shownSpan ?: OverlaySpan(
+                    startMs = 0L, endMs = 1L, text = "",
+                    p1Name = score.sport.videoSideName(score.player1Name, 1), p2Name = score.sport.videoSideName(score.player2Name, 2),
+                    p1ColorHex = score.player1ColorHex, p2ColorHex = score.player2ColorHex,
+                    p1Pts = 3, p2Pts = 1, gamesP1 = 4, gamesP2 = 3, completedSets = listOf(6 to 4),
+                ),
+            )
+        }
         val takeCreditRequest = { appCreditRequest.shouldAsk().also { ask -> if (ask) appCreditRequest.markAsked() } }
         val result = try {
-            ScoreboardSettingsDialog.show(controls, score.scoreboard, sample, loadFrame, takeCreditRequest) { preview ->
+            ScoreboardSettingsDialog.show(controls, score.scoreboard, sample, loadFrame, takeCreditRequest, videoLanguage = videoLanguage) { preview ->
                 previewStyle = preview
                 redrawScoreboard()
             }
@@ -520,19 +530,21 @@ internal class PointsScoring(
             // A point after the last point gives the span with the final score.
             val finalScore = PointV1(id = FINAL_SCORE_ID, startMs = last.endMs, endMs = Int.MAX_VALUE)
             val players = players()
-            ScoreboardTimelineBuilder.build(
-                points = points + finalScore,
-                outcomes = score.outcomes,
-                idleTrim = false,
-                player1Name = players.p1Name,
-                player2Name = players.p2Name,
-                player1ColorHex = score.player1ColorHex,
-                player2ColorHex = score.player2ColorHex,
-                rules = score.rules.normalized(),
-                manualMarks = score.manualMarks(),
-                serverMarks = score.serverMarks,
-                sport = score.sport,
-            )
+            I18n.inVideo(videoLanguage) {
+                ScoreboardTimelineBuilder.build(
+                    points = points + finalScore,
+                    outcomes = score.outcomes,
+                    idleTrim = false,
+                    player1Name = players.p1Name,
+                    player2Name = players.p2Name,
+                    player1ColorHex = score.player1ColorHex,
+                    player2ColorHex = score.player2ColorHex,
+                    rules = score.rules.normalized(),
+                    manualMarks = score.manualMarks(),
+                    serverMarks = score.serverMarks,
+                    sport = score.sport,
+                )
+            }
         }.getOrDefault(emptyList())
         redrawScoreboard()
     }

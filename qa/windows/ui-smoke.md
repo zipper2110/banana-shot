@@ -42,7 +42,8 @@ To do only the manual checklist again, add `-SkipNativeChecks` to the runner com
 3. **Video playback** — Play, pause, and seek within the short clip. Preview state and timeline position should change without an error dialog. Capture a screenshot.
 4. **Edit and score** — In Points mark one point boundary pair; then give the point to Player 1 with the Q key. The visible values and saved project data should retain each edit. Capture a screenshot.
 5. **Adjustment controls and FFmpeg export** — The automated native checks do these steps. Make sure that their report rows show "Pass".
-6. **Relaunch and recents** — Close the app, relaunch it with the same runner-created app-data directory, and confirm the project appears in recents and reopens. Capture a screenshot.
+6. **Video language** — On the Export tab, select *Scoreboard* and a *Video language* that is not the app language (for example *Español (España)* when the app is in English). Export *Only points*. Open the output and make sure that the scoreboard shows the default names in the video language ("JUGADOR 1"). Open the Points tab and make sure that the scoreboard on the video shows the same texts. Capture a screenshot.
+7. **Relaunch and recents** — Close the app, relaunch it with the same runner-created app-data directory, and confirm the project appears in recents and reopens. Capture a screenshot.
 
 ## Report fields
 

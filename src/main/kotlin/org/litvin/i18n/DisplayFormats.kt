@@ -22,9 +22,17 @@ object DisplayFormats {
     @Volatile
     var formatLocale: Locale = Locale.getDefault(Locale.Category.FORMAT)
 
-    /** [formatLocale] with the digits 0–9 (for example `ar-EG` has other digits by default). */
+    /**
+     * The locale of the numbers, with the digits 0–9 (for example `ar-EG` has other digits by default). It is the
+     * [formatLocale]. In [I18n.inVideo], it is the [formatLocale] only when its language is the video language, and
+     * else the default format of the video language (plan, "Decisions", "Video number format").
+     */
     private val numberLocale: Locale
-        get() = Locale.Builder().setLocale(formatLocale).setUnicodeLocaleKeyword("nu", "latn").build()
+        get() {
+            val video = I18n.videoLanguage
+            val base = if (video == null || formatLocale.language == video.baseCode) formatLocale else video.locale
+            return Locale.Builder().setLocale(base).setUnicodeLocaleKeyword("nu", "latn").build()
+        }
 
     private fun symbols(): DecimalFormatSymbols = DecimalFormatSymbols.getInstance(numberLocale).apply { zeroDigit = '0' }
 
@@ -90,6 +98,9 @@ object DisplayFormats {
         decimalFormatSymbols = symbols()
     }.format(value / 100.0)
 
-    /** The upper case of a translated text, with the rules of the app language (German "ß", Turkish "i"). */
-    fun upper(text: String): String = text.uppercase(I18n.language.locale)
+    /**
+     * The upper case of a translated text, with the rules of the app language (German "ß", Turkish "i"). In
+     * [I18n.inVideo], the rules of the video language apply.
+     */
+    fun upper(text: String): String = text.uppercase(I18n.active.language.locale)
 }

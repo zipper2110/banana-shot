@@ -40,6 +40,43 @@ class MessagePatternTest {
         assertEquals("5 puntos", format(pattern, "count" to 5, language = AppLanguage.SPANISH_SPAIN))
     }
 
+    /** B-11 E7-T2: Brazil uses `one` for 0 to 1.99. Portugal uses `one` only for 1, as English. */
+    @Test
+    fun `the Portuguese plural of Brazil and of Portugal differ for 0 and decimals`() {
+        val pattern = "{count, plural, one {# ponto} other {# pontos}}"
+        assertEquals("0 ponto", format(pattern, "count" to 0, language = AppLanguage.PORTUGUESE_BRAZIL))
+        assertEquals("1 ponto", format(pattern, "count" to 1, language = AppLanguage.PORTUGUESE_BRAZIL))
+        assertEquals("2 pontos", format(pattern, "count" to 2, language = AppLanguage.PORTUGUESE_BRAZIL))
+        assertEquals(PluralRules.ONE, PluralRules.category(AppLanguage.PORTUGUESE_BRAZIL, 1.5))
+        assertEquals("0 pontos", format(pattern, "count" to 0, language = AppLanguage.PORTUGUESE_PORTUGAL))
+        assertEquals("1 ponto", format(pattern, "count" to 1, language = AppLanguage.PORTUGUESE_PORTUGAL))
+        assertEquals(MessagePattern.OTHER, PluralRules.category(AppLanguage.PORTUGUESE_PORTUGAL, 1.5))
+    }
+
+    /** B-11 E7-T2: French uses `one` for 0, 1, and the numbers with decimals below 2 ("0 point", "1,5 seconde"). */
+    @Test
+    fun `a French plural uses one for 0 and for decimals below 2`() {
+        val pattern = "{count, plural, one {# point} other {# points}}"
+        assertEquals("0 point", format(pattern, "count" to 0, language = AppLanguage.FRENCH))
+        assertEquals("1 point", format(pattern, "count" to 1, language = AppLanguage.FRENCH))
+        assertEquals("2 points", format(pattern, "count" to 2, language = AppLanguage.FRENCH))
+        assertEquals(PluralRules.ONE, PluralRules.category(AppLanguage.FRENCH, 1.5))
+        assertEquals(MessagePattern.OTHER, PluralRules.category(AppLanguage.FRENCH, 2.5))
+    }
+
+    /** B-11 E7-T2: the CLDR rule of Russian, also for 0, the teens, and a number with decimals. */
+    @Test
+    fun `a Russian plural uses the four Russian categories`() {
+        val pattern = "{count, plural, one {# очко} few {# очка} many {# очков} other {# очка}}"
+        val expected = mapOf(
+            1 to "1 очко", 2 to "2 очка", 5 to "5 очков", 21 to "21 очко", 0 to "0 очков", 11 to "11 очков",
+            12 to "12 очков", 22 to "22 очка", 25 to "25 очков", 101 to "101 очко", 111 to "111 очков",
+        )
+        expected.forEach { (count, text) -> assertEquals(text, format(pattern, "count" to count, language = AppLanguage.RUSSIAN)) }
+        assertEquals(MessagePattern.OTHER, PluralRules.category(AppLanguage.RUSSIAN, 1.5))
+        assertEquals(PluralRules.MANY, PluralRules.category(AppLanguage.RUSSIAN, 1_000_000.0))
+    }
+
     @Test
     fun `a select uses the case of the value or other`() {
         val pattern = "{sport, select, padel {Team} other {Player}} {number}"

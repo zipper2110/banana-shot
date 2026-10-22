@@ -110,6 +110,37 @@ When item is done, move it under
   the feature is done, add it to the FAQ answer "Can I use a video from any
   phone or camera?" (`site/public/faq/index.html`, `#any-camera`).
 
+### B-50 Instant replay of a part of a point
+
+- Show a part of a point again in the exported video: for example the ball
+  near the line or a funny moment. The replay plays right after the end of
+  its point.
+- The user makes a replay on the Points tab. The UX mockup is
+  `design/instant-replay/index.html`.
+- Each replay has: a start and an end, a zoom frame on the video, a speed
+  from 0.1× to 1×, and a repeat count from 1 to 5.
+- Decided on 2026-10-22:
+  - A point can have more than one replay (for example the line call and a
+    reaction).
+  - A replay part can start up to 3 s before the point start and end up to
+    3 s after the point end.
+  - The zoom goes in smoothly at the start of the replay and out smoothly
+    at the end. It is not a hard cut.
+  - Sound: by default the sound slows down with the video. An option mutes
+    the sound of the replay.
+  - The Highlights export includes the replays of each point that it
+    includes.
+  - The timeline of the Points tab shows each replay as a segment in the
+    lime accent color after its point. The width of the segment is in
+    proportion to the time that the replay adds to the video. The segment
+    has no text. It has small spiky (zigzag) edges on all four sides
+    (spike 4 px wide, 2 px deep), so it looks different from the video
+    and the points. On the whole-match timeline a typical replay is about
+    3 px wide: there it is a plain lime tick, at least 3 px wide. The
+    spikes show only when the timeline is zoomed in.
+  - The replay editor opens in a separate popup window with its own video
+    player. The Points tab stays as it is in the main window.
+
 ### B-15 Intro and outro videos
 
 - Let the user add an intro video and an outro video to the exported video.

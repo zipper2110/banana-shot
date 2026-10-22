@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instant Replay UX</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+<link rel="stylesheet" href="../points-redesign/shared.css">
+<style>
+  /* Instant replay UX idea for the Points tab (backlog item B-50).
+     Three states: the Points tab with the entry points, the replay editor, and the replay preview.
+     The base is the Points tab after the scoring merge (point bar with the winner buttons, navigator on top of the side column). */
+  .tab {
+    display: grid; grid-template-columns: 1fr 360px; grid-template-rows: 1fr auto auto auto;
+    min-height: 0; background: var(--panel);
+  }
+  .video { grid-column: 1; grid-row: 1; }
+  .pointbar { grid-column: 1; grid-row: 2; }
+  .playbar { grid-column: 1; grid-row: 3; }
+  .side { grid-column: 2; grid-row: 1 / 4; }
+  .tl { grid-column: 1 / -1; grid-row: 4; border-top: 1px solid var(--line); }
+
+  /* ---------- Replay editor: a separate popup window over the main window ---------- */
+  .popup {
+    position: fixed; left: 50%; top: 84px; bottom: 78px; transform: translateX(-50%); width: min(1340px, calc(100vw - 120px));
+    display: grid; grid-template-rows: 30px 1fr; background: var(--panel); border: 1px solid #3c3c3c; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 28px 80px rgba(0,0,0,.8), 0 0 0 1px rgba(0,0,0,.7); z-index: 30;
+  }
+  .popup .titlebar { background: #262626; color: var(--fg); }
+  .popup .titlebar .logo { background: none; color: var(--lime); width: auto; height: auto; display: flex; }
+  .popup .titlebar .logo .material-symbols-outlined { font-size: 16px; }
+  .popup .win-buttons span { cursor: default; }
+  .popup .win-buttons .close { cursor: pointer; }
+  .popup .win-buttons .close:hover { color: var(--red); }
+  .pgrid { display: grid; grid-template-columns: 1fr 340px; grid-template-rows: 1fr auto; min-height: 0; }
+  .pvideo { grid-column: 1; grid-row: 1; position: relative; background: #000; min-height: 0; min-width: 0; overflow: hidden; }
+  .rbar { grid-column: 1; grid-row: 2; }
+  .rside { grid-column: 2; grid-row: 1 / 3; }
+  body[data-mode="points"] .popup { display: none; }
+  /* The main window is inactive while the popup is open. */
+  .window { transition: filter .2s; }
+  body:not([data-mode="points"]) .window { filter: brightness(.62); pointer-events: none; }
+
+  /* ---------- Video stage (16:9 box inside the video area) ---------- */
+  .stage { position: absolute; overflow: hidden; background: #000; }
+  .stage img { position: absolute; inset: 0; width: 100%; height: 100%; transform-origin: 0 0; transition: transform .6s cubic-bezier(.45,0,.25,1); }
+  .scorebug {
+    position: absolute; left: 3%; top: 4.5%; padding: 6px 10px 7px; border-radius: 6px; background: rgba(18,18,18,.86);
+    font: 800 12px/1.5 var(--font); letter-spacing: .04em; min-width: 190px; transition: opacity .3s;
+  }
+  .scorebug .t { color: var(--lime); font-size: 9.5px; letter-spacing: .14em; }
+  .scorebug .r { display: flex; gap: 8px; align-items: center; }
+  .scorebug .r i { width: 8px; height: 8px; display: inline-block; }
+  .scorebug .r b { margin-left: auto; color: var(--lime); width: 16px; text-align: right; }
+
+  /* Zoom frame: drawn on the video, as the crop frame in the Transform tab. */
+  .zf { position: absolute; border: 2px solid var(--lime); box-shadow: 0 0 0 9999px rgba(0,0,0,.55); cursor: move; touch-action: none; }
+  .zf.full { border-style: dashed; border-color: rgba(161,254,0,.55); box-shadow: none; cursor: crosshair; }
+  .zf .hd { position: absolute; width: 12px; height: 12px; background: var(--lime); border: 2px solid #142000; border-radius: 2px; }
+  .zf.full .hd { display: none; }
+  .zf .hd[data-c="nw"] { left: -7px; top: -7px; cursor: nwse-resize; }
+  .zf .hd[data-c="ne"] { right: -7px; top: -7px; cursor: nesw-resize; }
+  .zf .hd[data-c="sw"] { left: -7px; bottom: -7px; cursor: nesw-resize; }
+  .zf .hd[data-c="se"] { right: -7px; bottom: -7px; cursor: nwse-resize; }
+  .zf .zl {
+    position: absolute; left: -2px; top: -26px; height: 22px; padding: 0 8px; border-radius: 4px 4px 4px 0; background: var(--lime); color: #142000;
+    font: 700 11.5px/22px var(--font); white-space: nowrap; display: flex; gap: 5px; align-items: center;
+  }
+  .zf .zl .material-symbols-outlined { font-size: 15px; }
+  .zf.full .zl { top: 10px; left: 10px; border-radius: 4px; background: rgba(20,20,20,.9); color: var(--fg); border: 1px solid #444; }
+  .zf .grid { position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(90deg, transparent calc(33.33% - .5px), rgba(255,255,255,.18) calc(33.33% - .5px) calc(33.33% + .5px), transparent 0, transparent calc(66.66% - .5px), rgba(255,255,255,.18) calc(66.66% - .5px) calc(66.66% + .5px), transparent 0),
+      linear-gradient(transparent calc(33.33% - .5px), rgba(255,255,255,.18) calc(33.33% - .5px) calc(33.33% + .5px), transparent 0, transparent calc(66.66% - .5px), rgba(255,255,255,.18) calc(66.66% - .5px) calc(66.66% + .5px), transparent 0); }
+  .zf.full .grid { display: none; }
+  body:not([data-mode="edit"]) .zf { display: none; }
+
+  .vbadge {
+    position: absolute; display: none; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 5px;
+    font: 800 13px/1 var(--font); letter-spacing: .12em;
+  }
+  .vbadge.replay { right: 3%; top: 4.5%; background: var(--lime); color: #142000; }
+  .vbadge.replay .material-symbols-outlined { font-size: 18px; }
+  .vbadge.prev { left: 50%; bottom: 4%; transform: translateX(-50%); background: rgba(10,10,10,.85); color: var(--fg-2); border: 1px dashed #555; letter-spacing: .02em; font-weight: 600; font-size: 12px; }
+  .vbadge.prev .material-symbols-outlined { font-size: 16px; }
+  body[data-mode="preview"] .vbadge { display: flex; }
+  body[data-mode="preview"] .scorebug { opacity: 0; }
+  body[data-mode="preview"].nolabel .vbadge.replay { display: none; }
+  .edit-pill {
+    position: absolute; left: 50%; transform: translateX(-50%); top: 12px; display: none; align-items: center; gap: 6px; height: 26px; padding: 0 10px;
+    border-radius: 13px; background: rgba(14,14,14,.9); border: 1px solid #3a3a3a; font-size: 12px; color: var(--fg-2); z-index: 3;
+  }
+  .edit-pill b { color: var(--fg); }
+  .edit-pill .material-symbols-outlined { font-size: 16px; color: var(--lime); }
+  body[data-mode="edit"] .edit-pill { display: flex; }
+
+  /* ---------- Point bar (Points tab after the scoring merge) ---------- */
+  .pointbar { display: flex; align-items: center; gap: 16px; padding: 10px 16px; background: #1c1c1c; border-top: 1px solid var(--line); }
+  .pstart {
+    display: grid; gap: 2px; width: 150px; height: 46px; padding: 6px 10px; text-align: left; border-radius: var(--radius);
+    background: var(--raised); border: 1px solid var(--lime-line); cursor: pointer;
+  }
+  .pstart .top { display: flex; align-items: center; font-weight: 600; }
+  .pstart .top kbd { margin-left: auto; }
+  .pstart .v { color: var(--fg-3); font-weight: 600; }
+  .winners { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .winners .cap { font-size: 10.5px; letter-spacing: .1em; color: var(--fg-3); margin-right: 4px; }
+  .wbtn { height: 40px; min-width: 110px; padding: 0 10px; justify-content: space-between; border-left: 3px solid var(--c); }
+
+  /* ---------- Playback bar ---------- */
+  .playbar {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
+    padding: 10px 16px; background: #1c1c1c; border-top: 1px solid var(--line);
+  }
+  .clock { display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+  .clock .now { font-size: 15px; color: var(--fg); }
+  .clock .total { font-size: 12px; color: var(--fg-3); }
+  .transport { display: flex; align-items: center; gap: 6px; }
+  .seek { height: 40px; min-width: 64px; padding: 0 10px; gap: 6px; font-weight: 600; background: #292929; border-color: #474747; }
+  .seek .keys { display: inline-flex; gap: 3px; }
+  .seek kbd { width: 18px; padding: 0; border-color: #555; background: #1b1b1b; color: var(--fg); }
+  .transport .play { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 56px; height: 56px; margin: 0 8px; }
+  .transport .play .material-symbols-outlined { font-size: 28px; }
+  .play-key { font-size: 8.5px; font-weight: 800; letter-spacing: .06em; line-height: 1; margin-top: -2px; color: #607050; }
+  .right { display: flex; justify-content: flex-end; gap: 8px; }
+  .right .btn { height: 40px; }
+  .right .btn .material-symbols-outlined { color: var(--fg-2); }
+  /* Icon-only button: the name and the X key are in the tooltip. */
+  .right .btn-replay { width: 40px; padding: 0; }
+  .btn-replay .material-symbols-outlined { color: var(--lime) !important; font-size: 20px; }
+  .btn-replay:disabled { opacity: .45; cursor: default; }
+  .btn-replay:disabled .material-symbols-outlined { color: var(--fg-3) !important; }
+
+  /* ---------- Side column (points list) ---------- */
+  .side { display: flex; flex-direction: column; min-height: 0; background: var(--bg); border-left: 1px solid var(--line); }
+  .navcard { margin: 12px 12px 0; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  .navrow { display: flex; align-items: center; gap: 8px; }
+  .navrow .mid { flex: 1; text-align: center; font-weight: 600; font-size: 14px; }
+  .scoretbl { margin-top: 8px; display: grid; grid-template-columns: 1fr 50px 50px 50px; row-gap: 4px; font-size: 13px; }
+  .scoretbl .h { font-size: 10px; letter-spacing: .1em; color: var(--fg-3); text-align: right; }
+  .scoretbl .h:first-child { text-align: left; }
+  .scoretbl .p { padding: 5px 8px; border-left: 3px solid var(--c); background: #151515; font-weight: 600; }
+  .scoretbl .n { text-align: right; font-weight: 600; padding: 5px 4px; background: #151515; }
+  .side-head { padding: 14px 14px 10px; }
+  .side-head h2 { margin: 0 0 6px; font-size: 16px; font-weight: 600; }
+  .counts { display: flex; gap: 14px; font-size: 12px; color: var(--fg-2); }
+  .counts span { display: inline-flex; align-items: center; gap: 4px; }
+  .counts b { color: var(--fg); }
+  .counts .material-symbols-outlined { font-size: 14px; }
+  .trow { display: grid; grid-template-columns: 34px 74px 54px 1fr 24px 56px; column-gap: 5px; align-items: center; padding: 0 8px 0 14px; }
+  .thead { height: 26px; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--fg-3); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #121212; }
+  .tbody { flex: 1; min-height: 0; }
+  .pt { height: 45px; font-size: 12.5px; border-bottom: 1px solid #191919; cursor: pointer; position: relative; }
+  .pt::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--w, transparent); }
+  .pt:hover { background: #181818; }
+  .pt .n { font-weight: 700; color: var(--fg-2); }
+  .pt .len { color: var(--fg-3); }
+  .pt.sel { background: #232323; box-shadow: inset 0 0 0 1px var(--lime-line); }
+  .pt.sel .n { color: var(--lime); }
+  .tags { display: flex; gap: 4px; justify-content: flex-end; }
+  .tag { height: 18px; padding: 0 6px; border-radius: 3px; font: 700 9.5px/18px var(--font); letter-spacing: .06em; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+  .tag.game { background: #2f6fe0; color: #fff; }
+  .tag.rp { background: transparent; color: var(--lime); border: 1px solid var(--lime-line); cursor: pointer; }
+  .tag.rp .material-symbols-outlined { font-size: 13px; }
+  .tag.rp:hover { background: var(--lime-tint); }
+  .fav { color: var(--yellow); font-size: 17px; }
+  .acts { display: flex; justify-content: flex-end; gap: 1px; }
+  .acts .btn-icon { visibility: hidden; width: 24px; }
+  .pt:hover .acts .btn-icon { visibility: visible; }
+  .acts .btn-icon.rpl .material-symbols-outlined { color: var(--lime); }
+  .sidefoot { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
+  .sidefoot .btn { flex: 1; }
+
+  /* ---------- Replay editor: side panel ---------- */
+  .rside { display: flex; flex-direction: column; min-height: 0; background: var(--bg); border-left: 1px solid var(--line); }
+  .rhead { display: flex; align-items: center; gap: 8px; padding: 12px 12px 10px; border-bottom: 1px solid var(--line); }
+  .rhead h2 { margin: 0; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .rhead h2 .material-symbols-outlined { color: var(--lime); font-size: 20px; }
+  .rhead .sub { font-size: 12px; color: var(--fg-3); }
+  /* One tab for each replay of the point, plus Add. */
+  .rtabs { display: flex; gap: 6px; padding: 10px 12px 0; flex-wrap: wrap; }
+  .rtab {
+    height: 40px; padding: 0 10px; border-radius: var(--radius); border: 1px solid var(--line-2); background: var(--raised);
+    display: grid; align-content: center; text-align: left; cursor: pointer; line-height: 1.25;
+  }
+  .rtab b { font-size: 12.5px; }
+  .rtab small { font-size: 10.5px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .rtab:hover { border-color: #4a4a4a; }
+  .rtab.on { border-color: var(--lime-line); box-shadow: inset 0 0 0 1px rgba(161,254,0,.2); background: linear-gradient(var(--lime-tint), var(--lime-tint)), var(--raised); }
+  .rtab.on b { color: var(--lime); }
+  .rtab.add { display: flex; align-items: center; gap: 4px; border-style: dashed; color: var(--fg-2); font-size: 12px; }
+  .rtab.add .material-symbols-outlined { font-size: 16px; color: var(--lime); }
+  .rtab.add kbd { margin-left: 2px; }
+  .rbody { flex: 1; min-height: 0; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .grp { padding: 10px 12px 11px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 9px; }
+  .grp-h { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; }
+  .grp-h .material-symbols-outlined { font-size: 17px; color: var(--fg-3); }
+  .grp-h .val { margin-left: auto; font-size: 15px; color: var(--lime); font-variant-numeric: tabular-nums; }
+  .grp-h .val small { font-size: 11.5px; color: var(--fg-3); font-weight: 500; margin-left: 4px; }
+  .grp-note { font-size: 11.5px; color: var(--fg-3); line-height: 1.45; }
+  .grp-note.warn { color: var(--yellow); display: flex; gap: 5px; }
+  .grp-note.warn .material-symbols-outlined { font-size: 15px; }
+  .times { display: grid; grid-template-columns: 1fr 1fr 70px; gap: 6px; }
+  .tbox { padding: 6px 8px; border-radius: var(--radius-sm); background: #121212; border: 1px solid var(--line-2); display: grid; gap: 1px; }
+  .tbox .k { font-size: 10px; letter-spacing: .08em; color: var(--fg-3); display: flex; align-items: center; justify-content: space-between; }
+  .tbox .k kbd { height: 15px; min-width: 15px; font-size: 9.5px; padding: 0 3px; }
+  .tbox .v { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tbox .a { font-size: 10.5px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .seg { display: flex; gap: 2px; padding: 2px; background: #121212; border: 1px solid var(--line-2); border-radius: var(--radius); }
+  .seg button { flex: 1; height: 28px; border: 0; border-radius: 4px; background: transparent; color: var(--fg-2); cursor: pointer; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .seg button .material-symbols-outlined { font-size: 16px; }
+  .seg button:hover { color: var(--fg); background: #1f1f1f; }
+  .seg button.on { background: var(--lime); color: #142000; }
+  input[type=range] { width: 100%; accent-color: var(--lime); margin: 2px 0 0; }
+  .sound-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-2); }
+  .sound-row > span { display: inline-flex; align-items: center; gap: 5px; }
+  .sound-row > span .material-symbols-outlined { font-size: 16px; color: var(--fg-3); }
+  .summary { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--lime-line); background: linear-gradient(var(--lime-tint), var(--lime-tint)), var(--card); display: grid; gap: 6px; }
+  .sum-flow { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-2); flex-wrap: wrap; }
+  .sum-flow b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .sum-flow .material-symbols-outlined { font-size: 14px; color: var(--fg-3); }
+  .sum-main { font-size: 13px; }
+  .sum-main b { color: var(--lime); font-size: 15px; }
+  .sum-all { font-size: 12px; color: var(--fg-2); }
+  .sum-all b { color: var(--fg); }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--fg-2); cursor: pointer; }
+  .chk input { accent-color: var(--lime); width: 15px; height: 15px; margin: 0; }
+  .rfoot { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: #121212; }
+  .rfoot .grow { flex: 1; }
+  .rfoot kbd { margin-left: 2px; }
+  .rfoot .btn-lime kbd { background: rgba(0,0,0,.15); border-color: rgba(0,0,0,.35); color: #142000; }
+
+  /* ---------- Replay editor: bar under the video ---------- */
+  .rbar { background: #1c1c1c; border-top: 1px solid var(--line); padding: 10px 16px 10px; display: grid; gap: 8px; }
+  .trim-cap { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--fg-3); }
+  .trim-cap .lg { display: inline-flex; align-items: center; gap: 5px; }
+  .trim-cap .sw { width: 14px; height: 8px; border-radius: 2px; }
+  .trim-cap .grow { flex: 1; }
+  .trim { position: relative; height: 54px; margin-top: 14px; border-radius: 6px; background: #121212; border: 1px solid var(--line-2); cursor: pointer; touch-action: none; user-select: none; }
+  .trim .tick { position: absolute; bottom: 0; height: 6px; border-left: 1px solid #3a3a3a; }
+  .trim .tick.big { height: 12px; border-color: #555; }
+  .trim .tick span { position: absolute; left: 3px; bottom: 1px; font-size: 10px; color: var(--fg-3); white-space: nowrap; }
+  .trim .ptrange { position: absolute; top: 6px; bottom: 16px; background: rgba(76,175,80,.22); border-left: 2px solid var(--mark); border-right: 2px solid var(--mark); }
+  .trim .ptrange span { position: absolute; left: 6px; top: 3px; font-size: 10.5px; font-weight: 700; color: #7fcf83; letter-spacing: .04em; }
+  .trim .rp { position: absolute; top: 2px; bottom: 12px; background: repeating-linear-gradient(-45deg, rgba(161,254,0,.26) 0 5px, rgba(161,254,0,.12) 5px 10px); border: 2px solid var(--lime); border-radius: 3px; cursor: grab; z-index: 2; }
+  .trim .rp.other { background: rgba(161,254,0,.07); border: 1px dashed rgba(161,254,0,.55); cursor: pointer; z-index: 1; }
+  .trim .rp .rn { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font: 700 10.5px/1 var(--font); color: var(--lime); pointer-events: none; }
+  .trim .rp .h { position: absolute; top: -2px; bottom: -2px; width: 12px; background: var(--lime); cursor: ew-resize; display: grid; place-items: center; }
+  .trim .rp .h::after { content: ""; width: 2px; height: 14px; border-left: 1px solid #142000; border-right: 1px solid #142000; }
+  .trim .rp .h.s { left: -7px; border-radius: 3px 0 0 3px; }
+  .trim .rp .h.e { right: -7px; border-radius: 0 3px 3px 0; }
+  .trim .rp .h kbd { position: absolute; top: -20px; height: 16px; min-width: 16px; font-size: 9.5px; border-color: var(--lime-line); color: var(--lime); background: #111; }
+  .trim .ph { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--playhead); pointer-events: none; z-index: 3; }
+  .trim .ph::before { content: ""; position: absolute; top: 0; left: -5px; border: 6px solid transparent; border-top: 7px solid var(--playhead); border-bottom: 0; }
+  .rtrans { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+  .rtrans .clock .now { font-size: 14px; }
+  .rtrans .mid { display: flex; align-items: center; gap: 6px; }
+  .rtrans .setb { height: 40px; gap: 6px; font-weight: 600; }
+  .rtrans .setb kbd { border-color: var(--lime-line); color: var(--lime); }
+  .rtrans .play { display: flex; align-items: center; width: auto; min-width: 150px; padding: 0 16px; gap: 8px; height: 48px; margin: 0 8px; font-weight: 700; font-size: 13px; }
+  .rtrans .play .material-symbols-outlined { font-size: 26px; }
+  .rtrans .play kbd { background: rgba(0,0,0,.12); border-color: rgba(0,0,0,.35); color: #142000; }
+  .rtrans .hint { justify-self: end; font-size: 11.5px; color: var(--fg-3); display: flex; gap: 10px; }
+  .rtrans .hint span { display: inline-flex; gap: 4px; align-items: center; }
+  .pbar { height: 4px; border-radius: 2px; background: #2a2a2a; overflow: hidden; display: none; }
+  .pbar i { display: block; height: 100%; width: 0; background: var(--lime); }
+  body[data-mode="preview"] .pbar { display: block; }
+  body[data-mode="preview"] .rbar .setb, body[data-mode="preview"] .trim .rp .h { visibility: hidden; }
+
+  /* ---------- Bottom timeline ---------- */
+  .tl-wrap { display: grid; grid-template-columns: 124px 1fr; }
+  .tl-wrap + .tl-wrap .tl-l { border-top: 1px solid #1d1d1d; }
+  .tl-g { display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; color: var(--fg-2); border-right: 1px solid var(--line); background: #131313; }
+  .tl-g .material-symbols-outlined { font-size: 14px; color: var(--fg-3); }
+  .tl-l { position: relative; overflow: hidden; }
+  .tl-r { height: 20px; border-bottom: 1px solid var(--line); background: #131313; }
+  .tl-v { height: 24px; }
+  .tl-p { height: 24px; }
+  /* Video lane: the source video in blue; each replay is a lime segment as long as the time it adds. */
+  .tl-vb { position: absolute; top: 6px; height: 12px; background: rgba(68, 136, 255, .55); border-radius: 2px; }
+  /* A replay: a lime block with spiky (zigzag) edges on all four sides, no text.
+     The outer mask (b) cuts the left and right edges; the inner mask (i) cuts the top and bottom edges.
+     "round" fits a whole number of spikes on each edge. A spike is 4 px wide and 2 px deep.
+     A block under 8 px wide has no room for side spikes, so it keeps only the top and bottom spikes. */
+  .tl-rs { position: absolute; top: 3px; height: 18px; cursor: pointer; --z: 4px; }
+  .tl-rs.narrow b { -webkit-mask: none; mask: none; }
+  .tl-rs b {
+    position: absolute; inset: 0;
+    -webkit-mask:
+      conic-gradient(from 45deg at left, #0000, #000 1deg 89deg, #0000 90deg) left / 51% var(--z) no-repeat round,
+      conic-gradient(from 225deg at right, #0000, #000 1deg 89deg, #0000 90deg) right / 51% var(--z) no-repeat round;
+    mask:
+      conic-gradient(from 45deg at left, #0000, #000 1deg 89deg, #0000 90deg) left / 51% var(--z) no-repeat round,
+      conic-gradient(from 225deg at right, #0000, #000 1deg 89deg, #0000 90deg) right / 51% var(--z) no-repeat round;
+  }
+  .tl-rs i {
+    position: absolute; inset: 0; background: var(--lime);
+    -webkit-mask:
+      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--z) 51% round no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--z) 51% round no-repeat;
+    mask:
+      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--z) 51% round no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--z) 51% round no-repeat;
+  }
+  .tl-rs:hover i { background: #c4ff5c; }
+  .tl-rs.cur { z-index: 2; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }
+  .tl-m { position: absolute; top: 5px; bottom: 5px; min-width: 1px; background: var(--mark); border-radius: 1px; cursor: pointer; }
+  .tl-m.fav { background: var(--yellow); }
+  .tl-m.sel { box-shadow: 0 0 0 1.5px #fff; z-index: 2; }
+  .tl-ph { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--playhead); pointer-events: none; z-index: 5; }
+
+  /* ---------- Mockup notes ---------- */
+  .mock-bar .title { color: var(--fg); font-weight: 600; }
+  .notes {
+    position: fixed; left: 96px; bottom: 120px; width: 440px; max-height: calc(100vh - 240px); overflow: auto; z-index: 40;
+    background: #0a0a0a; border: 1px dashed #555; border-radius: 8px; padding: 14px 30px 14px 16px; color: var(--fg-2); font-size: 12px; line-height: 1.55;
+  }
+  .notes h4 { margin: 10px 0 4px; color: var(--fg); font-size: 12.5px; }
+  .notes h4:first-of-type { margin-top: 0; }
+  .notes ol, .notes ul { margin: 0; padding-left: 18px; }
+  .notes li { margin: 2px 0; }
+  .notes b { color: var(--fg); }
+  .notes .x { position: absolute; top: 6px; right: 8px; border: 0; background: none; color: var(--fg-3); cursor: pointer; font-size: 14px; }
+</style>
+</head>
+<body data-mode="points">
+<div class="mock-bar">
+  <span class="title">Instant replay — UX idea (B-50)</span>
+  <span class="mock-label">State</span>
+  <div class="mock-states" id="modes">
+    <button data-m="points">1 · Points tab</button>
+    <button data-m="edit">2 · Edit replay</button>
+    <button data-m="preview">3 · Preview</button>
+  </div>
+  <span class="mock-label">Timeline</span>
+  <div class="mock-states" id="zooms">
+    <button data-z="window" class="is-selected">10 min</button>
+    <button data-z="match">Whole match</button>
+  </div>
+  <span class="spacer"></span>
+  <div class="mock-states"><button id="bNotes" class="is-selected">Notes</button></div>
+</div>
+
+<div class="window">
+  <div class="titlebar"><span class="logo"></span>BananaShot — Points — PXL_20260913_070045619<span class="win-buttons"><span>—</span><span>☐</span><span>✕</span></span></div>
+  <div class="app">
+    <nav class="nav">
+      <div class="nav-group"><a class="nav-item"><span class="material-symbols-outlined">folder_open</span>Projects</a></div>
+      <div class="nav-group"><div class="nav-caption">MATCH</div>
+        <a class="nav-item active"><span class="material-symbols-outlined">sports_tennis</span>Points</a>
+        <a class="nav-item"><span class="material-symbols-outlined">bar_chart</span>Stats</a></div>
+      <div class="nav-group"><div class="nav-caption">VIDEO</div>
+        <a class="nav-item"><span class="material-symbols-outlined">palette</span>Colors</a>
+        <a class="nav-item"><span class="material-symbols-outlined">crop_rotate</span>Transform</a></div>
+      <div class="nav-group"><a class="nav-item"><span class="material-symbols-outlined">movie</span>Export</a></div>
+      <div class="nav-group push"><a class="nav-item"><span class="material-symbols-outlined">help</span>Help</a><a class="nav-item"><span class="material-symbols-outlined">more_horiz</span>More</a></div>
+    </nav>
+
+    <main class="tab">
+      <!-- Video -->
+      <div class="video" id="video">
+        <div class="stage" id="stage0">
+          <img id="frame0" src="../points-redesign/frame.jpg" alt="Video preview">
+          <div class="scorebug">
+            <div class="t">● SUNDAY CLUB MATCH</div>
+            <div class="r"><i style="background:#4b8bff"></i>ALEX<span style="margin-left:auto;color:var(--fg-2)">5</span><b>30</b></div>
+            <div class="r"><i style="background:#ff5c5c"></i>SAM<span style="margin-left:auto;color:var(--fg-2)">1</span><b>15</b></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Point bar (Points tab) -->
+      <div class="pointbar">
+        <button class="pstart"><span class="top">Point start<kbd>C</kbd></span><span class="v">—</span></button>
+        <div class="winners">
+          <span class="cap">WHO WON?</span>
+          <button class="btn wbtn" style="--c:#4b8bff">Alex<kbd>Q</kbd></button>
+          <button class="btn wbtn" style="--c:#777">No point<kbd>W</kbd></button>
+          <button class="btn wbtn" style="--c:#ff5c5c">Sam<kbd>E</kbd></button>
+        </div>
+      </div>
+
+      <!-- Playback bar (Points tab) -->
+      <div class="playbar">
+        <div class="clock"><span class="now tc" id="now"></span><span class="total tc">/ 01:36:01.0</span></div>
+        <div class="transport">
+          <button class="btn seek" data-nudge="-5000">−5s<span class="keys"><kbd>⇧</kbd><kbd>←</kbd></span></button>
+          <button class="btn seek" data-nudge="-1000">−1s<span class="keys"><kbd>←</kbd></span></button>
+          <button class="play" id="bPlay"><span class="material-symbols-outlined fill">play_arrow</span><span class="play-key">SPACE</span></button>
+          <button class="btn seek" data-nudge="1000">+1s<span class="keys"><kbd>→</kbd></span></button>
+          <button class="btn seek" data-nudge="5000">+5s<span class="keys"><kbd>⇧</kbd><kbd>→</kbd></span></button>
+        </div>
+        <div class="right">
+          <button class="btn"><span class="material-symbols-outlined">add_comment</span>Add comment</button>
+          <button class="btn btn-replay" id="bReplay" aria-label="Add replay"><span class="material-symbols-outlined">slow_motion_video</span></button>
+        </div>
+      </div>
+
+      <!-- Side column (Points tab) -->
+      <aside class="side">
+        <div class="navcard">
+          <div class="navrow">
+            <button class="btn btn-sm">Previous<kbd>⇧</kbd><kbd>R</kbd></button>
+            <span class="mid" id="navMid"></span>
+            <button class="btn btn-sm">Next<kbd>R</kbd></button>
+          </div>
+          <div class="scoretbl">
+            <span class="h">AFTER THE POINT</span><span class="h">SETS</span><span class="h">GAMES</span><span class="h">POINTS</span>
+            <span class="p" style="--c:#4b8bff">Alex</span><span class="n">0</span><span class="n">5</span><span class="n">30</span>
+            <span class="p" style="--c:#ff5c5c">Sam</span><span class="n">0</span><span class="n">1</span><span class="n">15</span>
+          </div>
+        </div>
+        <div class="side-head">
+          <h2>Points &amp; events</h2>
+          <div class="counts">
+            <span><span class="material-symbols-outlined fill" style="color:var(--lime)">flag</span><b>128</b> marked</span>
+            <span><span class="material-symbols-outlined fill" style="color:var(--yellow)">star</span><b>39</b> favorites</span>
+            <span><span class="material-symbols-outlined" style="color:var(--lime)">slow_motion_video</span><b id="rpCount"></b> replays</span>
+          </div>
+        </div>
+        <div class="trow thead"><span>#</span><span>Start</span><span>Length</span><span></span><span>★</span><span></span></div>
+        <div class="tbody scroll" id="list"></div>
+        <div class="sidefoot">
+          <button class="btn"><span class="material-symbols-outlined">tune</span>Scoring settings</button>
+          <button class="btn"><span class="material-symbols-outlined">scoreboard</span>Scoreboard style</button>
+        </div>
+      </aside>
+
+      <!-- Bottom timeline -->
+      <div class="tl">
+        <div class="tl-wrap"><div class="tl-g"></div><div class="tl-l tl-r" id="tlRuler"></div></div>
+        <div class="tl-wrap"><div class="tl-g"><span class="material-symbols-outlined">movie</span>VIDEO</div><div class="tl-l tl-v" id="tlVid"></div></div>
+        <div class="tl-wrap"><div class="tl-g"><span class="material-symbols-outlined">flag</span>POINTS</div><div class="tl-l tl-p" id="tlPts"></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Replay editor: a separate popup window with its own video player -->
+<div class="popup" role="dialog" aria-label="Instant replays">
+  <div class="titlebar"><span class="logo"><span class="material-symbols-outlined">slow_motion_video</span></span><span id="popTitle"></span>
+    <span class="win-buttons"><span>—</span><span>☐</span><span class="close" id="bClose" title="Close without saving [Esc]">✕</span></span></div>
+  <div class="pgrid">
+      <div class="pvideo" id="pvideo">
+        <div class="edit-pill"><span class="material-symbols-outlined">slow_motion_video</span><b>Editing replay</b> · drag the frame to zoom</div>
+        <div class="stage" id="stage">
+          <img id="frame" src="../points-redesign/frame.jpg" alt="Video preview">
+          <div class="scorebug">
+            <div class="t">● SUNDAY CLUB MATCH</div>
+            <div class="r"><i style="background:#4b8bff"></i>ALEX<span style="margin-left:auto;color:var(--fg-2)">5</span><b>30</b></div>
+            <div class="r"><i style="background:#ff5c5c"></i>SAM<span style="margin-left:auto;color:var(--fg-2)">1</span><b>15</b></div>
+          </div>
+          <div class="zf" id="zf">
+            <div class="grid"></div>
+            <div class="zl" id="zl"></div>
+            <div class="hd" data-c="nw"></div><div class="hd" data-c="ne"></div><div class="hd" data-c="sw"></div><div class="hd" data-c="se"></div>
+          </div>
+          <div class="vbadge replay"><span class="material-symbols-outlined">replay</span>REPLAY</div>
+          <div class="vbadge prev" id="prevBadge"></div>
+        </div>
+      </div>
+
+      <!-- Bar under the video -->
+      <div class="rbar">
+        <div class="trim-cap">
+          <span class="lg"><span class="sw" style="background:rgba(76,175,80,.5)"></span>Point</span>
+          <span class="lg"><span class="sw" style="background:var(--lime)"></span>This replay</span>
+          <span class="lg"><span class="sw" style="border:1px dashed var(--lime-line)"></span>Other replays</span>
+          <span class="grow"></span>
+          <span>Times count from the point start. Up to 3 s before and after the point.</span>
+        </div>
+        <div class="trim" id="trim"></div>
+        <div class="pbar"><i id="pfill"></i></div>
+        <div class="rtrans">
+          <div class="clock"><span class="now tc" id="rNow"></span><span class="total tc" id="rNowAbs"></span></div>
+          <div class="mid">
+            <button class="btn seek" id="bBack"><span class="keys"><kbd>←</kbd></span>−0.1s</button>
+            <button class="btn setb" id="bSetS"><kbd>I</kbd>Start here</button>
+            <button class="play" id="bPreview"><span class="material-symbols-outlined fill" id="prevIcon">play_arrow</span><span id="prevText">Preview replay</span><kbd>SPACE</kbd></button>
+            <button class="btn setb" id="bSetE">End here<kbd>O</kbd></button>
+            <button class="btn seek" id="bFwd">+0.1s<span class="keys"><kbd>→</kbd></span></button>
+          </div>
+          <div class="hint"><span><kbd>⇧</kbd><kbd>←</kbd><kbd>→</kbd> 1 s</span></div>
+        </div>
+      </div>
+
+      <!-- Replay editor: side panel -->
+      <aside class="rside">
+        <div class="rhead">
+          <div>
+            <h2><span class="material-symbols-outlined">slow_motion_video</span>Instant replays</h2>
+            <div class="sub" id="rSub"></div>
+          </div>
+        </div>
+        <div class="rtabs" id="rtabs"></div>
+        <div class="rbody scroll">
+          <div class="grp">
+            <div class="grp-h"><span class="material-symbols-outlined">content_cut</span>Part<span class="val" id="vLen"></span></div>
+            <div class="times">
+              <div class="tbox"><span class="k">START<kbd>I</kbd></span><span class="v" id="vS"></span><span class="a" id="vSa"></span></div>
+              <div class="tbox"><span class="k">END<kbd>O</kbd></span><span class="v" id="vE"></span><span class="a" id="vEa"></span></div>
+              <button class="btn" id="bWhole" style="height:auto;flex-direction:column;gap:2px;font-size:11.5px" title="Use the whole point"><span class="material-symbols-outlined">width_full</span>Whole</button>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span class="material-symbols-outlined">zoom_in</span>Zoom<span class="val" id="vZoom"></span></div>
+            <div class="seg" id="segZoom">
+              <button data-z="1">Off</button><button data-z="1.5">1.5×</button><button data-z="2">2×</button><button data-z="3">3×</button>
+            </div>
+            <div class="grp-note" id="zoomNote"></div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span class="material-symbols-outlined">speed</span>Speed<span class="val" id="vSpeed"></span></div>
+            <input type="range" id="speed" min="0.1" max="1" step="0.05">
+            <div class="seg" id="segSpeed">
+              <button data-s="0.1">0.1×</button><button data-s="0.25">0.25×</button><button data-s="0.5">0.5×</button><button data-s="0.75">0.75×</button><button data-s="1">1×</button>
+            </div>
+            <div class="sound-row">
+              <span><span class="material-symbols-outlined">volume_up</span>Sound</span>
+              <div class="seg" id="segSound">
+                <button data-snd="slow">Slowed down</button>
+                <button data-snd="mute"><span class="material-symbols-outlined">volume_off</span>Muted</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grp">
+            <div class="grp-h"><span class="material-symbols-outlined">repeat</span>Repeat<span class="val" id="vRep"></span></div>
+            <div class="seg" id="segRep">
+              <button data-r="1">1</button><button data-r="2">2</button><button data-r="3">3</button><button data-r="4">4</button><button data-r="5">5</button>
+            </div>
+          </div>
+
+          <div class="summary">
+            <div class="sum-flow" id="sumFlow"></div>
+            <div class="sum-main" id="sumMain"></div>
+            <div class="sum-all" id="sumAll"></div>
+          </div>
+          <label class="chk"><input type="checkbox" id="cLabel" checked>Show the “REPLAY” badge on the video</label>
+        </div>
+        <div class="rfoot">
+          <button class="btn btn-danger" id="bDel" title="Delete this replay"><span class="material-symbols-outlined">delete</span>Delete</button>
+          <span class="grow"></span>
+          <button class="btn" id="bCancel">Cancel<kbd>Esc</kbd></button>
+          <button class="btn btn-lime" id="bSave">Save<kbd>Enter</kbd></button>
+        </div>
+      </aside>
+  </div>
+</div>
+
+<div class="notes" id="notes">
+  <button class="x" id="bNotesX" aria-label="Close">✕</button>
+  <h4>Flow</h4>
+  <ol>
+    <li>Pause the video on the moment. Click the replay icon at the right end of the playback bar (or <kbd>X</kbd>, or the replay icon on a row).</li>
+    <li>The replay editor opens in a popup window with its own video player. The Points tab stays as it is behind it. A new replay starts 1.5 s before the playhead and ends 1.5 s after it.</li>
+    <li>Drag the part edges in the bar under the video. Drag or resize the lime frame on the video to zoom. Set the speed, the repeat count and the sound on the right.</li>
+    <li>A point can have more than one replay. Each replay has a tab at the top of the panel. <b>Add</b> makes one more replay at the playhead.</li>
+    <li><b>Preview replay</b> plays the result. <b>Save</b> keeps all replays of the point and closes the popup.</li>
+    <li>A point with replays has a lime <b>REPLAY</b> tag in the list. On the timeline, each replay is a lime block with spiky edges after its point. The block width shows the time that the replay adds.</li>
+  </ol>
+  <h4>Decided on 2026-10-22 (backlog B-50)</h4>
+  <ul>
+    <li>A point can have more than one replay.</li>
+    <li>The part can start up to 3 s before the point and end up to 3 s after it.</li>
+    <li>The zoom goes in smoothly at the start and out smoothly at the end.</li>
+    <li>The sound slows down with the video by default. An option mutes it.</li>
+    <li>The Highlights export includes the replays of each point that it includes.</li>
+    <li>On the timeline, a replay is lime, and its width is in proportion to the time it adds. It has no text and small spiky edges on all four sides. A narrow replay (whole-match view, about 3 px) is a plain lime tick; the spikes show only when the timeline is zoomed in.</li>
+    <li>The editor opens in a separate popup window, not in the main window.</li>
+  </ul>
+  <h4>Assumptions in this mockup (not decided)</h4>
+  <ul>
+    <li>The replays of one point play one after the other, in the order of their start times.</li>
+    <li>The timeline ruler shows the times of the source video. It skips over the replay segments.</li>
+    <li>The popup is modal: the main window waits until Save or Cancel.</li>
+  </ul>
+  <h4>Technical fit</h4>
+  <ul>
+    <li>The popup needs a second mpv player. The main player pauses while the popup is open.</li>
+    <li>The zoom frame can use the same mouse logic as the crop frame of the Transform tab (CropEditorOverlay), drawn with libass.</li>
+    <li>X, I and O are free keys now.</li>
+  </ul>
+</div>
+
+<script>
+  // ---------- Data ----------
+  const ms = (t) => { const [h, m, s] = t.split(':').map(Number); return ((h * 60 + m) * 60 + s) * 1000; };
+  const W = { a: '#4b8bff', s: '#ff5c5c', n: '#555' };
+  const RAW = [
+    [37, '00:39:06', 12.8, 1, 0, 'a'], [38, '00:39:33', 18.9, 1, 1, 'a'], [39, '00:40:18', 15.1, 1, 0, 's'], [40, '00:41:00', 13.2, 0, 0, 's'],
+    [41, '00:41:34', 10.0, 0, 0, 'a'], [42, '00:42:10', 7.7, 0, 0, 'a'], [43, '00:42:46', 6.0, 1, 0, 'a'], [44, '00:43:13', 8.3, 1, 1, 'a'],
+    [45, '00:45:29', 19.3, 0, 0, null], [46, '00:46:15', 5.0, 0, 0, null], [47, '00:46:32', 9.2, 0, 0, null], [48, '00:46:55', 12.8, 0, 0, null],
+    [49, '00:47:31', 7.4, 1, 0, null], [50, '00:48:02', 11.6, 0, 0, null], [51, '00:48:40', 6.3, 0, 0, null],
+  ];
+  const points = RAW.map(([n, st, len, fav, game, won]) => ({ n, start: ms(st), end: ms(st) + Math.round(len * 1000), fav: !!fav, game: !!game, won, replays: [] }));
+  const byN = (n) => points.find((p) => p.n === n);
+  const mk = (p, s, e, o = {}) => ({ s: p.start + s, e: p.start + e, x: 0, y: 0, w: 1, speed: .5, rep: 1, label: true, sound: 'slow', ...o });
+  // Example replays that exist already: point 38 has the line call and the reaction after the point.
+  byN(38).replays = [
+    mk(byN(38), 14200, 17400, { x: .3, y: .3, w: .5, speed: .25, rep: 2 }),
+    mk(byN(38), 19400, 21400, { x: .35, y: .1, w: .66, speed: .75, sound: 'mute' }),
+  ];
+  byN(43).replays = [mk(byN(43), 3000, 6800)];
+
+  const state = { mode: 'points', cur: 45, t: byN(45).start + 16100, drafts: null, ri: 0, pt: null, prev: null };
+
+  // ---------- Format ----------
+  const pad = (n, w = 2) => String(n).padStart(w, '0');
+  const fmt = (t) => `${pad(Math.floor(t / 3600000))}:${pad(Math.floor(t / 60000) % 60)}:${pad(Math.floor(t / 1000) % 60)}.${Math.floor((t % 1000) / 100)}`;
+  const rel = (d) => { const neg = d < 0; d = Math.abs(d); return `${neg ? '−' : ''}${Math.floor(d / 60000)}:${pad(Math.floor(d / 1000) % 60)}.${Math.floor((d % 1000) / 100)}`; };
+  const sec = (d) => (d / 1000).toFixed(1) + ' s';
+  const xf = (v) => (+v).toFixed(2).replace(/\.?0+$/, '') + '×';
+  const $ = (id) => document.getElementById(id);
+  const icon = (name, cls = '') => `<span class="material-symbols-outlined ${cls}">${name}</span>`;
+  const cur = () => byN(state.cur);
+  const draft = () => state.drafts[state.ri];
+  const pointAt = (t) => points.find((p) => p.start <= t && t < p.end) || null;
+  const added = (r) => ((r.e - r.s) / r.speed) * r.rep;
+  const replaysOf = (p) => (state.drafts && p.n === state.cur ? state.drafts : p.replays);
+  const addedOf = (p) => replaysOf(p).reduce((sum, r) => sum + added(r), 0);
+
+  // ---------- Video stage ----------
+  // Two players: the main window (Points tab) and the popup window (replay editor).
+  function fitOne(box, stage, img) {
+    const v = $(box).getBoundingClientRect();
+    if (!v.width || !v.height) return;
+    const ar = ($(img).naturalWidth && $(img).naturalHeight) ? $(img).naturalWidth / $(img).naturalHeight : 16 / 9;
+    let w = v.width, h = w / ar;
+    if (h > v.height) { h = v.height; w = h * ar; }
+    Object.assign($(stage).style, { width: w + 'px', height: h + 'px', left: (v.width - w) / 2 + 'px', top: (v.height - h) / 2 + 'px' });
+  }
+  function fitStage() { fitOne('video', 'stage0', 'frame0'); fitOne('pvideo', 'stage', 'frame'); }
+  new ResizeObserver(fitStage).observe($('video'));
+  new ResizeObserver(fitStage).observe($('pvideo'));
+  $('frame').onload = fitStage;
+  $('frame0').onload = fitStage;
+
+  function renderFrame() {
+    const d = draft(), zf = $('zf');
+    zf.classList.toggle('full', d.w >= .999);
+    Object.assign(zf.style, { left: d.x * 100 + '%', top: d.y * 100 + '%', width: d.w * 100 + '%', height: d.w * 100 + '%' });
+    $('zl').innerHTML = d.w >= .999
+      ? `${icon('zoom_in')}No zoom · drag on the video to draw a frame`
+      : `${icon('zoom_in')}${xf(Math.round(10 / d.w) / 10)}`;
+  }
+
+  // Zoom frame drag: move, resize from a corner (aspect locked), or draw a new frame.
+  (function bindFrame() {
+    const stage = $('stage');
+    let drag = null;
+    stage.addEventListener('pointerdown', (ev) => {
+      if (state.mode !== 'edit') return;
+      const d = draft(), r = stage.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width, py = (ev.clientY - r.top) / r.height;
+      const hd = ev.target.closest('.hd');
+      if (hd) {
+        const c = hd.dataset.c;
+        const ax = c.includes('w') ? d.x + d.w : d.x, ay = c.includes('n') ? d.y + d.w : d.y;
+        drag = { kind: 'resize', ax, ay, sx: c.includes('w') ? -1 : 1, sy: c.includes('n') ? -1 : 1 };
+      } else if (d.w < .999 && px >= d.x && px <= d.x + d.w && py >= d.y && py <= d.y + d.w) {
+        drag = { kind: 'move', ox: px - d.x, oy: py - d.y };
+      } else {
+        drag = { kind: 'resize', ax: px, ay: py, sx: 0, sy: 0 };
+      }
+      stage.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+    stage.addEventListener('pointermove', (ev) => {
+      if (!drag) return;
+      const d = draft(), r = stage.getBoundingClientRect();
+      const px = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)), py = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
+      if (drag.kind === 'move') {
+        d.x = Math.max(0, Math.min(1 - d.w, px - drag.ox));
+        d.y = Math.max(0, Math.min(1 - d.w, py - drag.oy));
+      } else {
+        const sx = drag.sx || (px >= drag.ax ? 1 : -1), sy = drag.sy || (py >= drag.ay ? 1 : -1);
+        const maxW = Math.min(sx > 0 ? 1 - drag.ax : drag.ax, sy > 0 ? 1 - drag.ay : drag.ay);
+        if (maxW < .25) return;
+        const w = Math.max(.25, Math.min(maxW, Math.max(Math.abs(px - drag.ax), Math.abs(py - drag.ay))));
+        d.w = w;
+        d.x = sx > 0 ? drag.ax : drag.ax - w;
+        d.y = sy > 0 ? drag.ay : drag.ay - w;
+      }
+      renderFrame(); renderPanel();
+    });
+    stage.addEventListener('pointerup', () => { drag = null; });
+  })();
+
+  // ---------- Points tab ----------
+  function renderList() {
+    $('list').innerHTML = points.map((p) => {
+      const k = p.replays.length;
+      const tag = k ? `<span class="tag rp" data-edit="${p.n}" title="Edit the replays of point ${p.n}">${icon('slow_motion_video')}${k > 1 ? k + ' REPLAYS' : 'REPLAY'}</span>` : '';
+      return `
+      <div class="trow pt ${p.n === state.cur ? 'sel' : ''}" data-n="${p.n}" style="--w:${p.won ? W[p.won] : 'transparent'}">
+        <span class="n num">${p.n}</span>
+        <span class="tc">${fmt(p.start).slice(0, 8)}</span>
+        <span class="len tc">${sec(p.end - p.start)}</span>
+        <span class="tags">${p.game ? '<span class="tag game">GAME</span>' : ''}${tag}</span>
+        <span>${p.fav ? icon('star', 'fill fav') : ''}</span>
+        <span class="acts">
+          <button class="btn-icon rpl" data-add="${p.n}" title="Add an instant replay [X]">${icon('slow_motion_video')}</button>
+          <button class="btn-icon" title="Edit times/label">${icon('edit')}</button>
+          <button class="btn-icon danger" title="Delete point">${icon('close')}</button>
+        </span>
+      </div>`;
+    }).join('');
+    $('rpCount').textContent = points.reduce((sum, p) => sum + p.replays.length, 0);
+    $('list').querySelector('.sel')?.scrollIntoView({ block: 'center' });
+  }
+
+  function renderPlaybar() {
+    $('now').textContent = fmt(state.t);
+    const p = pointAt(state.t);
+    $('navMid').innerHTML = `Point ${state.cur} / 128 <span style="color:var(--fg-3)">☆</span>`;
+    const b = $('bReplay');
+    b.disabled = !p;
+    b.title = p ? `Add replay — point ${p.n}, at the playhead [X]` : 'Add replay [X] — move the playhead into a point first';
+  }
+
+  // ---------- Bottom timeline ----------
+  // The timeline shows the exported video: each replay is inserted after its point, as long as the time it adds.
+  // Mockup switch: "window" shows about 10 minutes; "match" shows the whole match, as the app does by default.
+  const DURATION = ms('01:36:01');
+  const RANGES = { window: [ms('00:38:40'), ms('00:49:00'), 60000], match: [0, DURATION, 600000] };
+  state.zoom = 'window';
+
+  // Filler points for the whole-match view only (the list shows points 37–51).
+  // About one point in four has a typical replay: 2–4 s at 0.5× (sometimes 0.25×), played once.
+  const fillers = (() => {
+    let seed = 20260913;
+    const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+    const list = [];
+    for (let t = ms('00:03:00'); t < ms('01:35:00');) {
+      const start = t + 18000 + rnd() * 24000, end = start + 4000 + rnd() * 12000;
+      t = end;
+      if (start > ms('00:38:20') && start < ms('00:49:00')) continue;
+      const p = { n: 0, start, end, fav: rnd() < .3, replays: [] };
+      if (rnd() < .25) { const s = start + (end - start) * (.4 + rnd() * .3); p.replays.push({ s, e: s + 2000 + rnd() * 2000, speed: rnd() < .3 ? .25 : .5, rep: 1 }); }
+      list.push(p);
+    }
+    return list;
+  })();
+  const allPoints = () => points.concat(fillers).sort((a, b) => a.start - b.start);
+  const pos = (t) => t + allPoints().filter((p) => p.end < t).reduce((sum, p) => sum + addedOf(p), 0);
+
+  function renderTimeline() {
+    const [TL0, TL1, STEP] = RANGES[state.zoom];
+    const D0 = pos(TL0), D1 = pos(TL1);
+    const X = (d) => ((d - D0) / (D1 - D0)) * 100;
+    const lanePx = $('tlVid').clientWidth || 1400;
+    let r = '';
+    for (let t = Math.ceil((TL0 + 1) / STEP) * STEP; t < TL1; t += STEP) r += `<div class="tl-tick" style="left:${X(pos(t))}%"><span>${fmt(t).slice(0, 8)}</span></div>`;
+    $('tlRuler').innerHTML = r;
+
+    let v = '', from = TL0;
+    allPoints().forEach((p) => {
+      const list = replaysOf(p);
+      if (!list.length || p.end < TL0 || p.start > TL1) return;
+      v += `<div class="tl-vb" style="left:${X(pos(from))}%;width:${X(pos(p.end)) - X(pos(from))}%"></div>`;
+      let d = pos(p.end);
+      list.forEach((rp, i) => {
+        const w = X(d + added(rp)) - X(d);
+        const narrow = (w * lanePx) / 100 < 8 ? 'narrow' : '';
+        const isCur = state.drafts && p.n === state.cur && i === state.ri ? 'cur' : '';
+        const tip = p.n ? `Replay ${i + 1} of point ${p.n}` : 'Replay';
+        v += `<div class="tl-rs ${narrow} ${isCur}" ${p.n ? `data-edit="${p.n}" data-i="${i}"` : ''} style="left:${X(d)}%;width:max(3px, calc(${w}% - 1px))" title="${tip}: adds ${sec(added(rp))}"><b><i></i></b></div>`;
+        d += added(rp);
+      });
+      from = p.end + 1;
+    });
+    v += `<div class="tl-vb" style="left:${X(pos(from))}%;right:0"></div>`;
+
+    const pts = allPoints().filter((p) => p.end >= TL0 && p.start <= TL1).map((p) =>
+      `<div class="tl-m ${p.fav ? 'fav' : ''} ${p.n && p.n === state.cur ? 'sel' : ''}" ${p.n ? `data-n="${p.n}"` : ''} style="left:${X(pos(p.start))}%;width:${X(pos(p.end)) - X(pos(p.start))}%"></div>`).join('');
+
+    let ph;
+    if (state.mode === 'preview' && state.prev) {
+      const before = state.drafts.slice(0, state.ri).reduce((sum, x) => sum + added(x), 0);
+      ph = X(pos(cur().end) + before + state.prev.el);
+    } else ph = X(pos(state.mode === 'points' ? state.t : state.pt));
+    const phDiv = `<div class="tl-ph" style="left:${ph}%"></div>`;
+    $('tlVid').innerHTML = v + phDiv;
+    $('tlPts').innerHTML = pts + phDiv;
+  }
+
+  // ---------- Replay editor ----------
+  const MARGIN = 3000, MIN_LEN = 500;
+  const win = () => ({ a: cur().start - MARGIN, b: cur().end + MARGIN });
+
+  function newReplay(t) {
+    const { a, b } = win();
+    let s = Math.max(a, t - 1500), e = Math.min(b, s + 3000);
+    s = Math.max(a, e - 3000);
+    return { s, e, x: 0, y: 0, w: 1, speed: .5, rep: 1, label: true, sound: 'slow' };
+  }
+
+  // Opens the editor for point n. With add=true, it adds a new replay at the playhead.
+  function openEditor(n, { add = false, index = 0 } = {}) {
+    const p = byN(n);
+    state.cur = n;
+    state.drafts = p.replays.map((r) => ({ ...r })).sort((x, y) => x.s - y.s);
+    if (add || !state.drafts.length) {
+      const t = (state.t >= p.start - MARGIN && state.t < p.end + MARGIN) ? state.t : p.end - 1500;
+      state.drafts.push(newReplay(t));
+      state.ri = state.drafts.length - 1;
+    } else state.ri = Math.min(index, state.drafts.length - 1);
+    state.pt = draft().s;
+    setMode('edit');
+  }
+
+  function renderTabs() {
+    const p = cur();
+    $('rtabs').innerHTML = state.drafts.map((r, i) => `
+      <button class="rtab ${i === state.ri ? 'on' : ''}" data-i="${i}">
+        <b>Replay ${i + 1}</b><small>${rel(r.s - p.start)} · +${sec(added(r))}</small>
+      </button>`).join('') +
+      `<button class="rtab add" id="bAdd" title="Add one more replay at the playhead [X]">${icon('add')}Add<kbd>X</kbd></button>`;
+  }
+  $('rtabs').onclick = (ev) => {
+    if (state.mode !== 'edit') return;
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.id === 'bAdd') addDraft();
+    else { state.ri = +b.dataset.i; state.pt = draft().s; renderEditor(); }
+  };
+  function addDraft() { state.drafts.push(newReplay(state.pt)); state.ri = state.drafts.length - 1; renderEditor(); }
+
+  function renderTrim() {
+    const { a, b } = win(), p = cur(), d = draft();
+    const X = (t) => ((t - a) / (b - a)) * 100 + '%';
+    let h = '';
+    for (let t = Math.ceil((a - p.start) / 1000) * 1000; p.start + t <= b; t += 1000) {
+      const big = t % 5000 === 0;
+      h += `<div class="tick ${big ? 'big' : ''}" style="left:${X(p.start + t)}">${big ? `<span>${t / 1000}s</span>` : ''}</div>`;
+    }
+    h += `<div class="ptrange" style="left:${X(p.start)};width:${((p.end - p.start) / (b - a)) * 100}%"><span>POINT ${p.n}</span></div>`;
+    state.drafts.forEach((r, i) => {
+      if (i === state.ri) return;
+      h += `<div class="rp other" data-i="${i}" title="Replay ${i + 1}: click to edit" style="left:${X(r.s)};width:${((r.e - r.s) / (b - a)) * 100}%"><span class="rn">${i + 1}</span></div>`;
+    });
+    h += `<div class="rp" style="left:${X(d.s)};width:${((d.e - d.s) / (b - a)) * 100}%"><span class="rn">${state.ri + 1}</span><div class="h s" data-h="s"><kbd>I</kbd></div><div class="h e" data-h="e"><kbd>O</kbd></div></div>`;
+    h += `<div class="ph" style="left:${X(state.pt)}"></div>`;
+    $('trim').innerHTML = h;
+    $('rNow').textContent = rel(state.pt - p.start);
+    $('rNowAbs').textContent = fmt(state.pt);
+  }
+
+  (function bindTrim() {
+    const el = $('trim');
+    let drag = null;
+    const tAt = (ev) => { const r = el.getBoundingClientRect(), { a, b } = win(); return Math.round((a + ((ev.clientX - r.left) / r.width) * (b - a)) / 100) * 100; };
+    el.addEventListener('pointerdown', (ev) => {
+      if (state.mode !== 'edit') return;
+      const other = ev.target.closest('.rp.other');
+      if (other) { state.ri = +other.dataset.i; state.pt = draft().s; renderEditor(); return; }
+      const h = ev.target.closest('.h'), rp = ev.target.closest('.rp'), t = tAt(ev), d = draft();
+      drag = h ? { kind: h.dataset.h } : rp ? { kind: 'move', off: t - d.s } : { kind: 'scrub' };
+      if (drag.kind === 'scrub') { state.pt = t; renderEditor(); }
+      el.setPointerCapture(ev.pointerId);
+    });
+    el.addEventListener('pointermove', (ev) => {
+      if (!drag) return;
+      const { a, b } = win(), d = draft(), t = Math.max(a, Math.min(b, tAt(ev)));
+      if (drag.kind === 's') { d.s = Math.min(t, d.e - MIN_LEN); state.pt = d.s; }
+      else if (drag.kind === 'e') { d.e = Math.max(t, d.s + MIN_LEN); state.pt = d.e; }
+      else if (drag.kind === 'move') { const len = d.e - d.s; d.s = Math.max(a, Math.min(b - len, t - drag.off)); d.e = d.s + len; }
+      else state.pt = t;
+      renderEditor();
+    });
+    el.addEventListener('pointerup', () => { drag = null; });
+  })();
+
+  function renderPanel() {
+    const p = cur(), d = draft(), len = d.e - d.s, z = 1 / d.w;
+    $('rSub').textContent = `Point ${p.n} · ${fmt(p.start)} · ${sec(p.end - p.start)}`;
+    $('popTitle').textContent = `Instant replays — Point ${p.n} — PXL_20260913_070045619`;
+    $('vS').textContent = rel(d.s - p.start); $('vSa').textContent = fmt(d.s);
+    $('vE').textContent = rel(d.e - p.start); $('vEa').textContent = fmt(d.e);
+    $('vLen').textContent = sec(len);
+    const zr = Math.round(z * 10) / 10;
+    $('vZoom').innerHTML = d.w >= .999 ? '<small>none</small>' : xf(zr);
+    const presets = [1, 1.5, 2, 3];
+    $('segZoom').querySelectorAll('button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.z - (d.w >= .999 ? 1 : zr)) < .05));
+    const custom = !presets.some((v) => Math.abs(v - zr) < .05);
+    $('zoomNote').className = 'grp-note' + (zr > 2.5 ? ' warn' : '');
+    $('zoomNote').innerHTML = zr > 2.5
+      ? `${icon('warning')}<span>${custom ? `Custom zoom ${xf(zr)}. ` : ''}Strong zoom on a 1080p video: the picture can look soft.</span>`
+      : (custom ? `Custom zoom ${xf(zr)}. ` : '') + (d.w >= .999 ? 'Drag on the video to draw a frame.' : 'Drag the frame to move it. Drag a corner to resize it.');
+    $('speed').value = d.speed;
+    $('vSpeed').innerHTML = `${xf(d.speed)}<small>${d.speed < 1 ? Math.round(1 / d.speed * 10) / 10 + '× slower' : 'normal'}</small>`;
+    $('segSpeed').querySelectorAll('button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.s - d.speed) < .001));
+    $('vRep').innerHTML = `${d.rep}×`;
+    $('segRep').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.r === d.rep));
+    $('segSound').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.snd === d.sound));
+    const one = len / d.speed, total = one * d.rep;
+    $('sumFlow').innerHTML = `<b>${sec(len)}</b>${icon('arrow_forward')}<b>${sec(one)}</b> at ${xf(d.speed)}${d.rep > 1 ? `${icon('arrow_forward')}<b>${sec(total)}</b> with ${d.rep} plays` : ''}`;
+    $('sumMain').innerHTML = `Replay ${state.ri + 1} adds <b>${sec(total)}</b> to the video.`;
+    const all = state.drafts.reduce((sum, r) => sum + added(r), 0);
+    $('sumAll').innerHTML = state.drafts.length > 1
+      ? `All ${state.drafts.length} replays add <b>${sec(all)}</b>, right after point ${p.n}.`
+      : `It plays right after point ${p.n}.`;
+    $('cLabel').checked = d.label;
+    document.body.classList.toggle('nolabel', !d.label);
+  }
+
+  function renderEditor() { renderTabs(); renderTrim(); renderPanel(); renderFrame(); renderTimeline(); }
+
+  // Zoom preset: keep the center of the frame.
+  $('segZoom').onclick = (ev) => {
+    const b = ev.target.closest('button'); if (!b) return;
+    const d = draft(), w = 1 / +b.dataset.z;
+    const cx = d.w >= .999 ? .5 : d.x + d.w / 2, cy = d.w >= .999 ? .5 : d.y + d.w / 2;
+    d.w = w; d.x = Math.max(0, Math.min(1 - w, cx - w / 2)); d.y = Math.max(0, Math.min(1 - w, cy - w / 2));
+    renderEditor();
+  };
+  $('speed').oninput = (ev) => { draft().speed = +ev.target.value; renderEditor(); };
+  $('segSpeed').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { draft().speed = +b.dataset.s; renderEditor(); } };
+  $('segRep').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { draft().rep = +b.dataset.r; renderEditor(); } };
+  $('segSound').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { draft().sound = b.dataset.snd; renderPanel(); } };
+  $('cLabel').onchange = (ev) => { draft().label = ev.target.checked; renderPanel(); };
+  $('bWhole').onclick = () => { draft().s = cur().start; draft().e = cur().end; renderEditor(); };
+  const setS = () => { const d = draft(); d.s = Math.min(state.pt, d.e - MIN_LEN); renderEditor(); };
+  const setE = () => { const d = draft(); d.e = Math.max(state.pt, d.s + MIN_LEN); renderEditor(); };
+  $('bSetS').onclick = setS; $('bSetE').onclick = setE;
+  const step = (dt) => { const { a, b } = win(); state.pt = Math.max(a, Math.min(b, state.pt + dt)); renderEditor(); };
+  $('bBack').onclick = () => step(-100); $('bFwd').onclick = () => step(100);
+  function save() { cur().replays = state.drafts.slice().sort((x, y) => x.s - y.s); setMode('points'); }
+  $('bSave').onclick = save;
+  $('bCancel').onclick = () => setMode('points');
+  $('bClose').onclick = () => setMode('points');
+  $('bDel').onclick = () => {
+    state.drafts.splice(state.ri, 1);
+    if (!state.drafts.length) return save();
+    state.ri = Math.min(state.ri, state.drafts.length - 1);
+    state.pt = draft().s;
+    renderEditor();
+  };
+
+  // ---------- Preview ----------
+  // The zoom goes in smoothly at the start of the replay and out smoothly at the end (decided 2026-10-22).
+  const ZOOM_MS = 600;
+  let timer = null;
+  function startPreview() {
+    setMode('preview');
+    const d = draft(), img = $('frame');
+    const len = d.e - d.s, onePlay = len / d.speed, total = onePlay * d.rep, t0 = performance.now();
+    const zoomed = d.w < .999;
+    img.style.transform = '';
+    if (zoomed) requestAnimationFrame(() => requestAnimationFrame(() => { img.style.transform = `scale(${1 / d.w}) translate(${-d.x * 100}%, ${-d.y * 100}%)`; }));
+    state.prev = { el: 0 };
+    clearInterval(timer);
+    timer = setInterval(() => {
+      const el = performance.now() - t0;
+      if (el >= total) return stopPreview();
+      if (zoomed && el >= total - ZOOM_MS) img.style.transform = '';
+      state.prev.el = el;
+      const play = Math.floor(el / onePlay);
+      state.pt = d.s + ((el % onePlay) * d.speed);
+      $('pfill').style.width = (el / total) * 100 + '%';
+      $('prevBadge').innerHTML = `${icon(d.sound === 'mute' ? 'volume_off' : 'volume_up')}Preview · replay ${state.ri + 1} · ${xf(d.speed)} · play ${play + 1} of ${d.rep} · ${sec(total - el)} left`;
+      renderTrim(); renderTimeline();
+    }, 50);
+  }
+  function stopPreview() {
+    clearInterval(timer); timer = null;
+    $('frame').style.transform = '';
+    $('pfill').style.width = '0';
+    state.prev = null;
+    if (state.mode === 'preview') setMode('edit');
+  }
+  $('bPreview').onclick = () => (state.mode === 'preview' ? stopPreview() : startPreview());
+
+  // ---------- Modes ----------
+  function setMode(m) {
+    if (m !== 'preview' && timer) { clearInterval(timer); timer = null; state.prev = null; $('frame').style.transform = ''; }
+    if (m !== 'points' && !state.drafts) { openEditor(state.cur); return; }
+    state.mode = m;
+    document.body.dataset.mode = m;
+    if (m === 'points') { state.drafts = null; state.pt = null; }
+    $('modes').querySelectorAll('button').forEach((b) => b.classList.toggle('is-selected', b.dataset.m === m));
+    $('prevIcon').textContent = m === 'preview' ? 'stop' : 'play_arrow';
+    $('prevText').textContent = m === 'preview' ? 'Stop preview' : 'Preview replay';
+    fitStage();
+    if (m === 'points') { renderList(); renderPlaybar(); renderTimeline(); }
+    else renderEditor();
+  }
+  $('modes').onclick = (ev) => {
+    const b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.m === 'preview') { if (!state.drafts) openEditor(state.cur); startPreview(); }
+    else if (b.dataset.m === 'edit') { if (state.mode === 'preview') stopPreview(); else if (state.mode === 'points') openEditor(state.cur); }
+    else setMode('points');
+  };
+
+  // ---------- Points tab events ----------
+  const selectPoint = (n) => { const p = byN(n); state.cur = p.n; state.t = p.start; renderList(); renderPlaybar(); renderTimeline(); };
+  $('bReplay').onclick = () => { const p = pointAt(state.t); if (p) openEditor(p.n, { add: true }); };
+  $('list').onclick = (ev) => {
+    const e = ev.target.closest('[data-edit]'); if (e) return openEditor(+e.dataset.edit);
+    const a = ev.target.closest('[data-add]'); if (a) { const p = byN(+a.dataset.add); if (!pointAt(state.t) || pointAt(state.t).n !== p.n) state.t = p.end - 1500; return openEditor(p.n, { add: true }); }
+    const row = ev.target.closest('[data-n]'); if (row) selectPoint(+row.dataset.n);
+  };
+  document.querySelector('.tl').onclick = (ev) => {
+    if (state.mode !== 'points') return;
+    const rs = ev.target.closest('.tl-rs'); if (rs) return openEditor(+rs.dataset.edit, { index: +rs.dataset.i });
+    const m = ev.target.closest('.tl-m'); if (m) selectPoint(+m.dataset.n);
+  };
+  document.querySelectorAll('[data-nudge]').forEach((b) => b.onclick = () => {
+    state.t += +b.dataset.nudge;
+    const p = pointAt(state.t); if (p) state.cur = p.n;
+    renderList(); renderPlaybar(); renderTimeline();
+  });
+  document.querySelectorAll('button').forEach((b) => b.addEventListener('mouseup', () => b.blur()));
+
+  // ---------- Keys ----------
+  document.addEventListener('keydown', (ev) => {
+    if (ev.target.tagName === 'INPUT' && ev.target.type !== 'range' && ev.target.type !== 'checkbox') return;
+    const k = ev.key.toLowerCase();
+    if (state.mode === 'points') {
+      if (k === 'x') { const p = pointAt(state.t); if (p) openEditor(p.n, { add: true }); }
+      return;
+    }
+    if (k === 'escape') { state.mode === 'preview' ? stopPreview() : setMode('points'); }
+    else if (k === 'enter') { if (state.mode === 'preview') stopPreview(); save(); }
+    else if (k === ' ') { ev.preventDefault(); $('bPreview').click(); }
+    else if (state.mode !== 'edit') return;
+    else if (k === 'x') addDraft();
+    else if (k === 'i') setS();
+    else if (k === 'o') setE();
+    else if (k === 'arrowleft') { ev.preventDefault(); step(ev.shiftKey ? -1000 : -100); }
+    else if (k === 'arrowright') { ev.preventDefault(); step(ev.shiftKey ? 1000 : 100); }
+  });
+
+  // ---------- Timeline zoom (mockup only) ----------
+  function setZoom(z) {
+    state.zoom = z;
+    $('zooms').querySelectorAll('button').forEach((b) => b.classList.toggle('is-selected', b.dataset.z === z));
+    renderTimeline();
+  }
+  $('zooms').onclick = (ev) => { const b = ev.target.closest('button'); if (b) { setZoom(b.dataset.z); b.blur(); } };
+  new ResizeObserver(() => renderTimeline()).observe($('tlVid'));
+
+  // ---------- Notes ----------
+  const toggleNotes = (on) => { $('notes').hidden = !on; $('bNotes').classList.toggle('is-selected', on); };
+  $('bNotes').onclick = () => toggleNotes($('notes').hidden);
+  $('bNotesX').onclick = () => toggleNotes(false);
+
+  // A hash such as #mode=edit&n=38 or #mode=preview&notes=0 sets the first state (for screenshots).
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get('notes') === '0') toggleNotes(false);
+  setMode('points');
+  if (hash.get('tl') === 'match') setZoom('match');
+  if (hash.get('mode') === 'edit' || hash.get('mode') === 'preview') {
+    openEditor(+(hash.get('n') || 45));
+    if (hash.get('zoom')) { const d = draft(), w = 1 / +hash.get('zoom'); d.w = w; d.x = .44 - w / 2; d.y = .62 - w / 2; d.speed = .25; d.rep = 2; renderEditor(); }
+    if (hash.get('mode') === 'preview') startPreview();
+  }
+</script>
+</body>
+</html>

@@ -21,6 +21,7 @@ and the other cards work.
 - `GET /api/summary?days=1|7|30|90[&end=YYYY-MM-DD][&dev=1]`: all numbers as JSON. The period ends on the day `end` (UTC, included); without `end`, or with a day after today, it ends today. `days=1` is only that day. `dev=1` includes the
   `-SNAPSHOT` versions.
 - `POST /api/snapshot`: takes a download snapshot now.
+- The hourly cron takes the download snapshot. Then it sends the Telegram digest (see "Telegram digest").
 - Each request needs the password (HTTP Basic, any user name). Without the secret
   `COCKPIT_PASSWORD`, the Worker returns `503`.
 
@@ -85,7 +86,37 @@ a new setup.
 5. Optional: `npx wrangler secret put GITHUB_TOKEN` (a fine-grained token with no
    permissions is enough for a public repository). Without it, GitHub allows 60 requests in one
    hour for each IP address, and Workers share their addresses.
-6. `npx wrangler deploy`. Open the `workers.dev` URL, give the password, and click
+6. Optional: the Telegram digest. Use the bot and the chat of the feedback Worker
+   (`feedback-worker/README.md`, "Make the Telegram bot"):
+
+   ```bash
+   npx wrangler secret put TELEGRAM_BOT_TOKEN
+   npx wrangler secret put TELEGRAM_CHAT_ID
+   ```
+
+7. `npx wrangler deploy`. Open the `workers.dev` URL, give the password, and click
    "Take a download snapshot now" once.
+
+## Telegram digest
+
+Each hour, after the download snapshot, the cron sends one Telegram message with the new items
+since the last run (`src/notify.ts`). Without new items, it sends no message.
+
+- Visits: the new visits of the site (`site_daily.visits`), by page, referrer host, country, and
+  device. A visit is a page view that came from another site or from a direct open.
+- Downloads: the new downloads of `BananaShot-win-Setup.exe` (installer) and of the `.nupkg` files
+  (update packages), by release. The numbers come from the GitHub totals of the snapshot. The
+  other release files, for example `releases.win.json`, do not count.
+- New installs: the new first sessions of the app (`session_n_1`), by version and OS. There is no
+  install ID, so this is an estimate (`analytics-worker/queries/usage.sql`). Only an install that
+  started the app with analytics on counts. `synthetic-smoke` and `-SNAPSHOT` versions do not count.
+
+The sources keep only totals. The table `notify_seen` keeps the totals of the last run, and the
+next run sends the increase. The first run only keeps the totals and sends no message. When
+Telegram refuses the message, the totals do not change, and the next run sends the items again.
+The result of the last run is in the table `job_status` (`telegram_digest`).
+
+Without the secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, the cron sends no digest. To stop
+the digest, delete one secret: `npx wrangler secret delete TELEGRAM_CHAT_ID`.
 
 Do not commit `.dev.vars`, the password, or the tokens.

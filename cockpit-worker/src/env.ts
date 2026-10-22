@@ -3,7 +3,7 @@ export interface Env {
   ANALYTICS_DB: D1Database;
   /** The database of the feedback Worker. Read only. */
   FEEDBACK_DB: D1Database;
-  /** The own database of the cockpit: the download snapshots. */
+  /** The own database of the cockpit: the download snapshots and the totals of the last digest. */
   COCKPIT_DB: D1Database;
   /** The static files of the page. */
   ASSETS: Fetcher;
@@ -20,6 +20,10 @@ export interface Env {
   CF_ACCOUNT_ID?: string;
   /** Comma-separated Worker names for the health section. */
   WORKER_SCRIPTS?: string;
+  /** The bot token for the hourly digest (secret). Without it or the chat ID, the Worker sends no digest. */
+  TELEGRAM_BOT_TOKEN?: string;
+  /** The chat that gets the hourly digest (secret). */
+  TELEGRAM_CHAT_ID?: string;
 }
 
 /** The result of one data source. A failure in one source does not stop the other sources. */

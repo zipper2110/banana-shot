@@ -18,7 +18,8 @@ WORKER_SCRIPTS = "bananashot-analytics,bananashot-feedback,bananashot-cockpit"
 CF_ACCOUNT_ID = "6a013160bcd4459a28817b6a30384998"
 
 # Secrets (set with `wrangler secret put`, never here):
-#   COCKPIT_PASSWORD, CF_API_TOKEN, GITHUB_TOKEN (optional)
+#   COCKPIT_PASSWORD, CF_API_TOKEN, GITHUB_TOKEN (optional),
+#   TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID (optional: the hourly digest, README.md)
 
 # Read only: the database of the analytics Worker. Write the ID from analytics-worker/wrangler.toml.
 # migrations_dir is only for the local preview. Never apply these migrations from here to the remote database.
@@ -35,14 +36,14 @@ database_name = "bananashot-feedback"
 database_id = "18fbdae7-b0b9-41ec-b4a6-245efe1a6bec"
 migrations_dir = "../feedback-worker/migrations"
 
-# The own database of the cockpit: the download snapshots.
+# The own database of the cockpit: the download snapshots and the totals of the last digest.
 [[d1_databases]]
 binding = "COCKPIT_DB"
 database_name = "bananashot-cockpit"
 database_id = "a35c78d9-d7a9-46bc-bd1f-ba6099c56046"
 migrations_dir = "migrations"
 
-# The download snapshot. Each hour, so that a failed run has no big effect (decision 3).
+# The download snapshot and then the Telegram digest. Each hour, so that a failed run has no big effect (decision 3).
 [triggers]
 crons = ["17 * * * *"]
 

@@ -4,6 +4,7 @@ import { loadWorkerHealth } from './cloudflare';
 import { loadDownloads, takeSnapshot } from './downloads';
 import { type Env, section } from './env';
 import { loadFeedback } from './feedback';
+import { sendDigest } from './notify';
 import { makePeriod, parseDays, parseLastDay } from './period';
 import { loadSite } from './site';
 
@@ -80,6 +81,26 @@ export default {
   },
 
   async scheduled(_controller: ScheduledController, env: Env, context: ExecutionContext): Promise<void> {
-    context.waitUntil(takeSnapshot(env, Date.now()));
+    context.waitUntil(runHourly(env, Date.now()));
   },
 } satisfies ExportedHandler<Env>;
+
+/**
+ * The hourly job: first the download snapshot, then the Telegram digest. The digest reads the new snapshot. A failed
+ * snapshot does not stop the digest. The job fails when one of the two fails.
+ */
+export async function runHourly(env: Env, now: number, fetcher: typeof fetch = fetch): Promise<void> {
+  let failure: unknown = null;
+  try {
+    await takeSnapshot(env, now, fetcher);
+  } catch (error) {
+    failure = error;
+  }
+  try {
+    await sendDigest(env, now, fetcher);
+  } catch (error) {
+    console.error(`Digest failed: ${error instanceof Error ? error.message : String(error)}`);
+    failure ??= error;
+  }
+  if (failure) throw failure;
+}

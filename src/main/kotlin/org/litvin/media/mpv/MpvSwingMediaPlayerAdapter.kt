@@ -13,6 +13,8 @@ import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.media.OverlayShape
 import org.litvin.media.PlayerStatus
+import org.litvin.media.ReplaySound
+import org.litvin.media.ReplayView
 import org.litvin.media.SwingMediaPlayer
 import org.litvin.media.VideoErrorViewFactory
 import org.litvin.media.VideoOverlay
@@ -125,6 +127,9 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     @Volatile private var osdMarginRight = 0
 
     @Volatile private var cropEditing = false
+    @Volatile private var replayView: ReplayView? = null
+    @Volatile private var replaySound: ReplaySound? = null
+    @Volatile override var onPlaybackRestart: (() -> Unit)? = null
     @Volatile private var editorShapes: List<OverlayShape>? = null
     @Volatile private var boundsChangePending = false
     override var onVideoBoundsChanged: (() -> Unit)? = null
@@ -324,7 +329,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         val startSeconds = String.format(Locale.US, "%.3f", loadStartMs / 1000.0)
         logger.info { "Loading into mpv preview #$playerId: ${file.absolutePath} at ${startSeconds}s ($reason)" }
         mpv.setProperty("pause", "yes")
-        mpv.setProperty("speed", String.format(Locale.US, "%.3f", playbackRate))
+        mpv.setProperty("speed", String.format(Locale.US, "%.3f", effectiveSpeed()))
         mpv.command("loadfile", file.absolutePath, "replace", "-1", "start=$startSeconds")
     }
 
@@ -381,7 +386,24 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     override fun setRate(rate: Float) {
         val next = rate.takeIf { it.isFinite() && it > 0.0f } ?: return
         playbackRate = next
-        core?.setProperty("speed", String.format(Locale.US, "%.3f", next))
+        core?.setProperty("speed", String.format(Locale.US, "%.3f", effectiveSpeed()))
+    }
+
+    /** The speed of [setRate], multiplied by the speed of a replay. */
+    private fun effectiveSpeed(): Double = playbackRate * (replaySound?.speed?.takeIf { it > 0.0 } ?: 1.0)
+
+    override fun setReplayView(view: ReplayView?) {
+        replayView = view?.takeIf { !it.isNormal }
+        applyShaderOptions()
+    }
+
+    override fun setReplaySound(sound: ReplaySound?) {
+        replaySound = sound
+        val mpv = core ?: return
+        mpv.setProperty("speed", String.format(Locale.US, "%.3f", effectiveSpeed()))
+        // Without the pitch correction, the slow sound has a lower pitch (B-50 decision 4).
+        mpv.setProperty("audio-pitch-correction", if (sound != null && sound.speed < 1.0) "no" else "yes")
+        mpv.setProperty("mute", if (sound?.muted == true) "yes" else "no")
     }
 
     override fun stepFrameForward(maximumTimeMs: Long): Long {
@@ -459,7 +481,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         } else {
             null
         }
-        val opts = MpvShaderParams.build(adjustments, video, cropEditing, lastKnownTimeMs)
+        val opts = MpvShaderParams.build(adjustments, video, cropEditing, lastKnownTimeMs, replayView)
         if (opts == appliedShaderOpts) return
         appliedShaderOpts = opts
         mpv.setProperty("glsl-shader-opts", opts)
@@ -602,7 +624,10 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                 setStatus(PlayerStatus.READY)
                 setStatus(if (paused) PlayerStatus.PAUSED else PlayerStatus.PLAYING)
             }
-            LibMpv.EVENT_PLAYBACK_RESTART -> pendingSeekMs = null
+            LibMpv.EVENT_PLAYBACK_RESTART -> {
+                pendingSeekMs = null
+                onPlaybackRestart?.invoke()
+            }
             LibMpv.EVENT_END_FILE -> {
                 pendingSeekMs = null
                 if (event.endFileReason() == LibMpv.END_FILE_REASON_ERROR) {

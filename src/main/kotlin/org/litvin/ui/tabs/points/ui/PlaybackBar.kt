@@ -125,10 +125,21 @@ internal class PlaybackBar(
 
     /** Shows the playhead time and the video length. A length of 0 hides the length. */
     fun setTime(currentMs: Long, totalMs: Long) {
-        val now = Timecode.format(max(0, currentMs))
+        val now = replayText ?: Timecode.format(max(0, currentMs))
         if (nowLabel.text != now) nowLabel.text = now
         val total = if (totalMs > 0) Timecode.format(totalMs) else ""
         if (totalLabel.text != total) totalLabel.text = total
+    }
+
+    /** The text of the clock during a replay (B-50), or null for the time. */
+    private var replayText: String? = null
+
+    /** Shows [text] in lime in place of the current time while a replay plays. Null shows the time again. */
+    fun setReplay(text: String?) {
+        if (replayText == text) return
+        replayText = text
+        nowLabel.foreground = if (text != null) Palette.LIME else Palette.FG
+        if (text != null) nowLabel.text = text
     }
 
     /** A seek hotkey briefly gives the matching button a lime border. */

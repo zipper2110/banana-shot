@@ -7,6 +7,7 @@ import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.GeometryPlan
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.adjustments.CropRect
+import org.litvin.media.ReplayView
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.round
@@ -33,8 +34,15 @@ internal object MpvShaderParams {
      * [cropEditing] true keeps the full rotated frame (no crop), for the Crop/Rotate editor. With a rotation, the
      * editor also shows the corners of the rotated frame around the frame ([GeometryPlan.editorView]).
      * [timeMs] is the source time of the frame. It selects the geometry and the colors of the change points (B-47).
+     * [replay] is the zoom frame and the dip of a replay (B-50), or null for the normal picture.
      */
-    fun build(adjustments: AdjustmentsV1, video: MpvVideoInfo?, cropEditing: Boolean = false, timeMs: Long = 0L): String {
+    fun build(
+        adjustments: AdjustmentsV1,
+        video: MpvVideoInfo?,
+        cropEditing: Boolean = false,
+        timeMs: Long = 0L,
+        replay: ReplayView? = null,
+    ): String {
         val fullRange = video?.colorLevels.equals("full", ignoreCase = true)
         val colors = ColorTimeline.at(adjustments, timeMs)
         val color = FfmpegColorAdjustmentStrategy.map(colors, if (fullRange) ToneRange.FULL else ToneRange.LIMITED)
@@ -57,9 +65,15 @@ internal object MpvShaderParams {
         val geometryActive = plan.hasRotation || crop != GeometryPlan.FULL_FRAME
         val colorActive = color.hasEqualizerAdjustments || color.hasToneAdjustments || color.hasTemperatureAdjustments
         val (kr, kb) = matrixCoefficients(video?.colorMatrix)
+        // The crop editor shows the full frame, so a replay zoom does not apply there.
+        val view = replay?.takeIf { !cropEditing && !it.isNormal }
+        val zoomWidth = view?.zoomWidth?.coerceIn(0.01, 1.0) ?: 1.0
+        val zoomX = view?.zoomX?.coerceIn(0.0, 1.0 - zoomWidth) ?: 0.0
+        val zoomY = view?.zoomY?.coerceIn(0.0, 1.0 - zoomWidth) ?: 0.0
+        val dip = view?.dip?.coerceIn(0.0, 1.0) ?: 0.0
 
         val values = linkedMapOf(
-            "tr_active" to if (geometryActive || colorActive) "1" else "0",
+            "tr_active" to if (geometryActive || colorActive || view != null) "1" else "0",
             "tr_contrast" to fmt(contrast),
             "tr_saturation" to fmt(saturation),
             "tr_brightness_lift" to fmt(brightnessLift),
@@ -78,6 +92,11 @@ internal object MpvShaderParams {
             "tr_kr" to fmt(kr),
             "tr_kb" to fmt(kb),
             "tr_full_range" to if (fullRange) "1" else "0",
+            "tr_zoom_x" to fmt(zoomX),
+            "tr_zoom_y" to fmt(zoomY),
+            "tr_zoom_w" to fmt(zoomWidth),
+            "tr_dip" to fmt(dip),
+            "tr_dip_white" to if (view?.dipWhite == true) "1" else "0",
         )
         return values.entries.joinToString(",") { "${it.key}=${it.value}" }
     }

@@ -125,6 +125,35 @@
 //!MAXIMUM 1
 0
 
+//!PARAM tr_zoom_x
+//!DESC Replay zoom frame left edge, as a fraction of the frame after the crop (B-50).
+//!TYPE DYNAMIC float
+0.0
+
+//!PARAM tr_zoom_y
+//!DESC Replay zoom frame top edge, as a fraction of the frame after the crop.
+//!TYPE DYNAMIC float
+0.0
+
+//!PARAM tr_zoom_w
+//!DESC Replay zoom frame size, as a fraction of the frame after the crop. 1 is no zoom.
+//!TYPE DYNAMIC float
+1.0
+
+//!PARAM tr_dip
+//!DESC Replay dip amount: 0 shows the picture, 1 shows only the dip color.
+//!TYPE DYNAMIC float
+//!MINIMUM 0.0
+//!MAXIMUM 1.0
+0.0
+
+//!PARAM tr_dip_white
+//!DESC 1 dips to white. 0 dips to black.
+//!TYPE DYNAMIC int
+//!MINIMUM 0
+//!MAXIMUM 1
+0
+
 //!HOOK MAIN
 //!BIND HOOKED
 //!WHEN tr_active
@@ -200,7 +229,9 @@ vec4 hook() {
     // Geometry. The output pixel is a point in the crop rectangle of the rotated frame.
     // Rotate that point back into the source frame, in pixel units about the center.
     vec2 size = HOOKED_size;
-    vec2 q = vec2(tr_crop_x, tr_crop_y) + HOOKED_pos * vec2(tr_crop_w, tr_crop_h);
+    // The replay zoom frame (B-50) is a part of the crop rectangle.
+    vec2 zoomed = vec2(tr_zoom_x, tr_zoom_y) + HOOKED_pos * tr_zoom_w;
+    vec2 q = vec2(tr_crop_x, tr_crop_y) + zoomed * vec2(tr_crop_w, tr_crop_h);
     vec2 d = (q - 0.5) * size;
     float a = radians(tr_rotation_deg);
     float ca = cos(a);
@@ -225,5 +256,8 @@ vec4 hook() {
     codes.yz = clamp(floor(codes.yz + vec2(tr_cb_shift, tr_cr_shift) + 0.5), 0.0, 255.0);
 
     color.rgb = codes_to_rgb(codes / 255.0, tr_kr, tr_kb);
+    // The replay dip to black or white (B-50).
+    if (tr_dip > 0.0)
+        color.rgb = mix(color.rgb, vec3(float(tr_dip_white)), tr_dip);
     return color;
 }

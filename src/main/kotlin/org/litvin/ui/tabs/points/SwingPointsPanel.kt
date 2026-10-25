@@ -108,6 +108,10 @@ class SwingPointsPanel(
     // The comments on the video at the playhead
     private val commentPreview = CommentPreview()
 
+    // Plays the replays of the points after their ends (B-50)
+    private val replays = ReplayDirector()
+    private var replayShown = false
+
     // The comment that the comment dialog shows on the video before Save, or null when no dialog is open.
     private var dialogComment: CommentV1? = null
 
@@ -213,6 +217,7 @@ class SwingPointsPanel(
         scoring.onDeactivated()
         saveNow()
         player.pause()
+        applyReplay(replays.stop())
         player.deactivatePreview("points deactivated")
     }
 
@@ -445,8 +450,15 @@ class SwingPointsPanel(
         idleUiTimer.start()
 
         // Player callbacks → update UI and repaint timeline on EDT
-        player.onTimeChanged =
-            { t -> EventQueue.invokeLater { updateTimeUI(t); timeline.repaint(); autoActivatePoint(t) } }
+        player.onTimeChanged = { t ->
+            EventQueue.invokeLater {
+                applyReplay(replays.onTime(t, player.status() == PlayerStatus.PLAYING))
+                updateTimeUI(t)
+                timeline.repaint()
+                autoActivatePoint(t)
+            }
+        }
+        player.onPlaybackRestart = { EventQueue.invokeLater { replays.onRestart() } }
         player.onReady =
             { EventQueue.invokeLater { updateTimeUI(player.currentTimeMs()); timeline.repaint(); updatePlayPauseButton() } }
         player.onStatusChanged = { _ -> EventQueue.invokeLater { updatePlayPauseButton(); refreshUiAtCurrentTime() } }
@@ -715,6 +727,7 @@ class SwingPointsPanel(
     private fun onPointsChanged() {
         val skipAutosave = reloadingProjectFromDisk
         EventQueue.invokeLater {
+            applyReplay(replays.setPoints(dispatcher.getCompletedPoints()))
             showComments(commentPreview.setComments(commentDispatcher.state().comments))
             updateCountBadge(dispatcher.getCompletedPoints())
             pushCardsState()
@@ -974,8 +987,11 @@ class SwingPointsPanel(
     /** The scoreboard and the comments at the playhead over the video. */
     private fun refreshOverlay() {
         val shown = withDialogComment(commentDrag.displayed(commentPreview.shown))
-        // The comments draw after the scoreboard, so they are on top of it.
-        player.setPreviewOverlay(VideoOverlay { area -> scoring.scoreboardEvents(area) + CommentAss.previewEvents(shown, area) })
+        // The comments draw after the scoreboard, so they are on top of it. A replay hides the scoreboard (B-50).
+        val showBoard = !replays.isActive
+        player.setPreviewOverlay(VideoOverlay { area ->
+            (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area)
+        })
         commentDrag.refresh()
     }
 
@@ -1002,7 +1018,25 @@ class SwingPointsPanel(
         updatePlayPauseButton()
     }
 
+    /** Sends the commands of the replay director to the player, and shows when a replay plays. */
+    private fun applyReplay(commands: List<ReplayDirector.Command>) {
+        for (command in commands) {
+            when (command) {
+                is ReplayDirector.Command.Seek -> player.seek(command.sourceMs)
+                is ReplayDirector.Command.Look -> player.setReplayView(command.view)
+                is ReplayDirector.Command.Sound -> player.setReplaySound(command.sound)
+            }
+        }
+        val active = replays.isActive
+        if (active == replayShown) return
+        replayShown = active
+        playbackBar.setReplay(if (active) tr("replay.clock") else null)
+        refreshOverlay()
+    }
+
     private fun onStartAtPlayhead() {
+        // The marking keys do not work during a replay (B-50).
+        if (replays.isActive) return
         dispatcher.onPointStart(player.currentTimeMs())
         maybeShowDispatcherHint()
         // Refresh cards and select the pending visual row (0)
@@ -1016,6 +1050,7 @@ class SwingPointsPanel(
     }
 
     private fun onEndAtPlayhead() {
+        if (replays.isActive) return
         // Capture pending Start before finalization to select the created row afterwards
         val prevPending = dispatcher.getPendingStart()
         if (dispatcher.onPointEnd(player.currentTimeMs())) analytics.record(AnalyticsEvent.PointAdded)
@@ -1036,6 +1071,7 @@ class SwingPointsPanel(
      * to the active point. Between points, the key does nothing.
      */
     private fun endPointWithWinner(outcome: Outcome) {
+        if (replays.isActive) return
         val pendingStart = dispatcher.getPendingStart()
         if (pendingStart == null) {
             (selectedEvent() as? PointEventDto)?.let { scoring.score(outcome, it.point.id) }
@@ -1118,6 +1154,7 @@ class SwingPointsPanel(
         player.onTimeChanged = null
         player.onStatusChanged = null
         player.onReady = null
+        player.onPlaybackRestart = null
         player.setPreviewOverlay(null)
         player.close()
     }

@@ -47,6 +47,10 @@ without a question. Check them, and change them if necessary.
 | R2 | T6 | The export badge has no replay icon, only the text. The app has no icon font for ffmpeg. The sizes are relative to the frame height: the badge is 7% high, 4.5% from the top, and 3% from the right. |
 | R3 | T6 | A replay uses the Transform geometry and the colors at the start of its part. A change point inside the part has no effect in the replay. |
 | R4 | T6 | With change points, the zoom works on the frame at the output size, not at the source size. Thus a strong zoom looks softer than without change points. |
+| R5 | T3 | Only the Points tab plays the replays. The Colors and Transform tab plays the source video without them, because the user edits the picture at one source time there. |
+| R6 | T3 | During a replay, the seek keys and a click on the timeline move in source time. A seek out of the replay part stops the replay. The play-time timeline comes with T5. |
+| R7 | T3 | The dip before the cut into a replay shows only while the video plays. A paused frame near a point end shows no dip. |
+| R8 | T3 | Not checked in a real player yet: the shader change (zoom and dip), the lower pitch, and the timing of the dips. Run the app on the Points tab with a replay to check it. |
 
 ## Tasks
 
@@ -55,7 +59,7 @@ without a question. Check them, and change them if necessary.
 | T0 | Prototype: the freeze at each seek | — | done |
 | T1 | Replay data in `edl.json` | — | done |
 | T2 | Replay timeline: source time and play time | T1 | done |
-| T3 | Live playback of the replays | T0, T2 | open |
+| T3 | Live playback of the replays | T0, T2 | done |
 | T4 | Replay editor popup | T1, T3 | open |
 | T5 | Replays on the Points tab: timeline, list, button | T2, T4 | open |
 | T6 | Export of the replays | T1 | done |
@@ -149,8 +153,12 @@ prototype measures how long the picture stops at each seek.
 
 ### T3 Live playback of the replays
 
-- One controller for each player (Points tab and Colors and Transform
-  tab). It watches the `time-pos` of the player. When the video reaches
+- Status: done, but not checked in a real player (R8). `ReplayDirector`
+  gives the commands, and `SwingPointsPanel` sends them to the player.
+  `SwingMediaPlayer` has `setReplayView`, `setReplaySound`, and
+  `onPlaybackRestart`. `tr-adjust.hook` has the zoom and the dip
+  parameters (`tr_zoom_*`, `tr_dip`, `tr_dip_white`).
+- One controller for the Points tab player (R5). It watches the `time-pos` of the player. When the video reaches
   the end of a point with replays, it:
   1. starts the cut effect (decision 2);
   2. seeks to the start of the replay part;
@@ -167,7 +175,7 @@ prototype measures how long the picture stops at each seek.
   work during a replay.
 - Pause, frame step, and the speed control of the player work during a
   replay. (The speed control multiplies the replay speed.)
-- Tests: —
+- Tests: `ReplayDirectorTest`, `MpvShaderParamsTest`
 
 ### T4 Replay editor popup
 

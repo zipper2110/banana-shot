@@ -70,7 +70,42 @@ interface SwingMediaPlayer : AutoCloseable {
      * Engines without this feature ignore it.
      */
     fun setEditorOverlay(shapes: List<OverlayShape>?) {}
+
+    /**
+     * Shows the picture of a replay (B-50): the zoom frame and the dip to black or white. Null shows the normal
+     * picture. Engines without this feature ignore it.
+     */
+    fun setReplayView(view: ReplayView?) {}
+
+    /**
+     * Plays the sound and the video of a replay (B-50): slower, with a lower pitch, or muted. Null plays them
+     * normally. The speed multiplies the speed of [setRate]. Engines without this feature ignore it.
+     */
+    fun setReplaySound(sound: ReplaySound?) {}
+
+    /** Called on the player thread when the playback starts again after a seek. */
+    var onPlaybackRestart: (() -> Unit)?
+        get() = null
+        set(@Suppress("UNUSED_PARAMETER") value) {}
 }
+
+/**
+ * The picture of a replay. The zoom frame ([zoomX], [zoomY], [zoomWidth]) is a part of the frame after the
+ * Transform tab, as fractions of that frame. It has the aspect of the frame. [dip] is the amount of the dip:
+ * 0 shows the picture, and 1 shows only black (or white when [dipWhite]).
+ */
+data class ReplayView(
+    val zoomX: Double = 0.0,
+    val zoomY: Double = 0.0,
+    val zoomWidth: Double = 1.0,
+    val dip: Double = 0.0,
+    val dipWhite: Boolean = false,
+) {
+    val isNormal: Boolean get() = zoomWidth >= 1.0 && dip <= 0.0
+}
+
+/** The sound of a replay: the speed of the part (below 1 is slower), and if the sound is off. */
+data class ReplaySound(val speed: Double, val muted: Boolean)
 
 /**
  * ASS events that a player draws over the video with libass. The export burns the same events

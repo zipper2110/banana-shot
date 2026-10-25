@@ -132,4 +132,22 @@ class MpvShaderParamsTest {
         val full = parse(MpvShaderParams.build(AdjustmentsV1(), video.copy(colorLevels = "full")))
         assertTrue(full["tr_full_range"] == "1")
     }
+
+    @Test
+    fun `a replay view turns the shader on with the zoom frame and the dip`() {
+        val view = org.litvin.media.ReplayView(zoomX = 0.25, zoomY = 0.2, zoomWidth = 0.5, dip = 0.4, dipWhite = true)
+        val values = parse(MpvShaderParams.build(AdjustmentsV1(), video, replay = view))
+
+        assertEquals("1", values["tr_active"])
+        assertEquals("0.250000", values["tr_zoom_x"])
+        assertEquals("0.200000", values["tr_zoom_y"])
+        assertEquals("0.500000", values["tr_zoom_w"])
+        assertEquals("0.400000", values["tr_dip"])
+        assertEquals("1", values["tr_dip_white"])
+
+        // The crop editor shows the full frame without the replay.
+        val editing = parse(MpvShaderParams.build(AdjustmentsV1(), video, cropEditing = true, replay = view))
+        assertEquals("1.000000", editing["tr_zoom_w"])
+        assertEquals("0.000000", editing["tr_dip"])
+    }
 }

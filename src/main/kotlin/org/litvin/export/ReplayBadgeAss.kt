@@ -28,8 +28,11 @@ object ReplayBadgeAss {
     /** The letter spacing as a part of the font size. */
     private const val SPACING_SHARE = 0.12
 
-    /** The events of the badge in a frame of [frameWidth] x [frameHeight]: first the box, then the text. */
-    fun events(text: String, frameWidth: Double, frameHeight: Double): List<String> {
+    /**
+     * The events of the badge in a frame of [frameWidth] x [frameHeight] at ([frameX], [frameY]): first the box,
+     * then the text. The export uses the whole output frame. The preview uses the video area of the player.
+     */
+    fun events(text: String, frameWidth: Double, frameHeight: Double, frameX: Double = 0.0, frameY: Double = 0.0): List<String> {
         if (text.isBlank()) return emptyList()
         val height = (frameHeight * HEIGHT_SHARE).roundToInt().coerceAtLeast(8)
         val fontSize = height * FONT_SHARE
@@ -38,8 +41,8 @@ object ReplayBadgeAss {
         // The letter spacing also comes after the last letter, so the text loses one spacing at the right.
         val textWidth = ScoreboardFonts.textWidth(text, family, true, fontSize, spacing) - spacing
         val width = (textWidth + 2 * height * PAD_SHARE).roundToInt()
-        val left = frameWidth * (1 - RIGHT_SHARE) - width
-        val top = frameHeight * TOP_SHARE
+        val left = frameX + frameWidth * (1 - RIGHT_SHARE) - width
+        val top = frameY + frameHeight * TOP_SHARE
         val box = "{\\an7\\pos(${fmt(left)},${fmt(top)})\\bord0\\shad0\\blur0\\fscx100\\fscy100\\frz0" +
             "\\1c${ScoreboardAss.color(BADGE_COLOR)}\\1a${ScoreboardAss.alpha(1.0)}\\p1}" +
             CommentAss.roundedRect(width, height, (height * RADIUS_SHARE).roundToInt()) + "{\\p0}"

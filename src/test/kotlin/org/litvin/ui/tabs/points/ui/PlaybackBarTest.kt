@@ -16,7 +16,7 @@ import org.litvin.ui.commons.SpeedControl
 
 class PlaybackBarTest {
     @Test
-    fun centersTheTransportAndPutsTheClockAndFrameStepLeftAndAddCommentRight() {
+    fun centersTheTransportAndPutsTheClockAndFrameStepLeftAndCommentAndReplayRight() {
         SwingUtilities.invokeAndWait {
             val bar = PlaybackBar(onTogglePlay = {}, onNudge = {}, onAddComment = {}, onSpeedIndex = {})
             bar.setTime(1_316_300, 5_761_000)
@@ -26,11 +26,13 @@ class PlaybackBarTest {
             val transport = assertNotNull(bar.findByName("points-video-controls"))
             val clock = assertNotNull(bar.findByName("points-time-panel"))
             val comment = assertNotNull(bar.findByName("points-add-comment"))
+            val replay = assertNotNull(bar.findByName("points-replay"))
 
             val transportCenter = transport.x + transport.width / 2
             assertTrue(abs(transportCenter - bar.width / 2) <= 1, "transport center=$transportCenter, bar width=${bar.width}")
             assertEquals(16, clock.x)
-            assertEquals(bar.width - 16, comment.x + comment.width)
+            assertEquals(bar.width - 16, replay.x + replay.width)
+            assertTrue(comment.x + comment.width < replay.x, "comment right=${comment.x + comment.width}, replay x=${replay.x}")
             // Frame step is next to the seek buttons, because it changes what Left and Right do.
             assertEquals(transport.x - 16, bar.frameStep.x + bar.frameStep.width)
             assertFalse(bar.frameStep.compact)

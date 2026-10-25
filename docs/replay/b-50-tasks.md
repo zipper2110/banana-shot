@@ -51,6 +51,15 @@ without a question. Check them, and change them if necessary.
 | R6 | T3 | During a replay, the seek keys and a click on the timeline move in source time. A seek out of the replay part stops the replay. The play-time timeline comes with T5. |
 | R7 | T3 | The dip before the cut into a replay shows only while the video plays. A paused frame near a point end shows no dip. |
 | R8 | T3 | Not checked in a real player yet: the shader change (zoom and dip), the lower pitch, and the timing of the dips. Run the app on the Points tab with a replay to check it. |
+| R9 | T4 | The editor is not checked on the screen. Off-screen pictures of the window, the timeline, and the list were checked. Check the editor with a real video: the zoom frame drag, the preview, and the keys. |
+| R10 | T4 | The editor has its own player. While the editor is open, the main player turns its preview off (decision 5). When the editor closes, the main player turns the preview on again and goes back to the old playhead. |
+| R11 | T4 | The preview in the editor starts 1 s before the point end and stops 1 s after it. It plays only the selected replay. The comments do not show in the preview. The badge shows. |
+| R12 | T4 | The sound choice is a separate "Sound" group under "Speed", because the two choices need the full width in some languages. |
+| R13 | T4 | A replay from a list row or a timeline block starts at the point end when the playhead is not in the window of the point. |
+| R14 | T5 | The actions column of the list is 82 px wide (it was 54 px), for the replay button on hover. |
+| R15 | T5 | The list is 360 px wide, so the tag shows "REPLAY" or "2 REPLAYS" only when there is room. Else it shows the icon and the count ("2"), or only the icon for one replay. |
+| R16 | T5 | The replay blocks are in the VIDEO track, as in the mockup. One block for each replay, with all its repeats. A click on a block opens the editor on that replay. A click in a block does not seek. |
+| R17 | T5 | The ruler ticks are at round source times, so with replays the ticks are not at equal distances. |
 
 ## Tasks
 
@@ -60,8 +69,8 @@ without a question. Check them, and change them if necessary.
 | T1 | Replay data in `edl.json` | — | done |
 | T2 | Replay timeline: source time and play time | T1 | done |
 | T3 | Live playback of the replays | T0, T2 | done |
-| T4 | Replay editor popup | T1, T3 | open |
-| T5 | Replays on the Points tab: timeline, list, button | T2, T4 | open |
+| T4 | Replay editor popup | T1, T3 | done |
+| T5 | Replays on the Points tab: timeline, list, button | T2, T4 | done |
 | T6 | Export of the replays | T1 | done |
 | T7 | Texts, help, and translations | T4, T5 | open |
 | T8 | Site, changelog, and version scope | T1–T7 | open |
@@ -179,6 +188,11 @@ prototype measures how long the picture stops at each seek.
 
 ### T4 Replay editor popup
 
+- Status: done, but not checked on the screen (R9). `ReplayEditorWindow`
+  is a modeless dialog with its own player (`MediaScreen.REPLAY_EDITOR`).
+  `ReplayEditorModel` holds the changes until Save. `ReplayPartBar` is the
+  bar under the video, and `ReplayZoomOverlay` draws the zoom frame with
+  the editor overlay of mpv. The preview uses a `ReplayDirector`.
 - A separate window with its own player (decision 5), as in the mockup: the part
   bar with the two edges, the zoom frame on the video, speed, repeats,
   sound, the cut effect (decision 3), Preview, Save, and Cancel.
@@ -192,10 +206,12 @@ prototype measures how long the picture stops at each seek.
   popup or adds a replay (decision of 2026-10-26).
 - A strong zoom on a small video gives a warning ("the picture can look
   soft").
-- Tests: —
+- Tests: `ReplayEditorModelTest`
 
 ### T5 Replays on the Points tab: timeline, list, button
 
+- Status: done, but not checked on the screen (R9). `TimelineScale`
+  converts between source time and the play time of the timeline.
 - The replay button at the right end of the playback bar, and a replay
   icon on each row of the list. They open the popup for the point at the
   playhead, or for the row.
@@ -206,7 +222,8 @@ prototype measures how long the picture stops at each seek.
   are spiky (decision 10). The ruler shows source times and skips over the blocks
   (decision of 2026-10-26).
 - A click on a block opens the popup on that replay.
-- Tests: —
+- Tests: `TimelineScaleTest`, `SwingTimelineComponentTest`,
+  `PlaybackBarTest`, `PointsDispatcherTest`
 
 ### T6 Export of the replays
 

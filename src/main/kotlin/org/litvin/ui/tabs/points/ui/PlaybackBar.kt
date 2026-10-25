@@ -35,6 +35,8 @@ internal class PlaybackBar(
     onSpeedIndex: (index: Int) -> Unit,
     /** The Frame step toggle. */
     onToggleFrameStep: () -> Unit = {},
+    /** The replay button at the right end of the bar (B-50 T5). */
+    onReplay: () -> Unit = {},
 ) : JPanel() {
 
     /** A seek tooltip, for example "Seek back 5 seconds [Shift+Left]". */
@@ -95,6 +97,13 @@ internal class PlaybackBar(
         isFocusable = false
     }
 
+    /** Opens the replay editor for the point at the playhead (B-50). No key does this (decision of 2026-10-26). */
+    private val replayButton = UiButton("", org.kordamp.ikonli.material2.Material2MZ.SLOW_MOTION_VIDEO, buttonHeight = 40).apply {
+        name = "points-replay"
+        toolTipText = tr("points.replay.tooltip")
+        isFocusable = false
+    }
+
     val frameStep = FrameStepToggle().apply {
         name = "points-frame-step"
         addActionListener { onToggleFrameStep() }
@@ -112,10 +121,12 @@ internal class PlaybackBar(
         add(speed)
         add(transport)
         add(commentButton)
+        add(replayButton)
         add(frameStep)
         playButton.addActionListener { onTogglePlay() }
         seekButtons.forEach { button -> button.addActionListener { onNudge(button.deltaMs) } }
         commentButton.addActionListener { onAddComment() }
+        replayButton.addActionListener { onReplay() }
         setPlaying(false)
     }
 
@@ -161,9 +172,9 @@ internal class PlaybackBar(
 
         override fun preferredLayoutSize(parent: Container): Dimension {
             val insets = parent.insets
-            val content = listOf(clock, speed, transport, commentButton, frameStep).maxOf { it.preferredSize.height }
+            val content = listOf(clock, speed, transport, commentButton, replayButton, frameStep).maxOf { it.preferredSize.height }
             val left = leftWidth(speedCompact = false, frameStepCompact = false)
-            val side = max(left, commentButton.preferredSize.width)
+            val side = max(left, rightWidth())
             return Dimension(insets.left + insets.right + side * 2 + transport.preferredSize.width + GRID_GAP * 2, insets.top + insets.bottom + content)
         }
 
@@ -190,9 +201,15 @@ internal class PlaybackBar(
             val stepMinX = if (speed.isVisible) speedX + speed.preferredSize.width + SPEED_GAP else speedX
             // Frame step has the height of the seek buttons, so it lines up with them.
             place(frameStep, max(stepMinX, centerX - GRID_GAP - step), step, seekButtons.first().preferredSize.height)
+            val replay = replayButton.preferredSize.width
+            val replayX = max(centerX + center + GRID_GAP, parent.width - insets.right - replay)
+            place(replayButton, replayX, replay)
             val button = commentButton.preferredSize.width
-            place(commentButton, max(centerX + center + GRID_GAP, parent.width - insets.right - button), button)
+            place(commentButton, max(centerX + center + GRID_GAP, replayX - SPEED_GAP - button), button)
         }
+
+        /** The width of Comment and the replay button on the right of the transport. */
+        private fun rightWidth() = commentButton.preferredSize.width + SPEED_GAP + replayButton.preferredSize.width
 
         /** The width of the clock, the speed, and Frame step in the given forms. */
         private fun leftWidth(speedCompact: Boolean, frameStepCompact: Boolean) =

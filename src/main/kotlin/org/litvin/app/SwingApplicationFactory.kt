@@ -353,6 +353,7 @@ object SwingApplicationFactory {
                 commentStyles,
                 PreferencesScoreboardStyleDefaults(scoreboardPreferences),
                 PreferencesAppCreditRequest(scoreboardPreferences),
+                replayPlayers = { services.mediaPlayers.create(MediaScreen.REPLAY_EDITOR) },
             )
             closeActions += pointsPanel::close
 

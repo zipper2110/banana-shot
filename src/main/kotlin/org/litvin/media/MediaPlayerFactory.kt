@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 enum class MediaScreen {
     POINTS,
     ADJUST_VIDEO,
+    REPLAY_EDITOR,
     TEST,
 }
 

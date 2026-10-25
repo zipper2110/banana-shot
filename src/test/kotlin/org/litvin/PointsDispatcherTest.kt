@@ -28,6 +28,24 @@ class PointsDispatcherTest {
     }
 
     @Test
+    fun setReplaysFitsTheReplaysToThePointAndNotifies() {
+        val d = newDispatcher()
+        d.onPointStart(10_000)
+        d.onPointEnd(14_000)
+        val id = d.getCompletedPoints().single().id
+        var changes = 0
+        d.onPointsChanged = { changes++ }
+
+        // The second part is outside the window of 3 s around the point, so the dispatcher removes it.
+        val saved = d.setReplays(id, listOf(org.litvin.points.ReplayV1(11_000, 13_000), org.litvin.points.ReplayV1(30_000, 31_000)))
+
+        assertTrue(saved)
+        assertEquals(listOf(org.litvin.points.ReplayV1(11_000, 13_000)), d.getCompletedPoints().single().replays)
+        assertEquals(1, changes)
+        assertEquals(false, d.setReplays("missing", emptyList()))
+    }
+
+    @Test
     fun create_point_happyPath_and_adjacent_allowed() {
         val d = newDispatcher()
         // First point: [0, 1000)

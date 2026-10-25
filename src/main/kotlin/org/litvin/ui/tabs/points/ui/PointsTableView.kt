@@ -165,6 +165,7 @@ class PointsTableView(
                         stripColor = { winnerColor(event.point.id) },
                         marks = { pointMarks(event.point.id) },
                         onToggleFavorite = { actions.toggleFavorite(event.point.id) },
+                        onReplays = { actions.openReplays(event.point.id) },
                         onEdit = { EditPointDialog.show(this, event.point, number, actions) },
                         onDelete = {
                             actions.selectByVisualIndex(visualIndex)

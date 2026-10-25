@@ -142,6 +142,17 @@ class PointsDispatcher {
         onPointsChanged?.invoke()
     }
 
+    /** Replaces the replays of the point with [id] (B-50). The replays are fitted to the point. Returns true if updated. */
+    fun setReplays(id: String, replays: List<org.litvin.points.ReplayV1>): Boolean {
+        val idx = points.indexOfFirst { it.id == id }
+        if (idx < 0) return false
+        val updated = Replays.fitted(points[idx].copy(replays = replays))
+        if (updated == points[idx]) return true
+        points[idx] = updated
+        onPointsChanged?.invoke()
+        return true
+    }
+
     /** Toggle favorite status for a completed point by id. Returns true if updated. */
     fun toggleFavorite(id: String): Boolean {
         val idx = points.indexOfFirst { it.id == id }

@@ -32,6 +32,9 @@ interface PointsActions {
     fun previewComment(id: Int?, comment: CommentInput?) {}
     fun deleteComment(id: Int) {}
 
+    /** Opens the replay editor for the point with [id] (B-50). */
+    fun openReplays(id: String) {}
+
     /**
      * Selects an item by its visual index (index within the composed view list).
      */
@@ -84,6 +87,8 @@ data class PointDto(
     val label: String?,
     val flags: Set<String> = emptySet(),
     val favorite: Boolean = false,
+    /** The number of instant replays of the point (B-50). */
+    val replayCount: Int = 0,
 )
 
 /** Partial update to a point. Fields set to null are not modified. */

@@ -23,7 +23,7 @@ import org.litvin.i18n.tr
 
 /**
  * The columns of the points table: #, Start, Length, the marks, ★ and the row actions.
- * The widths: 34 px, 70 px, 50 px, the rest, 24 px and 54 px, with 5 px gaps.
+ * The widths: 34 px, 70 px, 50 px, the rest, 24 px and 82 px, with 5 px gaps.
  * The marks (game, set and serve) are at the right end of their column.
  */
 internal data class TableColumns(val width: Int) {
@@ -41,7 +41,7 @@ internal data class TableColumns(val width: Int) {
         const val PAD_RIGHT = 8
         const val GAP = 5
         const val STAR = 24
-        const val ACTIONS = 54
+        const val ACTIONS = 82
     }
 }
 
@@ -194,6 +194,8 @@ internal class PointRow(
     onToggleFavorite: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    /** Opens the replay editor of the point (B-50). */
+    onReplays: () -> Unit = {},
 ) : TableRow(visualIndex, point.startMs) {
 
     override val title = "#$number"
@@ -205,8 +207,12 @@ internal class PointRow(
         color = if (point.favorite) Palette.YELLOW else Palette.FG_3,
         side = 22,
     ).apply { name = "favorite-point-${point.id}" }
+    val replayButton = RowIconButton(Material2MZ.SLOW_MOTION_VIDEO, tr("points.replay.row.tooltip")).apply { name = "replays-point-${point.id}" }
     val editButton = RowIconButton(Material2AL.EDIT, tr("points.row.edit.tooltip")).apply { name = "edit-point-${point.id}" }
     val deleteButton = RowIconButton(Material2AL.CLOSE, tr("pointEdit.delete.title"), danger = true).apply { name = "delete-point-${point.id}" }
+
+    /** The lime REPLAY tag of a point with replays (B-50 T5), or null. */
+    private val replayTag: String? = point.replayCount.takeIf { it > 0 }?.let { tr("points.replay.tag", "count" to it) }
 
     private val textFont get() = UiKit.font(12.5f)
     private val numberFont get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
@@ -218,9 +224,11 @@ internal class PointRow(
         // The row shows the tooltips of the marks (see getToolTipText).
         toolTipText = ""
         add(favoriteButton)
+        add(replayButton)
         add(editButton)
         add(deleteButton)
         favoriteButton.addActionListener { onToggleFavorite() }
+        replayButton.addActionListener { onReplays() }
         editButton.addActionListener { onEdit() }
         deleteButton.addActionListener { onDelete() }
         onStateChanged()
@@ -229,6 +237,7 @@ internal class PointRow(
     override fun onStateChanged() {
         // The star of a favorite stays visible. The other buttons show only while the pointer is over the row.
         favoriteButton.isVisible = point.favorite || hovered
+        replayButton.isVisible = hovered
         editButton.isVisible = hovered
         deleteButton.isVisible = hovered
     }
@@ -237,7 +246,7 @@ internal class PointRow(
         val columns = TableColumns(width)
         val star = favoriteButton.preferredSize
         favoriteButton.setBounds(columns.star + (TableColumns.STAR - star.width) / 2, (height - star.height) / 2, star.width, star.height)
-        layoutActions(listOf(editButton, deleteButton))
+        layoutActions(listOf(replayButton, editButton, deleteButton))
     }
 
     override fun paintComponent(g: Graphics) {
@@ -255,7 +264,8 @@ internal class PointRow(
             UiKit.drawText(g2, Timecode.format(point.startMs), textFont, Palette.FG, columns.start.toFloat(), 0f, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
             UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), 0f, h)
-            marks()?.let { paintMarks(g2, it, columns.marksRight) }
+            val marksLeft = marks()?.let { paintMarks(g2, it, columns.marksRight) } ?: columns.marksRight
+            replayTag?.let { tag -> paintReplayTag(g2, tag, marksLeft, columns.lengthRight + MARK_GAP) }
         } finally {
             g2.dispose()
         }
@@ -263,10 +273,31 @@ internal class PointRow(
 
     private fun badgeWidth(text: String) = ceil(UiKit.textWidth(text, badgeFont)).toInt() + 10
 
+    private val replayIcon by lazy { UiKit.icon(Material2MZ.SLOW_MOTION_VIDEO, 12, Palette.LIME) }
+
+    /**
+     * The lime outline tag of a point with replays, before the marks: the icon and "REPLAY" or "2 REPLAYS".
+     * Without room for the text, the tag shows the icon and the count of 2 or more, or only the icon.
+     */
+    private fun paintReplayTag(g2: Graphics2D, tag: String, right: Int, minLeft: Int) {
+        val count = point.replayCount
+        val text = listOfNotNull(tag, count.takeIf { it > 1 }?.toString())
+            .firstOrNull { right - (replayIcon.iconWidth + 3 + badgeWidth(it)) >= minLeft }
+        val w = text?.let { replayIcon.iconWidth + 3 + badgeWidth(it) } ?: (replayIcon.iconWidth + 8)
+        val x = right - w
+        val y = (height - BADGE_HEIGHT) / 2
+        UiKit.paintBox(g2, x, y, w, BADGE_HEIGHT, 3, null, Palette.LIME_LINE)
+        replayIcon.paintIcon(this, g2, x + 4, (height - replayIcon.iconHeight) / 2)
+        if (text != null) UiKit.drawText(g2, text, badgeFont, Palette.LIME, x + 4f + replayIcon.iconWidth + 3f, y.toFloat(), BADGE_HEIGHT.toFloat())
+    }
+
     private fun racketWidth(marks: PointMarks) = if (marks.serveOnBadge) RACKET_BADGE else RACKET
 
-    /** The GAME or SET badge at the right end of the marks column, and the serve racket before it. */
-    private fun paintMarks(g2: Graphics2D, marks: PointMarks, marksRight: Int) {
+    /**
+     * The GAME or SET badge at the right end of the marks column, and the serve racket before it.
+     * Returns the left end of the painted marks, with a gap.
+     */
+    private fun paintMarks(g2: Graphics2D, marks: PointMarks, marksRight: Int): Int {
         var right = marksRight
         marks.milestone?.let { text ->
             val w = badgeWidth(text)
@@ -295,7 +326,9 @@ internal class PointRow(
         }
         if (marks.overridden) {
             overrideIcon.paintIcon(this, g2, right - OVERRIDE, (height - overrideIcon.iconHeight) / 2)
+            right -= OVERRIDE + MARK_GAP
         }
+        return right
     }
 
     override fun getToolTipText(event: MouseEvent): String? {

@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.points.ui
 
 import org.litvin.points.CommentV1
 import org.litvin.points.PointV1
+import org.litvin.points.ReplayV1
 import org.litvin.ui.commons.Palette
 import java.awt.Color
 import java.awt.Cursor
@@ -188,6 +189,65 @@ class SwingTimelineComponentTest {
                 }
             }
             assertTrue(limePixels > 10, "the pending range should have a lime border, found $limePixels lime pixels")
+        }
+    }
+
+    @Test
+    fun aClickOnAReplayBlockOpensThatReplayAndDoesNotSeek() {
+        SwingUtilities.invokeAndWait {
+            val opened = mutableListOf<Pair<String, Int>>()
+            val seeks = mutableListOf<Long>()
+            // The replay adds 2 s after the point end at 4 s: 12 s of play time on 200 px.
+            val point = PointV1("p1", 2_000, 4_000, replays = listOf(ReplayV1(3_000, 4_000, speed = 0.5)))
+            val timeline = SwingTimelineComponent(
+                timeProvider = { 0L },
+                durationProvider = { 10_000L },
+                pointsProvider = { listOf(point) },
+                onSeekRequested = { seeks += it },
+                onReplaySelected = { id, index -> opened += id to index },
+            )
+            timeline.setSize(WIDTH, timeline.preferredSize.height)
+            val box = timeline.replayBlockBoundsForTest().single()
+            assertEquals(GUTTER + 200 * 4 / 12, box.x)
+            assertTrue(box.width >= SwingTimelineComponent.SPIKY_BLOCK_PX, "block width was ${box.width}")
+
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_PRESSED, box.centerX.toInt(), box.centerY.toInt()))
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_RELEASED, box.centerX.toInt(), box.centerY.toInt()))
+
+            assertEquals(listOf("p1" to 0), opened)
+            assertEquals(emptyList(), seeks)
+            assertEquals(Cursor.HAND_CURSOR, timeline.cursorAtForTest(box.centerX.toInt(), box.centerY.toInt()).type)
+
+            val image = BufferedImage(timeline.width, timeline.height, BufferedImage.TYPE_INT_ARGB)
+            val g = image.createGraphics()
+            timeline.paint(g)
+            g.dispose()
+            val center = Color(image.getRGB(box.centerX.toInt(), box.centerY.toInt()))
+            val lime = Palette.LIME
+            assertTrue(abs(center.red - lime.red) + abs(center.green - lime.green) + abs(center.blue - lime.blue) <= 30, "block color was $center")
+        }
+    }
+
+    @Test
+    fun aClickAfterAReplayBlockSeeksInSourceTime() {
+        SwingUtilities.invokeAndWait {
+            val seeks = mutableListOf<Long>()
+            val point = PointV1("p1", 2_000, 4_000, replays = listOf(ReplayV1(3_000, 4_000, speed = 0.5)))
+            val timeline = SwingTimelineComponent(
+                timeProvider = { 0L },
+                durationProvider = { 10_000L },
+                pointsProvider = { listOf(point) },
+                onSeekRequested = { seeks += it },
+            )
+            timeline.setSize(WIDTH, timeline.preferredSize.height)
+            // 9 s of play time is 7 s of source time.
+            val x = GUTTER + 200 * 9 / 12
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_PRESSED, x, timeline.videoTrackTopForTest() + 2))
+            timeline.dispatchEvent(mouse(timeline, MouseEvent.MOUSE_RELEASED, x, timeline.videoTrackTopForTest() + 2))
+
+            // The press scrubs, and the release seeks to the same time.
+            assertEquals(2, seeks.size)
+            assertTrue(seeks.all { abs(it - 7_000) <= 60 }, "seeks were $seeks")
         }
     }
 

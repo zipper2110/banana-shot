@@ -14,6 +14,7 @@ import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
+import org.litvin.points.Replays
 import org.litvin.points.components.CommentDispatcher
 import org.litvin.points.components.CommentPatch as DispatcherCommentPatch
 import org.litvin.points.components.CommentState
@@ -80,6 +81,8 @@ class SwingPointsPanel(
     // The scoreboard style defaults and the app credit request of the scoring.
     styleDefaults: ScoreboardStyleDefaults = ScoreboardStyleDefaults.NONE,
     appCreditRequest: AppCreditRequest = AppCreditRequest.NONE,
+    // Creates the player of the replay editor (B-50). The editor closes it.
+    private val replayPlayers: () -> SwingMediaPlayer = { MpvSwingMediaPlayerAdapter() },
 ) : JPanel(BorderLayout()), AutoCloseable {
 
     constructor() : this(
@@ -111,6 +114,11 @@ class SwingPointsPanel(
     // Plays the replays of the points after their ends (B-50)
     private val replays = ReplayDirector()
     private var replayShown = false
+
+    // The open replay editor, or null. While it is open, it uses the video, and this player shows a note.
+    private var replayEditor: org.litvin.ui.tabs.points.replay.ReplayEditorWindow? = null
+    private val videoCards = java.awt.CardLayout()
+    private val videoArea = JPanel(videoCards)
 
     // The comment that the comment dialog shows on the video before Save, or null when no dialog is open.
     private var dialogComment: CommentV1? = null
@@ -213,6 +221,7 @@ class SwingPointsPanel(
 
     fun onDeactivated() {
         active = false
+        replayEditor?.cancel()
         hints.hide(HintId.POINT_ROW)
         scoring.onDeactivated()
         saveNow()
@@ -275,6 +284,7 @@ class SwingPointsPanel(
                 label = point.label,
                 flags = emptySet(),
                 favorite = point.favorite,
+                replayCount = point.replays.size,
             ))
         }
         val comments = commentDispatcher.state().comments.map { comment ->
@@ -323,6 +333,8 @@ class SwingPointsPanel(
         selectedPointIdProvider = { (selectedEvent() as? PointEventDto)?.point?.id },
         pendingStartProvider = { dispatcher.getPendingStart()?.toLong() },
         winnerColorProvider = { id -> scoring.winnerColor(id) },
+        replayPlayheadProvider = { replays.activePlay?.playAt(player.currentTimeMs()) },
+        onReplaySelected = { id, index -> EventQueue.invokeLater { openReplayEditor(pointId = id, replayIndex = index) } },
     ).apply { name = "points-seek" }
 
     // Autosave controller (debounced, off-EDT persistence). The snapshot is taken on the EDT,
@@ -378,6 +390,7 @@ class SwingPointsPanel(
         override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
         override fun previewComment(id: Int?, comment: CommentInput?) = this@SwingPointsPanel.previewComment(id, comment)
         override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
+        override fun openReplays(id: String) = openReplayEditor(pointId = id)
     }
 
     override fun addNotify() {
@@ -402,6 +415,7 @@ class SwingPointsPanel(
             onAddComment = { addCommentAtPlayhead() },
             onSpeedIndex = { index -> setSpeedIndex(index); player.component.requestFocusInWindow() },
             onToggleFrameStep = { toggleFrameStep() },
+            onReplay = { openReplayEditor(addNew = true) },
         )
         playbackBar.speed.setSpeedIndex(speedIndex)
         markPanel = PointStartButton(onStart = { onStartAtPlayhead() })
@@ -419,7 +433,16 @@ class SwingPointsPanel(
                 if (SwingUtilities.isLeftMouseButton(e) && isMediaLoaded && !commentDrag.pressedOnComment) togglePlayPause()
             }
         })
-        leftColumn.add(geometryViewport, BorderLayout.CENTER)
+        videoArea.add(geometryViewport, VIDEO_CARD)
+        videoArea.add(JPanel(java.awt.GridBagLayout()).apply {
+            name = "points-replay-busy"
+            background = Palette.VIDEO_BG
+            add(javax.swing.JLabel(tr("replay.editor.busy")).apply {
+                font = org.litvin.ui.commons.UiKit.font(14f)
+                foreground = Palette.FG_2
+            })
+        }, BUSY_CARD)
+        leftColumn.add(videoArea, BorderLayout.CENTER)
         leftColumn.add(JPanel(BorderLayout()).apply {
             isOpaque = false
             add(buildPointBar(), BorderLayout.NORTH)
@@ -989,8 +1012,11 @@ class SwingPointsPanel(
         val shown = withDialogComment(commentDrag.displayed(commentPreview.shown))
         // The comments draw after the scoreboard, so they are on top of it. A replay hides the scoreboard (B-50).
         val showBoard = !replays.isActive
+        val badge = replays.activePlay?.replay?.showBadge == true
+        val badgeText = tr("replay.badge")
         player.setPreviewOverlay(VideoOverlay { area ->
-            (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area)
+            (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area) +
+                (if (badge) org.litvin.export.ReplayBadgeAss.events(badgeText, area.width, area.height, area.x, area.y) else emptyList())
         })
         commentDrag.refresh()
     }
@@ -1012,7 +1038,57 @@ class SwingPointsPanel(
         autoActivatePoint(t)
     }
 
+    /**
+     * Opens the replay editor for the point with [pointId], or for the point at the playhead (B-50 T4). With
+     * [addNew], the editor adds a replay at the playhead. Else it selects the replay [replayIndex], or adds one when
+     * the point has no replay. While the editor is open, it uses the video, and this player shows a note.
+     */
+    fun openReplayEditor(pointId: String? = null, replayIndex: Int? = null, addNew: Boolean = false) {
+        replayEditor?.let { it.toFront(); return }
+        val playhead = player.currentTimeMs()
+        val points = dispatcher.getCompletedPoints()
+        val point = (pointId?.let { id -> points.firstOrNull { it.id == id } } ?: pointNear(playhead)) ?: run {
+            dialogs.showHint(this, tr("points.replay.noPoint"))
+            return
+        }
+        val file = pendingMediaFile ?: return
+        player.pause()
+        applyReplay(replays.stop())
+        player.deactivatePreview("replay editor")
+        videoCards.show(videoArea, BUSY_CARD)
+        val number = points.sortedBy { it.startMs }.indexOfFirst { it.id == point.id } + 1
+        val select = when {
+            addNew -> null
+            point.replays.isEmpty() -> null
+            else -> (replayIndex ?: 0).coerceIn(0, point.replays.lastIndex)
+        }
+        // A replay from a row or a block starts at the point end when the playhead is not near the point.
+        val newAt = if (playhead in Replays.windowStartMs(point)..Replays.windowEndMs(point)) playhead else point.endMs.toLong()
+        replayEditor = org.litvin.ui.tabs.points.replay.ReplayEditorWindow(
+            owner = SwingUtilities.getWindowAncestor(this),
+            player = replayPlayers(),
+            videoFile = file,
+            adjustments = adjustments.get(),
+            point = point,
+            pointTitle = tr("replay.editor.pointName", "number" to number),
+            playheadMs = newAt,
+            selectIndex = select,
+            onSave = { list -> dispatcher.setReplays(point.id, list) },
+            onClosed = {
+                replayEditor = null
+                videoCards.show(videoArea, VIDEO_CARD)
+                if (active) {
+                    player.activatePreview("replay editor closed")
+                    player.seek(playhead)
+                }
+                refreshUiAtCurrentTime()
+            },
+        ).also { it.isVisible = true }
+    }
+
     private fun togglePlayPause() {
+        // The replay editor uses the video (B-50 decision 5).
+        if (replayEditor != null) return
         val wasPlaying = player.status() == PlayerStatus.PLAYING
         if (wasPlaying) player.pause() else player.play()
         updatePlayPauseButton()
@@ -1141,6 +1217,7 @@ class SwingPointsPanel(
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
+        replayEditor?.cancel()
         idleUiTimer.stop()
         keybindings?.uninstall()
         keybindings = null
@@ -1163,6 +1240,9 @@ class SwingPointsPanel(
     private class EdlSnapshot(val projectDir: String, val edl: EdlV1)
 
     private companion object {
+        const val VIDEO_CARD = "video"
+        const val BUSY_CARD = "busy"
+
         /** A point stays active while the playhead is this close to it. */
         const val NEAR_POINT_MS = 2_000L
 

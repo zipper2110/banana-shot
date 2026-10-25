@@ -6,6 +6,7 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.points.CommentV1
 import org.litvin.points.PointV1
+import org.litvin.points.ReplayTimeline
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.Html
 import java.awt.BasicStroke
@@ -61,6 +62,10 @@ class SwingTimelineComponent(
     private val pendingStartProvider: () -> Long? = { null },
     /** The winner color of a scored point. Null keeps the normal color. */
     private val winnerColorProvider: (pointId: String) -> java.awt.Color? = { null },
+    /** The play time of the replay that plays now, or null outside a replay. The playhead is in the block then. */
+    private val replayPlayheadProvider: () -> Long? = { null },
+    /** A click on a replay block (B-50 T5). */
+    private val onReplaySelected: (pointId: String, replayIndex: Int) -> Unit = { _, _ -> },
 ) : JComponent() {
 
     private val gutterBg get() = Palette.INSET
@@ -124,6 +129,13 @@ class SwingTimelineComponent(
             return
         }
 
+        val block = replayBlockAt(event.point)
+        if (block != null) {
+            pressPoint = null
+            onReplaySelected(block.pointId, block.replayIndex)
+            return
+        }
+
         val mark = markAt(event.point)
         if (mark != null) {
             onSeekRequested(mark.startMs.toLong())
@@ -157,12 +169,38 @@ class SwingTimelineComponent(
 
     private fun lanesWidth(): Int = (width - GUTTER).coerceAtLeast(1)
 
-    private fun timeAtX(x: Int): Long {
+    /** The scale of the last call, while the points and the duration stay the same. */
+    private var cachedScale: TimelineScale? = null
+    private var cachedPoints: List<PointV1>? = null
+
+    private fun scale(points: List<PointV1> = pointsProvider()): TimelineScale {
         val total = max(1L, durationProvider())
-        return (((x - GUTTER).toDouble() / lanesWidth().toDouble()) * total).toLong().coerceIn(0L, total)
+        cachedScale?.let { if (cachedPoints === points && it.sourceTotalMs == total) return it }
+        return TimelineScale(ReplayTimeline(points), total).also {
+            cachedScale = it
+            cachedPoints = points
+        }
     }
 
-    private fun xAt(ms: Long, pxPerMs: Double): Int = GUTTER + (ms * pxPerMs).toInt()
+    private fun timeAtX(x: Int): Long = scale().let { it.sourceAt(it.playAtX(x, GUTTER, lanesWidth())) }
+
+    /** The x of the source time [ms]. */
+    private fun xAt(ms: Long, scale: TimelineScale): Int = scale.xAtSource(ms, GUTTER, lanesWidth())
+
+    private fun blockBounds(block: TimelineScale.Block, scale: TimelineScale): Rectangle {
+        val x1 = scale.xAtPlay(block.startMs, GUTTER, lanesWidth())
+        val x2 = scale.xAtPlay(block.endMs, GUTTER, lanesWidth())
+        return Rectangle(x1, videoTrackTop() + 2, max(MIN_BLOCK_PX, x2 - x1), TRACK_HEIGHT - 4)
+    }
+
+    private fun replayBlockAt(point: Point): TimelineScale.Block? {
+        val scale = scale()
+        // A narrow block gets a wider hit area.
+        return scale.blocks.firstOrNull { block ->
+            val box = blockBounds(block, scale)
+            point.y in box.y until box.y + box.height && point.x in box.x - 2..box.x + box.width + 1
+        }
+    }
 
     private fun commentMarkerAt(point: Point): CommentMarkerLayout? =
         commentMarkerLayouts().firstOrNull { it.boxBounds.contains(point) }
@@ -170,10 +208,11 @@ class SwingTimelineComponent(
     private fun markAt(point: Point): PointV1? {
         val markRect = Rectangle(GUTTER, marksTrackTop(), lanesWidth(), TRACK_HEIGHT)
         if (!markRect.contains(point)) return null
-        val pxPerMs = pxPerMs(max(1L, durationProvider()), lanesWidth())
-        return pointsProvider().firstOrNull { mark ->
-            val x1 = xAt(mark.startMs.toLong(), pxPerMs)
-            val x2 = xAt(mark.endMs.toLong(), pxPerMs)
+        val points = pointsProvider()
+        val scale = scale(points)
+        return points.firstOrNull { mark ->
+            val x1 = xAt(mark.startMs.toLong(), scale)
+            val x2 = xAt(mark.endMs.toLong(), scale)
             point.x in x1..max(x1 + 1, x2)
         }
     }
@@ -181,7 +220,7 @@ class SwingTimelineComponent(
     /** Hand over the discrete targets (comment labels, marks), crosshair over the scrubbable rest. */
     private fun cursorFor(point: Point?): Cursor = when {
         point == null || point.x < GUTTER -> Cursor.getDefaultCursor()
-        commentMarkerAt(point) != null || markAt(point) != null -> Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        commentMarkerAt(point) != null || markAt(point) != null || replayBlockAt(point) != null -> Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         else -> Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR)
     }
 
@@ -195,9 +234,6 @@ class SwingTimelineComponent(
     private fun commentsTrackTop(): Int = marksTrackTop() + TRACK_HEIGHT
 
     private fun commentTrackHeight(laneCount: Int): Int = max(TRACK_HEIGHT, laneCount * TAG_LANE + 5)
-
-    private fun pxPerMs(totalMs: Long, availableWidth: Int): Double =
-        if (totalMs <= 0) 0.0 else availableWidth.toDouble() / totalMs.toDouble()
 
     override fun paintComponent(graphics: Graphics) {
         val g = UiKit.smooth(graphics)
@@ -217,18 +253,24 @@ class SwingTimelineComponent(
         val total = max(1L, durationProvider())
         val points = pointsProvider()
         val comments = commentsProvider()
-        val layouts = commentMarkerLayouts(total, comments)
+        val scale = scale(points)
+        val layouts = commentMarkerLayouts(comments, scale)
         val laneCount = (layouts.maxOfOrNull { it.lane } ?: -1) + 1
-        val pxPerMs = pxPerMs(total, lanesWidth())
 
         paintGutter(g, points.size, comments.size, commentTrackHeight(laneCount))
-        paintRuler(g, total)
-        paintVideoTrack(g)
-        paintMarksTrack(g, points, pxPerMs)
+        paintRuler(g, total, scale)
+        paintVideoTrack(g, scale)
+        paintMarksTrack(g, points, scale)
         paintCommentsTrack(g, comments, layouts, commentTrackHeight(laneCount))
 
-        val current = (scrubTimeMs ?: timeProvider()).coerceIn(0L, total)
-        paintPlayhead(g, xAt(current, pxPerMs))
+        val scrub = scrubTimeMs
+        val playheadX = if (scrub == null) {
+            replayPlayheadProvider()?.let { scale.xAtPlay(it, GUTTER, lanesWidth()) }
+                ?: xAt(timeProvider().coerceIn(0L, total), scale)
+        } else {
+            xAt(scrub.coerceIn(0L, total), scale)
+        }
+        paintPlayhead(g, playheadX)
     }
 
     private fun paintGutter(g: Graphics2D, markCount: Int, commentCount: Int, commentHeight: Int) {
@@ -252,7 +294,8 @@ class SwingTimelineComponent(
         label(commentsIcon, DisplayFormats.upper(tr("timeline.comments")), if (commentCount > 0) commentCount.toString() else "", commentsTrackTop(), commentHeight)
     }
 
-    private fun paintRuler(g: Graphics2D, total: Long) {
+    /** The ruler shows source times. Its ticks skip over the replay blocks (B-50, ruler option A). */
+    private fun paintRuler(g: Graphics2D, total: Long, scale: TimelineScale) {
         val top = TOP_BORDER
         val lanes = lanesWidth()
         g.color = gutterBg
@@ -260,36 +303,100 @@ class SwingTimelineComponent(
         g.color = Palette.LINE
         g.fillRect(GUTTER, top + RULER_HEIGHT - 1, lanes, 1)
         for (index in 0..TICKS) {
-            val x = GUTTER + (index * (lanes.toDouble() / TICKS)).toInt()
+            val tickMs = index * (total / TICKS.toLong())
+            val x = if (index == TICKS) GUTTER + lanes else xAt(tickMs, scale)
             g.color = tickColor
             g.fillRect(min(x, width - 1), top, 1, RULER_HEIGHT - 1)
             // A narrow timeline labels every second tick only.
             if (lanes < ALL_TICK_LABELS_WIDTH && index % 2 == 1) continue
-            val text = Timecode.format(index * (total / TICKS.toLong()))
+            val text = Timecode.format(tickMs)
             val textX = if (index == TICKS) x - 4 - UiKit.textWidth(text, tickFont) else x + 4f
             UiKit.drawText(g, text, tickFont, Palette.FG_3, textX, top.toFloat(), RULER_HEIGHT - 1f)
         }
     }
 
-    private fun paintVideoTrack(g: Graphics2D) {
+    /** The source video in blue, with a gap for each replay block. Each replay is a lime block in the gap. */
+    private fun paintVideoTrack(g: Graphics2D, scale: TimelineScale) {
         val top = videoTrackTop()
+        val lanes = lanesWidth()
+        var from = 0L
+        for (insert in scale.replays.inserts) {
+            paintVideoRange(g, scale.xAtPlay(from, GUTTER, lanes), scale.xAtPlay(insert.startMs, GUTTER, lanes), top)
+            from = insert.endMs
+        }
+        paintVideoRange(g, scale.xAtPlay(from, GUTTER, lanes), GUTTER + lanes, top)
+        scale.blocks.forEach { block -> paintReplayBlock(g, blockBounds(block, scale)) }
+    }
+
+    private fun paintVideoRange(g: Graphics2D, x1: Int, x2: Int, top: Int) {
+        if (x2 <= x1) return
         g.color = Palette.VIDEO_RANGE
-        g.fill(RoundRectangle2D.Double(GUTTER.toDouble(), top + 7.0, lanesWidth().toDouble(), 8.0, 4.0, 4.0))
+        g.fill(RoundRectangle2D.Double(x1.toDouble(), top + 7.0, (x2 - x1).toDouble(), 8.0, 4.0, 4.0))
+    }
+
+    /**
+     * A replay block: lime with spiky edges on all four sides (decision 10). A spike is 4 px wide and 2 px deep.
+     * A block under 16 px wide is a plain lime tick.
+     */
+    private fun paintReplayBlock(g: Graphics2D, box: Rectangle) {
+        g.color = Palette.LIME
+        if (box.width < SPIKY_BLOCK_PX) {
+            g.fillRect(box.x, box.y + SPIKE_DEPTH, box.width, box.height - 2 * SPIKE_DEPTH)
+            return
+        }
+        g.fill(spikyPath(box))
+    }
+
+    private fun spikyPath(box: Rectangle): Path2D.Double {
+        val path = Path2D.Double()
+        val left = box.x.toDouble()
+        val right = (box.x + box.width).toDouble()
+        val top = box.y.toDouble()
+        val bottom = (box.y + box.height).toDouble()
+        val depth = SPIKE_DEPTH.toDouble()
+        // Each edge has a whole number of spikes, so that the spikes fit the edge.
+        val across = max(1, (box.width - 2 * SPIKE_DEPTH) / SPIKE_WIDTH)
+        val down = max(1, (box.height - 2 * SPIKE_DEPTH) / SPIKE_WIDTH)
+        val stepX = (right - left - 2 * depth) / across
+        val stepY = (bottom - top - 2 * depth) / down
+        path.moveTo(left + depth, top + depth)
+        for (i in 0 until across) {
+            val x = left + depth + i * stepX
+            path.lineTo(x + stepX / 2, top)
+            path.lineTo(x + stepX, top + depth)
+        }
+        for (i in 0 until down) {
+            val y = top + depth + i * stepY
+            path.lineTo(right, y + stepY / 2)
+            path.lineTo(right - depth, y + stepY)
+        }
+        for (i in 0 until across) {
+            val x = right - depth - i * stepX
+            path.lineTo(x - stepX / 2, bottom)
+            path.lineTo(x - stepX, bottom - depth)
+        }
+        for (i in 0 until down) {
+            val y = bottom - depth - i * stepY
+            path.lineTo(left, y - stepY / 2)
+            path.lineTo(left + depth, y - stepY)
+        }
+        path.closePath()
+        return path
     }
 
     /** A scored point has the winner color. Otherwise a favorite is yellow and a point is green. */
     private fun markColor(point: PointV1) =
         winnerColorProvider(point.id) ?: if (point.favorite) Palette.YELLOW else Palette.GREEN
 
-    private fun paintMarksTrack(g: Graphics2D, points: List<PointV1>, pxPerMs: Double) {
+    private fun paintMarksTrack(g: Graphics2D, points: List<PointV1>, scale: TimelineScale) {
         val top = marksTrackTop()
         g.color = rowLine
         g.fillRect(GUTTER, top, lanesWidth(), 1)
         val selectedId = selectedPointIdProvider()
         var selected: Rectangle? = null
         points.forEach { point ->
-            val x1 = xAt(point.startMs.toLong(), pxPerMs)
-            val w = max(2, xAt(point.endMs.toLong(), pxPerMs) - x1)
+            val x1 = xAt(point.startMs.toLong(), scale)
+            val w = max(2, xAt(point.endMs.toLong(), scale) - x1)
             if (point.id == selectedId) {
                 selected = Rectangle(x1, top + 1, w, TRACK_HEIGHT - 2)
                 return@forEach
@@ -297,7 +404,7 @@ class SwingTimelineComponent(
             g.color = markColor(point)
             g.fill(RoundRectangle2D.Double(x1.toDouble(), top + 4.0, w.toDouble(), TRACK_HEIGHT - 8.0, 2.0, 2.0))
         }
-        pendingStartProvider()?.let { start -> paintPending(g, start, pxPerMs, top) }
+        pendingStartProvider()?.let { start -> paintPending(g, start, scale, top) }
         selected?.let { box ->
             g.color = points.firstOrNull { it.id == selectedId }?.let(::markColor) ?: Palette.GREEN
             g.fill(RoundRectangle2D.Double(box.x.toDouble(), box.y.toDouble(), box.width.toDouble(), box.height.toDouble(), 2.0, 2.0))
@@ -308,10 +415,10 @@ class SwingTimelineComponent(
     }
 
     /** The pending point: a hatched range with a dashed lime border from its start to the playhead. */
-    private fun paintPending(g: Graphics2D, startMs: Long, pxPerMs: Double, top: Int) {
+    private fun paintPending(g: Graphics2D, startMs: Long, scale: TimelineScale, top: Int) {
         val now = scrubTimeMs ?: timeProvider()
-        val x1 = xAt(min(startMs, now), pxPerMs)
-        val w = max(3, xAt(max(startMs, now), pxPerMs) - x1)
+        val x1 = xAt(min(startMs, now), scale)
+        val w = max(3, xAt(max(startMs, now), scale) - x1)
         val box = Rectangle(x1, top + 3, w, TRACK_HEIGHT - 6)
         val clip = g.clip
         g.clip(box)
@@ -361,10 +468,9 @@ class SwingTimelineComponent(
     }
 
     private fun commentMarkerLayouts(
-        totalMs: Long = max(1L, durationProvider()),
         comments: List<CommentV1> = commentsProvider(),
+        scale: TimelineScale = scale(),
     ): List<CommentMarkerLayout> {
-        val pxPerMs = pxPerMs(totalMs, lanesWidth())
         val laneEnds = mutableListOf<Int>()
         val result = mutableListOf<CommentMarkerLayout>()
         val sorted = comments.asSequence()
@@ -373,7 +479,7 @@ class SwingTimelineComponent(
             .toList()
         val top = commentsTrackTop()
         for (comment in sorted) {
-            val lineX = xAt(comment.startMs.toLong(), pxPerMs).coerceIn(GUTTER, max(GUTTER, width - 2))
+            val lineX = xAt(comment.startMs.toLong(), scale).coerceIn(GUTTER, max(GUTTER, width - 2))
             val boxLeft = lineX + 3
             val boxWidth = ceil(UiKit.textWidth("#${comment.id}", tagFont)).toInt() + TAG_PAD * 2
             val lane = laneEnds.indexOfFirst { previousEnd -> previousEnd < boxLeft }
@@ -405,6 +511,7 @@ class SwingTimelineComponent(
     internal fun commentsTrackTopForTest(): Int = commentsTrackTop()
     internal fun commentTrackBottomForTest(): Int = commentsTrackTop() + commentTrackHeight(commentLaneCountForTest())
     internal fun cursorAtForTest(x: Int, y: Int): Cursor = cursorFor(Point(x, y))
+    internal fun replayBlockBoundsForTest(): List<Rectangle> = scale().let { s -> s.blocks.map { blockBounds(it, s) } }
 
     override fun getPreferredSize(): Dimension {
         val laneCount = if (width > 0) commentLaneCount() else 1
@@ -424,5 +531,11 @@ class SwingTimelineComponent(
         const val TICKS = 10
         const val ALL_TICK_LABELS_WIDTH = 1300
         const val DRAG_THRESHOLD_PX = 3.0
+
+        /** A replay block is at least this wide. A block of [SPIKY_BLOCK_PX] or more has spiky edges (decision 10). */
+        const val MIN_BLOCK_PX = 3
+        const val SPIKY_BLOCK_PX = 16
+        const val SPIKE_WIDTH = 4
+        const val SPIKE_DEPTH = 2
     }
 }

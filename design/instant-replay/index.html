@@ -37,7 +37,7 @@
   .rbar { grid-column: 1; grid-row: 2; }
   .rside { grid-column: 2; grid-row: 1 / 3; }
   body[data-mode="points"] .popup { display: none; }
-  /* The main window is inactive while the popup is open. */
+  /* The app popup is not modal. The mockup dims the main window only to keep the mockup simple. */
   .window { transition: filter .2s; }
   body:not([data-mode="points"]) .window { filter: brightness(.62); pointer-events: none; }
 
@@ -554,7 +554,7 @@
   <button class="x" id="bNotesX" aria-label="Close">✕</button>
   <h4>Flow</h4>
   <ol>
-    <li>Pause the video on the moment. Click the replay icon at the right end of the playback bar (or <kbd>X</kbd>, or the replay icon on a row).</li>
+    <li>Pause the video on the moment. Click the replay icon at the right end of the playback bar (or the replay icon on a row). No key adds a replay.</li>
     <li>The replay editor opens in a popup window with its own video player. The Points tab stays as it is behind it. A new replay starts 1.5 s before the playhead and ends 1.5 s after it.</li>
     <li>Drag the part edges in the bar under the video. Drag or resize the lime frame on the video to zoom. Set the speed, the repeat count and the sound on the right.</li>
     <li>A point can have more than one replay. Each replay has a tab at the top of the panel. <b>Add</b> makes one more replay at the playhead.</li>
@@ -567,21 +567,29 @@
     <li>The part can start up to 3 s before the point and end up to 3 s after it.</li>
     <li>The zoom goes in smoothly at the start and out smoothly at the end.</li>
     <li>The sound slows down with the video by default. An option mutes it.</li>
-    <li>The Highlights export includes the replays of each point that it includes.</li>
+    <li>Each export includes the replays of each point that it includes: Full and Only points include all replays, Only favorites only the replays of the favorite points. No export option turns them off.</li>
+    <li>A replay is a piece of video inserted after its point. The players on all tabs play it as a part of the source video.</li>
+    <li>During a replay, the player clock shows only "Replay". The seek keys and timeline clicks move through it. C, Q, W and E do not work in it. "Add comment" during a replay is for later (B-52).</li>
+    <li>The zoom frame is on the video after the Transform tab. The Colors settings also apply to the replay.</li>
+    <li>The scoreboard is hidden during a replay.</li>
+    <li>The comments of a point also show over its replays. The user can add comments over a replay.</li>
+    <li>The popup has a control for the effect at the cut into and out of the replay. The default is a fade.</li>
     <li>On the timeline, a replay is lime, and its width is in proportion to the time it adds. It has no text and small spiky edges on all four sides. A narrow replay (whole-match view, about 3 px) is a plain lime tick; the spikes show only when the timeline is zoomed in.</li>
     <li>The editor opens in a separate popup window, not in the main window.</li>
   </ul>
-  <h4>Assumptions in this mockup (not decided)</h4>
+  <h4>Decided on 2026-10-26</h4>
   <ul>
     <li>The replays of one point play one after the other, in the order of their start times.</li>
-    <li>The timeline ruler shows the times of the source video. It skips over the replay segments.</li>
-    <li>The popup is modal: the main window waits until Save or Cancel.</li>
+    <li>The popup is not modal. The user can use the main window while the popup is open. (The mockup dims the main window to keep it simple.)</li>
+    <li>No key adds a replay. The user clicks the replay button.</li>
+    <li>A new replay starts 1.5 s before the playhead and ends 1.5 s after it.</li>
+    <li>The ruler of the Points tab timeline shows the times of the source video. It skips over the replay blocks.</li>
   </ul>
   <h4>Technical fit</h4>
   <ul>
     <li>The popup needs a second mpv player. The main player pauses while the popup is open.</li>
     <li>The zoom frame can use the same mouse logic as the crop frame of the Transform tab (CropEditorOverlay), drawn with libass.</li>
-    <li>X, I and O are free keys now.</li>
+    <li>I and O (set the start and the end in the popup) are free keys now.</li>
   </ul>
 </div>
 
@@ -702,7 +710,7 @@
         <span class="tags">${p.game ? '<span class="tag game">GAME</span>' : ''}${tag}</span>
         <span>${p.fav ? icon('star', 'fill fav') : ''}</span>
         <span class="acts">
-          <button class="btn-icon rpl" data-add="${p.n}" title="Add an instant replay [X]">${icon('slow_motion_video')}</button>
+          <button class="btn-icon rpl" data-add="${p.n}" title="Add an instant replay">${icon('slow_motion_video')}</button>
           <button class="btn-icon" title="Edit times/label">${icon('edit')}</button>
           <button class="btn-icon danger" title="Delete point">${icon('close')}</button>
         </span>
@@ -718,7 +726,7 @@
     $('navMid').innerHTML = `Point ${state.cur} / 128 <span style="color:var(--fg-3)">☆</span>`;
     const b = $('bReplay');
     b.disabled = !p;
-    b.title = p ? `Add replay — point ${p.n}, at the playhead [X]` : 'Add replay [X] — move the playhead into a point first';
+    b.title = p ? `Add replay — point ${p.n}, at the playhead` : 'Add replay — move the playhead into a point first';
   }
 
   // ---------- Bottom timeline ----------
@@ -818,7 +826,7 @@
       <button class="rtab ${i === state.ri ? 'on' : ''}" data-i="${i}">
         <b>Replay ${i + 1}</b><small>${rel(r.s - p.start)} · +${sec(added(r))}</small>
       </button>`).join('') +
-      `<button class="rtab add" id="bAdd" title="Add one more replay at the playhead [X]">${icon('add')}Add<kbd>X</kbd></button>`;
+      `<button class="rtab add" id="bAdd" title="Add one more replay at the playhead">${icon('add')}Add</button>`;
   }
   $('rtabs').onclick = (ev) => {
     if (state.mode !== 'edit') return;
@@ -1018,15 +1026,11 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.target.tagName === 'INPUT' && ev.target.type !== 'range' && ev.target.type !== 'checkbox') return;
     const k = ev.key.toLowerCase();
-    if (state.mode === 'points') {
-      if (k === 'x') { const p = pointAt(state.t); if (p) openEditor(p.n, { add: true }); }
-      return;
-    }
+    if (state.mode === 'points') return;
     if (k === 'escape') { state.mode === 'preview' ? stopPreview() : setMode('points'); }
     else if (k === 'enter') { if (state.mode === 'preview') stopPreview(); save(); }
     else if (k === ' ') { ev.preventDefault(); $('bPreview').click(); }
     else if (state.mode !== 'edit') return;
-    else if (k === 'x') addDraft();
     else if (k === 'i') setS();
     else if (k === 'o') setE();
     else if (k === 'arrowleft') { ev.preventDefault(); step(ev.shiftKey ? -1000 : -100); }

@@ -128,8 +128,31 @@ When item is done, move it under
     at the end. It is not a hard cut.
   - Sound: by default the sound slows down with the video. An option mutes
     the sound of the replay.
-  - The Highlights export includes the replays of each point that it
-    includes.
+  - Each export includes the replays of each point that it includes. Full
+    and Only points include all replays. Only favorites includes only the
+    replays of the favorite points. The Export tab has no option to turn
+    the replays off.
+  - A replay is a piece of video that the app inserts after its point.
+    The players on all tabs play it as a part of the source video, with
+    its speed, zoom, repeats, and sound.
+  - During a replay, the clock of the player shows only "Replay", not a
+    time.
+  - The seek keys and a click on the timeline move through a replay as
+    through any other part of the video.
+  - The marking keys (C, Q, W, E) do not work during a replay. "Add
+    comment" during a replay is a separate item for later (B-52).
+  - The zoom frame of a replay is on the video after the Transform tab
+    (crop and rotation). The Colors tab settings also apply to the replay.
+  - The live players do not use pre-rendered replay files. The app
+    controls mpv: it seeks to the replay part, sets the speed, and sets
+    the zoom as a smaller crop in the `tr-adjust.hook` shader. A prototype
+    first measures the freeze at each seek.
+  - The scoreboard is hidden during a replay.
+  - Comments: the comments of a point also show over its replays, extended
+    by the time of the replays. The user can also add comments over a
+    replay.
+  - The popup has a control for the effect at the cut into the replay and
+    out of it, from a set of ready-made effects. The default is a fade.
   - The timeline of the Points tab shows each replay as a segment in the
     lime accent color after its point. The width of the segment is in
     proportion to the time that the replay adds to the video. The segment
@@ -140,6 +163,23 @@ When item is done, move it under
     spikes show only when the timeline is zoomed in.
   - The replay editor opens in a separate popup window with its own video
     player. The Points tab stays as it is in the main window.
+- Decided on 2026-10-26:
+  - The replays of one point play one after the other, in the order of
+    their start times.
+  - The popup is not modal. The user can use the main window while the
+    popup is open.
+  - No key adds a replay. The user clicks the replay button (on the
+    playback bar, on a row, or "Add" in the popup).
+  - A new replay starts 1.5 s before the playhead and ends 1.5 s after it.
+  - The ruler of the Points tab timeline shows the times of the source
+    video. It skips over the replay blocks, so a replay block has no time
+    marks. Reason: the exported times are different for each export mode,
+    and source times agree with the point list and the player clock.
+
+### B-52 Add comment during a replay
+
+- Postponed from B-50 on 2026-10-26. Do it after B-50.
+- "Add comment" should work during a replay. It needs a concept first.
 
 ### B-15 Intro and outro videos
 

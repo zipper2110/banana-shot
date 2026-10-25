@@ -98,7 +98,18 @@ object Replays {
         return if (result == zoom) zoom else result
     }
 
-    /** The time that the replay adds to the video: the part length divided by the speed, for each repeat. */
-    fun addedMs(replay: ReplayV1): Long =
-        Math.round((replay.endMs - replay.startMs).coerceAtLeast(0) / replay.speed) * replay.repeats
+    /** The play time of one repeat: the part length divided by the speed. */
+    fun playMs(replay: ReplayV1): Long = Math.round((replay.endMs - replay.startMs).coerceAtLeast(0) / replay.speed)
+
+    /** The time that the replay adds to the video: [playMs] for each repeat. */
+    fun addedMs(replay: ReplayV1): Long = playMs(replay) * replay.repeats
+
+    /** The dip to black or white at the cut into a replay and out of it: this time out, then this time in (decision 2). */
+    const val CUT_FADE_MS = 250L
+
+    /** The dip to black between two repeats: this time out, then this time in (decision 7). */
+    const val REPEAT_FADE_MS = 100L
+
+    /** The zoom in at the start of the first play and the zoom out at the end of the last play (decision 8). */
+    const val ZOOM_MS = 400L
 }

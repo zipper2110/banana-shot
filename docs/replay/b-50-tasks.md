@@ -42,7 +42,7 @@ None. Write each new decision in "Decisions" at once.
 |---|---|---|---|
 | T0 | Prototype: the freeze at each seek | — | done |
 | T1 | Replay data in `edl.json` | — | done |
-| T2 | Replay timeline: source time and play time | T1 | open |
+| T2 | Replay timeline: source time and play time | T1 | done |
 | T3 | Live playback of the replays | T0, T2 | open |
 | T4 | Replay editor popup | T1, T3 | open |
 | T5 | Replays on the Points tab: timeline, list, button | T2, T4 | open |
@@ -123,6 +123,8 @@ prototype measures how long the picture stops at each seek.
 
 ### T2 Replay timeline: source time and play time
 
+- Status: done. `ReplayTimeline` (and `Replays.playMs`, the time
+  constants of the effects and the zoom).
 - A new class gives the play order of a project: the source video with
   each replay inserted after the end of its point, and each repeat.
 - It converts in two directions: from a play time to a source time (or to
@@ -131,7 +133,7 @@ prototype measures how long the picture stops at each seek.
   repeats).
 - The players (T3), the timeline (T5), and the Export tab (the export
   length) use it.
-- Tests: —
+- Tests: `ReplayTimelineTest`
 
 ### T3 Live playback of the replays
 

@@ -3,6 +3,7 @@ package org.litvin.ui.commons
 import org.kordamp.ikonli.Ikon
 import java.awt.Color
 import java.awt.Dimension
+import java.awt.Rectangle
 import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -49,7 +50,13 @@ internal open class SectionPage(title: String) : ToolPage() {
      * A file path shows in a monospace font.
      */
     fun valueRow(label: String, value: String, mono: Boolean = looksLikePath(value)): JTextArea {
-        val valueArea = JTextArea(value).apply {
+        val valueArea = object : JTextArea(value) {
+            // The caret moves after the first layout and scrolls the page to this row. Only a user who selects the
+            // text (and so gives it the focus) can scroll the page.
+            override fun scrollRectToVisible(rect: Rectangle) {
+                if (isFocusOwner) super.scrollRectToVisible(rect)
+            }
+        }.apply {
             isEditable = false
             isOpaque = false
             lineWrap = true

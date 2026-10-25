@@ -191,7 +191,7 @@ Style:
 | English | Russian | Note |
 |---|---|---|
 | point (a marked part of the video, a rally) | розыгрыш | The Points tab is "Розыгрыши". "Only points" = "Только розыгрыши" |
-| point (a unit of the score) | очко | "Points won" = "Выиграно очков", "No score" = "Без очка" |
+| point (a unit of the score) | очко | "Points won" = "Выиграно очков" |
 | game | гейм | |
 | set | сет | |
 | tiebreak | тай-брейк | "матч-тай-брейк", "супертай-брейк" |
@@ -663,18 +663,331 @@ Style:
 
 ### Japanese (`ja`)
 
-- Sentences use the polite です/ます form.
-- Buttons and menu items use short noun forms: "エクスポート", "保存".
-- Quotes are 「…」.
+One variant (files `*_ja.properties`). Windows `ja-JP` and `ja` give it.
+
+Style:
+
+- Sentences use the polite です/ます form: "選択してください",
+  "保存されます".
+- Buttons and menu items use short noun forms or a short verb form:
+  "エクスポート", "保存", "フォルダーを開く".
+- Quotes are 「…」. A name of a tab or a button in a sentence is in 「…」:
+  "「スコアを修正」をクリックします". The tab names with "タブ" have no
+  quotes: "ポイントタブ". `MessageCatalogTest` ("Japanese texts use the
+  Japanese quotes") finds other quotes and the straight apostrophe.
+- Punctuation is full-width: "、", "。", "（…）", "？", "！". A colon after a
+  label is the half-width ": ".
+- A number and a unit have a space when the unit is a word: "3 ポイント",
+  "{seconds} 秒", "2 MB". A short count of a default name has no space:
+  "プレイヤー1", "ペア1".
+- Plurals have only `other` (CLDR). A Japanese noun has no plural form.
+- Katakana words with the long vowel mark use the modern forms of the
+  Windows UI: "フォルダー", "ブラウザー", "エンコーダー", "ユーザー".
+- Key names: "Space", "Delete", "Enter", "Esc", and "Shift" as on the
+  keyboard, and arrows for the arrow keys ("←", "→", "↑", "↓").
+
+#### Sport terms
+
+| English | Japanese | Note |
+|---|---|---|
+| point | ポイント | |
+| game | ゲーム | |
+| set | セット | "Best of 3 sets" = "3 セットマッチ" |
+| tiebreak | タイブレーク | Also "マッチタイブレーク" and "スーパータイブレーク" |
+| deuce | デュース | |
+| advantage | アドバンテージ | "No-ad" = "ノーアド" |
+| golden point | ゴールデンポイント | |
+| star point | スターポイント | |
+| deciding point | 決定ポイント | The video badge "決定ポイント" |
+| deciding set | 最終セット | |
+| serve, server | サーブ, サーバー | "{name} がサーブ" |
+| return | リターン | |
+| break point, set point, match point | ブレークポイント, セットポイント, マッチポイント | "Break points saved" = "ブレークポイントのセーブ" |
+| player | プレイヤー | Default name "プレイヤー1" |
+| team (padel) | ペア | Default name "ペア1". "Team" in Americano texts = "チーム" |
+| singles, doubles | シングルス, ダブルス | |
+| match | 試合 | |
+| padel, tennis | パデル, テニス | |
+| beach tennis | ビーチテニス | |
+| Americano | アメリカーノ | |
+| pro set | プロセット | |
+| momentum | 流れ | |
+| no point (outcome) | 得点なし | |
+| scored (a point with a winner) | 記録済み | "Score each point" = "各ポイントを記録する" |
+
+#### App terms
+
+| English | Japanese | Note |
+|---|---|---|
+| video | 動画 | |
+| project | プロジェクト | |
+| export (noun, verb) | エクスポート, エクスポートする | Not "書き出し" |
+| scoreboard | スコアボード | |
+| score | スコア | "Final score" = "最終スコア" |
+| Override score | スコアを修正 | |
+| Scoring settings | スコアの設定 | |
+| Scoreboard style | スコアボードのスタイル | |
+| favorite | お気に入り | |
+| comment | コメント | |
+| thumbnail | サムネイル | |
+| statistics card | 統計カード | |
+| set summary | セットのまとめ | |
+| change point | 変化点 | |
+| Transform | トリミング | The tab "Colors & Transform" = "色とトリミング" |
+| playhead | 再生位置 | |
+| seek bar | シークバー | |
+| timeline | タイムライン | |
+| frame | フレーム | "Frame step" = "コマ送り" |
+| frame rate | フレームレート | |
+| encoder | エンコーダー | |
+| bitrate | ビットレート | |
+| queue | 待機列 | A queued export = "待機中" |
+| log files | ログファイル | |
+| feedback | フィードバック | |
+| Settings | 設定 | |
+| More | その他 | |
+| Help | ヘルプ | |
+| email | メール | |
+| theme | テーマ | |
+
+#### Tab names
+
+| English | Japanese |
+|---|---|
+| Projects | プロジェクト |
+| Points | ポイント |
+| Stats (sidebar), Statistics | 統計 |
+| Colors & Transform | 色とトリミング (sidebar: "色と / トリミング") |
+| Thumbnail | サムネイル |
+| Export | エクスポート |
+
+#### Open questions for the reviewer
+
+- "決定ポイント" for the deciding point, also as the video badge. Another
+  option: "デサイディングポイント" (long).
+- "トリミング" for Transform. The tab also zooms and rotates. Other
+  options: "構図", "変形".
+- "ペア" for a padel team. Another option: "チーム".
+- "流れ" for momentum. Another option: "モメンタム".
+- "記録済み" for a scored point.
+- The arrows as key names ("←") in place of words ("左").
 
 ### Simplified Chinese (`zh-Hans`)
 
-- Sentences use "你".
-- Quotes are “…”.
-- Do not say that YouTube is the only place to share a video.
+One variant (files `*_zh_Hans.properties`). Windows `zh-CN`, `zh-SG`,
+`zh-Hans`, and `zh` give it. The detection gives it to all Chinese locales
+without the script `Hant` and outside Taiwan, Hong Kong, and Macau.
+
+Style:
+
+- Sentences use "你" and the polite "请" for an instruction: "请选择比赛视频".
+- Buttons and menu items use a short verb or noun: "导出", "保存封面",
+  "打开文件夹".
+- Quotes are “…”. A name of a tab or a button in a sentence is in “…”:
+  "点击“修改比分”". The tab names with "标签页" have no quotes:
+  "回合标签页". Two quoted names next to each other have no "、" between
+  them: "“收藏”“编辑”和“删除”". `MessageCatalogTest` ("Chinese texts use the quotes of
+  their script") finds other quotes and the straight apostrophe.
+- Punctuation is full-width: "，", "。", "：", "；", "（…）", "？", "！".
+- A half-width space separates Chinese from Latin letters, digits, and
+  placeholders: "导出 1080p 视频", "{count} 个回合", "球员 1". No space comes
+  next to a full-width mark.
+- A percentage has no space: "{percent}%".
+- Plurals have only `other` (CLDR). A count uses a measure word: "# 个回合",
+  "# 局", "# 盘", "# 分", "# 页", "# 天".
+- Do not say that YouTube is the only place to share a video. YouTube is
+  blocked in mainland China. "YouTube thumbnail" is "视频封面", and "YouTube
+  search" is "视频平台的搜索结果". A fact about YouTube keeps the name
+  ("YouTube 只接受 2 MB 或更小的封面").
+- Key names: "空格" for Space. "Shift", "Enter", "Esc", and "Delete" stay as
+  on the keyboard. The arrow keys are "←", "→", "↑", "↓".
+
+#### Sport terms
+
+| English | Simplified Chinese | Note |
+|---|---|---|
+| point (a marked part of the video, a rally) | 回合 | The Points tab is "回合". "Only points" = "仅回合" |
+| point (a unit of the score) | 分 | "Points won" = "得分" |
+| game | 局 | |
+| set | 盘 | "Best of 3 sets" = "三盘两胜", "Best of {count}" = "{count} 盘制" |
+| tiebreak | 抢七 | "Match tiebreak" = "决胜抢十", "super tiebreak" = "超级抢十" |
+| deuce | 平分 | |
+| advantage | 占先 | "No-ad" = "无占先" |
+| golden point | 金球 | Also the video badge |
+| star point | 星分 | |
+| deciding point | 决胜分 | Also the video badge |
+| deciding set | 决胜盘 | |
+| serve, server | 发球, 发球方 | "Switch the server" = "更换发球方" |
+| return | 接发球 | "Return games won" = "接发球局获胜" |
+| break point, set point, match point | 破发点, 盘点, 赛点 | "Break points saved" = "挽救破发点" |
+| player | 球员 | Default name "球员 1" |
+| team (padel) | 组合 | Default name "组合 1". "Team" in Americano texts = "队" |
+| singles, doubles | 单打, 双打 | |
+| match | 比赛 | |
+| padel, tennis | 板式网球, 网球 | |
+| beach tennis | 沙滩网球 (`zh-Hans`), 沙灘網球 (`zh-Hant`) | |
+| Americano | Americano | |
+| pro set | 长盘 | |
+| momentum | 势头 | |
+| pressure (statistics group) | 关键分 | |
+| no point (outcome) | 不计分 | |
+| scored | 已计分 | "Score each point" = "为每个回合计分" |
+
+#### App terms
+
+| English | Simplified Chinese | Note |
+|---|---|---|
+| app | 应用 | |
+| video | 视频 | |
+| project | 项目 | |
+| export (noun, verb) | 导出 | |
+| import | 导入 | |
+| scoreboard | 记分牌 | |
+| score | 比分 | "Final score" = "最终比分" |
+| Override score | 修改比分 | |
+| Scoring settings | 计分设置 | |
+| Scoreboard style | 记分牌样式 | |
+| favorite | 收藏 | "Only favorites" = "仅收藏", a star = "标星" |
+| comment | 评论 | |
+| thumbnail | 封面 | |
+| statistics card | 统计卡片 | |
+| set summary | 盘总结 | |
+| change point | 变化点 | |
+| Transform | 构图 | The tab "Colors & Transform" = "颜色与构图" |
+| crop rectangle | 裁剪框 | |
+| playhead | 播放头 | |
+| seek bar | 进度条 | |
+| timeline | 时间轴 | |
+| frame | 帧 | "Frame step" = "逐帧" |
+| frame rate | 帧率 | |
+| resolution | 分辨率 | |
+| bitrate | 码率 | |
+| encoder | 编码器 | |
+| queue | 队列 | A queued export = "排队中" |
+| log files | 日志文件 | |
+| feedback | 反馈 | |
+| Settings | 设置 | |
+| More | 更多 | |
+| Help | 帮助 | |
+| email | 电子邮件 | The short label is "邮箱" |
+| theme | 主题 | |
+| tab | 标签页 | |
+
+#### Tab names
+
+| English | Simplified Chinese |
+|---|---|
+| Projects | 项目 |
+| Points | 回合 |
+| Stats (sidebar), Statistics | 统计 |
+| Colors & Transform | 颜色与构图 (sidebar: "颜色与 / 构图") |
+| Thumbnail | 封面 |
+| Export | 导出 |
+
+#### Open questions for the reviewer
+
+- "回合" for a marked point and "分" for a score point are two terms for
+  one English word, as in Russian. Check that each text uses the correct
+  one. Another option: "分" in all texts.
+- "星分" for the star point. The term is new in padel, and no Chinese
+  term is common yet.
+- "构图" for Transform. The tab also zooms and rotates. Other options:
+  "画面", "裁剪".
+- "评论" for a comment in the video. Other options: "注释", "文字".
+- "组合" for a padel team.
+- "封面" for the thumbnail, and "视频平台" in place of YouTube.
+- "长盘" for the pro set.
 
 ### Traditional Chinese (`zh-Hant`)
 
-- Sentences use "你".
-- Use the Taiwan terms: "影片", "專案", "檔案".
-- Quotes are 「…」.
+One variant with the Taiwan terms (files `*_zh_Hant.properties`). Windows
+`zh-TW`, `zh-HK`, `zh-MO`, and `zh-Hant` give it. A full catalog, not a
+child of `zh-Hans`. The draft started from the Simplified texts and
+changed the characters and the terms.
+
+Style:
+
+- The style of Simplified Chinese, with these differences.
+- Quotes are 「…」. A name of a tab or a button in a sentence is in 「…」.
+  Two or more names in a list have "、" between them: "「收藏」、「編輯」和「刪除」".
+- Use the Taiwan terms, not a character conversion of the mainland terms.
+  `MessageCatalogTest` ("Traditional Chinese uses the Taiwan terms") finds
+  the common mainland terms, for example "視頻", "導出", "默認", "信息",
+  "軟件", "網絡", "質量", "幀".
+- "列" is a row and "欄" is a column (the reverse of the mainland use).
+- YouTube is common in Taiwan. The texts keep "YouTube" as in English:
+  "製作 YouTube 縮圖".
+- Key names: "空白鍵" for Space. The other keys as in Simplified Chinese.
+- Microsoft JhengHei UI has no "−" (U+2212). The texts use "－" (U+FF0D).
+  `ScriptFontsTest` ("the UI font of each script shows all characters of
+  its catalog") finds a character that the UI font does not have.
+
+#### Terms that are different from Simplified Chinese
+
+| English | Simplified Chinese | Traditional Chinese (Taiwan) |
+|---|---|---|
+| app | 应用 | 應用程式 |
+| video | 视频 | 影片 |
+| project | 项目 | 專案 |
+| export, import | 导出, 导入 | 匯出, 匯入 |
+| file, folder | 文件, 文件夹 | 檔案, 資料夾 |
+| settings | 设置 | 設定 |
+| default | 默认 | 預設 |
+| help | 帮助 | 說明 |
+| save | 保存 | 儲存 |
+| open | 打开 | 開啟 |
+| click | 点击 | 點選 |
+| select | 选择 | 選取 |
+| tab | 标签页 | 分頁 |
+| scoreboard | 记分牌 | 記分板 |
+| comment | 评论 | 註解 |
+| thumbnail | 封面 | 縮圖 |
+| playhead | 播放头 | 播放指標 |
+| seek bar | 进度条 | 進度列 |
+| slider | 滑块 | 滑桿 |
+| control | 控件 | 控制項 |
+| handle | 手柄 | 控點 |
+| crop | 裁剪 | 裁切 |
+| highlights | 高光 | 亮部 |
+| frame | 帧 | 影格, 格 ("Frame step" = "逐格") |
+| frame rate | 帧率 | 影格速率 |
+| resolution | 分辨率 | 解析度 |
+| bitrate | 码率 | 位元速率 |
+| quality | 质量 | 品質 |
+| queue | 队列 | 佇列 |
+| log files | 日志文件 | 記錄檔 |
+| feedback | 反馈 | 意見回饋 |
+| report (a problem) | 报告 | 回報 |
+| send | 发送 | 傳送 |
+| privacy | 隐私 | 隱私權 |
+| server | 服务器 | 伺服器 |
+| network | 网络 | 網路 |
+| software, hardware | 软件, 硬件 | 軟體, 硬體 |
+| graphics card | 显卡 | 顯示卡 |
+| burn in | 烧录 | 燒入 |
+| momentum | 势头 | 氣勢 |
+| advantage | 占先 | 佔先 |
+| set point, match point | 盘点, 赛点 | 盤末點, 賽末點 |
+| Break points saved | 挽救破发点 | 化解破發點 |
+| duration | 时长 | 長度, 持續時間 |
+| Smart App Control | 智能应用控制 | 智慧型應用程式控制 |
+
+#### Tab names
+
+| English | Traditional Chinese |
+|---|---|
+| Projects | 專案 |
+| Points | 回合 |
+| Stats (sidebar), Statistics | 統計 |
+| Colors & Transform | 顏色與構圖 (sidebar: "顏色與 / 構圖") |
+| Thumbnail | 縮圖 |
+| Export | 匯出 |
+
+#### Open questions for the reviewer
+
+- The open questions of Simplified Chinese, with the Taiwan terms.
+- "註解" for a comment in the video. Other options: "留言", "評論".
+- "盤末點" and "賽末點" (Taiwan) or "盤點" and "賽點".
+- "應用程式" in all texts, or "App" in short texts.
+- A reviewer from Hong Kong checks if the Taiwan terms are clear there
+  (for example "影片" and "視頻", "滑鼠" and "鼠標").

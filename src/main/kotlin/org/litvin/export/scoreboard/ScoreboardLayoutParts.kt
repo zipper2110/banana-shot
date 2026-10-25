@@ -104,7 +104,10 @@ internal fun serveBall(cx: Double, cy: Double, diameter: Double, rgb: Int, ringR
     return items
 }
 
-/** A label whose capital letters and digits are centered on [capCenterY]. */
+/**
+ * A label whose capital letters and digits are centered on [capCenterY]. A text that [font] cannot show uses the
+ * font of its script ([ScoreboardFonts.family]).
+ */
 internal fun centered(
     x: Double,
     capCenterY: Double,
@@ -117,19 +120,21 @@ internal fun centered(
     opacity: Double = 1.0,
     spacing: Double = 0.0,
     outline: Double = 0.0,
-) = SceneItem.Label(
-    x = x,
-    y = ScoreboardFonts.middleYForCapCenter(capCenterY, font, bold, size),
-    text = text,
-    font = font,
-    size = size,
-    rgb = rgb,
-    bold = bold,
-    anchor = anchor,
-    opacity = opacity,
-    spacing = spacing,
-    outline = outline,
-)
+) = ScoreboardFonts.family(font, text).let { family ->
+    SceneItem.Label(
+        x = x,
+        y = ScoreboardFonts.middleYForCapCenter(capCenterY, family, bold, size),
+        text = text,
+        font = family,
+        size = size,
+        rgb = rgb,
+        bold = bold,
+        anchor = anchor,
+        opacity = opacity,
+        spacing = spacing,
+        outline = outline,
+    )
+}
 
 internal fun nameWidth(rows: List<Row>, font: String, size: Double, minimum: Double, bold: Boolean = true): Double =
     max(minimum, rows.maxOf { ScoreboardFonts.textWidth(it.name, font, bold, size) })

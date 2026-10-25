@@ -1,7 +1,8 @@
 package org.litvin.ui.tabs.adjustments.presenter
 
 import org.litvin.adjustments.AdjustmentsV1
-import org.litvin.adjustments.ChangePoints
+import org.litvin.adjustments.ColorTimeline
+import org.litvin.adjustments.GeometryTimeline
 import org.litvin.ui.commons.ChangePointsState
 import java.io.File
 
@@ -23,8 +24,8 @@ enum class AdjustSection { COLORS, TRANSFORM }
 
 /**
  * [adjustments] are the stored adjustments with all change points (B-47). [playheadMs] selects the active
- * change point: the controls, the crop editor, and the preview show its values without the blend.
- * [section] is the open sub-tab of the right panel.
+ * color change point and the active transform change point: the controls, the crop editor, and the preview show
+ * their values without the blend. [section] is the open sub-tab of the right panel.
  */
 data class AdjustVideoViewState(
     val adjustments: AdjustmentsV1 = AdjustmentsV1(),
@@ -33,12 +34,23 @@ data class AdjustVideoViewState(
     val section: AdjustSection = AdjustSection.COLORS,
 ) {
     /** The colors and the transform that the controls edit, without change points. */
-    val editing: AdjustmentsV1 get() = ChangePoints.editingAt(adjustments, playheadMs)
+    val editing: AdjustmentsV1
+        get() = GeometryTimeline.editingAt(ColorTimeline.editingAt(adjustments, playheadMs), playheadMs)
 
-    /** The change points do not depend on the sub-tab: each one has the colors and the transform. */
-    val changePointTimes: List<Long> get() = ChangePoints.times(adjustments)
+    val colorChangePoints: ChangePointsState
+        get() = ChangePointsState(adjustments.colorKeys.map { it.atMs }, playheadMs)
 
-    val changePoints: ChangePointsState get() = ChangePointsState(changePointTimes, playheadMs)
+    val transformChangePoints: ChangePointsState
+        get() = ChangePointsState(adjustments.geometryKeys.map { it.atMs }, playheadMs)
+
+    /** The change points of the open sub-tab. The Colors and Transform sub-tabs have separate change points. */
+    val changePoints: ChangePointsState
+        get() = when (section) {
+            AdjustSection.COLORS -> colorChangePoints
+            AdjustSection.TRANSFORM -> transformChangePoints
+        }
+
+    val changePointTimes: List<Long> get() = changePoints.times
 
     val canAddChangePoint: Boolean get() = changePoints.canAdd
     val canRemoveChangePoint: Boolean get() = changePoints.canRemove
@@ -65,6 +77,8 @@ sealed class AdjustVideoIntent {
     /** The fill color outside the rotated video, as "#RRGGBB", or null for black. It applies to the whole video. */
     data class ChangeBackground(val color: String?) : AdjustVideoIntent()
     data class PlayheadMoved(val ms: Long) : AdjustVideoIntent()
+
+    // The change point intents work on the change points of the open sub-tab.
     data object AddChangePoint : AdjustVideoIntent()
     data object RemoveChangePoint : AdjustVideoIntent()
     data object GoToPreviousChangePoint : AdjustVideoIntent()

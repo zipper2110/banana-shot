@@ -5,6 +5,7 @@ import org.litvin.scoring.ScoreOverrideV1
 import org.litvin.scoring.ScorePairV1
 import org.litvin.scoring.SetGamesV1
 import java.awt.Color
+import java.awt.Container
 import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -17,7 +18,11 @@ class OverrideScoreDialogTest {
         points = ScorePairV1(2, 1),
     )
 
-    private fun dialog(current: ScoreOverrideV1 = ScoreOverrideV1(), tiebreakOf: (ScoreOverrideV1) -> Boolean = { false }) =
+    private fun dialog(
+        current: ScoreOverrideV1 = ScoreOverrideV1(),
+        tiebreakOf: (ScoreOverrideV1) -> Boolean = { false },
+        computed: ComputedScore = this.computed,
+    ) =
         OverrideScoreDialog(
             null,
             OverrideScoreInput(
@@ -90,5 +95,22 @@ class OverrideScoreDialogTest {
             assertTrue(dialog.tiebreakPoints)
             dialog.dispose()
         }
+    }
+
+    @Test
+    fun theTeamNamesStayVisibleWithFiveSets() {
+        SwingUtilities.invokeAndWait {
+            val fiveSets = computed.copy(sets = List(5) { SetGamesV1(6, 4) })
+            val dialog = dialog(computed = fiveSets)
+            val names = sideLabels(dialog)
+            assertEquals(2, names.size)
+            names.forEach { assertTrue(it.width >= 70, "A team name has a width of ${it.width} px") }
+            dialog.dispose()
+        }
+    }
+
+    private fun sideLabels(root: Container): List<java.awt.Component> = root.components.flatMap { child ->
+        val own = if (child.javaClass.simpleName == "SideLabel") listOf(child) else emptyList()
+        own + if (child is Container) sideLabels(child) else emptyList()
     }
 }

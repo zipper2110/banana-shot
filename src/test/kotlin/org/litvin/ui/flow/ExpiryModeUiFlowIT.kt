@@ -6,6 +6,7 @@ import org.litvin.AppInfo
 import org.litvin.app.PreferencesProvider
 import org.litvin.license.ExpiredVersionException
 import org.litvin.license.check.PreferencesExpiredFlagStore
+import org.litvin.ui.expiry.ExpiryTexts
 import org.litvin.ui.flow.harness.SwingUiFlowExtension
 import org.litvin.ui.flow.harness.UiFlowContext
 import org.litvin.ui.flow.harness.UiFlowExpiry
@@ -124,7 +125,7 @@ class ClockForwardOnlineUiFlowIT {
         requireNormalWindow(context)
         context.driver.requireShowing("wrong-clock")
         val text = onEdt { (Window.getWindows().flatMap { all(it) }.first { it.name == "wrong-clock" && it.isShowing } as org.litvin.ui.expiry.NoticeRow).shownText }
-        assertTrue(text.contains("400 days ahead"), text)
+        assertTrue(text.contains(ExpiryTexts.wrongClock(Duration.ofDays(400), 400)), text)
 
         context.driver.click("wrong-clock-close")
         context.driver.requireShowing("wrong-clock", false)

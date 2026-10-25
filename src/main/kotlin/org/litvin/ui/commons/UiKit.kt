@@ -8,7 +8,6 @@ import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
-import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.Shape
 import java.awt.Toolkit
@@ -31,21 +30,13 @@ internal object UiKit {
 
     private val fonts = HashMap<Pair<Float, Weight>, Font>()
 
-    private val semiboldFamily: String? by lazy {
-        try {
-            GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.firstOrNull { it == "Segoe UI Semibold" }
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    /** A font of the app family with a size in pixels. Semibold uses "Segoe UI Semibold" when the PC has it. */
+    /** A font of the app family with a size in pixels. Semibold uses the semibold family of [UiFonts] when the PC has it. */
     fun font(size: Float, weight: Weight = Weight.REGULAR): Font = fonts.getOrPut(size to weight) {
         val family = (UIManager.getFont("Label.font") ?: Font(Font.SANS_SERIF, Font.PLAIN, 13)).family
         when (weight) {
             Weight.REGULAR -> Font(family, Font.PLAIN, 1).deriveFont(size)
             Weight.BOLD -> Font(family, Font.BOLD, 1).deriveFont(size)
-            Weight.SEMIBOLD -> semiboldFamily?.let { Font(it, Font.PLAIN, 1).deriveFont(size) }
+            Weight.SEMIBOLD -> UiFonts.semiboldFamily?.let { Font(it, Font.PLAIN, 1).deriveFont(size) }
                 ?: Font(family, Font.BOLD, 1).deriveFont(size)
         }
     }

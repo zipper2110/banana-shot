@@ -6,6 +6,7 @@ import java.awt.Graphics
 import javax.swing.JComboBox
 import javax.swing.JPanel
 import kotlin.math.ceil
+import org.litvin.SessionSettings
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
 
@@ -93,7 +94,8 @@ internal class SpeedControl(listName: String, onSpeedIndex: (Int) -> Unit) : JPa
     companion object {
         /** The labels of SessionSettings.speedPresets, from high to low. */
         val LABELS: Array<String>
-            get() = arrayOf(2.0, 1.5, 1.25, 1.0, 0.5, 0.25).map { tr("speed.factor", "factor" to DisplayFormats.decimal(it, 0, 2)) }.toTypedArray()
+            get() = SessionSettings.speedPresets
+                .map { tr("speed.factor", "factor" to DisplayFormats.decimal(it.toDouble(), 0, 2)) }.toTypedArray()
         val CAPTION: String get() = tr("speed.caption")
         val KEYS = listOf("↑", "↓")
         const val GAP = 6

@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.points
 
 import org.litvin.points.CommentStyle
+import org.litvin.ui.commons.CommentInput
 
 /**
  * Contracts for the Points tab UI and its container.
@@ -23,6 +24,12 @@ interface PointsActions {
     fun addCommentAtPlayhead() {}
     fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) {}
     fun editComment(id: Int, patch: CommentPatch) {}
+
+    /**
+     * Shows [comment] on the video while the comment dialog is open, before Save.
+     * [id] is the comment that the dialog changes, or null for a new comment. A null [comment] stops the preview.
+     */
+    fun previewComment(id: Int?, comment: CommentInput?) {}
     fun deleteComment(id: Int) {}
 
     /**
@@ -62,6 +69,9 @@ data class CommentDto(
     val text: String,
     val colorHex: String,
     val style: CommentStyle = CommentStyle.OUTLINE,
+    val sizePercent: Int = 100,
+    val opacityPercent: Int = 100,
+    val rotationDeg: Int = 0,
 ) : TimelineEventDto {
     override val stableKey: String get() = "comment:$id"
 }
@@ -92,6 +102,9 @@ data class CommentPatch(
     val text: String? = null,
     val colorHex: String? = null,
     val style: CommentStyle? = null,
+    val sizePercent: Int? = null,
+    val opacityPercent: Int? = null,
+    val rotationDeg: Int? = null,
 )
 
 /** Autosave status surfaced to the toolbar and other indicators. */

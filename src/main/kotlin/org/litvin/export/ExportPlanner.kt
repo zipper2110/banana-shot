@@ -371,29 +371,45 @@ object ExportPlanner {
                     text = comment.text,
                     colorHex = EdlIO.normalizeColorHex(comment.colorHex)!!,
                     style = comment.style,
+                    position = comment.position,
+                    sizePercent = comment.sizePercent,
+                    opacityPercent = comment.opacityPercent,
+                    rotationDeg = comment.rotationDeg,
                 )
             }
         }
 
+        // A comment starts in the first kept point that it overlaps in the source video. A comment
+        // that starts before that point starts at the point start and loses only the part before it.
+        // From its start, the comment keeps its remaining time and can continue over the next points.
         val orderedPoints = keptPoints.sortedBy { it.startMs }
         return validComments.mapNotNull { comment ->
+            val commentStart = comment.startMs.toLong()
+            val commentEnd = commentStart + comment.durationMs.toLong()
             var elapsedMs = 0L
             for (point in orderedPoints) {
-                if (point.startMs <= comment.startMs && comment.startMs < point.endMs) {
-                    val startMs = elapsedMs + (comment.startMs - point.startMs).toLong()
+                val pointStart = point.startMs.toLong()
+                val pointEnd = point.endMs.toLong()
+                if (commentStart < pointEnd && pointStart < commentEnd) {
+                    val visibleStart = maxOf(commentStart, pointStart)
+                    val startMs = elapsedMs + (visibleStart - pointStart)
                     return@mapNotNull CommentOverlaySpan(
                         id = comment.id,
                         startMs = startMs,
-                        endMs = startMs + comment.durationMs.toLong(),
+                        endMs = startMs + (commentEnd - visibleStart),
                         text = comment.text,
                         colorHex = EdlIO.normalizeColorHex(comment.colorHex)!!,
                         style = comment.style,
+                        position = comment.position,
+                        sizePercent = comment.sizePercent,
+                        opacityPercent = comment.opacityPercent,
+                        rotationDeg = comment.rotationDeg,
                     )
                 }
-                elapsedMs += (point.endMs - point.startMs).toLong().coerceAtLeast(0L)
+                elapsedMs += (pointEnd - pointStart).coerceAtLeast(0L)
             }
             null
-        }
+        }.sortedWith(compareBy<CommentOverlaySpan> { it.startMs }.thenBy { it.id })
     }
 
     private fun buildOverlayTimeline(

@@ -24,13 +24,13 @@ Not in this epic: right-to-left languages (plan section 9).
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
 | E8-T1 | Select the language | E2 | in-progress |
-| E8-T2 | Video fonts for the script | E8-T1 | open |
-| E8-T3 | UI font for the script | E8-T1 | open |
-| E8-T4 | Line breaks without spaces | E8-T1 | open |
+| E8-T2 | Video fonts for the script | E8-T1 | in-progress |
+| E8-T3 | UI font for the script | E8-T1 | in-progress |
+| E8-T4 | Line breaks without spaces | E8-T1 | in-progress |
 | E8-T5 | Input method tests | E8-T1 | open |
-| E8-L-ja | Japanese | E8-T2–E8-T5 | open |
-| E8-L-zh-Hans | Simplified Chinese | E8-T2–E8-T5 | open |
-| E8-L-zh-Hant | Traditional Chinese | E8-L-zh-Hans | open |
+| E8-L-ja | Japanese | E8-T2–E8-T5 | in-progress |
+| E8-L-zh-Hans | Simplified Chinese | E8-T2–E8-T5 | in-progress |
+| E8-L-zh-Hant | Traditional Chinese | E8-L-zh-Hans | in-progress |
 | E8-L-`<code>` | One task for each language (template of E7) | E8-T2–E8-T5 | — |
 
 When E8-T1 selects a language, add a row `E8-L-<code>` to this table, and
@@ -38,7 +38,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 
 ### E8-T1 Select the language
 
-- Status: open
+- Status: in-progress
 - Plan: "Decisions" ("Next languages"), 10
 - Value: the high cost of a new script goes to a language with enough
   users.
@@ -57,14 +57,17 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The plan, "Decisions", has the language, the data, and the reviewer.
   - If the language is Chinese, a test proves that `zh-TW` does not give
     Simplified Chinese.
-- Tests: — (decision)
+- Tests: `LanguageSettingsTest` ("Chinese of Taiwan, Hong Kong, and Macau
+  gives Traditional Chinese").
 - Notes: on 2026-10-20 the author selected Japanese, Simplified Chinese,
   and Traditional Chinese, before the data of E2. Simplified Chinese comes
-  before Traditional Chinese. The reviewers are not known yet.
+  before Traditional Chinese. The reviewers are not known yet. On
+  2026-10-21 the app has both Chinese languages, so the case "only one of
+  the two" does not apply.
 
 ### E8-T2 Video fonts for the script
 
-- Status: open
+- Status: in-progress
 - Plan: 6 ("Fonts"), "Costs"
 - Value: the video shows the letters of the script, and the preview shows
   the same letters as the export.
@@ -95,7 +98,22 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
     and a stopped download. In each case, the app does not use the file,
     and no export makes empty boxes.
 - Tests: —
-- Notes: Japanese and Chinese use the same Unicode code points for many
+- Notes: on 2026-10-20 the app uses the Windows font Yu Gothic for the
+  Japanese video texts (plan, "Decisions", "CJK fonts"). No font is bundled
+  or downloaded, so the bad cases of a download do not apply.
+  `ScoreboardFonts.family` gives the font of the script when the style font
+  cannot show a text: in a Japanese video, or for a text with kana. The
+  scoreboards, the comments, the statistics card, the thumbnails, and the
+  focus chip of the Transform tab use it. `ScoreboardFontCoverageTest`
+  checks the kana and all characters of the Japanese catalog.
+  `ScoreboardPreviewMain --language=ja` shows the video texts of all
+  styles. They fit. On 2026-10-21 Chinese uses the Windows fonts in the
+  same way: Microsoft YaHei for `zh-Hans` and Microsoft JhengHei for
+  `zh-Hant`. A text with kana uses Yu Gothic also in a Chinese video.
+  `ScoreboardFontCoverageTest` checks all characters of each Chinese
+  catalog. `ScoreboardPreviewMain --language=zh-Hans` and
+  `--language=zh-Hant` show the video texts of all styles. They fit.
+  Japanese and Chinese use the same Unicode code points for many
   characters (Han unification), but the correct shapes are different. Thus
   the video font follows the video language: a Japanese font for `ja`, a
   Simplified Chinese font for `zh-Hans`, and a Traditional Chinese font for
@@ -107,7 +125,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 
 ### E8-T3 UI font for the script
 
-- Status: open
+- Status: in-progress
 - Plan: 7
 - Value: the UI shows the letters of the script, not empty boxes.
 - Requirements:
@@ -125,14 +143,26 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The screenshots of E4-T4 in the language show no empty boxes.
   - A test with a missing UI font gives the "Dialog" font and no empty
     boxes.
-- Tests: —
+- Tests: `ScriptFontsTest` ("a missing Japanese UI font gives the Dialog
+  font", "a missing Chinese UI font gives the Dialog font", "the UI font of
+  each script shows all characters of its catalog"), `UiFontsTest` ("each
+  language name in the list shows without empty boxes").
 - Notes: as in E8-T2, the UI font follows the app language: for example
   Yu Gothic UI for `ja`, Microsoft YaHei UI for `zh-Hans`, and Microsoft
-  JhengHei UI for `zh-Hant`.
+  JhengHei UI for `zh-Hant`. On 2026-10-20 `ScriptFonts.uiFamily` and
+  `UiFonts` give Yu Gothic UI (and Yu Gothic UI Semibold) for `ja`. The
+  language lists (Settings, Export "Video language") show each name in its
+  own language, so `UiFonts.showLanguageNames` gives an entry the UI font of
+  its language when the font of the app language cannot show it (for
+  example "日本語" in an English app). On 2026-10-21 `zh-Hans` uses
+  Microsoft YaHei UI and `zh-Hant` uses Microsoft JhengHei UI. These fonts
+  have no semibold form, so the semibold texts use the bold form. Microsoft
+  JhengHei UI has no "−" (U+2212), so the Traditional texts use "－".
+  Open: the screenshots of E4-T4 in Japanese and in Chinese.
 
 ### E8-T4 Line breaks without spaces
 
-- Status: open
+- Status: in-progress
 - Plan: 7
 - Value: long texts in Chinese and Japanese wrap correctly in the UI and in
   the help.
@@ -156,7 +186,17 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The test also checks: no line ends with an opening punctuation mark,
     "BananaShot" inside a Chinese text stays on one line, and a Korean
     text breaks only at spaces.
-- Tests: —
+- Tests: `LineBreaksTest` (also "a Chinese text does not break before a
+  closing mark or after an opening mark"), `WrapTextTest` ("a Japanese text
+  wraps between characters", "a Chinese text wraps between characters"),
+  `CommentAssTest` ("japaneseCommentWrapsBetweenCharacters").
+- Notes: on 2026-10-20 `LineBreaks` splits a word with Chinese or Japanese
+  characters by `BreakIterator.getLineInstance`. A word without them stays
+  one piece, so the other languages do not change. The text wraps of
+  `ui.commons` (also the help), of the Stats, Export, Projects, and
+  Adjustments tabs, and of the video comments use it. The Swing HTML texts
+  and `JTextArea` use the line breaks of Swing. On 2026-10-21 the wrap test
+  with a Chinese text in a component passes.
 
 ### E8-T5 Input method tests
 
@@ -180,7 +220,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 
 ### E8-L-ja Japanese
 
-- Status: open
+- Status: in-progress
 - Plan: "Decisions" ("Form of address"), 7, 13, and the process of E4
   (`CONTRIBUTING.md`)
 - Value: the users in Japan can use the app and share videos in Japanese.
@@ -196,7 +236,25 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The screenshots show no Chinese character shapes in the Japanese UI
     and video.
   - A test gives Japanese for `ja-JP` and `ja`.
-- Tests: —
+- Tests: `MessageCatalogTest` ("the Japanese catalog has texts in
+  Japanese", "Japanese texts use the Japanese quotes", and the checks of all
+  languages), `LanguageSettingsTest` ("Japanese gives Japanese"),
+  `MessagePatternTest` ("a Japanese plural uses only other"),
+  `EffectiveExpiryTest` ("the moment shows in Japanese with the year, month,
+  and day marks"), `ScoreboardFontCoverageTest`, `ScriptFontsTest`.
+- Notes:
+  - Done on 2026-10-20: the machine draft of `messages_ja.properties` and
+    `help_ja.properties`, the glossary, the detection, the plural rule
+    (only `other`), and the expiry date format ("2027年3月29日 16:00").
+    The language list of E2-T1 already has `ja`.
+  - The UI font, the video font, and the line breaks come from E8-T2,
+    E8-T3, and E8-T4.
+  - The key names use arrows ("←", "→", "↑", "↓"). The key chips use the
+    font "Dialog" for a character that the UI font does not show.
+  - The help and the texts put the names of tabs and buttons in 「…」.
+  - Open: the review by a native speaker, the screenshots and the sidebar
+    width in the app, the Windows smoke test in Japanese, the input method
+    check (E8-T5), and the open parts of E7-T3 and E7-T4.
 
 ### E8-L-zh-Hans Simplified Chinese
 
@@ -217,7 +275,29 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The template of E7.
   - A test gives Simplified Chinese for `zh-CN`, `zh-SG`, `zh-Hans`, and
     `zh`.
-- Tests: —
+- Tests: `MessageCatalogTest` ("the Chinese catalogs have texts in
+  Simplified and in Traditional Chinese", "Chinese texts use the quotes of
+  their script", "each Chinese catalog uses only the characters of its
+  script", and the checks of all languages), `LanguageSettingsTest`
+  ("Chinese of mainland China, Singapore, and without a region gives
+  Simplified Chinese"), `MessagePatternTest` ("a Chinese plural uses only
+  other"), `EffectiveExpiryTest` ("the moment shows in Chinese with the
+  year, month, and day marks"), `ScoreboardFontCoverageTest`,
+  `ScriptFontsTest`.
+- Notes:
+  - Done on 2026-10-21: the machine draft of `messages_zh_Hans.properties`
+    and `help_zh_Hans.properties`, the glossary, the detection, the plural
+    rule (only `other`), and the expiry date format ("2027年3月29日 16:00").
+    The language list of E2-T1 already has `zh`.
+  - The UI font, the video font, and the line breaks come from E8-T2,
+    E8-T3, and E8-T4.
+  - "YouTube thumbnail" is "视频封面", and "YouTube search" is
+    "视频平台的搜索结果". The texts keep "YouTube" only for a fact about
+    YouTube (the 2 MB limit).
+  - Open: the review by a native speaker from mainland China, the
+    screenshots and the sidebar width in the app, the Windows smoke test in
+    Simplified Chinese, the input method check (E8-T5), and the open parts
+    of E7-T3 and E7-T4.
 
 ### E8-L-zh-Hant Traditional Chinese
 
@@ -240,7 +320,25 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The template of E7.
   - A test gives Traditional Chinese for `zh-TW`, `zh-HK`, `zh-MO`, and
     `zh-Hant`, and never Simplified Chinese.
-- Tests: —
+- Tests: `MessageCatalogTest` ("the Chinese catalogs have texts in
+  Simplified and in Traditional Chinese", "Chinese texts use the quotes of
+  their script", "Traditional Chinese uses the Taiwan terms", "each Chinese
+  catalog uses only the characters of its script", and the checks of all
+  languages), `LanguageSettingsTest` ("Chinese of Taiwan, Hong Kong, and
+  Macau gives Traditional Chinese"), `MessagePatternTest`,
+  `EffectiveExpiryTest`, `ScoreboardFontCoverageTest`, `ScriptFontsTest`.
+- Notes:
+  - Done on 2026-10-21: the machine draft of `messages_zh_Hant.properties`
+    and `help_zh_Hant.properties` with the Taiwan terms, the glossary
+    section, the detection, the plural rule, and the expiry date format.
+  - The draft is a conversion of the Simplified draft, not of reviewed
+    texts. The plan expects the reviewed Simplified texts first. Thus the
+    Traditional texts get the corrections of the Simplified review too.
+  - The texts keep "YouTube" as in English ("製作 YouTube 縮圖").
+  - Open: the review by a native speaker from Taiwan (and, if possible, one
+    from Hong Kong), the screenshots and the sidebar width in the app, the
+    Windows smoke test in Traditional Chinese, the input method check
+    (E8-T5), and the open parts of E7-T3 and E7-T4.
 
 ## Done when
 

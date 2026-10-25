@@ -65,11 +65,15 @@ internal class SeekButton(
     private fun keysWidth() = keys.sumOf { KeyChips.width(it, KeyChipStyle.SEEK) } + KEY_GAP * (keys.size - 1)
 
     /** The icon is 18 px wide with -2 px margins on both sides, as in the design. */
-    private fun iconWidth() = if (showDirection) 14 + GAP else 0
+    private fun iconWidth(direction: Boolean = showDirection) = if (direction) 14 + GAP else 0
 
-    private fun contentWidth(): Float = iconWidth() + UiKit.textWidth(label, labelFont) + GAP + KEYS_MARGIN + keysWidth()
+    private fun contentWidth(direction: Boolean = showDirection): Float =
+        iconWidth(direction) + UiKit.textWidth(label, labelFont) + GAP + KEYS_MARGIN + keysWidth()
 
-    override fun getPreferredSize() = Dimension(max(MIN_WIDTH, ceil(contentWidth()).toInt() + PADDING * 2), HEIGHT)
+    /** The preferred width with or without the direction icon, so that a layout can select one without a change. */
+    fun preferredWidth(direction: Boolean) = max(MIN_WIDTH, ceil(contentWidth(direction)).toInt() + PADDING * 2)
+
+    override fun getPreferredSize() = Dimension(preferredWidth(showDirection), HEIGHT)
     override fun getMinimumSize() = preferredSize
     override fun getMaximumSize() = preferredSize
 

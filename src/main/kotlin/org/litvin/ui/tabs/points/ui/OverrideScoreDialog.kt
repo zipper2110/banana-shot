@@ -75,7 +75,7 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
     JDialog(owner, tr("points.override"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object {
-        private const val WIDTH = 520
+        private const val DIALOG_WIDTH = 520
         private const val CELL = 52
         private val POINT_LABELS = listOf("0", "15", "30", "40", "Ad")
 
@@ -221,18 +221,23 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
         }
         val help = WrapText(
             tr("override.help", "number" to input.pointNumber),
-            UiKit.font(12f), Palette.FG_2, 1.5f, WIDTH - DialogKit.PAD_X * 2,
+            UiKit.font(12f), Palette.FG_2, 1.5f, DIALOG_WIDTH - DialogKit.PAD_X * 2,
         )
         val body = Stack(pad = Insets(8, DialogKit.PAD_X, 14, DialogKit.PAD_X), gap = 14).apply {
             add(help)
             add(grid)
         }
-        contentPane = DialogKit.content(
-            WIDTH,
-            DialogKit.head(tr("points.override")),
-            body,
-            DialogKit.footer(left = listOf(clearButton), right = listOf(cancelButton, saveButton)),
-        )
+        // The dialog gets wider when the grid needs more width, for example with many sets or long names.
+        contentPane = object : Stack(background = Palette.OVERLAY) {
+            override fun getPreferredSize(): Dimension {
+                val w = maxOf(DIALOG_WIDTH, grid.preferredSize.width + DialogKit.PAD_X * 2)
+                return Dimension(w, heightForWidth(w))
+            }
+        }.apply {
+            add(DialogKit.head(tr("points.override")))
+            add(body, fill = true)
+            add(DialogKit.footer(left = listOf(clearButton), right = listOf(cancelButton, saveButton)))
+        }
         rootPane.defaultButton = saveButton
         DialogKit.onEscape(this) { dispose() }
         DialogKit.packToScreen(this)
@@ -453,11 +458,19 @@ internal class OverrideScoreDialog(owner: Window?, private val input: OverrideSc
         })
     }
 
-    /** The name of a side with its color strip. */
+    /**
+     * The name of a side with its color strip. The width follows the name, from 70 to 150 px.
+     * The minimum width is the preferred width, so that the name column cannot collapse to zero.
+     */
     private class SideLabel(private val text: String, private val color: Color) : JComponent() {
         private val textFont get() = UiKit.font(13f, UiKit.Weight.SEMIBOLD)
 
-        override fun getPreferredSize() = Dimension(130, DialogKit.INPUT_HEIGHT)
+        override fun getPreferredSize(): Dimension {
+            val textWidth = getFontMetrics(textFont).stringWidth(text)
+            return Dimension((textWidth + 20).coerceIn(70, 150), DialogKit.INPUT_HEIGHT)
+        }
+
+        override fun getMinimumSize() = preferredSize
 
         override fun paintComponent(g: Graphics) {
             val g2 = UiKit.smooth(g)

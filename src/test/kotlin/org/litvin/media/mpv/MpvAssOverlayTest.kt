@@ -21,6 +21,17 @@ class MpvAssOverlayTest {
     }
 
     @Test
+    fun `rotated rectangle turns clockwise around its center`() {
+        val event = MpvAssOverlay.events(
+            listOf(OverlayShape.Rect(10.0, 20.0, 100.0, 50.0, stroke = Color.WHITE, strokeWidth = 2.0, rotationDeg = 30.0)),
+            scale = 2.0,
+        )
+
+        // ASS turns counterclockwise for a positive angle.
+        assertTrue(event.startsWith("""{\an7\pos(20,40)\org(120,90)\frz-30"""), event)
+    }
+
+    @Test
     fun `stroke only rectangle has a transparent fill and a half-width border`() {
         val event = MpvAssOverlay.events(
             listOf(OverlayShape.Rect(0.0, 0.0, 10.0, 10.0, stroke = Color(0x11, 0x22, 0x33), strokeWidth = 2.0)),

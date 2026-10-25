@@ -13,6 +13,7 @@ import java.awt.Graphics
 import java.awt.GraphicsEnvironment
 import java.awt.GridLayout
 import java.awt.Insets
+import java.awt.LayoutManager
 import java.awt.Window
 import java.awt.event.ActionEvent
 import java.awt.event.FocusAdapter
@@ -20,7 +21,6 @@ import java.awt.event.FocusEvent
 import javax.swing.AbstractAction
 import javax.swing.BorderFactory
 import javax.swing.Box
-import javax.swing.BoxLayout
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JDialog
@@ -229,25 +229,23 @@ internal object DialogKit {
     /**
      * The foot: [left] items, a flexible gap, then [right] items, with 8 px between two items.
      * A [gap] item adds more space, for example between "Reset to defaults" and Cancel.
+     * When one row is too narrow, for example for a long translation, the [left] items go on a row of their own,
+     * and the [right] items wrap onto more rows on the right (see [FooterLayout]).
      */
-    fun footer(left: List<JComponent> = emptyList(), right: List<JComponent>): JComponent = object : JPanel() {
-        override fun paintComponent(g: Graphics) {
-            g.color = Palette.ROW_HOVER
-            g.fillRect(0, 0, width, height)
-            g.color = Palette.LINE
-            g.fillRect(0, 0, width, 1)
-        }
-    }.apply {
-        layout = BoxLayout(this, BoxLayout.X_AXIS)
-        border = BorderFactory.createEmptyBorder(12, PAD_X, 12, PAD_X)
-        left.forEachIndexed { index, item ->
-            if (index > 0) add(Box.createHorizontalStrut(8))
-            add(item)
-        }
-        add(Box.createHorizontalGlue())
-        right.forEachIndexed { index, item ->
-            if (index > 0 && item !is Box.Filler && right[index - 1] !is Box.Filler) add(Box.createHorizontalStrut(8))
-            add(item)
+    fun footer(left: List<JComponent> = emptyList(), right: List<JComponent>): JComponent {
+        val footerLayout = FooterLayout(left, right)
+        return object : JPanel(footerLayout), HeightForWidth {
+            override fun paintComponent(g: Graphics) {
+                g.color = Palette.ROW_HOVER
+                g.fillRect(0, 0, width, height)
+                g.color = Palette.LINE
+                g.fillRect(0, 0, width, 1)
+            }
+
+            override fun heightForWidth(width: Int): Int = footerLayout.heightAt(this, width)
+        }.apply {
+            border = BorderFactory.createEmptyBorder(12, PAD_X, 12, PAD_X)
+            (left + right).forEach(::add)
         }
     }
 
@@ -613,4 +611,112 @@ internal class ScrollColumn(private val content: JComponent) : JPanel(BorderLayo
 internal fun setEnabledDeep(root: Component, enabled: Boolean) {
     root.isEnabled = enabled
     if (root is Container) root.components.forEach { setEnabledDeep(it, enabled) }
+}
+
+/**
+ * The layout of [DialogKit.footer]. One row when all items fit: [left] on the left, [right] on the right.
+ * Else the [left] items take the first rows, aligned left, and the [right] items take the next rows, aligned
+ * right. A row wraps between two items. Hidden items take no space. A [Box.Filler] gap at the start or the end
+ * of a wrapped row is dropped.
+ */
+internal class FooterLayout(private val left: List<Component>, private val right: List<Component>) : LayoutManager {
+    /** A row of the foot: [start] items on the left, [end] items on the right. */
+    private class Row(val start: List<Component>, val end: List<Component>) {
+        val height: Int get() = (start + end).maxOfOrNull { it.preferredSize.height } ?: 0
+    }
+
+    /** The height of [parent] at [width], with its insets. */
+    fun heightAt(parent: Container, width: Int): Int {
+        val insets = parent.insets
+        val rows = rows(width - insets.left - insets.right)
+        return insets.top + insets.bottom + rows.sumOf { it.height } + ROW_GAP * max(0, rows.size - 1)
+    }
+
+    override fun preferredLayoutSize(parent: Container): Dimension {
+        val insets = parent.insets
+        val oneRow = insets.left + insets.right + oneRowWidth()
+        // A parent without a width yet gets one row. A parent with a width gets the rows of that width.
+        val width = if (parent.width > 0) parent.width else oneRow
+        return Dimension(oneRow, heightAt(parent, width))
+    }
+
+    override fun minimumLayoutSize(parent: Container): Dimension = preferredLayoutSize(parent)
+
+    override fun layoutContainer(parent: Container) {
+        val insets = parent.insets
+        val inner = parent.width - insets.left - insets.right
+        var y = insets.top
+        for (row in rows(inner)) {
+            place(row.start, insets.left, y, row.height)
+            place(row.end, insets.left + inner - rowWidth(row.end), y, row.height)
+            y += row.height + ROW_GAP
+        }
+    }
+
+    override fun addLayoutComponent(name: String?, comp: Component) = Unit
+
+    override fun removeLayoutComponent(comp: Component) = Unit
+
+    private fun place(items: List<Component>, startX: Int, y: Int, rowHeight: Int) {
+        var x = startX
+        var previous: Component? = null
+        for (item in items) {
+            x += gap(previous, item)
+            val size = item.preferredSize
+            item.setBounds(x, y + (rowHeight - size.height) / 2, size.width, size.height)
+            x += size.width
+            previous = item
+        }
+    }
+
+    private fun shownLeft() = left.filter { it.isVisible }
+
+    private fun shownRight() = right.filter { it.isVisible }
+
+    private fun oneRowWidth(): Int {
+        val l = shownLeft()
+        val r = shownRight()
+        val middle = if (l.isNotEmpty() && r.isNotEmpty()) ITEM_GAP else 0
+        return rowWidth(l) + middle + rowWidth(r)
+    }
+
+    private fun rows(width: Int): List<Row> {
+        val l = shownLeft()
+        val r = shownRight()
+        if (oneRowWidth() <= width) return listOf(Row(l, r))
+        return wrap(l, width).map { Row(it, emptyList()) } + wrap(r, width).map { Row(emptyList(), it) }
+    }
+
+    private fun wrap(items: List<Component>, width: Int): List<List<Component>> {
+        val rows = mutableListOf<List<Component>>()
+        var current = mutableListOf<Component>()
+        for (item in items) {
+            if (current.isNotEmpty() && item !is Box.Filler && rowWidth(current + item) > width) {
+                rows += current.dropLastWhile { it is Box.Filler }
+                current = mutableListOf()
+            }
+            if (current.isEmpty() && item is Box.Filler) continue
+            current += item
+        }
+        current.dropLastWhile { it is Box.Filler }.takeIf { it.isNotEmpty() }?.let { rows += it }
+        return rows
+    }
+
+    private companion object {
+        const val ITEM_GAP = 8
+        const val ROW_GAP = 8
+
+        fun gap(previous: Component?, item: Component): Int =
+            if (previous == null || previous is Box.Filler || item is Box.Filler) 0 else ITEM_GAP
+
+        fun rowWidth(items: List<Component>): Int {
+            var width = 0
+            var previous: Component? = null
+            for (item in items) {
+                width += gap(previous, item) + item.preferredSize.width
+                previous = item
+            }
+            return width
+        }
+    }
 }

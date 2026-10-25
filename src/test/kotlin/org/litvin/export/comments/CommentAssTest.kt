@@ -1,8 +1,10 @@
 package org.litvin.export.comments
 
 import org.litvin.points.CommentStyle
+import org.litvin.points.CommentPosition
 import org.litvin.points.CommentV1
 import java.awt.geom.Rectangle2D
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -110,6 +112,19 @@ class CommentAssTest {
         assertEquals(listOf("a", "", "b"), CommentAss.wrapLines("a\n\nb", 50.0, measure))
     }
 
+    /** B-11 E8-T4: a Japanese comment breaks between characters, and not before "、" or "。". */
+    @Test
+    fun japaneseCommentWrapsBetweenCharacters() {
+        val measure: (String) -> Double = { it.length * 10.0 }
+        val text = "ナイスショット、すばらしいポイントでした。"
+        val lines = CommentAss.wrapLines(text, 70.0, measure)
+        assertEquals(text, lines.joinToString(""))
+        lines.forEach { line ->
+            assertTrue(line.length <= 7, "\"$line\" is too long")
+            assertTrue(line.first() !in "、。ー", "\"$line\" starts with a closing mark")
+        }
+    }
+
     @Test
     fun blankTextOrEmptyAreaGivesNoEvents() {
         assertEquals(emptyList(), CommentAss.events("  ", "#FFFFFF", 0.0, 0.0, 1920.0, 1080.0))
@@ -139,5 +154,115 @@ class CommentAssTest {
         // A new comment at the playhead shows at once.
         assertTrue(preview.setComments(listOf(comment(1, 1_000, 2_000), comment(2, 2_900, 500))))
         assertEquals(listOf(2), preview.shown.map { it.id })
+    }
+
+    @Test
+    fun commentWithoutPositionIsAtTheDefaultPosition() {
+        for (style in CommentStyle.entries) {
+            val withoutPosition = CommentAss.events("Great point", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, style)
+            val atDefault = CommentAss.events("Great point", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, style, CommentPosition.DEFAULT)
+            assertEquals(withoutPosition, atDefault, "$style")
+            val placement = CommentAss.placement("Great point", 0.0, 0.0, 1920.0, 1080.0, style)!!
+            assertEquals(CommentPosition.DEFAULT, placement.position, "The default position does not move: $style")
+        }
+    }
+
+    @Test
+    fun positionMovesTheComment() {
+        // The video area starts at (100, 50) in the window.
+        val text = CommentAss.events("Top left", "#FFFFFF", 100.0, 50.0, 1000.0, 500.0, position = CommentPosition(0.3, 0.25)).single()
+
+        assertTrue(text.startsWith("{\\an2\\pos(400.0,175.0)"), text)
+        val placement = CommentAss.placement("Top left", 100.0, 50.0, 1000.0, 500.0, position = CommentPosition(0.3, 0.25))!!
+        assertEquals(CommentPosition(0.3, 0.25), placement.position)
+        assertEquals(400.0, placement.box.centerX, 0.01)
+    }
+
+    @Test
+    fun commentAtTheEdgeMovesInsideTheFrame() {
+        for (style in CommentStyle.entries) {
+            for (position in listOf(CommentPosition(0.0, 0.0), CommentPosition(1.0, 1.0), CommentPosition(0.02, 0.98))) {
+                val placement = CommentAss.placement("A long comment\nin two lines", 100.0, 50.0, 960.0, 540.0, style, position)!!
+                val box = placement.box
+                assertTrue(box.x >= 100.0 - 0.01 && box.y >= 50.0 - 0.01, "$style $position: $box")
+                assertTrue(box.maxX <= 1060.0 + 0.01 && box.maxY <= 590.0 + 0.01, "$style $position: $box")
+                assertTrue(placement.position != position, "The position changed, because the box did not fit: $style $position")
+            }
+        }
+    }
+
+    @Test
+    fun boxContainsTheDrawnCard() {
+        val position = CommentPosition(0.7, 0.4)
+        val placement = CommentAss.placement("Card", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, position)!!
+        val card = CommentAss.events("Card", "#FFFFFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, position)[1]
+        val (left, top) = Regex("""\\pos\(([\d.]+),([\d.]+)\)""").find(card)!!.destructured
+        // The path starts "m r 0 l (w - r) 0 b w 0", so the first curve gives the width.
+        val width = Regex("""l \d+ 0 b (\d+) 0""").find(card)!!.groupValues[1].toDouble()
+        assertEquals(placement.box.x, left.toDouble(), 0.1)
+        assertEquals(placement.box.y, top.toDouble(), 0.1)
+        assertEquals(placement.box.width, width, 0.1)
+    }
+
+    @Test
+    fun sizePercentScalesTheComment() {
+        fun fontSize(events: List<String>) = Regex("""\\fs([\d.]+)""").find(events.last())!!.groupValues[1].toDouble()
+        val normal = CommentAss.events("Size", "#FFFFFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD)
+        val large = CommentAss.events("Size", "#FFFFFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, sizePercent = 200)
+        assertEquals(fontSize(normal) * 2, fontSize(large), 0.1)
+
+        val normalBox = CommentAss.placement("Size", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD)!!.box
+        val largeBox = CommentAss.placement("Size", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, sizePercent = 200)!!.box
+        assertEquals(normalBox.height * 2, largeBox.height, 2.0)
+        assertEquals(normalBox.maxY, largeBox.maxY, 0.01, "The lower edge stays at its position")
+    }
+
+    @Test
+    fun opacityPercentMakesAllPartsTransparent() {
+        val events = CommentAss.events("Half", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, opacityPercent = 50)
+        val (shadow, card, text) = events
+        // ASS alpha is inverted: 00 is opaque, FF is transparent.
+        assertTrue(text.contains("\\1a&H7F&"), "The text is half transparent: $text")
+        assertTrue(card.contains("\\1a&H93&"), "The card is 85% × 50% opaque: $card")
+        assertTrue(shadow.contains("\\1a&HC7&"), "The shadow is 44% × 50% opaque: $shadow")
+
+        val pill = CommentAss.events("Half", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.PILL, opacityPercent = 50)[1]
+        assertTrue(pill.contains("\\1a&H7F&"), pill)
+        val outline = CommentAss.events("Half", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, opacityPercent = 50).single()
+        assertTrue(outline.contains("\\3a&H7F&") && outline.contains("\\1a&H7F&"), outline)
+    }
+
+    @Test
+    fun rotationTurnsAllPartsAroundTheCenterOfTheBox() {
+        val events = CommentAss.events("Turn", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, rotationDeg = 30)
+        val box = CommentAss.placement("Turn", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, rotationDeg = 30)!!.box
+        val (shadow, card, text) = events
+        val center = String.format(Locale.US, "\\org(%.1f,%.1f)", box.centerX, box.centerY)
+        // ASS turns counterclockwise for a positive angle, so a clockwise rotation gives a negative \frz.
+        assertTrue(card.contains("$center\\frz-30"), card)
+        assertTrue(text.contains("$center\\frz-30"), text)
+        // The shadow is 8 px below the card. Its center is also 8 px lower, so the shadow stays below the comment.
+        val shadowCenter = String.format(Locale.US, "\\org(%.1f,%.1f)", box.centerX, box.centerY + 8)
+        assertTrue(shadow.contains("$shadowCenter\\frz-30"), shadow)
+    }
+
+    @Test
+    fun commentWithoutRotationHasNoRotationCenter() {
+        val events = CommentAss.events("Flat", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.PILL)
+
+        assertTrue(events.all { it.contains("\\frz0") && !it.contains("\\org") }, events.toString())
+    }
+
+    @Test
+    fun rotatedCommentMovesInsideTheFrame() {
+        val top = CommentPosition(0.5, 0.0)
+        val flat = CommentAss.placement("Top edge", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, top)!!
+        val turned = CommentAss.placement("Top edge", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD, top, rotationDeg = 90)!!
+
+        assertEquals(flat.box.height / 2, flat.box.centerY, 0.01, "The flat card touches the top edge")
+        // After a quarter turn, the card is as tall as it was wide. It moves down until its top touches the edge.
+        assertEquals(turned.box.width / 2, turned.box.centerY, 0.01)
+        assertEquals(flat.box.centerX, turned.box.centerX, 0.01)
+        assertTrue(turned.position.y > flat.position.y, "The turned comment has a lower position: ${turned.position}")
     }
 }

@@ -506,6 +506,11 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         )
     }
 
+    override fun overlayScale(): Double {
+        val width = osdWidth
+        return if (width > 0 && canvas.width > 0) width.toDouble() / canvas.width else 1.0
+    }
+
     override fun setEditorOverlay(shapes: List<OverlayShape>?) {
         editorShapes = shapes
         renderEditorOverlay()

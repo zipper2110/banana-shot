@@ -16,7 +16,7 @@ import org.litvin.ui.commons.SpeedControl
 
 class PlaybackBarTest {
     @Test
-    fun centersTheTransportAndPutsTheClockLeftAndAddCommentRight() {
+    fun centersTheTransportAndPutsTheClockAndFrameStepLeftAndAddCommentRight() {
         SwingUtilities.invokeAndWait {
             val bar = PlaybackBar(onTogglePlay = {}, onNudge = {}, onAddComment = {}, onSpeedIndex = {})
             bar.setTime(1_316_300, 5_761_000)
@@ -30,17 +30,22 @@ class PlaybackBarTest {
             val transportCenter = transport.x + transport.width / 2
             assertTrue(abs(transportCenter - bar.width / 2) <= 1, "transport center=$transportCenter, bar width=${bar.width}")
             assertEquals(16, clock.x)
-            assertEquals(bar.width - 16, bar.frameStep.x + bar.frameStep.width)
-            assertTrue(comment.x + comment.width < bar.frameStep.x, "Comment is left of Frame step")
-            assertEquals(comment.height, bar.frameStep.height)
-            assertEquals(comment.y, bar.frameStep.y)
-            assertEquals("00:21:56.3", (bar.findByName("points-current-time") as JLabel).text)
-            assertTrue(bar.labels().any { it.text == "/ 01:36:01.0" && it.isVisible })
+            assertEquals(bar.width - 16, comment.x + comment.width)
+            // Frame step is next to the seek buttons, because it changes what Left and Right do.
+            assertEquals(transport.x - 16, bar.frameStep.x + bar.frameStep.width)
+            assertFalse(bar.frameStep.compact)
+            val now = bar.findByName("points-current-time") as JLabel
+            val total = bar.findByName("points-total-time") as JLabel
+            assertEquals("00:21:56.3", now.text)
+            assertEquals("01:36:01.0", total.text)
+            assertTrue(total.isVisible)
+            assertEquals(now.x, total.x, "the video length is under the current time")
+            assertTrue(total.y >= now.y + now.height, "now y=${now.y}, total y=${total.y}")
 
             val speed = bar.descendants().filterIsInstance<SpeedControl>().single()
             assertTrue(speed.isVisible && !speed.compact, "a wide bar shows the full speed control")
             assertTrue(speed.x >= clock.x + clock.width, "speed x=${speed.x}, clock right=${clock.x + clock.width}")
-            assertTrue(speed.x + speed.width <= transport.x, "speed right=${speed.x + speed.width}, transport x=${transport.x}")
+            assertTrue(speed.x + speed.width < bar.frameStep.x, "speed right=${speed.x + speed.width}, frame step x=${bar.frameStep.x}")
         }
     }
 
@@ -63,17 +68,19 @@ class PlaybackBarTest {
     }
 
     @Test
-    fun aNarrowBarHidesTheVideoLengthAndTheDirectionIcons() {
+    fun aNarrowBarKeepsTheVideoLengthAndHidesTheDirectionIconsAndLabels() {
         SwingUtilities.invokeAndWait {
             val bar = PlaybackBar(onTogglePlay = {}, onNudge = {}, onAddComment = {}, onSpeedIndex = {})
             bar.setTime(1_000, 5_761_000)
             bar.setSize(860, bar.preferredSize.height)
             bar.layoutRecursively()
 
-            assertFalse(bar.labels().first { it.text.startsWith("/ ") }.isVisible)
+            assertTrue(bar.findByName("points-total-time")!!.isVisible)
             assertTrue(bar.descendants().filterIsInstance<SeekButton>().none { it.showDirection })
             val speed = bar.descendants().filterIsInstance<SpeedControl>().single()
             assertTrue(speed.compact)
+            val transport = assertNotNull(bar.findByName("points-video-controls"))
+            assertTrue(bar.frameStep.x + bar.frameStep.width <= transport.x, "Frame step does not cover the seek buttons")
         }
     }
 

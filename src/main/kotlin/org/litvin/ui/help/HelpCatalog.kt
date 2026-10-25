@@ -125,7 +125,6 @@ object HelpCatalog {
             workflow = listOf(
                 tr("help.crop.workflow.1"),
                 tr("help.crop.workflow.2"),
-                tr("help.crop.workflow.3"),
                 tr("help.crop.workflow.4"),
                 tr("help.crop.workflow.5"),
             ),

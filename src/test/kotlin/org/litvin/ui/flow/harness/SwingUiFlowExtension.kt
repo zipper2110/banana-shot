@@ -16,6 +16,9 @@ import org.litvin.app.TrackedExecutorProvider
 import org.litvin.export.EncoderCapabilities
 import org.litvin.export.FileCompletedRendersRepository
 import org.litvin.export.ProductionRenderService
+import org.litvin.i18n.I18n
+import org.litvin.i18n.LanguageSettings
+import org.litvin.i18n.Messages
 import org.litvin.license.BuildExpiry
 import org.litvin.license.TestExpiry
 import org.litvin.license.check.ExecutorExpiryScheduler
@@ -46,6 +49,7 @@ import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 import javax.swing.JComponent
+import javax.swing.UIManager
 import javax.swing.RepaintManager
 
 /** The media services of a UI flow. */
@@ -101,6 +105,7 @@ class SwingUiFlowExtension(
             // The hint balloons can cover the controls that the tests click.
             HintId.entries.forEach { node(PreferencesProvider.APPLICATION).putBoolean(PreferencesHintRegistry.key(it), true) }
         }
+        installLanguage(preferences)
         lifecycleOrdinal = 0
 
         previousUncaughtHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -156,6 +161,20 @@ class SwingUiFlowExtension(
         current = null
 
         if (testFailure == null && failure != null) throw failure
+    }
+
+    /**
+     * Installs the language of the property `bananashot.language`, as `main` does. Without the property, the
+     * tests use English. Use it to run the UI-flow tests in each app language: `-Dbananashot.language=ru`.
+     */
+    private fun installLanguage(preferences: InMemoryPreferencesProvider) {
+        if (System.getProperty(LanguageSettings.PROPERTY).isNullOrBlank()) return
+        val resolution = LanguageSettings(preferences.node(PreferencesProvider.APPLICATION)).resolve()
+        I18n.install(Messages.of(resolution.language, pseudo = resolution.pseudo))
+        val locale = I18n.language.locale
+        JComponent.setDefaultLocale(locale)
+        UIManager.getLookAndFeelDefaults().defaultLocale = locale
+        UIManager.getDefaults().defaultLocale = locale
     }
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =

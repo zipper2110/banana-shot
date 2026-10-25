@@ -54,8 +54,9 @@ internal data class PointControlsState(
 /**
  * The point controls. Two parts show them:
  * - [navigator], at the top of the side column: "Point x / y" with the favorite star, and Previous and Next under it.
- * - This panel, in the point bar under the video, after Point start: the serve button, the three outcome buttons,
+ * - This panel, in the point bar under the video, after Point start: "Winner:", the three outcome buttons,
  *   and Override score at the right end. The outcome buttons fill the remaining width.
+ * - [serveButton], at the start of the point bar, before Point start. The point bar places it.
  */
 internal class PointsScoringControls(
     onPrevious: () -> Unit,
@@ -108,6 +109,11 @@ internal class PointsScoringControls(
         addActionListener { onOutcome(Outcome.P2) }
     }
     private val outcomeButtons = listOf(player1Button, noPointButton, player2Button)
+    private val winnerLabel = JLabel(tr("points.outcome.caption")).apply {
+        name = "points-winner-label"
+        font = UiKit.font(12f)
+        foreground = Palette.FG_2
+    }
 
     /** The current point with Previous and Next, for the top of the side column. */
     val navigator = PointNavigator(previousButton, pointLabel, favoriteButton, nextButton)
@@ -117,7 +123,7 @@ internal class PointsScoringControls(
 
     init {
         isOpaque = false
-        listOf(serveButton, player1Button, noPointButton, player2Button, overrideButton).forEach(::add)
+        listOf(winnerLabel, player1Button, noPointButton, player2Button, overrideButton).forEach(::add)
         previousButton.addActionListener { onPrevious() }
         nextButton.addActionListener { onNext() }
         favoriteButton.addActionListener { onToggleFavorite() }
@@ -129,9 +135,9 @@ internal class PointsScoringControls(
 
     fun setPlayers(players: ScorePlayers) {
         this.players = players
-        player1Button.setPlayer(tr("points.outcome.scored", "name" to players.p1Name), players.p1Color)
-        player2Button.setPlayer(tr("points.outcome.scored", "name" to players.p2Name), players.p2Color)
-        noPointButton.setPlayer(tr("points.outcome.noScore"), Palette.LINE_6)
+        player1Button.setPlayer(players.p1Name, players.p1Color)
+        player2Button.setPlayer(players.p2Name, players.p2Color)
+        noPointButton.setPlayer(tr("points.outcome.noWinner"), Palette.LINE_6)
         // setPlayer gives "Point for ..." tooltips, so the buttons get their own tooltips.
         player1Button.toolTipText = outcomeTip("Q", tr("points.outcome.won.tooltip", "name" to players.p1Name))
         player2Button.toolTipText = outcomeTip("E", tr("points.outcome.won.tooltip", "name" to players.p2Name))
@@ -198,22 +204,22 @@ internal class PointsScoringControls(
         }
     }
 
-    private fun serveWidth(): Int = serveButton.preferredSize.width
+    private fun labelWidth(): Int = winnerLabel.preferredSize.width
 
     private val overrideFullWidth: Int get() = overrideButton.preferredWidthFor(OVERRIDE_TEXT)
 
     private fun outcomesWidth() = OUTCOME_MIN * 3 + OUTCOME_GAP * 2
 
     override fun getPreferredSize() = Dimension(
-        serveWidth() + GROUP_GAP + outcomesWidth() + GROUP_GAP + overrideFullWidth,
+        labelWidth() + LABEL_GAP + outcomesWidth() + GROUP_GAP + overrideFullWidth,
         HEIGHT,
     )
 
     override fun getMinimumSize() = Dimension(0, HEIGHT)
 
     override fun doLayout() {
-        val serve = serveWidth()
-        serveButton.setBounds(0, 0, serve, HEIGHT)
+        val label = labelWidth()
+        winnerLabel.setBounds(0, 0, label, HEIGHT)
         // A narrow bar shows only the pencil of Override score, so that the outcome buttons keep their width.
         val compact = width < preferredSize.width
         val text = if (compact) "" else OVERRIDE_TEXT
@@ -221,8 +227,8 @@ internal class PointsScoringControls(
         val override = overrideButton.preferredSize.width
         val outcomesEnd = max(0, width - override - GROUP_GAP)
         overrideButton.setBounds(outcomesEnd + GROUP_GAP, 0, override, HEIGHT)
-        // The outcome buttons in three equal columns between the serve button and Override score.
-        val x = serve + GROUP_GAP
+        // The outcome buttons in three equal columns between "Winner:" and Override score.
+        val x = label + LABEL_GAP
         val area = max(0, outcomesEnd - x)
         val buttonWidth = (area - OUTCOME_GAP * 2) / 3
         outcomeButtons.forEachIndexed { i, button ->
@@ -236,6 +242,7 @@ internal class PointsScoringControls(
         const val HEIGHT = OutcomeButton.HEIGHT
         const val STAR = 24
         private const val GROUP_GAP = 16
+        private const val LABEL_GAP = 8
         private const val OUTCOME_GAP = 6
         private const val OUTCOME_MIN = 110
         private val OVERRIDE_TEXT: String get() = tr("points.override")

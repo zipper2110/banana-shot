@@ -6,9 +6,9 @@ import kotlin.test.assertEquals
 
 class SessionSettingsTest {
     @Test
-    fun playbackSpeedPresetsIncludeOnePointFiveAndDefaultToNormalSpeed() {
+    fun playbackSpeedPresetsIncludeSmallStepsNearNormalSpeedAndDefaultToNormalSpeed() {
         assertContentEquals(
-            floatArrayOf(2.0f, 1.5f, 1.25f, 1.0f, 0.5f, 0.25f),
+            floatArrayOf(2.0f, 1.5f, 1.25f, 1.1f, 1.0f, 0.75f, 0.5f, 0.25f),
             SessionSettings.speedPresets,
         )
         assertEquals(1.0f, SessionSettings.toRate(SessionSettings.playbackSpeedIndex))

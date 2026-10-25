@@ -5,6 +5,7 @@ import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.ColorTimeline
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
+import org.litvin.media.relativeSeekDeltaMs
 import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.CardColumn
 import org.litvin.ui.commons.ChangePointsCard
@@ -28,8 +29,6 @@ import java.awt.Dimension
 import java.awt.EventQueue
 import java.awt.Graphics
 import java.awt.event.ActionEvent
-import java.awt.event.FocusAdapter
-import java.awt.event.FocusEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
@@ -45,7 +44,7 @@ import org.litvin.i18n.tr
 /**
  * The Colors & Transform tab: the video with the playback bar on the left, and the right panel with two sub-tabs,
  * Colors and Transform. Each sub-tab has its own header with "Reset all". The change points card is under the
- * sub-tabs, because a change point has the colors and the transform (B-47).
+ * sub-tabs. It shows the change points of the open sub-tab, because each sub-tab has its own change points (B-47).
  *
  * On the Colors sub-tab, the video shows the result. While the user holds the left mouse button on the video,
  * the preview shows the original colors. On the Transform sub-tab, the player shows the rotated full frame, and
@@ -97,8 +96,7 @@ class SwingAdjustVideoPanel(
 
     private val changePointsCard = ChangePointsCard(
         namePrefix = "adjust",
-        hint = tr("adjust.changePoints.question") + "<br>" +
-            tr("adjust.changePoints.hint", "seconds" to ColorTimeline.BLEND_MS / 1000),
+        hint = changePointsHint(AdjustSection.COLORS),
         onAdd = { presenter.onIntent(AdjustVideoIntent.AddChangePoint) },
         onRemove = { presenter.onIntent(AdjustVideoIntent.RemoveChangePoint) },
         onPrevious = { presenter.onIntent(AdjustVideoIntent.GoToPreviousChangePoint) },
@@ -110,6 +108,7 @@ class SwingAdjustVideoPanel(
         barName = "adjust-transport",
         onTogglePlay = { togglePlayPause() },
         onSeek = { target -> player.seek(target) },
+        onNudge = { delta -> nudge(delta) },
     )
 
     private val sectionChoice = SegmentedChoice(
@@ -197,16 +196,6 @@ class SwingAdjustVideoPanel(
         }
         gradePanel.resetButton.addActionListener { presenter.onIntent(AdjustVideoIntent.ResetColors) }
 
-        // The chip on the video shows if the arrow keys move the crop rectangle.
-        player.component.addFocusListener(object : FocusAdapter() {
-            override fun focusGained(e: FocusEvent) {
-                editor.videoFocused = true
-            }
-
-            override fun focusLost(e: FocusEvent) {
-                editor.videoFocused = false
-            }
-        })
         installCompareOnHold()
         installPlayerCallbacks()
         installKeyBindings()
@@ -299,6 +288,16 @@ class SwingAdjustVideoPanel(
         if (transform) showingOriginal = false
         player.setCropEditing(transform)
         editor.active = transform
+        changePointsCard.setHint(changePointsHint(section))
+    }
+
+    /** The hint of the change points card. Each sub-tab has its own change points and its own question. */
+    private fun changePointsHint(section: AdjustSection): String {
+        val question = when (section) {
+            AdjustSection.COLORS -> tr("adjust.colors.changePoints.question")
+            AdjustSection.TRANSFORM -> tr("adjust.transform.changePoints.question")
+        }
+        return question + "<br>" + tr("adjust.changePoints.hint", "seconds" to ColorTimeline.BLEND_MS / 1000)
     }
 
     private fun renderColors(editing: AdjustmentsV1) {
@@ -418,6 +417,22 @@ class SwingAdjustVideoPanel(
         player.component.requestFocusInWindow()
     }
 
+    /** Seeks [deltaMs] from the playhead, as the seek buttons of the Points tab do. */
+    private fun nudge(deltaMs: Long) {
+        val playing = player.status() == PlayerStatus.PLAYING
+        val duration = player.totalDurationMs()
+        var target = maxOf(0L, player.currentTimeMs() + relativeSeekDeltaMs(deltaMs, playing))
+        if (duration > 0) target = target.coerceAtMost(duration - 1)
+        player.seek(target)
+        if (duration > 0) playbackBar.setTime(target, duration)
+    }
+
+    /** A seek hotkey seeks and briefly marks the matching button. */
+    private fun nudgeFromKey(deltaMs: Long) {
+        playbackBar.flashSeek(deltaMs)
+        nudge(deltaMs)
+    }
+
     private fun updatePlayPauseUi() {
         playbackBar.setPlaying(player.status() == PlayerStatus.PLAYING)
     }
@@ -433,19 +448,11 @@ class SwingAdjustVideoPanel(
         }
         val anywhere = intArrayOf(JComponent.WHEN_IN_FOCUSED_WINDOW, JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
         bind(this, AppShortcuts.PLAY_PAUSE.keyStroke, "adjustTogglePlayPause", anywhere) { togglePlayPause() }
-
-        // On the Transform sub-tab, the arrow keys move the crop rectangle while the video has the focus
-        // (a click on the video gives it). The editor ignores them on the Colors sub-tab.
-        val video = player.component as? JComponent ?: return
-        val focused = intArrayOf(JComponent.WHEN_FOCUSED)
-        bind(video, AppShortcuts.LEFT.keyStroke, "cropNudgeLeft", focused) { editor.nudge(-1, 0) }
-        bind(video, AppShortcuts.RIGHT.keyStroke, "cropNudgeRight", focused) { editor.nudge(1, 0) }
-        bind(video, AppShortcuts.UP.keyStroke, "cropNudgeUp", focused) { editor.nudge(0, -1) }
-        bind(video, AppShortcuts.DOWN.keyStroke, "cropNudgeDown", focused) { editor.nudge(0, 1) }
-        bind(video, AppShortcuts.SHIFT_LEFT.keyStroke, "cropNudgeLeftFast", focused) { editor.nudge(-10, 0) }
-        bind(video, AppShortcuts.SHIFT_RIGHT.keyStroke, "cropNudgeRightFast", focused) { editor.nudge(10, 0) }
-        bind(video, AppShortcuts.SHIFT_UP.keyStroke, "cropNudgeUpFast", focused) { editor.nudge(0, -10) }
-        bind(video, AppShortcuts.SHIFT_DOWN.keyStroke, "cropNudgeDownFast", focused) { editor.nudge(0, 10) }
+        // Left and Right seek 1 second, and with Shift 5 seconds, as on the Points tab. This is the same on both sub-tabs.
+        bind(this, AppShortcuts.LEFT.keyStroke, "adjustSeekBack", anywhere) { nudgeFromKey(-1_000) }
+        bind(this, AppShortcuts.RIGHT.keyStroke, "adjustSeekForward", anywhere) { nudgeFromKey(1_000) }
+        bind(this, AppShortcuts.SHIFT_LEFT.keyStroke, "adjustSeekBackFast", anywhere) { nudgeFromKey(-5_000) }
+        bind(this, AppShortcuts.SHIFT_RIGHT.keyStroke, "adjustSeekForwardFast", anywhere) { nudgeFromKey(5_000) }
     }
 
     /** "Saved to the project. Export uses these values." with a save icon, under a line. */

@@ -8,21 +8,11 @@ import java.io.InputStreamReader
  * Attempts to hint Windows to use the High Performance GPU for this application by
  * setting HKCU\Software\Microsoft\DirectX\UserGpuPreferences for the current executable path.
  *
- * This affects future launches of the app (Windows reads the preference when a process starts),
- * so a restart is recommended after a change is applied.
+ * The preference has an effect from the next start of the app, because Windows reads it when a
+ * process starts. The app does not tell the user about the change.
  */
 object WindowsGpuPreference {
     private val logger = KotlinLogging.logger {}
-
-    @Volatile private var applied = false
-    @Volatile private var failedReason: String? = null
-    @Volatile private var gpuCount: Int? = null
-
-    fun wasChangeApplied(): Boolean = applied
-    fun failureMessage(): String? = failedReason
-
-    /** The number of GPUs at the time of the change, or null if the count failed or no change occurred (B-35). */
-    fun gpuCountAtChange(): Int? = gpuCount
 
     fun ensureHighPerformancePreference() {
         try {
@@ -35,14 +25,12 @@ object WindowsGpuPreference {
             val regPath = "HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreferences"
             val desired = "GpuPreference=2;" // 2 = High Performance GPU
 
-            var anyChanged = false
             for (exePath in targets) {
                 val current = readRegistryValue(regPath, exePath)
                 val already = current?.contains("GpuPreference=2") == true
                 if (!already) {
                     val ok = writeRegistryValue(regPath, exePath, desired)
                     if (ok) {
-                        anyChanged = true
                         logger.info { "Set HighPerformance GPU preference for $exePath" }
                     } else {
                         logger.warn { "Failed to set HighPerformance GPU preference for $exePath" }
@@ -51,14 +39,7 @@ object WindowsGpuPreference {
                     logger.debug { "HighPerformance GPU preference already set for $exePath" }
                 }
             }
-            // Count the GPUs only after a change, because only the restart popup uses the count.
-            if (anyChanged) gpuCount = WindowsGpuCount.count()
-            applied = anyChanged
-            if (!anyChanged) {
-                failedReason = null // not an error; nothing to do
-            }
         } catch (t: Throwable) {
-            failedReason = t.message
             logger.warn(t) { "Failed to ensure HighPerformance GPU preference." }
         }
     }

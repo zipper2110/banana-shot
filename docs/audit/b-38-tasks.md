@@ -14,6 +14,7 @@ decision to keep the current behavior.
 | # | Decision |
 |---|---|
 | 1 | Decided on 2026-10-05: do this work after the first release. One backlog item (B-38) holds all the findings. |
+| 2 | Q7, decided on 2026-10-24: a comment that starts outside the kept points starts at the start of the first kept point that it overlaps. It loses only its part before that point. From its start, a comment keeps its remaining time and can continue over the next points. No warning, and no cut at the end of a point. |
 
 ## Open questions
 
@@ -28,7 +29,6 @@ decision in "Decisions" at once.
 | Q4 | T7 | Scoreboard sets: show all completed sets, or let the user select the number in the scoreboard style? |
 | Q5 | T8 | Final result: show the final score after the match point until the end of the last point, or for a fixed time (for example 5 s)? |
 | Q6 | T9 | Deciding set: add a rule "10-point tiebreak at 6–6 in the deciding set" and use it in the "Best of 5 sets" preset? Or only change the preset text? |
-| Q7 | T13 | Comments between points in "Only points": warn the user, move the comment to the start of the next point, or both? Also cut a comment at the end of its point? |
 
 ## Tasks
 
@@ -46,7 +46,7 @@ decision in "Decisions" at once.
 | T10 | F-13 | Super-minor | Clear the pending Start | — | open |
 | T11 | F-14, F-15 | Super-minor | Reload the projects list; show damaged projects | — | open |
 | T12 | F-16 | Super-minor | Set a point back to "not scored" | — | open |
-| T13 | F-17 | Super-minor | Comments between points in "Only points" | Q7 | open |
+| T13 | F-17 | Super-minor | Comments between points in "Only points" | Q7 | done |
 
 Status values: `open`, `in-progress`, `done`. When a task is done, write
 the test classes in its "Tests" line. Do not remove the task.
@@ -176,5 +176,6 @@ the test classes in its "Tests" line. Do not remove the task.
 - A comment that starts between two points is not in the video, and the
   user gets no warning. A comment that starts in a point can continue over
   the next points. The behavior depends on Q7.
-- Code: `export/ExportPlanner.kt:299-340`.
-- Tests:
+- Decision 2 sets the behavior.
+- Code: `export/ExportPlanner.kt` (`buildCommentOverlayTimeline`).
+- Tests: `ExportPlannerTest`

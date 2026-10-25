@@ -5,6 +5,7 @@ import java.awt.Container
 import java.awt.Dialog
 import java.awt.EventQueue
 import java.awt.Point
+import java.awt.Rectangle
 import java.awt.Robot
 import java.awt.Toolkit
 import java.awt.Window
@@ -16,6 +17,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 import javax.swing.AbstractButton
 import javax.swing.JComboBox
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JSlider
 import javax.swing.KeyStroke
@@ -169,6 +171,10 @@ class RobotSwingDriver : SwingUiDriver {
     }
 
     private fun click(component: Component) {
+        // A longer translation can push the component below the visible part of a scroll pane. A user scrolls
+        // to it, so the driver does the same before it clicks.
+        onEdt { (component as? JComponent)?.scrollRectToVisible(Rectangle(0, 0, component.width, component.height)) }
+        robot.waitForIdle()
         val center = onEdt {
             val location = component.locationOnScreen
             Point(location.x + component.width / 2, location.y + component.height / 2)

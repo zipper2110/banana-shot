@@ -1,5 +1,6 @@
 package org.litvin.share
 
+import org.litvin.export.scoreboard.ScoreboardFonts
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
@@ -131,7 +132,18 @@ object ThumbnailRenderer {
         return font.deriveFont(mapOf(TextAttribute.TRACKING to (spacing / size).toFloat()))
     }
 
-    internal fun width(text: String, font: Font): Double = if (text.isEmpty()) 0.0 else font.getStringBounds(text, frc).width
+    internal fun width(text: String, font: Font): Double = if (text.isEmpty()) 0.0 else forText(font, text).getStringBounds(text, frc).width
+
+    /**
+     * [font], or the font of the script of [text] when [font] cannot show it (B-11 E8-T2). The size and the spacing
+     * stay. "Segoe UI Black" and "Segoe UI Semibold" become the bold font of the script.
+     */
+    internal fun forText(font: Font, text: String): Font {
+        val family = ScoreboardFonts.family(font.family, text)
+        if (family == font.family) return font
+        val weight = if (font.isBold || font.family != SEGOE) TextAttribute.WEIGHT_BOLD else TextAttribute.WEIGHT_REGULAR
+        return font.deriveFont(mapOf(TextAttribute.FAMILY to family, TextAttribute.WEIGHT to weight))
+    }
 
     private fun ascent(font: Font): Double = font.getLineMetrics("Hg", frc).ascent.toDouble()
     private fun descent(font: Font): Double = font.getLineMetrics("Hg", frc).descent.toDouble()
@@ -176,7 +188,7 @@ object ThumbnailRenderer {
         fun text(text: String, font: Font, rgb: Int, x: Double, baseline: Double, shadow: TextShadow? = null, alpha: Double = 1.0) {
             if (text.isEmpty()) return
             if (font.size2D < SMALL_TEXT) small = true
-            items += Item.Text(text, font, color(rgb, alpha), x, baseline, shadow)
+            items += Item.Text(text, forText(font, text), color(rgb, alpha), x, baseline, shadow)
         }
 
         fun fill(shape: Shape, paint: Paint) {

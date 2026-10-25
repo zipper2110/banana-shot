@@ -35,6 +35,13 @@ internal object MpvAssOverlay {
                     fill = shape.fill,
                     stroke = shape.stroke,
                     strokeWidth = shape.strokeWidth * scale,
+                    turn = if (shape.rotationDeg == 0.0) {
+                        ""
+                    } else {
+                        // ASS turns counterclockwise for a positive angle.
+                        "\\org(${fmt((shape.x + shape.width / 2) * scale)},${fmt((shape.y + shape.height / 2) * scale)})" +
+                            "\\frz${fmt(-shape.rotationDeg)}"
+                    },
                 )
             }
         }
@@ -111,9 +118,17 @@ internal object MpvAssOverlay {
         .replace("{", "\\{")
         .replace("}", "\\}")
 
-    private fun drawing(x: Double, y: Double, path: String, fill: Color?, stroke: Color?, strokeWidth: Double): String {
+    private fun drawing(
+        x: Double,
+        y: Double,
+        path: String,
+        fill: Color?,
+        stroke: Color?,
+        strokeWidth: Double,
+        turn: String = "",
+    ): String {
         val tags = buildString {
-            append("{\\an7\\pos(${fmt(x)},${fmt(y)})\\shad0\\blur0")
+            append("{\\an7\\pos(${fmt(x)},${fmt(y)})$turn\\shad0\\blur0")
             if (fill != null) {
                 append("\\1c${assColor(fill)}\\1a${assAlpha(fill)}")
             } else {

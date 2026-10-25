@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.adjustments
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
+import org.litvin.i18n.LineBreaks
 import org.litvin.ui.commons.HeightForWidth
 import org.litvin.ui.commons.KeyChipStyle
 import org.litvin.ui.commons.KeyChips
@@ -118,7 +119,11 @@ internal class TransformHints(private val hints: List<TransformHint> = Transform
                     words.forEachIndexed { index, word ->
                         val last = index == words.lastIndex
                         val gap = if (!last || part.text.endsWith(" ")) space else 0f
-                        place(part, word, UiKit.textWidth(word, font), gap)
+                        // A Japanese word breaks between its characters, and its pieces have no gap between them.
+                        val pieces = LineBreaks.pieces(word)
+                        pieces.forEachIndexed { pieceIndex, piece ->
+                            place(part, piece, UiKit.textWidth(piece, font), if (pieceIndex == pieces.lastIndex) gap else 0f)
+                        }
                     }
                 }
             }

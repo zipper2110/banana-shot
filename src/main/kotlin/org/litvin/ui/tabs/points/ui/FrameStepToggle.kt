@@ -46,9 +46,13 @@ internal class FrameStepToggle : JButton(tr("points.frameStep")) {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
     }
 
-    private fun labelWidth() = if (compact) 0 else ceil(UiKit.textWidth(text, textFont)).toInt() + GAP
+    private fun labelWidth(compact: Boolean = this.compact) =
+        if (compact) 0 else ceil(UiKit.textWidth(text, textFont)).toInt() + GAP
 
-    override fun getPreferredSize() = Dimension(PAD * 2 + BOX + GAP + labelWidth() + KeyChips.width(KEY), HEIGHT)
+    /** The preferred width of the full or the [compact] toggle, for a layout that selects the form that fits. */
+    fun preferredWidth(compact: Boolean) = PAD * 2 + BOX + GAP + labelWidth(compact) + KeyChips.width(KEY)
+
+    override fun getPreferredSize() = Dimension(preferredWidth(compact), HEIGHT)
 
     override fun getMinimumSize() = preferredSize
     override fun getMaximumSize() = preferredSize

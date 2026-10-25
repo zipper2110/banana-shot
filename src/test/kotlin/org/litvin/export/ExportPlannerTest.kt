@@ -413,7 +413,51 @@ class ExportPlannerTest {
     }
 
     @Test
-    fun trimmedExport_omitsCommentsBeginningOutsideKeptIntervals() {
+    fun trimmedExport_includesCommentThatStartsBeforeAPointForTheOverlap() {
+        // The comment starts 1 s before the point and is 3 s long: it shows for the first 2 s of the point.
+        val edl = EdlV1(
+            points = listOf(point("p1", 5_000, 10_000, favorite = true)),
+            comments = listOf(CommentV1(1, 4_000, 3_000, "Early", "#FFFFFF")),
+        )
+
+        for (favoriteOnly in listOf(false, true)) {
+            val plan = buildPlan(edl, idleTrim = true, favoriteOnly = favoriteOnly, includeComments = true)
+            assertEquals(listOf(CommentOverlaySpan(1, 0, 2_000, "Early", "#FFFFFF")), plan.commentOverlayTimeline)
+        }
+    }
+
+    @Test
+    fun trimmedExport_commentThatStartsBeforeAPointCarriesItsRestAcrossGap() {
+        // The comment starts 1 s before p1 and is 8 s long: 7 s remain from the p1 start.
+        val edl = EdlV1(
+            points = listOf(point("p1", 5_000, 10_000), point("p2", 20_000, 25_000)),
+            comments = listOf(CommentV1(1, 4_000, 8_000, "Rally", "#FFFFFF")),
+        )
+
+        val plan = buildPlan(edl, idleTrim = true, favoriteOnly = false, includeComments = true)
+
+        assertEquals(listOf(CommentOverlaySpan(1, 0, 7_000, "Rally", "#FFFFFF")), plan.commentOverlayTimeline)
+    }
+
+    @Test
+    fun trimmedExport_commentInAGapStartsAtTheNextPointItOverlaps() {
+        // The favorites are p1 and p3. The comment starts in the gap after p1 and ends in p3.
+        val edl = EdlV1(
+            points = listOf(
+                point("p1", 0, 2_000, favorite = true),
+                point("p2", 3_000, 4_000),
+                point("p3", 5_000, 8_000, favorite = true),
+            ),
+            comments = listOf(CommentV1(1, 2_500, 4_000, "Late", "#FFFFFF")),
+        )
+
+        val plan = buildPlan(edl, idleTrim = true, favoriteOnly = true, includeComments = true)
+
+        assertEquals(listOf(CommentOverlaySpan(1, 2_000, 3_500, "Late", "#FFFFFF")), plan.commentOverlayTimeline)
+    }
+
+    @Test
+    fun trimmedExport_omitsCommentsOutsideKeptPoints() {
         val edl = EdlV1(
             points = listOf(point("fav", 0, 1_000, favorite = true), point("other", 2_000, 3_000)),
             comments = listOf(

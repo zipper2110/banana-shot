@@ -83,9 +83,10 @@ class Messages(
 
 /**
  * The plural categories of the CLDR data for the shipped languages (B-11 E7-T2). English, Spanish, Portuguese,
- * French, and German have the categories `one` and `other`. Russian has `one`, `few`, `many`, and `other`. A later language adds
- * its rule here. The CLDR case `many` of Spanish, Portuguese, and French is only for compact numbers ("1 M"), and the
- * app has none.
+ * French, and German have the categories `one` and `other`. Russian has `one`, `few`, `many`, and `other`. Japanese
+ * and Chinese have only `other`, because their nouns have no plural form ("3 ポイント", "3 个回合"). A later language
+ * adds its rule here. The CLDR case `many` of Spanish, Portuguese, and French is only for compact numbers ("1 M"),
+ * and the app has none.
  *
  * The rules cover the numbers that the app shows: integers and numbers with decimals. A number with decimals uses
  * the CLDR category of a visible fraction: `other` in English and Russian ("1.5 seconds", "1,5 секунды").
@@ -98,6 +99,7 @@ object PluralRules {
         language in ZERO_AND_ONE -> if (kotlin.math.abs(amount) < 2.0) ONE else MessagePattern.OTHER
         language.baseCode in ONE_OTHER -> if (amount == 1.0) ONE else MessagePattern.OTHER
         language.baseCode == "ru" -> russian(amount)
+        language.baseCode in OTHER_ONLY -> MessagePattern.OTHER
         else -> error("No plural rule for ${language.code}")
     }
 
@@ -105,11 +107,15 @@ object PluralRules {
     fun categories(language: AppLanguage): Set<String> = when (language.baseCode) {
         in ONE_OTHER -> setOf(ONE, MessagePattern.OTHER)
         "ru" -> setOf(ONE, FEW, MANY, MessagePattern.OTHER)
+        in OTHER_ONLY -> setOf(MessagePattern.OTHER)
         else -> error("No plural rule for ${language.code}")
     }
 
     /** The languages with only `one` and `other`. */
     private val ONE_OTHER = setOf("en", "es", "pt", "fr", "de")
+
+    /** The languages with only `other`. */
+    private val OTHER_ONLY = setOf("ja", "zh")
 
     /** CLDR: one is i = 0 or 1. Thus `one` is for 0, 1, and the numbers with decimals below 2. */
     private val ZERO_AND_ONE = setOf(AppLanguage.PORTUGUESE_BRAZIL, AppLanguage.FRENCH)

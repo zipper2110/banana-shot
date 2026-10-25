@@ -192,11 +192,18 @@ class PointsTableView(
     }
 
     private fun editComment(comment: CommentDto) {
-        val current = CommentInput(comment.startMs, comment.durationMs, comment.text, comment.colorHex, comment.style)
-        CommentDialog.showEdit(this, "points", comment.id, current) { saved ->
-            // The style is in the patch only when the user changed it, so that the panel remembers only a new choice.
+        val current = CommentInput(
+            comment.startMs, comment.durationMs, comment.text, comment.colorHex, comment.style, comment.sizePercent,
+            comment.opacityPercent, comment.rotationDeg,
+        )
+        CommentDialog.showEdit(this, "points", comment.id, current, onPreview = { actions.previewComment(comment.id, it) }) { saved ->
+            // The style, the size, and the opacity are in the patch only when the user changed them,
+            // so that the panel remembers only a new choice.
             val style = saved.style.takeIf { it != comment.style }
-            actions.editComment(comment.id, CommentPatch(saved.startMs, saved.durationMs, saved.text, saved.colorHex, style))
+            val size = saved.sizePercent.takeIf { it != comment.sizePercent }
+            val opacity = saved.opacityPercent.takeIf { it != comment.opacityPercent }
+            val patch = CommentPatch(saved.startMs, saved.durationMs, saved.text, saved.colorHex, style, size, opacity, saved.rotationDeg)
+            actions.editComment(comment.id, patch)
         }
     }
 

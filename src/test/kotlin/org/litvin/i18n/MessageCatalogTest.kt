@@ -245,6 +245,84 @@ class MessageCatalogTest {
         assertEquals(emptyList<String>(), failures)
     }
 
+    @Test
+    fun `the Japanese catalog has texts in Japanese`() {
+        val japanese = Messages.of(AppLanguage.JAPANESE)
+        assertEquals("エクスポート", japanese.text("export.table.title"))
+        assertEquals("1 ポイント", japanese.text("export.points", mapOf("count" to 1)))
+        assertEquals("3 ポイント", japanese.text("export.points", mapOf("count" to 3)))
+        assertEquals("ペア1", japanese.text("sport.padel.side", mapOf("number" to 1)))
+        assertEquals("プロジェクト「X」を削除しますか？", japanese.text("projects.delete.question", mapOf("project" to "X")))
+        assertTrue(japanese.text("help.points.summary").startsWith("試合の各ポイント"))
+    }
+
+    /**
+     * B-11 E8-L-ja: Japanese uses 「…」 quotes. A straight apostrophe before a placeholder starts an ICU quote.
+     */
+    @Test
+    fun `Japanese texts use the Japanese quotes`() {
+        val failures = MessageCatalog.loadWithParents(AppLanguage.JAPANESE).toSortedMap().mapNotNull { (key, text) ->
+            JAPANESE_QUOTES.find(text)?.let { "$key: ${it.value}" }
+        }
+        assertEquals(emptyList<String>(), failures)
+    }
+
+    @Test
+    fun `the Chinese catalogs have texts in Simplified and in Traditional Chinese`() {
+        val simplified = Messages.of(AppLanguage.CHINESE_SIMPLIFIED)
+        assertEquals("导出", simplified.text("export.table.title"))
+        assertEquals("1 个回合", simplified.text("export.points", mapOf("count" to 1)))
+        assertEquals("3 个回合", simplified.text("export.points", mapOf("count" to 3)))
+        assertEquals("组合 1", simplified.text("sport.padel.side", mapOf("number" to 1)))
+        assertEquals("要删除项目“X”吗？", simplified.text("projects.delete.question", mapOf("project" to "X")))
+        assertTrue(simplified.text("help.points.summary").startsWith("标记比赛的每个回合"))
+        val traditional = Messages.of(AppLanguage.CHINESE_TRADITIONAL)
+        assertEquals("匯出", traditional.text("export.table.title"))
+        assertEquals("3 個回合", traditional.text("export.points", mapOf("count" to 3)))
+        assertEquals("組合 1", traditional.text("sport.padel.side", mapOf("number" to 1)))
+        assertEquals("要刪除專案「X」嗎？", traditional.text("projects.delete.question", mapOf("project" to "X")))
+        assertTrue(traditional.text("help.points.summary").startsWith("標記比賽的每個回合"))
+    }
+
+    /**
+     * B-11 E8-L-zh-Hans and E8-L-zh-Hant: Simplified Chinese uses “…” quotes, and Traditional Chinese uses 「…」. A
+     * straight apostrophe before a placeholder starts an ICU quote.
+     */
+    @Test
+    fun `Chinese texts use the quotes of their script`() {
+        val failures = mapOf(AppLanguage.CHINESE_SIMPLIFIED to SIMPLIFIED_CHINESE_QUOTES, AppLanguage.CHINESE_TRADITIONAL to JAPANESE_QUOTES)
+            .flatMap { (language, quotes) ->
+                MessageCatalog.loadWithParents(language).toSortedMap().mapNotNull { (key, text) ->
+                    quotes.find(text)?.let { "${language.code} $key: ${it.value}" }
+                }
+            }
+        assertEquals(emptyList<String>(), failures)
+    }
+
+    /**
+     * B-11 E8-L-zh-Hant: the Traditional texts use the Taiwan terms, not the mainland terms in traditional characters
+     * (for example "影片", not "視頻"). A conversion of only the characters gives the mainland terms.
+     */
+    @Test
+    fun `Traditional Chinese uses the Taiwan terms`() {
+        val failures = MessageCatalog.loadWithParents(AppLanguage.CHINESE_TRADITIONAL).toSortedMap().mapNotNull { (key, text) ->
+            MAINLAND_TERMS.find(text)?.let { "$key: ${it.value}" }
+        }
+        assertEquals(emptyList<String>(), failures)
+    }
+
+    /** B-11 E8-L-zh-Hant: a Traditional character in a Simplified text, or the reverse, shows that a text is wrong. */
+    @Test
+    fun `each Chinese catalog uses only the characters of its script`() {
+        val simplified = MessageCatalog.loadWithParents(AppLanguage.CHINESE_SIMPLIFIED).toSortedMap().mapNotNull { (key, text) ->
+            text.filter { it in TRADITIONAL_ONLY }.takeIf { it.isNotEmpty() }?.let { "zh-Hans $key: $it" }
+        }
+        val traditional = MessageCatalog.loadWithParents(AppLanguage.CHINESE_TRADITIONAL).toSortedMap().mapNotNull { (key, text) ->
+            text.filter { it in SIMPLIFIED_ONLY }.takeIf { it.isNotEmpty() }?.let { "zh-Hant $key: $it" }
+        }
+        assertEquals(emptyList<String>(), simplified + traditional)
+    }
+
     /**
      * B-11 E7-L-fr: French has a no-break space before ":", ";", "?", "!", and "%", and inside « … ». A normal space
      * can break the line before the mark. A straight apostrophe before a placeholder starts an ICU quote, so French uses
@@ -312,6 +390,20 @@ class MessageCatalogTest {
         val FRENCH_SPACING = Regex(" [:;?!%»]|« |[^\\s\\u00A0][;?!»]|«[^\\u00A0]|'")
         /** A quote that German does not use: straight, English opening, French, or a straight apostrophe. */
         val GERMAN_QUOTES = Regex("[\"”«»']")
+        /** A quote that Japanese does not use: straight, English, French, or German, or a straight apostrophe. */
+        val JAPANESE_QUOTES = Regex("[\"“”«»„']")
+        /** A quote that Simplified Chinese does not use: straight, Japanese, French, or German, or a straight apostrophe. */
+        val SIMPLIFIED_CHINESE_QUOTES = Regex("[\"「」『』«»„']")
+        /**
+         * Mainland terms in traditional characters. The Taiwan terms are 影片, 專案, 匯出, 匯入, 預設, 資訊, 螢幕, 滑鼠, 軟體,
+         * 網路, 品質, 解析度, 位元速率, and 影格. "項目" alone is also correct in Taiwan for an item or an entry ("統計項目"),
+         * so only the phrases with "project" count.
+         */
+        val MAINLAND_TERMS = Regex("視頻|新項目|項目名稱|打開項目|當前項目|最近的項目|導出|導入|默認|信息|屏幕|鼠標|軟件|網絡|質量|分辨率|碼率|幀")
+        /** Common characters that only Simplified Chinese uses. */
+        const val SIMPLIFIED_ONLY = "个们这时档设视项导选择删录击开关应软体数据网页说话认识论边处总门问间预览颜级转换线组队变让还没对过发会"
+        /** The Traditional forms of [SIMPLIFIED_ONLY], in the same order. */
+        const val TRADITIONAL_ONLY = "個們這時檔設視項導選擇刪錄擊開關應軟體數據網頁說話認識論邊處總門問間預覽顏級轉換線組隊變讓還沒對過發會"
         val BRAZIL_WORDS = Regex(
             "(?<![\\p{L}])(tela|arquivos?|placar(es)?|salvar|baixar|excluir|usuários?|configurações|pressione|celular|esportes?|tênis|abas?|games?|saque|você)(?![\\p{L}])",
             RegexOption.IGNORE_CASE,

@@ -60,42 +60,6 @@ import kotlin.test.assertTrue
 
 class SwingApplicationFactoryTest {
     @Test
-    fun `test mode suppresses the GPU restart notification`() {
-        assertTrue(
-            SwingApplicationFactory.shouldShowGpuRestartNotification(
-                show = true,
-                testEnabled = false,
-                gpuPreferenceChanged = true,
-                gpuCount = 2,
-            )
-        )
-        assertFalse(
-            SwingApplicationFactory.shouldShowGpuRestartNotification(
-                show = true,
-                testEnabled = true,
-                gpuPreferenceChanged = true,
-                gpuCount = 2,
-            )
-        )
-    }
-
-    @Test
-    fun `the GPU restart notification shows only with more than one GPU`() {
-        fun showFor(gpuCount: Int?) = SwingApplicationFactory.shouldShowGpuRestartNotification(
-            show = true,
-            testEnabled = false,
-            gpuPreferenceChanged = true,
-            gpuCount = gpuCount,
-        )
-        assertFalse(showFor(0))
-        assertFalse(showFor(1))
-        assertTrue(showFor(2))
-        assertTrue(showFor(3))
-        // A failed count shows the notification (the safe default).
-        assertTrue(showFor(null))
-    }
-
-    @Test
     fun `a project can return to Projects after opening`() {
         val projectFixture = OpenProjectFixture()
         val fixture = TestServices(projectsRepository = projectFixture.repository)

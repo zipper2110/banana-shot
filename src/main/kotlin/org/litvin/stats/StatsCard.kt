@@ -274,14 +274,16 @@ object StatsCard {
         opacity: Double = 1.0,
         maxWidth: Double = Double.MAX_VALUE,
     ): SceneItem.Label {
+        // A Japanese text uses the Japanese font (B-11 E8-T2).
+        val family = ScoreboardFonts.family(SEGOE, text)
         var fitted = text
         var fittedSize = size
-        fun width() = ScoreboardFonts.textWidth(fitted, SEGOE, bold, fittedSize, spacing)
+        fun width() = ScoreboardFonts.textWidth(fitted, family, bold, fittedSize, spacing)
         while (width() > maxWidth && fittedSize > size * MIN_SHRINK) fittedSize -= 1.0
         while (width() > maxWidth && fitted.length > 1) fitted = fitted.dropLast(2) + "…"
         val middleY = if (anchor == TextAnchor.TOP_LEFT || anchor == TextAnchor.TOP_RIGHT) y else
-            ScoreboardFonts.middleYForCapCenter(y, SEGOE, bold, fittedSize)
-        return SceneItem.Label(x, middleY, fitted, SEGOE, fittedSize, rgb, bold, anchor, opacity, spacing)
+            ScoreboardFonts.middleYForCapCenter(y, family, bold, fittedSize)
+        return SceneItem.Label(x, middleY, fitted, family, fittedSize, rgb, bold, anchor, opacity, spacing)
     }
 
     private fun rgb(hex: String, fallback: Int): Int = hex.removePrefix("#").toIntOrNull(16) ?: fallback

@@ -2,6 +2,7 @@ package org.litvin.ui.flow
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.litvin.i18n.tr
 import org.litvin.scoring.DeuceRule
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.Sport
@@ -42,12 +43,12 @@ class ApplicationShellUiFlowIT {
         application.assertProjectsOnlyNavigation()
         application.projects.importMatch(projectName = "Club final")
         application.points.assertReady()
-        application.assertTitle("BananaShot — Points — Club final")
+        application.assertTitle("BananaShot — ${tr("tab.points")} — Club final")
 
         application.projects.open()
             .renameCurrent("Semi final")
             .assertCurrentProject("Semi final")
-        application.assertTitle("BananaShot — Projects — Semi final")
+        application.assertTitle("BananaShot — ${tr("tab.projects")} — Semi final")
         assertEquals("Semi final", context.fixtures.onlyProject().manifest.name)
     }
 
@@ -61,8 +62,8 @@ class ApplicationShellUiFlowIT {
         val score = ScoreIO.readForProjectDir(created.directory.toString())
         assertEquals(Sport.PADEL, score.sport)
         assertEquals(DeuceRule.NO_AD, score.rules.deuce)
-        assertEquals("Team 1", score.player1Name)
-        assertEquals("Team 2", score.player2Name)
+        assertEquals(Sport.PADEL.defaultSideName(1), score.player1Name)
+        assertEquals(Sport.PADEL.defaultSideName(2), score.player2Name)
     }
 
     companion object {

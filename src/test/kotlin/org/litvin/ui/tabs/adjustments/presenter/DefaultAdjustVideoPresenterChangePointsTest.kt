@@ -40,6 +40,7 @@ class DefaultAdjustVideoPresenterChangePointsTest {
     fun `an edit after a change point changes the change point and not the usual values`() = onEdt {
         presenter.attach(view)
         presenter.onActivated()
+        presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.TRANSFORM))
         presenter.onIntent(AdjustVideoIntent.ChangeTransform(AdjustmentsV1(rotationDeg = 1.0f)))
         presenter.onIntent(AdjustVideoIntent.PlayheadMoved(10_000))
         presenter.onIntent(AdjustVideoIntent.AddChangePoint)
@@ -73,6 +74,7 @@ class DefaultAdjustVideoPresenterChangePointsTest {
     fun `the fill color applies to the whole video and not to a change point`() = onEdt {
         presenter.attach(view)
         presenter.onActivated()
+        presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.TRANSFORM))
         presenter.onIntent(AdjustVideoIntent.PlayheadMoved(10_000))
         presenter.onIntent(AdjustVideoIntent.AddChangePoint)
         presenter.onIntent(AdjustVideoIntent.ChangeBackground("#336699"))
@@ -85,26 +87,34 @@ class DefaultAdjustVideoPresenterChangePointsTest {
     }
 
     @Test
-    fun `a change point has the colors and the transform`() = onEdt {
+    fun `each sub-tab has its own change points`() = onEdt {
         presenter.attach(view)
         presenter.onActivated()
         presenter.onIntent(AdjustVideoIntent.PlayheadMoved(10_000))
         presenter.onIntent(AdjustVideoIntent.AddChangePoint)
         presenter.onIntent(AdjustVideoIntent.ChangeColors(AdjustmentsV1(brightness = 1.3f)))
+        assertEquals(listOf(10_000L), view.state.changePointTimes)
+
         presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.TRANSFORM))
+        assertEquals(emptyList(), view.state.changePointTimes)
+        assertTrue(view.state.canAddChangePoint)
+        assertFalse(view.state.canRemoveChangePoint)
+
+        presenter.onIntent(AdjustVideoIntent.PlayheadMoved(20_000))
+        presenter.onIntent(AdjustVideoIntent.AddChangePoint)
         presenter.onIntent(AdjustVideoIntent.ChangeTransform(AdjustmentsV1(rotationDeg = 2.0f)))
 
         val stored = adjustments.get()
         assertEquals(listOf(10_000L), stored.colorKeys.map { it.atMs })
-        assertEquals(listOf(10_000L), stored.geometryKeys.map { it.atMs })
+        assertEquals(listOf(20_000L), stored.geometryKeys.map { it.atMs })
         assertEquals(1.3f, stored.colorKeys.single().brightness)
         assertEquals(2.0f, stored.geometryKeys.single().rotationDeg)
         assertEquals(1.0f, stored.brightness)
         assertEquals(0.0f, stored.rotationDeg)
-        assertEquals(listOf(10_000L), view.state.changePointTimes)
+        assertEquals(listOf(20_000L), view.state.changePointTimes)
 
         presenter.onIntent(AdjustVideoIntent.RemoveChangePoint)
-        assertTrue(adjustments.get().colorKeys.isEmpty())
+        assertEquals(listOf(10_000L), adjustments.get().colorKeys.map { it.atMs })
         assertTrue(adjustments.get().geometryKeys.isEmpty())
     }
 
@@ -130,11 +140,16 @@ class DefaultAdjustVideoPresenterChangePointsTest {
         adjustments.set(
             AdjustmentsV1(
                 colorKeys = listOf(ColorKeyV1(atMs = 5_000, contrast = 1.5f)),
-                geometryKeys = listOf(GeometryKeyV1(atMs = 5_000, rotationDeg = 2.0f)),
+                geometryKeys = listOf(GeometryKeyV1(atMs = 4_000, rotationDeg = 2.0f)),
             ),
         )
         presenter.onActivated()
         assertEquals(0.0f, view.state.editing.rotationDeg)
+        assertEquals(1.0f, view.state.editing.contrast)
+
+        // The Colors sub-tab is open. A transform change point also changes the shown values.
+        presenter.onIntent(AdjustVideoIntent.PlayheadMoved(4_500))
+        assertEquals(2.0f, view.state.editing.rotationDeg)
         assertEquals(1.0f, view.state.editing.contrast)
 
         presenter.onIntent(AdjustVideoIntent.PlayheadMoved(6_000))
@@ -145,7 +160,7 @@ class DefaultAdjustVideoPresenterChangePointsTest {
         assertEquals(listOf<AdjustVideoViewEffect>(AdjustVideoViewEffect.SeekTo(5_000)), view.effects)
 
         presenter.onIntent(AdjustVideoIntent.RemoveChangePoint)
-        assertTrue(adjustments.get().geometryKeys.isEmpty())
         assertTrue(adjustments.get().colorKeys.isEmpty())
+        assertEquals(listOf(4_000L), adjustments.get().geometryKeys.map { it.atMs })
     }
 }

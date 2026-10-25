@@ -3,13 +3,11 @@ package org.litvin.app
 import org.litvin.AppInfo
 import org.litvin.ApplicationLayout
 import org.litvin.SwingMainApp
-import org.litvin.WindowsGpuPreference
 import org.litvin.media.MediaScreen
 import org.litvin.ui.UiStyles
 import org.litvin.ui.commons.AppIcon
 import org.litvin.ui.commons.AppTheme
 import org.litvin.ui.commons.AppShortcuts
-import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.MessageDialog
@@ -132,19 +130,6 @@ object SwingApplicationFactory {
         background = services.executors.createExecutor("feedback-send"),
         ui = EventQueue::invokeLater,
     )
-
-    /**
-     * With one GPU, the GPU preference has no effect, so the restart popup is not necessary (B-35).
-     * If the GPU count is not available ([gpuCount] is null), the popup shows. A missing popup on a
-     * system with two GPUs keeps the app on the slow GPU until the next start. An unnecessary popup
-     * on a system with one GPU shows only one time.
-     */
-    internal fun shouldShowGpuRestartNotification(
-        show: Boolean,
-        testEnabled: Boolean,
-        gpuPreferenceChanged: Boolean,
-        gpuCount: Int?,
-    ): Boolean = show && !testEnabled && gpuPreferenceChanged && (gpuCount == null || gpuCount > 1)
 
     private fun openWithDesktop(file: File): Boolean = runCatching { Desktop.getDesktop().open(file) }.isSuccess
 
@@ -818,21 +803,6 @@ object SwingApplicationFactory {
                 }
             }
 
-            if (shouldShowGpuRestartNotification(
-                    show,
-                    testEnabled,
-                    WindowsGpuPreference.wasChangeApplied(),
-                    WindowsGpuPreference.gpuCountAtChange(),
-                )
-            ) {
-                MessageDialog.show(
-                    frame,
-                    MessageKind.INFO,
-                    tr("gpu.title"),
-                    tr("gpu.text"),
-                    DialogKit.WIDE,
-                )
-            }
             if (show && !askConsent) showFirstLaunchOverview()
             if (show) showLanguageNotice(frame, languageSettings, firstStart, languageSetting)
 

@@ -3,7 +3,6 @@ package org.litvin.ui.tabs.adjustments.presenter
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsV1
-import org.litvin.adjustments.ChangePoints
 import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.CropGeometryMath
 import org.litvin.adjustments.GeometryTimeline
@@ -11,6 +10,7 @@ import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.analytics.DisabledAnalytics
 import org.litvin.projects.ManifestIO
+import org.litvin.ui.commons.ChangePointsState
 import java.awt.EventQueue
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -122,11 +122,17 @@ class DefaultAdjustVideoPresenter(
             AdjustVideoIntent.AddChangePoint -> {
                 if (!state.canAddChangePoint) return
                 val at = state.playheadMs
-                changeKeys { previous -> ChangePoints.withAdded(previous, at) }
+                when (state.section) {
+                    AdjustSection.COLORS -> changeKeys { previous -> ColorTimeline.withKeyAdded(previous, at) }
+                    AdjustSection.TRANSFORM -> changeKeys { previous -> GeometryTimeline.withKeyAdded(previous, at) }
+                }
             }
             AdjustVideoIntent.RemoveChangePoint -> {
                 val at = state.playheadMs
-                changeKeys { previous -> ChangePoints.withRemoved(previous, at) }
+                when (state.section) {
+                    AdjustSection.COLORS -> changeKeys { previous -> ColorTimeline.withKeyRemoved(previous, at) }
+                    AdjustSection.TRANSFORM -> changeKeys { previous -> GeometryTimeline.withKeyRemoved(previous, at) }
+                }
             }
             AdjustVideoIntent.GoToPreviousChangePoint -> state.previousChangePointMs?.let { seekTo(it) }
             AdjustVideoIntent.GoToNextChangePoint -> state.nextChangePointMs?.let { seekTo(it) }
@@ -168,22 +174,27 @@ class DefaultAdjustVideoPresenter(
         analytics.record(AnalyticsEvent.ColorChanged)
     }
 
-    /** Keeps the playhead. The view renders again only when the controls must show other values or buttons. */
+    /**
+     * Keeps the playhead. The view renders again only when the controls must show other values or buttons. The
+     * change points of the two sub-tabs count: the preview shows the colors and the transform together.
+     */
     private fun movePlayhead(ms: Long) {
         val before = state
         val after = before.copy(playheadMs = ms.coerceAtLeast(0L))
         state = after
-        val beforePoints = before.changePoints
-        val afterPoints = after.changePoints
-        val changed = afterPoints.activeIndex != beforePoints.activeIndex ||
-            afterPoints.canAdd != beforePoints.canAdd ||
-            afterPoints.previousMs != beforePoints.previousMs ||
-            afterPoints.nextMs != beforePoints.nextMs
+        val changed = changed(before.colorChangePoints, after.colorChangePoints) ||
+            changed(before.transformChangePoints, after.transformChangePoints)
         if (changed) {
             countedColors = colorsOf(after.editing)
             render()
         }
     }
+
+    private fun changed(before: ChangePointsState, after: ChangePointsState): Boolean =
+        after.activeIndex != before.activeIndex ||
+            after.canAdd != before.canAdd ||
+            after.previousMs != before.previousMs ||
+            after.nextMs != before.nextMs
 
     private fun seekTo(ms: Long) {
         movePlayhead(ms)

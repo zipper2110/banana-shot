@@ -1,6 +1,7 @@
 package org.litvin
 
 import org.litvin.points.CommentDefaultsV1
+import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
 import org.litvin.points.components.CommentDispatcher
@@ -79,5 +80,56 @@ class CommentDispatcherTest {
         assertFalse(dispatcher.update(1, CommentPatch(colorHex = "blue")))
 
         assertEquals(before, dispatcher.state())
+    }
+
+    @Test
+    fun updatePosition_movesTheCommentAndTheDefaultPositionRemovesIt() {
+        val dispatcher = CommentDispatcher()
+        dispatcher.load(CommentState(listOf(CommentV1(1, 0, 1_000, "Serve", "#FFFFFF")), CommentDefaultsV1(), 2))
+
+        assertTrue(dispatcher.update(1, CommentPatch(position = CommentPosition(0.25, 0.3))))
+        assertEquals(CommentPosition(0.25, 0.3), dispatcher.state().comments.single().position)
+
+        assertTrue(dispatcher.update(1, CommentPatch(text = "Return")), "Other changes keep the position")
+        assertEquals(CommentPosition(0.25, 0.3), dispatcher.state().comments.single().position)
+
+        assertTrue(dispatcher.update(1, CommentPatch(position = CommentPosition(1.5, Double.NaN))), "A position that is not a number is ignored")
+        assertEquals(CommentPosition(0.25, 0.3), dispatcher.state().comments.single().position)
+
+        assertTrue(dispatcher.update(1, CommentPatch(position = CommentPosition.DEFAULT)))
+        assertNull(dispatcher.state().comments.single().position, "A comment at the default position has no position")
+    }
+
+    @Test
+    fun sizeAndOpacity_areKeptInTheirRanges() {
+        val dispatcher = CommentDispatcher()
+        dispatcher.load(CommentState(emptyList(), CommentDefaultsV1(), 1))
+
+        val created = dispatcher.create(startMs = 0, durationMs = 1_000, text = "Big", sizePercent = 500, opacityPercent = 0)!!
+        assertEquals(CommentV1.MAX_SIZE_PERCENT, created.sizePercent)
+        assertEquals(CommentV1.MIN_OPACITY_PERCENT, created.opacityPercent)
+
+        assertTrue(dispatcher.update(created.id, CommentPatch(sizePercent = 150, opacityPercent = 70)))
+        val updated = dispatcher.state().comments.single()
+        assertEquals(150, updated.sizePercent)
+        assertEquals(70, updated.opacityPercent)
+
+        assertTrue(dispatcher.update(created.id, CommentPatch(text = "Small")), "Other changes keep the size and the opacity")
+        assertEquals(150 to 70, dispatcher.state().comments.single().let { it.sizePercent to it.opacityPercent })
+    }
+
+    @Test
+    fun rotation_isKeptInItsRange_andOtherChangesKeepIt() {
+        val dispatcher = CommentDispatcher()
+        dispatcher.load(CommentState(emptyList(), CommentDefaultsV1(), 1))
+
+        val created = dispatcher.create(startMs = 0, durationMs = 1_000, text = "Turn", rotationDeg = 200)!!
+        assertEquals(-160, created.rotationDeg)
+
+        assertTrue(dispatcher.update(created.id, CommentPatch(rotationDeg = 15)))
+        assertEquals(15, dispatcher.state().comments.single().rotationDeg)
+
+        assertTrue(dispatcher.update(created.id, CommentPatch(position = CommentPosition(0.2, 0.3), sizePercent = 120)))
+        assertEquals(15, dispatcher.state().comments.single().rotationDeg, "A move and a resize keep the rotation")
     }
 }

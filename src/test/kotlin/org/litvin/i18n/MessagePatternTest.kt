@@ -75,6 +75,30 @@ class MessagePatternTest {
         assertEquals(setOf(PluralRules.ONE, MessagePattern.OTHER), PluralRules.categories(AppLanguage.GERMAN))
     }
 
+    /** B-11 E8-L-ja: a Japanese noun has no plural form, so Japanese has only `other` (CLDR). */
+    @Test
+    fun `a Japanese plural uses only other`() {
+        val pattern = "{count, plural, other {# ポイント}}"
+        listOf(0, 1, 2, 21).forEach { count ->
+            assertEquals("$count ポイント", format(pattern, "count" to count, language = AppLanguage.JAPANESE))
+        }
+        assertEquals(MessagePattern.OTHER, PluralRules.category(AppLanguage.JAPANESE, 1.0))
+        assertEquals(MessagePattern.OTHER, PluralRules.category(AppLanguage.JAPANESE, 1.5))
+        assertEquals(setOf(MessagePattern.OTHER), PluralRules.categories(AppLanguage.JAPANESE))
+    }
+
+    /** B-11 E8-L-zh-Hans and E8-L-zh-Hant: a Chinese noun has no plural form, so Chinese has only `other` (CLDR). */
+    @Test
+    fun `a Chinese plural uses only other`() {
+        listOf(AppLanguage.CHINESE_SIMPLIFIED to "个回合", AppLanguage.CHINESE_TRADITIONAL to "個回合").forEach { (language, noun) ->
+            listOf(0, 1, 2, 21).forEach { count ->
+                assertEquals("$count $noun", format("{count, plural, other {# $noun}}", "count" to count, language = language))
+            }
+            assertEquals(MessagePattern.OTHER, PluralRules.category(language, 1.0))
+            assertEquals(setOf(MessagePattern.OTHER), PluralRules.categories(language))
+        }
+    }
+
     /** B-11 E7-T2: the CLDR rule of Russian, also for 0, the teens, and a number with decimals. */
     @Test
     fun `a Russian plural uses the four Russian categories`() {

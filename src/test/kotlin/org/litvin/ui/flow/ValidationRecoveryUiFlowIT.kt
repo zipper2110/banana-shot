@@ -3,6 +3,7 @@ package org.litvin.ui.flow
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.litvin.i18n.tr
 import org.litvin.points.EdlIO
 import org.litvin.projects.ManifestIO
 import org.litvin.ui.flow.harness.SwingUiFlowExtension
@@ -54,7 +55,7 @@ class ValidationRecoveryUiFlowIT {
         application.projects.open().openRecent(project.manifest.id)
         application.export.open()
             .setIdleTrim(true)
-            .assertInitializeExplainsBlockedRender("no valid points")
+            .assertInitializeExplainsBlockedRender(tr("export.readiness.noPoints"))
             .setIdleTrim(false)
             .assertInitializeEnabled(true)
     }

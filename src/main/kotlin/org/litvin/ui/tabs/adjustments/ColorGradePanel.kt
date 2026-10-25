@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.adjustments
 
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
+import org.litvin.i18n.LineBreaks
 import org.litvin.ui.commons.CardColumn
 import org.litvin.ui.commons.HeightForWidth
 import org.litvin.ui.commons.Palette
@@ -98,12 +99,15 @@ internal class LivePreviewNotice : JComponent(), HeightForWidth {
         val lines = mutableListOf<String>()
         var current = ""
         for (word in ColorGradePanel.NOTICE_TEXT.split(' ')) {
-            val candidate = if (current.isEmpty()) word else "$current $word"
-            if (current.isNotEmpty() && UiKit.textWidth(candidate, textFont) > maxWidth) {
-                lines += current
-                current = word
-            } else {
-                current = candidate
+            // A Japanese word breaks between its characters, and its pieces join without a space.
+            LineBreaks.pieces(word).forEachIndexed { index, part ->
+                val candidate = if (current.isEmpty()) part else if (index == 0) "$current $part" else "$current$part"
+                if (current.isNotEmpty() && UiKit.textWidth(candidate, textFont) > maxWidth) {
+                    lines += current
+                    current = part
+                } else {
+                    current = candidate
+                }
             }
         }
         if (current.isNotEmpty()) lines += current

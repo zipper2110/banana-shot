@@ -137,6 +137,28 @@ class EffectiveExpiryTest {
     }
 
     @Test
+    fun `the moment shows in Japanese with the year, month, and day marks`() {
+        I18n.install(Messages.of(AppLanguage.JAPANESE))
+        try {
+            assertEquals("2027年3月29日 16:00", ExpiryMomentFormat.format(Instant.parse("2027-03-30T00:00:00Z"), ZoneOffset.ofHours(-8)))
+        } finally {
+            I18n.install(Messages.english())
+        }
+    }
+
+    @Test
+    fun `the moment shows in Chinese with the year, month, and day marks`() {
+        listOf(AppLanguage.CHINESE_SIMPLIFIED, AppLanguage.CHINESE_TRADITIONAL).forEach { language ->
+            I18n.install(Messages.of(language))
+            try {
+                assertEquals("2027年3月29日 16:00", ExpiryMomentFormat.format(Instant.parse("2027-03-30T00:00:00Z"), ZoneOffset.ofHours(-8)), language.code)
+            } finally {
+                I18n.install(Messages.english())
+            }
+        }
+    }
+
+    @Test
     fun `the moment shows in Russian with the genitive month and the year mark`() {
         I18n.install(Messages.of(AppLanguage.RUSSIAN))
         try {

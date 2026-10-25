@@ -3,6 +3,7 @@ package org.litvin.points.components
 import org.litvin.i18n.tr
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.points.CommentDefaultsV1
+import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
@@ -14,6 +15,11 @@ data class CommentPatch(
     val text: String? = null,
     val colorHex: String? = null,
     val style: CommentStyle? = null,
+    /** The new position. [CommentPosition.DEFAULT] removes the position, so the comment uses the default place. */
+    val position: CommentPosition? = null,
+    val sizePercent: Int? = null,
+    val opacityPercent: Int? = null,
+    val rotationDeg: Int? = null,
 )
 
 data class CommentState(
@@ -61,6 +67,9 @@ class CommentDispatcher {
         text: String,
         colorHex: String? = null,
         style: CommentStyle = CommentStyle.OUTLINE,
+        sizePercent: Int = CommentV1.DEFAULT_SIZE_PERCENT,
+        opacityPercent: Int = 100,
+        rotationDeg: Int = 0,
     ): CommentV1? {
         val requestedColor = colorHex?.let(EdlIO::normalizeColorHex)
         if (colorHex != null && requestedColor == null) {
@@ -77,6 +86,9 @@ class CommentDispatcher {
             text = text.trim(),
             colorHex = color,
             style = style,
+            sizePercent = EdlIO.normalizeSizePercent(sizePercent),
+            opacityPercent = EdlIO.normalizeOpacityPercent(opacityPercent),
+            rotationDeg = EdlIO.normalizeRotationDeg(rotationDeg),
         )
         comments += comment
         comments.sortWith(compareBy<CommentV1> { it.startMs }.thenBy { it.id })
@@ -103,6 +115,14 @@ class CommentDispatcher {
             text = (patch.text ?: existing.text).trim(),
             colorHex = requestedColor ?: existing.colorHex,
             style = patch.style ?: existing.style,
+            position = when (val position = EdlIO.normalizePosition(patch.position)) {
+                null -> existing.position
+                CommentPosition.DEFAULT -> null
+                else -> position
+            },
+            sizePercent = patch.sizePercent?.let(EdlIO::normalizeSizePercent) ?: existing.sizePercent,
+            opacityPercent = patch.opacityPercent?.let(EdlIO::normalizeOpacityPercent) ?: existing.opacityPercent,
+            rotationDeg = patch.rotationDeg?.let(EdlIO::normalizeRotationDeg) ?: existing.rotationDeg,
         )
         if (!isValid(updated.startMs, updated.durationMs, updated.text, updated.colorHex)) return false
 

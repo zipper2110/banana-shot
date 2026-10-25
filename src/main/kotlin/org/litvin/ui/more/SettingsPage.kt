@@ -11,6 +11,7 @@ import org.litvin.ui.commons.SectionPage
 import org.litvin.ui.commons.SwatchButton
 import org.litvin.ui.commons.ThemeSettings
 import org.litvin.ui.commons.UiButton
+import org.litvin.ui.commons.UiFonts
 import org.litvin.ui.commons.ThemeSwitch
 import org.litvin.ui.commons.UiKit
 import java.awt.Dimension
@@ -105,6 +106,8 @@ internal class SettingsPage(
         ).apply {
             name = "more-settings-language"
             DialogKit.styleCombo(this)
+            // "日本語" needs a Japanese font also when the app is in another language.
+            UiFonts.showLanguageNames(this) { it.language ?: setting.systemLanguage }
             selectedIndex = options.indexOf(setting.choice).coerceAtLeast(0)
         }
         val restart = setting.restart

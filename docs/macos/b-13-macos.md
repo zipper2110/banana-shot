@@ -73,7 +73,7 @@ Apple Developer account. The preview spike can change this number.
 | Native folder | `natives/windows-x64`, `ffmpeg.exe`, `ffprobe.exe` | `natives/macos-arm64`, no `.exe` | `ApplicationLayout.kt` |
 | Packaged launcher | `BananaShot.exe` | `BananaShot.app/Contents/MacOS/BananaShot` | `ApplicationLayout.kt` |
 | Data folder | `%APPDATA%\BananaShot` | `~/Library/Application Support/BananaShot` (now the fallback is `~/.bananashot`) | `ApplicationLayout.kt` |
-| GPU choice | Registry key `UserGpuPreferences`, DXGI GPU count | Not necessary. macOS selects the GPU. Skip on macOS | `WindowsGpuPreference.kt`, `WindowsGpuCount.kt` |
+| GPU choice | Registry key `UserGpuPreferences` | Not necessary. macOS selects the GPU. Skip on macOS | `WindowsGpuPreference.kt` |
 | Encoder choice | `powershell.exe Get-CimInstance Win32_VideoController` | VideoToolbox is always the hardware encoder on a Mac | `FFmpegCapabilities.kt` |
 | Hardware encoders | `h264_nvenc`, `h264_amf`, `h264_qsv` | `h264_videotoolbox` | `export/EncoderCapabilities.kt`, `FFmpegCommandBuilder.kt` |
 | Run time counter | `Kernel32.GetTickCount64` (counts sleep) | A clock that counts sleep (see "6. Platform services") | `license/time/RunTimeCounter.kt` |
@@ -83,7 +83,7 @@ Apple Developer account. The preview spike can change this number.
 | Show in folder | `Desktop.open`, then `explorer.exe` | `Desktop.open`, then `open -R <file>` | `ui/tabs/export/ExportsTable.kt` |
 | Update | Download `BananaShot-win-Setup.exe` and start it | Download the macOS installer and open it | `license/update/UpdateAndRestart.kt`, `UpdateOptions.kt` |
 | Velopack hooks | `--veloapp-*` arguments | Verify which hooks Velopack runs on macOS | `VelopackHooks.kt` |
-| UI font | `Segoe UI` set in `SwingMainApp` | The macOS system font | `SwingMainApp.kt`, `ui/commons/UiKit.kt`, `ExportUi.kt`, `ProjectsUi.kt`, `VideoFocusChip.kt` |
+| UI font | `Segoe UI` set in `SwingMainApp` | The macOS system font | `SwingMainApp.kt`, `ui/commons/UiKit.kt`, `ExportUi.kt`, `ProjectsUi.kt` |
 | Scoreboard fonts | Windows system fonts | Bundled open fonts on all platforms (see "5. Fonts") | `export/scoreboard/ScoreboardLayoutParts.kt`, `export/comments/CommentAss.kt`, `AssOverlayWriter.kt` |
 | Text anti-aliasing | `lcd_hrgb` on Windows | `on` (already the code path for other systems) | `SwingMainApp.kt` |
 | Diagnostics | `BananaShot Diagnostics.cmd`, check `libmpv-2.dll` | A shell script or `--diagnostics` from the bundle, check the dylib | `distribution/windows/`, `DistributionDiagnostics.kt` |
@@ -265,8 +265,8 @@ arm64 files. Then:
 
 ### UI font
 
-`SwingMainApp` sets `Segoe UI` as the default font, and `UiKit`, `ExportUi`,
-`ProjectsUi`, and `VideoFocusChip` ask for `Segoe UI` or `Segoe UI Semibold`.
+`SwingMainApp` sets `Segoe UI` as the default font, and `UiKit`, `ExportUi`, and
+`ProjectsUi` ask for `Segoe UI` or `Segoe UI Semibold`.
 On macOS, Java then uses a fallback font. Use the FlatLaf default font on
 macOS (the system font) and keep `Segoe UI` on Windows. Check each screen for
 text that does not fit, because the system font of macOS is wider.
@@ -348,11 +348,11 @@ no change. For the other fonts, check the box sizes of each style.
 
 ## 6. Platform services
 
-- **GPU preference and GPU count (B-35):** call
-  `WindowsGpuPreference.ensureHighPerformancePreference` and
-  `WindowsGpuCount.count` only on Windows (they return at once on other
-  systems now). Do not show the GPU restart message on macOS. Apple Silicon
-  Macs have one GPU, so no GPU choice is necessary.
+- **GPU preference (B-35):** call
+  `WindowsGpuPreference.ensureHighPerformancePreference` only on Windows
+  (it returns at once on other systems now). Apple Silicon Macs have one
+  GPU, so no GPU choice is necessary. The app shows no GPU message on any
+  system.
 - **Run time counter (expiry):** `RunTimeCounter.production` calls
   `Kernel32.GetTickCount64`. On macOS this call fails, and the app uses
   `System.nanoTime`. On macOS, `System.nanoTime` does not count the time
@@ -562,10 +562,6 @@ The checks for Velopack on macOS:
   Keep the two texts in agreement (`docs/feedback/privacy-notice.md`).
 - **App texts:** `ContactPage.kt` says "the version of Windows". The help
   texts and the export texts say "PC". Change to platform-neutral words.
-- **Windows-only messages:** the GPU restart message in
-  `SwingApplicationFactory` names Windows Graphics Settings and `javaw.exe`.
-  It does not show on macOS now, because `WindowsGpuPreference` makes no
-  change there. Add a test that keeps this behavior.
 - **README:** change "The app is for Windows x64 only" and add the macOS
   development steps (the natives script and the data folder).
 - **Licensing documents:** `build-expiry-spec.md` and `threat-model.md`

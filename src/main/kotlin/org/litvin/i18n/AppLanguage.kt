@@ -21,6 +21,9 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
     PORTUGUESE_PORTUGAL("pt-PT", "Português (Portugal)", parent = PORTUGUESE_BRAZIL),
     FRENCH("fr", "Français"),
     GERMAN("de", "Deutsch"),
+    JAPANESE("ja", "日本語"),
+    CHINESE_SIMPLIFIED("zh-Hans", "简体中文"),
+    CHINESE_TRADITIONAL("zh-Hant", "繁體中文"),
     ;
 
     val locale: Locale get() = Locale.forLanguageTag(code)
@@ -41,6 +44,9 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
         /** The countries that use the Portuguese of Brazil. All other countries get the Portuguese of Portugal. */
         private val BRAZIL_COUNTRIES = setOf("", "BR")
 
+        /** The regions that write Chinese with the traditional characters, when the locale has no script. */
+        private val TRADITIONAL_CHINESE_COUNTRIES = setOf("TW", "HK", "MO")
+
         /** The language with the tag [code] (case does not matter, "_" works as "-"), or null. */
         fun ofCode(code: String?): AppLanguage? {
             val normalized = code?.trim()?.replace('_', '-')?.lowercase(Locale.ROOT) ?: return null
@@ -54,7 +60,9 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
          * Portuguese of Brazil gives [PORTUGUESE_BRAZIL]. Portuguese of all other countries (Portugal, Angola,
          * Mozambique, and so on) gives [PORTUGUESE_PORTUGAL]. French of all countries (France, Belgium, Switzerland,
          * Canada, and so on) gives [FRENCH]. German of all countries (Germany, Austria, Switzerland, and so on) gives
-         * [GERMAN].
+         * [GERMAN]. Japanese gives [JAPANESE]. Chinese with the script `Hant`, or without a script in Taiwan, Hong
+         * Kong, or Macau, gives [CHINESE_TRADITIONAL]. All other Chinese (`zh-CN`, `zh-SG`, `zh-Hans`, `zh`) gives
+         * [CHINESE_SIMPLIFIED].
          */
         fun forLocale(locale: Locale): AppLanguage? = when (locale.language) {
             ENGLISH.baseCode -> ENGLISH
@@ -63,7 +71,15 @@ enum class AppLanguage(val code: String, val nativeName: String, val parent: App
             PORTUGUESE_BRAZIL.baseCode -> if (locale.country in BRAZIL_COUNTRIES) PORTUGUESE_BRAZIL else PORTUGUESE_PORTUGAL
             FRENCH.baseCode -> FRENCH
             GERMAN.baseCode -> GERMAN
+            JAPANESE.baseCode -> JAPANESE
+            CHINESE_SIMPLIFIED.baseCode -> if (isTraditionalChinese(locale)) CHINESE_TRADITIONAL else CHINESE_SIMPLIFIED
             else -> null
+        }
+
+        private fun isTraditionalChinese(locale: Locale): Boolean = when (locale.script) {
+            "Hant" -> true
+            "Hans" -> false
+            else -> locale.country in TRADITIONAL_CHINESE_COUNTRIES
         }
     }
 }

@@ -10,7 +10,6 @@ import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
-import java.awt.GraphicsEnvironment
 import java.awt.RenderingHints
 import java.awt.Toolkit
 import java.awt.font.FontRenderContext
@@ -21,7 +20,9 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.UIManager
 import kotlin.math.ceil
+import org.litvin.i18n.LineBreaks
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.UiFonts
 import org.litvin.i18n.DisplayFormats
 
 /**
@@ -33,21 +34,13 @@ internal object ProjectsUi {
 
     private val fonts = HashMap<Pair<Float, Weight>, Font>()
 
-    private val semiboldFamily: String? by lazy {
-        try {
-            GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.firstOrNull { it == "Segoe UI Semibold" }
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    /** A font of the app family with a size in pixels. Semibold uses "Segoe UI Semibold" when the PC has it. */
+    /** A font of the app family with a size in pixels. Semibold uses the semibold family of [UiFonts] when the PC has it. */
     fun font(size: Float, weight: Weight = Weight.REGULAR): Font = fonts.getOrPut(size to weight) {
         val family = (UIManager.getFont("Label.font") ?: Font(Font.SANS_SERIF, Font.PLAIN, 13)).family
         when (weight) {
             Weight.REGULAR -> Font(family, Font.PLAIN, 1).deriveFont(size)
             Weight.BOLD -> Font(family, Font.BOLD, 1).deriveFont(size)
-            Weight.SEMIBOLD -> semiboldFamily?.let { Font(it, Font.PLAIN, 1).deriveFont(size) }
+            Weight.SEMIBOLD -> UiFonts.semiboldFamily?.let { Font(it, Font.PLAIN, 1).deriveFont(size) }
                 ?: Font(family, Font.BOLD, 1).deriveFont(size)
         }
     }
@@ -148,7 +141,9 @@ internal object ProjectsUi {
             // The longest start of the text that fits.
             var fit = 1
             while (fit < rest.length && textWidth(rest.substring(0, fit + 1), font) <= maxWidth) fit++
-            val breakAt = (fit downTo 1).firstOrNull { rest[it - 1] == ' ' || rest[it - 1] == '\\' || rest[it - 1] == '/' }
+            // A Japanese text also breaks between its characters (B-11 E8-T4).
+            val cjkBreaks = LineBreaks.cjkBreaks(rest)
+            val breakAt = (fit downTo 1).firstOrNull { rest[it - 1] == ' ' || rest[it - 1] == '\\' || rest[it - 1] == '/' || it in cjkBreaks }
             val cut = if (breakAt != null && breakAt > fit / 3) breakAt else fit
             lines += rest.substring(0, cut).trimEnd()
             rest = rest.substring(cut).trimStart()

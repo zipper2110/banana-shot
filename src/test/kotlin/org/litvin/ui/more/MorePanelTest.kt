@@ -1,6 +1,7 @@
 package org.litvin.ui.more
 
 import org.litvin.ui.commons.AppTheme
+import org.litvin.ui.commons.Theme
 import org.litvin.ui.commons.ThemeSettings
 import java.awt.Color
 import java.awt.Component
@@ -9,8 +10,10 @@ import java.io.File
 import java.net.URI
 import javax.swing.AbstractButton
 import javax.swing.JLabel
+import javax.swing.JScrollPane
 import javax.swing.JTextArea
 import javax.swing.SwingUtilities
+import javax.swing.UIManager
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -31,6 +34,34 @@ class MorePanelTest {
 
             panel.selectSection("Unknown")
             assertEquals("About", panel.selectedTitle)
+        }
+    }
+
+    /** The data folder path is in a text area. Its caret must not scroll the page to the data card when it opens. */
+    @Test
+    fun `the Settings page opens at the top`() {
+        System.setProperty("java.awt.headless", "true")
+        lateinit var scroll: JScrollPane
+        val previous = UIManager.getLookAndFeel()
+        // The app uses FlatLaf, and its caret differs from the caret of the default look.
+        Theme.start(AppTheme.DEFAULT)
+
+        try {
+            SwingUtilities.invokeAndWait {
+                val page = SettingsPage(File("C:\\Users\\player\\AppData\\Local\\BananaShot"), RecordingThemeSettings(), onShowHintsAgain = {}, onOpenFolder = { true })
+                scroll = page.inScrollPane().apply { setSize(600, 300) }
+                // Without a window, validate() does not lay out, so lay out each container as the window does.
+                layOut(scroll)
+            }
+            // The caret scrolls in a later event, so wait for the events that the page made.
+            repeat(3) { SwingUtilities.invokeAndWait {} }
+
+            SwingUtilities.invokeAndWait {
+                assertTrue(scroll.viewport.viewSize.height > 300, "The page must be taller than the view")
+                assertEquals(0, scroll.viewport.viewPosition.y)
+            }
+        } finally {
+            UIManager.setLookAndFeel(previous)
         }
     }
 
@@ -144,6 +175,12 @@ class MorePanelTest {
             findButton(page, "more-about-open-website")!!.doClick()
         }
         assertEquals(listOf(URI("https://example.test/")), opened)
+    }
+
+    private fun layOut(component: Component) {
+        if (component !is Container) return
+        component.doLayout()
+        component.components.forEach(::layOut)
     }
 
     private fun find(root: Component, name: String): Component? =

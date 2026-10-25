@@ -24,10 +24,13 @@ import org.litvin.ui.commons.WrapText
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Cursor
 import java.awt.Dialog
 import java.awt.Dimension
+import java.awt.Graphics
 import java.awt.Insets
 import java.awt.Window
+import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JDialog
 import javax.swing.JLabel
@@ -38,6 +41,9 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.text.AbstractDocument
 import org.litvin.i18n.tr
+import kotlin.math.ceil
+import kotlin.math.max
+import kotlin.math.min
 
 /** The values that the "Scoring settings" dialog edits. */
 data class ScoreSettings(
@@ -58,9 +64,10 @@ fun interface ScoreSettingsEditor {
  * Modal "Scoring settings" dialog: player names and colors, the sport, the match format (point counting rules),
  * and the fully manual scoring option. The layout comes from design/dialogs-redesign/scoring-settings.html.
  *
- * The format list holds popular formats. The rule controls under it show the rules of the selected format.
- * A change to a rule selects the matching format, or "Custom". The unused rules stay visible, but dim,
- * so the dialog does not change its height.
+ * The format list holds popular formats. The deuce rule shows under the format, because the formats do not set it.
+ * The other rule controls are under "Custom scoring rules". They show the rules of the selected format.
+ * This part opens when the rules match no format ("Custom"), and the user can open and close it.
+ * A change to a rule selects the matching format, or "Custom". The unused rules stay visible, but dim.
  *
  * The sport sets the formats in the list, the deuce rules, and the names of the sides ("Player" or "Team").
  * A change of the sport resets the rules to the defaults of the new sport.
@@ -156,6 +163,10 @@ class ScoreSettingsDialog private constructor(
     /** The label of each rule control, so that a disabled rule also dims its label. */
     private val ruleLabels = mutableMapOf<Component, JLabel>()
 
+    /** The rows under "Custom scoring rules". */
+    private val customRuleRows = mutableListOf<Component>()
+    private val customRulesToggle = DisclosureRow(tr("scoreSettings.customRules"), "score-settings-custom-rules")
+
     init {
         name = "score-settings-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
@@ -165,8 +176,12 @@ class ScoreSettingsDialog private constructor(
         format.addActionListener {
             @Suppress("UNCHECKED_CAST")
             val preset = (format.selectedItem as? Choice<MatchFormatPreset>)?.value ?: return@addActionListener
+            if (updatingControls) return@addActionListener
             update { preset.applyTo(it) }
+            // "Custom" has no rules of its own, so the user sets them under "Custom scoring rules".
+            if (preset == MatchFormatPreset.CUSTOM) showCustomRules(true)
         }
+        customRulesToggle.addActionListener { showCustomRules(!customRulesToggle.open) }
         bestOf.onChange { value -> update { it.copy(bestOfSets = value) } }
         // A new games count gets its usual tiebreak: early only for the pro set to 9 games.
         gamesPerSet.onChange { value ->
@@ -225,6 +240,7 @@ class ScoreSettingsDialog private constructor(
         DialogKit.onEscape(this) { dispose() }
 
         syncControls()
+        setCustomRulesVisible(MatchFormatPreset.of(rules, sport) == MatchFormatPreset.CUSTOM)
         DialogKit.packToScreen(this)
         minimumSize = Dimension(width, 300)
         player1Name.requestFocusInWindow()
@@ -239,14 +255,41 @@ class ScoreSettingsDialog private constructor(
         row(tr("projects.new.sport"), sportChoice)
         ruleLabels[format] = row(tr("rules.format"), format)
         text(formatDescription, indent = true, lineAbove = true, top = 8)
-        ruleLabels[bestOf] = row(tr("scoreSettings.sets"), bestOf)
-        ruleLabels[gamesPerSet] = row(tr("scoreSettings.gamesPerSet"), gamesPerSet)
-        ruleLabels[setTiebreak] = row(tr("scoreSettings.setTiebreak"), setTiebreak)
-        ruleLabels[tiebreakPoints] = row(tr("scoreSettings.tiebreakPoints"), tiebreakPoints)
-        ruleLabels[finalSet] = row(tr("scoreSettings.finalSet"), finalSet)
-        ruleLabels[deuce] = row(tr("rules.deuce"), deuce)
-        ruleLabels[totalPoints] = row(tr("rules.totalPoints"), totalPoints)
-        ruleLabels[serveTurn] = row(tr("rules.serveTurn"), serveTurn)
+        ruleLabels[deuce] = row(tr("rules.deuce"), deuce, line = true)
+        wide(customRulesToggle)
+        listOf(
+            bestOf to tr("scoreSettings.sets"),
+            gamesPerSet to tr("scoreSettings.gamesPerSet"),
+            setTiebreak to tr("scoreSettings.setTiebreak"),
+            tiebreakPoints to tr("scoreSettings.tiebreakPoints"),
+            finalSet to tr("scoreSettings.finalSet"),
+            totalPoints to tr("rules.totalPoints"),
+            serveTurn to tr("rules.serveTurn"),
+        ).forEach { (control, label) ->
+            val rowLabel = row(label, control)
+            ruleLabels[control] = rowLabel
+            customRuleRows += rowLabel.parent
+        }
+    }
+
+    /** Opens or closes "Custom scoring rules". The dialog grows or shrinks, and its top edge stays. */
+    private fun showCustomRules(open: Boolean) {
+        if (open == customRulesToggle.open) return
+        setCustomRulesVisible(open)
+        val left = x
+        val top = y
+        DialogKit.packToScreen(this)
+        val config = graphicsConfiguration ?: return
+        val insets = toolkit.getScreenInsets(config)
+        val screenTop = config.bounds.y + insets.top
+        val screenBottom = config.bounds.y + config.bounds.height - insets.bottom
+        setLocation(left, max(screenTop, min(top, screenBottom - height)))
+    }
+
+    private fun setCustomRulesVisible(open: Boolean) {
+        customRulesToggle.open = open
+        customRuleRows.forEach { it.isVisible = open }
+        formatGroup.revalidate()
     }
 
     /** The formats of the current sport. */
@@ -443,3 +486,44 @@ class ScoreSettingsDialog private constructor(
 }
 
 private val MANUAL_HINT: String get() = tr("scoreSettings.manual.hint")
+
+/** A full-width row that opens and closes the rows under it: the text on the left and a chevron on the right. */
+private class DisclosureRow(private val text: String, componentName: String) : JButton() {
+    var open = false
+        set(value) {
+            field = value
+            repaint()
+        }
+
+    init {
+        name = componentName
+        isContentAreaFilled = false
+        isBorderPainted = false
+        isFocusPainted = false
+        isOpaque = false
+        isRolloverEnabled = true
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        getAccessibleContext().accessibleName = text
+    }
+
+    override fun getPreferredSize() = Dimension(ceil(UiKit.textWidth(text, FONT)).toInt() + 8 + ICON, HEIGHT_PX)
+    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, HEIGHT_PX)
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = UiKit.smooth(g)
+        try {
+            val color = if (model.isRollover || isFocusOwner) Palette.FG else Palette.FG_2
+            UiKit.drawText(g2, text, FONT, color, 0f, 0f, height.toFloat())
+            val chevron = UiKit.icon(if (open) Material2AL.EXPAND_LESS else Material2AL.EXPAND_MORE, ICON, color)
+            chevron.paintIcon(this, g2, width - chevron.iconWidth, (height - chevron.iconHeight) / 2)
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    private companion object {
+        const val ICON = 18
+        const val HEIGHT_PX = 30
+        val FONT = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
+    }
+}

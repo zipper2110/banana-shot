@@ -74,6 +74,36 @@ class LanguageSettingsTest {
     }
 
     @Test
+    fun `Japanese gives Japanese`() {
+        listOf("ja", "ja-JP").forEach { tag ->
+            assertEquals(AppLanguage.JAPANESE, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        assertEquals(AppLanguage.JAPANESE, settings.resolve(Locale.US, property = "ja-JP").language)
+    }
+
+    /** B-11 E8-L-zh-Hans: all Chinese without the traditional script or a traditional region is Simplified. */
+    @Test
+    fun `Chinese of mainland China, Singapore, and without a region gives Simplified Chinese`() {
+        listOf("zh", "zh-CN", "zh-SG", "zh-Hans", "zh-Hans-CN", "zh-Hans-HK").forEach { tag ->
+            assertEquals(AppLanguage.CHINESE_SIMPLIFIED, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        assertEquals(AppLanguage.CHINESE_SIMPLIFIED, settings.resolve(Locale.US, property = "zh-CN").language)
+        assertEquals(AppLanguage.CHINESE_SIMPLIFIED, settings.resolve(Locale.US, property = "zh-hans").language)
+    }
+
+    /** B-11 E8-T1 and E8-L-zh-Hant: Taiwan, Hong Kong, Macau, and the script Hant never give Simplified Chinese. */
+    @Test
+    fun `Chinese of Taiwan, Hong Kong, and Macau gives Traditional Chinese`() {
+        listOf("zh-TW", "zh-HK", "zh-MO", "zh-Hant", "zh-Hant-TW", "zh-Hant-CN").forEach { tag ->
+            assertEquals(AppLanguage.CHINESE_TRADITIONAL, LanguageSettings.systemLanguage(Locale.forLanguageTag(tag)), tag)
+        }
+        // Java on Windows gives the display locale as language and country, without a script.
+        assertEquals(AppLanguage.CHINESE_TRADITIONAL, LanguageSettings.systemLanguage(Locale.of("zh", "TW")))
+        assertEquals(AppLanguage.CHINESE_TRADITIONAL, settings.resolve(Locale.US, property = "zh_TW").language)
+        assertEquals(AppLanguage.CHINESE_TRADITIONAL, settings.resolve(Locale.US, property = "zh-Hant").language)
+    }
+
+    @Test
     fun `a saved Latin American choice keeps its tag`() {
         settings.save(AppLanguage.SPANISH_LATIN_AMERICA)
         assertEquals("es-419", node.get(LanguageSettings.KEY, null))

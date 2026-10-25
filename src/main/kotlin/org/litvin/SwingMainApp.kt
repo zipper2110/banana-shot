@@ -17,6 +17,7 @@ import org.litvin.ui.commons.AppTheme
 import org.litvin.ui.commons.SwingUserDialogService
 import org.litvin.ui.commons.Theme
 import org.litvin.ui.commons.ThemePreferences
+import org.litvin.ui.commons.UiFonts
 import org.litvin.ui.expiry.CheckingDateWindow
 import java.awt.EventQueue
 import java.awt.Font
@@ -74,7 +75,7 @@ object SwingMainApp {
                 theme to themePreferences.accentFor(theme)
             }.getOrDefault(AppTheme.DEFAULT to AppTheme.DEFAULT.accent)
             Theme.start(theme, accent)
-            UIManager.put("defaultFont", Font("Segoe UI", Font.PLAIN, 14))
+            UIManager.put("defaultFont", Font(UiFonts.scriptFamily ?: "Segoe UI", Font.PLAIN, 14))
             applySwingLocale()
         } catch (failure: Exception) {
             logger.warn(failure) { "Failed to initialize FlatLaf look and feel." }
@@ -245,7 +246,8 @@ object SwingMainApp {
 
     private fun applyBaseTheme() {
         val families = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
-        val family = when {
+        // A language with other letters (Japanese) uses the UI font of its script (B-11 E8-T3).
+        val family = UiFonts.scriptFamily ?: when {
             families.contains("Segoe UI Variable") -> "Segoe UI Variable"
             families.contains("Segoe UI") -> "Segoe UI"
             else -> "Tahoma"

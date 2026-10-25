@@ -4,6 +4,7 @@ import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.tr
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.UiFonts
 import java.awt.BorderLayout
 import java.awt.GridBagLayout
 import javax.swing.JComboBox
@@ -32,6 +33,8 @@ internal class VideoLanguageRow(
         name = "export-video-language"
         toolTipText = tr("export.videoLanguage.tooltip")
         DialogKit.styleCombo(this)
+        // "日本語" needs a Japanese font also when the app is in another language.
+        UiFonts.showLanguageNames(this) { it.language }
     }
 
     /** The language that the list shows. */

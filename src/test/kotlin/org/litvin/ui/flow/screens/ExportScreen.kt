@@ -1,5 +1,6 @@
 package org.litvin.ui.flow.screens
 
+import org.litvin.i18n.tr
 import org.litvin.ui.flow.fakes.DialogOutcome
 import org.litvin.ui.flow.fakes.FilePickerOutcome
 import java.nio.file.Path
@@ -57,7 +58,7 @@ internal class ExportScreen(application: ApplicationScreen) : UserFlowScreen(app
         context.dialogs.showNextAsRealModal()
         context.driver.click("export-content-favorites")
         application.eventually("favorite-only validation dialog to be dismissed") {
-            context.driver.dismissDialog("Favorite export unavailable", "OK")
+            context.driver.dismissDialog(tr("export.favorites.unavailable"), tr("common.ok"))
         }
     }
 
@@ -66,7 +67,7 @@ internal class ExportScreen(application: ApplicationScreen) : UserFlowScreen(app
         context.dialogs.script(DialogOutcome.RealModal)
         context.driver.click("export-initialize")
         application.eventually("render initialized dialog to be dismissed") {
-            context.driver.dismissDialog("Export started", "OK")
+            context.driver.dismissDialog(tr("export.started"), tr("common.ok"))
         }
     }
 
@@ -82,10 +83,10 @@ internal class ExportScreen(application: ApplicationScreen) : UserFlowScreen(app
         context.dialogs.showNextAsRealModal()
         context.driver.click("export-initialize")
         application.eventually("blocked render dialog to be dismissed") {
-            context.driver.dismissDialog("Cannot start export", "OK")
+            context.driver.dismissDialog(tr("export.start.blocked"), tr("common.ok"))
         }
         val last = context.dialogs.calls.last()
-        if (last.title != "Cannot start export" || !last.message.contains(explanation)) {
+        if (last.title != tr("export.start.blocked") || !last.message.contains(explanation)) {
             throw AssertionError("Blocked render dialog was $last")
         }
     }

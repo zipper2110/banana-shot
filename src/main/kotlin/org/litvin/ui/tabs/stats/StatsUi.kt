@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.stats
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
+import org.litvin.i18n.LineBreaks
 import org.litvin.scoring.PerPlayer
 import org.litvin.ui.commons.HeightForWidth
 import org.litvin.ui.commons.Palette
@@ -125,8 +126,9 @@ internal class WrapText(
         for (paragraph in text.split('\n')) {
             var line = ""
             for (word in paragraph.split(' ').filter { it.isNotEmpty() }) {
-                // A word that is wider than the line breaks at a character (a long German compound noun).
-                splitToWidth(word, font, width.toFloat()).forEachIndexed { index, part ->
+                // A Japanese word breaks between its characters. A word that is wider than the line breaks at a
+                // character (a long German compound noun).
+                LineBreaks.pieces(word).flatMap { splitToWidth(it, font, width.toFloat()) }.forEachIndexed { index, part ->
                     val candidate = if (line.isEmpty()) part else if (index == 0) "$line $part" else "$line$part"
                     if (line.isNotEmpty() && UiKit.textWidth(candidate, font) > width) {
                         lines += line

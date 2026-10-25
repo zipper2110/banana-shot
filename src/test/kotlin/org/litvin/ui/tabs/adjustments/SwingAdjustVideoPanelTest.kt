@@ -214,11 +214,42 @@ class SwingAdjustVideoPanelTest {
 
             val play = bar.playButton
             val seek = bar.seekSlider
+            val now = bar.find("colors-current-time")!!
             val total = bar.find("colors-total-time")!!
-            assertEquals(16, play.x)
+            assertEquals(16, now.x)
             assertEquals(bar.width - 16, total.x + total.width)
-            assertTrue(seek.x > play.x + play.width)
+            assertTrue(seek.x > now.x + now.width)
             assertEquals(total.x - 14, seek.x + seek.width)
+            assertTrue(play.y + play.height <= seek.y, "the play button is on the row above the seek bar")
+        }
+    }
+
+    @Test
+    fun theSeekButtonsSitAroundThePlayButtonAndSeekByTheirStep() {
+        val nudges = mutableListOf<Long>()
+        onEdt {
+            val bar = VideoPlaybackBar("colors", "adj-color-transport", onTogglePlay = {}, onSeek = {}, onNudge = { nudges += it })
+            bar.setTime(0, 5_761_000)
+            bar.setSize(1120, bar.preferredSize.height)
+            bar.doLayout()
+
+            val names = listOf("colors-seek-back-5s", "colors-seek-back-1s", "colors-seek-forward-1s", "colors-seek-forward-5s")
+            val buttons = names.map { bar.find(it) as AbstractButton }
+            buttons.forEach { it.doClick() }
+            assertEquals(listOf(-5_000L, -1_000L, 1_000L, 5_000L), nudges)
+
+            val play = bar.playButton
+            val seek = bar.seekSlider
+            assertTrue(buttons[0].x + buttons[0].width < buttons[1].x)
+            assertTrue(buttons[1].x + buttons[1].width < play.x)
+            assertTrue(play.x + play.width < buttons[2].x)
+            assertTrue(buttons[2].x + buttons[2].width < buttons[3].x)
+            // The buttons are in the center of their own row, above the seek bar.
+            val left = buttons[0].x - 16
+            val right = bar.width - 16 - (buttons[3].x + buttons[3].width)
+            assertTrue(kotlin.math.abs(left - right) <= 1, "left $left, right $right")
+            (buttons + play).forEach { assertTrue(it.y + it.height <= seek.y, "${it.name} is above the seek bar") }
+            assertTrue(seek.width > 800, "the seek bar uses the full row")
         }
     }
 
@@ -302,7 +333,7 @@ class SwingAdjustVideoPanelTest {
     }
 
     @Test
-    fun theChangePointsCardIsOutsideTheSubTabsAndAddsToBothLists() {
+    fun theChangePointsCardIsOutsideTheSubTabsAndShowsTheListOfTheOpenSubTab() {
         onEdt {
             val panel = panel()
             panel.onActivated()
@@ -310,11 +341,17 @@ class SwingAdjustVideoPanelTest {
             assertFalse(panel.find("adjust-colors")!!.descendants().contains(card))
             assertFalse(panel.find("crop-transform-panel")!!.descendants().contains(card))
 
+            val status = panel.find("adjust-change-status") as JLabel
+            val hint = panel.find("adjust-change-hint") as JLabel
+            assertTrue(hint.text.contains("Did the light change?"))
             (panel.find("adjust-change-add") as UiButton).doClick()
             assertEquals(listOf(0L), adjustments.get().colorKeys.map { it.atMs })
-            assertEquals(listOf(0L), adjustments.get().geometryKeys.map { it.atMs })
+            assertEquals(emptyList(), adjustments.get().geometryKeys)
+            assertEquals("Change point 1 of 1, at 00:00:00", status.text)
+
             (panel.find("adjust-section-1") as AbstractButton).doClick()
-            assertEquals("Change point 1 of 1, at 00:00:00", (panel.find("adjust-change-status") as JLabel).text)
+            assertEquals("No change points", status.text)
+            assertTrue(hint.text.contains("Did the phone move?"))
             panel.close()
         }
     }

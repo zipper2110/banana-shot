@@ -1,5 +1,7 @@
 package org.litvin.ui.flow.screens
 
+import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.tr
 import org.litvin.points.EdlIO
 import org.litvin.points.CommentV1
 import org.litvin.scoring.Outcome
@@ -54,9 +56,9 @@ internal class PointsScreen(application: ApplicationScreen) : UserFlowScreen(app
 
     fun assertPointCount(marked: Int, favorites: Int = 0, comments: Int = 0) {
         application.eventually("points point count to become $marked marked / $favorites favorite / $comments comments") {
-            context.driver.requireText("points-point-count", "$marked marked")
-            context.driver.requireText("points-favorite-count", "$favorites favorites")
-            context.driver.requireText("points-comment-count", "$comments comments")
+            context.driver.requireText("points-point-count", countText(marked, "points.count.marked"))
+            context.driver.requireText("points-favorite-count", countText(favorites, "points.count.favorites"))
+            context.driver.requireText("points-comment-count", countText(comments, "points.count.comments"))
         }
     }
 
@@ -108,6 +110,10 @@ internal class PointsScreen(application: ApplicationScreen) : UserFlowScreen(app
     }
 
     private fun formatTime(ms: Long): String = Timecode.format(ms)
+
+    /** The text of a count label in the Points header, in the app language. */
+    private fun countText(count: Int, nounKey: String): String =
+        "${DisplayFormats.integer(count)} ${tr(nounKey, "count" to count)}"
 
     private fun formatInputTime(ms: Long): String {
         val hours = ms / 3_600_000L

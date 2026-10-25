@@ -89,6 +89,7 @@ object AssOverlayWriter {
                 val end = toAssTs(comment.endMs)
                 val events = CommentAss.events(
                     comment.text, comment.colorHex, 0.0, 0.0, playResX.toDouble(), playResY.toDouble(), comment.style,
+                    comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
                 )
                 events.forEachIndexed { index, text ->
                     w.appendLine("Dialogue: ${COMMENT_LAYER + index},$start,$end,Comment,,0,0,0,,$text")

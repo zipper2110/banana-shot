@@ -8,7 +8,9 @@ import org.litvin.SessionSettings
 import org.litvin.projects.ManifestIO
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
+import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
+import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
@@ -25,6 +27,8 @@ import org.litvin.media.relativeSeekDeltaMs
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
 import org.litvin.ui.commons.CommentDialog
+import org.litvin.ui.commons.CommentInput
+import org.litvin.ui.commons.CommentLook
 import org.litvin.ui.commons.CommentStyleDefaults
 import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
@@ -103,6 +107,19 @@ class SwingPointsPanel(
 
     // The comments on the video at the playhead
     private val commentPreview = CommentPreview()
+
+    // The comment that the comment dialog shows on the video before Save, or null when no dialog is open.
+    private var dialogComment: CommentV1? = null
+
+    // Drags a comment on the video (B-51)
+    private val commentDrag = CommentDragController(
+        player = player,
+        enabled = { isMediaLoaded },
+        shownComments = { commentPreview.shown },
+        onPreview = { refreshOverlay() },
+        onChanged = { id, position, sizePercent, rotationDeg -> placeComment(id, position, sizePercent, rotationDeg) },
+        onClicked = { id -> scrollToEvent("comment:$id") },
+    )
 
     // Current project manifest path (projectDir derived from it)
     private var manifestPath: String? = null
@@ -263,6 +280,9 @@ class SwingPointsPanel(
                 text = comment.text,
                 colorHex = comment.colorHex,
                 style = comment.style,
+                sizePercent = comment.sizePercent,
+                opacityPercent = comment.opacityPercent,
+                rotationDeg = comment.rotationDeg,
             )
         }
         return (pointEvents + comments).sortedWith(compareBy<TimelineEventDto> { it.startMs }.thenBy { it.stableKey })
@@ -346,9 +366,12 @@ class SwingPointsPanel(
         override fun selectByVisualIndex(index: Int) = this@SwingPointsPanel.setSelectedVisualAndScroll(index)
         override fun saveNow() = this@SwingPointsPanel.saveNow()
         override fun addCommentAtPlayhead() = this@SwingPointsPanel.addCommentAtPlayhead()
-        override fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) =
-            this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex, commentStyles.load())
+        override fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) {
+            val look = commentStyles.load()
+            this@SwingPointsPanel.createComment(startMs, durationMs, text, colorHex, look.style, look.sizePercent, look.opacityPercent)
+        }
         override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
+        override fun previewComment(id: Int?, comment: CommentInput?) = this@SwingPointsPanel.previewComment(id, comment)
         override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
     }
 
@@ -385,6 +408,12 @@ class SwingPointsPanel(
         // Wrap the video component with the geometry viewport for live zoom/pan (Task 5.4)
         geometryViewport = GeometryViewportPanel(player.component)
         geometryViewport.name = "points-video"
+        // A left click on the video plays or pauses it. A click on a comment selects the comment instead.
+        player.component.addMouseListener(object : java.awt.event.MouseAdapter() {
+            override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                if (SwingUtilities.isLeftMouseButton(e) && isMediaLoaded && !commentDrag.pressedOnComment) togglePlayPause()
+            }
+        })
         leftColumn.add(geometryViewport, BorderLayout.CENTER)
         leftColumn.add(JPanel(BorderLayout()).apply {
             isOpaque = false
@@ -498,7 +527,7 @@ class SwingPointsPanel(
     }
 
     /**
-     * The point bar under the video: Point start, the serve button and the outcome buttons.
+     * The point bar under the video: the serve button, Point start, and the outcome buttons.
      */
     private fun buildPointBar(): JComponent = JPanel(BorderLayout(16, 0)).apply {
         name = "points-point-bar"
@@ -508,7 +537,11 @@ class SwingPointsPanel(
             BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
             BorderFactory.createEmptyBorder(10, 16, 10, 16),
         )
-        add(markPanel, BorderLayout.WEST)
+        add(JPanel(BorderLayout(16, 0)).apply {
+            isOpaque = false
+            add(scoring.controls.serveButton, BorderLayout.WEST)
+            add(markPanel, BorderLayout.CENTER)
+        }, BorderLayout.WEST)
         add(scoring.controls, BorderLayout.CENTER)
     }
 
@@ -692,29 +725,77 @@ class SwingPointsPanel(
     }
 
     private fun addCommentAtPlayhead() {
+        val look = commentStyles.load()
         CommentDialog.showCreate(
             parent = this,
             namePrefix = "points",
             initialStartMs = player.currentTimeMs(),
             defaultColor = commentDispatcher.state().defaults.colorHex,
-            defaultStyle = commentStyles.load(),
-        ) { comment -> createComment(comment.startMs, comment.durationMs, comment.text, comment.colorHex, comment.style) }
+            defaultStyle = look.style,
+            defaultSizePercent = look.sizePercent,
+            defaultOpacityPercent = look.opacityPercent,
+            onPreview = { previewComment(null, it) },
+        ) { comment ->
+            createComment(
+                comment.startMs, comment.durationMs, comment.text, comment.colorHex, comment.style, comment.sizePercent,
+                comment.opacityPercent, comment.rotationDeg,
+            )
+        }
     }
 
-    private fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String, style: CommentStyle) {
+    private fun createComment(
+        startMs: Long,
+        durationMs: Long,
+        text: String,
+        colorHex: String,
+        style: CommentStyle,
+        sizePercent: Int = CommentV1.DEFAULT_SIZE_PERCENT,
+        opacityPercent: Int = 100,
+        rotationDeg: Int = 0,
+    ) {
         val comment = commentDispatcher.create(
             startMs = startMs.toCommentIntOrNull() ?: return showCommentRangeError(),
             durationMs = durationMs.toCommentIntOrNull() ?: return showCommentRangeError(),
             text = text,
             colorHex = colorHex,
             style = style,
+            sizePercent = sizePercent,
+            opacityPercent = opacityPercent,
+            rotationDeg = rotationDeg,
         )
         maybeShowCommentHint()
         if (comment != null) {
-            commentStyles.save(style)
+            commentStyles.save(CommentLook(comment.style, comment.sizePercent, comment.opacityPercent))
             analytics.record(AnalyticsEvent.CommentAdded)
         }
         comment?.let { EventQueue.invokeLater { scrollToEvent("comment:${it.id}") } }
+    }
+
+    /**
+     * Shows [input] on the video while the comment dialog is open. [id] is the changed comment, or null for a new one.
+     * The comment shows also when the playhead is outside its duration. A null [input] stops the preview.
+     */
+    private fun previewComment(id: Int?, input: CommentInput?) {
+        if (input == null) {
+            // After Save, the saved comments come earlier in the event queue. Stop the preview after them,
+            // so that the old comment does not show for a moment.
+            EventQueue.invokeLater {
+                dialogComment = null
+                refreshOverlay()
+            }
+            return
+        }
+        val base = id?.let { changed -> commentDispatcher.state().comments.firstOrNull { it.id == changed } }
+            ?: CommentV1(id = NEW_COMMENT_PREVIEW_ID, startMs = 0, durationMs = 0, text = "")
+        dialogComment = base.copy(
+            text = input.text,
+            colorHex = input.colorHex,
+            style = input.style,
+            sizePercent = input.sizePercent,
+            opacityPercent = input.opacityPercent,
+            rotationDeg = input.rotationDeg,
+        )
+        refreshOverlay()
     }
 
     private fun editComment(id: Int, patch: CommentPatch) {
@@ -726,11 +807,31 @@ class SwingPointsPanel(
                 text = patch.text,
                 colorHex = patch.colorHex,
                 style = patch.style,
+                sizePercent = patch.sizePercent,
+                opacityPercent = patch.opacityPercent,
+                rotationDeg = patch.rotationDeg,
             ),
         )
         maybeShowCommentHint()
-        if (updated) patch.style?.let(commentStyles::save)
+        if (updated) rememberLook(patch.style, patch.sizePercent, patch.opacityPercent)
         if (updated) EventQueue.invokeLater { scrollToEvent("comment:$id") }
+    }
+
+    private fun placeComment(id: Int, position: CommentPosition, sizePercent: Int, rotationDeg: Int) {
+        val oldSize = commentDispatcher.state().comments.firstOrNull { it.id == id }?.sizePercent
+        val updated = commentDispatcher.update(
+            id, DispatcherCommentPatch(position = position, sizePercent = sizePercent, rotationDeg = rotationDeg),
+        )
+        maybeShowCommentHint()
+        // A corner drag is a size choice. A move or a rotation is not.
+        if (updated && oldSize != sizePercent) rememberLook(sizePercent = sizePercent)
+    }
+
+    /** Remembers the parts of the look that the user changed, for the next new comment. Null parts do not change. */
+    private fun rememberLook(style: CommentStyle? = null, sizePercent: Int? = null, opacityPercent: Int? = null) {
+        if (style == null && sizePercent == null && opacityPercent == null) return
+        val look = commentStyles.load()
+        commentStyles.save(CommentLook(style ?: look.style, sizePercent ?: look.sizePercent, opacityPercent ?: look.opacityPercent))
     }
 
     private fun deleteComment(id: Int) {
@@ -872,9 +973,20 @@ class SwingPointsPanel(
 
     /** The scoreboard and the comments at the playhead over the video. */
     private fun refreshOverlay() {
-        val shown = commentPreview.shown
+        val shown = withDialogComment(commentDrag.displayed(commentPreview.shown))
         // The comments draw after the scoreboard, so they are on top of it.
         player.setPreviewOverlay(VideoOverlay { area -> scoring.scoreboardEvents(area) + CommentAss.previewEvents(shown, area) })
+        commentDrag.refresh()
+    }
+
+    /** [comments] with the comment of the open comment dialog in place of its saved version, or added to the end. */
+    private fun withDialogComment(comments: List<CommentV1>): List<CommentV1> {
+        val changed = dialogComment ?: return comments
+        return if (comments.any { it.id == changed.id }) {
+            comments.map { if (it.id == changed.id) changed else it }
+        } else {
+            comments + changed
+        }
     }
 
     private fun refreshUiAtCurrentTime() {
@@ -998,6 +1110,7 @@ class SwingPointsPanel(
         keybindings = null
         dispatcher.onPointsChanged = null
         commentDispatcher.onCommentsChanged = null
+        commentDrag.dispose()
         unsubscribeAdjustments?.invoke()
         unsubscribeAdjustments = null
         autosave.flushAndClose()
@@ -1015,6 +1128,9 @@ class SwingPointsPanel(
     private companion object {
         /** A point stays active while the playhead is this close to it. */
         const val NEAR_POINT_MS = 2_000L
+
+        /** The id of a new comment in the dialog preview. Saved comments have positive ids. */
+        const val NEW_COMMENT_PREVIEW_ID = -1
 
         val POINT_ROW_HINT: String get() = tr("points.hint.pointRow")
     }

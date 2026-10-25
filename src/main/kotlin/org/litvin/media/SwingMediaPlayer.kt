@@ -54,6 +54,12 @@ interface SwingMediaPlayer : AutoCloseable {
     /** The area of [component] that shows the video, in component pixels. Null when it is not known. */
     fun videoBounds(): Rectangle2D.Double? = null
 
+    /**
+     * The number of overlay pixels in one component pixel. A [VideoOverlay] gets its video area in overlay pixels.
+     * With display scaling above 100%, the overlay uses device pixels, so the value is above 1.
+     */
+    fun overlayScale(): Double = 1.0
+
     /** Called on the event dispatch thread when [videoBounds] changes. */
     var onVideoBoundsChanged: (() -> Unit)?
         get() = null
@@ -80,7 +86,10 @@ fun interface VideoOverlay {
 
 /** A vector shape that a player draws over the video. The coordinates are component pixels. */
 sealed interface OverlayShape {
-    /** A rectangle. A [radius] above 0 gives it round corners. */
+    /**
+     * A rectangle. A [radius] above 0 gives it round corners.
+     * [rotationDeg] turns it around its center. A positive angle turns it clockwise.
+     */
     data class Rect(
         val x: Double,
         val y: Double,
@@ -90,6 +99,7 @@ sealed interface OverlayShape {
         val stroke: Color? = null,
         val strokeWidth: Double = 0.0,
         val radius: Double = 0.0,
+        val rotationDeg: Double = 0.0,
     ) : OverlayShape
 
     /**

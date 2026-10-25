@@ -44,6 +44,6 @@ class MessagesTest {
 
     @Test
     fun `a saved default text is known in all languages`() {
-        assertEquals(setOf("Player 1", "Jugador 1", "Игрок 1", "Jogador 1", "Joueur 1", "Spieler 1"), I18n.inAllLanguages("sport.tennis.side", "number" to 1))
+        assertEquals(setOf("Player 1", "Jugador 1", "Игрок 1", "Jogador 1", "Joueur 1", "Spieler 1", "プレイヤー1", "球员 1", "球員 1"), I18n.inAllLanguages("sport.tennis.side", "number" to 1))
     }
 }

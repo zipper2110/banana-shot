@@ -27,7 +27,8 @@ data class ChangePointsState(val times: List<Long> = emptyList(), val playheadMs
 /**
  * The card with the change points of the Colors & Transform tab (B-47). The wind can move the phone, and the
  * light can change during a recording. A change point sets other values from its time on. The status shows
- * which values the controls edit. The components are named "<namePrefix>-change-status", "-add", "-remove",
+ * which values the controls edit. The card shows the change points of the open sub-tab, so [setHint] changes
+ * the hint with the sub-tab. The components are named "<namePrefix>-change-status", "-add", "-remove",
  * "-previous", "-next" and "-hint".
  */
 internal class ChangePointsCard private constructor(private val parts: Parts) :
@@ -47,6 +48,11 @@ internal class ChangePointsCard private constructor(private val parts: Parts) :
     internal val removeButton: UiButton get() = parts.remove
     internal val previousButton: UiButton get() = parts.previous
     internal val nextButton: UiButton get() = parts.next
+
+    /** Sets the hint. [hint] has two lines, with a <br> between them. */
+    fun setHint(hint: String) {
+        parts.hintLabel.text = "<html>$hint</html>"
+    }
 
     fun render(state: ChangePointsState) {
         val times = state.times
@@ -90,7 +96,7 @@ internal class ChangePointsCard private constructor(private val parts: Parts) :
 
         // The hint has two fixed lines (a <br> in [hint]): the card rows have one height, and a wrapped HTML
         // label can need a third line.
-        private val hintLabel = JLabel("<html>$hint</html>").apply {
+        val hintLabel = JLabel("<html>$hint</html>").apply {
             name = "$namePrefix-change-hint"
             font = UiKit.font(11.5f)
             foreground = Palette.FG_3

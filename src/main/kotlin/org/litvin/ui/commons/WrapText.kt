@@ -1,5 +1,6 @@
 package org.litvin.ui.commons
 
+import org.litvin.i18n.LineBreaks
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
@@ -14,8 +15,8 @@ import kotlin.math.ceil
 internal data class TextRun(val text: String, val font: Font, val color: Color)
 
 /**
- * A text that wraps between words. The parts ([TextRun]) can have different fonts and colors.
- * A "\n" in a part starts a new line. The height depends on the width: a parent that knows the width
+ * A text that wraps between words, and between the characters of a Chinese or Japanese text ([LineBreaks]).
+ * The parts ([TextRun]) can have different fonts and colors. A "\n" in a part starts a new line. The height depends on the width: a parent that knows the width
  * asks [heightForWidth]. Before the first layout, the component uses [wrapWidth].
  */
 internal open class WrapText(
@@ -51,7 +52,8 @@ internal open class WrapText(
     private fun split(runs: List<TextRun>): List<Piece> = runs.flatMap { run ->
         run.text.split('\n').flatMapIndexed { index, part ->
             // Each word keeps the space after it, so the pieces of one line join without extra spaces.
-            val words = Regex("\\S+\\s*|\\s+").findAll(part).map { it.value }.toList()
+            // A Chinese or Japanese word breaks between its characters (B-11 E8-T4).
+            val words = Regex("\\S+\\s*|\\s+").findAll(part).flatMap { LineBreaks.pieces(it.value) }.toList()
             val list = words.map { Piece(it, run, UiKit.textWidth(it, run.font), false) }
             if (index > 0) listOf(Piece("", run, 0f, true)) + list else list
         }

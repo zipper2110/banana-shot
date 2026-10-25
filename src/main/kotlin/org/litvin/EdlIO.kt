@@ -59,7 +59,36 @@ data class CommentV1(
     val text: String,
     val colorHex: String = "#FFFFFF",
     val style: CommentStyle = CommentStyle.OUTLINE,
-)
+    /** The place of the comment in the frame. Null is the default place: centered, in the lower third. */
+    val position: CommentPosition? = null,
+    /** The size of the comment, in percent of the default size (B-51). */
+    val sizePercent: Int = DEFAULT_SIZE_PERCENT,
+    /** The opacity of the whole comment, in percent (B-51). The shadows and the card are also transparent. */
+    val opacityPercent: Int = 100,
+    /** The rotation of the comment around the center of its box, in whole degrees (B-51). Positive is clockwise. */
+    val rotationDeg: Int = 0,
+) {
+    companion object {
+        const val DEFAULT_SIZE_PERCENT = 100
+        const val MIN_SIZE_PERCENT = 50
+        const val MAX_SIZE_PERCENT = 200
+        const val MIN_OPACITY_PERCENT = 20
+        const val MIN_ROTATION_DEG = -180
+        const val MAX_ROTATION_DEG = 180
+    }
+}
+
+/**
+ * The place of a comment in the frame, as fractions of the frame size (0 to 1).
+ * [x] is the horizontal center of the comment. [y] is the lower edge of the comment.
+ * The user sets it when they drag the comment on the video (B-51).
+ */
+data class CommentPosition(val x: Double, val y: Double) {
+    companion object {
+        /** The place of a comment without a position. */
+        val DEFAULT = CommentPosition(0.5, 0.82)
+    }
+}
 
 data class CommentDefaultsV1(
     val colorHex: String = "#FFFFFF",
@@ -130,7 +159,14 @@ object EdlIO {
         val repaired = validComments.mapIndexed { index, comment ->
             val id = firstValidIds[index] ?: replacementId++
             val color = normalizeColorHex(comment.colorHex) ?: DEFAULT_COMMENT_COLOR
-            comment.copy(id = id, colorHex = color)
+            comment.copy(
+                id = id,
+                colorHex = color,
+                position = normalizePosition(comment.position),
+                sizePercent = normalizeSizePercent(comment.sizePercent),
+                opacityPercent = normalizeOpacityPercent(comment.opacityPercent),
+                rotationDeg = normalizeRotationDeg(comment.rotationDeg),
+            )
         }
         val maxCommentId = repaired.maxOfOrNull { it.id } ?: 0
         val normalizedDefault = normalizeColorHex(edl.commentDefaults.colorHex) ?: DEFAULT_COMMENT_COLOR
@@ -140,6 +176,23 @@ object EdlIO {
             commentDefaults = CommentDefaultsV1(normalizedDefault),
             nextCommentId = nextCommentId,
         )
+    }
+
+    /** A position outside the frame moves to the nearest edge. A position that is not a number is removed. */
+    internal fun normalizePosition(position: CommentPosition?): CommentPosition? {
+        if (position == null || !position.x.isFinite() || !position.y.isFinite()) return null
+        return CommentPosition(position.x.coerceIn(0.0, 1.0), position.y.coerceIn(0.0, 1.0))
+    }
+
+    internal fun normalizeSizePercent(percent: Int): Int =
+        percent.coerceIn(CommentV1.MIN_SIZE_PERCENT, CommentV1.MAX_SIZE_PERCENT)
+
+    internal fun normalizeOpacityPercent(percent: Int): Int = percent.coerceIn(CommentV1.MIN_OPACITY_PERCENT, 100)
+
+    /** An angle outside -180..180 turns into that range, for example 270 gives -90. */
+    internal fun normalizeRotationDeg(degrees: Int): Int {
+        val turned = Math.floorMod(degrees + 180, 360) - 180
+        return if (turned == -180 && degrees > 0) 180 else turned
     }
 
     /** Returns absolute path to edl.json for a given project directory. */

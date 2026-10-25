@@ -24,8 +24,7 @@ import org.litvin.ui.commons.Palette
  * shows the corners of the rotated frame around it, so the video area is larger than the frame
  * ([CropGeometryMath.editorViewScale]). The crop rectangle can go past the frame edges into that area.
  * This class draws the crop rectangle, the dim mask, the resize handles, and the rotation handle through
- * [SwingMediaPlayer.setEditorOverlay]. It also draws the [VideoFocusChip], which tells if the arrow keys move
- * the crop rectangle. It reads the mouse on [SwingMediaPlayer.component]. All coordinates are component pixels,
+ * [SwingMediaPlayer.setEditorOverlay]. It reads the mouse on [SwingMediaPlayer.component]. All coordinates are component pixels,
  * and the content box is the video area that [SwingMediaPlayer.videoBounds] gives.
  */
 class CropEditorOverlay(
@@ -93,7 +92,7 @@ class CropEditorOverlay(
         }
     }
 
-    /** False on the Colors sub-tab: the editor draws nothing and ignores the mouse and the arrow keys. */
+    /** False on the Colors sub-tab: the editor draws nothing and ignores the mouse. */
     var active: Boolean = true
         set(value) {
             if (field == value) return
@@ -104,14 +103,6 @@ class CropEditorOverlay(
             redraw()
         }
 
-    /** True while the video has the keyboard focus, so the arrow keys move the crop rectangle. */
-    var videoFocused: Boolean = false
-        set(value) {
-            if (field == value) return
-            field = value
-            redraw()
-        }
-
     fun render(next: AdjustmentsV1) {
         adjustments = next
         redraw()
@@ -119,22 +110,9 @@ class CropEditorOverlay(
 
     /**
      * False while the values have an older version: the presenter converts them when it knows the video size.
-     * The mouse and the arrow keys would otherwise write values of the current rules into an older project.
+     * The mouse would otherwise write values of the current rules into an older project.
      */
     private val editable: Boolean get() = adjustments.version >= AdjustmentsV1.CURRENT_VERSION
-
-    /** Moves the crop rectangle by [dx], [dy] component pixels. */
-    fun nudge(dx: Int, dy: Int) {
-        if (!active || !editable) return
-        val content = player.videoBounds() ?: return
-        val current = overlayRect(content)
-        val moved = CropGeometryMath.clampInside(
-            current.copy(x = current.x + dx, y = current.y + dy),
-            moveBounds(content),
-            aspect(content),
-        )
-        emit(modelFrom(content, moved))
-    }
 
     private fun updateHover(next: HitTarget, force: Boolean = false) {
         if (next == hoverTarget && !force) return
@@ -221,9 +199,6 @@ class CropEditorOverlay(
         val highlighted = hoverTarget != HitTarget.NONE || dragTarget != HitTarget.NONE
         val stroke = if (highlighted) Palette.LIME else Palette.FG_STRONG
         val shapes = mutableListOf<OverlayShape>()
-
-        // The chip is under the editor, so it never hides a handle.
-        shapes += VideoFocusChip.shapes(videoFocused, target.width.toDouble(), target.height.toDouble())
 
         // Dim mask: four bands of the content box around the crop rectangle.
         val right = overlay.x + overlay.width

@@ -10,7 +10,6 @@ import java.awt.Dimension
 import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
-import java.awt.GraphicsEnvironment
 import java.awt.Rectangle
 import java.awt.RenderingHints
 import java.awt.Toolkit
@@ -27,7 +26,9 @@ import javax.swing.Scrollable
 import javax.swing.UIManager
 import kotlin.math.ceil
 import kotlin.math.max
+import org.litvin.i18n.LineBreaks
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.UiFonts
 
 /**
  * Fonts and small painted parts of the Export tab. The colors are in [Palette].
@@ -41,21 +42,13 @@ internal object ExportUi {
 
     private val fonts = HashMap<Pair<Float, Weight>, Font>()
 
-    private val semiboldFamily: String? by lazy {
-        try {
-            GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.firstOrNull { it == "Segoe UI Semibold" }
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    /** A font of the app family with a size in pixels. Semibold uses "Segoe UI Semibold" when the PC has it. */
+    /** A font of the app family with a size in pixels. Semibold uses the semibold family of [UiFonts] when the PC has it. */
     fun font(size: Float, weight: Weight = Weight.REGULAR): Font = fonts.getOrPut(size to weight) {
         val family = (UIManager.getFont("Label.font") ?: Font(Font.SANS_SERIF, Font.PLAIN, 13)).family
         when (weight) {
             Weight.REGULAR -> Font(family, Font.PLAIN, 1).deriveFont(size)
             Weight.BOLD -> Font(family, Font.BOLD, 1).deriveFont(size)
-            Weight.SEMIBOLD -> semiboldFamily?.let { Font(it, Font.PLAIN, 1).deriveFont(size) }
+            Weight.SEMIBOLD -> UiFonts.semiboldFamily?.let { Font(it, Font.PLAIN, 1).deriveFont(size) }
                 ?: Font(family, Font.BOLD, 1).deriveFont(size)
         }
     }
@@ -267,7 +260,8 @@ internal class WrapText(
 
         for (run in runs) {
             lastFont = run.font
-            for (token in TOKEN.findAll(run.text).map { it.value }) {
+            // A Japanese word breaks between its characters (B-11 E8-T4).
+            for (token in TOKEN.findAll(run.text).flatMap { LineBreaks.pieces(it.value) }) {
                 when {
                     token == "\n" -> flush()
                     token.isBlank() -> if (current.isNotEmpty()) {

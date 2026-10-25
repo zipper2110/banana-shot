@@ -6,7 +6,6 @@ import org.litvin.shared.util.Timecode
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.LayoutManager
 import javax.swing.BorderFactory
 import javax.swing.Box
@@ -24,8 +23,10 @@ import org.litvin.ui.commons.SpeedControl
 import org.litvin.i18n.tr
 
 /**
- * The playback bar under the video: the current time and the speed on the left, the seek and play buttons in the
- * center, and Comment on the right. It has playback controls only; the mark buttons are in the point bar above it.
+ * The playback bar under the video: the current time with the video length under it, the speed, and Frame step on the
+ * left, the seek and play buttons in the center, and Comment on the right. Frame step is next to the seek buttons,
+ * because it changes what Left and Right do. The bar has playback controls only; the mark buttons are in the point bar
+ * above it.
  */
 internal class PlaybackBar(
     onTogglePlay: () -> Unit,
@@ -45,14 +46,19 @@ internal class PlaybackBar(
         foreground = Palette.FG
         toolTipText = tr("playback.currentTime")
     }
-    private val totalLabel = TimeLabel("", prefix = "/ ").apply {
+    private val totalLabel = TimeLabel("").apply {
+        name = "points-total-time"
         font = UiKit.font(12f)
         foreground = Palette.FG_3
     }
-    private val clock = JPanel(FlowLayout(FlowLayout.LEFT, CLOCK_GAP, 0)).apply {
+
+    /** The current time with the video length under it, so that the clock uses less width. */
+    private val clock = JPanel().apply {
         name = "points-time-panel"
         isOpaque = false
-        (layout as FlowLayout).alignOnBaseline = true
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        nowLabel.alignmentX = LEFT_ALIGNMENT
+        totalLabel.alignmentX = LEFT_ALIGNMENT
         add(nowLabel)
         add(totalLabel)
     }
@@ -121,7 +127,7 @@ internal class PlaybackBar(
     fun setTime(currentMs: Long, totalMs: Long) {
         val now = Timecode.format(max(0, currentMs))
         if (nowLabel.text != now) nowLabel.text = now
-        val total = if (totalMs > 0) "/ " + Timecode.format(totalMs) else ""
+        val total = if (totalMs > 0) Timecode.format(totalMs) else ""
         if (totalLabel.text != total) totalLabel.text = total
     }
 
@@ -132,9 +138,10 @@ internal class PlaybackBar(
 
     /**
      * The grid "1fr auto 1fr" of the design: the transport stays in the center of the bar,
-     * the clock and the speed use the space on its left and Comment the space on its right.
+     * the clock, the speed, and Frame step use the space on its left and Comment the space on its right.
+     * Frame step is at the right end of the left space, next to the seek buttons.
      * A narrow bar hides the direction icons of the seek buttons first. When the left space is too small,
-     * the speed hides its caption and key chips, then the clock hides the video length, and then the speed hides.
+     * the speed hides its caption and key chips, then Frame step hides its label, and then the speed hides.
      */
     private inner class BarLayout : LayoutManager {
         override fun addLayoutComponent(name: String?, comp: Component?) = Unit
@@ -144,8 +151,8 @@ internal class PlaybackBar(
         override fun preferredLayoutSize(parent: Container): Dimension {
             val insets = parent.insets
             val content = listOf(clock, speed, transport, commentButton, frameStep).maxOf { it.preferredSize.height }
-            val left = clock.preferredSize.width + SPEED_GAP + speed.preferredSize.width
-            val side = max(left, rightGroupWidth())
+            val left = leftWidth(speedCompact = false, frameStepCompact = false)
+            val side = max(left, commentButton.preferredSize.width)
             return Dimension(insets.left + insets.right + side * 2 + transport.preferredSize.width + GRID_GAP * 2, insets.top + insets.bottom + content)
         }
 
@@ -166,50 +173,49 @@ internal class PlaybackBar(
             fitLeftSide(space)
             val clockWidth = clock.preferredSize.width.coerceAtMost(space)
             place(clock, insets.left, clockWidth)
-            if (speed.isVisible) place(speed, insets.left + clockWidth + SPEED_GAP, speed.preferredSize.width)
+            val speedX = insets.left + clockWidth + SPEED_GAP
+            if (speed.isVisible) place(speed, speedX, speed.preferredSize.width)
+            val step = frameStep.preferredSize.width
+            val stepMinX = if (speed.isVisible) speedX + speed.preferredSize.width + SPEED_GAP else speedX
+            // Frame step has the height of the seek buttons, so it lines up with them.
+            place(frameStep, max(stepMinX, centerX - GRID_GAP - step), step, seekButtons.first().preferredSize.height)
             val button = commentButton.preferredSize.width
-            val groupX = max(centerX + center + GRID_GAP, parent.width - insets.right - rightGroupWidth())
-            place(commentButton, groupX, button)
-            // Frame step has the height of Comment, so the two buttons line up.
-            place(frameStep, groupX + button + RIGHT_GAP, frameStep.preferredSize.width, commentButton.preferredSize.height)
+            place(commentButton, max(centerX + center + GRID_GAP, parent.width - insets.right - button), button)
         }
 
-        /** Comment and the Frame step toggle, at the right end of the bar. */
-        private fun rightGroupWidth() = commentButton.preferredSize.width + RIGHT_GAP + frameStep.preferredSize.width
+        /** The width of the clock, the speed, and Frame step in the given forms. */
+        private fun leftWidth(speedCompact: Boolean, frameStepCompact: Boolean) =
+            clock.preferredSize.width + SPEED_GAP + speed.preferredWidth(speedCompact) + SPEED_GAP +
+                frameStep.preferredWidth(frameStepCompact)
 
         /**
-         * Selects the first form of the clock and the speed that fits in [space]. The widths come from the preferred
+         * Selects the first form of the speed and Frame step that fits in [space]. The widths come from the preferred
          * sizes of the parts, because a visibility change in each layout pass would start a new layout pass.
          */
         private fun fitLeftSide(space: Int) {
-            val now = nowLabel.preferredSize.width
-            val clockFull = now + totalLabel.preferredSize.width + CLOCK_GAP * 3
-            val clockShort = now + CLOCK_GAP * 2
-            fun fits(clockWidth: Int, compact: Boolean) = clockWidth + SPEED_GAP + speed.preferredWidth(compact) <= space
-            val (showTotal, compact, showSpeed) = when {
-                fits(clockFull, compact = false) -> Triple(true, false, true)
-                fits(clockFull, compact = true) -> Triple(true, true, true)
-                fits(clockShort, compact = true) -> Triple(false, true, true)
-                else -> Triple(false, true, false)
+            val (speedCompact, stepCompact, showSpeed) = when {
+                leftWidth(speedCompact = false, frameStepCompact = false) <= space -> Triple(false, false, true)
+                leftWidth(speedCompact = true, frameStepCompact = false) <= space -> Triple(true, false, true)
+                leftWidth(speedCompact = true, frameStepCompact = true) <= space -> Triple(true, true, true)
+                else -> Triple(true, true, false)
             }
-            totalLabel.isVisible = showTotal
-            speed.compact = compact
+            speed.compact = speedCompact
             speed.isVisible = showSpeed
+            frameStep.compact = stepCompact
         }
     }
 
     /**
-     * A time label with the width of its widest time, so that the next parts of the bar (the video length and the speed)
+     * A time label with the width of its widest time, so that the next parts of the bar (the speed)
      * do not move while the time changes. An empty label has no width.
      */
-    private class TimeLabel(text: String, private val prefix: String = "") : JLabel(text) {
+    private class TimeLabel(text: String) : JLabel(text) {
         override fun getPreferredSize(): Dimension {
             val size = super.getPreferredSize()
             if (text.isNullOrEmpty()) return size
             // The widest digit in each place of the time, for example "88:88:88.8" in most fonts.
-            val digits = text.removePrefix(prefix)
             val widest = ('0'..'9').maxBy { UiKit.textWidth(it.toString(), font) }
-            val sample = prefix + digits.map { if (it.isDigit()) widest else it }.joinToString("")
+            val sample = text.map { if (it.isDigit()) widest else it }.joinToString("")
             val textWidth = ceil(UiKit.textWidth(sample, font)).toInt() + 2
             return Dimension(max(size.width, textWidth + insets.left + insets.right), size.height)
         }
@@ -219,9 +225,7 @@ internal class PlaybackBar(
         const val GRID_GAP = 16
         const val TRANSPORT_GAP = 6
         const val PLAY_MARGIN = 8
-        const val CLOCK_GAP = 8
         const val SPEED_GAP = 8
-        const val RIGHT_GAP = 8
         const val HIDE_DIRECTION_BELOW = 880
     }
 }

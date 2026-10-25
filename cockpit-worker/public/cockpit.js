@@ -436,7 +436,7 @@
 
   const ATTRIBUTE_IDS = ['attr-sport', 'attr-theme', 'attr-accent'];
   const ATTRIBUTE_NAMES = {
-    sport: { tennis: 'Tennis', padel: 'Padel' },
+    sport: { tennis: 'Tennis', padel: 'Padel', beach_tennis: 'Beach tennis' },
     theme: { dark: 'Dark', mid: 'Mid', light: 'Light' },
     accent: { default: 'Default', custom: 'Custom' },
   };

@@ -76,6 +76,7 @@ class StatsCardPreview : JComponent() {
                 when (sport) {
                     Sport.TENNIS -> drawCourt(g, x, y, frameWidth, frameHeight)
                     Sport.PADEL -> drawPadelCourt(g, x, y, frameWidth, frameHeight)
+                    Sport.BEACH_TENNIS -> drawBeachCourt(g, x, y, frameWidth, frameHeight)
                 }
             } else drawFrame(g, frame, x, y, frameWidth, frameHeight)
             val scene = pages.getOrNull(page)
@@ -144,7 +145,7 @@ class StatsCardPreview : JComponent() {
     private fun drawPadelCourt(g: Graphics2D, x: Double, y: Double, w: Double, h: Double) {
         g.color = Palette.COURT_SURROUND
         g.fill(Rectangle2D.Double(x, y, w, h))
-        val view = PadelView(x, y, w, h)
+        val view = CourtView(x, y, w, h)
         g.color = Palette.COURT_PADEL
         val court = view.area(0.0, 1.0, 0.0, 1.0)
         g.fill(court)
@@ -179,11 +180,34 @@ class StatsCardPreview : JComponent() {
     }
 
     /**
-     * The perspective of the padel court in the frame. A court point has a depth (0 at the far back wall,
-     * 1 at the near back wall) and a side position (0 at the left wall, 1 at the right wall).
+     * A simple beach tennis court in perspective: 16 m × 8 m of sand with tape lines on the outline only.
+     * The net is high (1.7 m), so it shows as a band.
+     */
+    private fun drawBeachCourt(g: Graphics2D, x: Double, y: Double, w: Double, h: Double) {
+        g.color = Palette.COURT_SAND_SURROUND
+        g.fill(Rectangle2D.Double(x, y, w, h))
+        val view = CourtView(x, y, w, h)
+        g.color = Palette.COURT_SAND
+        val court = view.area(0.0, 1.0, 0.0, 1.0)
+        g.fill(court)
+
+        g.color = Palette.COURT_TAPE
+        g.stroke = BasicStroke((h / 150).toFloat().coerceAtLeast(1f))
+        g.draw(court)
+
+        val net = view.wall(0.5, 0.5, 0.0, 1.0, BEACH_NET_HEIGHT / BEACH_WIDTH)
+        g.color = Palette.COURT_NET
+        g.fill(net)
+        g.color = Palette.COURT_TAPE
+        g.draw(net)
+    }
+
+    /**
+     * The perspective of a court in the frame. A court point has a depth (0 at the far baseline or back wall,
+     * 1 at the near one) and a side position (0 at the left side, 1 at the right side).
      * The court has the same outline in the frame as the tennis court.
      */
-    private class PadelView(val x: Double, val y: Double, val w: Double, val h: Double) {
+    private class CourtView(val x: Double, val y: Double, val w: Double, val h: Double) {
         /** The screen y of a depth. The far half of the court is shorter on the screen than the near half. */
         fun screenY(depth: Double): Double {
             val t = depth / (depth + FAR_SHRINK * (1 - depth))
@@ -250,5 +274,7 @@ class StatsCardPreview : JComponent() {
         const val PADEL_SERVICE_LINE = 3.0 / 20.0
         /** The side glass is 4 m long at each end. */
         const val PADEL_SIDE_GLASS = 4.0 / 20.0
+        const val BEACH_WIDTH = 8.0
+        const val BEACH_NET_HEIGHT = 1.7
     }
 }

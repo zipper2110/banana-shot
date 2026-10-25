@@ -56,6 +56,9 @@ data class StatsSettingsV1(
         // Padel points are usually longer than tennis points. These values are an estimate, not a measurement (P-5 of padel.md).
         const val PADEL_SHORT_POINT_MAX_SECONDS = 12
         const val PADEL_LONG_POINT_MIN_SECONDS = 18
+        // Beach tennis points are usually shorter than tennis points: one serve and no bounce (beach-tennis.md).
+        const val BEACH_TENNIS_SHORT_POINT_MAX_SECONDS = 7
+        const val BEACH_TENNIS_LONG_POINT_MIN_SECONDS = 10
         const val MIN_POINT_LIMIT_SECONDS = 1
         const val MAX_POINT_LIMIT_SECONDS = 120
         const val DEFAULT_CARD_TRANSPARENCY_PERCENT = 18
@@ -68,6 +71,10 @@ data class StatsSettingsV1(
             Sport.PADEL -> StatsSettingsV1(
                 shortPointMaxSeconds = PADEL_SHORT_POINT_MAX_SECONDS,
                 longPointMinSeconds = PADEL_LONG_POINT_MIN_SECONDS,
+            )
+            Sport.BEACH_TENNIS -> StatsSettingsV1(
+                shortPointMaxSeconds = BEACH_TENNIS_SHORT_POINT_MAX_SECONDS,
+                longPointMinSeconds = BEACH_TENNIS_LONG_POINT_MIN_SECONDS,
             )
         }
     }

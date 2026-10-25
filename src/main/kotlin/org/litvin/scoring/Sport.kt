@@ -6,7 +6,7 @@ import org.litvin.i18n.DisplayFormats
 import org.litvin.i18n.I18n
 
 /**
- * The sport of a project. Tennis and padel use the same point, game, and set counting.
+ * The sport of a project. Tennis, padel, and beach tennis use the same point, game, and set counting.
  * The sport sets the match formats that the app shows, the default rules, and the names of the two sides.
  */
 enum class Sport {
@@ -15,12 +15,16 @@ enum class Sport {
 
     /** Padel is always doubles. Each side is a team of two players. */
     PADEL,
+
+    /** Beach tennis is usually doubles. Each side is a team of two players. The ITF rules always use no-ad. */
+    BEACH_TENNIS,
     ;
 
     val title: String
         get() = when (this) {
             TENNIS -> tr("sport.tennis")
             PADEL -> tr("sport.padel")
+            BEACH_TENNIS -> tr("sport.beachTennis")
         }
 
     /** The rules of a new project. */
@@ -28,6 +32,8 @@ enum class Sport {
         TENNIS -> MatchRulesV1()
         // The FIP rules use the star point since 2026.
         PADEL -> MatchRulesV1(deuce = DeuceRule.STAR_POINT)
+        // The ITF rules: two tiebreak sets, a 10-point match tiebreak in place of the third set, and no-ad (beach-tennis.md).
+        BEACH_TENNIS -> MatchRulesV1(finalSet = FinalSetRule.MATCH_TIEBREAK, deuce = DeuceRule.NO_AD)
     }
 
     /**
@@ -36,13 +42,14 @@ enum class Sport {
      */
     fun defaultSideName(side: Int): String = when (this) {
         TENNIS -> tr("sport.tennis.side", "number" to side)
-        PADEL -> tr("sport.padel.side", "number" to side)
+        // Beach tennis also has teams of two. It uses the padel text, for example "Team 1".
+        PADEL, BEACH_TENNIS -> tr("sport.padel.side", "number" to side)
     }
 
     /** [defaultSideName] in all app languages. A project keeps the default name of the language that made it. */
     fun defaultSideNames(side: Int): Set<String> = when (this) {
         TENNIS -> I18n.inAllLanguages("sport.tennis.side", "number" to side)
-        PADEL -> I18n.inAllLanguages("sport.padel.side", "number" to side)
+        PADEL, BEACH_TENNIS -> I18n.inAllLanguages("sport.padel.side", "number" to side)
     }
 
     /**
@@ -57,7 +64,7 @@ enum class Sport {
     /** The deuce rules that the score settings offer. A [current] rule that the sport does not use stays in the list. */
     fun deuceRules(current: DeuceRule): List<DeuceRule> {
         val rules = when (this) {
-            TENNIS -> listOf(DeuceRule.ADVANTAGE, DeuceRule.NO_AD)
+            TENNIS, BEACH_TENNIS -> listOf(DeuceRule.ADVANTAGE, DeuceRule.NO_AD)
             PADEL -> listOf(DeuceRule.ADVANTAGE, DeuceRule.NO_AD, DeuceRule.STAR_POINT)
         }
         return if (current in rules) rules else rules + current

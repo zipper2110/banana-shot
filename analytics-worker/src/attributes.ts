@@ -18,7 +18,7 @@ export const ATTRIBUTE_VALUES: Readonly<Record<string, readonly string[]>> = {
   accent: ['default', 'custom'],
   language: LANGUAGES,
   os_language: LANGUAGES,
-  sport: ['tennis', 'padel'],
+  sport: ['tennis', 'padel', 'beach_tennis'],
 };
 
 /** Attributes with an array of values. Each value can be in the array one time. */

@@ -333,4 +333,5 @@ class DefaultProjectsPresenter(
 private fun Sport.analyticsSport(): AnalyticsEvent.Sport = when (this) {
     Sport.TENNIS -> AnalyticsEvent.Sport.TENNIS
     Sport.PADEL -> AnalyticsEvent.Sport.PADEL
+    Sport.BEACH_TENNIS -> AnalyticsEvent.Sport.BEACH_TENNIS
 }

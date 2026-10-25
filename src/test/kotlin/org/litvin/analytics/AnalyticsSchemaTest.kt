@@ -92,7 +92,7 @@ class AnalyticsSchemaTest {
             sessionId = "id", level = AnalyticsLevel.EXTENDED, appVersion = "1.1.0", osFamily = "windows", snapshot = 0,
             final = false, durationS = 0, activeS = 0, counters = emptyMap(),
             attributes = mapOf(
-                "theme" to "dark", "accent" to "default", "language" to "en", "os_language" to "pt", "sport" to listOf("tennis", "padel"),
+                "theme" to "dark", "accent" to "default", "language" to "en", "os_language" to "pt", "sport" to listOf("tennis", "padel", "beach_tennis"),
             ),
         ).toJson())
         assertEquals(fixture["attributes"], json["attributes"])

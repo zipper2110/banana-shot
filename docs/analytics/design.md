@@ -325,7 +325,7 @@ each side check the lists against the file.
 | `accent` | `default`, `custom` | `custom` if the user selected an accent color. Never the color. |
 | `language` | The language list (below) | The language of the app interface. Both Spanish variants send `es`. The test language `qps` sends `en`. |
 | `os_language` | The language list (below) | The Windows display language (`Locale.getDefault(Locale.Category.DISPLAY)`). Schema 4 and later. |
-| `sport` | An array of `tennis`, `padel` | The sports of the projects that the session created or opened, or of a sport change in the score settings of the Points tab. `[]` if there was no project. |
+| `sport` | An array of `tennis`, `padel`, `beach_tennis` | The sports of the projects that the session created or opened, or of a sport change in the score settings of the Points tab. `[]` if there was no project. |
 
 - The language list (B-11 E2, decided on 2026-10-10): the primary language
   subtags (ISO 639-1, lower case) of the Windows display languages, and

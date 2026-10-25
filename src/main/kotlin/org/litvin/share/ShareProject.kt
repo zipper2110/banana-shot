@@ -72,10 +72,13 @@ data class ShareProject(
         ThumbnailField.DATE to (videoDate?.let(::thumbnailDate) ?: ""),
     )
 
-    /** "PADEL" for padel. For tennis, "DOUBLES" when the names are teams such as "Dima / Yana", else "SINGLES". */
+    /**
+     * The sport name for padel and beach tennis, for example "PADEL". For tennis, "DOUBLES" when the names are teams such
+     * as "Dima / Yana", else "SINGLES".
+     */
     fun matchKind(): String = DisplayFormats.upper(
         when (sport) {
-            Sport.PADEL -> tr("sport.padel")
+            Sport.PADEL, Sport.BEACH_TENNIS -> sport.title
             Sport.TENNIS -> if (isTeam(score.player1Name) && isTeam(score.player2Name)) tr("share.kind.doubles") else tr("share.kind.singles")
         },
     )
@@ -85,7 +88,7 @@ data class ShareProject(
     /** The name of a side, or empty when the user did not type a name. */
     private fun sideName(name: String, side: Int): String {
         val trimmed = name.trim()
-        val defaults = Sport.TENNIS.defaultSideNames(side) + Sport.PADEL.defaultSideNames(side)
+        val defaults = Sport.entries.flatMap { it.defaultSideNames(side) }.toSet()
         return if (trimmed in defaults) "" else trimmed.take(ThumbnailField.TEAM1.maxLength)
     }
 

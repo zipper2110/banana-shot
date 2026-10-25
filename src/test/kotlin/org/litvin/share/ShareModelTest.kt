@@ -75,6 +75,7 @@ class ShareModelTest {
         assertEquals("", presets[ThumbnailField.EVENT])
         assertEquals("SINGLES", presets[ThumbnailField.KIND])
         assertEquals("PADEL", project(points(), ScoreV1(sport = Sport.PADEL)).matchKind())
+        assertEquals("BEACH TENNIS", project(points(), ScoreV1(sport = Sport.BEACH_TENNIS)).matchKind())
     }
 
     @Test

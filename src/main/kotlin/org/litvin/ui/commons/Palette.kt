@@ -258,6 +258,13 @@ internal object Palette {
     /** The glass walls of a padel court: a light tint and a brighter edge. */
     val COURT_GLASS = withAlpha(Color.WHITE, 36)
     val COURT_GLASS_EDGE = withAlpha(Color.WHITE, 120)
+    /** The sand of a beach tennis court, and the darker sand around it. */
+    val COURT_SAND = Color(0xC9A86A)
+    val COURT_SAND_SURROUND = Color(0x9C7F4C)
+    /** The blue tape lines of a beach tennis court. */
+    val COURT_TAPE = Color(0x1F4F8F)
+    /** A net that shows the court behind it. */
+    val COURT_NET = withAlpha(Color(0x10151C), 110)
 
     /** The warm stop of the app mark gradient. */
     val BRAND_GOLD = Color(0xEDE450)

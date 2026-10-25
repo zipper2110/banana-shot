@@ -76,6 +76,7 @@ Style:
 | team (padel) | pareja | Default name "Pareja 1". Padel players in Spain and in Latin America say "pareja". The feminine form needs feminine words: "la pareja que saca", "las dos parejas juntas" |
 | singles, doubles | individual, dobles | Thumbnail match type |
 | padel, tennis | pádel, tenis | |
+| beach tennis | tenis playa | The name that the ITF and the RFET use |
 | Americano | Americano | |
 | pro set | pro set | |
 | best of 3 sets | al mejor de 3 sets | |
@@ -207,6 +208,7 @@ Style:
 | team (padel) | пара | Default name "Пара 1" |
 | singles, doubles | одиночный, парный | Thumbnail match type |
 | padel, tennis | падел, теннис | |
+| beach tennis | пляжный теннис | |
 | Americano | Американо | |
 | pro set | про-сет | |
 | best of 3 sets | до 2 выигранных сетов | "Best of {count}" in the set control = "Из {count}" |
@@ -332,6 +334,7 @@ Style:
 | team (padel) | dupla | Default name "Dupla 1" |
 | singles, doubles | simples, duplas | Thumbnail match type |
 | padel, tennis | padel, tênis (`pt`), ténis (`pt-PT`) | |
+| beach tennis | beach tennis (`pt`), ténis de praia (`pt-PT`) | Brazilian players use the English name |
 | Americano | Americano | |
 | best of 3 sets | melhor de 3 sets | |
 | momentum | dinâmica | |
@@ -459,6 +462,7 @@ Style:
 | team (padel) | équipe | Default name "Équipe 1" |
 | singles, doubles | simple, double | Thumbnail match type |
 | padel, tennis | padel, tennis | |
+| beach tennis | beach tennis | The name that the FFT uses |
 | Americano | Americano | |
 | pro set | pro set | |
 | best of 3 sets | au meilleur des 3 sets | |
@@ -580,6 +584,7 @@ Style:
 | singles, doubles | Einzel, Doppel | Thumbnail match type |
 | match | Match | Neuter: "das Match", "des Matchs" |
 | padel, tennis | Padel, Tennis | |
+| beach tennis | Beachtennis | |
 | Americano | Americano | |
 | pro set | Pro-Satz | |
 | best of 3 sets | Best of 3 Sätze | |

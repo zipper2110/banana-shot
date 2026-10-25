@@ -87,3 +87,33 @@ object SourceAudioProbe {
     /** Parses the `csv=p=0` output of ffprobe: one `audio` line for each audio stream. */
     internal fun parse(output: String): Boolean = output.lineSequence().any { it.trim() == "audio" }
 }
+
+/**
+ * Finds the sample rate of the first audio stream of the source. The slow sound of a replay (B-50) changes the
+ * rate and then converts back to it. A failed probe returns [DEFAULT_RATE].
+ */
+object SourceSampleRateProbe {
+    const val DEFAULT_RATE = 48000
+
+    fun probe(sourcePath: String, ffprobeExecutable: String): Int {
+        return try {
+            val process = ProcessBuilder(
+                ffprobeExecutable, "-v", "error", "-select_streams", "a:0",
+                "-show_entries", "stream=sample_rate", "-of", "csv=p=0", sourcePath,
+            ).redirectErrorStream(true).start()
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                return DEFAULT_RATE
+            }
+            if (process.exitValue() != 0) return DEFAULT_RATE
+            parse(process.inputStream.bufferedReader().use { it.readText() })
+        } catch (_: Throwable) {
+            DEFAULT_RATE
+        }
+    }
+
+    /** Parses the `csv=p=0` output of ffprobe: the sample rate on the first line. */
+    internal fun parse(output: String): Int =
+        output.lineSequence().firstNotNullOfOrNull { it.trim().trimEnd(',').toIntOrNull()?.takeIf { rate -> rate > 0 } }
+            ?: DEFAULT_RATE
+}

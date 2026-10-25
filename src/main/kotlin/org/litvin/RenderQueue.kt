@@ -66,6 +66,9 @@ data class RenderJob(
     val adjustments: org.litvin.adjustments.AdjustmentsV1 = org.litvin.adjustments.AdjustmentsV1(),
     // The language code of the video texts when the user queued the export (B-11 E4-T9). See [videoTextLanguage].
     val videoLanguage: String? = null,
+    // The instant replays after the exported points, in output order (B-50). The video timeline of the scoreboard
+    // and the comments does not include them, the same as the cards.
+    val replays: List<org.litvin.export.ExportReplay> = emptyList(),
     // Runtime fields
     var status: RenderStatus = RenderStatus.QUEUED,
     var progress: Double = 0.0,          // 0.0 .. 1.0
@@ -391,7 +394,16 @@ object RenderQueueManager {
                     setSummaries = job.setSummaries,
                     endCard = job.statsCard,
                     fullVideoDurationMs = probedDurationMs,
+                    replays = job.replays,
                 )
+                // A replay pass counts the source frames for the zoom and slows the sound (B-50).
+                val replayFrameRate = job.replays.takeIf { it.isNotEmpty() }
+                    ?.let { org.litvin.export.ExportSourceProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable).frameRate }
+                val replaySampleRate = if (job.replays.isNotEmpty() && sourceHasAudio) {
+                    org.litvin.export.SourceSampleRateProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable)
+                } else {
+                    org.litvin.export.SourceSampleRateProbe.DEFAULT_RATE
+                }
 
                 // Keep the last N stderr lines for diagnostics, across every pass of this job.
                 val tailSize = 200
@@ -402,7 +414,7 @@ object RenderQueueManager {
                 } else {
                     probedDurationMs
                 }
-                val totalDurationMs: Long? = videoDurationMs?.plus(org.litvin.export.ExportPassPlanner.cardDurationMs(passes))
+                val totalDurationMs: Long? = videoDurationMs?.plus(org.litvin.export.ExportPassPlanner.extraDurationMs(passes))
                 runs[job.id]?.videoMs = totalDurationMs
 
                 fun buildFor(
@@ -412,6 +424,9 @@ object RenderQueueManager {
                     chunkOutput: Boolean,
                     freezeFrame: FFmpegCommandBuilder.FreezeFrame? = null,
                     subtitlesPath: String? = assFile?.absolutePath,
+                    fadeIn: org.litvin.export.PassFade? = null,
+                    fadeOut: org.litvin.export.PassFade? = null,
+                    replay: FFmpegCommandBuilder.ReplayRender? = null,
                 ) = FFmpegCommandBuilder.build(
                     FFmpegCommandBuilder.BuildParams(
                         sourcePath = job.sourcePath,
@@ -421,7 +436,8 @@ object RenderQueueManager {
                         outHeight = job.outHeight,
                         outputFrameRate = job.outputFrameRate,
                         encoderLabel = job.encoderLabel,
-                        idleTrim = job.idleTrim,
+                        // A full video export with replays splits the source into ranges. Each range seeks like a kept segment.
+                        idleTrim = job.idleTrim || passKeeps.isNotEmpty(),
                         keeps = passKeeps,
                         subtitlesAssPath = subtitlesPath,
                         adjustments = jobAdjustments,
@@ -433,6 +449,9 @@ object RenderQueueManager {
                         videoBitrateK = job.videoBitrateK,
                         freezeFrame = freezeFrame,
                         sourceHasAudio = sourceHasAudio,
+                        fadeIn = fadeIn,
+                        fadeOut = fadeOut,
+                        replay = replay,
                     )
                 )
 
@@ -478,7 +497,41 @@ object RenderQueueManager {
                         val passFile = java.io.File(partOut.absolutePath + ".chunk$index.ts")
                         val build = when (pass) {
                             is org.litvin.export.ExportPassPlanner.Video ->
-                                buildFor(pass.chunk.keeps, passFile, pass.chunk.outputOffsetMs, chunkOutput = true)
+                                buildFor(
+                                    pass.chunk.keeps, passFile, pass.chunk.outputOffsetMs, chunkOutput = true,
+                                    fadeIn = pass.fadeIn, fadeOut = pass.fadeOut,
+                                )
+                            is org.litvin.export.ExportPassPlanner.Replay -> {
+                                // The comments and the badge of the replay are burned in, without the scoreboard.
+                                val replayAss = java.io.File(partOut.absolutePath + ".replay$index.ass")
+                                cardAssFiles += replayAss
+                                val withOverlay = try {
+                                    org.litvin.i18n.I18n.inVideo(job.videoTextLanguage) {
+                                        AssOverlayWriter.writeReplay(replayAss, pass.replay, job.outWidth, job.outHeight)
+                                    }
+                                    true
+                                } catch (t: Throwable) {
+                                    logger.warn(t) { "Failed to prepare the replay overlay; the replay shows without it" }
+                                    false
+                                }
+                                val part = pass.replay.replay
+                                val render = FFmpegCommandBuilder.ReplayRender(
+                                    startMs = part.startMs.toLong(),
+                                    endMs = part.endMs.toLong(),
+                                    speed = part.speed,
+                                    zoom = part.zoom,
+                                    zoomIn = pass.isFirst,
+                                    zoomOut = pass.isLast,
+                                    muted = part.muted,
+                                    sourceFrameRate = replayFrameRate,
+                                    sampleRate = replaySampleRate,
+                                )
+                                buildFor(
+                                    emptyList(), passFile, 0L, chunkOutput = true,
+                                    subtitlesPath = replayAss.absolutePath.takeIf { withOverlay },
+                                    fadeIn = pass.fadeIn, fadeOut = pass.fadeOut, replay = render,
+                                )
+                            }
                             is org.litvin.export.ExportPassPlanner.Card -> {
                                 // The card pages are burned in over a frozen frame, without the scoreboard.
                                 val cardAss = java.io.File(partOut.absolutePath + ".card$index.ass")

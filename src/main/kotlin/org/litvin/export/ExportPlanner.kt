@@ -299,7 +299,14 @@ object ExportPlanner {
         } else {
             emptyList()
         }
-        val cardsMs = (statsCard?.durationMs ?: 0L) + setSummaries.sumOf { it.card.durationMs }
+        // Full and Only points include all replays. Only favorites includes the replays of the favorite points (B-50).
+        val replays = ExportReplays.of(
+            points = if (effectiveIdleTrim) keptPoints else allValidPoints,
+            comments = if (request.includeComments) request.edl?.comments.orEmpty() else emptyList(),
+            badgeText = tr("replay.badge"),
+        )
+        val cardsMs = (statsCard?.durationMs ?: 0L) + setSummaries.sumOf { it.card.durationMs } +
+            ExportReplays.addedMs(replays)
         val outputDurationMs = if (effectiveIdleTrim) {
             ExportChunkPlanner.keptDurationMs(keptPoints)
         } else {
@@ -334,6 +341,7 @@ object ExportPlanner {
             setSummaries = setSummaries,
             adjustments = request.adjustments,
             videoLanguage = request.videoLanguage.code,
+            replays = replays,
         )
 
         return ExportRenderPlan(

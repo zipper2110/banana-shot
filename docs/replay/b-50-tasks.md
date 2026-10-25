@@ -36,6 +36,18 @@ the proposals Q1 to Q10 of the code study):
 
 None. Write each new decision in "Decisions" at once.
 
+## For review
+
+The author was away during the work of 2026-10-26. These choices were made
+without a question. Check them, and change them if necessary.
+
+| # | Task | Choice |
+|---|---|---|
+| R1 | T6 | The badge texts: en and pt "REPLAY", de "WIEDERHOLUNG", es "REPETICIÓN", fr "RALENTI", ru "ПОВТОР", ja "リプレイ", zh_Hans "回放", zh_Hant "重播". |
+| R2 | T6 | The export badge has no replay icon, only the text. The app has no icon font for ffmpeg. The sizes are relative to the frame height: the badge is 7% high, 4.5% from the top, and 3% from the right. |
+| R3 | T6 | A replay uses the Transform geometry and the colors at the start of its part. A change point inside the part has no effect in the replay. |
+| R4 | T6 | With change points, the zoom works on the frame at the output size, not at the source size. Thus a strong zoom looks softer than without change points. |
+
 ## Tasks
 
 | Task | Scope | Depends on | Status |
@@ -46,7 +58,7 @@ None. Write each new decision in "Decisions" at once.
 | T3 | Live playback of the replays | T0, T2 | open |
 | T4 | Replay editor popup | T1, T3 | open |
 | T5 | Replays on the Points tab: timeline, list, button | T2, T4 | open |
-| T6 | Export of the replays | T1 | open |
+| T6 | Export of the replays | T1 | done |
 | T7 | Texts, help, and translations | T4, T5 | open |
 | T8 | Site, changelog, and version scope | T1–T7 | open |
 
@@ -190,17 +202,26 @@ prototype measures how long the picture stops at each seek.
 
 ### T6 Export of the replays
 
+- Status: done. A test export of one replay pass (2 s of `D:S.mp4`, 4K60,
+  speed 0.5, zoom 2×) gave 4.0 s of video at 60 fps and 48 kHz sound, with
+  the zoom in, the zoom out, the dip from black and the dip to white.
 - `ExportPassPlanner` gets a replay pass, as the card pass. A video chunk
   ends after each point with replays, and the replay passes follow it. The
   passes join by stream copy, as now.
 - A full video export also splits at the end of each point with replays.
 - The replay pass reads the part from the source, and applies:
   - the speed (`setpts`) and the sound (decision 4, or silent audio when muted);
-  - the zoom: a crop that changes with the time, inside the geometry of
-    the Transform tab, then the scale to the output size (decision 8);
+  - the zoom: a `perspective` filter that changes with the frame number,
+    inside the geometry of the Transform tab, then the scale to the output
+    size (decision 8). The crop filter cannot change its size during the
+    stream, and a scale up of 4× before a fixed crop is too slow;
   - the colors of the Colors tab;
   - the cut effect at its start and its end (decision 2);
-  - the comments (decision 9). No scoreboard.
+  - the comments (decision 9) and the "REPLAY" badge (`ReplayBadgeAss`),
+    in one ASS file for each replay pass. No scoreboard;
+  - the frame rate of the source (`fps`), so that the join can copy the
+    streams. The sound converts back to the sample rate of the source
+    (`SourceSampleRateProbe`).
 - The chunk before a replay gets the end of the cut effect (for example a
   fade out over its last frames).
 - Full and Only points include all replays. Only favorites includes the
@@ -209,7 +230,8 @@ prototype measures how long the picture stops at each seek.
 - Set cards and the statistics card go after the replays (decision 11).
 - Keep the end-to-end check small: a short 1080p clip (see the note about
   heavy local runs).
-- Tests: —
+- Tests: `ExportPassPlannerTest`, `FFmpegCommandBuilderReplayTest`,
+  `ReplayExportOverlayTest`
 
 ### T7 Texts, help, and translations
 

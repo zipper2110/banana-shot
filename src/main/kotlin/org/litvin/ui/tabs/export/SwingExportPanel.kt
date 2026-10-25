@@ -513,13 +513,17 @@ class SwingExportPanel(
 
     /** The duration of the exported video, for the file size estimates. */
     private fun updateOutputDuration() {
-        val durationMs = if (!idleTrimSelected()) {
-            sourceInfo.durationMs
+        val validPoints = ExportPlanner.validateEdl(readCurrentProjectEdl())
+        val kept = if (idleTrimSelected()) {
+            ExportPlanner.selectedKeepPoints(validPoints, idleTrim = true, favoriteOnly = favoriteOnlySelected())
         } else {
-            val validPoints = ExportPlanner.validateEdl(readCurrentProjectEdl())
-            val kept = ExportPlanner.selectedKeepPoints(validPoints, idleTrim = true, favoriteOnly = favoriteOnlySelected())
-            // Without valid points the export falls back to the full video.
-            if (kept.isEmpty()) sourceInfo.durationMs else ExportChunkPlanner.keptDurationMs(kept)
+            emptyList()
+        }
+        // Without valid points the export falls back to the full video.
+        val durationMs = if (kept.isEmpty()) sourceInfo.durationMs else ExportChunkPlanner.keptDurationMs(kept)
+        // The replays add their plays to the video (B-50).
+        val replayMs = (kept.ifEmpty { validPoints }).sumOf { point ->
+            org.litvin.points.Replays.fitTo(point).sumOf { org.litvin.points.Replays.addedMs(it) }
         }
         val cardMs = if (statsCardCheck.isSelected) currentStatsCard()?.durationMs ?: 0L else 0L
         val setCardsMs = if (setSummariesCheck.isEnabled && setSummariesCheck.isSelected) {
@@ -527,7 +531,7 @@ class SwingExportPanel(
         } else {
             0L
         }
-        qualityPanel.setOutputDurationMs(durationMs?.plus(cardMs + setCardsMs))
+        qualityPanel.setOutputDurationMs(durationMs?.plus(cardMs + setCardsMs + replayMs))
     }
 
     private fun refreshCompletedFromStore() {

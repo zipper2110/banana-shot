@@ -51,7 +51,35 @@ object FFmpegCommandBuilder {
         // False when the source has no audio stream. Then each pass writes silent audio, so that all
         // passes have the same streams and the join can copy them.
         val sourceHasAudio: Boolean = true,
+        // A dip to black or white at the start and the end of the pass (B-50). Only a pass of kept segments and a
+        // replay pass use them.
+        val fadeIn: org.litvin.export.PassFade? = null,
+        val fadeOut: org.litvin.export.PassFade? = null,
+        // When set, the output is one play of a replay part (B-50), in place of the keeps.
+        val replay: ReplayRender? = null,
     )
+
+    /**
+     * One play of a replay part [startMs, endMs) of the source (B-50). The video gets the [zoom] frame inside the
+     * geometry of the Transform tab: the zoom goes in at the start when [zoomIn], and out at the end when [zoomOut].
+     * The sound slows down with a lower pitch, or is silent when [muted].
+     */
+    data class ReplayRender(
+        val startMs: Long,
+        val endMs: Long,
+        val speed: Double,
+        val zoom: org.litvin.points.ReplayZoom?,
+        val zoomIn: Boolean,
+        val zoomOut: Boolean,
+        val muted: Boolean,
+        /** The frame rate of the source. The zoom counts the frames, and the output keeps this rate. */
+        val sourceFrameRate: org.litvin.export.ExportFrameRate?,
+        /** The sample rate of the source audio. The lower pitch changes it and then converts back to it. */
+        val sampleRate: Int,
+    ) {
+        /** The output duration of the play. */
+        val durationMs: Long get() = Math.round((endMs - startMs).coerceAtLeast(0L) / speed)
+    }
 
     /**
      * A still frame of the source for [durationMs], for example under the statistics card.
@@ -298,6 +326,65 @@ object FFmpegCommandBuilder {
 
     private fun fmt6(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.6f", d)
 
+    /** The frame rate that the zoom of a replay counts with when the source rate is not known. */
+    private const val FALLBACK_FPS = 30.0
+
+    /**
+     * The zoom of a replay (B-50) as a perspective filter, or null without a zoom. The filter maps a part of the
+     * input frame to the full frame. The part changes from the full frame to the zoom frame in the first
+     * [org.litvin.points.Replays.ZOOM_MS] of the play, and back in the last ones (decision 7 and 8). The expressions
+     * count the input frames, because perspective has no time variable.
+     */
+    internal fun replayZoomFilter(replay: ReplayRender): String? {
+        val zoom = replay.zoom ?: return null
+        val fps = replay.sourceFrameRate?.framesPerSecond?.takeIf { it > 0.0 } ?: FALLBACK_FPS
+        // The source frames in the zoom time. The play is slower, so the zoom takes fewer source frames.
+        val zoomFrames = fmt6((fps * org.litvin.points.Replays.ZOOM_MS / 1000.0 * replay.speed).coerceAtLeast(1.0))
+        val lastFrame = fmt6(((replay.endMs - replay.startMs) / 1000.0 * fps - 1.0).coerceAtLeast(0.0))
+        fun smooth(u: String) = "($u)*($u)*(3-2*($u))"
+        val parts = buildList {
+            if (replay.zoomIn) add(smooth("clip(in/$zoomFrames,0,1)"))
+            if (replay.zoomOut) add(smooth("clip(($lastFrame-in)/$zoomFrames,0,1)"))
+        }
+        val progress = when (parts.size) {
+            0 -> "1"
+            1 -> parts.single()
+            else -> "min(${parts[0]},${parts[1]})"
+        }
+        val size = "(1-${fmt6(1.0 - zoom.width)}*$progress)"
+        val left = "${fmt6(zoom.x)}*$progress"
+        val top = "${fmt6(zoom.y)}*$progress"
+        val x0 = "W*($left)"
+        val y0 = "H*($top)"
+        val x1 = "W*($left+$size)"
+        val y1 = "H*($top+$size)"
+        val corners = listOf("x0" to x0, "y0" to y0, "x1" to x1, "y1" to y0, "x2" to x0, "y2" to y1, "x3" to x1, "y3" to y1)
+        val eval = if (parts.isEmpty()) "init" else "frame"
+        return "perspective=" + corners.joinToString(":") { (name, value) -> "$name='$value'" } + ":sense=source:eval=$eval"
+    }
+
+    /** The video fades of a pass of [durationSecs]: a dip from black or white at the start, and to it at the end. */
+    internal fun fadeFilters(fadeIn: org.litvin.export.PassFade?, fadeOut: org.litvin.export.PassFade?, durationSecs: Double): List<String> {
+        fun color(fade: org.litvin.export.PassFade) = if (fade.white) "white" else "black"
+        return listOfNotNull(
+            fadeIn?.let { "fade=t=in:st=0:d=${(it.durationMs / 1000.0).formatSecs()}:color=${color(it)}" },
+            fadeOut?.let {
+                val length = (it.durationMs / 1000.0).coerceAtMost(durationSecs)
+                "fade=t=out:st=${(durationSecs - length).coerceAtLeast(0.0).formatSecs()}:d=${length.formatSecs()}:color=${color(it)}"
+            },
+        )
+    }
+
+    /** The sound fades that go with [fadeFilters]. */
+    internal fun audioFadeFilters(fadeIn: org.litvin.export.PassFade?, fadeOut: org.litvin.export.PassFade?, durationSecs: Double): List<String> =
+        listOfNotNull(
+            fadeIn?.let { "afade=t=in:st=0:d=${(it.durationMs / 1000.0).formatSecs()}" },
+            fadeOut?.let {
+                val length = (it.durationMs / 1000.0).coerceAtMost(durationSecs)
+                "afade=t=out:st=${(durationSecs - length).coerceAtLeast(0.0).formatSecs()}:d=${length.formatSecs()}"
+            },
+        )
+
     /** The output path that sends the images to the standard output as BMP files, one after the other. */
     const val PIPE = "-"
 
@@ -409,8 +496,13 @@ object FFmpegCommandBuilder {
         // frame-accurate since ffmpeg 2.1 (it decodes and discards up to the exact point), so the
         // segment durations still match what ScoreboardTimelineBuilder assumes.
         val freeze = p.freezeFrame
-        val segmentInputs = freeze == null && p.idleTrim && p.keeps.isNotEmpty()
-        if (freeze != null) {
+        val replay = p.replay?.takeIf { freeze == null }
+        val segmentInputs = freeze == null && replay == null && p.idleTrim && p.keeps.isNotEmpty()
+        if (replay != null) {
+            val lengthSecs = (replay.endMs - replay.startMs).coerceAtLeast(0L) / 1000.0
+            args += listOf("-ss", (replay.startMs / 1000.0).formatSecs(), "-t", lengthSecs.formatSecs())
+            args += listOf("-i", p.sourcePath)
+        } else if (freeze != null) {
             val atMs = freeze.atMs
             if (atMs == null) {
                 args += listOf("-sseof", (-FREEZE_WINDOW_SECS).formatSecs())
@@ -440,7 +532,8 @@ object FFmpegCommandBuilder {
 
         fun buildColorFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? = colorFilter(adj, p.toneRange)
         // A freeze shows the geometry of its frame. Without change points, the time has no effect.
-        val geometryAtMs = freeze?.let { it.atMs?.minus(STILL_FRAME_OFFSET_MS) ?: Long.MAX_VALUE } ?: 0L
+        // A replay shows the geometry and the colors of its start.
+        val geometryAtMs = freeze?.let { it.atMs?.minus(STILL_FRAME_OFFSET_MS) ?: Long.MAX_VALUE } ?: replay?.startMs ?: 0L
         fun buildGeometryFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? =
             geometryFilter(adj, p.sourceWidth, p.sourceHeight, p.outWidth, p.outHeight, geometryAtMs)
 
@@ -455,7 +548,7 @@ object FFmpegCommandBuilder {
         // A color fade reads its part of the source from one more input, without audio. These inputs come
         // after the other inputs.
         val baseInputCount = when {
-            freeze != null -> 1
+            freeze != null || replay != null -> 1
             segmentInputs -> p.keeps.size
             p.sourceHasAudio -> 1
             else -> 2
@@ -542,6 +635,40 @@ object FFmpegCommandBuilder {
                 "$SILENT_AUDIO,atrim=duration=$duration"
             }
             filterComplex = "[0:v]${video.joinToString(",")}$vMap;$audio$aMap"
+        } else if (replay != null) {
+            // The zoom works on the frame after the Transform geometry, at the source resolution when it can.
+            // The speed and the frame rate come after it, because the zoom counts the source frames.
+            val durationSecs = replay.durationMs / 1000.0
+            val duration = durationSecs.formatSecs()
+            val zoom = replayZoomFilter(replay)
+            val video = mutableListOf("setpts=PTS-STARTPTS")
+            if (timedAdjustments != null) {
+                video += timedFilters(timedAdjustments, replay.startMs, replay.endMs)
+                zoom?.let { video += it }
+                buildColorFilter(ColorTimeline.at(timedAdjustments, replay.startMs))?.let { video += it }
+            } else {
+                geometry?.let { video += it }
+                zoom?.let { video += it }
+                video += scale
+                buildColorFilter(p.adjustments)?.let { video += it }
+            }
+            video += "setpts=PTS/${fmt6(replay.speed)}"
+            replay.sourceFrameRate?.let { video += "fps=${it.ffmpegArgument}" }
+            p.subtitlesAssPath?.let { video += "subtitles='${escapeForFilterPath(it)}'" }
+            video += fadeFilters(p.fadeIn, p.fadeOut, durationSecs)
+            val audioFades = audioFadeFilters(p.fadeIn, p.fadeOut, durationSecs)
+            val audio = when {
+                !p.sourceHasAudio -> "$SILENT_AUDIO,atrim=duration=$duration"
+                replay.muted -> "[0:a]asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
+                else -> {
+                    // A lower sample rate plays the samples slower, so the pitch goes down with the speed (decision 4).
+                    // The resample keeps the sample rate of the other passes, so the join can copy the streams.
+                    val slowRate = Math.round(replay.sampleRate * replay.speed).coerceAtLeast(1L)
+                    (listOf("[0:a]asetpts=PTS-STARTPTS", "asetrate=$slowRate", "aresample=${replay.sampleRate}", "apad", "atrim=duration=$duration") + audioFades)
+                        .joinToString(",")
+                }
+            }
+            filterComplex = "[0:v]${video.joinToString(",")}$vMap;$audio$aMap"
         } else if (segmentInputs) {
             // Build the concat graph over the per-segment inputs. Each input was already seeked and
             // length-limited on the command line, so the segment only needs its timestamps rebased.
@@ -574,7 +701,18 @@ object FFmpegCommandBuilder {
             } else {
                 "[vcat]" + listOfNotNull(geometry, scale).joinToString(",") + "[vsc]"
             }
-            parts += aLabels.joinToString(separator = "") + "concat=n=${p.keeps.size}:v=0:a=1" + aMap
+            // A chunk next to a replay dips to black or white (B-50).
+            val chunkSecs = p.keeps.sumOf { (it.endMs - it.startMs).coerceAtLeast(0).toLong() } / 1000.0
+            val videoFades = fadeFilters(p.fadeIn, p.fadeOut, chunkSecs)
+            val audioFades = audioFadeFilters(p.fadeIn, p.fadeOut, chunkSecs)
+            val finalVideo = vMap
+            if (videoFades.isNotEmpty()) vMap = "[vfd]"
+            if (audioFades.isEmpty()) {
+                parts += aLabels.joinToString(separator = "") + "concat=n=${p.keeps.size}:v=0:a=1" + aMap
+            } else {
+                parts += aLabels.joinToString(separator = "") + "concat=n=${p.keeps.size}:v=0:a=1[acat]"
+                parts += "[acat]${audioFades.joinToString(",")}$aMap"
+            }
             // Apply color adjustments after scale to match preview, before subtitles
             val color = if (timedAdjustments != null) null else buildColorFilter(p.adjustments)
             var baseLabel = "[vsc]"
@@ -598,6 +736,10 @@ object FFmpegCommandBuilder {
                 parts += "$baseLabel" + burnIn + vMap
             } else {
                 vMap = baseLabel
+            }
+            if (videoFades.isNotEmpty()) {
+                parts += "$vMap${videoFades.joinToString(",")}$finalVideo"
+                vMap = finalVideo
             }
             filterComplex = parts.joinToString(";")
         } else if (timedAdjustments != null) {

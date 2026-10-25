@@ -127,6 +127,47 @@ object AssOverlayWriter {
         }
     }
 
+    /**
+     * Writes the ASS file of one play of a replay (B-50). The pass video starts at 0. The file has the comments of
+     * the replay part and the "REPLAY" badge, but no scoreboard (the board is hidden during a replay).
+     */
+    fun writeReplay(file: File, replay: org.litvin.export.ExportReplay, outWidth: Int, outHeight: Int) {
+        val playResX = outWidth.coerceAtLeast(16)
+        val playResY = outHeight.coerceAtLeast(16)
+        file.parentFile?.mkdirs()
+        file.bufferedWriter(Charsets.UTF_8).use { w ->
+            w.scriptInfo(playResX, playResY)
+            w.appendLine("[V4+ Styles]")
+            w.appendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding")
+            val black = assColor(0x000000, 0x00)
+            w.appendLine("Style: Comment,Arial,20,${assColor(0xFFFFFF, 0x00)},&H000000FF,$black,$black,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,0")
+            w.appendLine()
+            w.appendLine("[Events]")
+            w.appendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text")
+            for (comment in replay.comments) {
+                if (comment.endMs <= comment.startMs || comment.text.isBlank()) continue
+                val start = toAssTs(comment.startMs)
+                val end = toAssTs(comment.endMs)
+                val events = CommentAss.events(
+                    comment.text, comment.colorHex, 0.0, 0.0, playResX.toDouble(), playResY.toDouble(), comment.style,
+                    comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
+                )
+                events.forEachIndexed { index, text ->
+                    w.appendLine("Dialogue: ${COMMENT_LAYER + index},$start,$end,Comment,,0,0,0,,$text")
+                }
+            }
+            replay.badgeText?.let { badge ->
+                val end = toAssTs(replay.playMs)
+                org.litvin.export.ReplayBadgeAss.events(badge, playResX.toDouble(), playResY.toDouble()).forEachIndexed { index, text ->
+                    w.appendLine("Dialogue: ${BADGE_LAYER + index},0:00:00.00,$end,Comment,,0,0,0,,$text")
+                }
+            }
+        }
+    }
+
+    /** The replay badge is above the comments. */
+    private const val BADGE_LAYER = 2000
+
     private fun Appendable.scriptInfo(playResX: Int, playResY: Int) {
         appendLine("[Script Info]")
         appendLine("ScriptType: v4.00+")

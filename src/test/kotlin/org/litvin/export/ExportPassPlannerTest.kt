@@ -4,6 +4,8 @@ import org.litvin.export.ExportPassPlanner.Card
 import org.litvin.export.ExportPassPlanner.Video
 import org.litvin.export.scoreboard.ScoreboardScene
 import org.litvin.points.PointV1
+import org.litvin.points.ReplayEffect
+import org.litvin.points.ReplayV1
 import org.litvin.stats.SetSummaryCard
 import org.litvin.stats.StatsCardVideo
 import kotlin.test.Test
@@ -23,6 +25,7 @@ class ExportPassPlannerTest {
         when (pass) {
             is Video -> "video ${pass.chunk.keeps.joinToString("+") { it.id }} @${pass.chunk.outputOffsetMs}/${pass.progressBaseMs}"
             is Card -> "card ${pass.card.durationMs} at ${pass.freezeAtMs} @${pass.progressBaseMs}"
+            is ExportPassPlanner.Replay -> "replay ${pass.replay.pointId}#${pass.repeat} ${pass.durationMs} @${pass.progressBaseMs}"
         }
     }
 
@@ -95,5 +98,105 @@ class ExportPassPlannerTest {
         assertNull(end.freezeAtMs)
         assertEquals(90_000L, end.progressBaseMs)
         assertEquals(12_000L, ExportPassPlanner.cardDurationMs(passes))
+    }
+
+    // B-50: the replays.
+
+    /** A replay of the last 2 s of point [id] at half speed: one play is 4 s. */
+    private fun replay(id: String, repeats: Int = 1, effect: ReplayEffect = ReplayEffect.FADE): ExportReplay {
+        val point = keeps.first { it.id == id }
+        return ExportReplay(id, point.endMs, ReplayV1(point.endMs - 2_000, point.endMs, speed = 0.5, repeats = repeats, effect = effect))
+    }
+
+    private fun PassFade?.text() = when {
+        this == null -> "-"
+        white -> "white$durationMs"
+        else -> "black$durationMs"
+    }
+
+    private fun List<ExportPassPlanner.Pass>.fades(): List<String> = map { pass ->
+        when (pass) {
+            is Video -> "${pass.fadeIn.text()}/${pass.fadeOut.text()}"
+            is ExportPassPlanner.Replay -> "${pass.fadeIn.text()}/${pass.fadeOut.text()}"
+            is Card -> "card"
+        }
+    }
+
+    @Test
+    fun theReplaysOfAPointComeAfterItsEndAndThePlaysAddToTheProgress() {
+        val passes = ExportPassPlanner.plan(keeps, replays = listOf(replay("p2", repeats = 2)), maxSegmentsPerChunk = 8)
+
+        assertEquals(
+            listOf(
+                "video p1+p2 @0/0",
+                "replay p2#0 4000 @10000",
+                "replay p2#1 4000 @14000",
+                "video p3+p4+p5+p6 @10000/18000",
+            ),
+            passes.describe(),
+        )
+        // The cut into and out of the replay dips to black. The repeats have a short dip between them.
+        assertEquals(listOf("-/black250", "black250/black100", "black100/black250", "black250/-"), passes.fades())
+        assertEquals(8_000L, ExportPassPlanner.extraDurationMs(passes))
+    }
+
+    @Test
+    fun flashDipsToWhiteAndCutHasNoDip() {
+        val flash = ExportPassPlanner.plan(keeps, replays = listOf(replay("p1", effect = ReplayEffect.FLASH)), maxSegmentsPerChunk = 8)
+        assertEquals(listOf("-/white250", "white250/white250", "white250/-"), flash.fades())
+
+        val cut = ExportPassPlanner.plan(keeps, replays = listOf(replay("p1", effect = ReplayEffect.CUT)), maxSegmentsPerChunk = 8)
+        assertEquals(listOf("-/-", "-/-", "-/-"), cut.fades())
+    }
+
+    @Test
+    fun theSetCardComesAfterTheReplaysOfTheLastPointOfTheSet() {
+        val passes = ExportPassPlanner.plan(
+            keeps,
+            setSummaries = listOf(set(1, "p1", "p2", "p3")),
+            replays = listOf(replay("p3")),
+            maxSegmentsPerChunk = 8,
+        )
+
+        assertEquals(
+            listOf(
+                "video p1+p2+p3 @0/0",
+                "replay p3#0 4000 @15000",
+                "card 6000 at 35000 @19000",
+                "video p4+p5+p6 @15000/25000",
+            ),
+            passes.describe(),
+        )
+        // A card between the replay and the video stops the fade in of the video.
+        assertEquals(listOf("-/black250", "black250/black250", "card", "-/-"), passes.fades())
+    }
+
+    @Test
+    fun aReplayOfAPointThatIsNotKeptIsNotInThePlan() {
+        val passes = ExportPassPlanner.plan(keeps.take(2), replays = listOf(replay("p4")), maxSegmentsPerChunk = 8)
+
+        assertEquals(listOf("video p1+p2 @0/0"), passes.describe())
+    }
+
+    @Test
+    fun aFullVideoWithReplaysSplitsTheSourceAtThePointEnds() {
+        val passes = ExportPassPlanner.plan(
+            keeps = emptyList(),
+            fullVideoDurationMs = 60_000,
+            replays = listOf(replay("p1"), replay("p3")),
+        )
+
+        assertEquals(
+            listOf(
+                "video range-0 @0/0",
+                "replay p1#0 4000 @15000",
+                "video range-15000 @15000/19000",
+                "replay p3#0 4000 @39000",
+                "video range-35000 @35000/43000",
+            ),
+            passes.describe(),
+        )
+        val ranges = passes.filterIsInstance<Video>().map { it.chunk.keeps.single().let { k -> k.startMs to k.endMs } }
+        assertEquals(listOf(0 to 15_000, 15_000 to 35_000, 35_000 to 60_000), ranges)
     }
 }

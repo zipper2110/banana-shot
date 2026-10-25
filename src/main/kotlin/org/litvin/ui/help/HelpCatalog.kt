@@ -181,6 +181,9 @@ object HelpCatalog {
                 tr("help.points.action.7"),
                 tr("help.points.action.8"),
                 tr("help.points.action.9"),
+                tr("help.points.action.10"),
+                tr("help.points.action.11"),
+                tr("help.points.action.12"),
             ),
             goodToKnow = listOf(
                 tr("help.points.note.1"),
@@ -197,6 +200,10 @@ object HelpCatalog {
                 tr("help.points.note.12"),
                 tr("help.points.note.13"),
                 tr("help.points.note.14"),
+                tr("help.points.note.15"),
+                tr("help.points.note.16"),
+                tr("help.points.note.17"),
+                tr("help.points.note.18"),
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.PLAY_PAUSE, tr("help.points.shortcut.playPause")),

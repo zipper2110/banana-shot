@@ -60,6 +60,8 @@ without a question. Check them, and change them if necessary.
 | R15 | T5 | The list is 360 px wide, so the tag shows "REPLAY" or "2 REPLAYS" only when there is room. Else it shows the icon and the count ("2"), or only the icon for one replay. |
 | R16 | T5 | The replay blocks are in the VIDEO track, as in the mockup. One block for each replay, with all its repeats. A click on a block opens the editor on that replay. A click in a block does not seek. |
 | R17 | T5 | The ruler ticks are at round source times, so with replays the ticks are not at equal distances. |
+| R18 | T7 | The replay help is a part of the Points help page (3 actions and 4 notes), not a separate page. The help pages are one for each tab. |
+| R19 | T7 | The replay texts and the replay help in de, es, es-419, fr, pt, pt-PT, ru, ja, zh-Hans, and zh-Hant are drafts by Claude. Ask the reviewer of each language to check them. |
 
 ## Tasks
 
@@ -72,7 +74,7 @@ without a question. Check them, and change them if necessary.
 | T4 | Replay editor popup | T1, T3 | done |
 | T5 | Replays on the Points tab: timeline, list, button | T2, T4 | done |
 | T6 | Export of the replays | T1 | done |
-| T7 | Texts, help, and translations | T4, T5 | open |
+| T7 | Texts, help, and translations | T4, T5 | done |
 | T8 | Site, changelog, and version scope | T1–T7 | open |
 
 Status values: `open`, `in-progress`, `done`. When a task is done, write
@@ -260,9 +262,10 @@ prototype measures how long the picture stops at each seek.
 
 ### T7 Texts, help, and translations
 
+- Status: done (R18, R19).
 - All new texts in `messages.properties` and in all app languages.
 - A help topic about replays.
-- Tests: —
+- Tests: `MessageCatalogTest`, `HelpCatalogTest`
 
 ### T8 Site, changelog, and version scope
 

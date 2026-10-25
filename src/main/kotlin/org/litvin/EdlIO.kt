@@ -31,6 +31,47 @@ data class PointV1(
     val label: String? = null,
     val notes: String? = null,
     val favorite: Boolean = false,
+    /** The instant replays after the point, sorted by start time (B-50). An empty list is not written. */
+    @field:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    val replays: List<ReplayV1> = emptyList(),
+)
+
+/** How the video goes into a replay and out of it (B-50, decision 3 of `docs/replay/b-50-tasks.md`). */
+enum class ReplayEffect {
+    /** A dip to black: the video fades out, then the next picture fades in. */
+    @JsonEnumDefaultValue
+    FADE,
+
+    /** A dip to white. */
+    FLASH,
+
+    /** No effect. */
+    CUT,
+}
+
+/**
+ * The zoom frame of a replay, as fractions of the frame after the crop and the rotation of the Transform tab.
+ * [x] and [y] are the upper-left corner. The zoom frame has the aspect of the frame, so [width] is also the
+ * fraction of the frame height. Thus the zoom factor is 1 / [width].
+ */
+data class ReplayZoom(val x: Double, val y: Double, val width: Double)
+
+/**
+ * One instant replay of a part of a point (B-50). The part is in source time. [Replays] gives the limits.
+ * The replay plays the part [repeats] times at [speed], right after the end of its point.
+ */
+data class ReplayV1(
+    val startMs: Int,
+    val endMs: Int,
+    /** Null is no zoom. */
+    val zoom: ReplayZoom? = null,
+    val speed: Double = Replays.DEFAULT_SPEED,
+    val repeats: Int = 1,
+    /** True mutes the sound. Otherwise the sound slows down with the video, with a lower pitch (decision 4). */
+    val muted: Boolean = false,
+    val effect: ReplayEffect = ReplayEffect.FADE,
+    /** Shows the "REPLAY" badge on the video during the replay. */
+    val showBadge: Boolean = true,
 )
 
 /**
@@ -207,8 +248,11 @@ object EdlIO {
         if (changed) {
             logger.info { "Repaired missing/duplicate point ids before save; changes will be persisted" }
         }
-        JsonFileIO.writeAtomically(mapper, edlFilePath, normalizeComments(edl.copy(points = fixedPoints)))
+        JsonFileIO.writeAtomically(mapper, edlFilePath, normalizeComments(edl.copy(points = fitReplays(fixedPoints))))
     }
+
+    /** Keeps the replays of each point inside the limits of [Replays] (B-50). */
+    internal fun fitReplays(points: List<PointV1>): List<PointV1> = points.map(Replays::fitted)
 
     /** Read EDL from the given file path; returns empty EdlV1 if file does not exist. Repairs ids if needed. */
     fun read(edlFilePath: String): EdlV1 {
@@ -219,7 +263,7 @@ object EdlIO {
         if (changed) {
             logger.info { "Backfilled/repaired point ids while loading; will persist on next autosave" }
         }
-        return normalizeComments(raw.copy(points = fixedPoints))
+        return normalizeComments(raw.copy(points = fitReplays(fixedPoints)))
     }
 
     /** Convenience: read EDL for a given project directory. */

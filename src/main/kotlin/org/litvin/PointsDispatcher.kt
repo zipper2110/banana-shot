@@ -4,6 +4,7 @@ import org.litvin.i18n.tr
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.points.EdlIO
 import org.litvin.points.PointV1
+import org.litvin.points.Replays
 import org.litvin.shared.util.Timecode
 
 /**
@@ -62,7 +63,8 @@ class PointsDispatcher {
             return false
         }
         val old = points[idx]
-        val updated = old.copy(startMs = s, endMs = e, label = newLabel)
+        // The replays keep their source times and stay inside the new window of the point (B-50).
+        val updated = Replays.fitted(old.copy(startMs = s, endMs = e, label = newLabel))
         points[idx] = updated
         // Keep list sorted by startMs
         points.sortBy { it.startMs }

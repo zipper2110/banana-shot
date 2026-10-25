@@ -117,6 +117,8 @@ When item is done, move it under
   its point.
 - The user makes a replay on the Points tab. The UX mockup is
   `design/instant-replay/index.html`.
+- The tasks, the open questions, and the seek prototype results are in
+  `docs/replay/b-50-tasks.md`.
 - Each replay has: a start and an end, a zoom frame on the video, a speed
   from 0.1× to 1×, and a repeat count from 1 to 5.
 - Decided on 2026-10-22:

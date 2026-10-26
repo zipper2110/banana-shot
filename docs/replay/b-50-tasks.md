@@ -34,6 +34,7 @@ the proposals Q1 to Q10 of the code study):
 | 12 | T3, T6 | Decided on 2026-10-26 after the work: the zoom does not go out at the end of the replay. The zoom stays until the cut effect at the end, and the video after the replay starts at the normal size. |
 | 13 | T5 | Decided on 2026-10-26 after the work: each replay is a sub-row right under its point in the list, also before a comment inside the point. The row is 30 px high and has no number. It shows the replay icon, "Replay 1", the time that the replay adds in Length, and the speed, the repeats, the zoom, and a muted sound. A click opens the editor on the replay. Delete shows on hover and removes the replay without a question, as for a comment. The row is not a timeline event: the selection, R, the arrow keys, and Delete skip it. The point row has no REPLAY tag. Its replay button stays, to add a replay. |
 | 14 | T4, T5 | Decided on 2026-10-26 after the work: the user sets the play order of the replays of a point. The editor has arrow buttons next to Delete, and each replay row in the list has Move up and Move down on hover. The app does not sort the replays by start time. |
+| 15 | T4 | Decided on 2026-10-26 after the work: the editor offers the speeds 0.1×, 0.2×, 0.3×, 0.5× (the default), and 1×. A replay with another speed in the data keeps it, and no speed button is selected. |
 
 ## Open questions
 

@@ -15,6 +15,9 @@ object Replays {
     const val MAX_SPEED = 1.0
     const val DEFAULT_SPEED = 0.5
 
+    /** The speeds that the replay editor offers (decision 15). */
+    val SPEEDS = listOf(0.1, 0.2, 0.3, 0.5, 1.0)
+
     const val MIN_REPEATS = 1
     const val MAX_REPEATS = 5
 

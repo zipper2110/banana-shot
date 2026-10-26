@@ -123,7 +123,7 @@ internal class ReplayEditorWindow(
     private val zoomNote = WrapText("", UiKit.font(12f), Palette.FG_3, wrapWidth = NOTE_WIDTH)
     private val speedChoice = SegmentedChoice(
         "replay-speed-choice",
-        listOf(0.1, 0.25, 0.5, 0.75, 1.0).map { SegmentedChoice.Option(it, "${DisplayFormats.decimal(it, 0, 2)}×") },
+        Replays.SPEEDS.map { SegmentedChoice.Option(it, "${DisplayFormats.decimal(it, 0, 2)}×") },
     )
     private val soundChoice = SegmentedChoice(
         "replay-sound-choice",
@@ -566,7 +566,7 @@ internal class ReplayEditorWindow(
             isSoft(replay) -> tr("replay.editor.zoom.soft")
             else -> tr("replay.editor.zoom.hint")
         })
-        speedChoice.selected = listOf(0.1, 0.25, 0.5, 0.75, 1.0).firstOrNull { kotlin.math.abs(it - replay.speed) < 0.001 }
+        speedChoice.selected = Replays.SPEEDS.firstOrNull { kotlin.math.abs(it - replay.speed) < 0.001 }
         speedGroup.showNote("${DisplayFormats.decimal(replay.speed, 0, 2)}×")
         soundChoice.selected = replay.muted
         repeatChoice.selected = replay.repeats

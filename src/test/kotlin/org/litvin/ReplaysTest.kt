@@ -63,6 +63,13 @@ class ReplaysTest {
     }
 
     @Test
+    fun `the editor speeds are inside the limits and include the default`() {
+        assertEquals(listOf(0.1, 0.2, 0.3, 0.5, 1.0), Replays.SPEEDS)
+        assertTrue(Replays.SPEEDS.all { it in Replays.MIN_SPEED..Replays.MAX_SPEED })
+        assertTrue(Replays.DEFAULT_SPEED in Replays.SPEEDS)
+    }
+
+    @Test
     fun `speed and repeats go into their limits`() {
         val fitted = Replays.fitTo(
             point.copy(

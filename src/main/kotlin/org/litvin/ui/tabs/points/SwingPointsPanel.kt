@@ -1110,6 +1110,9 @@ class SwingPointsPanel(
                 if (active) {
                     player.activatePreview("replay editor closed")
                     player.seek(playhead)
+                    // The busy card hid the video, so the main window gave the focus to another button (the
+                    // Projects nav button). Space would press that button. Give the focus back to the video.
+                    EventQueue.invokeLater { player.component.requestFocusInWindow() }
                 }
                 refreshUiAtCurrentTime()
             },

@@ -407,7 +407,8 @@ internal class CommentRow(
 
 /**
  * One instant replay under the row of its point (B-50): the replay icon, "Replay 1", the speed, the repeats, the zoom,
- * and the time that the replay adds. A click opens the replay editor on the replay. Delete shows on hover.
+ * and the time that the replay adds. A click opens the replay editor on the replay. Move up, Move down, and Delete
+ * show on hover. The replays of a point play in the order of the rows.
  * The row is not a timeline event, so it has no visual index and no selected state.
  */
 internal class ReplayRow(
@@ -416,6 +417,10 @@ internal class ReplayRow(
     pointEndMs: Long,
     private val onOpen: () -> Unit,
     onDelete: () -> Unit,
+    /** Moves the replay: -1 plays it earlier, 1 plays it later. */
+    onMove: (Int) -> Unit = {},
+    private val isFirst: Boolean = true,
+    private val isLast: Boolean = true,
 ) : TableRow(NO_INDEX, pointEndMs) {
 
     override val title = tr("replay.editor.tab", "number" to replay.index + 1)
@@ -423,6 +428,10 @@ internal class ReplayRow(
     override val rowHeight: Int get() = REPLAY_HEIGHT
 
     private val icon = UiKit.icon(Material2MZ.SLOW_MOTION_VIDEO, 14, Palette.LIME)
+    val upButton = RowIconButton(Material2AL.ARROW_UPWARD, tr("replay.moveEarlier"))
+        .apply { name = "move-up-replay-$pointId-${replay.index}" }
+    val downButton = RowIconButton(Material2AL.ARROW_DOWNWARD, tr("replay.moveLater"))
+        .apply { name = "move-down-replay-$pointId-${replay.index}" }
     val deleteButton = RowIconButton(Material2AL.CLOSE, tr("points.replay.row.delete"), danger = true)
         .apply { name = "delete-replay-$pointId-${replay.index}" }
 
@@ -430,7 +439,11 @@ internal class ReplayRow(
         name = "replay-row-$pointId-${replay.index}"
         toolTipText = tr("points.replay.row.edit")
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        add(upButton)
+        add(downButton)
         add(deleteButton)
+        upButton.addActionListener { onMove(-1) }
+        downButton.addActionListener { onMove(1) }
         deleteButton.addActionListener { onDelete() }
         onStateChanged()
     }
@@ -439,10 +452,13 @@ internal class ReplayRow(
     fun open() = onOpen()
 
     override fun onStateChanged() {
+        // The first replay cannot move up and the last cannot move down. A hidden button keeps its place.
+        upButton.isVisible = hovered && !isFirst
+        downButton.isVisible = hovered && !isLast
         deleteButton.isVisible = hovered
     }
 
-    override fun doLayout() = layoutActions(listOf(deleteButton))
+    override fun doLayout() = layoutActions(listOf(upButton, downButton, deleteButton))
 
     /** The speed, the repeats, the zoom, and a muted sound, for example "0.5× · ×2 · Zoom 2×". */
     internal val details: String
@@ -475,7 +491,7 @@ internal class ReplayRow(
             UiKit.drawText(g2, added, textFont, Palette.FG_3, addedX, 0f, h)
             // A replay row has no marks and no star, so the details can use these columns, up to Delete on hover.
             val metaX = columns.lengthRight + DETAILS_GAP
-            val metaRight = if (deleteButton.isVisible) deleteButton.x - TableColumns.GAP else columns.actionsRight
+            val metaRight = if (hovered) columns.actions - TableColumns.GAP else columns.actionsRight
             val meta = UiKit.ellipsize(details, textFont, (metaRight - metaX).toFloat())
             UiKit.drawText(g2, meta, textFont, Palette.FG_3, metaX.toFloat(), 0f, h)
         } finally {

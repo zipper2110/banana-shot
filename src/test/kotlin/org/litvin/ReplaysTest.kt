@@ -57,9 +57,9 @@ class ReplaysTest {
     }
 
     @Test
-    fun `the replays are sorted by start time`() {
+    fun `the replays keep the play order of the user`() {
         val replays = listOf(ReplayV1(startMs = 15_000, endMs = 17_000), ReplayV1(startMs = 11_000, endMs = 12_000))
-        assertEquals(listOf(11_000, 15_000), Replays.fitTo(point.copy(replays = replays)).map { it.startMs })
+        assertEquals(listOf(15_000, 11_000), Replays.fitTo(point.copy(replays = replays)).map { it.startMs })
     }
 
     @Test

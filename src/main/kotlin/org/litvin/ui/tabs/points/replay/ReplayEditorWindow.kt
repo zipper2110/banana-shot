@@ -148,6 +148,16 @@ internal class ReplayEditorWindow(
     private val summary = WrapText("", UiKit.font(12.5f), Palette.FG_2, wrapWidth = NOTE_WIDTH)
     private val emptyNote = WrapText(tr("replay.editor.empty"), UiKit.font(12.5f), Palette.FG_2, wrapWidth = NOTE_WIDTH)
     private val deleteButton = UiButton(tr("common.delete"), Material2AL.DELETE, UiButton.Kind.DANGER).apply { name = "replay-delete" }
+    private val earlierButton = UiButton("", Material2AL.ARROW_BACK).apply {
+        name = "replay-move-earlier"
+        toolTipText = tr("replay.moveEarlier")
+        isFocusable = false
+    }
+    private val laterButton = UiButton("", Material2AL.ARROW_FORWARD).apply {
+        name = "replay-move-later"
+        toolTipText = tr("replay.moveLater")
+        isFocusable = false
+    }
     private val saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply { name = "replay-save" }
     private val cancelButton = UiButton(tr("common.cancel")).apply { name = "replay-cancel" }
     private val editors = JPanel()
@@ -332,7 +342,7 @@ internal class ReplayEditorWindow(
             add(editors, BorderLayout.NORTH)
             add(emptyNote.apply { border = BorderFactory.createEmptyBorder(16, 16, 16, 16) }, BorderLayout.CENTER)
         }
-        val footer = DialogKit.footer(left = listOf(deleteButton), right = listOf(cancelButton, saveButton))
+        val footer = DialogKit.footer(left = listOf(deleteButton, earlierButton, laterButton), right = listOf(cancelButton, saveButton))
         return JPanel(BorderLayout()).apply {
             name = "replay-side"
             background = Palette.BG
@@ -366,6 +376,8 @@ internal class ReplayEditorWindow(
         badgeSwitch.addActionListener { edits.setShowBadge(badgeSwitch.isSelected); refreshSide() }
         previewButton.addActionListener { togglePreview() }
         deleteButton.addActionListener { stopPreview(); edits.deleteSelected(); seekToSelected(); refresh() }
+        earlierButton.addActionListener { stopPreview(); edits.moveSelected(-1); refresh() }
+        laterButton.addActionListener { stopPreview(); edits.moveSelected(1); refresh() }
         cancelButton.addActionListener { close(save = false) }
         saveButton.addActionListener { close(save = true) }
     }
@@ -538,6 +550,8 @@ internal class ReplayEditorWindow(
         editors.isVisible = replay != null
         emptyNote.isVisible = replay == null
         deleteButton.isEnabled = replay != null
+        earlierButton.isEnabled = edits.canMove(-1)
+        laterButton.isEnabled = edits.canMove(1)
         previewButton.isEnabled = replay != null
         zoomOverlay.zoom = replay?.zoom
         if (replay == null) return

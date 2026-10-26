@@ -38,6 +38,9 @@ interface PointsActions {
     /** Removes the replay [replayIndex] of the point with [id] (B-50). */
     fun deleteReplay(id: String, replayIndex: Int) {}
 
+    /** Moves the replay [replayIndex] of the point with [id] by [delta] places: -1 plays it earlier, 1 later (B-50). */
+    fun moveReplay(id: String, replayIndex: Int, delta: Int) {}
+
     /**
      * Selects an item by its visual index (index within the composed view list).
      */

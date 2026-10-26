@@ -49,8 +49,8 @@ object Replays {
 
     /**
      * The replays of [point] after a change of the point (decision 6): each part is cut to the window of the point,
-     * a part shorter than [MIN_PART_MS] is removed, and the values go into their limits. The result is sorted by
-     * start time (decision of 2026-10-26).
+     * a part shorter than [MIN_PART_MS] is removed, and the values go into their limits. The replays keep their
+     * order, because the user sets the play order (decision 14).
      */
     fun fitTo(point: PointV1): List<ReplayV1> {
         if (point.replays.isEmpty()) return point.replays
@@ -62,7 +62,6 @@ object Replays {
                 val end = replay.endMs.coerceAtMost(windowEnd)
                 if (end - start < MIN_PART_MS) null else normalizeValues(replay.copy(startMs = start, endMs = end))
             }
-            .sortedWith(compareBy<ReplayV1> { it.startMs }.thenBy { it.endMs })
     }
 
     /** [point] with its replays fitted to it. The same object when nothing changes. */

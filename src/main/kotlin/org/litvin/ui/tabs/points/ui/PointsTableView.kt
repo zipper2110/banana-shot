@@ -203,6 +203,9 @@ class PointsTableView(
                             pointEndMs = point.endMs ?: point.startMs,
                             onOpen = { actions.openReplays(point.id, replay.index) },
                             onDelete = { actions.deleteReplay(point.id, replay.index) },
+                            onMove = { delta -> actions.moveReplay(point.id, replay.index, delta) },
+                            isFirst = replay.index == 0,
+                            isLast = replay.index == point.replays.lastIndex,
                         ),
                         selected = false,
                     )

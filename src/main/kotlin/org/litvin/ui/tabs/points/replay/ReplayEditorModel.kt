@@ -40,6 +40,20 @@ class ReplayEditorModel(val point: PointV1, selectedIndex: Int = 0) {
         return true
     }
 
+    /** True when the selected replay can move by [delta] places: -1 is earlier, 1 is later. */
+    fun canMove(delta: Int): Boolean = selectedIndex in list.indices && (selectedIndex + delta) in list.indices
+
+    /**
+     * Moves the selected replay [delta] places: -1 plays it earlier, 1 plays it later. The replays of a point play in
+     * the order of the list. The moved replay stays selected.
+     */
+    fun moveSelected(delta: Int) {
+        if (!canMove(delta)) return
+        val target = selectedIndex + delta
+        list.add(target, list.removeAt(selectedIndex))
+        selectedIndex = target
+    }
+
     /** Removes the selected replay. The replay before it is selected next. */
     fun deleteSelected() {
         if (selectedIndex !in list.indices) return

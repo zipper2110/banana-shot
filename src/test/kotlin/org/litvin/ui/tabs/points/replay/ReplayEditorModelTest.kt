@@ -95,6 +95,30 @@ class ReplayEditorModelTest {
     }
 
     @Test
+    fun aMoveChangesThePlayOrderAndKeepsTheSelection() {
+        val first = ReplayV1(10_000, 11_000)
+        val second = ReplayV1(12_000, 13_000)
+        val third = ReplayV1(11_000, 12_000)
+        val model = ReplayEditorModel(point.copy(replays = listOf(first, second, third)), selectedIndex = 0)
+        assertFalse(model.canMove(-1))
+
+        model.moveSelected(1)
+        assertEquals(listOf(second, first, third), model.replays)
+        assertEquals(1, model.selectedIndex)
+        assertTrue(model.changed)
+
+        model.moveSelected(1)
+        assertEquals(listOf(second, third, first), model.replays)
+        assertFalse(model.canMove(1))
+        model.moveSelected(1)
+        assertEquals(listOf(second, third, first), model.replays, "the last replay cannot move later")
+
+        model.moveSelected(-2)
+        assertEquals(listOf(first, second, third), model.replays)
+        assertEquals(0, model.selectedIndex)
+    }
+
+    @Test
     fun theAddedTimeCountsEachRepeat() {
         val saved = point.copy(replays = listOf(ReplayV1(10_000, 11_000, speed = 0.5, repeats = 3)))
         assertEquals(6_000, ReplayEditorModel(saved).addedMs)

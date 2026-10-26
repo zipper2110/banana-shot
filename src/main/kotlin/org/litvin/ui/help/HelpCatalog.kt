@@ -184,6 +184,7 @@ object HelpCatalog {
                 tr("help.points.action.10"),
                 tr("help.points.action.11"),
                 tr("help.points.action.12"),
+                tr("help.points.action.13"),
             ),
             goodToKnow = listOf(
                 tr("help.points.note.1"),

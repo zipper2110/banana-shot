@@ -146,6 +146,7 @@ class PointsTableViewTest {
             override fun seekTo(ms: Long) { calls += "seek $ms" }
             override fun openReplays(id: String, replayIndex: Int?) { calls += "open $id $replayIndex" }
             override fun deleteReplay(id: String, replayIndex: Int) { calls += "delete $id $replayIndex" }
+            override fun moveReplay(id: String, replayIndex: Int, delta: Int) { calls += "move $id $replayIndex $delta" }
         }
         SwingUtilities.invokeAndWait {
             val view = PointsTableView(actions)
@@ -177,6 +178,18 @@ class PointsTableViewTest {
             (findByName(view, "delete-replay-pt-a-0") as javax.swing.AbstractButton).doClick()
             dispatch(rows[4], MouseEvent.MOUSE_CLICKED)
             assertEquals(listOf("open pt-a 1", "delete pt-a 0", "select 2", "seek 3000"), calls)
+
+            // On hover, the first replay can move down only, and the last replay can move up only.
+            dispatch(replayRows[0], MouseEvent.MOUSE_ENTERED)
+            assertFalse(replayRows[0].upButton.isVisible)
+            assertTrue(replayRows[0].downButton.isVisible)
+            dispatch(replayRows[1], MouseEvent.MOUSE_ENTERED)
+            assertTrue(replayRows[1].upButton.isVisible)
+            assertFalse(replayRows[1].downButton.isVisible)
+            calls.clear()
+            replayRows[0].downButton.doClick()
+            replayRows[1].upButton.doClick()
+            assertEquals(listOf("move pt-a 0 1", "move pt-a 1 -1"), calls)
 
             // A selection by visual index never marks a replay row.
             view.updateSelection(2)

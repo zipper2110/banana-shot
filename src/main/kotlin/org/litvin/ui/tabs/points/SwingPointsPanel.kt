@@ -401,6 +401,7 @@ class SwingPointsPanel(
         override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
         override fun openReplays(id: String, replayIndex: Int?) = openReplayEditor(pointId = id, replayIndex = replayIndex)
         override fun deleteReplay(id: String, replayIndex: Int) = this@SwingPointsPanel.deleteReplay(id, replayIndex)
+        override fun moveReplay(id: String, replayIndex: Int, delta: Int) = this@SwingPointsPanel.moveReplay(id, replayIndex, delta)
     }
 
     override fun addNotify() {
@@ -886,6 +887,17 @@ class SwingPointsPanel(
         val point = dispatcher.getCompletedPoints().firstOrNull { it.id == id } ?: return
         if (replayIndex !in point.replays.indices) return
         dispatcher.setReplays(id, point.replays.filterIndexed { index, _ -> index != replayIndex })
+    }
+
+    /** Moves one replay of a point. The replays of a point play in the order of the list. */
+    private fun moveReplay(id: String, replayIndex: Int, delta: Int) {
+        replayEditor?.let { it.toFront(); return }
+        val point = dispatcher.getCompletedPoints().firstOrNull { it.id == id } ?: return
+        val target = replayIndex + delta
+        if (replayIndex !in point.replays.indices || target !in point.replays.indices) return
+        val list = point.replays.toMutableList()
+        list.add(target, list.removeAt(replayIndex))
+        dispatcher.setReplays(id, list)
     }
 
     private fun deleteComment(id: Int) {

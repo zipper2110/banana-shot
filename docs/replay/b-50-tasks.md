@@ -32,6 +32,7 @@ the proposals Q1 to Q10 of the code study):
 | 10 | T5 | Q9: the spiky edges of a replay block show when the block is 16 px or wider. A narrower block is a plain lime tick, at least 3 px wide. |
 | 11 | T6 | Q10: the set cards and the statistics card go after the replays of the last point. |
 | 12 | T3, T6 | Decided on 2026-10-26 after the work: the zoom does not go out at the end of the replay. The zoom stays until the cut effect at the end, and the video after the replay starts at the normal size. |
+| 13 | T5 | Decided on 2026-10-26 after the work: each replay is a sub-row right under its point in the list, also before a comment inside the point. The row is 30 px high and has no number. It shows the replay icon, "Replay 1", the time that the replay adds in Length, and the speed, the repeats, the zoom, and a muted sound. A click opens the editor on the replay. Delete shows on hover and removes the replay without a question, as for a comment. The row is not a timeline event: the selection, R, the arrow keys, and Delete skip it. The point row has no REPLAY tag. Its replay button stays, to add a replay. |
 
 ## Open questions
 
@@ -58,7 +59,7 @@ without a question. Check them, and change them if necessary.
 | R12 | T4 | The sound choice is a separate "Sound" group under "Speed", because the two choices need the full width in some languages. |
 | R13 | T4 | A replay from a list row or a timeline block starts at the point end when the playhead is not in the window of the point. |
 | R14 | T5 | The actions column of the list is 82 px wide (it was 54 px), for the replay button on hover. |
-| R15 | T5 | The list is 360 px wide, so the tag shows "REPLAY" or "2 REPLAYS" only when there is room. Else it shows the icon and the count ("2"), or only the icon for one replay. |
+| R15 | T5 | Replaced by decision 13: the list shows each replay as a sub-row, and the point row has no REPLAY tag. |
 | R16 | T5 | The replay blocks are in the VIDEO track, as in the mockup. One block for each replay, with all its repeats. A click on a block opens the editor on that replay. A click in a block does not seek. |
 | R17 | T5 | The ruler ticks are at round source times, so with replays the ticks are not at equal distances. |
 | R18 | T7 | The replay help is a part of the Points help page (3 actions and 4 notes), not a separate page. The help pages are one for each tab. |

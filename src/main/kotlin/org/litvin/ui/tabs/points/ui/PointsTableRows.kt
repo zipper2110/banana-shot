@@ -11,6 +11,8 @@ import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.formatSeconds
 import org.litvin.ui.tabs.points.CommentDto
 import org.litvin.ui.tabs.points.PointDto
+import org.litvin.ui.tabs.points.ReplayRowDto
+import java.awt.Cursor
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
@@ -111,15 +113,18 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
     /** Rows that can have the selected state. A comment row has no selected state. */
     abstract val selectable: Boolean
 
+    /** The height of the row. A replay row is lower than a point row or a comment row. */
+    open val rowHeight: Int get() = HEIGHT
+
     protected open fun onStateChanged() = Unit
 
     init {
         isOpaque = false
     }
 
-    override fun getPreferredSize() = Dimension(0, HEIGHT)
-    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, HEIGHT)
-    override fun getMinimumSize() = Dimension(0, HEIGHT)
+    override fun getPreferredSize() = Dimension(0, rowHeight)
+    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, rowHeight)
+    override fun getMinimumSize() = Dimension(0, rowHeight)
 
     protected fun paintRowBackground(g2: Graphics2D, rest: Color?, bar: Color?, barWidth: Int = BAR) {
         val fill = when {
@@ -153,6 +158,9 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
 
     companion object {
         const val HEIGHT = 45
+
+        /** The visual index of a row that is not a timeline event, for example a replay row. */
+        const val NO_INDEX = -1
 
         /** The width of the selection bar and the comment color bar at the left edge. */
         const val BAR = 3
@@ -211,9 +219,6 @@ internal class PointRow(
     val editButton = RowIconButton(Material2AL.EDIT, tr("points.row.edit.tooltip")).apply { name = "edit-point-${point.id}" }
     val deleteButton = RowIconButton(Material2AL.CLOSE, tr("pointEdit.delete.title"), danger = true).apply { name = "delete-point-${point.id}" }
 
-    /** The lime REPLAY tag of a point with replays (B-50 T5), or null. */
-    private val replayTag: String? = point.replayCount.takeIf { it > 0 }?.let { tr("points.replay.tag", "count" to it) }
-
     private val textFont get() = UiKit.font(12.5f)
     private val numberFont get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
     private val badgeFont get() = UiKit.trackedFont(9.5f, 0.05, UiKit.Weight.BOLD)
@@ -264,32 +269,13 @@ internal class PointRow(
             UiKit.drawText(g2, Timecode.format(point.startMs), textFont, Palette.FG, columns.start.toFloat(), 0f, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
             UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), 0f, h)
-            val marksLeft = marks()?.let { paintMarks(g2, it, columns.marksRight) } ?: columns.marksRight
-            replayTag?.let { tag -> paintReplayTag(g2, tag, marksLeft, columns.lengthRight + MARK_GAP) }
+            marks()?.let { paintMarks(g2, it, columns.marksRight) }
         } finally {
             g2.dispose()
         }
     }
 
     private fun badgeWidth(text: String) = ceil(UiKit.textWidth(text, badgeFont)).toInt() + 10
-
-    private val replayIcon by lazy { UiKit.icon(Material2MZ.SLOW_MOTION_VIDEO, 12, Palette.LIME) }
-
-    /**
-     * The lime outline tag of a point with replays, before the marks: the icon and "REPLAY" or "2 REPLAYS".
-     * Without room for the text, the tag shows the icon and the count of 2 or more, or only the icon.
-     */
-    private fun paintReplayTag(g2: Graphics2D, tag: String, right: Int, minLeft: Int) {
-        val count = point.replayCount
-        val text = listOfNotNull(tag, count.takeIf { it > 1 }?.toString())
-            .firstOrNull { right - (replayIcon.iconWidth + 3 + badgeWidth(it)) >= minLeft }
-        val w = text?.let { replayIcon.iconWidth + 3 + badgeWidth(it) } ?: (replayIcon.iconWidth + 8)
-        val x = right - w
-        val y = (height - BADGE_HEIGHT) / 2
-        UiKit.paintBox(g2, x, y, w, BADGE_HEIGHT, 3, null, Palette.LIME_LINE)
-        replayIcon.paintIcon(this, g2, x + 4, (height - replayIcon.iconHeight) / 2)
-        if (text != null) UiKit.drawText(g2, text, badgeFont, Palette.LIME, x + 4f + replayIcon.iconWidth + 3f, y.toFloat(), BADGE_HEIGHT.toFloat())
-    }
 
     private fun racketWidth(marks: PointMarks) = if (marks.serveOnBadge) RACKET_BADGE else RACKET
 
@@ -416,5 +402,90 @@ internal class CommentRow(
         } finally {
             g2.dispose()
         }
+    }
+}
+
+/**
+ * One instant replay under the row of its point (B-50): the replay icon, "Replay 1", the speed, the repeats, the zoom,
+ * and the time that the replay adds. A click opens the replay editor on the replay. Delete shows on hover.
+ * The row is not a timeline event, so it has no visual index and no selected state.
+ */
+internal class ReplayRow(
+    val pointId: String,
+    val replay: ReplayRowDto,
+    pointEndMs: Long,
+    private val onOpen: () -> Unit,
+    onDelete: () -> Unit,
+) : TableRow(NO_INDEX, pointEndMs) {
+
+    override val title = tr("replay.editor.tab", "number" to replay.index + 1)
+    override val selectable = false
+    override val rowHeight: Int get() = REPLAY_HEIGHT
+
+    private val icon = UiKit.icon(Material2MZ.SLOW_MOTION_VIDEO, 14, Palette.LIME)
+    val deleteButton = RowIconButton(Material2AL.CLOSE, tr("points.replay.row.delete"), danger = true)
+        .apply { name = "delete-replay-$pointId-${replay.index}" }
+
+    init {
+        name = "replay-row-$pointId-${replay.index}"
+        toolTipText = tr("points.replay.row.edit")
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        add(deleteButton)
+        deleteButton.addActionListener { onDelete() }
+        onStateChanged()
+    }
+
+    /** Opens the replay editor on this replay. */
+    fun open() = onOpen()
+
+    override fun onStateChanged() {
+        deleteButton.isVisible = hovered
+    }
+
+    override fun doLayout() = layoutActions(listOf(deleteButton))
+
+    /** The speed, the repeats, the zoom, and a muted sound, for example "0.5× · ×2 · Zoom 2×". */
+    internal val details: String
+        get() = listOfNotNull(
+            "${DisplayFormats.decimal(replay.speed, 0, 2)}×",
+            replay.repeats.takeIf { it > 1 }?.let { "×$it" },
+            replay.zoomFactor?.let { "${tr("replay.editor.zoom")} ${DisplayFormats.decimal(it, 0, 1)}×" },
+            tr("replay.editor.sound.muted").takeIf { replay.muted },
+        ).joinToString(" · ")
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = UiKit.smooth(g)
+        try {
+            paintRowBackground(g2, null, null)
+            val columns = TableColumns(width)
+            val h = height - 1f
+            // A short line from the point row above to the icon shows that the replay belongs to the point.
+            g2.color = Palette.LIME_DIM_LINE
+            val lineX = columns.number + 6
+            g2.fillRect(lineX, 0, 1, height / 2)
+            g2.fillRect(lineX, height / 2, 6, 1)
+            icon.paintIcon(this, g2, lineX + 8, (height - icon.iconHeight) / 2)
+            // Start: "Replay 1". Length: the time that the replay adds. After it: the details.
+            val textFont = UiKit.font(12f)
+            val added = "+" + formatSeconds(replay.addedMs)
+            val addedX = columns.lengthRight - UiKit.textWidth(added, textFont)
+            val titleFont = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
+            val shownTitle = UiKit.ellipsize(title, titleFont, addedX - TITLE_GAP - columns.start)
+            UiKit.drawText(g2, shownTitle, titleFont, Palette.LIME, columns.start.toFloat(), 0f, h)
+            UiKit.drawText(g2, added, textFont, Palette.FG_3, addedX, 0f, h)
+            // A replay row has no marks and no star, so the details can use these columns, up to Delete on hover.
+            val metaX = columns.lengthRight + DETAILS_GAP
+            val metaRight = if (deleteButton.isVisible) deleteButton.x - TableColumns.GAP else columns.actionsRight
+            val meta = UiKit.ellipsize(details, textFont, (metaRight - metaX).toFloat())
+            UiKit.drawText(g2, meta, textFont, Palette.FG_3, metaX.toFloat(), 0f, h)
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    companion object {
+        const val REPLAY_HEIGHT = 30
+        private const val TITLE_GAP = 6
+        private const val DETAILS_GAP = 12
     }
 }

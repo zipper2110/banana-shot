@@ -32,8 +32,11 @@ interface PointsActions {
     fun previewComment(id: Int?, comment: CommentInput?) {}
     fun deleteComment(id: Int) {}
 
-    /** Opens the replay editor for the point with [id] (B-50). */
-    fun openReplays(id: String) {}
+    /** Opens the replay editor for the point with [id] (B-50), on the replay [replayIndex] when it is not null. */
+    fun openReplays(id: String, replayIndex: Int? = null) {}
+
+    /** Removes the replay [replayIndex] of the point with [id] (B-50). */
+    fun deleteReplay(id: String, replayIndex: Int) {}
 
     /**
      * Selects an item by its visual index (index within the composed view list).
@@ -87,8 +90,21 @@ data class PointDto(
     val label: String?,
     val flags: Set<String> = emptySet(),
     val favorite: Boolean = false,
-    /** The number of instant replays of the point (B-50). */
-    val replayCount: Int = 0,
+    /** The instant replays of the point (B-50). The list shows each one as a sub-row under the point. */
+    val replays: List<ReplayRowDto> = emptyList(),
+)
+
+/** One instant replay of a point, for its sub-row in the list (B-50). */
+data class ReplayRowDto(
+    /** The index of the replay in its point, from 0. */
+    val index: Int,
+    val speed: Double,
+    val repeats: Int,
+    /** The zoom as a factor, for example 2.0 for 2×, or null for no zoom. */
+    val zoomFactor: Double?,
+    val muted: Boolean,
+    /** The time that the replay adds to the video, with all its repeats. */
+    val addedMs: Long,
 )
 
 /** Partial update to a point. Fields set to null are not modified. */

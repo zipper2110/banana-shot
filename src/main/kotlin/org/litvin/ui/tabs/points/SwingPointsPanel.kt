@@ -284,7 +284,16 @@ class SwingPointsPanel(
                 label = point.label,
                 flags = emptySet(),
                 favorite = point.favorite,
-                replayCount = point.replays.size,
+                replays = point.replays.mapIndexed { index, replay ->
+                    ReplayRowDto(
+                        index = index,
+                        speed = replay.speed,
+                        repeats = replay.repeats,
+                        zoomFactor = replay.zoom?.let { 1.0 / it.width },
+                        muted = replay.muted,
+                        addedMs = Replays.addedMs(replay),
+                    )
+                },
             ))
         }
         val comments = commentDispatcher.state().comments.map { comment ->
@@ -390,7 +399,8 @@ class SwingPointsPanel(
         override fun editComment(id: Int, patch: CommentPatch) = this@SwingPointsPanel.editComment(id, patch)
         override fun previewComment(id: Int?, comment: CommentInput?) = this@SwingPointsPanel.previewComment(id, comment)
         override fun deleteComment(id: Int) = this@SwingPointsPanel.deleteComment(id)
-        override fun openReplays(id: String) = openReplayEditor(pointId = id)
+        override fun openReplays(id: String, replayIndex: Int?) = openReplayEditor(pointId = id, replayIndex = replayIndex)
+        override fun deleteReplay(id: String, replayIndex: Int) = this@SwingPointsPanel.deleteReplay(id, replayIndex)
     }
 
     override fun addNotify() {
@@ -868,6 +878,14 @@ class SwingPointsPanel(
         if (style == null && sizePercent == null && opacityPercent == null) return
         val look = commentStyles.load()
         commentStyles.save(CommentLook(style ?: look.style, sizePercent ?: look.sizePercent, opacityPercent ?: look.opacityPercent))
+    }
+
+    /** Removes one replay of a point. While the replay editor is open, it owns the replays, so the editor comes to the front. */
+    private fun deleteReplay(id: String, replayIndex: Int) {
+        replayEditor?.let { it.toFront(); return }
+        val point = dispatcher.getCompletedPoints().firstOrNull { it.id == id } ?: return
+        if (replayIndex !in point.replays.indices) return
+        dispatcher.setReplays(id, point.replays.filterIndexed { index, _ -> index != replayIndex })
     }
 
     private fun deleteComment(id: Int) {

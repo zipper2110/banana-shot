@@ -34,6 +34,8 @@ import org.litvin.i18n.tr
 /**
  * The points table of the side column: one row for each marked point and each comment, in time order.
  * A click on a row selects it and seeks to its start. The pending point is not a row; [PointStartButton] shows it.
+ * Each instant replay is a lower sub-row right under its point (B-50). A replay row is not a timeline event: it has no
+ * visual index, and a click on it opens the replay editor.
  */
 class PointsTableView(
     private val actions: PointsActions,
@@ -76,6 +78,10 @@ class PointsTableView(
         override fun mouseClicked(event: MouseEvent) {
             if (!SwingUtilities.isLeftMouseButton(event)) return
             val row = event.component as? TableRow ?: return
+            if (row is ReplayRow) {
+                row.open()
+                return
+            }
             actions.selectByVisualIndex(row.visualIndex)
             actions.seekTo(row.startMs)
         }
@@ -112,24 +118,30 @@ class PointsTableView(
 
     fun updateSelection(selectedIndex: Int) {
         lastState = lastState?.copy(selectedVisualIndex = selectedIndex)
-        rows.forEach { it.selected = it.visualIndex == selectedIndex }
+        rows.forEach { it.selected = it.visualIndex != TableRow.NO_INDEX && it.visualIndex == selectedIndex }
     }
 
     /** Scrolls the row into view. An index without a row, such as the pending point, does nothing. */
     fun scrollToVisualIndex(index: Int) {
-        if (rows.getOrNull(index) == null) return
-        // Calculate the rectangle from the index. After a rebuild, the new rows have empty bounds until the next
+        val position = rows.indexOfFirst { it.visualIndex == index && index != TableRow.NO_INDEX }
+        if (position < 0) return
+        // Calculate the rectangle from the row heights. After a rebuild, the new rows have empty bounds until the next
         // layout, and a scroll to an empty rectangle at (0, 0) moves the list to the top.
-        rowsPanel.scrollRectToVisible(Rectangle(0, index * TableRow.HEIGHT, rowsPanel.width, TableRow.HEIGHT))
+        rowsPanel.scrollRectToVisible(rowRect(position))
     }
 
     /** The row of the first marked point, or null when the list has no point or the row is scrolled out of view. */
     fun firstPointRowInView(): JComponent? {
-        val index = rows.indexOfFirst { it is PointRow }
-        if (index < 0) return null
-        // The rows have a fixed height, so the rectangle is correct also before the next layout.
-        val rect = Rectangle(0, index * TableRow.HEIGHT, rowsPanel.width.coerceAtLeast(1), TableRow.HEIGHT)
-        return rows[index].takeIf { scroll.viewport.viewRect.intersects(rect) }
+        val position = rows.indexOfFirst { it is PointRow }
+        if (position < 0) return null
+        // The rectangle comes from the row heights, so it is correct also before the next layout.
+        return rows[position].takeIf { scroll.viewport.viewRect.intersects(rowRect(position)) }
+    }
+
+    /** The bounds of the row at [position] in the list, from the heights of the rows above it. */
+    private fun rowRect(position: Int): Rectangle {
+        val top = rows.take(position).sumOf { it.rowHeight }
+        return Rectangle(0, top, rowsPanel.width.coerceAtLeast(1), rows[position].rowHeight)
     }
 
     internal fun visibleTitles(): List<String> = rows.map { it.title }
@@ -180,16 +192,35 @@ class PointsTableView(
                     onDelete = { actions.deleteComment(event.id) },
                 )
             }
-            row.selected = visualIndex == state.selectedVisualIndex
-            row.addMouseListener(hoverListener)
-            row.components.forEach { it.addMouseListener(hoverListener) }
-            rows += row
-            rowsPanel.add(row)
+            add(row, selected = visualIndex == state.selectedVisualIndex)
+            if (event is PointEventDto) {
+                val point = event.point
+                point.replays.forEach { replay ->
+                    add(
+                        ReplayRow(
+                            pointId = point.id,
+                            replay = replay,
+                            pointEndMs = point.endMs ?: point.startMs,
+                            onOpen = { actions.openReplays(point.id, replay.index) },
+                            onDelete = { actions.deleteReplay(point.id, replay.index) },
+                        ),
+                        selected = false,
+                    )
+                }
+            }
         }
         rowsPanel.revalidate()
         rowsPanel.repaint()
         // A click on a star rebuilds the rows. The pointer stays on the new row, but Swing sends no enter event.
         SwingUtilities.invokeLater(::restoreHover)
+    }
+
+    private fun add(row: TableRow, selected: Boolean) {
+        row.selected = selected
+        row.addMouseListener(hoverListener)
+        row.components.forEach { it.addMouseListener(hoverListener) }
+        rows += row
+        rowsPanel.add(row)
     }
 
     private fun editComment(comment: CommentDto) {
@@ -239,14 +270,16 @@ class PointsTableView(
         override fun doLayout() {
             var y = 0
             for (child in components) {
-                child.setBounds(0, y, width, TableRow.HEIGHT)
-                y += TableRow.HEIGHT
+                val h = (child as? TableRow)?.rowHeight ?: TableRow.HEIGHT
+                child.setBounds(0, y, width, h)
+                y += h
             }
         }
 
         override fun getPreferredSize(): Dimension {
             val viewportWidth = (parent as? JViewport)?.width ?: 0
-            return Dimension(viewportWidth, if (componentCount == 0) EMPTY_HEIGHT else componentCount * TableRow.HEIGHT)
+            val rowsHeight = components.sumOf { (it as? TableRow)?.rowHeight ?: TableRow.HEIGHT }
+            return Dimension(viewportWidth, if (componentCount == 0) EMPTY_HEIGHT else rowsHeight)
         }
 
         override fun paintComponent(g: Graphics) {

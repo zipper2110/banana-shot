@@ -7,6 +7,7 @@ import org.litvin.ui.tabs.points.PointEventDto
 import org.litvin.ui.tabs.points.PointPatch
 import org.litvin.ui.tabs.points.PointsActions
 import org.litvin.ui.tabs.points.PointsViewState
+import org.litvin.ui.tabs.points.ReplayRowDto
 import org.litvin.ui.tabs.points.TimelineEventDto
 import java.awt.Component
 import java.awt.Container
@@ -134,6 +135,53 @@ class PointsTableViewTest {
             dispatch(rows[1], MouseEvent.MOUSE_CLICKED)
 
             assertEquals(listOf("select 1", "seek 3000"), calls)
+        }
+    }
+
+    @Test
+    fun eachReplayIsALowRowUnderItsPointAndKeepsTheVisualIndexes() {
+        val calls = mutableListOf<String>()
+        val actions = object : PointsActions by NoOpActions {
+            override fun selectByVisualIndex(index: Int) { calls += "select $index" }
+            override fun seekTo(ms: Long) { calls += "seek $ms" }
+            override fun openReplays(id: String, replayIndex: Int?) { calls += "open $id $replayIndex" }
+            override fun deleteReplay(id: String, replayIndex: Int) { calls += "delete $id $replayIndex" }
+        }
+        SwingUtilities.invokeAndWait {
+            val view = PointsTableView(actions)
+            val replays = listOf(
+                ReplayRowDto(0, speed = 0.5, repeats = 2, zoomFactor = 2.0, muted = false, addedMs = 8_000),
+                ReplayRowDto(1, speed = 0.25, repeats = 1, zoomFactor = null, muted = true, addedMs = 4_000),
+            )
+            view.setState(
+                state(
+                    PointEventDto(PointDto("pt-a", 1_000, 2_000, null, replays = replays)),
+                    CommentDto(4, 1_500, 2_000, "In", "#FFFFFF"),
+                    PointEventDto(PointDto("pt-b", 3_000, 4_000, null)),
+                ),
+            )
+            view.setSize(360, 400)
+            view.layoutRecursively()
+
+            // The replay rows come right after their point, also before a comment inside the point.
+            assertEquals(listOf("#1", "Replay 1", "Replay 2", "Comment #4", "#2"), view.visibleTitles())
+            val rows = view.descendants().filterIsInstance<TableRow>()
+            assertEquals(listOf(45, 30, 30, 45, 45), rows.map { it.height })
+            assertEquals(listOf(0, 45, 75, 105, 150), rows.map { it.y })
+            assertEquals(listOf(0, TableRow.NO_INDEX, TableRow.NO_INDEX, 1, 2), rows.map { it.visualIndex })
+            val replayRows = rows.filterIsInstance<ReplayRow>()
+            assertEquals("0.5× · ×2 · Zoom 2×", replayRows[0].details)
+            assertEquals("0.25× · Muted", replayRows[1].details)
+
+            dispatch(replayRows[1], MouseEvent.MOUSE_CLICKED)
+            (findByName(view, "delete-replay-pt-a-0") as javax.swing.AbstractButton).doClick()
+            dispatch(rows[4], MouseEvent.MOUSE_CLICKED)
+            assertEquals(listOf("open pt-a 1", "delete pt-a 0", "select 2", "seek 3000"), calls)
+
+            // A selection by visual index never marks a replay row.
+            view.updateSelection(2)
+            assertEquals("#2", view.selectedTitle())
+            assertTrue(replayRows.none { it.selected })
         }
     }
 

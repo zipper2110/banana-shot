@@ -20,7 +20,7 @@ import kotlin.math.ceil
  */
 internal class UiButton(
     text: String,
-    private val ikon: Ikon? = null,
+    ikon: Ikon? = null,
     private val kind: Kind = Kind.SECONDARY,
     private val buttonHeight: Int = HEIGHT,
     private val fontSize: Float = 12.5f,
@@ -35,6 +35,16 @@ internal class UiButton(
         }
 
     private var cachedIcon: Pair<Color, Icon>? = null
+
+    /** The icon in front of the text. Null shows no icon. A change can show a new state, for example Play and Stop. */
+    var ikon: Ikon? = ikon
+        set(value) {
+            if (field == value) return
+            field = value
+            cachedIcon = null
+            revalidate()
+            repaint()
+        }
 
     /** A color square in front of the text, for a color button. Null shows no square. */
     var swatch: Color? = null

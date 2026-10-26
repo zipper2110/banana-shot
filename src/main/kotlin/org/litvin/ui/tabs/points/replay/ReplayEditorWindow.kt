@@ -584,6 +584,7 @@ internal class ReplayEditorWindow(
     private fun refreshPreviewButton() {
         val playing = previewing && player.status() == PlayerStatus.PLAYING
         previewButton.text = tr(if (playing) "replay.editor.stopPreview" else "replay.editor.preview")
+        previewButton.ikon = if (playing) Material2MZ.STOP else Material2MZ.PLAY_ARROW
     }
 
     /** A time from the point start, for example "+1.2 s" or "−0.8 s". */

@@ -98,7 +98,7 @@ internal class PlaybackBar(
     }
 
     /** Opens the replay editor for the point at the playhead (B-50). No key does this (decision of 2026-10-26). */
-    private val replayButton = UiButton("", org.kordamp.ikonli.material2.Material2MZ.SLOW_MOTION_VIDEO, buttonHeight = 40).apply {
+    private val replayButton = UiButton(tr("points.replay"), org.kordamp.ikonli.material2.Material2MZ.SLOW_MOTION_VIDEO, buttonHeight = 40).apply {
         name = "points-replay"
         toolTipText = tr("points.replay.tooltip")
         isFocusable = false
@@ -247,6 +247,13 @@ internal class PlaybackBar(
             val textWidth = ceil(UiKit.textWidth(sample, font)).toInt() + 2
             return Dimension(max(size.width, textWidth + insets.left + insets.right), size.height)
         }
+
+        /**
+         * The label can use the full width of the clock. The default maximum is the exact text width, and the vertical
+         * box of the clock never gives more. At some screen scales the drawn text is wider than that measured width,
+         * and the label then cuts the text to "…".
+         */
+        override fun getMaximumSize(): Dimension = Dimension(Short.MAX_VALUE.toInt(), preferredSize.height)
     }
 
     private companion object {

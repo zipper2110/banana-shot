@@ -6,6 +6,7 @@ import { type Env, section } from './env';
 import { loadFeedback } from './feedback';
 import { makePeriod, parseDays, parseLastDay } from './period';
 import { loadSite } from './site';
+import { loadUserBase, saveAppDays } from './user-base';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'cache-control': 'no-store',
@@ -29,9 +30,10 @@ function json(body: unknown, status = 200): Response {
 export async function summary(env: Env, url: URL, now: number, fetcher: typeof fetch = fetch) {
   const period = makePeriod(parseDays(url.searchParams.get('days')), now, parseLastDay(url.searchParams.get('end'), now));
   const includeDev = url.searchParams.get('dev') === '1';
-  const [downloads, app, feedback, site, workers] = await Promise.all([
+  const [downloads, app, users, feedback, site, workers] = await Promise.all([
     section(() => loadDownloads(env, period)),
     section(() => loadAppUsage(env, period, includeDev)),
+    section(() => loadUserBase(env, period, includeDev)),
     section(() => loadFeedback(env, period, includeDev)),
     section(() => loadSite(env, period)),
     section(() => loadWorkerHealth(env, period, fetcher)),
@@ -40,7 +42,7 @@ export async function summary(env: Env, url: URL, now: number, fetcher: typeof f
     generatedAt: now,
     period: { days: period.days, start: period.start, end: period.end, prevStart: period.prevStart, weeksStart: period.weeksStart },
     includeDev,
-    downloads, app, feedback, site, workers,
+    downloads, app, users, feedback, site, workers,
   };
 }
 
@@ -80,6 +82,11 @@ export default {
   },
 
   async scheduled(_controller: ScheduledController, env: Env, context: ExecutionContext): Promise<void> {
-    context.waitUntil(takeSnapshot(env, Date.now()));
+    // Two separate jobs: a failure of one does not stop the other. Each job writes its result to job_status.
+    const now = Date.now();
+    context.waitUntil(Promise.allSettled([takeSnapshot(env, now), saveAppDays(env, now)]).then(results => {
+      const failed = results.find(result => result.status === 'rejected');
+      if (failed) throw failed.reason;
+    }));
   },
 } satisfies ExportedHandler<Env>;

@@ -10,9 +10,22 @@ downloads, app usage, features, exports, errors, and feedback. The decisions and
 |---|---|---|
 | Downloads | GitHub releases API → own D1 `bananashot-cockpit` | An hourly cron saves the totals. The history starts with the first snapshot. |
 | App usage, features, exports, crashes | D1 of the analytics Worker (`ANALYTICS_DB`) | Read only. Totals only. |
+| User base | D1 of the analytics Worker → own D1 `bananashot-cockpit`, table `app_daily` | An hourly cron copies the session totals of each complete day. They stay after the 90-day deletion. The days after the last copy come from the analytics D1. |
 | Feedback, errors in reports | D1 of the feedback Worker (`FEEDBACK_DB`) | Read only. No email addresses on the page. |
 | Site | D1 of the analytics Worker (`ANALYTICS_DB`), tables `site_daily` and `site_bot_daily` | The own page view counter and the bot counter of the site (`site/README.md`). Exact daily totals. Cloudflare Web Analytics samples its data, so the cockpit does not use it. |
 | Worker health | Cloudflare GraphQL API, Workers invocations | Needs `CF_API_TOKEN`, `CF_ACCOUNT_ID`. |
+
+### User base
+
+Decided on 2026-10-27 by the author: the section uses the current analytics data. The app sends nothing new.
+
+- The analytics data has no install ID (`docs/analytics/design.md`). Each install sends exactly one session with
+  `session_n_1`. Thus the sum of the first sessions is the number of installs that started the app.
+- The other session numbers (2 to 5, 6 to 20, 21 or later) count sessions, not installs. The cockpit cannot count
+  the occasional and the regular users. For these counts, the app must send more data, for example a flag on the
+  first session of each week and month. This needs an app release and a new legitimate-interest assessment.
+- The cron writes each complete day of the last 60 days again. It writes an older day only when the day has no row.
+  Thus the 90-day deletion of the analytics Worker never makes a saved day smaller.
 
 Each source is separate. When one source fails or is not configured, its cards show the reason,
 and the other cards work.

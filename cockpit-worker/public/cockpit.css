@@ -336,3 +336,10 @@ td.bad { color: var(--critical-ink); font-weight: 600; }
 @media (prefers-reduced-motion: no-preference) {
   .funnel-step .fill, .ranked-row .bar span { transition: width 0.4s ease; }
 }
+
+/* ---------- User base ---------- */
+
+.stats { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-bottom: 10px; }
+.stat .label { color: var(--ink-2); font-size: 13px; }
+.stat .value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat.main .value { font-size: 28px; letter-spacing: -0.02em; }

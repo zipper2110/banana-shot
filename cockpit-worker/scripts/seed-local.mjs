@@ -170,7 +170,7 @@ run('bananashot-feedback', join(dir, 'feedback.sql'));
 
 // ---------- Download snapshots ----------
 
-const snapshots = ['DELETE FROM download_snapshot;', 'DELETE FROM job_status;'];
+const snapshots = ['DELETE FROM download_snapshot;', 'DELETE FROM job_status;', 'DELETE FROM app_daily;'];
 let setup = 0, other = 0;
 for (let day = releaseDay - DAY; day <= today; day += DAY) {
   const sinceRelease = (day - releaseDay) / DAY;

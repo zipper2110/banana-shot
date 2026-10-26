@@ -4,7 +4,7 @@ import { type Period, dates, parseDate, weekOf, weeks } from './period';
 const ENCODERS = ['software', 'nvenc', 'amf', 'qsv'] as const;
 
 /** Decision 10: never the smoke rows; the development versions only when the page asks for them. */
-const FILTER = "app_version <> 'synthetic-smoke' AND (? = 1 OR app_version NOT LIKE '%-SNAPSHOT')";
+export const FILTER = "app_version <> 'synthetic-smoke' AND (? = 1 OR app_version NOT LIKE '%-SNAPSHOT')";
 const IN_PERIOD = `${FILTER} AND first_received_at >= ? AND first_received_at < ?`;
 
 function counter(key: string): string {

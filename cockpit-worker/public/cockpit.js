@@ -216,6 +216,7 @@
     renderAlerts(data);
     renderKpis(data);
     renderFunnel(data);
+    renderUsers(data);
     renderDownloads(data);
     renderSite(data);
     renderUsage(data);
@@ -231,7 +232,7 @@
     const add = (level, icon, title, text) => alerts.push({ level, icon, title, text });
     const notConfigured = section => !section.ok && section.error.startsWith('Not configured');
 
-    for (const [name, section] of [['Downloads', data.downloads], ['App usage', data.app], ['Feedback', data.feedback], ['Site', data.site], ['Workers', data.workers]]) {
+    for (const [name, section] of [['Downloads', data.downloads], ['App usage', data.app], ['User base', data.users], ['Feedback', data.feedback], ['Site', data.site], ['Workers', data.workers]]) {
       if (section.ok) continue;
       if (notConfigured(section)) {
         const same = alerts.find(alert => alert.text === section.error);
@@ -246,6 +247,11 @@
       if (!snapshot) add('warning', '!', 'No download snapshot yet.', 'The hourly cron writes the first one. Or use "Take a download snapshot now" at the bottom.');
       else if (!snapshot.ok) add('critical', '!', 'The last download snapshot failed:', `${snapshot.message} (${ago(snapshot.ranAt)}).`);
       else if (Date.now() - snapshot.ranAt > 3 * 3600000) add('warning', '!', 'The download snapshot is old:', `the last one ran ${ago(snapshot.ranAt)}. Check the cron of the cockpit Worker.`);
+    }
+
+    if (data.users.ok) {
+      const run = data.users.data.lastRun;
+      if (run && !run.ok) add('critical', '!', 'The last copy of the daily session totals failed:', `${run.message} (${ago(run.ranAt)}). The all-time numbers can miss days after 90 days.`);
     }
 
     if (data.app.ok) {
@@ -377,6 +383,42 @@
       row.append(name, track, num);
       return row;
     }));
+  }
+
+  /**
+   * The user base. The statistics have no install ID: the first sessions give the installs, and the other session
+   * numbers give sessions, not users.
+   */
+  function renderUsers(data) {
+    const ids = ['users-stats', 'users-daily', 'users-number'];
+    if (!data.users.ok) return failAll(ids, data.users.error);
+    const users = data.users.data;
+    const total = users.total;
+    const inPeriod = total.session_n_1 - users.installsBefore;
+    $('users-note').textContent = users.since
+      ? `All time, from ${shortDate(users.since)} to the end of the period. One install is one first start of the app on a computer.`
+      : 'No session yet.';
+    const stats = h('div', 'stats');
+    const stat = (label, value, cls) => {
+      const item = h('div', `stat ${cls || ''}`);
+      item.append(h('div', 'label', label), h('div', 'value', format(value)));
+      return item;
+    };
+    stats.append(stat('Installs, all time', total.session_n_1, 'main'), stat('New in the period', inPeriod), stat('Sessions, all time', total.sessions));
+    $('users-stats').replaceChildren(stats);
+    window.Charts.lines($('users-daily'), {
+      data: users.daily, area: true, label: 'Installs that started the app, all time, at the end of each day',
+      series: [{ key: 'installs', label: 'Installs', color: 3 }],
+    });
+
+    const sessions = total.sessions;
+    const share = value => ({ value: value || 0, label: `${format(value || 0)} · ${percent(value || 0, sessions)}` });
+    ranked($('users-number'), [
+      { name: '1st session (one for each install)', ...share(total.session_n_1), cls: 'c3' },
+      { name: '2nd to 5th', ...share(total.session_n_2_5) },
+      { name: '6th to 20th', ...share(total.session_n_6_20) },
+      { name: '21st or later', ...share(total.session_n_21p) },
+    ], { keepZero: true, max: sessions, emptyText: 'No session yet.' });
   }
 
   function renderDownloads(data) {
@@ -707,6 +749,10 @@
       const downloads = data.downloads.data;
       const snapshot = downloads.lastSnapshot;
       items.push(`Downloads: GitHub release totals, snapshot each hour. ${snapshot ? `Last snapshot ${ago(snapshot.ranAt)} (${snapshot.ok ? 'ok' : 'failed'}).` : 'No snapshot yet.'}`);
+    }
+    if (data.users.ok) {
+      const run = data.users.data.lastRun;
+      items.push(`User base: daily session totals, copied each hour from the analytics database to the cockpit database. They stay after the 90 days. ${run ? `Last copy ${ago(run.ranAt)} (${run.ok ? 'ok' : 'failed'}).` : 'No copy yet: all numbers come from the analytics database.'}`);
     }
     if (data.app.ok) {
       const retention = data.app.data.retention;

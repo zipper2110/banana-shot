@@ -66,6 +66,8 @@ describe('summary', () => {
     expect(result.site.ok).toBe(true);
     expect(result.workers.ok).toBe(false);
     expect(result.downloads.ok).toBe(true);
+    expect(result.users.ok && result.users.data.total.session_n_1).toBe(0);
+    expect(result.users.ok && result.users.data.total.sessions).toBe(1);
   });
 
   it('counts only today for the period of 1 day', async () => {

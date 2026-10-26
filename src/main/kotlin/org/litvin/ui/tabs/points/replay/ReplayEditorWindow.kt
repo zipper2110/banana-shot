@@ -17,6 +17,7 @@ import org.litvin.points.Replays
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.DialogGroup
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.SwitchBox
@@ -166,7 +167,7 @@ internal class ReplayEditorWindow(
         name = "replay-editor"
         defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
         addWindowListener(object : WindowAdapter() {
-            override fun windowClosing(e: WindowEvent?) = close(save = false)
+            override fun windowClosing(e: WindowEvent?) = closeAsked()
         })
         if (selectIndex == null) edits.add(playheadMs)
 
@@ -397,7 +398,7 @@ internal class ReplayEditorWindow(
         bind("RIGHT", "replay.forward") { nudge(STEP_MS) }
         bind("shift LEFT", "replay.backLong") { nudge(-LONG_STEP_MS) }
         bind("shift RIGHT", "replay.forwardLong") { nudge(LONG_STEP_MS) }
-        bind("ESCAPE", "replay.cancel") { close(save = false) }
+        bind("ESCAPE", "replay.cancel") { closeAsked() }
         bind("ENTER", "replay.save") { close(save = true) }
     }
 
@@ -505,7 +506,29 @@ internal class ReplayEditorWindow(
     }
 
     /** Closes the window without Save. */
+    /** Closes the window without Save and without a question. The app calls it, for example when the tab closes. */
     fun cancel() = close(save = false)
+
+    /**
+     * The user closes the window without Save, with the X or with ESC. When there are changes that are not saved, the
+     * window asks first, and stays open if the user keeps editing. The Cancel button discards without a question.
+     */
+    private fun closeAsked() {
+        if (closed) return
+        if (edits.changed) {
+            stopPreview()
+            val discard = MessageDialog.confirm(
+                this,
+                tr("replay.editor.discard.title"),
+                tr("replay.editor.discard.question"),
+                confirmLabel = tr("replay.editor.discard.confirm"),
+                cancelLabel = tr("replay.editor.discard.keep"),
+                destructive = true,
+            )
+            if (!discard) return
+        }
+        close(save = false)
+    }
 
     private fun close(save: Boolean) {
         if (closed) return

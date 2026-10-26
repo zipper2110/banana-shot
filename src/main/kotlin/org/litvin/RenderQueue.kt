@@ -521,7 +521,6 @@ object RenderQueueManager {
                                     speed = part.speed,
                                     zoom = part.zoom,
                                     zoomIn = pass.isFirst,
-                                    zoomOut = pass.isLast,
                                     muted = part.muted,
                                     sourceFrameRate = replayFrameRate,
                                     sampleRate = replaySampleRate,

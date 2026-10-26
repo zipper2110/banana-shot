@@ -110,6 +110,6 @@ object Replays {
     /** The dip to black between two repeats: this time out, then this time in (decision 7). */
     const val REPEAT_FADE_MS = 100L
 
-    /** The zoom in at the start of the first play and the zoom out at the end of the last play (decision 8). */
+    /** The zoom in at the start of the first play (decision 8). The replay has no zoom out (decision 12). */
     const val ZOOM_MS = 400L
 }

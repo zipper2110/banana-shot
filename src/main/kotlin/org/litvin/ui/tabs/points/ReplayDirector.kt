@@ -135,7 +135,10 @@ class ReplayDirector {
         return look(view) + listOf(Command.Sound(null), Command.Seek(at))
     }
 
-    /** The picture at [sourceMs] of the part of [play]: the zoom and the dips (decisions 2, 7, and 8). */
+    /**
+     * The picture at [sourceMs] of the part of [play]: the zoom and the dips (decisions 2, 7, and 8). The zoom goes
+     * in at the start of the first play. It does not go out at the end (decision 12).
+     */
     private fun viewIn(play: ReplayTimeline.Play, sourceMs: Long): ReplayView {
         val part = play.replay
         val length = Replays.playMs(part).toDouble()
@@ -147,9 +150,7 @@ class ReplayDirector {
         val dip = maxOf(dipIn, dipOut, 0.0).coerceAtMost(1.0)
         val white = (if (dipIn >= dipOut) fadeIn else fadeOut)?.white ?: false
         val zoom = part.zoom ?: return ReplayView(dip = dip, dipWhite = white)
-        var progress = 1.0
-        if (play.isFirst) progress = minOf(progress, smooth(offset / Replays.ZOOM_MS))
-        if (play.isLast) progress = minOf(progress, smooth((length - offset) / Replays.ZOOM_MS))
+        val progress = if (play.isFirst) smooth(offset / Replays.ZOOM_MS) else 1.0
         return ReplayView(
             zoomX = zoom.x * progress,
             zoomY = zoom.y * progress,

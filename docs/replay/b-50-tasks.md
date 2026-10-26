@@ -26,11 +26,12 @@ the proposals Q1 to Q10 of the code study):
 | 4 | T3, T6 | Q3: the slowed sound has a lower pitch, as a slow tape. The pitch is not kept. |
 | 5 | T3, T4 | Q4: while the popup is open, the main player stops and shows a black area with the text "The replay editor uses the video". The list, the timeline, and the other controls of the main window work. Play in the main window does nothing until the popup closes. |
 | 6 | T1 | Q5: a replay keeps its source times when the user changes its point. When the part goes out of the allowed window (3 s around the point), the app cuts it to the window. A replay shorter than 0.5 s after the cut is removed. Delete removes the replays of the point. |
-| 7 | T3, T6 | Q6: the zoom goes in at the start of the first play and out at the end of the last play. Between two repeats, a short dip to black (0.2 s). |
-| 8 | T3, T6 | Q7: the zoom in and the zoom out take 0.4 s of output time each. |
+| 7 | T3, T6 | Q6: the zoom goes in at the start of the first play. Between two repeats, a short dip to black (0.2 s). (Changed by decision 12: the zoom does not go out.) |
+| 8 | T3, T6 | Q7: the zoom in takes 0.4 s of output time. |
 | 9 | T6 | Q8: each comment that is visible during the replay part in the source video shows again during the replay, at the same moment of the part. Its time gets longer by the slow speed. Each repeat shows it again. |
 | 10 | T5 | Q9: the spiky edges of a replay block show when the block is 16 px or wider. A narrower block is a plain lime tick, at least 3 px wide. |
 | 11 | T6 | Q10: the set cards and the statistics card go after the replays of the last point. |
+| 12 | T3, T6 | Decided on 2026-10-26 after the work: the zoom does not go out at the end of the replay. The zoom stays until the cut effect at the end, and the video after the replay starts at the normal size. |
 
 ## Open questions
 

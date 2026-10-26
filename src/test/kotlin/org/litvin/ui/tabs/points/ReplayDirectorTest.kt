@@ -58,7 +58,7 @@ class ReplayDirectorTest {
     }
 
     @Test
-    fun theRepeatsDipBetweenThemAndTheZoomGoesInAndOut() {
+    fun theRepeatsDipBetweenThemAndTheZoomGoesInButNotOut() {
         val director = director(point(repeats = 2, zoom = ReplayZoom(0.25, 0.25, 0.5)))
         director.onTime(9_900, playing = true)
         director.onTime(10_010, playing = true)
@@ -76,6 +76,11 @@ class ReplayDirectorTest {
         assertEquals(1.0, second.dip, 1e-9)
         assertEquals(0.5, second.zoomWidth, 1e-9)
         director.onRestart()
+
+        // Near the end of the last play, the video dips to black, and the zoom stays full (decision 12).
+        val nearEnd = director.onTime(9_900, playing = true).views().single()!!
+        assertEquals(0.2, nearEnd.dip, 1e-9)
+        assertEquals(0.5, nearEnd.zoomWidth, 1e-9)
 
         // The end of the last play goes back to the point end. The video comes back from black.
         val exit = director.onTime(9_990, playing = true)

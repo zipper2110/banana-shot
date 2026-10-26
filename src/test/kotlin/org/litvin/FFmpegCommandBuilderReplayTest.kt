@@ -19,7 +19,6 @@ class FFmpegCommandBuilderReplayTest {
     private fun render(
         zoom: ReplayZoom? = null,
         zoomIn: Boolean = true,
-        zoomOut: Boolean = true,
         muted: Boolean = false,
     ) = FFmpegCommandBuilder.ReplayRender(
         startMs = 12_000,
@@ -27,7 +26,6 @@ class FFmpegCommandBuilderReplayTest {
         speed = 0.5,
         zoom = zoom,
         zoomIn = zoomIn,
-        zoomOut = zoomOut,
         muted = muted,
         sourceFrameRate = ExportFrameRate("30000/1001", 29.97),
         sampleRate = 44_100,
@@ -108,22 +106,18 @@ class FFmpegCommandBuilderReplayTest {
     }
 
     @Test
-    fun theZoomGoesInAtTheFirstPlayAndOutAtTheLastPlay() {
+    fun theZoomGoesInAtTheFirstPlayAndDoesNotGoOut() {
         val zoom = ReplayZoom(0.25, 0.25, 0.5)
         // 29.97 fps x 0.4 s x 0.5 speed: the zoom takes about 6 source frames.
-        val first = FFmpegCommandBuilder.replayZoomFilter(render(zoom, zoomIn = true, zoomOut = false))!!
+        val first = FFmpegCommandBuilder.replayZoomFilter(render(zoom, zoomIn = true))!!
         assertTrue("clip(in/5.994000,0,1)" in first, first)
         assertFalse("-in)" in first, first)
 
-        // 2 s of 29.97 fps: the last frame is 58.94.
-        val last = FFmpegCommandBuilder.replayZoomFilter(render(zoom, zoomIn = false, zoomOut = true))!!
-        assertTrue("clip((58.940000-in)/5.994000,0,1)" in last, last)
-
-        // A middle repeat keeps the zoom frame, so the filter computes it once.
-        val middle = FFmpegCommandBuilder.replayZoomFilter(render(zoom, zoomIn = false, zoomOut = false))!!
-        assertTrue("x0='W*(0.250000*1)'" in middle, middle)
-        assertTrue("x1='W*(0.250000*1+(1-0.500000*1))'" in middle, middle)
-        assertTrue(middle.endsWith("eval=init"), middle)
+        // The next repeats keep the zoom frame to the end (decision 12), so the filter computes it once.
+        val next = FFmpegCommandBuilder.replayZoomFilter(render(zoom, zoomIn = false))!!
+        assertTrue("x0='W*(0.250000*1)'" in next, next)
+        assertTrue("x1='W*(0.250000*1+(1-0.500000*1))'" in next, next)
+        assertTrue(next.endsWith("eval=init"), next)
 
         assertNull(FFmpegCommandBuilder.replayZoomFilter(render(zoom = null)))
     }

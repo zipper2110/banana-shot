@@ -61,7 +61,7 @@ object FFmpegCommandBuilder {
 
     /**
      * One play of a replay part [startMs, endMs) of the source (B-50). The video gets the [zoom] frame inside the
-     * geometry of the Transform tab: the zoom goes in at the start when [zoomIn], and out at the end when [zoomOut].
+     * geometry of the Transform tab: the zoom goes in at the start when [zoomIn]. It does not go out (decision 12).
      * The sound slows down with a lower pitch, or is silent when [muted].
      */
     data class ReplayRender(
@@ -70,7 +70,6 @@ object FFmpegCommandBuilder {
         val speed: Double,
         val zoom: org.litvin.points.ReplayZoom?,
         val zoomIn: Boolean,
-        val zoomOut: Boolean,
         val muted: Boolean,
         /** The frame rate of the source. The zoom counts the frames, and the output keeps this rate. */
         val sourceFrameRate: org.litvin.export.ExportFrameRate?,
@@ -340,17 +339,8 @@ object FFmpegCommandBuilder {
         val fps = replay.sourceFrameRate?.framesPerSecond?.takeIf { it > 0.0 } ?: FALLBACK_FPS
         // The source frames in the zoom time. The play is slower, so the zoom takes fewer source frames.
         val zoomFrames = fmt6((fps * org.litvin.points.Replays.ZOOM_MS / 1000.0 * replay.speed).coerceAtLeast(1.0))
-        val lastFrame = fmt6(((replay.endMs - replay.startMs) / 1000.0 * fps - 1.0).coerceAtLeast(0.0))
         fun smooth(u: String) = "($u)*($u)*(3-2*($u))"
-        val parts = buildList {
-            if (replay.zoomIn) add(smooth("clip(in/$zoomFrames,0,1)"))
-            if (replay.zoomOut) add(smooth("clip(($lastFrame-in)/$zoomFrames,0,1)"))
-        }
-        val progress = when (parts.size) {
-            0 -> "1"
-            1 -> parts.single()
-            else -> "min(${parts[0]},${parts[1]})"
-        }
+        val progress = if (replay.zoomIn) smooth("clip(in/$zoomFrames,0,1)") else "1"
         val size = "(1-${fmt6(1.0 - zoom.width)}*$progress)"
         val left = "${fmt6(zoom.x)}*$progress"
         val top = "${fmt6(zoom.y)}*$progress"
@@ -359,7 +349,7 @@ object FFmpegCommandBuilder {
         val x1 = "W*($left+$size)"
         val y1 = "H*($top+$size)"
         val corners = listOf("x0" to x0, "y0" to y0, "x1" to x1, "y1" to y0, "x2" to x0, "y2" to y1, "x3" to x1, "y3" to y1)
-        val eval = if (parts.isEmpty()) "init" else "frame"
+        val eval = if (replay.zoomIn) "frame" else "init"
         return "perspective=" + corners.joinToString(":") { (name, value) -> "$name='$value'" } + ":sense=source:eval=$eval"
     }
 

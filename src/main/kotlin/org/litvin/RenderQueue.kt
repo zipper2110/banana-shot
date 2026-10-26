@@ -10,6 +10,7 @@ import org.litvin.export.RenderRunResult
 import org.litvin.export.RenderQueueRequest
 import org.litvin.export.RenderTerminalOutcome
 import org.litvin.points.PointV1
+import org.litvin.points.Replays
 import org.litvin.scoring.ScoreboardSettingsV1
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -520,7 +521,7 @@ object RenderQueueManager {
                                     endMs = part.endMs.toLong(),
                                     speed = part.speed,
                                     zoom = part.zoom,
-                                    zoomIn = pass.isFirst,
+                                    zoomIn = Replays.zoomsIn(pass.replay.replayIndex, pass.repeat),
                                     muted = part.muted,
                                     sourceFrameRate = replayFrameRate,
                                     sampleRate = replaySampleRate,

@@ -143,4 +143,32 @@ class ReplayDirectorTest {
         director.setPoints(listOf(point(repeats = 3)))
         assertFalse(director.isActive)
     }
+
+    @Test
+    fun theSecondReplayStartsWithTheZoomAlreadyIn() {
+        val zoom = ReplayZoom(0.25, 0.25, 0.5)
+        val first = ReplayV1(8_000, 10_000, zoom = zoom, speed = 0.5)
+        val two = PointV1(id = "p1", startMs = 0, endMs = 10_000, replays = listOf(first, first))
+        val director = director(two)
+        director.onTime(9_900, playing = true)
+        director.onTime(10_010, playing = true)
+        director.onRestart()
+        assertEquals(0.75, director.onTime(8_100, playing = true).views().single()!!.zoomWidth, 1e-9)
+
+        // The second replay starts with a dip and the full zoom (decision 18).
+        val next = director.onTime(9_990, playing = true)
+        assertEquals(listOf(8_000L), next.seeks())
+        director.onRestart()
+        assertEquals(0.5, director.onTime(8_100, playing = true).views().single()!!.zoomWidth, 1e-9)
+    }
+
+    @Test
+    fun theEditorPreviewOfTheSecondReplayStartsWithTheZoomAlreadyIn() {
+        val director = ReplayDirector()
+        director.setPoints(listOf(point(zoom = ReplayZoom(0.25, 0.25, 0.5))), firstReplayIndex = 1)
+        director.onTime(9_900, playing = true)
+        director.onTime(10_010, playing = true)
+        director.onRestart()
+        assertEquals(0.5, director.onTime(8_100, playing = true).views().single()!!.zoomWidth, 1e-9)
+    }
 }

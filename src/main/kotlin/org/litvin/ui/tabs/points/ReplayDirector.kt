@@ -48,7 +48,15 @@ class ReplayDirector {
     val activePlay: ReplayTimeline.Play? get() = insert?.plays?.getOrNull(playIndex)
 
     /** Sets the points. A replay that plays now stops when its point changes. */
-    fun setPoints(points: List<PointV1>): List<Command> {
+    /** The index of the first replay of each point that the director has. Not 0 only in the editor preview. */
+    private var firstReplayIndex = 0
+
+    /**
+     * Sets the points and their replays. The replay editor preview gives only the selected replay, with its index in
+     * [firstReplayIndex], so that the preview zooms in as the Points tab does.
+     */
+    fun setPoints(points: List<PointV1>, firstReplayIndex: Int = 0): List<Command> {
+        this.firstReplayIndex = firstReplayIndex
         val next = ReplayTimeline(points)
         val active = insert
         timeline = next
@@ -137,7 +145,7 @@ class ReplayDirector {
 
     /**
      * The picture at [sourceMs] of the part of [play]: the zoom and the dips (decisions 2, 7, and 8). The zoom goes
-     * in at the start of the first play. It does not go out at the end (decision 12).
+     * in at the start of the first play of the first replay (decision 18). It does not go out at the end (decision 12).
      */
     private fun viewIn(play: ReplayTimeline.Play, sourceMs: Long): ReplayView {
         val part = play.replay
@@ -150,7 +158,7 @@ class ReplayDirector {
         val dip = maxOf(dipIn, dipOut, 0.0).coerceAtMost(1.0)
         val white = (if (dipIn >= dipOut) fadeIn else fadeOut)?.white ?: false
         val zoom = part.zoom ?: return ReplayView(dip = dip, dipWhite = white)
-        val progress = if (play.isFirst) smooth(offset / Replays.ZOOM_MS) else 1.0
+        val progress = if (Replays.zoomsIn(firstReplayIndex + play.replayIndex, play.repeat)) smooth(offset / Replays.ZOOM_MS) else 1.0
         return ReplayView(
             zoomX = zoom.x * progress,
             zoomY = zoom.y * progress,

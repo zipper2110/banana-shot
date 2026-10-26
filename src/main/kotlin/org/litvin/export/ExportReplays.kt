@@ -19,6 +19,8 @@ data class ExportReplay(
     val comments: List<CommentOverlaySpan> = emptyList(),
     /** The text of the "REPLAY" badge in the language of the video. Null shows no badge. */
     val badgeText: String? = null,
+    /** The place of the replay among the replays of its point, from 0. Only the first one zooms in (decision 18). */
+    val replayIndex: Int = 0,
 ) {
     /** The time of one play. */
     @get:JsonIgnore
@@ -42,11 +44,12 @@ object ExportReplays {
             .filter { it.replays.isNotEmpty() }
             .sortedBy { it.endMs }
             .flatMap { point ->
-                Replays.fitTo(point).map { replay ->
+                Replays.fitTo(point).mapIndexed { index, replay ->
                     ExportReplay(
                         pointId = point.id,
                         pointEndMs = point.endMs,
                         replay = replay,
+                        replayIndex = index,
                         comments = commentSpans(replay, comments),
                         badgeText = badgeText.takeIf { replay.showBadge },
                     )

@@ -112,6 +112,15 @@ object Replays {
     /** The dip to black between two repeats: this time out, then this time in (decision 7). */
     const val REPEAT_FADE_MS = 100L
 
-    /** The zoom in at the start of the first play (decision 8). The replay has no zoom out (decision 12). */
+    /**
+     * The zoom in at the start of the first play of the first replay of a point (decisions 8 and 18). The replay has
+     * no zoom out (decision 12).
+     */
     const val ZOOM_MS = 400L
+
+    /**
+     * True when the play [repeat] (from 0) of the replay at [replayIndex] of its point zooms in. Only the first play of
+     * the first replay zooms in. The other plays start with the zoom already in (decision 18).
+     */
+    fun zoomsIn(replayIndex: Int, repeat: Int): Boolean = replayIndex == 0 && repeat == 0
 }

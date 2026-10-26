@@ -440,7 +440,7 @@ internal class ReplayEditorWindow(
         val replay = edits.selected ?: return
         previewing = true
         director.stop()
-        director.setPoints(listOf(point.copy(replays = listOf(replay))))
+        director.setPoints(listOf(point.copy(replays = listOf(replay))), firstReplayIndex = edits.selectedIndex)
         zoomOverlay.visible = false
         partBar.locked = true
         refreshOverlay()

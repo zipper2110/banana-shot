@@ -163,4 +163,18 @@ class ReplaysTest {
         assertTrue(dispatcher.deletePoint("P"))
         assertTrue(dispatcher.getCompletedPoints().isEmpty())
     }
+
+    @Test
+    fun `only the first play of the first replay of a point zooms in`() {
+        assertTrue(Replays.zoomsIn(replayIndex = 0, repeat = 0))
+        assertFalse(Replays.zoomsIn(replayIndex = 0, repeat = 1))
+        assertFalse(Replays.zoomsIn(replayIndex = 1, repeat = 0))
+    }
+
+    @Test
+    fun `the export replays know their place in the point`() {
+        val withTwo = point.copy(replays = listOf(ReplayV1(startMs = 9_000, endMs = 12_000), ReplayV1(startMs = 10_000, endMs = 12_000)))
+        val replays = org.litvin.export.ExportReplays.of(listOf(withTwo), emptyList(), "REPLAY")
+        assertEquals(listOf(0, 1), replays.map { it.replayIndex })
+    }
 }

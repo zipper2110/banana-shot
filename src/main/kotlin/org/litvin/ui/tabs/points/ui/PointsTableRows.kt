@@ -462,12 +462,7 @@ internal class ReplayRow(
 
     /** The speed, the repeats, the zoom, and a muted sound, for example "0.5× · ×2 · Zoom 2×". */
     internal val details: String
-        get() = listOfNotNull(
-            "${DisplayFormats.decimal(replay.speed, 0, 2)}×",
-            replay.repeats.takeIf { it > 1 }?.let { "×$it" },
-            replay.zoomFactor?.let { "${tr("replay.editor.zoom")} ${DisplayFormats.decimal(it, 0, 1)}×" },
-            tr("replay.editor.sound.muted").takeIf { replay.muted },
-        ).joinToString(" · ")
+        get() = details(replay.speed, replay.repeats, replay.zoomFactor, replay.muted)
 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
@@ -501,6 +496,14 @@ internal class ReplayRow(
 
     companion object {
         const val REPLAY_HEIGHT = 30
+
+        /** The details of a replay, for example "0.5× · ×2 · Zoom 2×". The replay editor uses the same text. */
+        fun details(speed: Double, repeats: Int, zoomFactor: Double?, muted: Boolean): String = listOfNotNull(
+            "${DisplayFormats.decimal(speed, 0, 2)}×",
+            repeats.takeIf { it > 1 }?.let { "×$it" },
+            zoomFactor?.let { "${tr("replay.editor.zoom")} ${DisplayFormats.decimal(it, 0, 1)}×" },
+            tr("replay.editor.sound.muted").takeIf { muted },
+        ).joinToString(" · ")
         private const val TITLE_GAP = 6
         private const val DETAILS_GAP = 12
     }

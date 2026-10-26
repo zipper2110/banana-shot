@@ -102,7 +102,11 @@ internal class ReplayEditorWindow(
         font = UiKit.font(12f)
         foreground = Palette.FG_3
     }
-    private val tabs = SegmentedChoice<Int>("replay-tabs", emptyList())
+    private val list = ReplayList(
+        onSelect = { index -> stopPreview(); edits.select(index); seekToSelected(); refresh() },
+        onDelete = { index -> stopPreview(); edits.select(index); edits.deleteSelected(); seekToSelected(); refresh() },
+        onMove = { index, delta -> stopPreview(); edits.select(index); edits.moveSelected(delta); refresh() },
+    )
     private val addButton = UiButton(tr("replay.editor.add"), Material2AL.ADD, buttonHeight = 26).apply {
         name = "replay-add"
         toolTipText = tr("replay.editor.add.tooltip")
@@ -148,17 +152,6 @@ internal class ReplayEditorWindow(
     private val badgeSwitch = SwitchBox(tr("replay.editor.badge")).apply { name = "replay-badge" }
     private val summary = WrapText("", UiKit.font(12.5f), Palette.FG_2, wrapWidth = NOTE_WIDTH)
     private val emptyNote = WrapText(tr("replay.editor.empty"), UiKit.font(12.5f), Palette.FG_2, wrapWidth = NOTE_WIDTH)
-    private val deleteButton = UiButton(tr("common.delete"), Material2AL.DELETE, UiButton.Kind.DANGER).apply { name = "replay-delete" }
-    private val earlierButton = UiButton("", Material2AL.ARROW_BACK).apply {
-        name = "replay-move-earlier"
-        toolTipText = tr("replay.moveEarlier")
-        isFocusable = false
-    }
-    private val laterButton = UiButton("", Material2AL.ARROW_FORWARD).apply {
-        name = "replay-move-later"
-        toolTipText = tr("replay.moveLater")
-        isFocusable = false
-    }
     private val saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply { name = "replay-save" }
     private val cancelButton = UiButton(tr("common.cancel")).apply { name = "replay-cancel" }
     private val editors = JPanel()
@@ -295,19 +288,26 @@ internal class ReplayEditorWindow(
             isOpaque = false
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = BorderFactory.createEmptyBorder(14, 16, 6, 16)
-            add(JLabel(tr("replay.editor.heading"), UiKit.icon(Material2MZ.SLOW_MOTION_VIDEO, 18, Palette.LIME), JLabel.LEFT).apply {
-                font = UiKit.font(16f, UiKit.Weight.SEMIBOLD)
-                foreground = Palette.FG
-                alignmentX = LEFT_ALIGNMENT
-            })
-            add(sub.apply { alignmentX = LEFT_ALIGNMENT })
-            add(Box.createVerticalStrut(10))
+            // The heading row: the title and the point time on the left, Add on the right.
             add(JPanel(BorderLayout(8, 0)).apply {
                 isOpaque = false
                 alignmentX = LEFT_ALIGNMENT
-                add(tabs, BorderLayout.CENTER)
-                add(addButton, BorderLayout.EAST)
+                add(JPanel().apply {
+                    isOpaque = false
+                    layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                    add(JLabel(tr("replay.editor.heading"), UiKit.icon(Material2MZ.SLOW_MOTION_VIDEO, 18, Palette.LIME), JLabel.LEFT).apply {
+                        font = UiKit.font(16f, UiKit.Weight.SEMIBOLD)
+                        foreground = Palette.FG
+                    })
+                    add(sub)
+                }, BorderLayout.CENTER)
+                add(JPanel(BorderLayout()).apply {
+                    isOpaque = false
+                    add(addButton, BorderLayout.NORTH)
+                }, BorderLayout.EAST)
             })
+            add(Box.createVerticalStrut(10))
+            add(list.apply { alignmentX = LEFT_ALIGNMENT })
         }
         partGroup.wide(JPanel(FlowLayout(FlowLayout.LEFT, 14, 0)).apply {
             isOpaque = false
@@ -343,7 +343,7 @@ internal class ReplayEditorWindow(
             add(editors, BorderLayout.NORTH)
             add(emptyNote.apply { border = BorderFactory.createEmptyBorder(16, 16, 16, 16) }, BorderLayout.CENTER)
         }
-        val footer = DialogKit.footer(left = listOf(deleteButton, earlierButton, laterButton), right = listOf(cancelButton, saveButton))
+        val footer = DialogKit.footer(left = emptyList(), right = listOf(cancelButton, saveButton))
         return JPanel(BorderLayout()).apply {
             name = "replay-side"
             background = Palette.BG
@@ -363,7 +363,6 @@ internal class ReplayEditorWindow(
     }
 
     private fun wireControls() {
-        tabs.onChange { index -> stopPreview(); edits.select(index); seekToSelected(); refresh() }
         addButton.addActionListener {
             stopPreview()
             if (edits.add(player.currentTimeMs())) seekToSelected()
@@ -376,9 +375,6 @@ internal class ReplayEditorWindow(
         effectChoice.onChange { effect -> edits.setEffect(effect); refreshSide() }
         badgeSwitch.addActionListener { edits.setShowBadge(badgeSwitch.isSelected); refreshSide() }
         previewButton.addActionListener { togglePreview() }
-        deleteButton.addActionListener { stopPreview(); edits.deleteSelected(); seekToSelected(); refresh() }
-        earlierButton.addActionListener { stopPreview(); edits.moveSelected(-1); refresh() }
-        laterButton.addActionListener { stopPreview(); edits.moveSelected(1); refresh() }
         cancelButton.addActionListener { close(save = false) }
         saveButton.addActionListener { close(save = true) }
     }
@@ -505,7 +501,6 @@ internal class ReplayEditorWindow(
         )
     }
 
-    /** Closes the window without Save. */
     /** Closes the window without Save and without a question. The app calls it, for example when the tab closes. */
     fun cancel() = close(save = false)
 
@@ -557,8 +552,7 @@ internal class ReplayEditorWindow(
             edits.replays,
             edits.selectedIndex,
         )
-        tabs.setOptions(edits.replays.indices.map { SegmentedChoice.Option(it, tr("replay.editor.tab", "number" to it + 1)) })
-        tabs.selected = edits.selectedIndex.takeIf { it >= 0 }
+        list.setState(edits.replays, edits.selectedIndex)
         addButton.isEnabled = edits.replays.size < MAX_REPLAYS
         sub.text = tr(
             "replay.editor.sub",
@@ -572,9 +566,6 @@ internal class ReplayEditorWindow(
         val replay = edits.selected
         editors.isVisible = replay != null
         emptyNote.isVisible = replay == null
-        deleteButton.isEnabled = replay != null
-        earlierButton.isEnabled = edits.canMove(-1)
-        laterButton.isEnabled = edits.canMove(1)
         previewButton.isEnabled = replay != null
         zoomOverlay.zoom = replay?.zoom
         if (replay == null) return

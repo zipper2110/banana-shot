@@ -36,6 +36,7 @@ the proposals Q1 to Q10 of the code study):
 | 14 | T4, T5 | Decided on 2026-10-26 after the work: the user sets the play order of the replays of a point. The editor has arrow buttons next to Delete, and each replay row in the list has Move up and Move down on hover. The app does not sort the replays by start time. |
 | 15 | T4 | Decided on 2026-10-26 after the work: the editor offers the speeds 0.1×, 0.2×, 0.3×, 0.5× (the default), and 1×. A replay with another speed in the data keeps it, and no speed button is selected. |
 | 16 | T4 | Decided on 2026-10-26 after the work: when the user closes the editor with the X or with ESC and there are changes that are not saved, the editor asks "Discard the replay changes?". Discard closes the editor without the changes. Keep editing keeps the editor open. The Cancel button discards without a question. When the app closes the editor, for example when the tab closes, the editor does not ask. |
+| 17 | T4 | Decided on 2026-10-26 after the work: the replay editor shows the replays of the point as a vertical list, not as tabs, so that many replays do not overflow. Each row shows "Replay 1" and the details, as the replay row in the Points list. Each row has Move up, Move down, and Delete. The selected row always shows these buttons. The other rows show them on hover. The footer has no Delete and no arrow buttons. Add is in the heading row, right of the title. |
 
 ## Open questions
 

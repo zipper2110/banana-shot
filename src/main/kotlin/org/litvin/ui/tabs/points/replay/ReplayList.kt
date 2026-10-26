@@ -7,7 +7,7 @@ import org.litvin.points.ReplayV1
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.UiKit
-import org.litvin.ui.tabs.points.ui.ReplayRow
+import org.litvin.ui.tabs.points.ui.ReplayDetails
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
@@ -66,7 +66,7 @@ internal class ReplayList(
         private val isLast: Boolean,
     ) : JPanel(null) {
         private val title = tr("replay.editor.tab", "number" to index + 1)
-        private val details = ReplayRow.details(
+        private val details = ReplayDetails.of(
             speed = replay.speed,
             repeats = replay.repeats,
             zoomFactor = replay.zoom?.let { 1.0 / it.width },
@@ -150,8 +150,7 @@ internal class ReplayList(
                 // The details use the room up to the buttons when the buttons show.
                 val right = if (buttonsShown) upButton.x - BUTTON_GAP else width - END_GAP
                 val detailsFont = UiKit.font(12f)
-                val shown = UiKit.ellipsize(details, detailsFont, (right - x).toFloat())
-                UiKit.drawText(g2, shown, detailsFont, Palette.FG_3, x.toFloat(), 0f, h)
+                ReplayDetails.paint(g2, details, detailsFont, Palette.FG_3, x, 0f, h, right)
             } finally {
                 g2.dispose()
             }

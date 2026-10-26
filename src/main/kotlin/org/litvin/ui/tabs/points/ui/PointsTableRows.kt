@@ -460,9 +460,11 @@ internal class ReplayRow(
 
     override fun doLayout() = layoutActions(listOf(upButton, downButton, deleteButton))
 
-    /** The speed, the repeats, the zoom, and a muted sound, for example "0.5× · ×2 · Zoom 2×". */
-    internal val details: String
-        get() = details(replay.speed, replay.repeats, replay.zoomFactor, replay.muted)
+    /** The speed, the repeats, the zoom, and a muted sound, each with its icon. */
+    private val detailItems = ReplayDetails.of(replay.speed, replay.repeats, replay.zoomFactor, replay.muted)
+
+    /** The details as plain text, for example "0.5× · ×2 · 2×". */
+    internal val details: String get() = ReplayDetails.text(detailItems)
 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
@@ -487,8 +489,7 @@ internal class ReplayRow(
             // A replay row has no marks and no star, so the details can use these columns, up to Delete on hover.
             val metaX = columns.lengthRight + DETAILS_GAP
             val metaRight = if (hovered) columns.actions - TableColumns.GAP else columns.actionsRight
-            val meta = UiKit.ellipsize(details, textFont, (metaRight - metaX).toFloat())
-            UiKit.drawText(g2, meta, textFont, Palette.FG_3, metaX.toFloat(), 0f, h)
+            ReplayDetails.paint(g2, detailItems, textFont, Palette.FG_3, metaX, 0f, h, metaRight)
         } finally {
             g2.dispose()
         }
@@ -496,14 +497,6 @@ internal class ReplayRow(
 
     companion object {
         const val REPLAY_HEIGHT = 30
-
-        /** The details of a replay, for example "0.5× · ×2 · Zoom 2×". The replay editor uses the same text. */
-        fun details(speed: Double, repeats: Int, zoomFactor: Double?, muted: Boolean): String = listOfNotNull(
-            "${DisplayFormats.decimal(speed, 0, 2)}×",
-            repeats.takeIf { it > 1 }?.let { "×$it" },
-            zoomFactor?.let { "${tr("replay.editor.zoom")} ${DisplayFormats.decimal(it, 0, 1)}×" },
-            tr("replay.editor.sound.muted").takeIf { muted },
-        ).joinToString(" · ")
         private const val TITLE_GAP = 6
         private const val DETAILS_GAP = 12
     }

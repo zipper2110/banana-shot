@@ -171,7 +171,7 @@ class PointsTableViewTest {
             assertEquals(listOf(0, 45, 75, 105, 150), rows.map { it.y })
             assertEquals(listOf(0, TableRow.NO_INDEX, TableRow.NO_INDEX, 1, 2), rows.map { it.visualIndex })
             val replayRows = rows.filterIsInstance<ReplayRow>()
-            assertEquals("0.5× · ×2 · Zoom 2×", replayRows[0].details)
+            assertEquals("0.5× · ×2 · 2×", replayRows[0].details)
             assertEquals("0.25× · Muted", replayRows[1].details)
 
             dispatch(replayRows[1], MouseEvent.MOUSE_CLICKED)

@@ -1,6 +1,7 @@
 package org.litvin.ui.expiry
 
 import org.litvin.AppInfo
+import org.litvin.license.LatestRelease
 import org.litvin.license.check.CheckState
 import org.litvin.license.check.ExpiryCommands
 import org.litvin.license.check.ExpiryListener
@@ -11,6 +12,7 @@ import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.commons.UiButton
 import java.awt.Component
 import java.awt.EventQueue
+import java.awt.event.HierarchyEvent
 import java.time.ZoneId
 
 /**
@@ -29,6 +31,8 @@ internal class ExpiryUi(
     private val windowShows: () -> Boolean,
     private val appVersion: String = AppInfo.version,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
+    /** The "What's new" popup (B-54). Null shows no popup. */
+    private val whatsNew: WhatsNewSupport? = null,
 ) : ExpiryListener, AutoCloseable {
     val bar = ExpiryBar()
 
@@ -44,6 +48,12 @@ internal class ExpiryUi(
     }
 
     private val noticeUpdate = UpdateButtons("update-notice", runner)
+    /** The site page of the release in the update notice (B-54). */
+    private var noticePageUrl: String? = null
+    val noticeReadMore = SiteLink(ExpiryTexts.READ_MORE) { noticePageUrl?.let(runner::openDownloadPage) }.apply {
+        name = "update-notice-read-more"
+    }
+    private val noticeReadMoreRow = SiteLink.row(noticeReadMore)
     val updateNotice = NoticeRow("update-notice", MessageKind.HINT, onClose = null).apply {
         setButtons(
             noticeUpdate.all + UiButton(ExpiryTexts.LATER).apply {
@@ -51,7 +61,13 @@ internal class ExpiryUi(
                 addActionListener { commands.laterUpdateNotice() }
             },
         )
+        setLink(noticeReadMoreRow)
     }
+
+    private val whatsNewUpdate = UpdateButtons("whats-new", runner)
+    val whatsNewDialog = WhatsNewDialog(parent, whatsNewUpdate, runner::openDownloadPage)
+    /** The version whose popup this session loads or showed. The popup does not load two times. */
+    private var whatsNewRequested: String? = null
 
     private val warningUpdate = UpdateButtons("expiry-warning", runner)
     val warning = NoticeRow("expiry-warning", MessageKind.WARNING, onClose = commands::closeExpiryWarning).apply {
@@ -75,6 +91,10 @@ internal class ExpiryUi(
 
     init {
         listOf(banner, updateNotice, warning, clockBehind, wrongClock).forEach(bar::addRow)
+        // The state can arrive before the main window shows. The popup then shows when the window shows.
+        bar.addHierarchyListener { event ->
+            if (event.changeFlags and HierarchyEvent.SHOWING_CHANGED.toLong() != 0L && bar.isShowing) syncWhatsNew()
+        }
     }
 
     /** Shows the current state and listens for changes. Call it on the EDT. */
@@ -118,7 +138,11 @@ internal class ExpiryUi(
         updateNotice.isVisible = normal && latest != null
         if (normal && latest != null) {
             updateNotice.setTexts(ExpiryTexts.UPDATE_TITLE, listOf(ExpiryTexts.versionAvailable(latest.version), latest.notes))
+            noticePageUrl = latest.pageUrl
+            noticeReadMoreRow.isVisible = latest.pageUrl != null
         }
+        // The popup shows only in normal mode. The dialog of expired mode can show next.
+        if (!normal) whatsNewDialog.hide()
 
         warning.isVisible = normal && state.expiryWarning
         if (warning.isVisible) {
@@ -141,7 +165,51 @@ internal class ExpiryUi(
         bar.repaint()
         // The modal dialog blocks the call that shows it. Thus, it shows in a separate event.
         EventQueue.invokeLater(::syncDialog)
+        EventQueue.invokeLater(::syncWhatsNew)
     }
+
+    /**
+     * Starts the load of the "What's new" page when a new version has a page, the main window shows, and the popup of
+     * this version did not show before (B-54).
+     */
+    private fun syncWhatsNew() {
+        val support = whatsNew ?: return
+        val state = shown ?: return
+        val latest = state.updateNotice ?: return
+        val url = latest.whatsNewUrl ?: return
+        if (closed || state.mode != ExpiryMode.NORMAL || !windowShows()) return
+        if (whatsNewRequested == latest.version || !support.seen.isNew(latest.version)) return
+        whatsNewRequested = latest.version
+        support.background.execute {
+            val html = support.load(url, WhatsNewDialog.IMAGE_WIDTH)
+            EventQueue.invokeLater { showWhatsNew(support, latest, html) }
+        }
+    }
+
+    private fun showWhatsNew(support: WhatsNewSupport, latest: LatestRelease, html: String?) {
+        val state = shown
+        if (closed || state == null || state.mode != ExpiryMode.NORMAL || state.updateNotice?.version != latest.version || !windowShows()) {
+            // The popup of this version can show at the next start.
+            whatsNewRequested = null
+            return
+        }
+        if (!support.seen.isNew(latest.version)) return
+        support.seen.markShown(latest.version)
+        whatsNewUpdate.show(UpdateOptions.of(appVersion, latest))
+        // Modal: this call returns when the popup closes.
+        whatsNewDialog.show(html ?: fallbackHtml(latest), latest.pageUrl)
+    }
+
+    /** With no page, the popup shows the version and the `notes` as plain text. */
+    private fun fallbackHtml(latest: LatestRelease): String = buildString {
+        append("<p>").append(escapeHtml(ExpiryTexts.versionAvailable(latest.version))).append("</p>")
+        latest.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+            append("<p>").append(escapeHtml(notes).replace("\n", "<br>")).append("</p>")
+        }
+    }
+
+    private fun escapeHtml(text: String) =
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
     private fun syncDialog() {
         val state = shown ?: return
@@ -164,5 +232,7 @@ internal class ExpiryUi(
         closed = true
         dialog.hide()
         dialog.dialog.dispose()
+        whatsNewDialog.hide()
+        whatsNewDialog.dialog.dispose()
     }
 }

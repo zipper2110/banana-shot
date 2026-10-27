@@ -164,6 +164,29 @@ class VersionRulesParserTest {
     }
 
     @Test
+    fun `whatsNewUrl and pageUrl are read, and a value that is not a string is ignored`() {
+        val result = valid(
+            """
+            {"schema": 1, "rules": [],
+             "latest": {"version": "1.4.0", "downloadUrl": "https://example.invalid/releases",
+                        "whatsNewUrl": "https://example.invalid/changelog/1.4.0/whats-new.md",
+                        "pageUrl": "https://example.invalid/changelog/1.4.0/"}}
+            """,
+        )
+        assertEquals("https://example.invalid/changelog/1.4.0/whats-new.md", result.rules.latest?.whatsNewUrl)
+        assertEquals("https://example.invalid/changelog/1.4.0/", result.rules.latest?.pageUrl)
+
+        val wrong = valid(
+            """
+            {"schema": 1, "rules": [],
+             "latest": {"version": "1.4.0", "downloadUrl": "https://example.invalid/releases", "whatsNewUrl": 1, "pageUrl": {}}}
+            """,
+        )
+        assertEquals(LatestRelease("1.4.0", "https://example.invalid/releases"), wrong.rules.latest)
+        assertEquals(2, wrong.problems.size)
+    }
+
+    @Test
     fun `a latest that is not an object, or with no version or downloadUrl, is ignored as a whole`() {
         val cases = listOf(
             "\"1.4.0\"",

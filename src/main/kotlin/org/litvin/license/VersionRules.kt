@@ -25,6 +25,10 @@ data class LatestRelease(
     val downloadUrl: String,
     val installerUrl: String? = null,
     val notes: String? = null,
+    /** The Markdown page of the "What's new" popup (B-54). With no page, no popup shows. */
+    val whatsNewUrl: String? = null,
+    /** The extended page about the release on the site (B-54). The popup and the update notice link to it. */
+    val pageUrl: String? = null,
 )
 
 data class VersionRule(

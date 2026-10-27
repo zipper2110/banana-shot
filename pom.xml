@@ -195,6 +195,17 @@
             <artifactId>jsvg</artifactId>
             <version>2.1.0</version>
         </dependency>
+        <!-- commonmark-java converts the Markdown page of the "What's new" popup to HTML (B-54) -->
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark</artifactId>
+            <version>0.24.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-tables</artifactId>
+            <version>0.24.0</version>
+        </dependency>
         <!-- JNA binds libmpv (the preview engine) and a few Win32 calls -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>

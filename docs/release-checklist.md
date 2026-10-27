@@ -194,6 +194,13 @@ If a check fails, fix the cause and start again at step 5.
 
 ## 9. After the release
 
+- [ ] "What's new" page (B-54, optional): write
+      `site/public/changelog/<version>/whats-new.md` with its images in the
+      same folder. Use relative image addresses, for example
+      `![Zoom](zoom.png)`. Use PNG, JPEG, or GIF. A wide image gets the
+      width of the popup (about 550 pixels). Also write the extended page
+      about the release on the site. Deploy the site before the next step,
+      because the app loads the page when it sees the new `latest`.
 - [ ] Set `latest` in `release/version-policy.json` to the new release, and
       push the change to `master`:
       - `version`: the new version.
@@ -201,7 +208,12 @@ If a check fails, fix the cause and start again at step 5.
       - `installerUrl`:
         `https://github.com/zipper2110/banana-shot/releases/download/v<version>/BananaShot-win-Setup.exe`.
       - `notes` (optional): a short text about the release. The app shows it
-        as plain text.
+        as plain text. Builds before 1.3.0 show only this text.
+      - `whatsNewUrl` (optional):
+        `https://banana-shot-editor.app/changelog/<version>/whats-new.md`.
+        Builds from 1.3.0 show this page in the "What's new" popup.
+      - `pageUrl` (optional): the extended page about the release on the
+        site. The popup and the update notice link to it.
 - [ ] Site changelog (`site/public/changelog/index.html`): write the release
       date (YYYY-MM-DD) of the new version, and deploy the site. For the
       first release, replace "coming soon" of 1.0.0. Also change

@@ -95,6 +95,16 @@ internal class NoticeRow(
         closeButton?.let { add(it) }
     }
 
+    /** A component under the lines, for example a link. It stays under the lines when the lines change. */
+    private var link: JComponent? = null
+
+    fun setLink(component: JComponent?) {
+        link?.let { text.remove(it) }
+        link = component
+        component?.let { text.add(it) }
+        revalidateBar()
+    }
+
     /** Sets the title and the lines. A null line does not show. */
     fun setTexts(titleText: String, lineTexts: List<String?>) {
         if (title.text != titleText) title.runs = listOf(TextRun(titleText, title.runs.first().font, Palette.FG))
@@ -102,7 +112,9 @@ internal class NoticeRow(
         while (lines.size < shownLines.size) {
             val line = WrapText("", UiKit.font(12.5f), Palette.FG_2, 1.45f).apply { name = "$rowName-line-${lines.size}" }
             lines += line
+            link?.let { text.remove(it) }
             text.add(line)
+            link?.let { text.add(it) }
         }
         lines.forEachIndexed { index, line ->
             val value = shownLines.getOrNull(index)

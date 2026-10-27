@@ -16,7 +16,10 @@ import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.VideoErrorPanel
 import org.litvin.ui.expiry.ExpiryUi
 import org.litvin.ui.expiry.UpdateRunner
+import org.litvin.ui.expiry.WhatsNewSupport
 import org.litvin.license.update.UpdateAndRestart
+import org.litvin.license.update.PreferencesWhatsNewSeen
+import org.litvin.license.update.WhatsNewLoader
 import org.litvin.feedback.FeedbackLog
 import org.litvin.feedback.FeedbackPreferences
 import org.litvin.feedback.FeedbackSystemInfo
@@ -721,6 +724,12 @@ object SwingApplicationFactory {
                 beforeExpiredMode = { goTo(CARD_EXPORT) },
                 setExpiredMode = ::setExpiredMode,
                 windowShows = { frame.isShowing },
+                whatsNew = WhatsNewSupport(
+                    seen = PreferencesWhatsNewSeen(services.preferences.node(PreferencesProvider.LICENSE)),
+                    load = WhatsNewLoader.production()::load,
+                    // A daemon thread: a slow page must not stop the close of the app.
+                    background = Executor { task -> Thread(task, "bananashot-whats-new").apply { isDaemon = true }.start() },
+                ),
             )
             closeActions += expiryUi::close
             exportPanel.onNewExportRefused = services.expiry::showExpiredDialog

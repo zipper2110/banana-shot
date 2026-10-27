@@ -99,7 +99,14 @@ Terms:
   1. The user starts the app, or the 24-hour online check runs.
 - **App behavior:** a notice that is not modal shows the new version, the
   `notes`, an "Update and restart" button, a "Manually download update" button, and a
-  "Later" button.
+  "Later" button. With a `latest.pageUrl`, the notice also has a "Read more
+  on the site" link.
+  - With a `latest.whatsNewUrl`, the "What's new" popup also shows, only one
+    time for this version (B-54). It shows the page of the release, the
+    "Read more on the site" link, and the buttons "Later", "Manually
+    download update", and "Update and restart". "Later" or a close of the
+    window closes the popup. The notice stays. At the next start, only the
+    notice shows.
 - **Next steps for the user:**
   - "Update and restart":
     1. If an export runs, the app asks first. The running export starts
@@ -124,8 +131,8 @@ Terms:
   development build `1.4.0-SNAPSHOT` does not show it for `1.4.0`. After
   "Update and restart", the new version runs with the same projects and the
   same export queue.
-- **References:** "Update notice", "Update and restart", "Rules for the
-  app".
+- **References:** "Update notice", "What's new popup", "Update and
+  restart", "Rules for the app".
 
 ### S-03 Expiry during a session, with exports in the queue
 

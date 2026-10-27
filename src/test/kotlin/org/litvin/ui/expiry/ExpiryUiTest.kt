@@ -12,6 +12,7 @@ import org.litvin.license.check.ExpiryListener
 import org.litvin.license.check.ExpiryMode
 import org.litvin.license.check.ExpiryState
 import org.litvin.license.update.UpdateAndRestart
+import org.litvin.license.update.WhatsNewSeen
 import java.awt.Component
 import java.awt.Container
 import java.awt.EventQueue
@@ -161,6 +162,92 @@ class ExpiryUiTest {
     }
 
     @Test
+    fun `the update notice links to the site page only when the release has one (B-54)`() {
+        show(state(updateNotice = LatestRelease("1.4.0", "https://example.invalid/releases", pageUrl = "https://example.invalid/changelog/1.4.0/")))
+
+        onEdt {
+            assertTrue(ui.noticeReadMore.parent.isVisible)
+            ui.noticeReadMore.doClick()
+        }
+        assertEquals(listOf("https://example.invalid/changelog/1.4.0/"), opened)
+
+        show(state(updateNotice = LatestRelease("1.5.0", "https://example.invalid/releases")))
+
+        onEdt { assertFalse(ui.noticeReadMore.parent.isVisible) }
+    }
+
+    @Test
+    fun `the What's new popup shows one time for each new version, with the page, the site link, and Later (B-54)`() {
+        val seen = MemorySeen()
+        val loads = mutableListOf<String>()
+        val popupUi = popupUi(seen) { url -> loads += url; "<h1>Smarter replays</h1>" }
+        val release = LatestRelease(
+            "1.4.0",
+            "https://example.invalid/releases",
+            whatsNewUrl = "https://example.invalid/changelog/1.4.0/whats-new.md",
+            pageUrl = "https://example.invalid/changelog/1.4.0/",
+        )
+        try {
+            onEdt { popupUi.apply(state(updateNotice = release)) }
+            waitFor { popupUi.whatsNewDialog.dialog.isVisible }
+
+            assertEquals(listOf("https://example.invalid/changelog/1.4.0/whats-new.md"), loads)
+            assertEquals("1.4.0", seen.lastShown())
+            onEdt {
+                val page = popupUi.whatsNewDialog.page
+                assertTrue(page.document.getText(0, page.document.length).contains("Smarter replays"))
+                popupUi.whatsNewDialog.readMore.doClick()
+                popupUi.whatsNewDialog.later.doClick()
+            }
+            waitFor { !popupUi.whatsNewDialog.dialog.isVisible }
+            assertEquals(listOf("https://example.invalid/changelog/1.4.0/"), opened)
+
+            // The same version does not show the popup again, also in a new session.
+            onEdt { popupUi.apply(state(updateNotice = release, warning = true)) }
+            onEdt { }
+            assertEquals(1, loads.size)
+            val nextSession = popupUi(seen) { url -> loads += url; "<p>Again</p>" }
+            try {
+                onEdt { nextSession.apply(state(updateNotice = release)) }
+                onEdt { }
+                assertEquals(1, loads.size)
+            } finally {
+                onEdt { nextSession.close() }
+            }
+        } finally {
+            onEdt { popupUi.close() }
+        }
+    }
+
+    @Test
+    fun `a page that does not load shows the version and the notes as text, and no page address shows no popup (B-54)`() {
+        val seen = MemorySeen()
+        val popupUi = popupUi(seen) { null }
+        try {
+            onEdt { popupUi.apply(state(updateNotice = LatestRelease("1.4.0", "https://example.invalid/releases"))) }
+            onEdt { }
+            onEdt { }
+            assertFalse(onEdt { popupUi.whatsNewDialog.dialog.isVisible })
+            assertNull(seen.lastShown())
+
+            val release = LatestRelease("1.4.0", "https://example.invalid/releases", notes = "<b>Faster</b>", whatsNewUrl = "https://example.invalid/x.md")
+            onEdt { popupUi.apply(state(updateNotice = release)) }
+            waitFor { popupUi.whatsNewDialog.dialog.isVisible }
+            onEdt {
+                val page = popupUi.whatsNewDialog.page
+                val text = page.document.getText(0, page.document.length)
+                assertTrue(text.contains("Version 1.4.0 is available."), text)
+                assertTrue(text.contains("<b>Faster</b>"), text)
+                assertFalse(popupUi.whatsNewDialog.readMore.parent.isVisible)
+                popupUi.whatsNewDialog.dialog.dispatchEvent(java.awt.event.WindowEvent(popupUi.whatsNewDialog.dialog, java.awt.event.WindowEvent.WINDOW_CLOSING))
+            }
+            waitFor { !popupUi.whatsNewDialog.dialog.isVisible }
+        } finally {
+            onEdt { popupUi.close() }
+        }
+    }
+
+    @Test
     fun `the update notice does not show in expired mode`() {
         show(state(mode = ExpiryMode.EXPIRED, updateNotice = LatestRelease("1.4.0", "https://example.invalid/releases")))
 
@@ -263,6 +350,47 @@ class ExpiryUiTest {
         if (root is Container) root.components.forEach { child -> find(child, name)?.let { return it } }
         if (root is javax.swing.RootPaneContainer) return find(root.rootPane, name)
         return null
+    }
+
+    /** An interface with the "What's new" popup, a window that shows, and a load on the EDT. */
+    private fun popupUi(seen: WhatsNewSeen, load: (String) -> String?): ExpiryUi = onEdt {
+        val runner = UpdateRunner(
+            update = UpdateAndRestart(downloader = { _, _, _ -> }, launcher = { }),
+            background = { tasks += it },
+            exportRuns = { false },
+            closeSequence = { },
+            exit = { },
+            openUrl = { opened += it },
+            parent = { frame },
+        )
+        ExpiryUi(
+            commands,
+            runner,
+            frame,
+            beforeExpiredMode = { },
+            setExpiredMode = { },
+            windowShows = { true },
+            appVersion = "1.2.0",
+            zone = { ZoneOffset.UTC },
+            whatsNew = WhatsNewSupport(seen, load = { url, _ -> load(url) }, background = { it.run() }),
+        )
+    }
+
+    /** Waits up to 5 seconds. A modal popup runs its own event loop, so the EDT still answers. */
+    private fun waitFor(condition: () -> Boolean) {
+        val end = System.nanoTime() + 5_000_000_000L
+        while (!onEdt(condition)) {
+            check(System.nanoTime() < end) { "The condition did not come true in 5 seconds" }
+            Thread.sleep(20)
+        }
+    }
+
+    private class MemorySeen : WhatsNewSeen {
+        private var version: String? = null
+        override fun lastShown() = version
+        override fun markShown(version: String) {
+            this.version = version
+        }
     }
 
     private fun <T> onEdt(block: () -> T): T {

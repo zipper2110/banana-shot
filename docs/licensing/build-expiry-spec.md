@@ -255,6 +255,12 @@ Example:
     first release, also if the file does not use it yet (see "Changes to the
     file format").
   - `notes`: a short text about the release. Optional.
+  - `whatsNewUrl`: the HTTPS address of the Markdown page of the "What's
+    new" popup (B-54, see "What's new popup"). Optional. Builds before 1.3.0
+    ignore it.
+  - `pageUrl`: the extended page about the release on the site. The popup
+    and the update notice link to it (B-54). Optional. Builds before 1.3.0
+    ignore it.
 - `rules`: a list of rules. Each rule stops a range of versions on a date.
   This field is required. The list can be empty.
   - `id`: a unique name. The app uses it to show the warning again when a
@@ -853,6 +859,42 @@ the name can change.
   has no meaning there. They show the new version instead (see "Expired
   mode"). When the app leaves expired mode, the notice shows again, unless
   the user clicked "Later" for that version in this session.
+- With a `latest.pageUrl`, the notice has a "Read more on the site" link
+  under the texts. The link opens `pageUrl` in the browser (B-54, decided on
+  2026-10-27).
+
+### What's new popup
+
+Decided on 2026-10-27 (B-54).
+
+- When the update notice shows for a version with a `latest.whatsNewUrl`,
+  the app also shows the "What's new" popup. The popup shows only one time
+  for each new version. The app saves the version of the last popup in the
+  preferences (`whatsNewShownVersion` in the license node). Thus, the popup
+  does not show again after "Later", after a close, or at the next start.
+- The popup shows only in normal mode, and only when the main window shows.
+  When the app goes to expired mode, the popup closes.
+- The app loads the Markdown page and its images before the popup shows.
+  Only HTTPS addresses load. A relative address uses the address of the
+  page. Limits: 256 KB for the page, 5 MB for each image, and 30 images.
+  An image that does not load, or that is not PNG, JPEG, GIF, or BMP, does
+  not show. The rest of the page shows.
+- The app converts the Markdown to HTML with commonmark-java and the table
+  extension. HTML in the Markdown shows as text. A link that is not HTTP,
+  HTTPS, or mailto has no address. A link opens in the browser.
+- An image that is wider than the page gets the width of the page, with the
+  same aspect ratio.
+- If the page does not load, the popup shows the version and the `notes` as
+  plain text.
+- The popup has:
+  - The title "A new version is out" with an icon. No version text.
+  - The page in a scroll area, up to 440 pixels high.
+  - Under the page, a "Read more on the site" link to `latest.pageUrl`. It
+    shows only with a `pageUrl`.
+  - The buttons "Later", "Manually download update", and "Update and
+    restart". "Later" and the close button of the window close the popup.
+    The update notice stays.
+- The popup is modal, but the user can close it at any time.
 
 ### Update and restart
 

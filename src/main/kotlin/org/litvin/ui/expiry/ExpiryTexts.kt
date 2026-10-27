@@ -47,6 +47,12 @@ internal object ExpiryTexts {
 
     val UPDATE_TITLE get() = tr("expiry.update.title")
 
+    /** The title of the "What's new" popup (B-54). */
+    val WHATS_NEW_TITLE get() = tr("expiry.whatsNew.title")
+
+    /** The link to the extended page about the release on the site (B-54). */
+    val READ_MORE get() = tr("expiry.readMore")
+
     /** The state of the online check in the banner and the dialog. "Still expired" has no extra text. */
     fun checkState(check: CheckState): String? = when (check) {
         CheckState.CHECKING -> CHECKING

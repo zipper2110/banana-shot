@@ -1,6 +1,6 @@
 import { FILTER } from './app-usage';
 import type { Env } from './env';
-import { DAY, type Period, dates, isoDate, startOfDay } from './period';
+import { DAY, type Period, dataStart, dates, isoDate, startOfDay } from './period';
 
 export const APP_DAYS_JOB = 'app_daily';
 
@@ -31,7 +31,7 @@ const LIVE_DAYS = `SELECT date(first_received_at / 1000, 'unixepoch') AS day, ${
 FROM analytics_session WHERE ${FILTER} AND first_received_at >= ? AND first_received_at < ? GROUP BY day ORDER BY day`;
 
 const STORED_DAYS = `SELECT day, sessions, session_n_1, session_n_2_5, session_n_6_20, session_n_21p
-FROM app_daily WHERE dev = ? ORDER BY day`;
+FROM app_daily WHERE dev = ? AND day >= ? ORDER BY day`;
 
 const COLUMNS = 'day,dev,sessions,session_n_1,session_n_2_5,session_n_6_20,session_n_21p,taken_at';
 const VALUES = 'VALUES (?,?,?,?,?,?,?,?)';
@@ -42,14 +42,14 @@ const KEEP = `INSERT INTO app_daily (${COLUMNS}) ${VALUES} ON CONFLICT(day,dev) 
 
 const ZERO: DayTotals = { sessions: 0, session_n_1: 0, session_n_2_5: 0, session_n_6_20: 0, session_n_21p: 0 };
 
-/** Copies the totals of each complete UTC day from the analytics database. Returns the number of days. */
+/** Copies the totals of each complete UTC day from DATA_START on from the analytics database. Returns the number of days. */
 export async function saveAppDays(env: Env, now: number): Promise<number> {
   try {
     const today = startOfDay(now);
     const rewriteFrom = isoDate(today - REWRITE_DAYS * DAY);
     const statements: D1PreparedStatement[] = [];
     for (const dev of [0, 1]) {
-      const { results } = await env.ANALYTICS_DB.prepare(LIVE_DAYS).bind(dev, 0, today).all<DayRow>();
+      const { results } = await env.ANALYTICS_DB.prepare(LIVE_DAYS).bind(dev, dataStart(env.DATA_START), today).all<DayRow>();
       for (const row of results) {
         statements.push(env.COCKPIT_DB.prepare(row.day >= rewriteFrom ? REWRITE : KEEP).bind(
           row.day, dev, row.sessions, row.session_n_1, row.session_n_2_5, row.session_n_6_20, row.session_n_21p, now));
@@ -90,13 +90,15 @@ export interface UserBase {
  */
 export async function loadUserBase(env: Env, period: Period, includeDev: boolean): Promise<UserBase> {
   const dev = includeDev ? 1 : 0;
+  // Never a day before DATA_START. The table can still have older rows from before the variable.
+  const floor = dataStart(env.DATA_START);
   const [stored, status] = await Promise.all([
-    env.COCKPIT_DB.prepare(STORED_DAYS).bind(dev).all<DayRow>(),
+    env.COCKPIT_DB.prepare(STORED_DAYS).bind(dev, isoDate(floor)).all<DayRow>(),
     env.COCKPIT_DB.prepare('SELECT ran_at, ok, message FROM job_status WHERE name = ?').bind(APP_DAYS_JOB)
       .first<{ ran_at: number; ok: number; message: string }>(),
   ]);
   const savedThrough = stored.results.length ? stored.results[stored.results.length - 1].day : null;
-  const liveFrom = savedThrough ? Date.parse(`${savedThrough}T00:00:00Z`) + DAY : 0;
+  const liveFrom = Math.max(savedThrough ? Date.parse(`${savedThrough}T00:00:00Z`) + DAY : 0, floor);
   const live = liveFrom < period.end
     ? (await env.ANALYTICS_DB.prepare(LIVE_DAYS).bind(dev, liveFrom, period.end).all<DayRow>()).results
     : [];

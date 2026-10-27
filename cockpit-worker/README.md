@@ -27,6 +27,14 @@ Decided on 2026-10-27 by the author: the section uses the current analytics data
 - The cron writes each complete day of the last 60 days again. It writes an older day only when the day has no row.
   Thus the 90-day deletion of the analytics Worker never makes a saved day smaller.
 
+### Data start
+
+Decided on 2026-10-27 by the author: the data before 2026-10-13 is test data. The variable `DATA_START` in
+`wrangler.toml` sets this day. The cockpit ignores all older sessions, reports, page views, bot requests, and saved
+days. The cron does not copy older days to `app_daily`. The downloads count from this day: the last snapshot before it
+is the base line, also for the totals of each release. No data is deleted: to show all data again, remove the variable.
+The Worker health section is not changed.
+
 Each source is separate. When one source fails or is not configured, its cards show the reason,
 and the other cards work.
 

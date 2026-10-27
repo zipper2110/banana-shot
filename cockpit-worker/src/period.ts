@@ -36,6 +36,16 @@ export function parseLastDay(value: string | null, now: number): number {
   return Number.isNaN(day) || isoDate(day) !== value || day > today ? today : day;
 }
 
+/**
+ * The first UTC day of data that the cockpit shows (the variable `DATA_START`, `YYYY-MM-DD`). The cockpit ignores all
+ * older data, for example test data before the first release. Returns 0 (no limit) for no date or an invalid date.
+ */
+export function dataStart(value: string | undefined): number {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return 0;
+  const day = parseDate(value);
+  return Number.isNaN(day) || isoDate(day) !== value ? 0 : day;
+}
+
 export function startOfDay(time: number): number {
   return Math.floor(time / DAY) * DAY;
 }

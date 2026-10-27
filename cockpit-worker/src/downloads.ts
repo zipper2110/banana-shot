@@ -1,5 +1,5 @@
 import type { Env } from './env';
-import { type Period, dates, isoDate, parseDate, weekOf, weeks } from './period';
+import { type Period, dataStart, dates, isoDate, parseDate, weekOf, weeks } from './period';
 
 export const SETUP_ASSET = 'BananaShot-win-Setup.exe';
 export const SNAPSHOT_JOB = 'download_snapshot';
@@ -106,7 +106,13 @@ export async function loadDownloads(env: Env, period: Period): Promise<Downloads
     'SELECT day, release_tag, asset_name, download_count, published_at FROM download_snapshot ORDER BY day').all<SnapshotRow>();
   const status = await env.COCKPIT_DB.prepare('SELECT ran_at, ok, message FROM job_status WHERE name = ?')
     .bind(SNAPSHOT_JOB).first<{ ran_at: number; ok: number; message: string }>();
-  const increases = dailyIncreases(rows);
+  // Never a download before DATA_START. The last snapshot before it is the base line of the first day.
+  const floorDate = isoDate(dataStart(env.DATA_START));
+  const increases = new Map([...dailyIncreases(rows)].filter(([date]) => date >= floorDate));
+  const baseRows = rows.filter(row => row.day < floorDate);
+  const baseDay = baseRows.length ? baseRows[baseRows.length - 1].day : null;
+  const base = new Map(baseRows.filter(row => row.day === baseDay)
+    .map(row => [`${row.release_tag}\u0000${row.asset_name}`, row.download_count]));
 
   const daily = dates(period.start, period.end).map(date => point(date, increases.get(date)));
   const weekly = weeks(period).map(week => ({ date: week, setup: null as number | null, other: null as number | null }));
@@ -127,15 +133,16 @@ export async function loadDownloads(env: Env, period: Period): Promise<Downloads
 
   const lastDay = rows.length ? rows[rows.length - 1].day : null;
   const releases = new Map<string, Downloads['releases'][number]>();
-  for (const row of rows.filter(row => row.day === lastDay)) {
+  for (const row of rows.filter(row => row.day === lastDay && row.day >= floorDate)) {
     const release = releases.get(row.release_tag) ?? { tag: row.release_tag, publishedAt: row.published_at, setup: 0, other: 0 };
-    if (row.asset_name === SETUP_ASSET) release.setup += row.download_count;
-    else release.other += row.download_count;
+    const count = Math.max(0, row.download_count - (base.get(`${row.release_tag}\u0000${row.asset_name}`) ?? 0));
+    if (row.asset_name === SETUP_ASSET) release.setup += count;
+    else release.other += count;
     releases.set(row.release_tag, release);
   }
 
   return {
-    trackingSince: rows.length ? rows[0].day : null,
+    trackingSince: lastDay && lastDay >= floorDate ? (rows[0].day > floorDate ? rows[0].day : floorDate) : null,
     lastSnapshot: status ? { ranAt: status.ran_at, ok: status.ok === 1, message: status.message } : null,
     total: { setup, prevSetup, other },
     daily,

@@ -1,5 +1,5 @@
 import type { Env } from './env';
-import { type Period, dates, parseDate, weekOf, weeks } from './period';
+import { type Period, dataStart, dates, parseDate, weekOf, weeks } from './period';
 
 const ENCODERS = ['software', 'nvenc', 'amf', 'qsv'] as const;
 
@@ -140,15 +140,19 @@ function add(target: Totals, row: Totals) {
 export async function loadAppUsage(env: Env, period: Period, includeDev: boolean): Promise<AppUsage> {
   const db = env.ANALYTICS_DB;
   const dev = includeDev ? 1 : 0;
-  const from = Math.min(period.prevStart, period.weeksStart);
+  // Never a session before DATA_START.
+  const floor = dataStart(env.DATA_START);
+  const after = (time: number) => Math.max(time, floor);
+  const from = after(Math.min(period.prevStart, period.weeksStart));
+  const start = after(period.start);
   const [dailyRows, versions, osFamilies, shape, counters, attributes, languageRows, retention] = await Promise.all([
     db.prepare(DAILY).bind(dev, from, period.end).all<DailyRow>(),
-    db.prepare(VERSIONS).bind(dev, period.start, period.end).all<AppUsage['versions'][number]>(),
-    db.prepare(OS_FAMILIES).bind(dev, period.start, period.end).all<AppUsage['osFamilies'][number]>(),
-    db.prepare(SESSION_SHAPE).bind(dev, period.start, period.end).first<Record<string, number | null>>(),
-    db.prepare(COUNTERS).bind(dev, period.start, period.end).all<AppUsage['counters'][number]>(),
-    db.prepare(ATTRIBUTES).bind(dev, period.start, period.end).all<AppUsage['attributes'][number]>(),
-    db.prepare(LANGUAGES).bind(dev, Math.min(period.start, period.weeksStart), period.end).all<LanguageDayRow>(),
+    db.prepare(VERSIONS).bind(dev, start, period.end).all<AppUsage['versions'][number]>(),
+    db.prepare(OS_FAMILIES).bind(dev, start, period.end).all<AppUsage['osFamilies'][number]>(),
+    db.prepare(SESSION_SHAPE).bind(dev, start, period.end).first<Record<string, number | null>>(),
+    db.prepare(COUNTERS).bind(dev, start, period.end).all<AppUsage['counters'][number]>(),
+    db.prepare(ATTRIBUTES).bind(dev, start, period.end).all<AppUsage['attributes'][number]>(),
+    db.prepare(LANGUAGES).bind(dev, after(Math.min(period.start, period.weeksStart)), period.end).all<LanguageDayRow>(),
     db.prepare(RETENTION).first<{ ran_at: number; deleted_count: number; oldest_received_at: number | null }>(),
   ]);
 

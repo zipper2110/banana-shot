@@ -1,5 +1,5 @@
 import type { Env } from './env';
-import { type Period, dates, isoDate } from './period';
+import { type Period, dataStart, dates, isoDate } from './period';
 
 const TOP_LIMIT = 10;
 
@@ -35,22 +35,25 @@ const top = (column: string, order: 'views' | 'visits', where = '') =>
 
 export async function loadSite(env: Env, period: Period): Promise<Site> {
   const db = env.ANALYTICS_DB;
-  const start = isoDate(period.start);
+  // Never a day before DATA_START.
+  const floor = dataStart(env.DATA_START);
+  const start = isoDate(Math.max(period.start, floor));
   const end = isoDate(period.end);
+  const prevStart = isoDate(Math.max(period.prevStart, floor));
   const botTop = (column: string) =>
     `SELECT ${column} AS name, SUM(requests) AS requests FROM site_bot_daily WHERE date >= ? AND date < ? GROUP BY ${column} ORDER BY requests DESC, name LIMIT ${TOP_LIMIT}`;
   const [daily, prev, pages, referrers, countries, devices, first, byBot, botPages, botTotal, botFirst] = await Promise.all([
     db.prepare(`SELECT date AS name, SUM(visits) AS visits, SUM(views) AS views ${RANGE} GROUP BY date`).bind(start, end).all<Row>(),
-    db.prepare(`SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(views), 0) AS views ${RANGE}`).bind(isoDate(period.prevStart), start).first<Row>(),
+    db.prepare(`SELECT COALESCE(SUM(visits), 0) AS visits, COALESCE(SUM(views), 0) AS views ${RANGE}`).bind(prevStart, isoDate(period.start)).first<Row>(),
     db.prepare(top('path', 'views')).bind(start, end).all<Row>(),
     db.prepare(top('referrer', 'visits', ' AND visits > 0')).bind(start, end).all<Row>(),
     db.prepare(top('country', 'visits')).bind(start, end).all<Row>(),
     db.prepare(top('device', 'visits')).bind(start, end).all<Row>(),
-    db.prepare('SELECT MIN(date) AS name FROM site_daily').first<{ name: string | null }>(),
+    db.prepare('SELECT MIN(date) AS name FROM site_daily WHERE date >= ?').bind(isoDate(floor)).first<{ name: string | null }>(),
     db.prepare(botTop('bot')).bind(start, end).all<{ name: string; requests: number }>(),
     db.prepare(botTop('path')).bind(start, end).all<{ name: string; requests: number }>(),
     db.prepare('SELECT COALESCE(SUM(requests), 0) AS requests FROM site_bot_daily WHERE date >= ? AND date < ?').bind(start, end).first<{ requests: number }>(),
-    db.prepare('SELECT MIN(date) AS name FROM site_bot_daily').first<{ name: string | null }>(),
+    db.prepare('SELECT MIN(date) AS name FROM site_bot_daily WHERE date >= ?').bind(isoDate(floor)).first<{ name: string | null }>(),
   ]);
 
   const byDate = new Map(daily.results.map(row => [row.name, row]));

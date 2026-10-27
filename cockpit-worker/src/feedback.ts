@@ -1,5 +1,5 @@
 import type { Env } from './env';
-import { type Period, dates } from './period';
+import { type Period, dataStart, dates } from './period';
 
 const TOPICS = ['problem', 'idea', 'question', 'other'] as const;
 const FILTER = "app_version <> 'synthetic-smoke' AND (? = 1 OR app_version NOT LIKE '%-SNAPSHOT')";
@@ -45,14 +45,18 @@ export function errorLine(error: string): string {
 export async function loadFeedback(env: Env, period: Period, includeDev: boolean): Promise<Feedback> {
   const db = env.FEEDBACK_DB;
   const dev = includeDev ? 1 : 0;
+  // Never a report before DATA_START.
+  const floor = dataStart(env.DATA_START);
+  const start = Math.max(period.start, floor);
+  const prevStart = Math.max(period.prevStart, floor);
   const [reports, daily, prev, errors, undelivered] = await Promise.all([
-    db.prepare(REPORTS).bind(dev, period.start, period.end).all<ReportRow>(),
-    db.prepare(DAILY).bind(dev, period.start, period.end).all<{ day: string; topic: string; reports: number }>(),
+    db.prepare(REPORTS).bind(dev, start, period.end).all<ReportRow>(),
+    db.prepare(DAILY).bind(dev, start, period.end).all<{ day: string; topic: string; reports: number }>(),
     db.prepare(`SELECT COUNT(*) AS reports FROM feedback_report WHERE ${FILTER} AND received_at >= ? AND received_at < ?`)
-      .bind(dev, period.prevStart, period.start).first<{ reports: number }>(),
-    db.prepare(ERRORS).bind(dev, period.start, period.end).all<{ error: string }>(),
+      .bind(dev, prevStart, period.start).first<{ reports: number }>(),
+    db.prepare(ERRORS).bind(dev, start, period.end).all<{ error: string }>(),
     db.prepare(`SELECT COUNT(*) AS reports FROM feedback_report WHERE ${FILTER} AND received_at >= ? AND received_at < ? AND delivered = 0`)
-      .bind(dev, period.start, period.end).first<{ reports: number }>(),
+      .bind(dev, start, period.end).first<{ reports: number }>(),
   ]);
 
   const byTopic: Record<string, number> = Object.fromEntries(TOPICS.map(topic => [topic, 0]));

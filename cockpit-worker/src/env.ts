@@ -18,6 +18,8 @@ export interface Env {
   /** Cloudflare API token with "Account Analytics: Read" (secret). */
   CF_API_TOKEN?: string;
   CF_ACCOUNT_ID?: string;
+  /** The first UTC day (`YYYY-MM-DD`) of data that the cockpit shows. Older data is ignored. No value: all data. */
+  DATA_START?: string;
   /** Comma-separated Worker names for the health section. */
   WORKER_SCRIPTS?: string;
 }

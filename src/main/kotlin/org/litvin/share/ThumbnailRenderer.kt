@@ -13,6 +13,7 @@ import java.awt.RenderingHints
 import java.awt.Shape
 import java.awt.font.FontRenderContext
 import java.awt.font.TextAttribute
+import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Area
 import java.awt.geom.Path2D
@@ -31,6 +32,12 @@ data class ThumbnailScene(
     val place: TextPlace,
     val texts: Map<ThumbnailField, String>,
     val colors: ThumbnailColors,
+    /** The logo of the user. Only the styles with [ThumbnailStyle.showsLogo] show it. */
+    val logo: ThumbnailLogo? = null,
+    /** The font of the brand name ([ThumbnailField.CLUB]). Null: the font of the style. */
+    val brandFace: ThumbnailFace? = null,
+    /** The color of the brand name. Null: the text color of the style. */
+    val brandRgb: Int? = null,
 ) {
     fun text(field: ThumbnailField): String = texts[field]?.trim().orEmpty()
 }
@@ -50,11 +57,30 @@ class ThumbnailLayout internal constructor(
     val shrunk: Boolean,
     val small: Boolean,
 ) {
-    /** The bounds of the texts, for the tests. */
-    val textBounds: List<Rectangle2D> get() = items.filterIsInstance<ThumbnailRenderer.Item.Text>().map { it.bounds }
+    /** The texts of the layout and the transform of each one, in the order of the items. */
+    private val placed: List<Pair<ThumbnailRenderer.Item.Text, AffineTransform>> by lazy {
+        val result = mutableListOf<Pair<ThumbnailRenderer.Item.Text, AffineTransform>>()
+        fun walk(list: List<ThumbnailRenderer.Item>, transform: AffineTransform) {
+            for (item in list) {
+                when (item) {
+                    is ThumbnailRenderer.Item.Text -> result += item to transform
+                    is ThumbnailRenderer.Item.Group -> walk(item.items, AffineTransform(transform).apply { concatenate(item.transform) })
+                    else -> Unit
+                }
+            }
+        }
+        walk(items, AffineTransform())
+        result
+    }
+
+    /** The bounds of the line boxes of the texts, for the tests. A rotated text has the bounds of its rotated line box. */
+    val textBounds: List<Rectangle2D> get() = placed.map { (text, transform) -> transform.createTransformedShape(text.bounds).bounds2D }
+
+    /** The outlines of the letters, for the tests. */
+    val textShapes: List<Shape> get() = placed.map { (text, transform) -> transform.createTransformedShape(ThumbnailRenderer.outline(text)) }
 
     /** The texts and their font sizes, for the tests. */
-    val texts: List<Pair<String, Float>> get() = items.filterIsInstance<ThumbnailRenderer.Item.Text>().map { it.text to it.font.size2D }
+    val texts: List<Pair<String, Float>> get() = placed.map { (text, _) -> text.text to text.font.size2D }
 }
 
 /**
@@ -85,13 +111,19 @@ object ThumbnailRenderer {
         /** A soft shadow under [shape], as the CSS box-shadow. */
         class BoxShadow(val shape: RoundRectangle2D, val offsetY: Double, val blur: Double, val alpha: Double) : Item()
 
+        /**
+         * A text. [color] null: only the outline shows. [outline]: the CSS -webkit-text-stroke. With a fill, the fill
+         * covers the inner half of the outline, as "paint-order: stroke fill". [drop]: a hard shadow without blur.
+         */
         class Text(
             val text: String,
             val font: Font,
-            val color: Color,
+            val color: Color?,
             val x: Double,
             val baseline: Double,
             val shadow: TextShadow?,
+            val outline: TextOutline? = null,
+            val drop: TextDrop? = null,
         ) : Item() {
             val bounds: Rectangle2D
                 get() {
@@ -99,10 +131,25 @@ object ThumbnailRenderer {
                     return Rectangle2D.Double(x, baseline - metrics.ascent, width(text, font), (metrics.ascent + metrics.descent).toDouble())
                 }
         }
+
+        /** Items with a transform (for example a rotation, as the CSS transform) and a clip in the coordinates of the group. */
+        class Group(val transform: AffineTransform, val clip: Shape?, val items: List<Item>) : Item()
+
+        /** An image, for example the logo, in the box [x], [y], [w], [h]. */
+        class Picture(val image: BufferedImage, val x: Double, val y: Double, val w: Double, val h: Double) : Item()
+
+        /** The frame in [shape] becomes gray and dark, as the CSS "grayscale(1) contrast(1.2) brightness(0.38)". */
+        class GrayFrame(val shape: Shape) : Item()
     }
 
     /** A soft text shadow, as the CSS text-shadow. */
     internal data class TextShadow(val rgb: Int, val alpha: Double, val offsetY: Double, val blur: Double)
+
+    /** The outline of a text: [width] px, centered on the edge of the letters. */
+    internal data class TextOutline(val rgb: Int, val width: Double, val alpha: Double = 1.0)
+
+    /** A hard text shadow, as the CSS "text-shadow: dx dy 0 color". It includes the outline of the text. */
+    internal data class TextDrop(val rgb: Int, val dx: Double, val dy: Double, val alpha: Double = 1.0)
 
     // ---------- Fonts and text sizes ----------
 
@@ -145,14 +192,18 @@ object ThumbnailRenderer {
         return font.deriveFont(mapOf(TextAttribute.FAMILY to family, TextAttribute.WEIGHT to weight))
     }
 
-    private fun ascent(font: Font): Double = font.getLineMetrics("Hg", frc).ascent.toDouble()
-    private fun descent(font: Font): Double = font.getLineMetrics("Hg", frc).descent.toDouble()
+    internal fun ascent(font: Font): Double = font.getLineMetrics("Hg", frc).ascent.toDouble()
+    internal fun descent(font: Font): Double = font.getLineMetrics("Hg", frc).descent.toDouble()
 
     /** The CSS line height "normal": ascent, descent, and leading of the font. */
-    private fun normalLine(font: Font): Double = font.getLineMetrics("Hg", frc).let { (it.ascent + it.descent + it.leading).toDouble() }
+    internal fun normalLine(font: Font): Double = font.getLineMetrics("Hg", frc).let { (it.ascent + it.descent + it.leading).toDouble() }
+
+    /** The outline of the letters of [text] at its position. */
+    internal fun outline(text: Item.Text): Shape =
+        TextLayout(text.text, text.font, frc).getOutline(AffineTransform.getTranslateInstance(text.x, text.baseline))
 
     /** The baseline of a line box of [lineHeight] at [top]. The text is in the middle of the line box, as in CSS. */
-    private fun baseline(font: Font, top: Double, lineHeight: Double): Double =
+    internal fun baseline(font: Font, top: Double, lineHeight: Double): Double =
         top + (lineHeight - ascent(font) - descent(font)) / 2 + ascent(font)
 
     /** The large words in one or two rows, with the split that gives the narrowest block. */
@@ -168,31 +219,63 @@ object ThumbnailRenderer {
     // ---------- Layout ----------
 
     /** Collects the items of a layout, and makes each long text smaller until it fits. */
-    private class Builder(val colors: ThumbnailColors) {
-        val items = mutableListOf<Item>()
+    internal class Builder(val colors: ThumbnailColors) {
+        private val root = mutableListOf<Item>()
+        private var target = root
+        val items: List<Item> get() = root
         var shrunk = false
         var small = false
 
-        /** Makes [font] smaller until [text] is not wider than [max]. [extra] is the width of the parts that do not shrink. */
-        fun fit(text: String, font: Font, max: Double, extra: (Font) -> Double = { 0.0 }): Font {
+        fun add(item: Item) {
+            target += item
+        }
+
+        /**
+         * Makes [font] smaller until [text] is not wider than [max]. [extra] is the width of the parts that do not shrink.
+         * A font that becomes smaller than [normal] (the smallest size of the design) makes the layout "shrunk".
+         */
+        fun fit(text: String, font: Font, max: Double, normal: Double = font.size2D.toDouble(), extra: (Font) -> Double = { 0.0 }): Font {
             var fitted = font
             var tries = 0
-            while (width(text, fitted) + extra(fitted) > max && tries < 40) {
+            while (width(text, fitted) + extra(fitted) > max && tries < 60) {
                 fitted = fitted.deriveFont(fitted.size2D * 0.95f)
                 tries++
-                shrunk = true
             }
+            if (fitted.size2D < normal - 0.01) shrunk = true
             return fitted
         }
 
-        fun text(text: String, font: Font, rgb: Int, x: Double, baseline: Double, shadow: TextShadow? = null, alpha: Double = 1.0) {
+        fun text(
+            text: String,
+            font: Font,
+            rgb: Int?,
+            x: Double,
+            baseline: Double,
+            shadow: TextShadow? = null,
+            alpha: Double = 1.0,
+            outline: TextOutline? = null,
+            drop: TextDrop? = null,
+        ) {
             if (text.isEmpty()) return
             if (font.size2D < SMALL_TEXT) small = true
-            items += Item.Text(text, forText(font, text), color(rgb, alpha), x, baseline, shadow)
+            add(Item.Text(text, forText(font, text), rgb?.let { color(it, alpha) }, x, baseline, shadow, outline, drop))
         }
 
         fun fill(shape: Shape, paint: Paint) {
-            items += Item.Fill(shape, paint)
+            add(Item.Fill(shape, paint))
+        }
+
+        /** The items of [body] go in a group with [transform] and [clip]. */
+        fun group(transform: AffineTransform? = null, clip: Shape? = null, body: () -> Unit) {
+            val outer = target
+            val inner = mutableListOf<Item>()
+            target = inner
+            try {
+                body()
+            } finally {
+                target = outer
+            }
+            if (inner.isNotEmpty()) outer += Item.Group(transform ?: AffineTransform(), clip, inner.toList())
         }
 
         fun shade(alpha: Double): Color = color(colors.shade, alpha * colors.strength)
@@ -210,6 +293,7 @@ object ThumbnailRenderer {
             ThumbnailStyle.SPLIT -> split(builder, scene)
             ThumbnailStyle.BROADCAST -> broadcast(builder, scene)
             ThumbnailStyle.POSTER -> poster(builder, scene)
+            else -> ThumbnailDesigns.layout(builder, scene)
         }
         return ThumbnailLayout(builder.items.toList(), builder.shrunk, builder.small)
     }
@@ -328,7 +412,7 @@ object ThumbnailRenderer {
         if (top == start) return
 
         val card = RoundRectangle2D.Double(cardX, 48.0, 580.0, top - 48.0 + 34.0, 36.0, 36.0)
-        b.items += Item.BoxShadow(card, 12.0, 40.0, 0.45)
+        b.add(Item.BoxShadow(card, 12.0, 40.0, 0.45))
         b.fill(card, color(b.colors.panel, 0.92))
         val edgeX = if (right) cardX + 580.0 - 10.0 else cardX
         val edge = Area(card).apply { intersect(Area(Rectangle2D.Double(edgeX, card.y, 10.0, card.height))) }
@@ -479,27 +563,153 @@ object ThumbnailRenderer {
 
     // ---------- Painting ----------
 
-    /** Paints the layout in the 1280 × 720 coordinates of [g2]. */
-    fun paintLayout(g2: Graphics2D, layout: ThumbnailLayout) {
+    /**
+     * Paints the layout in the 1280 × 720 coordinates of [g2]. [frame] is the frame under the layout at 0, 0, 1280, 720,
+     * for the parts that change the frame. Without it (the live video), such a part is a dark area.
+     */
+    fun paintLayout(g2: Graphics2D, layout: ThumbnailLayout, frame: BufferedImage? = null) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
         g2.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
         g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE)
-        for (item in layout.items) {
+        paintItems(g2, layout.items, frame)
+    }
+
+    private fun paintItems(g2: Graphics2D, items: List<Item>, frame: BufferedImage?) {
+        for (item in items) {
             when (item) {
                 is Item.Fill -> {
                     g2.paint = item.paint
                     g2.fill(item.shape)
                 }
                 is Item.BoxShadow -> paintBoxShadow(g2, item)
-                is Item.Text -> {
-                    item.shadow?.let { paintTextShadow(g2, item, it) }
-                    g2.font = item.font
-                    g2.color = item.color
-                    g2.drawString(item.text, item.x.toFloat(), item.baseline.toFloat())
+                is Item.Text -> paintText(g2, item)
+                is Item.Group -> {
+                    val inner = g2.create() as Graphics2D
+                    try {
+                        inner.transform(item.transform)
+                        item.clip?.let { inner.clip(it) }
+                        paintItems(inner, item.items, frame)
+                    } finally {
+                        inner.dispose()
+                    }
                 }
+                is Item.Picture -> paintPicture(g2, item)
+                is Item.GrayFrame -> paintGrayFrame(g2, item, frame)
             }
         }
+    }
+
+    private fun paintText(g2: Graphics2D, item: Item.Text) {
+        val plain = item.outline == null && item.drop == null
+        val shape = if (plain) null else outline(item)
+        item.drop?.let { drop ->
+            val moved = AffineTransform.getTranslateInstance(drop.dx, drop.dy).createTransformedShape(shape)
+            g2.color = color(drop.rgb, drop.alpha)
+            if (item.color != null) g2.fill(moved)
+            item.outline?.let { outline ->
+                g2.stroke = BasicStroke(outline.width.toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+                g2.draw(moved)
+            }
+        }
+        item.shadow?.let { paintTextShadow(g2, item, it) }
+        item.outline?.let { outline ->
+            val oldStroke = g2.stroke
+            g2.stroke = BasicStroke(outline.width.toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+            g2.color = color(outline.rgb, outline.alpha)
+            g2.draw(shape)
+            g2.stroke = oldStroke
+        }
+        val fill = item.color ?: return
+        g2.color = fill
+        if (shape != null) {
+            g2.fill(shape)
+        } else {
+            g2.font = item.font
+            g2.drawString(item.text, item.x.toFloat(), item.baseline.toFloat())
+        }
+    }
+
+    /** The scaled logos. A large logo scaled in one step to a small size looks rough. */
+    private val pictureCache = object : LinkedHashMap<Triple<Int, Int, Int>, BufferedImage>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Triple<Int, Int, Int>, BufferedImage>?) = size > 24
+    }
+
+    private fun paintPicture(g2: Graphics2D, item: Item.Picture) {
+        val scale = kotlin.math.sqrt(kotlin.math.abs(g2.transform.determinant)).coerceAtLeast(0.01)
+        val w = (item.w * scale).roundToInt().coerceAtLeast(1)
+        val h = (item.h * scale).roundToInt().coerceAtLeast(1)
+        val key = Triple(System.identityHashCode(item.image), w, h)
+        val scaled = synchronized(pictureCache) {
+            pictureCache.getOrPut(key) { ThumbnailLogos.fit(stepDown(item.image, w, h)) }
+        }
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+        g2.drawImage(scaled, item.x.roundToInt(), item.y.roundToInt(), item.w.roundToInt(), item.h.roundToInt(), null)
+    }
+
+    /** [image] at [w] × [h] with an alpha channel, scaled down in steps of one half. */
+    private fun stepDown(image: BufferedImage, w: Int, h: Int): BufferedImage {
+        var current = image
+        var cw = image.width
+        var ch = image.height
+        while (cw / 2 >= w && ch / 2 >= h) {
+            cw /= 2
+            ch /= 2
+            current = argbScale(current, cw, ch)
+        }
+        return argbScale(current, w, h)
+    }
+
+    private fun argbScale(image: BufferedImage, w: Int, h: Int): BufferedImage {
+        val result = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
+        val g2 = result.createGraphics()
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+            g2.drawImage(image, 0, 0, w, h, null)
+        } finally {
+            g2.dispose()
+        }
+        return result
+    }
+
+    private var grayCache: Pair<Int, BufferedImage>? = null
+
+    private fun paintGrayFrame(g2: Graphics2D, item: Item.GrayFrame, frame: BufferedImage?) {
+        if (frame == null) {
+            g2.color = color(SHADOW_INK, 0.62)
+            g2.fill(item.shape)
+            return
+        }
+        val key = System.identityHashCode(frame)
+        val gray = synchronized(this) {
+            grayCache?.takeIf { it.first == key }?.second ?: grayFrame(frame).also { grayCache = key to it }
+        }
+        val inner = g2.create() as Graphics2D
+        try {
+            inner.clip(item.shape)
+            inner.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            inner.drawImage(gray, 0, 0, WIDTH, HEIGHT, null)
+        } finally {
+            inner.dispose()
+        }
+    }
+
+    /** The CSS filter "grayscale(1) contrast(1.2) brightness(0.38)". */
+    internal fun grayFrame(frame: BufferedImage): BufferedImage {
+        val result = BufferedImage(frame.width, frame.height, BufferedImage.TYPE_INT_RGB)
+        val row = IntArray(frame.width)
+        for (y in 0 until frame.height) {
+            frame.getRGB(0, y, frame.width, 1, row, 0, frame.width)
+            for (x in row.indices) {
+                val rgb = row[x]
+                val gray = 0.2126 * ((rgb shr 16) and 0xFF) + 0.7152 * ((rgb shr 8) and 0xFF) + 0.0722 * (rgb and 0xFF)
+                val v = (((gray / 255.0 - 0.5) * 1.2 + 0.5).coerceIn(0.0, 1.0) * 0.38 * 255).roundToInt()
+                row[x] = (v shl 16) or (v shl 8) or v
+            }
+            result.setRGB(0, y, frame.width, 1, row, 0, frame.width)
+        }
+        return result
     }
 
     /** An approximation of the CSS blur: layers that grow and fade. */
@@ -524,7 +734,7 @@ object ThumbnailRenderer {
         val radius = shadow.blur / 3
         val offsets = listOf(0.0 to 0.0, radius to 0.0, -radius to 0.0, 0.0 to radius, 0.0 to -radius)
         val each = 1.0 - Math.pow(1.0 - shadow.alpha * 0.8, 1.0 / offsets.size)
-        val outline = text.font.createGlyphVector(g2.fontRenderContext, text.text).getOutline(0f, 0f)
+        val outline = TextLayout(text.text, text.font, frc).getOutline(null)
         val oldStroke = g2.stroke
         g2.stroke = BasicStroke((radius * 1.2).toFloat(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
         g2.color = color(shadow.rgb, each)
@@ -609,14 +819,15 @@ object ThumbnailRenderer {
         val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB)
         val g2 = image.createGraphics()
         try {
+            var scaled: BufferedImage? = null
             if (frame != null) {
-                var scaled = scaledFrame(frame, view, WIDTH, HEIGHT)
-                repeat(softness) { scaled = ThumbnailPng.soften(scaled) }
+                scaled = scaledFrame(frame, view, WIDTH, HEIGHT)
+                repeat(softness) { scaled = ThumbnailPng.soften(scaled!!) }
                 g2.drawImage(scaled, 0, 0, null)
             } else {
                 paintFrame(g2, null, view)
             }
-            paintLayout(g2, layout(scene))
+            paintLayout(g2, layout(scene), scaled)
         } finally {
             g2.dispose()
         }

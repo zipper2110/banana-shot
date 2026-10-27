@@ -42,6 +42,9 @@ internal class PlaybackBar(
     /** A seek tooltip, for example "Seek back 5 seconds [Shift+Left]". */
     private fun seekTip(key: String, seconds: Int, keyName: String) = tr(key, "seconds" to seconds, "key" to keyName)
 
+    private fun seekLabel(seconds: Int) =
+        if (seconds < 0) tr("playback.seekBack.label", "seconds" to -seconds) else tr("playback.seekForward.label", "seconds" to seconds)
+
     private val nowLabel = TimeLabel(Timecode.format(0)).apply {
         name = "points-current-time"
         font = UiKit.font(15f)
@@ -66,10 +69,10 @@ internal class PlaybackBar(
     }
 
     private val seekButtons = listOf(
-        SeekButton("−5s", -5_000, listOf("⇧", "←"), Feather.CHEVRONS_LEFT, seekTip("points.seekBack.tooltip", 5, tr("key.withShift", "key" to tr("key.left"))), "points-seek-back-5s"),
-        SeekButton("−1s", -1_000, listOf("←"), Feather.CHEVRON_LEFT, seekTip("points.seekBack.tooltip", 1, tr("key.left")), "points-seek-back-1s"),
-        SeekButton("+1s", 1_000, listOf("→"), Feather.CHEVRON_RIGHT, seekTip("points.seekForward.tooltip", 1, tr("key.right")), "points-seek-forward-1s"),
-        SeekButton("+5s", 5_000, listOf("⇧", "→"), Feather.CHEVRONS_RIGHT, seekTip("points.seekForward.tooltip", 5, tr("key.withShift", "key" to tr("key.right"))), "points-seek-forward-5s"),
+        SeekButton(seekLabel(-5), -5_000, listOf("⇧", "←"), Feather.CHEVRONS_LEFT, seekTip("points.seekBack.tooltip", 5, tr("key.withShift", "key" to tr("key.left"))), "points-seek-back-5s"),
+        SeekButton(seekLabel(-1), -1_000, listOf("←"), Feather.CHEVRON_LEFT, seekTip("points.seekBack.tooltip", 1, tr("key.left")), "points-seek-back-1s"),
+        SeekButton(seekLabel(1), 1_000, listOf("→"), Feather.CHEVRON_RIGHT, seekTip("points.seekForward.tooltip", 1, tr("key.right")), "points-seek-forward-1s"),
+        SeekButton(seekLabel(5), 5_000, listOf("⇧", "→"), Feather.CHEVRONS_RIGHT, seekTip("points.seekForward.tooltip", 5, tr("key.withShift", "key" to tr("key.right"))), "points-seek-forward-5s"),
     )
     private val playButton = PlayButton().apply { name = "points-play-pause" }
     private val transport = JPanel().apply {

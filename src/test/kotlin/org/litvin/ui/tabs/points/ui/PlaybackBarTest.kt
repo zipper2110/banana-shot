@@ -77,7 +77,10 @@ class PlaybackBarTest {
             bar.setSize(860, bar.preferredSize.height)
             bar.layoutRecursively()
 
-            assertTrue(bar.findByName("points-total-time")!!.isVisible)
+            val total = bar.findByName("points-total-time")!!
+            assertTrue(total.isVisible)
+            // The label needs more than the exact text width, or some screen scales cut the text to "…".
+            assertTrue(total.width >= total.preferredSize.width, "total width=${total.width}, preferred=${total.preferredSize.width}")
             assertTrue(bar.descendants().filterIsInstance<SeekButton>().none { it.showDirection })
             val speed = bar.descendants().filterIsInstance<SpeedControl>().single()
             assertTrue(speed.compact)

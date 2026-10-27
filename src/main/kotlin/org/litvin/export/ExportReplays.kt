@@ -8,9 +8,8 @@ import org.litvin.points.PointV1
 import org.litvin.points.ReplayEffect
 import org.litvin.points.ReplayV1
 import org.litvin.points.Replays
-import kotlin.math.roundToLong
 
-/** One replay of an export (B-50 T6). The export plays it [ReplayV1.repeats] times after the end of its point. */
+/** One replay of an export (B-50 T6). The export plays it once after the end of its point. */
 data class ExportReplay(
     val pointId: String,
     val pointEndMs: Int,
@@ -36,10 +35,16 @@ data class PassFade(val white: Boolean, val durationMs: Long)
 
 object ExportReplays {
     /**
-     * The replays of [points], in output order. [comments] are the comments of the project, or empty when the
-     * export has no comments. [badgeText] is the text of the badge in the video language.
+     * The replays of [points], in output order. [comments] are the comments of the project. [includeComments] false is
+     * an export without comments: no point comments and no replay comments. [defaultLabel] gives the default badge label
+     * for the place of a replay in its point.
      */
-    fun of(points: List<PointV1>, comments: List<CommentV1>, badgeText: String): List<ExportReplay> =
+    fun of(
+        points: List<PointV1>,
+        comments: List<CommentV1>,
+        includeComments: Boolean = true,
+        defaultLabel: (Int) -> String = Replays::defaultLabel,
+    ): List<ExportReplay> =
         points
             .filter { it.replays.isNotEmpty() }
             .sortedBy { it.endMs }
@@ -50,20 +55,56 @@ object ExportReplays {
                         pointEndMs = point.endMs,
                         replay = replay,
                         replayIndex = index,
-                        comments = commentSpans(replay, comments),
-                        badgeText = badgeText.takeIf { replay.showBadge },
+                        comments = if (includeComments) commentSpans(replay, comments) else emptyList(),
+                        badgeText = Replays.badgeText(replay, index, defaultLabel).takeIf { replay.showBadge },
                     )
                 }
             }
 
     /**
-     * The comments that are visible during the part of [replay] in the source video. Each one shows at the same
-     * moment of the play, and its time gets longer by the slow speed (decision 9).
+     * The comments over one play of [replay], in milliseconds from the play start.
+     *
+     * The point comments ([comments]) show when [ReplayV1.showPointComments] is on. They are the comments that are
+     * visible during the part in the source video. Each one shows at the same moment of the play, and its time gets
+     * longer by the slow speed (decision 9). A comment that shows at the still frame also shows during the still frame
+     * (decision 22).
+     *
+     * The replay comments always show (decision 24). Each one starts at the moment of play of its source time and
+     * shows for its time, until the replay end. They draw over the point comments.
      */
     fun commentSpans(replay: ReplayV1, comments: List<CommentV1>): List<CommentOverlaySpan> {
+        val point = if (replay.showPointComments) pointCommentSpans(replay, comments) else emptyList()
+        return (point + replayCommentSpans(replay))
+            .sortedWith(compareBy<CommentOverlaySpan> { it.startMs }.thenBy { it.id })
+    }
+
+    /** The ids of the replay comments in the spans start here, so that they sort after the point comments. */
+    const val REPLAY_COMMENT_ID_BASE = 1_000_000
+
+    private fun replayCommentSpans(replay: ReplayV1): List<CommentOverlaySpan> = replay.comments
+        .filter { it.id > 0 && it.durationMs > 0 && it.text.isNotBlank() }
+        .mapNotNull { comment ->
+            val color = EdlIO.normalizeColorHex(comment.colorHex) ?: return@mapNotNull null
+            val start = Replays.commentPlayStartMs(replay, comment)
+            val end = Replays.commentPlayEndMs(replay, comment)
+            if (end <= start) return@mapNotNull null
+            CommentOverlaySpan(
+                id = REPLAY_COMMENT_ID_BASE + comment.id,
+                startMs = start,
+                endMs = end,
+                text = comment.text,
+                colorHex = color,
+                style = comment.style,
+                position = comment.position,
+                sizePercent = comment.sizePercent,
+                opacityPercent = comment.opacityPercent,
+                rotationDeg = comment.rotationDeg,
+            )
+        }
+
+    private fun pointCommentSpans(replay: ReplayV1, comments: List<CommentV1>): List<CommentOverlaySpan> {
         val partStart = replay.startMs.toLong()
         val partEnd = replay.endMs.toLong()
-        val playEnd = Replays.playMs(replay)
         return comments
             .asSequence()
             .filter { it.id > 0 && it.durationMs > 0 && it.text.isNotBlank() }
@@ -74,8 +115,8 @@ object ExportReplays {
                 if (end <= start) return@mapNotNull null
                 CommentOverlaySpan(
                     id = comment.id,
-                    startMs = ((start - partStart) / replay.speed).roundToLong(),
-                    endMs = ((end - partStart) / replay.speed).roundToLong().coerceAtMost(playEnd),
+                    startMs = Replays.playOffsetAt(replay, start),
+                    endMs = Replays.playOffsetAt(replay, end),
                     text = comment.text,
                     colorHex = color,
                     style = comment.style,
@@ -99,6 +140,4 @@ object ExportReplays {
         ReplayEffect.CUT -> null
     }
 
-    /** The dip to black between two repeats (decision 7). */
-    val repeatFade: PassFade = PassFade(white = false, durationMs = Replays.REPEAT_FADE_MS)
 }

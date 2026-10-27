@@ -7,8 +7,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TimelineScaleTest {
-    // A point from 2 s to 4 s with one replay of 1 s at half speed, twice: the replay adds 4 s.
-    private val point = PointV1("p1", 2_000, 4_000, replays = listOf(ReplayV1(3_000, 4_000, speed = 0.5, repeats = 2)))
+    // A point from 2 s to 4 s with one replay of 2 s at half speed: the replay adds 4 s.
+    private val point = PointV1("p1", 2_000, 4_000, replays = listOf(ReplayV1(2_000, 4_000, speed = 0.5)))
     private val scale = TimelineScale(ReplayTimeline(listOf(point)), 10_000)
 
     @Test

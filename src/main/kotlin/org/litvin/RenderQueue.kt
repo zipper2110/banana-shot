@@ -521,10 +521,12 @@ object RenderQueueManager {
                                     endMs = part.endMs.toLong(),
                                     speed = part.speed,
                                     zoom = part.zoom,
-                                    zoomIn = Replays.zoomsIn(pass.replay.replayIndex, pass.repeat),
+                                    zoomIn = Replays.zoomsIn(pass.replay.replayIndex),
                                     muted = part.muted,
                                     sourceFrameRate = replayFrameRate,
                                     sampleRate = replaySampleRate,
+                                    freezeAtMs = Replays.freezeOffsetMs(part),
+                                    freezeMs = Replays.freezeMs(part),
                                 )
                                 buildFor(
                                     emptyList(), passFile, 0L, chunkOutput = true,

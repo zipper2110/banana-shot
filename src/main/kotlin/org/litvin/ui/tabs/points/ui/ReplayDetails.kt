@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.points.ui
 
 import org.kordamp.ikonli.Ikon
+import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.i18n.DisplayFormats
 import org.litvin.i18n.tr
@@ -14,8 +15,8 @@ import javax.swing.Icon
 internal data class ReplayDetail(val ikon: Ikon?, val text: String)
 
 /**
- * The details of a replay on a replay row, in the Points list and in the replay editor (B-50): the speed, the repeats,
- * the zoom, and a muted sound. The icons of the editor groups tell what each value is.
+ * The details of a replay on a replay row, in the Points list and in the replay editor (B-50): the speed, the zoom,
+ * the still frame, the replay comments, and a muted sound. The icons of the editor groups tell what each value is.
  */
 internal object ReplayDetails {
     private const val ICON_SIZE = 13
@@ -24,14 +25,15 @@ internal object ReplayDetails {
 
     private val icons = HashMap<Pair<Ikon, Color>, Icon>()
 
-    fun of(speed: Double, repeats: Int, zoomFactor: Double?, muted: Boolean): List<ReplayDetail> = listOfNotNull(
+    fun of(speed: Double, zoomFactor: Double?, muted: Boolean, freezeMs: Long? = null, commentCount: Int = 0): List<ReplayDetail> = listOfNotNull(
         ReplayDetail(Material2MZ.SPEED, "${DisplayFormats.decimal(speed, 0, 2)}×"),
-        repeats.takeIf { it > 1 }?.let { ReplayDetail(Material2MZ.REPEAT, "×$it") },
         zoomFactor?.let { ReplayDetail(Material2MZ.ZOOM_IN, "${DisplayFormats.decimal(it, 0, 1)}×") },
+        freezeMs?.let { ReplayDetail(Material2MZ.PAUSE_CIRCLE_OUTLINE, tr("replay.editor.seconds", "value" to DisplayFormats.decimal(it / 1000.0, 0, 1))) },
+        ReplayDetail(Material2AL.CHAT_BUBBLE_OUTLINE, commentCount.toString()).takeIf { commentCount > 0 },
         ReplayDetail(null, tr("replay.editor.sound.muted")).takeIf { muted },
     )
 
-    /** The details as plain text, for example "0.5× · ×2 · 2×". */
+    /** The details as plain text, for example "0.5× · 2× · 0.8 s". */
     fun text(details: List<ReplayDetail>): String = details.joinToString(" · ") { it.text }
 
     /**

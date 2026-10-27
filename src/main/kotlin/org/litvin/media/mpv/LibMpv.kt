@@ -31,6 +31,10 @@ internal interface LibMpv : Library {
     /** [args] must end with a null item. */
     fun mpv_command(ctx: Pointer, args: Array<String?>): Int
 
+    /** [args] must end with a null item. [result] is an mpv_node of 16 bytes. Free it with [mpv_free_node_contents]. */
+    fun mpv_command_ret(ctx: Pointer, args: Array<String?>, result: Pointer): Int
+    fun mpv_free_node_contents(node: Pointer)
+
     /** [args] must end with a null item. */
     fun mpv_command_async(ctx: Pointer, replyUserdata: Long, args: Array<String?>): Int
     fun mpv_observe_property(ctx: Pointer, replyUserdata: Long, name: String, format: Int): Int
@@ -46,6 +50,8 @@ internal interface LibMpv : Library {
         const val FORMAT_FLAG = 3
         const val FORMAT_INT64 = 4
         const val FORMAT_DOUBLE = 5
+        const val FORMAT_NODE_MAP = 8
+        const val FORMAT_BYTE_ARRAY = 9
 
         const val EVENT_NONE = 0
         const val EVENT_SHUTDOWN = 1
@@ -129,6 +135,37 @@ internal interface LibMpv : Library {
         }
 
         private const val LOAD_WITH_ALTERED_SEARCH_PATH = 0x8
+    }
+}
+
+/**
+ * Read-only view of an mpv_node, with the field offsets of mpv/client.h on 64-bit platforms:
+ * the value (a union of 8 bytes) at 0 and the format at 8.
+ */
+internal class MpvNode(private val pointer: Pointer) {
+    val format: Int get() = pointer.getInt(8)
+
+    fun long(): Long? = if (format == LibMpv.FORMAT_INT64) pointer.getLong(0) else null
+
+    fun string(): String? = if (format == LibMpv.FORMAT_STRING) pointer.getPointer(0)?.getString(0, "UTF-8") else null
+
+    /** mpv_byte_array: data at 0, size at 8. */
+    fun bytes(): Pointer? = if (format == LibMpv.FORMAT_BYTE_ARRAY) pointer.getPointer(0)?.getPointer(0) else null
+
+    /** mpv_node_list: count at 0, values at 8, keys at 16. Each value is an mpv_node of [SIZE] bytes. */
+    fun map(): Map<String, MpvNode> {
+        if (format != LibMpv.FORMAT_NODE_MAP) return emptyMap()
+        val list = pointer.getPointer(0) ?: return emptyMap()
+        val count = list.getInt(0)
+        val values = list.getPointer(8) ?: return emptyMap()
+        val keys = list.getPointer(16) ?: return emptyMap()
+        return (0 until count).associate { i ->
+            keys.getPointer(i * 8L).getString(0, "UTF-8") to MpvNode(values.share(i * SIZE))
+        }
+    }
+
+    companion object {
+        const val SIZE = 16L
     }
 }
 

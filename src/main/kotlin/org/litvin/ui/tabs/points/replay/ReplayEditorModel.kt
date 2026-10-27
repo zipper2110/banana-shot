@@ -1,7 +1,10 @@
 package org.litvin.ui.tabs.points.replay
 
+import org.litvin.points.CommentPosition
+import org.litvin.points.CommentV1
 import org.litvin.points.PointV1
 import org.litvin.points.ReplayEffect
+import org.litvin.points.ReplayFreeze
 import org.litvin.points.ReplayV1
 import org.litvin.points.ReplayZoom
 import org.litvin.points.Replays
@@ -78,13 +81,45 @@ class ReplayEditorModel(val point: PointV1, selectedIndex: Int = 0) {
 
     fun setSpeed(speed: Double) = update { it.copy(speed = speed) }
 
-    fun setRepeats(repeats: Int) = update { it.copy(repeats = repeats) }
-
     fun setMuted(muted: Boolean) = update { it.copy(muted = muted) }
 
     fun setEffect(effect: ReplayEffect) = update { it.copy(effect = effect) }
 
     fun setShowBadge(show: Boolean) = update { it.copy(showBadge = show) }
+
+    /**
+     * Turns the still frame of the selected replay on or off (decision 22). On puts it at [playheadMs], or in the middle
+     * of the part when the playhead is outside the part. A still frame that is already on stays where it is.
+     */
+    fun setFreeze(on: Boolean, playheadMs: Long) = update { replay ->
+        when {
+            !on -> replay.copy(freeze = null)
+            replay.freeze != null -> replay
+            else -> {
+                val inside = playheadMs in replay.startMs.toLong()..replay.endMs.toLong()
+                val at = if (inside) playheadMs.toInt() else (replay.startMs + replay.endMs) / 2
+                replay.copy(freeze = ReplayFreeze(at))
+            }
+        }
+    }
+
+    /** Moves the still frame to [ms]. It stays inside the part. Without a still frame, nothing changes. */
+    fun setFreezeAt(ms: Long) = update { replay ->
+        val freeze = replay.freeze ?: return@update replay
+        replay.copy(freeze = freeze.copy(atMs = ms.coerceIn(replay.startMs.toLong(), replay.endMs.toLong()).toInt()))
+    }
+
+    /** Sets the time of the still frame. Without a still frame, nothing changes. */
+    fun setFreezeDuration(durationMs: Int) = update { replay ->
+        val freeze = replay.freeze ?: return@update replay
+        replay.copy(freeze = freeze.copy(durationMs = durationMs))
+    }
+
+    /** Sets the label of the selected replay from the typed [text]. A blank text or the default label is the default. */
+    fun setLabel(text: String) = update { it.copy(label = Replays.labelOf(text, selectedIndex)) }
+
+    /** The label of the selected replay, or an empty text when no replay is selected. */
+    val selectedLabel: String get() = selected?.let { Replays.label(it, selectedIndex) }.orEmpty()
 
     /** Sets the zoom frame. Null or the full frame is no zoom. */
     fun setZoom(zoom: ReplayZoom?) = update { it.copy(zoom = zoom) }
@@ -107,6 +142,48 @@ class ReplayEditorModel(val point: PointV1, selectedIndex: Int = 0) {
 
     /** The time that all replays of the point add to the video. */
     val addedMs: Long get() = list.sumOf { Replays.addedMs(it) }
+
+    // ---- Replay comments (decision 24) ----
+
+    /** The comments of the selected replay. */
+    val comments: List<CommentV1> get() = selected?.comments.orEmpty()
+
+    fun comment(id: Int): CommentV1? = comments.firstOrNull { it.id == id }
+
+    /**
+     * Adds [comment] to the selected replay with a new id, and returns the new comment. The start goes inside the part.
+     * Without a selected replay, nothing changes and the result is null.
+     */
+    fun addComment(comment: CommentV1): CommentV1? {
+        val replay = selected ?: return null
+        val added = comment.copy(id = Replays.nextCommentId(replay))
+        update { it.copy(comments = it.comments + added) }
+        return comment(added.id)
+    }
+
+    /** Replaces the comment with the id of [comment]. The start goes inside the part. */
+    fun updateComment(comment: CommentV1) = update { replay ->
+        replay.copy(comments = replay.comments.map { if (it.id == comment.id) comment else it })
+    }
+
+    /** Moves the start of comment [id] to [ms], inside the part. */
+    fun moveComment(id: Int, ms: Long) = update { replay ->
+        replay.copy(comments = replay.comments.map { if (it.id == id) it.copy(startMs = ms.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()) else it })
+    }
+
+    /** Sets the place, the size, and the rotation of comment [id] after a drag on the video. */
+    fun placeComment(id: Int, position: CommentPosition, sizePercent: Int, rotationDeg: Int) = update { replay ->
+        replay.copy(
+            comments = replay.comments.map {
+                if (it.id == id) it.copy(position = position, sizePercent = sizePercent, rotationDeg = rotationDeg) else it
+            },
+        )
+    }
+
+    fun deleteComment(id: Int) = update { replay -> replay.copy(comments = replay.comments.filterNot { it.id == id }) }
+
+    /** Shows or hides the point comments during the selected replay. */
+    fun setShowPointComments(show: Boolean) = update { it.copy(showPointComments = show) }
 
     private fun update(change: (ReplayV1) -> ReplayV1) {
         val old = selected ?: return

@@ -36,6 +36,9 @@ interface SwingMediaPlayer : AutoCloseable {
     fun setPreviewOverlay(overlay: VideoOverlay?)
     fun stepFrameForward(maximumTimeMs: Long = Long.MAX_VALUE): Long
     fun stepFrameBackward(minimumTimeMs: Long = 0L): Long
+
+    /** The frames in each second of the video, or null when the player does not know it yet. */
+    fun frameRate(): Double? = null
     fun nextFrame()
     fun setSubtitleFile(file: File): Boolean
     fun activatePreview(reason: String = "activate")
@@ -83,6 +86,12 @@ interface SwingMediaPlayer : AutoCloseable {
      */
     fun setReplaySound(sound: ReplaySound?) {}
 
+    /**
+     * Draws the image of [overlay] over the whole player, for example the texts of a thumbnail. Null removes it.
+     * The player asks for a new image when its size changes. Engines without this feature ignore it.
+     */
+    fun setImageOverlay(overlay: ImageOverlay?) {}
+
     /** Called on the player thread when the playback starts again after a seek. */
     var onPlaybackRestart: (() -> Unit)?
         get() = null
@@ -117,6 +126,15 @@ fun interface VideoOverlay {
      * [videoArea] is the area that shows the video, in overlay pixels. The events use the same pixels.
      */
     fun assEvents(videoArea: Rectangle2D.Double): List<String>
+}
+
+/** An image that a player draws over the video with its alpha. */
+fun interface ImageOverlay {
+    /**
+     * Returns an image of [width] × [height] device pixels, the size of the whole player, of type
+     * [java.awt.image.BufferedImage.TYPE_INT_ARGB_PRE]. Transparent pixels show the video.
+     */
+    fun render(width: Int, height: Int): java.awt.image.BufferedImage
 }
 
 /** A vector shape that a player draws over the video. The coordinates are component pixels. */

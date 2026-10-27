@@ -14,6 +14,99 @@ class ReplayEditorModelTest {
     private val point = PointV1("p1", 10_000, 14_000)
 
     @Test
+    fun theReplayCommentsGetNewIdsStayInsideThePartAndCanBeChangedAndDeleted() {
+        val model = ReplayEditorModel(point)
+        model.add(12_000)
+        val draft = org.litvin.points.CommentV1(id = 0, startMs = 99_000, durationMs = 2_000, text = "Lob", colorHex = "#FFFFFF")
+
+        val first = model.addComment(draft)
+        val second = model.addComment(draft.copy(startMs = 11_000))
+        assertEquals(listOf(1, 2), model.comments.map { it.id })
+        // The start goes to the part end.
+        assertEquals(13_500, first?.startMs)
+        assertEquals(11_000, second?.startMs)
+
+        model.moveComment(2, 12_000)
+        assertEquals(12_000, model.comment(2)?.startMs)
+        model.placeComment(2, org.litvin.points.CommentPosition(0.2, 0.3), sizePercent = 150, rotationDeg = 10)
+        assertEquals(org.litvin.points.CommentPosition(0.2, 0.3), model.comment(2)?.position)
+        model.updateComment(model.comment(2)!!.copy(text = "Great lob"))
+        assertEquals("Great lob", model.comment(2)?.text)
+
+        // An edge that moves over a comment takes it along.
+        model.setEnd(11_500)
+        assertEquals(listOf(11_500, 11_500), model.comments.map { it.startMs })
+
+        model.deleteComment(1)
+        assertEquals(listOf(2), model.comments.map { it.id })
+        assertEquals(3, model.addComment(draft)?.id)
+
+        assertTrue(model.selected!!.showPointComments)
+        model.setShowPointComments(false)
+        assertFalse(model.selected!!.showPointComments)
+    }
+
+    @Test
+    fun theStillFrameTurnsOnAtThePlayheadMovesInsideThePartAndTurnsOff() {
+        val model = ReplayEditorModel(point)
+        model.add(12_000)
+        assertNull(model.selected?.freeze)
+
+        model.setFreeze(true, playheadMs = 11_000)
+        assertEquals(org.litvin.points.ReplayFreeze(11_000, Replays.DEFAULT_FREEZE_MS), model.selected?.freeze)
+
+        model.setFreezeAt(99_000)
+        assertEquals(13_500, model.selected?.freeze?.atMs)
+        model.setFreezeDuration(1_500)
+        assertEquals(1_500, model.selected?.freeze?.durationMs)
+
+        // An edge that moves over the still frame takes it along.
+        model.setEnd(12_500)
+        assertEquals(12_500, model.selected?.freeze?.atMs)
+
+        model.setFreeze(false, playheadMs = 0)
+        assertNull(model.selected?.freeze)
+    }
+
+    @Test
+    fun aStillFrameWithThePlayheadOutsideThePartIsInTheMiddle() {
+        val model = ReplayEditorModel(point)
+        model.add(12_000)
+        model.setFreeze(true, playheadMs = 1_000)
+        assertEquals(12_000, model.selected?.freeze?.atMs)
+    }
+
+    @Test
+    fun theLabelIsTheTypedTextOrTheDefaultOfThePlace() {
+        val model = ReplayEditorModel(point)
+        model.add(11_000)
+        model.add(12_000)
+        assertEquals("Replay 2", model.selectedLabel)
+
+        model.setLabel("Ace")
+        assertEquals("Ace", model.selected?.label)
+        assertEquals("Ace", model.selectedLabel)
+
+        model.setLabel(" ")
+        assertNull(model.selected?.label)
+        assertEquals("Replay 2", model.selectedLabel)
+    }
+
+    @Test
+    fun aDefaultLabelFollowsTheReplayWhenItMoves() {
+        val model = ReplayEditorModel(point)
+        model.add(11_000)
+        model.add(12_000)
+
+        model.moveSelected(-1)
+
+        assertEquals(0, model.selectedIndex)
+        assertEquals("Replay", model.selectedLabel)
+        model.select(1)
+        assertEquals("Replay 2", model.selectedLabel)
+    }
+
+    @Test
     fun aNewReplayIsAroundThePlayheadAndSelected() {
         val model = ReplayEditorModel(point)
         assertEquals(-1, model.selectedIndex)
@@ -51,10 +144,8 @@ class ReplayEditorModelTest {
         model.add(12_000)
 
         model.setSpeed(5.0)
-        model.setRepeats(99)
 
         assertEquals(Replays.MAX_SPEED, model.selected?.speed)
-        assertEquals(Replays.MAX_REPEATS, model.selected?.repeats)
     }
 
     @Test
@@ -119,8 +210,8 @@ class ReplayEditorModelTest {
     }
 
     @Test
-    fun theAddedTimeCountsEachRepeat() {
-        val saved = point.copy(replays = listOf(ReplayV1(10_000, 11_000, speed = 0.5, repeats = 3)))
-        assertEquals(6_000, ReplayEditorModel(saved).addedMs)
+    fun theAddedTimeCountsEachReplayOnce() {
+        val saved = point.copy(replays = listOf(ReplayV1(10_000, 11_000, speed = 0.5), ReplayV1(11_000, 12_000, speed = 1.0)))
+        assertEquals(3_000, ReplayEditorModel(saved).addedMs)
     }
 }

@@ -61,8 +61,11 @@ data class ShareProject(
 
     fun point(id: String?): SharePoint? = points.firstOrNull { it.id == id }
 
-    /** The preset of each field. [event] is the league of the last thumbnail. An empty preset does not show. */
-    fun presets(type: ThumbnailVideoType, event: String?): Map<ThumbnailField, String> = mapOf(
+    /**
+     * The preset of each field. [event] is the league and [club] is the club name of the last thumbnail. An empty preset
+     * does not show. The round and the score have no preset: they change in each match.
+     */
+    fun presets(type: ThumbnailVideoType, event: String?, club: String? = null): Map<ThumbnailField, String> = mapOf(
         ThumbnailField.HEAD to type.words,
         ThumbnailField.KIND to matchKind(),
         ThumbnailField.TEAM1 to sideName(score.player1Name, 1),
@@ -70,6 +73,7 @@ data class ShareProject(
         ThumbnailField.EVENT to event.orEmpty().trim().take(ThumbnailField.EVENT.maxLength),
         ThumbnailField.COURT to court(),
         ThumbnailField.DATE to (videoDate?.let(::thumbnailDate) ?: ""),
+        ThumbnailField.CLUB to club.orEmpty().trim().take(ThumbnailField.CLUB.maxLength),
     )
 
     /**

@@ -102,11 +102,14 @@ data class ReplayRowDto(
     /** The index of the replay in its point, from 0. */
     val index: Int,
     val speed: Double,
-    val repeats: Int,
     /** The zoom as a factor, for example 2.0 for 2×, or null for no zoom. */
     val zoomFactor: Double?,
     val muted: Boolean,
-    /** The time that the replay adds to the video, with all its repeats. */
+    /** The time of the still frame, or null for no still frame (decision 22). */
+    val freezeMs: Long? = null,
+    /** The number of the comments of the replay (decision 24). */
+    val commentCount: Int = 0,
+    /** The time that the replay adds to the video. */
     val addedMs: Long,
 )
 

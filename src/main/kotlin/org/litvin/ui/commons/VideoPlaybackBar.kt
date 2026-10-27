@@ -40,10 +40,10 @@ internal class VideoPlaybackBar(
 
     /** The -5s and -1s buttons on the left of the play button, and the +1s and +5s buttons on its right. */
     private val seekButtons: List<SeekButton> = if (onNudge == null) emptyList() else listOf(
-        SeekButton("−5s", -5_000, listOf("⇧", "←"), Feather.CHEVRONS_LEFT, seekTip("points.seekBack.tooltip", 5, tr("key.withShift", "key" to tr("key.left"))), "$namePrefix-seek-back-5s"),
-        SeekButton("−1s", -1_000, listOf("←"), Feather.CHEVRON_LEFT, seekTip("points.seekBack.tooltip", 1, tr("key.left")), "$namePrefix-seek-back-1s"),
-        SeekButton("+1s", 1_000, listOf("→"), Feather.CHEVRON_RIGHT, seekTip("points.seekForward.tooltip", 1, tr("key.right")), "$namePrefix-seek-forward-1s"),
-        SeekButton("+5s", 5_000, listOf("⇧", "→"), Feather.CHEVRONS_RIGHT, seekTip("points.seekForward.tooltip", 5, tr("key.withShift", "key" to tr("key.right"))), "$namePrefix-seek-forward-5s"),
+        SeekButton(seekLabel(-5), -5_000, listOf("⇧", "←"), Feather.CHEVRONS_LEFT, seekTip("points.seekBack.tooltip", 5, tr("key.withShift", "key" to tr("key.left"))), "$namePrefix-seek-back-5s"),
+        SeekButton(seekLabel(-1), -1_000, listOf("←"), Feather.CHEVRON_LEFT, seekTip("points.seekBack.tooltip", 1, tr("key.left")), "$namePrefix-seek-back-1s"),
+        SeekButton(seekLabel(1), 1_000, listOf("→"), Feather.CHEVRON_RIGHT, seekTip("points.seekForward.tooltip", 1, tr("key.right")), "$namePrefix-seek-forward-1s"),
+        SeekButton(seekLabel(5), 5_000, listOf("⇧", "→"), Feather.CHEVRONS_RIGHT, seekTip("points.seekForward.tooltip", 5, tr("key.withShift", "key" to tr("key.right"))), "$namePrefix-seek-forward-5s"),
     )
 
     private val nowLabel = JLabel(format(0)).apply {
@@ -109,6 +109,9 @@ internal class VideoPlaybackBar(
 
     /** A seek tooltip, for example "Seek back 5 seconds [Shift+Left]". */
     private fun seekTip(key: String, seconds: Int, keyName: String) = tr(key, "seconds" to seconds, "key" to keyName)
+
+    private fun seekLabel(seconds: Int) =
+        if (seconds < 0) tr("playback.seekBack.label", "seconds" to -seconds) else tr("playback.seekForward.label", "seconds" to seconds)
 
     /** The width of the seek buttons and the play button with the gaps between them. */
     private fun transportWidth(direction: Boolean): Int {

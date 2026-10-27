@@ -9,6 +9,7 @@ enum class MediaScreen {
     POINTS,
     ADJUST_VIDEO,
     REPLAY_EDITOR,
+    SHARE,
     TEST,
 }
 

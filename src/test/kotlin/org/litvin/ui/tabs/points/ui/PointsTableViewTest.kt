@@ -151,8 +151,8 @@ class PointsTableViewTest {
         SwingUtilities.invokeAndWait {
             val view = PointsTableView(actions)
             val replays = listOf(
-                ReplayRowDto(0, speed = 0.5, repeats = 2, zoomFactor = 2.0, muted = false, addedMs = 8_000),
-                ReplayRowDto(1, speed = 0.25, repeats = 1, zoomFactor = null, muted = true, addedMs = 4_000),
+                ReplayRowDto(0, speed = 0.5, zoomFactor = 2.0, muted = false, addedMs = 4_000),
+                ReplayRowDto(1, speed = 0.25, zoomFactor = null, muted = true, addedMs = 4_000),
             )
             view.setState(
                 state(
@@ -171,7 +171,7 @@ class PointsTableViewTest {
             assertEquals(listOf(0, 45, 75, 105, 150), rows.map { it.y })
             assertEquals(listOf(0, TableRow.NO_INDEX, TableRow.NO_INDEX, 1, 2), rows.map { it.visualIndex })
             val replayRows = rows.filterIsInstance<ReplayRow>()
-            assertEquals("0.5× · ×2 · 2×", replayRows[0].details)
+            assertEquals("0.5× · 2×", replayRows[0].details)
             assertEquals("0.25× · Muted", replayRows[1].details)
 
             dispatch(replayRows[1], MouseEvent.MOUSE_CLICKED)

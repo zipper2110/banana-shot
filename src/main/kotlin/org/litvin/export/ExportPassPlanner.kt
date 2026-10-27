@@ -33,16 +33,13 @@ object ExportPassPlanner {
         override val progressBaseMs: Long,
     ) : Pass
 
-    /** One play ([repeat], from 0) of a replay. */
+    /** The play of a replay. */
     data class Replay(
         val replay: ExportReplay,
-        val repeat: Int,
         override val progressBaseMs: Long,
         val fadeIn: PassFade?,
         val fadeOut: PassFade?,
     ) : Pass {
-        val isFirst: Boolean get() = repeat == 0
-        val isLast: Boolean get() = repeat == replay.replay.repeats - 1
         val durationMs: Long get() = replay.playMs
     }
 
@@ -140,15 +137,11 @@ object ExportPassPlanner {
             pendingFadeIn = null
         }
 
-        /** Adds each play of [replay]. The effect of the replay is at its start and its end. */
+        /** Adds the play of [replay]. The effect of the replay is at its start and its end. */
         fun addReplay(replay: ExportReplay) {
             val cut = ExportReplays.cutFade(replay.replay.effect)
-            for (repeat in 0 until replay.replay.repeats) {
-                val fadeIn = if (repeat == 0) cut else ExportReplays.repeatFade
-                val fadeOut = if (repeat == replay.replay.repeats - 1) cut else ExportReplays.repeatFade
-                passes += Replay(replay, repeat, videoMs + extraMs, fadeIn, fadeOut)
-                extraMs += replay.playMs
-            }
+            passes += Replay(replay, videoMs + extraMs, cut, cut)
+            extraMs += replay.playMs
             pendingFadeIn = cut
         }
 

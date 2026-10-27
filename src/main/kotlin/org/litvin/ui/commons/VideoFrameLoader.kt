@@ -11,6 +11,7 @@ import org.litvin.adjustments.GeometryTimeline
 import org.litvin.export.ExportResolution
 import org.litvin.export.ExportResolutionProbe
 import org.litvin.export.SourceToneRangeProbe
+import org.litvin.media.mpv.MpvFrameReader
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
@@ -151,6 +152,29 @@ class VideoFrameLoader(
             val tone = ColorTimeline.allColors(adjustments).any { FfmpegColorAdjustmentStrategy.map(it).hasToneAdjustments }
             if (!tone) return ToneRange.LIMITED
             return toneRanges.getOrPut(sourcePath) { SourceToneRangeProbe.probe(sourcePath, ApplicationLayout.current().ffprobeExecutable) }
+        }
+
+        /**
+         * Reads the frame with a hidden mpv player that keeps the video open. A seek is then much faster than a new ffmpeg process.
+         * When mpv cannot read the frame, ffmpeg reads it. The filters are the same, so the frame is the same.
+         */
+        fun mpvOrFfmpeg(reader: MpvFrameReader = MpvFrameReader()): (VideoFrameRequest) -> BufferedImage? = { request ->
+            extractWithMpv(reader, request) ?: extractWithFfmpeg(request)
+        }
+
+        private fun extractWithMpv(reader: MpvFrameReader, request: VideoFrameRequest): BufferedImage? {
+            if (!File(request.sourcePath).isFile) return null
+            val sourceSize = sourceSize(request.adjustments, request.sourcePath, request.width)
+            val filters = FFmpegCommandBuilder.stillFrameFilters(
+                atMs = request.atMs,
+                width = request.width,
+                adjustments = request.adjustments,
+                sourceWidth = sourceSize?.width,
+                sourceHeight = sourceSize?.height,
+                toneRange = toneRange(request.adjustments, request.sourcePath),
+                lgpl = true,
+            )
+            return reader.read(request.sourcePath, FFmpegCommandBuilder.stillFrameSeekMs(request.atMs), filters)
         }
 
         private fun extractWithFfmpeg(request: VideoFrameRequest): BufferedImage? {

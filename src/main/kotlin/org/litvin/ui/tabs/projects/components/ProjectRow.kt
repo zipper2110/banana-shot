@@ -61,7 +61,7 @@ internal class ProjectRow(
     private val openButton: JButton? = if (isCurrent) {
         null
     } else {
-        ProjectsButton(tr("common.open"), buttonHeight = 26, fontSize = 12f, limeHover = true).apply {
+        ProjectsTableColumns.openButton().apply {
             name = "projects-open-${project.id}"
             toolTipText = tr("projects.row.open.tooltip")
             addActionListener { onOpen() }
@@ -285,7 +285,7 @@ internal open class FigureCell(
 /** The sport of the project, left-aligned. A null text shows a gray placeholder bar while the presenter loads it. */
 internal class SportCell(text: String?) : JLabel(text.orEmpty()) {
     private val loading = text == null
-    private val cellFont: Font = ProjectsUi.font(12.5f)
+    private val cellFont: Font = ProjectsTableColumns.sportFont
 
     override fun paintComponent(g: Graphics) {
         val g2 = ProjectsUi.smooth(g)

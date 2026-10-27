@@ -1,40 +1,29 @@
 package org.litvin.points
 
-import kotlin.math.roundToLong
-
 /**
  * The play order of a project with instant replays (B-50 T2): the source video, with the replays of each point
- * inserted after the end of the point, and each repeat of a replay after the other.
+ * inserted after the end of the point, one replay after the other.
  *
  * "Play time" counts the source video and the replays. "Source time" is the time in the video file.
  * Before the first insert, the two times are the same. The source time of a point end is after its replays:
  * the video continues there when the replays end.
  */
 class ReplayTimeline(points: List<PointV1>) {
-    /** One play of a replay part: one repeat. [startMs] is in play time. */
+    /** One play of a replay part. [startMs] is in play time. */
     data class Play(
         val pointId: String,
         val replayIndex: Int,
-        val repeat: Int,
         val replay: ReplayV1,
         val startMs: Long,
         val durationMs: Long,
     ) {
         val endMs: Long get() = startMs + durationMs
-        val isFirst: Boolean get() = repeat == 0
-        val isLast: Boolean get() = repeat == replay.repeats - 1
 
-        /** The source time of the frame at [playMs] of this play. */
-        fun sourceAt(playMs: Long): Long {
-            val offset = (playMs - startMs).coerceIn(0L, durationMs)
-            return (replay.startMs + offset * replay.speed).roundToLong().coerceAtMost(replay.endMs.toLong())
-        }
+        /** The source time of the frame at [playMs] of this play. During the still frame, it is the still frame. */
+        fun sourceAt(playMs: Long): Long = Replays.sourceAt(replay, (playMs - startMs).coerceIn(0L, durationMs))
 
         /** The play time of the frame at [sourceMs] of the part. */
-        fun playAt(sourceMs: Long): Long {
-            val offset = (sourceMs - replay.startMs).coerceIn(0L, (replay.endMs - replay.startMs).toLong())
-            return startMs + (offset / replay.speed).roundToLong().coerceAtMost(durationMs)
-        }
+        fun playAt(sourceMs: Long): Long = startMs + Replays.playOffsetAt(replay, sourceMs).coerceAtMost(durationMs)
     }
 
     /** All replays of one point, inserted at the end of the point. [startMs] is in play time. */
@@ -65,11 +54,9 @@ class ReplayTimeline(points: List<PointV1>) {
             .map { point ->
                 val insertStart = point.endMs + added
                 var playStart = insertStart
-                val plays = point.replays.flatMapIndexed { index, replay ->
+                val plays = point.replays.mapIndexed { index, replay ->
                     val one = Replays.playMs(replay)
-                    (0 until replay.repeats).map { repeat ->
-                        Play(point.id, index, repeat, replay, playStart, one).also { playStart += one }
-                    }
+                    Play(point.id, index, replay, playStart, one).also { playStart += one }
                 }
                 Insert(point, insertStart, plays).also { added += it.durationMs }
             }

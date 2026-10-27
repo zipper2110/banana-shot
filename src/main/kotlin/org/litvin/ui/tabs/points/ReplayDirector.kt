@@ -20,12 +20,18 @@ import kotlin.math.abs
  *
  * A time far outside the part during a replay is a seek of the user. Then the replay stops, and the video plays
  * from that time.
+ *
+ * At the still frame of a replay (decision 22), the director gives [Command.Hold]. The caller pauses the player on the
+ * frame, waits, and then calls [endHold] and plays again.
  */
 class ReplayDirector {
     sealed interface Command {
         data class Seek(val sourceMs: Long) : Command
         data class Look(val view: ReplayView?) : Command
         data class Sound(val sound: ReplaySound?) : Command
+
+        /** Pause the player on the frame at [sourceMs] for [durationMs], then call [endHold] and play again. */
+        data class Hold(val sourceMs: Long, val durationMs: Long) : Command
     }
 
     private var timeline = ReplayTimeline.EMPTY
@@ -43,6 +49,13 @@ class ReplayDirector {
 
     /** True while a replay plays. */
     val isActive: Boolean get() = insert != null
+
+    /** True while the player holds the still frame of a replay. */
+    var isHolding: Boolean = false
+        private set
+
+    /** True when the play that plays now showed its still frame. */
+    private var frozen = false
 
     /** The play that the player shows now, or null outside a replay. */
     val activePlay: ReplayTimeline.Play? get() = insert?.plays?.getOrNull(playIndex)
@@ -78,7 +91,23 @@ class ReplayDirector {
         if (active != null) {
             val play = active.plays[playIndex]
             val part = play.replay
+            val freeze = part.freeze
+            if (isHolding) {
+                // The player shows the still frame. A time far from it is a seek of the user.
+                val at = freeze?.atMs?.toLong() ?: sourceMs
+                return if (abs(sourceMs - at) > JUMP_MS) stop() else emptyList()
+            }
             if (sourceMs < part.startMs - JUMP_MS || sourceMs > part.endMs + JUMP_MS) return stop()
+            if (freeze != null && playing && !frozen) {
+                // The still frame comes when the video plays over its frame. A frame step past it shows no still frame.
+                val trigger = minOf(freeze.atMs.toLong(), part.endMs - END_TOLERANCE_MS)
+                if ((previous ?: sourceMs) <= trigger && sourceMs >= trigger) {
+                    frozen = true
+                    isHolding = true
+                    return look(viewIn(play, freeze.atMs.toLong())) +
+                        Command.Hold(freeze.atMs.toLong(), freeze.durationMs.toLong())
+                }
+            }
             if (sourceMs >= part.endMs - END_TOLERANCE_MS) return next(active)
             return look(viewIn(play, sourceMs))
         }
@@ -93,6 +122,16 @@ class ReplayDirector {
         seekTarget = null
     }
 
+    /**
+     * The time of the still frame is over. Returns true when the caller must play the video again. Returns false when
+     * the director holds no still frame, for example after a seek of the user or [stop].
+     */
+    fun endHold(): Boolean {
+        if (!isHolding) return false
+        isHolding = false
+        return true
+    }
+
     /** Stops a replay where the player is now, and shows the normal picture and sound. */
     fun stop(): List<Command> {
         val wasActive = insert != null
@@ -100,6 +139,8 @@ class ReplayDirector {
         playIndex = 0
         seekTarget = null
         fadeInAt = null
+        isHolding = false
+        frozen = false
         val commands = mutableListOf<Command>()
         if (shownView != null) commands += Command.Look(null)
         shownView = null
@@ -118,6 +159,8 @@ class ReplayDirector {
         val part = play.replay
         seekTarget = part.startMs.toLong()
         ignoredTimes = 0
+        isHolding = false
+        frozen = false
         lastMs = part.startMs.toLong()
         return look(viewIn(play, part.startMs.toLong())) + listOf(
             Command.Sound(ReplaySound(part.speed, part.muted)),
@@ -144,21 +187,21 @@ class ReplayDirector {
     }
 
     /**
-     * The picture at [sourceMs] of the part of [play]: the zoom and the dips (decisions 2, 7, and 8). The zoom goes
-     * in at the start of the first play of the first replay (decision 18). It does not go out at the end (decision 12).
+     * The picture at [sourceMs] of the part of [play]: the zoom and the dips (decisions 2 and 8). The zoom goes in at
+     * the start of the first replay (decision 18). It does not go out at the end (decision 12).
      */
     private fun viewIn(play: ReplayTimeline.Play, sourceMs: Long): ReplayView {
         val part = play.replay
-        val length = Replays.playMs(part).toDouble()
+        val length = Replays.motionMs(part).toDouble()
         val offset = ((sourceMs - part.startMs) / part.speed).coerceIn(0.0, length)
-        val fadeIn = if (play.isFirst) ExportReplays.cutFade(part.effect) else ExportReplays.repeatFade
-        val fadeOut = if (play.isLast) ExportReplays.cutFade(part.effect) else ExportReplays.repeatFade
+        val fadeIn = ExportReplays.cutFade(part.effect)
+        val fadeOut = fadeIn
         val dipIn = fadeIn?.let { 1.0 - offset / it.durationMs } ?: 0.0
         val dipOut = fadeOut?.let { 1.0 - (length - offset) / it.durationMs } ?: 0.0
         val dip = maxOf(dipIn, dipOut, 0.0).coerceAtMost(1.0)
         val white = (if (dipIn >= dipOut) fadeIn else fadeOut)?.white ?: false
         val zoom = part.zoom ?: return ReplayView(dip = dip, dipWhite = white)
-        val progress = if (Replays.zoomsIn(firstReplayIndex + play.replayIndex, play.repeat)) smooth(offset / Replays.ZOOM_MS) else 1.0
+        val progress = if (Replays.zoomsIn(firstReplayIndex + play.replayIndex)) smooth(offset / Replays.ZOOM_MS) else 1.0
         return ReplayView(
             zoomX = zoom.x * progress,
             zoomY = zoom.y * progress,

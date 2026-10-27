@@ -45,13 +45,21 @@ data class SavedThumbnailV1(
 )
 
 /**
- * The values that go to the next project: the last style, the text position and the colors of each style, and the
- * last league or event. The texts of the project and the final score do not go to the next project.
+ * The values that go to the next project: the last style, the text position and the colors of each style, the last
+ * league or event, the last brand name, the logo, and the font and the color of the brand name. The other texts of the project and the final score do not go to
+ * the next project.
  */
 data class ShareDefaultsV1(
     val style: String? = null,
     val looks: Map<String, StyleLookV1> = emptyMap(),
     val event: String? = null,
+    val club: String? = null,
+    /** The PNG copy of the logo in the app data folder (see [ThumbnailLogos.store]). Null: no logo. */
+    val logo: String? = null,
+    /** [ThumbnailFace.name] of the brand name. Null: the font of each style. */
+    val brandFont: String? = null,
+    /** The color of the brand name, "#RRGGBB". Null: the text color of each style. */
+    val brandColor: String? = null,
 )
 
 object ShareIO {

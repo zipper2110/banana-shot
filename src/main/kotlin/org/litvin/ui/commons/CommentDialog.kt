@@ -70,11 +70,14 @@ object CommentDialog {
         defaultStyle: CommentStyle,
         defaultSizePercent: Int = CommentV1.DEFAULT_SIZE_PERCENT,
         defaultOpacityPercent: Int = 100,
+        /** The first time of the new comment. */
+        initialDurationMs: Long = DEFAULT_DURATION_MS,
         onPreview: (CommentInput?) -> Unit = {},
         onSave: (CommentInput) -> Unit,
     ) {
         buildCreate(
-            parent, namePrefix, initialStartMs, defaultColor, defaultStyle, defaultSizePercent, defaultOpacityPercent, onPreview, onSave,
+            parent, namePrefix, initialStartMs, defaultColor, defaultStyle, defaultSizePercent, defaultOpacityPercent,
+            initialDurationMs, onPreview, onSave,
         ).showOver(parent)
     }
 
@@ -98,13 +101,14 @@ object CommentDialog {
         defaultStyle: CommentStyle,
         defaultSizePercent: Int = CommentV1.DEFAULT_SIZE_PERCENT,
         defaultOpacityPercent: Int = 100,
+        initialDurationMs: Long = DEFAULT_DURATION_MS,
         onPreview: (CommentInput?) -> Unit = {},
         onSave: (CommentInput) -> Unit,
     ): JDialog = build(
         parent,
         namePrefix,
         tr("comment.add.title"),
-        CommentInput(initialStartMs, DEFAULT_DURATION_MS, "", defaultColor, defaultStyle, defaultSizePercent, defaultOpacityPercent),
+        CommentInput(initialStartMs, initialDurationMs, "", defaultColor, defaultStyle, defaultSizePercent, defaultOpacityPercent),
         onPreview,
         onSave,
     )

@@ -1,5 +1,7 @@
 package org.litvin.points
 
+import org.litvin.i18n.tr
+
 /**
  * The limits of the instant replays of a point (B-50), and the rules that keep a replay inside them.
  * See `docs/backlog.md` (B-50) and `docs/replay/b-50-tasks.md`.
@@ -18,14 +20,20 @@ object Replays {
     /** The speeds that the replay editor offers (decision 15). */
     val SPEEDS = listOf(0.1, 0.2, 0.3, 0.5, 1.0)
 
-    const val MIN_REPEATS = 1
-    const val MAX_REPEATS = 5
-
     /** The narrowest zoom frame, a zoom of 4×. */
     const val MIN_ZOOM_WIDTH = 0.25
 
     /** A zoom frame this wide or wider is no zoom. */
     private const val NO_ZOOM_WIDTH = 0.999
+
+    /** The still frame durations that the replay editor offers (decision 22). */
+    val FREEZE_DURATIONS_MS = listOf(500, 800, 1_000, 1_500, 2_000, 3_000)
+    const val DEFAULT_FREEZE_MS = 1_000
+    const val MIN_FREEZE_MS = 100
+    const val MAX_FREEZE_MS = 10_000
+
+    /** The longest replay label. */
+    const val MAX_LABEL_LENGTH = 40
 
     /** A new replay starts this much before the playhead and ends this much after it (decision of 2026-10-26). */
     const val NEW_PART_LEAD_MS = 1_500
@@ -73,17 +81,69 @@ object Replays {
         return if (replays == point.replays) point else point.copy(replays = replays)
     }
 
-    /** Puts the speed, the repeat count, and the zoom frame into their limits. */
+    /** Puts the speed, the zoom frame, and the still frame into their limits. The still frame stays inside the part. */
     internal fun normalizeValues(replay: ReplayV1): ReplayV1 {
         val speed = if (replay.speed.isFinite()) replay.speed.coerceIn(MIN_SPEED, MAX_SPEED) else DEFAULT_SPEED
-        val repeats = replay.repeats.coerceIn(MIN_REPEATS, MAX_REPEATS)
         val zoom = normalizeZoom(replay.zoom)
-        return if (speed == replay.speed && repeats == replay.repeats && zoom == replay.zoom) {
+        val freeze = replay.freeze?.let {
+            ReplayFreeze(
+                atMs = it.atMs.coerceIn(replay.startMs, replay.endMs.coerceAtLeast(replay.startMs)),
+                durationMs = it.durationMs.coerceIn(MIN_FREEZE_MS, MAX_FREEZE_MS),
+            )
+        }
+        val comments = normalizeComments(replay)
+        return if (speed == replay.speed && zoom == replay.zoom && freeze == replay.freeze && comments == replay.comments) {
             replay
         } else {
-            replay.copy(speed = speed, repeats = repeats, zoom = zoom)
+            replay.copy(speed = speed, zoom = zoom, freeze = freeze, comments = comments)
         }
     }
+
+    /** The comments of [replay] with each start inside the part and each time in the limits (decision 24). */
+    private fun normalizeComments(replay: ReplayV1): List<CommentV1> {
+        if (replay.comments.isEmpty()) return replay.comments
+        val end = replay.endMs.coerceAtLeast(replay.startMs)
+        val result = replay.comments.map { comment ->
+            val start = comment.startMs.coerceIn(replay.startMs, end)
+            val duration = comment.durationMs.coerceIn(MIN_COMMENT_MS, MAX_COMMENT_MS)
+            if (start == comment.startMs && duration == comment.durationMs) comment else comment.copy(startMs = start, durationMs = duration)
+        }
+        return if (result == replay.comments) replay.comments else result
+    }
+
+    // ---- Replay comments (decision 24) ----
+
+    /** The least time of a replay comment. */
+    const val MIN_COMMENT_MS = 100
+
+    /** The most time of a replay comment. */
+    const val MAX_COMMENT_MS = 60_000
+
+    /** The time from the play start when [comment] of [replay] starts to show. */
+    fun commentPlayStartMs(replay: ReplayV1, comment: CommentV1): Long = playOffsetAt(replay, comment.startMs.toLong())
+
+    /** The time from the play start when [comment] of [replay] stops to show. The comment stops at the replay end. */
+    fun commentPlayEndMs(replay: ReplayV1, comment: CommentV1): Long =
+        (commentPlayStartMs(replay, comment) + comment.durationMs).coerceAtMost(playMs(replay))
+
+    /** The source time of the frame when [comment] of [replay] stops to show. The editor bar uses it. */
+    fun commentSourceEndMs(replay: ReplayV1, comment: CommentV1): Long = sourceAt(replay, commentPlayEndMs(replay, comment))
+
+    /** The comments of [replay] on screen at [playOffsetMs] from the play start. */
+    fun commentsAt(replay: ReplayV1, playOffsetMs: Long): List<CommentV1> = replay.comments.filter { comment ->
+        comment.text.isNotBlank() &&
+            commentPlayStartMs(replay, comment) <= playOffsetMs && playOffsetMs < commentPlayEndMs(replay, comment)
+    }
+
+    /**
+     * The comments of [replay] on screen at the frame at [sourceMs], for an editor that is paused on that frame. On the
+     * frame of the still frame, it uses the start of the still frame.
+     */
+    fun commentsAtSource(replay: ReplayV1, sourceMs: Long): List<CommentV1> =
+        if (sourceMs < replay.startMs || sourceMs > replay.endMs) emptyList() else commentsAt(replay, playOffsetAt(replay, sourceMs))
+
+    /** The id for a new comment of [replay]. */
+    fun nextCommentId(replay: ReplayV1): Int = (replay.comments.maxOfOrNull { it.id } ?: 0) + 1
 
     /**
      * A zoom frame inside the frame. A frame that is too small gets [MIN_ZOOM_WIDTH] around its center.
@@ -100,27 +160,77 @@ object Replays {
         return if (result == zoom) zoom else result
     }
 
-    /** The play time of one repeat: the part length divided by the speed. */
-    fun playMs(replay: ReplayV1): Long = Math.round((replay.endMs - replay.startMs).coerceAtLeast(0) / replay.speed)
+    /** The default label of the replay at [index] of its point: "Replay", "Replay 2", "Replay 3", and so on. */
+    fun defaultLabel(index: Int): String = tr("replay.label", "number" to index + 1)
 
-    /** The time that the replay adds to the video: [playMs] for each repeat. */
-    fun addedMs(replay: ReplayV1): Long = playMs(replay) * replay.repeats
+    /** The label of the replay at [index] of its point: the label of the user, or the default label for the index. */
+    fun label(replay: ReplayV1, index: Int, defaults: (Int) -> String = ::defaultLabel): String =
+        replay.label?.takeIf { it.isNotBlank() } ?: defaults(index)
+
+    /** The badge text of the replay at [index] of its point: the label in capital letters, as the badge style. */
+    fun badgeText(replay: ReplayV1, index: Int, defaults: (Int) -> String = ::defaultLabel): String =
+        label(replay, index, defaults).uppercase()
+
+    /**
+     * The label to keep for the [text] that the user typed for the replay at [index]. A blank text and the default
+     * label give null, so that the label follows the place of the replay. The text is cut to [MAX_LABEL_LENGTH].
+     */
+    fun labelOf(text: String, index: Int, defaults: (Int) -> String = ::defaultLabel): String? {
+        val label = text.trim().take(MAX_LABEL_LENGTH).trim()
+        return label.takeUnless { it.isEmpty() || it == defaults(index) }
+    }
+
+    /** The time that the part moves: the part length divided by the speed, without the still frame. */
+    fun motionMs(replay: ReplayV1): Long = Math.round((replay.endMs - replay.startMs).coerceAtLeast(0) / replay.speed)
+
+    /** The time of the still frame of the replay, or 0 without a still frame. */
+    fun freezeMs(replay: ReplayV1): Long = replay.freeze?.durationMs?.toLong() ?: 0L
+
+    /** The play time of the replay: the [motionMs] and the still frame. */
+    fun playMs(replay: ReplayV1): Long = motionMs(replay) + freezeMs(replay)
+
+    /** The time that the replay adds to the video: its [playMs], because the replay plays once. */
+    fun addedMs(replay: ReplayV1): Long = playMs(replay)
+
+    /** The time from the play start to the start of the still frame, or null without a still frame. */
+    fun freezeOffsetMs(replay: ReplayV1): Long? =
+        replay.freeze?.let { Math.round((it.atMs - replay.startMs).coerceAtLeast(0) / replay.speed).coerceAtMost(motionMs(replay)) }
+
+    /**
+     * The time from the play start of the frame at [sourceMs] of the part. A frame after the still frame comes later by
+     * the still frame. The frame of the still frame is at the start of the still frame.
+     */
+    fun playOffsetAt(replay: ReplayV1, sourceMs: Long): Long {
+        val offset = (sourceMs - replay.startMs).coerceIn(0L, (replay.endMs - replay.startMs).coerceAtLeast(0).toLong())
+        val motion = Math.round(offset / replay.speed).coerceAtMost(motionMs(replay))
+        val freezeAt = freezeOffsetMs(replay) ?: return motion
+        return if (motion > freezeAt) motion + freezeMs(replay) else motion
+    }
+
+    /** The source time of the frame at [playOffsetMs] from the play start. During the still frame, it is the still frame. */
+    fun sourceAt(replay: ReplayV1, playOffsetMs: Long): Long {
+        val offset = playOffsetMs.coerceIn(0L, playMs(replay))
+        val freezeAt = freezeOffsetMs(replay)
+        val motion = when {
+            freezeAt == null || offset <= freezeAt -> offset
+            offset < freezeAt + freezeMs(replay) -> freezeAt
+            else -> offset - freezeMs(replay)
+        }
+        return Math.round(replay.startMs + motion * replay.speed).coerceAtMost(replay.endMs.toLong())
+    }
 
     /** The dip to black or white at the cut into a replay and out of it: this time out, then this time in (decision 2). */
     const val CUT_FADE_MS = 250L
 
-    /** The dip to black between two repeats: this time out, then this time in (decision 7). */
-    const val REPEAT_FADE_MS = 100L
-
     /**
-     * The zoom in at the start of the first play of the first replay of a point (decisions 8 and 18). The replay has
-     * no zoom out (decision 12).
+     * The zoom in at the start of the first replay of a point (decisions 8 and 18). The replay has no zoom out
+     * (decision 12).
      */
     const val ZOOM_MS = 400L
 
     /**
-     * True when the play [repeat] (from 0) of the replay at [replayIndex] of its point zooms in. Only the first play of
-     * the first replay zooms in. The other plays start with the zoom already in (decision 18).
+     * True when the replay at [replayIndex] of its point zooms in. Only the first replay zooms in. The next replays
+     * start with the zoom already in (decision 18).
      */
-    fun zoomsIn(replayIndex: Int, repeat: Int): Boolean = replayIndex == 0 && repeat == 0
+    fun zoomsIn(replayIndex: Int): Boolean = replayIndex == 0
 }

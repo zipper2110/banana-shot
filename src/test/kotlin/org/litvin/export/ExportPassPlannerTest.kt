@@ -25,7 +25,7 @@ class ExportPassPlannerTest {
         when (pass) {
             is Video -> "video ${pass.chunk.keeps.joinToString("+") { it.id }} @${pass.chunk.outputOffsetMs}/${pass.progressBaseMs}"
             is Card -> "card ${pass.card.durationMs} at ${pass.freezeAtMs} @${pass.progressBaseMs}"
-            is ExportPassPlanner.Replay -> "replay ${pass.replay.pointId}#${pass.repeat} ${pass.durationMs} @${pass.progressBaseMs}"
+            is ExportPassPlanner.Replay -> "replay ${pass.replay.pointId}#${pass.replay.replayIndex} ${pass.durationMs} @${pass.progressBaseMs}"
         }
     }
 
@@ -102,10 +102,11 @@ class ExportPassPlannerTest {
 
     // B-50: the replays.
 
-    /** A replay of the last 2 s of point [id] at half speed: one play is 4 s. */
-    private fun replay(id: String, repeats: Int = 1, effect: ReplayEffect = ReplayEffect.FADE): ExportReplay {
+    /** The replay [index] of point [id]: the last 2 s of the point at half speed, so the play is 4 s. */
+    private fun replay(id: String, index: Int = 0, effect: ReplayEffect = ReplayEffect.FADE): ExportReplay {
         val point = keeps.first { it.id == id }
-        return ExportReplay(id, point.endMs, ReplayV1(point.endMs - 2_000, point.endMs, speed = 0.5, repeats = repeats, effect = effect))
+        val part = ReplayV1(point.endMs - 2_000, point.endMs, speed = 0.5, effect = effect)
+        return ExportReplay(id, point.endMs, part, replayIndex = index)
     }
 
     private fun PassFade?.text() = when {
@@ -124,7 +125,7 @@ class ExportPassPlannerTest {
 
     @Test
     fun theReplaysOfAPointComeAfterItsEndAndThePlaysAddToTheProgress() {
-        val passes = ExportPassPlanner.plan(keeps, replays = listOf(replay("p2", repeats = 2)), maxSegmentsPerChunk = 8)
+        val passes = ExportPassPlanner.plan(keeps, replays = listOf(replay("p2"), replay("p2", index = 1)), maxSegmentsPerChunk = 8)
 
         assertEquals(
             listOf(
@@ -135,8 +136,8 @@ class ExportPassPlannerTest {
             ),
             passes.describe(),
         )
-        // The cut into and out of the replay dips to black. The repeats have a short dip between them.
-        assertEquals(listOf("-/black250", "black250/black100", "black100/black250", "black250/-"), passes.fades())
+        // Each replay plays once. The cut into and out of each replay dips to black.
+        assertEquals(listOf("-/black250", "black250/black250", "black250/black250", "black250/-"), passes.fades())
         assertEquals(8_000L, ExportPassPlanner.extraDurationMs(passes))
     }
 

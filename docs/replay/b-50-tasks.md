@@ -26,18 +26,24 @@ the proposals Q1 to Q10 of the code study):
 | 4 | T3, T6 | Q3: the slowed sound has a lower pitch, as a slow tape. The pitch is not kept. |
 | 5 | T3, T4 | Q4: while the popup is open, the main player stops and shows a black area with the text "The replay editor uses the video". The list, the timeline, and the other controls of the main window work. Play in the main window does nothing until the popup closes. |
 | 6 | T1 | Q5: a replay keeps its source times when the user changes its point. When the part goes out of the allowed window (3 s around the point), the app cuts it to the window. A replay shorter than 0.5 s after the cut is removed. Delete removes the replays of the point. |
-| 7 | T3, T6 | Q6: the zoom goes in at the start of the first play. Between two repeats, a short dip to black (0.2 s). (Changed by decision 12: the zoom does not go out.) |
+| 7 | T3, T6 | Q6: the zoom goes in at the start of the first play. Between two repeats, a short dip to black (0.2 s). (Changed by decision 12: the zoom does not go out. Decision 21 removed the repeats.) |
 | 8 | T3, T6 | Q7: the zoom in takes 0.4 s of output time. |
-| 9 | T6 | Q8: each comment that is visible during the replay part in the source video shows again during the replay, at the same moment of the part. Its time gets longer by the slow speed. Each repeat shows it again. |
+| 9 | T6 | Q8: each comment that is visible during the replay part in the source video shows again during the replay, at the same moment of the part. Its time gets longer by the slow speed. Each repeat shows it again. (Decision 21 removed the repeats.) |
 | 10 | T5 | Q9: the spiky edges of a replay block show when the block is 16 px or wider. A narrower block is a plain lime tick, at least 3 px wide. |
 | 11 | T6 | Q10: the set cards and the statistics card go after the replays of the last point. |
 | 12 | T3, T6 | Decided on 2026-10-26 after the work: the zoom does not go out at the end of the replay. The zoom stays until the cut effect at the end, and the video after the replay starts at the normal size. |
-| 13 | T5 | Decided on 2026-10-26 after the work: each replay is a sub-row right under its point in the list, also before a comment inside the point. The row is 30 px high and has no number. It shows the replay icon, "Replay 1", the time that the replay adds in Length, and the speed, the repeats, the zoom, and a muted sound. The speed, the repeats, and the zoom have the icons of the editor groups, and the zoom has no "Zoom" word. A click opens the editor on the replay. Delete shows on hover and removes the replay without a question, as for a comment. The row is not a timeline event: the selection, R, the arrow keys, and Delete skip it. The point row has no REPLAY tag. Its replay button stays, to add a replay. |
+| 13 | T5 | Decided on 2026-10-26 after the work: each replay is a sub-row right under its point in the list, also before a comment inside the point. The row is 30 px high and has no number. It shows the replay icon, "Replay 1", the time that the replay adds in Length, and the speed, the repeats, the zoom, and a muted sound. The speed, the repeats, and the zoom have the icons of the editor groups, and the zoom has no "Zoom" word. A click opens the editor on the replay. Delete shows on hover and removes the replay without a question, as for a comment. The row is not a timeline event: the selection, R, the arrow keys, and Delete skip it. The point row has no REPLAY tag. Its replay button stays, to add a replay. (Decision 21 removed the repeats from the row.) |
 | 14 | T4, T5 | Decided on 2026-10-26 after the work: the user sets the play order of the replays of a point. The editor has arrow buttons next to Delete, and each replay row in the list has Move up and Move down on hover. The app does not sort the replays by start time. |
 | 15 | T4 | Decided on 2026-10-26 after the work: the editor offers the speeds 0.1×, 0.2×, 0.3×, 0.5× (the default), and 1×. A replay with another speed in the data keeps it, and no speed button is selected. |
 | 16 | T4 | Decided on 2026-10-26 after the work: when the user closes the editor with the X or with ESC and there are changes that are not saved, the editor asks "Discard the replay changes?". Discard closes the editor without the changes. Keep editing keeps the editor open. The Cancel button discards without a question. When the app closes the editor, for example when the tab closes, the editor does not ask. |
 | 17 | T4 | Decided on 2026-10-26 after the work: the replay editor shows the replays of the point as a vertical list, not as tabs, so that many replays do not overflow. Each row shows "Replay 1" and the details, as the replay row in the Points list. Each row has Move up, Move down, and Delete. The selected row always shows these buttons. The other rows show them on hover. The footer has no Delete and no arrow buttons. Add is in the heading row, right of the title. |
-| 18 | T3, T6 | Decided on 2026-10-26 after the work: only the first play of the first replay of a point zooms in. The repeats and the next replays of the point start with the zoom already in. The Points tab, the editor preview, and the export use the same rule (`Replays.zoomsIn`). |
+| 18 | T3, T6 | Decided on 2026-10-26 after the work: only the first play of the first replay of a point zooms in. The repeats and the next replays of the point start with the zoom already in. The Points tab, the editor preview, and the export use the same rule (`Replays.zoomsIn`). (Decision 21 removed the repeats: only the first replay of a point zooms in.) |
+| 19 | T4, T6 | Decided on 2026-10-26 after the work: each replay has a label, the text of its badge. The editor shows a Label input under the badge switch. The default label follows the place of the replay in its point: "Replay" for the first replay, "Replay 2" for the second, and so on, in the app language. The default label is not saved (`label` is null), so it changes when the replay moves. A blank input gives the default label again. The badge shows the label in capital letters. The export uses the default label in the video language. The label has 40 characters or fewer. The label does not change the replay number: the lists show "Replay 1", "Replay 2", and so on. |
+| 20 | T4 | Decided on 2026-10-26 after the work: the replay editor is a frame, not a dialog, so that it can be resized and maximized. It opens at 80% of the width and the height of the screen of the main window, in the center. |
+| 21 | T1 to T6 | Decided on 2026-10-26 after the work: a replay has no repeats. It plays once. The editor has no Repeat group, the replay rows show no repeat count, and the summary shows no play count. The data has no `repeats` field. An old `edl.json` with `repeats` reads without error, and the replay plays once. To show a part two times, the user adds a second replay. |
+| 22 | T1 to T6 | Decided on 2026-10-26 after the work: a replay can have a still frame. The video stops on one frame of the part for some time, so that the viewer can see where the ball is. By default a replay has no still frame. The user turns it on in the editor, moves it on the bar under the video, sets its time (1 s by default), and can turn it off again. The Points tab, the editor preview, and the export show it. The still frame adds its time to the replay. |
+| 23 | T4 | Decided on 2026-10-26 after the work: the Still frame group has a "Pick frame" button. It starts pick mode in the same editor window, not in a separate window. In pick mode, the video shows the zoom of the replay, and the bar under the video shows only the part, with a tick for each frame. The transport has Previous frame, Play or Pause, and Next frame. Left and Right step one frame, Shift with Left or Right steps 5 frames, and Space plays the part at the replay speed. The lime "Use this frame" button (or Enter) puts the still frame on the shown frame and turns it on. Cancel (or Esc) ends pick mode without a change. Pick mode starts on the still frame, or on the part start. The side panel is locked during pick mode. The drag of the white mark stays for a rough place. |
+| 24 | T1 to T6 | Decided on 2026-10-27 after the work: a replay can have its own comments. They show only during the replay. The editor has a Comments group under Still frame, with Add comment, a row for each comment (Edit and Delete), and the switch "Show the point comments in this replay". The switch is on by default, so old projects do not change. Add and Edit use the comment dialog of the Points tab. A selected comment turns on the comment view: the video shows the zoom of the replay, as the export draws the comments on the zoomed frame, and a drag on the video moves the comment. Each comment is a bar on the bar under the video. A drag of the bar moves its start. The start of a comment is a source time inside the part, so the comment stays on the same moment of play when the speed or the edges change. Its time is a time of the replay, so a 2 s comment shows for 2 s at each speed. A comment can start on the still frame. The Points tab, the editor preview, and the export show the replay comments over the point comments. The replay rows show the number of comments. |
 
 ## Open questions
 
@@ -60,7 +66,7 @@ without a question. Check them, and change them if necessary.
 | R8 | T3 | Not checked in a real player yet: the shader change (zoom and dip), the lower pitch, and the timing of the dips. Run the app on the Points tab with a replay to check it. |
 | R9 | T4 | The editor is not checked on the screen. Off-screen pictures of the window, the timeline, and the list were checked. Check the editor with a real video: the zoom frame drag, the preview, and the keys. |
 | R10 | T4 | The editor has its own player. While the editor is open, the main player turns its preview off (decision 5). When the editor closes, the main player turns the preview on again and goes back to the old playhead. |
-| R11 | T4 | The preview in the editor starts 1 s before the point end and stops 1 s after it. It plays only the selected replay. The comments do not show in the preview. The badge shows. |
+| R11 | T4 | The preview in the editor starts 1 s before the point end and stops 1 s after it. It plays only the selected replay. The badge shows. (Decision 24: the preview shows the point comments and the replay comments.) |
 | R12 | T4 | The sound choice is a separate "Sound" group under "Speed", because the two choices need the full width in some languages. |
 | R13 | T4 | A replay from a list row or a timeline block starts at the point end when the playhead is not in the window of the point. |
 | R14 | T5 | The actions column of the list is 82 px wide (it was 54 px), for the replay button on hover. |
@@ -69,6 +75,11 @@ without a question. Check them, and change them if necessary.
 | R17 | T5 | The ruler ticks are at round source times, so with replays the ticks are not at equal distances. |
 | R18 | T7 | The replay help is a part of the Points help page (3 actions and 4 notes), not a separate page. The help pages are one for each tab. |
 | R19 | T7 | The replay texts and the replay help in de, es, es-419, fr, pt, pt-PT, ru, ja, zh-Hans, and zh-Hant are drafts by Claude. Ask the reviewer of each language to check them. |
+| R20 | T4 | The still frame times are presets: 0.5, 0.8, 1, 1.5, 2, and 3 s (`Replays.FREEZE_DURATIONS_MS`). The data accepts 0.1 to 10 s. The editor group "Still frame" is under "Part". It has a switch, the presets, and a hint. A white mark with a knob in the lower half of the bar moves the still frame. F puts the still frame at the playhead and turns it on. Off forgets the place and the time. |
+| R21 | T3, T6 | The sound is silent during the still frame. The zoom, the badge, and the comments of that moment stay. A comment that ends at the still frame frame ends when the still frame starts. |
+| R22 | T3 | The live player pauses on the frame (an exact seek) and plays again after the time. Play during the still frame ends it at once. The still frame shows only when the video plays over its frame, not after a frame step or a seek past it, and only once in each play. |
+| R23 | T6 | The export cuts the slowed video at the still frame, repeats the first frame after the cut with `tpad`, and joins the two parts (`FFmpegCommandBuilder.replayFreezeVideo`). The sound gets silence with `adelay` at the same place. A still frame at the start or at the end needs no cut. |
+| R24 | T4, T6 | Replay comments: a new comment has 2 s (a point comment has 5 s). The Start field of the dialog is a source time, and Save moves a start outside the part to the nearest edge. The comment view shows only while a comment is selected or the dialog is open. Esc clears the selection before it closes the editor. Delete deletes the selected comment. The bar shows the comments in two lanes. The Points tab cannot drag a replay comment. An export without comments has no replay comments. |
 
 ## Tasks
 
@@ -130,8 +141,8 @@ prototype measures how long the picture stops at each seek.
   - Videos with long keyframe intervals (for example an export of the app,
     or some cameras) freeze for 1 to 1.7 s. With the dip to black, the
     black stays until the replay is ready.
-  - The same freeze occurs at each repeat (decision 7), because a repeat is a seek
-    back to the start of the part.
+  - The same freeze occurred at each repeat (decision 7), because a repeat was a
+    seek back to the start of the part. Decision 21 removed the repeats.
 - A seamless cut needs a second player that seeks before the cut, and
   thus two hardware decoders. Do that only if users ask for it.
 
@@ -141,15 +152,21 @@ prototype measures how long the picture stops at each seek.
 - `PointV1` gets a list `replays` (`ReplayV1`). Each replay has:
   `startMs`, `endMs`, `zoom` (`x`, `y`, `width` as fractions of the frame
   after the Transform tab; null is no zoom), `speed` (0.1 to 1, default
-  0.5), `repeats` (1 to 5), `muted`, `effect` (`FADE`, `FLASH`, `CUT`),
-  and `showBadge` (the "REPLAY" badge of the mockup, default on).
+  0.5), `muted`, `effect` (`FADE`, `FLASH`, `CUT`),
+  `showBadge` (the "REPLAY" badge of the mockup, default on), `label`
+  (the badge text; null is the default label, decision 19), `freeze`
+  (the still frame: `atMs` in source time inside the part and
+  `durationMs`; null is no still frame, decision 22), `comments` (the
+  replay comments: `startMs` in source time inside the part and
+  `durationMs` in replay time; an empty list is not written, decision 24),
+  and `showPointComments` (default on, decision 24).
 - The zoom frame has the aspect of the frame. The smallest frame is 0.25
   of the frame (a zoom of 4×), as in the mockup.
 - Old projects have no `replays`. An empty list is not written, so their
   `edl.json` does not change.
 - `Replays` has the limits and the rules. `EdlIO` fits the replays on read
-  and on write: it limits the part to 3 s around the point, the speed, the
-  repeats, and the frame. The replays keep their order (decision 14). An unknown
+  and on write: it limits the part to 3 s around the point, the speed, and
+  the frame. The replays keep their order (decision 14). An unknown
   effect reads as `FADE`.
 - `PointsDispatcher.updatePoint` fits the replays to the new point
   (decision 6). Delete removes the point with its replays.
@@ -160,11 +177,10 @@ prototype measures how long the picture stops at each seek.
 - Status: done. `ReplayTimeline` (and `Replays.playMs`, the time
   constants of the effects and the zoom).
 - A new class gives the play order of a project: the source video with
-  each replay inserted after the end of its point, and each repeat.
+  each replay inserted after the end of its point.
 - It converts in two directions: from a play time to a source time (or to
   "replay N, at M ms of the part"), and back.
-- It gives the length of each replay in play time (part length / speed ×
-  repeats).
+- It gives the length of each replay in play time (part length / speed).
 - The players (T3), the timeline (T5), and the Export tab (the export
   length) use it.
 - Tests: `ReplayTimelineTest`
@@ -182,7 +198,7 @@ prototype measures how long the picture stops at each seek.
   2. seeks to the start of the replay part;
   3. sets the speed, the sound (decision 4, or muted), and the zoom crop in
      `tr-adjust.hook` (the zoom goes in smoothly, decision 8);
-  4. at the end of the part, plays the next repeat or the next replay;
+  4. at the end of the part, plays the next replay;
   5. after the last replay, seeks to the point end and sets the normal
      speed, sound, and crop again.
 - The zoom frame is inside the crop of the Transform tab. The colors of
@@ -198,12 +214,12 @@ prototype measures how long the picture stops at each seek.
 ### T4 Replay editor popup
 
 - Status: done, but not checked on the screen (R9). `ReplayEditorWindow`
-  is a modeless dialog with its own player (`MediaScreen.REPLAY_EDITOR`).
+  is a window that is not modal, with its own player (`MediaScreen.REPLAY_EDITOR`).
   `ReplayEditorModel` holds the changes until Save. `ReplayPartBar` is the
   bar under the video, and `ReplayZoomOverlay` draws the zoom frame with
   the editor overlay of mpv. The preview uses a `ReplayDirector`.
 - A separate window with its own player (decision 5), as in the mockup: the part
-  bar with the two edges, the zoom frame on the video, speed, repeats,
+  bar with the two edges, the zoom frame on the video, speed,
   sound, the cut effect (decision 3), Preview, Save, and Cancel.
 - The zoom frame uses the mouse logic of the crop frame
   (`CropEditorOverlay`) and is drawn with the editor overlay of mpv.

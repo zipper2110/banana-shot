@@ -115,6 +115,21 @@ class SwingPointsPanel(
     private val replays = ReplayDirector()
     private var replayShown = false
 
+    /** Ends the still frame of a replay (decision 22) after its time. */
+    private val replayHold = javax.swing.Timer(0) { endReplayHold() }.apply { isRepeats = false }
+
+    // The comments of the replay that plays now (decision 24). During a still frame, the ticker shows their changes.
+    private val replayCommentClock = ReplayCommentClock()
+    private var replayCommentsShown: List<CommentV1> = emptyList()
+    private var pointCommentsHidden = false
+    private val replayCommentTicker = javax.swing.Timer(REPLAY_COMMENT_TICK_MS) {
+        if (!replays.isHolding) (it.source as javax.swing.Timer).stop()
+        if (updateReplayComments(player.currentTimeMs())) refreshOverlay()
+    }
+
+    /** The replay badge text over the video, or null when the video shows no badge. */
+    private var badgeShown: String? = null
+
     // The open replay editor, or null. While it is open, it uses the video, and this player shows a note.
     private var replayEditor: org.litvin.ui.tabs.points.replay.ReplayEditorWindow? = null
     private val videoCards = java.awt.CardLayout()
@@ -127,7 +142,7 @@ class SwingPointsPanel(
     private val commentDrag = CommentDragController(
         player = player,
         enabled = { isMediaLoaded },
-        shownComments = { commentPreview.shown },
+        shownComments = { visiblePointComments() },
         onPreview = { refreshOverlay() },
         onChanged = { id, position, sizePercent, rotationDeg -> placeComment(id, position, sizePercent, rotationDeg) },
         onClicked = { id -> scrollToEvent("comment:$id") },
@@ -288,9 +303,10 @@ class SwingPointsPanel(
                     ReplayRowDto(
                         index = index,
                         speed = replay.speed,
-                        repeats = replay.repeats,
                         zoomFactor = replay.zoom?.let { 1.0 / it.width },
                         muted = replay.muted,
+                        freezeMs = replay.freeze?.durationMs?.toLong(),
+                        commentCount = replay.comments.size,
                         addedMs = Replays.addedMs(replay),
                     )
                 },
@@ -1021,8 +1037,26 @@ class SwingPointsPanel(
         playbackBar.setTime(shown, player.totalDurationMs())
         showPendingStart()
         scoring.moveTo(shown)
-        showComments(commentPreview.moveTo(shown))
+        val replayChanged = updateReplayComments(ms)
+        showComments(commentPreview.moveTo(shown) || replayChanged)
     }
+
+    /**
+     * Finds the replay comments on screen at [sourceMs], and whether the point comments hide (decision 24). Returns true
+     * when the video must show a change.
+     */
+    private fun updateReplayComments(sourceMs: Long): Boolean {
+        val play = replays.activePlay
+        val now = play?.let { replayCommentClock.comments(it.replay, sourceMs, replays.isHolding) }.orEmpty()
+        val hidden = play != null && !play.replay.showPointComments
+        if (now == replayCommentsShown && hidden == pointCommentsHidden) return false
+        replayCommentsShown = now
+        pointCommentsHidden = hidden
+        return true
+    }
+
+    /** The point comments on the video now. A replay with Show the point comments off hides them. */
+    private fun visiblePointComments(): List<CommentV1> = if (pointCommentsHidden) emptyList() else commentPreview.shown
 
     /** Point start shows the start of the pending point, and the outcome buttons end a pending point. */
     private fun showPendingStart() {
@@ -1039,17 +1073,22 @@ class SwingPointsPanel(
 
     /** The scoreboard and the comments at the playhead over the video. */
     private fun refreshOverlay() {
-        val shown = withDialogComment(commentDrag.displayed(commentPreview.shown))
+        // The replay comments draw over the point comments. Only the point comments can be dragged on this tab.
+        val shown = withDialogComment(commentDrag.displayed(visiblePointComments())) + replayCommentsShown
         // The comments draw after the scoreboard, so they are on top of it. A replay hides the scoreboard (B-50).
         val showBoard = !replays.isActive
-        val badge = replays.activePlay?.replay?.showBadge == true
-        val badgeText = tr("replay.badge")
+        val badgeText = activeBadgeText()
+        badgeShown = badgeText
         player.setPreviewOverlay(VideoOverlay { area ->
             (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area) +
-                (if (badge) org.litvin.export.ReplayBadgeAss.events(badgeText, area.width, area.height, area.x, area.y) else emptyList())
+                (badgeText?.let { org.litvin.export.ReplayBadgeAss.events(it, area.width, area.height, area.x, area.y) } ?: emptyList())
         })
         commentDrag.refresh()
     }
+
+    /** The badge text of the replay that plays now, or null when no replay with a badge plays. */
+    private fun activeBadgeText(): String? =
+        replays.activePlay?.takeIf { it.replay.showBadge }?.let { Replays.badgeText(it.replay, it.replayIndex) }
 
     /** [comments] with the comment of the open comment dialog in place of its saved version, or added to the end. */
     private fun withDialogComment(comments: List<CommentV1>): List<CommentV1> {
@@ -1104,6 +1143,11 @@ class SwingPointsPanel(
             playheadMs = newAt,
             selectIndex = select,
             onSave = { list -> dispatcher.setReplays(point.id, list) },
+            pointComments = commentDispatcher.state().comments,
+            newCommentLook = commentStyles.load().let { look ->
+                CommentInput(0, 0, "", commentDispatcher.state().defaults.colorHex, look.style, look.sizePercent, look.opacityPercent)
+            },
+            onCommentLook = { look -> commentStyles.save(look) },
             onClosed = {
                 replayEditor = null
                 videoCards.show(videoArea, VIDEO_CARD)
@@ -1122,6 +1166,11 @@ class SwingPointsPanel(
     private fun togglePlayPause() {
         // The replay editor uses the video (B-50 decision 5).
         if (replayEditor != null) return
+        // Play during a still frame ends the still frame at once.
+        if (replays.isHolding) {
+            endReplayHold()
+            return
+        }
         val wasPlaying = player.status() == PlayerStatus.PLAYING
         if (wasPlaying) player.pause() else player.play()
         updatePlayPauseButton()
@@ -1134,13 +1183,34 @@ class SwingPointsPanel(
                 is ReplayDirector.Command.Seek -> player.seek(command.sourceMs)
                 is ReplayDirector.Command.Look -> player.setReplayView(command.view)
                 is ReplayDirector.Command.Sound -> player.setReplaySound(command.sound)
+                is ReplayDirector.Command.Hold -> {
+                    player.pause()
+                    player.seek(command.sourceMs)
+                    replayHold.initialDelay = command.durationMs.toInt()
+                    replayHold.restart()
+                    replayCommentClock.holdStarted()
+                    if (replays.activePlay?.replay?.comments?.isNotEmpty() == true) replayCommentTicker.restart()
+                }
             }
         }
+        // The next replay of the same point can have a different badge, so a change of the badge also redraws.
         val active = replays.isActive
-        if (active == replayShown) return
-        replayShown = active
-        playbackBar.setReplay(if (active) tr("replay.clock") else null)
+        if (active == replayShown && activeBadgeText() == badgeShown) return
+        if (active != replayShown) {
+            replayShown = active
+            playbackBar.setReplay(if (active) tr("replay.clock") else null)
+        }
         refreshOverlay()
+    }
+
+    /** The still frame of a replay is over: the video plays on. After a seek or a stop, nothing happens. */
+    private fun endReplayHold() {
+        replayHold.stop()
+        replayCommentTicker.stop()
+        replayCommentClock.holdEnded()
+        if (!replays.endHold()) return
+        player.play()
+        updatePlayPauseButton()
     }
 
     private fun onStartAtPlayhead() {
@@ -1257,6 +1327,7 @@ class SwingPointsPanel(
         dispatcher.onPointsChanged = null
         commentDispatcher.onCommentsChanged = null
         commentDrag.dispose()
+        replayCommentTicker.stop()
         unsubscribeAdjustments?.invoke()
         unsubscribeAdjustments = null
         autosave.flushAndClose()
@@ -1281,6 +1352,9 @@ class SwingPointsPanel(
 
         /** The id of a new comment in the dialog preview. Saved comments have positive ids. */
         const val NEW_COMMENT_PREVIEW_ID = -1
+
+        /** How often the video shows the changes of the replay comments during a still frame. */
+        const val REPLAY_COMMENT_TICK_MS = 40
 
         val POINT_ROW_HINT: String get() = tr("points.hint.pointRow")
     }

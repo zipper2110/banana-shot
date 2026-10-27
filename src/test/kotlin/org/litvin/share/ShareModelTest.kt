@@ -66,6 +66,16 @@ class ShareModelTest {
     }
 
     @Test
+    fun theClubNameComesFromTheLastThumbnailAndTheRoundAndTheScoreHaveNoPreset() {
+        val presets = project(points(), ScoreV1()).presets(ThumbnailVideoType.FULL_MATCH, null, " Batumi beach club ")
+
+        assertEquals("Batumi beach club", presets[ThumbnailField.CLUB])
+        assertEquals("", presets[ThumbnailField.ROUND].orEmpty())
+        assertEquals("", presets[ThumbnailField.SCORE].orEmpty())
+        assertEquals("", project(points(), ScoreV1()).presets(ThumbnailVideoType.FULL_MATCH, null)[ThumbnailField.CLUB])
+    }
+
+    @Test
     fun theDefaultNamesAndTheDefaultTitleGiveNoPreset() {
         val presets = project(points(), ScoreV1()).presets(ThumbnailVideoType.BEST_POINTS, null)
 

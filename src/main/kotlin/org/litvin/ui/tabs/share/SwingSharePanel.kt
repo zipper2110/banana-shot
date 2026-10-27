@@ -1,12 +1,19 @@
 package org.litvin.ui.tabs.share
 
+import com.formdev.flatlaf.util.SystemFileChooser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.ApplicationLayout
+import org.litvin.FFmpegCommandBuilder
 import org.litvin.adjustments.AdjustmentsIO
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.export.ExportSourceProbe
+import org.litvin.media.ImageOverlay
+import org.litvin.media.PlayerStatus
+import org.litvin.media.ReplayView
+import org.litvin.media.SwingMediaPlayer
+import org.litvin.media.mpv.MpvFrameReader
 import org.litvin.share.ColorRole
 import org.litvin.share.FrameView
 import org.litvin.share.SavedThumbnailV1
@@ -16,10 +23,14 @@ import org.litvin.share.ShareIO
 import org.litvin.share.SharePoint
 import org.litvin.share.ShareProject
 import org.litvin.share.ShareSettingsV1
+import org.litvin.share.StyleGroup
 import org.litvin.share.StyleLookV1
 import org.litvin.share.TextPlace
+import org.litvin.share.ThumbnailFace
 import org.litvin.share.ThumbnailField
 import org.litvin.share.ThumbnailLayout
+import org.litvin.share.ThumbnailLogo
+import org.litvin.share.ThumbnailLogos
 import org.litvin.share.ThumbnailLooks
 import org.litvin.share.ThumbnailPng
 import org.litvin.share.ThumbnailRenderer
@@ -100,10 +111,20 @@ class SwingSharePanel(
     private val exportFolder: () -> File? = { null },
     /** Opens the Points tab, where the user marks the points. */
     private val onOpenPoints: () -> Unit = {},
-    private val frameLoader: VideoFrameLoader = VideoFrameLoader(cacheSize = 6),
+    /**
+     * Creates the video player of the large preview, as on the Points tab. A click on the strip then shows the frame at once.
+     * Without the player, the large preview shows the frame image of [frameLoader].
+     */
+    private val createPlayer: (() -> SwingMediaPlayer)? = null,
+    // The frame image of the small previews and the PNG. The hidden mpv player keeps the video open, so the image loads quickly.
+    private val frameLoader: VideoFrameLoader = VideoFrameLoader(cacheSize = 6, extract = VideoFrameLoader.mpvOrFfmpeg()),
     private val stripLoader: VideoFrameLoader = VideoFrameLoader(cacheSize = 12),
     private val probeSource: (String) -> ShareSourceFacts? = ::probeShareSource,
     private val now: () -> Long = System::currentTimeMillis,
+    /** The folder of the PNG copy of the logo (B-53). */
+    private val logoFolder: () -> File = { File(ApplicationLayout.current().appDataDirectory, "share") },
+    /** Asks the user for a logo file. Null: the user closed the dialog. */
+    private val chooseLogo: (JComponent) -> File? = ::chooseLogoFile,
 ) : JPanel(BorderLayout()) {
     private val logger = KotlinLogging.logger {}
 
@@ -126,13 +147,36 @@ class SwingSharePanel(
     private var frameFailed = false
     private var stripFor: Pair<String, Int>? = null
 
-    /** The key frames of the point of the strip. The preview shows the nearest key frame while its frame loads. */
-    private var stripFrames: List<KeyFrame> = emptyList()
 
     /** Only for the point list. The project does not store it. */
     private var favoritesOnly = false
     private var sideTab = SIDE_TEXTS
     private var updating = false
+
+    /**
+     * The video player of the large preview, the source in it, and its last exact seek.
+     * [playerReady] is true when the player shows a frame of [playerSource]. Until then, the preview shows the frame image.
+     * [playerFailed] is the source that the player cannot play. The preview then shows the frame image.
+     */
+    private var player: SwingMediaPlayer? = null
+    private var playerPan: FramePan? = null
+    private var playerSource: String? = null
+    private var playerSeekMs: Long? = null
+
+    /** When the last seek went to the player, while it decodes its frame, and the seek that waits for it. */
+    private var seekSentAtMs: Long? = null
+    private var queuedSeekMs: Long? = null
+    private var playerReady = false
+    private var playerFailed: String? = null
+    private var overlayScene: ThumbnailScene? = null
+    private var active = false
+
+    /** The frame image loads a little after the live frame, so that the two decoders do not slow the player. */
+    private val frameTimer = Timer(LIVE_FRAME_DELAY_MS) {
+        val project = project
+        val point = project?.let(::currentPoint)
+        if (project != null && point != null) loadFrame(project, point)
+    }.apply { isRepeats = false }
 
     private val probeExecutor = Executors.newSingleThreadExecutor { task -> Thread(task, "share-probe").apply { isDaemon = true } }
     private val saveTimer = Timer(SAVE_DELAY_MS) { writeSettings() }.apply { isRepeats = false }
@@ -140,6 +184,12 @@ class SwingSharePanel(
     // ---------- Components ----------
     private val sizeNote = ShareUi.label("1280 × 720 PNG", 12f, Palette.FG_3)
     private val preview = ThumbnailView("share-preview")
+    private val previewCards = CardLayout()
+    private val previewHost = JPanel(previewCards).apply {
+        name = "share-preview-host"
+        isOpaque = false
+        add(preview, PREVIEW_IMAGE)
+    }
     private val prevPoint = RowIconButton(Material2AL.CHEVRON_LEFT, tr("share.prevPoint")).apply { name = "share-prev-point" }
     private val nextPoint = RowIconButton(Material2AL.CHEVRON_RIGHT, tr("share.nextPoint")).apply { name = "share-next-point" }
     private val favoriteIcon = UiKit.icon(Material2MZ.STAR, 14, Palette.YELLOW)
@@ -148,6 +198,8 @@ class SwingSharePanel(
         DialogKit.styleCombo(this)
         preferredSize = Dimension(200, 30)
         maximumRowCount = 16
+        // The video of the large preview is a native window. A Swing popup cannot show over it.
+        isLightWeightPopupEnabled = false
         renderer = object : DefaultListCellRenderer() {
             override fun getListCellRendererComponent(list: JList<*>?, value: Any?, index: Int, selected: Boolean, focus: Boolean): Component {
                 val point = value as? SharePoint
@@ -177,11 +229,25 @@ class SwingSharePanel(
     private val placeChoice = SegmentedChoice<TextPlace>("share-place", emptyList())
     private val styleCards = ThumbnailStyle.entries.associateWith { style -> StyleCard("share-style-${style.key}", style.title) }
 
+    /** The group of style cards that shows. Null: the group of the selected style. The project does not store it. */
+    private var shownGroup: StyleGroup? = null
+    private val groupChoice = SegmentedChoice("share-style-group", StyleGroup.entries.map { SegmentedChoice.Option(it, it.title) })
+    private var leftColumn: JComponent? = null
+
+    /** The logo of the user (B-53), and the file that it comes from. The logo is the same for all projects. */
+    private var logo: ThumbnailLogo? = null
+    private var logoFile: String? = null
+
     private val texts = ShareTextsPanel(
         onType = ::selectType,
         onText = ::editText,
         onHead = ::selectHead,
         onUsePresets = { change { it.copy(texts = emptyMap(), finalScore = false) } },
+        onChooseLogo = ::addLogo,
+        onRemoveLogo = ::removeLogo,
+        onBrandFont = { face -> changeBrand { it.copy(brandFont = face?.name) } },
+        onBrandColor = { value -> changeBrand { it.copy(brandColor = ThumbnailLooks.parseHex(value)?.let(ThumbnailLooks::hex)) } },
+        onPickBrandColor = ::pickBrandColor,
     )
     private val colors = ShareColorsPanel(
         onSet = { id -> changeLook { look -> StyleLookV1(place = look.place, colorSet = id) } },
@@ -196,7 +262,6 @@ class SwingSharePanel(
     /** The line of the current video type, and the line of the other type. */
     private val currentLine = FileLine("share-file-current")
     private val otherLine = FileLine("share-file-other")
-    private val fitNote = NoteBox("share-fit-note", Material2MZ.TEXT_FIELDS)
     private val saveButton = UiButton(tr("share.save"), Material2MZ.SAVE, UiButton.Kind.LIME).apply {
         name = "share-save"
         stretch = true
@@ -240,6 +305,12 @@ class SwingSharePanel(
         }
         preview.onPan = { view, done -> change(save = done) { it.copy(panX = view.panX, panY = view.panY) } }
         placeChoice.onChange { place -> changeLook { look -> look.copy(place = place.key) } }
+        groupChoice.onChange { group ->
+            if (updating) return@onChange
+            shownGroup = group
+            leftColumn?.revalidate()
+            render()
+        }
         styleCards.forEach { (style, card) ->
             card.addActionListener {
                 change { it.copy(style = style.key) }
@@ -273,21 +344,31 @@ class SwingSharePanel(
         frameRequest = null
         frameFailed = false
         stripFor = null
-        stripFrames = emptyList()
         strip.cells = List(MomentStrip.CELLS) { null }
+        playerSource = null
+        playerSeekMs = null
+        seekSentAtMs = null
+        queuedSeekMs = null
+        playerReady = false
+        playerFailed = null
+        showPreviewCard()
         favoritesOnly = false
         facts = null
         factsFor = null
         probing = false
+        shownGroup = null
     }
 
     /** Reads the project again: the points, the scoring, and the adjustments can change in the other tabs. */
     fun onActivated() {
+        active = true
+        player?.activatePreview("share activated")
         val dir = projectDir
         val manifest = manifestPath
         if (dir == null || manifest == null) return showEmpty(tr("stats.empty.noProject"), tr("stats.empty.noProject.text"), withButton = false)
         val loaded = try {
             shareDefaults = defaults.load()
+            loadLogo()
             adjustments = AdjustmentsIO.readForProjectDir(dir)
             ShareProject.load(dir, manifest)
         } catch (failure: Exception) {
@@ -304,11 +385,29 @@ class SwingSharePanel(
         render()
     }
 
-    fun onDeactivated() = writeSettings()
+    fun onDeactivated() {
+        active = false
+        writeSettings()
+        frameTimer.stop()
+        // The player releases the decoder. The Points tab needs it.
+        player?.let {
+            it.pause()
+            it.deactivatePreview("share deactivated")
+        }
+        // A seek that waits is lost. The next activation seeks again.
+        playerSeekMs = null
+        seekSentAtMs = null
+        queuedSeekMs = null
+        playerReady = false
+        showPreviewCard()
+    }
 
     fun close() {
         writeSettings()
+        frameTimer.stop()
         probeExecutor.shutdownNow()
+        player?.close()
+        player = null
     }
 
     private fun readSettings(dir: String): ShareSettingsV1 = try {
@@ -353,10 +452,14 @@ class SwingSharePanel(
 
     private fun look(style: ThumbnailStyle): StyleLookV1? = settings.looks[style.key]
 
-    private fun presets(project: ShareProject) = project.presets(type(project), shareDefaults.event)
+    private fun presets(project: ShareProject) = project.presets(type(project), shareDefaults.event, shareDefaults.club)
 
-    /** The value of a field: the edited text, the final score, or the preset. */
+    /** The group of the style cards: the group that the user selected, else the group of the selected style. */
+    private fun group() = shownGroup ?: style().group
+
+    /** The value of a field: the edited text, the final score, or the preset. The brand name is the same in all projects. */
     private fun value(project: ShareProject, field: ThumbnailField): String {
+        if (field == ThumbnailField.CLUB) return presets(project)[field].orEmpty()
         settings.texts[field.key]?.let { return it }
         if (field == ThumbnailField.HEAD && headIsScore(project)) return project.finalScore.orEmpty()
         return presets(project)[field].orEmpty()
@@ -369,6 +472,9 @@ class SwingSharePanel(
         place = ThumbnailLooks.place(style, look(style)),
         texts = ThumbnailField.entries.associateWith { value(project, it) },
         colors = ThumbnailLooks.colors(style, look(style)),
+        logo = logo.takeIf { style.showsLogo },
+        brandFace = ThumbnailFace.byKey(shareDefaults.brandFont),
+        brandRgb = ThumbnailLooks.parseHex(shareDefaults.brandColor),
     )
 
     /** The zoom stops when the frame has less than 1280 px of the video: 150 % for a 1080p video, 200 % for 4K. */
@@ -417,6 +523,8 @@ class SwingSharePanel(
     /** A text that is the same as its preset is not an edit, so that the field follows its preset again. */
     private fun editText(field: ThumbnailField, text: String) {
         val project = project ?: return
+        // The brand name goes to all projects at once, as the logo.
+        if (field == ThumbnailField.CLUB) return changeBrand { it.copy(club = text.ifBlank { null }) }
         val preset = presets(project)[field].orEmpty()
         change {
             when {
@@ -426,6 +534,57 @@ class SwingSharePanel(
                 else -> it.copy(texts = it.texts + (field.key to text))
             }
         }
+    }
+
+    // ---------- Logo ----------
+
+    /** Reads the stored logo when its file changed, for example after a change in another window. */
+    private fun loadLogo() {
+        val path = shareDefaults.logo
+        if (path == logoFile && (path == null || logo != null)) return
+        logoFile = path
+        logo = ThumbnailLogos.load(path?.let(::File))
+        if (path != null && logo == null) logger.warn { "Cannot read the thumbnail logo $path" }
+    }
+
+    /** Reads a logo file, keeps a PNG copy of it, and shows it on the styles with a logo. */
+    private fun addLogo() {
+        val source = chooseLogo(this) ?: return
+        val stored = try {
+            cursor = Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR)
+            ThumbnailLogos.store(source, logoFolder(), runCatching { ApplicationLayout.current().ffmpegExecutable }.getOrNull())
+        } catch (failure: Exception) {
+            logger.warn(failure) { "Cannot read the logo $source" }
+            dialogs.showError(this, tr("share.logo.error.text", "name" to source.name), tr("share.logo.error"))
+            return
+        } finally {
+            cursor = Cursor.getDefaultCursor()
+        }
+        shareDefaults = shareDefaults.copy(logo = stored.absolutePath)
+        // The file name stays the same, so the logo must load again.
+        logoFile = null
+        loadLogo()
+        runCatching { defaults.save(shareDefaults) }.onFailure { logger.warn(it) { "Cannot save the thumbnail defaults" } }
+        render()
+    }
+
+    /** The font and the color of the brand name go to all styles and to the next project, as the logo. */
+    private fun changeBrand(update: (ShareDefaultsV1) -> ShareDefaultsV1) {
+        shareDefaults = update(shareDefaults)
+        runCatching { defaults.save(shareDefaults) }.onFailure { logger.warn(it) { "Cannot save the thumbnail defaults" } }
+        render()
+    }
+
+    private fun pickBrandColor(current: java.awt.Color) {
+        val picked = ColorPickerDialog.pick(this, tr("share.brand.color.pick"), current) ?: return
+        changeBrand { it.copy(brandColor = ThumbnailLooks.hex(picked.rgb)) }
+    }
+
+    private fun removeLogo() {
+        shareDefaults = shareDefaults.copy(logo = null)
+        loadLogo()
+        runCatching { defaults.save(shareDefaults) }.onFailure { logger.warn(it) { "Cannot save the thumbnail defaults" } }
+        render()
     }
 
     private fun pickColor(role: ColorRole, current: java.awt.Color) {
@@ -453,17 +612,18 @@ class SwingSharePanel(
         change { it.copy(pointId = point.id, momentMs = moment) }
     }
 
-    private fun seekStrip(position: Double, done: Boolean) {
+    /**
+     * The video player shows the exact frame for a click and during a drag. Key frames during a drag look confusing,
+     * because they jump between the moments. The frame image loads only for the release.
+     */
+    private fun seekStrip(position: Double, step: StripSeek) {
         val project = project ?: return
         val point = currentPoint(project) ?: return
         val moment = point.startMs + (point.lengthMs * position).roundToLong()
-        if (!done) {
-            // The strip moves at once. The frame loads only for the last position of a drag.
-            strip.position = position
-            momentTime.text = momentText(point, moment)
-            return
-        }
-        change { it.copy(pointId = point.id, momentMs = moment) }
+        if (step == StripSeek.RELEASE) return change { it.copy(pointId = point.id, momentMs = moment) }
+        strip.position = position
+        momentTime.text = momentText(point, moment)
+        if (playerReady && liveSource(project) == playerSource) seekPlayer(liveSeekMs(moment))
     }
 
     private fun selectSideTab(tab: String) {
@@ -489,7 +649,7 @@ class SwingSharePanel(
         } finally {
             updating = false
         }
-        loadFrame(project, point)
+        renderPreview(project, point)
         loadStrip(project, point)
         revalidate()
         repaint()
@@ -536,14 +696,13 @@ class SwingSharePanel(
             "length" to ShareProject.clockTenths(point.lengthMs),
         )
 
-    private var currentLayout: ThumbnailLayout? = null
-
     private fun renderThumbnails(project: ShareProject) {
         val view = view()
         val message = if (frameFailed && !frameLoading) FRAME_ERROR else null
         val style = style()
-        val layouts = ThumbnailStyle.entries.associateWith { ThumbnailRenderer.layout(scene(project, it)) }
-        currentLayout = layouts.getValue(style)
+        // Only the cards of the shown group need a layout.
+        val group = group()
+        val layouts = ThumbnailStyle.entries.filter { it == style || it.group == group }.associateWith { ThumbnailRenderer.layout(scene(project, it)) }
         fun ThumbnailPainter.show(layout: ThumbnailLayout, badge: String?) {
             this.frame = this@SwingSharePanel.frame
             this.view = view
@@ -555,7 +714,9 @@ class SwingSharePanel(
         preview.updateCursor()
         mini.painter.show(layouts.getValue(style), project.videoLength(type(project)))
         styleCards.forEach { (cardStyle, card) ->
-            card.painter.show(layouts.getValue(cardStyle), null)
+            card.isVisible = cardStyle.group == group
+            val layout = layouts[cardStyle]?.takeIf { card.isVisible } ?: return@forEach
+            card.painter.show(layout, null)
             card.selectedStyle = cardStyle == style
             card.repaint()
         }
@@ -570,6 +731,10 @@ class SwingSharePanel(
         placeChoice.selected = ThumbnailLooks.place(style, look(style))
         placeChoice.isVisible = places.size > 1
         placeHint.text = if (places.size > 1) tr("share.place") else tr("share.place.one")
+        if (groupChoice.selected != group()) {
+            groupChoice.selected = group()
+            leftColumn?.revalidate()
+        }
     }
 
     private fun textsState(project: ShareProject): TextsState {
@@ -578,7 +743,7 @@ class SwingSharePanel(
         val fields = ThumbnailField.entries.associateWith { field ->
             val value = value(project, field)
             val choices = listOfNotNull(presets[field], project.finalScore.takeIf { field == ThumbnailField.HEAD })
-            val edited = field.key in settings.texts && settings.texts[field.key] !in choices
+            val edited = field != ThumbnailField.CLUB && field.key in settings.texts && settings.texts[field.key] !in choices
             FieldState(value, field.source, edited, field in used)
         }
         return TextsState(
@@ -588,6 +753,10 @@ class SwingSharePanel(
             finalScore = project.finalScore,
             headIsScore = headIsScore(project),
             anyEdited = fields.values.any { it.edited },
+            logo = logo?.image,
+            showsLogo = style().showsLogo,
+            brandFont = ThumbnailFace.byKey(shareDefaults.brandFont),
+            brandColor = shareDefaults.brandColor ?: ThumbnailLooks.AUTO,
         )
     }
 
@@ -614,14 +783,6 @@ class SwingSharePanel(
         saveButton.text = if (project.thumbnailFile(folder, type).isFile) tr("share.replace") else tr("share.save")
         saveButton.isEnabled = frame != null && !frameLoading && !frameFailed
         saveButton.toolTipText = project.thumbnailFile(folder, type).absolutePath
-        val layout = currentLayout
-        fitNote.text = when {
-            layout == null -> ""
-            layout.shrunk && layout.small -> tr("share.fit.tooSmall")
-            layout.small -> tr("share.fit.small")
-            layout.shrunk -> tr("share.fit.shrunk")
-            else -> ""
-        }
     }
 
     private fun savedTime(ms: Long): String {
@@ -632,6 +793,151 @@ class SwingSharePanel(
             today -> tr("share.time.today", "time" to clock)
             today.minusDays(1) -> tr("share.time.yesterday", "time" to clock)
             else -> "${DisplayFormats.date(time.toLocalDate())} $clock"
+        }
+    }
+
+    // ---------- Video player ----------
+
+    /**
+     * The source for the video player, or null when the large preview shows the frame image:
+     * without a player, before the probe, after a player error, and for a video that is not 16:9.
+     * The frame image covers the 16:9 preview. The player shows the whole frame, so the aspect must be the same.
+     */
+    private fun liveSource(project: ShareProject): String? {
+        if (createPlayer == null || probing) return null
+        val source = project.sourcePath?.takeIf { File(it).isFile } ?: return null
+        val facts = facts ?: return null
+        if (abs(facts.width * 9 - facts.height * 16) > facts.height * 16 / 100) return null
+        return source.takeIf { it != playerFailed }
+    }
+
+    private fun renderPreview(project: ShareProject, point: SharePoint) {
+        val source = liveSource(project)
+        if (source == null || !active) {
+            showPreviewCard()
+            loadFrame(project, point)
+            return
+        }
+        val player = player ?: createLivePlayer() ?: return loadFrame(project, point)
+        if (source != playerSource) {
+            playerSource = source
+            playerSeekMs = null
+            seekSentAtMs = null
+            queuedSeekMs = null
+            playerReady = false
+            player.load(File(source))
+        }
+        player.applyPreviewAdjustments(adjustments)
+        player.setReplayView(replayView(view()))
+        seekPlayer(liveSeekMs(momentMs(point)))
+        val scene = scene(project, style())
+        if (scene != overlayScene) {
+            overlayScene = scene
+            player.setImageOverlay(layoutOverlay(ThumbnailRenderer.layout(scene)))
+        }
+        playerPan?.updateCursor()
+        showPreviewCard()
+        scheduleFrame(project, point)
+    }
+
+    /** The exact seek of the player for [moment]: the same frame as the frame image, the first frame at or after the still-frame time. */
+    private fun liveSeekMs(moment: Long): Long = FFmpegCommandBuilder.stillFrameSeekMs(moment) + MpvFrameReader.HR_SEEK_TOLERANCE_MS
+
+    /**
+     * Sends an exact seek to the player. While the player decodes the frame of a seek, the next seek waits,
+     * and only the newest one stays. Without this, each seek of a drag stops the seek before it, and the player shows no frame.
+     */
+    private fun seekPlayer(seekMs: Long) {
+        if (seekMs == playerSeekMs) return
+        playerSeekMs = seekMs
+        val sentAt = seekSentAtMs
+        if (sentAt != null && System.currentTimeMillis() - sentAt < SEEK_WAIT_MS) {
+            queuedSeekMs = seekMs
+            return
+        }
+        queuedSeekMs = null
+        seekSentAtMs = System.currentTimeMillis()
+        player?.seek(seekMs)
+    }
+
+    /** The player shows the frame of the last seek. The waiting seek can go now. */
+    private fun onPlayerFrame() {
+        seekSentAtMs = null
+        val queued = queuedSeekMs ?: return
+        queuedSeekMs = null
+        seekSentAtMs = System.currentTimeMillis()
+        player?.seek(queued)
+    }
+
+    private fun createLivePlayer(): SwingMediaPlayer? {
+        val created = try {
+            createPlayer?.invoke()
+        } catch (failure: Exception) {
+            logger.warn(failure) { "Cannot create the video player of the Thumbnail tab" }
+            null
+        } ?: return null
+        created.onStatusChanged = { status ->
+            if (status == PlayerStatus.ERROR) {
+                SwingUtilities.invokeLater {
+                    logger.warn { "The video player of the Thumbnail tab cannot play $playerSource. The preview shows the frame image." }
+                    playerFailed = playerSource
+                    playerReady = false
+                    render()
+                }
+            }
+        }
+        created.onPlaybackRestart = {
+            SwingUtilities.invokeLater {
+                onPlayerFrame()
+                if (active && playerSource != null && !playerReady) {
+                    playerReady = true
+                    showPreviewCard()
+                }
+            }
+        }
+        previewHost.add(created.component, PREVIEW_PLAYER)
+        playerPan = FramePan(created.component, { view() }) { view, done -> change(save = done) { it.copy(panX = view.panX, panY = view.panY) } }
+        player = created
+        return created
+    }
+
+    /** The player shows when it has a frame of the source. Before that, the frame image shows. */
+    private fun showPreviewCard() {
+        val live = player != null && playerReady && active && project?.let(::liveSource) == playerSource
+        previewCards.show(previewHost, if (live) PREVIEW_PLAYER else PREVIEW_IMAGE)
+    }
+
+    /**
+     * The frame image of the small previews and the PNG loads a little later. The Save button waits for it.
+     * Many fast clicks load only the image of the last click.
+     */
+    private fun scheduleFrame(project: ShareProject, point: SharePoint) {
+        val request = request(project, point)
+        if (request == frameRequest) return
+        if (request != null && frameLoader.cached(request) != null) return loadFrame(project, point)
+        frameLoading = true
+        renderSave(project)
+        frameTimer.restart()
+    }
+
+    /** The zoom of the frame as the zoom frame of the player: the part of the frame that the thumbnail shows. */
+    private fun replayView(view: FrameView): ReplayView? {
+        if (view.zoom <= 1.0) return null
+        val width = 1.0 / view.zoom
+        return ReplayView(zoomX = (1.0 - width) * view.panX, zoomY = (1.0 - width) * view.panY, zoomWidth = width)
+    }
+
+    /** The texts and the shapes of the layout over the video, at the size of the player. */
+    private fun layoutOverlay(layout: ThumbnailLayout) = ImageOverlay { width, height ->
+        BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE).also { image ->
+            val g2 = image.createGraphics()
+            try {
+                g2.scale(width / ThumbnailRenderer.WIDTH.toDouble(), height / ThumbnailRenderer.HEIGHT.toDouble())
+                // The overlay has no frame. A style with a gray part of the frame (Duotone) shows a dark part there.
+                ThumbnailRenderer.paintLayout(g2, layout)
+            } finally {
+                g2.dispose()
+            }
         }
     }
 
@@ -666,7 +972,6 @@ class SwingSharePanel(
         }
         frameLoading = true
         renderSave(project)
-        showKeyFrame(project, point)
         // Only the last request is necessary. For example, the user can press the arrow key many times.
         frameLoader.cancelPending(stopRunning = true)
         frameLoader.load(request) { image ->
@@ -681,15 +986,6 @@ class SwingSharePanel(
         }
     }
 
-    /** While the exact frame loads, the preview shows the nearest key frame of the strip at once. */
-    private fun showKeyFrame(project: ShareProject, point: SharePoint) {
-        val request = frameRequest ?: return
-        if (!frameLoading || stripFor?.first != point.id) return
-        val keyFrame = nearest(stripFrames, request.atMs) ?: return
-        frame = keyFrame.image
-        renderThumbnails(project)
-    }
-
     private fun nearest(frames: List<KeyFrame>, atMs: Long): KeyFrame? = frames.minByOrNull { abs(it.atMs - atMs) }
 
     private fun cellMs(point: SharePoint, cell: Int) = point.startMs + (point.lengthMs * (cell + 0.5) / MomentStrip.CELLS).roundToLong()
@@ -700,22 +996,19 @@ class SwingSharePanel(
         val key = point.id to adjustments.hashCode()
         if (stripFor == key) return
         stripFor = key
-        stripFrames = emptyList()
         stripLoader.cancelPending(stopRunning = true)
         val request = KeyFramesRequest(source, point.startMs, point.endMs, adjustments, STRIP_FRAME_WIDTH)
-        stripLoader.cachedKeyFrames(request)?.let { frames -> return showStrip(project, point, frames) }
+        stripLoader.cachedKeyFrames(request)?.let { frames -> return showStrip(point, frames) }
         strip.cells = List(MomentStrip.CELLS) { null }
         stripLoader.loadKeyFrames(request) { frames ->
             if (stripFor != key) return@loadKeyFrames
-            if (frames.isEmpty()) loadStripFrames(source, point, key) else showStrip(project, point, frames)
+            if (frames.isEmpty()) loadStripFrames(source, point, key) else showStrip(point, frames)
         }
     }
 
     /** Each cell shows the key frame nearest to the time of the cell. */
-    private fun showStrip(project: ShareProject, point: SharePoint, frames: List<KeyFrame>) {
-        stripFrames = frames
+    private fun showStrip(point: SharePoint, frames: List<KeyFrame>) {
         strip.cells = (0 until MomentStrip.CELLS).map { cell -> nearest(frames, cellMs(point, cell))?.image }
-        showKeyFrame(project, point)
     }
 
     /** Without key frames in the point, each cell reads its own frame. This is slower. */
@@ -770,7 +1063,7 @@ class SwingSharePanel(
         } finally {
             cursor = Cursor.getDefaultCursor()
         }
-        // The league goes to the next project ("From your last thumbnail").
+        // The league goes to the next project ("From your last thumbnail"). The brand name is already there.
         shareDefaults = shareDefaults.copy(event = value(project, ThumbnailField.EVENT).trim().ifEmpty { null })
         runCatching { defaults.save(shareDefaults) }.onFailure { logger.warn(it) { "Cannot save the thumbnail defaults" } }
         change { it.copy(saved = it.saved + (type.key to SavedThumbnailV1(file.absolutePath, now(), signature(project)))) }
@@ -807,7 +1100,7 @@ class SwingSharePanel(
     // ---------- Layout ----------
 
     private fun shareView(): JComponent {
-        val left = LeftColumn()
+        val left = LeftColumn().also { leftColumn = it }
         val side = JPanel(BorderLayout()).apply {
             background = Palette.PANEL
             border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
@@ -842,27 +1135,28 @@ class SwingSharePanel(
         private val momentLabel = ShareUi.label(tr("share.momentLabel"))
         private val zoomLabel = ShareUi.label(tr("adjust.zoom"))
         private val styleTitle = ShareUi.sectionTitle(tr("scoreboard.style"))
-        private val styles = styleCards.values.toList()
-
         init {
             background = Palette.BG
             listOf(
-                title, sizeNote, preview, pointLabel, prevPoint, pointCombo, nextPoint, favoritesSwitch,
+                title, sizeNote, previewHost, pointLabel, prevPoint, pointCombo, nextPoint, favoritesSwitch,
                 momentLabel, strip, framePrev, momentTime, frameNext, zoomLabel, zoom, zoomHint, zoomValue, pickNote,
-                styleTitle, placeHint, placeChoice,
+                styleTitle, placeHint, placeChoice, groupChoice,
             ).forEach { add(it) }
-            styles.forEach { add(it) }
+            styleCards.values.forEach { add(it) }
         }
 
         private fun stripHeight(w: Int) = ((w - LABEL_W - CONTROL_GAP - STEP_W) / MomentStrip.CELLS.toDouble() * 9 / 16).roundToInt().coerceAtLeast(ROW_H - 6)
         private fun noteHeight(w: Int) = if (pickNote.isVisible) pickNote.heightForWidth(w - LABEL_W - CONTROL_GAP) + ROW_GAP else 0
-        private fun cardWidth(w: Int) = (w - CARD_GAP * (styles.size - 1)) / styles.size
+
+        /** The cards of one group are in one row. The row has room for the largest group, so the cards keep their size. */
+        private val cardsInRow = StyleGroup.entries.maxOf { it.styles.size }
+        private fun cardWidth(w: Int) = (w - CARD_GAP * (cardsInRow - 1)) / cardsInRow
         private fun cardHeight(w: Int) = (cardWidth(w) * 9.0 / 16).roundToInt() + CARD_NAME_H
 
         private fun contentHeight(w: Int): Int =
             TITLE_H + GAP + (w * 9.0 / 16).roundToInt() + GAP +
                 ROW_H + ROW_GAP + maxOf(ROW_H, stripHeight(w)) + ROW_GAP + ROW_H + noteHeight(w) + GAP +
-                STYLE_HEAD_H + GAP + cardHeight(w)
+                STYLE_HEAD_H + GAP + groupChoice.preferredSize.height + ROW_GAP + cardHeight(w)
 
         override fun doLayout() {
             val availW = width - PAD * 2
@@ -878,7 +1172,7 @@ class SwingSharePanel(
             sizeNote.setBounds(x + w - noteW, y, noteW, TITLE_H)
             y += TITLE_H + GAP
             val previewH = (w * 9.0 / 16).roundToInt()
-            preview.setBounds(x, y, w, previewH)
+            previewHost.setBounds(x, y, w, previewH)
             y += previewH + GAP
 
             val cx = x + LABEL_W + CONTROL_GAP
@@ -925,8 +1219,12 @@ class SwingSharePanel(
             placeHint.setBounds(x + w - placeW - (if (placeW > 0) 10 else 0) - hintWidth, y, hintWidth, STYLE_HEAD_H - 10)
             styleTitle.setBounds(x, y, w / 3, STYLE_HEAD_H - 10)
             y += STYLE_HEAD_H - 10 + GAP
+            val groupH = groupChoice.preferredSize.height
+            groupChoice.setBounds(x, y, minOf(w, groupChoice.preferredSize.width), groupH)
+            y += groupH + ROW_GAP
             val cardW = cardWidth(w)
-            styles.forEachIndexed { index, card ->
+            val group = group()
+            styleCards.entries.filter { it.key.group == group }.forEachIndexed { index, (_, card) ->
                 card.setBounds(x + index * (cardW + CARD_GAP), y, cardW, cardHeight(w))
             }
             styleLineWidth = w
@@ -1009,19 +1307,17 @@ class SwingSharePanel(
         init {
             name = "share-save-block"
             background = Palette.PANEL
-            listOf(mini, currentLine, otherLine, fitNote, saveButton, openButton).forEach { add(it) }
+            listOf(mini, currentLine, otherLine, saveButton, openButton).forEach { add(it) }
         }
 
         /** The thumbnail has the full width of the block, as the buttons. */
         private fun miniHeight(width: Int) = width * 9 / 16
 
-        private fun fitHeight(width: Int) = if (fitNote.isVisible) fitNote.heightForWidth(width) + 8 else 0
-
         private fun linesHeight(width: Int) = currentLine.heightForWidth(width) + otherLine.heightForWidth(width)
 
         override fun getPreferredSize(): Dimension {
             val w = SIDE_WIDTH - 32
-            return Dimension(SIDE_WIDTH, 12 + miniHeight(w) + 8 + linesHeight(w) + 8 + fitHeight(w) + 30 + 14)
+            return Dimension(SIDE_WIDTH, 12 + miniHeight(w) + 8 + linesHeight(w) + 8 + 30 + 14)
         }
 
         override fun doLayout() {
@@ -1034,11 +1330,6 @@ class SwingSharePanel(
             currentLine.setBounds(x, y, w, currentH)
             otherLine.setBounds(x, y + currentH, w, otherLine.heightForWidth(w))
             y += linesHeight(w) + 8
-            if (fitNote.isVisible) {
-                val h = fitNote.heightForWidth(w)
-                fitNote.setBounds(x, y, w, h)
-                y += h + 8
-            }
             val openW = openButton.preferredSize.width
             saveButton.setBounds(x, y, w - openW - 8, 30)
             openButton.setBounds(x + w - openW, y, openW, 30)
@@ -1054,13 +1345,19 @@ class SwingSharePanel(
     companion object {
         private const val CARD_SHARE = "share"
         private const val CARD_EMPTY = "empty"
+        private const val PREVIEW_IMAGE = "image"
+        private const val PREVIEW_PLAYER = "player"
+        private const val LIVE_FRAME_DELAY_MS = 250
+
+        /** A seek waits at most this time for the frame of the seek before it. A lost event does not stop the seeks. */
+        private const val SEEK_WAIT_MS = 1_000L
         private const val SIDE_TEXTS = "texts"
         private const val SIDE_COLORS = "colors"
         private const val SIDE_WIDTH = 340
         private const val SAVE_DELAY_MS = 400
         private const val MAX_ZOOM = 2.0
         private const val DEFAULT_FPS = 30.0
-        /** The strip cells are small. The preview also shows these frames, for a short time, while its frame loads. */
+        /** The strip cells are small. */
         private const val STRIP_FRAME_WIDTH = 320
         private val FRAME_ERROR: String get() = tr("share.frameError") + "\n" + tr("share.frameError.action")
 
@@ -1079,6 +1376,17 @@ class SwingSharePanel(
 
 
     }
+}
+
+/** The file dialog of the operating system for a logo: PNG, JPG, GIF, BMP, TIFF, WEBP, or SVG. */
+private fun chooseLogoFile(parent: JComponent): File? {
+    val chooser = SystemFileChooser().apply {
+        dialogTitle = tr("share.logo.choose")
+        fileSelectionMode = SystemFileChooser.FILES_ONLY
+        isAcceptAllFileFilterUsed = false
+        fileFilter = SystemFileChooser.FileNameExtensionFilter(tr("share.logo.files"), *ThumbnailLogos.EXTENSIONS.toTypedArray())
+    }
+    return if (chooser.showOpenDialog(parent) == SystemFileChooser.APPROVE_OPTION) chooser.selectedFile else null
 }
 
 /** Reads the size and the frame rate of the video with ffprobe. */

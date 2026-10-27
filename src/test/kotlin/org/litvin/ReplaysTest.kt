@@ -4,6 +4,7 @@ import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.points.ReplayEffect
+import org.litvin.points.ReplayFreeze
 import org.litvin.points.ReplayV1
 import org.litvin.points.ReplayZoom
 import org.litvin.points.Replays
@@ -70,18 +71,17 @@ class ReplaysTest {
     }
 
     @Test
-    fun `speed and repeats go into their limits`() {
+    fun `the speed goes into its limits`() {
         val fitted = Replays.fitTo(
             point.copy(
                 replays = listOf(
-                    ReplayV1(startMs = 11_000, endMs = 12_000, speed = 0.01, repeats = 0),
-                    ReplayV1(startMs = 12_000, endMs = 13_000, speed = 3.0, repeats = 9),
+                    ReplayV1(startMs = 11_000, endMs = 12_000, speed = 0.01),
+                    ReplayV1(startMs = 12_000, endMs = 13_000, speed = 3.0),
                     ReplayV1(startMs = 13_000, endMs = 14_000, speed = Double.NaN),
                 ),
             ),
         )
         assertEquals(listOf(0.1, 1.0, 0.5), fitted.map { it.speed })
-        assertEquals(listOf(1, 5, 1), fitted.map { it.repeats })
     }
 
     @Test
@@ -100,8 +100,76 @@ class ReplaysTest {
     }
 
     @Test
-    fun `the added time is the part length divided by the speed for each repeat`() {
-        assertEquals(12_000L, Replays.addedMs(ReplayV1(startMs = 0, endMs = 2_000, speed = 0.5, repeats = 3)))
+    fun `the added time is the part length divided by the speed`() {
+        assertEquals(4_000L, Replays.addedMs(ReplayV1(startMs = 0, endMs = 2_000, speed = 0.5)))
+    }
+
+    @Test
+    fun `the still frame adds its time and moves the later frames`() {
+        val replay = ReplayV1(startMs = 10_000, endMs = 12_000, speed = 0.5, freeze = ReplayFreeze(11_000, 800))
+        assertEquals(4_000L, Replays.motionMs(replay))
+        assertEquals(4_800L, Replays.playMs(replay))
+        assertEquals(4_800L, Replays.addedMs(replay))
+        assertEquals(2_000L, Replays.freezeOffsetMs(replay))
+
+        assertEquals(1_000L, Replays.playOffsetAt(replay, 10_500))
+        assertEquals(2_000L, Replays.playOffsetAt(replay, 11_000))
+        assertEquals(3_800L, Replays.playOffsetAt(replay, 11_500))
+
+        assertEquals(10_500L, Replays.sourceAt(replay, 1_000))
+        // During the still frame, the source time stays at the still frame.
+        assertEquals(11_000L, Replays.sourceAt(replay, 2_500))
+        assertEquals(11_500L, Replays.sourceAt(replay, 3_800))
+        assertEquals(12_000L, Replays.sourceAt(replay, 4_800))
+    }
+
+    @Test
+    fun `a replay has no still frame by default`() {
+        val replay = ReplayV1(startMs = 10_000, endMs = 12_000, speed = 0.5)
+        assertNull(replay.freeze)
+        assertNull(Replays.freezeOffsetMs(replay))
+        assertEquals(Replays.motionMs(replay), Replays.playMs(replay))
+    }
+
+    @Test
+    fun `the still frame stays inside the part and its time in the limits`() {
+        val fitted = Replays.fitTo(
+            point.copy(
+                replays = listOf(
+                    ReplayV1(startMs = 11_000, endMs = 12_000, freeze = ReplayFreeze(15_000, 50)),
+                    ReplayV1(startMs = 13_000, endMs = 14_000, freeze = ReplayFreeze(1_000, 60_000)),
+                ),
+            ),
+        )
+        assertEquals(
+            listOf(ReplayFreeze(12_000, Replays.MIN_FREEZE_MS), ReplayFreeze(13_000, Replays.MAX_FREEZE_MS)),
+            fitted.map { it.freeze },
+        )
+        assertEquals(Replays.DEFAULT_FREEZE_MS, ReplayFreeze(1_000).durationMs)
+    }
+
+    @Test
+    fun `the timeline counts the still frame`() {
+        val withFreeze = point.copy(replays = listOf(ReplayV1(startMs = 18_000, endMs = 20_000, speed = 0.5, freeze = ReplayFreeze(19_000, 800))))
+        val play = org.litvin.points.ReplayTimeline(listOf(withFreeze)).inserts.single().plays.single()
+        assertEquals(4_800L, play.durationMs)
+        assertEquals(19_000L, play.sourceAt(play.startMs + 2_400))
+        assertEquals(play.startMs + 3_800, play.playAt(19_500))
+    }
+
+    @Test
+    fun `an old edl json with repeats reads and the replay plays once`() {
+        val file = Files.createTempDirectory("edl_old_repeats_").resolve("edl.json").toFile()
+        file.writeText(
+            """
+            {"version": 1, "points": [{"id": "P", "startMs": 10000, "endMs": 20000, "replays": [
+              {"startMs": 12000, "endMs": 14000, "speed": 0.5, "repeats": 3}
+            ]}]}
+            """.trimIndent(),
+        )
+        val replay = EdlIO.read(file.absolutePath).points.single().replays.single()
+        assertEquals(ReplayV1(startMs = 12_000, endMs = 14_000, speed = 0.5), replay)
+        assertEquals(4_000L, Replays.addedMs(replay))
     }
 
     @Test
@@ -112,14 +180,86 @@ class ReplaysTest {
             endMs = 14_000,
             zoom = ReplayZoom(0.25, 0.3, 0.5),
             speed = 0.25,
-            repeats = 2,
             muted = true,
             effect = ReplayEffect.FLASH,
             showBadge = false,
+            label = "Ace",
+            freeze = ReplayFreeze(atMs = 13_000, durationMs = 1_500),
+            comments = listOf(
+                org.litvin.points.CommentV1(
+                    id = 1, startMs = 12_500, durationMs = 2_000, text = "Watch the lob", colorHex = "#FFD400",
+                    style = org.litvin.points.CommentStyle.PILL, position = org.litvin.points.CommentPosition(0.3, 0.4),
+                ),
+            ),
+            showPointComments = false,
         )
         val edl = EdlV1(points = listOf(point.copy(replays = listOf(replay))))
         EdlIO.write(path, edl)
         assertEquals(edl, EdlIO.read(path))
+    }
+
+    @Test
+    fun `a replay without comments writes no comments key and shows the point comments`() {
+        val file = Files.createTempDirectory("edl_replay_no_comments_").resolve("edl.json").toFile()
+        EdlIO.write(file.absolutePath, EdlV1(points = listOf(point.copy(replays = listOf(ReplayV1(12_000, 14_000))))))
+        val json = com.fasterxml.jackson.databind.ObjectMapper().readTree(file)
+        assertFalse(json["points"][0]["replays"][0].has("comments"), file.readText())
+        val replay = EdlIO.read(file.absolutePath).points.single().replays.single()
+        assertEquals(emptyList(), replay.comments)
+        assertTrue(replay.showPointComments)
+    }
+
+    private fun replayComment(id: Int, start: Int, duration: Int) =
+        org.litvin.points.CommentV1(id = id, startMs = start, durationMs = duration, text = "C$id", colorHex = "#FFFFFF")
+
+    @Test
+    fun `a replay comment starts at the moment of its frame and shows for its time in the replay`() {
+        // 2 s at half speed: the part plays in 4 s.
+        val replay = ReplayV1(startMs = 10_000, endMs = 12_000, speed = 0.5, comments = listOf(replayComment(1, 11_000, 1_500)))
+        val comment = replay.comments.single()
+        assertEquals(2_000L, Replays.commentPlayStartMs(replay, comment))
+        assertEquals(3_500L, Replays.commentPlayEndMs(replay, comment))
+        assertEquals(11_750L, Replays.commentSourceEndMs(replay, comment))
+
+        // At full speed, the comment starts at the same frame. The replay end at 2 s cuts it.
+        val fast = replay.copy(speed = 1.0)
+        assertEquals(1_000L, Replays.commentPlayStartMs(fast, comment))
+        assertEquals(2_000L, Replays.commentPlayEndMs(fast, comment))
+
+        assertEquals(emptyList(), Replays.commentsAt(replay, 1_999))
+        assertEquals(listOf(comment), Replays.commentsAt(replay, 2_000))
+        assertEquals(emptyList(), Replays.commentsAt(replay, 3_500))
+        assertEquals(listOf(comment), Replays.commentsAtSource(replay, 11_500))
+        assertEquals(emptyList(), Replays.commentsAtSource(replay, 12_500))
+    }
+
+    @Test
+    fun `a replay comment on the still frame shows during the still frame and stops at the replay end`() {
+        val replay = ReplayV1(
+            startMs = 10_000, endMs = 12_000, speed = 0.5, freeze = ReplayFreeze(11_000, 800),
+            comments = listOf(replayComment(1, 11_000, 800), replayComment(2, 11_800, 5_000)),
+        )
+        val (onFreeze, late) = replay.comments
+        assertEquals(2_000L, Replays.commentPlayStartMs(replay, onFreeze))
+        assertEquals(2_800L, Replays.commentPlayEndMs(replay, onFreeze))
+        assertEquals(listOf(onFreeze), Replays.commentsAt(replay, 2_400))
+        // The later comment comes after the still frame, and the replay end cuts it.
+        assertEquals(4_400L, Replays.commentPlayStartMs(replay, late))
+        assertEquals(4_800L, Replays.commentPlayEndMs(replay, late))
+    }
+
+    @Test
+    fun `replay comments stay inside the part and their time in the limits`() {
+        val fitted = Replays.fitTo(
+            point.copy(
+                replays = listOf(
+                    ReplayV1(startMs = 11_000, endMs = 12_000, comments = listOf(replayComment(1, 15_000, 10), replayComment(2, 1_000, 90_000))),
+                ),
+            ),
+        ).single()
+        assertEquals(listOf(12_000, 11_000), fitted.comments.map { it.startMs })
+        assertEquals(listOf(Replays.MIN_COMMENT_MS, Replays.MAX_COMMENT_MS), fitted.comments.map { it.durationMs })
+        assertEquals(3, Replays.nextCommentId(fitted))
     }
 
     @Test
@@ -165,16 +305,57 @@ class ReplaysTest {
     }
 
     @Test
-    fun `only the first play of the first replay of a point zooms in`() {
-        assertTrue(Replays.zoomsIn(replayIndex = 0, repeat = 0))
-        assertFalse(Replays.zoomsIn(replayIndex = 0, repeat = 1))
-        assertFalse(Replays.zoomsIn(replayIndex = 1, repeat = 0))
+    fun `only the first replay of a point zooms in`() {
+        assertTrue(Replays.zoomsIn(replayIndex = 0))
+        assertFalse(Replays.zoomsIn(replayIndex = 1))
+    }
+
+    @Test
+    fun `the default label follows the place of the replay`() {
+        val replay = ReplayV1(startMs = 9_000, endMs = 12_000)
+        assertEquals("Replay", Replays.label(replay, 0))
+        assertEquals("Replay 2", Replays.label(replay, 1))
+        assertEquals("Ace", Replays.label(replay.copy(label = "Ace"), 1))
+        assertEquals("Replay 3", Replays.label(replay.copy(label = "  "), 2))
+    }
+
+    @Test
+    fun `the badge shows the label in capital letters`() {
+        val replay = ReplayV1(startMs = 9_000, endMs = 12_000)
+        assertEquals("REPLAY", Replays.badgeText(replay, 0))
+        assertEquals("REPLAY 2", Replays.badgeText(replay, 1))
+        assertEquals("GREAT LOB", Replays.badgeText(replay.copy(label = "Great lob"), 0))
+    }
+
+    @Test
+    fun `a blank or default typed label is the default label`() {
+        assertNull(Replays.labelOf("", 0))
+        assertNull(Replays.labelOf("   ", 1))
+        assertNull(Replays.labelOf("Replay", 0))
+        assertNull(Replays.labelOf("Replay 2", 1))
+        assertEquals("Replay", Replays.labelOf("Replay", 1))
+        assertEquals("Ace", Replays.labelOf("  Ace ", 0))
+        assertEquals(Replays.MAX_LABEL_LENGTH, Replays.labelOf("x".repeat(100), 0)?.length)
+    }
+
+    @Test
+    fun `the export badge has the label of each replay`() {
+        val withThree = point.copy(
+            replays = listOf(
+                ReplayV1(startMs = 9_000, endMs = 12_000),
+                ReplayV1(startMs = 10_000, endMs = 12_000, label = "Great lob"),
+                ReplayV1(startMs = 11_000, endMs = 13_000),
+                ReplayV1(startMs = 11_000, endMs = 13_000, showBadge = false),
+            ),
+        )
+        val replays = org.litvin.export.ExportReplays.of(listOf(withThree), emptyList())
+        assertEquals(listOf("REPLAY", "GREAT LOB", "REPLAY 3", null), replays.map { it.badgeText })
     }
 
     @Test
     fun `the export replays know their place in the point`() {
         val withTwo = point.copy(replays = listOf(ReplayV1(startMs = 9_000, endMs = 12_000), ReplayV1(startMs = 10_000, endMs = 12_000)))
-        val replays = org.litvin.export.ExportReplays.of(listOf(withTwo), emptyList(), "REPLAY")
+        val replays = org.litvin.export.ExportReplays.of(listOf(withTwo), emptyList())
         assertEquals(listOf(0, 1), replays.map { it.replayIndex })
     }
 }

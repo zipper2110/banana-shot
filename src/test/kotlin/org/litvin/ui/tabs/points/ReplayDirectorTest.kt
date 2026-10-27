@@ -14,12 +14,16 @@ import kotlin.test.assertTrue
 
 /** Covers the live play order of the replays (B-50 T3). */
 class ReplayDirectorTest {
-    /** A point from 0 to 10 s with a replay of its last 2 s at half speed: one play is 4 s. */
-    private fun point(repeats: Int = 1, effect: ReplayEffect = ReplayEffect.FADE, zoom: ReplayZoom? = null) = PointV1(
+    /** A point from 0 to 10 s with a replay of its last 2 s at half speed: the play is 4 s. */
+    private fun point(
+        effect: ReplayEffect = ReplayEffect.FADE,
+        zoom: ReplayZoom? = null,
+        freeze: org.litvin.points.ReplayFreeze? = null,
+    ) = PointV1(
         id = "p1",
         startMs = 0,
         endMs = 10_000,
-        replays = listOf(ReplayV1(8_000, 10_000, zoom = zoom, speed = 0.5, repeats = repeats, effect = effect)),
+        replays = listOf(ReplayV1(8_000, 10_000, zoom = zoom, speed = 0.5, effect = effect, freeze = freeze)),
     )
 
     private fun director(point: PointV1) = ReplayDirector().also { it.setPoints(listOf(point)) }
@@ -42,6 +46,54 @@ class ReplayDirectorTest {
         assertEquals(listOf(ReplayView(dip = 1.0)), enter.views())
     }
 
+    /** Plays into the replay of [point] and past the seek to the part start. */
+    private fun entered(point: PointV1) = director(point).also {
+        it.onTime(9_900, playing = true)
+        it.onTime(10_010, playing = true)
+        it.onRestart()
+    }
+
+    @Test
+    fun theStillFrameHoldsThePictureAndThenThePlayGoesOn() {
+        val director = entered(point(freeze = org.litvin.points.ReplayFreeze(9_000, 800)))
+        assertTrue(director.onTime(8_500, playing = true).none { it is Command.Hold })
+
+        val hold = director.onTime(9_020, playing = true)
+        assertEquals(listOf(Command.Hold(9_000, 800)), hold.filterIsInstance<Command.Hold>())
+        assertTrue(director.isHolding)
+        // The player shows the still frame. Its time does not end the replay.
+        assertTrue(director.onTime(9_000, playing = false).isEmpty())
+        assertTrue(director.isActive)
+
+        assertTrue(director.endHold())
+        assertFalse(director.isHolding)
+        // The play goes on, and the still frame does not come again.
+        assertTrue(director.onTime(9_100, playing = true).none { it is Command.Hold })
+        assertFalse(director.endHold())
+    }
+
+    @Test
+    fun aFrameStepPastTheStillFrameShowsNoStillFrame() {
+        val director = entered(point(freeze = org.litvin.points.ReplayFreeze(9_000, 800)))
+        assertTrue(director.onTime(9_050, playing = false).none { it is Command.Hold })
+        assertTrue(director.onTime(9_100, playing = true).none { it is Command.Hold })
+        assertFalse(director.isHolding)
+    }
+
+    @Test
+    fun aSeekDuringTheStillFrameStopsTheReplay() {
+        val director = entered(point(freeze = org.litvin.points.ReplayFreeze(9_000, 800)))
+        director.onTime(8_500, playing = true)
+        director.onTime(9_020, playing = true)
+        assertTrue(director.isHolding)
+
+        director.onTime(2_000, playing = false)
+
+        assertFalse(director.isActive)
+        assertFalse(director.isHolding)
+        assertFalse(director.endHold())
+    }
+
     @Test
     fun oldTimesAfterTheSeekDoNotCount() {
         val director = director(point())
@@ -58,8 +110,8 @@ class ReplayDirectorTest {
     }
 
     @Test
-    fun theRepeatsDipBetweenThemAndTheZoomGoesInButNotOut() {
-        val director = director(point(repeats = 2, zoom = ReplayZoom(0.25, 0.25, 0.5)))
+    fun theZoomGoesInButNotOut() {
+        val director = director(point(zoom = ReplayZoom(0.25, 0.25, 0.5)))
         director.onTime(9_900, playing = true)
         director.onTime(10_010, playing = true)
         director.onRestart()
@@ -69,20 +121,12 @@ class ReplayDirectorTest {
         assertEquals(0.75, zoomIn.zoomWidth, 1e-9)
         assertEquals(0.125, zoomIn.zoomX, 1e-9)
 
-        // The end of the first play starts the second play with a short dip to black and the full zoom.
-        val repeat = director.onTime(9_990, playing = true)
-        assertEquals(listOf(8_000L), repeat.seeks())
-        val second = repeat.views().single()!!
-        assertEquals(1.0, second.dip, 1e-9)
-        assertEquals(0.5, second.zoomWidth, 1e-9)
-        director.onRestart()
-
-        // Near the end of the last play, the video dips to black, and the zoom stays full (decision 12).
+        // Near the end of the play, the video dips to black, and the zoom stays full (decision 12).
         val nearEnd = director.onTime(9_900, playing = true).views().single()!!
         assertEquals(0.2, nearEnd.dip, 1e-9)
         assertEquals(0.5, nearEnd.zoomWidth, 1e-9)
 
-        // The end of the last play goes back to the point end. The video comes back from black.
+        // The end of the play goes back to the point end. The video comes back from black.
         val exit = director.onTime(9_990, playing = true)
         assertFalse(director.isActive)
         assertEquals(listOf(10_000L), exit.seeks())
@@ -140,7 +184,7 @@ class ReplayDirectorTest {
         director.onTime(10_010, playing = true)
         director.onRestart()
 
-        director.setPoints(listOf(point(repeats = 3)))
+        director.setPoints(listOf(point(effect = ReplayEffect.CUT)))
         assertFalse(director.isActive)
     }
 

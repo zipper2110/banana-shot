@@ -1,5 +1,6 @@
 package org.litvin.media.mpv
 
+import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.locks.ReentrantReadWriteLock
@@ -62,6 +63,25 @@ internal class MpvCore(
     fun commandSync(vararg args: String): Int = call { lib.mpv_command(handle, arrayOf(*args, null)) } ?: -1
 
     fun setProperty(property: String, value: String) = command("set", property, value)
+
+    /** Sets the property and waits for the result. A negative result is an error. */
+    fun setPropertySync(property: String, value: String): Int =
+        call { lib.mpv_set_property_string(handle, property, value) } ?: -1
+
+    /** Runs a command, waits for it, and gives its result node to [read]. The node is valid only during the call. */
+    fun <T> commandResult(vararg args: String, read: (MpvNode) -> T): T? = call {
+        val node = Memory(MpvNode.SIZE).apply { clear() }
+        val result = lib.mpv_command_ret(handle, arrayOf(*args, null), node)
+        if (result < 0) {
+            logger.warn { "mpv[$name] command ${args.toList()} failed: ${errorText(result)}" }
+            return@call null
+        }
+        try {
+            read(MpvNode(node))
+        } finally {
+            lib.mpv_free_node_contents(node)
+        }
+    }
 
     fun getProperty(property: String): String? = call {
         val pointer = lib.mpv_get_property_string(handle, property) ?: return@call null

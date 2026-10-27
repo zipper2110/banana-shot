@@ -9,15 +9,15 @@ import kotlin.math.max
  * time, so this scale converts between the two times.
  */
 internal class TimelineScale(val replays: ReplayTimeline, sourceTotalMs: Long) {
-    /** One replay as a block in play time: all its repeats. */
+    /** One replay as a block in play time. */
     data class Block(val pointId: String, val replayIndex: Int, val startMs: Long, val endMs: Long)
 
     val sourceTotalMs: Long = max(1L, sourceTotalMs)
     val playTotalMs: Long = this.sourceTotalMs + replays.addedMs
 
     val blocks: List<Block> = replays.inserts.flatMap { insert ->
-        insert.plays.groupBy { it.replayIndex }.map { (index, plays) ->
-            Block(insert.point.id, index, plays.minOf { it.startMs }, plays.maxOf { it.endMs })
+        insert.plays.map { play ->
+            Block(insert.point.id, play.replayIndex, play.startMs, play.endMs)
         }
     }
 

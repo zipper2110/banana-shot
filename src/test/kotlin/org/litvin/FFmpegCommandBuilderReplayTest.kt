@@ -86,6 +86,41 @@ class FFmpegCommandBuilderReplayTest {
     }
 
     @Test
+    fun theStillFrameRepeatsTheFrameAfterTheCutAndTheSoundIsSilent() {
+        val replay = render().copy(freezeAtMs = 2_000, freezeMs = 800)
+        assertEquals(4_800L, replay.durationMs)
+        val filter = build(replay, fadeIn = PassFade(false, 250), fadeOut = PassFade(false, 250), subtitles = "replay.ass")
+            .valueOf("-filter_complex")
+
+        assertTrue("fps=30000/1001,split[rfa][rfb];[rfa]trim=end=2.000,setpts=PTS-STARTPTS[rfa1]" in filter, filter)
+        assertTrue("[rfb]trim=start=2.000,setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration=0.800[rfb1]" in filter, filter)
+        // The subtitles and the fades come after the join, and the fade out is at the end of the longer play.
+        assertTrue(
+            "[rfa1][rfb1]concat=n=2:v=1:a=0,subtitles='replay.ass',fade=t=in:st=0:d=0.250:color=black,fade=t=out:st=4.550:d=0.250:color=black[vout]" in filter,
+            filter,
+        )
+        assertTrue("aresample=44100,asplit[rsa][rsb];[rsa]atrim=end=2.000,asetpts=PTS-STARTPTS[rsa1]" in filter, filter)
+        assertTrue("[rsb]atrim=start=2.000,asetpts=PTS-STARTPTS,adelay=delays=800:all=1[rsb1]" in filter, filter)
+        assertTrue("[rsa1][rsb1]concat=n=2:v=0:a=1,apad,atrim=duration=4.800," in filter, filter)
+    }
+
+    @Test
+    fun aStillFrameAtTheStartOrTheEndNeedsNoCut() {
+        val atStart = build(render().copy(freezeAtMs = 0, freezeMs = 500)).valueOf("-filter_complex")
+        assertTrue("fps=30000/1001,tpad=start_mode=clone:start_duration=0.500[vout]" in atStart, atStart)
+        assertTrue("aresample=44100,adelay=delays=500:all=1,apad,atrim=duration=4.500[aout]" in atStart, atStart)
+        assertFalse("split" in atStart, atStart)
+
+        val atEnd = build(render().copy(freezeAtMs = 4_000, freezeMs = 500)).valueOf("-filter_complex")
+        assertTrue("fps=30000/1001,tpad=stop_mode=clone:stop_duration=0.500[vout]" in atEnd, atEnd)
+        assertTrue("aresample=44100,apad,atrim=duration=4.500[aout]" in atEnd, atEnd)
+        assertFalse("split" in atEnd, atEnd)
+
+        val muted = build(render(muted = true).copy(freezeAtMs = 2_000, freezeMs = 500)).valueOf("-filter_complex")
+        assertTrue("[0:a]asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=4.500[aout]" in muted, muted)
+    }
+
+    @Test
     fun aMutedReplayAndASourceWithoutAudioHaveSilentAudio() {
         val muted = build(render(muted = true)).valueOf("-filter_complex")
         assertTrue("[0:a]asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=4.000[aout]" in muted, muted)
@@ -106,14 +141,14 @@ class FFmpegCommandBuilderReplayTest {
     }
 
     @Test
-    fun theZoomGoesInAtTheFirstPlayAndDoesNotGoOut() {
+    fun theZoomGoesInAtTheFirstReplayAndDoesNotGoOut() {
         val zoom = ReplayZoom(0.25, 0.25, 0.5)
         // 29.97 fps x 0.4 s x 0.5 speed: the zoom takes about 6 source frames.
         val first = FFmpegCommandBuilder.replayZoomFilter(render(zoom, zoomIn = true))!!
         assertTrue("clip(in/5.994000,0,1)" in first, first)
         assertFalse("-in)" in first, first)
 
-        // The next repeats keep the zoom frame to the end (decision 12), so the filter computes it once.
+        // The next replays of the point keep the zoom frame to the end (decision 12), so the filter computes it once.
         val next = FFmpegCommandBuilder.replayZoomFilter(render(zoom, zoomIn = false))!!
         assertTrue("x0='W*(0.250000*1)'" in next, next)
         assertTrue("x1='W*(0.250000*1+(1-0.500000*1))'" in next, next)

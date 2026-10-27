@@ -1,10 +1,12 @@
 package org.litvin.share
 
+import java.awt.geom.Area
 import java.awt.geom.Rectangle2D
 import java.awt.image.BufferedImage
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ThumbnailRendererTest {
@@ -16,35 +18,199 @@ class ThumbnailRendererTest {
         ThumbnailField.EVENT to "Friday doubles league",
         ThumbnailField.COURT to "Batumi : Court Airport",
         ThumbnailField.DATE to "11 Oct 2026",
+        ThumbnailField.ROUND to "Semi-final",
+        ThumbnailField.CLUB to "Batumi beach club",
+        ThumbnailField.SCORE to "6-4 7-5",
     )
 
-    private fun scene(style: ThumbnailStyle, place: TextPlace = style.places.first(), values: Map<ThumbnailField, String> = texts) =
-        ThumbnailScene(style, place, values, ThumbnailLooks.colors(style, null))
+    /** A logo of 200 × 100 px, as a wide club logo. */
+    private val logo = ThumbnailLogo("test", BufferedImage(200, 100, BufferedImage.TYPE_INT_ARGB))
+
+    private fun scene(
+        style: ThumbnailStyle,
+        place: TextPlace = style.places.first(),
+        values: Map<ThumbnailField, String> = texts,
+        logo: ThumbnailLogo? = null,
+    ) = ThumbnailScene(style, place, values, ThumbnailLooks.colors(style, null), logo)
 
     /** YouTube shows the video length in the bottom-right corner. */
     private val lengthBadge = Rectangle2D.Double(1050.0, 630.0, 230.0, 90.0)
+
+    /** Very long texts that must shrink. */
+    private val long = mapOf(
+        ThumbnailField.HEAD to "The most incredible comeback",
+        ThumbnailField.KIND to "Men's doubles open category",
+        ThumbnailField.TEAM1 to "Alexander Zverev / Maximilian Marterer",
+        ThumbnailField.TEAM2 to "Alexander Bublik / Mikhail Kukushkin",
+        ThumbnailField.EVENT to "National Beach Tennis Championship 2026",
+        ThumbnailField.COURT to "Center court",
+        ThumbnailField.DATE to "September 28, 2026",
+        ThumbnailField.ROUND to "Quarter-final",
+        ThumbnailField.CLUB to "Beach Tennis Club Copacabana",
+        ThumbnailField.SCORE to "7-6 4-6 11-9",
+    )
 
     @Test
     fun noStyleAndNoPositionPutsATextInTheBottomRightCornerOrOutsideThePng() {
         for (style in ThumbnailStyle.entries) {
             for (place in style.places) {
-                val layout = ThumbnailRenderer.layout(scene(style, place))
-                assertTrue(layout.textBounds.isNotEmpty(), "$style $place shows no text")
-                layout.textBounds.forEach { bounds ->
-                    assertFalse(bounds.intersects(lengthBadge), "$style $place puts a text at $bounds in the corner of the video length")
-                    assertTrue(bounds.minX >= 0 && bounds.maxX <= ThumbnailRenderer.WIDTH, "$style $place: $bounds is outside the PNG")
-                    assertTrue(bounds.minY >= 0 && bounds.maxY <= ThumbnailRenderer.HEIGHT, "$style $place: $bounds is outside the PNG")
+                for ((name, values) in listOf("short" to texts, "long" to long)) {
+                    for (withLogo in listOf(null, logo)) {
+                        val layout = ThumbnailRenderer.layout(scene(style, place, values, withLogo))
+                        val case = "$style $place, $name texts, logo ${withLogo != null}"
+                        assertTrue(layout.textShapes.isNotEmpty(), "$case shows no text")
+                        // The outlines of the letters: a rotated line box can touch the corner, but its letters do not.
+                        layout.textShapes.forEachIndexed { index, shape ->
+                            val text = layout.texts[index].first
+                            val bounds = shape.bounds2D
+                            val inCorner = Area(shape).apply { intersect(Area(lengthBadge)) }
+                            assertTrue(inCorner.isEmpty, "$case puts \"$text\" at $bounds in the corner of the video length")
+                            assertTrue(bounds.minX >= -0.5 && bounds.maxX <= ThumbnailRenderer.WIDTH + 0.5, "$case: \"$text\" at $bounds is outside the PNG")
+                            assertTrue(bounds.minY >= -0.5 && bounds.maxY <= ThumbnailRenderer.HEIGHT + 0.5, "$case: \"$text\" at $bounds is outside the PNG")
+                        }
+                    }
                 }
             }
         }
     }
 
     @Test
+    fun theSampleTextsOfTheDesignFitEachNewStyle() {
+        val sample = mapOf(
+            ThumbnailField.HEAD to "Best rally",
+            ThumbnailField.KIND to "Mixed doubles",
+            ThumbnailField.TEAM1 to "Anna & Mark",
+            ThumbnailField.TEAM2 to "Leo & Kate",
+            ThumbnailField.EVENT to "Spring Cup 2026",
+            ThumbnailField.COURT to "Court 3",
+            ThumbnailField.DATE to "May 12",
+            ThumbnailField.ROUND to "Semi-final",
+            ThumbnailField.CLUB to "Your club",
+            ThumbnailField.SCORE to "6-4 7-5",
+        )
+        for (style in ThumbnailStyle.entries.filter { it.showsLogo }) {
+            val layout = ThumbnailRenderer.layout(scene(style, values = sample, logo = logo))
+            assertFalse(layout.shrunk, "$style made a sample text smaller: ${layout.texts}")
+            assertFalse(layout.small, "$style has a small sample text: ${layout.texts}")
+        }
+    }
+
+    @Test
+    fun theNewStylesShowTheLogoAndTheOldStylesDoNot() {
+        for (style in ThumbnailStyle.entries) {
+            val pictures = ThumbnailRenderer.layout(scene(style, logo = logo)).items.count { it is ThumbnailRenderer.Item.Picture }
+            assertEquals(if (style.showsLogo) 1 else 0, pictures, "$style")
+        }
+    }
+
+    @Test
+    fun withoutALogoTheClubNameGoesUp() {
+        fun club(logo: ThumbnailLogo?): Rectangle2D {
+            val layout = ThumbnailRenderer.layout(scene(ThumbnailStyle.SPLASH, logo = logo))
+            return layout.textBounds[layout.texts.indexOfFirst { it.first == "BATUMI BEACH CLUB" }]
+        }
+        assertTrue(club(null).y < club(logo).y - 50, "Without the logo: ${club(null)}. With the logo: ${club(logo)}")
+    }
+
+    @Test
+    fun theBrandNameHasItsOwnFontAndColor() {
+        fun brand(style: ThumbnailStyle, face: ThumbnailFace?, rgb: Int?): ThumbnailRenderer.Item.Text {
+            val scene = scene(style, logo = logo).copy(brandFace = face, brandRgb = rgb)
+            fun walk(items: List<ThumbnailRenderer.Item>): List<ThumbnailRenderer.Item.Text> = items.flatMap {
+                when (it) {
+                    is ThumbnailRenderer.Item.Text -> listOf(it)
+                    is ThumbnailRenderer.Item.Group -> walk(it.items)
+                    else -> emptyList()
+                }
+            }
+            return walk(ThumbnailRenderer.layout(scene).items).first { it.text.equals("Batumi beach club", ignoreCase = true) }
+        }
+        val marker = ThumbnailFonts.base(ThumbnailFace.MARKER)!!.family
+
+        // Under the logo, at the side of the logo, and in the info line of the official bar.
+        for (style in listOf(ThumbnailStyle.SPLASH, ThumbnailStyle.SIDE_PANEL, ThumbnailStyle.OFFICIAL_BAR, ThumbnailStyle.SCORE_BUG)) {
+            val styled = brand(style, ThumbnailFace.MARKER, 0xFF2E88)
+            assertEquals(marker, styled.font.family, "$style")
+            assertEquals(0xFF2E88, styled.color!!.rgb and 0xFFFFFF, "$style")
+            assertEquals(255, styled.color!!.alpha, "$style")
+
+            val auto = brand(style, null, null)
+            assertNotEquals(marker, auto.font.family, "$style")
+            assertNotEquals(0xFF2E88, auto.color!!.rgb and 0xFFFFFF, "$style")
+        }
+    }
+
+    @Test
+    fun aTextWithLettersThatTheFontDoesNotHaveUsesTheFontOfTheApp() {
+        // Big Shoulders Display has no Cyrillic letters.
+        val layout = ThumbnailRenderer.layout(scene(ThumbnailStyle.FIGHT_CARD, values = texts + (ThumbnailField.TEAM1 to "Дима / Яна")))
+        val team = layout.items.filterIsInstance<ThumbnailRenderer.Item.Text>().first { it.text == "ДИМА / ЯНА" }
+        assertEquals(-1, team.font.canDisplayUpTo(team.text))
+    }
+
+    @Test
+    fun theScoreBugReadsTheSetsOfTheScore() {
+        assertEquals(listOf("6" to "4", "7" to "5"), ThumbnailDesigns.sets("6-4 7-5"))
+        assertEquals(listOf("7" to "6", "4" to "6", "11" to "9"), ThumbnailDesigns.sets("7–6 4–6 11–9"))
+        assertEquals(listOf("6" to "3"), ThumbnailDesigns.sets("6:3"))
+        assertEquals(emptyList(), ThumbnailDesigns.sets("won"))
+    }
+
+    @Test
+    fun aTeamNameBreaksBeforeItsSeparator() {
+        assertEquals(listOf("ANNA", "& MARK"), ThumbnailDesigns.teamRows("ANNA & MARK"))
+        assertEquals(listOf("DIMA", "/ YANA"), ThumbnailDesigns.teamRows("DIMA / YANA"))
+        assertEquals(listOf("NADAL"), ThumbnailDesigns.teamRows("NADAL"))
+    }
+
+    @Test
+    fun eachGroupHasItsStyles() {
+        assertEquals(31, ThumbnailStyle.entries.size)
+        assertEquals(6, StyleGroup.CLASSIC.styles.size)
+        StyleGroup.entries.filter { it != StyleGroup.CLASSIC }.forEach { assertEquals(5, it.styles.size, "$it") }
+        assertTrue(StyleGroup.CLASSIC.styles.none { it.showsLogo })
+    }
+
+    @Test
     fun eachStyleShowsOnlyItsFields() {
         for (style in ThumbnailStyle.entries) {
-            val shown = ThumbnailRenderer.layout(scene(style)).texts.map { it.first }
-            val event = texts.getValue(ThumbnailField.EVENT).uppercase()
-            assertEquals(ThumbnailField.EVENT in style.fields, shown.any { event in it }, "$style and the league: $shown")
+            val shown = ThumbnailRenderer.layout(scene(style)).texts.joinToString(" ") { it.first }.lowercase()
+            // Some styles show the league in two rows, or with its last word in another color.
+            assertEquals(ThumbnailField.EVENT in style.fields, "league" in shown, "$style and the league: $shown")
+        }
+    }
+
+    @Test
+    fun eachFieldOfAStyleShowsAndTheOtherFieldsDoNot() {
+        for (style in ThumbnailStyle.entries) {
+            val all = ThumbnailRenderer.layout(scene(style, logo = logo)).texts.map { it.first }
+            for (field in ThumbnailField.entries) {
+                val without = ThumbnailRenderer.layout(scene(style, values = texts - field, logo = logo)).texts.map { it.first }
+                // A field of the style shows also when all other fields have a text. No other field takes its place.
+                assertEquals(field in style.fields, all != without, "$style and $field")
+            }
+        }
+    }
+
+    @Test
+    fun eachColorOfTheColorsTabChangesTheThumbnail() {
+        val frame = BufferedImage(1280, 720, BufferedImage.TYPE_INT_RGB).apply {
+            val g2 = createGraphics()
+            g2.color = java.awt.Color(0x808080)
+            g2.fillRect(0, 0, width, height)
+            g2.dispose()
+        }
+        fun pixels(style: ThumbnailStyle, look: StyleLookV1?): IntArray {
+            val scene = ThumbnailScene(style, style.places.first(), texts, ThumbnailLooks.colors(style, look), logo.takeIf { style.showsLogo })
+            return ThumbnailRenderer.render(frame, FrameView(), scene).getRGB(0, 0, 1280, 720, null, 0, 1280)
+        }
+        for (style in ThumbnailStyle.entries) {
+            val before = pixels(style, null)
+            for (role in style.roles.keys) {
+                val other = if (ThumbnailLooks.roleValue(style, null, role) == "#3dd65a") "#7a1fd1" else "#3dd65a"
+                val after = pixels(style, StyleLookV1(colors = mapOf(role.key to other)))
+                assertFalse(before.contentEquals(after), "$style shows the role $role, but the role changes nothing")
+            }
         }
     }
 

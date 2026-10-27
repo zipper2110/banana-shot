@@ -205,6 +205,8 @@ object HelpCatalog {
                 tr("help.points.note.16"),
                 tr("help.points.note.17"),
                 tr("help.points.note.18"),
+                tr("help.points.note.19"),
+                tr("help.points.note.20"),
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.PLAY_PAUSE, tr("help.points.shortcut.playPause")),

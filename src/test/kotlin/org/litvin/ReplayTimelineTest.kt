@@ -10,11 +10,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ReplayTimelineTest {
-    // Point A: 10 s to 20 s with one replay of 2 s at 0.5 (4 s) played twice (8 s).
+    // Point A: 10 s to 20 s with two replays of the same 2 s at 0.5 (4 s each, 8 s).
     // Point B: 30 s to 40 s with two replays: 1 s at 1.0 (1 s), and 1 s at 0.25 (4 s).
     private val a = PointV1(
         id = "A", startMs = 10_000, endMs = 20_000,
-        replays = listOf(ReplayV1(startMs = 15_000, endMs = 17_000, speed = 0.5, repeats = 2)),
+        replays = List(2) { ReplayV1(startMs = 15_000, endMs = 17_000, speed = 0.5) },
     )
     private val b = PointV1(
         id = "B", startMs = 30_000, endMs = 40_000,
@@ -36,11 +36,10 @@ class ReplayTimelineTest {
     }
 
     @Test
-    fun `each repeat is one play`() {
+    fun `each replay is one play`() {
         val plays = timeline.inserts.first().plays
-        assertEquals(listOf(0, 1), plays.map { it.repeat })
+        assertEquals(listOf(0, 1), plays.map { it.replayIndex })
         assertEquals(listOf(20_000L, 24_000L), plays.map { it.startMs })
-        assertTrue(plays[0].isFirst && !plays[0].isLast && plays[1].isLast)
     }
 
     @Test
@@ -55,11 +54,11 @@ class ReplayTimelineTest {
     fun `a position in a replay gives the source frame at the replay speed`() {
         val position = timeline.positionAt(21_000)
         assertIs<ReplayTimeline.Position.InReplay>(position)
-        assertEquals(0, position.play.repeat)
+        assertEquals(0, position.play.replayIndex)
         assertEquals(15_500L, position.sourceMs)
         val second = timeline.positionAt(26_000)
         assertIs<ReplayTimeline.Position.InReplay>(second)
-        assertEquals(1, second.play.repeat)
+        assertEquals(1, second.play.replayIndex)
         assertEquals(16_000L, second.sourceMs)
     }
 

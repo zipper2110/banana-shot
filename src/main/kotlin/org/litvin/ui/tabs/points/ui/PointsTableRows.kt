@@ -406,8 +406,8 @@ internal class CommentRow(
 }
 
 /**
- * One instant replay under the row of its point (B-50): the replay icon, "Replay 1", the speed, the repeats, the zoom,
- * and the time that the replay adds. A click opens the replay editor on the replay. Move up, Move down, and Delete
+ * One instant replay under the row of its point (B-50): the replay icon, "Replay 1", the speed, the zoom, and the time
+ * that the replay adds. A click opens the replay editor on the replay. Move up, Move down, and Delete
  * show on hover. The replays of a point play in the order of the rows.
  * The row is not a timeline event, so it has no visual index and no selected state.
  */
@@ -460,10 +460,10 @@ internal class ReplayRow(
 
     override fun doLayout() = layoutActions(listOf(upButton, downButton, deleteButton))
 
-    /** The speed, the repeats, the zoom, and a muted sound, each with its icon. */
-    private val detailItems = ReplayDetails.of(replay.speed, replay.repeats, replay.zoomFactor, replay.muted)
+    /** The speed, the zoom, the still frame, and a muted sound, each with its icon. */
+    private val detailItems = ReplayDetails.of(replay.speed, replay.zoomFactor, replay.muted, replay.freezeMs, replay.commentCount)
 
-    /** The details as plain text, for example "0.5× · ×2 · 2×". */
+    /** The details as plain text, for example "0.5× · 2×". */
     internal val details: String get() = ReplayDetails.text(detailItems)
 
     override fun paintComponent(g: Graphics) {

@@ -128,8 +128,7 @@ internal class ShareColorsPanel(
                 add(ShareUi.label(role.title, 12.5f, Palette.FG), BorderLayout.WEST)
                 add(ShareUi.label(use, 11f, Palette.FG_3), BorderLayout.EAST)
             })
-            add(JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-                isOpaque = false
+            add(SwatchRows().apply {
                 auto?.let {
                     add(it)
                     it.addActionListener { onRole(role, ThumbnailLooks.AUTO) }
@@ -240,5 +239,49 @@ internal class ShareColorsPanel(
             g.color = Palette.LINE
             g.fillRect(0, 0, width, 1)
         }
+    }
+}
+
+/**
+ * The swatches of a color role in rows. A row ends at the width of the column, so that a role with many swatches
+ * (the accent of B-53) does not go out of the column.
+ */
+internal class SwatchRows : JPanel(null) {
+    init {
+        isOpaque = false
+    }
+
+    override fun doLayout() {
+        place(width)
+    }
+
+    override fun getPreferredSize(): Dimension = Dimension(DEFAULT_WIDTH, place(if (width > 0) width else DEFAULT_WIDTH, apply = false))
+
+    override fun getMinimumSize(): Dimension = Dimension(0, preferredSize.height)
+
+    override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
+
+    /** Puts the swatches in rows of [w] and returns the height. */
+    private fun place(w: Int, apply: Boolean = true): Int {
+        var x = 0
+        var y = 0
+        var rowH = 0
+        for (child in components) {
+            val size = child.preferredSize
+            if (x > 0 && x + size.width > w) {
+                x = 0
+                y += rowH
+                rowH = 0
+            }
+            if (apply) child.setBounds(x, y, size.width, size.height)
+            x += size.width
+            rowH = maxOf(rowH, size.height)
+        }
+        return y + rowH
+    }
+
+    private companion object {
+        /** The width of the side column without its padding and the scroll bar. */
+        const val DEFAULT_WIDTH = 296
     }
 }

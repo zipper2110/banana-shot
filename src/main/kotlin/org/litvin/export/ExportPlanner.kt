@@ -303,7 +303,7 @@ object ExportPlanner {
         val replays = ExportReplays.of(
             points = if (effectiveIdleTrim) keptPoints else allValidPoints,
             comments = if (request.includeComments) request.edl?.comments.orEmpty() else emptyList(),
-            badgeText = tr("replay.badge"),
+            includeComments = request.includeComments,
         )
         val cardsMs = (statsCard?.durationMs ?: 0L) + setSummaries.sumOf { it.card.durationMs } +
             ExportReplays.addedMs(replays)

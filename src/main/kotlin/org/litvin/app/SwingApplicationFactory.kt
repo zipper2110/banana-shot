@@ -392,6 +392,7 @@ object SwingApplicationFactory {
                 PreferencesShareDefaults(services.preferences.node(PreferencesProvider.SHARE)),
                 exportFolder = exportSettings::loadOutputDirectory,
                 onOpenPoints = { clickInCode(btnPoints) },
+                createPlayer = { services.mediaPlayers.create(MediaScreen.SHARE) },
             )
             closeActions += sharePanel::close
 

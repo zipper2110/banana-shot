@@ -1,6 +1,8 @@
 package org.litvin.media.mpv
 
+import com.sun.jna.Memory
 import com.sun.jna.Native
+import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.platform.win32.WinUser
@@ -11,6 +13,7 @@ import org.litvin.ApplicationLayout
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.GeometryTimeline
+import org.litvin.media.ImageOverlay
 import org.litvin.media.OverlayShape
 import org.litvin.media.PlayerStatus
 import org.litvin.media.ReplaySound
@@ -29,6 +32,8 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.awt.geom.Rectangle2D
+import java.awt.image.BufferedImage
+import java.awt.image.DataBufferInt
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
@@ -61,6 +66,9 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         private var activePlayer: MpvSwingMediaPlayerAdapter? = null
         private const val EDITOR_OVERLAY_ID = "1"
         private const val SCOREBOARD_OVERLAY_ID = "2"
+
+        /** The id of the image overlay. The `overlay-add` ids are separate from the `osd-overlay` ids. */
+        private const val IMAGE_OVERLAY_ID = "0"
         private const val EDITOR_MARGIN_VERTICAL = 0.07
         private const val EDITOR_MARGIN_HORIZONTAL = 0.04
         private const val VIDEO_CARD = "video"
@@ -107,6 +115,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
      */
     @Volatile private var pendingSeekMs: Long? = null
     @Volatile private var frameDurationMs = 40L
+    @Volatile private var framesPerSecond = 0.0
     @Volatile private var frameStepCursorMs: Long? = null
     @Volatile private var playbackRate = 1.0f
     @Volatile private var lastStatus = PlayerStatus.STOPPED
@@ -119,6 +128,10 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     @Volatile private var appliedShaderOpts: String? = null
 
     @Volatile private var previewOverlay: VideoOverlay? = null
+    @Volatile private var imageOverlay: ImageOverlay? = null
+
+    /** The size of the image overlay that mpv shows, or null when it shows none. */
+    private var imageOverlaySize: Dimension? = null
     @Volatile private var osdWidth = 0
     @Volatile private var osdHeight = 0
     @Volatile private var osdMarginTop = 0
@@ -257,6 +270,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         core = null
         fileLoaded = false
         appliedShaderOpts = null
+        imageOverlaySize = null
         logger.info { "Destroying mpv preview #$playerId: $reason" }
         old.close()
     }
@@ -422,6 +436,8 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         seekExact(target)
         return target
     }
+
+    override fun frameRate(): Double? = framesPerSecond.takeIf { it > 0.0 }
 
     override fun nextFrame() {
         core?.command("frame-step")
@@ -595,6 +611,45 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         )
     }
 
+    override fun setImageOverlay(overlay: ImageOverlay?) {
+        imageOverlay = overlay
+        applyImageOverlay(force = true)
+    }
+
+    /**
+     * Sends the image overlay to mpv with `overlay-add`. mpv copies the pixels before the command returns,
+     * so the memory is free after the call. [force] false sends the image only when the OSD size changed.
+     * The format "bgra" of mpv is the premultiplied ARGB int of Java in little-endian order.
+     */
+    private fun applyImageOverlay(force: Boolean) {
+        val mpv = core ?: return
+        val overlay = imageOverlay
+        val width = osdWidth
+        val height = osdHeight
+        if (overlay == null || width <= 0 || height <= 0) {
+            if (imageOverlaySize != null) mpv.command("overlay-remove", IMAGE_OVERLAY_ID)
+            imageOverlaySize = null
+            return
+        }
+        val size = Dimension(width, height)
+        if (!force && size == imageOverlaySize) return
+        val image = overlay.render(width, height)
+        if (image.type != BufferedImage.TYPE_INT_ARGB_PRE || image.width != width || image.height != height) {
+            logger.warn { "mpv preview #$playerId: wrong overlay image ${image.width}x${image.height} type ${image.type}" }
+            return
+        }
+        val pixels = (image.raster.dataBuffer as DataBufferInt).data
+        val memory = Memory(pixels.size * 4L)
+        memory.write(0, pixels, 0, pixels.size)
+        val result = mpv.commandSync(
+            "overlay-add", IMAGE_OVERLAY_ID, "0", "0", "&${Pointer.nativeValue(memory)}", "0", "bgra",
+            width.toString(), height.toString(), (width * 4).toString(),
+        )
+        memory.close()
+        imageOverlaySize = if (result >= 0) size else null
+        if (result < 0) logger.warn { "mpv preview #$playerId: overlay-add failed ($result)" }
+    }
+
     // ---- Events (mpv event thread) -----------------------------------------------------------------------
 
     private fun handleEvent(event: MpvEvent) {
@@ -617,6 +672,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                     applyEditorMargins()
                     applyShaderOptions()
                     applyOverlay()
+                    applyImageOverlay(force = true)
                     onVideoBoundsChanged?.invoke()
                     renderEditorOverlay()
                 }
@@ -678,7 +734,10 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
             }
             "container-fps" -> if (format == LibMpv.FORMAT_DOUBLE) {
                 val fps = event.propertyDouble() ?: 0.0
-                if (fps > 0.0) frameDurationMs = ceil(1000.0 / fps).toLong().coerceAtLeast(1L)
+                if (fps > 0.0) {
+                    framesPerSecond = fps
+                    frameDurationMs = ceil(1000.0 / fps).toLong().coerceAtLeast(1L)
+                }
             }
             "video-params/w" -> videoWidth = event.int64OrZero(format)
             "video-params/h" -> videoHeight = event.int64OrZero(format)
@@ -728,6 +787,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
 
     private fun scheduleOverlay() {
         if (previewOverlay != null) SwingUtilities.invokeLater { applyOverlay() }
+        if (imageOverlay != null) SwingUtilities.invokeLater { applyImageOverlay(force = false) }
     }
 
     private fun setStatus(status: PlayerStatus) {

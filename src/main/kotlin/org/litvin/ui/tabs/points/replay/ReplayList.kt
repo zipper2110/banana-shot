@@ -68,9 +68,10 @@ internal class ReplayList(
         private val title = tr("replay.editor.tab", "number" to index + 1)
         private val details = ReplayDetails.of(
             speed = replay.speed,
-            repeats = replay.repeats,
             zoomFactor = replay.zoom?.let { 1.0 / it.width },
             muted = replay.muted,
+            freezeMs = replay.freeze?.durationMs?.toLong(),
+            commentCount = replay.comments.size,
         )
         private var hovered = false
         private val upButton = RowIconButton(Material2AL.ARROW_UPWARD, tr("replay.moveEarlier"), side = BUTTON)

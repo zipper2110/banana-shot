@@ -57,8 +57,14 @@ enum class ReplayEffect {
 data class ReplayZoom(val x: Double, val y: Double, val width: Double)
 
 /**
+ * A still frame inside a replay (decision 22): the replay stops on the frame at [atMs] of the source for [durationMs],
+ * then plays on. [atMs] is inside the part of the replay. The sound is silent during the still frame.
+ */
+data class ReplayFreeze(val atMs: Int, val durationMs: Int = Replays.DEFAULT_FREEZE_MS)
+
+/**
  * One instant replay of a part of a point (B-50). The part is in source time. [Replays] gives the limits.
- * The replay plays the part [repeats] times at [speed], right after the end of its point.
+ * The replay plays the part once at [speed], right after the end of its point. A replay has no repeats (decision 21).
  */
 data class ReplayV1(
     val startMs: Int,
@@ -66,12 +72,29 @@ data class ReplayV1(
     /** Null is no zoom. */
     val zoom: ReplayZoom? = null,
     val speed: Double = Replays.DEFAULT_SPEED,
-    val repeats: Int = 1,
     /** True mutes the sound. Otherwise the sound slows down with the video, with a lower pitch (decision 4). */
     val muted: Boolean = false,
     val effect: ReplayEffect = ReplayEffect.FADE,
     /** Shows the "REPLAY" badge on the video during the replay. */
     val showBadge: Boolean = true,
+    /**
+     * The text of the badge. Null is the default label, which follows the place of the replay in its point:
+     * "Replay" for the first replay, "Replay 2" for the second, and so on (decision 19). The label does not change the
+     * replay number in the lists.
+     */
+    val label: String? = null,
+    /** The still frame of the replay. Null is no still frame, the default. */
+    val freeze: ReplayFreeze? = null,
+    /**
+     * The comments that show only during this replay (decision 24). The [CommentV1.startMs] of each comment is a source
+     * time inside the part, so the comment stays on the same moment of play when the speed or the edges change. Its
+     * [CommentV1.durationMs] is a time of the replay play, so the comment shows for that time at each speed. The ids
+     * count inside the replay. An empty list is not written.
+     */
+    @field:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    val comments: List<CommentV1> = emptyList(),
+    /** True shows the point comments of the part during the replay, as before decision 24. */
+    val showPointComments: Boolean = true,
 )
 
 /**

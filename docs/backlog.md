@@ -119,8 +119,9 @@ When item is done, move it under
   `design/instant-replay/index.html`.
 - The tasks, the open questions, and the seek prototype results are in
   `docs/replay/b-50-tasks.md`.
-- Each replay has: a start and an end, a zoom frame on the video, a speed
-  from 0.1× to 1×, and a repeat count from 1 to 5.
+- Each replay has: a start and an end, a zoom frame on the video, and a
+  speed from 0.1× to 1×. A replay plays once: decision 21 of
+  `docs/replay/b-50-tasks.md` removed the repeat count.
 - Decided on 2026-10-22:
   - A point can have more than one replay (for example the line call and a
     reaction).
@@ -136,7 +137,7 @@ When item is done, move it under
     the replays off.
   - A replay is a piece of video that the app inserts after its point.
     The players on all tabs play it as a part of the source video, with
-    its speed, zoom, repeats, and sound.
+    its speed, zoom, and sound.
   - During a replay, the clock of the player shows only "Replay", not a
     time.
   - The seek keys and a click on the timeline move through a replay as
@@ -182,6 +183,89 @@ When item is done, move it under
 
 - Postponed from B-50 on 2026-10-26. Do it after B-50.
 - "Add comment" should work during a replay. It needs a concept first.
+
+### B-53 More thumbnail styles and a logo
+
+- The design is the Claude Design canvas "Thumbnail Styles"
+  (https://claude.ai/artifact/NNuzc1vU2ZbkTtHtBLVjwu). It has 25 styles
+  in 5 groups: Street, Competition, Fight night, Bold blocks, and Sports TV.
+  The pages "day" and "night" show the same styles on other frames.
+- Decided on 2026-10-27:
+  - The Share tab keeps the 6 styles of B-46 and adds the 25 new styles.
+  - The app bundles the fonts of the design (Google Fonts, OFL license).
+  - New text fields: Round (for example "SEMI-FINAL"), Club name (the
+    text under the logo), and Score (for example "6-4 7-5"). The score is
+    never a preset, because many users do not want to show the result.
+  - The user can add a logo file: PNG, JPG, GIF, BMP, TIFF, WEBP, or SVG.
+    The logo and the club name stay for the next project, as the style.
+  - A row of group buttons (Classic and the 5 new groups) is above the
+    style cards. The cards of one group show at a time.
+  - The app keeps a PNG copy of the logo (logo.png, 1024 px or less) in
+    the app data folder. FFmpeg reads WEBP. JSVG draws SVG.
+  - A text with letters that a design font does not have (for example
+    Cyrillic) uses the font of the B-46 styles.
+  - Only the new styles show the logo. The 6 B-46 styles do not change.
+  - The text under the logo is the "Brand name" field. Its field is
+    directly under the logo controls.
+  - The brand name has its own font (the font of the style, or one of the
+    bundled fonts) and its own color (the text color of the style, or a
+    color). The font and the color are the same for all styles and go to
+    the next project, as the logo.
+  - The brand name is the same in all projects. The app saves it as the
+    user types, as the logo.
+  - One text field goes to one label on the thumbnail, and one label shows
+    one text field. No label shows another field when its field is empty.
+    The fields have the same names in all styles, so the texts stay when
+    the user selects another style.
+  - In the artboards, some styles show the round in the place of the large
+    words. These styles show the large words there, and have no Round
+    field. Only Split XL, Score bug, and Alert have a Round field, because
+    they have a separate place for it.
+  - The Colors tab shows only the color roles that change the thumbnail of
+    the style. A role that only colors the brand name is not there.
+  - All colors of the thumbnail can change. New roles: Accent 2 and
+    Accent 3 (the sides of the two teams, and the red parts of the TV
+    styles), Light box (the paper, the info bars, the cards, and the score
+    cells), and Text on light box. The gray texts and lines of a light box
+    come from the light box and its text color.
+  - The color sets give a value to all roles, so that a set changes all
+    styles in the same way.
+  - The Share tab does not show a note about long or small texts.
+
+### B-54 "What's new" popup for a new version
+
+- Show the main changes of a new version to the users of older versions.
+- Decided on 2026-10-27:
+  - Each release has one Markdown file with its images on the site, for
+    example `site/public/changelog/<version>/whats-new.md`. The content has
+    no fixed structure: rich text, lists, images, and links.
+  - The extended page on the site is a separate page. The author writes it.
+    No script makes it from the Markdown file.
+  - `latest` in `release/version-policy.json` gets two optional fields:
+    `whatsNewUrl` (the Markdown file) and `pageUrl` (the extended site
+    page). Released builds ignore new fields.
+  - When the app finds a newer version, it shows the "What's new" popup.
+    The popup shows only one time for each new version.
+  - The user can close the popup. The popup does not stop the user.
+  - The popup has:
+    - A header with an icon, "A new version is out", and a close button. The
+      header shows no version text.
+    - The Markdown page in a scroll area. Under the page, above the line of
+      the buttons, a "Read more on the site" link opens `pageUrl` in the
+      browser. The app adds this link. The Markdown file does not need it.
+    - The buttons "Later", "Manually download update", and "Update and
+      restart".
+  - The update notice bar stays as it is now. It gets a link to the site
+    page (`pageUrl`).
+  - The app converts the Markdown to HTML with commonmark-java (BSD-2) and
+    shows it in a `JEditorPane` with an app style sheet. Images fit the
+    width. Links open in the browser.
+  - If the Markdown file does not load, the popup shows the `notes` and the
+    site link.
+  - Builds 1.0 to 1.2 show only the `notes` in the bar.
+  - Not now: the page at the first start after the update.
+- Change `build-expiry-spec.md` ("Update notice") and S-02 of
+  `docs/licensing/expiry-scenarios.md` to match.
 
 ### B-15 Intro and outro videos
 

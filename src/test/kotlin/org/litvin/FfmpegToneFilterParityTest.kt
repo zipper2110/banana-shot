@@ -11,7 +11,8 @@ import kotlin.test.assertEquals
 /**
  * Runs the export `lutyuv` filter in the real ffmpeg on a frame with every 8-bit luma and chroma code, and
  * compares each output code with [FfmpegColorAdjustmentStrategy.toneCurve] and [FfmpegColorAdjustmentStrategy.chromaCurve].
- * The preview shader copies the same curves. The test is skipped when ffmpeg is not available.
+ * The preview shader copies the same curves. It also compares "eq" with its lookup table for the LGPL libmpv.
+ * The test is skipped when ffmpeg is not available.
  */
 class FfmpegToneFilterParityTest {
     private val ffmpeg = ApplicationLayout.current().ffmpegExecutable
@@ -42,6 +43,22 @@ class FfmpegToneFilterParityTest {
                 assertEquals(emptyList(), mismatches(output.y, expected.y), "luma at $at")
                 assertEquals(emptyList(), mismatches(output.u, expected.u), "Cb at $at")
                 assertEquals(emptyList(), mismatches(output.v, expected.v), "Cr at $at")
+            }
+        }
+    }
+
+    @Test
+    fun `the lookup filter for the LGPL libmpv gives the same codes as eq`() {
+        assumeTrue(ffmpegRuns(), "ffmpeg is not available")
+        val values = listOf(0.0, 0.5, 0.8765, 0.9999, 1.0, 1.0001, 1.15, 1.5, 2.0, 3.0)
+        for (contrast in values) {
+            for (saturation in values) {
+                val eq = runFilter("eq=contrast=$contrast:saturation=$saturation")
+                val lut = runFilter(FFmpegCommandBuilder.eqLutFilter(contrast, saturation))
+                val at = "contrast=$contrast saturation=$saturation"
+                assertEquals(emptyList(), mismatches(lut.y, eq.y), "luma at $at")
+                assertEquals(emptyList(), mismatches(lut.u, eq.u), "Cb at $at")
+                assertEquals(emptyList(), mismatches(lut.v, eq.v), "Cr at $at")
             }
         }
     }

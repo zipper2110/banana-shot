@@ -85,18 +85,19 @@ internal class ThumbnailPainter {
                 return
             }
             val frame = frame
+            var scaled: BufferedImage? = null
             if (frame != null) {
                 // The scaled frame has the pixels of the screen, so that it is sharp on a HiDPI screen.
                 val scale = g2.transform.scaleX.coerceAtLeast(1.0)
                 val size = Dimension(ceil(width * scale).toInt().coerceAtLeast(1), ceil(height * scale).toInt().coerceAtLeast(1))
                 val key = Pair(System.identityHashCode(frame), view)
-                val scaled = cache?.takeIf { it.first == key && it.second == size }?.third
+                scaled = cache?.takeIf { it.first == key && it.second == size }?.third
                     ?: ThumbnailRenderer.scaledFrame(frame, view, size.width, size.height).also { cache = Triple(key, size, it) }
                 g2.drawImage(scaled, 0, 0, width, height, null)
             }
             g2.scale(width / ThumbnailRenderer.WIDTH.toDouble(), height / ThumbnailRenderer.HEIGHT.toDouble())
             if (frame == null) ThumbnailRenderer.paintFrame(g2, null, view)
-            layout?.let { ThumbnailRenderer.paintLayout(g2, it) }
+            layout?.let { ThumbnailRenderer.paintLayout(g2, it, scaled) }
             badge?.let { ThumbnailRenderer.paintLengthBadge(g2, it) }
         } finally {
             g2.dispose()
@@ -124,41 +125,41 @@ internal class ThumbnailPainter {
     }
 }
 
-/** The large preview of the thumbnail. When the frame has a zoom, a drag moves the frame. */
-internal class ThumbnailView(componentName: String, private val radius: Int = 4) : JPanel(null) {
-    val painter = ThumbnailPainter()
-
-    /** Gets the new frame position while the user drags. [done] is true when the user releases the mouse button. */
-    var onPan: ((FrameView, done: Boolean) -> Unit)? = null
-
+/**
+ * A drag on [component] moves a zoomed frame: the frame moves with the pointer. [view] gives the zoom and the position.
+ * [onPan] gets the new position while the user drags. Its second value is true when the user releases the mouse button.
+ */
+internal class FramePan(
+    private val component: java.awt.Component,
+    private val view: () -> FrameView?,
+    private val onPan: (FrameView, done: Boolean) -> Unit,
+) {
     private var dragStart: Pair<java.awt.Point, FrameView>? = null
 
     init {
-        name = componentName
-        isOpaque = false
         val mouse = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
-                if (painter.view.zoom > 1.0 && painter.message == null) dragStart = e.point to painter.view
+                view()?.takeIf { it.zoom > 1.0 }?.let { dragStart = e.point to it }
             }
 
             override fun mouseDragged(e: MouseEvent) {
                 val (start, view) = dragStart ?: return
-                onPan?.invoke(panned(view, e.x - start.x, e.y - start.y), false)
+                onPan(panned(view, e.x - start.x, e.y - start.y), false)
             }
 
             override fun mouseReleased(e: MouseEvent) {
                 val (start, view) = dragStart ?: return
                 dragStart = null
-                onPan?.invoke(panned(view, e.x - start.x, e.y - start.y), true)
+                onPan(panned(view, e.x - start.x, e.y - start.y), true)
             }
         }
-        addMouseListener(mouse)
-        addMouseMotionListener(mouse)
+        component.addMouseListener(mouse)
+        component.addMouseMotionListener(mouse)
     }
 
-    /** The frame position after a drag of [dx], [dy] screen pixels: the frame moves with the pointer. */
+    /** The frame position after a drag of [dx], [dy] screen pixels. */
     private fun panned(view: FrameView, dx: Int, dy: Int): FrameView {
-        val scale = width / ThumbnailRenderer.WIDTH.toDouble()
+        val scale = component.width / ThumbnailRenderer.WIDTH.toDouble()
         val zoom = view.zoom - 1.0
         if (scale <= 0.0 || zoom <= 0.0) return view
         return view.copy(
@@ -169,8 +170,27 @@ internal class ThumbnailView(componentName: String, private val radius: Int = 4)
 
     /** Shows the move cursor when a drag can move the frame. */
     fun updateCursor() {
-        cursor = Cursor.getPredefinedCursor(if (painter.view.zoom > 1.0 && painter.message == null) Cursor.MOVE_CURSOR else Cursor.DEFAULT_CURSOR)
+        val movable = (view()?.zoom ?: 1.0) > 1.0
+        component.cursor = Cursor.getPredefinedCursor(if (movable) Cursor.MOVE_CURSOR else Cursor.DEFAULT_CURSOR)
     }
+}
+
+/** The large preview of the thumbnail. When the frame has a zoom, a drag moves the frame. */
+internal class ThumbnailView(componentName: String, private val radius: Int = 4) : JPanel(null) {
+    val painter = ThumbnailPainter()
+
+    /** Gets the new frame position while the user drags. [done] is true when the user releases the mouse button. */
+    var onPan: ((FrameView, done: Boolean) -> Unit)? = null
+
+    private val pan = FramePan(this, { painter.view.takeIf { painter.message == null } }) { view, done -> onPan?.invoke(view, done) }
+
+    init {
+        name = componentName
+        isOpaque = false
+    }
+
+    /** Shows the move cursor when a drag can move the frame. */
+    fun updateCursor() = pan.updateCursor()
 
     override fun paintComponent(g: Graphics) {
         val g2 = g as Graphics2D
@@ -185,11 +205,23 @@ internal class ThumbnailView(componentName: String, private val radius: Int = 4)
     }
 }
 
+/** The step of a click or a drag on the [MomentStrip]. */
+internal enum class StripSeek {
+    /** The mouse button goes down. */
+    PRESS,
+
+    /** The pointer moves with the button down, after a small movement as on the timeline of the Points tab. */
+    DRAG,
+
+    /** The mouse button goes up. After a click without a drag, the position is the position of the press. */
+    RELEASE,
+}
+
 /**
  * The frames of the point under the preview. A click or a drag sets the exact moment. The lime line shows the moment.
- * [onSeek] gets the position (0.0 to 1.0) and true when the user releases the mouse button.
+ * [onSeek] gets the position (0.0 to 1.0) and the step of the click or the drag.
  */
-internal class MomentStrip(private val onSeek: (Double, Boolean) -> Unit) : JComponent() {
+internal class MomentStrip(private val onSeek: (Double, StripSeek) -> Unit) : JComponent() {
     var cells: List<Image?> = List(CELLS) { null }
         set(value) {
             field = value
@@ -207,18 +239,35 @@ internal class MomentStrip(private val onSeek: (Double, Boolean) -> Unit) : JCom
         toolTipText = tr("share.strip.tooltip")
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         val mouse = object : MouseAdapter() {
-            override fun mousePressed(e: MouseEvent) = seek(e, false)
-            override fun mouseDragged(e: MouseEvent) = seek(e, false)
-            override fun mouseReleased(e: MouseEvent) = seek(e, true)
+            override fun mousePressed(e: MouseEvent) {
+                if (!isEnabled || width <= 0) return
+                press = e.point to positionAt(e)
+                dragging = false
+                onSeek(positionAt(e), StripSeek.PRESS)
+            }
+
+            override fun mouseDragged(e: MouseEvent) {
+                val (start, _) = press ?: return
+                if (!dragging && start.distance(e.point) < DRAG_THRESHOLD_PX) return
+                dragging = true
+                onSeek(positionAt(e), StripSeek.DRAG)
+            }
+
+            override fun mouseReleased(e: MouseEvent) {
+                val (_, pressed) = press ?: return
+                press = null
+                onSeek(if (dragging) positionAt(e) else pressed, StripSeek.RELEASE)
+                dragging = false
+            }
         }
         addMouseListener(mouse)
         addMouseMotionListener(mouse)
     }
 
-    private fun seek(e: MouseEvent, done: Boolean) {
-        if (!isEnabled || width <= 0) return
-        onSeek((e.x.toDouble() / width).coerceIn(0.0, 1.0), done)
-    }
+    private var press: Pair<java.awt.Point, Double>? = null
+    private var dragging = false
+
+    private fun positionAt(e: MouseEvent) = (e.x.toDouble() / width.coerceAtLeast(1)).coerceIn(0.0, 1.0)
 
     override fun getPreferredSize() = Dimension(400, 30)
     override fun getMinimumSize() = Dimension(100, 20)
@@ -265,6 +314,9 @@ internal class MomentStrip(private val onSeek: (Double, Boolean) -> Unit) : JCom
     }
 
     companion object {
+        /** The movement that starts a drag, as on the timeline of the Points tab. */
+        private const val DRAG_THRESHOLD_PX = 3.0
+
         /** The strip shows this number of frames of the point. */
         const val CELLS = 10
     }

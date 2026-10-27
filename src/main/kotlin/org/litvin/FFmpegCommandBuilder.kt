@@ -63,6 +63,8 @@ object FFmpegCommandBuilder {
      * One play of a replay part [startMs, endMs) of the source (B-50). The video gets the [zoom] frame inside the
      * geometry of the Transform tab: the zoom goes in at the start when [zoomIn]. It does not go out (decision 12).
      * The sound slows down with a lower pitch, or is silent when [muted].
+     * With [freezeAtMs], the play stops on the frame at that time of the play for [freezeMs], with no sound
+     * (decision 22).
      */
     data class ReplayRender(
         val startMs: Long,
@@ -75,9 +77,16 @@ object FFmpegCommandBuilder {
         val sourceFrameRate: org.litvin.export.ExportFrameRate?,
         /** The sample rate of the source audio. The lower pitch changes it and then converts back to it. */
         val sampleRate: Int,
+        /** The time from the play start to the still frame, or null for no still frame. */
+        val freezeAtMs: Long? = null,
+        /** The time of the still frame. */
+        val freezeMs: Long = 0L,
     ) {
-        /** The output duration of the play. */
-        val durationMs: Long get() = Math.round((endMs - startMs).coerceAtLeast(0L) / speed)
+        /** The output time of the moving part, without the still frame. */
+        val motionMs: Long get() = Math.round((endMs - startMs).coerceAtLeast(0L) / speed)
+
+        /** The output duration of the play, with the still frame. */
+        val durationMs: Long get() = motionMs + (if (freezeAtMs != null) freezeMs else 0L)
     }
 
     /**
@@ -98,7 +107,8 @@ object FFmpegCommandBuilder {
         val preview: String,
     )
 
-    private fun colorFilter(adj: org.litvin.adjustments.AdjustmentsV1?, toneRange: ToneRange): String? {
+    /** With [lgpl], the filters do not use the GPL filter "eq" (see [eqLutFilter]). */
+    private fun colorFilter(adj: org.litvin.adjustments.AdjustmentsV1?, toneRange: ToneRange, lgpl: Boolean = false): String? {
         if (adj == null) return null
         val values = FfmpegColorAdjustmentStrategy.map(adj, toneRange)
         if (!values.hasEqualizerAdjustments && !values.hasToneAdjustments && !values.hasTemperatureAdjustments) return null
@@ -106,13 +116,34 @@ object FFmpegCommandBuilder {
         fun fmt(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.4f", d)
         val filters = mutableListOf<String>()
         if (values.hasEqualizerAdjustments) {
-            filters += "eq=contrast=${fmt(values.contrast)}:saturation=${fmt(values.saturation)}"
+            val contrast = fmt(values.contrast)
+            val saturation = fmt(values.saturation)
+            filters += if (lgpl) eqLutFilter(contrast.toDouble(), saturation.toDouble()) else "eq=contrast=$contrast:saturation=$saturation"
         }
         if (values.hasToneAdjustments || values.hasTemperatureAdjustments) {
             filters += lutFilter(values)
         }
         return filters.joinToString(",")
     }
+
+    /**
+     * The filter "eq" with [contrast] and [saturation], as a lookup table. The LGPL libmpv of the app has no "eq",
+     * because "eq" is GPL. The math is the fixed-point path of vf_eq.c, as in the preview shader:
+     * `clip(floor(val*c/4096)+b, 0, 255)` with `c = trunc(contrast*4096)` and `b = 127 - trunc(c/32)`.
+     * An unchanged plane is not processed. The "format" filter gives the 8-bit formats of "eq", as ffmpeg does before "eq".
+     */
+    internal fun eqLutFilter(contrast: Double, saturation: Double): String {
+        fun plane(value: Double): String {
+            if (value == 1.0) return "val"
+            val c = (value * 4096).toInt()
+            val b = 127 - c / 32
+            return "'clip(floor(val*$c/4096)+($b),0,255)'"
+        }
+        return "format=$EQ_FORMATS,lutyuv=y=${plane(contrast)}:u=${plane(saturation)}:v=${plane(saturation)}"
+    }
+
+    /** The pixel formats of vf_eq.c. */
+    private const val EQ_FORMATS = "gray|yuv410p|yuv411p|yuv420p|yuv422p|yuv440p|yuv444p|yuvj420p|yuvj422p|yuvj440p|yuvj444p"
 
     /**
      * Brightness, shadows/highlights and temperature as lookup tables: the luma table is
@@ -334,6 +365,44 @@ object FFmpegCommandBuilder {
      * [org.litvin.points.Replays.ZOOM_MS] of the play, and back in the last ones (decision 7 and 8). The expressions
      * count the input frames, because perspective has no time variable.
      */
+    /**
+     * The video graph of a replay from the input [before] the still frame to the filters [after] it, without the output
+     * label (decision 22). The still frame repeats the frame at the still frame time: tpad clones the first frame of
+     * the part after the cut, or the last frame when the still frame is at the end.
+     */
+    internal fun replayFreezeVideo(before: List<String>, after: List<String>, replay: ReplayRender): String {
+        val at = replay.freezeAtMs
+        if (at == null || replay.freezeMs <= 0) return "[0:v]" + (before + after).joinToString(",")
+        val hold = (replay.freezeMs / 1000.0).formatSecs()
+        return when {
+            at <= 0L -> "[0:v]" + (before + "tpad=start_mode=clone:start_duration=$hold" + after).joinToString(",")
+            at >= replay.motionMs -> "[0:v]" + (before + "tpad=stop_mode=clone:stop_duration=$hold" + after).joinToString(",")
+            else -> {
+                val cut = (at / 1000.0).formatSecs()
+                "[0:v]" + (before + "split[rfa][rfb]").joinToString(",") +
+                    ";[rfa]trim=end=$cut,setpts=PTS-STARTPTS[rfa1]" +
+                    ";[rfb]trim=start=$cut,setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration=$hold[rfb1]" +
+                    ";[rfa1][rfb1]" + (listOf("concat=n=2:v=1:a=0") + after).joinToString(",")
+            }
+        }
+    }
+
+    /**
+     * The slowed sound of a replay from [before] to [after], with silence during the still frame (decision 22). The
+     * output label is not in the text. A still frame at the end needs no cut, because [after] pads the end with silence.
+     */
+    internal fun replayFreezeAudio(before: List<String>, after: List<String>, replay: ReplayRender): String {
+        val at = replay.freezeAtMs
+        if (at == null || replay.freezeMs <= 0 || at >= replay.motionMs) return (before + after).joinToString(",")
+        val delay = "adelay=delays=${replay.freezeMs}:all=1"
+        if (at <= 0L) return (before + delay + after).joinToString(",")
+        val cut = (at / 1000.0).formatSecs()
+        return (before + "asplit[rsa][rsb]").joinToString(",") +
+            ";[rsa]atrim=end=$cut,asetpts=PTS-STARTPTS[rsa1]" +
+            ";[rsb]atrim=start=$cut,asetpts=PTS-STARTPTS,$delay[rsb1]" +
+            ";[rsa1][rsb1]" + (listOf("concat=n=2:v=0:a=1") + after).joinToString(",")
+    }
+
     internal fun replayZoomFilter(replay: ReplayRender): String? {
         val zoom = replay.zoom ?: return null
         val fps = replay.sourceFrameRate?.framesPerSecond?.takeIf { it > 0.0 } ?: FALLBACK_FPS
@@ -396,18 +465,38 @@ object FFmpegCommandBuilder {
         sourceHeight: Int? = null,
         toneRange: ToneRange = ToneRange.LIMITED,
     ): List<String> {
-        val height = width * 9 / 16
-        val filters = listOfNotNull(
-            geometryFilter(adjustments, sourceWidth, sourceHeight, width, height, atMs - STILL_FRAME_OFFSET_MS),
-            "scale=$width:-2",
-            colorFilter(adjustments?.let { ColorTimeline.at(it, atMs - STILL_FRAME_OFFSET_MS) }, toneRange),
-        )
-        val seekSecs = ((atMs - STILL_FRAME_OFFSET_MS).coerceAtLeast(0) / 1000.0).formatSecs()
+        val filters = stillFrameFilters(atMs, width, adjustments, sourceWidth, sourceHeight, toneRange)
+        val seekSecs = (stillFrameSeekMs(atMs) / 1000.0).formatSecs()
         val output = if (outputPath == PIPE) BMP_PIPE_OUTPUT else listOf("-update", "1", outputPath)
         return listOf(
             "-y", "-v", "error", "-ss", seekSecs, "-i", sourcePath,
-            "-frames:v", "1", "-vf", filters.joinToString(","),
+            "-frames:v", "1", "-vf", filters,
         ) + output
+    }
+
+    /** The seek time of [stillFrameArgs]: the frame is the first frame at or after this time. */
+    fun stillFrameSeekMs(atMs: Long): Long = (atMs - STILL_FRAME_OFFSET_MS).coerceAtLeast(0)
+
+    /**
+     * The filters of [stillFrameArgs]: the crop and rotation, the width [width], and the colors.
+     * The Share tab gives the same filters to a hidden mpv player, so its frame is the same as the ffmpeg frame.
+     * The mpv player needs [lgpl]: its FFmpeg libraries have no GPL filters.
+     */
+    fun stillFrameFilters(
+        atMs: Long,
+        width: Int,
+        adjustments: org.litvin.adjustments.AdjustmentsV1? = null,
+        sourceWidth: Int? = null,
+        sourceHeight: Int? = null,
+        toneRange: ToneRange = ToneRange.LIMITED,
+        lgpl: Boolean = false,
+    ): String {
+        val height = width * 9 / 16
+        return listOfNotNull(
+            geometryFilter(adjustments, sourceWidth, sourceHeight, width, height, atMs - STILL_FRAME_OFFSET_MS),
+            "scale=$width:-2",
+            colorFilter(adjustments?.let { ColorTimeline.at(it, atMs - STILL_FRAME_OFFSET_MS) }, toneRange, lgpl),
+        ).joinToString(",")
     }
 
     /**
@@ -644,8 +733,10 @@ object FFmpegCommandBuilder {
             }
             video += "setpts=PTS/${fmt6(replay.speed)}"
             replay.sourceFrameRate?.let { video += "fps=${it.ffmpegArgument}" }
-            p.subtitlesAssPath?.let { video += "subtitles='${escapeForFilterPath(it)}'" }
-            video += fadeFilters(p.fadeIn, p.fadeOut, durationSecs)
+            // The subtitles and the fades come after the still frame, because their times count it.
+            val after = mutableListOf<String>()
+            p.subtitlesAssPath?.let { after += "subtitles='${escapeForFilterPath(it)}'" }
+            after += fadeFilters(p.fadeIn, p.fadeOut, durationSecs)
             val audioFades = audioFadeFilters(p.fadeIn, p.fadeOut, durationSecs)
             val audio = when {
                 !p.sourceHasAudio -> "$SILENT_AUDIO,atrim=duration=$duration"
@@ -654,11 +745,11 @@ object FFmpegCommandBuilder {
                     // A lower sample rate plays the samples slower, so the pitch goes down with the speed (decision 4).
                     // The resample keeps the sample rate of the other passes, so the join can copy the streams.
                     val slowRate = Math.round(replay.sampleRate * replay.speed).coerceAtLeast(1L)
-                    (listOf("[0:a]asetpts=PTS-STARTPTS", "asetrate=$slowRate", "aresample=${replay.sampleRate}", "apad", "atrim=duration=$duration") + audioFades)
-                        .joinToString(",")
+                    val slow = listOf("[0:a]asetpts=PTS-STARTPTS", "asetrate=$slowRate", "aresample=${replay.sampleRate}")
+                    replayFreezeAudio(slow, listOf("apad", "atrim=duration=$duration") + audioFades, replay)
                 }
             }
-            filterComplex = "[0:v]${video.joinToString(",")}$vMap;$audio$aMap"
+            filterComplex = "${replayFreezeVideo(video, after, replay)}$vMap;$audio$aMap"
         } else if (segmentInputs) {
             // Build the concat graph over the per-segment inputs. Each input was already seeked and
             // length-limited on the command line, so the segment only needs its timestamps rebased.

@@ -23,10 +23,12 @@ import javax.imageio.ImageIO
  * - `--logo=<image>`: a logo file in a format of [ThumbnailLogos.EXTENSIONS]. The default is no logo.
  * - `--texts=sample|long|short`: the sample texts. The default is `sample` (the texts of the design canvas).
  * - `--columns=<n>`: the number of thumbnails in a row. The default is 3.
+ * - `--brand-color=<#RRGGBB>`: the color of the brand name. The default is the text color of each style.
+ * - `--score=<text>`: the text of the Score field, in place of the score of the sample texts.
  */
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
-    val known = setOf("out", "styles", "frame", "logo", "texts", "columns")
+    val known = setOf("out", "styles", "frame", "logo", "texts", "columns", "brand-color", "score")
     val options = args.associate { arg ->
         require(arg.startsWith("--") && "=" in arg) { "Unknown argument: $arg. Use ${known.joinToString { "--$it=" }}." }
         arg.removePrefix("--").substringBefore('=') to arg.substringAfter('=')
@@ -40,11 +42,12 @@ fun main(args: Array<String>) {
         val image = ThumbnailLogos.fit(ThumbnailLogos.read(File(path), System.getenv("FFMPEG_PATH")?.let { "$it/ffmpeg.exe" } ?: "ffmpeg"))
         ThumbnailLogo("preview", image)
     }
-    val texts = ThumbnailPreviewSheet.texts(options["texts"] ?: "sample")
+    val texts = ThumbnailPreviewSheet.texts(options["texts"] ?: "sample") + listOfNotNull(options["score"]?.let { ThumbnailField.SCORE to it })
     val columns = options["columns"]?.toInt() ?: 3
+    val brandRgb = options["brand-color"]?.let { requireNotNull(ThumbnailLooks.parseHex(it)) { "Use a color as #RRGGBB: $it" } }
 
     out.absoluteFile.parentFile.mkdirs()
-    ImageIO.write(ThumbnailPreviewSheet.render(styles, frame, logo, texts, columns), "png", out)
+    ImageIO.write(ThumbnailPreviewSheet.render(styles, frame, logo, texts, columns, brandRgb), "png", out)
     println("Thumbnail previews: ${out.absolutePath}")
 }
 
@@ -95,6 +98,7 @@ object ThumbnailPreviewSheet {
         logo: ThumbnailLogo?,
         texts: Map<ThumbnailField, String>,
         columns: Int,
+        brandRgb: Int? = null,
     ): BufferedImage {
         val rows = (styles.size + columns - 1) / columns
         val sheet = BufferedImage(
@@ -119,6 +123,7 @@ object ThumbnailPreviewSheet {
                     texts = texts.filterKeys { it in style.fields },
                     colors = ThumbnailLooks.colors(style, null),
                     logo = logo,
+                    brandRgb = brandRgb,
                 )
                 val layout = ThumbnailRenderer.layout(scene)
                 val image = ThumbnailRenderer.render(source, FrameView(), scene)

@@ -215,6 +215,16 @@ When item is done, move it under
     user types, as the logo.
   - The thumbnail shows the brand name as the user types it. The app does
     not change it to capital letters. (Decided on 2026-10-27.)
+  - The shadow around the brand name contrasts with its color: black
+    around a light color, white around a dark color. (Decided on
+    2026-10-27.)
+  - Lightning: the first team is at the left edge, and the second team is
+    at the right edge. (Decided on 2026-10-27.)
+  - The Score field accepts any text. A text of set scores only (for
+    example "6-4 7-5") shows as set scores. Another text shows as the user
+    types it: Scoreline shows it in the large score font, and Score bug
+    shows it in one cell at the right of the team rows. (Decided on
+    2026-10-27.)
   - One text field goes to one label on the thumbnail, and one label shows
     one text field. No label shows another field when its field is empty.
     The fields have the same names in all styles, so the texts stay when

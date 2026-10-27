@@ -44,6 +44,7 @@ internal object ThumbnailDesigns {
     // Fixed colors of the artboards. The color roles change the other parts.
     private const val INK = 0x111111
     private const val BLACK = 0x000000
+    private const val WHITE = 0xFFFFFF
 
     /** The skew of a synthetic italic, as the browsers draw an italic of a font without an italic face. */
     private const val ITALIC = -0.25
@@ -87,9 +88,18 @@ internal object ThumbnailDesigns {
         }
     }
 
-    /** The sets of a score such as "6-4 7-5" or "7–6 4–6 11–9". At most 5 sets. */
-    fun sets(score: String): List<Pair<String, String>> =
-        Regex("(\\d+)\\s*[-–—:]\\s*(\\d+)").findAll(score).map { it.groupValues[1] to it.groupValues[2] }.take(5).toList()
+    /**
+     * The sets of a score such as "6-4 7-5" or "7–6, 4–6, 11–9", at most 5 sets. A text with other words, for example
+     * "6-4 ret." or "Close match", has no sets: the styles then show the text as the user types it.
+     */
+    fun sets(score: String): List<Pair<String, String>> {
+        if (!SCORE_ONLY.matches(score)) return emptyList()
+        val sets = SET.findAll(score).map { it.groupValues[1] to it.groupValues[2] }.toList()
+        return if (sets.size <= 5) sets else emptyList()
+    }
+
+    private val SET = Regex("(\\d+)\\s*[-–—:]\\s*(\\d+)")
+    private val SCORE_ONLY = Regex("\\s*\\d+\\s*[-–—:]\\s*\\d+(\\s*[,;/]?\\s*\\d+\\s*[-–—:]\\s*\\d+)*\\s*")
 
     /** A team name in two rows, before the separator ("/", "&", "+"). "ANNA & MARK" becomes "ANNA" and "& MARK". */
     fun teamRows(name: String): List<String> {
@@ -339,8 +349,13 @@ internal object ThumbnailDesigns {
         val club = raw(ThumbnailField.CLUB)
         if (club.isEmpty()) return
         val font = b.fitted(scene.brandFace ?: face, 36.0, club, 440.0, normal = 0.8, spacing = 2.0)
-        b.line(club, font, scene.brandRgb ?: c.text, edge, if (box != null) clubTop else logoTop + 4, 1.1 * font.size2D, align, CLUB_SHADOW)
+        val rgb = scene.brandRgb ?: c.text
+        b.line(club, font, rgb, edge, if (box != null) clubTop else logoTop + 4, 1.1 * font.size2D, align, clubShadow(rgb))
     }
+
+    /** The shadow around the brand name: black around a light color, white around a dark color, so the name stays readable. */
+    internal fun clubShadow(rgb: Int): TextShadow =
+        if (ThumbnailLooks.onColor(rgb) == WHITE) CLUB_SHADOW.copy(rgb = WHITE) else CLUB_SHADOW
 
     /** The rows of [text], each fitted to [max]. The first row starts at [sizes] first, the second at the second size. */
     private fun Ctx.rowFonts(
@@ -845,11 +860,12 @@ internal object ThumbnailDesigns {
         corner(ThumbnailFace.SHOULDERS)
     }
 
-    /** A team on a skewed plate with a hard shadow. */
-    private fun Ctx.skewedPlate(team: String, rgb: Int, x: Double, top: Double, max: Double) {
+    /** A team on a skewed plate with a hard shadow. [x] is the left edge, or the right edge for [right]. */
+    private fun Ctx.skewedPlate(team: String, rgb: Int, x: Double, top: Double, max: Double, right: Boolean = false) {
         if (team.isEmpty()) return
         val font = b.fitted(ThumbnailFace.SHOULDERS, 118.0, team, max)
-        val box = Rectangle2D.Double(x, top, width(team, font) + 60, 6 + font.size2D + 12.0)
+        val w = width(team, font) + 60
+        val box = Rectangle2D.Double(if (right) x - w else x, top, w, 6 + font.size2D + 12.0)
         b.group(skewX(-8.0, box.centerX, box.centerY)) {
             b.fill(Rectangle2D.Double(box.x + 10, box.y + 10, box.width, box.height), color(c.panel))
             b.fill(box, color(rgb))
@@ -862,9 +878,9 @@ internal object ThumbnailDesigns {
         b.fill(full(), b.shade(0.28))
         b.fill(polygon("704,10 824,10 759,272 844,272 624,730 714,422 634,422"), color(c.panel))
         b.fill(polygon("680,0 800,0 735,260 820,260 600,720 690,410 610,410"), color(c.accent))
-        // The first plate stops before the logo and the club name at the top right.
-        skewedPlate(up(ThumbnailField.TEAM1), c.second, 330.0, 44.0, 560.0)
-        skewedPlate(up(ThumbnailField.TEAM2), c.third, 500.0, 420.0, 660.0)
+        // The first team is at the left edge and stops before the bolt. The second team is at the right edge.
+        skewedPlate(up(ThumbnailField.TEAM1), c.second, 44.0, 44.0, 560.0)
+        skewedPlate(up(ThumbnailField.TEAM2), c.third, W - 56, 420.0, 660.0, right = true)
         if (head.isNotEmpty()) {
             val font = b.fitted(ThumbnailFace.SHOULDERS, 128.0, head, 960.0)
             b.line(head, font, c.accent, 44.0, 560.0, font.size2D.toDouble(), outline = TextOutline(c.panel, 8.0))
@@ -929,9 +945,11 @@ internal object ThumbnailDesigns {
             b.runs(runs, font, rx, y, 1.05 * font.size2D, Align.RIGHT)
             y += 1.05 * font.size2D
         }
-        val score = sets(raw(ThumbnailField.SCORE))
-        if (score.isNotEmpty()) {
-            val runs = score.flatMapIndexed { index, (a, z) ->
+        val scoreText = raw(ThumbnailField.SCORE)
+        val score = sets(scoreText)
+        if (scoreText.isNotEmpty()) {
+            // A score of sets has accent dashes. Another text shows as the user types it.
+            val runs = if (score.isEmpty()) listOf(Run(scoreText, c.text)) else score.flatMapIndexed { index, (a, z) ->
                 listOfNotNull(Run(" ", c.text).takeIf { index > 0 }, Run(a, c.text), Run("-", c.accent), Run(z, c.text))
             }
             val font = b.fitRuns(runs, ThumbnailFace.SHOULDERS, 236.0, max, normal = 0.45, spacing = 4.0)
@@ -1154,7 +1172,12 @@ internal object ThumbnailDesigns {
         val left = 492.0
         val w = 740.0
         val top = 96.0
-        val sets = sets(raw(ThumbnailField.SCORE))
+        val scoreText = raw(ThumbnailField.SCORE)
+        val sets = sets(scoreText)
+        // A score that is not sets shows as the user types it, in one cell at the right of the team rows.
+        val freeScore = scoreText.takeIf { it.isNotEmpty() && sets.isEmpty() }
+        val freeFont = freeScore?.let { b.fitted(ThumbnailFace.EXO_ITALIC, 64.0, it, 320.0) }
+        val freeW = if (freeScore != null && freeFont != null) width(freeScore, freeFont) + 56 else 0.0
         val names = listOf(up(ThumbnailField.TEAM1), up(ThumbnailField.TEAM2))
         val shown = names.indices.filter { names[it].isNotEmpty() }
         val info = joined(ThumbnailField.EVENT, ThumbnailField.ROUND)
@@ -1176,7 +1199,8 @@ internal object ThumbnailDesigns {
             won.count { it < 0 } > won.count { it > 0 } -> 1
             else -> 0
         }
-        val cellsLeft = left + w - sets.size * 112.0
+        val cellsLeft = left + w - sets.size * 112.0 - freeW
+        val rowsTop = y
         shown.forEachIndexed { row, side ->
             val strong = side == winner
             b.fill(Rectangle2D.Double(left, y, w, 124.0), color(c.panel))
@@ -1196,6 +1220,11 @@ internal object ThumbnailDesigns {
                 b.fill(Rectangle2D.Double(left, y, w, 4.0), color(blend(c.panel, c.text, 0.1)))
                 y += 4
             }
+        }
+        if (freeScore != null && freeFont != null && rowsH > 0) {
+            val cell = Rectangle2D.Double(cellsLeft, rowsTop, freeW, rowsH)
+            b.fill(cell, color(c.card))
+            b.line(freeScore, freeFont, c.onCard, cell.centerX, cell.centerY - 0.6 * freeFont.size2D, 1.2 * freeFont.size2D, Align.CENTER)
         }
         if (infoFont != null) {
             b.fill(Rectangle2D.Double(left, y, w, infoH), color(c.second))

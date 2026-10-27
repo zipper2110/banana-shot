@@ -122,18 +122,25 @@ object ThumbnailLogos {
         val longer = max(image.width, image.height)
         if (longer <= MAX_SIDE) return argb(image)
         val scale = MAX_SIDE.toDouble() / longer
-        var current = argb(image)
-        var w = image.width
-        var h = image.height
         val targetW = (image.width * scale).roundToInt().coerceAtLeast(1)
         val targetH = (image.height * scale).roundToInt().coerceAtLeast(1)
-        // Steps of one half keep a large image smooth.
-        while (w / 2 >= targetW && h / 2 >= targetH) {
-            w /= 2
-            h /= 2
-            current = scaled(current, w, h)
+        return scaledDown(argb(image), targetW, targetH)
+    }
+
+    /**
+     * [image] at [w] × [h] with an alpha channel. A large image scaled in one step to a small size looks rough,
+     * so the image goes down in steps of one half first.
+     */
+    fun scaledDown(image: BufferedImage, w: Int, h: Int): BufferedImage {
+        var current = image
+        var cw = image.width
+        var ch = image.height
+        while (cw / 2 >= w && ch / 2 >= h) {
+            cw /= 2
+            ch /= 2
+            current = scaled(current, cw, ch)
         }
-        return scaled(current, targetW, targetH)
+        return scaled(current, w, h)
     }
 
     private fun scaled(image: BufferedImage, w: Int, h: Int): BufferedImage {

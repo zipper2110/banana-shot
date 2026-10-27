@@ -641,36 +641,10 @@ object ThumbnailRenderer {
         val h = (item.h * scale).roundToInt().coerceAtLeast(1)
         val key = Triple(System.identityHashCode(item.image), w, h)
         val scaled = synchronized(pictureCache) {
-            pictureCache.getOrPut(key) { ThumbnailLogos.fit(stepDown(item.image, w, h)) }
+            pictureCache.getOrPut(key) { ThumbnailLogos.fit(ThumbnailLogos.scaledDown(item.image, w, h)) }
         }
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
         g2.drawImage(scaled, item.x.roundToInt(), item.y.roundToInt(), item.w.roundToInt(), item.h.roundToInt(), null)
-    }
-
-    /** [image] at [w] × [h] with an alpha channel, scaled down in steps of one half. */
-    private fun stepDown(image: BufferedImage, w: Int, h: Int): BufferedImage {
-        var current = image
-        var cw = image.width
-        var ch = image.height
-        while (cw / 2 >= w && ch / 2 >= h) {
-            cw /= 2
-            ch /= 2
-            current = argbScale(current, cw, ch)
-        }
-        return argbScale(current, w, h)
-    }
-
-    private fun argbScale(image: BufferedImage, w: Int, h: Int): BufferedImage {
-        val result = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
-        val g2 = result.createGraphics()
-        try {
-            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
-            g2.drawImage(image, 0, 0, w, h, null)
-        } finally {
-            g2.dispose()
-        }
-        return result
     }
 
     private var grayCache: Pair<Int, BufferedImage>? = null

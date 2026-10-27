@@ -150,6 +150,20 @@ class ThumbnailRendererTest {
     }
 
     @Test
+    fun theShadowOfTheBrandNameContrastsWithItsColor() {
+        fun shadow(rgb: Int): Int? {
+            val scene = scene(ThumbnailStyle.SPLASH, logo = logo).copy(brandRgb = rgb)
+            val text = ThumbnailRenderer.layout(scene).items.filterIsInstance<ThumbnailRenderer.Item.Text>()
+                .first { it.text == "Batumi beach club" }
+            return text.shadow?.rgb
+        }
+        assertEquals(0x000000, shadow(0xFFFFFF), "A white name has a black shadow")
+        assertEquals(0x000000, shadow(0xC8F031), "A lime name has a black shadow")
+        assertEquals(0xFFFFFF, shadow(0x141414), "A black name has a white shadow")
+        assertEquals(0xFFFFFF, shadow(0x1E3A8A), "A navy name has a white shadow")
+    }
+
+    @Test
     fun aTextWithLettersThatTheFontDoesNotHaveUsesTheFontOfTheApp() {
         // Big Shoulders Display has no Cyrillic letters.
         val layout = ThumbnailRenderer.layout(scene(ThumbnailStyle.FIGHT_CARD, values = texts + (ThumbnailField.TEAM1 to "Дима / Яна")))
@@ -163,6 +177,23 @@ class ThumbnailRendererTest {
         assertEquals(listOf("7" to "6", "4" to "6", "11" to "9"), ThumbnailDesigns.sets("7–6 4–6 11–9"))
         assertEquals(listOf("6" to "3"), ThumbnailDesigns.sets("6:3"))
         assertEquals(emptyList(), ThumbnailDesigns.sets("won"))
+        assertEquals(listOf("7" to "6", "4" to "6"), ThumbnailDesigns.sets("7-6, 4-6"))
+        // A text with other words is not a score of sets. The styles show it as the user types it.
+        assertEquals(emptyList(), ThumbnailDesigns.sets("6-4 ret."))
+        assertEquals(emptyList(), ThumbnailDesigns.sets("shocking score"))
+    }
+
+    @Test
+    fun aScoreThatIsNotSetsShowsAsTheUserTypesIt() {
+        for (style in listOf(ThumbnailStyle.SCORELINE, ThumbnailStyle.SCORE_BUG)) {
+            val values = mapOf(
+                ThumbnailField.TEAM1 to "Ilya",
+                ThumbnailField.TEAM2 to "Dima",
+                ThumbnailField.SCORE to "shocking score",
+            )
+            val texts = ThumbnailRenderer.layout(scene(style, values = values)).texts.map { it.first }
+            assertTrue(texts.any { "shocking score" in it }, "$style: $texts")
+        }
     }
 
     @Test

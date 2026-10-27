@@ -6,6 +6,7 @@ import org.litvin.share.ThumbnailColorSets
 import org.litvin.share.ThumbnailFace
 import org.litvin.share.ThumbnailField
 import org.litvin.share.ThumbnailFonts
+import org.litvin.share.ThumbnailLogos
 import org.litvin.share.ThumbnailLooks
 import org.litvin.share.ThumbnailVideoType
 import org.litvin.ui.commons.DialogKit
@@ -18,11 +19,13 @@ import java.awt.Component
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.GridLayout
-import java.awt.Image
+import java.awt.Graphics
+import java.awt.Graphics2D
 import java.awt.Insets
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import javax.swing.Box
-import javax.swing.ImageIcon
+import javax.swing.Icon
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JComboBox
 import javax.swing.JComponent
@@ -31,6 +34,8 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTextField
 import javax.swing.SwingConstants
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.text.AbstractDocument
@@ -319,7 +324,7 @@ internal class ShareTextsPanel(
         val known = brandRgb == null || brandSwatches.any { it.second == brandRgb }
         brandCustom.chosen = !known
         brandCustom.color = if (known) null else Color(brandRgb!!)
-        logoImage.icon = state.logo?.let { ImageIcon(fitted(it)) }
+        if ((logoImage.icon as? LogoIcon)?.image !== state.logo) logoImage.icon = state.logo?.let { LogoIcon(it) }
         logoImage.isVisible = state.logo != null
         logoAdd.text = if (state.logo == null) tr("share.logo.add") else tr("share.logo.change")
         logoRemove.isVisible = state.logo != null
@@ -328,12 +333,38 @@ internal class ShareTextsPanel(
         repaint()
     }
 
-    /** The logo in the box of the preview, with its aspect. */
-    private fun fitted(image: BufferedImage): Image {
-        val scale = minOf(LOGO_W.toDouble() / image.width, LOGO_H.toDouble() / image.height)
-        val w = (image.width * scale).toInt().coerceAtLeast(1)
-        val h = (image.height * scale).toInt().coerceAtLeast(1)
-        return image.getScaledInstance(w, h, Image.SCALE_SMOOTH)
+    /**
+     * The logo in the box of the preview, with its aspect. The icon scales the logo to the pixels of the screen when
+     * it paints, so the logo is sharp on a HiDPI screen. An image scaled to the logical size looks blurred there,
+     * because Swing then makes it larger again.
+     */
+    private class LogoIcon(val image: BufferedImage) : Icon {
+        private val scale = minOf(LOGO_W.toDouble() / image.width, LOGO_H.toDouble() / image.height)
+        private val w = (image.width * scale).roundToInt().coerceAtLeast(1)
+        private val h = (image.height * scale).roundToInt().coerceAtLeast(1)
+
+        /** The scaled logo and its size in device pixels. */
+        private var cache: Pair<Dimension, BufferedImage>? = null
+
+        override fun getIconWidth() = w
+
+        override fun getIconHeight() = h
+
+        override fun paintIcon(c: Component?, g: Graphics, x: Int, y: Int) {
+            val g2 = g.create() as Graphics2D
+            try {
+                val size = Dimension(
+                    ceil(w * g2.transform.scaleX.coerceAtLeast(1.0)).toInt(),
+                    ceil(h * g2.transform.scaleY.coerceAtLeast(1.0)).toInt(),
+                )
+                val scaled = cache?.takeIf { it.first == size }?.second
+                    ?: ThumbnailLogos.scaledDown(image, size.width, size.height).also { cache = size to it }
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+                g2.drawImage(scaled, x, y, w, h, null)
+            } finally {
+                g2.dispose()
+            }
+        }
     }
 
     /** A font of the brand name in the list. [face] null: the font of the style. */

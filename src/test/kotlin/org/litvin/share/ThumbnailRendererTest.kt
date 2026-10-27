@@ -107,9 +107,18 @@ class ThumbnailRendererTest {
     fun withoutALogoTheClubNameGoesUp() {
         fun club(logo: ThumbnailLogo?): Rectangle2D {
             val layout = ThumbnailRenderer.layout(scene(ThumbnailStyle.SPLASH, logo = logo))
-            return layout.textBounds[layout.texts.indexOfFirst { it.first == "BATUMI BEACH CLUB" }]
+            return layout.textBounds[layout.texts.indexOfFirst { it.first == "Batumi beach club" }]
         }
         assertTrue(club(null).y < club(logo).y - 50, "Without the logo: ${club(null)}. With the logo: ${club(logo)}")
+    }
+
+    @Test
+    fun theBrandNameKeepsTheLettersAsTheUserTypesThem() {
+        for (style in ThumbnailStyle.entries.filter { ThumbnailField.CLUB in it.fields }) {
+            val texts = ThumbnailRenderer.layout(scene(style, logo = logo)).texts.map { it.first }
+            assertFalse(texts.any { "BATUMI BEACH CLUB" in it }, "$style: $texts")
+            assertTrue(texts.any { "Batumi beach club" in it }, "$style: $texts")
+        }
     }
 
     @Test

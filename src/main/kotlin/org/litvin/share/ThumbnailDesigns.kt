@@ -335,7 +335,8 @@ internal object ThumbnailDesigns {
         val edge = if (right) W - x else x
         val box = logo(edge, logoTop, 240.0, 96.0, align)
         if (!withClub) return
-        val club = up(ThumbnailField.CLUB)
+        // The brand name keeps the letters as the user types them. The user types capital letters to get them.
+        val club = raw(ThumbnailField.CLUB)
         if (club.isEmpty()) return
         val font = b.fitted(scene.brandFace ?: face, 36.0, club, 440.0, normal = 0.8, spacing = 2.0)
         b.line(club, font, scene.brandRgb ?: c.text, edge, if (box != null) clubTop else logoTop + 4, 1.1 * font.size2D, align, CLUB_SHADOW)

@@ -213,6 +213,8 @@ When item is done, move it under
     the next project, as the logo.
   - The brand name is the same in all projects. The app saves it as the
     user types, as the logo.
+  - The thumbnail shows the brand name as the user types it. The app does
+    not change it to capital letters. (Decided on 2026-10-27.)
   - One text field goes to one label on the thumbnail, and one label shows
     one text field. No label shows another field when its field is empty.
     The fields have the same names in all styles, so the texts stay when

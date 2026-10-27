@@ -47,8 +47,7 @@ describe('data start', () => {
     expect(env.cockpit.db.prepare('SELECT day FROM app_daily WHERE dev = 0 ORDER BY day').all())
       .toEqual([{ day: '2026-10-01' }, { day: '2026-10-04' }]);
     expect(users.since).toBe('2026-10-04');
-    expect(users.total.session_n_1).toBe(1);
-    expect(users.installsBefore).toBe(0);
+    expect(users.total).toMatchObject({ sessions: 1, session_n_1: 1 });
   });
 
   it('ignores the reports before the start', async () => {

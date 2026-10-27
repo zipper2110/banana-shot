@@ -390,13 +390,11 @@
    * numbers give sessions, not users.
    */
   function renderUsers(data) {
-    const ids = ['users-stats', 'users-daily', 'users-number'];
-    if (!data.users.ok) return failAll(ids, data.users.error);
+    if (!data.users.ok) return failAll(['users-stats'], data.users.error);
     const users = data.users.data;
     const total = users.total;
-    const inPeriod = total.session_n_1 - users.installsBefore;
     $('users-note').textContent = users.since
-      ? `All time, from ${shortDate(users.since)} to the end of the period. One install is one first start of the app on a computer.`
+      ? `From ${shortDate(users.since)} to the end of the period. One install is one first start of the app on a computer.`
       : 'No session yet.';
     const stats = h('div', 'stats');
     const stat = (label, value, cls) => {
@@ -404,21 +402,8 @@
       item.append(h('div', 'label', label), h('div', 'value', format(value)));
       return item;
     };
-    stats.append(stat('Installs, all time', total.session_n_1, 'main'), stat('New in the period', inPeriod), stat('Sessions, all time', total.sessions));
+    stats.append(stat('Installs', total.session_n_1, 'main'), stat('Sessions', total.sessions, 'main'));
     $('users-stats').replaceChildren(stats);
-    window.Charts.lines($('users-daily'), {
-      data: users.daily, area: true, label: 'Installs that started the app, all time, at the end of each day',
-      series: [{ key: 'installs', label: 'Installs', color: 3 }],
-    });
-
-    const sessions = total.sessions;
-    const share = value => ({ value: value || 0, label: `${format(value || 0)} · ${percent(value || 0, sessions)}` });
-    ranked($('users-number'), [
-      { name: '1st session (one for each install)', ...share(total.session_n_1), cls: 'c3' },
-      { name: '2nd to 5th', ...share(total.session_n_2_5) },
-      { name: '6th to 20th', ...share(total.session_n_6_20) },
-      { name: '21st or later', ...share(total.session_n_21p) },
-    ], { keepZero: true, max: sessions, emptyText: 'No session yet.' });
   }
 
   function renderDownloads(data) {

@@ -1,6 +1,6 @@
 import { FILTER } from './app-usage';
 import type { Env } from './env';
-import { DAY, type Period, dataStart, dates, isoDate, startOfDay } from './period';
+import { DAY, type Period, dataStart, isoDate, startOfDay } from './period';
 
 export const APP_DAYS_JOB = 'app_daily';
 
@@ -78,10 +78,6 @@ export interface UserBase {
   lastRun: { ranAt: number; ok: boolean; message: string } | null;
   /** From the first day to the end of the period. */
   total: DayTotals;
-  /** The installs that started the app before the period. */
-  installsBefore: number;
-  /** For each day of the period: the new installs and the installs up to the end of that day. */
-  daily: { date: string; newInstalls: number; installs: number }[];
 }
 
 /**
@@ -104,29 +100,16 @@ export async function loadUserBase(env: Env, period: Period, includeDev: boolean
     : [];
 
   const endDate = isoDate(period.end);
-  const startDate = isoDate(period.start);
   const rows = [...stored.results, ...live].filter(row => row.day < endDate);
   const total = { ...ZERO };
-  let installsBefore = 0;
-  const newByDay = new Map<string, number>();
   for (const row of rows) {
     for (const key of Object.keys(ZERO) as (keyof DayTotals)[]) total[key] += row[key] ?? 0;
-    if (row.day < startDate) installsBefore += row.session_n_1 ?? 0;
-    else newByDay.set(row.day, row.session_n_1 ?? 0);
   }
-  let installs = installsBefore;
-  const daily = dates(period.start, period.end).map(date => {
-    const newInstalls = newByDay.get(date) ?? 0;
-    installs += newInstalls;
-    return { date, newInstalls, installs };
-  });
 
   return {
     since: rows.find(row => row.sessions > 0)?.day ?? null,
     savedThrough,
     lastRun: status ? { ranAt: status.ran_at, ok: status.ok === 1, message: status.message } : null,
     total,
-    installsBefore,
-    daily,
   };
 }

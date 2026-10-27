@@ -21,6 +21,8 @@ Decided on 2026-10-27 by the author: the section uses the current analytics data
 
 - The analytics data has no install ID (`docs/analytics/design.md`). Each install sends exactly one session with
   `session_n_1`. Thus the sum of the first sessions is the number of installs that started the app.
+- The section shows two all-time numbers: the installs and the sessions. Changed on 2026-10-27 by the author: no
+  chart and no session numbers.
 - The other session numbers (2 to 5, 6 to 20, 21 or later) count sessions, not installs. The cockpit cannot count
   the occasional and the regular users. For these counts, the app must send more data, for example a flag on the
   first session of each week and month. This needs an app release and a new legitimate-interest assessment.

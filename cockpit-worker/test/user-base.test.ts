@@ -55,9 +55,6 @@ describe('user base', () => {
     expect(users.since).toBe('2026-09-01');
     expect(users.savedThrough).toBe('2026-09-20');
     expect(users.total).toEqual({ sessions: 5, session_n_1: 3, session_n_2_5: 1, session_n_6_20: 0, session_n_21p: 1 });
-    expect(users.installsBefore).toBe(1);
-    expect(users.daily.map(day => day.installs)).toEqual([1, 1, 2, 2, 2, 2, 3]);
-    expect(users.daily[2]).toEqual({ date: '2026-10-02', newInstalls: 1, installs: 2 });
     expect(users.lastRun?.ok).toBe(true);
   });
 
@@ -70,7 +67,7 @@ describe('user base', () => {
     const users = await loadUserBase(env, makePeriod(7, NOW, Date.parse('2026-09-30T00:00:00Z')), false);
 
     expect(users.total.session_n_1).toBe(1);
-    expect(users.daily.at(-1)).toEqual({ date: '2026-09-30', newInstalls: 0, installs: 1 });
+    expect(users.total.sessions).toBe(1);
   });
 
   it('uses the analytics database only before the first copy, and includes the development builds on request', async () => {

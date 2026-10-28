@@ -15,6 +15,7 @@ import java.awt.GraphicsEnvironment
 import java.awt.GridLayout
 import java.awt.Insets
 import java.awt.LayoutManager
+import java.awt.Point
 import java.awt.Window
 import java.awt.event.ActionEvent
 import java.awt.event.FocusAdapter
@@ -312,6 +313,31 @@ internal object DialogKit {
             bounds.y + insets.top + max(0, (areaHeight - dialog.height) / 2),
         )
     }
+
+    /**
+     * Moves [window] into the screen area without the taskbar, when the window is not fully in it. A window that
+     * grows with `pack()` keeps its top edge, so its bottom can go below the taskbar, for example with a longer
+     * translation on a small screen. A window that is larger than the area keeps its top left corner in the area.
+     */
+    fun keepOnScreen(window: Window) {
+        val config = window.graphicsConfiguration ?: return
+        val bounds = config.bounds
+        val insets = runCatching { window.toolkit.getScreenInsets(config) }.getOrDefault(Insets(0, 0, 0, 0))
+        val area = Rectangle(
+            bounds.x + insets.left,
+            bounds.y + insets.top,
+            bounds.width - insets.left - insets.right,
+            bounds.height - insets.top - insets.bottom,
+        )
+        val location = keptLocation(window.bounds, area)
+        if (location != window.location) window.location = location
+    }
+
+    /** The location of [window] that puts it fully into [area], with the smallest move. */
+    internal fun keptLocation(window: Rectangle, area: Rectangle): Point = Point(
+        window.x.coerceAtMost(area.x + area.width - window.width).coerceAtLeast(area.x),
+        window.y.coerceAtMost(area.y + area.height - window.height).coerceAtLeast(area.y),
+    )
 
     const val INPUT_HEIGHT = 34
 }

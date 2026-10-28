@@ -80,6 +80,7 @@ class NewProjectDialog private constructor(
         ): NewProjectRequest? {
             val dialog = NewProjectDialog(SwingUtilities.getWindowAncestor(parent), initial, chooseVideo, videoCheck)
             dialog.setLocationRelativeTo(parent)
+            DialogKit.keepOnScreen(dialog)
             dialog.isVisible = true
             return dialog.result
         }
@@ -184,6 +185,8 @@ class NewProjectDialog private constructor(
         minimumSize = null
         pack()
         minimumSize = size
+        // A taller dialog can reach below the taskbar on a small screen.
+        DialogKit.keepOnScreen(this)
     }
 
     /** Shows the error messages and enables "Create project" only for correct values. Returns true for correct values. */
@@ -256,6 +259,7 @@ class NewProjectDialog private constructor(
         videoExplanation.isVisible = explanation != null
         // The explanation adds some lines, so the dialog gets taller.
         pack()
+        DialogKit.keepOnScreen(this)
     }
 
     private fun showError(label: JLabel, message: String?) {

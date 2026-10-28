@@ -159,6 +159,7 @@ Started: $(Get-Date -Format o)
 | Adjustment controls | Pending |  |  |  |
 | FFmpeg export | Pending |  |  |  |
 | Video language | Pending |  |  |  |
+| Keyboard layouts | Pending |  |  |  |
 | Relaunch and recents | Pending |  |  |  |
 
 ## Failure details

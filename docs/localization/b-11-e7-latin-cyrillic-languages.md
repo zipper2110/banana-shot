@@ -126,11 +126,20 @@ example `E7-L-pt`), and copy the template below.
     acts.
   - The manual check with the Russian and the Greek layouts is in
     `qa/windows/ui-smoke.md`, and it passes.
-- Tests: —
-- Notes: on 2026-10-20 all shortcuts bind key codes (`AppShortcuts`,
-  `KeyStroke.getKeyStroke("Q")`). No code reads the typed character, and no
-  shortcut uses Ctrl+Alt or a punctuation key. The scan test and the manual
-  check are open.
+- Tests: `KeyboardShortcutScanTest` (the main sources, and a negative test
+  with each bad shortcut).
+- Notes:
+  - On 2026-10-20 all shortcuts bind key codes (`AppShortcuts`,
+    `KeyStroke.getKeyStroke("Q")`). No code reads the typed character, and
+    no shortcut uses Ctrl+Alt or a punctuation key.
+  - On 2026-10-28 the scan test is done. It reads the first text argument
+    of `getKeyStroke`, `AppShortcut`, `bind`, and `bindStepKey`, and the
+    `KeyEvent.VK_` codes and the modifier masks. A text that is not a key
+    stroke also fails, so a wrong key name does not hide a shortcut.
+  - Step 7 of `qa/windows/ui-smoke.md` is the manual check (the Russian,
+    the Greek, and the Polish layouts). The report of `Run-UiSmoke.ps1` has
+    its row.
+  - Open: the manual check.
 
 ### E7-T4 Font check for each language
 

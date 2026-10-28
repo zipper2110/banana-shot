@@ -43,7 +43,8 @@ To do only the manual checklist again, add `-SkipNativeChecks` to the runner com
 4. **Edit and score** — In Points mark one point boundary pair; then give the point to Player 1 with the Q key. The visible values and saved project data should retain each edit. Capture a screenshot.
 5. **Adjustment controls and FFmpeg export** — The automated native checks do these steps. Make sure that their report rows show "Pass".
 6. **Video language** — On the Export tab, select *Scoreboard* and a *Video language* that is not the app language (for example *Español (España)* when the app is in English). Export *Only points*. Open the output and make sure that the scoreboard shows the default names in the video language ("JUGADOR 1"). Open the Points tab and make sure that the scoreboard on the video shows the same texts. Capture a screenshot.
-7. **Relaunch and recents** — Close the app, relaunch it with the same runner-created app-data directory, and confirm the project appears in recents and reopens. Capture a screenshot.
+7. **Keyboard layouts** — Add the Russian, the Greek, and the Polish keyboard layouts in Windows. Make the Russian layout active. On the Points tab, use the shortcuts C, V, A, Q, W, E, R, Shift+R, S, and F. Make sure that each shortcut does its action. Do the same with the Greek layout. Then make the Polish layout active. Type "ą", "ł", and "€" with AltGr in a player name (score settings) and in a comment. Make sure that the letters show and that no shortcut acts. Capture a screenshot.
+8. **Relaunch and recents** — Close the app, relaunch it with the same runner-created app-data directory, and confirm the project appears in recents and reopens. Capture a screenshot.
 
 ## Report fields
 

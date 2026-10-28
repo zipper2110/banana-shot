@@ -23,7 +23,13 @@ enum class Outcome { P1, P2, NONE }
 data class ScoreV1(
     val outcomes: Map<String, Outcome> = emptyMap(),
     val version: Int = 1,
+    /**
+     * The side names. A default side name is "not set" (B-11 E3-T18): the file does not keep it, and a read gives the
+     * default name of the sport in the app language (see [withDefaultTexts]).
+     */
+    @get:JsonInclude(JsonInclude.Include.CUSTOM, valueFilter = DefaultSide1NameFilter::class)
     val player1Name: String = Sport.TENNIS.defaultSideName(1),
+    @get:JsonInclude(JsonInclude.Include.CUSTOM, valueFilter = DefaultSide2NameFilter::class)
     val player2Name: String = Sport.TENNIS.defaultSideName(2),
     val player1ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER1_HEX,
     val player2ColorHex: String = ScoreboardComponent.DEFAULT_PLAYER2_HEX,
@@ -49,6 +55,19 @@ data class ScoreV1(
 ) {
     fun manualMarks(): ManualScoreMarks = ManualScoreMarks(manualGameWins, manualSetWins, scoreOverrides)
 
+    /**
+     * A copy with the default texts of the app language: a blank side name or a default side name of any sport and
+     * any language becomes [Sport.defaultSideName] of [sport], and a default title becomes the default title of the app
+     * language. The file does not keep these texts, so they follow the app language (B-11 E3-T18).
+     */
+    fun withDefaultTexts(): ScoreV1 {
+        val name1 = if (isDefaultSideName(player1Name, 1)) sport.defaultSideName(1) else player1Name
+        val name2 = if (isDefaultSideName(player2Name, 2)) sport.defaultSideName(2) else player2Name
+        val board = scoreboard.withDefaultTexts()
+        return if (name1 == player1Name && name2 == player2Name && board == scoreboard) this
+        else copy(player1Name = name1, player2Name = name2, scoreboard = board)
+    }
+
     companion object {
         /** The score file of a new project of [sport] with [rules]. The side names are "Team 1" and "Team 2" for padel. */
         fun newProject(sport: Sport, rules: MatchRulesV1): ScoreV1 = ScoreV1(
@@ -58,7 +77,25 @@ data class ScoreV1(
             sport = sport,
             useDefaultScoreboard = true,
         )
+
+        /** True when [name] is blank or a default name of side [side] of any sport in any app language. */
+        fun isDefaultSideName(name: String, side: Int): Boolean =
+            name.isBlank() || Sport.entries.any { name.trim() in it.defaultSideNames(side) }
     }
+}
+
+/** Jackson leaves out a default name of side 1, so that the project file keeps "not set" (B-11 E3-T18). */
+class DefaultSide1NameFilter {
+    override fun equals(other: Any?): Boolean = other is String && ScoreV1.isDefaultSideName(other, 1)
+
+    override fun hashCode(): Int = 0
+}
+
+/** Jackson leaves out a default name of side 2, so that the project file keeps "not set" (B-11 E3-T18). */
+class DefaultSide2NameFilter {
+    override fun equals(other: Any?): Boolean = other is String && ScoreV1.isDefaultSideName(other, 2)
+
+    override fun hashCode(): Int = 0
 }
 
 object ScoreIO {
@@ -80,8 +117,8 @@ object ScoreIO {
     /** Read ScoreV1 from the given file path; returns empty ScoreV1 if file does not exist. */
     fun read(scoreFilePath: String): ScoreV1 {
         val f = File(scoreFilePath)
-        if (!f.exists()) return ScoreV1()
-        return JsonFileIO.read(mapper, f.path, ScoreV1::class.java)
+        if (!f.exists()) return ScoreV1().withDefaultTexts()
+        return JsonFileIO.read(mapper, f.path, ScoreV1::class.java).withDefaultTexts()
     }
 
     /** Convenience: read ScoreV1 for a given project directory. */
@@ -110,7 +147,7 @@ object ScoreIO {
     /** Reads scoreboard settings from [scoreboardToJson] text. Returns null if the text is not valid. */
     fun scoreboardFromJson(json: String): ScoreboardSettingsV1? =
         try {
-            mapper.readValue(json, ScoreboardSettingsV1::class.java).normalized()
+            mapper.readValue(json, ScoreboardSettingsV1::class.java).normalized().withDefaultTexts()
         } catch (_: Exception) {
             null
         }

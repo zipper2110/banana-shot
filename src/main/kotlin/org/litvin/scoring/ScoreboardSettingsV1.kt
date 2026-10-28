@@ -1,6 +1,7 @@
 package org.litvin.scoring
 
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
+import com.fasterxml.jackson.annotation.JsonInclude
 import org.litvin.i18n.tr
 import org.litvin.i18n.I18n
 import org.litvin.i18n.TextFit
@@ -78,6 +79,11 @@ enum class ScoreboardPosition {
  */
 data class ScoreboardSettingsV1(
     val style: ScoreboardStyleId = ScoreboardStyleId.BROADCAST,
+    /**
+     * The title above the board. A default title is "not set" (B-11 E3-T18): the file does not keep it, and a read
+     * gives [DEFAULT_TITLE] of the app language. An older build then uses its own default title.
+     */
+    @get:JsonInclude(JsonInclude.Include.CUSTOM, valueFilter = DefaultTitleFilter::class)
     val title: String = DEFAULT_TITLE,
     val showTitle: Boolean = true,
     /** Shows the [APP_CREDIT] line at the bottom of the scoreboard. */
@@ -97,7 +103,13 @@ data class ScoreboardSettingsV1(
      * The title in the video. A [DEFAULT_TITLE] of an app language shows in the video language, because the user did
      * not write it (B-11 E5-T3). A function, so that the project file does not get it as a field.
      */
-    fun videoTitle(): String = if (title.trim() in defaultTitles()) DEFAULT_TITLE else title
+    fun videoTitle(): String = if (isDefaultTitle(title)) DEFAULT_TITLE else title
+
+    /** True when the user did not set a title: the title is blank or a default title of an app language. */
+    fun hasDefaultTitle(): Boolean = isDefaultTitle(title)
+
+    /** A copy with [DEFAULT_TITLE] of the app language in place of a default title of any language. */
+    fun withDefaultTexts(): ScoreboardSettingsV1 = if (hasDefaultTitle() && title != DEFAULT_TITLE) copy(title = DEFAULT_TITLE) else this
 
     /** Returns a copy with all values in their allowed ranges. */
     fun normalized(): ScoreboardSettingsV1 = copy(
@@ -113,6 +125,9 @@ data class ScoreboardSettingsV1(
          * and a project from a Spanish start keeps the Spanish text (see [defaultTitles]).
          */
         val DEFAULT_TITLE: String get() = tr("video.defaultTitle")
+
+        /** True when [title] is blank or [DEFAULT_TITLE] of an app language. */
+        fun isDefaultTitle(title: String): Boolean = title.isBlank() || title.trim() in defaultTitles()
 
         /** [DEFAULT_TITLE] in all app languages. */
         fun defaultTitles(): Set<String> = I18n.inAllLanguages("video.defaultTitle")
@@ -130,4 +145,11 @@ data class ScoreboardSettingsV1(
             return "#" + clean.uppercase()
         }
     }
+}
+
+/** Jackson leaves out a default title, so that the project file keeps "not set" (B-11 E3-T18). */
+class DefaultTitleFilter {
+    override fun equals(other: Any?): Boolean = other is String && ScoreboardSettingsV1.isDefaultTitle(other)
+
+    override fun hashCode(): Int = 0
 }

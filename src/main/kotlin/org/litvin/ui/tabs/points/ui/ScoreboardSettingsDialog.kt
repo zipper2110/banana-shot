@@ -148,6 +148,8 @@ class ScoreboardSettingsDialog private constructor(
         (document as? AbstractDocument)?.documentFilter = MaxLengthFilter(ScoreboardSettingsV1.MAX_TITLE_LENGTH)
         toolTipText = tr("scoreboard.title.tooltip")
         getAccessibleContext().accessibleName = tr("scoreboard.title")
+        // A default title is "not set" (B-11 E3-T18): the field is empty and shows the default title of the app language.
+        putClientProperty("JTextField.placeholderText", ScoreboardSettingsV1.DEFAULT_TITLE)
     }
     private val showTitle = SwitchBox(tr("scoreboard.title")).apply {
         name = "scoreboard-show-title"
@@ -371,7 +373,8 @@ class ScoreboardSettingsDialog private constructor(
     )
 
     private fun onTitleChanged() {
-        update { it.copy(title = titleField.text) }
+        val text = titleField.text
+        update { it.copy(title = if (ScoreboardSettingsV1.isDefaultTitle(text)) ScoreboardSettingsV1.DEFAULT_TITLE else text) }
     }
 
     /** Closes without a result. The caller restores the saved settings on the video. */
@@ -392,7 +395,10 @@ class ScoreboardSettingsDialog private constructor(
             styleCards.forEach { (style, card) -> card.isSelected = style == settings.style }
             styleGroup.showNote(settings.style.title)
             positionChoice.selected = settings.position
-            if (titleField.text != settings.title) titleField.text = settings.title
+            // The field stays empty for a default title. A typed default text stays as typed until the next open.
+            val shownTitle = if (settings.hasDefaultTitle()) "" else settings.title
+            val sameValue = settings.hasDefaultTitle() && ScoreboardSettingsV1.isDefaultTitle(titleField.text)
+            if (!sameValue && titleField.text != shownTitle) titleField.text = shownTitle
             showTitle.isSelected = settings.showTitle
             titleField.isEnabled = settings.showTitle
             showAppCredit.isSelected = settings.showAppCredit

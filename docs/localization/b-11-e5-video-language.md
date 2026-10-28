@@ -22,7 +22,7 @@ are in the plan, "Epics".
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
 | E5-T1 | The project keeps the video language | — | done |
-| E5-T2 | "Video language" choice on the Export tab | E5-T1 | in-progress |
+| E5-T2 | "Video language" choice on the Export tab | E5-T1 | done |
 | E5-T3 | The render uses the selected language | E5-T1 | done |
 | E5-T4 | The preview uses the video language | E5-T1 | done |
 | E5-T5 | Numbers in the video | E5-T3, E5-T4 | done |
@@ -82,7 +82,7 @@ Notes for all tasks:
 
 ### E5-T2 "Video language" choice on the Export tab
 
-- Status: in-progress
+- Status: done
 - Plan: 6 ("Setting")
 - Value: the user selects the video language where they make the video.
 - Requirements:
@@ -102,11 +102,14 @@ Notes for all tasks:
   - The Export tab has no presenter. `SwingExportPanelTest` checks the
     default, a change, the saved value, and the language of the queued
     job.
-  - Open: the UI flow test. The font check starts with E8-T2, because all
-    current languages use the same fonts.
+  - `ExportConfigurationUiFlowIT` selects German (Spanish when the app
+    language is German) and checks the queued job and the project file.
+  - The font check starts with E8-T2, because all current languages use
+    the same fonts.
 - Tests: `SwingExportPanelTest.theVideoLanguageStartsAtTheAppLanguageAndTheProjectKeepsTheSelection`,
   `SwingExportPanelTest.withOnlyOneLanguageTheVideoLanguageRowDoesNotShow`,
-  `SwingExportPanelTest.aChangeOfTheVideoLanguageInCodeIsNotASelection`.
+  `SwingExportPanelTest.aChangeOfTheVideoLanguageInCodeIsNotASelection`,
+  `ExportConfigurationUiFlowIT."the selected video language goes into the queued job and the project"`.
 
 ### E5-T3 The render uses the selected language
 

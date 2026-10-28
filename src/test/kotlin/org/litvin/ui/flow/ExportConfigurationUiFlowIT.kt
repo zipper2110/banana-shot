@@ -2,6 +2,9 @@ package org.litvin.ui.flow
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
+import org.litvin.projects.ManifestIO
 import org.litvin.scoring.Outcome
 import org.litvin.ui.flow.harness.SwingUiFlowExtension
 import org.litvin.ui.flow.harness.UiFlowContext
@@ -175,6 +178,25 @@ class ExportConfigurationUiFlowIT {
         assertEquals(486, job.outHeight)
         assertEquals("24", job.outputFrameRate)
         assertEquals(2_205, job.videoBitrateK)
+    }
+
+    /** B-11 E5-T2: the user selects the video language on the Export tab, and the queued job uses it. */
+    @Test
+    fun `the selected video language goes into the queued job and the project`(context: UiFlowContext) {
+        val project = context.fixtures.exportReadyProject()
+        val output = context.workspace.resolve("exports").resolve("german-match.mp4")
+        val application = ApplicationScreen(context)
+        // A language that is not the app language, so that the selection is a change.
+        val language = if (I18n.language == AppLanguage.GERMAN) AppLanguage.SPANISH_SPAIN else AppLanguage.GERMAN
+
+        application.projects.open().openRecent(project.manifest.id)
+        application.export.open()
+            .selectVideoLanguage(language)
+            .initialize(output)
+            .assertExactlyOneRenderQueued()
+
+        assertEquals(language.code, context.renderService.jobs.single().videoLanguage)
+        assertEquals(language.code, ManifestIO.read(project.manifestFile.toString()).videoLanguage)
     }
 
     companion object {

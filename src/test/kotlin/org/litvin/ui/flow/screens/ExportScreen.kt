@@ -1,5 +1,6 @@
 package org.litvin.ui.flow.screens
 
+import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.tr
 import org.litvin.ui.flow.fakes.DialogOutcome
 import org.litvin.ui.flow.fakes.FilePickerOutcome
@@ -31,6 +32,11 @@ internal class ExportScreen(application: ApplicationScreen) : UserFlowScreen(app
         application.eventually("export comments selection to be $enabled") {
             context.driver.requireSelected("export-comments", enabled)
         }
+    }
+
+    /** Selects [language] in the "Video language" list. The list shows each language in its own language. */
+    fun selectVideoLanguage(language: AppLanguage): ExportScreen = apply {
+        context.driver.select("export-video-language", language.nativeName)
     }
 
     fun setIdleTrim(enabled: Boolean): ExportScreen = selectContent(if (enabled) "points" else "full")

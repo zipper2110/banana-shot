@@ -7,6 +7,7 @@ import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 import kotlin.streams.asSequence
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -16,6 +17,7 @@ import kotlin.test.assertTrue
  * 1) No imports from one tab package into another:
  *    org.litvin.ui.tabs.<A> must not import org.litvin.ui.tabs.<B> when A != B
  * 2) ui.commons must not import any ui.tabs.* packages.
+ * 3) org.litvin.i18n is a leaf package: it uses no other org.litvin package (B-11 E1-T1). All packages can use it.
  *
  * How to run locally: mvn -q -Dtest=ArchitectureDependencyHygieneTest test
  */
@@ -91,6 +93,45 @@ class ArchitectureDependencyHygieneTest {
         }
     }
 
+    @Test
+    fun `the i18n package uses no other app package`() {
+        val root = srcRoot.resolve("org/litvin/i18n")
+        val violations = Files.walk(root).use { stream ->
+            stream.asSequence()
+                .filter { it.isRegularFile() && it.toString().endsWith(".kt") }
+                .flatMap { file -> i18nViolations(String(Files.readAllBytes(file))).map { "${root.relativize(file)}: $it" } }
+                .toList()
+        }
+        assertEquals(emptyList(), violations, "org.litvin.i18n must not use another org.litvin package. Move the code, or give the value as a parameter")
+    }
+
+    @Test
+    fun `the i18n rule finds imports and full names of other app packages`() {
+        val source = """
+            package org.litvin.i18n
+
+            import org.litvin.i18n.Messages
+            import org.litvin.ui.commons.Palette
+            import org.litvin.Timecode
+            // org.litvin.export in a comment
+            val a = org.litvin.shared.util.Timecode.format(0)
+            val b = java.util.Locale.ROOT
+        """.trimIndent()
+
+        assertEquals(
+            listOf("org.litvin.ui", "org.litvin.Timecode", "org.litvin.shared"),
+            i18nViolations(source).map { it.substringAfter(": ") },
+        )
+    }
+
+    /** The places where [text] uses another org.litvin package: "line number: name". Comments are not read. */
+    private fun i18nViolations(text: String): List<String> =
+        text.lines().flatMapIndexed { index, raw ->
+            val line = raw.trim()
+            if (line.startsWith("package ") || line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")) return@flatMapIndexed emptyList()
+            OTHER_APP_PACKAGE.findAll(line.substringBefore("//")).map { "${index + 1}: ${it.value}" }.toList()
+        }
+
     /**
      * All UI colors come from ui.commons.Palette, so that a theme can change them in one place.
      * A color value in a different UI file (a hex or RGB literal, a named AWT color, a "#RRGGBB" string,
@@ -138,5 +179,10 @@ class ArchitectureDependencyHygieneTest {
     private fun formatViolation(file: Path, pkg: String, imp: String, cause: String): String {
         val rel = try { srcRoot.relativize(file).toString() } catch (e: Exception) { file.toString() }
         return "[$rel] package $pkg imports $imp — $cause"
+    }
+
+    private companion object {
+        /** A name of another org.litvin package or class, for example "org.litvin.ui" or "org.litvin.Timecode". */
+        val OTHER_APP_PACKAGE = Regex("""\borg\.litvin\.(?!i18n\b)\w+""")
     }
 }

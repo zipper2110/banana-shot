@@ -7,7 +7,7 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: in-progress
+- Status: done
 - Plan sections: 1 (`i18n` package), 5 (Formats), 14 (Documentation)
 - Depends on: —
 - Size: a few days.
@@ -34,18 +34,18 @@ Not in this epic:
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E1-T1 | `i18n` package and its dependency rule | — | in-progress |
+| E1-T1 | `i18n` package and its dependency rule | — | done |
 | E1-T2 | Machine formats do not use the default locale | E1-T1 | done |
 | E1-T3 | Tests with other default locales | E1-T2 | done |
 | E1-T4 | Test that finds calls with the default locale | E1-T2 | done |
 | E1-T5 | Display formats | E1-T1 | done |
 | E1-T6 | The UI shows the display formats | E1-T5 | done |
-| E1-T7 | Decide the locale provider (`HOST` or CLDR) | E1-T5 | open |
-| E1-T8 | Documentation | E1-T1–E1-T7 | open |
+| E1-T7 | Decide the locale provider (`HOST` or CLDR) | E1-T5 | done |
+| E1-T8 | Documentation | E1-T1–E1-T7 | done |
 
 ### E1-T1 `i18n` package and its dependency rule
 
-- Status: in-progress
+- Status: done
 - Plan: 1 ("New package `org.litvin.i18n`")
 - Value: all format and text code has one place. All packages can use it
   without a dependency cycle.
@@ -57,7 +57,10 @@ Not in this epic:
   - The architecture test fails when a file in `i18n` imports another
     `org.litvin` package.
   - `docs/architecture-rules.md` gives the package and its rule.
-- Tests: —
+- Notes (2026-10-28): the rule also finds a full name of another package in
+  the code (for example `org.litvin.ui.commons.Palette` without an import).
+  It does not read comments.
+- Tests: `ArchitectureDependencyHygieneTest`.
 
 ### E1-T2 Machine formats do not use the default locale
 
@@ -326,7 +329,7 @@ Not in this epic:
 
 ### E1-T7 Decide the locale provider (`HOST` or CLDR)
 
-- Status: open
+- Status: done
 - Plan: 5 ("An alternative is the JDK `HOST` locale provider")
 - Value: the formats follow the custom changes of the user in Windows (for
   example a changed date form), if the `HOST` provider does this well.
@@ -343,11 +346,14 @@ Not in this epic:
   - The plan, "Decisions", has the decision and the reason.
   - If the decision is `HOST`, the installed app uses it, and the
     validation of the app image checks it.
+- Notes (2026-10-28): decision CLDR, without the comparison on Windows.
+  The author does not change the Windows regional format for a test now.
+  The plan, "Decisions", "Locale provider", has the reason.
 - Tests: — (manual)
 
 ### E1-T8 Documentation
 
-- Status: open
+- Status: done
 - Plan: 14
 - Value: a contributor knows which format to use, and does not add a new
   locale risk.
@@ -360,6 +366,9 @@ Not in this epic:
   - The plan, "Current state", tells that the formats are done.
 - Acceptance:
   - A contributor can find the format rules in `CONTRIBUTING.md`.
+- Notes (2026-10-28): `docs/architecture-rules.md` has the section
+  "Formats and the locale". `CONTRIBUTING.md` has the section "Formats in
+  the code".
 - Tests: —
 
 ## Done when

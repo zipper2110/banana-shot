@@ -60,6 +60,7 @@ proposal or an accepted decision. The column "Status" tells which.
 | Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not | accepted 2026-10-28 |
 | Right-to-left | Not in B-11 | proposal |
 | Calendar | The UI and the video always use the Gregorian calendar, also when the Windows format locale has another calendar (for example `th-TH` with the Buddhist calendar, or `ja-JP-u-ca-japanese`). The year 2026 never shows as 2569 | accepted 2026-10-10 |
+| Locale provider | The app uses the default locale data of the JDK (CLDR), not the `HOST` provider. A custom change of the Windows regional format (for example a changed date form) does not apply in the app: the app uses the standard forms of the regional format. Few users change these settings, and with `HOST` a custom setting can bring back other digits or a wrong separator. The author decided without a test on Windows (E1-T7) | accepted 2026-10-28 |
 | Typed decimal separator | A number or a time code that the user types can have "." or ",", in all languages. A Spanish numeric keypad gives ",". The app shows the number in the format locale | accepted 2026-10-10 |
 | Unknown language value | A stored language, a queued job language, or a project video language that this build does not have is not an error. The app uses the fallback of each case, and does not overwrite the stored value until the user changes it | accepted 2026-10-10 |
 | Windows pseudo-locales | The Windows test locales `qps-ploc`, `qps-ploca`, and `qps-plocm` are not the app test language `qps`. The app uses English for them, and analytics sends `other` | accepted 2026-10-10 |
@@ -122,6 +123,10 @@ A user who does not read English can do all the steps in their language:
   its default is the English text "Your tournament or club". The video shows
   this text. A Spanish user gets an English title in the video, and old
   projects keep the English text.
+- The formats are done (E1, 2026-10-28): machine texts use
+  `MachineFormats`, and texts for the user use `DisplayFormats`. The rules
+  are in `docs/architecture-rules.md`, "Formats and the locale". The
+  format points below describe the state before E1.
 - Formats use fixed locales: `Locale.US`, `Locale.ROOT`, `Locale.ENGLISH`.
   This is correct for FFmpeg arguments, ASS files, and JSON. It is not
   correct for texts that the user reads, for example the date in
@@ -358,11 +363,14 @@ allowlist, and make the list shorter with each extraction pull request.
   - If not, use `FormatStyle.SHORT` with the format locale. It has only
     digits ("10/10/26" for `es-ES`, "10.10.26" for `de-DE`). Thus an English
     window does not show Spanish month names.
-  - This applies to `ExportsTable` and `ExpiryMomentFormat`. Times use the
-    24-hour or 12-hour form of the format locale.
-- An alternative is the JDK `HOST` locale provider. It reads the real
-  Windows settings, also the changes of the user. Measure it on Windows
-  before you select it.
+  - This applies to `ExportsTable`. Times use the 24-hour or 12-hour form
+    of the format locale.
+  - The expiry moment (`ExpiryMomentFormat`) keeps its own form for each
+    app language, with the full month name ("29 March 2027, 16:00").
+    Decided on 2026-10-28 (E1-T6).
+- The JDK `HOST` locale provider reads the real Windows settings, also the
+  changes of the user. The app does not use it (see "Decisions", "Locale
+  provider").
 - Numbers in the UI: always use the format locale. Example: the decimal
   separator of `es-ES` gives "1,5 s". This applies to `formatSeconds`,
   `RenderFormatting` sizes ("2,35 GB"), the transform values, and the

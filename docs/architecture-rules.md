@@ -15,6 +15,7 @@ Top‑level feature and shared packages:
 - `org.litvin.analytics` — opt‑in usage analytics (B-9): the events, the session counters, the summary transport, consent state.
 - `org.litvin.feedback` — feedback reports (B-8): the report and its JSON, the log data, the sender, the endpoint setting.
 - `org.litvin.shared.util` — cross‑cutting utilities and primitives (timecode, debouncers, pagination, OS tweaks, etc.).
+- `org.litvin.i18n` — the texts of the app languages and the formats (B-11): `I18n` and `tr`, the message catalog, `DisplayFormats`, and `MachineFormats`.
 - `org.litvin.ui` — UI layer only.
   - `org.litvin.ui.tabs.{projects,points,stats,adjustments,export}` — tab UIs per feature (`adjustments` is the Colors & Transform tab with the Colors and Transform sub-tabs) (plus `test`, a diagnostics tab wired in only when the test flag is enabled).
   - `org.litvin.ui.commons` — shared UI widgets/components/styles with no tab dependency.
@@ -41,7 +42,16 @@ Allowed directions:
 - Feature and UI packages can use only `Analytics`, `AnalyticsEvent` (with its nested types), and `DisabledAnalytics`. They get `Analytics` from `app` through the constructor; the default is `DisabledAnalytics`. Only `app` and `ui.privacy` use the rest of `analytics`. A feature that has no constructor from `app` (for example `RenderQueueManager`) gives plain facts to a listener, and `app` changes them into events. `AnalyticsDependencyTest` checks these rules.
 - `ui.feedback` → `feedback` and `ui.commons`. `feedback` must not depend on any other `org.litvin` package: `app` gives it the HTTP client with the trust of `license.online`. The other UI packages open the form only through callbacks from `app`.
 - `shared.util` must not depend on any feature/ui/app.
+- `i18n` is a leaf package: it must not depend on any other `org.litvin` package. All packages can depend on it, also `shared.util`, `ui.commons`, and the leaf services. `ArchitectureDependencyHygieneTest` checks this rule.
 - Cycles are forbidden.
+
+## Formats and the locale
+The Windows regional format must not change a text that a program reads. A text that the user reads uses the regional format.
+- A text for a program (FFmpeg arguments, ASS files, JSON, hex colors, hashes, time codes in a field) uses `MachineFormats` (`Locale.ROOT`) or an explicit `Locale.ROOT` or `Locale.US`. Never use a format call without a locale.
+- A number, date, or time that the user reads uses `DisplayFormats`. It uses the Windows regional format with the digits 0–9 and the Gregorian calendar.
+- A number that the user types can have "." or ",". Read it with `DisplayFormats.parseDecimal` or `Timecode.parse`. Do not compare or parse a display text: compare the number.
+- Do not change the default locale of the JVM (`Locale.setDefault`) in the app. Only tests can change it, and they must set the old value again.
+- `DefaultLocaleScanTest` finds format calls without a locale. `DefaultLocaleOutputTest` compares the machine texts under other default locales.
 
 ## Third-party license boundaries
 The app uses the Elastic License 2.0. A GPL component must not be part of the app process.

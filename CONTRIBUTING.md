@@ -77,6 +77,19 @@ binding. The app already tells this in each language other than English
 (`privacy.notice.english`). A new translation does not change the notice
 version.
 
+## Formats in the code
+
+The Windows regional format must not change a text that a program reads.
+
+- A text for a program (FFmpeg arguments, ASS files, JSON, hex colors, time
+  codes) uses `MachineFormats` or an explicit `Locale.ROOT`.
+- A number, date, or time that the user reads uses `DisplayFormats`.
+- Do not change the default locale of the JVM.
+
+`DefaultLocaleScanTest` finds a format call without a locale. The full rules
+are in [docs/architecture-rules.md](docs/architecture-rules.md), "Formats and
+the locale".
+
 ## License
 
 BananaShot uses the Elastic License 2.0. See [LICENSE](LICENSE) and

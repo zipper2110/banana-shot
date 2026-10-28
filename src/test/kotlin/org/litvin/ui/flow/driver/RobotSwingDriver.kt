@@ -176,15 +176,30 @@ class RobotSwingDriver : SwingUiDriver {
         // to it, so the driver does the same before it clicks.
         onEdt { (component as? JComponent)?.scrollRectToVisible(Rectangle(0, 0, component.width, component.height)) }
         robot.waitForIdle()
-        val center = onEdt {
-            val location = component.locationOnScreen
-            Point(location.x + component.width / 2, location.y + component.height / 2)
+        // A layout change can move the component after the last event, for example when an opened project shows the
+        // sidebar groups. Thus the driver clicks only when the component is at the click point.
+        var center: Point? = null
+        waitUntil("component '${component.name ?: component.javaClass.simpleName}' to be at its click point") {
+            center = onEdt { clickPoint(component) }
+            center != null
         }
-        robot.mouseMove(center.x, center.y)
+        val point = center!!
+        robot.mouseMove(point.x, point.y)
         robot.mousePress(InputEvent.BUTTON1_DOWN_MASK)
         robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
         Toolkit.getDefaultToolkit().sync()
         robot.waitForIdle()
+    }
+
+    /** The screen point in the middle of [component], or null when another component is at this point. */
+    private fun clickPoint(component: Component): Point? {
+        if (!component.isShowing) return null
+        val window = SwingUtilities.getWindowAncestor(component) ?: return null
+        val location = component.locationOnScreen
+        val center = Point(location.x + component.width / 2, location.y + component.height / 2)
+        val inWindow = Point(center).also { SwingUtilities.convertPointFromScreen(it, window) }
+        val hit = SwingUtilities.getDeepestComponentAt(window, inWindow.x, inWindow.y) ?: return null
+        return center.takeIf { hit === component || SwingUtilities.isDescendingFrom(hit, component) }
     }
 
     private fun activate(component: Component, componentName: String? = component.name) {

@@ -72,6 +72,9 @@ internal class ProjectsScreen(application: ApplicationScreen) : UserFlowScreen(a
         require(id.isNotBlank()) { "project id must not be blank" }
         assertRecent(id)
         context.driver.click("projects-open-$id")
+        // The project tabs show when the project is open. Then the sidebar has its final layout, and the next click
+        // on a sidebar button cannot hit the button that was at its place before.
+        application.eventually("the project tabs to show") { context.driver.requireShowing("nav-points") }
     }
 
     fun assertRecent(id: String): ProjectsScreen = apply {

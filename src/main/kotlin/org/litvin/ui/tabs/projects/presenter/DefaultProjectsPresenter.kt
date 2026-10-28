@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.ui.commons.ErrorTexts
 import org.litvin.i18n.DisplayFormats
 import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsEvent
@@ -262,7 +263,7 @@ class DefaultProjectsPresenter(
             try {
                 block()
             } catch (t: Throwable) {
-                emitEffect(ProjectsViewEffect.ShowError(errorTitle, t.message ?: t.toString()))
+                emitEffect(ProjectsViewEffect.ShowError(errorTitle, ErrorTexts.of(t)))
             }
         }
     }

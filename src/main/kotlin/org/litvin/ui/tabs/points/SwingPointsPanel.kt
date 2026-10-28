@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points
 
+import org.litvin.ui.commons.ErrorTexts
 import org.litvin.GeometryViewportPanel
 import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsEvent
@@ -266,7 +267,7 @@ class SwingPointsPanel(
         } catch (t: Throwable) {
             if (!loadErrorShown) {
                 loadErrorShown = true
-                dialogs.showError(this, t.message ?: t.toString(), tr("points.error.load"))
+                dialogs.showError(this, ErrorTexts.of(t), tr("points.error.load"))
 
             }
         }
@@ -387,7 +388,7 @@ class SwingPointsPanel(
                 EdlIO.writeForProjectDir(snapshot.projectDir, snapshot.edl)
             } catch (t: Throwable) {
                 // Surface error on EDT
-                EventQueue.invokeLater { dialogs.showError(this, t.message ?: t.toString(), tr("points.error.autosave")) }
+                EventQueue.invokeLater { dialogs.showError(this, ErrorTexts.of(t), tr("points.error.autosave")) }
             }
         })
 
@@ -676,7 +677,7 @@ class SwingPointsPanel(
             loadErrorShown = false
             ensurePlayerLoaded()
         } catch (t: Throwable) {
-            dialogs.showError(this, t.message ?: t.toString(), tr("points.error.load"))
+            dialogs.showError(this, ErrorTexts.of(t), tr("points.error.load"))
         }
     }
 
@@ -718,7 +719,7 @@ class SwingPointsPanel(
         try {
             loadEdl(EdlIO.readForProjectDir(dir))
         } catch (t: Throwable) {
-            dialogs.showError(this, t.message ?: t.toString(), tr("points.error.refresh"))
+            dialogs.showError(this, ErrorTexts.of(t), tr("points.error.refresh"))
             return
         }
 

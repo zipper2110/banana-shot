@@ -15,7 +15,7 @@ import org.litvin.i18n.tr
  */
 object Dialogs {
     fun showError(parent: Component?, throwable: Throwable, title: String = tr("dialog.error.title")) {
-        MessageDialog.show(parent, MessageKind.ERROR, title, throwable.message ?: throwable.toString())
+        MessageDialog.show(parent, MessageKind.ERROR, title, ErrorTexts.of(throwable))
     }
 
     fun showInfo(parent: Component?, message: String, title: String = tr("dialog.info.title")) {

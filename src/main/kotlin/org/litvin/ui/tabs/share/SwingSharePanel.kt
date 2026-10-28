@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.share
 
+import org.litvin.ui.commons.ErrorTexts
 import com.formdev.flatlaf.util.SystemFileChooser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.kordamp.ikonli.material2.Material2AL
@@ -377,7 +378,7 @@ class SwingSharePanel(
             ShareProject.load(dir, manifest)
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot read the project for the Thumbnail tab: $dir" }
-            return showEmpty(tr("share.error.read"), failure.message ?: failure.toString(), withButton = false)
+            return showEmpty(tr("share.error.read"), ErrorTexts.of(failure), withButton = false)
         }
         if (project == null) settings = readSettings(dir)
         project = loaded
@@ -1062,7 +1063,7 @@ class SwingSharePanel(
             }
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save the thumbnail $file" }
-            dialogs.showError(this, failure.message ?: failure.toString(), tr("share.error.save"))
+            dialogs.showError(this, ErrorTexts.of(failure), tr("share.error.save"))
             return
         } finally {
             cursor = Cursor.getDefaultCursor()
@@ -1086,7 +1087,7 @@ class SwingSharePanel(
                 java.awt.Desktop.getDesktop().open(file.absoluteFile.parentFile)
             }
         } catch (failure: Exception) {
-            dialogs.showError(this, failure.message ?: failure.toString(), tr("export.error.openFolder"))
+            dialogs.showError(this, ErrorTexts.of(failure), tr("export.error.openFolder"))
         }
     }
 

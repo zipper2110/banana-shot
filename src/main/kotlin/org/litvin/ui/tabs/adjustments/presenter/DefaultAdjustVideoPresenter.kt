@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.adjustments.presenter
 
+import org.litvin.ui.commons.ErrorTexts
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsV1
@@ -231,7 +232,7 @@ class DefaultAdjustVideoPresenter(
         val source = try {
             ManifestIO.read(manifestPath).sourceVideo?.let { File(it) }
         } catch (t: Throwable) {
-            postEffect(AdjustVideoViewEffect.ShowError(t.message ?: tr("adjust.error.read")))
+            postEffect(AdjustVideoViewEffect.ShowError(ErrorTexts.of(t, tr("adjust.error.read"))))
             null
         }
         if (source != null && !source.exists()) {

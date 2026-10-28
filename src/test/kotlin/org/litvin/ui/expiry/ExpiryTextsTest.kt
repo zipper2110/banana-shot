@@ -77,6 +77,6 @@ class ExpiryTextsTest {
             ExpiryTexts.dateUsed(Instant.parse("2026-11-02T10:00:00Z"), ZoneOffset.UTC),
         )
         assertEquals("Downloading… 50%", ExpiryTexts.downloading(50, 100))
-        assertEquals("Downloading… 3 MB", ExpiryTexts.downloading(3L * 1024 * 1024, null))
+        assertEquals("Downloading… 3\u00A0MB", ExpiryTexts.downloading(3L * 1024 * 1024, null))
     }
 }

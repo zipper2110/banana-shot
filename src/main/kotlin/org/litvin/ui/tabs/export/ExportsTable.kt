@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.export
 
+import org.litvin.ui.commons.ErrorTexts
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.litvin.ActiveQueueSnapshot
@@ -694,7 +695,7 @@ internal class ExportsTable(
                     Runtime.getRuntime().exec(arrayOf("explorer.exe", dir.absolutePath))
                 }
             } catch (t: Throwable) {
-                dialogs.showError(parent, t.message ?: t.toString(), tr("export.error.openFolder"))
+                dialogs.showError(parent, ErrorTexts.of(t), tr("export.error.openFolder"))
             }
         }
 

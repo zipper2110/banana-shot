@@ -1,4 +1,5 @@
 package org.litvin.ui.tabs.export
+import org.litvin.ui.commons.ErrorTexts
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.ApplicationLayout
 import org.litvin.ExportPresetsIO
@@ -331,7 +332,7 @@ class SwingExportPanel(
             ProjectVideoLanguage.save(path, language)
         } catch (t: Throwable) {
             logger.warn(t) { "Cannot save the video language of $path" }
-            showReportableError(t.message ?: t.toString(), tr("export.videoLanguage.saveFailed"))
+            showReportableError(ErrorTexts.of(t), tr("export.videoLanguage.saveFailed"))
         }
     }
 
@@ -380,7 +381,7 @@ class SwingExportPanel(
         val manifest = try {
             if (manifestPath.isNullOrBlank()) null else ManifestIO.read(manifestPath)
         } catch (t: Throwable) {
-            showReportableError(t.message ?: t.toString(), tr("export.error.manifest"))
+            showReportableError(ErrorTexts.of(t), tr("export.error.manifest"))
             return
         }
         val source = manifest?.sourceVideo

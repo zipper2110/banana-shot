@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points
 
+import org.litvin.ui.commons.ErrorTexts
 import org.litvin.OverlaySpan
 import org.litvin.ScoreboardComponent
 import org.litvin.ScoreboardTimelineBuilder
@@ -494,7 +495,7 @@ internal class PointsScoring(
             try {
                 ScoreIO.writeForProjectDir(dir, updated)
             } catch (t: Throwable) {
-                onError(t.message ?: t.toString())
+                onError(ErrorTexts.of(t))
                 return
             }
         }
@@ -508,7 +509,7 @@ internal class PointsScoring(
         return try {
             ScoreIO.readForProjectDir(dir)
         } catch (t: Throwable) {
-            onError(t.message ?: t.toString())
+            onError(ErrorTexts.of(t))
             null
         }
     }

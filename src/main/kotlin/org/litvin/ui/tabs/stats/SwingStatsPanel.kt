@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.stats
 
+import org.litvin.ui.commons.ErrorTexts
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.adjustments.AdjustmentsIO
 import org.litvin.adjustments.AdjustmentsV1
@@ -112,7 +113,7 @@ class SwingStatsPanel(
             StatsReport.load(dir)
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot read the statistics of $dir" }
-            return showEmpty(StatsEmptyView.Kind.ERROR, tr("stats.error.read"), failure.message ?: failure.toString())
+            return showEmpty(StatsEmptyView.Kind.ERROR, tr("stats.error.read"), ErrorTexts.of(failure))
         }
         report = loaded
         if (!loaded.hasScoredPoints) {
@@ -321,7 +322,7 @@ class SwingStatsPanel(
             settings = updated
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
-            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
+            dialogs.showError(this, ErrorTexts.of(failure), tr("stats.error.save"))
         }
         // The rows update in place, so the steppers keep the focus.
         showRows()
@@ -342,7 +343,7 @@ class SwingStatsPanel(
             StatsIO.writeForProjectDir(dir, settings)
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
-            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
+            dialogs.showError(this, ErrorTexts.of(failure), tr("stats.error.save"))
         }
     }
 
@@ -356,7 +357,7 @@ class SwingStatsPanel(
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
             table.momentumCheck.isSelected = !selected
-            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
+            dialogs.showError(this, ErrorTexts.of(failure), tr("stats.error.save"))
         }
     }
 
@@ -372,7 +373,7 @@ class SwingStatsPanel(
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
             check.isSelected = !selected
-            dialogs.showError(this, failure.message ?: failure.toString(), tr("stats.error.save"))
+            dialogs.showError(this, ErrorTexts.of(failure), tr("stats.error.save"))
         }
     }
 

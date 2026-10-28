@@ -28,9 +28,9 @@ data class EffectiveExpiry(
     val warningStart: Instant
         get() = moment - WARNING_PERIOD
 
-    /** The rule `message`, or null. */
+    /** The rule `message` in the app language (B-11 E6), or null. */
     val message: String?
-        get() = rule?.message
+        get() = rule?.messageIn()
 
     fun isExpired(now: Instant): Boolean = now >= moment
 

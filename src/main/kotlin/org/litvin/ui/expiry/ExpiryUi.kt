@@ -137,7 +137,7 @@ internal class ExpiryUi(
         val latest = state.updateNotice
         updateNotice.isVisible = normal && latest != null
         if (normal && latest != null) {
-            updateNotice.setTexts(ExpiryTexts.UPDATE_TITLE, listOf(ExpiryTexts.versionAvailable(latest.version), latest.notes))
+            updateNotice.setTexts(ExpiryTexts.UPDATE_TITLE, listOf(ExpiryTexts.versionAvailable(latest.version), latest.notesIn()))
             noticePageUrl = latest.pageUrl
             noticeReadMoreRow.isVisible = latest.pageUrl != null
         }
@@ -180,8 +180,10 @@ internal class ExpiryUi(
         if (closed || state.mode != ExpiryMode.NORMAL || !windowShows()) return
         if (whatsNewRequested == latest.version || !support.seen.isNew(latest.version)) return
         whatsNewRequested = latest.version
+        // The page of the app language (B-11 E6). With no such page, or when it does not load, the English page.
+        val ownUrl = latest.whatsNewUrlOnlyIn()?.takeIf { it != url }
         support.background.execute {
-            val html = support.load(url, WhatsNewDialog.IMAGE_WIDTH)
+            val html = ownUrl?.let { support.load(it, WhatsNewDialog.IMAGE_WIDTH) } ?: support.load(url, WhatsNewDialog.IMAGE_WIDTH)
             EventQueue.invokeLater { showWhatsNew(support, latest, html) }
         }
     }
@@ -200,10 +202,10 @@ internal class ExpiryUi(
         whatsNewDialog.show(html ?: fallbackHtml(latest), latest.pageUrl)
     }
 
-    /** With no page, the popup shows the version and the `notes` as plain text. */
+    /** With no page, the popup shows the version and the `notes` of the app language as plain text. */
     private fun fallbackHtml(latest: LatestRelease): String = buildString {
         append("<p>").append(escapeHtml(ExpiryTexts.versionAvailable(latest.version))).append("</p>")
-        latest.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+        latest.notesIn()?.takeIf { it.isNotBlank() }?.let { notes ->
             append("<p>").append(escapeHtml(notes).replace("\n", "<br>")).append("</p>")
         }
     }

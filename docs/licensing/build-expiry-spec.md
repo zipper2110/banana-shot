@@ -261,6 +261,9 @@ Example:
   - `pageUrl`: the extended page about the release on the site. The popup
     and the update notice link to it (B-54). Optional. Builds before 1.3.0
     ignore it.
+  - `notesByLanguage`, `whatsNewUrlByLanguage`: the `notes` and the
+    `whatsNewUrl` in other languages (B-11 E6). Optional. See "Texts in
+    other languages".
 - `rules`: a list of rules. Each rule stops a range of versions on a date.
   This field is required. The list can be empty.
   - `id`: a unique name. The app uses it to show the warning again when a
@@ -273,7 +276,39 @@ Example:
   - `stopsOn`: the date when the versions stop (see "Expiry moment"). A date
     in the past stops the versions at the next expiry check.
   - `message`: the reason. The app shows it in the warning and in the dialog
-    of expired mode. This field is optional. English only until localization (B-11).
+    of expired mode. This field is optional.
+  - `messageByLanguage`: the `message` in other languages (B-11 E6).
+    Optional. See "Texts in other languages".
+
+### Texts in other languages
+
+Decided on 2026-10-29 (B-11 E6). The fields `notes`, `whatsNewUrl`, and
+`message` are English. Each has an optional field with "ByLanguage" at the
+end. Its value is an object. The key is a language code of the app, and the
+value is the text (or the address) in this language. Example:
+
+```json
+"notes": "Faster export.",
+"notesByLanguage": {"es": "Exportación más rápida.", "de": "Schnellerer Export."}
+```
+
+- The keys are the codes of the language list of the app, with the same
+  case: `es`, `es-419`, `ru`, `pt`, `pt-PT`, `fr`, `de`, `ja`, `zh-Hans`,
+  `zh-Hant`. English (`en`) is not a key: the field without "ByLanguage"
+  gives the English text.
+- The app uses the text of the app language. A variant without its own text
+  uses the text of its main language: `es-419` uses `es`, and `pt-PT` uses
+  `pt`. Without a text, the app uses the English field. The test language
+  `qps` uses the English field.
+- The "What's new" popup loads the page of the app language. If the file
+  has no page for the language, or the page does not load, the popup loads
+  the English page (`whatsNewUrl`). If this page also does not load, the
+  popup shows the version and the `notes` of the app language as plain text.
+- The "Read more on the site" link always opens `pageUrl`. The site is in
+  English.
+- The app shows these texts as plain text, the same as the English texts.
+- Builds before 1.3.0 ignore these fields and show the English texts (see
+  "Changes to the file format").
 
 The app shows `latest.notes` and `message` as plain text. A Swing label shows
 a text that starts with `<html>` as HTML, and HTML can load images from other
@@ -324,6 +359,13 @@ An optional field is not valid in these cases:
 - `latest` is not an object, or its `version` or `downloadUrl` is missing or
   is not a string. The app ignores all of `latest`: it shows no update notice
   and uses the default download URL (see "Expired mode").
+- A "ByLanguage" field is not an object, or its English field is missing.
+  The app ignores the full "ByLanguage" field. A translation of a missing
+  English text does not show.
+- An entry of a "ByLanguage" field has a key that is not a language code of
+  the app (for example `en`, `ES`, `es-ES`, or `qps`), a value that is not a
+  string, or a blank value. The app ignores only this entry. The log gets a
+  warning for each such entry.
 
 Other rules:
 
@@ -886,6 +928,8 @@ Decided on 2026-10-27 (B-54).
   same aspect ratio.
 - If the page does not load, the popup shows the version and the `notes` as
   plain text.
+- The popup loads the page of the app language first (see "Texts in other
+  languages").
 - The popup has:
   - The title "A new version is out" with an icon. No version text.
   - The page in a scroll area, up to 440 pixels high.

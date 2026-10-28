@@ -220,6 +220,18 @@ If a check fails, fix the cause and start again at step 5.
         Builds from 1.3.0 show this page in the "What's new" popup.
       - `pageUrl` (optional): the extended page about the release on the
         site. The popup and the update notice link to it.
+      - `notesByLanguage` and `whatsNewUrlByLanguage` (B-11 E6): the notes
+        and the "What's new" page in each shipped language, for example
+        `{"es": "…", "de": "…"}`. A machine translation can make them. Read
+        each text before the push. Write each translated page next to the
+        English page, for example `whats-new.es.md`, and deploy the site
+        before the push. Builds from 1.3.0 show the text of the app
+        language. See `docs/licensing/build-expiry-spec.md`, "Texts in other
+        languages".
+      - When you change an English text (`notes`, `whatsNewUrl`, or a rule
+        `message`), change or remove each translation of it in the same
+        push. An old translation that tells a different thing is worse than
+        the English text.
 - [ ] Site changelog (`site/public/changelog/index.html`): write the release
       date (YYYY-MM-DD) of the new version, and deploy the site. For the
       first release, replace "coming soon" of 1.0.0. Also change
@@ -242,6 +254,9 @@ If a check fails, fix the cause and start again at step 5.
   serious bug on some computers, users can install N-1 again until a fix is
   available. Stop N-1 earlier when necessary, for example when N-1 can damage
   project files.
+- When you add a rule with a `message`, also add `messageByLanguage` with
+  the message in each shipped language (B-11 E6). Read each text before the
+  push.
 
 ## Emergency rebuild
 

@@ -2,6 +2,9 @@ package org.litvin.ui.expiry
 
 import org.junit.jupiter.api.Assumptions.assumeFalse
 import org.junit.jupiter.api.BeforeEach
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
+import org.litvin.i18n.Messages
 import org.litvin.license.EffectiveExpiry
 import org.litvin.license.LatestRelease
 import org.litvin.license.VersionRule
@@ -72,6 +75,71 @@ class ExpiryUiTest {
     @AfterTest
     fun tearDown() {
         if (::ui.isInitialized) onEdt { ui.close(); frame.dispose() }
+        I18n.install(Messages.english())
+    }
+
+    @Test
+    fun `the update notice and the warning show the text of the app language, or the English text (B-11 E6)`() {
+        I18n.install(Messages.of(AppLanguage.SPANISH_SPAIN))
+        val html = "<b>Más rápido</b>"
+        val release = LatestRelease("1.4.0", "https://example.invalid/releases", notes = "Faster", notesByLanguage = mapOf(AppLanguage.SPANISH_SPAIN to html))
+        show(state(updateNotice = release))
+        // The text shows as plain text, also when it has HTML.
+        onEdt { assertTrue(ui.updateNotice.shownText.endsWith("\n$html"), ui.updateNotice.shownText) }
+
+        show(state(updateNotice = release.copy(version = "1.5.0", notesByLanguage = mapOf(AppLanguage.GERMAN to "Schneller"))))
+        onEdt { assertTrue(ui.updateNotice.shownText.endsWith("\nFaster"), ui.updateNotice.shownText) }
+
+        I18n.install(Messages.english())
+        show(state(updateNotice = release.copy(version = "1.6.0")))
+        onEdt { assertTrue(ui.updateNotice.shownText.endsWith("\nFaster"), ui.updateNotice.shownText) }
+
+        val rule = VersionRule("r", null, "1.2.0", LocalDate.of(2027, 1, 15), "Update now.", mapOf(AppLanguage.SPANISH_SPAIN to "Actualiza ya."))
+        assertEquals("Update now.", EffectiveExpiry(LocalDate.of(2027, 1, 15), rule).message)
+        I18n.install(Messages.of(AppLanguage.SPANISH_LATIN_AMERICA))
+        assertEquals("Actualiza ya.", EffectiveExpiry(LocalDate.of(2027, 1, 15), rule).message)
+    }
+
+    @Test
+    fun `the What's new popup loads the page of the app language, else the English page (B-11 E6)`() {
+        I18n.install(Messages.of(AppLanguage.SPANISH_SPAIN))
+        val english = "https://example.invalid/whats-new.md"
+        val spanish = "https://example.invalid/whats-new.es.md"
+        val pages = mapOf(english to "<p>English page</p>", spanish to "<p>Página en español</p>")
+        val release = LatestRelease(
+            "1.4.0", "https://example.invalid/releases",
+            whatsNewUrl = english, whatsNewUrlByLanguage = mapOf(AppLanguage.SPANISH_SPAIN to spanish),
+        )
+
+        val (spanishLoads, spanishText) = popupLoads(release) { pages[it] }
+        assertEquals(listOf(spanish), spanishLoads)
+        assertTrue("Página en español" in spanishText, spanishText)
+
+        val (noSpanishLoads, noSpanishText) = popupLoads(release.copy(whatsNewUrlByLanguage = emptyMap())) { pages[it] }
+        assertEquals(listOf(english), noSpanishLoads)
+        assertTrue("English page" in noSpanishText, noSpanishText)
+
+        val (failedLoads, failedText) = popupLoads(release) { if (it == spanish) null else pages[it] }
+        assertEquals(listOf(spanish, english), failedLoads)
+        assertTrue("English page" in failedText, failedText)
+    }
+
+    /** Shows the popup of [release] in a new session. Gives the loaded addresses and the text of the popup. */
+    private fun popupLoads(release: LatestRelease, load: (String) -> String?): Pair<List<String>, String> {
+        val loads = mutableListOf<String>()
+        val popupUi = popupUi(MemorySeen()) { url -> loads += url; load(url) }
+        try {
+            onEdt { popupUi.apply(state(updateNotice = release)) }
+            waitFor { popupUi.whatsNewDialog.dialog.isVisible }
+            val text = onEdt {
+                val page = popupUi.whatsNewDialog.page
+                page.document.getText(0, page.document.length).also { popupUi.whatsNewDialog.later.doClick() }
+            }
+            waitFor { !popupUi.whatsNewDialog.dialog.isVisible }
+            return loads to text
+        } finally {
+            onEdt { popupUi.close() }
+        }
     }
 
     @Test

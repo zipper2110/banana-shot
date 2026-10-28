@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litvin.i18n.AppLanguage
 import java.io.IOException
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
@@ -68,13 +69,17 @@ object VersionRulesParser {
             problems += "latest is ignored: version or downloadUrl is missing or is not a string"
             return null
         }
+        val notes = node.optionalText("notes", "latest", problems)
+        val whatsNewUrl = node.optionalText("whatsNewUrl", "latest", problems)
         return LatestRelease(
             version = version,
             downloadUrl = downloadUrl,
             installerUrl = node.optionalText("installerUrl", "latest", problems),
-            notes = node.optionalText("notes", "latest", problems),
-            whatsNewUrl = node.optionalText("whatsNewUrl", "latest", problems),
+            notes = notes,
+            whatsNewUrl = whatsNewUrl,
             pageUrl = node.optionalText("pageUrl", "latest", problems),
+            notesByLanguage = node.textsByLanguage("notes", notes, "latest", problems),
+            whatsNewUrlByLanguage = node.textsByLanguage("whatsNewUrl", whatsNewUrl, "latest", problems),
         )
     }
 
@@ -99,12 +104,14 @@ object VersionRulesParser {
             problems += "$name is ignored: $reason"
             return null
         }
+        val message = node.optionalText("message", name, problems)
         return VersionRule(
             id = id!!,
             fromVersion = fromVersionNode?.textValue(),
             toVersion = toVersion!!,
             stopsOn = stopsOn!!,
-            message = node.optionalText("message", name, problems),
+            message = message,
+            messageByLanguage = node.textsByLanguage("message", message, name, problems),
         )
     }
 
@@ -115,6 +122,41 @@ object VersionRulesParser {
         } catch (_: DateTimeParseException) {
             null
         }
+    }
+
+    /**
+     * The field "<[field]>ByLanguage" (B-11 E6): an object with a language code of the app as the key and a text as
+     * the value. A bad entry is ignored, and the other entries stay. The texts need the English field [english]: a
+     * translation of a missing English text is ignored. English ("en") is not a key, because the English field gives
+     * the English text.
+     */
+    private fun JsonNode.textsByLanguage(
+        field: String,
+        english: String?,
+        owner: String,
+        problems: MutableList<String>,
+    ): Map<AppLanguage, String> {
+        val name = field + "ByLanguage"
+        val value = get(name) ?: return emptyMap()
+        if (!value.isObject) {
+            problems += "$name of $owner is ignored: it is not an object"
+            return emptyMap()
+        }
+        if (english == null) {
+            problems += "$name of $owner is ignored: $field is missing"
+            return emptyMap()
+        }
+        val texts = linkedMapOf<AppLanguage, String>()
+        value.properties().forEach { (key, text) ->
+            val language = AppLanguage.entries.firstOrNull { it.code == key && it != AppLanguage.SOURCE }
+            when {
+                language == null -> problems += "$name.$key of $owner is ignored: it is not a language code of the app"
+                !text.isTextual -> problems += "$name.$key of $owner is ignored: it is not a string"
+                text.textValue().isBlank() -> problems += "$name.$key of $owner is ignored: it is empty"
+                else -> texts[language] = text.textValue()
+            }
+        }
+        return texts
     }
 
     private fun JsonNode.requiredText(field: String): String? = get(field)?.takeIf { it.isTextual }?.textValue()

@@ -7,7 +7,7 @@ are in the plan, "Epics".
 
 ## Epic
 
-- Status: open
+- Status: in-progress
 - Plan sections: 11 ("Rules file and update notice"), 14
 - Depends on: E3. The first translated texts need E4.
 - Decided on 2026-10-29: E6 is in release 1.3.0, and it also covers the
@@ -25,14 +25,14 @@ are in the plan, "Epics".
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E6-T1 | Translated fields in the rules file | — | open |
-| E6-T2 | The app shows the text of the app language | E6-T1 | open |
-| E6-T3 | Specification and release checklist | E6-T1 | open |
+| E6-T1 | Translated fields in the rules file | — | done |
+| E6-T2 | The app shows the text of the app language | E6-T1 | done |
+| E6-T3 | Specification and release checklist | E6-T1 | done |
 | E6-T4 | First translated notes | E6-T2, E6-T3, E4 | open |
 
 ### E6-T1 Translated fields in the rules file
 
-- Status: open
+- Status: done
 - Plan: 11 ("Rules file and update notice")
 - Value: the author can publish the notes and the messages in more than one
   language, and the released builds continue to work.
@@ -65,11 +65,17 @@ are in the plan, "Epics".
   - A test gives a field with a wrong type, and the app keeps the rules.
   - A test gives an empty Spanish text, a key `es-ES`, and a number value.
     The Spanish app shows the English text in each case.
-- Tests: —
+- Notes:
+  - Decided on 2026-10-29: English (`en`) is not a key. The English field
+    gives the English text. A translation of a missing English field is
+    ignored.
+  - `TranslatedRulesTest` passed with the parser before the change.
+  - `VersionPolicyFileTest` reads the current `release/version-policy.json`.
+- Tests: `TranslatedRulesTest`, `VersionPolicyFileTest`.
 
 ### E6-T2 The app shows the text of the app language
 
-- Status: open
+- Status: done
 - Plan: 11 ("Rules file and update notice")
 - Value: the user reads the notes and the messages in their language.
 - Requirements:
@@ -95,11 +101,17 @@ are in the plan, "Epics".
     that does not load. The last two show the English file.
   - A test gives HTML in a translated text, and the app shows it as plain
     text.
-- Tests: —
+- Notes:
+  - A variant without its own text uses the text of its main language
+    (`es-419` uses `es`). The app language already maps a Windows language
+    with a region to a language of the list (E3-T21).
+- Tests: `ExpiryUiTest` ("the update notice and the warning show the text
+  of the app language", "the What's new popup loads the page of the app
+  language"), `TranslatedRulesTest`.
 
 ### E6-T3 Specification and release checklist
 
-- Status: open
+- Status: done
 - Plan: 11, 14
 - Value: the author does not forget the translations at a release.
 - Requirements:
@@ -113,6 +125,8 @@ are in the plan, "Epics".
     thing is worse than the English fallback.
 - Acceptance:
   - The specification and the checklist name the new fields.
+- Notes: `build-expiry-spec.md`, "Texts in other languages", and
+  `release-checklist.md`, "9. After the release".
 - Tests: —
 
 ### E6-T4 First translated notes

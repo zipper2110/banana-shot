@@ -148,10 +148,18 @@ internal class StatsTableHeader : JPanel(null) {
             g2.translate(left, 0)
             paintLane(g2, cols.lane, cols.end, height - 1)
             val caption = DisplayFormats.upper(tr("stats.table.inVideo"))
-            val captionWidth = laneIcon.iconWidth + 4 + UiKit.textWidth(caption, CAPTION_FONT)
-            val x = cols.lane + (StatsColumns.LANE - captionWidth) / 2f
+            val room = StatsColumns.LANE - laneIcon.iconWidth - CAPTION_GAP - CAPTION_PAD * 2f
+            val lines = captionLines(caption, room, CAPTION_FONT)
+            val textWidth = lines.maxOf { UiKit.textWidth(it, CAPTION_FONT) }
+            val x = max(cols.lane + CAPTION_PAD.toFloat(), cols.lane + (StatsColumns.LANE - laneIcon.iconWidth - CAPTION_GAP - textWidth) / 2f)
             laneIcon.paintIcon(this, g2, x.toInt(), (height - 1 - laneIcon.iconHeight) / 2)
-            UiKit.drawText(g2, caption, CAPTION_FONT, Palette.SAGE, x + laneIcon.iconWidth + 4, 0f, height - 1f)
+            val blockTop = (height - 1 - lines.size * CAPTION_LINE) / 2f
+            lines.forEachIndexed { index, line ->
+                UiKit.drawText(
+                    g2, line, CAPTION_FONT, Palette.SAGE,
+                    x + laneIcon.iconWidth + CAPTION_GAP, blockTop + index * CAPTION_LINE, CAPTION_LINE,
+                )
+            }
             g2.translate(-left, 0)
             g2.color = Palette.LINE
             g2.fillRect(0, height - 1, width, 1)
@@ -166,7 +174,24 @@ internal class StatsTableHeader : JPanel(null) {
         const val DOT = 9
         const val DOT_GAP = 7
         val CAPTION_FONT = UiKit.trackedFont(11f, 0.05, UiKit.Weight.SEMIBOLD)
+        const val CAPTION_GAP = 4
+        const val CAPTION_PAD = 4
+        const val CAPTION_LINE = 14f
     }
+}
+
+/**
+ * The lines of the "In video" caption of the statistics header. A caption that is wider than [room] breaks at a space
+ * into 2 lines, so a longer translation ("DANS LA VIDÉO") fits in the column (B-11 E3-T22). The split gives the
+ * narrowest widest line. A caption without a space stays one line.
+ */
+internal fun captionLines(caption: String, room: Float, font: Font): List<String> {
+    if (UiKit.textWidth(caption, font) <= room) return listOf(caption)
+    val splits = caption.indices.filter { caption[it] == ' ' }
+    val best = splits.minByOrNull { index ->
+        max(UiKit.textWidth(caption.substring(0, index), font), UiKit.textWidth(caption.substring(index + 1), font))
+    } ?: return listOf(caption)
+    return listOf(caption.substring(0, best), caption.substring(best + 1))
 }
 
 /**

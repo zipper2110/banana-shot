@@ -257,8 +257,8 @@ class SwingTimelineComponentTest {
     }
 
     private companion object {
-        const val GUTTER = SwingTimelineComponent.GUTTER
-        const val WIDTH = GUTTER + 200
+        val GUTTER = SwingTimelineComponent.GUTTER
+        val WIDTH = GUTTER + 200
     }
 
     private fun timelineWithComments(

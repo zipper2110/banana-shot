@@ -184,7 +184,8 @@ internal class ExportQualityPanel(
         val target = selection().target
         return listOfNotNull(
             ExportVideoOptions.displayResolution(target.resolution.width, target.resolution.height),
-            target.frameRate?.let { "${it.displayFps} fps" },
+            // A no-break space keeps the number and "fps" on one line.
+            target.frameRate?.let { "${it.displayFps}\u00A0fps" },
         ).joinToString(" · ")
     }
 

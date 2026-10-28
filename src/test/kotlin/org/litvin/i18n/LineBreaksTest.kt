@@ -1,6 +1,7 @@
 package org.litvin.i18n
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -64,6 +65,12 @@ class LineBreaksTest {
         assertEquals(setOf(1, 2, 3, 4), LineBreaks.cjkBreaks(text))
         // No break after "「" (position 1) and before "」" (position 3).
         assertEquals(setOf(2), LineBreaks.cjkBreaks("「試合」"))
+    }
+
+    @Test
+    fun `a lone character is one Chinese or Japanese character with its closing marks`() {
+        listOf("み", "ん。", "ル", "过。」").forEach { assertTrue(LineBreaks.isLoneCharacter(it), it) }
+        listOf("遅い", "a", "。", "", "8K", "ab").forEach { assertFalse(LineBreaks.isLoneCharacter(it), it) }
     }
 
     private companion object {

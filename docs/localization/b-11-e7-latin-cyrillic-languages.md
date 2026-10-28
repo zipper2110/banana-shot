@@ -309,11 +309,11 @@ example `E7-L-pt`), and copy the template below.
   - `ScoreboardPreviewMain --language=fr` shows the video texts of all
     styles. They fit.
   - The screenshots of 2026-10-28 (`AllWindowsUiFlowIT`): the sidebar has
-    its normal width. Open cut texts: the Stats column header cuts "DANS
-    LA VIDÉ…", and "Joueur 2" touches the header icon. The Export footer
-    puts "fps" on a second line.
-  - Open: the cut texts above, the Windows smoke test in French, and the
-    open parts of E7-T3 and E7-T4.
+    its normal width. The cut texts are fixed (see E3-T22): the Stats
+    column header shows "DANS LA / VIDÉO" on 2 lines, the change-marker
+    hint shows all 3 lines, and the Export footer keeps "fps" on one line.
+  - Open: the Windows smoke test in French, and the open parts of E7-T3
+    and E7-T4.
 
 ### E7-L-de German
 
@@ -353,13 +353,13 @@ example `E7-L-pt`), and copy the template below.
   - The video badge "ENTSCHEIDUNGSPUNKT" has 18 letters. The catalog
     comment allows about 16.
   - The screenshots of 2026-10-28 (`AllWindowsUiFlowIT`): the sidebar has
-    its normal width. Open cut texts: the Export quality card breaks
-    "Originalqualit-ät" in the word. The timeline label "KOMMENTARE"
-    touches its count. The first steps of Projects cut
-    "YouTube-Thumbnail…". The change-marker hint of Colors and Crop needs
-    3 lines, and its card shows only 2.
-  - Open: the cut texts above, the Windows smoke test in German, and the
-    open parts of E7-T3 and E7-T4.
+    its normal width. The cut texts are fixed:
+    - The Export quality card says "Original" (also in the help). The
+      Projects step says "Thumbnail machen". The change-marker hint is
+      shorter.
+    - The timeline label column grows for "KOMMENTARE" (see E3-T22).
+  - Open: the Windows smoke test in German, and the open parts of E7-T3
+    and E7-T4.
 
 ### Template: E7-L-`<code>` `<Language>`
 

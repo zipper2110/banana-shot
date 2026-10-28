@@ -260,13 +260,14 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
     font "Dialog" for a character that the UI font does not show.
   - The help and the texts put the names of tabs and buttons in 「…」.
   - The screenshots of 2026-10-28: the sidebar has its normal width.
-    Open cut texts: the first steps of Projects cut "YouTube のサムネイルを…".
-    Some texts put one character alone on the last line: the Export cards
-    ("み", "ル", "ん") and the feedback form ("ん。").
+    The cut texts are fixed. The Projects step says "サムネイルを作る".
+  - The last line of a Chinese or Japanese paragraph does not have one
+    character alone (for example "み" or "ん。"). The line before it gives
+    its last character to the last line. Both `WrapText` classes of the
+    help and the Export tab do this.
   - With the Japanese UI font, the paths show "¥" for "\". All Japanese
     Windows fonts do this.
-  - Open: the cut texts above, the Windows
-    smoke test in Japanese, the input method
+  - Open: the Windows smoke test in Japanese, the input method
     check (E8-T5), and the open parts of E7-T3 and E7-T4.
 
 ### E8-L-zh-Hans Simplified Chinese

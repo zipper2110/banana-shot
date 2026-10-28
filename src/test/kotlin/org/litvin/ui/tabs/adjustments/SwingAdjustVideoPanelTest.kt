@@ -13,6 +13,7 @@ import org.litvin.media.VideoOverlay
 import org.litvin.ui.commons.ResetAllButton
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.VideoPlaybackBar
+import org.litvin.ui.commons.WrapText
 import org.litvin.ui.tabs.adjustments.presenter.AdjustSection
 import org.litvin.ui.tabs.adjustments.presenter.DefaultAdjustVideoPresenter
 import java.awt.Component
@@ -342,7 +343,7 @@ class SwingAdjustVideoPanelTest {
             assertFalse(panel.find("crop-transform-panel")!!.descendants().contains(card))
 
             val status = panel.find("adjust-change-status") as JLabel
-            val hint = panel.find("adjust-change-hint") as JLabel
+            val hint = panel.find("adjust-change-hint") as WrapText
             assertTrue(hint.text.contains("Did the light change?"))
             (panel.find("adjust-change-add") as UiButton).doClick()
             assertEquals(listOf(0L), adjustments.get().colorKeys.map { it.atMs })

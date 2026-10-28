@@ -62,9 +62,12 @@ internal open class WrapText(
     private fun lines(width: Int): List<List<Piece>> {
         val lines = mutableListOf(mutableListOf<Piece>())
         var x = 0f
+        var paragraphStart = 0
         pieces.forEach { whole ->
             if (whole.newLine) {
+                keepLastCharacterCompany(lines, paragraphStart)
                 lines += mutableListOf<Piece>()
+                paragraphStart = lines.lastIndex
                 x = 0f
                 return@forEach
             }
@@ -78,7 +81,21 @@ internal open class WrapText(
                 x += piece.width
             }
         }
+        keepLastCharacterCompany(lines, paragraphStart)
         return lines
+    }
+
+    /**
+     * A Chinese or Japanese paragraph does not end with one character alone on its last line (B-11 E8-T4). The line
+     * before gives the last line its last piece.
+     */
+    private fun keepLastCharacterCompany(lines: MutableList<MutableList<Piece>>, paragraphStart: Int) {
+        if (lines.size - paragraphStart < 2) return
+        val last = lines.last()
+        val previous = lines[lines.lastIndex - 1]
+        if (!LineBreaks.isLoneCharacter(last.joinToString("") { it.text })) return
+        if (previous.size < 2 || !LineBreaks.isCjkPiece(previous.last().text)) return
+        last.add(0, previous.removeAt(previous.lastIndex))
     }
 
     /** The piece, or its parts when the word is wider than [width] (for example a long German compound noun). */

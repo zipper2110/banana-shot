@@ -4,7 +4,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.litvin.i18n.AppLanguage
+import org.litvin.ui.tabs.export.WrapText as ExportWrapText
 import org.litvin.ui.tabs.stats.WrapText as StatsWrapText
+import kotlin.math.ceil
 
 /**
  * B-11 E7-L-de and plan section 7: German has long compound nouns. A word that is wider than the line breaks at a
@@ -64,6 +66,29 @@ class WrapTextTest {
             assertTrue(UiKit.textWidth(line, chineseFont) <= width, "\"$line\" is wider than $width px")
             assertTrue(line.trim().first() !in "，。）", "\"$line\" starts with a closing mark")
         }
+    }
+
+    /** B-11 E8-T4: the last line of a Japanese paragraph has more than one character ("み" alone looked wrong). */
+    @Test
+    fun `a Japanese paragraph does not end with one character alone`() {
+        val text = "ファイルは最大、エクスポートは最も遅い"
+        val japaneseFont = UiFonts.forText(font, text, AppLanguage.JAPANESE)
+        // At this width, only the last character does not fit on the first line.
+        val width = ceil(UiKit.textWidth(text.dropLast(1), japaneseFont)).toInt() + 2
+        listOf(
+            WrapText(text, japaneseFont, Palette.FG).lineTexts(width),
+            ExportWrapText(text, japaneseFont, Palette.FG).lineTexts(width),
+        ).forEach { lines ->
+            assertEquals(listOf(text.dropLast(2), "遅い"), lines)
+        }
+    }
+
+    @Test
+    fun `a paragraph with one character does not take a character from the paragraph before it`() {
+        val text = "テストです\nあ"
+        val japaneseFont = UiFonts.forText(font, text, AppLanguage.JAPANESE)
+        assertEquals(listOf("テストです", "あ"), WrapText(text, japaneseFont, Palette.FG).lineTexts(400))
+        assertEquals(listOf("テストです", "あ"), ExportWrapText(text, japaneseFont, Palette.FG).lineTexts(400))
     }
 
     @Test

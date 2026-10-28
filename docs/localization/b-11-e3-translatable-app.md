@@ -683,11 +683,19 @@ The tasks below give the area and the special requirements of the area.
   E4-T8, "Notes"). The projects table hides the size and the duration
   columns in a narrow window. The Thumbnail tab uses the full width for
   its controls and style cards.
+- Done with the screenshots of French, German, and Japanese (2026-10-28):
+  - The timeline label column grows with the widest track name and its
+    count. In English it stays 124 px.
+  - The change-marker card of Colors and Crop grows with its hint. The
+    hint is a `WrapText`, and a new line in the hint is "\n".
+  - The "In video" column header of the Stats tab breaks into 2 lines when
+    it does not fit on 1 line. The column keeps its width.
+  - The Export footer keeps the number and "fps" on one line.
 - Acceptance:
   - The `qps` screenshots show no cut text and no text outside its box.
   - In English, the screenshots of the UI flow tests do not change, or
     each change is accepted in the pull request.
-- Tests: —
+- Tests: `LongTextRoomTest`.
 
 ### E3-T23 User texts in any script
 

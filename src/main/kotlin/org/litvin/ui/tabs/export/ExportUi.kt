@@ -193,6 +193,9 @@ internal class WrapText(
         runs = listOf(TextRun(text, font, color))
     }
 
+    /** The text of each line at [width], for tests. */
+    internal fun lineTexts(width: Int): List<String> = lines(width.toFloat()).map { line -> line.pieces.joinToString("") { it.text }.trim() }
+
     /** Changes only the colors, for example when a button becomes selected. */
     fun recolor(color: (TextRun) -> Color) {
         runs = runs.map { it.copy(color = color(it)) }
@@ -250,6 +253,20 @@ internal class WrapText(
         val current = mutableListOf<Piece>()
         var x = 0f
         var lastFont = runs.firstOrNull()?.font ?: font ?: ExportUi.font(13f)
+        var paragraphStart = 0
+
+        // A Chinese or Japanese paragraph does not end with one character alone on its last line (B-11 E8-T4).
+        // The line before gives the last line its last piece.
+        fun keepLastCharacterCompany() {
+            if (lines.size <= paragraphStart) return
+            val words = current.filterNot { it.space }
+            if (words.size != 1 || !LineBreaks.isLoneCharacter(words[0].text)) return
+            val previous = lines.last()
+            val moved = previous.pieces.lastOrNull() ?: return
+            if (moved.space || previous.pieces.count { !it.space } < 2 || !LineBreaks.isCjkPiece(moved.text)) return
+            lines[lines.lastIndex] = line(previous.pieces.dropLast(1).dropLastWhile { it.space }, moved.font)
+            current.add(0, moved)
+        }
 
         fun flush() {
             while (current.lastOrNull()?.space == true) current.removeAt(current.lastIndex)
@@ -263,7 +280,11 @@ internal class WrapText(
             // A Japanese word breaks between its characters (B-11 E8-T4).
             for (token in TOKEN.findAll(run.text).flatMap { LineBreaks.pieces(it.value) }) {
                 when {
-                    token == "\n" -> flush()
+                    token == "\n" -> {
+                        keepLastCharacterCompany()
+                        flush()
+                        paragraphStart = lines.size
+                    }
                     token.isBlank() -> if (current.isNotEmpty()) {
                         val w = ExportUi.textWidth(token, run.font)
                         current += Piece(token, run.font, run.color, w, space = true)
@@ -294,6 +315,7 @@ internal class WrapText(
                 }
             }
         }
+        keepLastCharacterCompany()
         if (current.isNotEmpty() || lines.isEmpty()) flush()
         return lines
     }

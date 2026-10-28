@@ -73,13 +73,11 @@ class SwingTimelineComponent(
     private val tickColor get() = Palette.LINE_3
     private val defaultCommentColor get() = Palette.YELLOW
     private val tagText get() = Palette.ON_LIGHT
-    private val gutterFont = UiKit.trackedFont(10.5f, 0.06, UiKit.Weight.SEMIBOLD)
-    private val countFont = UiKit.font(10.5f)
     private val tickFont = UiKit.font(10.5f)
     private val tagFont = UiKit.font(10.5f, UiKit.Weight.BOLD)
-    private val videoIcon: Icon = UiKit.icon(Material2MZ.MOVIE, 14, Palette.FG_3)
-    private val marksIcon: Icon = UiKit.icon(Material2AL.FLAG, 14, Palette.FG_3)
-    private val commentsIcon: Icon = UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, Palette.FG_3)
+    private val videoIcon: Icon = UiKit.icon(Material2MZ.MOVIE, ICON_SIZE, Palette.FG_3)
+    private val marksIcon: Icon = UiKit.icon(Material2AL.FLAG, ICON_SIZE, Palette.FG_3)
+    private val commentsIcon: Icon = UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, ICON_SIZE, Palette.FG_3)
     private var lastKnownLaneCount = -1
     private var pressPoint: Point? = null
 
@@ -283,7 +281,7 @@ class SwingTimelineComponent(
 
         fun label(icon: Icon, text: String, count: String, top: Int, rowHeight: Int) {
             icon.paintIcon(this, g, GUTTER_PAD, top + (rowHeight - icon.iconHeight) / 2)
-            UiKit.drawText(g, text, gutterFont, Palette.FG_2, (GUTTER_PAD + icon.iconWidth + 6).toFloat(), top.toFloat(), rowHeight.toFloat())
+            UiKit.drawText(g, text, gutterFont, Palette.FG_2, (GUTTER_PAD + icon.iconWidth + LABEL_GAP).toFloat(), top.toFloat(), rowHeight.toFloat())
             if (count.isNotEmpty()) {
                 val x = GUTTER - 1 - GUTTER_PAD - UiKit.textWidth(count, countFont)
                 UiKit.drawText(g, count, countFont, Palette.FG_3, x, top.toFloat(), rowHeight.toFloat())
@@ -519,8 +517,26 @@ class SwingTimelineComponent(
     }
 
     internal companion object {
-        /** The width of the label column. */
-        const val GUTTER = 124
+        private val gutterFont = UiKit.trackedFont(10.5f, 0.06, UiKit.Weight.SEMIBOLD)
+        private val countFont = UiKit.font(10.5f)
+        private const val GUTTER_MIN = 124
+        private const val ICON_SIZE = 14
+        private const val LABEL_GAP = 6
+
+        /**
+         * The width of the label column: 124 px, or more when a track name and its count do not fit (B-11 E3-T22,
+         * "KOMMENTARE" in German). The app language does not change while the app runs.
+         */
+        val GUTTER: Int by lazy {
+            gutterWidth(listOf("timeline.video", "timeline.marks", "timeline.comments").map { DisplayFormats.upper(tr(it)) })
+        }
+
+        /** The width of the label column for the track names [labels]. The longest name has room for a count of 2 digits. */
+        fun gutterWidth(labels: List<String>): Int {
+            val widest = labels.maxOf { UiKit.textWidth(it, gutterFont) }
+            val needed = GUTTER_PAD + ICON_SIZE + LABEL_GAP + widest + LABEL_GAP + UiKit.textWidth("99", countFont) + GUTTER_PAD + 1
+            return maxOf(GUTTER_MIN, kotlin.math.ceil(needed).toInt())
+        }
         const val TOP_BORDER = 1
         const val RULER_HEIGHT = 20
         const val TRACK_HEIGHT = 22

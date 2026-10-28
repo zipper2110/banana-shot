@@ -49,9 +49,10 @@ internal class ChangePointsCard private constructor(private val parts: Parts) :
     internal val previousButton: UiButton get() = parts.previous
     internal val nextButton: UiButton get() = parts.next
 
-    /** Sets the hint. [hint] has two lines, with a <br> between them. */
+    /** Sets the hint. A "\n" in [hint] starts a new line. */
     fun setHint(hint: String) {
-        parts.hintLabel.text = "<html>$hint</html>"
+        parts.hintText.runs = listOf(TextRun(hint, HINT_FONT, Palette.FG_3))
+        revalidate()
     }
 
     fun render(state: ChangePointsState) {
@@ -94,15 +95,12 @@ internal class ChangePointsCard private constructor(private val parts: Parts) :
             listOf(add, remove, previous, next).forEach { add(it) }
         }
 
-        // The hint has two fixed lines (a <br> in [hint]): the card rows have one height, and a wrapped HTML
-        // label can need a third line.
-        val hintLabel = JLabel("<html>$hint</html>").apply {
+        // The hint wraps. A longer translation gets a third line, and the card grows (B-11 E3-T22).
+        val hintText = WrapText(hint, HINT_FONT, Palette.FG_3, lineFactor = HINT_LINE_FACTOR).apply {
             name = "$namePrefix-change-hint"
-            font = UiKit.font(11.5f)
-            foreground = Palette.FG_3
         }
 
-        val rows = listOf(padded(status), buttons, padded(hintLabel))
+        val rows = listOf(padded(status), buttons, HintRow(hintText))
 
         private fun button(suffix: String, text: String, ikon: Ikon, tooltip: String, action: () -> Unit) =
             UiButton(text, ikon, buttonHeight = UiButton.SMALL_HEIGHT).apply {
@@ -120,10 +118,29 @@ internal class ChangePointsCard private constructor(private val parts: Parts) :
         }
     }
 
+    /** The hint row: the hint with the padding of the card, as high as the lines of the hint. */
+    private class HintRow(private val text: WrapText) : JPanel(null), HeightForWidth {
+        init {
+            isOpaque = false
+            add(text)
+        }
+
+        override fun heightForWidth(width: Int): Int = text.heightForWidth((width - PAD_X * 2).coerceAtLeast(1)) + HINT_PAD_Y * 2
+
+        override fun doLayout() {
+            val textWidth = (width - PAD_X * 2).coerceAtLeast(1)
+            val h = text.heightForWidth(textWidth)
+            text.setBounds(PAD_X, (height - h) / 2, textWidth, h)
+        }
+    }
+
     private companion object {
         const val ROW_HEIGHT = 40
         const val PAD_X = 14
         const val BUTTON_GAP = 6
+        const val HINT_PAD_Y = 4
+        const val HINT_LINE_FACTOR = 1.35f
+        val HINT_FONT = UiKit.font(11.5f)
 
         fun format(ms: Long): String = Timecode.format(ms.coerceAtLeast(0L)).substring(0, 8)
     }

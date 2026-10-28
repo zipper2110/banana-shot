@@ -297,7 +297,7 @@ class SwingAdjustVideoPanel(
             AdjustSection.COLORS -> tr("adjust.colors.changePoints.question")
             AdjustSection.TRANSFORM -> tr("adjust.transform.changePoints.question")
         }
-        return question + "<br>" + tr("adjust.changePoints.hint", "seconds" to ColorTimeline.BLEND_MS / 1000)
+        return question + "\n" + tr("adjust.changePoints.hint", "seconds" to ColorTimeline.BLEND_MS / 1000)
     }
 
     private fun renderColors(editing: AdjustmentsV1) {

@@ -220,7 +220,8 @@ internal class CardColumn : JPanel(null), Scrollable {
 }
 
 /**
- * A card with a caption in capital letters and an icon, and rows of the same height under it.
+ * A card with a caption in capital letters and an icon, and rows of the same height under it. A row with
+ * [HeightForWidth] gets more height when its text needs it (a longer translation, B-11 E3-T22).
  * A subclass can paint more on the right of the caption with [paintCaptionEnd].
  */
 internal open class GroupCard(
@@ -229,7 +230,7 @@ internal open class GroupCard(
     ikon: Ikon,
     rows: List<JComponent>,
     private val rowHeight: Int,
-) : JPanel(null) {
+) : JPanel(null), HeightForWidth {
     private val rowComponents = rows.toList()
     private val captionIcon = UiKit.icon(ikon, 14, Palette.FG_3)
     private val captionFont = UiKit.trackedFont(10.5f, 0.1, UiKit.Weight.BOLD)
@@ -240,13 +241,21 @@ internal open class GroupCard(
         rowComponents.forEach { add(it) }
     }
 
-    override fun getPreferredSize() = Dimension(MIN_WIDTH, ROWS_TOP + rowComponents.size * rowHeight + PAD_BOTTOM)
+    private fun heightOf(row: JComponent, width: Int): Int =
+        if (row is HeightForWidth) max(rowHeight, row.heightForWidth(width - BORDER * 2)) else rowHeight
+
+    override fun heightForWidth(width: Int): Int = ROWS_TOP + rowComponents.sumOf { heightOf(it, width) } + PAD_BOTTOM
+
+    override fun getPreferredSize() = Dimension(MIN_WIDTH, heightForWidth(if (width > 0) width else SIDE_PANEL_WIDTH))
     override fun getMinimumSize() = preferredSize
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
 
     override fun doLayout() {
-        rowComponents.forEachIndexed { index, row ->
-            row.setBounds(BORDER, ROWS_TOP + index * rowHeight, width - BORDER * 2, rowHeight)
+        var y = ROWS_TOP
+        rowComponents.forEach { row ->
+            val h = heightOf(row, width)
+            row.setBounds(BORDER, y, width - BORDER * 2, h)
+            y += h
         }
     }
 

@@ -228,9 +228,9 @@ class ExportPlannerTest {
 
     @Test
     fun renderFormattingFormatsSizesAndDurations() {
-        assertEquals("999 B", RenderFormatting.formatSize(999))
-        assertEquals("1.50 KB", RenderFormatting.formatSize(1_500))
-        assertEquals("2.00 MB", RenderFormatting.formatSize(2_000_000))
+        assertEquals("999\u00A0B", RenderFormatting.formatSize(999))
+        assertEquals("1.50\u00A0KB", RenderFormatting.formatSize(1_500))
+        assertEquals("2.00\u00A0MB", RenderFormatting.formatSize(2_000_000))
         assertEquals("1:02:03", RenderFormatting.formatDuration(3_723_000))
         assertEquals("2h 30min 10sec", RenderFormatting.formatDurationWords(9_010_000))
         assertEquals("1h 0min 5sec", RenderFormatting.formatDurationWords(3_605_000))
@@ -265,7 +265,7 @@ class ExportPlannerTest {
     @Test
     fun renderFormattingDescribesTheVideoSettings() {
         assertEquals(
-            "Balanced · 1080p · 60 FPS · 12 Mbit/s · H.264 (NVENC)",
+            "Balanced · 1080p · 60\u00A0fps · 12 Mbit/s · H.264 (NVENC)",
             RenderFormatting.formatVideo("balanced", 1920, 1080, "60", 12_000, "H.264 (NVENC)"),
         )
         // A job that keeps the source rate has no frame rate. Old entries have no bitrate and can have an old preset id.
@@ -274,20 +274,20 @@ class ExportPlannerTest {
             RenderFormatting.formatVideo("maximum", 2704, 1520, null, null, "H.264 (libx264)"),
         )
         assertEquals(
-            "4K · 30 FPS · 8.5 Mbit/s · H.264 (QSV)",
+            "4K · 30\u00A0fps · 8.5 Mbit/s · H.264 (QSV)",
             RenderFormatting.formatVideo("unknown-preset", 3840, 2160, "30", 8_500, "H.264 (QSV)"),
         )
         // A size near a standard size keeps its pixels, so the user sees that it is not exactly 1080p.
         assertEquals(
-            "1080p (1920×1088) · 30 FPS · H.264 (QSV)",
+            "1080p (1920×1088) · 30\u00A0fps · H.264 (QSV)",
             RenderFormatting.formatVideo(null, 1920, 1088, "30", null, "H.264 (QSV)"),
         )
     }
 
     @Test
     fun renderFormattingShowsTheWrittenAndTheExpectedSize() {
-        assertEquals("120.50 MB / ~480.00 MB", RenderFormatting.formatSizeProgress(120_500_000, 480_000_000))
-        assertEquals("0 B", RenderFormatting.formatSizeProgress(0, null))
+        assertEquals("120.50\u00A0MB / ~480.00\u00A0MB", RenderFormatting.formatSizeProgress(120_500_000, 480_000_000))
+        assertEquals("0\u00A0B", RenderFormatting.formatSizeProgress(0, null))
     }
 
     @Test
@@ -390,8 +390,8 @@ class ExportPlannerTest {
 
     @Test
     fun renderFormattingDescribesOutputFrameRate() {
-        assertEquals("60 FPS", RenderFormatting.formatFrameRate("60"))
-        assertEquals("29.97 FPS", RenderFormatting.formatFrameRate("30000/1001"))
+        assertEquals("60\u00A0fps", RenderFormatting.formatFrameRate("60"))
+        assertEquals("29.97\u00A0fps", RenderFormatting.formatFrameRate("30000/1001"))
         assertNull(RenderFormatting.formatFrameRate(null))
         assertNull(RenderFormatting.formatFrameRate("not-a-rate"))
     }

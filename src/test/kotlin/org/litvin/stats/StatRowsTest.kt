@@ -102,7 +102,7 @@ class StatRowsTest {
         val rows = rows(report("12"))
 
         assertEquals(StatValue("0:15"), rows.of(MatchStat.DURATION).shared)
-        assertEquals(StatValue("5.0 s"), rows.of(MatchStat.AVERAGE_POINT).shared)
+        assertEquals(StatValue("5.0\u00A0s"), rows.of(MatchStat.AVERAGE_POINT).shared)
         assertNull(rows.of(MatchStat.DURATION).values)
     }
 

@@ -336,6 +336,27 @@ class MessageCatalogTest {
         assertEquals(listOf("a", "b", "c", "d", "e"), problems.map { it.substringBefore(':') })
     }
 
+    /** B-11 E3-T20: a line never breaks between a number and its unit, so the space between them is a no-break space. */
+    @Test
+    fun `a number and its unit have a no-break space`() {
+        val problems = (listOf(AppLanguage.SOURCE to english) + translations.toList()).flatMap { (language, texts) ->
+            unitSpaceProblems(texts).map { "${language.code} $it" }
+        }
+        assertEquals(emptyList<String>(), problems)
+    }
+
+    @Test
+    fun `the unit check finds a normal space and accepts a word that is not a unit`() {
+        val problems = unitSpaceProblems(
+            mapOf("a" to "{seconds} s", "b" to "2 MB", "c" to "{fps} fps", "d" to "{seconds}${NBSP}s", "e" to "{app} с сайта", "f" to "{count} sets"),
+        )
+        assertEquals(listOf("a", "b", "c"), problems.map { it.substringBefore(':') })
+    }
+
+    private fun unitSpaceProblems(texts: Map<String, String>): List<String> = texts.toSortedMap().mapNotNull { (key, text) ->
+        UNIT_SPACE.find(text)?.let { "$key: «${it.value}»" }
+    }
+
     private fun frenchTypographyProblems(texts: Map<String, String>): List<String> = texts.toSortedMap().mapNotNull { (key, text) ->
         FRENCH_SPACING.find(text)?.let { "$key: «${it.value}»" }
     }
@@ -422,6 +443,9 @@ class MessageCatalogTest {
 
         /** The no-break space of French typography. */
         val NBSP = Char(0xA0)
+
+        /** A normal space between a number or a placeholder (not `{app}`) and a unit. */
+        val UNIT_SPACE = Regex("(?:\\d|(?<!\\{app)\\}) (?:s|ms|fps|GB|MB|KB|B|%|с|мс|秒)(?![\\p{L}\\d/])")
 
         /** A normal space before a high mark or after «, no space before ";", "?", "!", or », or a straight apostrophe. */
         val FRENCH_SPACING = Regex(" [:;?!%»]|« |[^\\s\\u00A0][;?!»]|«[^\\u00A0]|'")

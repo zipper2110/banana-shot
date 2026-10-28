@@ -270,7 +270,7 @@ object StatRows {
     private fun percent(ratio: Ratio): String? = ratio.percent?.let(DisplayFormats::percent)
 
     /** "12.3 s", with the decimal separator of the format locale. */
-    fun seconds(ms: Long): String = "${DisplayFormats.decimal(ms / 1000.0, 1)} s"
+    fun seconds(ms: Long): String = tr("unit.seconds", "value" to DisplayFormats.decimal(ms / 1000.0, 1))
 
     /** "42:07" or "1:42:07" */
     fun clock(ms: Long): String {

@@ -87,7 +87,7 @@ class ExportVideoOptionsTest {
     fun `frame rate cards mark a source rate near a standard rate`() {
         val choices = ExportVideoOptions.frameRateChoices(ExportFrameRates.parse("30000/1001"))
 
-        assertEquals(listOf("24 fps", "29.97 fps", "60 fps"), choices.map { it.title })
+        assertEquals(listOf("24\u00A0fps", "29.97\u00A0fps", "60\u00A0fps"), choices.map { it.title })
         assertEquals(listOf(true, true, false), choices.map { it.available })
         val selected = ExportVideoOptions.defaultFrameRate(choices)
         assertTrue(selected.isSource)
@@ -98,7 +98,7 @@ class ExportVideoOptionsTest {
     fun `a 50 fps source gets its own card between 30 and 60`() {
         val choices = ExportVideoOptions.frameRateChoices(ExportFrameRates.parse("50"))
 
-        assertEquals(listOf("24 fps", "30 fps", "50 fps", "60 fps"), choices.map { it.title })
+        assertEquals(listOf("24\u00A0fps", "30\u00A0fps", "50\u00A0fps", "60\u00A0fps"), choices.map { it.title })
         assertEquals(listOf(true, true, true, false), choices.map { it.available })
         assertNull(choices[2].level)
     }

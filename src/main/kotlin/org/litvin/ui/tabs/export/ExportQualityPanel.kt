@@ -184,8 +184,8 @@ internal class ExportQualityPanel(
         val target = selection().target
         return listOfNotNull(
             ExportVideoOptions.displayResolution(target.resolution.width, target.resolution.height),
-            // A no-break space keeps the number and "fps" on one line.
-            target.frameRate?.let { ExportVideoOptions.frameRateText(it.displayFps).replace(' ', '\u00A0') },
+            // The catalog text has a no-break space, so the number and "fps" stay on one line.
+            target.frameRate?.let { ExportVideoOptions.frameRateText(it.displayFps) },
         ).joinToString(" · ")
     }
 

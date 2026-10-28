@@ -11,10 +11,10 @@ object RenderFormatting {
         val mb = kb * 1000
         val gb = mb * 1000
         return when {
-            bytes >= gb -> "${DisplayFormats.decimal(bytes / gb, 2)} GB"
-            bytes >= mb -> "${DisplayFormats.decimal(bytes / mb, 2)} MB"
-            bytes >= kb -> "${DisplayFormats.decimal(bytes / kb, 2)} KB"
-            else -> "$bytes B"
+            bytes >= gb -> tr("unit.size.gb", "value" to DisplayFormats.decimal(bytes / gb, 2))
+            bytes >= mb -> tr("unit.size.mb", "value" to DisplayFormats.decimal(bytes / mb, 2))
+            bytes >= kb -> tr("unit.size.kb", "value" to DisplayFormats.decimal(bytes / kb, 2))
+            else -> tr("unit.size.bytes", "value" to DisplayFormats.integer(bytes))
         }
     }
 
@@ -90,10 +90,10 @@ object RenderFormatting {
 
     private const val SEPARATOR = " · "
 
-    /** Output frame rate for display, e.g. "60 FPS" or "29.97 FPS"; null when the job kept the source rate. */
+    /** Output frame rate for display, for example "60 fps" or "29.97 fps"; null when the job kept the source rate. */
     fun formatFrameRate(rawRate: String?): String? = rawRate
         ?.let(ExportFrameRates::parse)
-        ?.let { "${it.displayFps} FPS" }
+        ?.let { ExportVideoOptions.frameRateText(it.displayFps) }
 
     fun formatDuration(ms: Long): String {
         var remaining = ms.coerceAtLeast(0L)

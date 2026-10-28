@@ -80,10 +80,10 @@ class DisplayFormatsTest {
         val date = LocalDate.of(2026, 10, 10)
         val time = LocalTime.of(15, 45)
         val rows = listOf(
-            "en-US" to listOf("Oct 10, 2026", "3:45\u202FPM", "2.35 GB", "64%"),
-            "es-ES" to listOf("10/10/26", "15:45", "2,35 GB", "64\u00A0%"),
-            "es-MX" to listOf("10/10/26", "3:45 p.m.", "2.35 GB", "64%"),
-            "de-DE" to listOf("10.10.26", "15:45", "2,35 GB", "64\u00A0%"),
+            "en-US" to listOf("Oct 10, 2026", "3:45\u202FPM", "2.35\u00A0GB", "64%"),
+            "es-ES" to listOf("10/10/26", "15:45", "2,35\u00A0GB", "64\u00A0%"),
+            "es-MX" to listOf("10/10/26", "3:45 p.m.", "2.35\u00A0GB", "64%"),
+            "de-DE" to listOf("10.10.26", "15:45", "2,35\u00A0GB", "64\u00A0%"),
         )
         rows.forEach { (tag, expected) ->
             DisplayFormats.formatLocale = Locale.forLanguageTag(tag)
@@ -128,7 +128,7 @@ class DisplayFormatsTest {
         }
         DisplayFormats.formatLocale = DisplayFormats.usableFormatLocale(Locale.forLanguageTag("xx-XX"))
         assertEquals("Oct 10, 2026", DisplayFormats.date(LocalDate.of(2026, 10, 10)))
-        assertEquals("2.35 GB", RenderFormatting.formatSize(2_350_000_000))
+        assertEquals("2.35\u00A0GB", RenderFormatting.formatSize(2_350_000_000))
         listOf("es-ES", "de-DE", "th-TH-u-nu-thai", "sv-SE").forEach { tag ->
             assertEquals(Locale.forLanguageTag(tag), DisplayFormats.usableFormatLocale(Locale.forLanguageTag(tag)))
         }

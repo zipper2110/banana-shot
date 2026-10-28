@@ -205,11 +205,11 @@ class VideoLanguageExportTest {
             }
 
             // Each point is 4.2 s long, so all points are short. Player 1 wins four of seven: 57 %.
-            card(AppLanguage.ENGLISH, "en-US").let { assertTrue(it.containsAll(listOf("4.2 s", "57%")), it.toString()) }
-            card(AppLanguage.SPANISH_SPAIN, "es-MX").let { assertTrue(it.containsAll(listOf("4.2 s", "57%")), it.toString()) }
-            card(AppLanguage.SPANISH_SPAIN, "en-US").let { assertTrue(it.containsAll(listOf("4,2 s", "57\u00A0%")), it.toString()) }
+            card(AppLanguage.ENGLISH, "en-US").let { assertTrue(it.containsAll(listOf("4.2\u00A0s", "57%")), it.toString()) }
+            card(AppLanguage.SPANISH_SPAIN, "es-MX").let { assertTrue(it.containsAll(listOf("4.2\u00A0s", "57%")), it.toString()) }
+            card(AppLanguage.SPANISH_SPAIN, "en-US").let { assertTrue(it.containsAll(listOf("4,2\u00A0s", "57\u00A0%")), it.toString()) }
             val arabic = card(AppLanguage.ENGLISH, "ar-EG")
-            assertTrue(arabic.containsAll(listOf("4.2 s", "57%")), arabic.toString())
+            assertTrue(arabic.containsAll(listOf("4.2\u00A0s", "57%")), arabic.toString())
             assertTrue(arabic.joinToString("").none { it.isDigit() && it !in '0'..'9' }, arabic.toString())
         } finally {
             DisplayFormats.formatLocale = saved

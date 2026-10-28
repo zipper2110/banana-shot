@@ -201,9 +201,11 @@ Notes for all tasks:
   - The smoke test passes.
 - Notes:
   - Done: the help of the Export tab (`help.export.workflow.videoLanguage`,
-    English and Spanish) and step 6 of `qa/windows/ui-smoke.md`.
-  - Open: the fit tests wait for E3-T19. The smoke test did not run yet.
-- Tests: —
+    in all languages) and step 6 of `qa/windows/ui-smoke.md`.
+  - Done: the fit test (`VideoTextFitTest`, done with E4-T8) runs for each
+    language of `AppLanguage`, so it covers each video language.
+  - Open: the smoke test did not run yet.
+- Tests: `VideoTextFitTest`.
 
 ## Done when
 

@@ -66,7 +66,8 @@ object ScoreboardFonts {
         if (text.isEmpty()) return 0.0
         val drawn = DrawnText.composed(text)
         val width = awtFont(family(family, drawn), bold, assSize).getStringBounds(drawn, frc).width
-        return width + spacing * drawn.length
+        // The video adds the spacing once for each character. An emoji is one character, but two Java chars.
+        return width + spacing * drawn.codePointCount(0, drawn.length)
     }
 
     private fun metrics(family: String, bold: Boolean): Metrics = metricsCache.getOrPut(family to bold) {

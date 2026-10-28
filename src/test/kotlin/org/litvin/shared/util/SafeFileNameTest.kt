@@ -33,6 +33,31 @@ class SafeFileNameTest {
     fun usesTheFallbackWhenNoCharactersStay() {
         assertEquals("x", SafeFileName.of("", "x"))
         assertEquals("x", SafeFileName.of(" ... ", "x"))
-        assertEquals("___", SafeFileName.of("???", "x"))
+        assertEquals("x", SafeFileName.of("???", "x"))
+        assertEquals("x", SafeFileName.of("   ", "x"))
+        assertEquals("x", SafeFileName.of("?* <>", "x"))
+        assertEquals("x", SafeFileName.of("\uD83C", "x"))
+        assertEquals("a__", SafeFileName.of("a??", "x"))
+    }
+
+    /** B-11 E3-T23: a name in another script gives a folder name with the same letters. */
+    @Test
+    fun keepsTheLettersOfOtherScripts() {
+        listOf("Финал Кубка", "Τελικός", "决赛 第二盘", "決勝戦", "Ünal & Çelik").forEach { name ->
+            assertEquals(name, SafeFileName.of(name, "x"))
+        }
+        assertEquals("Финал 3_2", SafeFileName.of("Финал 3:2", "x"))
+    }
+
+    @Test
+    fun keepsAnEmojiAndReplacesHalfOfAnEmoji() {
+        assertEquals("Final 🎾", SafeFileName.of("Final 🎾", "x"))
+        assertEquals("Final _", SafeFileName.of("Final \uD83C", "x"))
+        assertEquals("_ Final", SafeFileName.of("\uDFBE Final", "x"))
+    }
+
+    @Test
+    fun givesOneNameForTheTwoFormsOfALetterWithAnAccent() {
+        assertEquals("Café", SafeFileName.of("Café", "x"))
     }
 }

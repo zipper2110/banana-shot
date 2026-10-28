@@ -1,5 +1,6 @@
 package org.litvin.projects
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.shared.util.SafeFileName
 import java.io.File
 import org.litvin.i18n.tr
@@ -27,6 +28,12 @@ object NewProjectRules {
             else -> null
         }
     }
+
+    /**
+     * The project name that the app saves: without the spaces at the start and the end, and in the composed form
+     * (NFC). Thus "é" as one character and "e" with U+0301 give the same name (B-11 E3-T23).
+     */
+    fun cleanName(name: String): String = DrawnText.composed(name.trim())
 
     /** Returns a correct Windows folder name for the project name. For example, "Who won?" gives "Who won_". */
     fun folderName(name: String): String = SafeFileName.of(name.trim(), FALLBACK_FOLDER_NAME)

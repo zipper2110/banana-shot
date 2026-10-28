@@ -8,6 +8,7 @@ import java.awt.GraphicsEnvironment
 import java.awt.font.TextAttribute
 import javax.swing.JComboBox
 import javax.swing.ListCellRenderer
+import javax.swing.text.StyleContext
 
 /**
  * The UI font families of the app language (B-11 E8-T3). "Segoe UI" has no Japanese or Chinese letters, and Swing
@@ -41,6 +42,15 @@ internal object UiFonts {
     }
 
     private fun Font.withFamily(family: String): Font = deriveFont(mapOf(TextAttribute.FAMILY to family))
+
+    /**
+     * A font of [family] that also shows the letters that [family] does not have (B-11 E3-T23). A plain
+     * `Font("Segoe UI")` shows an empty box for a Japanese letter or an emoji in a user text, for example a project
+     * name. This font uses the Java fallback fonts for such a letter. The size and the line height of the letters of
+     * [family] do not change.
+     */
+    fun withFallback(family: String, style: Int, size: Float): Font =
+        StyleContext.getDefaultStyleContext().getFont(family, style, 1).deriveFont(size)
 
     /**
      * Makes each entry of [combo] show in a font that has its letters. [languageOf] gives the language of the text of

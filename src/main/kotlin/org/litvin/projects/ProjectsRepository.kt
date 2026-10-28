@@ -86,8 +86,8 @@ class FileProjectsRepository(
 
         // The project name and the folder name are different (B-36). The name is unique among the project names.
         // The folder is unique on the disk, because two names can give the same folder name ("Who won?", "Who won_").
-        val takenNames = recentsProvider.refresh().map { it.name.lowercase() }.toSet()
-        val projectName = withSuffix(name.trim()) { it.lowercase() !in takenNames }
+        val takenNames = recentsProvider.refresh().map { NewProjectRules.cleanName(it.name).lowercase() }.toSet()
+        val projectName = withSuffix(NewProjectRules.cleanName(name)) { it.lowercase() !in takenNames }
         val folderName = withSuffix(NewProjectRules.folderName(projectName)) { !File(targetRoot, it).exists() }
         val projectDir = File(targetRoot, folderName)
         if (!projectDir.mkdirs() && !projectDir.exists()) {
@@ -124,7 +124,7 @@ class FileProjectsRepository(
 
     override fun renameProject(path: String, name: String): ProjectSummary {
         NewProjectRules.nameError(name)?.let { throw IllegalArgumentException(it) }
-        val updated = ManifestIO.read(path).copy(name = name.trim())
+        val updated = ManifestIO.read(path).copy(name = NewProjectRules.cleanName(name))
         ManifestIO.write(path, updated)
         recentsProvider.refresh()
         return summaryFor(path, updated)

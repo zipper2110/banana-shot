@@ -198,5 +198,5 @@ internal object MonoFont {
         }
     }
 
-    fun of(size: Float): Font = fonts.getOrPut(size) { Font(family, Font.PLAIN, 1).deriveFont(size) }
+    fun of(size: Float): Font = fonts.getOrPut(size) { UiFonts.withFallback(family, Font.PLAIN, size) }
 }

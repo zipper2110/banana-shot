@@ -52,7 +52,7 @@ Order of the work:
 | E3-T20 | Units in the catalog | E3-T2 | in-progress |
 | E3-T21 | Language setting, detection, and restart (hidden) | E3-T2 | in-progress |
 | E3-T22 | Layout fixes for longer texts | E3-T5, E3-T6–E3-T16 | in-progress |
-| E3-T23 | User texts in any script | — | open |
+| E3-T23 | User texts in any script | — | in-progress |
 | E3-T24 | Documentation and the empty allowlist | E3-T1–E3-T23 | open |
 
 ### E3-T1 Decide the message library
@@ -691,6 +691,9 @@ The tasks below give the area and the special requirements of the area.
   - The "In video" column header of the Stats tab breaks into 2 lines when
     it does not fit on 1 line. The column keeps its width.
   - The Export footer keeps the number and "fps" on one line.
+  - Decided on 2026-10-28: the sidebar keeps its width. In French and
+    German, the labels "et cadrage" and "Ausschnitt" touch the accent bar
+    of the active tab.
 - Acceptance:
   - The `qps` screenshots show no cut text and no text outside its box.
   - In English, the screenshots of the UI flow tests do not change, or
@@ -699,7 +702,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T23 User texts in any script
 
-- Status: open
+- Status: in-progress
 - Plan: 9 ("What B-11 must do now")
 - Value: a user can type player names, comments, and project names in any
   script. This is necessary also for English users.
@@ -731,7 +734,33 @@ The tasks below give the area and the special requirements of the area.
   - A test exports a video with an emoji in a player name. The export
     does not fail.
   - The manual IME check is in `qa/windows/ui-smoke.md`, and it passes.
-- Tests: —
+- Notes (2026-10-28):
+  - `SafeFileName` keeps the letters of all scripts and complete emoji. It
+    replaces half of an emoji (a lone surrogate) with "_". A name with no
+    allowed character ("???", only spaces) gives the fallback name
+    ("Project" for a folder, "export" for an export file).
+  - The app saves a project name in the composed form (NFC), at the
+    creation and at a rename. The folder name is also composed. Thus "é"
+    as one character and "e" with U+0301 are the same name, and the
+    second project gets " (2)".
+  - Path length: Windows counts the characters of a path in UTF-16 units,
+    not in bytes. The name limit (80) counts the same units, so a Chinese
+    or a Cyrillic name gives no longer path than an English name.
+  - Shortcuts: the Points tab and the replay editor do not act while a
+    text field has the focus. An input method composes only in a text
+    field. Colors and Crop has no text field. The Thumbnail tab uses only
+    the arrow keys, and a text field uses them first.
+  - The letter spacing of the video texts counts an emoji as one
+    character.
+  - The UI fonts use the fallback fonts of Java (`UiFonts.withFallback`).
+    Before, the English app showed empty boxes for "決勝 🎾" in the
+    project name field, because a plain "Segoe UI" font has no fallback.
+    The width and the line height of the English texts do not change.
+  - The manual check is step 8 "Input method" of `qa/windows/ui-smoke.md`.
+    Open: a pass on Windows.
+- Tests: `SafeFileNameTest`, `FileProjectsRepositoryNamesTest`,
+  `DecomposedTextTest`, `AppLookTest`, `UserTextExportTest` (runs the real ffmpeg; it
+  skips when ffmpeg is not on the computer).
 
 ### E3-T24 Documentation and the empty allowlist
 

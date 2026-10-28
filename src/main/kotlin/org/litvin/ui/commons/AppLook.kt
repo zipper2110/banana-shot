@@ -16,7 +16,7 @@ internal object AppLook {
     /** Sets [theme] and the default font. Call it after the app language is installed and before the app makes a component. */
     fun start(theme: AppTheme, accent: Color = theme.accent) {
         Theme.start(theme, accent)
-        UIManager.put("defaultFont", Font(UiFonts.scriptFamily ?: "Segoe UI", Font.PLAIN, 14))
+        UIManager.put("defaultFont", UiFonts.withFallback(UiFonts.scriptFamily ?: "Segoe UI", Font.PLAIN, 14f))
         // The texts of Swing and FlatLaf follow the app language. The default locale of the JVM does not change.
         val locale = I18n.language.locale
         JComponent.setDefaultLocale(locale)
@@ -34,7 +34,8 @@ internal object AppLook {
             else -> "Tahoma"
         }
         val baseSize = (UIManager.getFont("Label.font")?.size2D ?: 13f).coerceAtLeast(13f)
-        val baseFont = Font(family, Font.PLAIN, baseSize.toInt())
+        // The fallback fonts show a user text in any script, for example a Japanese project name in English.
+        val baseFont = UiFonts.withFallback(family, Font.PLAIN, baseSize.toInt().toFloat())
 
         val keys = UIManager.getDefaults().keys()
         while (keys.hasMoreElements()) {

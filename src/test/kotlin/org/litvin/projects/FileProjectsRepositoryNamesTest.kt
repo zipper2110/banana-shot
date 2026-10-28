@@ -52,6 +52,41 @@ class FileProjectsRepositoryNamesTest {
         assertEquals("who won_ (2)", File(second.path).parentFile.name)
     }
 
+    /** B-11 E3-T23: a project name in another script gives a folder with the same letters. */
+    @Test
+    fun `a name in another script gives a folder with the same letters`() {
+        listOf("Финал Кубка", "Τελικός", "决赛 第二盘", "Final 🎾").forEach { name ->
+            val project = repository.createProject(video.absolutePath, name)
+            assertEquals(name, project.name)
+            assertEquals(File(root, "$name/$name.trproj").absolutePath, project.path)
+            assertTrue(File(project.path).isFile)
+        }
+    }
+
+    @Test
+    fun `a name with only characters that Windows does not permit uses the fallback folder`() {
+        val question = repository.createProject(video.absolutePath, "???")
+        val stars = repository.createProject(video.absolutePath, "**")
+
+        assertEquals("???", question.name)
+        assertEquals("Project", File(question.path).parentFile.name)
+        assertEquals("**", stars.name)
+        assertEquals("Project (2)", File(stars.path).parentFile.name)
+    }
+
+    @Test
+    fun `the two forms of a letter with an accent are the same name`() {
+        val composed = repository.createProject(video.absolutePath, "Café")
+        val decomposed = repository.createProject(video.absolutePath, "Café")
+
+        assertEquals("Café", composed.name)
+        assertEquals("Café (2)", decomposed.name)
+        assertNotEquals(File(composed.path).parentFile, File(decomposed.path).parentFile)
+        assertTrue(File(composed.path).isFile)
+        assertTrue(File(decomposed.path).isFile)
+        assertEquals("Café", repository.renameProject(composed.path, "Café").name)
+    }
+
     @Test
     fun `an existing project whose name is the folder name still opens`() {
         val folder = File(root, "Club final").apply { mkdirs() }

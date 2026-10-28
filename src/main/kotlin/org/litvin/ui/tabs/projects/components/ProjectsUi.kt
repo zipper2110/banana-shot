@@ -38,10 +38,10 @@ internal object ProjectsUi {
     fun font(size: Float, weight: Weight = Weight.REGULAR): Font = fonts.getOrPut(size to weight) {
         val family = (UIManager.getFont("Label.font") ?: Font(Font.SANS_SERIF, Font.PLAIN, 13)).family
         when (weight) {
-            Weight.REGULAR -> Font(family, Font.PLAIN, 1).deriveFont(size)
-            Weight.BOLD -> Font(family, Font.BOLD, 1).deriveFont(size)
-            Weight.SEMIBOLD -> UiFonts.semiboldFamily?.let { Font(it, Font.PLAIN, 1).deriveFont(size) }
-                ?: Font(family, Font.BOLD, 1).deriveFont(size)
+            Weight.REGULAR -> UiFonts.withFallback(family, Font.PLAIN, size)
+            Weight.BOLD -> UiFonts.withFallback(family, Font.BOLD, size)
+            Weight.SEMIBOLD -> UiFonts.semiboldFamily?.let { UiFonts.withFallback(it, Font.PLAIN, size) }
+                ?: UiFonts.withFallback(family, Font.BOLD, size)
         }
     }
 

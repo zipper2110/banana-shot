@@ -43,6 +43,14 @@ class DecomposedTextTest {
         }
     }
 
+    /** B-11 E3-T23: the video adds the letter spacing once for each character. An emoji is two Java chars. */
+    @Test
+    fun `the letter spacing counts an emoji as one character`() {
+        val withoutSpacing = ScoreboardFonts.textWidth("A🎾", "Segoe UI", false, 40.0)
+        val withSpacing = ScoreboardFonts.textWidth("A🎾", "Segoe UI", false, 40.0, spacing = 3.0)
+        assertEquals(6.0, withSpacing - withoutSpacing, 0.001)
+    }
+
     @Test
     fun `a thumbnail shows a decomposed text in the composed form`() {
         val style = ThumbnailStyle.entries.first()

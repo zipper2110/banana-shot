@@ -160,6 +160,7 @@ Started: $(Get-Date -Format o)
 | FFmpeg export | Pending |  |  |  |
 | Video language | Pending |  |  |  |
 | Keyboard layouts | Pending |  |  |  |
+| Input method | Pending |  |  |  |
 | Relaunch and recents | Pending |  |  |  |
 
 ## Failure details

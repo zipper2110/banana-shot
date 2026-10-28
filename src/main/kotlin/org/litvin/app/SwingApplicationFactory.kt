@@ -124,7 +124,7 @@ object SwingApplicationFactory {
         preferences = FeedbackPreferences(services.preferences.node(PreferencesProvider.APPLICATION)),
         system = FeedbackSystemInfo.current(
             AppInfo.version,
-            appLanguage = AnalyticsEvent.Language.ofCode(I18n.language.baseCode).key,
+            appLanguage = appLanguage().key,
             osLanguage = osLanguage().key,
         ),
         contactEmail = CONTACT_EMAIL,
@@ -335,9 +335,7 @@ object SwingApplicationFactory {
                         AppTheme.LIGHT -> AnalyticsEvent.Theme.LIGHT
                     },
                     accent = if (themeSettings.customAccent == null) AnalyticsEvent.Accent.DEFAULT else AnalyticsEvent.Accent.CUSTOM,
-                    // The primary subtag of the app language: "es" for both Spanish variants. The test language qps
-                    // is English with changed texts, so it sends "en" (B-11 E2, E4-T10).
-                    language = AnalyticsEvent.Language.ofCode(I18n.language.baseCode),
+                    language = appLanguage(),
                 ),
             )
             recordSettings()

@@ -352,17 +352,24 @@ are in the plan, "Epics".
   - A hidden language that the system property shows sends its own code.
     `qps` sends `en`.
   - With "System" and a Windows language that the app does not have (for
-    example French), `language` is `en`, and `os_language` is `fr`.
+    example Italian), `language` is `en`, and `os_language` is `it`.
   - With Spanish and some stale or fallback texts, `language` stays `es`.
 - Acceptance:
   - A test: with the app in Spanish, the summary has `"language": "es"`,
     and the feedback report has `"app_language": "es"`.
-  - A test: with Windows in French and "System", the summary has
-    `"language": "en"` and `"os_language": "fr"`.
+  - A test: with Windows in Italian and "System", the summary has
+    `"language": "en"` and `"os_language": "it"`.
   - The cockpit shows the first `es` data after the release.
-- Tests: the code is in E2-T3 and E2-T5 (`SwingApplicationFactory` sends
-  the primary subtag of the app language). Open: the acceptance tests with
-  the app in Spanish, and the first `es` data in the cockpit.
+- Notes:
+  - The example was French. French is now an app language, so the
+    example is Italian.
+  - `appLanguage()` and `osLanguage()` in `AppServices.kt` give the two
+    values. The analytics summary and the feedback report use the same
+    functions.
+  - Open: the first `es` data in the cockpit after the release.
+- Tests: `LanguageValuesTest` (Spanish of Spain and of Latin America,
+  Spanish selected on a Windows in English, Italian with "System", the
+  system property with `ru` and `qps`, Spanish with missing texts).
 
 ### E4-T11 Show the language setting
 
@@ -407,6 +414,9 @@ are in the plan, "Epics".
   - "Use English" in the notice restarts the app in English, and the
     stored value is English (not "System").
   - A language that is not complete does not show without the property.
+- Notes: decided on 2026-10-28: the release ships all complete languages
+  whose checks pass, not only Spanish (plan, "Decisions", "Languages of the
+  first release"). The Settings list shows all of them now.
 - Tests: —
 
 ### E4-T12 Windows smoke test in Spanish

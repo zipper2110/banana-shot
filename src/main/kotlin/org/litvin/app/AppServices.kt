@@ -38,6 +38,8 @@ import org.litvin.ui.commons.UserDialogService
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsController
 import org.litvin.analytics.AnalyticsEvent
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
 import org.litvin.analytics.AnalyticsPreferences
 import org.litvin.analytics.AnalyticsTransport
 import org.litvin.analytics.JdkAnalyticsTransport
@@ -208,8 +210,16 @@ internal fun productionAnalyticsController(
  * `os_language`, and the feedback report as `os_language`. A language that is not in the list gives "other". It never
  * throws.
  */
-internal fun osLanguage(): AnalyticsEvent.Language =
-    runCatching { AnalyticsEvent.Language.of(Locale.getDefault(Locale.Category.DISPLAY)) }.getOrDefault(AnalyticsEvent.Language.OTHER)
+internal fun osLanguage(locale: Locale = Locale.getDefault(Locale.Category.DISPLAY)): AnalyticsEvent.Language =
+    runCatching { AnalyticsEvent.Language.of(locale) }.getOrDefault(AnalyticsEvent.Language.OTHER)
+
+/**
+ * The app language as a value of the fixed language list (B-11 E2, E4-T10). The analytics summary sends it as
+ * `language`, and the feedback report as `app_language`. It is the primary subtag: "es" for both Spanish variants.
+ * The test language qps is English with changed texts, so it gives "en". Missing or stale texts do not change it.
+ */
+internal fun appLanguage(language: AppLanguage = I18n.language): AnalyticsEvent.Language =
+    AnalyticsEvent.Language.ofCode(language.baseCode)
 
 private fun productionAnalyticsTransport(config: AnalyticsBuildConfig.Enabled): AnalyticsTransport =
     JdkAnalyticsTransport(config.endpoint) {

@@ -1,5 +1,6 @@
 package org.litvin.export.scoreboard
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.i18n.I18n
 import org.litvin.i18n.ScriptFonts
 import java.awt.Font
@@ -51,18 +52,21 @@ object ScoreboardFonts {
      * language (outside of a video block, the app language), when that font shows the text. Else [family].
      */
     fun family(family: String, text: String): String {
-        if (displays(family, text)) return family
+        val drawn = DrawnText.composed(text)
+        if (displays(family, drawn)) return family
         val language = I18n.videoLanguage ?: I18n.language
-        return ScriptFonts.videoFamily(language, text)?.takeIf { displays(it, text) } ?: family
+        return ScriptFonts.videoFamily(language, drawn)?.takeIf { displays(it, drawn) } ?: family
     }
 
     private fun displays(family: String, text: String): Boolean =
         displayCache.getOrPut(family) { Font(family, Font.PLAIN, 1) }.canDisplayUpTo(text) == -1
 
+    /** The width of [text] in the composed form, as the video draws it (see [DrawnText]). */
     fun textWidth(text: String, family: String, bold: Boolean, assSize: Double, spacing: Double = 0.0): Double {
         if (text.isEmpty()) return 0.0
-        val width = awtFont(family(family, text), bold, assSize).getStringBounds(text, frc).width
-        return width + spacing * text.length
+        val drawn = DrawnText.composed(text)
+        val width = awtFont(family(family, drawn), bold, assSize).getStringBounds(drawn, frc).width
+        return width + spacing * drawn.length
     }
 
     private fun metrics(family: String, bold: Boolean): Metrics = metricsCache.getOrPut(family to bold) {

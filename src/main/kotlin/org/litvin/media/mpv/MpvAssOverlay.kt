@@ -1,5 +1,6 @@
 package org.litvin.media.mpv
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.media.OverlayShape
 import java.awt.Color
 import java.util.Locale
@@ -113,10 +114,7 @@ internal object MpvAssOverlay {
     }
 
     /** Text in ASS must not open an override block or start an escape sequence. */
-    private fun escape(text: String): String = text
-        .replace("\\", "\\\\")
-        .replace("{", "\\{")
-        .replace("}", "\\}")
+    private fun escape(text: String): String = DrawnText.ass(text)
 
     private fun drawing(
         x: Double,

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.I18n
+import org.litvin.shared.util.DrawnText
 import java.awt.Font
 import java.awt.GraphicsEnvironment
 import java.io.File
@@ -13,10 +14,11 @@ import java.text.Normalizer
 
 /**
  * B-11 E7-T4: each scoreboard font can show all letters of each shipped language, so that the video texts and
- * the player names never show empty boxes. The letters are the CLDR exemplar characters in the composed form (NFC).
+ * the player names never show empty boxes. The letters are the CLDR exemplar characters.
  *
- * The decomposed form (NFD) is not checked yet: Arial Black, Georgia, Trebuchet MS, and Ink Free have no combining
- * accents (U+0301, U+0303, U+0306, U+0308). E7-T4 records this gap.
+ * A user can also type the letters in the decomposed form (NFD). Arial Black, Georgia, Trebuchet MS, and Ink Free have
+ * no combining accents (U+0301, U+0303, U+0306, U+0308), so the video draws each text in the composed form (NFC, see
+ * [org.litvin.shared.util.DrawnText]). The second test checks the letters after this step.
  *
  * The fonts are the Windows fonts of the scoreboards, the statistics card, and the thumbnails. A font that is not
  * installed (for example on a server image) is not checked.
@@ -37,6 +39,24 @@ class ScoreboardFontCoverageTest {
                 val letters = LETTERS[language.baseCode] ?: scriptLetters(language)
                 val text = Normalizer.normalize(letters, Normalizer.Form.NFC)
                 val shown = I18n.inVideo(language) { ScoreboardFonts.family(family, text) }
+                val font = Font(shown, Font.PLAIN, 24)
+                val missing = text.filterNot { font.canDisplay(it) }.toSet()
+                if (missing.isEmpty()) emptyList() else listOf("$shown ${language.code}: " + missing.joinToString(" ") { "U+%04X".format(it.code) })
+            }
+        }
+        assertEquals(emptyList<String>(), failures)
+    }
+
+    @Test
+    fun `each installed scoreboard font shows the letters of each language that a user types in the decomposed form`() {
+        val installed = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
+        val fonts = FONTS.filter { it in installed }
+        assumeTrue(fonts.isNotEmpty(), "No scoreboard font is installed")
+        val failures = fonts.flatMap { family ->
+            AppLanguage.entries.flatMap { language ->
+                val typed = Normalizer.normalize(LETTERS[language.baseCode] ?: scriptLetters(language), Normalizer.Form.NFD)
+                val text = DrawnText.composed(typed)
+                val shown = I18n.inVideo(language) { ScoreboardFonts.family(family, typed) }
                 val font = Font(shown, Font.PLAIN, 24)
                 val missing = text.filterNot { font.canDisplay(it) }.toSet()
                 if (missing.isEmpty()) emptyList() else listOf("$shown ${language.code}: " + missing.joinToString(" ") { "U+%04X".format(it.code) })

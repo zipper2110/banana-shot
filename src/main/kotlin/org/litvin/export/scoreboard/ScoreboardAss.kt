@@ -1,5 +1,6 @@
 package org.litvin.export.scoreboard
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.scoring.ScoreboardPosition
 import org.litvin.scoring.ScoreboardSettingsV1
 import java.util.Locale
@@ -175,10 +176,7 @@ object ScoreboardAss {
         return String.format(Locale.US, "&H%02X&", value)
     }
 
-    private fun escape(text: String): String = text
-        .replace("\\", "\\\\")
-        .replace("{", "\\{")
-        .replace("}", "\\}")
+    private fun escape(text: String): String = DrawnText.ass(text)
 
     private fun fmt(value: Double): String {
         val rounded = (value * 100.0).roundToInt() / 100.0

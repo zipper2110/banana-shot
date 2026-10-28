@@ -1,5 +1,6 @@
 package org.litvin.ui.commons
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.export.scoreboard.Corners
 import org.litvin.export.scoreboard.SceneItem
 import org.litvin.export.scoreboard.ScenePoint
@@ -104,7 +105,8 @@ object ScoreboardSceneImage {
         val outline = Path2D.Double()
         var penX = left
         val frc = g.fontRenderContext
-        val chunks = if (label.spacing == 0.0) listOf(label.text) else label.text.map { it.toString() }
+        val text = DrawnText.composed(label.text)
+        val chunks = if (label.spacing == 0.0) listOf(text) else text.map { it.toString() }
         chunks.forEach { chunk ->
             val glyphs = font.createGlyphVector(frc, chunk)
             outline.append(glyphs.getOutline(penX.toFloat(), baseline.toFloat()), false)

@@ -1,5 +1,6 @@
 package org.litvin.share
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.export.scoreboard.ScoreboardFonts
 import java.awt.BasicStroke
 import java.awt.Color
@@ -39,7 +40,7 @@ data class ThumbnailScene(
     /** The color of the brand name. Null: the text color of the style. */
     val brandRgb: Int? = null,
 ) {
-    fun text(field: ThumbnailField): String = texts[field]?.trim().orEmpty()
+    fun text(field: ThumbnailField): String = texts[field]?.trim()?.let(DrawnText::composed).orEmpty()
 }
 
 /**

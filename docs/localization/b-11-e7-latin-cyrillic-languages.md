@@ -26,7 +26,7 @@ B-11 is done after E6. This epic continues with each new language.
 | E7-T1 | Select the languages | E2 | in-progress |
 | E7-T2 | Plural forms with the CLDR rules | — | in-progress |
 | E7-T3 | Shortcuts with Cyrillic and Greek keyboard layouts | — | in-progress |
-| E7-T4 | Font check for each language | — | in-progress |
+| E7-T4 | Font check for each language | — | done |
 | E7-L-ru | Russian | E7-T1–E7-T4 | in-progress |
 | E7-L-pt | Portuguese (Brazil and Portugal) | E7-T1–E7-T4 | in-progress |
 | E7-L-fr | French | E7-T1–E7-T4, E7-L-pt | in-progress |
@@ -134,7 +134,7 @@ example `E7-L-pt`), and copy the template below.
 
 ### E7-T4 Font check for each language
 
-- Status: in-progress
+- Status: done
 - Plan: 6 ("Fonts")
 - Value: no text of a shipped language shows empty boxes or a different
   font in the UI or in the video.
@@ -156,13 +156,26 @@ example `E7-L-pt`), and copy the template below.
     a language is not in the list of styles for this language.
   - On Windows, the "Ink Free" style shows Cyrillic and Greek letters, or
     the style is not available for these languages.
-- Tests: `ScoreboardFontCoverageTest` (NFC only).
-- Notes: on 2026-10-20 all scoreboard fonts show all Russian and Spanish
-  letters in NFC, also "Ink Free". The NFD check fails: Arial Black,
-  Georgia, Trebuchet MS, and Ink Free have no combining accents (U+0301,
-  U+0303, U+0306, U+0308). A typed "е" + U+0308 shows a box in these
-  styles. A possible fix: change the user texts to NFC before the video
-  draws them. Greek is not checked yet.
+- Tests: `ScoreboardFontCoverageTest` (NFC, and NFD after the
+  composition), `DecomposedTextTest`, `DrawnTextTest`.
+- Notes:
+  - On 2026-10-20 all scoreboard fonts show all Russian and Spanish
+    letters in NFC, also "Ink Free". Arial Black, Georgia, Trebuchet MS,
+    and Ink Free have no combining accents (U+0301, U+0303, U+0306,
+    U+0308), so a typed "е" + U+0308 showed a box in these styles.
+  - Fixed on 2026-10-28: the video draws each text in the composed form
+    (`DrawnText`). The ASS texts of the scoreboard, the comments, the
+    replay badge, and the preview overlay use `DrawnText.ass`. The font
+    choice and the text width (`ScoreboardFonts`), the player names
+    (`ScoreboardComponent.display`), the scoreboard images of the UI, and
+    the thumbnail texts also use the composed form. The length limit of a
+    name now counts the letters, not the combining marks.
+  - A letter with a mark that has no composed form (for example a
+    Cyrillic vowel with a stress mark, U+0301) still needs the combining
+    mark. The four fonts above show a box for it. No CLDR letter of a
+    shipped language has this problem.
+  - No shipped language uses Greek, so the Greek check is not necessary
+    now. Do it with the first Greek language.
 
 ### E7-L-ru Russian
 

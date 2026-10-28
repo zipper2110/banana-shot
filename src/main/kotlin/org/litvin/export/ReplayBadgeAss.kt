@@ -1,5 +1,6 @@
 package org.litvin.export
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.export.comments.CommentAss
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardFonts
@@ -56,5 +57,5 @@ object ReplayBadgeAss {
 
     private fun fmt(value: Double): String = String.format(Locale.US, "%.1f", value)
 
-    private fun escape(text: String): String = text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
+    private fun escape(text: String): String = DrawnText.ass(text)
 }

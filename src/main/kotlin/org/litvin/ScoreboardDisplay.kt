@@ -1,5 +1,6 @@
 package org.litvin
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.scoring.Sport
 import org.litvin.i18n.DisplayFormats
 
@@ -52,8 +53,9 @@ object ScoreboardComponent {
         }
 
         return ScoreboardDisplay(
-            player1Name = ellipsize(rawP1.trim().let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
-            player2Name = ellipsize(rawP2.trim().let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
+            // The composed form: the length limit counts letters, and the fonts without combining marks show them.
+            player1Name = ellipsize(DrawnText.composed(rawP1.trim()).let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
+            player2Name = ellipsize(DrawnText.composed(rawP2.trim()).let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
             player1Rgb = parseHexRgbOrDefault(span.p1ColorHex, DEFAULT_PLAYER1_RGB),
             player2Rgb = parseHexRgbOrDefault(span.p2ColorHex, DEFAULT_PLAYER2_RGB),
             player1PointText = if (span.isTiebreak) span.tbP1.toString() else pointsLabel(span.p1Pts, span.p2Pts),

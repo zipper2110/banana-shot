@@ -1,5 +1,6 @@
 package org.litvin.export.comments
 
+import org.litvin.shared.util.DrawnText
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardFonts
 import org.litvin.i18n.LineBreaks
@@ -350,10 +351,7 @@ object CommentAss {
     /** At this luminance, black and white have the same contrast with the color: sqrt(1.05 × 0.05) − 0.05. */
     private const val LUMINANCE_THRESHOLD = 0.1791
 
-    private fun escape(text: String): String = text
-        .replace("\\", "\\\\")
-        .replace("{", "\\{")
-        .replace("}", "\\}")
+    private fun escape(text: String): String = DrawnText.ass(text)
 
     private fun fmt(value: Double): String = String.format(Locale.US, "%.1f", value)
 }

@@ -757,7 +757,10 @@ The tasks below give the area and the special requirements of the area.
     project name field, because a plain "Segoe UI" font has no fallback.
     The width and the line height of the English texts do not change.
   - The manual check is step 8 "Input method" of `qa/windows/ui-smoke.md`.
-    Open: a pass on Windows.
+    On 2026-10-28 the author did the export part in the English app: the
+    project "決勝 🎾" with the player name "山田 🎾" exported with no
+    error. Open: the input method parts. The author does not add the
+    Japanese and Chinese input methods on the development PC for now.
 - Tests: `SafeFileNameTest`, `FileProjectsRepositoryNamesTest`,
   `DecomposedTextTest`, `AppLookTest`, `UserTextExportTest` (runs the real ffmpeg; it
   skips when ffmpeg is not on the computer).

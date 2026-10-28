@@ -54,7 +54,7 @@ proposal or an accepted decision. The column "Status" tells which.
 | Message format | `.properties` files in UTF-8 with the ICU message syntax. The app reads them with its own parser of the ICU subset that the catalog uses (`MessagePattern`: named arguments, `plural`, `select`, ICU apostrophes) and its own CLDR plural rules (`PluralRules`). The app does not bundle ICU4J (about 14 MB). A later language with more plural forms adds its rule to `PluralRules`, and the catalog syntax does not change. The installer sizes were not measured | accepted 2026-10-19 |
 | Translation | Machine translation with the glossary and the key comments. Decided on 2026-10-28: the languages ship without a native review. The catalog tests, the fit tests, and the smoke test are the checks. A native speaker who plays tennis or padel can review a language later, if one comes forward (for example from the feedback form). Then the corrections go into the next release | accepted 2026-10-28 |
 | Translation tool | The files stay in the repository. A hosted tool (Weblate or Crowdin) only if volunteer translators come | proposal |
-| Incomplete language | The app does not show a language until 100% of its texts are translated and the checks of the language pass. A native review is not necessary (see "Translation") | accepted 2026-10-28 |
+| Incomplete language | The app does not show a language until 100% of its texts are translated and the checks of the language pass. A native review is not necessary (see "Translation"). Decided on 2026-10-28: the catalog tests fail for a missing text, so a language that is not complete cannot be in a build. The app has no hidden languages and no system property that shows them | accepted 2026-10-28 |
 | Languages of the first release | The release of E4 ships all languages whose texts are complete and whose checks pass, not only Spanish: on 2026-10-28, these are Spanish, Russian, Portuguese, French, German, Japanese, and Chinese (with their variants). The Settings list shows them, and "System" selects them. | accepted 2026-10-28 |
 | Legal texts | The privacy notice on the site is in English only, and the English text is the binding version. It is not translated. The consent dialog and the Privacy page are translated. In each language other than English, they tell that the notice is in English and that the English text is binding (`privacy.notice.english`) | accepted 2026-10-28 |
 | Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not | accepted 2026-10-28 |
@@ -511,8 +511,8 @@ separate setting.
   first translation. Then the worker and the cockpit accept each later app
   language. A new language needs no worker deployment before its release.
 - The test language `qps` is not a value of the list. When it is on, the app
-  sends `language` = `en`. A hidden language that the system property
-  shows (section 13) sends its own code.
+  sends `language` = `en`. A language that the system property
+  `bananashot.language` selects sends its own code.
 - Why the essential level: the extended level is opt-in. Few users select
   it, and they are not typical. A user who does not read English well is
   less likely to select an opt-in in an English dialog. Thus extended data

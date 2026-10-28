@@ -67,7 +67,6 @@ import org.litvin.ui.commons.MessageButton
 import org.litvin.ui.commons.UiButton
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.LanguageSettings
-import org.litvin.i18n.Messages
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Locale
 import org.litvin.ui.privacy.KeepStatisticsRequest
@@ -207,34 +206,19 @@ object SwingApplicationFactory {
         exit()
     }
 
-    /**
-     * The notice after an automatic language change (E4-T11): the app follows Windows, and Windows has a language that
-     * the app now has. It shows one time. A new user does not see it. "Use English" is in English, so that a user who
-     * cannot read the new language can use it.
-     */
-    private fun showLanguageNotice(frame: JFrame, settings: LanguageSettings, firstStart: Boolean, setting: LanguageSetting) {
-        val resolution = SwingMainApp.languageResolution ?: return
-        if (!settings.needsSystemLanguageNotice(resolution)) return
-        settings.noticeShown(resolution.language)
-        if (firstStart) return
-        EventQueue.invokeLater {
-            val useEnglish = Messages.english().text("language.notice.useEnglish")
-            val clicked = MessageDialog.show(
-                frame,
-                MessageKind.INFO,
-                tr("language.notice.title"),
-                tr("language.notice.text", "language" to resolution.language.nativeName),
-                listOf(MessageButton(useEnglish), MessageButton(tr("common.ok"), UiButton.Kind.LIME)),
-                defaultIndex = 1,
-                cancelIndex = 1,
-            )
-            if (clicked == 0 && setting.save(AppLanguage.ENGLISH)) {
-                val restart = setting.restart
-                if (restart != null) restart() else {
-                    MessageDialog.show(frame, MessageKind.INFO, useEnglish, Messages.english().text("settings.language.closeAndStart"))
-                }
-            }
-        }
+    /** The dialogs of [SystemLanguageNotice]. OK is the default. Escape and the close button also give OK. */
+    private fun languageNoticeDialogs(frame: JFrame) = object : SystemLanguageNotice.Dialogs {
+        override fun ask(title: String, text: String, useEnglish: String, ok: String): Boolean = MessageDialog.show(
+            frame,
+            MessageKind.INFO,
+            title,
+            text,
+            listOf(MessageButton(useEnglish), MessageButton(ok, UiButton.Kind.LIME)),
+            defaultIndex = 1,
+            cancelIndex = 1,
+        ) == 0
+
+        override fun tell(title: String, text: String) = MessageDialog.show(frame, MessageKind.INFO, title, text)
     }
 
     fun create(
@@ -844,7 +828,10 @@ object SwingApplicationFactory {
             }
 
             if (show && !askConsent) showFirstLaunchOverview()
-            if (show) showLanguageNotice(frame, languageSettings, firstStart, languageSetting)
+            if (show) {
+                SystemLanguageNotice(languageSettings, languageSetting, languageNoticeDialogs(frame))
+                    .start(SwingMainApp.languageResolution, firstStart) { task -> EventQueue.invokeLater(task) }
+            }
 
             return handle
         } catch (failure: Throwable) {

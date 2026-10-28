@@ -35,7 +35,7 @@ are in the plan, "Epics".
 | E4-T8 | Fit tests for Spanish | E4-T5 | done |
 | E4-T9 | Queued render job keeps its language | — | done |
 | E4-T10 | The app sends the language `es` | — | in-progress |
-| E4-T11 | Show the language setting | E4-T5, E4-T8 | in-progress |
+| E4-T11 | Show the language setting | E4-T5, E4-T8 | done |
 | E4-T12 | Windows smoke test in Spanish | E4-T11 | in-progress |
 | E4-T13 | Documentation and release | E4-T2–E4-T12, without E4-T7 | open |
 
@@ -349,7 +349,7 @@ are in the plan, "Epics".
   - With the app in Spanish, the analytics attribute `language` and the
     feedback field `app_language` are `es`. The contracts and the workers
     accept `es` since E2. No deployment is necessary before the release.
-  - A hidden language that the system property shows sends its own code.
+  - A language that the system property selects sends its own code.
     `qps` sends `en`.
   - With "System" and a Windows language that the app does not have (for
     example Italian), `language` is `en`, and `os_language` is `it`.
@@ -373,7 +373,7 @@ are in the plan, "Epics".
 
 ### E4-T11 Show the language setting
 
-- Status: in-progress
+- Status: done
 - Plan: 4, 13 ("New languages"), "Decisions" ("Incomplete language",
   "Translation", "Existing users")
 - Value: Spanish users get the app in Spanish without an action, and all
@@ -381,8 +381,9 @@ are in the plan, "Epics".
 - Requirements:
   - The "Language" row of E3-T21 shows to all users.
   - The list has only the complete languages whose checks pass. A native
-    review is not necessary. A system property shows the other languages
-    for the author.
+    review is not necessary. The catalog tests fail for a missing text, so
+    a language that is not complete cannot be in a build (plan,
+    "Decisions", "Incomplete language").
   - An existing user with Windows in Spanish gets Spanish after the update,
     because the setting is "System". At the first start in Spanish, the app
     shows a notice one time: the app is now in Spanish, and the user can
@@ -413,11 +414,25 @@ are in the plan, "Epics".
   - A user who closes the notice with Escape does not see it again.
   - "Use English" in the notice restarts the app in English, and the
     stored value is English (not "System").
-  - A language that is not complete does not show without the property.
-- Notes: decided on 2026-10-28: the release ships all complete languages
-  whose checks pass, not only Spanish (plan, "Decisions", "Languages of the
-  first release"). The Settings list shows all of them now.
-- Tests: —
+  - A language that is not complete fails the catalog tests.
+- Notes:
+  - Decided on 2026-10-28: the release ships all complete languages whose
+    checks pass, not only Spanish (plan, "Decisions", "Languages of the
+    first release"). The Settings list shows all of them now.
+  - `SystemLanguageNotice` has the logic of the notice. The app records the
+    notice as shown when it opens, not before, so a stop before the notice
+    opens shows it at the next start.
+  - In the notice, OK, Escape, and the close button give the same result.
+  - `SwingMainApp.applySwingLocale` sets the locale of the Swing and FlatLaf
+    texts. No unit test checks it. The smoke test (E4-T12) checks it.
+  - Decided on 2026-10-28: the app has no hidden languages and no system
+    property that shows them. The failing catalog tests are enough.
+- Tests: `SystemLanguageNoticeTest` (one time, a new user, Escape, a stop
+  before the notice opens, "Use English" with and without a restart, no
+  notice for a selected language or an unknown Windows language),
+  `LanguageCardTest` (the globe icon and the English word "Language", the
+  native names, "Restart now"), `LanguageSettingsTest` (Spanish Windows
+  gives Spanish).
 
 ### E4-T12 Windows smoke test in Spanish
 

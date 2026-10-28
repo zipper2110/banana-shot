@@ -7,6 +7,9 @@ import org.litvin.analytics.AnalyticsEvent
 import org.litvin.analytics.AnalyticsLevel
 import org.litvin.analytics.AnalyticsPreferences
 import org.litvin.analytics.ManagedAnalytics
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
+import org.litvin.i18n.Messages
 import org.litvin.ui.commons.SwitchBox
 import org.litvin.ui.commons.WrapText
 import org.litvin.ui.flow.fakes.InMemoryPreferencesProvider
@@ -189,6 +192,33 @@ class PrivacyPageTest {
             assertTrue(it in text, text)
         }
         assertTrue("Enable analytics" !in text, text)
+    }
+
+    /** B-11 E4-T6: the privacy notice is in English only, and the English text is binding. */
+    @Test
+    fun `a translated app tells that the privacy notice is in English and binding`() {
+        val preferences = AnalyticsPreferences(InMemoryPreferencesProvider().node("analytics"))
+        val controller = AnalyticsController(analyticsConfig(), preferences, sessionFactory = { _, _, _ -> NoAnalytics })
+        fun notes(): List<String> {
+            val page = analyticsPage()
+            return onEdt {
+                val dialog = AnalyticsConsentDialog.build(null, controller, URI("https://example.test/privacy")) { true }
+                try {
+                    (all(page) + all(dialog)).filter { it.name == "more-privacy-notice-english" || it.name == "consent-notice-english" }
+                        .map { (it as WrapText).text }
+                } finally {
+                    dialog.dispose()
+                }
+            }
+        }
+        try {
+            I18n.install(Messages.of(AppLanguage.SPANISH_SPAIN))
+            val note = "El aviso de privacidad está en inglés. El texto en inglés es la versión vinculante."
+            assertEquals(listOf(note, note), notes())
+        } finally {
+            I18n.install(Messages.english())
+        }
+        assertEquals(emptyList<String>(), notes(), "English has no note")
     }
 
     @Test

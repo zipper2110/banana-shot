@@ -30,7 +30,7 @@ are in the plan, "Epics".
 | E4-T3 | Check of the missing and the stale texts | — | done |
 | E4-T4 | Screenshots for translators | E3-T5 | done |
 | E4-T5 | Machine draft | E4-T2, E4-T3 | done |
-| E4-T6 | Legal texts | E4-T5 | open |
+| E4-T6 | Legal texts | E4-T5 | done |
 | E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | later |
 | E4-T8 | Fit tests for Spanish | E4-T5 | done |
 | E4-T9 | Queued render job keeps its language | — | done |
@@ -205,7 +205,7 @@ are in the plan, "Epics".
 
 ### E4-T6 Legal texts
 
-- Status: open
+- Status: done
 - Plan: "Decisions" ("Legal texts", "Notice version")
 - Value: a Spanish user understands what the app collects, and the author
   knows which text is binding.
@@ -227,7 +227,31 @@ are in the plan, "Epics".
   - The author confirms that the Spanish choices have the same meaning as
     the English choices (for example with a back-translation into
     English).
-- Tests: —
+- Notes:
+  - Decided on 2026-10-28: the English privacy notice on the site is the
+    binding version, and it is not translated (plan, "Decisions", "Legal
+    texts"). The notice version does not change.
+  - The key `privacy.notice.english` tells that the notice is in English
+    and that the English text is binding. The Privacy page shows it above
+    the "Privacy notice" button, and the consent dialog shows it under its
+    texts. English does not show it. Each language has the text, so E7 and
+    E8 need no work for it.
+  - Back-translation of the Spanish consent dialog (2026-10-28):
+    - "Solo esenciales": "Essential only".
+    - "Enviar ampliadas": "Send extended".
+    - "Por defecto, {app} envía estadísticas de uso esenciales y anónimas
+      …": "By default, {app} sends essential and anonymous usage statistics
+      …", with the same list of data.
+    - "También puedes enviar estadísticas ampliadas …": "You can also send
+      extended statistics …", with the same list of data.
+    - "Nunca recogemos vídeo, nombres de proyecto, rutas, marcadores ni
+      datos personales": "We never collect video, project names, paths,
+      scores, or personal details".
+    - The default and the close of the window (essential) are in the code,
+      so they do not change with the language.
+  - The author confirmed the back-translation on 2026-10-28.
+- Tests: `PrivacyPageTest` ("a translated app tells that the privacy notice
+  is in English and binding").
 
 ### E4-T7 Review by a native speaker
 

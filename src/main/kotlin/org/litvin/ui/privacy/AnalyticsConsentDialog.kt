@@ -83,12 +83,16 @@ object AnalyticsConsentDialog {
             isVisible = false
         }
         val later = WrapText(LATER, UiKit.font(12f), Palette.FG_3, 1.45f, TEXT_WIDTH)
-        val parts = listOf(
+        val noticeInEnglish = PrivacyPage.NOTICE_IN_ENGLISH?.let {
+            WrapText(it, UiKit.font(12f), Palette.FG_3, 1.45f, TEXT_WIDTH).apply { name = "consent-notice-english" }
+        }
+        val parts = listOfNotNull(
             MessageDialog.paragraph(ESSENTIAL, WIDTH),
             MessageDialog.paragraph(EXTENDED, WIDTH),
             fact,
             copyLine,
             later,
+            noticeInEnglish,
         )
 
         val read = UiButton(tr("consent.read"), Material2MZ.OPEN_IN_NEW, UiButton.Kind.GHOST).apply {

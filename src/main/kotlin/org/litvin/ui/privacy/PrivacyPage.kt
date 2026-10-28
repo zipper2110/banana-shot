@@ -10,6 +10,8 @@ import org.litvin.ui.commons.SectionPage
 import org.litvin.ui.commons.SwitchBox
 import java.awt.Component
 import java.net.URI
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
 import org.litvin.i18n.tr
 
 /** The Privacy section of the More window. */
@@ -32,6 +34,13 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
 
     companion object {
         val TITLE: String get() = tr("privacy.title")
+
+        /**
+         * The privacy notice on the site is in English only, and the English text is binding (B-11 plan,
+         * "Decisions", "Legal texts"). A translated app tells this next to each link to the notice. English has no note.
+         */
+        internal val NOTICE_IN_ENGLISH: String? get() =
+            if (I18n.language == AppLanguage.SOURCE) null else tr("privacy.notice.english")
 
         /**
          * The page for a build that sends usage statistics. One switch turns all statistics on and off. The other
@@ -72,6 +81,7 @@ internal class PrivacyPage private constructor() : SectionPage(TITLE) {
             addItem(extended)
             paragraph(ANALYTICS_EXTENDED)
             paragraph(ANALYTICS_EXCLUDED, secondary = true)
+            NOTICE_IN_ENGLISH?.let { paragraph(it, secondary = true).name = "more-privacy-notice-english" }
             buttonRow(
                 secondaryButton(tr("privacy.notice"), Material2MZ.OPEN_IN_NEW) { linkOpener.open(privacyUrl) },
                 secondaryButton(tr("privacy.contact"), Material2MZ.MAIL_OUTLINE) { linkOpener.open(URI("mailto:$contactEmail")) },

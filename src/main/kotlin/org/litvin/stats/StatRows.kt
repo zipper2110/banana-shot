@@ -146,8 +146,8 @@ object StatRows {
      * With [rules], the deciding points row gets the name of the deuce rule, for example "Golden points won".
      */
     fun label(stat: MatchStat, settings: StatsSettingsV1, rules: MatchRulesV1? = null): String = when (stat) {
-        MatchStat.SHORT_POINTS_WON -> "${stat.label} (≤ ${settings.normalized().shortPointMaxSeconds} s)"
-        MatchStat.LONG_POINTS_WON -> "${stat.label} (≥ ${settings.normalized().longPointMinSeconds} s)"
+        MatchStat.SHORT_POINTS_WON -> tr("stats.row.shortPointsWon.limit", "seconds" to settings.normalized().shortPointMaxSeconds)
+        MatchStat.LONG_POINTS_WON -> tr("stats.row.longPointsWon.limit", "seconds" to settings.normalized().longPointMinSeconds)
         MatchStat.DECIDING_POINTS_WON -> when (rules?.deuce) {
             DeuceRule.NO_AD -> tr("stats.row.goldenPointsWon")
             DeuceRule.STAR_POINT -> tr("stats.row.starPointsWon")

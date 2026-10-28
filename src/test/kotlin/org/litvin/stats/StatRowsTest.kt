@@ -1,5 +1,9 @@
 package org.litvin.stats
 
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
+import org.litvin.i18n.Messages
+import org.litvin.i18n.ScriptFonts
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.scoring.MatchRulesV1
@@ -7,6 +11,7 @@ import org.litvin.scoring.MatchStructure
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.PerPlayer
 import org.litvin.scoring.ScoreV1
+import java.awt.Font
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,12 +48,33 @@ class StatRowsTest {
         val defaults = StatRows.build(report.match, report.score.rules)
         assertEquals(PerPlayer(StatValue("67%", "2/3"), StatValue("33%", "1/3")), defaults.of(MatchStat.SHORT_POINTS_WON).values)
         assertEquals(PerPlayer(StatValue("0%", "0/1"), StatValue("100%", "1/1")), defaults.of(MatchStat.LONG_POINTS_WON).values)
-        assertEquals("Short points won (\u2264 10 s)", defaults.of(MatchStat.SHORT_POINTS_WON).label)
-        assertEquals("Long points won (\u2265 13 s)", defaults.of(MatchStat.LONG_POINTS_WON).label)
+        assertEquals("Short points won (\u2264 10\u00a0s)", defaults.of(MatchStat.SHORT_POINTS_WON).label)
+        assertEquals("Long points won (\u2265 13\u00a0s)", defaults.of(MatchStat.LONG_POINTS_WON).label)
 
         val custom = StatRows.build(report.match, report.score.rules, StatsSettingsV1(shortPointMaxSeconds = 3, longPointMinSeconds = 10))
         assertEquals(PerPlayer(StatValue("100%", "1/1"), StatValue("0%", "0/1")), custom.of(MatchStat.SHORT_POINTS_WON).values)
         assertEquals(PerPlayer(StatValue("0%", "0/2"), StatValue("100%", "2/2")), custom.of(MatchStat.LONG_POINTS_WON).values)
+    }
+
+    /**
+     * B-11: the statistics card of the video draws a row name in the video font of the language. Microsoft JhengHei
+     * has no "≤", so the Traditional Chinese card showed empty boxes. Each language must use signs that its font
+     * shows.
+     */
+    @Test
+    fun theVideoFontOfEachLanguageShowsTheRowsWithALimit() {
+        try {
+            for (language in AppLanguage.entries) {
+                I18n.install(Messages.of(language))
+                for (stat in listOf(MatchStat.SHORT_POINTS_WON, MatchStat.LONG_POINTS_WON)) {
+                    val label = StatRows.label(stat, StatsSettingsV1())
+                    val family = ScriptFonts.videoFamily(language, label) ?: continue
+                    assertEquals(-1, Font(family, Font.PLAIN, 12).canDisplayUpTo(label), "$language, $family: $label")
+                }
+            }
+        } finally {
+            I18n.install(Messages.english())
+        }
     }
 
     @Test

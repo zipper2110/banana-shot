@@ -4,6 +4,7 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.Dialog
 import java.awt.EventQueue
+import java.awt.Frame
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Robot
@@ -189,6 +190,7 @@ class RobotSwingDriver : SwingUiDriver {
     private fun activate(component: Component, componentName: String? = component.name) {
         val window = onEdt {
             SwingUtilities.getWindowAncestor(component)?.also { owner ->
+                restore(owner)
                 owner.toFront()
                 owner.requestFocus()
             } ?: throw AssertionError("Showing component '${componentName ?: component.javaClass.simpleName}' has no owning window")
@@ -197,6 +199,16 @@ class RobotSwingDriver : SwingUiDriver {
         waitUntil("window containing '${componentName ?: component.javaClass.simpleName}' to become active") {
             onEdt { window.isActive || window.isFocused }
         }
+    }
+
+    /**
+     * Restores [window] when it is minimized. Windows opens the first window of a process with the window state of
+     * the process start. A process from a hidden shell thus shows its first window minimized, and the first click goes
+     * to another window. [Window.toFront] does not restore a minimized frame.
+     */
+    private fun restore(window: Window) {
+        val frame = window as? Frame ?: return
+        if (frame.extendedState and Frame.ICONIFIED != 0) frame.extendedState = frame.extendedState and Frame.ICONIFIED.inv()
     }
 
     private fun dragSlider(slider: JSlider, target: Int) {
@@ -219,6 +231,7 @@ class RobotSwingDriver : SwingUiDriver {
     private fun focus(component: Component, name: String) {
         onEdt {
             SwingUtilities.getWindowAncestor(component)?.let { window ->
+                restore(window)
                 window.toFront()
                 window.requestFocus()
             }

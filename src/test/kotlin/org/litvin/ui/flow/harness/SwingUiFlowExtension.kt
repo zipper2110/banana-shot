@@ -24,6 +24,8 @@ import org.litvin.license.TestExpiry
 import org.litvin.license.check.ExecutorExpiryScheduler
 import org.litvin.license.check.ExpiryController
 import org.litvin.projects.FileProjectsRepository
+import org.litvin.ui.commons.AppLook
+import org.litvin.ui.commons.AppTheme
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.PreferencesHintRegistry
 import org.litvin.ui.expiry.CheckingDateWindow
@@ -49,7 +51,6 @@ import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.LockSupport
 import javax.swing.JComponent
-import javax.swing.UIManager
 import javax.swing.RepaintManager
 
 /** The media services of a UI flow. */
@@ -107,6 +108,11 @@ class SwingUiFlowExtension(
             HintId.entries.forEach { node(PreferencesProvider.APPLICATION).putBoolean(PreferencesHintRegistry.key(it), true) }
         }
         installLanguage(preferences)
+        // The theme and the fonts of the real app, so the tests and the screenshots show the real look (B-11 E8-T3).
+        onEdt {
+            AppLook.start(AppTheme.DEFAULT)
+            AppLook.installBaseFont()
+        }
         screenshots = UiFlowScreenshots.forTest(className, methodName)
         lifecycleOrdinal = 0
 
@@ -172,15 +178,12 @@ class SwingUiFlowExtension(
     /**
      * Installs the language of the property `bananashot.language`, as `main` does. Without the property, the
      * tests use English. Use it to run the UI-flow tests in each app language: `-Dbananashot.language=ru`.
+     * [AppLook.start] then sets the locale of the Swing texts.
      */
     private fun installLanguage(preferences: InMemoryPreferencesProvider) {
         if (System.getProperty(LanguageSettings.PROPERTY).isNullOrBlank()) return
         val resolution = LanguageSettings(preferences.node(PreferencesProvider.APPLICATION)).resolve()
         I18n.install(Messages.of(resolution.language, pseudo = resolution.pseudo))
-        val locale = I18n.language.locale
-        JComponent.setDefaultLocale(locale)
-        UIManager.getLookAndFeelDefaults().defaultLocale = locale
-        UIManager.getDefaults().defaultLocale = locale
     }
 
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean =

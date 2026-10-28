@@ -308,8 +308,12 @@ example `E7-L-pt`), and copy the template below.
     the users tells if this is a problem.
   - `ScoreboardPreviewMain --language=fr` shows the video texts of all
     styles. They fit.
-  - Open: the sidebar width in the app, the Windows smoke test in French, and the open parts of E7-T3 and
-    E7-T4.
+  - The screenshots of 2026-10-28 (`AllWindowsUiFlowIT`): the sidebar has
+    its normal width. Open cut texts: the Stats column header cuts "DANS
+    LA VIDÉ…", and "Joueur 2" touches the header icon. The Export footer
+    puts "fps" on a second line.
+  - Open: the cut texts above, the Windows smoke test in French, and the
+    open parts of E7-T3 and E7-T4.
 
 ### E7-L-de German
 
@@ -348,8 +352,14 @@ example `E7-L-pt`), and copy the template below.
     the Export tab did this already.
   - The video badge "ENTSCHEIDUNGSPUNKT" has 18 letters. The catalog
     comment allows about 16.
-  - Open: the sidebar width in the app, the Windows smoke test in German, and the open parts of E7-T3 and
-    E7-T4.
+  - The screenshots of 2026-10-28 (`AllWindowsUiFlowIT`): the sidebar has
+    its normal width. Open cut texts: the Export quality card breaks
+    "Originalqualit-ät" in the word. The timeline label "KOMMENTARE"
+    touches its count. The first steps of Projects cut
+    "YouTube-Thumbnail…". The change-marker hint of Colors and Crop needs
+    3 lines, and its card shows only 2.
+  - Open: the cut texts above, the Windows smoke test in German, and the
+    open parts of E7-T3 and E7-T4.
 
 ### Template: E7-L-`<code>` `<Language>`
 

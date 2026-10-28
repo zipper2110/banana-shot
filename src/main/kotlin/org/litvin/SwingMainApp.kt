@@ -14,18 +14,13 @@ import org.litvin.app.PreferencesProvider
 import org.litvin.app.SwingApplicationFactory
 import org.litvin.app.SwingApplicationHandle
 import org.litvin.license.check.ExpiryController
+import org.litvin.ui.commons.AppLook
 import org.litvin.ui.commons.AppTheme
 import org.litvin.ui.commons.SwingUserDialogService
-import org.litvin.ui.commons.Theme
 import org.litvin.ui.commons.ThemePreferences
-import org.litvin.ui.commons.UiFonts
 import org.litvin.ui.expiry.CheckingDateWindow
 import java.awt.EventQueue
-import java.awt.Font
-import java.awt.GraphicsEnvironment
 import java.awt.Toolkit
-import javax.swing.JComponent
-import javax.swing.UIManager
 import org.litvin.i18n.tr
 import org.litvin.i18n.I18n
 
@@ -90,9 +85,7 @@ object SwingMainApp {
                 val theme = themePreferences.load()
                 theme to themePreferences.accentFor(theme)
             }.getOrDefault(AppTheme.DEFAULT to AppTheme.DEFAULT.accent)
-            Theme.start(theme, accent)
-            UIManager.put("defaultFont", Font(UiFonts.scriptFamily ?: "Segoe UI", Font.PLAIN, 14))
-            applySwingLocale()
+            AppLook.start(theme, accent)
         } catch (failure: Exception) {
             logger.warn(failure) { "Failed to initialize FlatLaf look and feel." }
         }
@@ -140,7 +133,7 @@ object SwingMainApp {
 
             try {
                 WindowsGpuPreference.ensureHighPerformancePreference()
-                applyBaseTheme()
+                AppLook.installBaseFont()
                 handle = SwingApplicationFactory.create(
                     services = services,
                     onWindowClosed = { kotlin.system.exitProcess(0) },
@@ -170,14 +163,6 @@ object SwingMainApp {
         languageResolution = resolution
         I18n.install(Messages.of(resolution.language, pseudo = resolution.pseudo))
         logger.info { "The app language is ${resolution.language.code} (${resolution.source}${if (resolution.pseudo) ", qps" else ""})." }
-    }
-
-    /** The texts of Swing and FlatLaf follow the app language. The default locale of the JVM does not change. */
-    private fun applySwingLocale() {
-        val locale = I18n.language.locale
-        JComponent.setDefaultLocale(locale)
-        UIManager.getLookAndFeelDefaults().defaultLocale = locale
-        UIManager.getDefaults().defaultLocale = locale
     }
 
     /**
@@ -258,25 +243,5 @@ object SwingMainApp {
             System.setProperty("swing.aatext", "true")
             System.setProperty("awt.useSystemAAFontSettings", "on")
         }
-    }
-
-    private fun applyBaseTheme() {
-        val families = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
-        // A language with other letters (Japanese) uses the UI font of its script (B-11 E8-T3).
-        val family = UiFonts.scriptFamily ?: when {
-            families.contains("Segoe UI Variable") -> "Segoe UI Variable"
-            families.contains("Segoe UI") -> "Segoe UI"
-            else -> "Tahoma"
-        }
-        val baseSize = (UIManager.getFont("Label.font")?.size2D ?: 13f).coerceAtLeast(13f)
-        val baseFont = Font(family, Font.PLAIN, baseSize.toInt())
-
-        val keys = UIManager.getDefaults().keys()
-        while (keys.hasMoreElements()) {
-            val key = keys.nextElement()
-            if (key.toString().endsWith(".font")) UIManager.put(key, baseFont)
-        }
-        UIManager.put("defaultFont", baseFont)
-        UIManager.put("ToolTip.hideAccelerator", true)
     }
 }

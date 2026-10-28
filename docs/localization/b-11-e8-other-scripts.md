@@ -159,7 +159,13 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   Microsoft YaHei UI and `zh-Hant` uses Microsoft JhengHei UI. These fonts
   have no semibold form, so the semibold texts use the bold form. Microsoft
   JhengHei UI has no "−" (U+2212), so the Traditional texts use "－".
-  Open: the screenshots of E4-T4 in Japanese and in Chinese.
+  The screenshots of 2026-10-28 (`AllWindowsUiFlowIT`) show no empty boxes
+  in Japanese and in Chinese.
+  The first screenshots showed the kana with wide spaces. The cause: the
+  UI flow tests did not install the theme and the fonts of the app, so
+  Swing used the Java font "Dialog", which has full-width kana. Now
+  `AppLook` installs the theme and the fonts in `main` and in the UI flow
+  tests, so the screenshots show the fonts of the real app.
 
 ### E8-T4 Line breaks without spaces
 
@@ -253,7 +259,13 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The key names use arrows ("←", "→", "↑", "↓"). The key chips use the
     font "Dialog" for a character that the UI font does not show.
   - The help and the texts put the names of tabs and buttons in 「…」.
-  - Open: the screenshots and the sidebar width in the app, the Windows
+  - The screenshots of 2026-10-28: the sidebar has its normal width.
+    Open cut texts: the first steps of Projects cut "YouTube のサムネイルを…".
+    Some texts put one character alone on the last line: the Export cards
+    ("み", "ル", "ん") and the feedback form ("ん。").
+  - With the Japanese UI font, the paths show "¥" for "\". All Japanese
+    Windows fonts do this.
+  - Open: the cut texts above, the Windows
     smoke test in Japanese, the input method
     check (E8-T5), and the open parts of E7-T3 and E7-T4.
 
@@ -296,7 +308,10 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - "YouTube thumbnail" is "视频封面", and "YouTube search" is
     "视频平台的搜索结果". The texts keep "YouTube" only for a fact about
     YouTube (the 2 MB limit).
-  - Open: the screenshots and the sidebar width in the app, the Windows smoke test in
+  - The screenshots of 2026-10-28: the sidebar has its normal width. No
+    text is cut. The tracked captions ("比 赛", "概 览") have spaces
+    between the characters.
+  - Open: the Windows smoke test in
     Simplified Chinese, the input method check (E8-T5), and the open parts
     of E7-T3 and E7-T4.
 
@@ -337,7 +352,9 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
     corrects the Simplified texts, the Traditional texts get the same
     corrections.
   - The texts keep "YouTube" as in English ("製作 YouTube 縮圖").
-  - Open: the screenshots and the sidebar width in the app, the
+  - The screenshots of 2026-10-28: the sidebar has its normal width. No
+    text is cut.
+  - Open: the
     Windows smoke test in Traditional Chinese, the input method check
     (E8-T5), and the open parts of E7-T3 and E7-T4.
 

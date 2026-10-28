@@ -24,6 +24,35 @@ the English text, the current text, and your correction. If you play tennis
 or padel and want to review all texts of a language, write to the contact
 address on the Privacy page of the app.
 
+### Add a text
+
+All texts that the user can see come from the message catalog in
+`src/main/resources/i18n/`. The help pages use `help*.properties`. All other
+texts use `messages*.properties`. The rules for the code are in
+[docs/architecture-rules.md](docs/architecture-rules.md), "Texts for the
+user".
+
+1. **Key.** Add the key and its English text to `messages.properties`, next
+   to the keys of the same area. The key has the form
+   `<area>.<part>.<item>`, for example `export.quality.title`.
+2. **Comment.** Write a comment above the key for the translator: where the
+   text shows, what each placeholder is, and the maximum length if the
+   space is small.
+3. **Message.** Use one key for a full sentence. Do not make a sentence from
+   parts. Give placeholders a name (`{playerName}`). For a count, use the
+   ICU plural syntax: `{count, plural, one {# point} other {# points}}`.
+   Write an apostrophe one time ("don't").
+4. **Code.** Read the text with `tr("export.quality.title")`, or with
+   `tr("export.points", "count" to n)` for a placeholder. Write the key as a
+   string literal, so that `MessageCatalogTest` finds its use.
+5. **Translations.** Add the text to each `messages_<code>.properties`. A
+   regional variant (`es-419`, `pt-PT`) gets the text only if it is
+   different from its parent. Then write the records of the English text:
+   `TranslationCheckMain` with `--stamp=<codes> --keys=<keys>`. Stamp a
+   regional variant separately, only with the keys that its file has.
+6. **Checks.** Run `MessageCatalogTest` and `HardCodedTextScanTest`. A
+   missing translation fails the test, so it cannot be in a build.
+
 ### Add a new language
 
 The maintainer uses these steps for each new language. The plan is in

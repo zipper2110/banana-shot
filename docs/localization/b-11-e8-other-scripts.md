@@ -23,10 +23,10 @@ Not in this epic: right-to-left languages (plan section 9).
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E8-T1 | Select the language | E2 | in-progress |
+| E8-T1 | Select the language | E2 | done |
 | E8-T2 | Video fonts for the script | E8-T1 | in-progress |
-| E8-T3 | UI font for the script | E8-T1 | in-progress |
-| E8-T4 | Line breaks without spaces | E8-T1 | in-progress |
+| E8-T3 | UI font for the script | E8-T1 | done |
+| E8-T4 | Line breaks without spaces | E8-T1 | done |
 | E8-T5 | Input method tests | E8-T1 | open |
 | E8-L-ja | Japanese | E8-T2–E8-T5 | in-progress |
 | E8-L-zh-Hans | Simplified Chinese | E8-T2–E8-T5 | in-progress |
@@ -38,7 +38,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 
 ### E8-T1 Select the language
 
-- Status: in-progress
+- Status: done
 - Plan: "Decisions" ("Next languages"), 10
 - Value: the high cost of a new script goes to a language with enough
   users.
@@ -65,6 +65,8 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   languages ship without reviewers. On
   2026-10-21 the app has both Chinese languages, so the case "only one of
   the two" does not apply.
+- Done on 2026-10-29 for the current languages. The selection of later
+  languages is a new task (sequence, step 5.3).
 
 ### E8-T2 Video fonts for the script
 
@@ -126,7 +128,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 
 ### E8-T3 UI font for the script
 
-- Status: in-progress
+- Status: done
 - Plan: 7
 - Value: the UI shows the letters of the script, not empty boxes.
 - Requirements:
@@ -169,7 +171,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 
 ### E8-T4 Line breaks without spaces
 
-- Status: in-progress
+- Status: done
 - Plan: 7
 - Value: long texts in Chinese and Japanese wrap correctly in the UI and in
   the help.

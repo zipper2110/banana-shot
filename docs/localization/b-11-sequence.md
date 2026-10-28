@@ -29,10 +29,11 @@ Made on 2026-10-29 from the epic files and a check of the code on `master`.
 - The open work is mostly:
   - the approvals of the author and the deployment of E2;
   - the manual Windows checks;
-  - some code gaps in E3, and all of E6;
+  - the first run of the `qps` workflow on GitHub (step 1.9);
   - the release and the checks after the release.
-- Many task tables show `in-progress` for tasks that are complete in the
-  code. Step 0 corrects this.
+- Updated on 2026-10-29: steps 0 and 1 are done, except the first run of
+  the `qps` workflow (1.9). E3-T21, E3-T22, and E3-T23 stay in progress for
+  the Windows checks of step 3 and the `qps` layout items.
 
 ## Overview
 
@@ -56,10 +57,10 @@ time as step 0 and step 1.
 
 | Step | Task | Work | Needs | Enables | Owner | Blocks 1.3.0 |
 |---|---|---|---|---|---|---|
-| 0.1 | E3-T2, E3-T3, E3-T6, E3-T7, E3-T9, E3-T10, E3-T12, E3-T14, E3-T15, E3-T16, E3-T17, E3-T21 | Compare the acceptance criteria with the code and the tests. Set `done` where all criteria pass. Write the open criteria in the task. | — | 1.x, 3.1 | Claude | no |
-| 0.2 | E7-T1, E8-T1 | The author selected the languages on 2026-10-20. Set `done` for the current languages. The selection of later languages is step 5.3. | — | 5.3 | Claude | no |
-| 0.3 | E7-T2 | The rules of all shipped languages are done. Set `done`. The Polish rule comes with Polish (step 5.3). | — | — | Claude | no |
-| 0.4 | E8-T2, E8-T3, E8-T4 | The notes tell that the Windows fonts and the line breaks are done and tested. Check the acceptance criteria and set `done`. | — | 3.1 | Claude | no |
+| 0.1 | E3-T2, E3-T3, E3-T6, E3-T7, E3-T9, E3-T10, E3-T12, E3-T14, E3-T15, E3-T16, E3-T17, E3-T21 | Compare the acceptance criteria with the code and the tests. Set `done` where all criteria pass. Write the open criteria in the task. | — | 1.x, 3.1 | Claude | done |
+| 0.2 | E7-T1, E8-T1 | The author selected the languages on 2026-10-20. Set `done` for the current languages. The selection of later languages is step 5.3. | — | 5.3 | Claude | done |
+| 0.3 | E7-T2 | The rules of all shipped languages are done. Set `done`. The Polish rule comes with Polish (step 5.3). | — | — | Claude | done |
+| 0.4 | E8-T2, E8-T3, E8-T4 | The notes tell that the Windows fonts and the line breaks are done and tested. Check the acceptance criteria and set `done`. | — | 3.1 | Claude | done for E8-T3 and E8-T4; E8-T2 needs the export of step 3.5 |
 
 Known gaps from the code check on 2026-10-29 (each gap has its own step in
 step 1):
@@ -76,16 +77,16 @@ step 1):
 
 | Step | Task | Work | Needs | Enables | Owner | Blocks 1.3.0 |
 |---|---|---|---|---|---|---|
-| 1.1 | E3-T1 | The decision is accepted (own parser, no ICU4J). The sizes were not measured, because no library is bundled. Write this in the task and set `done`. | — | 1.10 | Claude | no |
-| 1.2 | E3-T20 | The units "GB", "MB", and "KB" come from the catalog. A no-break space is between each number and its unit in all catalogs. A catalog test checks the space. | — | 1.10 | Claude | yes |
-| 1.3 | E3-T11, E3-T13 | The Stats tab and the Share tab show a catalog text for an error, not the message of the exception. The log keeps the details. Add the Share tab to the area of E3-T13. | — | 1.10 | Claude | yes |
-| 1.4 | E3-T8 | The name rule of the Projects list (`RecentsProvider`) uses the collator of the app language, then the characters (decided on 2026-10-29). | — | 1.10 | Claude | no |
-| 1.5 | E3-T18 | Do "not set" for the default title and the default side names (decided on 2026-10-29). Keep the match of the old default texts. | — | 1.10 | Claude | no (do it before 1.3.0 if possible) |
-| 1.6 | E3-T22 | Fix the open layout problems: the More window opens Settings and Contact scrolled down, and the "Content" column of the exports table breaks a word. Check the `qps` list again with the screenshots. | — | 1.10, 3.1 | Claude | yes (the More window) |
-| 1.7 | E5-T2 | A UI flow test selects a video language on the Export tab. | — | 3.1 | Claude | no |
-| 1.8 | E6-T1, E6-T2, E6-T3 | Translated fields in the rules file (also the "What's new" Markdown file), the app shows the text of the app language, and the specification and the checklist. Decided on 2026-10-29. | — | 5.2 | Claude | yes (see below) |
-| 1.9 | E3-T5 | The UI flow tests run with `qps` in CI and keep the screenshots. | E3-T3 (step 0.1) | 1.10 | Claude | no |
-| 1.10 | E3-T24 | The documentation of E3 and the last allowlist check. Then set E3 to `done`. | 1.1–1.9 | — | Claude | no |
+| 1.1 | E3-T1 | The decision is accepted (own parser, no ICU4J). The sizes were not measured, because no library is bundled. Write this in the task and set `done`. | — | 1.10 | Claude | done |
+| 1.2 | E3-T20 | The units "GB", "MB", and "KB" come from the catalog. A no-break space is between each number and its unit in all catalogs. A catalog test checks the space. | — | 1.10 | Claude | done |
+| 1.3 | E3-T11, E3-T13 | The Stats tab and the Share tab show a catalog text for an error, not the message of the exception. The log keeps the details. Add the Share tab to the area of E3-T13. | — | 1.10 | Claude | done |
+| 1.4 | E3-T8 | The name rule of the Projects list (`RecentsProvider`) uses the collator of the app language, then the characters (decided on 2026-10-29). | — | 1.10 | Claude | done |
+| 1.5 | E3-T18 | Do "not set" for the default title and the default side names (decided on 2026-10-29). Keep the match of the old default texts. | — | 1.10 | Claude | done |
+| 1.6 | E3-T22 | Fix the open layout problems: the More window opens Settings and Contact scrolled down, and the "Content" column of the exports table breaks a word. Check the `qps` list again with the screenshots. | — | 1.10, 3.1 | Claude | done |
+| 1.7 | E5-T2 | A UI flow test selects a video language on the Export tab. | — | 3.1 | Claude | done |
+| 1.8 | E6-T1, E6-T2, E6-T3 | Translated fields in the rules file (also the "What's new" Markdown file), the app shows the text of the app language, and the specification and the checklist. Decided on 2026-10-29. | — | 5.2 | Claude | done |
+| 1.9 | E3-T5 | The UI flow tests run with `qps` in CI and keep the screenshots. | E3-T3 (step 0.1) | 1.10 | Claude | no; the workflow is ready, open: the first run on GitHub |
+| 1.10 | E3-T24 | The documentation of E3 and the last allowlist check. Then set E3 to `done`. | 1.1–1.9 | — | Claude | done |
 
 Why step 1.8 blocks 1.3.0: a build can show a translated update note only
 when it has the code of E6-T2. If E6 comes after 1.3.0, the users of 1.3.0

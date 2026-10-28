@@ -30,34 +30,34 @@ Order of the work:
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E3-T1 | Decide the message library (ICU4J or own plural rules) | — | in-progress |
-| E3-T2 | Message catalog and `Messages` | E3-T1 | in-progress |
-| E3-T3 | Test language `qps` | E3-T2 | in-progress |
+| E3-T1 | Decide the message library (ICU4J or own plural rules) | — | done |
+| E3-T2 | Message catalog and `Messages` | E3-T1 | done |
+| E3-T3 | Test language `qps` | E3-T2 | done |
 | E3-T4 | Hard-coded text test with an allowlist | E3-T2 | done |
-| E3-T5 | UI flow tests with `qps` in CI | E3-T3 | open |
-| E3-T6 | Extract: common widgets and dialogs | E3-T2 | in-progress |
-| E3-T7 | Extract: app shell, sidebar, and More | E3-T2 | in-progress |
-| E3-T8 | Extract: Projects tab and new-project dialogs | E3-T2 | in-progress |
-| E3-T9 | Extract: Points tab | E3-T2 | in-progress |
-| E3-T10 | Extract: scoring controls and score settings | E3-T2 | in-progress |
-| E3-T11 | Extract: Statistics tab and statistics names | E3-T2 | in-progress |
-| E3-T12 | Extract: Colors & Transform tab | E3-T2 | in-progress |
-| E3-T13 | Extract: Export tab, queue, and exports table | E3-T2 | in-progress |
-| E3-T14 | Extract: expiry and update texts | E3-T2 | in-progress |
-| E3-T15 | Extract: privacy, consent, and feedback | E3-T2 | in-progress |
-| E3-T16 | Extract: help and key names | E3-T2 | in-progress |
-| E3-T17 | Extract: texts in the video | E3-T2 | in-progress |
-| E3-T18 | Saved default texts | E3-T10, E3-T17 | in-progress |
+| E3-T5 | UI flow tests with `qps` in CI | E3-T3 | in-progress |
+| E3-T6 | Extract: common widgets and dialogs | E3-T2 | done |
+| E3-T7 | Extract: app shell, sidebar, and More | E3-T2 | done |
+| E3-T8 | Extract: Projects tab and new-project dialogs | E3-T2 | done |
+| E3-T9 | Extract: Points tab | E3-T2 | done |
+| E3-T10 | Extract: scoring controls and score settings | E3-T2 | done |
+| E3-T11 | Extract: Statistics tab and statistics names | E3-T2 | done |
+| E3-T12 | Extract: Colors & Transform tab | E3-T2 | done |
+| E3-T13 | Extract: Export tab, queue, and exports table | E3-T2 | done |
+| E3-T14 | Extract: expiry and update texts | E3-T2 | done |
+| E3-T15 | Extract: privacy, consent, and feedback | E3-T2 | done |
+| E3-T16 | Extract: help and key names | E3-T2 | done |
+| E3-T17 | Extract: texts in the video | E3-T2 | done |
+| E3-T18 | Saved default texts | E3-T10, E3-T17 | done |
 | E3-T19 | Fit of the video texts | E3-T17 | done |
-| E3-T20 | Units in the catalog | E3-T2 | in-progress |
+| E3-T20 | Units in the catalog | E3-T2 | done |
 | E3-T21 | Language setting, detection, and restart (hidden) | E3-T2 | in-progress |
 | E3-T22 | Layout fixes for longer texts | E3-T5, E3-T6–E3-T16 | in-progress |
 | E3-T23 | User texts in any script | — | in-progress |
-| E3-T24 | Documentation and the empty allowlist | E3-T1–E3-T23 | open |
+| E3-T24 | Documentation and the empty allowlist | E3-T1–E3-T23 | done |
 
 ### E3-T1 Decide the message library
 
-- Status: in-progress
+- Status: done
 - Plan: 2 ("Format"), "Costs"
 - Value: correct plural forms in all later languages, at a known cost in
   installer size.
@@ -72,11 +72,16 @@ Order of the work:
   - The plan, "Decisions", has the decision and the measured sizes.
   - The catalog syntax is ICU MessageFormat in both cases. Thus the catalog
     does not change when E7 adds languages with more plural forms.
+- Notes: the plan, "Decisions", "Message format" (accepted 2026-10-19), has
+  the decision: an own parser of the ICU subset (`MessagePattern`) and own
+  CLDR plural rules (`PluralRules`), without ICU4J. Thus the installer does
+  not grow, and the sizes of ICU4J were not measured. The third-party
+  notices need no new library.
 - Tests: — (decision)
 
 ### E3-T2 Message catalog and `Messages`
 
-- Status: in-progress
+- Status: done
 - Plan: 1, 2
 - Value: one source for all texts of the app. A translator gets the text,
   its place, and its placeholders. The app never shows a key.
@@ -151,11 +156,15 @@ Order of the work:
     `de-DE` and `ar-EG`, and checks the digits and the group separator.
   - A test changes a German caption with "ß" and a Turkish caption with
     "i" to upper case with the locale of the language.
-- Tests: —
+- Notes (2026-10-29): the keys are string literals, not constants (plan,
+  "Decisions", "Keys in the code"). An argument that the message does not
+  use logs one warning. The captions use `DisplayFormats.upper`.
+- Tests: `MessageCatalogTest`, `MessagesTest`, `MessagePatternTest`,
+  `DisplayFormatsTest`.
 
 ### E3-T3 Test language `qps`
 
-- Status: in-progress
+- Status: done
 - Plan: 12 ("Pseudo-localization"), 10
 - Value: a developer or a reviewer sees at once which texts are still hard
   coded, which texts are cut, and which letters are missing.
@@ -186,7 +195,8 @@ Order of the work:
   - An analytics summary of a `qps` session has `"language": "en"`.
   - A unit test changes each message of the English catalog to `qps`, and
     each result parses with ICU and has the same placeholders.
-- Tests: —
+- Notes (2026-10-29): the parse uses the own ICU parser (E3-T1).
+- Tests: `MessagesTest`, `MessageCatalogTest`, `VideoLanguageTest`.
 
 ### E3-T4 Hard-coded text test with an allowlist
 
@@ -247,7 +257,7 @@ Order of the work:
 
 ### E3-T5 UI flow tests with `qps` in CI
 
-- Status: open
+- Status: in-progress
 - Plan: 12
 - Value: each pull request shows its texts and layout in `qps` without a
   manual start of the app.
@@ -264,7 +274,17 @@ Order of the work:
   - The `qps` run adds less than the time of one normal UI flow run. If it
     adds more, it runs only on the main branch and on release tags.
 - Notes: E4-T4 added the screenshots (`UiFlowScreenshots`,
-  `qa/Make-TranslatorScreenshots.ps1 -Language qps`). Open: the CI job.
+  `qa/Make-TranslatorScreenshots.ps1 -Language qps`).
+  - 2026-10-29: the workflow `.github/workflows/ui-flow-qps.yml` runs the
+    UI flow tests in `qps` and keeps the screenshots as an artifact. It
+    starts only by hand, because the UI flow tests did not run on a GitHub
+    runner before. Open: start it one time on GitHub. If it passes, add a
+    start on `master` and on the release tags, and set this task to done.
+  - 2026-10-29: on the development PC, all 25 UI flow tests pass in `qps`
+    (1 is skipped, as in English). The run found two problems, and both are
+    fixed: the New project dialog went below the taskbar (see E3-T22), and
+    a click on a sidebar button could hit the button that was at its place
+    before the project opened (a race in the test driver).
 - Tests: —
 
 ### Extraction tasks (E3-T6 to E3-T17)
@@ -317,7 +337,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T6 Extract: common widgets and dialogs
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 1), 4 (Swing and FlatLaf texts)
 - Area: the shared widgets and dialogs (message dialogs, file pickers,
   hints, transport buttons, speed control).
@@ -328,7 +348,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T7 Extract: app shell, sidebar, and More
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 2)
 - Area: the main window, the sidebar, and the More window (Settings,
   About).
@@ -339,7 +359,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T8 Extract: Projects tab and new-project dialogs
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 3), 5 ("Sort order")
 - Area: the Projects tab, the new-project dialogs, and the padel rules.
 - Special requirements:
@@ -356,11 +376,14 @@ The tasks below give the area and the special requirements of the area.
   "Ángel" comes after "Zeta". Decided on 2026-10-29: the second rule uses
   the collator of the app language, and then the characters, so that equal
   names keep a fixed order.
-- Tests: —
+- Notes (2026-10-29): names with digits or emoji sort where the collator of
+  the JDK puts them. The app does not move them after the letters. They
+  cause no error.
+- Tests: `RecentsOrderTest`.
 
 ### E3-T9 Extract: Points tab
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 4)
 - Area: the Points tab and the point dialogs.
 - Special requirements:
@@ -371,7 +394,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T10 Extract: scoring controls and score settings
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 5), "Current state"
 - Area: the scoring controls of the Points tab (the outcome buttons, the
   serve button, Override score), the score settings dialog, the titles of
@@ -386,7 +409,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T11 Extract: Statistics tab and statistics names
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 6), "Current state"
 - Area: the Statistics tab, the statistics table, the momentum chart, the
   names of the statistics, and the reasons why a statistic is not
@@ -400,14 +423,14 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T12 Extract: Colors & Transform tab
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 7)
 - Area: the Colors & Transform tab with its Colors and Transform sub-tabs.
 - Tests: —
 
 ### E3-T13 Extract: Export tab, queue, and exports table
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 8), "Current state"
 - Area: the Export tab, the queue, the exports table, the names of the
   qualities, encoders, and resolutions, the cut mode and content texts,
@@ -424,7 +447,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T14 Extract: expiry and update texts
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 9)
 - Area: the expiry bar, the expired dialog, the update texts, and the
   texts of the `license` package.
@@ -436,7 +459,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T15 Extract: privacy, consent, and feedback
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 10)
 - Area: the consent dialog, the Privacy page, and the feedback form.
 - Special requirements:
@@ -453,7 +476,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T16 Extract: help and key names
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 11), 8
 - Area: the help and the key names in the help and in the hints.
 - Special requirements:
@@ -468,7 +491,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T17 Extract: texts in the video
 
-- Status: in-progress
+- Status: done
 - Plan: 3 (area 12), 6 ("Texts to translate")
 - Area: the scoreboard (badges such as "GOLDEN POINT", layout titles,
   "SET" and "GAME" marks, tiebreak marks, score words such as "AD"), the
@@ -498,7 +521,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T18 Saved default texts
 
-- Status: in-progress
+- Status: done
 - Plan: 1 ("Rules for the code"), "Current state" ("Saved default texts")
 - Value: a project shows its default texts in the current language. Now
   the English default title goes into each project file and into each
@@ -549,7 +572,12 @@ The tasks below give the area and the special requirements of the area.
     languages for the projects that the earlier builds saved. Do it before
     the release of 1.3.0 if possible, so that no released build saves a
     translated default text.
-- Tests: —
+  - Done on 2026-10-29: the project file leaves out the title and the side
+    names when they are a default text of any language, or blank. The
+    1.2.0 reader then uses its English defaults. The settings dialog shows
+    the default title as a placeholder. The credit line stays English (plan,
+    "Decisions", "Credit line").
+- Tests: `DefaultTextsTest`.
 
 ### E3-T19 Fit of the video texts
 
@@ -607,7 +635,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T20 Units in the catalog
 
-- Status: in-progress
+- Status: done
 - Plan: 5 ("Units")
 - Value: a language can use its own unit symbols and spaces.
 - Requirements:
@@ -618,7 +646,11 @@ The tasks below give the area and the special requirements of the area.
 - Acceptance:
   - In `qps`, the units show in the pseudo-language.
   - In English, the texts do not change.
-- Tests: —
+- Notes (2026-10-29): the keys `unit.size.*` and `unit.seconds`. All
+  catalogs use a no-break space before a unit. "MB" and "GB" stay in Latin
+  letters in all languages, as Windows shows them. The export footer and the
+  exports table show "fps".
+- Tests: `MessageCatalogTest` (no-break space), `ExportPlannerTest`.
 
 ### E3-T21 Language setting, detection, and restart (hidden)
 
@@ -755,6 +787,13 @@ The tasks below give the area and the special requirements of the area.
     use the same grid as the rows in a narrow view.
   - The More window opens each page at the top. The screenshots of German
     (2026-10-28) show it.
+  - The New project dialog stays above the taskbar when the padel rules
+    make it taller (`DialogKit.keepOnScreen`). In `qps` on a screen of
+    1536 × 912 without the taskbar, "Create project" was below it.
+- Open in `qps` (screenshots of 2026-10-29, 1200 × 800): the Points table
+  column names "Start" and "Length" touch; the outcome buttons are cut; the
+  Statistics header "In video" and the group counts ("1 of 3") are cut. The
+  shipped languages do not show these problems.
 - Acceptance:
   - The `qps` screenshots show no cut text and no text outside its box.
   - In English, the screenshots of the UI flow tests do not change, or
@@ -829,7 +868,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T24 Documentation and the empty allowlist
 
-- Status: open
+- Status: done
 - Plan: 14, "Done when"
 - Value: a contributor adds each new text to the catalog, and a translator
   can add a language without help.
@@ -844,7 +883,12 @@ The tasks below give the area and the special requirements of the area.
   - The allowlist of E3-T4 has no UI texts. Only short codes ("F1", "4K")
     stay.
   - In `qps`, the app and the exported video show no English text.
-- Tests: —
+- Notes (2026-10-29): `CONTRIBUTING.md`, "Add a text";
+  `docs/architecture-rules.md`, "Texts for the user"; the plan, "Current
+  state". The allowlist has brand names, a size, a file name, and the
+  technical texts of the feedback report. The app has no new library
+  (E3-T1).
+- Tests: `HardCodedTextScanTest`.
 
 ## Done when
 

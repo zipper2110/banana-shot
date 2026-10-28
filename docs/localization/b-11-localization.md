@@ -96,6 +96,12 @@ A user who does not read English can do all the steps in their language:
 
 ## Current state
 
+Updated on 2026-10-29: E3 changed this state. The app has a message catalog
+(`src/main/resources/i18n/`), the test language `qps`, and the rules in
+`docs/architecture-rules.md`, "Texts for the user". The domain texts below
+come from the catalog. The project files save "not set" for the default
+title and the default side names. The list below is the state before E3.
+
 - The app has no message catalog. All texts are string literals in Kotlin.
   There are about 1,100 different texts in about 150 files.
 - Some texts are in the domain packages, not in `ui`. Examples:

@@ -53,6 +53,25 @@ The Windows regional format must not change a text that a program reads. A text 
 - Do not change the default locale of the JVM (`Locale.setDefault`) in the app. Only tests can change it, and they must set the old value again.
 - `DefaultLocaleScanTest` finds format calls without a locale. `DefaultLocaleOutputTest` compares the machine texts under other default locales.
 
+## Texts for the user
+
+All texts that the user can see come from the message catalog (B-11). The
+plan is in `docs/localization/b-11-localization.md`. How to add a text is in
+`CONTRIBUTING.md`, "Add a text".
+- Read a text with `tr("key")`. The key is a string literal. `MessageCatalogTest` finds the keys that the code uses, and fails for a key without an English text or a text without a translation.
+- The domain packages (`stats`, `scoring`, `export`, `projects`, `license`) do not make sentences for the user. They return enums, `Text` values, or numbers, or read a single text with `tr` in a getter. The UI or the overlay writer makes the sentence.
+- Use one key for a full sentence, with named placeholders. Do not make a sentence from parts: the word order is different in other languages.
+- Do not put HTML markup in the catalog if possible. When a text needs bold parts, use named placeholders for these parts.
+- Do not save a default text in a file. Save "not set" (an empty or null value), and show the text of the app language. The scoreboard title and the side names do this (`ScoreboardSettingsV1.title`, `ScoreV1.player1Name`). `APP_CREDIT` stays English as the brand text.
+- Component names (`name = "more-settings-theme"`) stay in English. Tests find components by name, not by text. Do not make a component name from a display text.
+- Code logic never depends on a display text. Do not compare, parse, store, or search a display text. Use an enum, an ID, or a number. Preferences and project files keep codes, not texts.
+- The user never sees only the message of an exception. Use `ErrorTexts.of`: it gives a catalog text first, and the English message of the exception as the detail under it.
+- Show a caption in capital letters with `DisplayFormats.upper`. It uses the locale of the app language.
+- Put a no-break space (U+00A0) between a number and its unit in the catalog ("5\u00A0s", "2,3\u00A0GB"). `MessageCatalogTest` checks it.
+- A text from a server or a file (release notes, expiry messages) shows as plain text, never as HTML.
+- `HardCodedTextScanTest` finds a text in the code that is not in the catalog. Its allowlist has only brand names, short codes, a file name, and the technical texts of the feedback report.
+- Run the app with the test language `qps` (`-Dbananashot.language=qps`) to find a text that is not in the catalog and a text that does not fit.
+
 ## Third-party license boundaries
 The app uses the Elastic License 2.0. A GPL component must not be part of the app process.
 - Start the bundled GPL FFmpeg build only as a separate process (`ffmpeg.exe`, `ffprobe.exe`). Communicate only through command-line arguments, pipes and files.

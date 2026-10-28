@@ -23,8 +23,8 @@ B-11 is done after E6. This epic continues with each new language.
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E7-T1 | Select the languages | E2 | in-progress |
-| E7-T2 | Plural forms with the CLDR rules | — | in-progress |
+| E7-T1 | Select the languages | E2 | done |
+| E7-T2 | Plural forms with the CLDR rules | — | done |
 | E7-T3 | Shortcuts with Cyrillic and Greek keyboard layouts | — | in-progress |
 | E7-T4 | Font check for each language | — | done |
 | E7-L-ru | Russian | E7-T1–E7-T4 | in-progress |
@@ -38,7 +38,7 @@ example `E7-L-pt`), and copy the template below.
 
 ### E7-T1 Select the languages
 
-- Status: in-progress
+- Status: done
 - Plan: "Decisions" ("Next languages"), 10
 - Value: the translation work goes to the languages with the most users.
 - Requirements:
@@ -55,10 +55,12 @@ example `E7-L-pt`), and copy the template below.
   "Decisions", "Next languages"). On 2026-10-28 the author decided that
   the languages ship without reviewers. Later languages wait for the
   data.
+- Done on 2026-10-29 for the current languages. The selection of later
+  languages is a new task (sequence, step 5.3).
 
 ### E7-T2 Plural forms with the CLDR rules
 
-- Status: in-progress
+- Status: done
 - Plan: 2 ("Message syntax"), 12
 - Value: texts with a number are correct in languages with more than two
   plural forms ("1 punto", but Russian "1 очко", "2 очка", "5 очков").
@@ -99,6 +101,8 @@ example `E7-L-pt`), and copy the template below.
   - CLDR also gives `fr`, `pt`, and `es` a `many` case for millions in
     compact notation. The app has no compact numbers, so the Spanish rule
     has no `many`. Do the same for `fr` and `pt`.
+- Done on 2026-10-29: the rules of all shipped languages pass. A later
+  language with a new rule (for example Polish) adds it in its own task.
 
 ### E7-T3 Shortcuts with Cyrillic and Greek keyboard layouts
 

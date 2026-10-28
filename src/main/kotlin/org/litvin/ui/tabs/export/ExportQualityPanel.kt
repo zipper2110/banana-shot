@@ -185,7 +185,7 @@ internal class ExportQualityPanel(
         return listOfNotNull(
             ExportVideoOptions.displayResolution(target.resolution.width, target.resolution.height),
             // A no-break space keeps the number and "fps" on one line.
-            target.frameRate?.let { "${it.displayFps}\u00A0fps" },
+            target.frameRate?.let { ExportVideoOptions.frameRateText(it.displayFps).replace(' ', '\u00A0') },
         ).joinToString(" · ")
     }
 
@@ -370,8 +370,14 @@ internal class ExportQualityPanel(
     private fun estimatedSize(bitrateK: Int): String =
         outputDurationMs?.let { "~" + RenderFormatting.formatSize(ExportVideoOptions.estimatedBytes(bitrateK, it)) } ?: tr("export.unknown")
 
+    // The component names use fixed ids, not the display texts, so they are the same in each language (B-11 E3-T4).
     private fun resolutionButtonName(choice: ExportResolutionChoice): String =
-        "export-resolution-" + if (choice.level == null) "source" else choice.title.lowercase()
+        "export-resolution-" + when (choice.level) {
+            null -> "source"
+            ExportQualityLevel.LOW -> "720p"
+            ExportQualityLevel.MEDIUM -> "1080p"
+            ExportQualityLevel.HIGH -> "4k"
+        }
 
     private fun frameRateButtonName(choice: ExportFrameRateChoice): String =
         "export-fps-" + if (choice.level == null) "source" else when (choice.level) {

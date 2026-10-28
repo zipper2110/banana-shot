@@ -170,12 +170,15 @@ object ExportVideoOptions {
      * Returns the 24, 30 and 60 FPS cards. A card is available when the source rate is at least that high.
      * A source rate near a standard rate, such as 29.97, marks that card. Other source rates get their own card.
      */
+    /** The frame rate for the user, for example "30 fps". */
+    fun frameRateText(fps: String): String = tr("export.frameRate.value", "fps" to fps)
+
     fun frameRateChoices(source: ExportFrameRate?): List<ExportFrameRateChoice> {
         val choices = standardFrameRates.map { (fps, level) ->
             val standard = ExportFrameRate(fps.toString(), fps.toDouble())
             val isSource = source != null && isNear(source.framesPerSecond, fps.toDouble())
             ExportFrameRateChoice(
-                title = "${(if (isSource) source!! else standard).displayFps} fps",
+                title = frameRateText((if (isSource) source!! else standard).displayFps),
                 frameRate = if (isSource) source!! else standard,
                 level = level,
                 isSource = isSource,
@@ -183,14 +186,14 @@ object ExportVideoOptions {
             )
         }
         if (source == null || choices.any { it.isSource }) return choices
-        val sourceChoice = ExportFrameRateChoice("${source.displayFps} fps", source, null, isSource = true, available = true)
+        val sourceChoice = ExportFrameRateChoice(frameRateText(source.displayFps), source, null, isSource = true, available = true)
         return (choices + sourceChoice).sortedBy { it.frameRate.framesPerSecond }
     }
 
     /** The card that is selected by default: the source, or 1080p when the source is unknown. */
     fun defaultResolution(choices: List<ExportResolutionChoice>): ExportResolutionChoice =
         choices.firstOrNull { it.isSource }
-            ?: choices.firstOrNull { it.title == "1080p" && it.available }
+            ?: choices.firstOrNull { it.level == ExportQualityLevel.MEDIUM && it.available }
             ?: choices.first { it.available }
 
     /** The card that is selected by default: the source, or 30 fps when the source is unknown. */

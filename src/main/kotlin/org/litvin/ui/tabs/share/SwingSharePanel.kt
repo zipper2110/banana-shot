@@ -688,7 +688,7 @@ class SwingSharePanel(
             else -> ""
         }
         zoomHint.toolTipText = zoomHint.text.ifEmpty { null }
-        sizeNote.text = if (view().zoom > 1.0) tr("share.zoom.drag") + " · 1280 × 720 PNG" else "1280 × 720 PNG"
+        sizeNote.text = if (view().zoom > 1.0) tr("share.zoom.drag") + " · " + IMAGE_FORMAT else IMAGE_FORMAT
         pickNote.text = if (project.hasFavorites) "" else tr("share.pick.noFavorites")
     }
 
@@ -1352,6 +1352,8 @@ class SwingSharePanel(
     }
 
     companion object {
+        /** The size and the file type of the thumbnail. They are the same in all languages. */
+        private const val IMAGE_FORMAT = "1280 × 720 PNG"
         private const val CARD_SHARE = "share"
         private const val CARD_EMPTY = "empty"
         private const val PREVIEW_IMAGE = "image"

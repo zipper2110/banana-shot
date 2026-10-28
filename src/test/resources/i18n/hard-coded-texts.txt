@@ -1,0 +1,15 @@
+# B-11 E3-T4: the hard-coded texts that stay as they are. HardCodedTextScanTest reads this file.
+# One line for each text: path below src/main/kotlin/org/litvin | text as in the source | reason.
+# Put a new text for the user into the catalog. Add a line here only for a text that must not be translated.
+
+AppInfo.kt | BananaShot | The app name is the same in all languages.
+AppInfo.kt | Dmitrii Litvin | The name of the author.
+scoring/ScoreboardSettingsV1.kt | BananaShot app | The credit line of the scoreboard is the brand text.
+ui/feedback/FeedbackDialog.kt | BananaShot ${state.systemSummary} | The app name and the system facts of the report.
+ui/tabs/share/SwingSharePanel.kt | 1280 × 720 PNG | A size and a file type.
+projects/NewProjectRules.kt | Project | The fallback folder name of a project. It is a file name, not a text in the UI.
+ExportPresets.kt | Bitrate adjusts to the selected resolution and FPS | The app does not show the description of a preset.
+ui/feedback/presenter/DefaultFeedbackPresenter.kt | BananaShot:  | The subject of the feedback email. The author reads it.
+ui/feedback/presenter/DefaultFeedbackPresenter.kt | Topic: ${draft.topic?.title ?:  | A field name of the feedback report. The author reads it.
+ui/feedback/presenter/DefaultFeedbackPresenter.kt | Report ID: $reportId | A field name of the feedback report. The author reads it.
+ui/feedback/presenter/DefaultFeedbackPresenter.kt | App: ${draft.systemSummary} | A field name of the feedback report. The author reads it.

@@ -33,7 +33,7 @@ Order of the work:
 | E3-T1 | Decide the message library (ICU4J or own plural rules) | — | in-progress |
 | E3-T2 | Message catalog and `Messages` | E3-T1 | in-progress |
 | E3-T3 | Test language `qps` | E3-T2 | in-progress |
-| E3-T4 | Hard-coded text test with an allowlist | E3-T2 | open |
+| E3-T4 | Hard-coded text test with an allowlist | E3-T2 | done |
 | E3-T5 | UI flow tests with `qps` in CI | E3-T3 | open |
 | E3-T6 | Extract: common widgets and dialogs | E3-T2 | in-progress |
 | E3-T7 | Extract: app shell, sidebar, and More | E3-T2 | in-progress |
@@ -190,7 +190,7 @@ Order of the work:
 
 ### E3-T4 Hard-coded text test with an allowlist
 
-- Status: open
+- Status: done
 - Plan: 3 (last part)
 - Value: CI finds a new hard-coded English text. The allowlist shows the
   progress of the extraction.
@@ -221,7 +221,29 @@ Order of the work:
   - A new hard-coded text makes the test fail.
   - A new string template with words, a new text comparison, and a new
     key as a free string make the test fail.
-- Tests: —
+- Notes (2026-10-28):
+  - `HardCodedTextScanTest` reads `src/main/kotlin`. A text for the user
+    has a word with a capital letter ("Save", "PNG") or two words ("key
+    frames"). One lowercase word is an id or a key, so the scan does not
+    report it.
+  - The scan ignores comments, log and exception calls (also over more
+    than one line), URIs, FlatLaf and HTML style texts, the font family
+    names, and the developer test tab (`ui/tabs/test`).
+  - In the UI code (`ui/`), it also reports a template or a
+    concatenation with words. Outside of the UI code, it reports only the
+    texts of the sinks and `const val` texts, because a concatenation
+    there is often a file name or an ffmpeg command.
+  - The allowlist `src/test/resources/i18n/hard-coded-texts.txt` has 11
+    texts, each with a reason: the app name, the author, the brand text,
+    the size of the thumbnail, the fallback folder name, the unused preset
+    description, and the email subject and field names of the feedback
+    report.
+  - Fixed with the scan: the frame rate cards and the Export footer use
+    `export.frameRate.value`. The resolution buttons of the Export tab get
+    fixed component names. The default resolution uses the quality level,
+    not the text "1080p". The unused `TransportBar` and
+    `IconBrowserDialog` are removed.
+- Tests: `HardCodedTextScanTest`.
 
 ### E3-T5 UI flow tests with `qps` in CI
 

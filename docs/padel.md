@@ -201,6 +201,8 @@ P-7 and P-6: the site first, then Spanish.
 - P-6 Spanish. The padel terms in Spanish (for example "punto de oro" for
   the golden point) are part of B-11, epic E4
   (`docs/localization/b-11-e4-spanish.md`, task E4-T2). Do it after P-7.
+  The Spanish glossary has the padel terms (E4-T2 is done). The app texts
+  in Spanish use them.
 - P-7 Site and FAQ. After the release with padel support:
   - Add the release note (see "Release note of the baseline") to the site
     changelog (`site/public/changelog/index.html`) and to the update

@@ -40,6 +40,13 @@ A desktop application that helps tennis and padel players turn full‑match reco
   summaries. A queue keeps the exports after a restart. The export can use
   hardware encoding.
 - Help: an overview page and a help page for each tab.
+- Languages: English, Spanish (Spain and Latin America), Russian,
+  Portuguese (Brazil and Portugal), French, German, Japanese, and Chinese
+  (Simplified and Traditional). The app starts in the Windows language if it
+  has this language. Otherwise it starts in English. The user can change the
+  language in More → Settings. The export can use another language for the
+  video texts. The translations are machine translations (see
+  [CONTRIBUTING.md](CONTRIBUTING.md), "Translations").
 - Feedback: send a problem, an idea, or a question to the author from the
   app.
 - Updates: the app shows when a new version is available. "Update and

@@ -37,7 +37,7 @@ are in the plan, "Epics".
 | E4-T10 | The app sends the language `es` | — | in-progress |
 | E4-T11 | Show the language setting | E4-T5, E4-T8 | done |
 | E4-T12 | Windows smoke test in Spanish | E4-T11 | in-progress |
-| E4-T13 | Documentation and release | E4-T2–E4-T12, without E4-T7 | open |
+| E4-T13 | Documentation and release | E4-T2–E4-T12, without E4-T7 | in-progress |
 
 ### E4-T1 Find the reviewer
 
@@ -462,7 +462,7 @@ are in the plan, "Epics".
 
 ### E4-T13 Documentation and release
 
-- Status: open
+- Status: in-progress
 - Plan: 14
 - Value: the next language uses a written process, not the memory of the
   author.
@@ -478,6 +478,15 @@ are in the plan, "Epics".
     macOS stay in English.
 - Acceptance:
   - The process for a new language is written, so E7 can use it.
+- Notes:
+  - `CONTRIBUTING.md`, "Translations", has the process (10 steps) and tells
+    users how to report a wrong text.
+  - `README.md`, "Key features", lists the languages of the release (plan,
+    "Decisions", "Languages of the first release").
+  - The release checklist already had the translation check (E4-T3).
+  - `docs/padel.md` (P-6) and `docs/macos/b-13-macos.md` ("App bundle")
+    have the notes.
+  - Open: the release. It comes after the smoke test (E4-T12).
 - Tests: —
 
 ## Done when

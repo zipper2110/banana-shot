@@ -418,6 +418,10 @@ a small `MacIntegration` class that runs only on macOS:
   `New-AppIcon.ps1` and `AppIconRenderer.java`).
 - Use the same runtime modules as Windows, without `jdk.crypto.mscapi`.
   Check with `jdeps` on macOS.
+- Declare the languages of the app in `Info.plist`
+  (`CFBundleLocalizations`, one entry for each `AppLanguage`). Without it,
+  the native dialogs of macOS (for example the file dialogs) stay in English
+  (B-11 E4-T13).
 - Set `LSMinimumSystemVersion` in `Info.plist` to the minimum macOS version
   (see "Minimum macOS version"). Build the libmpv and FFmpeg files with the
   same deployment target.

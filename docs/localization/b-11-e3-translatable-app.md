@@ -726,10 +726,6 @@ The tasks below give the area and the special requirements of the area.
   tests):
   - The Points tab: the outcome buttons are cut ("Team 1 sc…"), and the
     "Comment" button and the "Frame step" toggle are cut at the right edge.
-  - The exports table: the "Content" column breaks a word that is wider
-    than the column ("Scoreboard" / ": on", "Comentario" / "s: sí").
-  - The More window opens the Settings and Contact pages scrolled down. The
-    first heading of the page is not visible.
 - Done for Spanish: the note next to a dialog field name gets the free
   width of the row. The projects table moves a long "Scored" column name
   over the bar. The "Recent projects" title gets 4 px more. Spanish uses
@@ -751,6 +747,14 @@ The tasks below give the area and the special requirements of the area.
   - Decided on 2026-10-28: the sidebar keeps its width. In French and
     German, the labels "et cadrage" and "Ausschnitt" touch the accent bar
     of the active tab.
+- Done on 2026-10-29:
+  - Decided: a narrow exports table hides the "Video" column, then the
+    "Time" column, then the "Size" column, before a text column becomes
+    narrower than 96 px. Before, at 1200 × 800, each text column was
+    48 px, and the "Content" column broke the words. The column captions
+    use the same grid as the rows in a narrow view.
+  - The More window opens each page at the top. The screenshots of German
+    (2026-10-28) show it.
 - Acceptance:
   - The `qps` screenshots show no cut text and no text outside its box.
   - In English, the screenshots of the UI flow tests do not change, or

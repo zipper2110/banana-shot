@@ -595,7 +595,7 @@ internal class ReplayEditorWindow(
     private fun timeBox(caption: String, value: JLabel) = JPanel().apply {
         isOpaque = false
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        add(caption(caption.uppercase()))
+        add(caption(DisplayFormats.upper(caption)))
         add(value)
     }
 

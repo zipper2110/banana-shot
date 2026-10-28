@@ -1,5 +1,6 @@
 package org.litvin.ui.commons
 
+import org.litvin.i18n.DisplayFormats
 import org.kordamp.ikonli.Ikon
 import java.awt.AlphaComposite
 import java.awt.BorderLayout
@@ -404,7 +405,7 @@ internal class DialogGroup(
         isOpaque = false
         border = BorderFactory.createEmptyBorder(8, 14, 4, 14)
     }
-    private val captionLabel = object : JLabel(title.uppercase(), UiKit.icon(ikon, 14, Palette.FG_3), LEFT) {
+    private val captionLabel = object : JLabel(DisplayFormats.upper(title), UiKit.icon(ikon, 14, Palette.FG_3), LEFT) {
         // The label measures the text without the letter spacing, so it adds the width of the spacing.
         override fun getPreferredSize(): Dimension = super.getPreferredSize().let {
             Dimension(icon.iconWidth + iconTextGap + ceil(UiKit.textWidth(text, font)).toInt() + 4, it.height)

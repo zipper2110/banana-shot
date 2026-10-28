@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.projects.components
 
+import org.litvin.i18n.DisplayFormats
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
@@ -70,7 +71,7 @@ internal object ProjectsTableColumns {
     /** The width of the sport column: the longest sport name or the column name, in the current language. */
     private fun sportWidth(): Int {
         val longestName = Sport.entries.maxOf { ProjectsUi.textWidth(it.title, sportFont) }
-        val columnName = ProjectsUi.textWidth(tr("projects.column.sport").uppercase(), headerFont)
+        val columnName = ProjectsUi.textWidth(DisplayFormats.upper(tr("projects.column.sport")), headerFont)
         return maxOf(SPORT_MIN, ceil(maxOf(longestName, columnName)).toInt() + 2)
     }
 
@@ -182,7 +183,7 @@ internal object ProjectsTableColumns {
 
     /** A column name in small capital letters. [rightInset] moves a right-aligned name away from the right edge. */
     private class HeaderText(text: String, private val align: Int, private val rightInset: Int = 0) : JComponent() {
-        private val shown = text.uppercase()
+        private val shown = DisplayFormats.upper(text)
         private val headerFont = ProjectsTableColumns.headerFont
 
         override fun getPreferredSize() = Dimension(ceil(ProjectsUi.textWidth(shown, headerFont)).toInt() + 2, HEADER_HEIGHT)

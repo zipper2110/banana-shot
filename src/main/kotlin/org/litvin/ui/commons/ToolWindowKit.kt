@@ -1,5 +1,6 @@
 package org.litvin.ui.commons
 
+import org.litvin.i18n.DisplayFormats
 import org.kordamp.ikonli.Ikon
 import java.awt.Color
 import java.awt.Component
@@ -65,7 +66,7 @@ internal class ToolNav<T>(
         border = BorderFactory.createEmptyBorder(12, 8, 12, 8)
         items.forEachIndexed { index, item ->
             item.caption?.let { caption ->
-                add(JLabel(caption.uppercase()).apply {
+                add(JLabel(DisplayFormats.upper(caption)).apply {
                     font = UiKit.trackedFont(9.5f, 0.14)
                     foreground = Palette.FG_3
                     border = BorderFactory.createEmptyBorder(if (index == 0) 2 else 10, 10, 4, 10)
@@ -207,7 +208,7 @@ internal open class ToolPage : JPanel(null), Scrollable, HeightForWidth {
         }
 
         /** A section caption in capital letters with an icon: the `h2` element of the Help page. */
-        fun caption(text: String, ikon: Ikon): JComponent = object : JLabel(text.uppercase(), UiKit.icon(ikon, 15, Palette.FG_3), LEFT) {
+        fun caption(text: String, ikon: Ikon): JComponent = object : JLabel(DisplayFormats.upper(text), UiKit.icon(ikon, 15, Palette.FG_3), LEFT) {
             override fun getPreferredSize(): Dimension =
                 Dimension(icon.iconWidth + iconTextGap + ceil(UiKit.textWidth(text, font)).toInt() + 4, 18)
         }.apply {

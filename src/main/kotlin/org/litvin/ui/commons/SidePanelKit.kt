@@ -1,5 +1,6 @@
 package org.litvin.ui.commons
 
+import org.litvin.i18n.DisplayFormats
 import com.formdev.flatlaf.ui.FlatSliderUI
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.feather.Feather
@@ -266,7 +267,7 @@ internal open class GroupCard(
             val lineTop = CAPTION_TOP + CAPTION_PAD_TOP
             captionIcon.paintIcon(this, g2, CAPTION_X, lineTop + (CAPTION_LINE - captionIcon.iconHeight) / 2)
             val textX = (CAPTION_X + captionIcon.iconWidth + CAPTION_GAP).toFloat()
-            UiKit.drawText(g2, title.uppercase(), captionFont, Palette.FG_3, textX, lineTop.toFloat(), CAPTION_LINE.toFloat())
+            UiKit.drawText(g2, DisplayFormats.upper(title), captionFont, Palette.FG_3, textX, lineTop.toFloat(), CAPTION_LINE.toFloat())
             paintCaptionEnd(g2, (width - CAPTION_X).toFloat(), lineTop.toFloat(), CAPTION_LINE.toFloat())
         } finally {
             g2.dispose()

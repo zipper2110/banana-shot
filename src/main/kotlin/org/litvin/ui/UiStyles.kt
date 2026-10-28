@@ -1,5 +1,6 @@
 package org.litvin.ui
 
+import org.litvin.i18n.DisplayFormats
 import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
@@ -117,7 +118,7 @@ object UiStyles {
      * of the outline. The outline and the small spaced caption make the title different from the button labels.
      */
     class SidebarGroup(title: String) : JPanel() {
-        private val caption = title.uppercase()
+        private val caption = DisplayFormats.upper(title)
         private val captionFont: Font = font.deriveFont(Font.BOLD, 9f)
             .deriveFont(mapOf(java.awt.font.TextAttribute.TRACKING to 0.15))
 

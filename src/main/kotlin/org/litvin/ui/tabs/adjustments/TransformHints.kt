@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.adjustments
 
+import org.litvin.i18n.DisplayFormats
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
@@ -150,7 +151,7 @@ internal class TransformHints(private val hints: List<TransformHint> = Transform
             paintDashedBorder(g2)
             captionIcon.paintIcon(this, g2, PAD_X, PAD_TOP + (CAPTION_LINE - captionIcon.iconHeight) / 2)
             val captionX = (PAD_X + captionIcon.iconWidth + CAPTION_ICON_GAP).toFloat()
-            UiKit.drawText(g2, CAPTION.uppercase(), captionFont, Palette.FG_3, captionX, PAD_TOP.toFloat(), CAPTION_LINE.toFloat())
+            UiKit.drawText(g2, DisplayFormats.upper(CAPTION), captionFont, Palette.FG_3, captionX, PAD_TOP.toFloat(), CAPTION_LINE.toFloat())
 
             var top = (PAD_TOP + CAPTION_LINE + CAPTION_GAP_BOTTOM).toFloat()
             val textX = (PAD_X + ICON_COLUMN + ICON_GAP).toFloat()

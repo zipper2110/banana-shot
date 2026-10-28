@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.share
 
+import org.litvin.i18n.DisplayFormats
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.litvin.share.FrameView
@@ -38,7 +39,7 @@ import org.litvin.i18n.tr
 /** Fonts and small parts of the Share tab. The layout comes from design/share-redesign/final.html. */
 internal object ShareUi {
     /** The uppercase title of a section, the `.section-title` element of the design. */
-    fun sectionTitle(text: String, ikon: Ikon? = null): JLabel = JLabel(text.uppercase()).apply {
+    fun sectionTitle(text: String, ikon: Ikon? = null): JLabel = JLabel(DisplayFormats.upper(text)).apply {
         font = UiKit.trackedFont(11f, 0.08, UiKit.Weight.BOLD)
         foreground = Palette.FG_3
         if (ikon != null) {

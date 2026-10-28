@@ -28,6 +28,9 @@ class Messages(
     /** The text of [key] with the named [args]. */
     fun text(key: String, args: Map<String, Any?> = emptyMap()): String {
         val pattern = pattern(key) ?: return key
+        args.keys.filter { it !in pattern.argumentNames }.forEach { name ->
+            warnOnce("$key/$name/unused") { "The text $key does not use the argument {$name}." }
+        }
         val literal: (String) -> String = if (pseudo) PseudoLocalization::transform else { text -> text }
         val result = pattern.format(
             args,

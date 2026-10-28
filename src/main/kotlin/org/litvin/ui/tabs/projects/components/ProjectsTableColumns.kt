@@ -21,6 +21,8 @@ import org.litvin.ui.commons.Palette
  *
  * The columns are the status icon, the project name, the video path, the sport, the duration, the size,
  * the scored points, the favorite points and the row actions. The name and the path share the free width 1 : 1.6.
+ * A narrow table hides the size column first and then the duration column, so that the name and the path keep
+ * [NAME_MIN] each (B-11 E4-T8). A hidden column has the width 0 and no gap.
  * The sport column and the actions column fit their texts in the current language, for example "Beach tennis"
  * and the Open button in Russian.
  */
@@ -87,19 +89,42 @@ internal object ProjectsTableColumns {
 
     private fun fixedWidth(): Int = FIXED.values.sum() + sportWidth() + actionsWidth()
 
-    /** The smallest width that shows all columns. */
-    val minimumWidth: Int get() = fixedWidth() + NAME_MIN + COLUMN_GAP * (COLUMN_COUNT - 1) + SIDE_PADDING * 2
+    /** The columns that a narrow table hides, in the order in which it hides them. */
+    private val OPTIONAL = listOf(SIZE, DURATION)
 
-    /** Returns the left edge and the width of each column for a row of [width] pixels. */
+    /** The smallest width that shows the name and the path with [NAME_MIN] each, without the optional columns. */
+    val minimumWidth: Int
+        get() = fixedWidth() - OPTIONAL.sumOf { FIXED.getValue(it) } + NAME_MIN * 2 +
+            COLUMN_GAP * (COLUMN_COUNT - 1 - OPTIONAL.size) + SIDE_PADDING * 2
+
+    /** The free width for the name and the path when the [hidden] columns are not shown. */
+    private fun freeWidth(width: Int, hidden: Set<Int>): Int {
+        val shownFixed = FIXED.filterKeys { it !in hidden }.values.sum()
+        return width - SIDE_PADDING * 2 - COLUMN_GAP * (COLUMN_COUNT - 1 - hidden.size) - shownFixed - sportWidth() - actionsWidth()
+    }
+
+    /** The columns to hide in a row of [width] pixels: the fewest optional columns that give the name and the path [NAME_MIN] each. */
+    fun hiddenColumns(width: Int): Set<Int> {
+        val hidden = mutableSetOf<Int>()
+        for (column in OPTIONAL) {
+            if (freeWidth(width, hidden) >= NAME_MIN * 2) break
+            hidden += column
+        }
+        return hidden
+    }
+
+    /** Returns the left edge and the width of each column for a row of [width] pixels. A hidden column has the width 0. */
     fun columns(width: Int): List<Pair<Int, Int>> {
         val sport = sportWidth()
         val actions = actionsWidth()
-        val free = max(0, width - SIDE_PADDING * 2 - COLUMN_GAP * (COLUMN_COUNT - 1) - FIXED.values.sum() - sport - actions)
+        val hidden = hiddenColumns(width)
+        val free = max(0, freeWidth(width, hidden))
         // As minmax(140px, 1fr) in the design. In a narrow window the name gets at most half, so the path stays visible.
         val nameWidth = maxOf((free * NAME_SHARE / (NAME_SHARE + VIDEO_SHARE)).toInt(), minOf(NAME_MIN, free / 2))
         val videoWidth = free - nameWidth
         var x = SIDE_PADDING
         return (0 until COLUMN_COUNT).map { column ->
+            if (column in hidden) return@map x to 0
             val w = when (column) {
                 NAME -> nameWidth
                 VIDEO -> videoWidth

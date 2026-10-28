@@ -130,6 +130,23 @@ class ProjectRowTest {
         assertTrue(narrow[ProjectsTableColumns.NAME].second > 0)
     }
 
+    @Test
+    fun aNarrowTableHidesTheSizeAndThenTheDurationSoThatTheNameKeepsItsWidth() {
+        assertEquals(emptySet(), ProjectsTableColumns.hiddenColumns(1152))
+
+        val atMinimum = ProjectsTableColumns.columns(ProjectsTableColumns.minimumWidth)
+        assertEquals(0, atMinimum[ProjectsTableColumns.SIZE].second)
+        assertEquals(0, atMinimum[ProjectsTableColumns.DURATION].second)
+        assertTrue(atMinimum[ProjectsTableColumns.NAME].second >= 140)
+        assertTrue(atMinimum[ProjectsTableColumns.VIDEO].second >= 140)
+        // A hidden column has no gap, so the columns still end at the right padding.
+        assertEquals(ProjectsTableColumns.minimumWidth - 10, atMinimum.last().first + atMinimum.last().second)
+
+        // A table between both widths hides only the size.
+        val sizeOnly = (ProjectsTableColumns.minimumWidth..1152).first { ProjectsTableColumns.hiddenColumns(it).size == 1 }
+        assertEquals(setOf(ProjectsTableColumns.SIZE), ProjectsTableColumns.hiddenColumns(sizeOnly))
+    }
+
     private fun row(project: ProjectCardState, isCurrent: Boolean = false) =
         ProjectRow(project, isCurrent, onRename = {}, onDelete = {}, onOpen = {})
 

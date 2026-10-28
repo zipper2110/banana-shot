@@ -541,7 +541,12 @@ The tasks below give the area and the special requirements of the area.
     not change.
   - A unit test cuts a text with "é" as "e" and U+0301, and a text with an
     emoji at the limit. The result has no broken character.
-- Tests: —
+- Notes: the fit test is `VideoTextFit` (done with E4-T8). It draws each
+  sport, each scoreboard style, and each statistics card page with the
+  widest values. It reports a text that is cut, has a smaller font than in
+  English, goes outside the scene or its box, or covers another text. The
+  other requirements are open.
+- Tests: `VideoTextFitTest`.
 
 ### E3-T20 Units in the catalog
 
@@ -673,6 +678,11 @@ The tasks below give the area and the special requirements of the area.
   over the bar. The "Recent projects" title gets 4 px more. Spanish uses
   short forms for the controls with a fixed width (see the glossary, "Short
   forms").
+- Done with E4-T8 (all languages, 1200 × 800): the outcome buttons, the
+  "Comment" button, and the settings buttons of the Points tab fit (see
+  E4-T8, "Notes"). The projects table hides the size and the duration
+  columns in a narrow window. The Thumbnail tab uses the full width for
+  its controls and style cards.
 - Acceptance:
   - The `qps` screenshots show no cut text and no text outside its box.
   - In English, the screenshots of the UI flow tests do not change, or

@@ -266,7 +266,10 @@ class SwingSharePanel(
         name = "share-save"
         stretch = true
     }
-    private val openButton = UiButton(tr("export.openFolder"), Material2AL.FOLDER_OPEN, UiButton.Kind.GHOST).apply { name = "share-open-folder" }
+    private val openButton = UiButton(tr("export.openFolder"), Material2AL.FOLDER_OPEN, UiButton.Kind.GHOST).apply {
+        name = "share-open-folder"
+        toolTipText = tr("export.openFolder")
+    }
 
     private val cards = CardLayout()
     private val body = JPanel(cards)
@@ -1331,7 +1334,12 @@ class SwingSharePanel(
             currentLine.setBounds(x, y, w, currentH)
             otherLine.setBounds(x, y + currentH, w, otherLine.heightForWidth(w))
             y += linesHeight(w) + 8
-            val openW = openButton.preferredSize.width
+            // When the save text does not fit next to "Open folder", the folder button shows only its icon (B-11 E4-T8).
+            val openText = tr("export.openFolder")
+            val fits = saveButton.preferredWidthFor(saveButton.text) + 8 + openButton.preferredWidthFor(openText) <= w
+            val text = if (fits) openText else ""
+            if (openButton.text != text) openButton.text = text
+            val openW = openButton.preferredWidthFor(text)
             saveButton.setBounds(x, y, w - openW - 8, 30)
             openButton.setBounds(x + w - openW, y, openW, 30)
         }

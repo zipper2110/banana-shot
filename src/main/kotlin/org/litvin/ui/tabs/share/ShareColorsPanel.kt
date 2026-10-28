@@ -16,7 +16,6 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.Graphics
 import java.awt.GridLayout
 import java.awt.Insets
@@ -54,15 +53,7 @@ internal class ShareColorsPanel(
 
     init {
         name = "share-colors"
-        add(JPanel(BorderLayout()).apply {
-            isOpaque = false
-            add(ShareUi.sectionTitle(tr("share.colors.set")), BorderLayout.WEST)
-            add(JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
-                isOpaque = false
-                add(changed)
-                add(reset)
-            }, BorderLayout.EAST)
-        }, gapAfter = 8)
+        add(SetHeader(ShareUi.sectionTitle(tr("share.colors.set")), listOf(changed, reset)), gapAfter = 8)
         add(JPanel(GridLayout(0, 3, 6, 6)).apply {
             isOpaque = false
             setButtons.forEach { add(it) }
@@ -283,5 +274,50 @@ internal class SwatchRows : JPanel(null) {
     private companion object {
         /** The width of the side column without its padding and the scroll bar. */
         const val DEFAULT_WIDTH = 296
+    }
+}
+
+/**
+ * The title of the color sets with "Changed" and "Use the style colors" at the right end. When a long translation
+ * does not fit in one row, the two items go to a second row under the title, so that they do not cover the title
+ * (B-11 E4-T8).
+ */
+private class SetHeader(private val title: JComponent, private val items: List<JComponent>) :
+    JPanel(null), org.litvin.ui.commons.HeightForWidth {
+    init {
+        isOpaque = false
+        add(title)
+        items.forEach(::add)
+    }
+
+    private val shownItems get() = items.filter { it.isVisible }
+
+    private fun itemsWidth() = shownItems.sumOf { it.preferredSize.width } + GAP * (shownItems.size - 1).coerceAtLeast(0)
+
+    private fun oneRow(width: Int) = shownItems.isEmpty() || title.preferredSize.width + ROW_GAP + itemsWidth() <= width
+
+    private fun rowHeight() = maxOf(title.preferredSize.height, shownItems.maxOfOrNull { it.preferredSize.height } ?: 0)
+
+    override fun heightForWidth(width: Int): Int = if (oneRow(width)) rowHeight() else rowHeight() * 2 + LINE_GAP
+
+    override fun getPreferredSize() = Dimension(title.preferredSize.width + ROW_GAP + itemsWidth(), heightForWidth(width))
+
+    override fun doLayout() {
+        val h = rowHeight()
+        title.setBounds(0, 0, minOf(width, title.preferredSize.width), h)
+        val oneRow = oneRow(width)
+        var x = if (oneRow) width - itemsWidth() else 0
+        val y = if (oneRow) 0 else h + LINE_GAP
+        shownItems.forEach { item ->
+            val w = minOf(item.preferredSize.width, width - x)
+            item.setBounds(x, y, maxOf(0, w), h)
+            x += w + GAP
+        }
+    }
+
+    private companion object {
+        const val GAP = 6
+        const val ROW_GAP = 12
+        const val LINE_GAP = 4
     }
 }

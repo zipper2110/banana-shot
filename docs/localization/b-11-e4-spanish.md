@@ -32,7 +32,7 @@ are in the plan, "Epics".
 | E4-T5 | Machine draft | E4-T2, E4-T3 | in-progress |
 | E4-T6 | Legal texts | E4-T5 | open |
 | E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | later |
-| E4-T8 | Fit tests for Spanish | E4-T5 | open |
+| E4-T8 | Fit tests for Spanish | E4-T5 | done |
 | E4-T9 | Queued render job keeps its language | — | done |
 | E4-T10 | The app sends the language `es` | — | in-progress |
 | E4-T11 | Show the language setting | E4-T5, E4-T8 | in-progress |
@@ -236,7 +236,7 @@ are in the plan, "Epics".
 
 ### E4-T8 Fit tests for Spanish
 
-- Status: open
+- Status: done
 - Plan: 6 ("Fit")
 - Value: a Spanish video and the Spanish UI show all texts completely.
 - Requirements:
@@ -247,7 +247,31 @@ are in the plan, "Epics".
 - Acceptance:
   - The fit test passes with Spanish. No text is cut with "…" unless the
     author accepts it.
-- Tests: —
+- Notes:
+  - The video fit test passes for all languages, not only Spanish. No
+    Spanish video text needed a shorter text.
+  - The Spanish UI screenshots of `qa/Make-TranslatorScreenshots.ps1`
+    (1200 × 800) show no cut text. The cuts were layout problems, so the fix
+    is in the layout, and the Spanish texts did not change:
+    - The Thumbnail tab: the controls and the style cards use the full
+      width. A low window makes only the preview smaller.
+    - The Thumbnail tab: the "Color set" header puts "Changed" and "Use the
+      style colors" in a second row when one row is too narrow. "Open
+      folder" shows only its icon when the save text needs the space.
+    - The Points tab: a narrow point bar shows a compact Point start (the
+      time of a pending point is under the title). The outcome buttons share
+      the width by their names, and "Winner:" hides when the names do not
+      fit. Comment and Replay show only their icons when the space is too
+      small. The two settings buttons use two rows when one text does not
+      fit.
+    - The projects table hides the size column and then the duration
+      column, so that the name and the video path keep 140 px each.
+  - The program argument `--window-size=1200x800` (or
+    `-Dbananashot.windowSize=1200x800`) opens the main window at one size,
+    for a check of the layout by hand (see the README).
+- Tests: `VideoTextFitTest` (all languages, and negative tests for a
+  cut, a cover, a text outside its box, and a smaller font),
+  `ProjectRowTest` (the hidden columns), `WindowSizeTest`.
 
 ### E4-T9 Queued render job keeps its language
 

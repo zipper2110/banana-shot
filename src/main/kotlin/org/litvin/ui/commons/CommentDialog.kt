@@ -20,6 +20,7 @@ import javax.swing.JTextArea
 import javax.swing.JTextField
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import org.litvin.i18n.MachineFormats
 import org.litvin.i18n.tr
 
 /** The values of a comment in [CommentDialog]. The start is in source time; the color uses the #RRGGBB format. */
@@ -203,7 +204,7 @@ object CommentDialog {
         rotation.slider.addChangeListener { showChange() }
 
         val setColor = { chosen: Color ->
-            colorHex = "#%06X".format(chosen.rgb and 0xFFFFFF)
+            colorHex = MachineFormats.format("#%06X", chosen.rgb and 0xFFFFFF)
             color.swatch = chosen
             color.toolTipText = colorHex
         }

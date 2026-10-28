@@ -1,5 +1,7 @@
 package org.litvin.shared.util
 
+import org.litvin.i18n.MachineFormats
+
 /**
  * Time formatting/parsing helpers for consistent display and editing.
  * - Formats milliseconds to hh:mm:ss.mmm
@@ -17,7 +19,7 @@ object Timecode {
         val totalMinutes = totalSeconds / 60
         val m = (totalMinutes % 60).toInt()
         val h = (totalMinutes / 60).toInt()
-        return String.format("%02d:%02d:%02d.%01d", h, m, s, tenths)
+        return MachineFormats.format("%02d:%02d:%02d.%01d", h, m, s, tenths)
     }
 
     /** Round to the nearest 10 milliseconds. */
@@ -31,21 +33,23 @@ object Timecode {
      * - hh:mm:ss (no decimals)
      * - mm:ss
      * - ss
+     *
+     * The decimal separator can be "." or "," (B-11, "Typed decimal separator"). Full-width forms ("１：２３") and the
+     * digits of other scripts ("١:٢٣") give the same value as the ASCII digits (B-11 E1-T2). Another character, or a
+     * second decimal separator, gives an [IllegalArgumentException].
      */
     fun parse(text: String): Long {
-        val t = text.trim()
+        val t = MachineFormats.asciiDigits(text).trim()
         if (t.isEmpty()) throw IllegalArgumentException("Empty time string")
-        val parts = t.split(":")
-        val (h, m, sPart) = when (parts.size) {
+        if (!TIME.matches(t)) throw IllegalArgumentException("Invalid time format: $text")
+        val clock = t.substringBefore('.').substringBefore(',')
+        val msStr = t.substring(clock.length).drop(1)
+        val parts = clock.split(":")
+        val (h, m, secStr) = when (parts.size) {
             3 -> Triple(parts[0], parts[1], parts[2])
             2 -> Triple("0", parts[0], parts[1])
-            1 -> Triple("0", "0", parts[0])
-            else -> throw IllegalArgumentException("Invalid time format: $text")
+            else -> Triple("0", "0", parts[0])
         }
-        val (secStr, msStr) = if (sPart.contains('.')) {
-            val sp = sPart.split('.')
-            Pair(sp[0], sp.getOrElse(1) { "0" })
-        } else Pair(sPart, "0")
         val hours = h.toInt()
         val minutes = m.toInt()
         val seconds = secStr.toInt()
@@ -60,4 +64,6 @@ object Timecode {
         return totalMs
     }
 
+    /** One to three clock parts with ASCII digits, and an optional fraction after "." or ",". */
+    private val TIME = Regex("""[0-9]+(:[0-9]+){0,2}([.,][0-9]*)?""")
 }

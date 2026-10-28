@@ -3,6 +3,7 @@ package org.litvin
 import org.litvin.shared.util.DrawnText
 import org.litvin.scoring.Sport
 import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.MachineFormats
 
 /** The values that a scoreboard shows for one score state. All scoreboard styles use this model. */
 data class ScoreboardDisplay(
@@ -34,8 +35,8 @@ data class ScoreboardDisplay(
 object ScoreboardComponent {
     const val DEFAULT_PLAYER1_RGB = 0x4DA3FF
     const val DEFAULT_PLAYER2_RGB = 0xFF6B6B
-    val DEFAULT_PLAYER1_HEX = "#%06X".format(DEFAULT_PLAYER1_RGB)
-    val DEFAULT_PLAYER2_HEX = "#%06X".format(DEFAULT_PLAYER2_RGB)
+    val DEFAULT_PLAYER1_HEX = MachineFormats.format("#%06X", DEFAULT_PLAYER1_RGB)
+    val DEFAULT_PLAYER2_HEX = MachineFormats.format("#%06X", DEFAULT_PLAYER2_RGB)
     /** The scoring settings accept names of this length. The scoreboard shortens longer names, for example from an old file. */
     const val PLAYER_NAME_MAX_CHARS = 24
 

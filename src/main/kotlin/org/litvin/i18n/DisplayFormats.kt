@@ -86,8 +86,9 @@ object DisplayFormats {
 
     private fun formatter(withNames: FormatStyle, digitsOnly: FormatStyle, time: Boolean): DateTimeFormatter {
         val style = if (formatLocale.language == I18n.language.baseCode) withNames else digitsOnly
-        val base = if (time) DateTimeFormatter.ofLocalizedDateTime(style, FormatStyle.SHORT) else DateTimeFormatter.ofLocalizedDate(style)
-        return base.withLocale(numberLocale).withDecimalStyle(DecimalStyle.STANDARD).withChronology(IsoChronology.INSTANCE)
+        val dateTime = DateTimeFormatter.ofLocalizedDateTime(style, FormatStyle.SHORT).withLocale(numberLocale)
+        val base = if (time) dateTime else DateTimeFormatter.ofLocalizedDate(style).withLocale(numberLocale)
+        return base.withDecimalStyle(DecimalStyle.STANDARD).withChronology(IsoChronology.INSTANCE)
     }
 
     /**

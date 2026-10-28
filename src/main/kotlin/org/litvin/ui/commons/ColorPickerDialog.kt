@@ -36,6 +36,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.MachineFormats
 
 /**
  * The color picker of the app, in place of JColorChooser: design/dialogs-redesign/color-picker.html.
@@ -112,7 +113,7 @@ internal object ColorPickerDialog {
         while (recent.size > RECENT_MAX) recent.removeAt(recent.lastIndex)
     }
 
-    fun hex(color: Color) = "#%06X".format(color.rgb and 0xFFFFFF)
+    fun hex(color: Color) = MachineFormats.format("#%06X", color.rgb and 0xFFFFFF)
 
     /** The body of the picker. The color is kept as hue (0..360), saturation and value (0..1). */
     private class Picker(val initial: Color) : Stack(pad = Insets(8, DialogKit.PAD_X, 14, DialogKit.PAD_X), gap = 12) {

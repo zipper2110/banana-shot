@@ -62,6 +62,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.I18n
+import org.litvin.i18n.MachineFormats
 import org.litvin.i18n.tr
 
 /**
@@ -405,7 +406,7 @@ class ScoreboardSettingsDialog private constructor(
             accentButton.swatch = accent
             accentButton.detail = ColorPickerDialog.hex(accent)
             accentDefault.isEnabled = settings.accentColorHex != null
-            val styleHex = "#%06X".format(defaults.accentRgb and 0xFFFFFF)
+            val styleHex = MachineFormats.format("#%06X", defaults.accentRgb and 0xFFFFFF)
             accentNote.runs = listOf(
                 TextRun(
                     if (settings.normalized().accentColorHex != null) tr("scoreboard.accent.own", "style" to settings.style.title, "color" to styleHex)

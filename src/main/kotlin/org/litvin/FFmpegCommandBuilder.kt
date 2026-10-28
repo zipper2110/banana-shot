@@ -6,6 +6,7 @@ import org.litvin.adjustments.GeometryPlan
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.points.PointV1
 import kotlin.math.roundToLong
+import org.litvin.i18n.MachineFormats
 
 /**
  * Task 3.7 — FFmpeg command builder (v1)
@@ -214,7 +215,7 @@ object FFmpegCommandBuilder {
     /** The fill color of the areas outside the rotated frame, in the FFmpeg color syntax. */
     private fun fillColor(adj: org.litvin.adjustments.AdjustmentsV1): String {
         val rgb = adj.backgroundRgb and 0xFFFFFF
-        return if (rgb == 0) "black" else "0x%06X".format(rgb)
+        return if (rgb == 0) "black" else MachineFormats.format("0x%06X", rgb)
     }
 
     /**

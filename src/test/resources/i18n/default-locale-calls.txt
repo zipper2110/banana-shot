@@ -1,0 +1,6 @@
+# B-11 E1-T4: the accepted calls with the default locale. DefaultLocaleScanTest reads this file.
+# One line for each call: path below src/main/kotlin/org/litvin | the line of code | reason.
+# A machine text uses MachineFormats. A text for the user uses DisplayFormats. Add a line here only with a reason.
+
+app/AppServices.kt | internal fun osLanguage(locale: Locale = Locale.getDefault(Locale.Category.DISPLAY)): AnalyticsEvent.Language = | The app start reads the Windows display language for the analytics value os_language.
+app/SwingApplicationFactory.kt | override val systemLanguage: AppLanguage = LanguageSettings.systemLanguage(Locale.getDefault(Locale.Category.DISPLAY)) | The app start reads the Windows display language for the "System" choice of the language setting.

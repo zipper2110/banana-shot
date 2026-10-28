@@ -93,6 +93,7 @@ import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.MachineFormats
 
 /** The facts of the source video that the Share tab needs: the size for the zoom limit, and the frame rate for a frame step. */
 data class ShareSourceFacts(val width: Int, val height: Int, val framesPerSecond: Double?)
@@ -1039,7 +1040,7 @@ class SwingSharePanel(
         val point = currentPoint(project)
         val text = listOf(project.sourcePath, point?.let(::momentMs), adjustments, view(), scene(project, style())).joinToString("|")
         val digest = MessageDigest.getInstance("SHA-256").digest(text.toByteArray())
-        return digest.take(12).joinToString("") { "%02x".format(it) }
+        return digest.take(12).joinToString("") { MachineFormats.format("%02x", it) }
     }
 
     private fun saveThumbnail() {

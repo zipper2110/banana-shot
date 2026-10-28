@@ -4,6 +4,7 @@ import java.awt.Color
 import kotlin.math.roundToInt
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KProperty
+import org.litvin.i18n.MachineFormats
 
 /**
  * The color scheme of the app. All UI code gets its colors from this object.
@@ -460,6 +461,6 @@ internal object Palette {
 
     /** [color] as "#RRGGBB", or as "#RRGGBBAA" when it is not opaque. For FlatLaf style strings. */
     fun hex(color: Color): String =
-        if (color.alpha == 255) String.format("#%06X", color.rgb and 0xFFFFFF)
-        else String.format("#%06X%02X", color.rgb and 0xFFFFFF, color.alpha)
+        if (color.alpha == 255) MachineFormats.format("#%06X", color.rgb and 0xFFFFFF)
+        else MachineFormats.format("#%06X%02X", color.rgb and 0xFFFFFF, color.alpha)
 }

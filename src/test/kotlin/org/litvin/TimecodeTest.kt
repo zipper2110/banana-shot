@@ -42,4 +42,32 @@ class TimecodeTest {
         assertFailsWith<IllegalArgumentException> { Timecode.parse("1:60") }
         assertFailsWith<IllegalArgumentException> { Timecode.parse("1:2:60") }
     }
+
+    /** B-11 E1-T2: a Spanish numeric keypad gives ",". The two separators give the same value. */
+    @Test
+    fun `a comma and a period give the same value`() {
+        assertEquals(83_500, Timecode.parse("1:23.5"))
+        assertEquals(83_500, Timecode.parse("1:23,5"))
+        assertEquals(83_000, Timecode.parse("1:23,"))
+    }
+
+    @Test
+    fun `a text with other characters or two decimal separators is an error`() {
+        listOf("1:23.5.0", "1:23,5.0", "1:2a", "a", "1::2", "1:2:3:4", "-1", "1 :23", "1:23.5s").forEach { text ->
+            assertFailsWith<IllegalArgumentException>(text) { Timecode.parse(text) }
+        }
+    }
+
+    /**
+     * B-11 E1-T2: full-width digits from a Japanese input method and the digits of other scripts give the value of
+     * the digits 0-9. They never give a different value.
+     */
+    @Test
+    fun `full-width forms and the digits of other scripts give the same value`() {
+        assertEquals(83_000, Timecode.parse("１：２３"))
+        assertEquals(83_500, Timecode.parse("１：２３．５"))
+        assertEquals(83_000, Timecode.parse("١:٢٣"))
+        assertEquals(83_000, Timecode.parse("۱:۲۳"))
+        assertEquals(83_000, Timecode.parse("๑:๒๓"))
+    }
 }

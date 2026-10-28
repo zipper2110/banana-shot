@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 import kotlin.math.max
 import kotlin.math.roundToInt
+import org.litvin.i18n.MachineFormats
 
 /**
  * The logo of the user on a thumbnail (B-53). [id] identifies the image, so that two logos with the same pixels are equal.
@@ -169,5 +170,5 @@ object ThumbnailLogos {
     }
 
     private fun digest(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes).take(12).joinToString("") { "%02x".format(it) }
+        MessageDigest.getInstance("SHA-256").digest(bytes).take(12).joinToString("") { MachineFormats.format("%02x", it) }
 }

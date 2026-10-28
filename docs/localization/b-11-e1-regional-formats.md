@@ -35,9 +35,9 @@ Not in this epic:
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
 | E1-T1 | `i18n` package and its dependency rule | — | in-progress |
-| E1-T2 | Machine formats do not use the default locale | E1-T1 | open |
-| E1-T3 | Tests with other default locales | E1-T2 | open |
-| E1-T4 | Test that finds calls with the default locale | E1-T2 | open |
+| E1-T2 | Machine formats do not use the default locale | E1-T1 | done |
+| E1-T3 | Tests with other default locales | E1-T2 | done |
+| E1-T4 | Test that finds calls with the default locale | E1-T2 | done |
 | E1-T5 | Display formats | E1-T1 | in-progress |
 | E1-T6 | The UI shows the display formats | E1-T5 | in-progress |
 | E1-T7 | Decide the locale provider (`HOST` or CLDR) | E1-T5 | open |
@@ -61,7 +61,7 @@ Not in this epic:
 
 ### E1-T2 Machine formats do not use the default locale
 
-- Status: open
+- Status: done
 - Plan: 1, 5 ("Numbers for machines", "Time codes that the user can edit")
 - Value: the export, the preview, and the saved files are correct with all
   Windows regional formats.
@@ -104,15 +104,30 @@ Not in this epic:
   - A test saves a project with the default locale `de-DE`, and reads it
     with `en-US`. The values are the same. The test also does the
     opposite.
-- Notes: the time code in the comment dialog is a known risk. It uses
-  `String.format` without a locale, and `Timecode.parse` reads it again.
-  Start with it. `Timecode.format` also uses `String.format` without a
-  locale.
-- Tests: —
+- Notes (2026-10-28):
+  - `MachineFormats` (`i18n`) formats with `Locale.ROOT`. The time code
+    format and the hex colors and hashes use it. The comment dialog
+    already used `Locale.ROOT`. The other machine formats already gave
+    `Locale.US`. For numbers it gives the same output as `Locale.ROOT`, so
+    these calls stay. The time code of the comment dialog already used
+    `Locale.ROOT`.
+  - `Timecode.parse` accepts "." and ",". It changes the full-width forms
+    and the digits of other scripts to 0–9 (`MachineFormats.asciiDigits`):
+    "１：２３", "١:٢٣", "۱:۲۳", and "๑:๒๓" give the value of "1:23". Another
+    character or a second decimal separator gives an error. The comment
+    dialog and the point dialog show their catalog texts for this error.
+  - Proof for the older builds: the saved files (project, EDL, score,
+    adjustments, queue, completed exports) use Jackson, which does not use
+    the locale. The git history of this code has one format call without a
+    locale: the hex background color of the adjustments ("#%06X"). Java
+    does not localize the hex digits, so no older build wrote a value in
+    the regional format.
+- Tests: `TimecodeTest`, `DefaultLocaleOutputTest` (a project saved with
+  `de-DE` or `ar-EG` and read with `en-US`, and the opposite).
 
 ### E1-T3 Tests with other default locales
 
-- Status: open
+- Status: done
 - Plan: 5 ("Numbers for machines"), 12
 - Value: CI finds a machine format that depends on the default locale
   before a user finds it.
@@ -132,11 +147,24 @@ Not in this epic:
   - The tests pass with the three locales.
   - If one machine format uses the default locale, a test fails. Prove
     this one time: remove the locale from one call and see the failure.
-- Tests: —
+- Notes (2026-10-28):
+  - `DefaultLocaleOutputTest` makes the machine outputs with `en-US` and
+    with `de-DE`, `tr-TR`, `ar-EG`, `fa-IR`, and `th-TH-u-nu-thai`, and
+    compares them: the FFmpeg command, the ASS files of the scoreboard,
+    the comments, and the statistics card, the time codes, and the saved
+    project files. It sets the main locale and the FORMAT and DISPLAY
+    categories, and sets the old values again after the test.
+  - One test with each locale, not a second run of all test classes. The
+    test keeps `DisplayFormats.formatLocale` fixed, because the display
+    formats follow the regional format on purpose.
+  - Proof: without the locale in `Timecode.format`, the test failed for
+    `ar-EG`, `fa-IR`, and `th-TH-u-nu-thai`, and the scan of E1-T4 also
+    failed.
+- Tests: `DefaultLocaleOutputTest`.
 
 ### E1-T4 Test that finds calls with the default locale
 
-- Status: open
+- Status: done
 - Plan: 5
 - Value: a new format call without a locale cannot go into the code.
 - Requirements:
@@ -160,7 +188,22 @@ Not in this epic:
   - A new `String.format(Locale.getDefault(), …)` outside `i18n` makes the
     test fail.
   - The allowlist is empty, or each entry has a written reason.
-- Tests: —
+- Notes (2026-10-28):
+  - `DefaultLocaleScanTest` reads the main sources line by line. It finds
+    `"…".format` and `String.format` without a locale, `toUpperCase()`,
+    `toLowerCase()`, `ofPattern` without a locale, `ofLocalized…` without
+    `withLocale` on the same line, `NumberFormat`, `DecimalFormat`,
+    `DecimalFormatSymbols`, and `SimpleDateFormat` without a locale,
+    `MessageFormat`, `Collator.getInstance()`, `printf`,
+    `java.util.Formatter`, and `Locale.getDefault` outside of `i18n`. It
+    does not read comments and imports.
+  - The allowlist `src/test/resources/i18n/default-locale-calls.txt` has
+    one "path | code | reason" line for each call. An entry without a call
+    in the code makes the test fail. It has 2 entries: the app start reads
+    the Windows display language for the analytics value `os_language` and
+    for the "System" choice of the language setting.
+  - A second test gives the scan a sample source with each kind of call.
+- Tests: `DefaultLocaleScanTest`.
 
 ### E1-T5 Display formats
 

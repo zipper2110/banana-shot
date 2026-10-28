@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.export
 import java.io.File
 import java.security.MessageDigest
 import java.util.prefs.Preferences
+import org.litvin.i18n.MachineFormats
 
 /**
  * The quality choices that the export keeps between sessions. The resolution, frame rate and bitrate
@@ -102,7 +103,7 @@ class ExportSettingsPreferences(
             ?: return null
         val digest = MessageDigest.getInstance("SHA-1")
             .digest(normalized.toByteArray(Charsets.UTF_8))
-            .joinToString("") { "%02x".format(it) }
+            .joinToString("") { MachineFormats.format("%02x", it) }
         return prefix + digest
     }
 

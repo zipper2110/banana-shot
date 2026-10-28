@@ -11,6 +11,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import java.io.File
 import org.litvin.JsonFileIO
+import org.litvin.i18n.MachineFormats
 
 /**
  * Adjustments v1 schema and JSON read/write helpers (epic 5.1).
@@ -131,7 +132,7 @@ fun parseBackground(text: String?): Int? {
 }
 
 /** The "#RRGGBB" text of a 0xRRGGBB value. */
-fun backgroundHex(rgb: Int): String = "#%06X".format(rgb and 0xFFFFFF)
+fun backgroundHex(rgb: Int): String = MachineFormats.format("#%06X", rgb and 0xFFFFFF)
 
 object AdjustmentsIO {
     private val mapper: ObjectMapper = ObjectMapper()

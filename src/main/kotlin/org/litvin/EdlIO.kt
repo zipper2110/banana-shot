@@ -121,7 +121,7 @@ data class CommentV1(
     val startMs: Int,
     val durationMs: Int,
     val text: String,
-    val colorHex: String = "#FFFFFF",
+    val colorHex: String = DEFAULT_COLOR_HEX,
     val style: CommentStyle = CommentStyle.OUTLINE,
     /** The place of the comment in the frame. Null is the default place: centered, in the lower third. */
     val position: CommentPosition? = null,
@@ -133,6 +133,8 @@ data class CommentV1(
     val rotationDeg: Int = 0,
 ) {
     companion object {
+        /** The color of a new comment: white. */
+        const val DEFAULT_COLOR_HEX = "#FFFFFF"
         const val DEFAULT_SIZE_PERCENT = 100
         const val MIN_SIZE_PERCENT = 50
         const val MAX_SIZE_PERCENT = 200
@@ -296,5 +298,5 @@ object EdlIO {
     fun writeForProjectDir(projectDir: String, edl: EdlV1) = write(edlFilePath(projectDir), edl)
 
     private val COLOR_HEX_PATTERN = Regex("^#?([0-9A-Fa-f]{6})$")
-    private const val DEFAULT_COMMENT_COLOR = "#FFFFFF"
+    private const val DEFAULT_COMMENT_COLOR = CommentV1.DEFAULT_COLOR_HEX
 }

@@ -108,7 +108,7 @@ internal class ReplayEditorWindow(
     /** The comments of the project. The preview and the comment view show the point comments (decision 24). */
     private val pointComments: List<CommentV1> = emptyList(),
     /** The color and the look of a new comment. */
-    private val newCommentLook: CommentInput = CommentInput(0, 0, "", "#FFFFFF"),
+    private val newCommentLook: CommentInput = CommentInput(0, 0, "", CommentV1.DEFAULT_COLOR_HEX),
     /** Remembers the look of a saved comment for the next new comment. */
     private val onCommentLook: (CommentLook) -> Unit = {},
 ) : JFrame(tr("replay.editor.title", "point" to pointTitle)) {

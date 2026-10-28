@@ -107,8 +107,9 @@ are in the plan, "Epics".
 - Plan: 11
 - Value: the first Spanish users get the update notes in Spanish.
 - Requirements:
-  - The rules file has the Spanish notes of the next release. The reviewer
-    of E4 checks them.
+  - The rules file has the Spanish notes of the next release. The author
+    checks them. A native review is not necessary (plan, "Decisions",
+    "Translation").
 - Acceptance:
   - On Windows, the Spanish app shows the Spanish notes, and the English
     app shows the English notes.

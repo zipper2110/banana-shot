@@ -195,6 +195,9 @@ object ThumbnailColorSets {
         )
         ColorRole.ON_ACCENT, ColorRole.ON_PANEL, ColorRole.ON_CARD -> ink
     }
+
+    /** The swatches of the brand name color: the accent swatches and black. */
+    fun brandSwatches(): List<NamedColor> = swatches(ColorRole.ACCENT) + NamedColor(0x141414, "share.color.black")
 }
 
 /** The groups of the style cards. Classic has the six styles of B-46. The other groups are the styles of B-53. */

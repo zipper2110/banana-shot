@@ -10,7 +10,8 @@ are in the plan, "Epics".
 - Status: in-progress
 - Plan sections: 2 (plural forms), 6 ("Fonts", "Fit"), 8, 12, 13
 - Depends on: E4 (the process for a new language), E2 (the data)
-- Size: about 1 week for each language, mostly review time.
+- Size: about 1 week for each language. No native review (plan,
+  "Decisions", "Translation", 2026-10-28).
 - Value: a large part of the users can use the app in their language. The
   author selected Russian, Portuguese, French, and German on 2026-10-20
   (plan, "Decisions", "Next languages"). The data of E2 selects the later
@@ -43,16 +44,17 @@ example `E7-L-pt`), and copy the template below.
 - Requirements:
   - Use at least 4 weeks of `os_language` data from the cockpit (E2).
   - Compare the data with the marketing plan.
-  - Select the languages and their order. A reviewer must be available for
-    each one.
+  - Select the languages and their order. A reviewer is not necessary
+    (plan, "Decisions", "Translation").
 - Acceptance:
   - The plan, "Decisions", has the list, the order, and the data.
 - Tests: — (decision)
 - Notes: the author selected Russian on 2026-10-20, before the 4 weeks of
   data (plan, "Decisions", "Russian"). On the same day the author selected
   Portuguese, French, and German in this order, also before the data (plan,
-  "Decisions", "Next languages"). The reviewers are not known yet. Later
-  languages wait for the data.
+  "Decisions", "Next languages"). On 2026-10-28 the author decided that
+  the languages ship without reviewers. Later languages wait for the
+  data.
 
 ### E7-T2 Plural forms with the CLDR rules
 
@@ -185,8 +187,7 @@ example `E7-L-pt`), and copy the template below.
     file dialog is the Windows dialog. Thus no English Swing text shows.
   - `ScoreboardPreviewMain --language=ru` shows the video texts of all
     styles. They fit.
-  - Open: the review by a native speaker, the Windows smoke test in
-    Russian, and the open parts of E7-T3 and E7-T4.
+  - Open: the Windows smoke test in Russian, and the open parts of E7-T3 and E7-T4.
 
 ### E7-L-pt Portuguese (Brazil and Portugal)
 
@@ -202,8 +203,9 @@ example `E7-L-pt`), and copy the template below.
     from `pt`.
   - The detection gives Brazil for `pt-BR` and `pt`, and Portugal for
     `pt-PT` and all other Portuguese locales.
-  - A reviewer from Brazil reviews `pt`. A reviewer from Portugal reviews
-    `pt-PT`, and also checks the `pt` texts that `pt-PT` uses.
+  - A native review is optional. If reviewers come forward later, one
+    from Brazil reviews `pt`, and one from Portugal reviews `pt-PT` and
+    the `pt` texts that `pt-PT` uses.
   - The glossary has one Portuguese section with a column for each
     variant, as the Spanish section.
   - The `pt-PT` plural rule (E7-T2).
@@ -233,8 +235,7 @@ example `E7-L-pt`), and copy the template below.
     "enquadramento" needs 98 px and makes the sidebar 114 px wide.
   - `ScoreboardPreviewMain --language=pt` shows the video texts of all
     styles. They fit.
-  - Open: the review by a native speaker from Brazil and from Portugal,
-    the Windows smoke test in both variants, and the open parts of E7-T3
+  - Open: the Windows smoke test in both variants, and the open parts of E7-T3
     and E7-T4.
 
 ### E7-L-fr French
@@ -246,7 +247,7 @@ example `E7-L-pt`), and copy the template below.
   app and share videos in French.
 - Requirements:
   - The template below.
-  - One variant for all countries. The reviewer checks that no text uses a
+  - One variant for all countries. The author checks that no text uses a
     word that only France uses, if a common word exists.
   - French typography: a no-break space before ":", ";", "?", and "!", and
     inside « … ». A normal space can break the line before the mark.
@@ -281,12 +282,11 @@ example `E7-L-pt`), and copy the template below.
     layout, the code of a letter key is the letter on the key. Thus the
     names Q, W, E, R, S, C, V, and F in the help are correct on AZERTY.
     On AZERTY, the keys Q, W, and E are not side by side (Q and W are at
-    the left of the middle row and of the bottom row). The reviewer tells
-    if this is a problem.
+    the left of the middle row and of the bottom row). The feedback of
+    the users tells if this is a problem.
   - `ScoreboardPreviewMain --language=fr` shows the video texts of all
     styles. They fit.
-  - Open: the review by a native speaker, the sidebar width in the app,
-    the Windows smoke test in French, and the open parts of E7-T3 and
+  - Open: the sidebar width in the app, the Windows smoke test in French, and the open parts of E7-T3 and
     E7-T4.
 
 ### E7-L-de German
@@ -326,8 +326,7 @@ example `E7-L-pt`), and copy the template below.
     the Export tab did this already.
   - The video badge "ENTSCHEIDUNGSPUNKT" has 18 letters. The catalog
     comment allows about 16.
-  - Open: the review by a native speaker, the sidebar width in the app,
-    the Windows smoke test in German, and the open parts of E7-T3 and
+  - Open: the sidebar width in the app, the Windows smoke test in German, and the open parts of E7-T3 and
     E7-T4.
 
 ### Template: E7-L-`<code>` `<Language>`
@@ -338,10 +337,11 @@ example `E7-L-pt`), and copy the template below.
   their language.
 - Requirements:
   - The glossary of the language is in `docs/localization/glossary.md`.
-  - A native speaker who plays tennis or padel reviews the texts from the
-    screenshots (E4-T4).
   - The catalog and the help of the language come from a machine draft
-    with the glossary and the key comments, and then the review.
+    with the glossary and the key comments.
+  - A native review is optional (plan, "Decisions", "Translation"). If a
+    native speaker who plays tennis or padel comes forward, they review
+    the texts from the screenshots (E4-T4).
   - The language code is in the language list of E2-T1. Thus the
     analytics and the feedback accept it without a deployment. If the code
     is not in the list, change the list first, and deploy the workers
@@ -356,7 +356,6 @@ example `E7-L-pt`), and copy the template below.
     care.
 - Acceptance:
   - The check of E4-T3 shows no missing key for the language.
-  - The reviewer accepts all texts.
   - The fit tests (E3-T19), the font test (E7-T4), and the plural test
     (E7-T2) pass for the language.
   - The Windows smoke test passes in the language.

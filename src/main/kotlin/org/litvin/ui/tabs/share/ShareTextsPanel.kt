@@ -1,7 +1,6 @@
 package org.litvin.ui.tabs.share
 
 import org.litvin.share.ColorRole
-import org.litvin.share.NamedColor
 import org.litvin.share.ThumbnailColorSets
 import org.litvin.share.ThumbnailFace
 import org.litvin.share.ThumbnailField
@@ -142,7 +141,7 @@ internal class ShareTextsPanel(
     }
     private var brandColorValue = ThumbnailLooks.AUTO
     private val brandAuto = ColorSwatch("share-brand-color-auto", tr("share.brand.color.auto"), null)
-    private val brandSwatches = (ThumbnailColorSets.swatches(ColorRole.ACCENT) + NamedColor(0x141414, "share.color.black")).map { named ->
+    private val brandSwatches = ThumbnailColorSets.brandSwatches().map { named ->
         ColorSwatch("share-brand-color-${named.id}", named.name, Color(named.rgb)) to named.rgb
     }
     private val brandCustom = ColorSwatch(

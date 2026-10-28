@@ -10,6 +10,10 @@ Rules for all languages:
 - If a term is a name in the UI (a tab, a button, a field), use the exact
   catalog text of that name in the help and in the other texts.
 - The words in the "Do not translate" list stay as they are.
+- Decided on 2026-10-28: the languages ship without a native review (plan,
+  "Decisions", "Translation"). The terms in the tables are the terms of the
+  release. The sections "Open questions for the reviewer" stay for a later
+  review, if a reviewer comes forward.
 
 ## Do not translate
 
@@ -158,8 +162,9 @@ these controls use a short form. The help uses the same short form.
 
 ### Open questions
 
-The reviewers of E4-T7 check all texts. If possible, one reviewer is from
-Spain and one is from Latin America. There are no open term questions now.
+There are no open term questions now. The release has no native review
+(decided on 2026-10-28). If reviewers come forward later (E4-T7), one from
+Spain and one from Latin America check all texts.
 
 ## Russian (`ru`)
 

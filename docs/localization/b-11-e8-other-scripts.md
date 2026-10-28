@@ -44,8 +44,8 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   users.
 - Requirements:
   - Compare the number of users of each language (`os_language` data) with
-    the cost of the fonts and of the review.
-  - A reviewer must be available.
+    the cost of the fonts.
+  - A reviewer is not necessary (plan, "Decisions", "Translation").
   - Chinese has two scripts. The analytics value `zh` does not tell
     Simplified from Traditional. Decide the script from other data (for
     example the feedback, or the marketing plan). Do not guess from `zh`.
@@ -54,14 +54,15 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
     Simplified Chinese. If the app has only one of the two, the other
     gives English, not the wrong script.
 - Acceptance:
-  - The plan, "Decisions", has the language, the data, and the reviewer.
+  - The plan, "Decisions", has the language and the data.
   - If the language is Chinese, a test proves that `zh-TW` does not give
     Simplified Chinese.
 - Tests: `LanguageSettingsTest` ("Chinese of Taiwan, Hong Kong, and Macau
   gives Traditional Chinese").
 - Notes: on 2026-10-20 the author selected Japanese, Simplified Chinese,
   and Traditional Chinese, before the data of E2. Simplified Chinese comes
-  before Traditional Chinese. The reviewers are not known yet. On
+  before Traditional Chinese. On 2026-10-28 the author decided that the
+  languages ship without reviewers. On
   2026-10-21 the app has both Chinese languages, so the case "only one of
   the two" does not apply.
 
@@ -252,8 +253,8 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The key names use arrows ("←", "→", "↑", "↓"). The key chips use the
     font "Dialog" for a character that the UI font does not show.
   - The help and the texts put the names of tabs and buttons in 「…」.
-  - Open: the review by a native speaker, the screenshots and the sidebar
-    width in the app, the Windows smoke test in Japanese, the input method
+  - Open: the screenshots and the sidebar width in the app, the Windows
+    smoke test in Japanese, the input method
     check (E8-T5), and the open parts of E7-T3 and E7-T4.
 
 ### E8-L-zh-Hans Simplified Chinese
@@ -270,7 +271,8 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
     plural forms, so each plural message has only `other`.
   - The help and the texts do not say that YouTube is the only place to
     share a video. Check the thumbnail texts ("YouTube thumbnail").
-  - A reviewer from mainland China.
+  - A native review is optional. A later reviewer, if one comes forward,
+    is from mainland China.
 - Acceptance:
   - The template of E7.
   - A test gives Simplified Chinese for `zh-CN`, `zh-SG`, `zh-Hans`, and
@@ -294,8 +296,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - "YouTube thumbnail" is "视频封面", and "YouTube search" is
     "视频平台的搜索结果". The texts keep "YouTube" only for a fact about
     YouTube (the 2 MB limit).
-  - Open: the review by a native speaker from mainland China, the
-    screenshots and the sidebar width in the app, the Windows smoke test in
+  - Open: the screenshots and the sidebar width in the app, the Windows smoke test in
     Simplified Chinese, the input method check (E8-T5), and the open parts
     of E7-T3 and E7-T4.
 
@@ -309,13 +310,14 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 - Requirements:
   - The template of E7.
   - A full catalog, not a child of `zh-Hans`. The draft is a conversion of
-    the reviewed Simplified texts with the Taiwan terms (for example
+    the Simplified texts with the Taiwan terms (for example
     "影片", "專案", "檔案"). A conversion of only the characters is not
     sufficient.
   - Traditional Chinese quotes are 「…」.
   - The glossary has its own section for `zh-Hant`.
-  - A reviewer from Taiwan. If possible, a second reviewer from Hong Kong
-    checks the terms.
+  - A native review is optional. A later reviewer, if one comes forward,
+    is from Taiwan. If possible, a second reviewer from Hong Kong checks
+    the terms.
 - Acceptance:
   - The template of E7.
   - A test gives Traditional Chinese for `zh-TW`, `zh-HK`, `zh-MO`, and
@@ -331,12 +333,11 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - Done on 2026-10-21: the machine draft of `messages_zh_Hant.properties`
     and `help_zh_Hant.properties` with the Taiwan terms, the glossary
     section, the detection, the plural rule, and the expiry date format.
-  - The draft is a conversion of the Simplified draft, not of reviewed
-    texts. The plan expects the reviewed Simplified texts first. Thus the
-    Traditional texts get the corrections of the Simplified review too.
+  - The draft is a conversion of the Simplified draft. If a later review
+    corrects the Simplified texts, the Traditional texts get the same
+    corrections.
   - The texts keep "YouTube" as in English ("製作 YouTube 縮圖").
-  - Open: the review by a native speaker from Taiwan (and, if possible, one
-    from Hong Kong), the screenshots and the sidebar width in the app, the
+  - Open: the screenshots and the sidebar width in the app, the
     Windows smoke test in Traditional Chinese, the input method check
     (E8-T5), and the open parts of E7-T3 and E7-T4.
 

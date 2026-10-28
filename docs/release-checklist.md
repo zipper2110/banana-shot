@@ -21,6 +21,12 @@ the features of this release.
       first-time hints.
 - [ ] Tooltips on the changed controls.
 - [ ] More → About and More → Contact.
+- [ ] Translations (B-11 E4-T3): look at the list of the missing and the
+      stale texts in the job summary of CI, or run `TranslationCheckMain`
+      (the command is in `TranslationCheckMain.kt`). No shipped language
+      has a missing key. The "Windows release" workflow stops on a missing
+      key. For each stale key, update the translation and write its record
+      (`--stamp=<code> --keys=<key>`), or ship the stale text.
 
 ## 3. Feedback Worker
 

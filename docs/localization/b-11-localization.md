@@ -40,7 +40,7 @@ proposal or an accepted decision. The column "Status" tells which.
 | First language | Spanish (Spain and Latin America, also padel). See `docs/marketing/strategy.md` and B-45 P-6 | proposal |
 | Next languages | The author selected the languages after Russian on 2026-10-20, before the data of E2 (E7-T1, E8-T1). The order: Portuguese, French, and German in E7, then Japanese and Chinese in E8. The Latin languages come first because they use the shared tasks of E7 and need no new script. E8 first does the shared CJK tasks (E8-T2 to E8-T5). Later languages come from the `os_language` data (see "10. Analytics") | accepted 2026-10-20 |
 | Portuguese variants | Two app languages: "Português (Brasil)" (`pt`) and "Português (Portugal)" (`pt-PT`). The `pt` catalog is Brazilian Portuguese. The `pt-PT` catalog files have only the texts that are different (for example "ecrã", "ficheiro", "transferir", "guardar", and "a exportar" for "exportando"). Windows `pt-BR` and `pt` give Brazil. `pt-PT` and all other Portuguese locales (`pt-AO`, `pt-MZ`, and others) give Portugal. Both variants use the imperative without a pronoun ("Selecione"). The analytics value is `pt` for both, as `es` for both Spanish variants. The tasks are in E7 (`E7-L-pt`) | accepted 2026-10-20 |
-| Chinese scripts | Two app languages: "简体中文" (`zh-Hans`) and "繁體中文" (`zh-Hant`). Each has a full catalog, not a parent and a child, because many terms are different (for example "视频" and "影片", "项目" and "專案", "文件" and "檔案"). Simplified Chinese comes first. The Traditional draft starts as a conversion of the Simplified texts with the Taiwan terms, and then gets its own review. `zh-CN`, `zh-SG`, `zh-Hans`, and `zh` give Simplified Chinese. `zh-TW`, `zh-HK`, `zh-MO`, and `zh-Hant` give Traditional Chinese. The analytics value is `zh` for both. The tasks are in E8 (`E8-L-zh-Hans`, `E8-L-zh-Hant`) | accepted 2026-10-20 |
+| Chinese scripts | Two app languages: "简体中文" (`zh-Hans`) and "繁體中文" (`zh-Hant`). Each has a full catalog, not a parent and a child, because many terms are different (for example "视频" and "影片", "项目" and "專案", "文件" and "檔案"). Simplified Chinese comes first. The Traditional draft starts as a conversion of the Simplified texts with the Taiwan terms. A later review (see "Translation") is separate for each script. `zh-CN`, `zh-SG`, `zh-Hans`, and `zh` give Simplified Chinese. `zh-TW`, `zh-HK`, `zh-MO`, and `zh-Hant` give Traditional Chinese. The analytics value is `zh` for both. The tasks are in E8 (`E8-L-zh-Hans`, `E8-L-zh-Hant`) | accepted 2026-10-20 |
 | CJK fonts | The app bundles no CJK font and downloads none. It uses the Windows fonts of the language: "Yu Gothic UI" for the Japanese UI and "Yu Gothic" for the Japanese video texts. Both are in all installations of Windows 10 and 11, so the installer does not get larger (a bundled Noto Sans CJK is more than 15 MB for each language). A video text that the font of the style cannot show uses the font of the script (`ScoreboardFonts.family`): the export, the preview, and the Java2D images use the same font. Latin texts and numbers keep the style font. A missing UI font gives the Java font "Dialog". The macOS build (B-13) must decide again. Chinese uses Microsoft YaHei UI and Microsoft YaHei for `zh-Hans`, and Microsoft JhengHei UI and Microsoft JhengHei for `zh-Hant`, in the same way (E8-T2, E8-T3, done 2026-10-21) | proposal 2026-10-20 |
 | Form of address | The informal form where the users of the language expect it from a sports app: German "du", Simplified and Traditional Chinese "你". French uses "vous". Portuguese uses the imperative without a pronoun ("Selecione"). Japanese uses the polite です/ます form in sentences, and short noun forms on buttons. The details are in `glossary.md` | accepted 2026-10-20 |
 | Video language | A separate setting of each export. The default is the app language (see "6. Texts in the exported video") | proposal |
@@ -52,9 +52,9 @@ proposal or an accepted decision. The column "Status" tells which.
 | Language values | One fixed list of language codes: the primary language subtags of the Windows display languages (about 40) plus `other`. The analytics attributes `language` (app language) and `os_language` (Windows language), and the feedback fields `app_language` and `os_language`, all use it. A new app language needs no change of a contract or a worker (see "10. Analytics") | accepted 2026-10-10 |
 | Language attributes level | The essential level sends `language` and `os_language`, not only the extended level. Opt-in data undercounts the users who do not read English well, and these are the users who need a translation. The legitimate interest assessment must cover them before the release. The other attributes stay on the extended level (see "10. Analytics") | accepted 2026-10-10 |
 | Message format | `.properties` files in UTF-8 with the ICU message syntax. The app reads them with its own parser of the ICU subset that the catalog uses (`MessagePattern`: named arguments, `plural`, `select`, ICU apostrophes) and its own CLDR plural rules (`PluralRules`). The app does not bundle ICU4J (about 14 MB). A later language with more plural forms adds its rule to `PluralRules`, and the catalog syntax does not change. The installer sizes were not measured | accepted 2026-10-19 |
-| Translation | Machine translation with a glossary as the first draft. A native speaker who plays tennis or padel reviews each language | proposal |
+| Translation | Machine translation with the glossary and the key comments. Decided on 2026-10-28: the languages ship without a native review. The catalog tests, the fit tests, and the smoke test are the checks. A native speaker who plays tennis or padel can review a language later, if one comes forward (for example from the feedback form). Then the corrections go into the next release | accepted 2026-10-28 |
 | Translation tool | The files stay in the repository. A hosted tool (Weblate or Crowdin) only if volunteer translators come | proposal |
-| Incomplete language | The app does not show a language until 100% of its texts are translated and reviewed | proposal |
+| Incomplete language | The app does not show a language until 100% of its texts are translated and the checks of the language pass. A native review is not necessary (see "Translation") | accepted 2026-10-28 |
 | Legal texts | The consent dialog and the Privacy page are translated. The author decides if the English text is the binding version (get legal advice) | proposal |
 | Notice version | Only a change of the content of the privacy notice increases `notice_version`. A new or updated translation does not | proposal |
 | Right-to-left | Not in B-11 | proposal |
@@ -510,8 +510,8 @@ separate setting.
   first translation. Then the worker and the cockpit accept each later app
   language. A new language needs no worker deployment before its release.
 - The test language `qps` is not a value of the list. When it is on, the app
-  sends `language` = `en`. A language that only reviewers see (section 13)
-  sends its own code.
+  sends `language` = `en`. A hidden language that the system property
+  shows (section 13) sends its own code.
 - Why the essential level: the extended level is opt-in. Few users select
   it, and they are not typical. A user who does not read English well is
   less likely to select an opt-in in an English dialog. Thus extended data
@@ -594,12 +594,14 @@ separate setting.
   some scoreboard fonts, and no planned language uses it. The font tests of
   section 6 find the font gaps.
 - The UI flow tests (`ui/flow`) run one time with `qps` in CI and save
-  screenshots (`UiFlowArtifacts`). A person checks the screenshots for each
+  screenshots (`UiFlowScreenshots`). A person checks the screenshots for each
   release with new texts.
 - The locale tests of section 5 (`de-DE`, `tr-TR`, `ar-EG` default locale).
 - The fit tests and the font tests of section 6.
 - Screenshots for translators: the UI flow tests make screenshots of each
-  tab in each language. The reviewer checks the texts in their place.
+  tab in each language. The author (and a later reviewer) checks the texts
+  in their place. The command is
+  `qa/Make-TranslatorScreenshots.ps1 -Language <code>` (E4-T4).
 - Windows smoke test (`qa/windows/ui-smoke.md`): add one pass on Windows in
   Spanish for each new language.
 
@@ -623,18 +625,20 @@ separate setting.
   Transform. Each term has one translation, and all texts use it.
 - First draft: machine translation with the glossary and the comments of
   the keys.
-- Review: a native speaker who plays tennis or padel. Good candidates are
+- Review: not necessary for a release (see "Decisions", "Translation").
+  If a native speaker who plays tennis or padel comes forward later, they
+  review from the screenshots, not only from the file. Good candidates are
   users from the feedback form or the local chats of the marketing plan.
-  The reviewer works from the screenshots, not only from the file.
 - Changes to English texts:
   - Each translated file keeps a hash of the English text that it
     translates. A change of the English text makes the translation stale.
   - A CI check lists the missing and the stale keys for each language. It
     does not stop a pull request. It stops a release if a shipped language
     has missing keys (see the release checklist).
-  - A stale translation stays in use until the reviewer updates it.
+  - A stale translation stays in use until a new draft updates it.
 - New languages: the app shows a language only when it is complete and
-  reviewed. Until then, a system property can show it for the reviewers.
+  its checks pass. Until then, a system property can show it for the
+  author.
 
 ## 14. Documentation to change
 
@@ -726,7 +730,7 @@ release the app after each epic. Each epic has its own file with its tasks.
 - Do not remove a task when it is done. Set its status to `done`, and write
   the test classes or the test methods in "Tests".
 - Keep the summary table of each epic file up to date when a task status
-  changes. Set the epic status to `done` when all its tasks are done.
+  changes. Set the epic status to `done` when all its tasks are `done` or `later`.
 - One pull request can contain one or more tasks of one epic. Each pull
   request must pass CI.
 
@@ -737,6 +741,7 @@ Status values:
 | `open` | No work started. |
 | `in-progress` | Work started. The task is not complete. |
 | `done` | All acceptance criteria pass. "Tests" names the proof. |
+| `later` | Not necessary for the epic now. The task stays for a later release. The epic can be `done` with `later` tasks. |
 
 ### Later
 
@@ -749,14 +754,17 @@ translation tool, and user-defined shortcuts.
 - ICU4J: about 14 MB more in the installer (or our own plural rules).
 - Bundled fonts: a few MB for Latin, Cyrillic, and Greek. More than 15 MB
   for each CJK language.
-- Native reviewers: their time, or a fee for a professional review.
+- Native reviewers: their time, or a fee for a professional review. Only
+  if a reviewer comes forward. A release does not need one (see
+  "Decisions", "Translation").
 - A hosted translation tool: free or paid, only if volunteers come.
 
 ## Done when
 
 B-11 is done after E6. E7 and E8 continue with each new language.
 
-- The app has a complete Spanish translation, reviewed by a native speaker.
+- The app has a complete Spanish translation. A native review is not
+  necessary (see "Decisions", "Translation").
 - At the first start on Windows in Spanish, the app shows Spanish.
 - The user can change the app language and the video language.
 - A Spanish export shows the Spanish scoreboard and statistics texts, and

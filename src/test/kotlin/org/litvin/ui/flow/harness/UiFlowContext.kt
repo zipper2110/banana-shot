@@ -34,6 +34,8 @@ class UiFlowContext internal constructor(
     internal val asynchronousFailures: CopyOnWriteArrayList<Throwable>,
     /** True when the "Checking the date…" window showed during the expiry check at start (path A). */
     val checkingDateWindowShown: Boolean = false,
+    /** The screenshots for the translators (B-11 E4-T4). They are off without the property. */
+    val screenshots: UiFlowScreenshots = UiFlowScreenshots(null),
 ) {
     val mediaPlayers: FakeMediaPlayerFactory
         get() = checkNotNull(fakeMediaPlayers) { "This UI flow uses the native media players" }

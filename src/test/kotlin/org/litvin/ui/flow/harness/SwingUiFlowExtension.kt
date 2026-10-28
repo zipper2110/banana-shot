@@ -84,6 +84,7 @@ class SwingUiFlowExtension(
 ) : BeforeEachCallback, AfterTestExecutionCallback, AfterEachCallback, ParameterResolver {
     private var current: UiFlowContext? = null
     private var testFailure: Throwable? = null
+    private var screenshots = UiFlowScreenshots(null)
     private var previousUncaughtHandler: Thread.UncaughtExceptionHandler? = null
     private var previousRepaintManager: RepaintManager? = null
     private var lifecycleOrdinal = 0
@@ -106,6 +107,7 @@ class SwingUiFlowExtension(
             HintId.entries.forEach { node(PreferencesProvider.APPLICATION).putBoolean(PreferencesHintRegistry.key(it), true) }
         }
         installLanguage(preferences)
+        screenshots = UiFlowScreenshots.forTest(className, methodName)
         lifecycleOrdinal = 0
 
         previousUncaughtHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -136,6 +138,10 @@ class SwingUiFlowExtension(
     override fun afterTestExecution(context: ExtensionContext) {
         testFailure = context.executionException.orElse(null)
             ?: current?.asynchronousFailures?.firstOrNull()
+        // The windows of the end of the test. A failed screenshot does not change the test result.
+        runCatching { screenshots.captureNewWindows() }.exceptionOrNull()?.let { failure ->
+            testFailure?.addSuppressed(failure) ?: System.err.println("UI flow screenshot failed: $failure")
+        }
     }
 
     override fun afterEach(context: ExtensionContext) {
@@ -272,7 +278,9 @@ class SwingUiFlowExtension(
                 SwingApplicationFactory.create(services, show = true, updateAndRestart = UiFlowUpdate.NONE)
             }
             application = builtApplication
-            val builtDriver = driverFactory()
+            val builtDriver = driverFactory().let { plain ->
+                if (screenshots.enabled) ScreenshotSwingDriver(plain, screenshots) else plain
+            }
             driver = builtDriver
             return UiFlowContext(
                 workspace = workspace,
@@ -292,6 +300,7 @@ class SwingUiFlowExtension(
                 threadPrefix = threadPrefix,
                 asynchronousFailures = failures,
                 checkingDateWindowShown = checkingDateWindowShown,
+                screenshots = screenshots,
             ).apply {
                 onRestart { restartApplication(this) }
             }

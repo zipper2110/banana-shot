@@ -54,6 +54,9 @@ None. Write each new decision in "Decisions" at once.
 The author was away during the work of 2026-10-26. These choices were made
 without a question. Check them, and change them if necessary.
 
+Checked on 2026-10-28: the author checked the replays in the app. All
+replay functions work. The author accepts R1 to R24.
+
 | # | Task | Choice |
 |---|---|---|
 | R1 | T6 | The badge texts: en and pt "REPLAY", de "WIEDERHOLUNG", es "REPETICIÓN", fr "RALENTI", ru "ПОВТОР", ja "リプレイ", zh_Hans "回放", zh_Hant "重播". |
@@ -93,7 +96,7 @@ without a question. Check them, and change them if necessary.
 | T5 | Replays on the Points tab: timeline, list, button | T2, T4 | done |
 | T6 | Export of the replays | T1 | done |
 | T7 | Texts, help, and translations | T4, T5 | done |
-| T8 | Site, changelog, and version scope | T1–T7 | open |
+| T8 | Site, changelog, and version scope | T1–T7 | in-progress |
 
 Status values: `open`, `in-progress`, `done`. When a task is done, write
 the test classes in its "Tests" line. Do not remove the task.
@@ -187,7 +190,7 @@ prototype measures how long the picture stops at each seek.
 
 ### T3 Live playback of the replays
 
-- Status: done, but not checked in a real player (R8). `ReplayDirector`
+- Status: done. Checked in the app on 2026-10-28 (R8). `ReplayDirector`
   gives the commands, and `SwingPointsPanel` sends them to the player.
   `SwingMediaPlayer` has `setReplayView`, `setReplaySound`, and
   `onPlaybackRestart`. `tr-adjust.hook` has the zoom and the dip
@@ -213,7 +216,7 @@ prototype measures how long the picture stops at each seek.
 
 ### T4 Replay editor popup
 
-- Status: done, but not checked on the screen (R9). `ReplayEditorWindow`
+- Status: done. Checked in the app on 2026-10-28 (R9). `ReplayEditorWindow`
   is a window that is not modal, with its own player (`MediaScreen.REPLAY_EDITOR`).
   `ReplayEditorModel` holds the changes until Save. `ReplayPartBar` is the
   bar under the video, and `ReplayZoomOverlay` draws the zoom frame with
@@ -235,7 +238,7 @@ prototype measures how long the picture stops at each seek.
 
 ### T5 Replays on the Points tab: timeline, list, button
 
-- Status: done, but not checked on the screen (R9). `TimelineScale`
+- Status: done. Checked in the app on 2026-10-28 (R9). `TimelineScale`
   converts between source time and the play time of the timeline.
 - The replay button at the right end of the playback bar, and a replay
   icon on each row of the list. They open the popup for the point at the
@@ -292,6 +295,8 @@ prototype measures how long the picture stops at each seek.
 
 ### T8 Site, changelog, and version scope
 
+- Status: in-progress. B-50 is in `docs/version-scope/1.3.0.md`. The
+  changelog and the site pages are not done.
 - The changelog and the site pages that list the features.
 - Move B-50 to the version scope file of its release.
 - Tests: —

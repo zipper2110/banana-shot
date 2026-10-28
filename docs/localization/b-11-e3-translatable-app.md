@@ -241,6 +241,8 @@ Order of the work:
   - All UI flow tests pass in `qps`.
   - The `qps` run adds less than the time of one normal UI flow run. If it
     adds more, it runs only on the main branch and on release tags.
+- Notes: E4-T4 added the screenshots (`UiFlowScreenshots`,
+  `qa/Make-TranslatorScreenshots.ps1 -Language qps`). Open: the CI job.
 - Tests: —
 
 ### Extraction tasks (E3-T6 to E3-T17)

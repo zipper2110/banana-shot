@@ -28,5 +28,11 @@ jobs:
       - name: Build and run tests
         run: mvn -B test
 
+      - name: List the missing and the stale translations
+        # B-11 E4-T3. The list is in the job summary. It does not stop a pull request.
+        continue-on-error: true
+        shell: pwsh
+        run: mvn -B -q exec:java "-Dexec.classpathScope=test" "-Dapp.mainClass=org.litvin.i18n.TranslationCheckMainKt" "-Dexec.args=--summary=$env:GITHUB_STEP_SUMMARY"
+
       - name: Test the workflow scripts
         run: node --test .github/scripts/release-age-reminder.test.js

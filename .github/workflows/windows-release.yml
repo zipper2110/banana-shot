@@ -38,6 +38,12 @@ jobs:
         shell: pwsh
         run: mvn -B test
 
+      - name: Check that no language has missing texts
+        # B-11 E4-T3: the release stops when a shipped language has a missing key.
+        # Stale translations do not stop it. The list is in the job summary.
+        shell: pwsh
+        run: mvn -B -q exec:java "-Dexec.classpathScope=test" "-Dapp.mainClass=org.litvin.i18n.TranslationCheckMainKt" "-Dexec.args=--fail-on-missing --summary=$env:GITHUB_STEP_SUMMARY"
+
   windows-installer:
     # Builds, signs, and checks the release files. It uploads them as a workflow artifact.
     # Only this job gets the signing secrets of the windows-release environment.

@@ -11,36 +11,39 @@ are in the plan, "Epics".
 - Plan sections: 4, 6 ("Setting", "Fit"), 10, 12, 13, 14
 - Depends on: E3. E2 must be released some weeks before (for the data, not
   for the code).
-- Size: 1 to 2 weeks, mostly review time. Most of the code work is in E3.
+- Size: about 1 week. Most of the code work is in E3. No native review
+  (plan, "Decisions", "Translation", 2026-10-28).
 - Value:
   - Spanish-speaking players (Spain and Latin America, tennis and padel)
     can use the app and share videos in Spanish.
   - The app starts in Spanish on a Windows in Spanish. The user can change
     the language in More, Settings. The video uses the app language.
-- Prepares: the process for each new language: glossary, draft, review,
-  fit check, smoke test. E7 and E8 repeat it.
+- Prepares: the process for each new language: glossary, draft, fit
+  check, smoke test. E7 and E8 repeat it.
 
 ## Tasks
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E4-T1 | Find the reviewer | — | open |
-| E4-T2 | Spanish glossary | — | in-progress |
-| E4-T3 | Check of the missing and the stale texts | — | open |
-| E4-T4 | Screenshots for translators | E3-T5 | open |
+| E4-T1 | Find the reviewer | — | later |
+| E4-T2 | Spanish glossary | — | done |
+| E4-T3 | Check of the missing and the stale texts | — | done |
+| E4-T4 | Screenshots for translators | E3-T5 | done |
 | E4-T5 | Machine draft | E4-T2, E4-T3 | in-progress |
 | E4-T6 | Legal texts | E4-T5 | open |
-| E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | open |
+| E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | later |
 | E4-T8 | Fit tests for Spanish | E4-T5 | open |
 | E4-T9 | Queued render job keeps its language | — | done |
 | E4-T10 | The app sends the language `es` | — | in-progress |
-| E4-T11 | Show the language setting | E4-T7 | in-progress |
+| E4-T11 | Show the language setting | E4-T5, E4-T8 | in-progress |
 | E4-T12 | Windows smoke test in Spanish | E4-T11 | in-progress |
-| E4-T13 | Documentation and release | E4-T1–E4-T12 | open |
+| E4-T13 | Documentation and release | E4-T2–E4-T12, without E4-T7 | open |
 
 ### E4-T1 Find the reviewer
 
-- Status: open
+- Status: later. Decided on 2026-10-28: Spanish ships without a reviewer
+  (plan, "Decisions", "Translation"). Do this task if a reviewer comes
+  forward.
 - Plan: 13 ("Review"), "Costs"
 - Value: a person who knows the language and the sport makes sure that the
   texts are correct and natural.
@@ -59,7 +62,7 @@ are in the plan, "Epics".
 
 ### E4-T2 Spanish glossary
 
-- Status: in-progress
+- Status: done
 - Plan: 13 ("A glossary for each language"), 6 ("The score words")
 - Value: each term has one translation in all texts. The draft and the
   review use the same terms.
@@ -81,13 +84,14 @@ are in the plan, "Epics".
     and the file extensions. A test checks that each such term in an
     English text is also in its translation.
 - Acceptance:
-  - The reviewer of E4-T7 accepts the glossary before the review of the
-    texts.
-- Tests: —
+  - The glossary has no open term questions. Without a reviewer
+    (2026-10-28), the glossary is final for the release. A later reviewer
+    (E4-T7) can change it.
+- Tests: `MessageCatalogTest` (the "do not translate" list).
 
 ### E4-T3 Check of the missing and the stale texts
 
-- Status: open
+- Status: done
 - Plan: 13 ("Changes to English texts")
 - Value: after a change of an English text, the author knows which
   translations to update. A release cannot ship a language with missing
@@ -100,13 +104,13 @@ are in the plan, "Epics".
     stale when the English text changed after the translation.
   - CI shows the list. It does not stop a pull request.
   - The release stops if a shipped language has missing keys.
-  - A stale translation stays in use until the reviewer updates it.
+  - A stale translation stays in use until a new draft updates it.
   - Bad records:
     - A translated key without a record is stale, not current.
     - A record with a wrong form (for example a cut hash) is stale. The
       tool tells the key and does not stop.
     - A change of only the spaces or the punctuation of the English text
-      also makes the key stale. The reviewer decides if the translation
+      also makes the key stale. The author decides if the translation
       changes.
   - A renamed English key: the old key in the Spanish file is a test
     failure (E3-T2). The tool tells the old key and the new key, so the
@@ -118,28 +122,52 @@ are in the plan, "Epics".
   - A test removes the record of a Spanish key and sees the key as stale.
   - A test gives an empty Spanish value and sees the key as missing.
   - The release checklist has the step.
-- Tests: —
+- Notes: the record is the line `#@en=<hash>` above each key: the first 8
+  hex digits of the SHA-256 of the English text. `TranslationCheckMain`
+  (test sources) lists the missing, the stale, and the renamed keys, and
+  writes the records (`--stamp`). CI shows the list in the job summary. The
+  "Windows release" workflow runs it with `--fail-on-missing`. The first
+  records (2026-10-28) come from the git history: no translation was older
+  than its English text. The only exceptions were `points.count.favorites`
+  and `points.count.comments` in Spanish. English got a `one` form there
+  later, and the Spanish texts already had it, so they are current.
+- Tests: `TranslationCheckTest`.
 
 ### E4-T4 Screenshots for translators
 
-- Status: open
+- Status: done
 - Plan: 12 ("Screenshots for translators")
-- Value: the reviewer sees each text in its place, and can find texts that
-  are wrong for their place or too long.
+- Value: the author (and a later reviewer) sees each text in its place,
+  and can find texts that are wrong for their place or too long.
 - Requirements:
   - The UI flow tests can run with a given language and save a screenshot
     of each tab and each dialog (as E3-T5 does for `qps`).
   - One command or one CI job makes the screenshots for one language.
 - Acceptance:
-  - The reviewer gets a folder with the screenshots of the Spanish draft.
-- Tests: —
+  - One command gives a folder with the screenshots of the Spanish draft.
+- Notes: the command is `qa/Make-TranslatorScreenshots.ps1 -Language es`.
+  It runs the UI flow tests with `bananashot.language` and
+  `bananashot.uiFlow.screenshots=true`. The files go to
+  `target/translator-screenshots/<language>/<test class>/<test method>/`.
+  `-Tests AllWindowsUiFlowIT` runs only the test that opens each tab, each
+  Help page, each More section, and the feedback form, and saves a named
+  screenshot of each (21 files, about 30 s). With `-Tests`, the screenshots
+  of the other classes stay. In the other tests,
+  `UiFlowScreenshots` saves each new window title before each action of the
+  driver, so the dialogs of these tests are also in the folder. A failed
+  test does not stop the run. The script tells the failed classes. The tests
+  use the mouse, so do not use the PC during the run. A screenshot shows only
+  the visible part of a long Help page; the full text is in the help file.
+  This task does not need the CI part of E3-T5.
+- Tests: `AllWindowsUiFlowIT` (also without screenshots: each tab and each
+  window opens in the app language).
 
 ### E4-T5 Machine draft
 
 - Status: in-progress
 - Plan: 13 ("First draft")
-- Value: the reviewer corrects a full draft and does not translate from
-  the start.
+- Value: the machine draft is the Spanish text of the release. A later
+  reviewer corrects a full draft and does not translate from the start.
 - Requirements:
   - A machine translation makes the Spanish catalog and the Spanish help.
     It gets the glossary and the comments of the keys.
@@ -183,13 +211,16 @@ are in the plan, "Epics".
 - Acceptance:
   - The plan has the decision. E4 is not released without it.
   - The notice version does not change.
-  - The reviewer of E4-T7 confirms that the Spanish choices have the same
-    meaning as the English choices.
+  - The author confirms that the Spanish choices have the same meaning as
+    the English choices (for example with a back-translation into
+    English).
 - Tests: —
 
 ### E4-T7 Review by a native speaker
 
-- Status: open
+- Status: later. Decided on 2026-10-28: not necessary for the release
+  (plan, "Decisions", "Translation"). Do this task if a reviewer comes
+  forward. The corrections go into the next release.
 - Plan: 13 ("Review")
 - Value: the Spanish texts are correct, natural, and use the terms of the
   players.
@@ -210,12 +241,12 @@ are in the plan, "Epics".
 - Value: a Spanish video and the Spanish UI show all texts completely.
 - Requirements:
   - The fit test of E3-T19 runs with Spanish.
-  - If a video text is cut, the reviewer gives a shorter text first. Change
+  - If a video text is cut, the author gives a shorter text first. Change
     the layout only if no shorter text is possible.
   - The Spanish UI screenshots show no cut text.
 - Acceptance:
   - The fit test passes with Spanish. No text is cut with "…" unless the
-    reviewer accepts it.
+    author accepts it.
 - Tests: —
 
 ### E4-T9 Queued render job keeps its language
@@ -257,8 +288,8 @@ are in the plan, "Epics".
   - With the app in Spanish, the analytics attribute `language` and the
     feedback field `app_language` are `es`. The contracts and the workers
     accept `es` since E2. No deployment is necessary before the release.
-  - A language that only reviewers see sends its own code. `qps` sends
-    `en`.
+  - A hidden language that the system property shows sends its own code.
+    `qps` sends `en`.
   - With "System" and a Windows language that the app does not have (for
     example French), `language` is `en`, and `os_language` is `fr`.
   - With Spanish and some stale or fallback texts, `language` stays `es`.
@@ -276,13 +307,14 @@ are in the plan, "Epics".
 
 - Status: in-progress
 - Plan: 4, 13 ("New languages"), "Decisions" ("Incomplete language",
-  "Existing users")
+  "Translation", "Existing users")
 - Value: Spanish users get the app in Spanish without an action, and all
   users can select the language.
 - Requirements:
   - The "Language" row of E3-T21 shows to all users.
-  - The list has only the complete and reviewed languages. A system
-    property shows the other languages for the reviewers.
+  - The list has only the complete languages whose checks pass. A native
+    review is not necessary. A system property shows the other languages
+    for the author.
   - An existing user with Windows in Spanish gets Spanish after the update,
     because the setting is "System". At the first start in Spanish, the app
     shows a notice one time: the app is now in Spanish, and the user can
@@ -313,7 +345,7 @@ are in the plan, "Epics".
   - A user who closes the notice with Escape does not see it again.
   - "Use English" in the notice restarts the app in English, and the
     stored value is English (not "System").
-  - A language that is not reviewed does not show without the property.
+  - A language that is not complete does not show without the property.
 - Tests: —
 
 ### E4-T12 Windows smoke test in Spanish
@@ -350,7 +382,7 @@ are in the plan, "Epics".
   author.
 - Requirements:
   - `CONTRIBUTING.md` gives the process for a new language: glossary,
-    draft, review, fit check, smoke test. The language code must be in the
+    draft, fit check, smoke test. A native review is optional. The language code must be in the
     language list of E2-T1.
   - The release checklist has the translation check (E4-T3).
   - `README.md` lists the languages.
@@ -364,8 +396,9 @@ are in the plan, "Epics".
 
 ## Done when
 
-- All tasks are `done`.
-- The app has a complete Spanish translation, reviewed by a native speaker.
+- All tasks are `done` or `later`.
+- The app has a complete Spanish translation. A native review is not
+  necessary.
 - At the first start on Windows in Spanish, the app shows Spanish.
 - A Spanish export shows the Spanish scoreboard and statistics texts, and
   all texts fit.

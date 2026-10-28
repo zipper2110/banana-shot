@@ -27,7 +27,10 @@ internal class ApplicationScreen(
 
     fun assertTitle(title: String) {
         eventually("window title to be '$title'") {
-            val actual = onEdt { Window.getWindows().filterIsInstance<Frame>().single { it.name == "app-frame" }.title }
+            // A closed frame of an earlier start stays in Window.getWindows() until garbage collection.
+            val actual = onEdt {
+                Window.getWindows().filterIsInstance<Frame>().single { it.name == "app-frame" && it.isDisplayable }.title
+            }
             if (actual != title) throw AssertionError("Window title was '$actual'")
         }
     }

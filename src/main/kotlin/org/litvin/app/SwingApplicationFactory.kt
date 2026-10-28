@@ -755,13 +755,44 @@ object SwingApplicationFactory {
             val savedW = applicationPreferences.getInt("win.w", Int.MIN_VALUE)
             val savedH = applicationPreferences.getInt("win.h", Int.MIN_VALUE)
             val savedState = applicationPreferences.getInt("win.state", JFrame.NORMAL)
-            if (savedX != Int.MIN_VALUE && savedY != Int.MIN_VALUE && savedW > 0 && savedH > 0) {
+            // A size from the window-size option wins over a saved size (B-11 E4-T8).
+            val requestedSize = WindowSize.requested()
+            if (requestedSize != null) {
+                frame.extendedState = JFrame.NORMAL
+                frame.setSize(requestedSize.width, requestedSize.height)
+                frame.setLocationRelativeTo(null)
+            } else if (savedX != Int.MIN_VALUE && savedY != Int.MIN_VALUE && savedW > 0 && savedH > 0) {
                 frame.setBounds(savedX, savedY, savedW, savedH)
                 frame.extendedState = savedState
             } else {
-                frame.setSize(1200, 800)
+                frame.setSize(WindowSize.DEFAULT.width, WindowSize.DEFAULT.height)
                 frame.setLocationRelativeTo(null)
             }
+
+            // The app saves the window at close, so the next start opens it at the same place and size. A maximized
+            // window keeps its last normal bounds, for the "restore" button. A size from the window-size option is
+            // only for this start, so the app does not save it.
+            var normalBounds = frame.bounds
+            frame.addComponentListener(object : java.awt.event.ComponentAdapter() {
+                override fun componentResized(event: java.awt.event.ComponentEvent?) = rememberNormalBounds()
+                override fun componentMoved(event: java.awt.event.ComponentEvent?) = rememberNormalBounds()
+                private fun rememberNormalBounds() {
+                    if (frame.extendedState == JFrame.NORMAL) normalBounds = frame.bounds
+                }
+            })
+            fun saveWindow() {
+                if (requestedSize != null) return
+                runCatching {
+                    applicationPreferences.putInt("win.x", normalBounds.x)
+                    applicationPreferences.putInt("win.y", normalBounds.y)
+                    applicationPreferences.putInt("win.w", normalBounds.width)
+                    applicationPreferences.putInt("win.h", normalBounds.height)
+                    // A minimized window opens normal or maximized, not minimized.
+                    applicationPreferences.putInt("win.state", frame.extendedState and JFrame.ICONIFIED.inv())
+                }.onFailure { failure -> logger.warn(failure) { "Cannot save the place and the size of the main window." } }
+            }
+            // A close action, so that a close, a restart after a language change, and an update all save the window.
+            closeActions += ::saveWindow
 
             frame.addWindowListener(object : WindowAdapter() {
                 override fun windowClosing(event: WindowEvent?) {

@@ -80,7 +80,7 @@ internal class UiButton(
         return UiKit.icon(source, ICON_SIZE, color).also { cachedIcon = color to it }
     }
 
-    private fun leadingWidth() = when {
+    private fun leadingWidth(text: String?) = when {
         swatch != null -> SWATCH + SWATCH_GAP
         ikon != null -> ICON_SIZE + if (text.isNullOrEmpty()) 0 else GAP
         else -> 0
@@ -88,12 +88,16 @@ internal class UiButton(
 
     private fun detailWidth(): Float = detail?.let { DETAIL_GAP + UiKit.textWidth(it, DETAIL_FONT) } ?: 0f
 
-    private fun contentWidth(): Float = leadingWidth() + UiKit.textWidth(text.orEmpty(), textFont) + detailWidth()
+    private fun contentWidth(text: String? = this.text): Float =
+        leadingWidth(text) + UiKit.textWidth(text.orEmpty(), textFont) + detailWidth()
 
-    override fun getPreferredSize(): Dimension {
+    /** The preferred width of this button with [text]. An empty text gives the width of the icon button. */
+    fun preferredWidthFor(text: String?): Int {
         val padding = if (buttonHeight < HEIGHT) 10 else 12
-        return Dimension(ceil(contentWidth()).toInt() + padding * 2 + 2, buttonHeight)
+        return ceil(contentWidth(text)).toInt() + padding * 2 + 2
     }
+
+    override fun getPreferredSize() = Dimension(preferredWidthFor(text), buttonHeight)
 
     override fun getMinimumSize() = preferredSize
     override fun getMaximumSize() = if (stretch) Dimension(Int.MAX_VALUE, buttonHeight) else preferredSize

@@ -170,6 +170,7 @@ class SwingPointsPanel(
 
     // The width of the side column
     private val SIDE_COLUMN_WIDTH = 360
+    private val POINT_BAR_GAP = 16
 
     // Idle UI refresher to keep time label and timeline handle in sync when paused/seeking
     private val idleUiTimer = Timer(100) { _ ->
@@ -589,9 +590,17 @@ class SwingPointsPanel(
     }
 
     /**
-     * The point bar under the video: the serve button, Point start, and the outcome buttons.
+     * The point bar under the video: the serve button, Point start, and the outcome buttons. A narrow bar shows the
+     * compact Point start, so that the outcome buttons have space for the names (B-11 E4-T8).
      */
-    private fun buildPointBar(): JComponent = JPanel(BorderLayout(16, 0)).apply {
+    private fun buildPointBar(): JComponent = object : JPanel(BorderLayout(POINT_BAR_GAP, 0)) {
+        override fun doLayout() {
+            val inner = width - insets.left - insets.right
+            val fullStart = scoring.controls.serveButton.preferredSize.width + POINT_BAR_GAP + markPanel.fullWidth() + POINT_BAR_GAP
+            markPanel.compact = inner - fullStart < scoring.controls.fullNamesWidth()
+            super.doLayout()
+        }
+    }.apply {
         name = "points-point-bar"
         isOpaque = true
         background = Palette.OVERLAY
@@ -599,7 +608,7 @@ class SwingPointsPanel(
             BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
             BorderFactory.createEmptyBorder(10, 16, 10, 16),
         )
-        add(JPanel(BorderLayout(16, 0)).apply {
+        add(JPanel(BorderLayout(POINT_BAR_GAP, 0)).apply {
             isOpaque = false
             add(scoring.controls.serveButton, BorderLayout.WEST)
             add(markPanel, BorderLayout.CENTER)

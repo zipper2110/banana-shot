@@ -95,6 +95,19 @@ To use a separate data folder, set the system property
 `-Dbananashot.appDataDir=<folder>` or the environment variable
 `BANANASHOT_APP_DATA_DIR` in the run configuration.
 
+### Window size for a layout check
+
+The main window opens at 1200 × 800, the size of the first start and of the
+UI flow tests. To open it at an exact size, for example to check a
+translation, give the program argument `--window-size=<width>x<height>`, or
+the VM option `-Dbananashot.windowSize=<width>x<height>`. The size is in
+Swing units: at a Windows display scale of 125 %, 1200 × 800 fills
+1500 × 1000 screen pixels. A restart after a language change keeps the size.
+
+```
+mvn exec:java -Dexec.args="--window-size=1200x800" -Dbananashot.language=es
+```
+
 ### Usage analytics in a development run
 
 A development run has no analytics properties. Thus it sends no usage

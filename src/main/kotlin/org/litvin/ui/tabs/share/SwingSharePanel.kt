@@ -1127,7 +1127,8 @@ class SwingSharePanel(
 
     /**
      * The left side. It does not scroll: the preview becomes smaller in a low window, so that the style cards stay visible.
-     * All parts have the width of the preview.
+     * The controls and the style cards always use the full width. A smaller preview is in the center above them, so the
+     * column has no empty strip at its right side.
      */
     private inner class LeftColumn : JPanel(null) {
         private val title = ShareUi.sectionTitle(tr("tab.thumbnail"), Material2AL.IMAGE)
@@ -1153,26 +1154,26 @@ class SwingSharePanel(
         private fun cardWidth(w: Int) = (w - CARD_GAP * (cardsInRow - 1)) / cardsInRow
         private fun cardHeight(w: Int) = (cardWidth(w) * 9.0 / 16).roundToInt() + CARD_NAME_H
 
-        private fun contentHeight(w: Int): Int =
-            TITLE_H + GAP + (w * 9.0 / 16).roundToInt() + GAP +
+        /** The height of all parts other than the preview, for the width [w]. */
+        private fun heightWithoutPreview(w: Int): Int =
+            TITLE_H + GAP + GAP +
                 ROW_H + ROW_GAP + maxOf(ROW_H, stripHeight(w)) + ROW_GAP + ROW_H + noteHeight(w) + GAP +
                 STYLE_HEAD_H + GAP + groupChoice.preferredSize.height + ROW_GAP + cardHeight(w)
 
         override fun doLayout() {
-            val availW = width - PAD * 2
+            val w = width - PAD * 2
             val availH = height - PAD * 2
-            var w = availW
-            // The widest preview whose column fits the height.
-            while (w > MIN_W && contentHeight(w) > availH) w -= 8
-            w = w.coerceAtLeast(minOf(MIN_W, availW))
+            // The widest preview that fits the height. It is not narrower than MIN_W, and not wider than the column.
+            val fitW = ((availH - heightWithoutPreview(w)) * 16.0 / 9).toInt()
+            val previewW = fitW.coerceAtMost(w).coerceAtLeast(minOf(MIN_W, w))
             val x = PAD
             var y = PAD
             title.setBounds(x, y, w / 2, TITLE_H)
             val noteW = UiKit.textWidth(sizeNote.text, sizeNote.font).roundToInt() + 6
             sizeNote.setBounds(x + w - noteW, y, noteW, TITLE_H)
             y += TITLE_H + GAP
-            val previewH = (w * 9.0 / 16).roundToInt()
-            previewHost.setBounds(x, y, w, previewH)
+            val previewH = (previewW * 9.0 / 16).roundToInt()
+            previewHost.setBounds(x + (w - previewW) / 2, y, previewW, previewH)
             y += previewH + GAP
 
             val cx = x + LABEL_W + CONTROL_GAP

@@ -8,6 +8,7 @@ import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.LanguageSettings
 import org.litvin.i18n.Messages
 import org.litvin.app.AppServices
+import org.litvin.app.WindowSize
 import org.litvin.app.InstanceLock
 import org.litvin.app.PreferencesProvider
 import org.litvin.app.SwingApplicationFactory
@@ -64,6 +65,21 @@ object SwingMainApp {
         logger.info {
             "${AppInfo.NAME} ${AppInfo.version} started on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, " +
                 "Java ${System.getProperty("java.version")}."
+        }
+        // A fixed size of the main window, for a check of the layout (B-11 E4-T8). The argument sets the property, so
+        // the window and a restart after a language change read the same value.
+        (WindowSize.argumentValue(args) ?: System.getProperty(WindowSize.PROPERTY))?.let { value ->
+            val size = WindowSize.parse(value)
+            if (size != null) {
+                System.setProperty(WindowSize.PROPERTY, size.toString())
+                logger.info { "The main window opens at $size from the window-size option." }
+            } else {
+                System.clearProperty(WindowSize.PROPERTY)
+                logger.warn {
+                    "The window size \"$value\" is wrong, so the app ignores it. Give the width and the height from " +
+                        "${WindowSize.MIN} to ${WindowSize.MAX}, for example ${WindowSize.ARGUMENT}${WindowSize.DEFAULT}."
+                }
+            }
         }
         // The language comes before all texts. It does not change the default locale of the JVM (B-11 plan, section 1).
         installLanguage()

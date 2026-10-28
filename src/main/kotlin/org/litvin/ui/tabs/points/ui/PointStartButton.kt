@@ -59,12 +59,30 @@ internal class PointStartButton(onStart: () -> Unit) : JButton() {
     private val titleFont get() = UiKit.font(13f, UiKit.Weight.SEMIBOLD)
     private val valueFont get() = UiKit.font(13f, UiKit.Weight.SEMIBOLD)
 
-    override fun getPreferredSize(): Dimension {
+    /**
+     * The form for a narrow point bar: the time of a pending point is on a second line under the title, so the button
+     * does not keep space for the time next to the title (B-11 E4-T8). The point bar sets it.
+     */
+    var compact: Boolean = false
+        set(value) {
+            if (field == value) return
+            field = value
+            revalidate()
+            repaint()
+        }
+
+    /** The width of the button with the time next to the title. */
+    fun fullWidth(): Int = widthFor(compact = false)
+
+    private fun widthFor(compact: Boolean): Int {
         // The width keeps space for the time, so the bar does not move when a point starts.
         val time = ceil(UiKit.textWidth(TIME_SAMPLE, valueFont)).toInt()
         val title = ceil(UiKit.textWidth(TITLE, titleFont)).toInt()
-        return Dimension(PAD_X * 2 + title + GAP + time + GAP + KeyChips.width(KEY), HEIGHT)
+        val text = if (compact) maxOf(title, time) else title + GAP + time
+        return PAD_X * 2 + text + GAP + KeyChips.width(KEY)
     }
+
+    override fun getPreferredSize() = Dimension(widthFor(compact), HEIGHT)
 
     override fun getMinimumSize() = preferredSize
 
@@ -78,10 +96,16 @@ internal class PointStartButton(onStart: () -> Unit) : JButton() {
             if (!pending) UiKit.paintBox(g2, 1, 1, width - 2, height - 2, 7, null, Palette.LIME_EDGE)
 
             val x = PAD_X.toFloat()
-            UiKit.drawText(g2, TITLE, titleFont, Palette.FG, x, 0f, height.toFloat())
-            if (pending) {
-                val valueX = x + UiKit.textWidth(TITLE, titleFont) + GAP
-                UiKit.drawText(g2, value, valueFont, Palette.LIME, valueX, 0f, height.toFloat())
+            if (compact && pending) {
+                val half = height / 2f
+                UiKit.drawText(g2, TITLE, titleFont, Palette.FG, x, 2f, half - 1f)
+                UiKit.drawText(g2, value, valueFont, Palette.LIME, x, half - 1f, half - 1f)
+            } else {
+                UiKit.drawText(g2, TITLE, titleFont, Palette.FG, x, 0f, height.toFloat())
+                if (pending) {
+                    val valueX = x + UiKit.textWidth(TITLE, titleFont) + GAP
+                    UiKit.drawText(g2, value, valueFont, Palette.LIME, valueX, 0f, height.toFloat())
+                }
             }
             KeyChips.paint(g2, KEY, width - PAD_X - KeyChips.width(KEY), (height - KeyChips.HEIGHT) / 2)
         } finally {

@@ -204,15 +204,38 @@ internal class PlaybackBar(
             val stepMinX = if (speed.isVisible) speedX + speed.preferredSize.width + SPEED_GAP else speedX
             // Frame step has the height of the seek buttons, so it lines up with them.
             place(frameStep, max(stepMinX, centerX - GRID_GAP - step), step, seekButtons.first().preferredSize.height)
-            val replay = replayButton.preferredSize.width
-            val replayX = max(centerX + center + GRID_GAP, parent.width - insets.right - replay)
+            val rightStart = centerX + center + GRID_GAP
+            fitRightSide(parent.width - insets.right - rightStart)
+            val replay = replayButton.preferredWidthFor(replayButton.text)
+            val replayX = max(rightStart, parent.width - insets.right - replay)
             place(replayButton, replayX, replay)
-            val button = commentButton.preferredSize.width
-            place(commentButton, max(centerX + center + GRID_GAP, replayX - SPEED_GAP - button), button)
+            val button = commentButton.preferredWidthFor(commentButton.text)
+            place(commentButton, max(rightStart, replayX - SPEED_GAP - button), button)
         }
 
-        /** The width of Comment and the replay button on the right of the transport. */
-        private fun rightWidth() = commentButton.preferredSize.width + SPEED_GAP + replayButton.preferredSize.width
+        /** The width of Comment and the replay button on the right of the transport, with or without their texts. */
+        private fun rightWidth(commentText: Boolean = true, replayText: Boolean = true) =
+            commentButton.preferredWidthFor(if (commentText) COMMENT_TEXT else "") + SPEED_GAP +
+                replayButton.preferredWidthFor(if (replayText) REPLAY_TEXT else "")
+
+        /**
+         * A narrow right side shows the replay button without its text first, and then Comment without its text.
+         * The tooltips keep the names. A long translation must not push the buttons out of the bar (B-11 E4-T8).
+         */
+        private fun fitRightSide(space: Int) {
+            val (commentText, replayText) = when {
+                rightWidth() <= space -> true to true
+                rightWidth(replayText = false) <= space -> true to false
+                else -> false to false
+            }
+            setText(commentButton, if (commentText) COMMENT_TEXT else "")
+            setText(replayButton, if (replayText) REPLAY_TEXT else "")
+        }
+
+        // Only a change sets the text, because a new text starts a new layout pass.
+        private fun setText(button: UiButton, text: String) {
+            if (button.text != text) button.text = text
+        }
 
         /** The width of the clock, the speed, and Frame step in the given forms. */
         private fun leftWidth(speedCompact: Boolean, frameStepCompact: Boolean) =
@@ -261,6 +284,8 @@ internal class PlaybackBar(
 
     private companion object {
         const val GRID_GAP = 16
+        private val COMMENT_TEXT: String get() = tr("points.comment")
+        private val REPLAY_TEXT: String get() = tr("points.replay")
         const val TRANSPORT_GAP = 6
         const val PLAY_MARGIN = 8
         const val SPEED_GAP = 8

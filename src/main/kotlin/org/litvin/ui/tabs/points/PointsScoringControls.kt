@@ -217,24 +217,39 @@ internal class PointsScoringControls(
 
     override fun getMinimumSize() = Dimension(0, HEIGHT)
 
+    /** The width that shows "Winner:" and the full names of the outcome buttons, with the pencil of Override score. */
+    fun fullNamesWidth(): Int = labelWidth() + LABEL_GAP + outcomeButtons.sumOf { it.fullWidth() } + OUTCOME_GAP * 2 +
+        GROUP_GAP + overrideButton.preferredWidthFor("")
+
     override fun doLayout() {
-        val label = labelWidth()
-        winnerLabel.setBounds(0, 0, label, HEIGHT)
         // A narrow bar shows only the pencil of Override score, so that the outcome buttons keep their width.
         val compact = width < preferredSize.width
         val text = if (compact) "" else OVERRIDE_TEXT
         if (overrideButton.text != text) overrideButton.text = text
-        val override = overrideButton.preferredSize.width
+        val override = overrideButton.preferredWidthFor(text)
         val outcomesEnd = max(0, width - override - GROUP_GAP)
         overrideButton.setBounds(outcomesEnd + GROUP_GAP, 0, override, HEIGHT)
-        // The outcome buttons in three equal columns between "Winner:" and Override score.
-        val x = label + LABEL_GAP
-        val area = max(0, outcomesEnd - x)
-        val buttonWidth = (area - OUTCOME_GAP * 2) / 3
+        // When the full names do not fit, the bar hides "Winner:". The colors and the tooltips of the buttons still
+        // tell what they do (B-11 E4-T8, E3-T22).
+        val needs = outcomeButtons.map { it.fullWidth() }
+        val namesWidth = needs.sum() + OUTCOME_GAP * 2
+        val label = if (labelWidth() + LABEL_GAP + namesWidth <= outcomesEnd) labelWidth() else 0
+        winnerLabel.isVisible = label > 0
+        winnerLabel.setBounds(0, 0, label, HEIGHT)
+        val x = if (label > 0) label + LABEL_GAP else 0
+        val area = max(0, outcomesEnd - x - OUTCOME_GAP * 2)
+        // Three equal columns when the longest name fits. Else each button gets a part of the width for its name, so
+        // that the short "No point" gives its free space to the names of the players.
+        val widths = if (needs.max() * 3 <= area) {
+            List(3) { area / 3 }
+        } else {
+            needs.map { (it.toLong() * area / needs.sum().coerceAtLeast(1)).toInt() }
+        }
+        var bx = x
         outcomeButtons.forEachIndexed { i, button ->
-            val bx = x + i * (buttonWidth + OUTCOME_GAP)
-            val w = if (i == 2) outcomesEnd - bx else buttonWidth
+            val w = if (i == 2) outcomesEnd - bx else widths[i]
             button.setBounds(bx, 0, max(0, w), HEIGHT)
+            bx += w + OUTCOME_GAP
         }
     }
 

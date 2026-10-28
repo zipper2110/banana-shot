@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.points.ui
 
 import org.kordamp.ikonli.material2.Material2MZ
+import kotlin.math.ceil
 import org.litvin.ScoreboardComponent
 import org.litvin.scoring.Sport
 import java.awt.AlphaComposite
@@ -71,6 +72,10 @@ internal class OutcomeButton(private val player: Int, private val key: String) :
 
     override fun getPreferredSize() = Dimension(0, HEIGHT)
     override fun getMinimumSize() = preferredSize
+
+    /** The width that shows the full name and the key chip. The point bar uses it to share its width. */
+    fun fullWidth(): Int = STRIP + GAP + ceil(UiKit.textWidth(text.orEmpty(), labelFont)).toInt() + LABEL_GAP +
+        KeyChips.width(key, KeyChipStyle.DEFAULT) + PAD_RIGHT
 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)

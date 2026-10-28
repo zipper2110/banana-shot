@@ -33,9 +33,13 @@ object AppRestart {
 
     /** Starts [launcher] as a new process. The path can have spaces and non-ASCII letters. */
     fun start(launcher: File) {
-        ProcessBuilder(launcher.absolutePath, ARGUMENT)
+        ProcessBuilder(command(launcher))
             .directory(launcher.absoluteFile.parentFile)
             .also { it.environment()[ENVIRONMENT] = "1" }
             .start()
     }
+
+    /** The command of the new process. It keeps the window-size option of this process (B-11 E4-T8). */
+    internal fun command(launcher: File, windowSize: WindowSize? = WindowSize.requested()): List<String> =
+        listOfNotNull(launcher.absolutePath, ARGUMENT, windowSize?.let { "${WindowSize.ARGUMENT}$it" })
 }

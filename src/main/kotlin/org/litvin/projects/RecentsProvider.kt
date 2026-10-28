@@ -1,6 +1,9 @@
 package org.litvin.projects
 
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.I18n
 import java.io.File
+import java.text.Collator
 import java.time.Instant
 
 /**
@@ -40,14 +43,26 @@ class RecentsProvider(private val projectsRoot: File) {
                 }
             }
         }
-        cache = items.sortedWith(
-            compareByDescending<RecentEntry> { it.lastOpenedAt ?: Instant.EPOCH }
-                .thenBy { it.name.lowercase() }
-        )
+        cache = items.sortedWith(order(I18n.language))
         return cache
     }
 
     fun refresh(): List<RecentEntry> = scan()
 
     fun current(): List<RecentEntry> = cache.ifEmpty { scan() }
+
+    companion object {
+        /**
+         * The newest open first. Projects with the same time (for example, never opened) sort by name in the order of
+         * the app language (B-11 E3-T8): in Spanish "Ángel" comes before "Bruno". Names that are equal for the collator
+         * ("Angel" and "angel") then sort by their characters and by their path, so the order does not change.
+         */
+        internal fun order(language: AppLanguage): Comparator<RecentEntry> {
+            val collator = Collator.getInstance(language.locale).apply { strength = Collator.SECONDARY }
+            return compareByDescending<RecentEntry> { it.lastOpenedAt ?: Instant.EPOCH }
+                .then { a, b -> collator.compare(a.name, b.name) }
+                .thenBy { it.name }
+                .thenBy { it.path }
+        }
+    }
 }

@@ -36,7 +36,7 @@ Order of the work:
 
 | Task | Scope | Depends on | Status |
 |---|---|---|---|
-| E2-T8 | Legitimate interest assessment for the language attributes | — | in-progress |
+| E2-T8 | Legitimate interest assessment for the language attributes | — | done |
 | E2-T1 | The language list and the essential attributes in the analytics contract | — | done |
 | E2-T2 | The analytics worker and the cockpit | E2-T1 | done |
 | E2-T3 | The app sends the two language attributes | E2-T1 | done |
@@ -50,7 +50,7 @@ IDs do not change.
 
 ### E2-T8 Legitimate interest assessment for the language attributes
 
-- Status: in-progress
+- Status: done
 - Plan: 10, "Decisions" ("Language attributes level")
 - Value: the essential level stays lawful with the new attributes. The
   essential level is on by default and rests on legitimate interest (GDPR
@@ -86,7 +86,7 @@ IDs do not change.
   - If the result of the balancing test is negative, the two attributes
     stay on the extended level. Then change this epic and the plan before
     the other tasks continue.
-- Tests: — (decision). Claude wrote the draft on 2026-10-19 in `docs/analytics/legitimate-interest.md`. The review of the author is open.
+- Tests: — (decision). Claude wrote the draft on 2026-10-19 in `docs/analytics/legitimate-interest.md`. The author approved it on 2026-10-29. The two attributes stay on the essential level.
 
 ### E2-T1 The language list and the essential attributes in the analytics contract
 

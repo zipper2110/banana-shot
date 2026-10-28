@@ -9,9 +9,13 @@ are in the plan, "Epics".
 
 - Status: open
 - Plan sections: 11 ("Rules file and update notice"), 14
-- Depends on: E3. You can do it at any time after E3. The first translated
-  texts need E4.
-- Size: 1 to 2 days.
+- Depends on: E3. The first translated texts need E4.
+- Decided on 2026-10-29: E6 is in release 1.3.0, and it also covers the
+  "What's new" popup of B-54. 1.3.0 is the first release for users who do
+  not read English. A build can show a translated notice only when it has
+  the code of E6-T2. Thus the users of 1.3.0 get the notices of the next
+  release in their language.
+- Size: 2 to 3 days.
 - Value: a user who does not read English understands why to update and
   what the expiry message tells. These texts come from the server, so E3
   and E4 do not translate them.
@@ -33,9 +37,11 @@ are in the plan, "Epics".
 - Value: the author can publish the notes and the messages in more than one
   language, and the released builds continue to work.
 - Requirements:
-  - The rules file has two new optional fields: `latest.notesByLanguage`,
-    and `messageByLanguage` in each rule. The value is an object with a
-    language code as the key, for example `{"es": "…"}`.
+  - The rules file has three new optional fields: `latest.notesByLanguage`,
+    `latest.whatsNewUrlByLanguage`, and `messageByLanguage` in each rule.
+    The value is an object with a language code as the key, for example
+    `{"es": "…"}`. `whatsNewUrlByLanguage` gives the URL of the Markdown
+    file of the "What's new" popup (B-54) in each language.
   - The file keeps `schema: 1`. Released builds ignore the new fields, and
     show the English text (`build-expiry-spec.md`, "Changes to the file
     format").
@@ -70,6 +76,12 @@ are in the plan, "Epics".
   - The update notice and the expiry messages from the server use the text
     of the app language. If the file has no text for it, they use the
     English field.
+  - The "What's new" popup loads the Markdown file of the app language. If
+    the file has no URL for the language, or the file does not load, the
+    popup loads the English file (`whatsNewUrl`). If the English file also
+    does not load, the popup shows the notes, as now.
+  - The "Read more on the site" link stays on `pageUrl`. The site is in
+    English (plan, "Scope").
   - A language code with a region uses the main language (`es-AR` uses
     `es`), as the detection of E3-T21.
   - The app shows these texts as plain text, as now.
@@ -79,6 +91,8 @@ are in the plan, "Epics".
 - Acceptance:
   - Tests for the app languages English and Spanish, with and without a
     Spanish text in the file.
+  - Tests for the popup: a Spanish file, no Spanish URL, and a Spanish URL
+    that does not load. The last two show the English file.
   - A test gives HTML in a translated text, and the app shows it as plain
     text.
 - Tests: —
@@ -107,9 +121,10 @@ are in the plan, "Epics".
 - Plan: 11
 - Value: the first Spanish users get the update notes in Spanish.
 - Requirements:
-  - The rules file has the Spanish notes of the next release. The author
-    checks them. A native review is not necessary (plan, "Decisions",
-    "Translation").
+  - The rules file of the next release after 1.3.0 has the notes and the
+    "What's new" Markdown file in each shipped language. A machine
+    translation makes them. The author checks them. A native review is not
+    necessary (plan, "Decisions", "Translation").
 - Acceptance:
   - On Windows, the Spanish app shows the Spanish notes, and the English
     app shows the English notes.

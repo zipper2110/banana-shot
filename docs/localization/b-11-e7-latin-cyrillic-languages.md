@@ -390,7 +390,12 @@ example `E7-L-pt`), and copy the template below.
   - The check of E4-T3 shows no missing key for the language.
   - The fit tests (E3-T19), the font test (E7-T4), and the plural test
     (E7-T2) pass for the language.
-  - The Windows smoke test passes in the language.
+  - The Windows smoke test passes in the language. The short form (plan,
+    "Decisions", "Smoke test of a language"): the screenshots of
+    `qa/Make-TranslatorScreenshots.ps1` on the release candidate show no
+    empty boxes, no cut texts, and no English texts. A language with a
+    script or a video font that no other shipped language uses also gets one
+    manual export with the scoreboard and the statistics card.
   - The language shows in the list of More, Settings, and in the video
     language list.
   - The catalog tests find no plural case that the language does not

@@ -3,10 +3,8 @@
 Status: reviewed by the author, 2026-10-06. Claude wrote the first draft. It is not legal advice.
 
 Update for the language attributes (B-11 E2, task E2-T8): draft by Claude,
-2026-10-19. **Not reviewed yet.** The author must review and approve it
-before the release that sends the language attributes. Then write the date of
-the review here. If the result of the balancing test is negative, the two
-attributes stay on the extended level. Then change E2 and the B-11 plan.
+2026-10-19. Reviewed and approved by the author, 2026-10-29. The two
+attributes are on the essential level.
 
 This assessment covers only the essential level of the usage statistics
 (`docs/analytics/design.md`, "Levels"). The extended level uses consent
@@ -45,8 +43,8 @@ author cannot decide where to put the work, or see a bad release.
 
 The interest of the language attributes: decide which languages to translate
 the app into, and see if the users use the translations. A translation costs
-the author about one week and the fee of a native reviewer. The author must
-spend this on the languages of the real users.
+the author about one week of work. The author must spend this on the
+languages of the real users.
 
 - The interest is real and present: B-11 plans more languages after Spanish,
   and selects them from this data.
@@ -69,10 +67,10 @@ spend this on the languages of the real users.
 The language attributes:
 
 - The extended level alone gives biased data. The extended level is opt-in,
-  and the opt-in dialog is in English until the app has the language of the
-  user. A user who does not read English well is less likely to select an
-  opt-in in an English dialog. Thus opt-in data undercounts exactly the
-  users who need a translation.
+  and the opt-in dialog is in English for each user whose language the app
+  does not have. A user who does not read English well is less likely to
+  select an opt-in in an English dialog. Thus opt-in data undercounts
+  exactly the users who need a translation.
 - A less intrusive way with the same result is not known. The countries of
   the site visits do not tell the language (for example Switzerland or the
   United States). The feedback reports are rare.

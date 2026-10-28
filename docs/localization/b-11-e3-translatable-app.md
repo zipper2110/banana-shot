@@ -350,6 +350,12 @@ The tasks below give the area and the special requirements of the area.
     starts.
   - Names with digits, with emoji, or in a script that the collator does
     not know do not cause an error. They sort after the known letters.
+- Notes (2026-10-29): the Projects list sorts by the time of the last open.
+  The name is only the second rule (`RecentsProvider`), for example for
+  projects that were never opened. Now it compares the characters, so
+  "Ángel" comes after "Zeta". Decided on 2026-10-29: the second rule uses
+  the collator of the app language, and then the characters, so that equal
+  names keep a fixed order.
 - Tests: —
 
 ### E3-T9 Extract: Points tab
@@ -531,6 +537,18 @@ The tasks below give the area and the special requirements of the area.
     the current release reads and saves the project, and the new build
     reads "not set" again.
   - In `qps`, the video shows the `qps` placeholder title.
+- Notes:
+  - Now (2026-10-29) a project saves the default title of the app language
+    at the time of the creation. `ScoreboardSettingsV1.videoTitle` and
+    `Sport.videoSideName` change a default text of each language into the
+    video language. This does not match a default text after a later change
+    of its translation, the title field keeps the language of the creation,
+    and a cleared field gives no default.
+  - Decided on 2026-10-29: do "not set" as the requirements tell, also for
+    the default side names. Keep the match of the default texts of all
+    languages for the projects that the earlier builds saved. Do it before
+    the release of 1.3.0 if possible, so that no released build saves a
+    translated default text.
 - Tests: —
 
 ### E3-T19 Fit of the video texts
@@ -798,8 +816,9 @@ The tasks below give the area and the special requirements of the area.
   - The manual check is step 8 "Input method" of `qa/windows/ui-smoke.md`.
     On 2026-10-28 the author did the export part in the English app: the
     project "決勝 🎾" with the player name "山田 🎾" exported with no
-    error. Open: the input method parts. The author does not add the
-    Japanese and Chinese input methods on the development PC for now.
+    error. Open: the input method parts. Decided on 2026-10-29: the author
+    adds the Japanese and Chinese input methods on the development PC for
+    the check of the 1.3.0 release candidate, and removes them after it.
 - Tests: `SafeFileNameTest`, `FileProjectsRepositoryNamesTest`,
   `DecomposedTextTest`, `AppLookTest`, `UserTextExportTest` (runs the real ffmpeg; it
   skips when ffmpeg is not on the computer).

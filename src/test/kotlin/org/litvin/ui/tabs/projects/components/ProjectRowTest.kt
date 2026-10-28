@@ -22,7 +22,7 @@ class ProjectRowTest {
         name = "Club final",
         secondary = "D:\\video\\2026\\PXL_20260920_153210877.mp4",
         id = "p1",
-        stats = ProjectStatsState("1:52:44", "14.61 GB", "96/128", "38", scoredCount = 96, pointCount = 128, sport = "Padel"),
+        stats = ProjectStatsState("1:52:44", "14.61 GB", "96/128", "38", scoredCount = 96, pointCount = 128, favoriteCount = 38, sport = "Padel"),
     )
 
     @Test

@@ -93,7 +93,7 @@ internal class ShareColorsPanel(
                 updating = false
             }
         }
-        strengthValue?.text = "${DisplayFormats.integer((k * 100).roundToInt())}%"
+        strengthValue?.text = DisplayFormats.percent((k * 100).roundToInt())
         changed.isVisible = customized
         reset.isVisible = look?.colorsEdited == true
         revalidate()

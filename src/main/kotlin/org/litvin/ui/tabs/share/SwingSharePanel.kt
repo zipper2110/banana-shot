@@ -224,7 +224,7 @@ class SwingSharePanel(
         getAccessibleContext().accessibleName = tr("adjust.zoom")
     }
     private val zoomHint = ShareUi.hint()
-    private val zoomValue = ShareUi.label("${DisplayFormats.integer(100)} %", 12f, Palette.FG_2).apply { horizontalAlignment = SwingConstants.RIGHT }
+    private val zoomValue = ShareUi.label(DisplayFormats.percent(100), 12f, Palette.FG_2).apply { horizontalAlignment = SwingConstants.RIGHT }
     private val pickNote = NoteBox("share-pick-note", Material2AL.INFO)
     private val placeHint = ShareUi.hint()
     private val placeChoice = SegmentedChoice<TextPlace>("share-place", emptyList())
@@ -682,7 +682,7 @@ class SwingSharePanel(
         zoom.maximum = (maxZoom * 100).roundToInt()
         zoom.isEnabled = maxZoom > 1.0
         if (!zoom.valueIsAdjusting) zoom.value = (view().zoom * 100).roundToInt()
-        zoomValue.text = "${DisplayFormats.integer((view().zoom * 100).roundToInt())} %"
+        zoomValue.text = DisplayFormats.percent((view().zoom * 100).roundToInt())
         zoomHint.text = when {
             facts == null -> ""
             maxZoom < MAX_ZOOM -> tr("share.zoom.max", "percent" to (maxZoom * 100).roundToInt(), "height" to facts?.height.toString())

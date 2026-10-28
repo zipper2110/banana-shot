@@ -51,6 +51,8 @@ data class ProjectStatsState(
     /** The numbers of [scoredPoints], for the progress bar of the Scored column. */
     val scoredCount: Int = 0,
     val pointCount: Int = 0,
+    /** The number of [favoritePoints], for the color of the star. */
+    val favoriteCount: Int = 0,
     /** The name of the sport, for example "Padel". */
     val sport: String = Sport.TENNIS.title,
 )

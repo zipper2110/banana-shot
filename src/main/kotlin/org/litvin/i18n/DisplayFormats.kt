@@ -1,5 +1,7 @@
 package org.litvin.i18n
 
+import io.github.oshai.kotlinlogging.KotlinLogging
+import java.text.DateFormat
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
@@ -18,9 +20,32 @@ import java.util.Locale
  * arguments, ASS files, JSON) must not use this object: they use `Locale.ROOT` or `Locale.US`.
  */
 object DisplayFormats {
-    /** The Windows regional format. Tests set a fixed locale. */
+    private val logger = KotlinLogging.logger {}
+
+    /** The languages with number or date data in the JDK. It must stay above [formatLocale], which uses it. */
+    private val FORMAT_LANGUAGES: Set<String> =
+        (NumberFormat.getAvailableLocales().asSequence() + DateFormat.getAvailableLocales().asSequence())
+            .map { it.language }
+            .filter { it.isNotEmpty() }
+            .toSet()
+
+    /**
+     * The Windows regional format. The app reads it one time at the start, so one window never shows two formats.
+     * Tests set a fixed locale.
+     */
     @Volatile
-    var formatLocale: Locale = Locale.getDefault(Locale.Category.FORMAT)
+    var formatLocale: Locale = usableFormatLocale(Locale.getDefault(Locale.Category.FORMAT))
+
+    /**
+     * [locale], or `en-US` when [locale] has no language (`Locale.ROOT`, `und`) or the JDK has no format data for its
+     * language (for example `xx-XX`). The fallback writes one warning to the log.
+     */
+    internal fun usableFormatLocale(locale: Locale): Locale {
+        val language = locale.language
+        if (language.isNotEmpty() && language != "und" && language in FORMAT_LANGUAGES) return locale
+        logger.warn { "No format data for the regional format '${locale.toLanguageTag()}'. The app uses en-US." }
+        return Locale.US
+    }
 
     /**
      * The locale of the numbers, with the digits 0–9 (for example `ar-EG` has other digits by default). It is the

@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.litvin.i18n.DisplayFormats
 import org.kordamp.ikonli.feather.Feather
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.ScoreboardDisplay
@@ -170,14 +171,14 @@ class ScoreboardSettingsDialog private constructor(
     private val sizeRow = SliderValueRow(
         "scoreboard-size", tr("scoreboard.size"), tr("scoreboard.size.tooltip"),
         ScoreboardSettingsV1.MIN_SIZE_PERCENT, ScoreboardSettingsV1.MAX_SIZE_PERCENT, ScoreboardSettingsV1().sizePercent,
-        emptyList(), "${ScoreboardSettingsV1.MIN_SIZE_PERCENT} %", null, "${ScoreboardSettingsV1.MAX_SIZE_PERCENT} %",
+        emptyList(), DisplayFormats.percent(ScoreboardSettingsV1.MIN_SIZE_PERCENT), null, DisplayFormats.percent(ScoreboardSettingsV1.MAX_SIZE_PERCENT),
         percentFormat(), first = false,
     )
     private val sizeSlider = sizeRow.slider
     private val opacityRow = SliderValueRow(
         "scoreboard-opacity", tr("scoreboard.background"), tr("scoreboard.background.tooltip"),
         ScoreboardSettingsV1.MIN_OPACITY_PERCENT, 100, ScoreboardLayouts.defaults(initial.style).backgroundOpacityPercent,
-        emptyList(), "${ScoreboardSettingsV1.MIN_OPACITY_PERCENT} %", null, "100 %",
+        emptyList(), DisplayFormats.percent(ScoreboardSettingsV1.MIN_OPACITY_PERCENT), null, DisplayFormats.percent(100),
         percentFormat(), first = false,
     )
     private val opacitySlider = opacityRow.slider

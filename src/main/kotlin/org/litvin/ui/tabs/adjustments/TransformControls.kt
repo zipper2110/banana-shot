@@ -12,6 +12,7 @@ import java.awt.Graphics2D
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
 
@@ -62,7 +63,7 @@ internal enum class TransformControl(
 
     val low: String
         get() = when (this) {
-            ZOOM -> "${DisplayFormats.integer(100)}%"
+            ZOOM -> DisplayFormats.percent(100)
             PAN_X -> tr("adjust.left")
             PAN_Y -> tr("adjust.down")
             ROTATION -> "−180°"
@@ -78,7 +79,7 @@ internal enum class TransformControl(
 
     val high: String
         get() = when (this) {
-            ZOOM -> "${DisplayFormats.integer(250)}%"
+            ZOOM -> DisplayFormats.percent(250)
             PAN_X -> tr("adjust.right")
             PAN_Y -> tr("adjust.up")
             ROTATION -> "+180°"
@@ -106,11 +107,15 @@ internal enum class TransformControl(
         }
     }
 
-    /** One decimal with the decimal separator of the format locale. */
+    /** One decimal with the decimal separator of the format locale. The check of zero uses the number, not the text. */
     private fun signedDecimal(value: Float): String {
-        val text = DisplayFormats.decimal(value.toDouble(), 1, 1, grouping = false)
-        val zero = DisplayFormats.decimal(0.0, 1, 1, grouping = false)
-        return if (value > 0 && text != zero) "+$text" else if (text == "-$zero") zero else text
+        val tenths = (value.toDouble() * 10).roundToLong()
+        val text = DisplayFormats.decimal(abs(tenths) / 10.0, 1, 1, grouping = false)
+        return when {
+            tenths > 0 -> "+$text"
+            tenths < 0 -> DisplayFormats.decimal(tenths / 10.0, 1, 1, grouping = false)
+            else -> text
+        }
     }
 }
 
@@ -151,7 +156,7 @@ internal class TransformGroupCard(val group: TransformGroup, val rows: List<Tran
         if (group != TransformGroup.ROTATION) return
         val value = angleText
         val valueX = right - UiKit.textWidth(value, angleValueFont)
-        val valueColor = if (value != ZERO_ANGLE) Palette.LIME else Palette.FG_3
+        val valueColor = if (angleTenths(angle) != 0L) Palette.LIME else Palette.FG_3
         UiKit.drawText(g2, value, angleValueFont, valueColor, valueX, top, height)
         val labelX = valueX - ANGLE_GAP - UiKit.textWidth(ANGLE_LABEL, angleLabelFont)
         UiKit.drawText(g2, ANGLE_LABEL, angleLabelFont, Palette.FG_3, labelX, top, height)
@@ -160,7 +165,6 @@ internal class TransformGroupCard(val group: TransformGroup, val rows: List<Tran
     private companion object {
         val ANGLE_LABEL: String get() = tr("adjust.angle")
         const val ANGLE_GAP = 4
-        val ZERO_ANGLE: String get() = signedDegrees(0f)
     }
 }
 
@@ -169,10 +173,14 @@ internal class TransformGroupCard(val group: TransformGroup, val rows: List<Tran
  * The decimal separator is the one of the format locale.
  */
 internal fun signedDegrees(value: Float): String {
-    val text = DisplayFormats.decimal(abs(value).toDouble(), 1, 1, grouping = false)
+    val tenths = angleTenths(value)
+    val text = DisplayFormats.decimal(abs(tenths) / 10.0, 1, 1, grouping = false)
     return when {
-        text == DisplayFormats.decimal(0.0, 1, 1, grouping = false) -> "$text°"
-        value > 0 -> "+$text°"
-        else -> "−$text°"
+        tenths > 0 -> "+$text°"
+        tenths < 0 -> "−$text°"
+        else -> "$text°"
     }
 }
+
+/** The angle in tenths of a degree, rounded as the angle text shows it. */
+private fun angleTenths(value: Float): Long = (value.toDouble() * 10).roundToLong()

@@ -86,7 +86,7 @@ class SwingProjectsPanelTest {
             val open = find<AbstractButton>(panel, "projects-open-b")
             val delete = find<AbstractButton>(panel, "projects-delete-b")
 
-            val loaded = second.copy(stats = ProjectStatsState("0:42:09", "5.02 GB", "0/61", "9", scoredCount = 0, pointCount = 61))
+            val loaded = second.copy(stats = ProjectStatsState("0:42:09", "5.02 GB", "0/61", "9", scoredCount = 0, pointCount = 61, favoriteCount = 9))
             panel.render(ProjectsViewState(visibleProjects = listOf(first, loaded)))
 
             assertSame(open, find<AbstractButton>(panel, "projects-open-b"))

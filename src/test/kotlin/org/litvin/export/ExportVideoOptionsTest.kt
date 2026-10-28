@@ -1,5 +1,7 @@
 package org.litvin.export
 
+import org.litvin.i18n.DisplayFormats
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -169,5 +171,23 @@ class ExportVideoOptionsTest {
 
         assertEquals("30000/1001", info.frameRate?.ffmpegArgument)
         assertEquals(false, info.variableFrameRate)
+    }
+
+    @Test
+    fun `a frame rate with decimals follows the regional format`() {
+        val rate = ExportFrameRates.parse("30000/1001")!!
+        assertEquals("29.97", withFormatLocale("en-US") { rate.displayFps })
+        assertEquals("29,97", withFormatLocale("es-ES") { rate.displayFps })
+        assertEquals("30", withFormatLocale("es-ES") { ExportFrameRates.parse("30/1")!!.displayFps })
+    }
+
+    private fun <T> withFormatLocale(tag: String, block: () -> T): T {
+        val saved = DisplayFormats.formatLocale
+        DisplayFormats.formatLocale = Locale.forLanguageTag(tag)
+        try {
+            return block()
+        } finally {
+            DisplayFormats.formatLocale = saved
+        }
     }
 }

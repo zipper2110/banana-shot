@@ -38,8 +38,8 @@ Not in this epic:
 | E1-T2 | Machine formats do not use the default locale | E1-T1 | done |
 | E1-T3 | Tests with other default locales | E1-T2 | done |
 | E1-T4 | Test that finds calls with the default locale | E1-T2 | done |
-| E1-T5 | Display formats | E1-T1 | in-progress |
-| E1-T6 | The UI shows the display formats | E1-T5 | in-progress |
+| E1-T5 | Display formats | E1-T1 | done |
+| E1-T6 | The UI shows the display formats | E1-T5 | done |
 | E1-T7 | Decide the locale provider (`HOST` or CLDR) | E1-T5 | open |
 | E1-T8 | Documentation | E1-T1–E1-T7 | open |
 
@@ -207,7 +207,7 @@ Not in this epic:
 
 ### E1-T5 Display formats
 
-- Status: in-progress
+- Status: done
 - Plan: 5, "Decisions" ("Format locale", "Digits")
 - Value: one component gives all formats that the user reads. All later
   epics use it.
@@ -238,13 +238,13 @@ Not in this epic:
     Windows regional format while the app runs applies at the next start.
     One window never shows two formats.
 - Acceptance: unit tests with fixed locales and the app in English give
-  these results (measured on JDK 21).
+  these results (measured on JDK 25, the JDK of the release).
 
   | Format locale | Date | Time of 15:45 | 2.35 GB | 64 % |
   |---|---|---|---|---|
   | `en-US` | Oct 10, 2026 | 3:45 PM | 2.35 GB | 64% |
   | `es-ES` | 10/10/26 | 15:45 | 2,35 GB | 64 % |
-  | `es-MX` | 10/10/26 | 15:45 | 2.35 GB | 64% |
+  | `es-MX` | 10/10/26 | 3:45 p.m. | 2.35 GB | 64% |
   | `de-DE` | 10.10.26 | 15:45 | 2,35 GB | 64 % |
   | `ar-EG` | only the digits 0–9 | only the digits 0–9 | only the digits 0–9 | only the digits 0–9 |
   | `th-TH-u-nu-thai` | year 2026, only the digits 0–9 | only the digits 0–9 | only the digits 0–9 | only the digits 0–9 |
@@ -256,11 +256,22 @@ Not in this epic:
 - Notes: the JDK puts special spaces into some formats. "3:45 PM" has
   U+202F (narrow no-break space), and "64 %" has U+00A0 (no-break space).
   The tests must expect these characters. The UI font must show them.
-- Tests: —
+- Notes (2026-10-28):
+  - JDK 21 gave "15:45" for `es-MX`. JDK 25 gives "3:45 p.m." (with
+    U+202F), because the CLDR data changed. The app uses the form of the
+    JDK, as the requirement "Times" says.
+  - `DisplayFormats.usableFormatLocale` gives `en-US` and writes one
+    warning when the format locale has no language or the JDK has no
+    number or date data for its language. The app reads the format locale
+    one time, when `DisplayFormats` starts.
+  - The digits and the calendar are also tested with `fa-IR`, `th-TH`,
+    and `ar-SA-u-ca-islamic`, for the date, the date and time, the time,
+    the size, the percent, and a number with groups.
+- Tests: `DisplayFormatsTest`.
 
 ### E1-T6 The UI shows the display formats
 
-- Status: in-progress
+- Status: done
 - Plan: 5 ("Dates", "Numbers in the UI")
 - Value: the user sees the formats of their Windows regional format.
 - Requirements:
@@ -294,7 +305,24 @@ Not in this epic:
     −0.0, never "-0,0°" or "+0,0°".
   - With `es-ES`, the user types "1,5" and "1.5" in a Transform value
     field, and both give 1.5. The text "abc" keeps the old value.
-- Tests: —
+- Notes (2026-10-28):
+  - These texts now use `DisplayFormats`: the frame rate with decimals
+    ("29,97"), the duration field of the comment dialog ("1,5"), the
+    percent labels of the Share tab, the statistics card, the Transform
+    tab, the comment dialog, and the scoreboard settings, and the number
+    of favorite points.
+  - The Transform tab and the color of the favorites star compare the
+    number, not the text.
+  - A slider value field draws its unit ("%", "°") as a separate part of
+    the box, so it does not use the percent form.
+  - The percent sign in a catalog text ("{percent}%") is the choice of
+    the translator.
+  - Decision (2026-10-28): the expiry moment keeps its own form for each
+    app language (`ExpiryMomentFormat`, for example "29 March 2027,
+    16:00"), with the full month name. It does not use `DisplayFormats`.
+    This replaces the requirement "the expiry moment" above.
+- Tests: `TransformValueTextTest`, `ExportVideoOptionsTest`,
+  `DisplayFormatsTest`.
 
 ### E1-T7 Decide the locale provider (`HOST` or CLDR)
 

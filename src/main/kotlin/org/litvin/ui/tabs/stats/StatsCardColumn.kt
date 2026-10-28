@@ -71,7 +71,7 @@ internal class StatsCardColumn(
         toolTipText = TRANSPARENCY_TIP
         value = StatsSettingsV1.DEFAULT_CARD_TRANSPARENCY_PERCENT
         addChangeListener {
-            transparencyValue.text = "${DisplayFormats.integer(value)} %"
+            transparencyValue.text = DisplayFormats.percent(value)
             if (!showingTransparency) onTransparency(value, valueIsAdjusting)
         }
     }
@@ -123,7 +123,7 @@ internal class StatsCardColumn(
         } finally {
             showingTransparency = false
         }
-        transparencyValue.text = "${DisplayFormats.integer(percent)} %"
+        transparencyValue.text = DisplayFormats.percent(percent)
     }
 
     private val viewportHeight get() = (parent as? JViewport)?.height?.takeIf { it > 0 } ?: height.takeIf { it > 0 } ?: 700

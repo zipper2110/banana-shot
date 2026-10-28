@@ -111,7 +111,7 @@ internal class ProjectRow(
             ProjectsTableColumns.SIZE to FigureCell(stats?.fileSize, skeletonWidth = 56).apply { name = "projects-size-$id" },
             ProjectsTableColumns.SCORED to ScoredCell(stats?.scoredCount, stats?.pointCount, stats?.scoredPoints)
                 .apply { name = "projects-scored-$id" },
-            ProjectsTableColumns.FAVORITES to FavoritesCell(stats?.favoritePoints).apply { name = "projects-favorites-$id" },
+            ProjectsTableColumns.FAVORITES to FavoritesCell(stats?.favoritePoints, stats?.favoriteCount).apply { name = "projects-favorites-$id" },
         )
         // The layout places the children by index, so each cell goes to the index of its column.
         cells.forEach { (column, cell) ->
@@ -305,10 +305,10 @@ internal class SportCell(text: String?) : JLabel(text.orEmpty()) {
 private const val UNKNOWN = "—"
 
 /** The favorite points with a yellow star. The star is gray when the project has no favorite points. */
-internal class FavoritesCell(text: String?) : FigureCell(
+internal class FavoritesCell(text: String?, count: Int?) : FigureCell(
     text,
     skeletonWidth = 16,
-    figureIcon = ProjectsUi.icon(Material2MZ.STAR, 14, if (text == null || text == "0") Palette.FG_3 else Palette.YELLOW),
+    figureIcon = ProjectsUi.icon(Material2MZ.STAR, 14, if (count == null || count == 0) Palette.FG_3 else Palette.YELLOW),
 )
 
 /**

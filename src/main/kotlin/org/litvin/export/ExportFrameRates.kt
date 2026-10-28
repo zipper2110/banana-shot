@@ -1,16 +1,17 @@
 package org.litvin.export
 
-import java.util.Locale
+import org.litvin.i18n.DisplayFormats
 
 data class ExportFrameRate(
     val ffmpegArgument: String,
     val framesPerSecond: Double,
 ) {
+    /** The frame rate that the user reads, for example "30" or "29.97" ("29,97" with a decimal comma). */
     val displayFps: String
         get() = if (kotlin.math.abs(framesPerSecond - framesPerSecond.toInt()) < 0.005) {
             framesPerSecond.toInt().toString()
         } else {
-            String.format(Locale.US, "%.2f", framesPerSecond)
+            DisplayFormats.decimal(framesPerSecond, 2, 2, grouping = false)
         }
 }
 

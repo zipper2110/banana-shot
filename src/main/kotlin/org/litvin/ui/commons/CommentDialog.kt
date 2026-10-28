@@ -1,5 +1,6 @@
 package org.litvin.ui.commons
 
+import org.litvin.i18n.DisplayFormats
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
 import org.litvin.shared.util.Timecode
@@ -292,7 +293,7 @@ object CommentDialog {
         fromText = { SliderValueFormat.parse(it, "%")?.roundToInt() },
     )
 
-    private fun percent(value: Int): String = "$value %"
+    private fun percent(value: Int): String = DisplayFormats.percent(value)
 
     /** The format of the Rotation field: a whole number of degrees. */
     private val DEGREE_FORMAT = SliderValueFormat(
@@ -342,7 +343,8 @@ object CommentDialog {
     private fun typedSeconds(text: String): String = text.trim().replace(',', '.')
 
     private fun colorFor(hex: String): Color = runCatching { Color.decode(hex) }.getOrDefault(Palette.PURE_WHITE)
-    private fun formatDurationField(durationMs: Long): String = BigDecimal(durationMs).movePointLeft(3).stripTrailingZeros().toPlainString()
+    /** The duration in seconds with the decimal separator of the regional format, for example "1.5" or "1,5". */
+    private fun formatDurationField(durationMs: Long): String = DisplayFormats.decimal(durationMs / 1000.0, 0, 3, grouping = false)
     private fun formatTimestamp(totalMs: Long): String {
         val hours = totalMs / 3_600_000L
         val minutes = (totalMs % 3_600_000L) / 60_000L

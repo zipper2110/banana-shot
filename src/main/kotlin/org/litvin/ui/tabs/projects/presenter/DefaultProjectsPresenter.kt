@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.i18n.DisplayFormats
 import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.analytics.DisabledAnalytics
@@ -305,10 +306,11 @@ class DefaultProjectsPresenter(
             duration = durationMs?.let(RenderFormatting::formatDuration) ?: UNKNOWN,
             fileSize = fileSizeBytes?.let(RenderFormatting::formatSize) ?: UNKNOWN,
             scoredPoints = "$scoredCount/$pointCount",
-            favoritePoints = favoriteCount.toString(),
+            favoritePoints = DisplayFormats.integer(favoriteCount),
             videoMissingMessage = if (videoMissing) tr("projects.row.videoMissing.tooltip") else null,
             scoredCount = scoredCount,
             pointCount = pointCount,
+            favoriteCount = favoriteCount,
             sport = sport.title,
         )
     }

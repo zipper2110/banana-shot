@@ -546,11 +546,15 @@ internal class ExportsTable(
             captions.forEach(::add)
         }
 
-        override fun getPreferredSize() = Dimension(ExportTableGrid.MIN_WIDTH, HEIGHT)
+        // The rows follow the width of the view, so the captions follow it too. Otherwise a narrow view gives the
+        // captions a wider grid than the rows.
+        override fun getPreferredSize() =
+            Dimension((parent as? JViewport)?.width?.takeIf { it > 0 } ?: ExportTableGrid.MIN_WIDTH, HEIGHT)
 
         override fun doLayout() {
             val columns = ExportTableGrid.columns(width)
             captions.forEachIndexed { index, caption ->
+                if (!columns.isShown(index)) return@forEachIndexed caption.setBounds(0, 0, 0, 0)
                 val h = caption.heightForWidth(columns.width[index])
                 caption.setBounds(columns.x[index], (height - 1 - h) / 2, columns.width[index], h)
             }
@@ -718,7 +722,9 @@ internal class ExportsTable(
 /**
  * The columns of the exports table, like the CSS grid of the design:
  * 84px, minmax(170px, 1.3fr), minmax(160px, 1.2fr), minmax(140px, 1fr), 104px, 86px, 64px.
- * A narrow table makes the flexible columns narrower than their minimum, so that all columns stay visible.
+ * A narrow table makes the flexible columns narrower than their minimum. When a text column becomes narrower
+ * than [READABLE], the table hides the Video column, then the Time column, then the Size column (B-11 E3-T22).
+ * A hidden column has the width 0.
  */
 internal object ExportTableGrid {
     const val PAD = 16
@@ -728,27 +734,48 @@ internal object ExportTableGrid {
     private const val SMALLEST_FLEX = 48
     const val MIN_WIDTH = 84 + 170 + 160 + 140 + 104 + 86 + 64 + GAP * 6 + PAD * 2
 
-    class Columns(val x: IntArray, val width: IntArray)
+    /** The smallest width of a text column before the table hides a column. A word such as "Scoreboard:" fits. */
+    const val READABLE = 96
+
+    /** The columns that a narrow table hides, in this sequence: Video, Time, Size. */
+    private val HIDE_ORDER = listOf(3, 5, 4)
+
+    class Columns(val x: IntArray, val width: IntArray) {
+        fun isShown(index: Int) = width[index] > 0
+    }
 
     fun columns(total: Int): Columns {
+        val hidden = mutableSetOf<Int>()
+        fun free() = total - PAD * 2 - GAP * (6 - hidden.size) - FIXED.filterKeys { it !in hidden }.values.sum()
+        fun flex() = FLEX.filterKeys { it !in hidden }
+        fun narrowest(): Double {
+            val minimums = flex().values.sumOf { it.first }
+            return if (free() >= minimums) Double.MAX_VALUE else free().toDouble() * flex().values.minOf { it.first } / minimums
+        }
+        for (index in HIDE_ORDER) {
+            if (narrowest() >= READABLE) break
+            hidden += index
+        }
+
         val widths = IntArray(7)
-        FIXED.forEach { (index, w) -> widths[index] = w }
-        val free = total - PAD * 2 - GAP * 6 - FIXED.values.sum()
-        val minimums = FLEX.values.sumOf { it.first }
+        FIXED.forEach { (index, w) -> if (index !in hidden) widths[index] = w }
+        val free = free()
+        val flex = flex()
+        val minimums = flex.values.sumOf { it.first }
         if (free <= minimums) {
             // Not enough space for the minimums: share the space in the ratio of the minimums.
-            FLEX.forEach { (index, spec) ->
+            flex.forEach { (index, spec) ->
                 widths[index] = max(SMALLEST_FLEX, (free.toDouble() * spec.first / minimums).toInt())
             }
         } else {
-            val open = FLEX.keys.toMutableSet()
+            val open = flex.keys.toMutableSet()
             var remaining = free.toDouble()
             var clamped = true
             while (clamped) {
                 clamped = false
-                val share = remaining / open.sumOf { FLEX.getValue(it).second }
+                val share = remaining / open.sumOf { flex.getValue(it).second }
                 for (index in open.toList()) {
-                    val (minimum, fraction) = FLEX.getValue(index)
+                    val (minimum, fraction) = flex.getValue(index)
                     if (share * fraction < minimum) {
                         widths[index] = minimum
                         remaining -= minimum
@@ -757,14 +784,14 @@ internal object ExportTableGrid {
                     }
                 }
             }
-            val share = remaining / open.sumOf { FLEX.getValue(it).second }.coerceAtLeast(0.001)
-            open.forEach { widths[it] = (share * FLEX.getValue(it).second).toInt() }
+            val share = remaining / open.sumOf { flex.getValue(it).second }.coerceAtLeast(0.001)
+            open.forEach { widths[it] = (share * flex.getValue(it).second).toInt() }
         }
         val x = IntArray(7)
         var position = PAD
         for (index in 0 until 7) {
             x[index] = position
-            position += widths[index] + GAP
+            if (index !in hidden) position += widths[index] + GAP
         }
         return Columns(x, widths)
     }
@@ -815,7 +842,7 @@ internal open class DataRow : JPanel(null), HeightForWidth {
     }
 
     private fun mainHeight(columns: ExportTableGrid.Columns) =
-        cells.withIndex().maxOf { (index, cell) -> cell?.heightAt(columns.width[index]) ?: 0 }
+        cells.withIndex().maxOf { (index, cell) -> cell?.takeIf { columns.isShown(index) }?.heightAt(columns.width[index]) ?: 0 }
 
     private fun extraWidth(columns: ExportTableGrid.Columns) = columns.x[6] + columns.width[6] - columns.x[1]
 
@@ -832,6 +859,7 @@ internal open class DataRow : JPanel(null), HeightForWidth {
         val main = mainHeight(columns)
         cells.forEachIndexed { index, cell ->
             cell ?: return@forEachIndexed
+            if (!columns.isShown(index)) return@forEachIndexed cell.setBounds(0, 0, 0, 0)
             val w = columns.width[index]
             val h = cell.heightAt(w)
             val cellWidth = if (cell is StatusPill) minOf(w, cell.preferredSize.width) else w

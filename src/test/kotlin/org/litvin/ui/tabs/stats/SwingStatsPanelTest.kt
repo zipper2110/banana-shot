@@ -281,7 +281,7 @@ class SwingStatsPanelTest {
 
             slider.valueIsAdjusting = true
             slider.value = 50
-            assertEquals("50 %", panel.label("stats-card-transparency-value").text)
+            assertEquals("50%", panel.label("stats-card-transparency-value").text)
             assertEquals(StatsSettingsV1.DEFAULT_CARD_TRANSPARENCY_PERCENT, StatsIO.readForProjectDir(projectDir.path).cardTransparencyPercent)
 
             slider.valueIsAdjusting = false

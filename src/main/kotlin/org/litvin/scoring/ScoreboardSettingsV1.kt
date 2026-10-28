@@ -3,6 +3,7 @@ package org.litvin.scoring
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import org.litvin.i18n.tr
 import org.litvin.i18n.I18n
+import org.litvin.i18n.TextFit
 
 /** The look of the scoreboard. The scoring preview and the export use the same style. */
 enum class ScoreboardStyleId {
@@ -100,7 +101,7 @@ data class ScoreboardSettingsV1(
 
     /** Returns a copy with all values in their allowed ranges. */
     fun normalized(): ScoreboardSettingsV1 = copy(
-        title = title.trim().take(MAX_TITLE_LENGTH),
+        title = TextFit.takeWhole(title.trim(), MAX_TITLE_LENGTH),
         sizePercent = sizePercent.coerceIn(MIN_SIZE_PERCENT, MAX_SIZE_PERCENT),
         backgroundOpacityPercent = backgroundOpacityPercent?.coerceIn(MIN_OPACITY_PERCENT, 100),
         accentColorHex = accentColorHex?.let(::normalizeHex),

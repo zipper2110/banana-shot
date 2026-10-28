@@ -124,6 +124,7 @@ object StatsCard {
     /** The part of a page between the header and the footer. */
     private class Area(val left: Double, val right: Double, val top: Double, val bottom: Double) {
         val center: Double get() = (left + right) / 2
+        val width: Double get() = right - left
     }
 
     /** A page: the dim frame, the panel, the header, the footer, and the [body] between the header and the footer. */
@@ -152,7 +153,8 @@ object StatsCard {
         val nameWidth = panelWidth * 0.3
         items += label(inner, top + 78, content.names.p1, NAME_SIZE, content.colors.p1, TextAnchor.MIDDLE_LEFT, maxWidth = nameWidth)
         items += label(innerRight, top + 78, content.names.p2, NAME_SIZE, content.colors.p2, TextAnchor.MIDDLE_RIGHT, maxWidth = nameWidth)
-        items += label(center, top + 50, DisplayFormats.upper(content.title), 26.0, MUTED, TextAnchor.CENTER, bold = false, spacing = 3.0)
+        items += label(center, top + 50, DisplayFormats.upper(content.title), 26.0, MUTED, TextAnchor.CENTER, bold = false, spacing = 3.0,
+            maxWidth = innerRight - inner)
         items += label(center, top + 100, content.score, 44.0, WHITE, TextAnchor.CENTER, maxWidth = panelWidth - 2 * nameWidth - 2 * PADDING)
         items += SceneItem.Box(inner, top + HEADER_HEIGHT - 22, innerRight - inner, 2.0, WHITE, opacity = 0.16)
 
@@ -170,10 +172,12 @@ object StatsCard {
             val rowTop = area.top + i * ROW_HEIGHT
             val values = row.values
             if (values == null) {
-                items += label(area.center, rowTop + 30, row.label, LABEL_SIZE, SOFT, TextAnchor.CENTER, bold = false)
+                items += label(area.center, rowTop + 30, row.label, LABEL_SIZE, SOFT, TextAnchor.CENTER, bold = false, maxWidth = area.width)
                 items += label(area.center, rowTop + 72, row.shared?.text.orEmpty(), 46.0, WHITE, TextAnchor.CENTER)
             } else {
-                items += label(area.center, rowTop + 30, row.label, LABEL_SIZE, SOFT, TextAnchor.CENTER, bold = false)
+                // The label is between the two values.
+                items += label(area.center, rowTop + 30, row.label, LABEL_SIZE, SOFT, TextAnchor.CENTER, bold = false,
+                    maxWidth = area.width - 2 * BAR_INSET)
                 items += label(area.left, rowTop + 52, values.p1.text, VALUE_SIZE, WHITE, TextAnchor.MIDDLE_LEFT)
                 items += label(area.right, rowTop + 52, values.p2.text, VALUE_SIZE, WHITE, TextAnchor.MIDDLE_RIGHT)
                 row.bar?.let { items += bar(it, content.colors, area.left + BAR_INSET, area.right - BAR_INSET, rowTop + 62) }
@@ -202,12 +206,14 @@ object StatsCard {
         fun x(position: Double) = area.left + position * (area.right - area.left) / points.size
         fun y(difference: Double) = zeroY - difference * unit
 
-        items += label(area.right, labelBottom, tr("stats.card.pointDifference"), 26.0, MUTED, TextAnchor.MIDDLE_RIGHT, bold = false)
-        val p1Label = label(area.left, labelTop, "${content.names.p1} +${lead.p1}", 30.0, content.colors.p1, TextAnchor.MIDDLE_LEFT,
-            maxWidth = (area.right - area.left) * 0.3)
+        items += label(area.right, labelBottom, tr("stats.card.pointDifference"), 26.0, MUTED, TextAnchor.MIDDLE_RIGHT, bold = false,
+            maxWidth = area.width * 0.6)
+        // A long name is cut, and the lead after it stays.
+        val p1Label = label(area.left, labelTop, content.names.p1, 30.0, content.colors.p1, TextAnchor.MIDDLE_LEFT,
+            maxWidth = area.width * 0.3, suffix = " +${lead.p1}")
         items += p1Label
-        items += label(area.left, labelBottom, "${content.names.p2} +${lead.p2}", 30.0, content.colors.p2, TextAnchor.MIDDLE_LEFT,
-            maxWidth = (area.right - area.left) * 0.3)
+        items += label(area.left, labelBottom, content.names.p2, 30.0, content.colors.p2, TextAnchor.MIDDLE_LEFT,
+            maxWidth = area.width * 0.3, suffix = " +${lead.p2}")
 
         // The set lines. A set label that would cover the label of player 1 is left out.
         val p1LabelRight = area.left + ScoreboardFonts.textWidth(p1Label.text, SEGOE, p1Label.bold, p1Label.size)
@@ -261,7 +267,10 @@ object StatsCard {
         )
     }
 
-    /** A label that gets smaller, and then shorter with an ellipsis, when it is wider than [maxWidth]. */
+    /**
+     * A label that gets smaller, and then shorter with an ellipsis, when it is wider than [maxWidth] (B-11 E3-T19).
+     * The [suffix] after the text is never cut.
+     */
     private fun label(
         x: Double,
         y: Double,
@@ -273,17 +282,14 @@ object StatsCard {
         spacing: Double = 0.0,
         opacity: Double = 1.0,
         maxWidth: Double = Double.MAX_VALUE,
+        suffix: String = "",
     ): SceneItem.Label {
         // A Japanese text uses the Japanese font (B-11 E8-T2).
-        val family = ScoreboardFonts.family(SEGOE, text)
-        var fitted = text
-        var fittedSize = size
-        fun width() = ScoreboardFonts.textWidth(fitted, family, bold, fittedSize, spacing)
-        while (width() > maxWidth && fittedSize > size * MIN_SHRINK) fittedSize -= 1.0
-        while (width() > maxWidth && fitted.length > 1) fitted = fitted.dropLast(2) + "…"
+        val family = ScoreboardFonts.family(SEGOE, text + suffix)
+        val fitted = ScoreboardFonts.fit(text, family, bold, size, maxWidth, spacing, suffix)
         val middleY = if (anchor == TextAnchor.TOP_LEFT || anchor == TextAnchor.TOP_RIGHT) y else
-            ScoreboardFonts.middleYForCapCenter(y, family, bold, fittedSize)
-        return SceneItem.Label(x, middleY, fitted, family, fittedSize, rgb, bold, anchor, opacity, spacing)
+            ScoreboardFonts.middleYForCapCenter(y, family, bold, fitted.size)
+        return SceneItem.Label(x, middleY, fitted.text, family, fitted.size, rgb, bold, anchor, opacity, spacing)
     }
 
     private fun rgb(hex: String, fallback: Int): Int = hex.removePrefix("#").toIntOrNull(16) ?: fallback
@@ -341,7 +347,6 @@ object StatsCard {
     private const val BAR_INSET = 190.0
     private const val BAR_HEIGHT = 10.0
     private const val BAR_GAP = 6.0
-    private const val MIN_SHRINK = 0.7
     /** The chart page has the height of this number of rows, or more when a page has more rows. */
     private const val CHART_SLOTS = 4
     private const val MIN_CHART_POINTS = 2

@@ -19,6 +19,7 @@ import java.util.Locale
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
 import org.litvin.i18n.I18n
+import org.litvin.i18n.TextFit
 
 /** A point of the project for the Share tab. [number] starts at 1. [scoreLabel] is null when the project has no scored points. */
 data class SharePoint(
@@ -70,10 +71,10 @@ data class ShareProject(
         ThumbnailField.KIND to matchKind(),
         ThumbnailField.TEAM1 to sideName(score.player1Name, 1),
         ThumbnailField.TEAM2 to sideName(score.player2Name, 2),
-        ThumbnailField.EVENT to event.orEmpty().trim().take(ThumbnailField.EVENT.maxLength),
+        ThumbnailField.EVENT to TextFit.takeWhole(event.orEmpty().trim(), ThumbnailField.EVENT.maxLength),
         ThumbnailField.COURT to court(),
         ThumbnailField.DATE to (videoDate?.let(::thumbnailDate) ?: ""),
-        ThumbnailField.CLUB to club.orEmpty().trim().take(ThumbnailField.CLUB.maxLength),
+        ThumbnailField.CLUB to TextFit.takeWhole(club.orEmpty().trim(), ThumbnailField.CLUB.maxLength),
     )
 
     /**
@@ -93,12 +94,12 @@ data class ShareProject(
     private fun sideName(name: String, side: Int): String {
         val trimmed = name.trim()
         val defaults = Sport.entries.flatMap { it.defaultSideNames(side) }.toSet()
-        return if (trimmed in defaults) "" else trimmed.take(ThumbnailField.TEAM1.maxLength)
+        return if (trimmed in defaults) "" else TextFit.takeWhole(trimmed, ThumbnailField.TEAM1.maxLength)
     }
 
     private fun court(): String {
         val title = score.scoreboard.title.trim()
-        return if (title in ScoreboardSettingsV1.defaultTitles()) "" else title.take(ThumbnailField.COURT.maxLength)
+        return if (title in ScoreboardSettingsV1.defaultTitles()) "" else TextFit.takeWhole(title, ThumbnailField.COURT.maxLength)
     }
 
     /** The length of the exported video: the points for "Full match", the favorite points for "Best points". */

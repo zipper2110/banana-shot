@@ -48,7 +48,7 @@ Order of the work:
 | E3-T16 | Extract: help and key names | E3-T2 | in-progress |
 | E3-T17 | Extract: texts in the video | E3-T2 | in-progress |
 | E3-T18 | Saved default texts | E3-T10, E3-T17 | in-progress |
-| E3-T19 | Fit of the video texts | E3-T17 | open |
+| E3-T19 | Fit of the video texts | E3-T17 | done |
 | E3-T20 | Units in the catalog | E3-T2 | in-progress |
 | E3-T21 | Language setting, detection, and restart (hidden) | E3-T2 | in-progress |
 | E3-T22 | Layout fixes for longer texts | E3-T5, E3-T6–E3-T16 | in-progress |
@@ -535,7 +535,7 @@ The tasks below give the area and the special requirements of the area.
 
 ### E3-T19 Fit of the video texts
 
-- Status: open
+- Status: done
 - Plan: 6 ("Fit")
 - Value: a translated text never goes outside its box in the video.
 - Requirements:
@@ -563,12 +563,29 @@ The tasks below give the area and the special requirements of the area.
     not change.
   - A unit test cuts a text with "é" as "e" and U+0301, and a text with an
     emoji at the limit. The result has no broken character.
-- Notes: the fit test is `VideoTextFit` (done with E4-T8). It draws each
-  sport, each scoreboard style, and each statistics card page with the
-  widest values. It reports a text that is cut, has a smaller font than in
-  English, goes outside the scene or its box, or covers another text. The
-  other requirements are open.
-- Tests: `VideoTextFitTest`.
+- Notes:
+  - The fit is `i18n/TextFit`. It uses a minimum font of 80% and a margin
+    of 5%. `ScoreboardFonts.fit` gives it the width of the video font.
+  - The statistics card fits the names, the title, the score, the names of
+    the statistics, and the point difference. On the momentum chart, a long
+    name is cut, and the lead after it ("+12") stays.
+  - The scoreboard styles make their boxes as wide as the texts. Only the
+    two styles with a title tab that is not wider than the board fit the
+    title.
+  - The player names (24 characters) and the scoreboard title (40
+    characters) are cut by length at a grapheme boundary. The share
+    thumbnails (B-53) have their own layout, and the length limits of their
+    fields also cut at a grapheme boundary.
+  - The fit test is `VideoTextFit` (done with E4-T8). It draws each sport,
+    each scoreboard style, and each statistics card page with the widest
+    values. It reports a text that is cut, that the fit gave a smaller font,
+    that has a smaller font than in English, that goes outside the scene or
+    its box, or that covers another text. For `qps`, it reports only a text
+    outside its box or the scene, and a text that covers another text.
+  - The catalog comments of the video texts give the maximum lengths. The
+    lengths come from the box widths and the average letter width of
+    Segoe UI.
+- Tests: `TextFitTest`, `VideoTextFitTest`.
 
 ### E3-T20 Units in the catalog
 

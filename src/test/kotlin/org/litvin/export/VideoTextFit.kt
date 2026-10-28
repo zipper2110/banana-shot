@@ -10,6 +10,8 @@ import org.litvin.export.scoreboard.TextAnchor
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.DisplayFormats
 import org.litvin.i18n.I18n
+import org.litvin.i18n.Messages
+import org.litvin.i18n.TextFit
 import org.litvin.scoring.DeuceRule
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.PerPlayer
@@ -29,6 +31,7 @@ import org.litvin.stats.StatsSettingsV1
  * statistics card with the texts of a language, and reports each text that does not fit:
  *
  * - a text that the layout cut with "…";
+ * - a text that the fit ([TextFit]) gave a smaller font;
  * - a text with a smaller font than the same text place in English;
  * - a text that goes outside the smallest box under it;
  * - a text that covers another text.
@@ -41,23 +44,46 @@ internal object VideoTextFit {
         override fun toString() = "$place: \"$text\" $reason"
     }
 
-    /** A named scene. The same [place] in English and in the checked language has the same items in the same order. */
-    private data class Placed(val place: String, val scene: ScoreboardScene)
+    /**
+     * A named scene. The same [place] in English and in the checked language has the same items in the same order.
+     * [fits] are the fit results of the scene with a smaller font or a cut.
+     */
+    private data class Placed(val place: String, val scene: ScoreboardScene, val fits: List<TextFit.Fitted>)
+
+    private fun MutableList<Placed>.add(place: String, scene: () -> ScoreboardScene) {
+        val (made, fits) = TextFit.changedFits(scene)
+        add(Placed(place, made, fits))
+    }
 
     fun check(language: AppLanguage): List<Problem> {
         val english = I18n.inVideo(AppLanguage.ENGLISH) { scenes() }.associate { it.place to it.scene }
-        return I18n.inVideo(language) { scenes() }.flatMap { (place, scene) -> problems(place, scene, english[place]) }
+        return I18n.inVideo(language) { scenes() }.flatMap { (place, scene, fits) -> problems(place, scene, english[place], fits) }
+    }
+
+    /**
+     * The check of the test language `qps` (B-11 E3-T19): no text goes outside its box or the scene, and no text covers
+     * another text. The `qps` texts are 40 % longer, so a smaller font and a cut are not problems here.
+     */
+    fun checkPseudo(): List<Problem> {
+        I18n.install(Messages.of(AppLanguage.ENGLISH, pseudo = true))
+        try {
+            return I18n.inVideo(AppLanguage.ENGLISH) { scenes() }
+                .flatMap { (place, scene) -> problems(place, scene, english = null) }
+                .filter { it.reason.startsWith("goes outside") || it.reason.startsWith("covers") }
+        } finally {
+            I18n.install(Messages.english())
+        }
     }
 
     private fun scenes(): List<Placed> = scoreboards() + statsCards()
 
-    private fun scoreboards(): List<Placed> = buildList {
+    private fun scoreboards(): List<Placed> = buildList<Placed> {
         for (sport in Sport.entries) {
             val badges = sport.deuceRules(DeuceRule.ADVANTAGE).mapNotNull { rule -> sport.decidingPointBadge(rule)?.let { rule to it } }
             for (style in ScoreboardStyleId.entries) {
-                add(Placed("$sport $style", ScoreboardLayouts.scene(display(sport, badge = null), ScoreboardSettingsV1(style = style))))
+                add("$sport $style") { ScoreboardLayouts.scene(display(sport, badge = null), ScoreboardSettingsV1(style = style)) }
                 for ((rule, badge) in badges) {
-                    add(Placed("$sport $style $rule badge", ScoreboardLayouts.scene(display(sport, badge), ScoreboardSettingsV1(style = style))))
+                    add("$sport $style $rule badge") { ScoreboardLayouts.scene(display(sport, badge), ScoreboardSettingsV1(style = style)) }
                 }
             }
         }
@@ -83,7 +109,7 @@ internal object VideoTextFit {
     )
 
     /** The card with all statistics: the match card and a set card, for each deuce rule. */
-    private fun statsCards(): List<Placed> = buildList {
+    private fun statsCards(): List<Placed> = buildList<Placed> {
         val settings = StatsSettingsV1()
         for (rule in DeuceRule.entries) {
             val rules = MatchRulesV1(deuce = rule)
@@ -98,7 +124,8 @@ internal object VideoTextFit {
                     rows = rows,
                     credit = ScoreboardSettingsV1.APP_CREDIT,
                 )
-                StatsCard.pages(content).forEachIndexed { page, scene -> add(Placed("stats card $rule scope $scope page ${page + 1}", scene)) }
+                val (pages, fits) = TextFit.changedFits { StatsCard.pages(content) }
+                pages.forEachIndexed { page, scene -> add(Placed("stats card $rule scope $scope page ${page + 1}", scene, fits)) }
             }
         }
     }
@@ -112,12 +139,16 @@ internal object VideoTextFit {
         }
     }
 
-    /** The problems of one [scene]. [english] is the same scene with the English texts, or null. */
-    internal fun problems(place: String, scene: ScoreboardScene, english: ScoreboardScene?): List<Problem> {
+    /**
+     * The problems of one [scene]. [english] is the same scene with the English texts, or null. [fits] are the fit
+     * results of the scene with a smaller font or a cut.
+     */
+    internal fun problems(place: String, scene: ScoreboardScene, english: ScoreboardScene?, fits: List<TextFit.Fitted> = emptyList()): List<Problem> {
         val labels = scene.items.filterIsInstance<SceneItem.Label>().filter { it.text.isNotBlank() }
         val englishLabels = english?.items?.filterIsInstance<SceneItem.Label>()?.filter { it.text.isNotBlank() }
         val boxes = scene.items.filterIsInstance<SceneItem.Box>()
         val found = mutableListOf<Problem>()
+        fits.filter { it.shrunk && !it.cut }.forEach { found += Problem(place, it.text, "needs a smaller font (${it.size} < ${it.normalSize})") }
         labels.forEachIndexed { index, label ->
             val bounds = bounds(label)
             if ('…' in label.text) found += Problem(place, label.text, "is cut")

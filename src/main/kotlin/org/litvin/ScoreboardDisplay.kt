@@ -4,6 +4,7 @@ import org.litvin.shared.util.DrawnText
 import org.litvin.scoring.Sport
 import org.litvin.i18n.DisplayFormats
 import org.litvin.i18n.MachineFormats
+import org.litvin.i18n.TextFit
 
 /** The values that a scoreboard shows for one score state. All scoreboard styles use this model. */
 data class ScoreboardDisplay(
@@ -55,8 +56,8 @@ object ScoreboardComponent {
 
         return ScoreboardDisplay(
             // The composed form: the length limit counts letters, and the fonts without combining marks show them.
-            player1Name = ellipsize(DrawnText.composed(rawP1.trim()).let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
-            player2Name = ellipsize(DrawnText.composed(rawP2.trim()).let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
+            player1Name = TextFit.cutToChars(DrawnText.composed(rawP1.trim()).let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
+            player2Name = TextFit.cutToChars(DrawnText.composed(rawP2.trim()).let(DisplayFormats::upper), PLAYER_NAME_MAX_CHARS),
             player1Rgb = parseHexRgbOrDefault(span.p1ColorHex, DEFAULT_PLAYER1_RGB),
             player2Rgb = parseHexRgbOrDefault(span.p2ColorHex, DEFAULT_PLAYER2_RGB),
             player1PointText = if (span.isTiebreak) span.tbP1.toString() else pointsLabel(span.p1Pts, span.p2Pts),
@@ -87,10 +88,5 @@ object ScoreboardComponent {
         if (mine < 4 && other < 4) return base[mine.coerceIn(0, 3)]
         if (mine == other) return "40"
         return if (mine > other) "Ad" else "40"
-    }
-
-    private fun ellipsize(value: String, maxChars: Int): String {
-        if (value.length <= maxChars) return value
-        return value.substring(0, (maxChars - 1).coerceAtLeast(0)).trimEnd() + "…"
     }
 }

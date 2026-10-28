@@ -277,7 +277,7 @@ object ScoreboardLayouts {
 
         if (title != null) {
             items += SceneItem.Box(0.0, 0.0, tabW, tabH, look.accentRgb, 1.0, Corners(radius, radius, 0.0, 0.0))
-            items += centered(10.0, tabH / 2, title, SEGOE, titleSize, dark, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
+            items += centered(10.0, tabH / 2, title, SEGOE, titleSize, dark, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing, maxWidth = width - 20.0)
         }
         val boardCorners = Corners(if (title == null) radius else 0.0, radius, radius, radius)
         items += SceneItem.Box(0.0, tabH, width, 2 * rowH + footerH, BLACK, look.opacity, boardCorners)

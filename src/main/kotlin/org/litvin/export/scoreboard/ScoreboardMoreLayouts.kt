@@ -431,7 +431,7 @@ internal object ScoreboardMoreLayouts {
 
         if (title != null) {
             items += SceneItem.Box(0.0, 0.0, tabW, tabH, look.accentRgb, 1.0, Corners(radius, radius, 0.0, 0.0))
-            items += centered(10.0, tabH / 2, title, SEGOE, titleSize, ink, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
+            items += centered(10.0, tabH / 2, title, SEGOE, titleSize, ink, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing, maxWidth = width - 20.0)
         }
         val topLeft = if (title != null) 0.0 else radius
         items += SceneItem.Box(0.0, tabH, width, barH + footerH, bar, look.opacity, Corners(topLeft, radius, radius, radius))

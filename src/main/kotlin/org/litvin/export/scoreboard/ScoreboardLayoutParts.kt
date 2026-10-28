@@ -106,7 +106,8 @@ internal fun serveBall(cx: Double, cy: Double, diameter: Double, rgb: Int, ringR
 
 /**
  * A label whose capital letters and digits are centered on [capCenterY]. A text that [font] cannot show uses the
- * font of its script ([ScoreboardFonts.family]).
+ * font of its script ([ScoreboardFonts.family]). A text wider than [maxWidth] gets a smaller font, and then a cut
+ * ([ScoreboardFonts.fit]).
  */
 internal fun centered(
     x: Double,
@@ -120,13 +121,15 @@ internal fun centered(
     opacity: Double = 1.0,
     spacing: Double = 0.0,
     outline: Double = 0.0,
+    maxWidth: Double = Double.MAX_VALUE,
 ) = ScoreboardFonts.family(font, text).let { family ->
+    val fitted = ScoreboardFonts.fit(text, family, bold, size, maxWidth, spacing)
     SceneItem.Label(
         x = x,
-        y = ScoreboardFonts.middleYForCapCenter(capCenterY, family, bold, size),
-        text = text,
+        y = ScoreboardFonts.middleYForCapCenter(capCenterY, family, bold, fitted.size),
+        text = fitted.text,
         font = family,
-        size = size,
+        size = fitted.size,
         rgb = rgb,
         bold = bold,
         anchor = anchor,

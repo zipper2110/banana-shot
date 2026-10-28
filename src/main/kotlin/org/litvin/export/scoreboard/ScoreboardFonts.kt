@@ -3,6 +3,7 @@ package org.litvin.export.scoreboard
 import org.litvin.shared.util.DrawnText
 import org.litvin.i18n.I18n
 import org.litvin.i18n.ScriptFonts
+import org.litvin.i18n.TextFit
 import java.awt.Font
 import java.awt.font.FontRenderContext
 import java.util.concurrent.ConcurrentHashMap
@@ -69,6 +70,27 @@ object ScoreboardFonts {
         // The video adds the spacing once for each character. An emoji is one character, but two Java chars.
         return width + spacing * drawn.codePointCount(0, drawn.length)
     }
+
+    /**
+     * Fits [text] and the [suffix] after it in [maxWidth] (B-11 E3-T19): a smaller font, and then a cut with "…".
+     * See [TextFit]. [family] is the family that draws the text.
+     */
+    fun fit(
+        text: String,
+        family: String,
+        bold: Boolean,
+        assSize: Double,
+        maxWidth: Double,
+        spacing: Double = 0.0,
+        suffix: String = "",
+    ): TextFit.Fitted = TextFit.fit(
+        text = text,
+        size = assSize,
+        maxWidth = maxWidth,
+        width = { shown, size -> textWidth(shown, family, bold, size, spacing) },
+        suffix = suffix,
+        hasEllipsis = displays(family, TextFit.ELLIPSIS),
+    )
 
     private fun metrics(family: String, bold: Boolean): Metrics = metricsCache.getOrPut(family to bold) {
         val reference = Font(family, if (bold) Font.BOLD else Font.PLAIN, REFERENCE_SIZE)

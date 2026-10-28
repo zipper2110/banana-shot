@@ -16,10 +16,23 @@ class MessageCatalogTest {
 
     @Test
     fun `each language has the same keys as English`() {
-        translations.forEach { (language, texts) ->
-            assertEquals(emptySet<String>(), english.keys - texts.keys, "Keys without a ${language.code} text")
-            assertEquals(emptySet<String>(), texts.keys - english.keys, "${language.code} keys that English does not have")
-        }
+        val failures = translations.flatMap { (language, texts) -> keyProblems(language, texts) }
+        assertEquals(emptyList<String>(), failures)
+    }
+
+    /**
+     * B-11 E4-T5: a machine translation often breaks a message. `catalog-check/messages_es.properties` has one
+     * typical error in each key, and the checks of this class must find each error.
+     */
+    @Test
+    fun `the catalog checks find each error of a machine translation`() {
+        val source = testCatalog("catalog-check/messages.properties")
+        val draft = testCatalog("catalog-check/messages_es.properties")
+        val problems = catalogProblems(AppLanguage.SPANISH_SPAIN, draft, source)
+        val keys = problems.map { it.substringAfter(' ').substringBefore(':') }.toSortedSet()
+        assertEquals((source.keys + draft.keys - "correct.text").toSortedSet(), keys, problems.joinToString("\n"))
+        assertTrue(problems.any { "uno" in it }, "The plural check names the translated keyword")
+        assertTrue(problems.any { "BananaShot" in it } && problems.any { "fps" in it }, "The term check names the terms")
     }
 
     /** A regional variant has only the texts that are different from its parent. */
@@ -57,47 +70,26 @@ class MessageCatalogTest {
 
     @Test
     fun `each text parses`() {
-        val failures = (listOf(AppLanguage.SOURCE to english) + translations.toList()).flatMap { (language, texts) ->
-            texts.mapNotNull { (key, text) ->
-                runCatching { MessagePattern.parse(text) }.exceptionOrNull()?.let { "${language.code} $key: ${it.message}" }
-            }
-        }
+        val failures = (listOf(AppLanguage.SOURCE to english) + translations.toList()).flatMap { (language, texts) -> parseProblems(language, texts) }
         assertEquals(emptyList<String>(), failures)
     }
 
     @Test
     fun `a translation has the same placeholders as English`() {
-        val failures = translations.flatMap { (language, texts) ->
-            texts.mapNotNull { (key, text) ->
-                val expected = MessagePattern.parse(english.getValue(key)).argumentNames
-                val actual = MessagePattern.parse(text).argumentNames
-                if (expected == actual) null else "${language.code} $key: $actual, English: $expected"
-            }
-        }
+        val failures = translations.flatMap { (language, texts) -> placeholderProblems(language, texts) }
         assertEquals(emptyList<String>(), failures)
     }
 
     /** The "Do not translate" list of `docs/localization/glossary.md`. */
     @Test
     fun `a translation keeps the terms that are not translated`() {
-        val failures = translations.flatMap { (language, texts) ->
-            texts.flatMap { (key, text) ->
-                KEPT_TERMS.filter { term -> term.containsMatchIn(english.getValue(key)) && !term.containsMatchIn(text) }
-                    .map { term -> "${language.code} $key: ${term.pattern}" }
-            }
-        }
+        val failures = translations.flatMap { (language, texts) -> keptTermProblems(language, texts) }
         assertEquals(emptyList<String>(), failures)
     }
 
     @Test
     fun `a translation keeps the markup`() {
-        val failures = translations.flatMap { (language, texts) ->
-            texts.mapNotNull { (key, text) ->
-                val expected = MARKUP.findAll(english.getValue(key)).map { it.value }.sorted().toList()
-                val actual = MARKUP.findAll(text).map { it.value }.sorted().toList()
-                if (expected == actual) null else "${language.code} $key: $actual, English: $expected"
-            }
-        }
+        val failures = translations.flatMap { (language, texts) -> markupProblems(language, texts) }
         assertEquals(emptyList<String>(), failures)
     }
 
@@ -348,10 +340,55 @@ class MessageCatalogTest {
         FRENCH_SPACING.find(text)?.let { "$key: «${it.value}»" }
     }
 
+    /**
+     * All checks of one translation against [source]. Each problem starts with "<language code> <key>:". A text that
+     * does not parse gets only the parse problem, because the other checks need the parsed text.
+     */
+    private fun catalogProblems(language: AppLanguage, texts: Map<String, String>, source: Map<String, String>): List<String> =
+        keyProblems(language, texts, source) + parseProblems(language, texts) + placeholderProblems(language, texts, source) +
+            keptTermProblems(language, texts, source) + markupProblems(language, texts, source) + pluralProblems(language, texts)
+
+    private fun keyProblems(language: AppLanguage, texts: Map<String, String>, source: Map<String, String> = english): List<String> =
+        (source.keys - texts.keys).sorted().map { "${language.code} $it: no text" } +
+            (texts.keys - source.keys).sorted().map { "${language.code} $it: English does not have the key" }
+
+    private fun parseProblems(language: AppLanguage, texts: Map<String, String>): List<String> = texts.toSortedMap().mapNotNull { (key, text) ->
+        runCatching { MessagePattern.parse(text) }.exceptionOrNull()?.let { "${language.code} $key: ${it.message}" }
+    }
+
+    private fun placeholderProblems(language: AppLanguage, texts: Map<String, String>, source: Map<String, String> = english): List<String> =
+        commonTexts(texts, source).mapNotNull { (key, sourceText, text) ->
+            val expected = parsedOrNull(sourceText)?.argumentNames ?: return@mapNotNull null
+            val actual = parsedOrNull(text)?.argumentNames ?: return@mapNotNull null
+            if (expected == actual) null else "${language.code} $key: $actual, English: $expected"
+        }
+
+    private fun keptTermProblems(language: AppLanguage, texts: Map<String, String>, source: Map<String, String> = english): List<String> =
+        commonTexts(texts, source).flatMap { (key, sourceText, text) ->
+            KEPT_TERMS.filter { term -> term.containsMatchIn(sourceText) && !term.containsMatchIn(text) }
+                .map { term -> "${language.code} $key: ${term.pattern}" }
+        }
+
+    private fun markupProblems(language: AppLanguage, texts: Map<String, String>, source: Map<String, String> = english): List<String> =
+        commonTexts(texts, source).mapNotNull { (key, sourceText, text) ->
+            val expected = MARKUP.findAll(sourceText).map { it.value }.sorted().toList()
+            val actual = MARKUP.findAll(text).map { it.value }.sorted().toList()
+            if (expected == actual) null else "${language.code} $key: $actual, English: $expected"
+        }
+
+    /** The key, the source text, and the translation of each key that both catalogs have, in the order of the keys. */
+    private fun commonTexts(texts: Map<String, String>, source: Map<String, String>): List<Triple<String, String, String>> =
+        texts.toSortedMap().mapNotNull { (key, text) -> source[key]?.let { Triple(key, it, text) } }
+
+    private fun parsedOrNull(text: String): MessagePattern? = runCatching { MessagePattern.parse(text) }.getOrNull()
+
+    private fun testCatalog(path: String): Map<String, String> =
+        MessageCatalog.parse(requireNotNull(javaClass.classLoader.getResourceAsStream(path)) { "Missing $path" }.use { it.readBytes() })
+
     private fun pluralProblems(language: AppLanguage, texts: Map<String, String>): List<String> {
         val required = PluralRules.categories(language)
         return texts.toSortedMap().flatMap { (key, text) ->
-            MessagePattern.parse(text).pluralCases.mapNotNull { cases ->
+            parsedOrNull(text)?.pluralCases.orEmpty().mapNotNull { cases ->
                 val categories = cases.filterNot { it.startsWith("=") }.toSet()
                 when {
                     categories == setOf(MessagePattern.OTHER) -> null

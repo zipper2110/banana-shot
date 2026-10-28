@@ -29,7 +29,7 @@ are in the plan, "Epics".
 | E4-T2 | Spanish glossary | — | done |
 | E4-T3 | Check of the missing and the stale texts | — | done |
 | E4-T4 | Screenshots for translators | E3-T5 | done |
-| E4-T5 | Machine draft | E4-T2, E4-T3 | in-progress |
+| E4-T5 | Machine draft | E4-T2, E4-T3 | done |
 | E4-T6 | Legal texts | E4-T5 | open |
 | E4-T7 | Review by a native speaker | E4-T1, E4-T4, E4-T5, E4-T6 | later |
 | E4-T8 | Fit tests for Spanish | E4-T5 | done |
@@ -164,7 +164,7 @@ are in the plan, "Epics".
 
 ### E4-T5 Machine draft
 
-- Status: in-progress
+- Status: done
 - Plan: 13 ("First draft")
 - Value: the machine draft is the Spanish text of the release. A later
   reviewer corrects a full draft and does not translate from the start.
@@ -188,7 +188,20 @@ are in the plan, "Epics".
   - The check of E4-T3 shows no missing key.
   - A test file with each machine translation error above makes the
     catalog tests fail.
-- Tests: —
+- Notes: the test files are `src/test/resources/catalog-check/`. The
+  Spanish file has one error in each key. The checks find them as follows:
+  - a translated placeholder and an added apostrophe before a placeholder:
+    the placeholder check;
+  - `uno` in place of `one`: the plural check;
+  - a changed `plural` or `other`, and a lost apostrophe before a brace:
+    the parse check;
+  - added or lost markup: the markup check;
+  - a translated term: the "do not translate" check;
+  - a changed key name: the key check (a missing key and an extra key).
+  No catalog text uses `select` now. If a text uses it later, add a check
+  for its case names.
+- Tests: `MessageCatalogTest` ("the catalog checks find each error of a
+  machine translation").
 
 ### E4-T6 Legal texts
 

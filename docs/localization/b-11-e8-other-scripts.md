@@ -70,7 +70,7 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
 
 ### E8-T2 Video fonts for the script
 
-- Status: in-progress
+- Status: done
 - Plan: 6 ("Fonts"), "Costs"
 - Value: the video shows the letters of the script, and the preview shows
   the same letters as the export.
@@ -125,6 +125,10 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   Trebuchet MS, Ink Free). The Windows CJK fonts (Yu Gothic, Microsoft
   YaHei, Microsoft JhengHei) are an option to examine before a bundled or
   downloaded font.
+  On 2026-10-30 the exports of the 1.3.0 release candidate with the video
+  languages `ja`, `zh-Hans`, and `zh-Hant` show the scoreboard texts in the
+  correct script, with no empty boxes (sequence step 3.5). The author
+  accepted the scoreboard check without the statistics card.
 
 ### E8-T3 UI font for the script
 
@@ -269,8 +273,8 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
     help and the Export tab do this.
   - With the Japanese UI font, the paths show "¥" for "\". All Japanese
     Windows fonts do this.
-  - Open: the Windows smoke test in Japanese, the input method
-    check (E8-T5), and the open parts of E7-T3 and E7-T4.
+  - Open: the input method check (E8-T5) and the open parts of E7-T3. The
+    screenshots and the export of step 3.5 passed.
 
 ### E8-L-zh-Hans Simplified Chinese
 
@@ -314,9 +318,8 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The screenshots of 2026-10-28: the sidebar has its normal width. No
     text is cut. The tracked captions ("比 赛", "概 览") have spaces
     between the characters.
-  - Open: the Windows smoke test in
-    Simplified Chinese, the input method check (E8-T5), and the open parts
-    of E7-T3 and E7-T4.
+  - Open: the input method check (E8-T5) and the open parts of E7-T3. The
+    screenshots and the export of step 3.5 passed.
 
 ### E8-L-zh-Hant Traditional Chinese
 
@@ -357,9 +360,8 @@ copy the template of E7 ("Template: E7-L-`<code>` `<Language>`").
   - The texts keep "YouTube" as in English ("製作 YouTube 縮圖").
   - The screenshots of 2026-10-28: the sidebar has its normal width. No
     text is cut.
-  - Open: the
-    Windows smoke test in Traditional Chinese, the input method check
-    (E8-T5), and the open parts of E7-T3 and E7-T4.
+  - Open: the input method check (E8-T5) and the open parts of E7-T3. The
+    screenshots and the export of step 3.5 passed.
 
 ## Done when
 

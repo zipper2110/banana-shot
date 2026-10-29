@@ -112,10 +112,10 @@ checklist is `qa/windows/ui-smoke.md`.
 | Step | Task | Work | Needs | Enables | Owner | Blocks 1.3.0 |
 |---|---|---|---|---|---|---|
 | 3.1 | E4-T12, E3-T21 | The full pass in Spanish, with the mixed and the bad cases of E4-T12. "Restart now" from an install path with "José" (E3-T21). The notice for existing users and "Use English". | Release candidate (steps 0, 1.2, 1.3, 1.6, 1.8) | 4.1 | Author | yes |
-| 3.2 | E5-T6 | Step 6 of the checklist: an export with a video language that is not the app language. | 1.7 | 4.1 | Author | yes |
+| 3.2 | E5-T6 | Step 6 of the checklist: an export with a video language that is not the app language. | 1.7 | 4.1 | Author | done on 2026-10-30 |
 | 3.3 | E7-T3 | Step 7 of the checklist: the Russian, the Greek, and the Polish keyboard layouts. | Release candidate | 4.1 | Author | yes |
 | 3.4 | E3-T23, E8-T5 | Step 8 of the checklist: the Japanese and the Chinese input methods, with the app in English and in the language. | Release candidate, decision 3.6 | 4.1 | Author | see 3.6 |
-| 3.5 | E7-L-ru, E7-L-pt, E7-L-fr, E7-L-de, E8-L-ja, E8-L-zh-Hans, E8-L-zh-Hant | Claude runs the screenshot script for each variant except `es` (also `es-419` and `pt-PT`) and checks the images. The author does one export in Russian, Japanese, Simplified Chinese, and Traditional Chinese (see 3.7). | Release candidate | 4.1 | Claude, Author | yes; the Claude part is done on 2026-10-29 (the window screenshots of all variants; the fixes are in commit `edb9362`). Open: the exports of the author |
+| 3.5 | E7-L-ru, E7-L-pt, E7-L-fr, E7-L-de, E8-L-ja, E8-L-zh-Hans, E8-L-zh-Hant | Claude runs the screenshot script for each variant except `es` (also `es-419` and `pt-PT`) and checks the images. The author does one export in Russian, Japanese, Simplified Chinese, and Traditional Chinese (see 3.7). | Release candidate | 4.1 | Claude, Author | done on 2026-10-30 (the screenshots on 2026-10-29, the fixes in commit `edb9362`; the exports on 2026-10-30, scoreboard only) |
 
 Decisions for the author before step 3:
 

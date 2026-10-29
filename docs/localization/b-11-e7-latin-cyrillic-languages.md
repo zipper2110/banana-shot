@@ -221,7 +221,8 @@ example `E7-L-pt`), and copy the template below.
     file dialog is the Windows dialog. Thus no English Swing text shows.
   - `ScoreboardPreviewMain --language=ru` shows the video texts of all
     styles. They fit.
-  - Open: the Windows smoke test in Russian, and the open parts of E7-T3 and E7-T4.
+  - Open: the open parts of E7-T3. The screenshots and the export of step
+    3.5 passed.
 
 ### E7-L-pt Portuguese (Brazil and Portugal)
 
@@ -269,8 +270,7 @@ example `E7-L-pt`), and copy the template below.
     "enquadramento" needs 98 px and makes the sidebar 114 px wide.
   - `ScoreboardPreviewMain --language=pt` shows the video texts of all
     styles. They fit.
-  - Open: the Windows smoke test in both variants, and the open parts of E7-T3
-    and E7-T4.
+  - Open: the open parts of E7-T3. The screenshots of step 3.5 passed.
 
 ### E7-L-fr French
 
@@ -324,8 +324,7 @@ example `E7-L-pt`), and copy the template below.
     its normal width. The cut texts are fixed (see E3-T22): the Stats
     column header shows "DANS LA / VIDÉO" on 2 lines, the change-marker
     hint shows all 3 lines, and the Export footer keeps "fps" on one line.
-  - Open: the Windows smoke test in French, and the open parts of E7-T3
-    and E7-T4.
+  - Open: the open parts of E7-T3. The screenshots of step 3.5 passed.
 
 ### E7-L-de German
 
@@ -370,8 +369,7 @@ example `E7-L-pt`), and copy the template below.
       Projects step says "Thumbnail machen". The change-marker hint is
       shorter.
     - The timeline label column grows for "KOMMENTARE" (see E3-T22).
-  - Open: the Windows smoke test in German, and the open parts of E7-T3
-    and E7-T4.
+  - Open: the open parts of E7-T3. The screenshots of step 3.5 passed.
 
 ### Template: E7-L-`<code>` `<Language>`
 

@@ -192,7 +192,7 @@ Notes for all tasks:
 
 ### E5-T6 Checks and documentation
 
-- Status: in-progress
+- Status: done
 - Plan: 12, 14
 - Value: the separate video language stays correct in later releases.
 - Requirements:
@@ -207,7 +207,9 @@ Notes for all tasks:
     in all languages) and step 6 of `qa/windows/ui-smoke.md`.
   - Done: the fit test (`VideoTextFitTest`, done with E4-T8) runs for each
     language of `AppLanguage`, so it covers each video language.
-  - Open: the smoke test did not run yet.
+  - Done on 2026-10-30: step 6 of the smoke test passed on the 1.3.0
+    release candidate. With the app in English and the video language
+    Spanish, the export and the Points preview show "JUGADOR 1".
 - Tests: `VideoTextFitTest`.
 
 ## Done when

@@ -115,6 +115,54 @@ When item is done, move it under
 - Postponed from B-50 on 2026-10-26. Do it after B-50.
 - "Add comment" should work during a replay. It needs a concept first.
 
+### B-55 Lightweight scoreboard style
+
+- Add a new scoreboard style with no background. The texts have an outline,
+  so that they stay clear on a light or a dark video.
+- Keep the other parts to a minimum. The existing "Minimal" style still has
+  a background panel, so the new style is a different style.
+- Done when: the user can select the style on the Points tab, and the export
+  shows it with no background.
+
+### B-56 Show the scoreboard only after each point
+
+- Add a scoreboard option: show the scoreboard only after each point, not
+  during the whole video.
+- The scoreboard comes in with an ease-in animation (for example a fade)
+  after the point ends. It stays for a short time with the new score. Then
+  it goes out with an ease-out animation.
+- Open questions: how long the scoreboard stays, and whether the user can
+  change this time.
+- Done when: the user can turn on the option, and the export shows the
+  scoreboard only after each point, with the two animations.
+
+### B-57 Emoji in comments
+
+- Let the user put emoji in a comment. The preview and the exported video
+  show the emoji correctly.
+- The export draws comments with ASS subtitles (`CommentAss.kt`). Find out
+  first how the emoji look there now (color, black and white, or missing).
+- Done when: a comment with emoji shows the same emoji in the preview and in
+  the export.
+
+### B-59 Overlays on videos with non-square pixels
+
+- Found on 2026-10-30 in the 1.3.0 smoke test (step 6). The fixture
+  `ui-smoke.mp4` is 720x486 with a sample aspect ratio of 40:33. A player
+  shows it at about 873x486. The scoreboard is 21% too wide in the export
+  and in the Points preview.
+- Cause: `AssOverlayWriter.kt` sets `PlayResX` to the stored width. It does
+  not use the sample aspect ratio. Thus, the player stretches the overlay
+  with the video.
+- Users with DV, HDV (1440x1080), or broadcast videos get the problem.
+  Phone and action camera videos have square pixels and are correct.
+- Probably also in 1.2.0 (not checked). It does not block 1.3.0.
+- The fix uses the display size of the video for the overlay. The video
+  keeps its sample aspect ratio.
+- Done when: on a video with non-square pixels, the scoreboard, the
+  comments, the replay badge, and the statistics card have the same shape
+  as on a video with square pixels, in the export and in the preview.
+
 ### B-15 Intro and outro videos
 
 - Let the user add an intro video and an outro video to the exported video.
@@ -225,3 +273,17 @@ When item is done, move it under
   comment.
 - Done when: each block of the list has a class, and each "Show" and "Log"
   block is fixed.
+
+### B-58 Analyze the 404 requests of the site
+
+- Get the list of the requests to the landing site that got a 404 page. The
+  404 page sends its path to the counter (`data-path` in
+  `site/public/assets/count.js`), and the site Worker reports the HTML
+  requests to the analytics Worker. Also look at the Cloudflare analytics of
+  the zone.
+- Put the paths in groups: old or wrong links to our pages, links from other
+  sites, bots and scanners (for example `/wp-admin`), and other.
+- For each group, find out if an action is useful. Examples: a redirect to
+  the correct page, a fix of a wrong link, a new page, or no action.
+- Done when: the groups and the decision for each group are in this item, and
+  the useful actions are new tasks or new backlog items.

@@ -29,10 +29,8 @@ Made on 2026-10-29 from the epic files and a check of the code on `master`.
 - The open work is mostly:
   - the approvals of the author and the deployment of E2;
   - the manual Windows checks;
-  - the first run of the `qps` workflow on GitHub (step 1.9);
   - the release and the checks after the release.
-- Updated on 2026-10-29: steps 0 and 1 are done, except the first run of
-  the `qps` workflow (1.9). E3-T21, E3-T22, and E3-T23 stay in progress for
+- Updated on 2026-10-29: steps 0 and 1 are done. E3-T21, E3-T22, and E3-T23 stay in progress for
   the Windows checks of step 3 and the `qps` layout items.
 
 ## Overview
@@ -85,7 +83,7 @@ step 1):
 | 1.6 | E3-T22 | Fix the open layout problems: the More window opens Settings and Contact scrolled down, and the "Content" column of the exports table breaks a word. Check the `qps` list again with the screenshots. | — | 1.10, 3.1 | Claude | done |
 | 1.7 | E5-T2 | A UI flow test selects a video language on the Export tab. | — | 3.1 | Claude | done |
 | 1.8 | E6-T1, E6-T2, E6-T3 | Translated fields in the rules file (also the "What's new" Markdown file), the app shows the text of the app language, and the specification and the checklist. Decided on 2026-10-29. | — | 5.2 | Claude | done |
-| 1.9 | E3-T5 | The UI flow tests run with `qps` in CI and keep the screenshots. | E3-T3 (step 0.1) | 1.10 | Claude | no; the workflow is ready, open: the first run on GitHub |
+| 1.9 | E3-T5 | The UI flow tests run with `qps` in CI and keep the screenshots. | E3-T3 (step 0.1) | 1.10 | Claude | done |
 | 1.10 | E3-T24 | The documentation of E3 and the last allowlist check. Then set E3 to `done`. | 1.1–1.9 | — | Claude | done |
 
 Why step 1.8 blocks 1.3.0: a build can show a translated update note only

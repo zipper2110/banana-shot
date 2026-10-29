@@ -34,7 +34,7 @@ Order of the work:
 | E3-T2 | Message catalog and `Messages` | E3-T1 | done |
 | E3-T3 | Test language `qps` | E3-T2 | done |
 | E3-T4 | Hard-coded text test with an allowlist | E3-T2 | done |
-| E3-T5 | UI flow tests with `qps` in CI | E3-T3 | in-progress |
+| E3-T5 | UI flow tests with `qps` in CI | E3-T3 | done |
 | E3-T6 | Extract: common widgets and dialogs | E3-T2 | done |
 | E3-T7 | Extract: app shell, sidebar, and More | E3-T2 | done |
 | E3-T8 | Extract: Projects tab and new-project dialogs | E3-T2 | done |
@@ -257,7 +257,7 @@ Order of the work:
 
 ### E3-T5 UI flow tests with `qps` in CI
 
-- Status: in-progress
+- Status: done
 - Plan: 12
 - Value: each pull request shows its texts and layout in `qps` without a
   manual start of the app.
@@ -277,9 +277,12 @@ Order of the work:
   `qa/Make-TranslatorScreenshots.ps1 -Language qps`).
   - 2026-10-29: the workflow `.github/workflows/ui-flow-qps.yml` runs the
     UI flow tests in `qps` and keeps the screenshots as an artifact. It
-    starts only by hand, because the UI flow tests did not run on a GitHub
-    runner before. Open: start it one time on GitHub. If it passes, add a
-    start on `master` and on the release tags, and set this task to done.
+    starts on each push to `master` and on each release tag.
+  - 2026-10-29: on GitHub, all 25 UI flow tests pass in `qps` (1 is
+    skipped) in about 4 minutes. The runner gets the pinned FFmpeg and
+    libmpv, because the Export tests read the size of the test video with
+    ffprobe. The English UI flow tests do not run in CI, so the `qps` run
+    adds no time to an English run.
   - 2026-10-29: on the development PC, all 25 UI flow tests pass in `qps`
     (1 is skipped, as in English). The run found two problems, and both are
     fixed: the New project dialog went below the taskbar (see E3-T22), and

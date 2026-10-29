@@ -4,10 +4,13 @@ name: UI flow in qps
 # screenshot of each tab and each dialog. A test that passes in English and
 # fails in qps shows code that depends on a display text.
 #
-# Only a manual start, until a run on a GitHub runner shows that the tests
-# work there and how long they take. Then add `push` for master and the
-# release tags (see E3-T5, "Acceptance").
+# It runs on each push to master and on each release tag. A run takes about
+# 4 minutes on a GitHub runner (2026-10-29). A manual start is also possible.
 on:
+  push:
+    branches: [ master ]
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:

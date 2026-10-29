@@ -111,10 +111,10 @@ checklist is `qa/windows/ui-smoke.md`.
 
 | Step | Task | Work | Needs | Enables | Owner | Blocks 1.3.0 |
 |---|---|---|---|---|---|---|
-| 3.1 | E4-T12, E3-T21 | The full pass in Spanish, with the mixed and the bad cases of E4-T12. "Restart now" from an install path with "José" (E3-T21). The notice for existing users and "Use English". | Release candidate (steps 0, 1.2, 1.3, 1.6, 1.8) | 4.1 | Author | yes |
+| 3.1 | E4-T12, E3-T21 | The full pass in Spanish, with the mixed and the bad cases of E4-T12. "Restart now" from an install path with "José" (E3-T21). The notice for existing users and "Use English". | Release candidate (steps 0, 1.2, 1.3, 1.6, 1.8) | 4.1 | Author | no: skipped for 1.3.0 (decision 3.8) |
 | 3.2 | E5-T6 | Step 6 of the checklist: an export with a video language that is not the app language. | 1.7 | 4.1 | Author | done on 2026-10-30 |
-| 3.3 | E7-T3 | Step 7 of the checklist: the Russian, the Greek, and the Polish keyboard layouts. | Release candidate | 4.1 | Author | yes |
-| 3.4 | E3-T23, E8-T5 | Step 8 of the checklist: the Japanese and the Chinese input methods, with the app in English and in the language. | Release candidate, decision 3.6 | 4.1 | Author | see 3.6 |
+| 3.3 | E7-T3 | Step 7 of the checklist: the Russian, the Greek, and the Polish keyboard layouts. | Release candidate | 4.1 | Author | no: skipped for 1.3.0 (decision 3.8) |
+| 3.4 | E3-T23, E8-T5 | Step 8 of the checklist: the Japanese and the Chinese input methods, with the app in English and in the language. | Release candidate, decision 3.6 | 4.1 | Author | no: skipped for 1.3.0 (decision 3.8) |
 | 3.5 | E7-L-ru, E7-L-pt, E7-L-fr, E7-L-de, E8-L-ja, E8-L-zh-Hans, E8-L-zh-Hant | Claude runs the screenshot script for each variant except `es` (also `es-419` and `pt-PT`) and checks the images. The author does one export in Russian, Japanese, Simplified Chinese, and Traditional Chinese (see 3.7). | Release candidate | 4.1 | Claude, Author | done on 2026-10-30 (the screenshots on 2026-10-29, the fixes in commit `edb9362`; the exports on 2026-10-30, scoreboard only) |
 
 Decisions for the author before step 3:
@@ -127,12 +127,17 @@ Decisions for the author before step 3:
   language"): the full pass only for Spanish. The other variants get the
   screenshots and one export for each script or video font. The script run
   moves the mouse, so nobody uses the PC during the run.
+- 3.8: Decided on 2026-10-30: the author skips steps 3.1, 3.3, and 3.4 for
+  1.3.0. The release does not wait for them. Their tasks (E4-T12, E3-T21,
+  E7-T3, E3-T23, E8-T5) stay open. The risk: a bug of the Spanish app, a
+  shortcut with a non-Latin keyboard layout, or a typed text with an input
+  method can reach the users.
 
 ## Step 4: Release 1.3.0
 
 | Step | Task | Work | Needs | Enables | Owner | Blocks 1.3.0 |
 |---|---|---|---|---|---|---|
-| 4.1 | E4-T13 | Release 1.3.0 with the release checklist. The translation check runs with `--fail-on-missing`. The workers are already deployed (2.3), so the app release comes after them. | 2.2, 2.3, 3.1–3.5, and the steps of step 1 with "yes" | 5.x | Author | — |
+| 4.1 | E4-T13 | Release 1.3.0 with the release checklist. The translation check runs with `--fail-on-missing`. The workers are already deployed (2.3), so the app release comes after them. | 2.2, 2.3, 3.2, 3.5, and the steps of step 1 with "yes" | 5.x | Author | — |
 
 After step 4.1, set E2, E4, and E5 to `done` when all their tasks are `done`
 or `later`. E3 is done after step 1.10.

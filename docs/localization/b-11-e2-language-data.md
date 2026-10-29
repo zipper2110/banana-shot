@@ -330,9 +330,11 @@ IDs do not change.
 - Tests: — (manual)
 - Notes: on 2026-10-29 the "Cloudflare deploy" workflow deployed the site
   (notice version 3), the two workers, and the cockpit from commit
-  `8575458`. The smoke summary returned `204`. Open: the smoke report on
-  the production feedback worker, the release, and the first
-  `os_language` data in the cockpit.
+  `8575458`. The smoke summary returned `204`. The smoke report with a new
+  report ID returned `201`, and a second send returned `200`. The author
+  chat showed "Language: app en · Windows other". The smoke report with its
+  fixed report ID returns `200`, because the worker delivered it before.
+  Open: the release, and the first `os_language` data in the cockpit.
 
 ## Done when
 

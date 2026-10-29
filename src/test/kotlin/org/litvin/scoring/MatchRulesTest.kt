@@ -225,6 +225,17 @@ class MatchRulesTest {
     }
 
     @Test
+    fun setsWithoutMatchEndHaveTheirOwnPresetAndNoDecidingSet() {
+        val rules = MatchRulesV1(bestOfSets = MatchRulesV1.NO_MATCH_END, finalSet = FinalSetRule.MATCH_TIEBREAK)
+
+        assertEquals(MatchRulesV1.NO_MATCH_END, rules.normalized().bestOfSets)
+        assertFalse(rules.hasMatchEnd())
+        assertFalse(rules.hasMatchTiebreakDecider())
+        assertEquals(MatchFormatPreset.SETS_NO_END, MatchFormatPreset.of(rules))
+        assertTrue(MatchFormatPreset.forSport(Sport.PADEL).contains(MatchFormatPreset.SETS_NO_END))
+    }
+
+    @Test
     fun presetOfFindsTheFormatAndIgnoresDeuceAndManualScoring() {
         assertEquals(MatchFormatPreset.BEST_OF_3, MatchFormatPreset.of(MatchRulesV1()))
         assertEquals(MatchFormatPreset.BEST_OF_3, MatchFormatPreset.of(MatchRulesV1(deuce = DeuceRule.NO_AD, manualScoring = true)))

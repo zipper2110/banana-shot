@@ -24,6 +24,7 @@ import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.tabs.points.ui.ComputedScore
+import org.litvin.ui.tabs.points.ui.MatchEndNotice
 import org.litvin.ui.tabs.points.ui.OverrideScoreDialog
 import org.litvin.ui.tabs.points.ui.OverrideScoreInput
 import org.litvin.ui.tabs.points.ui.PointMarks
@@ -81,6 +82,8 @@ internal class PointsScoring(
     private val appCreditRequest: AppCreditRequest = AppCreditRequest.NONE,
     /** True while the Points tab is on the screen. The hints show only then. */
     private val isActive: () -> Boolean = { true },
+    /** Selects the point with this id and seeks to its start. */
+    private val onGoToPoint: (pointId: String) -> Unit = {},
 ) {
     /**
      * The serve button and the outcome buttons, in the point bar under the video.
@@ -119,6 +122,15 @@ internal class PointsScoring(
             addActionListener { openScoreboardStyle() }
         })
     }
+
+    // The id of the point that ends the match, or null when the match did not end.
+    private var matchPointId: String? = null
+
+    /** The notice under the points list when points after the end of the match have a winner. */
+    val matchEndNotice = MatchEndNotice(
+        onChangeFormat = { openScoreSettings() },
+        onGoToMatchPoint = { matchPointId?.let(onGoToPoint) },
+    )
 
     // The style that the open Scoreboard style dialog shows on the video before the user saves it.
     private var previewStyle: ScoreboardSettingsV1? = null
@@ -232,16 +244,19 @@ internal class PointsScoring(
         null -> null
     }
 
-    /** The GAME or SET badge and the serve mark of a point. */
+    /** The MATCH, SET or GAME badge, the serve mark and the after-match state of a point. */
     fun pointMarks(pointId: String): PointMarks? {
         val index = points.indexOfFirst { it.id == pointId }
         if (index < 0) return null
         val players = players()
         val state = states.getOrNull(index)
-        // A point that wins the set also wins a game, so it shows SET only. The Boolean is true for a set.
+        val afterMatch = timeline?.stateBefore(index)?.matchEnded == true
+        val matchPoint = state?.matchEnded == true && !afterMatch
+        // The match point also wins a set and a game, so it shows MATCH only. A point that wins the set shows SET only.
         val milestone = when {
-            state?.lastSetWonBy != null -> true to state.lastSetWonBy
-            state?.lastGameWonBy != null -> false to state.lastGameWonBy
+            matchPoint -> Milestone.MATCH to matchWinner(state)
+            state?.lastSetWonBy != null -> Milestone.SET to state.lastSetWonBy
+            state?.lastGameWonBy != null -> Milestone.GAME to state.lastGameWonBy
             else -> null
         }
         val server = when (score.serverMarks[pointId]) {
@@ -250,23 +265,46 @@ internal class PointsScoring(
             else -> null
         }
         val overridden = score.scoreOverrides[pointId]?.isEmpty() == false
-        if (milestone == null && server == null && !overridden) return null
+        if (milestone == null && server == null && !overridden && !afterMatch) return null
+        // A match that ends in a draw (a total points match) has no winner color.
+        val milestoneColor = milestone?.second?.let(players::color) ?: Palette.FG
         return PointMarks(
-            milestone = milestone?.let { (set, _) ->
-                DisplayFormats.upper(if (set) tr("points.badge.set") else tr("points.badge.game"))
+            milestone = milestone?.let { (kind, _) ->
+                DisplayFormats.upper(
+                    when (kind) {
+                        Milestone.MATCH -> tr("points.badge.match")
+                        Milestone.SET -> tr("points.badge.set")
+                        Milestone.GAME -> tr("points.badge.game")
+                    },
+                )
             },
-            milestoneIsSet = milestone?.first == true,
-            milestoneColor = milestone?.let { players.color(it.second) } ?: Palette.FG,
-            milestoneOnColor = milestone?.let { ScoringUi.onPlayer(players.color(it.second)) } ?: Palette.BG,
-            milestoneTip = milestone?.let { (set, player) ->
-                if (set) tr("points.badge.set.tooltip", "name" to players.name(player))
-                else tr("points.badge.game.tooltip", "name" to players.name(player))
+            milestoneIsSet = milestone != null && milestone.first != Milestone.GAME,
+            milestoneColor = milestoneColor,
+            milestoneOnColor = if (milestone != null) ScoringUi.onPlayer(milestoneColor) else Palette.BG,
+            milestoneTip = milestone?.let { (kind, player) ->
+                when {
+                    player == null -> tr("points.badge.match.draw.tooltip")
+                    kind == Milestone.MATCH -> tr("points.badge.match.tooltip", "name" to players.name(player))
+                    kind == Milestone.SET -> tr("points.badge.set.tooltip", "name" to players.name(player))
+                    else -> tr("points.badge.game.tooltip", "name" to players.name(player))
+                }
             }.orEmpty(),
             serveColor = server?.let(players::color),
             serveOnBadge = server?.let { ScoringUi.needsBadge(players.color(it)) } ?: false,
             serveTip = server?.let { tr("points.serveMark.tooltip", "name" to players.name(it)) }.orEmpty(),
             overridden = overridden,
+            afterMatch = afterMatch,
+            matchPoint = matchPoint,
         )
+    }
+
+    private enum class Milestone { GAME, SET, MATCH }
+
+    /** The side that won the match, or null for a draw. The sets decide; without sets, the points decide. */
+    private fun matchWinner(state: ScoringEngine.MatchState): Int? = when {
+        state.setsP1 != state.setsP2 -> if (state.setsP1 > state.setsP2) 1 else 2
+        state.p1Pts != state.p2Pts -> if (state.p1Pts > state.p2Pts) 1 else 2
+        else -> null
     }
 
     /** Q, W, E give the score. R and Shift+R go to the next and the previous point and play it. S switches the server. */
@@ -388,7 +426,7 @@ internal class PointsScoring(
             p2Color = players.p2Color,
             showSets = rules.manualScoring || rules.structure == MatchStructure.SETS,
             showGames = rules.manualScoring || rules.structure == MatchStructure.SETS || rules.structure == MatchStructure.GAMES_ONLY,
-            maxSets = if (rules.manualScoring) MAX_SETS else rules.bestOfSets,
+            maxSets = if (rules.manualScoring || !rules.hasMatchEnd()) MAX_SETS else rules.bestOfSets,
             tiebreakOf = { candidate ->
                 val trial = withoutThis.copy(scoreOverrides = withoutThis.scoreOverrides + (point.id to candidate))
                 runCatching { timelineOf(trial).statesAfterPoint.getOrNull(index)?.isTiebreak }.getOrNull() ?: state.isTiebreak
@@ -519,6 +557,19 @@ internal class PointsScoring(
         controls.setPlayers(players())
         render()
         rebuildSpans()
+        refreshMatchEndNotice()
+    }
+
+    /** Shows the notice when points after the match point have a winner, and hides it when none have. */
+    private fun refreshMatchEndNotice() {
+        val matchIndex = timeline?.statesAfterPoint?.indexOfFirst { it.matchEnded } ?: -1
+        matchPointId = points.getOrNull(matchIndex)?.id
+        val scoredAfter = if (matchIndex < 0) {
+            0
+        } else {
+            points.drop(matchIndex + 1).count { score.outcomes[it.id] == Outcome.P1 || score.outcomes[it.id] == Outcome.P2 }
+        }
+        matchEndNotice.show(matchIndex + 1, scoredAfter)
     }
 
     private fun render() = renderPanel()

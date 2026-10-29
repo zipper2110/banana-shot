@@ -58,7 +58,7 @@ enum class FinalSetRule {
 data class MatchRulesV1(
     val manualScoring: Boolean = false,
     val structure: MatchStructure = MatchStructure.SETS,
-    /** 1, 3 or 5. */
+    /** 1, 3 or 5, or [NO_MATCH_END] for sets without a match end. */
     val bestOfSets: Int = 3,
     /** The number of games that wins a set (with a two-game lead). */
     val gamesPerSet: Int = 6,
@@ -78,8 +78,11 @@ data class MatchRulesV1(
     /** [MatchStructure.TOTAL_POINTS]: the points that one side serves in a row. */
     val serveTurnPoints: Int = 4,
 ) {
-    /** The number of sets that wins the match. */
-    fun setsToWin(): Int = bestOfSets / 2 + 1
+    /** The number of sets that wins the match. Sets without a match end never reach it. */
+    fun setsToWin(): Int = if (hasMatchEnd()) bestOfSets / 2 + 1 else Int.MAX_VALUE
+
+    /** False for [MatchStructure.SETS] with [NO_MATCH_END]: the players play sets until they stop, for example in practice. */
+    fun hasMatchEnd(): Boolean = bestOfSets != NO_MATCH_END
 
     /** The games of each side at which the set tiebreak starts. */
     fun setTiebreakGames(): Int = if (earlyTiebreak) gamesPerSet - 1 else gamesPerSet
@@ -138,7 +141,9 @@ data class MatchRulesV1(
 
     companion object {
         const val MATCH_TIEBREAK_POINTS = 10
-        val BEST_OF_OPTIONS = listOf(1, 3, 5)
+        /** The [bestOfSets] value of sets without a match end. An older app version reads it as best of 3. */
+        const val NO_MATCH_END = 0
+        val BEST_OF_OPTIONS = listOf(1, 3, 5, NO_MATCH_END)
         val GAMES_PER_SET_OPTIONS = listOf(4, 6, 8, 9)
         /** The games in a set that offer [earlyTiebreak]: the pro set to 9 games with a tiebreak at 8–8 (see padel.md). */
         val EARLY_TIEBREAK_GAMES = setOf(9)
@@ -170,6 +175,7 @@ enum class MatchFormatPreset(
     BEST_OF_3(MatchRulesV1()),
     BEST_OF_3_MATCH_TIEBREAK(MatchRulesV1(finalSet = FinalSetRule.MATCH_TIEBREAK)),
     BEST_OF_5(MatchRulesV1(bestOfSets = 5), sports = setOf(Sport.TENNIS)),
+    SETS_NO_END(MatchRulesV1(bestOfSets = MatchRulesV1.NO_MATCH_END)),
     ONE_SET(MatchRulesV1(bestOfSets = 1)),
     PRO_SET(MatchRulesV1(bestOfSets = 1, gamesPerSet = 8)),
     PRO_SET_9(MatchRulesV1(bestOfSets = 1, gamesPerSet = 9, earlyTiebreak = true), sports = setOf(Sport.PADEL)),
@@ -196,6 +202,7 @@ enum class MatchFormatPreset(
         PRO_SET -> tr("format.proSet8")
         PRO_SET_9 -> tr("format.proSet9")
         SHORT_SETS -> tr("format.shortSets")
+        SETS_NO_END -> tr("format.setsNoEnd")
         GAMES_ONLY -> tr("format.gamesOnly")
         AMERICANO -> tr("format.americano")
         TIEBREAK -> tr("format.tiebreak")
@@ -213,6 +220,7 @@ enum class MatchFormatPreset(
         PRO_SET -> tr("format.proSet8.description")
         PRO_SET_9 -> tr("format.proSet9.description")
         SHORT_SETS -> tr("format.shortSets.description")
+        SETS_NO_END -> tr("format.setsNoEnd.description")
         GAMES_ONLY -> tr("format.gamesOnly.description")
         AMERICANO -> tr("format.americano.description")
         TIEBREAK -> tr("format.tiebreak.description")

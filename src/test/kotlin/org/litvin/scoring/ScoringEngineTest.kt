@@ -153,6 +153,35 @@ class ScoringEngineTest {
         assertTrue(setsPerPoint[48].all { !it.tiebreak })
     }
 
+    @Test
+    fun matchEndedIsTrueFromTheMatchPointOn() {
+        // Player 1 wins 6–0, 6–0 in a best of 3 match: the 48th point wins the match.
+        val points = points(50)
+        val outcomes = points.associate { it.id to Outcome.P1 }
+
+        val timeline = ScoringEngine.timeline(points, outcomes)
+
+        assertFalse(timeline.statesAfterPoint[46].matchEnded)
+        assertTrue(timeline.statesAfterPoint[47].matchEnded)
+        assertTrue(timeline.statesAfterPoint[49].matchEnded)
+    }
+
+    @Test
+    fun setsWithoutMatchEndCountEveryPoint() {
+        // Player 1 wins three sets 6–0, then one more point. Best of 3 would end after two sets.
+        val points = points(73)
+        val outcomes = points.associate { it.id to Outcome.P1 }
+        val rules = MatchRulesV1(bestOfSets = MatchRulesV1.NO_MATCH_END)
+
+        val timeline = ScoringEngine.timeline(points, outcomes, rules)
+        val last = timeline.statesAfterPoint.last()
+
+        assertEquals(3, last.setsP1)
+        assertEquals(1, last.p1Pts)
+        assertFalse(timeline.statesAfterPoint.any { it.matchEnded })
+        assertEquals(3, timeline.setsAfterPoint.last().size)
+    }
+
     private fun points(count: Int): List<PointV1> {
         return (1..count).map { point("p$it", it) }
     }

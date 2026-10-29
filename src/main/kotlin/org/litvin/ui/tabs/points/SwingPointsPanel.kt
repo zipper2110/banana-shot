@@ -201,6 +201,7 @@ class SwingPointsPanel(
         styleDefaults = styleDefaults,
         appCreditRequest = appCreditRequest,
         isActive = { active },
+        onGoToPoint = { id -> selectPoint(id) },
     )
     private val frameLoader = VideoFrameLoader()
 
@@ -619,7 +620,7 @@ class SwingPointsPanel(
 
     /**
      * The side column: the current point with Previous and Next, the "Points & events" header, the points table,
-     * and the Scoring settings and Scoreboard style buttons under the table.
+     * the match end notice, and the Scoring settings and Scoreboard style buttons under the table.
      */
     private fun buildSideColumn(): JComponent {
         val top = JPanel().apply {
@@ -637,7 +638,11 @@ class SwingPointsPanel(
             minimumSize = Dimension(SIDE_COLUMN_WIDTH, 0)
             add(top, BorderLayout.NORTH)
             add(cardsView, BorderLayout.CENTER)
-            add(scoring.settingsButtons, BorderLayout.SOUTH)
+            add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                add(scoring.matchEndNotice, BorderLayout.NORTH)
+                add(scoring.settingsButtons, BorderLayout.CENTER)
+            }, BorderLayout.SOUTH)
         }
     }
 

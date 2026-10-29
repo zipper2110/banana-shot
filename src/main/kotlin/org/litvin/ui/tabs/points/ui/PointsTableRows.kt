@@ -171,8 +171,8 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
 }
 
 /**
- * The game, set and serve marks of a point.
- * [milestone] is the "SET" or "GAME" badge text, and [milestoneIsSet] tells which one it is.
+ * The game, set, match and serve marks of a point.
+ * [milestone] is the "MATCH", "SET" or "GAME" badge text. [milestoneIsSet] is true for the outline badge of SET and MATCH.
  * A null [serveColor] means that the point has no serve mark.
  */
 internal data class PointMarks(
@@ -188,6 +188,10 @@ internal data class PointMarks(
     val serveTip: String = "",
     /** True when the point has a score that the user typed (Override score). */
     val overridden: Boolean = false,
+    /** True when the point comes after the end of the match. The score does not count it, so the row is dim. */
+    val afterMatch: Boolean = false,
+    /** True for the point that ends the match. The badge is a trophy, because a word does not fit in all languages. */
+    val matchPoint: Boolean = false,
 )
 
 /** One marked point: number, start, length, the marks, the favorite star, and Edit and Delete on hover. */
@@ -223,6 +227,7 @@ internal class PointRow(
     private val numberFont get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
     private val badgeFont get() = UiKit.trackedFont(9.5f, 0.05, UiKit.Weight.BOLD)
     private val racketIcons = HashMap<Color, javax.swing.Icon>()
+    private val trophyIcons = HashMap<Color, javax.swing.Icon>()
     private val overrideIcon by lazy { UiKit.icon(Material2AL.EDIT, OVERRIDE, Palette.LIME) }
 
     init {
@@ -258,24 +263,34 @@ internal class PointRow(
         val g2 = UiKit.smooth(g)
         try {
             val showSelection = selected
-            val strip = stripColor()
+            val marks = marks()
+            val afterMatch = marks?.afterMatch == true
+            // A point after the end of the match does not count: its winner strip and its texts are dim.
+            val strip = stripColor()?.let { if (afterMatch) Palette.withAlpha(it, AFTER_MATCH_ALPHA) else it }
             if (strip != null) paintRowBackground(g2, null, strip, WINNER_STRIP)
             else paintRowBackground(g2, null, if (showSelection) Palette.LIME else null)
             // A scored point keeps its winner strip; the selection shows as a lime outline.
             if (showSelection && strip != null) UiKit.paintBox(g2, 0, 0, width, height, 0, null, Palette.LIME_LINE)
             val columns = TableColumns(width)
             val h = height - 1f
-            UiKit.drawText(g2, number.toString(), numberFont, if (showSelection) Palette.LIME else Palette.FG_2, columns.number.toFloat(), 0f, h)
-            UiKit.drawText(g2, Timecode.format(point.startMs), textFont, Palette.FG, columns.start.toFloat(), 0f, h)
+            val numberColor = when {
+                showSelection -> Palette.LIME
+                afterMatch -> Palette.FG_3
+                else -> Palette.FG_2
+            }
+            UiKit.drawText(g2, number.toString(), numberFont, numberColor, columns.number.toFloat(), 0f, h)
+            UiKit.drawText(g2, Timecode.format(point.startMs), textFont, if (afterMatch) Palette.FG_3 else Palette.FG, columns.start.toFloat(), 0f, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
             UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), 0f, h)
-            marks()?.let { paintMarks(g2, it, columns.marksRight) }
+            marks?.let { paintMarks(g2, it, columns.marksRight) }
         } finally {
             g2.dispose()
         }
     }
 
     private fun badgeWidth(text: String) = ceil(UiKit.textWidth(text, badgeFont)).toInt() + 10
+
+    private fun milestoneWidth(marks: PointMarks, text: String) = if (marks.matchPoint) TROPHY_BADGE else badgeWidth(text)
 
     private fun racketWidth(marks: PointMarks) = if (marks.serveOnBadge) RACKET_BADGE else RACKET
 
@@ -286,11 +301,15 @@ internal class PointRow(
     private fun paintMarks(g2: Graphics2D, marks: PointMarks, marksRight: Int): Int {
         var right = marksRight
         marks.milestone?.let { text ->
-            val w = badgeWidth(text)
+            val w = milestoneWidth(marks, text)
             val x = right - w
             val y = (height - BADGE_HEIGHT) / 2
-            // SET is the outline badge: the player color on its contrast color. GAME is the filled badge.
-            if (marks.milestoneIsSet) {
+            // SET and MATCH are outline badges: the player color on its contrast color. GAME is the filled badge.
+            if (marks.matchPoint) {
+                UiKit.paintBox(g2, x, y, w, BADGE_HEIGHT, 3, marks.milestoneOnColor, marks.milestoneColor)
+                val icon = trophyIcons.getOrPut(marks.milestoneColor) { UiKit.icon(Material2AL.EMOJI_EVENTS, TROPHY, marks.milestoneColor) }
+                icon.paintIcon(this, g2, x + (w - icon.iconWidth) / 2, y + (BADGE_HEIGHT - icon.iconHeight) / 2)
+            } else if (marks.milestoneIsSet) {
                 UiKit.paintBox(g2, x, y, w, BADGE_HEIGHT, 3, marks.milestoneOnColor, marks.milestoneColor)
                 UiKit.drawText(g2, text, badgeFont, marks.milestoneColor, x + 5f, y.toFloat(), BADGE_HEIGHT.toFloat())
             } else {
@@ -321,7 +340,7 @@ internal class PointRow(
         val marks = marks() ?: return null
         var right = TableColumns(width).marksRight
         marks.milestone?.let { text ->
-            val left = right - badgeWidth(text)
+            val left = right - milestoneWidth(marks, text)
             if (event.x in left..right) return marks.milestoneTip
             right = left - MARK_GAP
         }
@@ -331,7 +350,7 @@ internal class PointRow(
             right = left - MARK_GAP
         }
         if (marks.overridden && event.x in (right - OVERRIDE)..right) return tr("points.row.override.tooltip")
-        return null
+        return if (marks.afterMatch) tr("points.row.afterMatch.tooltip") else null
     }
 
     private companion object {
@@ -340,6 +359,11 @@ internal class PointRow(
         const val RACKET = 15
         const val RACKET_BADGE = 21
         const val OVERRIDE = 14
+        const val TROPHY = 13
+        const val TROPHY_BADGE = 24
+
+        /** The alpha of the winner strip of a point after the end of the match. */
+        const val AFTER_MATCH_ALPHA = 70
     }
 }
 

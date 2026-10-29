@@ -131,6 +131,7 @@ class ScoreSettingsDialog private constructor(
             SegmentedChoice.Option(1, tr("scoreSettings.sets.one")),
             SegmentedChoice.Option(3, tr("scoreSettings.sets.bestOf", "count" to 3)),
             SegmentedChoice.Option(5, tr("scoreSettings.sets.bestOf", "count" to 5)),
+            SegmentedChoice.Option(MatchRulesV1.NO_MATCH_END, tr("scoreSettings.sets.noEnd")),
         ),
     )
     private val gamesPerSet = SegmentedChoice(

@@ -90,6 +90,13 @@ internal fun serveColumnWidth(display: ScoreboardDisplay, look: Look, width: Dou
     if (look.serve && display.server != 0) width else 0.0
 
 /**
+ * The width of the point column: [width], or 0 when the board does not show the points (after the end of the match).
+ * Without the point column, the games column is at the right edge, so it can need the round corners of the board.
+ */
+internal fun pointColumnWidth(display: ScoreboardDisplay, width: Double): Double =
+    if (display.showsPoints) width else 0.0
+
+/**
  * The serve ball: a circle with the center at ([cx], [cy]). [ringRgb] adds a ring around the ball,
  * for boards where the ball color does not show well on the background.
  */

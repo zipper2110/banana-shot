@@ -24,6 +24,8 @@ object ScoringRules {
         val server: Int? = null,
         /** True when this point wins the game for both players (golden point or star point). */
         val decidingPoint: Boolean = false,
+        /** True when the match ended before this point. */
+        val matchEnded: Boolean = false,
     )
 
     /**
@@ -56,6 +58,7 @@ object ScoringRules {
                 completedSetTiebreaks = sets.map { if (it.tiebreak) it.tiebreakP1 to it.tiebreakP2 else null },
                 server = timeline.serverOfPoint.getOrNull(i),
                 decidingPoint = ScoringEngine.isDecidingPoint(state, rules),
+                matchEnded = state.matchEnded,
             )
         }
     }

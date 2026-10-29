@@ -25,7 +25,9 @@ object ScoringEngine {
         val setsP2: Int,
         val lastGameWonBy: Int?, // 1,2 or null
         val lastSetWonBy: Int?,  // 1,2 or null
-        val isTiebreak: Boolean
+        val isTiebreak: Boolean,
+        /** True after the last point of the match. Manual scoring does not end the match. */
+        val matchEnded: Boolean = false,
     ) {
         companion object {
             val INITIAL = MatchState(0, 0, 0, 0, 0, 0, null, null, false)
@@ -347,6 +349,7 @@ object ScoringEngine {
             lastGameWonBy = gameWonBy,
             lastSetWonBy = setWonBy,
             isTiebreak = isTiebreak,
+            matchEnded = ended,
         )
 
         private fun checkGame() {

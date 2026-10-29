@@ -42,6 +42,8 @@ data class OverlaySpan(
     val server: Int? = null,
     /** The badge of a deciding point, for example "STAR POINT", or null for a normal point. */
     val badge: String? = null,
+    /** True when the match ended before this span. The scoreboard then shows the final score. */
+    val matchEnded: Boolean = false,
 )
 
 data class CommentOverlaySpan(
@@ -202,6 +204,7 @@ object ScoreboardTimelineBuilder {
                 completedSetTiebreaks = st?.completedSetTiebreaks ?: emptyList(),
                 server = st?.server,
                 badge = badge?.takeIf { st?.decidingPoint == true },
+                matchEnded = st?.matchEnded ?: false,
             )
         }
         return out

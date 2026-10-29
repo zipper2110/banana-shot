@@ -31,7 +31,7 @@ internal object ScoreboardMoreLayouts {
         val titleSize = 24.0
         val nameX = if (look.playerColors) 26.0 else 20.0
         val setColW = 50.0
-        val pointColW = 84.0
+        val pointColW = pointColumnWidth(display, 84.0)
         val columns = display.completedSets.size + 1
 
         val top = stripeH + headerH
@@ -53,9 +53,11 @@ internal object ScoreboardMoreLayouts {
             items += centered(20.0, stripeH + headerH / 2, title, GEORGIA, titleSize, look.accentRgb, TextAnchor.MIDDLE_LEFT)
             items += SceneItem.Box(0.0, top - 1.0, width, 1.0, look.accentRgb, 0.35)
         }
-        items += SceneItem.Box(pointX, top, pointColW, 2 * rowH, cream, look.opacity, Corners(0.0, 0.0, bottomRadius, 0.0))
+        if (pointColW > 0.0) {
+            items += SceneItem.Box(pointX, top, pointColW, 2 * rowH, cream, look.opacity, Corners(0.0, 0.0, bottomRadius, 0.0))
+            items += SceneItem.Box(pointX, top + rowH - 0.5, pointColW, 1.0, green, 0.18)
+        }
         items += SceneItem.Box(0.0, top + rowH - 0.5, pointX, 1.0, WHITE, 0.14)
-        items += SceneItem.Box(pointX, top + rowH - 0.5, pointColW, 1.0, green, 0.18)
 
         rows.forEachIndexed { index, row ->
             val rowTop = top + index * rowH
@@ -69,11 +71,11 @@ internal object ScoreboardMoreLayouts {
                 items += setGames(setsX + setIndex * setColW + setColW / 2, cy, row, setIndex, SEGOE, setSize, WHITE, 0x7FA08F)
             }
             items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), SEGOE, setSize, 0xE9F1EC, TextAnchor.CENTER)
-            if (row.leading) {
+            if (row.leading && pointColW > 0.0) {
                 val corners = Corners(bottomRight = if (index == 1) bottomRadius else 0.0)
                 items += SceneItem.Box(pointX, rowTop, pointColW, rowH, look.accentRgb, 0.45, corners)
             }
-            items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, green, TextAnchor.CENTER, opacity = if (row.trailing) 0.5 else 1.0)
+if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, green, TextAnchor.CENTER, opacity = if (row.trailing) 0.5 else 1.0)
         }
         if (look.credit != null) {
             items += SceneItem.Box(0.0, rowsBottom - 0.5, width, 1.0, WHITE, 0.14)
@@ -99,7 +101,7 @@ internal object ScoreboardMoreLayouts {
         val titleSpacing = 1.4
         val nameX = if (look.playerColors) 44.0 else 18.0
         val setColW = 50.0
-        val pointColW = 82.0
+        val pointColW = pointColumnWidth(display, 82.0)
         val columns = display.completedSets.size + 1
 
         val serveW = serveColumnWidth(display, look, 28.0)
@@ -120,8 +122,10 @@ internal object ScoreboardMoreLayouts {
             items += SceneItem.Box(0.0, 0.0, width, headerH, dark, look.opacity, Corners(radius, radius, 0.0, 0.0))
             items += centered(18.0, headerH / 2, title, TREBUCHET, titleSize, WHITE, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
         }
-        items += SceneItem.Box(gamesX, headerH, setColW, 2 * rowH, dark, 0.35)
-        items += SceneItem.Box(pointX, headerH, pointColW, 2 * rowH, deep, look.opacity, Corners(0.0, if (title == null) radius else 0.0, bottomRadius, 0.0))
+        // The right column has the round corners of the board: the point column, or the games column without it.
+        val rightCorners = Corners(0.0, if (title == null) radius else 0.0, bottomRadius, 0.0)
+        items += SceneItem.Box(gamesX, headerH, setColW, 2 * rowH, dark, 0.35, if (pointColW > 0.0) Corners.NONE else rightCorners)
+        if (pointColW > 0.0) items += SceneItem.Box(pointX, headerH, pointColW, 2 * rowH, deep, look.opacity, rightCorners)
         items += SceneItem.Box(0.0, headerH + rowH - 0.5, width, 1.0, WHITE, 0.22)
 
         rows.forEachIndexed { index, row ->
@@ -134,7 +138,7 @@ internal object ScoreboardMoreLayouts {
             }
             items += centered(gamesX + setColW / 2, cy, row.games.toString(), TREBUCHET, setSize, WHITE, TextAnchor.CENTER)
             val pointRgb = if (row.leading) look.accentRgb else WHITE
-            items += centered(pointX + pointColW / 2, cy, row.points, TREBUCHET, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.6 else 1.0)
+if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, TREBUCHET, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.6 else 1.0)
         }
         if (look.credit != null) {
             items += SceneItem.Box(0.0, rowsBottom, width, footerH, dark, look.opacity, Corners(0.0, 0.0, radius, radius))
@@ -159,7 +163,7 @@ internal object ScoreboardMoreLayouts {
         val titleSpacing = 1.4
         val nameX = if (look.playerColors) 44.0 else 18.0
         val setColW = 50.0
-        val pointColW = 82.0
+        val pointColW = pointColumnWidth(display, 82.0)
         val columns = display.completedSets.size + 1
 
         val serveW = serveColumnWidth(display, look, 28.0)
@@ -181,7 +185,7 @@ internal object ScoreboardMoreLayouts {
         }
         // White court lines between the rows and before the point column.
         items += SceneItem.Box(0.0, headerH + rowH - 1.0, width, 2.0, WHITE, 0.85)
-        items += SceneItem.Box(pointX - 1.0, headerH, 2.0, 2 * rowH, WHITE, 0.85)
+if (pointColW > 0.0) items += SceneItem.Box(pointX - 1.0, headerH, 2.0, 2 * rowH, WHITE, 0.85)
 
         rows.forEachIndexed { index, row ->
             val cy = headerH + index * rowH + rowH / 2
@@ -193,7 +197,7 @@ internal object ScoreboardMoreLayouts {
             }
             items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), TAHOMA, setSize, WHITE, TextAnchor.CENTER)
             val pointRgb = if (row.leading) look.accentRgb else WHITE
-            items += centered(pointX + pointColW / 2, cy, row.points, TAHOMA, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.6 else 1.0)
+if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, TAHOMA, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.6 else 1.0)
         }
         if (look.credit != null) {
             items += SceneItem.Box(0.0, rowsBottom - 1.0, width, 2.0, WHITE, 0.85)
@@ -222,11 +226,12 @@ internal object ScoreboardMoreLayouts {
         val titleSpacing = 2.0
         val nameX = if (look.playerColors) padX + 12.0 + 12.0 else padX
         val cellW = 42.0
-        val pointTileW = 72.0
+        val pointTileW = pointColumnWidth(display, 72.0)
+        val pointGap = if (pointTileW > 0.0) 8.0 else 0.0
         val columns = display.completedSets.size + 1
 
         val serveW = serveColumnWidth(display, look, 26.0)
-        val contentW = nameX + nameWidth(rows, CONSOLAS, nameSize, 140.0) + 16.0 + serveW + columns * cellW + 8.0 + pointTileW + padX
+        val contentW = nameX + nameWidth(rows, CONSOLAS, nameSize, 140.0) + 16.0 + serveW + columns * cellW + pointGap + pointTileW + padX
         val titleW = if (title != null) padX + ScoreboardFonts.textWidth(title, CONSOLAS, true, titleSize, titleSpacing) + padX else 0.0
         val width = max(contentW, titleW)
         val top = if (title != null) headerH + 4.0 else 8.0
@@ -234,7 +239,7 @@ internal object ScoreboardMoreLayouts {
         val footerH = if (look.credit != null) 30.0 else 0.0
         val height = rowsBottom + footerH
         val pointX = width - padX - pointTileW
-        val cellsX = pointX - 8.0 - columns * cellW
+        val cellsX = pointX - pointGap - columns * cellW
         val items = mutableListOf<SceneItem>()
 
         items += SceneItem.Box(0.0, 0.0, width, height, board, look.opacity)
@@ -255,8 +260,10 @@ internal object ScoreboardMoreLayouts {
                 items += setGames(cellsX + setIndex * cellW + cellW / 2, cy, row, setIndex, CONSOLAS, digitSize, led, led, lostOpacity = 0.4)
             }
             items += centered(cellsX + row.sets.size * cellW + cellW / 2, cy, row.games.toString(), CONSOLAS, digitSize, led, TextAnchor.CENTER)
-            items += SceneItem.Box(pointX, cy - tileH / 2, pointTileW, tileH, tile, 1.0, Corners.all(3.0))
-            items += centered(pointX + pointTileW / 2, cy, row.points, CONSOLAS, pointSize, led, TextAnchor.CENTER, opacity = if (row.trailing) 0.5 else 1.0)
+            if (pointTileW > 0.0) {
+                items += SceneItem.Box(pointX, cy - tileH / 2, pointTileW, tileH, tile, 1.0, Corners.all(3.0))
+                items += centered(pointX + pointTileW / 2, cy, row.points, CONSOLAS, pointSize, led, TextAnchor.CENTER, opacity = if (row.trailing) 0.5 else 1.0)
+            }
         }
         if (look.credit != null) {
             items += centered(width / 2, rowsBottom + footerH / 2 - 2.0, look.credit, CONSOLAS, 17.0, led, TextAnchor.CENTER, bold = false, opacity = 0.5, spacing = 1.0)
@@ -281,7 +288,7 @@ internal object ScoreboardMoreLayouts {
         val titleSpacing = 1.6
         val nameX = if (look.playerColors) padX + 10.0 + 12.0 else padX
         val setColW = 44.0
-        val pointColW = 70.0
+        val pointColW = pointColumnWidth(display, 70.0)
         val columns = display.completedSets.size + 1
 
         val serveW = serveColumnWidth(display, look, 26.0)
@@ -311,7 +318,7 @@ internal object ScoreboardMoreLayouts {
             }
             items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), SEGOE, setSize, WHITE, TextAnchor.CENTER, outline = outline)
             val pointRgb = if (row.leading) look.accentRgb else WHITE
-            items += centered(
+            if (pointColW > 0.0) items += centered(
                 pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, pointRgb, TextAnchor.CENTER,
                 opacity = if (row.trailing) 0.6 else 1.0, outline = outline,
             )
@@ -343,11 +350,12 @@ internal object ScoreboardMoreLayouts {
         // Without the player colors, the name tile starts at the left edge.
         val nameTileX = if (look.playerColors) colorW + gap else 0.0
         val setTileW = 42.0
-        val pointTileW = 66.0
+        val pointTileW = pointColumnWidth(display, 66.0)
         val columns = display.completedSets.size + 1
 
         val titleW = if (title != null) 14.0 + ScoreboardFonts.textWidth(title, SEGOE, true, titleSize, titleSpacing) + 14.0 else 0.0
-        val cellsW = columns * (setTileW + gap) + pointTileW
+        // Without the point tile, no gap is after the last set tile.
+        val cellsW = if (pointTileW > 0.0) columns * (setTileW + gap) + pointTileW else columns * (setTileW + gap) - gap
         val serveW = serveColumnWidth(display, look, 24.0)
         val nameTileW = max(16.0 + nameWidth(rows, SEGOE, nameSize, 120.0) + serveW + 16.0, titleW - nameTileX - gap - cellsW)
         val width = nameTileX + nameTileW + gap + cellsW
@@ -378,8 +386,10 @@ internal object ScoreboardMoreLayouts {
                 items += setGames(cellsX + setIndex * (setTileW + gap) + setTileW / 2, cy, row, setIndex, SEGOE, setSize, WHITE, 0x6F7682)
             }
             items += centered(cellsX + row.sets.size * (setTileW + gap) + setTileW / 2, cy, row.games.toString(), SEGOE, setSize, WHITE, TextAnchor.CENTER)
-            items += SceneItem.Box(pointX, y, pointTileW, rowH, if (row.leading) look.accentRgb else light, look.opacity, Corners.all(radius))
-            items += centered(pointX + pointTileW / 2, cy, row.points, SEGOE, pointSize, ink, TextAnchor.CENTER, opacity = if (row.trailing) 0.55 else 1.0)
+            if (pointTileW > 0.0) {
+                items += SceneItem.Box(pointX, y, pointTileW, rowH, if (row.leading) look.accentRgb else light, look.opacity, Corners.all(radius))
+                items += centered(pointX + pointTileW / 2, cy, row.points, SEGOE, pointSize, ink, TextAnchor.CENTER, opacity = if (row.trailing) 0.55 else 1.0)
+            }
         }
         if (look.credit != null) {
             val y = rowsBottom + gap
@@ -410,7 +420,8 @@ internal object ScoreboardMoreLayouts {
         val colorW = if (look.playerColors) 6.0 else 0.0
         val padX = 14.0
         val setW = 40.0
-        val pointCellW = 58.0
+        // Without the points, a thin accent bar stays in the middle to separate the two players.
+        val pointCellW = if (display.showsPoints) 58.0 else 3.0
         val columns = display.completedSets.size + 1
         val first = rows[0]
         val second = rows[1]
@@ -452,9 +463,11 @@ internal object ScoreboardMoreLayouts {
         items += centered(leftSetsX + first.sets.size * setW + setW / 2, cy, first.games.toString(), SEGOE, setSize, WHITE, TextAnchor.CENTER)
 
         items += SceneItem.Box(middleX, tabH, 2 * pointCellW, barH, look.accentRgb, 1.0)
-        items += SceneItem.Box(middleX + pointCellW - 0.5, tabH + 12.0, 1.0, barH - 24.0, ink, 0.3)
-        items += centered(middleX + pointCellW / 2, cy, first.points, SEGOE, pointSize, ink, TextAnchor.CENTER, opacity = if (first.trailing) 0.5 else 1.0)
-        items += centered(middleX + pointCellW * 1.5, cy, second.points, SEGOE, pointSize, ink, TextAnchor.CENTER, opacity = if (second.trailing) 0.5 else 1.0)
+        if (display.showsPoints) {
+            items += SceneItem.Box(middleX + pointCellW - 0.5, tabH + 12.0, 1.0, barH - 24.0, ink, 0.3)
+            items += centered(middleX + pointCellW / 2, cy, first.points, SEGOE, pointSize, ink, TextAnchor.CENTER, opacity = if (first.trailing) 0.5 else 1.0)
+            items += centered(middleX + pointCellW * 1.5, cy, second.points, SEGOE, pointSize, ink, TextAnchor.CENTER, opacity = if (second.trailing) 0.5 else 1.0)
+        }
 
         items += centered(rightSetsX + setW / 2, cy, second.games.toString(), SEGOE, setSize, WHITE, TextAnchor.CENTER)
         second.sets.indices.forEach { setIndex ->
@@ -489,7 +502,7 @@ internal object ScoreboardMoreLayouts {
         val titleSpacing = 1.0
         val nameX = if (look.playerColors) padX + 14.0 + 12.0 else padX
         val setColW = 48.0
-        val pointColW = 84.0
+        val pointColW = pointColumnWidth(display, 84.0)
         val columns = display.completedSets.size + 1
 
         val serveW = serveColumnWidth(display, look, 28.0)
@@ -523,9 +536,11 @@ internal object ScoreboardMoreLayouts {
             }
             items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), ARIAL, setSize, cream, TextAnchor.CENTER)
             // The leading player's points are in a solid pill. The other pill is faint.
-            items += SceneItem.Box(pointX + 6.0, rowTop + 6.0, pointColW - 12.0, rowH - 12.0, look.accentRgb, if (row.leading) 1.0 else 0.22, Corners.all(21.0))
-            val pointRgb = if (row.leading) brown else cream
-            items += centered(pointX + pointColW / 2, cy, row.points, ARIAL, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.7 else 1.0)
+            if (pointColW > 0.0) {
+                items += SceneItem.Box(pointX + 6.0, rowTop + 6.0, pointColW - 12.0, rowH - 12.0, look.accentRgb, if (row.leading) 1.0 else 0.22, Corners.all(21.0))
+                val pointRgb = if (row.leading) brown else cream
+                items += centered(pointX + pointColW / 2, cy, row.points, ARIAL, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.7 else 1.0)
+            }
         }
         if (look.credit != null) {
             items += centered(width / 2, rowsBottom + footerH / 2 - 4.0, look.credit, ARIAL, 18.0, 0xC9A98A, TextAnchor.CENTER, bold = false)
@@ -549,7 +564,7 @@ internal object ScoreboardMoreLayouts {
         val colorW = 10.0
         val nameX = if (look.playerColors) colorW + 16.0 else 18.0
         val setColW = 50.0
-        val pointColW = 86.0
+        val pointColW = pointColumnWidth(display, 86.0)
         val columns = display.completedSets.size + 1
 
         val serveW = serveColumnWidth(display, look, 28.0)
@@ -571,7 +586,7 @@ internal object ScoreboardMoreLayouts {
             items += centered(18.0, (headerH - accentBarH) / 2, title, SEGOE_BLACK, titleSize, look.accentRgb, TextAnchor.MIDDLE_LEFT, bold = false, spacing = titleSpacing)
         }
         items += SceneItem.Box(gamesX, headerH, setColW, 2 * rowH, 0xE6E6E6, look.opacity)
-        items += SceneItem.Box(pointX, headerH, pointColW, 2 * rowH, ink, look.opacity)
+if (pointColW > 0.0) items += SceneItem.Box(pointX, headerH, pointColW, 2 * rowH, ink, look.opacity)
         items += SceneItem.Box(0.0, headerH + rowH - 1.0, pointX, 2.0, ink, 0.1)
 
         rows.forEachIndexed { index, row ->
@@ -586,7 +601,7 @@ internal object ScoreboardMoreLayouts {
             }
             items += centered(gamesX + setColW / 2, cy, row.games.toString(), SEGOE, setSize, ink, TextAnchor.CENTER)
             val pointRgb = if (row.leading) look.accentRgb else WHITE
-            items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.55 else 1.0)
+if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.55 else 1.0)
         }
         if (look.credit != null) {
             items += SceneItem.Box(0.0, rowsBottom, width, footerH, ink, look.opacity)

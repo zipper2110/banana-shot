@@ -5,6 +5,7 @@ import org.litvin.scoring.Outcome
 import org.litvin.scoring.Sport
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ScoreboardTimelineBuilderTest {
@@ -175,5 +176,18 @@ class ScoreboardTimelineBuilderTest {
         assertEquals(0L, spans[0].startMs)
         assertEquals(1_000L, spans[0].endMs)
         assertTrue(spans[0].text.contains("pts 30"), "Expected score before C to include A and B outcomes: ${spans[0].text}")
+    }
+
+    @Test
+    fun spansAfterTheMatchPointAreMarkedAsMatchEnded() {
+        // Player 1 wins 6–0, 6–0 in a best of 3 match: 48 points. One more point follows the match point.
+        val points = (0..48).map { pts("P$it", it * 1_000, it * 1_000 + 500) }
+        val outcomes = points.associate { it.id to Outcome.P1 }
+
+        val spans = ScoreboardTimelineBuilder.build(points, outcomes, idleTrim = false)
+
+        assertFalse(spans[47].matchEnded, "The match point itself is still part of the match")
+        assertTrue(spans[48].matchEnded)
+        assertEquals(listOf(6 to 0, 6 to 0), spans[48].completedSets)
     }
 }

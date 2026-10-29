@@ -28,6 +28,8 @@ data class ScoreboardDisplay(
      * The list can be shorter than [completedSets].
      */
     val completedSetTiebreaks: List<Pair<Int, Int>?> = emptyList(),
+    /** False after the end of the match. The board then has no point column, and the games column is the last set. */
+    val showsPoints: Boolean = true,
 ) {
     val player1Leading: Boolean
         get() = pointLeader == 1
@@ -41,10 +43,34 @@ object ScoreboardComponent {
     /** The scoring settings accept names of this length. The scoreboard shortens longer names, for example from an old file. */
     const val PLAYER_NAME_MAX_CHARS = 24
 
-    /** The number of completed sets that a scoreboard shows. Older sets are not shown. */
+    /** The number of completed sets that a scoreboard shows during a match. Older sets are not shown. */
     const val VISIBLE_COMPLETED_SETS = 2
 
-    fun display(span: OverlaySpan): ScoreboardDisplay {
+    fun display(span: OverlaySpan): ScoreboardDisplay =
+        if (span.matchEnded && span.completedSets.isNotEmpty()) finalDisplay(span) else liveDisplay(span)
+
+    /**
+     * The final score after the last point. The board shows all the sets. The last set is in the games column,
+     * so no empty new set shows. The points and the serve are not shown.
+     */
+    private fun finalDisplay(span: OverlaySpan): ScoreboardDisplay {
+        val earlierSets = span.completedSets.dropLast(1)
+        val lastSet = span.completedSets.last()
+        return liveDisplay(span).copy(
+            player1PointText = "",
+            player2PointText = "",
+            player1Games = lastSet.first,
+            player2Games = lastSet.second,
+            completedSets = earlierSets,
+            completedSetTiebreaks = earlierSets.indices.map { span.completedSetTiebreaks.getOrNull(it) },
+            pointLeader = 0,
+            server = 0,
+            badge = null,
+            showsPoints = false,
+        )
+    }
+
+    private fun liveDisplay(span: OverlaySpan): ScoreboardDisplay {
         val rawP1 = span.p1Name.orEmpty().ifBlank { Sport.TENNIS.defaultSideName(1) }
         val rawP2 = span.p2Name.orEmpty().ifBlank { Sport.TENNIS.defaultSideName(2) }
         val leader = if (span.isTiebreak) {

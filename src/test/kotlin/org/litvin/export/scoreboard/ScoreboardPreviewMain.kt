@@ -120,11 +120,29 @@ object ScoreboardPreviewSheet {
         ),
     )
 
+    /** The final score of a best of 3 match: 6–3, 6–7 with a tiebreak (5–7), 4–6. No points and no serve show. */
+    private val matchEnded = ScoreboardComponent.display(
+        OverlaySpan(
+            startMs = 0L,
+            endMs = 1L,
+            text = "",
+            p1Name = "Dale | Devin",
+            p2Name = "Andrew | Dennis",
+            setsP1 = 1,
+            setsP2 = 2,
+            completedSets = listOf(6 to 3, 6 to 7, 4 to 6),
+            completedSetTiebreaks = listOf(null, 5 to 7, null),
+            server = 1,
+            matchEnded = true,
+        ),
+    )
+
     val variants = listOf(
         Variant("Title and credit", fullNames) { it.copy(title = "Round 4 | Stadium court") },
         Variant("No title, no credit", fullNames) { it.copy(showTitle = false, showAppCredit = false) },
         Variant("Padel, golden point, no colors", padelTeams) { it.copy(showTitle = false, showAppCredit = false, showPlayerColors = false) },
         Variant("Default title, deciding point", tennisDecidingPoint) { it.copy(title = ScoreboardSettingsV1.DEFAULT_TITLE) },
+        Variant("Match ended", matchEnded) { it.copy(title = "Westgate - Men's 6.5 practice") },
     )
 
     private const val GAP = 24

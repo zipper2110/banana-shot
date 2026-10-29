@@ -81,4 +81,45 @@ class ScoreboardComponentTest {
         assertEquals("Ad", display.player2PointText)
         assertEquals(2, display.pointLeader)
     }
+
+    @Test
+    fun finishedBestOfThreeShowsAllSetsAndNoNewSet() {
+        // The sets of a user report: 6–3, 6–7 (5–7), 4–6. The board showed 6–7, 4–6 and an empty 0–0 set.
+        val display = ScoreboardComponent.display(
+            OverlaySpan(
+                startMs = 0L,
+                endMs = 1_000L,
+                text = "",
+                setsP1 = 1,
+                setsP2 = 2,
+                completedSets = listOf(6 to 3, 6 to 7, 4 to 6),
+                completedSetTiebreaks = listOf(null, 5 to 7, null),
+                server = 1,
+                matchEnded = true,
+            )
+        )
+
+        assertEquals(listOf(6 to 3, 6 to 7), display.completedSets)
+        assertEquals(listOf(null, 5 to 7), display.completedSetTiebreaks)
+        assertEquals(4 to 6, display.player1Games to display.player2Games)
+        assertEquals("" to "", display.player1PointText to display.player2PointText)
+        assertEquals(0, display.server)
+        assertEquals(0, display.pointLeader)
+    }
+
+    @Test
+    fun matchInProgressStillShowsTheLastTwoSets() {
+        val display = ScoreboardComponent.display(
+            OverlaySpan(
+                startMs = 0L,
+                endMs = 1_000L,
+                text = "",
+                completedSets = listOf(6 to 3, 6 to 7, 4 to 6, 6 to 2),
+                matchEnded = false,
+            )
+        )
+
+        assertEquals(listOf(4 to 6, 6 to 2), display.completedSets)
+        assertEquals(0 to 0, display.player1Games to display.player2Games)
+    }
 }

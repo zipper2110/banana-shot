@@ -279,6 +279,17 @@ When item is done, move it under
 - Change `build-expiry-spec.md` ("Update notice") and S-02 of
   `docs/licensing/expiry-scenarios.md` to match.
 
+### B-55 Feature demos with different sports
+
+- Added on 2026-10-29.
+- The feature demos on the landing site (`site/public/index.html`) show
+  only tennis singles. The scripts are in `site/public/assets/demos/`.
+- Update the demos, so that they use different sports as examples: tennis,
+  padel, and beach tennis. Padel and beach tennis are usually doubles, so
+  their demos show two teams.
+- Update the `aria-label` text of each demo to match its sport.
+- Open question: which demo shows which sport.
+
 ### B-15 Intro and outro videos
 
 - Let the user add an intro video and an outro video to the exported video.

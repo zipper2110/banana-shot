@@ -1,9 +1,10 @@
 {
   "schema": 1,
   "latest": {
-    "version": "1.2.0",
+    "version": "1.3.0",
     "downloadUrl": "https://github.com/zipper2110/banana-shot/releases/latest",
-    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.2.0/BananaShot-win-Setup.exe"
+    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.3.0/BananaShot-win-Setup.exe",
+    "notes": "New: 7 more languages · instant replays with slow motion · comments empowered · 25 thumbnail styles · beach tennis"
   },
   "rules": []
 }

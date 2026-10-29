@@ -6,6 +6,7 @@ import org.litvin.i18n.ScriptFonts
 import org.litvin.i18n.TextFit
 import java.awt.Font
 import java.awt.font.FontRenderContext
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -50,17 +51,33 @@ object ScoreboardFonts {
 
     /**
      * [family] when it shows all characters of [text]. If not, the font of the script of the text in the video
-     * language (outside of a video block, the app language), when that font shows the text. Else [family].
+     * language (outside of a video block, the app language), when that font shows the text. If not, the first
+     * installed font of [FALLBACKS] that shows the text. Else [family].
      */
     fun family(family: String, text: String): String {
         val drawn = DrawnText.composed(text)
         if (displays(family, drawn)) return family
         val language = I18n.videoLanguage ?: I18n.language
-        return ScriptFonts.videoFamily(language, drawn)?.takeIf { displays(it, drawn) } ?: family
+        ScriptFonts.videoFamily(language, drawn)?.takeIf { displays(it, drawn) }?.let { return it }
+        val fallbacks = FALLBACKS[family].orEmpty() + LAST_FALLBACK
+        return fallbacks.firstOrNull { it != family && installed(it) && displays(it, drawn) } ?: family
     }
 
-    private fun displays(family: String, text: String): Boolean =
-        displayCache.getOrPut(family) { Font(family, Font.PLAIN, 1) }.canDisplayUpTo(text) == -1
+    private fun displays(family: String, text: String): Boolean = font(family).canDisplayUpTo(text) == -1
+
+    /** Java gives the logical font "Dialog" for a family that is not installed. */
+    private fun installed(family: String): Boolean = font(family).getFamily(Locale.ENGLISH).equals(family, ignoreCase = true)
+
+    private fun font(family: String): Font = displayCache.getOrPut(family) { Font(family, Font.PLAIN, 1) }
+
+    /**
+     * The fallback fonts of a style font that cannot show the letters of a language. The Ink Free font of Windows 10
+     * has no Cyrillic and no Greek letters. Segoe Print is also a handwriting font, and all Windows versions have it.
+     */
+    private val FALLBACKS = mapOf(INK_FREE to listOf("Segoe Print"))
+
+    /** All Windows versions have Segoe UI, with the Latin, the Cyrillic, and the Greek letters. */
+    private const val LAST_FALLBACK = "Segoe UI"
 
     /** The width of [text] in the composed form, as the video draws it (see [DrawnText]). */
     fun textWidth(text: String, family: String, bold: Boolean, assSize: Double, spacing: Double = 0.0): Double {

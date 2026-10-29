@@ -189,6 +189,14 @@ example `E7-L-pt`), and copy the template below.
     shipped language has this problem.
   - No shipped language uses Greek, so the Greek check is not necessary
     now. Do it with the first Greek language.
+  - Found on 2026-10-29 by CI: the Ink Free font of Windows Server 2022
+    (and of Windows 10) has no Cyrillic letters. The Ink Free font of
+    Windows 11 has them. Decided on 2026-10-29: the style stays available.
+    When the style font and the script font cannot show a text,
+    `ScoreboardFonts.family` uses a fallback font: "Segoe Print" (a
+    handwriting font) for Ink Free, then "Segoe UI" for each style font.
+    All Windows versions have the two fonts. The export, the preview, and
+    the images of the UI use the same fallback font.
 
 ### E7-L-ru Russian
 

@@ -248,7 +248,7 @@ class SwingStatsPanelTest {
             val row = panel.find<StatRowView>("stats-row-${MatchStat.LONG_POINTS_WON.key}")!!
             panel.find<LimitStepper>("stats-long-point-limit")!!.value = 20
 
-            assertEquals("Long points won (\u2265 20 s)", panel.label("stats-label-${MatchStat.LONG_POINTS_WON.key}").text)
+            assertEquals("Long points won (\u2265 20\u00a0s)", panel.label("stats-label-${MatchStat.LONG_POINTS_WON.key}").text)
             // The rows change in place, so the stepper keeps the focus.
             assertTrue(row === panel.find<StatRowView>("stats-row-${MatchStat.LONG_POINTS_WON.key}"))
         }

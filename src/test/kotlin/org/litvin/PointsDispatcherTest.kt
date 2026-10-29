@@ -106,7 +106,7 @@ class PointsDispatcherTest {
         d.onPointEnd(2250)
         assertEquals(2, d.getCompletedPoints().size)
         msg = d.consumeUserMessage()
-        assertTrue(msg != null && msg.contains("200 ms"), "Expect duration hint, but was: $msg")
+        assertTrue(msg != null && msg.contains("200 ms"), "Expect duration hint, but was: $msg")
 
         // Negative or zero duration: End <= Start rejected (outside all points)
         d.onPointStart(4500)

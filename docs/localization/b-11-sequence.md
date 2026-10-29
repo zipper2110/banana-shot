@@ -101,8 +101,8 @@ This step runs at the same time as step 0 and step 1.
 | Step | Task | Work | Needs | Enables | Owner | Blocks 1.3.0 |
 |---|---|---|---|---|---|---|
 | 2.1 | E2-T8 | Done on 2026-10-29: the author approved the assessment. | — | 2.2, 2.3 | Author | done |
-| 2.2 | E2-T4 | Set the GitHub variable `ANALYTICS_NOTICE_VERSION` to `3`. The code and the build check already use 3. | 2.1 | 2.3, 4.1 | Author | yes |
-| 2.3 | E2-T7 | Deploy the analytics worker, the feedback worker, the cockpit, and the site with the new privacy notice (the "Cloudflare deploy" workflow). Send the smoke summary and the smoke report to the production workers. | 2.1, 2.2 | 4.1 | Author | yes |
+| 2.2 | E2-T4 | Set the GitHub variable `ANALYTICS_NOTICE_VERSION` to `3`. The code and the build check already use 3. | 2.1 | 2.3, 4.1 | Author | done on 2026-10-29 |
+| 2.3 | E2-T7 | Deploy the analytics worker, the feedback worker, the cockpit, and the site with the new privacy notice (the "Cloudflare deploy" workflow). Send the smoke summary and the smoke report to the production workers. | 2.1, 2.2 | 4.1 | Author | yes; the deployment and the smoke summary are done on 2026-10-29. Open: the smoke report |
 
 ## Step 3: Windows smoke test
 

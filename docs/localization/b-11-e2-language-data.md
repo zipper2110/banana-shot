@@ -40,10 +40,10 @@ Order of the work:
 | E2-T1 | The language list and the essential attributes in the analytics contract | — | done |
 | E2-T2 | The analytics worker and the cockpit | E2-T1 | done |
 | E2-T3 | The app sends the two language attributes | E2-T1 | done |
-| E2-T4 | Privacy notice, consent dialog, and notice version | E2-T1, E2-T8 | in-progress |
+| E2-T4 | Privacy notice, consent dialog, and notice version | E2-T1, E2-T8 | done |
 | E2-T5 | Language fields in the feedback report | E2-T1 | done |
 | E2-T6 | Feedback form: the languages of the answer | — | done |
-| E2-T7 | Deployment and release | E2-T1–E2-T6, E2-T8 | open |
+| E2-T7 | Deployment and release | E2-T1–E2-T6, E2-T8 | in-progress |
 
 E2-T8 is the first task, but it keeps its number, so that the other task
 IDs do not change.
@@ -218,7 +218,7 @@ IDs do not change.
 
 ### E2-T4 Privacy notice, consent dialog, and notice version
 
-- Status: in-progress
+- Status: done
 - Plan: 10, "Decisions" ("Notice version", "Language attributes level")
 - Value: the users know about the new data and its level before the app
   sends it. They can turn off the statistics.
@@ -250,7 +250,9 @@ IDs do not change.
   check in `Build-AppImage.ps1`, and the GitHub variable
   `ANALYTICS_NOTICE_VERSION` (B-9 decision 17). Change all three in the
   same release.
-- Tests: `PrivacyPageTest`, `AnalyticsBuildConfigTest`. Open: the GitHub variable `ANALYTICS_NOTICE_VERSION` must be `3` before the release, and the review of E2-T8.
+- Tests: `PrivacyPageTest`, `AnalyticsBuildConfigTest`. The author approved
+  E2-T8 on 2026-10-29 and set the GitHub variable `ANALYTICS_NOTICE_VERSION`
+  to `3` on 2026-10-29.
 
 ### E2-T5 Language fields in the feedback report
 
@@ -308,7 +310,7 @@ IDs do not change.
 
 ### E2-T7 Deployment and release
 
-- Status: open
+- Status: in-progress
 - Plan: 10 ("Order"), 11
 - Value: no summary and no report is lost during the change.
 - Requirements:
@@ -326,6 +328,11 @@ IDs do not change.
     the release.
   - The cockpit shows the first `os_language` data after the release.
 - Tests: — (manual)
+- Notes: on 2026-10-29 the "Cloudflare deploy" workflow deployed the site
+  (notice version 3), the two workers, and the cockpit from commit
+  `8575458`. The smoke summary returned `204`. Open: the smoke report on
+  the production feedback worker, the release, and the first
+  `os_language` data in the cockpit.
 
 ## Done when
 

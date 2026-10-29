@@ -37,6 +37,17 @@ jobs:
         shell: pwsh
         run: Set-DisplayResolution -Width 1920 -Height 1080 -Force
 
+      - name: Get the pinned FFmpeg and libmpv
+        # The Export tests read the size of the test video with ffprobe. The
+        # runner has no FFmpeg. The app finds the tools by FFMPEG_PATH and
+        # FFPROBE_PATH, and libmpv in target/native.
+        shell: pwsh
+        run: |
+          ./distribution/windows/Get-NativeDependencies.ps1
+          $bin = Join-Path $PWD "target\native\windows-x64\ffmpeg\bin"
+          "FFMPEG_PATH=$bin\ffmpeg.exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "FFPROBE_PATH=$bin\ffprobe.exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
       - name: Run the UI flow tests in qps
         shell: pwsh
         run: >-

@@ -166,6 +166,9 @@ When item is done, move it under
 ### B-15 Intro and outro videos
 
 - Let the user add an intro video and an outro video to the exported video.
+- Postponed on 2026-10-30. The work has 3 epics (E1 to E3). The concept,
+  the open questions and the epics are in
+  `docs/intro-outro/b-15-intro-outro.md`.
 
 ### B-16 Social media features
 

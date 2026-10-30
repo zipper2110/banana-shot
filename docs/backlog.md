@@ -145,24 +145,6 @@ When item is done, move it under
 - Done when: a comment with emoji shows the same emoji in the preview and in
   the export.
 
-### B-59 Overlays on videos with non-square pixels
-
-- Found on 2026-10-30 in the 1.3.0 smoke test (step 6). The fixture
-  `ui-smoke.mp4` is 720x486 with a sample aspect ratio of 40:33. A player
-  shows it at about 873x486. The scoreboard is 21% too wide in the export
-  and in the Points preview.
-- Cause: `AssOverlayWriter.kt` sets `PlayResX` to the stored width. It does
-  not use the sample aspect ratio. Thus, the player stretches the overlay
-  with the video.
-- Users with DV, HDV (1440x1080), or broadcast videos get the problem.
-  Phone and action camera videos have square pixels and are correct.
-- Probably also in 1.2.0 (not checked). It does not block 1.3.0.
-- The fix uses the display size of the video for the overlay. The video
-  keeps its sample aspect ratio.
-- Done when: on a video with non-square pixels, the scoreboard, the
-  comments, the replay badge, and the statistics card have the same shape
-  as on a video with square pixels, in the export and in the preview.
-
 ### B-15 Intro and outro videos
 
 - Let the user add an intro video and an outro video to the exported video.

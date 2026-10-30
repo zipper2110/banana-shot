@@ -25,6 +25,8 @@ object AssOverlayWriter {
     /**
      * Write an ASS file using the given video resolution and spans.
      * Fonts, sizes, paddings are scaled relative to 1080p.
+     * [outWidth] is the display width: the stored width multiplied by the sample aspect ratio (B-59).
+     * The burn-in gives the same size to libass, so the overlay keeps its shape on non-square pixels.
      */
     fun write(
         file: File,

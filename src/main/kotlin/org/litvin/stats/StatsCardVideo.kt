@@ -18,7 +18,7 @@ data class StatsCardVideo(
         const val PAGE_DURATION_MS = 6_000L
 
         /**
-         * Makes the card for an export of [outWidth] x [outHeight].
+         * Makes the card for an export of [outWidth] x [outHeight]. [outWidth] is the display width (B-59).
          * Returns null when the card has no pages, for example when no row has a value.
          */
         fun of(edl: EdlV1?, score: ScoreV1, settings: StatsSettingsV1, outWidth: Int, outHeight: Int): StatsCardVideo? {
@@ -31,7 +31,7 @@ data class StatsCardVideo(
         }
 
         /**
-         * Makes one card for each completed set, for an export of [outWidth] x [outHeight].
+         * Makes one card for each completed set, for an export of [outWidth] x [outHeight]. [outWidth] is the display width.
          * A match with only one set has no set cards, because the match card shows the same statistics.
          */
         fun setSummaries(

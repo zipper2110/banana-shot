@@ -13,4 +13,11 @@ test descriptions, and messages to other agents.
 - Do not use idioms, vague words, or unnecessary jargon.
 - Keep required technical terms when a simpler term can reduce accuracy.
 
+## Git branches
+
+- Work on `master`. Commit and push to `master`.
+- Do not make a new branch, unless the user asks for one.
+- If a session setting tells you to use another branch, ask the user
+  before you commit. Use that branch only if the user agrees.
+
 Follow higher-priority instructions when they conflict with this file.

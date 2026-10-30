@@ -82,7 +82,7 @@ data class AdjustmentsV1(
     // It does not change at the change points.
     val backgroundColor: String? = null,
 
-    // The trim (B-60): the source time where the video starts and where it ends. Null is the start or the end of
+    // The trim (B-62): the source time where the video starts and where it ends. Null is the start or the end of
     // the source. Only the Points tab timeline and the "Full video" export use them. They have no change points.
     @field:JsonInclude(JsonInclude.Include.NON_NULL)
     @get:JsonInclude(JsonInclude.Include.NON_NULL)
@@ -90,7 +90,7 @@ data class AdjustmentsV1(
     @field:JsonInclude(JsonInclude.Include.NON_NULL)
     @get:JsonInclude(JsonInclude.Include.NON_NULL)
     val trimEndMs: Long? = null,
-    // True after the dialog that tells that the trim cuts off points showed one time for this project (B-60).
+    // True after the dialog that tells that the trim cuts off points showed one time for this project (B-62).
     @field:JsonInclude(JsonInclude.Include.NON_DEFAULT)
     @get:JsonInclude(JsonInclude.Include.NON_DEFAULT)
     val trimWarningShown: Boolean = false,

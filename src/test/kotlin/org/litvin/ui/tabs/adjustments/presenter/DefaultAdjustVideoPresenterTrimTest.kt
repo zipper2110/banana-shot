@@ -16,7 +16,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** The Trim sub-tab (B-60). */
+/** The Trim sub-tab (B-62). */
 class DefaultAdjustVideoPresenterTrimTest {
     private val scheduler = Executors.newSingleThreadScheduledExecutor()
     private val adjustments = AdjustmentsSession(scheduler, 60_000)

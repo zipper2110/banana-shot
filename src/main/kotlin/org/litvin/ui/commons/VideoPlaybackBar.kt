@@ -128,7 +128,7 @@ internal class VideoPlaybackBar(
     }
 
     /**
-     * Shows [points] as thin bars under the track, and dims the track outside [trim] (B-60). A point that is not
+     * Shows [points] as thin bars under the track, and dims the track outside [trim] (B-62). A point that is not
      * fully inside [trim] is red. A null [trim] shows no dim parts. An empty list and a null trim clear them.
      */
     fun setTrimView(points: List<Pair<Long, Long>>, trim: Pair<Long, Long>?) {

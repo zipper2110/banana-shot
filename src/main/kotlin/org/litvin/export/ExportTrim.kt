@@ -6,7 +6,7 @@ import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.TrimRange
 
 /**
- * The trim of a "Full video" export (B-60). The export uses only the source between [startMs] and [endMs]. The
+ * The trim of a "Full video" export (B-62). The export uses only the source between [startMs] and [endMs]. The
  * video timeline of the export starts at [startMs], so the scoreboard and the comments move back by [startMs].
  * The "Only points" and "Only favorites" exports do not use the trim.
  */

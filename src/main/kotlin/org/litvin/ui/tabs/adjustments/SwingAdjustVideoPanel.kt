@@ -48,7 +48,7 @@ import org.litvin.i18n.tr
  * header with "Reset all". The change points card is under the
  * sub-tabs. It shows the change points of the open sub-tab, because each sub-tab has its own change points (B-47).
  * The trim has no change points, so the Trim sub-tab hides the card. On the Trim sub-tab, the seek bar shows the
- * points and dims the parts outside the trim (B-60).
+ * points and dims the parts outside the trim (B-62).
  *
  * On the Colors sub-tab, the video shows the result. While the user holds the left mouse button on the video,
  * the preview shows the original colors. On the Transform sub-tab, the player shows the rotated full frame, and

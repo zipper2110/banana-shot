@@ -47,7 +47,7 @@ object ExportPassPlanner {
      * Plans the passes. Without [keeps] the export is the full video: one video pass, and no set cards. With
      * [replays], a full video export splits the video at the end of each point with replays.
      * [fullVideoDurationMs] is the source duration for a full video export, when it is known. [trim] limits a full
-     * video export to a part of the source (B-60). [replays] must be only the replays inside the trim.
+     * video export to a part of the source (B-62). [replays] must be only the replays inside the trim.
      */
     fun plan(
         keeps: List<PointV1>,
@@ -91,7 +91,7 @@ object ExportPassPlanner {
      * The full video. Without replays and without a [trim] it is one pass of the whole file. With replays, each part
      * of the source between two point ends with replays is one chunk, so the replays can go between the chunks.
      * With a [trim], the chunks are only the part between the trim start and the trim end, and the end card shows
-     * the frame of the trim end (B-60).
+     * the frame of the trim end (B-62).
      */
     private fun planFullVideo(endCard: StatsCardVideo?, durationMs: Long?, replays: List<ExportReplay>, trim: ExportTrim?): List<Pass> {
         val passes = mutableListOf<Pass>()

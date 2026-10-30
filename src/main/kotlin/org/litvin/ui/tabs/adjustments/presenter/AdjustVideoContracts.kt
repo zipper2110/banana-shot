@@ -35,7 +35,7 @@ data class AdjustVideoViewState(
     val sourceVideo: File? = null,
     val playheadMs: Long = 0L,
     val section: AdjustSection = AdjustSection.TRIM,
-    /** The points of the project. The Trim sub-tab shows them and warns about the points outside the trim (B-60). */
+    /** The points of the project. The Trim sub-tab shows them and warns about the points outside the trim (B-62). */
     val points: List<PointV1> = emptyList(),
 ) {
     /** The points that the trim cuts off fully or in part. */
@@ -97,7 +97,7 @@ sealed class AdjustVideoIntent {
     data class ChangeBackground(val color: String?) : AdjustVideoIntent()
     data class PlayheadMoved(val ms: Long) : AdjustVideoIntent()
 
-    /** Sets [end] of the trim (B-60) to the playhead. [durationMs] is the length of the source. */
+    /** Sets [end] of the trim (B-62) to the playhead. [durationMs] is the length of the source. */
     data class SetTrim(val end: TrimEnd, val durationMs: Long) : AdjustVideoIntent()
 
     /** Seeks to [end] of the trim. [durationMs] is the length of the source. */
@@ -115,6 +115,6 @@ sealed class AdjustVideoViewEffect {
     data class ShowError(val message: String) : AdjustVideoViewEffect()
     data class SeekTo(val ms: Long) : AdjustVideoViewEffect()
 
-    /** The first time in a project that the trim cuts off points: a dialog tells it (B-60). */
+    /** The first time in a project that the trim cuts off points: a dialog tells it (B-62). */
     data class TrimCutsPoints(val count: Int) : AdjustVideoViewEffect()
 }

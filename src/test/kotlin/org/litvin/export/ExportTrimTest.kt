@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
-/** The trim of the video (B-60) in the full video export. */
+/** The trim of the video (B-62) in the full video export. */
 class ExportTrimTest {
     private val trimmed = AdjustmentsV1(trimStartMs = 10_000, trimEndMs = 50_000)
 

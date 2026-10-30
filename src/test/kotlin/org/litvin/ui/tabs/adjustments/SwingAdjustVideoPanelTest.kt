@@ -296,7 +296,7 @@ class SwingAdjustVideoPanelTest {
             val panel = panel(player)
             val colors = panel.find("adjust-colors")!!
             val transform = panel.find("crop-transform-panel")!!
-            // The tab opens on the Trim sub-tab (B-60).
+            // The tab opens on the Trim sub-tab (B-62).
             assertEquals(AdjustSection.TRIM, panel.section)
             assertTrue(panel.find("trim-panel")!!.isVisible)
             assertFalse(colors.isVisible)

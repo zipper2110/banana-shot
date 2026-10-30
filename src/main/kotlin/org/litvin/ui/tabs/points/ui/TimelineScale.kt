@@ -9,7 +9,7 @@ import kotlin.math.max
  * video, and the replays of each point as blocks after the end of the point. The ruler and the marks use source
  * time, so this scale converts between the two times.
  *
- * With a [trim] (B-60), the timeline shows only the source between the trim start and the trim end, and the
+ * With a [trim] (B-62), the timeline shows only the source between the trim start and the trim end, and the
  * replays of the points that end in it. The play times stay the play times of the full source; only the x
  * positions use the window.
  */

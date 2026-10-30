@@ -67,7 +67,7 @@ class SwingTimelineComponent(
     private val replayPlayheadProvider: () -> Long? = { null },
     /** A click on a replay block (B-50 T5). */
     private val onReplaySelected: (pointId: String, replayIndex: Int) -> Unit = { _, _ -> },
-    /** The trim for a source of the given length (B-60), or null. The timeline shows only the trimmed part. */
+    /** The trim for a source of the given length (B-62), or null. The timeline shows only the trimmed part. */
     private val trimProvider: (sourceTotalMs: Long) -> TrimRange? = { null },
 ) : JComponent() {
 
@@ -299,7 +299,7 @@ class SwingTimelineComponent(
 
     /**
      * The ruler shows source times. Its ticks skip over the replay blocks (B-50, ruler option A). With a trim, the
-     * ticks go from the trim start to the trim end (B-60).
+     * ticks go from the trim start to the trim end (B-62).
      */
     private fun paintRuler(g: Graphics2D, scale: TimelineScale) {
         val first = scale.sourceStartMs

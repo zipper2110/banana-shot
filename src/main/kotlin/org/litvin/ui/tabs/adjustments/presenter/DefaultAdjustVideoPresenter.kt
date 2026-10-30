@@ -181,7 +181,7 @@ class DefaultAdjustVideoPresenter(
     /**
      * Sets [end] of the trim to the playhead. A time near the source start or end clears that end. The trimmed
      * video keeps at least [TrimRange.MIN_LENGTH_MS]. The trim can cut off points: the user decides, and the app
-     * keeps the points. The first time in a project, a dialog tells it (B-60).
+     * keeps the points. The first time in a project, a dialog tells it (B-62).
      */
     private fun setTrim(end: TrimEnd, durationMs: Long) {
         if (durationMs <= 0) return
@@ -331,7 +331,7 @@ class DefaultAdjustVideoPresenter(
     companion object {
         /**
          * The analytics keep the keys of the two older tabs, so the counts of the sub-tabs stay comparable.
-         * The analytics contract has no key for the Trim sub-tab, so it gives null (B-60).
+         * The analytics contract has no key for the Trim sub-tab, so it gives null (B-62).
          */
         fun analyticsTab(section: AdjustSection): AnalyticsEvent.Tab? = when (section) {
             AdjustSection.COLORS -> AnalyticsEvent.Tab.COLORS

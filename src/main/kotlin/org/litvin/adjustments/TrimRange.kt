@@ -1,7 +1,7 @@
 package org.litvin.adjustments
 
 /**
- * The part of the source between the trim start and the trim end (B-60), in source milliseconds.
+ * The part of the source between the trim start and the trim end (B-62), in source milliseconds.
  * [endMs] is after [startMs].
  */
 data class TrimRange(val startMs: Long, val endMs: Long) {
@@ -28,7 +28,7 @@ data class TrimRange(val startMs: Long, val endMs: Long) {
         }
 
         /**
-         * The points that the trim of [adjustments] cuts off fully or in part. The app keeps them (B-60).
+         * The points that the trim of [adjustments] cuts off fully or in part. The app keeps them (B-62).
          * The end of the source is not needed: without a trim end, no point is after the end.
          */
         fun <T> outside(adjustments: AdjustmentsV1, points: List<T>, startOf: (T) -> Long, endOf: (T) -> Long): List<T> {

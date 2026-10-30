@@ -23,11 +23,11 @@ import java.awt.Graphics2D
 import javax.swing.JLabel
 import javax.swing.JPanel
 
-/** The two ends of the trim (B-60). */
+/** The two ends of the trim (B-62). */
 enum class TrimEnd { START, END }
 
 /**
- * The Trim sub-tab of the Colors & Transform tab (B-60): a header with the changed count and "Reset all", and a card
+ * The Trim sub-tab of the Colors & Transform tab (B-62): a header with the changed count and "Reset all", and a card
  * with the start and the end of the video. "Set here" sets an end to the playhead. The arrow button seeks to it.
  * The caption of the card shows the length of the trimmed video. The trim has no change points.
  * Component IDs: trim-panel, trim-reset, trim-status, trim-start-row, trim-end-row, trim-start-set, trim-end-set,
@@ -52,7 +52,7 @@ class TrimControls(
     /** The number of points that the trim cuts off. The banner shows while it is more than 0. */
     private var outsideCount = 0
 
-    /** The yellow banner: the trim cuts off points. The points stay in the project (B-60). */
+    /** The yellow banner: the trim cuts off points. The points stay in the project (B-62). */
     internal val outsideBanner = LivePreviewNotice(
         text = { tr("adjust.trim.outside", "count" to outsideCount) },
         ikon = Material2OutlinedMZ.WARNING,

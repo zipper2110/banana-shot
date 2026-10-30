@@ -396,7 +396,7 @@ object RenderQueueManager {
                 val defIdx = ExportPresetsIO.defaultBalancedIndex(presets)
                 val preset = presets.find { it.id.equals(job.presetId, ignoreCase = true) } ?: presets[defIdx]
                 val keeps = if (job.idleTrim) job.edlSnapshot else emptyList()
-                // A full video export uses only the trimmed part of the source (B-60).
+                // A full video export uses only the trimmed part of the source (B-62).
                 val fullVideoTrim = if (keeps.isEmpty()) org.litvin.export.ExportTrim.of(job.adjustments, probedDurationMs) else null
                 // The video chunks and the statistics cards, in output order. A card is one more pass on a
                 // frozen frame, so a job with a card always joins passes.

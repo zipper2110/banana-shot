@@ -275,7 +275,7 @@ object ExportPlanner {
             favoriteOnly = request.favoriteOnly,
         )
         val effectiveIdleTrim = effectiveIdleTrim(request.idleTrim, keptPoints)
-        // Only a full video export uses the trim of the video (B-60). Its overlays move back by the trim start.
+        // Only a full video export uses the trim of the video (B-62). Its overlays move back by the trim start.
         val trim = if (effectiveIdleTrim) null else ExportTrim.of(request.adjustments, request.sourceDurationMs)
         val overlayTimeline = if (request.includeScoreboard) {
             buildOverlayTimeline(

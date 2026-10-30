@@ -364,7 +364,7 @@ class SwingPointsPanel(
         winnerColorProvider = { id -> scoring.winnerColor(id) },
         replayPlayheadProvider = { replays.activePlay?.playAt(player.currentTimeMs()) },
         onReplaySelected = { id, index -> EventQueue.invokeLater { openReplayEditor(pointId = id, replayIndex = index) } },
-        // The timeline shows only the trimmed part of the video (B-60).
+        // The timeline shows only the trimmed part of the video (B-62).
         trimProvider = { total -> adjustments.get().takeIf(TrimRange::isSet)?.let { TrimRange.of(it, total) } },
     ).apply { name = "points-seek" }
 

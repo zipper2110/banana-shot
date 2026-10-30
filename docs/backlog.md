@@ -145,7 +145,7 @@ When item is done, move it under
 - Done when: a comment with emoji shows the same emoji in the preview and in
   the export.
 
-### B-60 Trim the start and the end of the video
+### B-62 Trim the start and the end of the video
 
 - Let the user cut off the start and the end of the video, for example the
   warm-up before the match and the time after it.

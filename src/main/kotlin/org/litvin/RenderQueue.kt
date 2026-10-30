@@ -396,6 +396,8 @@ object RenderQueueManager {
                 val defIdx = ExportPresetsIO.defaultBalancedIndex(presets)
                 val preset = presets.find { it.id.equals(job.presetId, ignoreCase = true) } ?: presets[defIdx]
                 val keeps = if (job.idleTrim) job.edlSnapshot else emptyList()
+                // A full video export uses only the trimmed part of the source (B-60).
+                val fullVideoTrim = if (keeps.isEmpty()) org.litvin.export.ExportTrim.of(job.adjustments, probedDurationMs) else null
                 // The video chunks and the statistics cards, in output order. A card is one more pass on a
                 // frozen frame, so a job with a card always joins passes.
                 val passes = org.litvin.export.ExportPassPlanner.plan(
@@ -404,6 +406,7 @@ object RenderQueueManager {
                     endCard = job.statsCard,
                     fullVideoDurationMs = probedDurationMs,
                     replays = job.replays,
+                    trim = fullVideoTrim,
                 )
                 // A replay pass counts the source frames for the zoom and slows the sound (B-50).
                 val replayFrameRate = job.replays.takeIf { it.isNotEmpty() }
@@ -420,6 +423,8 @@ object RenderQueueManager {
 
                 val videoDurationMs: Long? = if (keeps.isNotEmpty()) {
                     org.litvin.export.ExportChunkPlanner.keptDurationMs(keeps)
+                } else if (fullVideoTrim != null) {
+                    fullVideoTrim.durationMs(probedDurationMs)
                 } else {
                     probedDurationMs
                 }
@@ -478,7 +483,9 @@ object RenderQueueManager {
                 var abandoned = false
 
                 if (passes.size == 1) {
-                    val build = buildFor(keeps, partOut, 0L, chunkOutput = false)
+                    // A trimmed full video has one range of the source as its keep.
+                    val singleKeeps = (passes.single() as? org.litvin.export.ExportPassPlanner.Video)?.chunk?.keeps ?: keeps
+                    val build = buildFor(singleKeeps, partOut, 0L, chunkOutput = false)
                     logger.debug { "ffmpeg command: ${build.preview}" }
                     val pass = runFfmpegPass(
                         request, build.args, finalOut.parentFile, partOut, errTail, tailSize,

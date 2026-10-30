@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.adjustments
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.ColorTimeline
+import org.litvin.adjustments.TrimRange
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
 import org.litvin.media.relativeSeekDeltaMs
@@ -13,7 +14,7 @@ import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.MessageKind
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SIDE_PANEL_WIDTH
-import org.litvin.ui.commons.SegmentedChoice
+import org.litvin.ui.commons.HeaderTabs
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.VideoPlaybackBar
 import org.litvin.ui.tabs.adjustments.presenter.AdjustSection
@@ -42,9 +43,12 @@ import javax.swing.SwingUtilities
 import org.litvin.i18n.tr
 
 /**
- * The Colors & Transform tab: the video with the playback bar on the left, and the right panel with two sub-tabs,
- * Colors and Transform. Each sub-tab has its own header with "Reset all". The change points card is under the
+ * The Colors & Transform tab: a strip of large sub-tabs across the top (Trim, Colors and Transform), the video with
+ * the playback bar on the left, and the right panel with the controls of the open sub-tab. Each sub-tab has its own
+ * header with "Reset all". The change points card is under the
  * sub-tabs. It shows the change points of the open sub-tab, because each sub-tab has its own change points (B-47).
+ * The trim has no change points, so the Trim sub-tab hides the card. On the Trim sub-tab, the seek bar shows the
+ * points and dims the parts outside the trim (B-60).
  *
  * On the Colors sub-tab, the video shows the result. While the user holds the left mouse button on the video,
  * the preview shows the original colors. On the Transform sub-tab, the player shows the rotated full frame, and
@@ -94,9 +98,15 @@ class SwingAdjustVideoPanel(
         onBackgroundChanged = { color -> presenter.onIntent(AdjustVideoIntent.ChangeBackground(color)) },
     )
 
+    private val trimControls = TrimControls(
+        onSet = { end -> presenter.onIntent(AdjustVideoIntent.SetTrim(end, player.totalDurationMs())) },
+        onGoTo = { end -> presenter.onIntent(AdjustVideoIntent.GoToTrim(end, player.totalDurationMs())) },
+        onReset = { presenter.onIntent(AdjustVideoIntent.ResetTrim) },
+    )
+
     private val changePointsCard = ChangePointsCard(
         namePrefix = "adjust",
-        hint = changePointsHint(AdjustSection.COLORS),
+        hint = changePointsHint(AdjustSection.TRIM),
         onAdd = { presenter.onIntent(AdjustVideoIntent.AddChangePoint) },
         onRemove = { presenter.onIntent(AdjustVideoIntent.RemoveChangePoint) },
         onPrevious = { presenter.onIntent(AdjustVideoIntent.GoToPreviousChangePoint) },
@@ -111,16 +121,16 @@ class SwingAdjustVideoPanel(
         onNudge = { delta -> nudge(delta) },
     )
 
-    private val sectionChoice = SegmentedChoice(
+    /** The sub-tabs, as headings across the top of the tab. Trim is first: the user trims the video first. */
+    private val sectionChoice = HeaderTabs(
         "adjust-section",
         listOf(
-            SegmentedChoice.Option(AdjustSection.COLORS, tr("adjust.colors")),
-            SegmentedChoice.Option(AdjustSection.TRANSFORM, tr("adjust.transform")),
+            HeaderTabs.Option(AdjustSection.TRIM, tr("adjust.trim"), "trim"),
+            HeaderTabs.Option(AdjustSection.COLORS, tr("adjust.colors"), "colors"),
+            HeaderTabs.Option(AdjustSection.TRANSFORM, tr("adjust.transform"), "transform"),
         ),
     ).apply {
-        selected = AdjustSection.COLORS
-        // Space must stay the play hotkey, so the segments never keep the focus.
-        components.forEach { it.isFocusable = false }
+        selected = AdjustSection.TRIM
         onChange { section -> presenter.onIntent(AdjustVideoIntent.SelectSection(section)) }
     }
 
@@ -130,6 +140,7 @@ class SwingAdjustVideoPanel(
         background = Palette.BG
         add(gradePanel, AdjustSection.COLORS.name)
         add(transformControls, AdjustSection.TRANSFORM.name)
+        add(trimControls, AdjustSection.TRIM.name)
     }
 
     private val viewportPanel = JPanel(BorderLayout()).apply {
@@ -149,6 +160,8 @@ class SwingAdjustVideoPanel(
         add(playbackBar, BorderLayout.SOUTH)
     }
 
+    private val changePointsColumn = CardColumn().apply { add(changePointsCard) }
+
     private val rightPanel = JPanel(BorderLayout()).apply {
         name = "adjust-right"
         isOpaque = true
@@ -156,14 +169,6 @@ class SwingAdjustVideoPanel(
         border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
         preferredSize = Dimension(SIDE_PANEL_WIDTH, 600)
         minimumSize = Dimension(SIDE_PANEL_WIDTH, 360)
-        add(
-            JPanel(BorderLayout()).apply {
-                isOpaque = false
-                border = BorderFactory.createEmptyBorder(14, 16, 0, 16)
-                add(sectionChoice, BorderLayout.CENTER)
-            },
-            BorderLayout.NORTH,
-        )
         add(sectionCards, BorderLayout.CENTER)
         add(
             JPanel(BorderLayout()).apply {
@@ -172,7 +177,7 @@ class SwingAdjustVideoPanel(
                     BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
                     BorderFactory.createEmptyBorder(12, 0, 0, 0),
                 )
-                add(CardColumn().apply { add(changePointsCard) }, BorderLayout.CENTER)
+                add(changePointsColumn, BorderLayout.CENTER)
                 add(SavedFooter(), BorderLayout.SOUTH)
             },
             BorderLayout.SOUTH,
@@ -183,6 +188,7 @@ class SwingAdjustVideoPanel(
         name = "adjust-root"
         isOpaque = true
         background = Palette.BG
+        add(sectionChoice, BorderLayout.NORTH)
         add(leftPanel, BorderLayout.CENTER)
         add(rightPanel, BorderLayout.EAST)
 
@@ -258,6 +264,7 @@ class SwingAdjustVideoPanel(
         applyPreview()
         changePointsCard.render(state.changePoints)
         playbackBar.setMarkers(state.changePointTimes)
+        renderTrim()
         reportVideoSize()
         val source = state.sourceVideo
         if (source != null && source != loadedMediaFile && source != pendingMediaFile) {
@@ -270,6 +277,12 @@ class SwingAdjustVideoPanel(
         when (effect) {
             // The message is short, so it is the title. The tab behind the box tells where it comes from.
             is AdjustVideoViewEffect.ShowError -> MessageDialog.show(this, MessageKind.WARNING, effect.message, "")
+            is AdjustVideoViewEffect.TrimCutsPoints -> MessageDialog.show(
+                this,
+                MessageKind.WARNING,
+                tr("adjust.trim.dialog.title"),
+                tr("adjust.trim.dialog.message", "count" to effect.count),
+            )
             is AdjustVideoViewEffect.SeekTo -> {
                 player.seek(effect.ms)
                 val duration = player.totalDurationMs()
@@ -289,6 +302,25 @@ class SwingAdjustVideoPanel(
         player.setCropEditing(transform)
         editor.active = transform
         changePointsCard.setHint(changePointsHint(section))
+        changePointsColumn.isVisible = section != AdjustSection.TRIM
+        rightPanel.revalidate()
+        renderTrim()
+    }
+
+    /**
+     * Shows the trim on the Trim sub-tab and on the seek bar. Only the Trim sub-tab shows the points and the dim
+     * parts on the seek bar. The source length comes from the player, so the player calls this again when it knows it.
+     */
+    private fun renderTrim() {
+        val duration = player.totalDurationMs()
+        trimControls.render(state.adjustments, duration, state.pointsOutsideTrim.size)
+        if (section != AdjustSection.TRIM || duration <= 0) {
+            playbackBar.setTrimView(emptyList(), null)
+            return
+        }
+        val range = TrimRange.of(state.adjustments, duration)
+        val trim = if (TrimRange.isSet(state.adjustments)) range.startMs to range.endMs else null
+        playbackBar.setTrimView(state.points.map { it.startMs.toLong() to it.endMs.toLong() }, trim)
     }
 
     /** The hint of the change points card. Each sub-tab has its own change points and its own question. */
@@ -296,6 +328,7 @@ class SwingAdjustVideoPanel(
         val question = when (section) {
             AdjustSection.COLORS -> tr("adjust.colors.changePoints.question")
             AdjustSection.TRANSFORM -> tr("adjust.transform.changePoints.question")
+            AdjustSection.TRIM -> return ""
         }
         return question + "\n" + tr("adjust.changePoints.hint", "seconds" to ColorTimeline.BLEND_MS / 1000)
     }
@@ -380,6 +413,7 @@ class SwingAdjustVideoPanel(
                 applyPreview()
                 updatePlayPauseUi()
                 reportVideoSize()
+                renderTrim()
             }
         }
     }

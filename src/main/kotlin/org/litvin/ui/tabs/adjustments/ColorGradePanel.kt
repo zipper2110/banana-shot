@@ -83,9 +83,15 @@ internal class ColorGradePanel(liveSupported: Boolean) : JPanel(BorderLayout()) 
     }
 }
 
-/** The yellow notice for a system without a live color preview. The text wraps at the width of the panel. */
-internal class LivePreviewNotice : JComponent(), HeightForWidth {
-    private val infoIcon = UiKit.icon(Material2OutlinedAL.INFO, 17, Palette.YELLOW)
+/**
+ * A yellow notice. The text wraps at the width of the panel. By default it tells that the system has no live color
+ * preview. [text] gives the text each time the notice paints, so a caller can change it and call revalidate.
+ */
+internal class LivePreviewNotice(
+    private val text: () -> String = { ColorGradePanel.NOTICE_TEXT },
+    ikon: org.kordamp.ikonli.Ikon = Material2OutlinedAL.INFO,
+) : JComponent(), HeightForWidth {
+    private val infoIcon = UiKit.icon(ikon, 17, Palette.YELLOW)
     private val textFont = UiKit.font(12f)
 
     init {
@@ -98,7 +104,7 @@ internal class LivePreviewNotice : JComponent(), HeightForWidth {
     private fun lines(maxWidth: Float): List<String> {
         val lines = mutableListOf<String>()
         var current = ""
-        for (word in ColorGradePanel.NOTICE_TEXT.split(' ')) {
+        for (word in text().split(' ')) {
             // A Japanese word breaks between its characters, and its pieces join without a space.
             LineBreaks.pieces(word).forEachIndexed { index, part ->
                 val candidate = if (current.isEmpty()) part else if (index == 0) "$current $part" else "$current$part"

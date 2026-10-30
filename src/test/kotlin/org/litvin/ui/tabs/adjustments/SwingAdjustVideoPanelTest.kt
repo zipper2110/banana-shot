@@ -145,6 +145,7 @@ class SwingAdjustVideoPanelTest {
         onEdt {
             panel = panel(player)
             panel.onActivated()
+            (panel.find("adjust-section-colors") as AbstractButton).doClick()
             (panel.find("colors-brightness") as JSlider).value = 30
             (panel.find("colors-saturation") as JSlider).value = -50
         }
@@ -295,18 +296,23 @@ class SwingAdjustVideoPanelTest {
             val panel = panel(player)
             val colors = panel.find("adjust-colors")!!
             val transform = panel.find("crop-transform-panel")!!
+            // The tab opens on the Trim sub-tab (B-60).
+            assertEquals(AdjustSection.TRIM, panel.section)
+            assertTrue(panel.find("trim-panel")!!.isVisible)
+            assertFalse(colors.isVisible)
+            (panel.find("adjust-section-colors") as AbstractButton).doClick()
             assertTrue(colors.isVisible)
             assertFalse(transform.isVisible)
             assertFalse(player.cropEditingOn)
             assertEquals(null, player.shownOverlay)
 
-            (panel.find("adjust-section-1") as AbstractButton).doClick()
+            (panel.find("adjust-section-transform") as AbstractButton).doClick()
             assertEquals(AdjustSection.TRANSFORM, panel.section)
             assertFalse(colors.isVisible)
             assertTrue(transform.isVisible)
             assertTrue(player.cropEditingOn)
 
-            (panel.find("adjust-section-0") as AbstractButton).doClick()
+            (panel.find("adjust-section-colors") as AbstractButton).doClick()
             assertEquals(AdjustSection.COLORS, panel.section)
             assertTrue(colors.isVisible)
             assertFalse(player.cropEditingOn)
@@ -342,6 +348,7 @@ class SwingAdjustVideoPanelTest {
             assertFalse(panel.find("adjust-colors")!!.descendants().contains(card))
             assertFalse(panel.find("crop-transform-panel")!!.descendants().contains(card))
 
+            (panel.find("adjust-section-colors") as AbstractButton).doClick()
             val status = panel.find("adjust-change-status") as JLabel
             val hint = panel.find("adjust-change-hint") as WrapText
             assertTrue(hint.text.contains("Did the light change?"))
@@ -350,7 +357,7 @@ class SwingAdjustVideoPanelTest {
             assertEquals(emptyList(), adjustments.get().geometryKeys)
             assertEquals("Change point 1 of 1, at 00:00:00", status.text)
 
-            (panel.find("adjust-section-1") as AbstractButton).doClick()
+            (panel.find("adjust-section-transform") as AbstractButton).doClick()
             assertEquals("No change points", status.text)
             assertTrue(hint.text.contains("Did the phone move?"))
             panel.close()

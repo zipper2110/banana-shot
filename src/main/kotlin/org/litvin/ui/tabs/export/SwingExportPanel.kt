@@ -344,6 +344,13 @@ class SwingExportPanel(
 
     private fun idleTrimSelected(): Boolean = !fullVideoCard.isSelected
 
+    /** The length of a full video export: the trimmed part of the source (B-60). */
+    private fun fullVideoDurationMs(): Long? {
+        val source = sourceInfo.durationMs
+        val trim = org.litvin.export.ExportTrim.of(adjustments.get(), source) ?: return source
+        return trim.durationMs(source)
+    }
+
     private fun favoriteOnlySelected(): Boolean = favoritesCard.isSelected
 
     private fun onContentChanged() {
@@ -521,9 +528,12 @@ class SwingExportPanel(
             emptyList()
         }
         // Without valid points the export falls back to the full video.
-        val durationMs = if (kept.isEmpty()) sourceInfo.durationMs else ExportChunkPlanner.keptDurationMs(kept)
+        val durationMs = if (kept.isEmpty()) fullVideoDurationMs() else ExportChunkPlanner.keptDurationMs(kept)
         // The replays add their plays to the video (B-50).
-        val replayMs = (kept.ifEmpty { validPoints }).sumOf { point ->
+        // A full video export plays only the replays inside the trim (B-60).
+        val fullTrim = org.litvin.export.ExportTrim.of(adjustments.get(), sourceInfo.durationMs)
+        val fullPoints = validPoints.filter { fullTrim?.keepsReplayAt(it.endMs.toLong()) ?: true }
+        val replayMs = (kept.ifEmpty { fullPoints }).sumOf { point ->
             org.litvin.points.Replays.fitTo(point).sumOf { org.litvin.points.Replays.addedMs(it) }
         }
         val cardMs = if (statsCardCheck.isSelected) currentStatsCard()?.durationMs ?: 0L else 0L
@@ -720,7 +730,7 @@ class SwingExportPanel(
         } catch (_: Throwable) {
             null
         }
-        contentCards.show(summary, sourceInfo.durationMs.takeIf { manifestPath != null })
+        contentCards.show(summary, fullVideoDurationMs().takeIf { manifestPath != null })
         showScoredCount(summary)
         updateFavoriteOnlyAvailability()
         updateOutputDuration()

@@ -9,6 +9,7 @@ import org.litvin.SessionSettings
 import org.litvin.projects.ManifestIO
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
+import org.litvin.adjustments.TrimRange
 import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
@@ -363,6 +364,8 @@ class SwingPointsPanel(
         winnerColorProvider = { id -> scoring.winnerColor(id) },
         replayPlayheadProvider = { replays.activePlay?.playAt(player.currentTimeMs()) },
         onReplaySelected = { id, index -> EventQueue.invokeLater { openReplayEditor(pointId = id, replayIndex = index) } },
+        // The timeline shows only the trimmed part of the video (B-60).
+        trimProvider = { total -> adjustments.get().takeIf(TrimRange::isSet)?.let { TrimRange.of(it, total) } },
     ).apply { name = "points-seek" }
 
     // Autosave controller (debounced, off-EDT persistence). The snapshot is taken on the EDT,
@@ -483,6 +486,7 @@ class SwingPointsPanel(
         unsubscribeAdjustments = adjustments.subscribe { adj ->
             player.applyPreviewAdjustments(adj)
             geometryViewport.refreshGeometry()
+            timeline.repaint()
         }
         // Apply current state immediately
         val currentAdjustments = adjustments.get()

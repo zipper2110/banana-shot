@@ -8,7 +8,7 @@ import kotlin.math.abs
 
 internal class ColorsScreen(application: ApplicationScreen) : UserFlowScreen(application) {
     /** Opens the Colors sub-tab of Colors & Transform. */
-    fun open(): ColorsScreen = apply { open("nav-adjust-video", "colors-brightness", sectionName = "adjust-section-0") }
+    fun open(): ColorsScreen = apply { open("nav-adjust-video", "colors-brightness", sectionName = "adjust-section-colors") }
 
     fun setBrightness(value: Int): ColorsScreen = apply {
         application.eventually("brightness slider to become $value") {

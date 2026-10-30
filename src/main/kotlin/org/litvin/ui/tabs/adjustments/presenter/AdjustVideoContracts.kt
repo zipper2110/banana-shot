@@ -3,6 +3,9 @@ package org.litvin.ui.tabs.adjustments.presenter
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.GeometryTimeline
+import org.litvin.adjustments.TrimRange
+import org.litvin.points.PointV1
+import org.litvin.ui.tabs.adjustments.TrimEnd
 import org.litvin.ui.commons.ChangePointsState
 import java.io.File
 
@@ -19,8 +22,8 @@ interface AdjustVideoPresenter {
     fun onIntent(intent: AdjustVideoIntent)
 }
 
-/** The sub-tabs of the right panel of the Colors & Transform tab. */
-enum class AdjustSection { COLORS, TRANSFORM }
+/** The sub-tabs of the Colors & Transform tab, in their order. The tab opens on the first one. */
+enum class AdjustSection { TRIM, COLORS, TRANSFORM }
 
 /**
  * [adjustments] are the stored adjustments with all change points (B-47). [playheadMs] selects the active
@@ -31,8 +34,14 @@ data class AdjustVideoViewState(
     val adjustments: AdjustmentsV1 = AdjustmentsV1(),
     val sourceVideo: File? = null,
     val playheadMs: Long = 0L,
-    val section: AdjustSection = AdjustSection.COLORS,
+    val section: AdjustSection = AdjustSection.TRIM,
+    /** The points of the project. The Trim sub-tab shows them and warns about the points outside the trim (B-60). */
+    val points: List<PointV1> = emptyList(),
 ) {
+    /** The points that the trim cuts off fully or in part. */
+    val pointsOutsideTrim: List<PointV1>
+        get() = TrimRange.outside(adjustments, points, { it.startMs.toLong() }, { it.endMs.toLong() })
+
     /** The colors and the transform that the controls edit, without change points. */
     val editing: AdjustmentsV1
         get() = GeometryTimeline.editingAt(ColorTimeline.editingAt(adjustments, playheadMs), playheadMs)
@@ -43,14 +52,24 @@ data class AdjustVideoViewState(
     val transformChangePoints: ChangePointsState
         get() = ChangePointsState(adjustments.geometryKeys.map { it.atMs }, playheadMs)
 
-    /** The change points of the open sub-tab. The Colors and Transform sub-tabs have separate change points. */
+    /**
+     * The change points of the open sub-tab. The Colors and Transform sub-tabs have separate change points.
+     * The trim has no change points.
+     */
     val changePoints: ChangePointsState
         get() = when (section) {
             AdjustSection.COLORS -> colorChangePoints
             AdjustSection.TRANSFORM -> transformChangePoints
+            AdjustSection.TRIM -> ChangePointsState(emptyList(), playheadMs)
         }
 
-    val changePointTimes: List<Long> get() = changePoints.times
+    /** The marks of the playback bar: the change points, or on the Trim sub-tab the trim start and end. */
+    val changePointTimes: List<Long>
+        get() = if (section == AdjustSection.TRIM) {
+            listOfNotNull(adjustments.trimStartMs, adjustments.trimEndMs)
+        } else {
+            changePoints.times
+        }
 
     val canAddChangePoint: Boolean get() = changePoints.canAdd
     val canRemoveChangePoint: Boolean get() = changePoints.canRemove
@@ -78,6 +97,13 @@ sealed class AdjustVideoIntent {
     data class ChangeBackground(val color: String?) : AdjustVideoIntent()
     data class PlayheadMoved(val ms: Long) : AdjustVideoIntent()
 
+    /** Sets [end] of the trim (B-60) to the playhead. [durationMs] is the length of the source. */
+    data class SetTrim(val end: TrimEnd, val durationMs: Long) : AdjustVideoIntent()
+
+    /** Seeks to [end] of the trim. [durationMs] is the length of the source. */
+    data class GoToTrim(val end: TrimEnd, val durationMs: Long) : AdjustVideoIntent()
+    data object ResetTrim : AdjustVideoIntent()
+
     // The change point intents work on the change points of the open sub-tab.
     data object AddChangePoint : AdjustVideoIntent()
     data object RemoveChangePoint : AdjustVideoIntent()
@@ -88,4 +114,7 @@ sealed class AdjustVideoIntent {
 sealed class AdjustVideoViewEffect {
     data class ShowError(val message: String) : AdjustVideoViewEffect()
     data class SeekTo(val ms: Long) : AdjustVideoViewEffect()
+
+    /** The first time in a project that the trim cuts off points: a dialog tells it (B-60). */
+    data class TrimCutsPoints(val count: Int) : AdjustVideoViewEffect()
 }

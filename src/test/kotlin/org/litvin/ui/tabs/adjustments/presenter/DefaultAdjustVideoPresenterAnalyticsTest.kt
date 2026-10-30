@@ -74,8 +74,10 @@ class DefaultAdjustVideoPresenterAnalyticsTest {
         presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.TRANSFORM))
         presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.TRANSFORM))
         presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.COLORS))
+        // The tab opens on the Trim sub-tab, so the first switch to Colors also counts (B-60).
         assertEquals(
             listOf<AnalyticsEvent>(
+                AnalyticsEvent.TabShown(AnalyticsEvent.Tab.COLORS, byUser = true),
                 AnalyticsEvent.TabShown(AnalyticsEvent.Tab.CROP_ROTATE, byUser = true),
                 AnalyticsEvent.TabShown(AnalyticsEvent.Tab.COLORS, byUser = true),
             ),

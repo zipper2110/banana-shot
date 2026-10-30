@@ -82,6 +82,19 @@ data class AdjustmentsV1(
     // It does not change at the change points.
     val backgroundColor: String? = null,
 
+    // The trim (B-60): the source time where the video starts and where it ends. Null is the start or the end of
+    // the source. Only the Points tab timeline and the "Full video" export use them. They have no change points.
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    @get:JsonInclude(JsonInclude.Include.NON_NULL)
+    val trimStartMs: Long? = null,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    @get:JsonInclude(JsonInclude.Include.NON_NULL)
+    val trimEndMs: Long? = null,
+    // True after the dialog that tells that the trim cuts off points showed one time for this project (B-60).
+    @field:JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @get:JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    val trimWarningShown: Boolean = false,
+
     // The version of the geometry rules (CropGeometryMath). Version 1 keeps the crop inside the frame and limits
     // its size with a rotation. Files of version 1 keep their crop until the Transform tab converts them.
     val version: Int = CURRENT_VERSION,
@@ -95,7 +108,8 @@ data class AdjustmentsV1(
         // Avoid clobbering known fields if Jackson routes them here for any reason
         when (key) {
             "brightness", "contrast", "saturation", "shadows", "highlights", "whiteBalance",
-            "zoom", "panX", "panY", "rotationDeg", "geometryKeys", "colorKeys", "backgroundColor", "version" -> return
+            "zoom", "panX", "panY", "rotationDeg", "geometryKeys", "colorKeys", "backgroundColor",
+            "trimStartMs", "trimEndMs", "trimWarningShown", "version" -> return
             else -> unknowns[key] = value
         }
     }

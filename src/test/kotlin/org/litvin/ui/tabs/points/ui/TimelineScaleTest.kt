@@ -48,4 +48,26 @@ class TimelineScaleTest {
         assertEquals(50, plain.xAtSource(5_000, 0, 100))
         assertEquals(5_000, plain.sourceAt(plain.playAtX(50, 0, 100)))
     }
+
+    @Test
+    fun aTrimShowsOnlyItsWindowWithTheReplaysInIt() {
+        // The window is 3 s to 6 s of the source, and the replay of 4 s after the point end at 4 s: 7 s of play time.
+        val trimmed = TimelineScale(ReplayTimeline(listOf(point)), 10_000, org.litvin.adjustments.TrimRange(3_000, 6_000))
+        assertEquals(7_000, trimmed.playTotalMs)
+        assertEquals(1, trimmed.blocks.size)
+        // 70 px for 7 s: the trim start is at the left edge, the trim end at the right edge.
+        assertEquals(0, trimmed.xAtSource(3_000, 0, 70))
+        assertEquals(70, trimmed.xAtSource(6_000, 0, 70))
+        assertEquals(3_000, trimmed.sourceAt(trimmed.playAtX(-10, 0, 70)))
+        assertEquals(6_000, trimmed.sourceAt(trimmed.playAtX(100, 0, 70)))
+    }
+
+    @Test
+    fun aTrimAfterThePointHidesItsReplay() {
+        val trimmed = TimelineScale(ReplayTimeline(listOf(point)), 10_000, org.litvin.adjustments.TrimRange(5_000, 10_000))
+        assertEquals(5_000, trimmed.playTotalMs)
+        assertEquals(emptyList(), trimmed.blocks)
+        assertEquals(0, trimmed.xAtSource(5_000, 0, 50))
+        assertEquals(50, trimmed.xAtSource(10_000, 0, 50))
+    }
 }

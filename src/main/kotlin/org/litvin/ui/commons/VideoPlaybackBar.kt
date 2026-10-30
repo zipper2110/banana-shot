@@ -127,10 +127,37 @@ internal class VideoPlaybackBar(
         updateMarkers()
     }
 
+    /**
+     * Shows [points] as thin bars under the track, and dims the track outside [trim] (B-60). A point that is not
+     * fully inside [trim] is red. A null [trim] shows no dim parts. An empty list and a null trim clear them.
+     */
+    fun setTrimView(points: List<Pair<Long, Long>>, trim: Pair<Long, Long>?) {
+        if (pointRangesMs == points && trimMs == trim) return
+        pointRangesMs = points
+        trimMs = trim
+        updateMarkers()
+    }
+
+    private var pointRangesMs: List<Pair<Long, Long>> = emptyList()
+    private var trimMs: Pair<Long, Long>? = null
+
     private fun updateMarkers() {
-        val values = if (totalMs > 0) markersMs.map { (SEEK_STEPS * (it.coerceIn(0L, totalMs).toDouble() / totalMs)).toInt() } else emptyList()
-        if (seekUi.markers == values) return
+        fun value(ms: Long) = if (totalMs > 0) (SEEK_STEPS * (ms.coerceIn(0L, totalMs).toDouble() / totalMs)).toInt() else 0
+        val values = if (totalMs > 0) markersMs.map(::value) else emptyList()
+        val trim = trimMs?.takeIf { totalMs > 0 }
+        val ranges = if (totalMs > 0) {
+            pointRangesMs.map { (start, end) ->
+                val outside = trim != null && (start < trim.first || end > trim.second)
+                SeekSliderUI.Range(value(start), value(end), outside)
+            }
+        } else {
+            emptyList()
+        }
+        val trimValues = trim?.let { value(it.first) to value(it.second) }
+        if (seekUi.markers == values && seekUi.ranges == ranges && seekUi.trim == trimValues) return
         seekUi.markers = values
+        seekUi.ranges = ranges
+        seekUi.trim = trimValues
         seekSlider.repaint()
     }
 
@@ -238,6 +265,15 @@ internal class SeekSliderUI : FlatSliderUI() {
     /** Slider values with a yellow mark on the track. */
     var markers: List<Int> = emptyList()
 
+    /** A point as slider values. [outside] is true when the trim cuts it off fully or in part. */
+    data class Range(val from: Int, val to: Int, val outside: Boolean)
+
+    /** The points, as bars under the track. */
+    var ranges: List<Range> = emptyList()
+
+    /** The trim as slider values. The track is dim outside it. Null shows no dim parts. */
+    var trim: Pair<Int, Int>? = null
+
     override fun getThumbSize(): Dimension = Dimension(KNOB, KNOB)
 
     override fun paintFocus(g: Graphics) = Unit
@@ -251,6 +287,23 @@ internal class SeekSliderUI : FlatSliderUI() {
             g2.fill(RoundRectangle2D.Double(0.0, y, slider.width.toDouble(), TRACK, TRACK, TRACK))
             g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(0.0, y, fill, TRACK, TRACK, TRACK))
+            trim?.let { (from, to) ->
+                // The parts that the export cuts off are dim.
+                g2.color = Palette.OVERLAY
+                g2.composite = java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.7f)
+                val left = xPositionForValue(from).toDouble()
+                val right = xPositionForValue(to).toDouble()
+                g2.fill(java.awt.geom.Rectangle2D.Double(0.0, y - 1, left, TRACK + 2))
+                g2.fill(java.awt.geom.Rectangle2D.Double(right, y - 1, slider.width - right, TRACK + 2))
+                g2.composite = java.awt.AlphaComposite.SrcOver
+            }
+            val rangeTop = y + TRACK + RANGE_GAP
+            ranges.forEach { range ->
+                g2.color = if (range.outside) Palette.RED else Palette.SAGE
+                val x1 = xPositionForValue(range.from).toDouble()
+                val x2 = xPositionForValue(range.to).toDouble()
+                g2.fill(RoundRectangle2D.Double(x1, rangeTop, (x2 - x1).coerceAtLeast(MIN_RANGE), RANGE_HEIGHT, 2.0, 2.0))
+            }
             g2.color = Palette.YELLOW
             val markTop = trackRect.y + (trackRect.height - MARK_HEIGHT) / 2.0
             markers.forEach { value ->
@@ -283,6 +336,9 @@ internal class SeekSliderUI : FlatSliderUI() {
         const val TRACK = 4.0
         const val MARK_WIDTH = 3.0
         const val MARK_HEIGHT = 12.0
+        const val RANGE_GAP = 2.0
+        const val RANGE_HEIGHT = 3.0
+        const val MIN_RANGE = 2.0
         val TRACK_BG get() = Palette.LINE_3
     }
 }

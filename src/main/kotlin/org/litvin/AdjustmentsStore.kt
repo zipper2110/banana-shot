@@ -117,6 +117,8 @@ class AdjustmentsSession(
             backgroundColor = parseBackground(m.backgroundColor)
                 ?.takeIf { it != AdjustmentsV1.DEFAULT_BACKGROUND_RGB }
                 ?.let(::backgroundHex),
+            trimStartMs = TrimRange.cleanStart(m.trimStartMs),
+            trimEndMs = TrimRange.cleanEnd(m.trimStartMs, m.trimEndMs),
             geometryKeys = m.geometryKeys
                 .map { key ->
                     key.copy(

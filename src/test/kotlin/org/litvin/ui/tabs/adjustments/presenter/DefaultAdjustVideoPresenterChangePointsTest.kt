@@ -90,6 +90,7 @@ class DefaultAdjustVideoPresenterChangePointsTest {
     fun `each sub-tab has its own change points`() = onEdt {
         presenter.attach(view)
         presenter.onActivated()
+        presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.COLORS))
         presenter.onIntent(AdjustVideoIntent.PlayheadMoved(10_000))
         presenter.onIntent(AdjustVideoIntent.AddChangePoint)
         presenter.onIntent(AdjustVideoIntent.ChangeColors(AdjustmentsV1(brightness = 1.3f)))
@@ -144,6 +145,7 @@ class DefaultAdjustVideoPresenterChangePointsTest {
             ),
         )
         presenter.onActivated()
+        presenter.onIntent(AdjustVideoIntent.SelectSection(AdjustSection.COLORS))
         assertEquals(0.0f, view.state.editing.rotationDeg)
         assertEquals(1.0f, view.state.editing.contrast)
 

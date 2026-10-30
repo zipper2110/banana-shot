@@ -6,7 +6,7 @@ import kotlin.math.abs
 
 internal class CropScreen(application: ApplicationScreen) : UserFlowScreen(application) {
     /** Opens the Transform sub-tab of Colors & Transform. */
-    fun open(): CropScreen = apply { open("nav-adjust-video", "crop-rotation", sectionName = "adjust-section-1") }
+    fun open(): CropScreen = apply { open("nav-adjust-video", "crop-rotation", sectionName = "adjust-section-transform") }
 
     fun setRotationDegrees(value: Float): CropScreen = apply {
         val halfDegreeSteps = value * 2.0f

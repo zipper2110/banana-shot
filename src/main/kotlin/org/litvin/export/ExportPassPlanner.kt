@@ -46,7 +46,8 @@ object ExportPassPlanner {
     /**
      * Plans the passes. Without [keeps] the export is the full video: one video pass, and no set cards. With
      * [replays], a full video export splits the video at the end of each point with replays.
-     * [fullVideoDurationMs] is the source duration for a full video export, when it is known.
+     * [fullVideoDurationMs] is the source duration for a full video export, when it is known. [trim] limits a full
+     * video export to a part of the source (B-60). [replays] must be only the replays inside the trim.
      */
     fun plan(
         keeps: List<PointV1>,
@@ -55,8 +56,9 @@ object ExportPassPlanner {
         fullVideoDurationMs: Long? = null,
         maxSegmentsPerChunk: Int = ExportChunkPlanner.maxSegmentsPerChunk(),
         replays: List<ExportReplay> = emptyList(),
+        trim: ExportTrim? = null,
     ): List<Pass> {
-        if (keeps.isEmpty()) return planFullVideo(endCard, fullVideoDurationMs, replays)
+        if (keeps.isEmpty()) return planFullVideo(endCard, fullVideoDurationMs, replays, trim)
         val builder = Builder(maxSegmentsPerChunk)
 
         // The set cards after each kept point. A set without a kept point has no card.
@@ -86,27 +88,29 @@ object ExportPassPlanner {
     }
 
     /**
-     * The full video. Without replays it is one pass. With replays, each part of the source between two point ends
-     * with replays is one chunk, so the replays can go between the chunks.
+     * The full video. Without replays and without a [trim] it is one pass of the whole file. With replays, each part
+     * of the source between two point ends with replays is one chunk, so the replays can go between the chunks.
+     * With a [trim], the chunks are only the part between the trim start and the trim end, and the end card shows
+     * the frame of the trim end (B-60).
      */
-    private fun planFullVideo(endCard: StatsCardVideo?, durationMs: Long?, replays: List<ExportReplay>): List<Pass> {
+    private fun planFullVideo(endCard: StatsCardVideo?, durationMs: Long?, replays: List<ExportReplay>, trim: ExportTrim?): List<Pass> {
         val passes = mutableListOf<Pass>()
-        if (replays.isEmpty()) {
+        if (replays.isEmpty() && trim == null) {
             passes += Video(ExportChunkPlanner.Chunk(emptyList(), 0L), 0L)
             endCard?.let { passes += Card(it, freezeAtMs = null, progressBaseMs = durationMs ?: 0L) }
             return passes
         }
         val builder = Builder(maxSegmentsPerChunk = 1)
-        val sourceEnd = durationMs?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt() ?: UNKNOWN_END_MS
-        var rangeStart = 0
+        val sourceEnd = (trim?.endMs ?: durationMs)?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt() ?: UNKNOWN_END_MS
+        var rangeStart = (trim?.startMs ?: 0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         for ((pointEnd, pointReplays) in replays.groupBy { it.pointEndMs }.toSortedMap()) {
-            if (pointEnd > sourceEnd) continue
+            if (pointEnd > sourceEnd || pointEnd <= rangeStart) continue
             builder.addVideo(listOf(range(rangeStart, pointEnd)), pointReplays.first())
             rangeStart = pointEnd
             pointReplays.forEach(builder::addReplay)
         }
         if (rangeStart < sourceEnd) builder.addVideo(listOf(range(rangeStart, sourceEnd)), null)
-        endCard?.let { builder.addCard(it, freezeAtMs = null) }
+        endCard?.let { builder.addCard(it, freezeAtMs = trim?.endMs) }
         return builder.passes
     }
 

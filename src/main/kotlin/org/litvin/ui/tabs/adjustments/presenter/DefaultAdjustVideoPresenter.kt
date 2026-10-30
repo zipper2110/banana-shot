@@ -7,6 +7,10 @@ import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.CropGeometryMath
 import org.litvin.adjustments.GeometryTimeline
+import org.litvin.adjustments.TrimRange
+import org.litvin.points.EdlIO
+import org.litvin.points.PointV1
+import org.litvin.ui.tabs.adjustments.TrimEnd
 import org.litvin.analytics.Analytics
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.analytics.DisabledAnalytics
@@ -66,7 +70,8 @@ class DefaultAdjustVideoPresenter(
         unsubscribeStore = adjustments.subscribe { newAdjustments ->
             updateState { it.copy(adjustments = newAdjustments) }
         }
-        updateState { it.copy(adjustments = adjustments.get()) }
+        // The Points tab can change the points between two visits, so read them again.
+        updateState { it.copy(adjustments = adjustments.get(), points = readPoints()) }
         countedColors = colorsOf(state.editing)
         convertOlderGeometry()
     }
@@ -120,12 +125,21 @@ class DefaultAdjustVideoPresenter(
                 noteTransformChange { previous -> previous.copy(backgroundColor = color) }
             }
             is AdjustVideoIntent.PlayheadMoved -> movePlayhead(intent.ms)
+            is AdjustVideoIntent.SetTrim -> setTrim(intent.end, intent.durationMs)
+            is AdjustVideoIntent.GoToTrim -> {
+                if (intent.durationMs <= 0) return
+                val range = TrimRange.of(adjustments.get(), intent.durationMs)
+                // The end is just after the last frame of the trimmed video, so the seek goes just before it.
+                seekTo(if (intent.end == TrimEnd.START) range.startMs else (range.endMs - 1).coerceAtLeast(range.startMs))
+            }
+            AdjustVideoIntent.ResetTrim -> adjustments.set { it.copy(trimStartMs = null, trimEndMs = null) }
             AdjustVideoIntent.AddChangePoint -> {
                 if (!state.canAddChangePoint) return
                 val at = state.playheadMs
                 when (state.section) {
                     AdjustSection.COLORS -> changeKeys { previous -> ColorTimeline.withKeyAdded(previous, at) }
                     AdjustSection.TRANSFORM -> changeKeys { previous -> GeometryTimeline.withKeyAdded(previous, at) }
+                    AdjustSection.TRIM -> Unit
                 }
             }
             AdjustVideoIntent.RemoveChangePoint -> {
@@ -133,6 +147,7 @@ class DefaultAdjustVideoPresenter(
                 when (state.section) {
                     AdjustSection.COLORS -> changeKeys { previous -> ColorTimeline.withKeyRemoved(previous, at) }
                     AdjustSection.TRANSFORM -> changeKeys { previous -> GeometryTimeline.withKeyRemoved(previous, at) }
+                    AdjustSection.TRIM -> Unit
                 }
             }
             AdjustVideoIntent.GoToPreviousChangePoint -> state.previousChangePointMs?.let { seekTo(it) }
@@ -160,7 +175,49 @@ class DefaultAdjustVideoPresenter(
     private fun selectSection(section: AdjustSection) {
         if (section == state.section) return
         updateState { it.copy(section = section) }
-        analytics.record(AnalyticsEvent.TabShown(analyticsTab(section), byUser = true))
+        analyticsTab(section)?.let { analytics.record(AnalyticsEvent.TabShown(it, byUser = true)) }
+    }
+
+    /**
+     * Sets [end] of the trim to the playhead. A time near the source start or end clears that end. The trimmed
+     * video keeps at least [TrimRange.MIN_LENGTH_MS]. The trim can cut off points: the user decides, and the app
+     * keeps the points. The first time in a project, a dialog tells it (B-60).
+     */
+    private fun setTrim(end: TrimEnd, durationMs: Long) {
+        if (durationMs <= 0) return
+        val at = state.playheadMs.coerceIn(0L, durationMs)
+        val range = TrimRange.of(adjustments.get(), durationMs)
+        val fits = when (end) {
+            TrimEnd.START -> range.endMs - at >= TrimRange.MIN_LENGTH_MS
+            TrimEnd.END -> at - range.startMs >= TrimRange.MIN_LENGTH_MS
+        }
+        if (!fits) {
+            postEffect(AdjustVideoViewEffect.ShowError(tr("adjust.trim.error.order")))
+            return
+        }
+        adjustments.set { previous ->
+            when (end) {
+                TrimEnd.START -> previous.copy(trimStartMs = at.takeIf { it >= SNAP_MS })
+                TrimEnd.END -> previous.copy(trimEndMs = at.takeIf { durationMs - it >= SNAP_MS })
+            }
+        }
+        val trimmed = adjustments.get()
+        updateState { it.copy(adjustments = trimmed) }
+        val outside = state.pointsOutsideTrim.size
+        if (outside > 0 && !trimmed.trimWarningShown) {
+            adjustments.set { it.copy(trimWarningShown = true) }
+            postEffect(AdjustVideoViewEffect.TrimCutsPoints(outside))
+        }
+    }
+
+    /** The points of the open project, or none when the file cannot be read. */
+    private fun readPoints(): List<PointV1> {
+        val dir = projectDir ?: return emptyList()
+        return try {
+            EdlIO.readForProjectDir(dir).points
+        } catch (_: Throwable) {
+            emptyList()
+        }
     }
 
     /** The preview shows the new colors at once. A drag counts one time, when the user releases the slider. */
@@ -238,7 +295,13 @@ class DefaultAdjustVideoPresenter(
         if (source != null && !source.exists()) {
             postEffect(AdjustVideoViewEffect.ShowError(tr("adjust.error.videoMissing")))
         }
-        updateState { it.copy(adjustments = adjustments.get(), sourceVideo = source?.takeIf { file -> file.exists() }) }
+        updateState {
+            it.copy(
+                adjustments = adjustments.get(),
+                sourceVideo = source?.takeIf { file -> file.exists() },
+                points = readPoints(),
+            )
+        }
         countedColors = colorsOf(state.editing)
     }
 
@@ -266,11 +329,18 @@ class DefaultAdjustVideoPresenter(
     }
 
     companion object {
-        /** The analytics keep the keys of the two older tabs, so the counts of the sub-tabs stay comparable. */
-        fun analyticsTab(section: AdjustSection): AnalyticsEvent.Tab = when (section) {
+        /**
+         * The analytics keep the keys of the two older tabs, so the counts of the sub-tabs stay comparable.
+         * The analytics contract has no key for the Trim sub-tab, so it gives null (B-60).
+         */
+        fun analyticsTab(section: AdjustSection): AnalyticsEvent.Tab? = when (section) {
             AdjustSection.COLORS -> AnalyticsEvent.Tab.COLORS
             AdjustSection.TRANSFORM -> AnalyticsEvent.Tab.CROP_ROTATE
+            AdjustSection.TRIM -> null
         }
+
+        /** A trim time nearer than this to the source start or end is the source start or end. */
+        private const val SNAP_MS = 100L
 
         private fun colorsOf(adjustments: AdjustmentsV1): List<Float> = listOf(
             adjustments.brightness,

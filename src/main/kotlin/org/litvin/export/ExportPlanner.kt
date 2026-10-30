@@ -275,6 +275,8 @@ object ExportPlanner {
             favoriteOnly = request.favoriteOnly,
         )
         val effectiveIdleTrim = effectiveIdleTrim(request.idleTrim, keptPoints)
+        // Only a full video export uses the trim of the video (B-60). Its overlays move back by the trim start.
+        val trim = if (effectiveIdleTrim) null else ExportTrim.of(request.adjustments, request.sourceDurationMs)
         val overlayTimeline = if (request.includeScoreboard) {
             buildOverlayTimeline(
                 edl = request.edl,
@@ -282,7 +284,7 @@ object ExportPlanner {
                 allValidPoints = allValidPoints,
                 keptPoints = keptPoints,
                 effectiveIdleTrim = effectiveIdleTrim,
-            )
+            ).let { spans -> trim?.overlays(spans) ?: spans }
         } else {
             emptyList()
         }
@@ -291,7 +293,7 @@ object ExportPlanner {
                 comments = request.edl?.comments.orEmpty(),
                 keptPoints = keptPoints,
                 idleTrim = effectiveIdleTrim,
-            )
+            ).let { spans -> trim?.comments(spans) ?: spans }
         } else {
             emptyList()
         }
@@ -307,17 +309,22 @@ object ExportPlanner {
         }
         // Full and Only points include all replays. Only favorites includes the replays of the favorite points (B-50).
         val replays = ExportReplays.of(
-            points = if (effectiveIdleTrim) keptPoints else allValidPoints,
+            points = if (effectiveIdleTrim) {
+                keptPoints
+            } else {
+                allValidPoints.filter { trim?.keepsReplayAt(it.endMs.toLong()) ?: true }
+            },
             comments = if (request.includeComments) request.edl?.comments.orEmpty() else emptyList(),
             includeComments = request.includeComments,
         )
         val cardsMs = (statsCard?.durationMs ?: 0L) + setSummaries.sumOf { it.card.durationMs } +
             ExportReplays.addedMs(replays)
-        val outputDurationMs = if (effectiveIdleTrim) {
-            ExportChunkPlanner.keptDurationMs(keptPoints)
-        } else {
-            request.sourceDurationMs
-        }?.let { it + cardsMs }
+        val videoDurationMs = when {
+            effectiveIdleTrim -> ExportChunkPlanner.keptDurationMs(keptPoints)
+            trim != null -> trim.durationMs(request.sourceDurationMs)
+            else -> request.sourceDurationMs
+        }
+        val outputDurationMs = videoDurationMs?.let { it + cardsMs }
         val expectedBytes = request.videoBitrateK?.let { bitrateK ->
             outputDurationMs?.let { ExportVideoOptions.estimatedBytes(bitrateK, it) }
         }

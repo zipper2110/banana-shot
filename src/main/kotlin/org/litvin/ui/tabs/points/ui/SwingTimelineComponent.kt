@@ -6,6 +6,7 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.points.CommentV1
 import org.litvin.points.PointV1
+import org.litvin.adjustments.TrimRange
 import org.litvin.points.ReplayTimeline
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.Html
@@ -66,6 +67,8 @@ class SwingTimelineComponent(
     private val replayPlayheadProvider: () -> Long? = { null },
     /** A click on a replay block (B-50 T5). */
     private val onReplaySelected: (pointId: String, replayIndex: Int) -> Unit = { _, _ -> },
+    /** The trim for a source of the given length (B-60), or null. The timeline shows only the trimmed part. */
+    private val trimProvider: (sourceTotalMs: Long) -> TrimRange? = { null },
 ) : JComponent() {
 
     private val gutterBg get() = Palette.INSET
@@ -173,8 +176,9 @@ class SwingTimelineComponent(
 
     private fun scale(points: List<PointV1> = pointsProvider()): TimelineScale {
         val total = max(1L, durationProvider())
-        cachedScale?.let { if (cachedPoints === points && it.sourceTotalMs == total) return it }
-        return TimelineScale(ReplayTimeline(points), total).also {
+        val trim = trimProvider(total)
+        cachedScale?.let { if (cachedPoints === points && it.sourceTotalMs == total && it.trim == trim) return it }
+        return TimelineScale(ReplayTimeline(points), total, trim).also {
             cachedScale = it
             cachedPoints = points
         }
@@ -248,7 +252,6 @@ class SwingTimelineComponent(
         g.color = Palette.LINE
         g.fillRect(0, 0, width, TOP_BORDER)
 
-        val total = max(1L, durationProvider())
         val points = pointsProvider()
         val comments = commentsProvider()
         val scale = scale(points)
@@ -256,7 +259,9 @@ class SwingTimelineComponent(
         val laneCount = (layouts.maxOfOrNull { it.lane } ?: -1) + 1
 
         paintGutter(g, points.size, comments.size, commentTrackHeight(laneCount))
-        paintRuler(g, total, scale)
+        // With a trim, the points outside it are out of the lanes. The clip keeps them out of the gutter.
+        g.clipRect(GUTTER, 0, lanesWidth(), height)
+        paintRuler(g, scale)
         paintVideoTrack(g, scale)
         paintMarksTrack(g, points, scale)
         paintCommentsTrack(g, comments, layouts, commentTrackHeight(laneCount))
@@ -264,9 +269,9 @@ class SwingTimelineComponent(
         val scrub = scrubTimeMs
         val playheadX = if (scrub == null) {
             replayPlayheadProvider()?.let { scale.xAtPlay(it, GUTTER, lanesWidth()) }
-                ?: xAt(timeProvider().coerceIn(0L, total), scale)
+                ?: xAt(timeProvider().coerceIn(scale.sourceStartMs, scale.sourceEndMs), scale)
         } else {
-            xAt(scrub.coerceIn(0L, total), scale)
+            xAt(scrub.coerceIn(scale.sourceStartMs, scale.sourceEndMs), scale)
         }
         paintPlayhead(g, playheadX)
     }
@@ -292,8 +297,13 @@ class SwingTimelineComponent(
         label(commentsIcon, DisplayFormats.upper(tr("timeline.comments")), if (commentCount > 0) commentCount.toString() else "", commentsTrackTop(), commentHeight)
     }
 
-    /** The ruler shows source times. Its ticks skip over the replay blocks (B-50, ruler option A). */
-    private fun paintRuler(g: Graphics2D, total: Long, scale: TimelineScale) {
+    /**
+     * The ruler shows source times. Its ticks skip over the replay blocks (B-50, ruler option A). With a trim, the
+     * ticks go from the trim start to the trim end (B-60).
+     */
+    private fun paintRuler(g: Graphics2D, scale: TimelineScale) {
+        val first = scale.sourceStartMs
+        val total = scale.sourceEndMs - first
         val top = TOP_BORDER
         val lanes = lanesWidth()
         g.color = gutterBg
@@ -301,7 +311,7 @@ class SwingTimelineComponent(
         g.color = Palette.LINE
         g.fillRect(GUTTER, top + RULER_HEIGHT - 1, lanes, 1)
         for (index in 0..TICKS) {
-            val tickMs = index * (total / TICKS.toLong())
+            val tickMs = first + index * (total / TICKS.toLong())
             val x = if (index == TICKS) GUTTER + lanes else xAt(tickMs, scale)
             g.color = tickColor
             g.fillRect(min(x, width - 1), top, 1, RULER_HEIGHT - 1)
@@ -317,8 +327,8 @@ class SwingTimelineComponent(
     private fun paintVideoTrack(g: Graphics2D, scale: TimelineScale) {
         val top = videoTrackTop()
         val lanes = lanesWidth()
-        var from = 0L
-        for (insert in scale.replays.inserts) {
+        var from = scale.firstPlayMs
+        for (insert in scale.inserts) {
             paintVideoRange(g, scale.xAtPlay(from, GUTTER, lanes), scale.xAtPlay(insert.startMs, GUTTER, lanes), top)
             from = insert.endMs
         }

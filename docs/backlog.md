@@ -145,6 +145,52 @@ When item is done, move it under
 - Done when: a comment with emoji shows the same emoji in the preview and in
   the export.
 
+### B-60 Trim the start and the end of the video
+
+- Let the user cut off the start and the end of the video, for example the
+  warm-up before the match and the time after it.
+- Decided on 2026-10-30:
+  - The trim is on its own sub-tab "Trim" of the Colors & Transform tab. It
+    is not on the Transform sub-tab, because it changes the time, not the
+    frame.
+  - The trim has a start time and an end time. They apply to the whole
+    video and have no change points. They are in `adjustments.json`.
+  - The Points tab timeline shows only the time between the start and the
+    end. So the timeline shows the match larger.
+  - The "Full video" export uses only the time between the start and the
+    end. The scoreboard and the comments move with the video.
+  - The "Only points" and "Only favorites" exports do not use the trim.
+    They keep all their points.
+  - The score does not change. The scoreboard at the start shows the score
+    of the points before the start.
+  - The trim sub-tab sends no analytics event for its tab, because the
+    analytics contract has no key for it.
+- Points outside the trim, decided on 2026-10-30:
+  - The user can set a trim that cuts off points. The user decides.
+  - The app keeps these points. It deletes no data.
+  - The Trim sub-tab shows the points as marks on its timeline, so the user
+    sees where they are.
+  - While points are outside the trim, a warning banner shows. It goes away
+    when no point is outside the trim.
+  - The first time that a trim cuts off points in a project, a warning
+    dialog also shows. The project remembers that the dialog showed.
+- Sub-tabs, decided on 2026-10-31:
+  - The sub-tabs are large tabs in a strip across the top of the Colors &
+    Transform tab, not a small control in the right panel.
+  - The order is Trim, Colors, Transform. The tab opens on Trim.
+- Done when: the Points tab timeline and the "Full video" export use the
+  trim.
+
+### B-61 Zoom the points timeline with the mouse wheel and the touchpad
+
+- Let the user zoom the Points tab timeline in and out with the mouse wheel
+  and with touchpad gestures (pinch, and two-finger scroll).
+- The zoom keeps the time under the mouse pointer at the same position.
+- Open question: which input zooms and which input scrolls the timeline
+  (for example, the wheel with Ctrl zooms, and the wheel alone scrolls).
+- Done when: the user can zoom the timeline with the mouse wheel and with
+  the touchpad.
+
 ### B-15 Intro and outro videos
 
 - Let the user add an intro video and an outro video to the exported video.

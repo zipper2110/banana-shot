@@ -340,6 +340,7 @@ class SavedRenderQueueTest {
             presetId = "high",
             outWidth = 3840,
             outHeight = 2160,
+            sampleAspect = SampleAspect(4, 3),
             outputFrameRate = "60",
             videoBitrateK = 40_000,
             expectedBytes = 123_456_789L,

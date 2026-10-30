@@ -42,6 +42,8 @@ data class RenderJob(
     val presetId: String,
     val outWidth: Int,
     val outHeight: Int,
+    // The pixel shape of the source (B-59). The output keeps it. A job from an older build has square pixels.
+    val sampleAspect: org.litvin.export.SampleAspect = org.litvin.export.SampleAspect.SQUARE,
     val outputFrameRate: String? = null,
     // Target video bitrate in kilobits per second. Null uses the bitrate table of the preset.
     val videoBitrateK: Int? = null,
@@ -88,6 +90,12 @@ data class RenderJob(
  * saved queue keeps the value (plan, "Decisions", "Unknown language value").
  */
 val RenderJob.videoTextLanguage: AppLanguage get() = AppLanguage.ofCode(videoLanguage) ?: AppLanguage.SOURCE
+
+/**
+ * The width of the overlay frame: the width that a player shows (B-59). The overlay ASS files use it with
+ * [RenderJob.outHeight], so that the scoreboard, the comments and the cards keep their shape on non-square pixels.
+ */
+val RenderJob.overlayWidth: Int get() = sampleAspect.displayWidth(outWidth)
 
 /** Simple snapshot for observers */
 data class ActiveQueueSnapshot(
@@ -435,6 +443,7 @@ object RenderQueueManager {
                         preset = preset,
                         outWidth = job.outWidth,
                         outHeight = job.outHeight,
+                        sampleAspect = job.sampleAspect,
                         outputFrameRate = job.outputFrameRate,
                         encoderLabel = job.encoderLabel,
                         // A full video export with replays splits the source into ranges. Each range seeks like a kept segment.
@@ -508,7 +517,7 @@ object RenderQueueManager {
                                 cardAssFiles += replayAss
                                 val withOverlay = try {
                                     org.litvin.i18n.I18n.inVideo(job.videoTextLanguage) {
-                                        AssOverlayWriter.writeReplay(replayAss, pass.replay, job.outWidth, job.outHeight)
+                                        AssOverlayWriter.writeReplay(replayAss, pass.replay, job.overlayWidth, job.outHeight)
                                     }
                                     true
                                 } catch (t: Throwable) {
@@ -539,7 +548,7 @@ object RenderQueueManager {
                                 val cardAss = java.io.File(partOut.absolutePath + ".card$index.ass")
                                 cardAssFiles += cardAss
                                 try {
-                                    AssOverlayWriter.writeStatsCard(cardAss, pass.card, job.outWidth, job.outHeight)
+                                    AssOverlayWriter.writeStatsCard(cardAss, pass.card, job.overlayWidth, job.outHeight)
                                 } catch (t: Throwable) {
                                     logger.warn(t) { "Failed to prepare a statistics card; the export does not show it" }
                                     continue

@@ -352,6 +352,32 @@ class ExportPlannerTest {
     }
 
     @Test
+    fun aVideoWithNonSquarePixelsGivesTheJobItsPixelShapeAndACardOfTheDisplayAspect() {
+        val edl = EdlV1(points = listOf(point("p1", 0, 10_000), point("p2", 20_000, 30_000)))
+        val job = ExportPlanner.buildRenderPlan(
+            ExportRenderPlanRequest(
+                manifest = manifest(),
+                sourcePath = "input.mp4",
+                edl = edl,
+                score = ScoreV1(outcomes = mapOf("p1" to Outcome.P1, "p2" to Outcome.P2)),
+                preset = preset,
+                resolution = ExportResolution("1080p", 1440, 1080, SampleAspect(4, 3)),
+                encoderLabel = "H.264 (libx264)",
+                idleTrim = true,
+                favoriteOnly = false,
+                includeScoreboard = false,
+                outputPath = "out.mp4",
+                includeStatsCard = true,
+            )
+        ).job
+
+        // B-59: the output keeps 1440 stored pixels, and a player shows them as 1920.
+        assertEquals(1440, job.outWidth)
+        assertEquals(SampleAspect(4, 3), job.sampleAspect)
+        assertEquals(1920.0, job.statsCard?.pages?.first()?.width)
+    }
+
+    @Test
     fun theSetCardsAreInTheJobForTheSetsThatTheVideoShows() {
         // One game wins a set with a two-game lead: sets of 8 points. Set 3 is not complete.
         val winners = "11111111" + "22222222" + "1111"

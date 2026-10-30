@@ -8,24 +8,28 @@ object ExportResolutionProbe {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable, "-v", "error", "-select_streams", "v:0",
-                "-show_entries", "stream=width,height", "-of", "csv=p=0", sourcePath,
+                "-show_entries", "stream=width,height,sample_aspect_ratio", "-of", "csv=p=0", sourcePath,
             ).redirectErrorStream(true).start()
             if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 process.destroyForcibly()
                 return null
             }
             if (process.exitValue() != 0) return null
-            val dimensions = process.inputStream.bufferedReader().use { reader ->
-                reader.lineSequence().firstOrNull()?.split(',', limit = 2)
-                    ?.takeIf { it.size == 2 }?.map(String::toIntOrNull)
-                    ?.takeIf { it.all { value -> value != null && value > 0 } }
-                    ?.map { requireNotNull(it) }
-            } ?: return null
-            val (width, height) = dimensions
-            ExportResolution(ExportVideoOptions.resolutionLabel(width, height), width, height)
+            parse(process.inputStream.bufferedReader().use { it.readText() })
         } catch (_: Throwable) {
             null
         }
+    }
+
+    /** Parses the `csv=p=0` output of ffprobe, for example `720,486,40:33`. */
+    internal fun parse(output: String): ExportResolution? {
+        val fields = output.lineSequence().firstOrNull()?.trim()?.split(',') ?: return null
+        val width = fields.getOrNull(0)?.trim()?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        val height = fields.getOrNull(1)?.trim()?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        return ExportResolution(
+            ExportVideoOptions.resolutionLabel(width, height), width, height,
+            SampleAspect.parse(fields.getOrNull(2)),
+        )
     }
 }
 

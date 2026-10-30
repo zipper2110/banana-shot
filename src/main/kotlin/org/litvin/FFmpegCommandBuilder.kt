@@ -28,6 +28,8 @@ object FFmpegCommandBuilder {
         val preset: ExportPreset,
         val outWidth: Int,
         val outHeight: Int,
+        // The pixel shape of the source (B-59). The output keeps it, and the subtitles get the display size.
+        val sampleAspect: org.litvin.export.SampleAspect = org.litvin.export.SampleAspect.SQUARE,
         val outputFrameRate: String? = null,
         val encoderLabel: String = "H.264 (libx264)",
         val idleTrim: Boolean = true,
@@ -298,7 +300,10 @@ object FFmpegCommandBuilder {
         knownHeight: Int?,
         outWidth: Int,
         outHeight: Int,
+        sampleAspect: org.litvin.export.SampleAspect = org.litvin.export.SampleAspect.SQUARE,
     ): List<String> {
+        // The crop has the frame aspect in source pixels, so the output pixels have the shape of the source pixels.
+        val setSar = "setsar=${sampleAspect.ffmpegArgument()}"
         val sourceWidth = knownWidth?.takeIf { it > 0 }
         val sourceHeight = knownHeight?.takeIf { it > 0 }
         val width = sourceWidth ?: outWidth
@@ -307,7 +312,7 @@ object FFmpegCommandBuilder {
         val blends = GeometryTimeline.blendsIn(adj, width, height, startMs, endMs)
         if (blends.isEmpty()) {
             val plan = GeometryTimeline.planAt(adj, startMs, width, height)
-            return listOfNotNull(planFilter(plan, sourceWidth, sourceHeight, fillColor(adj)), scale, "setsar=1")
+            return listOfNotNull(planFilter(plan, sourceWidth, sourceHeight, fillColor(adj)), scale, setSar)
         }
         val time = "(t+${(timeOffsetMs / 1000.0).formatSecs()})"
         // The plans in time order: the plan before the first blend, then the end plan of each blend.
@@ -351,8 +356,19 @@ object FFmpegCommandBuilder {
         val x = "min((${piecewise(plans.map { it.crop.x })})*$scaledWidth,$scaledWidth-$outWidth)"
         val y = "min((${piecewise(plans.map { it.crop.y })})*$scaledHeight,$scaledHeight-$outHeight)"
         filters += "crop=w=$outWidth:h=$outHeight:x='$x':y='$y'"
-        filters += "setsar=1"
+        filters += setSar
         return filters
+    }
+
+    /**
+     * Burns in the ASS file at [assPath]. The overlay ASS files use the display size of the output (B-59).
+     * With non-square pixels, "original_size" gives that size to libass, so that libass makes the text and the
+     * drawings narrower or wider in the stored frame. The player then shows them with their correct shape.
+     */
+    internal fun subtitlesFilter(assPath: String, outWidth: Int, outHeight: Int, sampleAspect: org.litvin.export.SampleAspect): String {
+        val filter = "subtitles='${escapeForFilterPath(assPath)}'"
+        if (sampleAspect.square || outWidth <= 0 || outHeight <= 0) return filter
+        return "$filter:original_size=${sampleAspect.displayWidth(outWidth)}x$outHeight"
     }
 
     private fun fmt6(d: Double): String = java.lang.String.format(java.util.Locale.US, "%.6f", d)
@@ -611,6 +627,7 @@ object FFmpegCommandBuilder {
         var aMap = "[aout]"
 
         fun buildColorFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? = colorFilter(adj, p.toneRange)
+        fun burnInFilter(assPath: String): String = subtitlesFilter(assPath, p.outWidth, p.outHeight, p.sampleAspect)
         // A freeze shows the geometry of its frame. Without change points, the time has no effect.
         // A replay shows the geometry and the colors of its start.
         val geometryAtMs = freeze?.let { it.atMs?.minus(STILL_FRAME_OFFSET_MS) ?: Long.MAX_VALUE } ?: replay?.startMs ?: 0L
@@ -623,7 +640,7 @@ object FFmpegCommandBuilder {
             ?.takeIf { freeze == null && (GeometryTimeline.hasKeys(it) || ColorTimeline.hasKeys(it)) }
         val exactOutHeight = if (p.outHeight > 0 && p.outHeight % 2 == 0) p.outHeight else p.outWidth * 9 / 16 / 2 * 2
         fun timedFilters(adj: org.litvin.adjustments.AdjustmentsV1, startMs: Long, endMs: Long): List<String> =
-            timedGeometry(adj, startMs, endMs, startMs, p.sourceWidth, p.sourceHeight, p.outWidth, exactOutHeight)
+            timedGeometry(adj, startMs, endMs, startMs, p.sourceWidth, p.sourceHeight, p.outWidth, exactOutHeight, p.sampleAspect)
 
         // A color fade reads its part of the source from one more input, without audio. These inputs come
         // after the other inputs.
@@ -707,7 +724,7 @@ object FFmpegCommandBuilder {
             geometry?.let { video += it }
             video += scale
             buildColorFilter(p.adjustments?.let { ColorTimeline.at(it, geometryAtMs) })?.let { video += it }
-            p.subtitlesAssPath?.let { video += "subtitles='${escapeForFilterPath(it)}'" }
+            p.subtitlesAssPath?.let { video += burnInFilter(it) }
             // The source audio keeps its sample rate and channels, so the AAC settings match the other passes.
             val audio = if (p.sourceHasAudio) {
                 "[0:a]asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
@@ -736,7 +753,7 @@ object FFmpegCommandBuilder {
             replay.sourceFrameRate?.let { video += "fps=${it.ffmpegArgument}" }
             // The subtitles and the fades come after the still frame, because their times count it.
             val after = mutableListOf<String>()
-            p.subtitlesAssPath?.let { after += "subtitles='${escapeForFilterPath(it)}'" }
+            p.subtitlesAssPath?.let { after += burnInFilter(it) }
             after += fadeFilters(p.fadeIn, p.fadeOut, durationSecs)
             val audioFades = audioFadeFilters(p.fadeIn, p.fadeOut, durationSecs)
             val audio = when {
@@ -805,15 +822,14 @@ object FFmpegCommandBuilder {
             // If subtitles present, append burn-in after color; else map baseLabel directly
             val subPath = p.subtitlesAssPath
             if (subPath != null) {
-                val esc = escapeForFilterPath(subPath)
                 // The subtitles filter picks events by frame timestamp. A chunk's frames start at
                 // zero, so shift them onto the whole-output timeline for the burn-in and rebase
                 // afterwards; the chunk still encodes from zero.
                 val offsetSecs = p.outputTimeOffsetMs / 1000.0
                 val burnIn = if (p.outputTimeOffsetMs > 0) {
-                    "setpts=PTS+${offsetSecs.formatSecs()}/TB,subtitles='${esc}',setpts=PTS-STARTPTS"
+                    "setpts=PTS+${offsetSecs.formatSecs()}/TB,${burnInFilter(subPath)},setpts=PTS-STARTPTS"
                 } else {
-                    "subtitles='${esc}'"
+                    burnInFilter(subPath)
                 }
                 parts += "$baseLabel" + burnIn + vMap
             } else {
@@ -829,7 +845,7 @@ object FFmpegCommandBuilder {
             val parts = timedSpan(timedAdjustments, 0L, Long.MAX_VALUE, 0, "vspan").toMutableList()
             val subPath = p.subtitlesAssPath
             if (subPath != null) {
-                parts += "[vspan]subtitles='${escapeForFilterPath(subPath)}'$vMap"
+                parts += "[vspan]${burnInFilter(subPath)}$vMap"
             } else {
                 vMap = "[vspan]"
             }
@@ -905,8 +921,7 @@ object FFmpegCommandBuilder {
             filters += scale
             if (color != null) filters += color
             if (sub != null) {
-                val esc = escapeForFilterPath(sub)
-                filters += "subtitles='${esc}'"
+                filters += burnInFilter(sub)
             }
             val vf = filters.joinToString(",")
             args += listOf("-vf", vf)

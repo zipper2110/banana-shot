@@ -17,7 +17,7 @@ object RenderOverlayScript {
                     file = file,
                     scoreboardSpans = scoreboardSpans,
                     commentSpans = commentSpans,
-                    outWidth = job.outWidth,
+                    outWidth = job.overlayWidth,
                     outHeight = job.outHeight,
                     settings = job.scoreboardSettings,
                 )

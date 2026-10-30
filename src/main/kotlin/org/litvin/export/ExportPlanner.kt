@@ -25,7 +25,13 @@ data class ExportResolution(
     val label: String,
     val width: Int,
     val height: Int,
-)
+    /** The pixel shape of the source. The export keeps it (B-59). */
+    val sampleAspect: SampleAspect = SampleAspect.SQUARE,
+) {
+    /** The width that a player shows. The overlays use this width, so that they keep their shape (B-59). */
+    @get:com.fasterxml.jackson.annotation.JsonIgnore
+    val displayWidth: Int get() = sampleAspect.displayWidth(width)
+}
 
 data class ExportPointSummary(
     val pointCount: Int,
@@ -290,12 +296,12 @@ object ExportPlanner {
             emptyList()
         }
         val statsCard = if (request.includeStatsCard) {
-            StatsCardVideo.of(request.edl, request.score, request.statsSettings, request.resolution.width, request.resolution.height)
+            StatsCardVideo.of(request.edl, request.score, request.statsSettings, request.resolution.displayWidth, request.resolution.height)
         } else {
             null
         }
         val setSummaries = if (request.includeSetSummaries && effectiveIdleTrim) {
-            setSummaryCards(request.edl, request.score, request.statsSettings, keptPoints, request.resolution.width, request.resolution.height)
+            setSummaryCards(request.edl, request.score, request.statsSettings, keptPoints, request.resolution.displayWidth, request.resolution.height)
         } else {
             emptyList()
         }
@@ -324,6 +330,7 @@ object ExportPlanner {
             presetId = request.preset.id,
             outWidth = request.resolution.width,
             outHeight = request.resolution.height,
+            sampleAspect = request.resolution.sampleAspect,
             outputFrameRate = request.outputFrameRate,
             videoBitrateK = request.videoBitrateK,
             expectedBytes = expectedBytes,

@@ -246,10 +246,10 @@ object ExportVideoOptions {
         return if (megabits < 10.0) "${DisplayFormats.decimal(megabits, 1)} Mbit/s" else "${megabits.roundToInt()} Mbit/s"
     }
 
-    /** Keeps the aspect ratio of the source. The width is even because H.264 needs even dimensions. */
+    /** Keeps the aspect ratio and the pixel shape of the source. The width is even because H.264 needs even dimensions. */
     private fun scaledTo(source: ExportResolution, standard: Standard): ExportResolution {
         val width = (source.width.toDouble() * standard.height / source.height / 2).roundToInt() * 2
-        return ExportResolution(standard.title, width, standard.height)
+        return ExportResolution(standard.title, width, standard.height, source.sampleAspect)
     }
 
     private fun isNear(actual: Double, standard: Double) = abs(actual - standard) / standard < 0.01

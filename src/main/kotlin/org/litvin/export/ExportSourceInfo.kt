@@ -28,14 +28,14 @@ data class ExportSourceInfo(
 }
 
 object ExportSourceProbe {
-    /** Reads the size, frame rate, bitrate and duration of the source with one ffprobe call. */
+    /** Reads the size, pixel shape, frame rate, bitrate and duration of the source with one ffprobe call. */
     fun probe(sourcePath: String, ffprobeExecutable: String): ExportSourceInfo {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable,
                 "-v", "error",
                 "-select_streams", "v:0",
-                "-show_entries", "stream=width,height,avg_frame_rate,r_frame_rate,bit_rate:format=duration,bit_rate",
+                "-show_entries", "stream=width,height,sample_aspect_ratio,avg_frame_rate,r_frame_rate,bit_rate:format=duration,bit_rate",
                 "-of", "flat",
                 sourcePath,
             ).redirectErrorStream(true).start()
@@ -65,7 +65,10 @@ object ExportSourceProbe {
         val width = stream("width")?.toIntOrNull()?.takeIf { it > 0 }
         val height = stream("height")?.toIntOrNull()?.takeIf { it > 0 }
         val resolution = if (width != null && height != null) {
-            ExportResolution(ExportVideoOptions.resolutionLabel(width, height), width, height)
+            ExportResolution(
+                ExportVideoOptions.resolutionLabel(width, height), width, height,
+                SampleAspect.parse(stream("sample_aspect_ratio")),
+            )
         } else {
             null
         }

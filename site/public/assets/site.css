@@ -239,7 +239,7 @@ main > .section-noai .section-head { margin-bottom: 48px; }
 }
 
 /* ---- Home: example videos. Each one is a link to YouTube with a still image. ---- */
-.videos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+.videos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
 .video { margin: 0; }
 .video-play {
   position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden;
@@ -265,6 +265,7 @@ main > .section-noai .section-head { margin-bottom: 48px; }
 .video-tutorial { max-width: 860px; margin: 56px auto 0; }
 .video-play iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 @media (max-width: 720px) { .videos { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 960px) and (min-width: 721px) { .video-btn { width: 60px; height: 60px; margin: -30px 0 0 -30px; } }
 
 /* ---- Call to action: a large centered glass panel with an accent glow ---- */
 .cta {

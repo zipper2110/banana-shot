@@ -152,6 +152,27 @@ class OverlayAssWriterTest {
         assertTrue(text.contains("PlayResY: 720"))
     }
 
+    @Test
+    fun boardEventsOfAFadingSpanHaveTheFadeTag() {
+        val tmp = File.createTempFile("score-fade", ".ass")
+        tmp.deleteOnExit()
+        val spans = listOf(
+            OverlaySpan(startMs = 0, endMs = 5_000, text = "", p1Pts = 1, fadeInMs = 500),
+            OverlaySpan(startMs = 5_000, endMs = 9_000, text = "", p1Pts = 2),
+            OverlaySpan(startMs = 9_000, endMs = 29_000, text = "", p1Pts = 3, fadeOutMs = 500),
+        )
+
+        AssOverlayWriter.write(tmp, spans, outWidth = 1920, outHeight = 1080)
+
+        val events = tmp.readLines().filter { it.startsWith("Dialogue:") }
+        val first = events.filter { it.contains(",0:00:00.00,0:00:05.00,") }
+        val middle = events.filter { it.contains(",0:00:05.00,0:00:09.00,") }
+        val last = events.filter { it.contains(",0:00:09.00,0:00:29.00,") }
+        assertTrue(first.isNotEmpty() && first.all { it.contains("{\\fad(500,0)}") }, first.firstOrNull())
+        assertTrue(middle.isNotEmpty() && middle.none { it.contains("\\fad") }, middle.firstOrNull())
+        assertTrue(last.isNotEmpty() && last.all { it.contains("{\\fad(0,500)}") }, last.firstOrNull())
+    }
+
     private fun sha256(data: ByteArray): String {
         val md = MessageDigest.getInstance("SHA-256")
         val digest = md.digest(data)

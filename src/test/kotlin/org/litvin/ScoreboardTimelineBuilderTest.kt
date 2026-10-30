@@ -190,4 +190,37 @@ class ScoreboardTimelineBuilderTest {
         assertTrue(spans[48].matchEnded)
         assertEquals(listOf(6 to 0, 6 to 0), spans[48].completedSets)
     }
+
+    @Test
+    fun fullVideoStartsAtTheFirstScoredPointAndEndsTwentySecondsAfterTheLastPoint() {
+        // A is a warm-up point without a winner. B and C have winners.
+        val points = listOf(pts("A", 2_000, 5_000), pts("B", 10_000, 15_000), pts("C", 20_000, 26_000))
+        val outcomes = mapOf("B" to Outcome.P1, "C" to Outcome.P1)
+
+        val spans = ScoreboardTimelineBuilder.build(points, outcomes, idleTrim = false, fullVideo = true)
+
+        assertEquals(listOf(10_000L to 15_000L, 15_000L to 26_000L, 26_000L to 46_000L), spans.map { it.startMs to it.endMs })
+        assertEquals(listOf(500L, 0L, 0L), spans.map { it.fadeInMs })
+        assertEquals(listOf(0L, 0L, 500L), spans.map { it.fadeOutMs })
+        // The last span shows the score after C: 30-0.
+        assertEquals(2 to 0, spans.last().p1Pts to spans.last().p2Pts)
+    }
+
+    @Test
+    fun fullVideoWithoutAScoredPointHasNoBoard() {
+        val points = listOf(pts("A", 0, 1_000), pts("B", 2_000, 3_000))
+
+        assertTrue(ScoreboardTimelineBuilder.build(points, emptyMap(), idleTrim = false, fullVideo = true).isEmpty())
+    }
+
+    @Test
+    fun highlightsHaveNoFade() {
+        val points = listOf(pts("A", 0, 1_000), pts("B", 2_000, 3_000))
+        val outcomes = mapOf("A" to Outcome.P1, "B" to Outcome.P2)
+
+        val spans = ScoreboardTimelineBuilder.build(points, outcomes, idleTrim = true)
+
+        assertTrue(spans.all { it.fadeInMs == 0L && it.fadeOutMs == 0L })
+        assertEquals(2, spans.size)
+    }
 }

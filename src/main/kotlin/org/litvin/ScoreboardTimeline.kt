@@ -44,6 +44,10 @@ data class OverlaySpan(
     val badge: String? = null,
     /** True when the match ended before this span. The scoreboard then shows the final score. */
     val matchEnded: Boolean = false,
+    /** The length of the fade at the start of the span, in ms. 0 shows the board at once. */
+    val fadeInMs: Long = 0,
+    /** The length of the fade at the end of the span, in ms. 0 hides the board at once. */
+    val fadeOutMs: Long = 0,
 )
 
 data class CommentOverlaySpan(
@@ -61,6 +65,14 @@ data class CommentOverlaySpan(
 
 object ScoreboardTimelineBuilder {
     private const val PREVIEW_SUBTITLE_PREROLL_MS = 250L
+
+    /** A full video shows the final score for this time after the end of the last point. */
+    const val FINAL_SCORE_MS = 20_000L
+
+    /** A full video fades the board in at the first scored point and out after the final score. */
+    const val FADE_MS = 500L
+
+    private const val FINAL_SCORE_ID = "final-score"
 
     fun buildSourcePointSpans(
         points: List<PointV1>,
@@ -98,7 +110,14 @@ object ScoreboardTimelineBuilder {
         }
     }
 
-    /** Builds overlay spans in OUTPUT time domain. */
+    /**
+     * Builds overlay spans in OUTPUT time domain.
+     *
+     * [fullVideo] is for a video with all the time between the points (a full export and the Points tab preview,
+     * with [idleTrim] false). The board then comes in with a fade at the start of the first scored point. After the
+     * last point, the board shows the final score for [FINAL_SCORE_MS] and goes out with a fade. Without a scored
+     * point, the video has no board.
+     */
     fun build(
         points: List<PointV1>,
         outcomes: Map<String, Outcome>,
@@ -112,8 +131,14 @@ object ScoreboardTimelineBuilder {
         manualMarks: ManualScoreMarks = ManualScoreMarks(),
         serverMarks: Map<String, Outcome> = emptyMap(),
         sport: Sport = Sport.TENNIS,
+        fullVideo: Boolean = false,
     ): List<OverlaySpan> {
         if (points.isEmpty()) return emptyList()
+        if (fullVideo) {
+            return buildFullVideo(
+                points, outcomes, player1Name, player2Name, player1ColorHex, player2ColorHex, rules, manualMarks, serverMarks, sport,
+            )
+        }
         val ordered = points.sortedBy { it.startMs }
         val shouldEmit = BooleanArray(ordered.size) { i ->
             exportedPointIds == null || ordered[i].id in exportedPointIds
@@ -208,5 +233,51 @@ object ScoreboardTimelineBuilder {
             )
         }
         return out
+    }
+
+    private fun buildFullVideo(
+        points: List<PointV1>,
+        outcomes: Map<String, Outcome>,
+        player1Name: String,
+        player2Name: String,
+        player1ColorHex: String?,
+        player2ColorHex: String?,
+        rules: MatchRulesV1,
+        manualMarks: ManualScoreMarks,
+        serverMarks: Map<String, Outcome>,
+        sport: Sport,
+    ): List<OverlaySpan> {
+        val ordered = points.sortedBy { it.startMs }
+        val firstScored = ordered.firstOrNull { it.id in outcomes } ?: return emptyList()
+        val last = ordered.last()
+        // A point after the last point gives the span with the final score.
+        val finalScore = PointV1(id = FINAL_SCORE_ID, startMs = last.endMs, endMs = last.endMs + FINAL_SCORE_MS.toInt())
+        val spans = build(
+            points = ordered + finalScore,
+            outcomes = outcomes,
+            idleTrim = false,
+            player1Name = player1Name,
+            player2Name = player2Name,
+            player1ColorHex = player1ColorHex,
+            player2ColorHex = player2ColorHex,
+            rules = rules,
+            manualMarks = manualMarks,
+            serverMarks = serverMarks,
+            sport = sport,
+        )
+        val firstStart = firstScored.startMs.toLong()
+        val shown = spans
+            .filter { it.endMs > firstStart }
+            .map { if (it.startMs < firstStart) it.copy(startMs = firstStart) else it }
+            .filter { it.endMs > it.startMs }
+        if (shown.isEmpty()) return emptyList()
+        // A fade is at most half of its span, so that a short span still shows the board.
+        fun fade(span: OverlaySpan) = minOf(FADE_MS, (span.endMs - span.startMs) / 2)
+        return shown.mapIndexed { index, span ->
+            span.copy(
+                fadeInMs = if (index == 0) fade(span) else 0L,
+                fadeOutMs = if (index == shown.lastIndex) fade(span) else 0L,
+            )
+        }
     }
 }

@@ -78,8 +78,10 @@ object AssOverlayWriter {
                 val display = ScoreboardComponent.display(withStructuredState(s))
                 val scene = ScoreboardLayouts.scene(display, settings)
                 val placement = ScoreboardAss.place(scene, settings, 0.0, 0.0, playResX.toDouble(), playResY.toDouble())
+                // Each board event fades in the same way, so the whole board fades as one.
+                val fade = if (s.fadeInMs > 0 || s.fadeOutMs > 0) "{\\fad(${s.fadeInMs},${s.fadeOutMs})}" else ""
                 ScoreboardAss.events(scene, placement).forEachIndexed { layer, text ->
-                    w.appendLine("Dialogue: $layer,$start,$end,Board,,0,0,0,,$text")
+                    w.appendLine("Dialogue: $layer,$start,$end,Board,,0,0,0,,$fade$text")
                 }
             }
 

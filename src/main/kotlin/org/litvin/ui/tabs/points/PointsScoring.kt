@@ -150,22 +150,20 @@ internal class PointsScoring(
     private val states: List<ScoringEngine.MatchState> get() = timeline?.statesAfterPoint.orEmpty()
     private var scene: ScoreboardScene? = null
 
-    // The scoreboard spans in source time: each span goes from the end of the previous point to the end of its point
-    // and shows the score before its point, as in a full export. The last span goes from the end of the last point to
-    // the end of the video and shows the final score.
+    // The scoreboard spans in source time, the same as in a full export: each span goes from the end of the previous
+    // point to the end of its point and shows the score before its point. The board starts at the first scored point.
+    // The last span shows the final score for a short time after the last point.
     private var spans: List<OverlaySpan> = emptyList()
-    private var firstScoredStartMs: Long? = null
     private var shownSpan: OverlaySpan? = null
     private var playheadMs: Long = 0L
 
     /**
-     * Shows the scoreboard of the playhead. The scoreboard shows from the start of the first scored point to the end
-     * of the video. Before that point, or without a scored point, the video has no scoreboard.
+     * Shows the scoreboard of the playhead, as the full export shows it. The preview shows no fade: the board comes
+     * and goes at the start and the end of the fades.
      */
     fun moveTo(timeMs: Long) {
         playheadMs = timeMs
-        val first = firstScoredStartMs
-        val span = if (first == null || timeMs < first) null else spans.lastOrNull { it.startMs <= timeMs }
+        val span = spans.lastOrNull { it.startMs <= timeMs && timeMs < it.endMs }
         if (span == shownSpan && (span == null) == (scene == null)) return
         shownSpan = span
         scene = span?.let {
@@ -576,15 +574,11 @@ internal class PointsScoring(
 
     /** Builds [spans] again after a change of the points or the score, and shows the scoreboard of the playhead again. */
     private fun rebuildSpans() {
-        firstScoredStartMs = points.firstOrNull { it.id in score.outcomes }?.startMs?.toLong()
         spans = runCatching {
-            val last = points.lastOrNull() ?: return@runCatching emptyList()
-            // A point after the last point gives the span with the final score.
-            val finalScore = PointV1(id = FINAL_SCORE_ID, startMs = last.endMs, endMs = Int.MAX_VALUE)
             val players = players()
             I18n.inVideo(videoLanguage) {
                 ScoreboardTimelineBuilder.build(
-                    points = points + finalScore,
+                    points = points,
                     outcomes = score.outcomes,
                     idleTrim = false,
                     player1Name = players.p1Name,
@@ -595,6 +589,7 @@ internal class PointsScoring(
                     manualMarks = score.manualMarks(),
                     serverMarks = score.serverMarks,
                     sport = score.sport,
+                    fullVideo = true,
                 )
             }
         }.getOrDefault(emptyList())
@@ -626,8 +621,6 @@ internal class PointsScoring(
     }
 
     private companion object {
-        const val FINAL_SCORE_ID = "final-score"
-
         /** The most sets that Override score offers in manual scoring. */
         const val MAX_SETS = 5
 

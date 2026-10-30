@@ -180,6 +180,7 @@ class VideoLanguageExportTest {
                 player1Name = score.player1Name, player2Name = score.player2Name,
                 player1ColorHex = score.player1ColorHex, player2ColorHex = score.player2ColorHex,
                 rules = score.rules, manualMarks = score.manualMarks(), serverMarks = score.serverMarks, sport = score.sport,
+                fullVideo = true,
             )
             spans.map { ScoreboardLayouts.scene(ScoreboardComponent.display(it), score.scoreboard) }
         }

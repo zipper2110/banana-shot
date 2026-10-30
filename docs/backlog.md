@@ -318,3 +318,14 @@ When item is done, move it under
   the correct page, a fix of a wrong link, a new page, or no action.
 - Done when: the groups and the decision for each group are in this item, and
   the useful actions are new tasks or new backlog items.
+
+### B-60 Feature demos with different sports
+
+- Added on 2026-10-29.
+- The feature demos on the landing site (`site/public/index.html`) show
+  only tennis singles. The scripts are in `site/public/assets/demos/`.
+- Update the demos, so that they use different sports as examples: tennis,
+  padel, and beach tennis. Padel and beach tennis are usually doubles, so
+  their demos show two teams.
+- Update the `aria-label` text of each demo to match its sport.
+- Open question: which demo shows which sport.

@@ -100,6 +100,9 @@ sealed class AdjustVideoIntent {
     /** Sets [end] of the trim (B-62) to the playhead. [durationMs] is the length of the source. */
     data class SetTrim(val end: TrimEnd, val durationMs: Long) : AdjustVideoIntent()
 
+    /** Sets [end] of the trim to [ms], for example at the end of a handle drag. [durationMs] is the length of the source. */
+    data class SetTrimAt(val end: TrimEnd, val ms: Long, val durationMs: Long) : AdjustVideoIntent()
+
     /** Seeks to [end] of the trim. [durationMs] is the length of the source. */
     data class GoToTrim(val end: TrimEnd, val durationMs: Long) : AdjustVideoIntent()
     data object ResetTrim : AdjustVideoIntent()

@@ -2,24 +2,20 @@ package org.litvin.ui.tabs.adjustments
 
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
-import org.litvin.shared.util.Timecode
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.TrimRange
 import org.litvin.i18n.tr
 import org.litvin.ui.commons.CardColumn
-import org.litvin.ui.commons.GroupCard
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.ResetAllButton
-import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.SidePanelHeader
-import org.litvin.ui.commons.SliderRows
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.WrapText
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Graphics
-import java.awt.Graphics2D
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
 
@@ -27,11 +23,11 @@ import javax.swing.JPanel
 enum class TrimEnd { START, END }
 
 /**
- * The Trim sub-tab of the Colors & Transform tab (B-62): a header with the changed count and "Reset all", and a card
- * with the start and the end of the video. "Set here" sets an end to the playhead. The arrow button seeks to it.
- * The caption of the card shows the length of the trimmed video. The trim has no change points.
- * Component IDs: trim-panel, trim-reset, trim-status, trim-start-row, trim-end-row, trim-start-set, trim-end-set,
- * trim-start-go, trim-end-go
+ * The Trim sub-tab of the Colors & Transform tab (B-62): a header with the changed count and "Reset all", a card with
+ * the length that the video keeps, and a card for each end of the trim. An end card shows the time, a large button
+ * that sets the end to the playhead, and a "Go" button that seeks to the end. The trim has no change points.
+ * Component IDs: trim-panel, trim-reset, trim-status, trim-summary, trim-start-card, trim-end-card, trim-start-set,
+ * trim-end-set, trim-start-go, trim-end-go, trim-outside-banner, trim-hint
  */
 class TrimControls(
     private val onSet: (TrimEnd) -> Unit,
@@ -43,11 +39,11 @@ class TrimControls(
     private val statusLabel = JLabel().apply { name = "trim-status" }
     private val header = SidePanelHeader(tr("adjust.trim"), statusLabel, resetButton)
 
-    internal val rows: Map<TrimEnd, TrimRow> = TrimEnd.entries.associateWith { end ->
-        TrimRow(end, first = end == TrimEnd.START, onSet = { onSet(end) }, onGoTo = { onGoTo(end) })
-    }
+    internal val summary = TrimSummary()
 
-    private val card = TrimCard(rows.values.toList())
+    internal val cards: Map<TrimEnd, TrimEndCard> = TrimEnd.entries.associateWith { end ->
+        TrimEndCard(end, onSet = { onSet(end) }, onGoTo = { onGoTo(end) })
+    }
 
     /** The number of points that the trim cuts off. The banner shows while it is more than 0. */
     private var outsideCount = 0
@@ -64,88 +60,167 @@ class TrimControls(
     /** The header status: "All at default" or "1 of 2 changed". */
     internal val statusText: String get() = statusLabel.text
 
-    /** The length text in the caption of the card, for example "00:42:10". Empty while the length is not known. */
-    internal val lengthText: String get() = card.lengthText
-
     init {
         name = "trim-panel"
         isOpaque = true
         background = Palette.BG
         val hint = WrapText(tr("adjust.trim.hint"), UiKit.font(12f), Palette.FG_3).apply { name = "trim-hint" }
         val column = CardColumn().apply {
+            add(summary)
             add(outsideBanner)
-            add(card)
+            TrimEnd.entries.forEach { add(cards.getValue(it)) }
             add(hint)
         }
         add(header, BorderLayout.NORTH)
         add(column.inScrollPane(), BorderLayout.CENTER)
-        render(AdjustmentsV1(), 0L, 0)
+        render(AdjustmentsV1(), 0L, 0, 0)
     }
 
     /**
      * Shows the trim of [adjustments] on a source of [durationMs]. A duration of 0 or less is not known yet.
-     * [pointsOutside] is the number of points that the trim cuts off.
+     * [pointCount] is the number of points of the project, and [pointsOutside] the number that the trim cuts off.
      */
-    fun render(adjustments: AdjustmentsV1, durationMs: Long, pointsOutside: Int) {
+    fun render(adjustments: AdjustmentsV1, durationMs: Long, pointCount: Int, pointsOutside: Int) {
         if (pointsOutside != outsideCount || outsideBanner.isVisible != (pointsOutside > 0)) {
             outsideCount = pointsOutside
             outsideBanner.isVisible = pointsOutside > 0
             outsideBanner.revalidate()
             outsideBanner.repaint()
         }
-        val known = durationMs > 0
-        val range = if (known) TrimRange.of(adjustments, durationMs) else null
-        rows.getValue(TrimEnd.START).show(range?.startMs ?: adjustments.trimStartMs ?: 0L, changed = adjustments.trimStartMs != null)
-        rows.getValue(TrimEnd.END).show(range?.endMs ?: adjustments.trimEndMs, changed = adjustments.trimEndMs != null)
-        card.lengthText = range?.let { format(it.durationMs) }.orEmpty()
+        val range = if (durationMs > 0) TrimRange.of(adjustments, durationMs) else null
+        cards.getValue(TrimEnd.START).show(range?.startMs ?: adjustments.trimStartMs ?: 0L, changed = adjustments.trimStartMs != null)
+        cards.getValue(TrimEnd.END).show(range?.endMs ?: adjustments.trimEndMs, changed = adjustments.trimEndMs != null)
+        summary.show(range, durationMs, pointCount, pointsOutside)
         val changed = listOf(adjustments.trimStartMs, adjustments.trimEndMs).count { it != null }
         header.showChanged(changed, TrimEnd.entries.size)
     }
 
     internal companion object {
-        /** "HH:MM:SS", as the change points card shows the times. */
-        fun format(ms: Long): String = Timecode.format(ms.coerceAtLeast(0L)).substring(0, 8)
+        /** "H:MM:SS", for example "1:23:43". */
+        fun clock(ms: Long): String {
+            val seconds = ms.coerceAtLeast(0L) / 1000
+            val text = StringBuilder().append(seconds / 3600).append(':')
+            fun two(value: Long) = text.append(if (value < 10) "0" else "").append(value)
+            two(seconds / 60 % 60).append(':')
+            two(seconds % 60)
+            return text.toString()
+        }
+
+        /** "M:SS" under one hour, else "H:MM:SS". For the time that the trim cuts off. */
+        fun shortClock(ms: Long): String {
+            if (ms >= 3_600_000) return clock(ms)
+            val seconds = ms.coerceAtLeast(0L) / 1000
+            val rest = seconds % 60
+            return "${seconds / 60}:${if (rest < 10) "0" else ""}$rest"
+        }
+
+        const val CARD_RADIUS = 10
     }
 }
 
-/** One end of the trim: the name, the time, the arrow button that seeks to the time, and "Set here". */
-internal class TrimRow(
-    val end: TrimEnd,
-    private val first: Boolean,
-    onSet: () -> Unit,
-    onGoTo: () -> Unit,
-) : JPanel(null) {
+/** The card "The video keeps": the kept length in large text, and the time cut off and the points under it. */
+internal class TrimSummary : JComponent() {
+    private val labelFont = UiKit.font(12.5f)
+    private val bigFont = UiKit.font(32f, UiKit.Weight.BOLD)
+    private val lineFont = UiKit.font(12.5f)
+
+    /** The kept length, for example "1:23:43", or "--:--:--" while the source length is not known. */
+    var keptText: String = UNKNOWN
+        private set
+
+    /** The line under the length, for example "8:57 cut off · all 46 points kept". */
+    var detailText: String = ""
+        private set
+
+    private var outside = false
+
+    init {
+        name = "trim-summary"
+        isOpaque = false
+    }
+
+    fun show(range: TrimRange?, durationMs: Long, pointCount: Int, pointsOutside: Int) {
+        keptText = range?.let { TrimControls.clock(it.durationMs) } ?: UNKNOWN
+        val cut = range?.let { tr("adjust.trim.cutOff", "cut" to TrimControls.shortClock(durationMs - it.durationMs)) }
+        val points = when {
+            pointsOutside > 0 -> tr("adjust.trim.pointsOutside", "count" to pointsOutside)
+            pointCount > 0 -> tr("adjust.trim.allKept", "count" to pointCount)
+            else -> null
+        }
+        detailText = listOfNotNull(cut, points).joinToString(" · ")
+        outside = pointsOutside > 0
+        repaint()
+    }
+
+    override fun getPreferredSize() = Dimension(200, HEIGHT_PX)
+    override fun getMinimumSize() = preferredSize
+    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, HEIGHT_PX)
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = UiKit.smooth(g)
+        try {
+            UiKit.paintBox(g2, 0, 0, width, height, TrimControls.CARD_RADIUS, Palette.CARD, Palette.LINE)
+            UiKit.drawText(g2, tr("adjust.trim.keeps"), labelFont, Palette.FG_2, PAD, 14f, 18f)
+            UiKit.drawText(g2, keptText, bigFont, Palette.FG_STRONG, PAD, 34f, 42f)
+            if (detailText.isNotEmpty()) {
+                UiKit.drawText(g2, detailText, lineFont, if (outside) Palette.RED_TEXT else Palette.FG_3, PAD, 80f, 18f)
+            }
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    private companion object {
+        const val HEIGHT_PX = 112
+        const val PAD = 18f
+        const val UNKNOWN = "-:--:--"
+    }
+}
+
+/**
+ * The card of one end of the trim: the name and the time on the first line, and under it a large button that sets
+ * the end to the playhead and a "Go" button that seeks to the end. The start button is lime, the end button has a
+ * lime border, so the two ends look different.
+ */
+internal class TrimEndCard(val end: TrimEnd, onSet: () -> Unit, onGoTo: () -> Unit) : JPanel(null) {
     private val key = end.name.lowercase()
 
-    val setButton = UiButton(tr("adjust.trim.setHere"), Material2OutlinedMZ.MY_LOCATION, UiButton.Kind.QUIET, buttonHeight = 26, fontSize = 12f).apply {
+    val setButton = UiButton(
+        tr(if (end == TrimEnd.START) "adjust.trim.startAtPosition" else "adjust.trim.endAtPosition"),
+        kind = if (end == TrimEnd.START) UiButton.Kind.LIME else UiButton.Kind.LIME_OUTLINE,
+        buttonHeight = BUTTON_HEIGHT,
+        fontSize = 13.5f,
+    ).apply {
         name = "trim-$key-set"
         toolTipText = tr("adjust.trim.setHere.tooltip")
         isFocusable = false
         addActionListener { onSet() }
     }
 
-    val goButton = RowIconButton(Material2OutlinedAL.ARROW_FORWARD, tr("adjust.trim.goTo.tooltip")).apply {
+    val goButton = UiButton(tr("adjust.trim.go"), Material2OutlinedAL.ARROW_FORWARD, buttonHeight = BUTTON_HEIGHT).apply {
         name = "trim-$key-go"
+        toolTipText = tr("adjust.trim.goTo.tooltip")
+        isFocusable = false
         addActionListener { onGoTo() }
     }
 
     private val label = tr(if (end == TrimEnd.START) "adjust.trim.start" else "adjust.trim.end")
-    private val nameFont = UiKit.font(13f)
-    private val timeFont = UiKit.font(12.5f)
+    private val labelFont = UiKit.font(13f)
+    private val timeFont = UiKit.font(20f, UiKit.Weight.BOLD)
 
     /** The shown time, or null while the end of the source is not known. */
     var timeMs: Long? = null
         private set
     private var changed = false
 
-    /** The time text, for example "00:05:12", or "--:--:--" while the time is not known. */
-    val timeText: String get() = timeMs?.let { TrimControls.format(it) } ?: UNKNOWN_TIME
+    /** The time text, for example "0:04:12", or "-:--:--" while the time is not known. */
+    val timeText: String get() = timeMs?.let { TrimControls.clock(it) } ?: "-:--:--"
 
     init {
-        name = "trim-$key-row"
+        name = "trim-$key-card"
         isOpaque = false
-        add(goButton)
         add(setButton)
+        add(goButton)
     }
 
     fun show(ms: Long?, changed: Boolean) {
@@ -156,54 +231,35 @@ internal class TrimRow(
         repaint()
     }
 
-    override fun getPreferredSize() = Dimension(MIN_WIDTH, ROW_HEIGHT)
+    override fun getPreferredSize() = Dimension(200, HEIGHT_PX)
     override fun getMinimumSize() = preferredSize
-    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, ROW_HEIGHT)
+    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, HEIGHT_PX)
 
     override fun doLayout() {
-        val set = setButton.preferredSize
-        val setX = width - SliderRows.PAD_X - set.width
-        setButton.setBounds(setX, (height - set.height) / 2, set.width, set.height)
-        val go = goButton.preferredSize
-        goButton.setBounds(setX - BUTTON_GAP - go.width, (height - go.height) / 2, go.width, go.height)
+        val go = goButton.preferredSize.width + 8
+        val top = BUTTON_TOP
+        goButton.setBounds(width - PAD - go, top, go, BUTTON_HEIGHT)
+        setButton.setBounds(PAD, top, width - PAD * 2 - go - GAP, BUTTON_HEIGHT)
     }
 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
         try {
-            SliderRows.paintFrame(g2, width, height, first = first, changed = changed)
-            UiKit.drawText(g2, label, nameFont, Palette.FG, SliderRows.PAD_X.toFloat(), 0f, height.toFloat())
+            UiKit.paintBox(g2, 0, 0, width, height, TrimControls.CARD_RADIUS, Palette.CARD, Palette.LINE)
+            UiKit.drawText(g2, label, labelFont, Palette.FG_2, PAD.toFloat(), 12f, 30f)
             val time = timeText
-            val timeX = goButton.x - BUTTON_GAP - UiKit.textWidth(time, timeFont)
-            UiKit.drawText(g2, time, timeFont, if (changed) Palette.FG else Palette.FG_3, timeX, 0f, height.toFloat())
+            val timeColor = if (changed) Palette.FG_STRONG else Palette.FG_3
+            UiKit.drawText(g2, time, timeFont, timeColor, width - PAD - UiKit.textWidth(time, timeFont), 12f, 30f)
         } finally {
             g2.dispose()
         }
     }
 
     private companion object {
-        const val MIN_WIDTH = 200
-        const val ROW_HEIGHT = 48
-        const val BUTTON_GAP = 8
-        const val UNKNOWN_TIME = "--:--:--"
-    }
-}
-
-/** The "START AND END" card. The caption shows the length of the trimmed video on the right. */
-internal class TrimCard(rows: List<TrimRow>) :
-    GroupCard("trim-group", tr("adjust.trim.group"), Material2OutlinedAL.CONTENT_CUT, rows, rows.first().preferredSize.height) {
-    private val lengthFont = UiKit.font(11.5f)
-
-    var lengthText: String = ""
-        set(value) {
-            if (field == value) return
-            field = value
-            repaint()
-        }
-
-    override fun paintCaptionEnd(g2: Graphics2D, right: Float, top: Float, height: Float) {
-        if (lengthText.isEmpty()) return
-        val text = tr("adjust.trim.length", "length" to lengthText)
-        UiKit.drawText(g2, text, lengthFont, Palette.FG_3, right - UiKit.textWidth(text, lengthFont), top, height)
+        const val HEIGHT_PX = 112
+        const val PAD = 18
+        const val GAP = 8
+        const val BUTTON_TOP = 52
+        const val BUTTON_HEIGHT = 42
     }
 }

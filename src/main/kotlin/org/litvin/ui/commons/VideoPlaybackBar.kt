@@ -2,20 +2,15 @@ package org.litvin.ui.commons
 
 import com.formdev.flatlaf.ui.FlatSliderUI
 import org.kordamp.ikonli.feather.Feather
+import org.litvin.i18n.tr
 import org.litvin.shared.util.Timecode
-import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.geom.Ellipse2D
 import java.awt.geom.RoundRectangle2D
-import javax.swing.BorderFactory
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JSlider
-import javax.swing.SwingConstants
+import javax.swing.*
 import kotlin.math.max
-import org.litvin.i18n.tr
 
 /**
  * The playback bar under the video of the Colors & Transform tab, in two rows. The top row has the seek buttons and
@@ -23,7 +18,8 @@ import org.litvin.i18n.tr
  * video length.
  * The components are named "<namePrefix>-play-pause", "-current-time", "-total-time", "-seek",
  * "-seek-back-5s", "-seek-back-1s", "-seek-forward-1s" and "-seek-forward-5s".
- * Without [onNudge], the bar has no seek buttons.
+ * Without [onNudge], the bar has no seek buttons. Without the seek row ([seekRowVisible] is false), the bar is
+ * one row, and the times show as "0:42:10 / 1:32:40" on the left of the buttons.
  */
 internal class VideoPlaybackBar(
     namePrefix: String,
@@ -58,6 +54,11 @@ internal class VideoPlaybackBar(
         foreground = Palette.FG_3
         toolTipText = tr("playback.videoLength")
     }
+    private val timeSlash = JLabel("/").apply {
+        font = UiKit.font(13f)
+        foreground = Palette.FG_3
+        isVisible = false
+    }
     private val seekUi = SeekSliderUI()
 
     val seekSlider: JSlider = JSlider(0, SEEK_STEPS, 0).apply {
@@ -87,6 +88,7 @@ internal class VideoPlaybackBar(
         add(nowLabel)
         add(seekSlider)
         add(totalLabel)
+        add(timeSlash)
         playButton.addActionListener { onTogglePlay() }
         if (onNudge != null) seekButtons.forEach { button -> button.addActionListener { onNudge(button.deltaMs) } }
         seekSlider.addChangeListener {
@@ -127,37 +129,22 @@ internal class VideoPlaybackBar(
         updateMarkers()
     }
 
-    /**
-     * Shows [points] as thin bars under the track, and dims the track outside [trim] (B-62). A point that is not
-     * fully inside [trim] is red. A null [trim] shows no dim parts. An empty list and a null trim clear them.
-     */
-    fun setTrimView(points: List<Pair<Long, Long>>, trim: Pair<Long, Long>?) {
-        if (pointRangesMs == points && trimMs == trim) return
-        pointRangesMs = points
-        trimMs = trim
-        updateMarkers()
-    }
-
-    private var pointRangesMs: List<Pair<Long, Long>> = emptyList()
-    private var trimMs: Pair<Long, Long>? = null
+    /** False hides the seek row, for example when another timeline under the video seeks. */
+    var seekRowVisible: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            seekSlider.isVisible = value
+            timeSlash.isVisible = !value
+            revalidate()
+            repaint()
+        }
 
     private fun updateMarkers() {
         fun value(ms: Long) = if (totalMs > 0) (SEEK_STEPS * (ms.coerceIn(0L, totalMs).toDouble() / totalMs)).toInt() else 0
         val values = if (totalMs > 0) markersMs.map(::value) else emptyList()
-        val trim = trimMs?.takeIf { totalMs > 0 }
-        val ranges = if (totalMs > 0) {
-            pointRangesMs.map { (start, end) ->
-                val outside = trim != null && (start < trim.first || end > trim.second)
-                SeekSliderUI.Range(value(start), value(end), outside)
-            }
-        } else {
-            emptyList()
-        }
-        val trimValues = trim?.let { value(it.first) to value(it.second) }
-        if (seekUi.markers == values && seekUi.ranges == ranges && seekUi.trim == trimValues) return
+        if (seekUi.markers == values) return
         seekUi.markers = values
-        seekUi.ranges = ranges
-        seekUi.trim = trimValues
         seekSlider.repaint()
     }
 
@@ -193,7 +180,7 @@ internal class VideoPlaybackBar(
         val insets = insets
         return Dimension(
             insets.left + insets.right + max(transportWidth(direction = true), TIME_WIDTH * 2 + GAP * 2 + 200),
-            insets.top + insets.bottom + playButton.preferredSize.height + ROW_GAP + SEEK_ROW,
+            insets.top + insets.bottom + playButton.preferredSize.height + if (seekRowVisible) ROW_GAP + SEEK_ROW else 0,
         )
     }
 
@@ -228,6 +215,19 @@ internal class VideoPlaybackBar(
             x += size.width + SEEK_GAP
         }
 
+        if (!seekRowVisible) {
+            // One row: "0:42:10 / 1:32:40" on the left of the buttons.
+            fun placeTime(component: java.awt.Component, x: Int): Int {
+                val w = component.preferredSize.width + 2
+                component.setBounds(x, buttonsTop + (play.height - TIME_LINE) / 2, w, TIME_LINE)
+                return x + w
+            }
+            x = placeTime(nowLabel, insets.left) + 4
+            x = placeTime(timeSlash, x) + 4
+            placeTime(totalLabel, x)
+            return
+        }
+
         // The bottom row: the current time, the seek bar and the video length.
         val rowTop = buttonsTop + play.height + ROW_GAP
         fun place(component: java.awt.Component, x: Int, w: Int, h: Int) =
@@ -244,7 +244,7 @@ internal class VideoPlaybackBar(
 
     private companion object {
         const val PAD_X = 16
-        const val PAD_Y = 10
+        const val PAD_Y = 6
         const val GAP = 14
         const val TIME_WIDTH = 62
         const val TIME_LINE = 18
@@ -265,15 +265,6 @@ internal class SeekSliderUI : FlatSliderUI() {
     /** Slider values with a yellow mark on the track. */
     var markers: List<Int> = emptyList()
 
-    /** A point as slider values. [outside] is true when the trim cuts it off fully or in part. */
-    data class Range(val from: Int, val to: Int, val outside: Boolean)
-
-    /** The points, as bars under the track. */
-    var ranges: List<Range> = emptyList()
-
-    /** The trim as slider values. The track is dim outside it. Null shows no dim parts. */
-    var trim: Pair<Int, Int>? = null
-
     override fun getThumbSize(): Dimension = Dimension(KNOB, KNOB)
 
     override fun paintFocus(g: Graphics) = Unit
@@ -287,23 +278,6 @@ internal class SeekSliderUI : FlatSliderUI() {
             g2.fill(RoundRectangle2D.Double(0.0, y, slider.width.toDouble(), TRACK, TRACK, TRACK))
             g2.color = Palette.LIME
             g2.fill(RoundRectangle2D.Double(0.0, y, fill, TRACK, TRACK, TRACK))
-            trim?.let { (from, to) ->
-                // The parts that the export cuts off are dim.
-                g2.color = Palette.OVERLAY
-                g2.composite = java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.7f)
-                val left = xPositionForValue(from).toDouble()
-                val right = xPositionForValue(to).toDouble()
-                g2.fill(java.awt.geom.Rectangle2D.Double(0.0, y - 1, left, TRACK + 2))
-                g2.fill(java.awt.geom.Rectangle2D.Double(right, y - 1, slider.width - right, TRACK + 2))
-                g2.composite = java.awt.AlphaComposite.SrcOver
-            }
-            val rangeTop = y + TRACK + RANGE_GAP
-            ranges.forEach { range ->
-                g2.color = if (range.outside) Palette.RED else Palette.SAGE
-                val x1 = xPositionForValue(range.from).toDouble()
-                val x2 = xPositionForValue(range.to).toDouble()
-                g2.fill(RoundRectangle2D.Double(x1, rangeTop, (x2 - x1).coerceAtLeast(MIN_RANGE), RANGE_HEIGHT, 2.0, 2.0))
-            }
             g2.color = Palette.YELLOW
             val markTop = trackRect.y + (trackRect.height - MARK_HEIGHT) / 2.0
             markers.forEach { value ->
@@ -336,9 +310,6 @@ internal class SeekSliderUI : FlatSliderUI() {
         const val TRACK = 4.0
         const val MARK_WIDTH = 3.0
         const val MARK_HEIGHT = 12.0
-        const val RANGE_GAP = 2.0
-        const val RANGE_HEIGHT = 3.0
-        const val MIN_RANGE = 2.0
         val TRACK_BG get() = Palette.LINE_3
     }
 }

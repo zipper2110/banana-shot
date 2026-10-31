@@ -125,7 +125,8 @@ class DefaultAdjustVideoPresenter(
                 noteTransformChange { previous -> previous.copy(backgroundColor = color) }
             }
             is AdjustVideoIntent.PlayheadMoved -> movePlayhead(intent.ms)
-            is AdjustVideoIntent.SetTrim -> setTrim(intent.end, intent.durationMs)
+            is AdjustVideoIntent.SetTrim -> setTrim(intent.end, state.playheadMs, intent.durationMs)
+            is AdjustVideoIntent.SetTrimAt -> setTrim(intent.end, intent.ms, intent.durationMs)
             is AdjustVideoIntent.GoToTrim -> {
                 if (intent.durationMs <= 0) return
                 val range = TrimRange.of(adjustments.get(), intent.durationMs)
@@ -179,13 +180,13 @@ class DefaultAdjustVideoPresenter(
     }
 
     /**
-     * Sets [end] of the trim to the playhead. A time near the source start or end clears that end. The trimmed
+     * Sets [end] of the trim to [ms]. A time near the source start or end clears that end. The trimmed
      * video keeps at least [TrimRange.MIN_LENGTH_MS]. The trim can cut off points: the user decides, and the app
      * keeps the points. The first time in a project, a dialog tells it (B-62).
      */
-    private fun setTrim(end: TrimEnd, durationMs: Long) {
+    private fun setTrim(end: TrimEnd, ms: Long, durationMs: Long) {
         if (durationMs <= 0) return
-        val at = state.playheadMs.coerceIn(0L, durationMs)
+        val at = ms.coerceIn(0L, durationMs)
         val range = TrimRange.of(adjustments.get(), durationMs)
         val fits = when (end) {
             TrimEnd.START -> range.endMs - at >= TrimRange.MIN_LENGTH_MS

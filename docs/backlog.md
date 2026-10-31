@@ -178,6 +178,24 @@ When item is done, move it under
   - The sub-tabs are large tabs in a strip across the top of the Colors &
     Transform tab, not a small control in the right panel.
   - The order is Trim, Colors, Transform. The tab opens on Trim.
+  - Each sub-tab has an icon, a title and a short subtitle. The open tab
+    has a lime icon.
+- Trim controls, decided on 2026-10-31 (from the user's mock):
+  - The right panel shows a card with the length that the video keeps, the
+    time cut off and the points. A card for each end shows its time, a
+    large "Start at the current position" or "End at the current position"
+    button, and a "Go" button. The texts do not use the word "playhead".
+  - Under the video, a trim timeline shows the whole video. The user drags
+    two handles to set the start and the end. Pills above the handles show
+    their times. The parts outside the trim are hatched. The points show
+    on the track, and the points outside the trim are red.
+  - The trim timeline replaces the seek bar on the Trim sub-tab. A click on
+    it seeks. The drag of a handle seeks the video with it, so the user
+    sees the frame. The trim timeline shows the playhead as the Points
+    tab does: a thin line with a small triangle. It shows no "Kept" text, because the
+    right panel shows the kept length.
+  - While the user drags a handle, the right panel shows the new length,
+    the points and the warning at once.
 - Done when: the Points tab timeline and the "Full video" export use the
   trim.
 

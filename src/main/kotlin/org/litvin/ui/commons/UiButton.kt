@@ -17,6 +17,7 @@ import kotlin.math.ceil
  * [Kind.SECONDARY] is the dark default. [Kind.LIME] is the main action of a dialog.
  * [Kind.DANGER] deletes or cancels work. [Kind.GHOST] has no box until the user moves the pointer on it.
  * [Kind.QUIET] has only a thin border, for a less important action such as "Reset to default".
+ * [Kind.LIME_OUTLINE] is a main action with a lime border and lime text, next to a [Kind.LIME] button.
  */
 internal class UiButton(
     text: String,
@@ -25,11 +26,11 @@ internal class UiButton(
     private val buttonHeight: Int = HEIGHT,
     private val fontSize: Float = 12.5f,
 ) : JButton(text) {
-    enum class Kind { SECONDARY, LIME, DANGER, GHOST, QUIET }
+    enum class Kind { SECONDARY, LIME, DANGER, GHOST, QUIET, LIME_OUTLINE }
 
     private val textFont
         get() = when (kind) {
-            Kind.LIME -> UiKit.font(fontSize, UiKit.Weight.BOLD)
+            Kind.LIME, Kind.LIME_OUTLINE -> UiKit.font(fontSize, UiKit.Weight.BOLD)
             Kind.DANGER -> UiKit.font(fontSize, UiKit.Weight.SEMIBOLD)
             else -> UiKit.font(fontSize)
         }
@@ -140,6 +141,12 @@ internal class UiButton(
                     border = Palette.LINE
                     fg = if (hover) Palette.FG else Palette.FG_2
                     iconColor = fg
+                }
+                Kind.LIME_OUTLINE -> {
+                    fill = if (hover) Palette.LIME_TINT else null
+                    border = Palette.LIME
+                    fg = Palette.LIME
+                    iconColor = Palette.LIME
                 }
             }
             val alpha = if (isEnabled) 1f else 0.35f

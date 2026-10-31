@@ -163,10 +163,17 @@ internal class PointsScoring(
      * Shows the scoreboard of the playhead, as the full export shows it. The preview shows no fade: the board comes
      * and goes at the start and the end of the fades.
      */
-    fun moveTo(timeMs: Long) {
+    fun moveTo(timeMs: Long) = showScoreboardAt(timeMs, redraw = false)
+
+    /**
+     * Shows the scoreboard at [timeMs]. Without [redraw], the overlay does not change when the span stays the same.
+     * A [redraw] always sends [onOverlayChanged], because a change of the spans or the style can remove the board
+     * that the video shows now.
+     */
+    private fun showScoreboardAt(timeMs: Long, redraw: Boolean) {
         playheadMs = timeMs
         val span = spans.lastOrNull { it.startMs <= timeMs && timeMs < it.endMs }
-        if (span == shownSpan && (span == null) == (scene == null)) return
+        if (!redraw && span == shownSpan && (span == null) == (scene == null)) return
         shownSpan = span
         scene = span?.let {
             runCatching { I18n.inVideo(videoLanguage) { ScoreboardLayouts.scene(ScoreboardComponent.display(it), style()) } }.getOrNull()
@@ -510,11 +517,7 @@ internal class PointsScoring(
         }
     }
 
-    private fun redrawScoreboard() {
-        shownSpan = null
-        scene = null
-        moveTo(playheadMs)
-    }
+    private fun redrawScoreboard() = showScoreboardAt(playheadMs, redraw = true)
 
     private fun selectedIndex(): Int = points.indexOfFirst { it.id == selectedId }
 

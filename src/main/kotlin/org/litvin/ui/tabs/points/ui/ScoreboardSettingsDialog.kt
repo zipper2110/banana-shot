@@ -6,7 +6,9 @@ import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.ScoreboardDisplay
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
+import org.litvin.scoring.ScoreboardEnd
 import org.litvin.scoring.ScoreboardPosition
+import org.litvin.scoring.ScoreboardStart
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStyleId
 import org.litvin.ui.commons.AuthorPortrait
@@ -47,6 +49,7 @@ import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import javax.swing.BorderFactory
 import javax.swing.JButton
+import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JLabel
@@ -67,8 +70,8 @@ import org.litvin.i18n.MachineFormats
 import org.litvin.i18n.tr
 
 /**
- * Modal "Scoreboard style" dialog. It sets up the scoreboard: style, title, player colors, serve ball, app credit line,
- * position, size, background opacity and accent color. The layout comes from design/dialogs-redesign/scoreboard-style.html:
+ * Modal "Scoreboard settings" dialog. It sets up the scoreboard: style, title, player colors, serve ball, app credit line,
+ * position, size, background opacity, accent color, and the start and the end of the board in the video (B-63). The layout comes from design/dialogs-redesign/scoreboard-style.html:
  * the preview and the style gallery on the left, a side panel with three groups on the right.
  *
  * The dialog shows the result in a 16:9 frame. It also sends each change to the `onPreview` callback,
@@ -82,7 +85,8 @@ class ScoreboardSettingsDialog private constructor(
     private val takeCreditRequest: () -> Boolean,
     private val onPreview: (ScoreboardSettingsV1) -> Unit,
     private val videoLanguage: AppLanguage,
-) : JDialog(owner, tr("points.scoreboardStyle"), Dialog.ModalityType.APPLICATION_MODAL) {
+    private val timing: TimingContext,
+) : JDialog(owner, tr("points.scoreboardSettings"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object {
         private const val DIALOG_WIDTH = 1120
@@ -105,6 +109,7 @@ class ScoreboardSettingsDialog private constructor(
          * [takeCreditRequest] returns true when the dialog must ask the user to keep the app credit line,
          * and then marks the request as done. The dialog asks when the user turns the line off.
          * The previews show the texts in [videoLanguage] (B-11 E5-T4).
+         * [timing] gives the preview position for "Use the current position", and the points for the timing hint.
          */
         fun show(
             parent: Component,
@@ -113,11 +118,13 @@ class ScoreboardSettingsDialog private constructor(
             loadFrame: ((BufferedImage?) -> Unit) -> Unit = {},
             takeCreditRequest: () -> Boolean = { false },
             videoLanguage: AppLanguage = I18n.language,
+            timing: TimingContext = TimingContext(),
             onPreview: (ScoreboardSettingsV1) -> Unit = {},
         ): ScoreboardSettingsV1? {
             val previewSample = if (sample.server == 0) sample.copy(server = 1) else sample
             val dialog = ScoreboardSettingsDialog(
                 SwingUtilities.getWindowAncestor(parent), initial.normalized(), previewSample, loadFrame, takeCreditRequest, onPreview, videoLanguage,
+                timing,
             )
             DialogKit.centerOnScreen(dialog)
             dialog.isVisible = true
@@ -195,6 +202,31 @@ class ScoreboardSettingsDialog private constructor(
     private val accentNote = WrapText("", UiKit.font(11.5f), Palette.FG_3, 1.45f, SIDE_WIDTH - 28)
     private val framePreview = FramePreview()
 
+    private val startChoice = JComboBox(ScoreboardStart.entries.map { Option(it, it.title) }.toTypedArray()).apply {
+        name = "scoreboard-start"
+        DialogKit.styleCombo(this)
+        getAccessibleContext().accessibleName = tr("scoreboard.start")
+    }
+    private val endChoice = JComboBox(ScoreboardEnd.entries.map { Option(it, it.title) }.toTypedArray()).apply {
+        name = "scoreboard-end"
+        DialogKit.styleCombo(this)
+        getAccessibleContext().accessibleName = tr("scoreboard.end")
+    }
+    private val startField = timeField("scoreboard-start-time", tr("scoreboard.start"))
+    private val endField = timeField("scoreboard-end-time", tr("scoreboard.end"))
+    private val startNow = UiButton(tr("scoreboard.time.useCurrent"), kind = UiButton.Kind.QUIET).apply {
+        name = "scoreboard-start-use-current"
+        toolTipText = tr("scoreboard.time.useCurrent.tooltip", "time" to ScoreboardTimeText.format(timing.positionMs))
+    }
+    private val endNow = UiButton(tr("scoreboard.time.useCurrent"), kind = UiButton.Kind.QUIET).apply {
+        name = "scoreboard-end-use-current"
+        toolTipText = tr("scoreboard.time.useCurrent.tooltip", "time" to ScoreboardTimeText.format(timing.positionMs))
+    }
+    private val timingNote = WrapText("", UiKit.font(11.5f), Palette.FG_3, 1.45f, SIDE_WIDTH - 28).apply {
+        name = "scoreboard-timing-note"
+    }
+    private lateinit var saveButton: UiButton
+
     init {
         name = "scoreboard-settings-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
@@ -226,12 +258,27 @@ class ScoreboardSettingsDialog private constructor(
             if (chosen != null) update { it.copy(accentColorHex = ColorPickerDialog.hex(chosen)) }
         }
         accentDefault.addActionListener { update { it.copy(accentColorHex = null) } }
+        startChoice.addActionListener {
+            val chosen = (startChoice.selectedItem as? Option<*>)?.value as? ScoreboardStart ?: return@addActionListener
+            update { it.copy(start = chosen, startMs = if (chosen == ScoreboardStart.FIXED_TIME) it.startMs ?: currentPositionMs() else it.startMs) }
+        }
+        endChoice.addActionListener {
+            val chosen = (endChoice.selectedItem as? Option<*>)?.value as? ScoreboardEnd ?: return@addActionListener
+            update { it.copy(end = chosen, endMs = if (chosen == ScoreboardEnd.FIXED_TIME) it.endMs ?: currentPositionMs() else it.endMs) }
+        }
+        startNow.addActionListener { update { it.copy(startMs = currentPositionMs()) }.also { showTime(startField, settings.startMs) } }
+        endNow.addActionListener { update { it.copy(endMs = currentPositionMs()) }.also { showTime(endField, settings.endMs) } }
+        onTyped(startField) { ms -> update { it.copy(startMs = ms) } }
+        onTyped(endField) { ms -> update { it.copy(endMs = ms) } }
 
-        val saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply {
+        saveButton = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply {
             name = "scoreboard-save"
             addActionListener {
-                result = settings.normalized()
-                dispose()
+                // A time that is not valid, or a fixed start after the fixed end, does not save.
+                if (timingError() == null) {
+                    result = settings.normalized()
+                    dispose()
+                }
             }
         }
         val cancelButton = UiButton(tr("common.cancel")).apply {
@@ -241,7 +288,11 @@ class ScoreboardSettingsDialog private constructor(
         val resetButton = UiButton(tr("scoreboard.reset"), Feather.ROTATE_CCW, UiButton.Kind.QUIET).apply {
             name = "scoreboard-reset"
             toolTipText = tr("scoreboard.reset.tooltip")
-            addActionListener { update { ScoreboardSettingsV1() } }
+            addActionListener {
+                update { ScoreboardSettingsV1() }
+                showTime(startField, null)
+                showTime(endField, null)
+            }
         }
 
         val body = JPanel(BorderLayout(16, 0)).apply {
@@ -259,6 +310,8 @@ class ScoreboardSettingsDialog private constructor(
         rootPane.defaultButton = saveButton
         DialogKit.onEscape(this) { cancel() }
 
+        showTime(startField, settings.startMs)
+        showTime(endField, settings.endMs)
         syncControls()
         pack()
         setSize(fitToScreen(size.height))
@@ -319,7 +372,7 @@ class ScoreboardSettingsDialog private constructor(
         isOpaque = false
         (layout as FlowLayout).alignOnBaseline = true
         border = BorderFactory.createEmptyBorder(16, DialogKit.PAD_X, 6, DialogKit.PAD_X)
-        add(JLabel(tr("points.scoreboardStyle")).apply {
+        add(JLabel(tr("points.scoreboardSettings")).apply {
             font = UiKit.font(15f, UiKit.Weight.SEMIBOLD)
             foreground = Palette.FG
         })
@@ -353,8 +406,16 @@ class ScoreboardSettingsDialog private constructor(
             })
             text(accentNote, top = 0)
         }
+        val shown = DialogGroup(tr("scoreboard.timing"), Material2MZ.SCHEDULE, "scoreboard-timing-group", labelWidth = 92).apply {
+            row(tr("scoreboard.start"), startChoice)
+            indented(timeRow(startField, startNow), left = 14)
+            row(tr("scoreboard.end"), endChoice, line = true)
+            indented(timeRow(endField, endNow), left = 14)
+            text(timingNote, top = 0)
+        }
         val column = Stack().apply {
             add(onBoard, gapAfter = 12)
+            add(shown, gapAfter = 12)
             add(place, gapAfter = 12)
             add(accent)
         }
@@ -363,6 +424,76 @@ class ScoreboardSettingsDialog private constructor(
             preferredSize = Dimension(SIDE_WIDTH + 8, column.heightForWidth(SIDE_WIDTH + 8) + 2)
             viewport.background = Palette.OVERLAY
         }
+    }
+
+    /** A field for a fixed time, with a red border while its text is not a time. */
+    private fun timeField(componentName: String, label: String) = JTextField(6).apply {
+        name = componentName
+        toolTipText = tr("scoreboard.time.tooltip")
+        getAccessibleContext().accessibleName = label
+        putClientProperty("JTextField.placeholderText", "mm:ss")
+    }
+
+    /** The time field and the "Use the current position" button of a fixed time. */
+    private fun timeRow(field: JTextField, useCurrent: UiButton): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+        isOpaque = false
+        add(DialogKit.inputBox(field, 32, hasError = { field.isEnabled && ScoreboardTimeText.parse(field.text) == null }).apply {
+            preferredSize = Dimension(84, preferredSize.height)
+        })
+        add(DialogKit.gap(8))
+        add(useCurrent)
+    }
+
+    /** Calls [onTime] with the time of each typed text that is a time. */
+    private fun onTyped(field: JTextField, onTime: (Long) -> Unit) {
+        field.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent) = typed()
+            override fun removeUpdate(e: DocumentEvent) = typed()
+            override fun changedUpdate(e: DocumentEvent) = typed()
+
+            private fun typed() {
+                if (updatingControls) return
+                val ms = ScoreboardTimeText.parse(field.text)
+                if (ms != null) onTime(ms) else syncControls()
+                field.parent?.repaint()
+            }
+        })
+    }
+
+    /** Puts [ms] into [field] without a change of the settings. A null time leaves the field empty. */
+    private fun showTime(field: JTextField, ms: Long?) {
+        val text = ms?.let(ScoreboardTimeText::format).orEmpty()
+        if (field.text == text) return
+        updatingControls = true
+        try {
+            field.text = text
+        } finally {
+            updatingControls = false
+        }
+        syncControls()
+    }
+
+    /** The preview position when the dialog opened, in whole seconds, so that the field shows the same time. */
+    private fun currentPositionMs(): Long = timing.positionMs.coerceAtLeast(0L) / 1000 * 1000
+
+    /** The error of the start and the end settings, or null when the dialog can save them. */
+    private fun timingError(): String? {
+        val fixedStart = settings.start == ScoreboardStart.FIXED_TIME
+        val fixedEnd = settings.end == ScoreboardEnd.FIXED_TIME
+        if ((fixedStart && ScoreboardTimeText.parse(startField.text) == null) || (fixedEnd && ScoreboardTimeText.parse(endField.text) == null)) {
+            return tr("scoreboard.time.invalid")
+        }
+        if (settings.hasFixedStartAfterEnd()) return tr("scoreboard.time.startAfterEnd")
+        return null
+    }
+
+    /** The hint when some points have no board, or null when all points have it. */
+    private fun timingHint(): String? {
+        val startMs = settings.startMs?.takeIf { settings.start == ScoreboardStart.FIXED_TIME }
+        val endMs = settings.endMs?.takeIf { settings.end == ScoreboardEnd.FIXED_TIME }
+        val lateStart = startMs != null && timing.firstPointStartMs != null && startMs > timing.firstPointStartMs
+        val earlyEnd = endMs != null && timing.lastPointEndMs != null && endMs < timing.lastPointEndMs
+        return if (lateStart || earlyEnd) tr("scoreboard.time.somePoints") else null
     }
 
     private fun percentFormat() = SliderValueFormat(
@@ -413,6 +544,22 @@ class ScoreboardSettingsDialog private constructor(
             accentButton.swatch = accent
             accentButton.detail = ColorPickerDialog.hex(accent)
             accentDefault.isEnabled = settings.accentColorHex != null
+            startChoice.selectedItem = startChoice.options().first { it.value == settings.start }
+            endChoice.selectedItem = endChoice.options().first { it.value == settings.end }
+            val fixedStart = settings.start == ScoreboardStart.FIXED_TIME
+            val fixedEnd = settings.end == ScoreboardEnd.FIXED_TIME
+            startField.isEnabled = fixedStart
+            startNow.isEnabled = fixedStart
+            endField.isEnabled = fixedEnd
+            endNow.isEnabled = fixedEnd
+            if (fixedStart && startField.text.isEmpty()) settings.startMs?.let { startField.text = ScoreboardTimeText.format(it) }
+            if (fixedEnd && endField.text.isEmpty()) settings.endMs?.let { endField.text = ScoreboardTimeText.format(it) }
+            val error = timingError()
+            val hint = timingHint()
+            timingNote.runs = listOf(
+                TextRun(error ?: hint ?: tr("scoreboard.time.note"), UiKit.font(11.5f), if (error != null) Palette.RED else Palette.FG_3),
+            )
+            if (::saveButton.isInitialized) saveButton.isEnabled = error == null
             val styleHex = MachineFormats.format("#%06X", defaults.accentRgb and 0xFFFFFF)
             accentNote.runs = listOf(
                 TextRun(
@@ -435,6 +582,8 @@ class ScoreboardSettingsDialog private constructor(
             updatingControls = false
         }
     }
+
+    private fun <T> JComboBox<Option<T>>.options(): List<Option<T>> = (0 until itemCount).map { getItemAt(it) }
 
     private fun accentRgb(): Int {
         val hex = settings.normalized().accentColorHex
@@ -655,3 +804,19 @@ private const val CORNER_INSET = 2
 
 /** The width of the small frame copy for the style cards. It is about two times the card width, for high-DPI screens. */
 private const val CARD_FRAME_WIDTH = 320
+
+/**
+ * The video facts for the start and the end settings (B-63). [positionMs] is the preview position when the dialog
+ * opens. [firstPointStartMs] is the start of the first scored point and [lastPointEndMs] the end of the last point,
+ * or null without points.
+ */
+data class TimingContext(
+    val positionMs: Long = 0L,
+    val firstPointStartMs: Long? = null,
+    val lastPointEndMs: Long? = null,
+)
+
+/** A value of a combo box with its shown text. */
+private data class Option<T>(val value: T, val label: String) {
+    override fun toString(): String = label
+}

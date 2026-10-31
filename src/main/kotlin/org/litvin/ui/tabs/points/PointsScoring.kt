@@ -4,6 +4,7 @@ import org.litvin.ui.commons.ErrorTexts
 import org.litvin.OverlaySpan
 import org.litvin.ScoreboardComponent
 import org.litvin.ScoreboardTimelineBuilder
+import org.litvin.ScoreboardTiming
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
 import org.litvin.export.scoreboard.ScoreboardScene
@@ -35,6 +36,7 @@ import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.ui.tabs.points.ui.ScoreSettings
 import org.litvin.ui.tabs.points.ui.ScoreSettingsDialog
 import org.litvin.ui.tabs.points.ui.ScoreboardSettingsDialog
+import org.litvin.ui.tabs.points.ui.TimingContext
 import org.litvin.ui.tabs.points.ui.ScoringButton
 import org.litvin.ui.tabs.points.ui.ScorePlayers
 import org.litvin.ui.tabs.points.ui.ScoringUi
@@ -101,9 +103,9 @@ internal class PointsScoring(
         onOverrideScore = { openOverride() },
     )
 
-    private val scoreSettingsButton = ScoringButton(tr("points.scoringSettings"), Material2MZ.TUNE, alignLeft = true).apply {
+    private val scoreSettingsButton = ScoringButton(tr("points.scoringRules"), Material2MZ.TUNE, alignLeft = true).apply {
         name = "points-score-settings"
-        toolTipText = tr("points.scoringSettings.tooltip")
+        toolTipText = tr("points.scoringRules.tooltip")
         addActionListener { openScoreSettings() }
     }
 
@@ -116,9 +118,9 @@ internal class PointsScoring(
             BorderFactory.createEmptyBorder(10, 12, 10, 12),
         )
         add(scoreSettingsButton)
-        add(ScoringButton(tr("points.scoreboardStyle"), alignLeft = true, glyph = ScoringUi::scoreboardIcon).apply {
+        add(ScoringButton(tr("points.scoreboardSettings"), alignLeft = true, glyph = ScoringUi::scoreboardIcon).apply {
             name = "points-scoreboard-style"
-            toolTipText = tr("points.scoreboardStyle.tooltip")
+            toolTipText = tr("points.scoreboardSettings.tooltip")
             addActionListener { openScoreboardStyle() }
         })
     }
@@ -151,8 +153,8 @@ internal class PointsScoring(
     private var scene: ScoreboardScene? = null
 
     // The scoreboard spans in source time, the same as in a full export: each span goes from the end of the previous
-    // point to the end of its point and shows the score before its point. The board starts at the first scored point.
-    // The last span shows the final score for a short time after the last point.
+    // point to the end of its point and shows the score before its point. The start and the end settings of the
+    // board apply (B-63). While the match has not ended, the board stays until the video ends.
     private var spans: List<OverlaySpan> = emptyList()
     private var shownSpan: OverlaySpan? = null
     private var playheadMs: Long = 0L
@@ -194,7 +196,7 @@ internal class PointsScoring(
         refresh()
         if (dir != null && (!exists || score.useDefaultScoreboard)) {
             val style = runCatching { styleDefaults.load() }.getOrNull()
-            change { it.copy(scoreboard = style ?: it.scoreboard, useDefaultScoreboard = false) }
+            change { it.copy(scoreboard = style?.forDefault() ?: it.scoreboard, useDefaultScoreboard = false) }
         }
     }
 
@@ -481,15 +483,23 @@ internal class PointsScoring(
         }
         val takeCreditRequest = { appCreditRequest.shouldAsk().also { ask -> if (ask) appCreditRequest.markAsked() } }
         val result = try {
-            ScoreboardSettingsDialog.show(controls, score.scoreboard, sample, loadFrame, takeCreditRequest, videoLanguage = videoLanguage) { preview ->
+            val timing = TimingContext(
+                positionMs = playheadMs,
+                firstPointStartMs = points.firstOrNull { it.id in score.outcomes }?.startMs?.toLong(),
+                lastPointEndMs = points.maxOfOrNull { it.endMs }?.toLong(),
+            )
+            ScoreboardSettingsDialog.show(
+                controls, score.scoreboard, sample, loadFrame, takeCreditRequest, videoLanguage = videoLanguage, timing = timing,
+            ) { preview ->
                 previewStyle = preview
-                redrawScoreboard()
+                // The start and the end settings change the spans, so the preview builds them again.
+                rebuildSpans()
             }
         } finally {
             previewStyle = null
         }
         if (result == null) {
-            redrawScoreboard()
+            rebuildSpans()
             return
         }
         change { it.copy(scoreboard = result) }
@@ -590,6 +600,8 @@ internal class PointsScoring(
                     serverMarks = score.serverMarks,
                     sport = score.sport,
                     fullVideo = true,
+                    timing = ScoreboardTiming.of(style()),
+                    preview = true,
                 )
             }
         }.getOrDefault(emptyList())

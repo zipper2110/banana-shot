@@ -26,10 +26,10 @@ interface ScoreboardStyleDefaults {
 /** Keeps the default scoreboard style as JSON in the user preferences. */
 class PreferencesScoreboardStyleDefaults(private val preferences: Preferences) : ScoreboardStyleDefaults {
     override fun load(): ScoreboardSettingsV1? =
-        preferences.get(KEY_SCOREBOARD, null)?.let(ScoreIO::scoreboardFromJson)
+        preferences.get(KEY_SCOREBOARD, null)?.let(ScoreIO::scoreboardFromJson)?.forDefault()
 
     override fun save(settings: ScoreboardSettingsV1) {
-        preferences.put(KEY_SCOREBOARD, ScoreIO.scoreboardToJson(settings.normalized()))
+        preferences.put(KEY_SCOREBOARD, ScoreIO.scoreboardToJson(settings.forDefault()))
     }
 
     private companion object {

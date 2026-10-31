@@ -6,6 +6,8 @@ import org.litvin.points.PointV1
 import org.litvin.scoring.ManualScoreMarks
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Outcome
+import org.litvin.scoring.ScoreboardEnd
+import org.litvin.scoring.ScoreboardStart
 import org.litvin.scoring.ScoringRules
 import org.litvin.scoring.Sport
 
@@ -66,8 +68,8 @@ data class CommentOverlaySpan(
 object ScoreboardTimelineBuilder {
     private const val PREVIEW_SUBTITLE_PREROLL_MS = 250L
 
-    /** A full video shows the final score for this time after the end of the last point. */
-    const val FINAL_SCORE_MS = 20_000L
+    /** The default time that a full video shows the final score after the end of the last point. */
+    val FINAL_SCORE_MS: Long = ScoreboardEnd.AFTER_20_S.afterLastPointMs!!
 
     /** A full video fades the board in at the first scored point and out after the final score. */
     const val FADE_MS = 500L
@@ -114,9 +116,8 @@ object ScoreboardTimelineBuilder {
      * Builds overlay spans in OUTPUT time domain.
      *
      * [fullVideo] is for a video with all the time between the points (a full export and the Points tab preview,
-     * with [idleTrim] false). The board then comes in with a fade at the start of the first scored point. After the
-     * last point, the board shows the final score for [FINAL_SCORE_MS] and goes out with a fade. Without a scored
-     * point, the video has no board.
+     * with [idleTrim] false). [timing] then sets when the board comes in and goes out (B-63). Without a scored point,
+     * the video has no board. See [fullVideoRange] for [preview] and [videoEndMs].
      */
     fun build(
         points: List<PointV1>,
@@ -132,11 +133,15 @@ object ScoreboardTimelineBuilder {
         serverMarks: Map<String, Outcome> = emptyMap(),
         sport: Sport = Sport.TENNIS,
         fullVideo: Boolean = false,
+        timing: ScoreboardTiming = ScoreboardTiming(),
+        preview: Boolean = false,
+        videoEndMs: Long? = null,
     ): List<OverlaySpan> {
         if (points.isEmpty()) return emptyList()
         if (fullVideo) {
             return buildFullVideo(
                 points, outcomes, player1Name, player2Name, player1ColorHex, player2ColorHex, rules, manualMarks, serverMarks, sport,
+                timing, preview, videoEndMs,
             )
         }
         val ordered = points.sortedBy { it.startMs }
@@ -235,6 +240,52 @@ object ScoreboardTimelineBuilder {
         return out
     }
 
+    /**
+     * The source time range of the board in a full video, or null when the video has no board.
+     *
+     * [videoEndMs] is the end of the source video, or null when it is not known: then the board of the video end has no
+     * end. A fixed end at or after [videoEndMs] is the video end. The [preview] of the Points tab keeps the board until
+     * the video ends while the match has not ended by the score, also when [timing] has a time after the last point.
+     */
+    internal fun fullVideoRange(
+        ordered: List<PointV1>,
+        outcomes: Map<String, Outcome>,
+        matchEnded: Boolean,
+        timing: ScoreboardTiming,
+        preview: Boolean,
+        videoEndMs: Long?,
+    ): BoardRange? {
+        val firstScored = ordered.firstOrNull { it.id in outcomes } ?: return null
+        val lastEnd = ordered.maxOf { it.endMs }.toLong()
+        val start = when (timing.start) {
+            ScoreboardStart.FIRST_POINT -> firstScored.startMs.toLong()
+            ScoreboardStart.VIDEO_START -> 0L
+            ScoreboardStart.FIXED_TIME -> timing.startMs ?: firstScored.startMs.toLong()
+        }
+        val untilVideoEnd = BoardRange(start, videoEndMs, fadeIn = timing.start != ScoreboardStart.VIDEO_START, fadeOut = false)
+        val range = when (val end = timing.end) {
+            ScoreboardEnd.VIDEO_END -> untilVideoEnd
+            ScoreboardEnd.FIXED_TIME -> {
+                val endMs = timing.endMs
+                if (endMs == null || (videoEndMs != null && endMs >= videoEndMs)) untilVideoEnd
+                else untilVideoEnd.copy(endMs = endMs, fadeOut = true)
+            }
+            else -> {
+                // While the user marks the points of a match that has not ended, the board stays in the preview.
+                if (preview && !matchEnded) {
+                    untilVideoEnd
+                } else {
+                    val endMs = lastEnd + end.afterLastPointMs!!
+                    if (videoEndMs != null && endMs >= videoEndMs) untilVideoEnd else untilVideoEnd.copy(endMs = endMs, fadeOut = true)
+                }
+            }
+        }
+        val rangeEnd = range.endMs
+        if (rangeEnd != null && rangeEnd <= range.startMs) return null
+        if (videoEndMs != null && range.startMs >= videoEndMs) return null
+        return range
+    }
+
     private fun buildFullVideo(
         points: List<PointV1>,
         outcomes: Map<String, Outcome>,
@@ -246,12 +297,15 @@ object ScoreboardTimelineBuilder {
         manualMarks: ManualScoreMarks,
         serverMarks: Map<String, Outcome>,
         sport: Sport,
+        timing: ScoreboardTiming,
+        preview: Boolean,
+        videoEndMs: Long?,
     ): List<OverlaySpan> {
         val ordered = points.sortedBy { it.startMs }
-        val firstScored = ordered.firstOrNull { it.id in outcomes } ?: return emptyList()
+        if (ordered.none { it.id in outcomes }) return emptyList()
         val last = ordered.last()
-        // A point after the last point gives the span with the final score.
-        val finalScore = PointV1(id = FINAL_SCORE_ID, startMs = last.endMs, endMs = last.endMs + FINAL_SCORE_MS.toInt())
+        // A point after the last point gives the span with the final score. It goes on to the end of the board.
+        val finalScore = PointV1(id = FINAL_SCORE_ID, startMs = last.endMs, endMs = Int.MAX_VALUE)
         val spans = build(
             points = ordered + finalScore,
             outcomes = outcomes,
@@ -265,19 +319,37 @@ object ScoreboardTimelineBuilder {
             serverMarks = serverMarks,
             sport = sport,
         )
-        val firstStart = firstScored.startMs.toLong()
+        val matchEnded = spans.lastOrNull()?.matchEnded ?: false
+        val range = fullVideoRange(ordered, outcomes, matchEnded, timing, preview, videoEndMs) ?: return emptyList()
+        val rangeEnd = range.endMs ?: Long.MAX_VALUE
         val shown = spans
-            .filter { it.endMs > firstStart }
-            .map { if (it.startMs < firstStart) it.copy(startMs = firstStart) else it }
+            .filter { it.endMs > range.startMs && it.startMs < rangeEnd }
+            .map { it.copy(startMs = maxOf(it.startMs, range.startMs), endMs = minOf(it.endMs, rangeEnd)) }
             .filter { it.endMs > it.startMs }
         if (shown.isEmpty()) return emptyList()
         // A fade is at most half of its span, so that a short span still shows the board.
         fun fade(span: OverlaySpan) = minOf(FADE_MS, (span.endMs - span.startMs) / 2)
         return shown.mapIndexed { index, span ->
             span.copy(
-                fadeInMs = if (index == 0) fade(span) else 0L,
-                fadeOutMs = if (index == shown.lastIndex) fade(span) else 0L,
+                fadeInMs = if (index == 0 && range.fadeIn) fade(span) else 0L,
+                fadeOutMs = if (index == shown.lastIndex && range.fadeOut) fade(span) else 0L,
             )
         }
     }
 }
+
+/** The start and the end settings of the board in a full video (B-63). */
+data class ScoreboardTiming(
+    val start: ScoreboardStart = ScoreboardStart.FIRST_POINT,
+    val startMs: Long? = null,
+    val end: ScoreboardEnd = ScoreboardEnd.AFTER_20_S,
+    val endMs: Long? = null,
+) {
+    companion object {
+        fun of(settings: org.litvin.scoring.ScoreboardSettingsV1): ScoreboardTiming =
+            settings.normalized().let { ScoreboardTiming(it.start, it.startMs, it.end, it.endMs) }
+    }
+}
+
+/** The source time range of the board. A null [endMs] goes on to the video end. */
+data class BoardRange(val startMs: Long, val endMs: Long?, val fadeIn: Boolean, val fadeOut: Boolean)

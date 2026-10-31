@@ -195,10 +195,10 @@ class MessageCatalogTest {
         assertEquals("1 ponto", brazil.text("export.points", mapOf("count" to 1)))
         assertEquals("3 pontos", brazil.text("export.points", mapOf("count" to 3)))
         assertEquals("Dupla 1", brazil.text("sport.padel.side", mapOf("number" to 1)))
-        assertEquals("Estilo do placar", brazil.text("points.scoreboardStyle"))
+        assertEquals("Configurações do placar", brazil.text("points.scoreboardSettings"))
         assertTrue(brazil.text("help.points.summary").startsWith("Marque"))
         val portugal = Messages.of(AppLanguage.PORTUGUESE_PORTUGAL)
-        assertEquals("Estilo do marcador", portugal.text("points.scoreboardStyle"))
+        assertEquals("Definições do marcador", portugal.text("points.scoreboardSettings"))
         assertEquals("Guardar", portugal.text("common.save"))
         assertEquals("Exportações", portugal.text("export.table.title"))
     }

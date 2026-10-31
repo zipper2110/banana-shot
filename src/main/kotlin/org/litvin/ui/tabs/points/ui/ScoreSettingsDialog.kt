@@ -75,7 +75,7 @@ fun interface ScoreSettingsEditor {
 class ScoreSettingsDialog private constructor(
     owner: Window?,
     initial: ScoreSettings,
-) : JDialog(owner, tr("points.scoringSettings"), Dialog.ModalityType.APPLICATION_MODAL) {
+) : JDialog(owner, tr("points.scoringRules"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : ScoreSettingsEditor {
         // The scoreboard shows the full name up to this length.
@@ -230,7 +230,7 @@ class ScoreSettingsDialog private constructor(
         }
         contentPane = DialogKit.content(
             WIDTH,
-            DialogKit.head(tr("points.scoringSettings")),
+            DialogKit.head(tr("points.scoringRules")),
             DialogKit.scrollBody(body),
             DialogKit.footer(
                 left = listOf(DialogKit.keysHint(tr("key.enter") to tr("scoreSettings.keys.save"), tr("key.escape") to tr("scoreSettings.keys.cancel"))),

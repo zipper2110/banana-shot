@@ -5,6 +5,7 @@ import org.litvin.OverlaySpan
 import org.litvin.RenderJob
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.ScoreboardTimelineBuilder
+import org.litvin.ScoreboardTiming
 import org.litvin.CommentOverlaySpan
 import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
@@ -284,6 +285,7 @@ object ExportPlanner {
                 allValidPoints = allValidPoints,
                 keptPoints = keptPoints,
                 effectiveIdleTrim = effectiveIdleTrim,
+                videoEndMs = request.sourceDurationMs?.takeIf { it > 0 },
             ).let { spans -> trim?.overlays(spans) ?: spans }
         } else {
             emptyList()
@@ -440,6 +442,7 @@ object ExportPlanner {
         allValidPoints: List<PointV1>,
         keptPoints: List<PointV1>,
         effectiveIdleTrim: Boolean,
+        videoEndMs: Long?,
     ): List<OverlaySpan> {
         val scoringPoints = allValidPoints.ifEmpty { edl?.points ?: emptyList() }
         val overlayPoints = if (effectiveIdleTrim) keptPoints else scoringPoints
@@ -456,6 +459,9 @@ object ExportPlanner {
             serverMarks = score.serverMarks,
             sport = score.sport,
             fullVideo = !effectiveIdleTrim,
+            // The "Only points" and "Only favorites" exports ignore the start and the end settings (B-63).
+            timing = ScoreboardTiming.of(score.scoreboard),
+            videoEndMs = videoEndMs,
             exportedPointIds = if (effectiveIdleTrim && overlayPoints.isNotEmpty()) {
                 overlayPoints.map { it.id }.toSet()
             } else {

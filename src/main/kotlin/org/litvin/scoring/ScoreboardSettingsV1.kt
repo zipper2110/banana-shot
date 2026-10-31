@@ -72,6 +72,55 @@ enum class ScoreboardPosition {
         }
 }
 
+/** When the scoreboard comes into a "Full video" export and the Points tab preview (B-63). */
+enum class ScoreboardStart {
+    /** At the start of the first scored point, with a fade. */
+    @JsonEnumDefaultValue
+    FIRST_POINT,
+
+    /** At the video start (the trim start), with no fade. */
+    VIDEO_START,
+
+    /** At [ScoreboardSettingsV1.startMs] of the source video, with a fade. */
+    FIXED_TIME,
+    ;
+
+    val title: String
+        get() = when (this) {
+            FIRST_POINT -> tr("scoreboard.start.firstPoint")
+            VIDEO_START -> tr("scoreboard.start.videoStart")
+            FIXED_TIME -> tr("scoreboard.time.fixed")
+        }
+}
+
+/** When the scoreboard goes out of a "Full video" export and the Points tab preview (B-63). */
+enum class ScoreboardEnd(
+    /** The time that the board shows the final score after the end of the last point, or null for no such time. */
+    val afterLastPointMs: Long?,
+) {
+    AT_ONCE(0L),
+    AFTER_5_S(5_000L),
+    AFTER_10_S(10_000L),
+
+    @JsonEnumDefaultValue
+    AFTER_20_S(20_000L),
+
+    /** At the video end (the trim end), with no fade. */
+    VIDEO_END(null),
+
+    /** At [ScoreboardSettingsV1.endMs] of the source video. */
+    FIXED_TIME(null),
+    ;
+
+    val title: String
+        get() = when (this) {
+            AT_ONCE -> tr("scoreboard.end.atOnce")
+            AFTER_5_S, AFTER_10_S, AFTER_20_S -> tr("scoreboard.end.after", "seconds" to (afterLastPointMs!! / 1000).toInt())
+            VIDEO_END -> tr("scoreboard.end.videoEnd")
+            FIXED_TIME -> tr("scoreboard.time.fixed")
+        }
+}
+
 /**
  * Scoreboard settings of a project. They are stored in score.json.
  *
@@ -98,6 +147,14 @@ data class ScoreboardSettingsV1(
     val sizePercent: Int = 100,
     val backgroundOpacityPercent: Int? = null,
     val accentColorHex: String? = null,
+    /** When the board comes in (B-63). */
+    val start: ScoreboardStart = ScoreboardStart.FIRST_POINT,
+    /** The source time of a [ScoreboardStart.FIXED_TIME] start. Null for the other starts. */
+    val startMs: Long? = null,
+    /** When the board goes out (B-63). */
+    val end: ScoreboardEnd = ScoreboardEnd.AFTER_20_S,
+    /** The source time of a [ScoreboardEnd.FIXED_TIME] end. Null for the other ends. */
+    val endMs: Long? = null,
 ) {
     /**
      * The title in the video. A [DEFAULT_TITLE] of an app language shows in the video language, because the user did
@@ -117,7 +174,31 @@ data class ScoreboardSettingsV1(
         sizePercent = sizePercent.coerceIn(MIN_SIZE_PERCENT, MAX_SIZE_PERCENT),
         backgroundOpacityPercent = backgroundOpacityPercent?.coerceIn(MIN_OPACITY_PERCENT, 100),
         accentColorHex = accentColorHex?.let(::normalizeHex),
+        start = if (start == ScoreboardStart.FIXED_TIME && startMs == null) ScoreboardStart.FIRST_POINT else start,
+        startMs = startMs?.coerceAtLeast(0L)?.takeIf { start == ScoreboardStart.FIXED_TIME },
+        end = if (end == ScoreboardEnd.FIXED_TIME && endMs == null) ScoreboardEnd.AFTER_20_S else end,
+        endMs = endMs?.coerceAtLeast(0L)?.takeIf { end == ScoreboardEnd.FIXED_TIME },
     )
+
+    /**
+     * The settings to keep as the user's default. A fixed time belongs to the video of one project, so the default
+     * has the first point in place of a fixed start, and 20 s after the last point in place of a fixed end.
+     */
+    fun forDefault(): ScoreboardSettingsV1 = normalized().let {
+        it.copy(
+            start = if (it.start == ScoreboardStart.FIXED_TIME) ScoreboardStart.FIRST_POINT else it.start,
+            startMs = null,
+            end = if (it.end == ScoreboardEnd.FIXED_TIME) ScoreboardEnd.AFTER_20_S else it.end,
+            endMs = null,
+        )
+    }
+
+    /** True when a fixed start is after a fixed end. The dialog does not save these settings. */
+    fun hasFixedStartAfterEnd(): Boolean {
+        val from = startMs?.takeIf { start == ScoreboardStart.FIXED_TIME } ?: return false
+        val to = endMs?.takeIf { end == ScoreboardEnd.FIXED_TIME } ?: return false
+        return from >= to
+    }
 
     companion object {
         /**

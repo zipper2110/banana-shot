@@ -227,6 +227,10 @@ class ScoreboardSettingsDialog private constructor(
     }
     private lateinit var saveButton: UiButton
 
+    // The rows with the time field. They show only for "Fixed time".
+    private var startTimeRow: JComponent? = null
+    private var endTimeRow: JComponent? = null
+
     init {
         name = "scoreboard-settings-dialog"
         defaultCloseOperation = DISPOSE_ON_CLOSE
@@ -408,9 +412,9 @@ class ScoreboardSettingsDialog private constructor(
         }
         val shown = DialogGroup(tr("scoreboard.timing"), Material2MZ.SCHEDULE, "scoreboard-timing-group", labelWidth = 92).apply {
             row(tr("scoreboard.start"), startChoice)
-            indented(timeRow(startField, startNow), left = 14)
+            startTimeRow = indented(timeRow(startField, startNow), left = 14)
             row(tr("scoreboard.end"), endChoice, line = true)
-            indented(timeRow(endField, endNow), left = 14)
+            endTimeRow = indented(timeRow(endField, endNow), left = 14)
             text(timingNote, top = 0)
         }
         val column = Stack().apply {
@@ -427,18 +431,18 @@ class ScoreboardSettingsDialog private constructor(
     }
 
     /** A field for a fixed time, with a red border while its text is not a time. */
-    private fun timeField(componentName: String, label: String) = JTextField(6).apply {
+    private fun timeField(componentName: String, label: String) = JTextField(8).apply {
         name = componentName
         toolTipText = tr("scoreboard.time.tooltip")
         getAccessibleContext().accessibleName = label
-        putClientProperty("JTextField.placeholderText", "mm:ss")
+        putClientProperty("JTextField.placeholderText", "hh:mm:ss")
     }
 
     /** The time field and the "Use the current position" button of a fixed time. */
     private fun timeRow(field: JTextField, useCurrent: UiButton): JComponent = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
         isOpaque = false
         add(DialogKit.inputBox(field, 32, hasError = { field.isEnabled && ScoreboardTimeText.parse(field.text) == null }).apply {
-            preferredSize = Dimension(84, preferredSize.height)
+            preferredSize = Dimension(100, preferredSize.height)
         })
         add(DialogKit.gap(8))
         add(useCurrent)
@@ -552,12 +556,23 @@ class ScoreboardSettingsDialog private constructor(
             startNow.isEnabled = fixedStart
             endField.isEnabled = fixedEnd
             endNow.isEnabled = fixedEnd
+            showRow(startTimeRow, fixedStart)
+            showRow(endTimeRow, fixedEnd)
             if (fixedStart && startField.text.isEmpty()) settings.startMs?.let { startField.text = ScoreboardTimeText.format(it) }
             if (fixedEnd && endField.text.isEmpty()) settings.endMs?.let { endField.text = ScoreboardTimeText.format(it) }
             val error = timingError()
             val hint = timingHint()
             timingNote.runs = listOf(
-                TextRun(error ?: hint ?: tr("scoreboard.time.note"), UiKit.font(11.5f), if (error != null) Palette.RED else Palette.FG_3),
+                // An error is red, a hint about points with no board is a warning, and the note is gray.
+                TextRun(
+                    error ?: hint ?: tr("scoreboard.time.note"),
+                    UiKit.font(11.5f),
+                    when {
+                        error != null -> Palette.RED
+                        hint != null -> Palette.YELLOW
+                        else -> Palette.FG_3
+                    },
+                ),
             )
             if (::saveButton.isInitialized) saveButton.isEnabled = error == null
             val styleHex = MachineFormats.format("#%06X", defaults.accentRgb and 0xFFFFFF)
@@ -580,6 +595,16 @@ class ScoreboardSettingsDialog private constructor(
             framePreview.repaint()
         } finally {
             updatingControls = false
+        }
+    }
+
+    /** Shows or hides a time row, and lays out the group again when the row changes. */
+    private fun showRow(row: JComponent?, visible: Boolean) {
+        if (row == null || row.isVisible == visible) return
+        row.isVisible = visible
+        row.parent?.let {
+            it.revalidate()
+            it.repaint()
         }
     }
 

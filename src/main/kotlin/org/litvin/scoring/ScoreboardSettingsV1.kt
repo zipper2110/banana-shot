@@ -114,7 +114,7 @@ enum class ScoreboardEnd(
 
     val title: String
         get() = when (this) {
-            AT_ONCE -> tr("scoreboard.end.atOnce")
+            AT_ONCE -> tr("scoreboard.end.rightAfter")
             AFTER_5_S, AFTER_10_S, AFTER_20_S -> tr("scoreboard.end.after", "seconds" to (afterLastPointMs!! / 1000).toInt())
             VIDEO_END -> tr("scoreboard.end.videoEnd")
             FIXED_TIME -> tr("scoreboard.time.fixed")

@@ -3,14 +3,14 @@ package org.litvin.ui.tabs.points.ui
 import org.litvin.i18n.MachineFormats
 
 /**
- * The text of a fixed scoreboard time (B-63): `mm:ss`. The minutes can be more than 59, for example "75:20".
- * The parse also accepts `h:mm:ss` and seconds only.
+ * The text of a fixed scoreboard time (B-63): `hh:mm:ss`, for example "01:15:20".
+ * The parse also accepts `mm:ss` and seconds only.
  */
 internal object ScoreboardTimeText {
-    /** [ms] as `mm:ss`. The seconds are rounded down. */
+    /** [ms] as `hh:mm:ss`. The seconds are rounded down. */
     fun format(ms: Long): String {
         val totalSeconds = ms.coerceAtLeast(0L) / 1000
-        return MachineFormats.format("%02d:%02d", totalSeconds / 60, totalSeconds % 60)
+        return MachineFormats.format("%02d:%02d:%02d", totalSeconds / 3600, totalSeconds / 60 % 60, totalSeconds % 60)
     }
 
     /** The time of [text] in ms, or null when the text is not a time. */

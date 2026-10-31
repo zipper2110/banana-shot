@@ -510,10 +510,15 @@ internal class DialogGroup(
         lastWasRow = false
     }
 
-    /** A component under a row, [left] pixels from the edge, for example the title field under the Title switch. */
-    fun indented(component: JComponent, left: Int, bottom: Int = 10) {
-        add(Indented(component, left, false, 0, bottom))
+    /**
+     * A component under a row, [left] pixels from the edge, for example the title field under the Title switch.
+     * Returns the row, so the caller can hide it.
+     */
+    fun indented(component: JComponent, left: Int, bottom: Int = 10): JComponent {
+        val row = Indented(component, left, false, 0, bottom)
+        add(row)
         lastWasRow = false
+        return row
     }
 
     /** A row that lays out and paints itself, for example a [SliderValueRow] of the side panels. */

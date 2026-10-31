@@ -18,16 +18,17 @@ data class ExportTrim(val startMs: Long, val endMs: Long?) {
     fun keepsReplayAt(pointEndMs: Long): Boolean = pointEndMs > startMs && (endMs == null || pointEndMs <= endMs)
 
     /**
-     * The scoreboard spans on the trimmed video timeline. A span outside the trim goes away. A span that the trim cuts
-     * has no fade at the cut, because the board has no fade at the video start and the video end (B-63).
+     * The scoreboard spans on the trimmed video timeline. A span outside the trim goes away. A span that the trim cuts,
+     * or that starts or ends exactly at the trim, has no fade there, because the board has no fade at the video start
+     * and the video end (B-63).
      */
     fun overlays(spans: List<OverlaySpan>): List<OverlaySpan> = spans.mapNotNull { span ->
         shift(span.startMs, span.endMs)?.let { (start, end) ->
             span.copy(
                 startMs = start,
                 endMs = end,
-                fadeInMs = if (span.startMs < startMs) 0L else span.fadeInMs,
-                fadeOutMs = if (endMs != null && span.endMs > endMs) 0L else span.fadeOutMs,
+                fadeInMs = if (span.startMs <= startMs) 0L else span.fadeInMs,
+                fadeOutMs = if (endMs != null && span.endMs >= endMs) 0L else span.fadeOutMs,
             )
         }
     }

@@ -7,6 +7,7 @@ import org.litvin.scoring.ManualScoreMarks
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreboardEnd
+import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStart
 import org.litvin.scoring.ScoringRules
 import org.litvin.scoring.Sport
@@ -68,10 +69,7 @@ data class CommentOverlaySpan(
 object ScoreboardTimelineBuilder {
     private const val PREVIEW_SUBTITLE_PREROLL_MS = 250L
 
-    /** The default time that a full video shows the final score after the end of the last point. */
-    val FINAL_SCORE_MS: Long = ScoreboardEnd.AFTER_20_S.afterLastPointMs!!
-
-    /** A full video fades the board in at the first scored point and out after the final score. */
+    /** A full video fades the board in when it comes and out when it goes, but not at the video start or the video end. */
     const val FADE_MS = 500L
 
     private const val FINAL_SCORE_ID = "final-score"
@@ -262,7 +260,8 @@ object ScoreboardTimelineBuilder {
             ScoreboardStart.VIDEO_START -> 0L
             ScoreboardStart.FIXED_TIME -> timing.startMs ?: firstScored.startMs.toLong()
         }
-        val untilVideoEnd = BoardRange(start, videoEndMs, fadeIn = timing.start != ScoreboardStart.VIDEO_START, fadeOut = false)
+        // The board has no fade at the video start, also for a fixed start at 0.
+        val untilVideoEnd = BoardRange(start, videoEndMs, fadeIn = start > 0L, fadeOut = false)
         val range = when (val end = timing.end) {
             ScoreboardEnd.VIDEO_END -> untilVideoEnd
             ScoreboardEnd.FIXED_TIME -> {
@@ -346,7 +345,7 @@ data class ScoreboardTiming(
     val endMs: Long? = null,
 ) {
     companion object {
-        fun of(settings: org.litvin.scoring.ScoreboardSettingsV1): ScoreboardTiming =
+        fun of(settings: ScoreboardSettingsV1): ScoreboardTiming =
             settings.normalized().let { ScoreboardTiming(it.start, it.startMs, it.end, it.endMs) }
     }
 }

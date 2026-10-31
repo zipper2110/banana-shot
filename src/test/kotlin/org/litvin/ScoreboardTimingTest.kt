@@ -162,6 +162,33 @@ class ScoreboardTimingTest {
     }
 
     @Test
+    fun `a fixed start at 0 has no fade, because the board has no fade at the video start`() {
+        val spans = full(ScoreboardTiming(start = ScoreboardStart.FIXED_TIME, startMs = 0))
+        assertEquals(0L, spans.first().startMs)
+        assertEquals(0L, spans.first().fadeInMs)
+    }
+
+    @Test
+    fun `a board that starts or ends exactly at the trim has no fade there`() {
+        val spans = full(ScoreboardTiming(), videoEndMs = 90_000)
+        val trimmed = ExportTrim(startMs = 10_000, endMs = 60_000).overlays(spans)
+        assertEquals(0L, trimmed.first().startMs)
+        assertEquals(0L, trimmed.first().fadeInMs)
+        assertEquals(50_000L, trimmed.last().endMs)
+        assertEquals(0L, trimmed.last().fadeOutMs)
+    }
+
+    @Test
+    fun `right after the last point shows no final score`() {
+        val spans = full(ScoreboardTiming(end = ScoreboardEnd.AT_ONCE))
+        // The last span is the span of point C. It shows the score before C and ends with C.
+        assertEquals(25_000L, spans.last().startMs)
+        assertEquals(40_000L, spans.last().endMs)
+        assertEquals(2, spans.last().p1Pts)
+        assertTrue(spans.none { it.startMs >= 40_000L })
+    }
+
+    @Test
     fun `the default drops a fixed time`() {
         val settings = ScoreboardSettingsV1(start = ScoreboardStart.FIXED_TIME, startMs = 5_000, end = ScoreboardEnd.FIXED_TIME, endMs = 60_000)
         val default = settings.forDefault()

@@ -81,7 +81,7 @@ enum class ScoreboardStart {
     /** At the video start (the trim start), with no fade. */
     VIDEO_START,
 
-    /** At [ScoreboardSettingsV1.startMs] of the source video, with a fade. */
+    /** At [ScoreboardSettingsV1.startMs] of the source video, with a fade. A fixed start at 0 has no fade. */
     FIXED_TIME,
     ;
 

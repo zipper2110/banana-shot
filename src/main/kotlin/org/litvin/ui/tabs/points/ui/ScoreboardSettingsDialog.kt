@@ -497,7 +497,12 @@ class ScoreboardSettingsDialog private constructor(
         val endMs = settings.endMs?.takeIf { settings.end == ScoreboardEnd.FIXED_TIME }
         val lateStart = startMs != null && timing.firstPointStartMs != null && startMs > timing.firstPointStartMs
         val earlyEnd = endMs != null && timing.lastPointEndMs != null && endMs < timing.lastPointEndMs
-        return if (lateStart || earlyEnd) tr("scoreboard.time.somePoints") else null
+        // The hint tells which setting hides the board: a late start, an early end, or both.
+        val texts = listOfNotNull(
+            tr("scoreboard.time.lateStart").takeIf { lateStart },
+            tr("scoreboard.time.earlyEnd").takeIf { earlyEnd },
+        )
+        return texts.joinToString(" ").ifEmpty { null }
     }
 
     private fun percentFormat() = SliderValueFormat(

@@ -203,7 +203,7 @@ internal class PointsScoring(
         refresh()
         if (dir != null && (!exists || score.useDefaultScoreboard)) {
             val style = runCatching { styleDefaults.load() }.getOrNull()
-            change { it.copy(scoreboard = style?.forDefault() ?: it.scoreboard, useDefaultScoreboard = false) }
+            change { it.copy(scoreboard = style ?: it.scoreboard, useDefaultScoreboard = false) }
         }
     }
 

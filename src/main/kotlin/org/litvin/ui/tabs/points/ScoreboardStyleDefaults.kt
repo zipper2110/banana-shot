@@ -9,7 +9,10 @@ import java.util.prefs.Preferences
  * A new project starts with this style, so the last used style carries over to the next project.
  */
 interface ScoreboardStyleDefaults {
-    /** Returns the default style, or null if the user did not save a style yet. */
+    /**
+     * Returns the default style, or null if the user did not save a style yet. The style has no fixed start time and
+     * no fixed end time (B-63), because a fixed time belongs to the video of one project.
+     */
     fun load(): ScoreboardSettingsV1?
 
     fun save(settings: ScoreboardSettingsV1)

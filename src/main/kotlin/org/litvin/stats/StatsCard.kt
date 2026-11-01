@@ -178,13 +178,30 @@ object StatsCard {
                 // The label is between the two values.
                 items += label(area.center, rowTop + 30, row.label, LABEL_SIZE, SOFT, TextAnchor.CENTER, bold = false,
                     maxWidth = area.width - 2 * BAR_INSET)
-                items += label(area.left, rowTop + 52, values.p1.text, VALUE_SIZE, WHITE, TextAnchor.MIDDLE_LEFT)
-                items += label(area.right, rowTop + 52, values.p2.text, VALUE_SIZE, WHITE, TextAnchor.MIDDLE_RIGHT)
+                val p1 = label(area.left, rowTop + VALUE_Y, values.p1.text, VALUE_SIZE, WHITE, TextAnchor.MIDDLE_LEFT)
+                val p2 = label(area.right, rowTop + VALUE_Y, values.p2.text, VALUE_SIZE, WHITE, TextAnchor.MIDDLE_RIGHT)
+                items += p1
+                items += p2
+                if (row.stat in DETAIL_STATS) {
+                    // The detail is on the inner side of the value, on the same baseline.
+                    values.p1.detail?.let { items += detail(area.left + width(p1) + DETAIL_GAP, rowTop, it, TextAnchor.MIDDLE_LEFT) }
+                    values.p2.detail?.let { items += detail(area.right - width(p2) - DETAIL_GAP, rowTop, it, TextAnchor.MIDDLE_RIGHT) }
+                }
                 row.bar?.let { items += bar(it, content.colors, area.left + BAR_INSET, area.right - BAR_INSET, rowTop + 62) }
             }
         }
         return items
     }
+
+    /** A small muted detail of a value, for example "36%", on the baseline of the value of the row at [rowTop]. */
+    private fun detail(x: Double, rowTop: Double, text: String, anchor: TextAnchor): SceneItem.Label {
+        val baseline = rowTop + VALUE_Y + ScoreboardFonts.capHeight(SEGOE, true, VALUE_SIZE) / 2
+        val capCenter = baseline - ScoreboardFonts.capHeight(SEGOE, false, DETAIL_SIZE) / 2
+        return label(x, capCenter, text, DETAIL_SIZE, MUTED, anchor, bold = false)
+    }
+
+    private fun width(label: SceneItem.Label): Double =
+        ScoreboardFonts.textWidth(label.text, label.font, label.bold, label.size, label.spacing)
 
     /**
      * The momentum chart: the point difference after each point. The area above the zero line has the color
@@ -344,6 +361,11 @@ object StatsCard {
     private const val NAME_SIZE = 58.0
     private const val LABEL_SIZE = 30.0
     private const val VALUE_SIZE = 54.0
+    private const val VALUE_Y = 52.0
+    private const val DETAIL_SIZE = 30.0
+    private const val DETAIL_GAP = 12.0
+    /** The rows that show the detail of each value on the card: the share of the points and of the games. */
+    private val DETAIL_STATS = setOf(MatchStat.POINTS_WON, MatchStat.GAMES_WON)
     private const val BAR_INSET = 190.0
     private const val BAR_HEIGHT = 10.0
     private const val BAR_GAP = 6.0

@@ -160,6 +160,25 @@ class StatsCardTest {
     }
 
     @Test
+    fun thePointsAndGamesRowsShowTheShareOfEachPlayer() {
+        // Player 1 wins 6 of 8 points.
+        val settings = StatsSettingsV1(videoMomentum = false, videoStats = listOf("points_won", "games_won", "duration"))
+        val content = StatsCard.content(report("11112211"), settings)
+
+        val labels = StatsCard.pages(content).single().items.filterIsInstance<SceneItem.Label>()
+
+        val p1Value = labels.single { it.text == "6" }
+        val p1Share = labels.single { it.text == content.rows[0].values!!.p1.detail }
+        val p2Share = labels.single { it.text == content.rows[0].values!!.p2.detail }
+        assertTrue(p1Share.x > p1Value.x, "The share of player 1 is after the value")
+        assertTrue(p1Share.size < p1Value.size)
+        assertTrue(p2Share.x < labels.single { it.text == "2" }.x, "The share of player 2 is before the value")
+        // The games row has a detail for each player.
+        val games = content.rows.single { it.stat == MatchStat.GAMES_WON }.values!!
+        assertTrue(labels.any { it.text == games.p1.detail })
+    }
+
+    @Test
     fun aLongNameGetsSmallerAndShorter() {
         val name = "Maximilian Alexander von Longname-Featherstonehaugh"
         val content = StatsCard.content(report("1111", ScoreV1(player1Name = name)), StatsSettingsV1(videoMomentum = false))

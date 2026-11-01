@@ -105,7 +105,7 @@ sealed class AnalyticsEvent {
 
     enum class Sport(internal val key: String) { TENNIS("tennis"), PADEL("padel"), BEACH_TENNIS("beach_tennis") }
 
-    enum class Encoder(internal val key: String) { SOFTWARE("software"), NVENC("nvenc"), AMF("amf"), QSV("qsv") }
+    enum class Encoder(internal val key: String) { SOFTWARE("software"), NVENC("nvenc"), AMF("amf"), QSV("qsv"), VIDEOTOOLBOX("videotoolbox") }
 
     enum class FailReason(internal val key: String) {
         SOURCE_MISSING("source_missing"), OUTPUT_WRITE("output_write"), PROCESS_START("process_start"),

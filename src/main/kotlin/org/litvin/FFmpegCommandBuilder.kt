@@ -5,6 +5,7 @@ import org.litvin.adjustments.CropRect
 import org.litvin.adjustments.GeometryPlan
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.points.PointV1
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import org.litvin.i18n.MachineFormats
 
@@ -387,6 +388,14 @@ object FFmpegCommandBuilder {
      * label (decision 22). The still frame repeats the frame at the still frame time: tpad clones the first frame of
      * the part after the cut, or the last frame when the still frame is at the end.
      */
+    /**
+     * Maps the x264 CRF of a quality level to the constant quality of VideoToolbox (`-q:v`, 1 to 100, higher is
+     * better). Apple silicon supports it. The values come from a VMAF comparison on an M1 (B-13): `-q:v` 75 gave the
+     * quality of CRF 21 (VMAF 96.4). Each CRF step is 2.5 quality steps.
+     */
+    internal fun videoToolboxQuality(crf: Int?): Int =
+        (75.0 + ((crf ?: 21) - 21) * -2.5).roundToInt().coerceIn(1, 100)
+
     internal fun replayFreezeVideo(before: List<String>, after: List<String>, replay: ReplayRender): String {
         val at = replay.freezeAtMs
         if (at == null || replay.freezeMs <= 0) return "[0:v]" + (before + after).joinToString(",")
@@ -572,10 +581,12 @@ object FFmpegCommandBuilder {
         val isNvenc = p.encoderLabel.contains("NVENC", ignoreCase = true)
         val isQsv = p.encoderLabel.contains("QSV", ignoreCase = true)
         val isAmf = p.encoderLabel.contains("AMF", ignoreCase = true)
+        val isVideoToolbox = p.encoderLabel.contains("VideoToolbox", ignoreCase = true)
         val videoCodec = when {
             isNvenc -> "h264_nvenc"
             isQsv -> "h264_qsv"
             isAmf -> "h264_amf"
+            isVideoToolbox -> "h264_videotoolbox"
             p.encoderLabel.contains("libx264", ignoreCase = true) -> "libx264"
             else -> (v.codec ?: "libx264")
         }
@@ -876,6 +887,11 @@ object FFmpegCommandBuilder {
             args += listOf("-preset", nvPreset)
             // Use high profile yuv420p unless overridden
             args += listOf("-profile:v", "high")
+        } else if (isVideoToolbox) {
+            // With the default settings, VideoToolbox uses much less than the bitrate and loses quality. The High
+            // profile and prio_speed 0 (quality before speed) gave almost the quality of x264 "slow" on an M1 (B-13).
+            args += listOf("-profile:v", "high", "-prio_speed", "0")
+            if (targetBitrateK == null) args += listOf("-q:v", videoToolboxQuality(v.crf).toString())
         } else if (p.encoderLabel.contains("libx264", ignoreCase = true)) {
             // Software x264 tuning
             v.x264Preset?.let { args += listOf("-preset", it) }

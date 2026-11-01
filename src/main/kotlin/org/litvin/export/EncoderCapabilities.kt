@@ -14,6 +14,8 @@ enum class ExportEncoder(
     NVENC("h264_nvenc", "NVIDIA NVENC", "H.264 (NVENC)", "export.encoder.nvenc", hardware = true),
     AMF("h264_amf", "AMD AMF", "H.264 (AMF)", "export.encoder.amf", hardware = true),
     QSV("h264_qsv", "Intel Quick Sync", "H.264 (QSV)", "export.encoder.qsv", hardware = true),
+    /** The media engine of Apple silicon (B-13). */
+    VIDEOTOOLBOX("h264_videotoolbox", "Apple VideoToolbox", "H.264 (VideoToolbox)", "export.encoder.videotoolbox", hardware = true),
     SOFTWARE("libx264", "Software (x264)", "H.264 (libx264)", "export.encoder.software", hardware = false),
     ;
 
@@ -47,7 +49,7 @@ data class EncoderCapabilities(
     companion object {
         val NONE = EncoderCapabilities(emptySet(), null)
 
-        /** Runs ffmpeg and PowerShell. It takes some seconds, so do not call it on the UI thread. */
+        /** Runs ffmpeg, and PowerShell on Windows. It takes some seconds, so do not call it on the UI thread. */
         fun production(): EncoderCapabilities {
             val listed = try {
                 FFmpegCapabilities.h264Encoders()

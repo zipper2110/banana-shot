@@ -275,25 +275,41 @@ arm64 files. Then:
 
 ## 4. Export
 
-- **Encoder:** add `VIDEOTOOLBOX("h264_videotoolbox", "Apple VideoToolbox",
-  "H.264 (VideoToolbox)", ...)` to `ExportEncoder`.
-- **Encoder choice:** `FFmpegCapabilities.videoAdapters` returns an empty
-  list on macOS. On macOS, select `h264_videotoolbox` when the encoder test
-  passes. Keep the real test encode, as for the other encoders.
-- **Quality:** `FFmpegCommandBuilder` maps the CRF only for NVENC. Add a map
-  for VideoToolbox. On Apple Silicon, VideoToolbox accepts a constant
-  quality (`-q:v`). Find the `-q:v` values that give the same quality as the
-  CRF values of the presets. Add tests to `FFmpegCommandBuilderTest`.
-- **Texts:** the encoder descriptions say "PC", "NVIDIA", "AMD", and
-  "Intel". Add a description for VideoToolbox and change "PC" to "computer".
-- **Analytics:** the counter keys are a closed list with one key for each
-  encoder (`export_started_nvenc`, `export_run_s_nvenc`, and so on). Add the
-  `videotoolbox` keys to `analytics-contract/v1/counter-keys.json`, the
-  analytics Worker, and the cockpit before a macOS release. Otherwise the
-  Worker refuses the summaries of Mac users or drops the keys. Verify the
-  current behavior for an unknown key.
-- **Hardware decode in the export:** the export uses no Windows hardware
-  decoder now. No change is necessary.
+Done on 2026-11-01, except the Worker deployment.
+
+- **Encoder:** `ExportEncoder.VIDEOTOOLBOX` (`h264_videotoolbox`, job label
+  "H.264 (VideoToolbox)"). The encoder detection finds it in the encoder
+  list of ffmpeg, keeps the real test encode, and prefers it when it works.
+  Only an ffmpeg for macOS has it, so no GPU check is necessary.
+- **Measurement** (M1, a 30 s 1080p clip, VMAF against the source):
+
+  | Encoder | Settings | Time | Size | VMAF |
+  |---|---|---|---|---|
+  | x264 | `slow`, 20 Mbit/s | 20.4 s | 67.8 MB | 98.1 |
+  | VideoToolbox | 20 Mbit/s, default settings | 4.7 s | 18.4 MB | 96.9 |
+  | VideoToolbox | 20 Mbit/s, `-profile:v high -prio_speed 0` | 4.7 s | 58.8 MB | 97.6 |
+  | VideoToolbox | constant bitrate 20 Mbit/s | 4.7 s | 73.8 MB | 96.9 |
+  | VideoToolbox | `-q:v` 65 / 75 / 85 | 4.6 s | 4.2 / 8.4 / 21.5 MB | 94.4 / 96.4 / 97.5 |
+  | x264 | `medium`, CRF 21 | 6.7 s | 4.3 MB | 96.4 |
+
+  With the default settings, VideoToolbox uses much less than the bitrate.
+  Constant bitrate makes larger files with no better quality.
+- **Arguments:** `-profile:v high -prio_speed 0` and the bitrate of the
+  export. A job with no bitrate gets `-q:v` from the CRF: 75 for CRF 21,
+  2.5 steps for each CRF step (`FFmpegCommandBuilder.videoToolboxQuality`).
+  Verify the quality with fast tennis and padel footage.
+- **Texts:** a description for VideoToolbox in all languages. "PC" is now
+  "computer" in the texts that a Mac user sees ("Best for this computer",
+  no hardware encoder, the software encoder). The NVIDIA, AMD, and Intel
+  texts keep "PC".
+- **Analytics:** the `videotoolbox` keys are in
+  `analytics-contract/v1/counter-keys.json`, the analytics Worker, the
+  cockpit, `docs/analytics/design.md`, and the privacy page of the site. The
+  Worker refuses a summary with an unknown key. Thus **deploy the analytics
+  Worker and the cockpit before a macOS release**, and also before a test
+  export with VideoToolbox sends a summary to the production Worker.
+- **Hardware decode in the export:** the export uses no hardware decoder.
+  No change is necessary.
 
 ## 5. Fonts
 

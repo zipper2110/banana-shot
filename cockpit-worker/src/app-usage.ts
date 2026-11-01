@@ -1,7 +1,7 @@
 import type { Env } from './env';
 import { type Period, dataStart, dates, parseDate, weekOf, weeks } from './period';
 
-const ENCODERS = ['software', 'nvenc', 'amf', 'qsv'] as const;
+const ENCODERS = ['software', 'nvenc', 'amf', 'qsv', 'videotoolbox'] as const;
 
 /** Decision 10: never the smoke rows; the development versions only when the page asks for them. */
 export const FILTER = "app_version <> 'synthetic-smoke' AND (? = 1 OR app_version NOT LIKE '%-SNAPSHOT')";

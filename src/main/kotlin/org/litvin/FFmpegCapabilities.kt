@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Lightweight runtime capability probe for ffmpeg encoders.
  *
- * We only care about H.264 paths for v0.1.0: libx264 (software), NVENC, QSV, AMF.
+ * We only care about H.264 paths: libx264 (software), NVENC, QSV, AMF, and VideoToolbox (macOS).
  * Detection is best-effort; failures simply return an empty set (software still available).
  */
 object FFmpegCapabilities {
@@ -71,6 +71,7 @@ object FFmpegCapabilities {
             if (l.contains("h264_nvenc")) out += "h264_nvenc"
             if (l.contains("h264_qsv")) out += "h264_qsv"
             if (l.contains("h264_amf")) out += "h264_amf"
+            if (l.contains("h264_videotoolbox")) out += "h264_videotoolbox"
         }
     }
 
@@ -196,6 +197,8 @@ object FFmpegCapabilities {
             "h264_nvenc" in encoders -> "h264_nvenc"
             "h264_amf" in encoders -> "h264_amf"
             "h264_qsv" in encoders -> "h264_qsv"
+            // Only an ffmpeg for macOS has VideoToolbox. The media engine of Apple silicon needs no GPU check.
+            "h264_videotoolbox" in encoders -> "h264_videotoolbox"
             else -> null
         }
     }

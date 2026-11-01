@@ -47,6 +47,7 @@ internal class RenderAnalytics(private val analytics: Analytics) : RenderRunList
             facts.encoderLabel.contains("NVENC", ignoreCase = true) -> AnalyticsEvent.Encoder.NVENC
             facts.encoderLabel.contains("QSV", ignoreCase = true) -> AnalyticsEvent.Encoder.QSV
             facts.encoderLabel.contains("AMF", ignoreCase = true) -> AnalyticsEvent.Encoder.AMF
+            facts.encoderLabel.contains("VideoToolbox", ignoreCase = true) -> AnalyticsEvent.Encoder.VIDEOTOOLBOX
             else -> AnalyticsEvent.Encoder.SOFTWARE
         }
 

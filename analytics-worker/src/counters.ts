@@ -4,7 +4,7 @@
  * analytics-contract/v1/counter-keys.json.
  */
 const TABS = ['projects', 'points', 'colors', 'crop_rotate', 'scoring', 'stats', 'export', 'thumbnail'];
-const ENCODERS = ['software', 'nvenc', 'amf', 'qsv'];
+const ENCODERS = ['software', 'nvenc', 'amf', 'qsv', 'videotoolbox'];
 const EXPORT_RESULTS = ['started', 'completed', 'failed', 'cancelled', 'interrupted', 'run_s', 'video_s'];
 const FAIL_REASONS = ['source_missing', 'output_write', 'process_start', 'ffmpeg_exit', 'other'];
 const EXPORT_OPTIONS = ['scoreboard', 'comments', 'stats_card', 'favorites_only', 'idle_trim'];

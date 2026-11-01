@@ -21,7 +21,8 @@ Rules for all languages:
 |---|---|
 | BananaShot | The brand |
 | 4K, 1080p, 720p | Video resolution codes |
-| H.264, HEVC, NVENC, AMF, QSV, x264 | Codec and encoder names |
+| H.264, HEVC, NVENC, AMF, QSV, VideoToolbox, x264 | Codec and encoder names |
+| Apple, Mac, M1 | Brand and product names (the VideoToolbox encoder, B-13) |
 | fps, FPS | Unit of the frame rate |
 | MB, GB, KB, Mbit/s | Units |
 | PNG, MP4 | File types |

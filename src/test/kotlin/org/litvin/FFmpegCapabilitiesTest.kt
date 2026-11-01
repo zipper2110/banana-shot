@@ -31,6 +31,15 @@ class FFmpegCapabilitiesTest {
     }
 
     @Test
+    fun choosesVideoToolboxOnAMac() {
+        // On a Mac the ffmpeg lists VideoToolbox and the app finds no GPU names.
+        assertEquals(
+            "h264_videotoolbox",
+            FFmpegCapabilities.preferredH264Encoder(setOf("libx264", "h264_videotoolbox"), ""),
+        )
+    }
+
+    @Test
     fun namesGpuAdaptersWithTheirManufacturer() {
         val output = """
             NVIDIA|NVIDIA GeForce RTX 3060 Laptop GPU

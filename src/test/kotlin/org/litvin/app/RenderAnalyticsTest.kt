@@ -41,6 +41,7 @@ class RenderAnalyticsTest {
         listener.started(facts("H.264 (NVENC)", 1080, 1920, scoreboard = true, statsCard = true, idleTrim = true))
         listener.started(facts("HEVC (hevc_qsv)", 1280, 720, comments = true, favoritesOnly = true))
         listener.started(facts("H.264 (h264_amf)", 3000, 2000))
+        listener.started(facts("H.264 (VideoToolbox)", 1920, 1080))
 
         assertEquals(
             listOf<AnalyticsEvent>(
@@ -51,6 +52,7 @@ class RenderAnalyticsTest {
                 ),
                 AnalyticsEvent.ExportStarted(Encoder.QSV, setOf(ExportOption.COMMENTS, ExportOption.FAVORITES_ONLY), Resolution.P720),
                 AnalyticsEvent.ExportStarted(Encoder.AMF, emptySet(), Resolution.OTHER),
+                AnalyticsEvent.ExportStarted(Encoder.VIDEOTOOLBOX, emptySet(), Resolution.P1080),
             ),
             analytics.events,
         )

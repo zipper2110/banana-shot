@@ -31,7 +31,7 @@
     export_res_720: '720p', export_res_1080: '1080p', export_res_1440: '1440p', export_res_2160: '2160p (4K)', export_res_other: 'Other',
   };
   const TOPICS = { problem: ['Problem', 2], idea: ['Idea', 1], question: ['Question', 3], other: ['Other', 4] };
-  const ENCODERS = { software: 'CPU', nvenc: 'NVIDIA', amf: 'AMD', qsv: 'Intel' };
+  const ENCODERS = { software: 'CPU', nvenc: 'NVIDIA', amf: 'AMD', qsv: 'Intel', videotoolbox: 'Apple' };
 
   const DAY = 86400000;
 

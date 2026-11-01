@@ -129,6 +129,47 @@ class FFmpegCommandBuilderTest {
     }
 
     @Test
+    fun build_videotoolbox_uses_the_high_profile_and_the_bitrate_of_the_export() {
+        val res = FFmpegCommandBuilder.build(
+            FFmpegCommandBuilder.BuildParams(
+                sourcePath = "input.mp4",
+                outputPath = "out.mp4",
+                preset = preset.copy(video = preset.video.copy(crf = 17, x264Preset = "slow")),
+                outWidth = 1920,
+                outHeight = 1080,
+                encoderLabel = "H.264 (VideoToolbox)",
+                idleTrim = false,
+                videoBitrateK = 20_000,
+            )
+        )
+        val argsStr = res.args.joinToString(" ")
+        assertTrue(argsStr.contains("-c:v h264_videotoolbox"), argsStr)
+        assertTrue(argsStr.contains("-profile:v high -prio_speed 0"), argsStr)
+        assertTrue(argsStr.contains("-b:v 20000k"), argsStr)
+        assertTrue(!argsStr.contains("-q:v") && !argsStr.contains("-crf") && !argsStr.contains("-preset"), argsStr)
+    }
+
+    @Test
+    fun build_videotoolbox_maps_crf_to_constant_quality_without_a_bitrate() {
+        val res = FFmpegCommandBuilder.build(
+            FFmpegCommandBuilder.BuildParams(
+                sourcePath = "input.mp4",
+                outputPath = "out.mp4",
+                preset = preset.copy(video = preset.video.copy(crf = 21, x264Preset = "medium")),
+                outWidth = 1920,
+                outHeight = 1080,
+                encoderLabel = "H.264 (VideoToolbox)",
+                idleTrim = false,
+            )
+        )
+        assertTrue(res.args.joinToString(" ").contains("-q:v 75"), res.args.joinToString(" "))
+        assertEquals(85, FFmpegCommandBuilder.videoToolboxQuality(17))
+        assertEquals(75, FFmpegCommandBuilder.videoToolboxQuality(null))
+        assertEquals(68, FFmpegCommandBuilder.videoToolboxQuality(24))
+        assertEquals(100, FFmpegCommandBuilder.videoToolboxQuality(0))
+    }
+
+    @Test
     fun build_balanced4k60_capsVideoAt20Mbps() {
         val res = FFmpegCommandBuilder.build(
             FFmpegCommandBuilder.BuildParams(

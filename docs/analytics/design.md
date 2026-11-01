@@ -287,7 +287,7 @@ programmatic UI updates, or changes that have no effect.
 
 ### Export
 
-`<enc>` is one of: `software`, `nvenc`, `amf`, `qsv`.
+`<enc>` is one of: `software`, `nvenc`, `amf`, `qsv`, `videotoolbox` (macOS, B-13).
 
 | Key | Meaning |
 |---|---|

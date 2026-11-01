@@ -121,3 +121,57 @@ object SourceSampleRateProbe {
         output.lineSequence().firstNotNullOfOrNull { it.trim().trimEnd(',').toIntOrNull()?.takeIf { rate -> rate > 0 } }
             ?: DEFAULT_RATE
 }
+
+/**
+ * Finds the end of the first video stream of the source, in milliseconds from the start of the file.
+ *
+ * The statistics card freezes the last frame of the video. The audio stream of a file can be longer than the video
+ * stream (many phones and cameras write such files). Then the end of the file is not the end of the video, and a
+ * window at the end of the file has no video frame. A failed probe returns null.
+ */
+object SourceVideoEndProbe {
+    fun probe(sourcePath: String, ffprobeExecutable: String): Long? {
+        return try {
+            val process = ProcessBuilder(
+                ffprobeExecutable, "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=start_time,duration:format=start_time", "-of", "default=nw=1", sourcePath,
+            ).redirectErrorStream(true).start()
+            if (!process.waitFor(5, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                return null
+            }
+            if (process.exitValue() != 0) return null
+            parse(process.inputStream.bufferedReader().use { it.readText() })
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Parses the `key=value` lines of the ffprobe output. The stream lines come before the format line.
+     * An input seek of ffmpeg counts from the start time of the file, so the result does too.
+     * A missing stream duration (for example in some MKV files) gives null.
+     */
+    internal fun parse(output: String): Long? {
+        val values = output.lineSequence()
+            .mapNotNull { line -> line.trim().split('=', limit = 2).takeIf { it.size == 2 } }
+            .map { (key, value) -> key to value.toDoubleOrNull()?.takeIf { it.isFinite() } }
+            .toList()
+        val duration = values.firstOrNull { it.first == "duration" }?.second?.takeIf { it > 0.0 } ?: return null
+        // The first start_time is the one of the stream, the second is the one of the file. "N/A" counts as 0.
+        val starts = values.filter { it.first == "start_time" }.map { it.second ?: 0.0 }
+        val streamStart = starts.getOrNull(0) ?: 0.0
+        val fileStart = starts.getOrNull(1) ?: 0.0
+        return ((streamStart + duration - fileStart) * 1000.0).toLong().takeIf { it > 0L }
+    }
+
+    /**
+     * The source time after the still frame of a statistics card. [requestedMs] is the end of the trim, or null for
+     * the end of the source. The result is never after [videoEndMs]. With no [videoEndMs], it is [requestedMs].
+     */
+    fun stillFrameAtMs(requestedMs: Long?, videoEndMs: Long?): Long? = when {
+        videoEndMs == null -> requestedMs
+        requestedMs == null -> videoEndMs
+        else -> minOf(requestedMs, videoEndMs)
+    }
+}

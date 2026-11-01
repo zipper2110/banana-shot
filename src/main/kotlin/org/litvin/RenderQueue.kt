@@ -470,6 +470,10 @@ object RenderQueueManager {
                     )
                 )
 
+                // Only a statistics card needs the end of the video stream, so the probe runs at the first card.
+                val videoEndMs by lazy {
+                    org.litvin.export.SourceVideoEndProbe.probe(job.sourcePath, ApplicationLayout.current().ffprobeExecutable)
+                }
                 val chunkFiles = mutableListOf<java.io.File>()
                 val concatListFile = java.io.File(partOut.absolutePath + ".concat.txt")
                 val cardAssFiles = mutableListOf<java.io.File>()
@@ -560,7 +564,9 @@ object RenderQueueManager {
                                     logger.warn(t) { "Failed to prepare a statistics card; the export does not show it" }
                                     continue
                                 }
-                                val freeze = FFmpegCommandBuilder.FreezeFrame(pass.freezeAtMs, pass.card.durationMs)
+                                // The still frame is the last frame of the video stream, also when the audio is longer.
+                                val stillAtMs = org.litvin.export.SourceVideoEndProbe.stillFrameAtMs(pass.freezeAtMs, videoEndMs)
+                                val freeze = FFmpegCommandBuilder.FreezeFrame(stillAtMs, pass.card.durationMs)
                                 buildFor(emptyList(), passFile, 0L, chunkOutput = true, freeze, cardAss.absolutePath)
                             }
                         }

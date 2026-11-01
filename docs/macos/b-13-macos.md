@@ -152,6 +152,40 @@ passes all the checks below. The spike code can start from
    `BufferedImage`. This method is simple and safe. It uses much CPU at 4K
    and can drop frames. Use it only as a fallback.
 
+### Result of the first spike (2026-11-01)
+
+Test Mac: MacBook Air M1, macOS 27.2, JDK 27, Homebrew mpv 0.41.0.
+
+- `Native.getComponentID` and `Native.getWindowID` give 0 on macOS. JNA
+  gives no `NSView` and no `NSWindow` for AWT components.
+- mpv 0.41 has no `wid` on macOS. The `macvk` context of `gpu-next`
+  always makes its own `NSWindow`. Thus method 2 does not work.
+- The render API (method 1 and method 3) uses the `gpu` renderer, not
+  `gpu-next`. `glsl-shader-opts` works only with `gpu-next`, so the color
+  and geometry controls of the preview do not work with the render API.
+- **Selected method: a child window.** mpv makes its own borderless window
+  (`force-window=yes`, `border=no`, `input-cursor-passthrough=yes`,
+  `focus-on=never`, `auto-window-resize=no`). The `window-id` property
+  gives the `NSWindow` pointer. `MacVideoWindow` attaches it as a child
+  window of the Java window and keeps its frame equal to the screen bounds
+  of the canvas. The app finds the `NSWindow` of the Java window in
+  `[NSApp windows]` by its frame and title, because the JDK has no public
+  API for it. All AppKit calls run on the main thread with
+  `dispatch_async_f`.
+- The test harness showed: `hwdec-current=videotoolbox`,
+  `current-vo=gpu-next`, the OSD size follows the canvas at the Retina
+  scale (2000x1166 pixels for 1000x583 points), the Java window keeps the
+  keyboard focus, and a tab change and a close do not block the app.
+- Not verified yet (the test shell has no Screen Recording and no
+  Accessibility permission): the picture on the screen, the mouse input
+  through the mpv window, Swing popups and dialogs over the video, full
+  screen, and two displays.
+- Risk: mpv calls `DispatchQueue.main.sync` when it makes and closes its
+  window. The app closes mpv on a separate thread. `mpv_initialize` still
+  runs on the event dispatch thread. If the main thread waits for the event
+  dispatch thread at that time (for example, VoiceOver), the app stops.
+- In a source run (not a bundle), mpv sets its own Dock icon.
+
 ### The checks of the spike
 
 - 4K 60 fps H.264 and HEVC files play with no dropped frames on an M1 Mac

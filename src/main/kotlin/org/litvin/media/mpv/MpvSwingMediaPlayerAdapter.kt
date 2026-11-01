@@ -2,6 +2,7 @@ package org.litvin.media.mpv
 
 import com.sun.jna.Memory
 import com.sun.jna.Native
+import com.sun.jna.Platform
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.User32
 import com.sun.jna.platform.win32.WinDef
@@ -28,6 +29,11 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.Window
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
+import java.awt.event.HierarchyBoundsAdapter
+import java.awt.event.HierarchyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
@@ -46,9 +52,12 @@ import kotlin.math.roundToLong
 /**
  * Swing media player backed by libmpv.
  *
- * mpv renders into a child window of a heavyweight [Canvas] (the `wid` option). mpv decodes on the GPU
+ * On Windows, mpv renders into a child window of a heavyweight [Canvas] (the `wid` option). mpv decodes on the GPU
  * (d3d11va) and renders with libplacebo (vo=gpu-next). The `tr-adjust.hook` shader applies the color and
  * geometry adjustments with the same math as the FFmpeg export. Parameter changes do not reload the video.
+ *
+ * On macOS, mpv has no `wid`. mpv renders with vo=gpu-next on Vulkan (MoltenVK) in its own borderless window and
+ * decodes with VideoToolbox. [MacVideoWindow] keeps that window over the canvas as a child window (B-13).
  *
  * Deactivation unloads the file (this releases the decoder) but keeps the mpv instance.
  * Activation loads the file again at the last position.
@@ -76,7 +85,14 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     }
 
     private val playerId = playerIds.incrementAndGet()
+    private val isMac = Platform.isMac()
     private val canvas = VideoCanvas()
+
+    /** macOS only: the mpv window over the canvas. Use it on the event dispatch thread. */
+    private var macWindow: MacVideoWindow? = null
+
+    /** macOS only: the last `window-id` of mpv. */
+    @Volatile private var macWindowId = 0L
     private val errorView = errorViews?.create(onRetry = { activatePreview("retry") })
 
     // The canvas is a native window, so a Swing view cannot show over it. The card layout hides the canvas
@@ -167,6 +183,28 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
             addMouseListener(forward)
             addMouseMotionListener(forward)
             addMouseWheelListener(forward)
+            if (isMac) followCanvasOnMac()
+        }
+
+        /** The mpv window of macOS is not a part of the canvas, so it must follow the bounds and the visibility of the canvas. */
+        private fun followCanvasOnMac() {
+            addComponentListener(object : ComponentAdapter() {
+                override fun componentResized(e: ComponentEvent) = updateMacWindow()
+                override fun componentMoved(e: ComponentEvent) = updateMacWindow()
+                override fun componentShown(e: ComponentEvent) = updateMacWindow()
+                override fun componentHidden(e: ComponentEvent) = updateMacWindow()
+            })
+            addHierarchyListener { e ->
+                val flags = HierarchyEvent.SHOWING_CHANGED.toLong() or HierarchyEvent.PARENT_CHANGED.toLong()
+                if (e.changeFlags and flags != 0L) updateMacWindow()
+            }
+            addHierarchyBoundsListener(object : HierarchyBoundsAdapter() {
+                // A child window moves with its parent window, so only a move inside the window needs an update.
+                override fun ancestorMoved(e: HierarchyEvent) {
+                    if (e.changed !is Window) updateMacWindow()
+                }
+                override fun ancestorResized(e: HierarchyEvent) = updateMacWindow()
+            })
         }
 
         private fun redispatch(e: MouseEvent) {
@@ -209,8 +247,8 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
             coreProblem = VideoProblem.previewFailure(LibMpv.loadFailure(), LibMpv.loadErrorCode)
             return null
         }
-        val wid = Native.getComponentID(canvas)
-        if (wid == 0L) return null
+        val wid = if (isMac) 0L else Native.getComponentID(canvas)
+        if (!isMac && wid == 0L) return null
         val shader = MpvShaderFile.path()
         val options = buildList {
             add("config" to "no")
@@ -227,15 +265,17 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
             add("keep-open" to "always")
             add("pause" to "yes")
             add("vo" to "gpu-next")
-            add("gpu-api" to "d3d11")
-            add("hwdec" to "d3d11va,auto-safe")
+            if (isMac) addAll(macWindowOptions()) else {
+                add("gpu-api" to "d3d11")
+                add("hwdec" to "d3d11va,auto-safe")
+            }
             // HDR sources: no per-frame peak detection. With it, the tone mapping brightens the whole frame
             // when the Highlights control darkens the brightest areas, so the preview shows the opposite change.
             add("hdr-compute-peak" to "no")
             add("hr-seek" to "yes")
             add("hr-seek-framedrop" to "no")
             add("background-color" to "#000000")
-            add("wid" to wid.toString())
+            if (!isMac) add("wid" to wid.toString())
             if (shader != null) add("glsl-shaders" to shader.absolutePath)
         }
         return try {
@@ -256,6 +296,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                 created.observe("osd-dimensions/mr", LibMpv.FORMAT_INT64)
                 core = created
                 logger.info { "Created mpv preview #$playerId (wid=$wid, shader=${shader?.absolutePath})" }
+                if (isMac) startMacWindow(created)
             }
         } catch (t: Throwable) {
             logger.warn(t) { "Failed to create mpv preview #$playerId" }
@@ -272,7 +313,73 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         appliedShaderOpts = null
         imageOverlaySize = null
         logger.info { "Destroying mpv preview #$playerId: $reason" }
-        old.close()
+        if (isMac) {
+            macWindow?.close()
+            macWindow = null
+            macWindowId = 0L
+            // On macOS, mpv closes its window on the main thread and waits for it. The main thread can wait for the
+            // event dispatch thread, so the event dispatch thread must not wait for mpv.
+            Thread({ old.close() }, "mpv-close-$playerId").apply { isDaemon = true }.start()
+        } else {
+            old.close()
+        }
+    }
+
+    // ---- macOS window -----------------------------------------------------------------------------------
+
+    /** The options of the mpv window on macOS: no border, no input, no focus, and no own size. */
+    private fun macWindowOptions(): List<Pair<String, String>> = buildList {
+        add("gpu-api" to "vulkan")
+        add("gpu-context" to "macvk")
+        add("hwdec" to "videotoolbox,auto-safe")
+        // The window exists also without a file. Then the window-id stays the same for the life of the mpv instance.
+        add("force-window" to "yes")
+        add("border" to "no")
+        add("input-cursor-passthrough" to "yes")
+        add("window-dragging" to "no")
+        add("focus-on" to "never")
+        add("auto-window-resize" to "no")
+        add("keepaspect-window" to "no")
+        // The first frame of the window, in device pixels, until MacVideoWindow attaches it.
+        macInitialGeometry()?.let { add("geometry" to it) }
+    }
+
+    private fun macInitialGeometry(): String? {
+        if (!canvas.isShowing || canvas.width <= 0 || canvas.height <= 0) return null
+        val configuration = canvas.graphicsConfiguration ?: return null
+        val scale = configuration.defaultTransform.scaleX
+        val screen = configuration.bounds
+        val location = canvas.locationOnScreen
+        fun px(points: Int) = (points * scale).toInt()
+        return "${px(canvas.width)}x${px(canvas.height)}+${px(location.x - screen.x)}+${px(location.y - screen.y)}"
+    }
+
+    /** Makes the [MacVideoWindow] and gives it the mpv window when mpv has made it. */
+    private fun startMacWindow(created: MpvCore) {
+        macWindow = MacVideoWindow(canvas, "#$playerId")
+        // mpv makes its window on its own thread. Do not wait for it on the event dispatch thread.
+        Thread({
+            repeat(200) {
+                if (core !== created || created.isClosed) return@Thread
+                if (refreshMacWindowId(created)) return@Thread
+                Thread.sleep(25)
+            }
+            logger.warn { "mpv preview #$playerId: mpv made no macOS window" }
+        }, "mpv-window-$playerId").apply { isDaemon = true }.start()
+    }
+
+    /** Reads `window-id`. Do not call it on the event dispatch thread. Returns true when mpv has a window. */
+    private fun refreshMacWindowId(created: MpvCore): Boolean {
+        val id = created.getProperty("window-id")?.toLongOrNull() ?: 0L
+        if (id != 0L && id != macWindowId) {
+            macWindowId = id
+            SwingUtilities.invokeLater { if (core === created) macWindow?.setMpvWindow(id) }
+        }
+        return id != 0L
+    }
+
+    private fun updateMacWindow() {
+        macWindow?.update()
     }
 
     override fun activatePreview(reason: String) {
@@ -704,6 +811,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                         "vo=${core?.getProperty("current-vo")}"
                 }
                 disableNativeInput()
+                if (isMac) core?.let(::refreshMacWindowId)
                 SwingUtilities.invokeLater { applyShaderOptions() }
             }
         }

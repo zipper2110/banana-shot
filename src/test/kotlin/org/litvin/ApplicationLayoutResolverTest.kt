@@ -235,6 +235,95 @@ class ApplicationLayoutResolverTest {
         assertEquals(root.resolve("tmp"), paths.temporary)
     }
 
+    @Test
+    fun macos_uses_the_macos_native_folder_and_no_exe_names() {
+        val appHome = tempDir.resolve("BananaShot.app/Contents").toFile().apply { mkdirs() }
+        val nativeRoot = File(appHome, "natives/macos-arm64")
+        val mpv = File(nativeRoot, "mpv").apply {
+            mkdirs()
+            resolve("libmpv.dylib").writeText("")
+        }
+        val ffmpeg = File(nativeRoot, "ffmpeg/bin/ffmpeg").apply {
+            parentFile.mkdirs()
+            writeText("")
+        }
+        val ffprobe = File(ffmpeg.parentFile, "ffprobe").apply { writeText("") }
+
+        val layout = resolver(appHome = appHome, properties = mapOf("os.name" to "Mac OS X", "user.home" to tempDir.toString())).resolve()
+
+        assertEquals(nativeRoot.absoluteFile, layout.nativeRoot.absoluteFile)
+        assertEquals(mpv.absoluteFile, layout.mpvDirectory)
+        assertEquals(ffmpeg.absolutePath, layout.ffmpegExecutable)
+        assertEquals(ffprobe.absolutePath, layout.ffprobeExecutable)
+    }
+
+    @Test
+    fun macos_development_uses_the_build_folder_before_homebrew() {
+        val workspace = tempDir.resolve("workspace").toFile().apply { mkdirs() }
+        val homebrew = tempDir.resolve("homebrew/lib").toFile().apply {
+            mkdirs()
+            resolve("libmpv.dylib").writeText("")
+        }
+        val properties = mapOf("os.name" to "Mac OS X", "user.home" to tempDir.resolve("home").toString())
+
+        fun layout() = ApplicationLayoutResolver(
+            properties = properties + ("bananashot.appDir" to workspace.resolve("target/classes").absolutePath),
+            environment = emptyMap(),
+            codeSourceLocation = null,
+            workingDirectory = workspace,
+            homebrewLibDirectory = homebrew,
+        ).resolve()
+
+        assertEquals(homebrew, layout().mpvDirectory)
+        assertEquals("ffmpeg", layout().ffmpegExecutable)
+        assertEquals("ffprobe", layout().ffprobeExecutable)
+
+        val developmentMpv = workspace.resolve("target/native/macos-arm64/mpv").apply { mkdirs() }
+        assertEquals(developmentMpv.absoluteFile, layout().mpvDirectory?.absoluteFile)
+    }
+
+    @Test
+    fun development_uses_the_ffmpeg_of_the_build_folder_before_the_path() {
+        val workspace = tempDir.resolve("workspace").toFile().apply { mkdirs() }
+        val ffmpeg = workspace.resolve("target/native/macos-arm64/ffmpeg/bin/ffmpeg").apply {
+            parentFile.mkdirs()
+            writeText("")
+        }
+        val ffprobe = File(ffmpeg.parentFile, "ffprobe").apply { writeText("") }
+
+        val layout = ApplicationLayoutResolver(
+            properties = mapOf(
+                "os.name" to "Mac OS X",
+                "user.home" to tempDir.resolve("home").toString(),
+                "bananashot.appDir" to workspace.resolve("target/classes").absolutePath,
+            ),
+            environment = emptyMap(),
+            codeSourceLocation = null,
+            workingDirectory = workspace,
+            homebrewLibDirectory = tempDir.resolve("no homebrew").toFile(),
+        ).resolve()
+
+        assertEquals(ffmpeg.absolutePath, layout.ffmpegExecutable)
+        assertEquals(ffprobe.absolutePath, layout.ffprobeExecutable)
+    }
+
+    @Test
+    fun windows_does_not_use_homebrew() {
+        val homebrew = tempDir.resolve("homebrew/lib").toFile().apply {
+            mkdirs()
+            resolve("libmpv.dylib").writeText("")
+        }
+        val layout = ApplicationLayoutResolver(
+            properties = mapOf("os.name" to "Windows 11", "user.home" to tempDir.toString()),
+            environment = emptyMap(),
+            codeSourceLocation = null,
+            workingDirectory = tempDir.toFile(),
+            homebrewLibDirectory = homebrew,
+        ).resolve()
+
+        assertNull(layout.mpvDirectory)
+    }
+
     private fun resolver(
         appHome: File,
         properties: Map<String, String>,

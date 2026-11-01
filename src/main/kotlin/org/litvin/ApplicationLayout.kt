@@ -23,14 +23,17 @@ class ApplicationLayoutResolver(
         ?.location
         ?.toURI(),
     private val workingDirectory: File = File("."),
+    /** The libmpv folder of Homebrew on Apple Silicon. Only development on macOS uses it. */
+    private val homebrewLibDirectory: File = File("/opt/homebrew/lib"),
 ) {
     fun resolve(): RuntimeLayout {
         val appHome = resolveAppHome()
-        val nativeRoot = File(appHome, "natives/windows-x64")
+        val nativeRoot = File(appHome, "natives/${platformFolder()}")
         val ffmpegExecutable = resolveExecutable(
             propertyName = "bananashot.ffmpegPath",
             environmentName = "FFMPEG_PATH",
-            bundledFile = File(nativeRoot, "ffmpeg/bin/ffmpeg.exe"),
+            bundledFile = File(nativeRoot, "ffmpeg/bin/${executable("ffmpeg")}"),
+            developmentFile = File(workingDirectory, "target/native/${platformFolder()}/ffmpeg/bin/${executable("ffmpeg")}"),
             fallbackCommand = if (isWindows()) "ffmpeg.exe" else "ffmpeg",
         )
         val ffprobeExecutable = resolveFfprobe(nativeRoot, ffmpegExecutable)
@@ -60,7 +63,8 @@ class ApplicationLayoutResolver(
     }
 
     /*
-     * The order for each native tool: the system property, the bundled file, the environment variable, the fallback.
+     * The order for each native tool: the system property, the bundled file, the environment variable, the file in the
+     * build folder (`target/native`), the fallback.
      * The bundled file comes before the environment variable, because an installed app must use its own signed and
      * pinned build (B-22). A variable that a different program set on the user's PC must not replace it. In development,
      * the app home has no bundle, so the variable still applies.
@@ -72,12 +76,14 @@ class ApplicationLayoutResolver(
         environment["MPV_PATH"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absoluteFile.normalize()
         }
-        return File(workingDirectory, "target/native/windows-x64/mpv").takeIf { it.isDirectory }
+        File(workingDirectory, "target/native/${platformFolder()}/mpv").takeIf { it.isDirectory }?.let { return it }
+        // Development on macOS before the pinned macOS build exists (B-13): `brew install mpv`.
+        return homebrewLibDirectory.takeIf { isMac() && File(it, "libmpv.dylib").isFile }
     }
 
     private fun resolveFfprobe(nativeRoot: File, ffmpegExecutable: String): String {
         value("bananashot.ffprobePath")?.let { return File(it).absolutePath }
-        val bundled = File(nativeRoot, "ffmpeg/bin/ffprobe.exe")
+        val bundled = File(nativeRoot, "ffmpeg/bin/${executable("ffprobe")}")
         if (bundled.isFile) return bundled.absolutePath
         environment["FFPROBE_PATH"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absolutePath
@@ -95,6 +101,7 @@ class ApplicationLayoutResolver(
         propertyName: String,
         environmentName: String,
         bundledFile: File,
+        developmentFile: File,
         fallbackCommand: String,
     ): String {
         value(propertyName)?.let { return File(it).absolutePath }
@@ -102,6 +109,8 @@ class ApplicationLayoutResolver(
         environment[environmentName]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absolutePath
         }
+        // The pinned build of Get-NativeDependencies.ps1 (Windows) or build-dev-ffmpeg.sh (macOS).
+        if (developmentFile.isFile) return developmentFile.absoluteFile.normalize().path
         return fallbackCommand
     }
 
@@ -121,6 +130,15 @@ class ApplicationLayoutResolver(
     private fun isWindows(): Boolean = properties["os.name"]
         ?.contains("windows", ignoreCase = true)
         ?: false
+
+    private fun isMac(): Boolean = properties["os.name"]
+        ?.startsWith("mac", ignoreCase = true)
+        ?: false
+
+    /** The folder of the native files: `windows-x64`, or `macos-arm64` on macOS (Apple Silicon only, B-13). */
+    private fun platformFolder(): String = if (isMac()) "macos-arm64" else "windows-x64"
+
+    private fun executable(name: String): String = if (isWindows()) "$name.exe" else name
 }
 
 object ApplicationLayout {

@@ -20,4 +20,10 @@ class LibMpvLoadErrorTest {
         assertEquals(193, LibMpv.windowsLoadError(notADll))
         assertNull(LibMpv.windowsLoadError(tempDir.resolve("missing.dll").toFile()))
     }
+
+    @Test
+    fun theLibraryNameDependsOnThePlatform() {
+        assertEquals("libmpv-2", LibMpv.libraryName(windows = true))
+        assertEquals("mpv", LibMpv.libraryName(windows = false))
+    }
 }

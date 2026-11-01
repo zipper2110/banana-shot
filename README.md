@@ -90,6 +90,19 @@ This places libmpv under `target/native/windows-x64/mpv` and FFmpeg under
 `target/native/windows-x64/ffmpeg`, which source runs prefer over machine-wide
 installations. Packaged Windows builds already include the same pinned runtime.
 
+On an Apple Silicon Mac (development only, B-13), install libmpv with Homebrew
+and build FFmpeg with libass. Homebrew's own `ffmpeg` has no `subtitles`
+filter, so the export fails with it.
+
+```bash
+brew install mpv pkgconf libass x264
+distribution/macos/build-dev-ffmpeg.sh
+```
+
+The script places FFmpeg under `target/native/macos-arm64/ffmpeg`. Source runs
+use libmpv from `target/native/macos-arm64/mpv` if it exists, else from
+`/opt/homebrew/lib`.
+
 ### Data folder of a development run
 
 Only one instance of the app runs for each Windows account. The app locks

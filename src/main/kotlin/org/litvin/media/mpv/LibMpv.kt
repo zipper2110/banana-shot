@@ -43,7 +43,13 @@ internal interface LibMpv : Library {
     fun mpv_wakeup(ctx: Pointer)
 
     companion object {
-        const val LIBRARY_NAME = "libmpv-2"
+        /**
+         * The JNA name of libmpv: `libmpv-2.dll` on Windows. On macOS, JNA adds `lib` and `.dylib`, so the name
+         * `mpv` finds `libmpv.dylib` (a link to `libmpv.2.dylib`).
+         */
+        val LIBRARY_NAME: String = libraryName(Platform.isWindows())
+
+        internal fun libraryName(windows: Boolean): String = if (windows) "libmpv-2" else "mpv"
 
         const val FORMAT_NONE = 0
         const val FORMAT_STRING = 1
@@ -89,7 +95,11 @@ internal interface LibMpv : Library {
                         loadErrorCode = ApplicationLayout.current().mpvDirectory
                             ?.let { windowsLoadError(File(it, "$LIBRARY_NAME.dll")) }
                         loadFailure = it
-                        logger.warn(it) { "libmpv is not available (Windows error ${loadErrorCode ?: "unknown"})." }
+                        if (Platform.isWindows()) {
+                            logger.warn(it) { "libmpv is not available (Windows error ${loadErrorCode ?: "unknown"})." }
+                        } else {
+                            logger.warn(it) { "libmpv is not available." }
+                        }
                     }
                     .getOrNull()
                     ?.also { loaded = it }

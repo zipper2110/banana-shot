@@ -41,7 +41,7 @@ object DistributionDiagnostics {
             executableCheck("FFmpeg", layout.ffmpegExecutable),
             executableCheck("FFprobe", layout.ffprobeExecutable),
             writableDirectoryCheck(layout.appDataDirectory),
-            windowsTrustStoreCheck(),
+            systemTrustStoreCheck(),
             httpsCheck(),
         )
     }
@@ -52,14 +52,21 @@ object DistributionDiagnostics {
      */
     internal val UPDATE_HOST: URI = URI("https://raw.githubusercontent.com/")
 
-    /** The `Windows-ROOT` key store needs the module `jdk.crypto.mscapi` ("Trust for the HTTPS connection"). */
-    internal fun windowsTrustStoreCheck(
-        load: () -> KeyStore = { KeyStore.getInstance("Windows-ROOT").apply { load(null, null) } },
+    /**
+     * The system key store of "Trust for the HTTPS connection": `Windows-ROOT` on Windows (it needs the module
+     * `jdk.crypto.mscapi`) and `KeychainStore-ROOT` on macOS.
+     */
+    internal fun systemTrustStoreType(osName: String = System.getProperty("os.name").orEmpty()): String =
+        if (osName.startsWith("Mac", ignoreCase = true)) "KeychainStore-ROOT" else "Windows-ROOT"
+
+    internal fun systemTrustStoreCheck(
+        type: String = systemTrustStoreType(),
+        load: () -> KeyStore = { KeyStore.getInstance(type).apply { load(null, null) } },
     ): DiagnosticCheck = try {
         val store = load()
-        DiagnosticCheck("Windows trust store", store.size() > 0, "Windows-ROOT, ${store.size()} certificates")
+        DiagnosticCheck("System trust store", store.size() > 0, "$type, ${store.size()} certificates")
     } catch (t: Throwable) {
-        DiagnosticCheck("Windows trust store", false, "Windows-ROOT (${t.javaClass.simpleName}: ${t.message})")
+        DiagnosticCheck("System trust store", false, "$type (${t.javaClass.simpleName}: ${t.message})")
     }
 
     /** An HTTPS request to [uri]. Each HTTP status passes. A failed connection or a TLS error fails. */

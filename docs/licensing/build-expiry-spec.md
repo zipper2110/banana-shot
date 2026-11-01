@@ -586,6 +586,12 @@ sleep. The result can be different on different computers.
   (`Kernel32.INSTANCE.GetTickCount64()` in jna-platform). It counts the
   milliseconds from the start of Windows. It includes the time in sleep and
   hibernation. Changes of the system clock have no effect on it.
+- On macOS, the app uses `clock_gettime_nsec_np(CLOCK_MONOTONIC)` from
+  `libc` through JNA. On macOS this clock also counts the time while the Mac
+  sleeps. `System.nanoTime` does not count it on macOS (B-13).
+- The app does not read `os.name` to select the counter. It uses the first
+  counter that works, and keeps it for the session. `os.name` only sets the
+  order of the tries.
 - The run time is the change of this counter after a known moment, for
   example the start of the session or the moment of the last server time.
   The app does not save the counter, because it starts again from 0 at each
@@ -682,7 +688,14 @@ app is false, but the rest of Windows uses the correct time.
 
 - The request for the rules file accepts a certificate if one of these
   stores trusts it: the store of the bundled runtime
-  (`<java.home>/lib/security/cacerts`) or the Windows store (`Windows-ROOT`).
+  (`<java.home>/lib/security/cacerts`) or a system store. The system store is
+  `Windows-ROOT` on Windows. On macOS, the system stores are
+  `KeychainStore-ROOT` (the system roots) and `KeychainStore` (the
+  certificates with a user or administrator trust setting). Both macOS types
+  need JDK 23 or later (B-13).
+- The app tries only the system store types that the runtime has
+  (`Security.getAlgorithms("KeyStore")`). It does not read `os.name`. An
+  empty store is not used.
 - The Windows store is necessary for offices that inspect TLS traffic. Their
   certificate is in the Windows store, but not in the bundled store. Without
   the Windows store, these users get no rules, no update notice, and no

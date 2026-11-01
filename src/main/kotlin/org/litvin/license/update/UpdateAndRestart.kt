@@ -33,7 +33,7 @@ fun interface SetupLauncher {
  *
  * The spec requires the same proxy and the same trust as the read of the rules file. The proxy comes
  * from `java.net.useSystemProxies` in `main`. The trust is [UpdateTrust.production]: the bundled store
- * and `Windows-ROOT`.
+ * and the system stores.
  */
 class HttpSetupDownloader(
     private val client: HttpClient = UpdateTrust.production.client(HttpClient.Redirect.NORMAL, Duration.ofSeconds(10)),

@@ -353,21 +353,21 @@ no change. For the other fonts, check the box sizes of each style.
   (it returns at once on other systems now). Apple Silicon Macs have one
   GPU, so no GPU choice is necessary. The app shows no GPU message on any
   system.
-- **Run time counter (expiry):** `RunTimeCounter.production` calls
-  `Kernel32.GetTickCount64`. On macOS this call fails, and the app uses
-  `System.nanoTime`. On macOS, `System.nanoTime` does not count the time
-  while the Mac sleeps. Then a sleeping Mac does not add run time. Add a
-  macOS primary counter that counts sleep, for example
-  `clock_gettime_nsec_np(CLOCK_MONOTONIC)` or `mach_continuous_time` through
-  JNA. Verify with the sleep check of B-42 on a Mac.
-- **Trust store:** `UpdateTrust` and `DistributionDiagnostics` load
-  `Windows-ROOT`. On macOS, load the bundled `cacerts` and the macOS
-  keychain store. JDK 25 has `KeychainStore` and, from JDK 23,
-  `KeychainStore-ROOT` for the system roots. Verify which type gives the
-  roots that an office TLS proxy adds. Remove `jdk.crypto.mscapi` from the
-  macOS runtime modules. Rename the diagnostics check to "System trust
-  store". Update "Trust for the HTTPS connection" in
-  `docs/licensing/build-expiry-spec.md`.
+- **Run time counter (expiry):** done on 2026-11-01. `RunTimeCounter.production`
+  uses `clock_gettime_nsec_np(CLOCK_MONOTONIC)` on macOS. This clock counts
+  the time while the Mac sleeps. The counter tries the macOS clock and
+  `GetTickCount64`, and keeps the first one that works. It does not read
+  `os.name`, because the expiry reads no property. Verify with the sleep
+  check of B-42 on a Mac.
+- **Trust store:** done on 2026-11-01. `UpdateTrust` loads the bundled
+  `cacerts` and each system store type that the runtime has:
+  `Windows-ROOT`, `KeychainStore-ROOT`, and `KeychainStore`. It skips an
+  empty store. On the M1 test Mac (macOS 27.2, JDK 27), `KeychainStore-ROOT`
+  has 150 roots and `KeychainStore` has 0 certificates. The diagnostics check
+  is now "System trust store". It checks `KeychainStore-ROOT` on macOS.
+  Still to do: verify with an office TLS proxy that its root shows in
+  `KeychainStore` (B-42). Remove `jdk.crypto.mscapi` from the macOS runtime
+  modules.
 - **Blocked files:** Smart App Control error codes do not exist on macOS. On
   macOS, a blocked file usually shows as a signature or quarantine failure
   when the process starts or the dylib loads. Add macOS texts to

@@ -16,7 +16,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * E5-S4. The test makes its own two key stores (in place of the bundled store and `Windows-ROOT`) and uses a local
+ * E5-S4. The test makes its own two key stores (in place of the bundled store and a system store) and uses a local
  * HTTPS server. It does not change the real Windows store.
  */
 class UpdateTrustTest {
@@ -93,5 +93,32 @@ class UpdateTrustTest {
         val stores: List<KeyStore> = UpdateTrust.productionStores()
         assertEquals(2, stores.size)
         assertTrue(stores.all { it.size() > 0 }, "Each store has certificates")
+    }
+
+    @Test
+    @EnabledOnOs(OS.MAC)
+    fun `production has the bundled store and the macOS system roots of this runtime`() {
+        // Reads the stores only. The test does not change them. KeychainStore can be empty, so it is not counted.
+        val stores: List<KeyStore> = UpdateTrust.productionStores()
+        assertTrue(stores.size >= 2, "Stores: ${stores.map { it.type }}")
+        assertTrue(stores.any { it.type == "KeychainStore-ROOT" }, "Stores: ${stores.map { it.type }}")
+        assertTrue(stores.all { it.size() > 0 }, "Each store has certificates")
+    }
+
+    @Test
+    fun `only the system store types of this runtime are tried`() {
+        assertEquals(listOf("Windows-ROOT"), UpdateTrust.systemStoreTypes(setOf("PKCS12", "WINDOWS-ROOT", "WINDOWS-MY")))
+        assertEquals(
+            listOf("KeychainStore-ROOT", "KeychainStore"),
+            UpdateTrust.systemStoreTypes(setOf("PKCS12", "KEYCHAINSTORE", "KEYCHAINSTORE-ROOT")),
+        )
+        assertEquals(emptyList(), UpdateTrust.systemStoreTypes(setOf("PKCS12", "JKS")))
+    }
+
+    @Test
+    fun `with no system store the bundled store is used`() {
+        val stores = UpdateTrust.productionStores(available = setOf("PKCS12"))
+        assertEquals(1, stores.size)
+        assertTrue(stores.single().size() > 0)
     }
 }

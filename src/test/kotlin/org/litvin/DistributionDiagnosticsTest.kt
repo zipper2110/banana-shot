@@ -16,12 +16,26 @@ class DistributionDiagnosticsTest {
     @EnabledOnOs(OS.WINDOWS)
     fun `the Windows-ROOT key store of this runtime loads`() {
         // Reads the Windows store only. The test does not change it.
-        assertTrue(DistributionDiagnostics.windowsTrustStoreCheck().passed)
+        assertTrue(DistributionDiagnostics.systemTrustStoreCheck().passed)
+    }
+
+    @Test
+    @EnabledOnOs(OS.MAC)
+    fun `the KeychainStore-ROOT key store of this runtime loads`() {
+        // Reads the macOS system roots only. The test does not change them.
+        val check = DistributionDiagnostics.systemTrustStoreCheck()
+        assertTrue(check.passed, check.detail)
+    }
+
+    @Test
+    fun `the system trust store type depends on the platform`() {
+        assertEquals("Windows-ROOT", DistributionDiagnostics.systemTrustStoreType("Windows 11"))
+        assertEquals("KeychainStore-ROOT", DistributionDiagnostics.systemTrustStoreType("Mac OS X"))
     }
 
     @Test
     fun `a key store that does not load fails the check`() {
-        val check = DistributionDiagnostics.windowsTrustStoreCheck { throw KeyStoreException("Windows-ROOT not found") }
+        val check = DistributionDiagnostics.systemTrustStoreCheck { throw KeyStoreException("Windows-ROOT not found") }
 
         assertFalse(check.passed)
         assertTrue(check.detail.contains("Windows-ROOT not found"), check.detail)
@@ -31,7 +45,7 @@ class DistributionDiagnosticsTest {
     fun `an empty key store fails the check`() {
         val empty = KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null, null) }
 
-        assertFalse(DistributionDiagnostics.windowsTrustStoreCheck { empty }.passed)
+        assertFalse(DistributionDiagnostics.systemTrustStoreCheck { empty }.passed)
     }
 
     @Test

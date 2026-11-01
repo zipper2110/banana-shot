@@ -10,6 +10,8 @@ import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.MatchStructure
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.PerPlayer
+import org.litvin.scoring.ScoreOverrideV1
+import org.litvin.scoring.ScorePairV1
 import org.litvin.scoring.ScoreV1
 import java.awt.Font
 import java.nio.file.Files
@@ -158,6 +160,18 @@ class StatRowsTest {
         assertEquals(2, report.pointsAfterMatchEnd)
         assertEquals(PerPlayer(3, 0), report.match.pointsWon)
         assertEquals(listOf(0..2), report.setRanges)
+    }
+
+    @Test
+    fun theReportTellsWhenThePointsHaveATypedScore() {
+        val base = report("1111")
+        val typed = mapOf("p2" to ScoreOverrideV1(games = ScorePairV1(3, 0)))
+
+        assertFalse(base.hasScoreOverrides)
+        assertTrue(base.copy(score = base.score.copy(scoreOverrides = typed)).hasScoreOverrides)
+        // An empty override changes nothing, and an override of a removed point does not apply.
+        assertFalse(base.copy(score = base.score.copy(scoreOverrides = mapOf("p2" to ScoreOverrideV1()))).hasScoreOverrides)
+        assertFalse(base.copy(score = base.score.copy(scoreOverrides = mapOf("gone" to typed.getValue("p2")))).hasScoreOverrides)
     }
 
     @Test

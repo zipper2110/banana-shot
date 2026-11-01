@@ -82,7 +82,12 @@ data class MatchStats(
     /** The points in the range that have a winner. */
     val scoredPoints: Int,
     val pointsWon: PerPlayer<Int>,
+    /**
+     * The games that the player won in the range. They come from the score, not from the points: the statistics are
+     * for the match, so a game that the user sets with a score override counts, also when no marked point wins it.
+     */
     val gamesWon: PerPlayer<Int>,
+    /** The sets that the player won in the range. They come from the score, as [gamesWon]. */
     val setsWon: PerPlayer<Int>,
     /** Null when the user did not mark a server. */
     val serve: ServeStats?,
@@ -126,8 +131,8 @@ data class MatchStats(
                 points = indices.size,
                 scoredPoints = scored.size,
                 pointsWon = count(scored) { winners[it] },
-                gamesWon = count(indices) { timeline.statesAfterPoint[it].lastGameWonBy },
-                setsWon = count(indices) { timeline.statesAfterPoint[it].lastSetWonBy },
+                gamesWon = scoreChange(indices, timeline, ::gamesInScore),
+                setsWon = scoreChange(indices, timeline) { state, _ -> PerPlayer(state.setsP1, state.setsP2) },
                 serve = serveStats(indices, scored, winners, timeline),
                 setPointsWon = chances(scored, winners, timeline, Stake.SET),
                 matchPointsWon = chances(scored, winners, timeline, Stake.MATCH),
@@ -138,7 +143,7 @@ data class MatchStats(
                         PerPlayer(wonBy(1), wonBy(2))
                     },
                 longestPointRun = longestRun(scored.map { winners[it]!! }),
-                longestGameRun = longestRun(indices.mapNotNull { timeline.statesAfterPoint[it].lastGameWonBy }),
+                longestGameRun = longestRun(gameWinners(indices, timeline)),
                 largestPointLead = largestLead(scored.map { winners[it]!! }),
                 time = timeStats(indices.map { points[it] }, indices.map { winners[it] }),
                 keyPoints = scored.map { winners[it]!! }.let { players ->
@@ -195,6 +200,41 @@ data class MatchStats(
             Outcome.P1 -> 1
             Outcome.P2 -> 2
             Outcome.NONE, null -> null
+        }
+
+        /**
+         * The games of each player in the score: the games of the completed sets and of the current set.
+         * A match tiebreak (a 1–0 tiebreak set) is not a game.
+         */
+        private fun gamesInScore(state: ScoringEngine.MatchState, sets: List<ScoringEngine.SetScore>): PerPlayer<Int> {
+            val gameSets = sets.filterNot { it.tiebreak && it.p1 + it.p2 == 1 }
+            return PerPlayer(gameSets.sumOf { it.p1 } + state.gamesP1, gameSets.sumOf { it.p2 } + state.gamesP2)
+        }
+
+        private fun setsBefore(timeline: ScoringEngine.Timeline, index: Int): List<ScoringEngine.SetScore> =
+            if (index == 0) emptyList() else timeline.setsAfterPoint[index - 1]
+
+        /**
+         * How much [value] grows from the score before the first point of [indices] to the score after the last point.
+         * The score includes the score overrides, so a game that the user sets in the score counts,
+         * also when no marked point wins it.
+         */
+        private fun scoreChange(
+            indices: List<Int>,
+            timeline: ScoringEngine.Timeline,
+            value: (ScoringEngine.MatchState, List<ScoringEngine.SetScore>) -> PerPlayer<Int>,
+        ): PerPlayer<Int> {
+            if (indices.isEmpty()) return PerPlayer(0, 0)
+            val before = value(timeline.stateBefore(indices.first()), setsBefore(timeline, indices.first()))
+            val after = value(timeline.statesAfterPoint[indices.last()], timeline.setsAfterPoint[indices.last()])
+            return PerPlayer((after.p1 - before.p1).coerceAtLeast(0), (after.p2 - before.p2).coerceAtLeast(0))
+        }
+
+        /** The winner of each game in order. A score override that adds games adds them for the player that gets them. */
+        private fun gameWinners(indices: List<Int>, timeline: ScoringEngine.Timeline): List<Int> = indices.flatMap { i ->
+            val before = gamesInScore(timeline.stateBefore(i), setsBefore(timeline, i))
+            val after = gamesInScore(timeline.statesAfterPoint[i], timeline.setsAfterPoint[i])
+            List((after.p1 - before.p1).coerceAtLeast(0)) { 1 } + List((after.p2 - before.p2).coerceAtLeast(0)) { 2 }
         }
 
         private fun count(indices: List<Int>, playerOf: (Int) -> Int?): PerPlayer<Int> {

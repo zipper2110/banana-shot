@@ -6,6 +6,8 @@ import org.litvin.points.PointV1
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.ScoreOverrideV1
+import org.litvin.scoring.ScorePairV1
 import org.litvin.scoring.ScoreV1
 import org.litvin.stats.MatchStat
 import org.litvin.stats.StatRows
@@ -207,6 +209,30 @@ class SwingStatsPanelTest {
     }
 
     @Test
+    fun aTypedScoreShowsASeparateNote() {
+        writeProject("11.1", overrides = mapOf("p3" to ScoreOverrideV1(games = ScorePairV1(3, 0))))
+
+        onEdt {
+            val panel = openPanel()
+            val coverage = panel.find<CoverageNote>("stats-coverage")!!
+            val overrides = panel.find<CoverageNote>("stats-overrides")!!
+
+            assertEquals(listOf("Based on 3 of 4 points. The other points have no winner."), coverage.lines)
+            assertTrue(overrides.isVisible)
+            assertEquals(listOf("The score has typed changes (Override score). Some statistics can be wrong."), overrides.lines)
+        }
+    }
+
+    @Test
+    fun withoutATypedScoreTheOverrideNoteIsHidden() {
+        writeProject("1111")
+
+        onEdt {
+            assertFalse(openPanel().find<CoverageNote>("stats-overrides")!!.isVisible)
+        }
+    }
+
+    @Test
     fun aClickOnAValueFromOnePointOpensThePoint() {
         writeProject("1222")
         val opened = mutableListOf<String>()
@@ -302,7 +328,11 @@ class SwingStatsPanelTest {
         }
 
     /** '1' and '2' are the point winners. Any other character leaves the point unscored. */
-    private fun writeProject(winners: String, rules: MatchRulesV1 = MatchRulesV1()) {
+    private fun writeProject(
+        winners: String,
+        rules: MatchRulesV1 = MatchRulesV1(),
+        overrides: Map<String, ScoreOverrideV1> = emptyMap(),
+    ) {
         val points = (1..winners.length).map { PointV1(id = "p$it", startMs = it * 10_000, endMs = it * 10_000 + 5_000) }
         val outcomes = points.zip(winners.toList()).mapNotNull { (point, c) ->
             when (c) {
@@ -314,7 +344,7 @@ class SwingStatsPanelTest {
         EdlIO.writeForProjectDir(projectDir.path, EdlV1(points = points))
         ScoreIO.writeForProjectDir(
             projectDir.path,
-            ScoreV1(outcomes = outcomes, player1Name = "Alex", player2Name = "Sam", rules = rules),
+            ScoreV1(outcomes = outcomes, player1Name = "Alex", player2Name = "Sam", rules = rules, scoreOverrides = overrides),
         )
     }
 

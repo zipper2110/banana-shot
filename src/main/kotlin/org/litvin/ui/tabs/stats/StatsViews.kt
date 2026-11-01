@@ -116,7 +116,7 @@ internal class StatsEmptyView(onOpenPoints: () -> Unit) : JPanel(GridBagLayout()
 }
 
 /** A yellow note with an info icon, for example "Based on 180 of 186 points." Each line is a paragraph. */
-internal class CoverageNote : JPanel(null), HeightForWidth {
+internal class CoverageNote(componentName: String = "stats-coverage") : JPanel(null), HeightForWidth {
     private val icon = UiKit.icon(Material2OutlinedAL.INFO, 17, Palette.YELLOW)
     private val body = WrapText("", UiKit.font(12.5f), Palette.YELLOW_TEXT)
 
@@ -131,7 +131,7 @@ internal class CoverageNote : JPanel(null), HeightForWidth {
         }
 
     init {
-        name = "stats-coverage"
+        name = componentName
         isOpaque = false
         isVisible = false
         add(body)

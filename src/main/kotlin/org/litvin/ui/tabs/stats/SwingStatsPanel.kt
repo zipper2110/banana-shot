@@ -74,6 +74,8 @@ class SwingStatsPanel(
     private val body = JPanel(cards)
     private val header = StatsTableHeader()
     private val coverage = CoverageNote()
+    /** A separate note: the score has typed changes, so some statistics can be wrong. */
+    private val overridesNote = CoverageNote("stats-overrides")
     private val table = StatsTable(
         onScope = ::selectScope,
         onMomentumInVideo = ::setMomentumInVideo,
@@ -147,18 +149,34 @@ class SwingStatsPanel(
             verticalScrollBar.unitIncrement = 16
             try { applyDarkScrollbar(this, Palette.BG) } catch (_: Throwable) { }
         }
-        // The coverage note is above the table, so it stays visible.
-        val notes = object : JPanel(BorderLayout()) {
+        // The notes are above the table, so they stay visible. Each visible note is a separate box.
+        val notes = object : JPanel(null) {
+            private fun shown() = listOf(coverage, overridesNote).filter { it.isVisible }
+
             override fun getPreferredSize(): Dimension {
-                if (!coverage.isVisible) return Dimension(0, 0)
+                val shown = shown()
+                if (shown.isEmpty()) return Dimension(0, 0)
                 val insets = insets
-                val width = (parent?.width ?: 0) - insets.left - insets.right
-                return Dimension(width, coverage.heightForWidth(width.coerceAtLeast(1)) + insets.top + insets.bottom)
+                val width = ((parent?.width ?: 0) - insets.left - insets.right).coerceAtLeast(1)
+                val height = shown.sumOf { it.heightForWidth(width) } + NOTE_GAP * (shown.size - 1)
+                return Dimension(width, height + insets.top + insets.bottom)
+            }
+
+            override fun doLayout() {
+                val insets = insets
+                val width = (this.width - insets.left - insets.right).coerceAtLeast(1)
+                var y = insets.top
+                for (note in shown()) {
+                    val height = note.heightForWidth(width)
+                    note.setBounds(insets.left, y, width, height)
+                    y += height + NOTE_GAP
+                }
             }
         }.apply {
             isOpaque = false
             border = BorderFactory.createEmptyBorder(12, StatsTable.PAD_LEFT, 8, 12)
-            add(coverage, BorderLayout.CENTER)
+            add(coverage)
+            add(overridesNote)
         }
         val left = JPanel(BorderLayout()).apply {
             background = Palette.BG
@@ -210,6 +228,7 @@ class SwingStatsPanel(
             tr("stats.coverage.afterEnd", "count" to report.pointsAfterMatchEnd)
                 .takeIf { report.pointsAfterMatchEnd > 0 },
         )
+        overridesNote.lines = listOfNotNull(tr("stats.coverage.overrides").takeIf { report.hasScoreOverrides })
         table.chart.names = names
         table.chart.colors = colors
         table.chart.momentum = Momentum.of(report, scope)
@@ -389,5 +408,7 @@ class SwingStatsPanel(
     private companion object {
         const val CARD_STATS = "stats"
         const val CARD_EMPTY = "empty"
+        /** The space between two notes above the table. */
+        const val NOTE_GAP = 8
     }
 }

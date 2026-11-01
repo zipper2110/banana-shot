@@ -26,6 +26,13 @@ data class StatsReport(
     val hasScoredPoints: Boolean get() = match.scoredPoints > 0
 
     /**
+     * True when a point has a typed score (Override score). Then the score and the marked points can disagree,
+     * so some statistics can be wrong.
+     */
+    val hasScoreOverrides: Boolean
+        get() = points.any { point -> score.scoreOverrides[point.id]?.isEmpty() == false }
+
+    /**
      * The score of each set, for example "6-4", "7-6" or "[10-7]" for a tiebreak that replaces a set.
      * A set that is not complete shows its current games. A match of points without games shows the points, for
      * example "13-11" in an Americano match.

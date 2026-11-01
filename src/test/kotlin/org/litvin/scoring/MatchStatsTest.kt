@@ -108,6 +108,47 @@ class MatchStatsTest {
     }
 
     @Test
+    fun gamesFromAScoreOverrideCount() {
+        // Player 1 wins a game. Then the user sets the games to 3–0 on a point without a winner.
+        val stats = stats("1111" + ".", overrides = mapOf("p5" to ScoreOverrideV1(games = ScorePairV1(3, 0))))
+
+        assertEquals(PerPlayer(4, 0), stats.pointsWon)
+        assertEquals(PerPlayer(3, 0), stats.gamesWon)
+        assertEquals(PerPlayer(3, 0), stats.longestGameRun)
+    }
+
+    @Test
+    fun setsFromAScoreOverrideCount() {
+        val stats = stats(".", overrides = mapOf("p1" to ScoreOverrideV1(sets = listOf(SetGamesV1(6, 4)))))
+
+        assertEquals(PerPlayer(0, 0), stats.pointsWon)
+        assertEquals(PerPlayer(6, 4), stats.gamesWon)
+        assertEquals(PerPlayer(1, 0), stats.setsWon)
+    }
+
+    @Test
+    fun aScoreOverrideBeforeTheRangeDoesNotCountInTheRange() {
+        val points = points(5)
+        val outcomes = outcomes(points, "." + "1111")
+        val marks = ManualScoreMarks(overrides = mapOf("p1" to ScoreOverrideV1(games = ScorePairV1(2, 3))))
+        val timeline = ScoringEngine.timeline(points, outcomes, MatchRulesV1(), marks)
+
+        val stats = MatchStats.compute(points, outcomes, timeline, MatchRulesV1(), 1..4)
+
+        assertEquals(PerPlayer(1, 0), stats.gamesWon)
+    }
+
+    @Test
+    fun aMatchTiebreakIsASetButNotAGame() {
+        val rules = MatchRulesV1(finalSet = FinalSetRule.MATCH_TIEBREAK)
+        val sets = listOf(SetGamesV1(6, 0), SetGamesV1(0, 6))
+        val stats = stats("." + "1".repeat(10), rules, overrides = mapOf("p1" to ScoreOverrideV1(sets = sets)))
+
+        assertEquals(PerPlayer(6, 6), stats.gamesWon)
+        assertEquals(PerPlayer(2, 1), stats.setsWon)
+    }
+
+    @Test
     fun theStakesShowABreakPoint() {
         val points = points(6)
         val timeline = ScoringEngine.timeline(points, outcomes(points, "222"), serverMarks = mapOf("p1" to Outcome.P1))
@@ -229,10 +270,11 @@ class MatchStatsTest {
         winners: String,
         rules: MatchRulesV1 = MatchRulesV1(),
         serverMarks: Map<String, Outcome> = emptyMap(),
+        overrides: Map<String, ScoreOverrideV1> = emptyMap(),
     ): MatchStats {
         val points = points(winners.length)
         val outcomes = outcomes(points, winners)
-        val timeline = ScoringEngine.timeline(points, outcomes, rules, serverMarks = serverMarks)
+        val timeline = ScoringEngine.timeline(points, outcomes, rules, ManualScoreMarks(overrides = overrides), serverMarks)
         return MatchStats.compute(points, outcomes, timeline, rules)
     }
 

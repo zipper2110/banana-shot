@@ -45,7 +45,8 @@ class RobotSwingDriver : SwingUiDriver {
     override fun setText(name: String, value: String) {
         val component = requireComponent(name, JTextComponent::class.java)
         focus(component, name)
-        pressAndRelease(KeyEvent.VK_A, intArrayOf(KeyEvent.VK_CONTROL))
+        // Select all: Cmd+A on macOS, Ctrl+A on Windows. On macOS, Ctrl+A only moves to the start of the line (B-13).
+        pressAndRelease(KeyEvent.VK_A, intArrayOf(menuShortcutKey()))
         value.forEach(::typeCharacter)
         waitUntil("text component '$name' to contain '$value'") { textOf(component) == value }
     }
@@ -255,6 +256,11 @@ class RobotSwingDriver : SwingUiDriver {
         robot.waitForIdle()
         waitUntil("component '$name' to gain focus") { onEdt { component.isFocusOwner } }
     }
+
+    /** The key of the menu shortcuts of the system: Cmd (VK_META) on macOS, Ctrl on the other systems. */
+    private fun menuShortcutKey(): Int =
+        if (Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx == InputEvent.META_DOWN_MASK) KeyEvent.VK_META
+        else KeyEvent.VK_CONTROL
 
     private fun typeCharacter(character: Char) {
         val stroke = characterStroke(character)

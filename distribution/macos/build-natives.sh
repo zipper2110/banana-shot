@@ -133,6 +133,13 @@ fetch_sources() {
   for entry in "${GIT_SOURCES[@]}"; do
     name="$(field "$entry" 1)"; repo="$(field "$entry" 3)"; commit="$(field "$entry" 4)"
     dir="$SRC/$name"
+    # The source archive of a natives release has the Git sources as tarballs with no .git folder.
+    if [[ ! -d "$dir/.git" && -f "$SRC/$name-$commit.tar.xz" ]]; then
+      rm -rf "$dir"
+      tar -xJf "$SRC/$name-$commit.tar.xz" -C "$SRC"
+      echo "$name: from $name-$commit.tar.xz"
+      continue
+    fi
     if [[ ! -d "$dir/.git" ]]; then
       git clone -q "$repo" "$dir"
     fi
@@ -403,6 +410,39 @@ write_build_info() {
   cp "$OUT/mpv/BUILD-INFO.txt" "$OUT/ffmpeg/BUILD-INFO.txt"
 }
 
+# The description of the natives release on GitHub.
+write_release_readme() {
+  cat <<EOF
+BananaShot natives for macOS arm64
+
+Third-party native builds that BananaShot bundles on macOS, and their
+corresponding source code. This is not a BananaShot release.
+distribution/macos/build-natives.sh built them from pinned sources.
+The minimum macOS version is $DEPLOYMENT_TARGET. The files are for Apple Silicon only.
+
+Binaries:
+- libmpv-v0.41.0-macos-arm64.tar.xz
+  mpv/libmpv.2.dylib: libmpv 0.41.0 (-Dgpl=false). License: LGPL-2.1-or-later.
+  It contains FFmpeg 9.0.2 (LGPL, no --enable-gpl), libplacebo, libass, FreeType,
+  FriBidi, HarfBuzz, Little CMS, and glslang as static libraries.
+  mpv/libMoltenVK.dylib: MoltenVK 1.4.2, the KhronosGroup release build. License: Apache-2.0.
+- ffmpeg-9.0.2-macos-arm64.tar.xz
+  ffmpeg/bin/ffmpeg and ffprobe: FFmpeg 9.0.2 with libx264, libass, and VideoToolbox.
+  License: GPL-2.0-or-later.
+
+Corresponding source:
+- natives-macos-arm64-source.tar
+  The pinned source archives of each library, the Git sources of libplacebo and
+  x264 with their submodules, and build-natives.sh. BUILD-INFO.txt lists each
+  source with its URL and SHA-256 or Git commit. To build, put the files of
+  sources/ in target/native-build/macos/src and run build-natives.sh.
+
+The binaries have an ad-hoc signature. The app signs them again with its own
+certificate. SHA256SUMS.txt lists the SHA-256 of each file in this release.
+Each folder has a LICENSES folder with the license texts.
+EOF
+}
+
 # --- Natives release files ---------------------------------------------------------------------
 package() {
   local release="$WORK/release" entry name version url file
@@ -432,6 +472,7 @@ package() {
   tar -C "$stage" -cf "$release/natives-macos-arm64-source.tar" .
   rm -rf "$stage"
 
+  write_release_readme >"$release/README.txt"
   (cd "$release" && shasum -a 256 ./*.tar* | sed 's| \./| |' >SHA256SUMS.txt)
   cat "$release/SHA256SUMS.txt"
 }

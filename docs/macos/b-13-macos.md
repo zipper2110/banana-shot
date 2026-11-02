@@ -345,7 +345,8 @@ arm64 files. Then:
   that code signing accepts the files in the selected folder.
 - The data folder: `~/Library/Application Support/BananaShot` on macOS, in
   place of `~/.bananashot`. The logs can stay in the `logs` folder of the
-  data folder.
+  data folder. Done on 2026-11-02. The app does not move an old
+  `~/.bananashot` folder, because only development runs used it.
 - `ApplicationLayoutResolverTest`: add the macOS cases.
 
 ## 4. Export
@@ -493,19 +494,28 @@ no change. For the other fonts, check the box sizes of each style.
   Still to do: verify with an office TLS proxy that its root shows in
   `KeychainStore` (B-42). Remove `jdk.crypto.mscapi` from the macOS runtime
   modules.
-- **Blocked files:** Smart App Control error codes do not exist on macOS. On
-  macOS, a blocked file usually shows as a signature or quarantine failure
-  when the process starts or the dylib loads. Add macOS texts to
-  `VideoProblem` and `ExportFailureAdvice`. The texts must tell the user to
-  install the app again from the site. Keep the Windows codes on Windows.
+- **Blocked files:** done on 2026-11-02. A test on the M1 (macOS 27.2)
+  showed the two cases. A libmpv with no valid signature does not load. The
+  dyld text has "missing code signature" (or "code signature ... not valid",
+  "disallowed by system policy", "different Team IDs"). An ffmpeg with no
+  valid signature starts, but macOS stops it at once with SIGKILL: exit code
+  137 and no output. A quarantine attribute alone also blocks a file with
+  only an ad-hoc signature (no notarization): the same exit code 137 for
+  ffmpeg, "library load disallowed by system policy" for libmpv, and a
+  Gatekeeper dialog for each file. `MacSecurityBlock` finds both cases. `VideoProblem`
+  and `ExportFailureAdvice` then show macOS texts in all languages. The texts
+  tell the user to install the app again from the site. The export shows the
+  ffmpeg text only when ffmpeg wrote nothing: with `-v info`, an ffmpeg that
+  runs always writes text. The Windows codes stay on Windows.
 - **Proxy:** `java.net.useSystemProxies` also reads the macOS proxy
-  settings. Change the comments that say "the proxy of Windows". Do the
-  proxy check of B-42 on a Mac.
+  settings. The comments now say "the proxy of the system" (done on
+  2026-11-02). Still to do: the proxy check of B-42 on a Mac.
 - **File in use:** `FileWriteCheck` returns false on macOS. macOS has no
   sharing lock of this type. Keep it.
-- **Show in folder:** in `ExportsTable.openFolder`, use `open -R <file>` on
-  macOS as the fallback, in place of `explorer.exe`. `open -R` also selects
-  the file in Finder.
+- **Show in folder:** done on 2026-11-02. `ShowInFolder` opens the folder
+  and selects the file: `open -R <file>` on macOS, `explorer.exe /select,`
+  on Windows. The export table and the share panel use it. On Windows, the
+  export table now also selects the file, as the share panel did before.
 
 ## 7. macOS app behavior
 
@@ -599,8 +609,8 @@ certificate and cannot notarize. If the membership stops, the versions that
 are already notarized still open. A new version cannot be signed until the
 membership is renewed.
 
-Status: the enrollment was sent on 2026-11-02. Approval is pending. Update
-this line and step 3 of "Order of the work" when Apple approves it.
+Status: the enrollment was sent on 2026-11-02. Apple approved it on
+2026-11-02. Next: the author does steps 2 to 6 below.
 
 The author does these steps. Do not put the certificate, the key, or the
 passwords in a chat, a file of the repository, or a log.
@@ -764,9 +774,9 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 |---|---|---|---|---|
 | 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike") |
 | 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. Still to do: deploy the analytics Worker and the cockpit (step 12) |
-| 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | In progress. Enrollment sent on 2026-11-02. Approval pending |
+| 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | In progress. Approved on 2026-11-02. To do (the author): the certificates, the API key, and the secrets of the `macos-release` environment (steps 2 to 6) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
-| 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Partly done. Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the architecture and libmpv checks of the diagnostics. To do: the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, the proxy comments, the B-42 checks on a Mac |
+| 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Not started |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Not started. Needs step 4 |

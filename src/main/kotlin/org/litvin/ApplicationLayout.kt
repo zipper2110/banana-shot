@@ -119,10 +119,13 @@ class ApplicationLayoutResolver(
         environment["BANANASHOT_APP_DATA_DIR"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absoluteFile.normalize()
         }
+        val userHome = properties["user.home"] ?: "."
+        // The usual folder of the app data on macOS (B-13).
+        if (isMac()) return File(userHome, "Library/Application Support/${AppInfo.NAME}")
         environment["APPDATA"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it, AppInfo.NAME)
         }
-        return File(properties["user.home"] ?: ".", ".bananashot")
+        return File(userHome, ".bananashot")
     }
 
     private fun value(name: String): String? = properties[name]?.trim()?.takeIf { it.isNotEmpty() }

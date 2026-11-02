@@ -196,7 +196,7 @@ data class AppServices(
  */
 /**
  * The analytics controller of the app (B-9). The summaries contain [BuildInfo.VERSION] and the Windows display
- * language. The transport uses the proxy of Windows and the trust of E5-S4, as the feedback sender does. It follows no
+ * language. The transport uses the proxy of the system and the trust of E5-S4, as the feedback sender does. It follows no
  * redirect.
  */
 internal fun productionAnalyticsController(
@@ -228,7 +228,7 @@ private fun productionAnalyticsTransport(config: AnalyticsBuildConfig.Enabled): 
 
 /**
  * The sender of the feedback reports, or null without a valid `bananashot.feedback.endpoint` (T2 of B-8). It uses the
- * proxy of Windows and the trust of E5-S4. The trust stores load at the first send, not at the start.
+ * proxy of the system and the trust of E5-S4. The trust stores load at the first send, not at the start.
  */
 internal fun productionFeedbackSender(): FeedbackSender? {
     val endpoint = FeedbackBuildConfig.endpointFromSystemProperties() ?: return null

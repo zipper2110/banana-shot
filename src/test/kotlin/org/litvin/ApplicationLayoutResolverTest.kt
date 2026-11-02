@@ -211,6 +211,32 @@ class ApplicationLayoutResolverTest {
     }
 
     @Test
+    fun resolves_app_data_below_application_support_on_macos() {
+        val userHome = tempDir.resolve("home").toFile()
+
+        val layout = resolver(
+            appHome = tempDir.toFile(),
+            properties = mapOf("os.name" to "Mac OS X", "user.home" to userHome.path),
+            environment = mapOf("APPDATA" to tempDir.resolve("roaming").toString()),
+        ).resolve()
+
+        assertEquals(userHome.resolve("Library/Application Support/BananaShot"), layout.appDataDirectory)
+    }
+
+    @Test
+    fun the_app_data_override_also_applies_on_macos() {
+        val override = tempDir.resolve("override").toFile()
+
+        val layout = resolver(
+            appHome = tempDir.toFile(),
+            properties = mapOf("os.name" to "Mac OS X", "user.home" to tempDir.resolve("home").toString()),
+            environment = mapOf("BANANASHOT_APP_DATA_DIR" to override.path),
+        ).resolve()
+
+        assertEquals(override, layout.appDataDirectory)
+    }
+
+    @Test
     fun resolves_app_data_below_user_home_when_no_windows_location_exists() {
         val userHome = tempDir.resolve("home").toFile()
 

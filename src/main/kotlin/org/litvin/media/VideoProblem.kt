@@ -3,6 +3,7 @@ package org.litvin.media
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.AppInfo
 import org.litvin.ApplicationLayout
+import org.litvin.MacSecurityBlock
 import org.litvin.WindowsSecurityBlock
 import org.litvin.i18n.tr
 import java.awt.Component
@@ -44,6 +45,12 @@ data class VideoProblem(
             get() = VideoProblem(tr("video.cannotPlay"), tr("video.unreadable.text", "app" to APP), reportable = true)
         val PREVIEW_BLOCKED: VideoProblem
             get() = VideoProblem(tr("video.previewBlocked"), tr("video.previewBlocked.text", "app" to APP), reportable = true)
+        val PREVIEW_BLOCKED_MAC: VideoProblem
+            get() = VideoProblem(
+                tr("video.previewBlocked.mac"),
+                tr("video.previewBlocked.mac.text", "app" to APP),
+                reportable = true,
+            )
         val PREVIEW_FAILED: VideoProblem
             get() = VideoProblem(tr("video.previewFailed"), tr("video.previewFailed.text", "app" to APP), reportable = true)
         val NO_VIDEO: VideoProblem
@@ -64,13 +71,24 @@ data class VideoProblem(
             }
         }
 
-        /** The problem when the video player does not start. [windowsError] is the Windows error of the DLL load. */
-        fun previewFailure(cause: Throwable?, windowsError: Int?): VideoProblem {
+        /**
+         * The problem when the video player does not start. [windowsError] is the Windows error of the DLL load.
+         * On macOS, the text of [cause] tells when macOS refused a library of the player.
+         */
+        fun previewFailure(
+            cause: Throwable?,
+            windowsError: Int?,
+            osName: String = System.getProperty("os.name").orEmpty(),
+        ): VideoProblem {
             val details = listOfNotNull(
                 windowsError?.let { "Windows error $it." },
                 cause?.let { "${it.javaClass.simpleName}: ${it.message}" },
             ).joinToString("\n").ifEmpty { null }
-            val problem = if (WindowsSecurityBlock.isBlockError(windowsError)) PREVIEW_BLOCKED else PREVIEW_FAILED
+            val problem = when {
+                WindowsSecurityBlock.isBlockError(windowsError) -> PREVIEW_BLOCKED
+                MacSecurityBlock.isMac(osName) && MacSecurityBlock.isLoadBlock(cause) -> PREVIEW_BLOCKED_MAC
+                else -> PREVIEW_FAILED
+            }
             return problem.copy(details = details)
         }
     }

@@ -44,6 +44,7 @@ import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.SegmentedChoice
+import org.litvin.ui.commons.ShowInFolder
 import org.litvin.ui.commons.Stack
 import org.litvin.ui.commons.SwitchBox
 import org.litvin.ui.commons.UiButton
@@ -1075,17 +1076,13 @@ class SwingSharePanel(
         writeSettings()
     }
 
-    /** Opens the export folder. When the file exists, Explorer selects it. */
+    /** Opens the export folder. When the file exists, the file manager selects it. */
     private fun openFolder() {
         val project = project ?: return
         val type = type(project)
         val file = settings.saved[type.key]?.let { File(it.path) }?.takeIf { it.isFile } ?: project.thumbnailFile(folder(project), type)
         try {
-            if (file.isFile && System.getProperty("os.name").orEmpty().startsWith("Windows")) {
-                ProcessBuilder("explorer.exe", "/select,", file.absolutePath).start()
-            } else {
-                java.awt.Desktop.getDesktop().open(file.absoluteFile.parentFile)
-            }
+            ShowInFolder().show(file)
         } catch (failure: Exception) {
             dialogs.showError(this, ErrorTexts.of(failure), tr("export.error.openFolder"))
         }

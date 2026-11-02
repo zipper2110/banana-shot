@@ -685,7 +685,10 @@ object RenderQueueManager {
                         val tailCopy = synchronized(errTail) { errTail.joinToString("\n") }
                         job.stderrTail = tailCopy
                         val brief = tailCopy.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.lastOrNull()
-                        job.failureReason = if (brief != null) {
+                        val blocked = ExportFailureAdvice.exitFailure(exit, tailCopy)
+                        job.failureReason = if (blocked != null) {
+                            blocked
+                        } else if (brief != null) {
                             tr("export.failure.ffmpeg", "code" to exit.toString(), "detail" to brief)
                         } else {
                             tr("export.failure.ffmpeg.noDetail", "code" to exit.toString())

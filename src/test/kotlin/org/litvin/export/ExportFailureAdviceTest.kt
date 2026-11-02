@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.litvin.RenderJob
 import java.io.IOException
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -51,6 +52,35 @@ class ExportFailureAdviceTest {
 
         assertTrue(reason.startsWith("Failed to start FFmpeg: IOException: "), reason)
         assertTrue(reason.endsWith("distribution diagnostics for details."), reason)
+    }
+
+    @Test
+    fun anFfmpegThatMacosStopsAtOnceNamesMacosSecurity() {
+        // macOS stops a program with a code signature that is not valid with SIGKILL, before it writes text.
+        val reason = ExportFailureAdvice.exitFailure(137, "", osName = "Mac OS X")
+
+        assertNotNull(reason)
+        assertTrue(reason.startsWith(ExportFailureAdvice.FFMPEG_BLOCKED_MAC), reason)
+        assertTrue("code signature" in reason, reason)
+        val hardware = ExportEncoder.entries.first { it.hardware }
+        assertNull(ExportFailureAdvice.of(job(hardware.jobLabel).apply { failureReason = reason }))
+    }
+
+    @Test
+    fun otherFfmpegExitsHaveNoSpecialText() {
+        // The text shows that ffmpeg ran, for example when the system stopped it later for lack of memory.
+        assertNull(ExportFailureAdvice.exitFailure(137, "frame=120 fps=30", osName = "Mac OS X"))
+        assertNull(ExportFailureAdvice.exitFailure(1, "", osName = "Mac OS X"))
+        assertNull(ExportFailureAdvice.exitFailure(137, "", osName = "Windows 11"))
+    }
+
+    @Test
+    fun anFfmpegThatMacosRefusesToLoadNamesMacosSecurity() {
+        val cause = IOException("Cannot run program \"ffmpeg\": missing code signature in '/Applications/BananaShot.app'")
+
+        val reason = ExportFailureAdvice.startFailure(cause, osName = "Mac OS X")
+
+        assertTrue(reason.startsWith(ExportFailureAdvice.FFMPEG_BLOCKED_MAC), reason)
     }
 
     private fun job(encoderLabel: String) = RenderJob(

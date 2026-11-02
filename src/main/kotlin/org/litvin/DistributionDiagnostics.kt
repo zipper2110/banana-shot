@@ -90,8 +90,8 @@ object DistributionDiagnostics {
     }
 
     private fun sendHeadRequest(uri: URI): Int {
-        // main sets java.net.useSystemProxies before this check, so the request uses the proxy of Windows.
-        // The trust is the same as for the rules file: the bundled store and Windows-ROOT (E5-S4).
+        // main sets java.net.useSystemProxies before this check, so the request uses the proxy of the system.
+        // The trust is the same as for the rules file: the bundled store and the system store (E5-S4).
         val client = UpdateTrust.production.client(HttpClient.Redirect.NEVER, Duration.ofSeconds(10))
         val request = HttpRequest.newBuilder(uri)
             .method("HEAD", HttpRequest.BodyPublishers.noBody())

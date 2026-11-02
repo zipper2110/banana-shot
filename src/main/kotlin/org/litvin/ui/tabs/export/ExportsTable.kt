@@ -13,6 +13,7 @@ import org.litvin.export.ExportFailureAdvice
 import org.litvin.export.RenderFormatting
 import org.litvin.export.RenderService
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.ShowInFolder
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.applyDarkScrollbar
 import org.litvin.ui.tabs.export.ExportUi.Weight
@@ -689,15 +690,10 @@ internal class ExportsTable(
         private val CANCEL_EXPORT: String get() = tr("export.cancel")
         private val CELL_FONT = ExportUi.font(12f)
 
-        /** Opens the folder of [outputPath] in the file manager. */
+        /** Opens the folder of [outputPath] in the file manager. When the file exists, the file manager selects it. */
         fun openFolder(outputPath: String, parent: Component, dialogs: UserDialogService) {
             try {
-                val dir = File(outputPath).absoluteFile.parentFile ?: return
-                try {
-                    java.awt.Desktop.getDesktop().open(dir)
-                } catch (_: Throwable) {
-                    Runtime.getRuntime().exec(arrayOf("explorer.exe", dir.absolutePath))
-                }
+                ShowInFolder().show(File(outputPath))
             } catch (t: Throwable) {
                 dialogs.showError(parent, ErrorTexts.of(t), tr("export.error.openFolder"))
             }

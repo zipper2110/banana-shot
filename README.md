@@ -105,9 +105,10 @@ source, see [distribution/macos/README.md](distribution/macos/README.md).
 
 ### Data folder of a development run
 
-Only one instance of the app runs for each Windows account. The app locks
+Only one instance of the app runs for each user account. The app locks
 `instance.lock` in its data folder. By default, a development run uses the
-same data folder as the installed app (`%APPDATA%\BananaShot`). Then an open
+same data folder as the installed app (`%APPDATA%\BananaShot` on Windows,
+`~/Library/Application Support/BananaShot` on macOS). Then an open
 installed app blocks the development run: the run shows "BananaShot is
 already running" and quits.
 

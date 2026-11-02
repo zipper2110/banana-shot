@@ -44,8 +44,8 @@ object SwingMainApp {
     @JvmStatic
     fun main(args: Array<String>) {
         // The order of the first steps is in build-expiry-spec.md, "Velopack hook processes".
-        // 1. Use the proxy settings of Windows. Java reads this property only one time, at the first
-        //    network request of the process, so it must come before all other code ("Proxy").
+        // 1. Use the proxy settings of the system (Windows or macOS). Java reads this property only one time,
+        //    at the first network request of the process, so it must come before all other code ("Proxy").
         System.setProperty("java.net.useSystemProxies", "true")
         // 2. The Velopack setup starts the app with a hook argument when it installs, updates, or
         //    removes the app. The app has no task for a hook: exit at once, with no UI, no lock,

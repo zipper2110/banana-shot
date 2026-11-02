@@ -21,6 +21,22 @@ class VideoProblemTest {
     }
 
     @Test
+    fun aLibraryThatMacosRefusesNamesMacosSecurity() {
+        // The dyld text of an unsigned libmpv.2.dylib on macOS 27.
+        val cause = UnsatisfiedLinkError(
+            "dlopen(/Applications/BananaShot.app/Contents/natives/macos-arm64/mpv/libmpv.dylib, 0x0006): tried: " +
+                "'/Applications/BananaShot.app/Contents/natives/macos-arm64/mpv/libmpv.2.dylib' (missing code signature)",
+        )
+
+        val problem = VideoProblem.previewFailure(cause, null, osName = "Mac OS X")
+
+        assertEquals(VideoProblem.PREVIEW_BLOCKED_MAC.title, problem.title)
+        assertTrue("code signature" in problem.explanation)
+        assertTrue(problem.reportable)
+        assertEquals(VideoProblem.PREVIEW_FAILED.title, VideoProblem.previewFailure(cause, null, osName = "Linux").title)
+    }
+
+    @Test
     fun otherLoadErrorsAreAFailureOfTheApplication() {
         assertEquals(VideoProblem.PREVIEW_FAILED.title, VideoProblem.previewFailure(null, 126).title)
         assertEquals(VideoProblem.PREVIEW_FAILED.title, VideoProblem.previewFailure(IOException("gpu"), null).title)

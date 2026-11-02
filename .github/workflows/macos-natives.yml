@@ -1,0 +1,55 @@
+name: macOS natives
+
+# Builds the pinned libmpv and FFmpeg for macOS arm64 from source (B-13) and uploads the files of a
+# natives release as a workflow artifact. A person makes the natives release from the artifact
+# ("Natives release" in distribution/macos/README.md). Run it only when a pin in
+# distribution/macos/build-natives.sh changes.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # An Apple Silicon runner with macOS 15, the minimum macOS version of the app. The script starts
+    # libmpv once, so the run also shows that libmpv loads on macOS 15.
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the build tools
+        # The build tools are not in the output. The script refuses to link a library of Homebrew.
+        run: |
+          for tool in meson ninja cmake; do
+            command -v "$tool" >/dev/null || brew install "$tool"
+          done
+          command -v pkgconf >/dev/null || command -v pkg-config >/dev/null || brew install pkgconf
+          sw_vers
+          clang --version | head -1
+          swiftc --version 2>&1 | head -1
+
+      - name: Build and check the native files
+        run: distribution/macos/build-natives.sh --package
+
+      - name: Write the checksums to the job summary
+        run: |
+          {
+            echo "### macOS natives"
+            echo
+            echo '```'
+            cat target/native-build/macos/release/SHA256SUMS.txt
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the natives release files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: macos-natives-${{ github.run_number }}
+          path: target/native-build/macos/release/
+          if-no-files-found: error
+          retention-days: 30

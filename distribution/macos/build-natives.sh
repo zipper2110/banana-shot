@@ -8,7 +8,11 @@
 #   mpv/libMoltenVK.dylib  The Vulkan driver of mpv (vo=gpu-next, gpu-api=vulkan).
 #   ffmpeg/bin/ffmpeg      GPL FFmpeg with libx264, libass, and VideoToolbox. The export
 #   ffmpeg/bin/ffprobe     runs these programs as separate processes.
-#   LICENSES/, BUILD-INFO.txt
+#   mpv/LICENSES, ffmpeg/LICENSES, and BUILD-INFO.txt in each folder.
+#
+# With --package, the script also makes the files of a natives release in
+# target/native-build/macos/release: one archive for libmpv, one for FFmpeg, one archive with the
+# corresponding source, and SHA256SUMS.txt.
 #
 # The app is not GPL (Elastic License 2.0). libmpv runs in the process of the app, so libmpv and
 # all the code in it must be LGPL or more permissive (mpv -Dgpl=false, FFmpeg without --enable-gpl).
@@ -19,7 +23,7 @@
 # They are not in the output. The script refuses to link a library of Homebrew.
 #
 # Needs: Xcode Command Line Tools (clang, swiftc), and brew install meson ninja cmake pkgconf
-# Usage: distribution/macos/build-natives.sh [--clean]
+# Usage: distribution/macos/build-natives.sh [--clean] [--package]
 set -euo pipefail
 
 DEPLOYMENT_TARGET="15.0"
@@ -63,11 +67,20 @@ if [[ "$(uname -s)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
   echo "This script is for an Apple Silicon Mac." >&2
   exit 1
 fi
-for tool in meson ninja cmake pkgconf clang swiftc; do
+for tool in meson ninja cmake clang swiftc; do
   command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done
 
-if [[ "${1:-}" == "--clean" ]]; then
+CLEAN=false
+PACKAGE=false
+for arg in "$@"; do
+  case "$arg" in
+    --clean) CLEAN=true ;;
+    --package) PACKAGE=true ;;
+    *) echo "Unknown option: $arg" >&2; exit 1 ;;
+  esac
+done
+if $CLEAN; then
   rm -rf "$BUILD" "$STAMPS" "$DEPS" "$LGPL" "$GPL" "$WORK/prefix-mpv"
 fi
 mkdir -p "$SRC" "$BUILD" "$STAMPS"
@@ -79,7 +92,9 @@ export CFLAGS="$ARCH_FLAGS -O2 -I$DEPS/include"
 export CXXFLAGS="$CFLAGS"
 export LDFLAGS="$ARCH_FLAGS -L$DEPS/lib"
 # Only our own .pc files. Homebrew .pc files must not be found.
-export PKG_CONFIG="$(command -v pkgconf)"
+PKG_CONFIG="$(command -v pkgconf || command -v pkg-config || true)"
+[[ -n "$PKG_CONFIG" ]] || { echo "Missing build tool: pkgconf" >&2; exit 1; }
+export PKG_CONFIG
 export PKG_CONFIG_LIBDIR="$DEPS/lib/pkgconfig"
 unset PKG_CONFIG_PATH CPATH LIBRARY_PATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH
 # CMake must not find the packages of Homebrew.
@@ -312,7 +327,7 @@ build_mpv() {
 # --- Output and checks -------------------------------------------------------------------------
 assemble() {
   rm -rf "$OUT/mpv" "$OUT/ffmpeg" "$OUT/LICENSES" "$OUT/BUILD-INFO.txt"
-  mkdir -p "$OUT/mpv" "$OUT/ffmpeg/bin" "$OUT/LICENSES"
+  mkdir -p "$OUT/mpv/LICENSES" "$OUT/ffmpeg/bin" "$OUT/ffmpeg/LICENSES"
 
   local lib="$OUT/mpv/libmpv.2.dylib"
   cp "$WORK/prefix-mpv/lib/libmpv.2.dylib" "$lib"
@@ -338,21 +353,26 @@ assemble() {
 }
 
 copy_licenses() {
-  local l="$OUT/LICENSES"
+  # The libraries in both folders: libass and its font libraries.
+  local l
+  for l in "$OUT/mpv/LICENSES" "$OUT/ffmpeg/LICENSES"; do
+    cp "$BUILD/ffmpeg-9.0.2/LICENSE.md" "$l/FFmpeg-LICENSE.md"
+    cp "$BUILD/libass-0.17.5/COPYING" "$l/libass-ISC.txt"
+    cp "$BUILD/freetype-2.15.0/docs/FTL.TXT" "$l/FreeType-FTL.txt"
+    cp "$BUILD/fribidi-1.0.18/COPYING" "$l/FriBidi-LGPL-2.1.txt"
+    cp "$BUILD/harfbuzz-15.0.0/COPYING" "$l/HarfBuzz-MIT.txt"
+  done
+  l="$OUT/mpv/LICENSES"
   cp "$BUILD/mpv-0.41.0/LICENSE.LGPL" "$l/mpv-LGPL-2.1.txt"
   cp "$BUILD/mpv-0.41.0/Copyright" "$l/mpv-Copyright.txt"
   cp "$BUILD/ffmpeg-9.0.2/COPYING.LGPLv2.1" "$l/FFmpeg-LGPL-2.1.txt"
-  cp "$BUILD/ffmpeg-9.0.2/COPYING.GPLv2" "$l/FFmpeg-GPL-2.0.txt"
-  cp "$BUILD/ffmpeg-9.0.2/LICENSE.md" "$l/FFmpeg-LICENSE.md"
   cp "$BUILD/libplacebo/LICENSE" "$l/libplacebo-LGPL-2.1.txt"
-  cp "$BUILD/libass-0.17.5/COPYING" "$l/libass-ISC.txt"
-  cp "$BUILD/freetype-2.15.0/docs/FTL.TXT" "$l/FreeType-FTL.txt"
-  cp "$BUILD/fribidi-1.0.18/COPYING" "$l/FriBidi-LGPL-2.1.txt"
-  cp "$BUILD/harfbuzz-15.0.0/COPYING" "$l/HarfBuzz-MIT.txt"
   cp "$BUILD/lcms2-2.19.1/LICENSE" "$l/LittleCMS-MIT.txt"
   cp "$BUILD/glslang-16.6.0/LICENSE.txt" "$l/glslang-LICENSE.txt"
   cp "$BUILD/Vulkan-Headers-1.4.363.0/LICENSE.md" "$l/Vulkan-Headers-LICENSE.md"
   cp "$DEPS/share/vulkan/MoltenVK-LICENSE" "$l/MoltenVK-Apache-2.0.txt"
+  l="$OUT/ffmpeg/LICENSES"
+  cp "$BUILD/ffmpeg-9.0.2/COPYING.GPLv2" "$l/FFmpeg-GPL-2.0.txt"
   cp "$BUILD/x264/COPYING" "$l/x264-GPL-2.0.txt"
 }
 
@@ -362,6 +382,9 @@ write_build_info() {
     echo "BananaShot native files for macOS arm64 (B-13)"
     echo "Built with distribution/macos/build-natives.sh, minimum macOS $DEPLOYMENT_TARGET"
     echo "Built on: macOS $(sw_vers -productVersion), $(clang --version | head -1)"
+    if [[ -n "${GITHUB_RUN_ID:-}" ]]; then
+      echo "Built by: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID (commit $GITHUB_SHA)"
+    fi
     echo
     echo "libmpv (mpv/libmpv.2.dylib): LGPL-2.1-or-later. mpv -Dgpl=false. It contains FFmpeg"
     echo "(LGPL, no --enable-gpl), libplacebo, libass, FreeType, FriBidi, HarfBuzz, Little CMS,"
@@ -376,7 +399,41 @@ write_build_info() {
     echo
     echo "FFmpeg configuration of the programs:"
     "$OUT/ffmpeg/bin/ffmpeg" -hide_banner -buildconf 2>/dev/null | sed -n '2,$p' | sed 's/^ */  /'
-  } >"$OUT/BUILD-INFO.txt"
+  } >"$OUT/mpv/BUILD-INFO.txt"
+  cp "$OUT/mpv/BUILD-INFO.txt" "$OUT/ffmpeg/BUILD-INFO.txt"
+}
+
+# --- Natives release files ---------------------------------------------------------------------
+package() {
+  local release="$WORK/release" entry name version url file
+  rm -rf "$release"; mkdir -p "$release"
+
+  # tar keeps the libmpv.dylib link. COPYFILE_DISABLE: no macOS metadata files in the archives.
+  export COPYFILE_DISABLE=1
+  tar -C "$OUT" -cJf "$release/libmpv-v0.41.0-macos-arm64.tar.xz" mpv
+  tar -C "$OUT" -cJf "$release/ffmpeg-9.0.2-macos-arm64.tar.xz" ffmpeg
+
+  # The corresponding source: the pinned tarballs, the Git sources with their submodules, and
+  # this script. The MoltenVK file is a binary release (Apache-2.0), so it is not in the archive.
+  local stage="$WORK/source-stage"
+  rm -rf "$stage"; mkdir -p "$stage/sources"
+  for entry in "${TARBALLS[@]}"; do
+    name="$(field "$entry" 1)"; version="$(field "$entry" 2)"; url="$(field "$entry" 3)"
+    [[ "$name" == "MoltenVK" ]] && continue
+    file="$(archive_file "$url" "$name" "$version")"
+    cp "$file" "$stage/sources/"
+  done
+  for entry in "${GIT_SOURCES[@]}"; do
+    name="$(field "$entry" 1)"
+    tar -C "$SRC" --exclude .git -cJf "$stage/sources/$name-$(field "$entry" 4).tar.xz" "$name"
+  done
+  cp "$0" "$stage/build-natives.sh"
+  cp "$OUT/mpv/BUILD-INFO.txt" "$stage/BUILD-INFO.txt"
+  tar -C "$stage" -cf "$release/natives-macos-arm64-source.tar" .
+  rm -rf "$stage"
+
+  (cd "$release" && shasum -a 256 ./*.tar* | sed 's| \./| |' >SHA256SUMS.txt)
+  cat "$release/SHA256SUMS.txt"
 }
 
 verify() {
@@ -457,5 +514,9 @@ log "Output"
 assemble
 log "Checks"
 verify
+if $PACKAGE; then
+  log "Package"
+  package
+fi
 echo
 echo "The native files are in $OUT"

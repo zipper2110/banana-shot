@@ -898,6 +898,17 @@ uninstall.
   needs the Accessibility permission on macOS. Verify if the hosted runner
   gives it. If not, run only the headless tests in CI and run the UI flow
   tests on a Mac by hand.
+- **Result of the CI step (2026-11-03).** The job `macos-test` of
+  `ci.yml` runs on `macos-15`. It gets the pinned native files with
+  `get-native-dependencies.sh` and runs `mvn -B test`. The second run passed
+  1794 tests (8 skipped), also the VideoToolbox export and the mpv start
+  with a non-C locale. Three tests failed on a Mac before: two expected
+  Windows paths or Windows fonts, and one showed that the file lock key
+  must ignore the case of the letters on macOS too. The first run crashed
+  once in `OverrideScoreDialogTest` (SIGABRT, exit code 134), and the next
+  run passed. If the crash comes back, the step "Show the output of a
+  crashed test process" prints its output. The robot tests of the
+  `ui-flow` profile do not run in CI.
 - **Release:** add a `macos-installer` job to the release workflow, or a new
   `macos-release.yml`. It runs the tests, gets the natives, builds the app
   image, validates it, runs the diagnostics, signs, notarizes, staples,
@@ -947,7 +958,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
-| 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Not started |
+| 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). Not done: the robot tests of `ui-flow` on macOS |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | In progress (see "Result of step 11 so far"). Done: the Developer ID signature, the scripts of the notarization, the Velopack installer, and the signature check, and "Update and restart" on macOS. To do: the notarization result and the install and update checks by hand |
 | 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | Not started |

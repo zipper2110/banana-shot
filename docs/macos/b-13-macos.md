@@ -610,10 +610,11 @@ are already notarized still open. A new version cannot be signed until the
 membership is renewed.
 
 Status: the enrollment was sent on 2026-11-02. Apple approved it on
-2026-11-02. Steps 2 to 4 are done (2026-11-02). The Developer ID Application
-certificate expires on 2027-12-02. Make a new one before that date. Next: the
-author installs the intermediate certificate (see the check below), then does
-steps 5 and 6.
+2026-11-02. Steps 1 to 6 are done (2026-11-02). The six secrets are in the
+`macos-release` environment. The development Mac has a valid Developer ID
+Application identity and a valid Developer ID Installer identity. The Developer
+ID Application certificate expires on 2027-12-02. Make a new one before that
+date, and update the two `MACOS_SIGNING_P12_*` secrets.
 
 The author does these steps. Do not put the certificate, the key, or the
 passwords in a chat, a file of the repository, or a log.
@@ -663,7 +664,11 @@ Application" as a valid identity.
   the Apple intermediate certificate "Developer ID Certification Authority"
   (G2). Get "Developer ID - G2" (`DeveloperIDG2CA.cer`) from
   apple.com/certificateauthority and install it in the login keychain with
-  a double-click. This was the state on 2026-11-02.
+  a double-click. The intermediate was installed on 2026-11-02.
+- On the development Mac, select the identity by its SHA-1 hash, not by its
+  name (`security find-identity -v -p codesigning` shows the hash). Then a
+  copy of the certificate in a second keychain cannot make the name
+  ambiguous.
 - Keep the Developer ID certificates only in the login keychain. On
   2026-11-02, a copy of each certificate was also in the System keychain.
   If `codesign` tells that the identity is "ambiguous", delete the copies in
@@ -795,7 +800,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 |---|---|---|---|---|
 | 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike") |
 | 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. Still to do: deploy the analytics Worker and the cockpit (step 12) |
-| 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | In progress. Approved on 2026-11-02. The certificates and the `.p12` export are done. To do (the author): the intermediate certificate, the API key, and the secrets of the `macos-release` environment (steps 5 and 6) |
+| 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | Done on 2026-11-02. The certificates, the API key, and the six secrets of the `macos-release` environment are in place. The Application certificate expires on 2027-12-02. Not tested yet: a real signature and a notarization (step 11) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |

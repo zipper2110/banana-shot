@@ -844,9 +844,12 @@ The checks for Velopack on macOS:
 - **Notarization.** `notarize.sh` sends the bundle with `notarytool` and
   staples the ticket. On the development Mac, the login is the keychain
   profile `bananashot-notary` (`xcrun notarytool store-credentials`). The
-  CI uses the API key secrets. The first submission (2026-11-02 20:35 UTC)
-  was still "In Progress" after 40 minutes. A first submission of a new
-  team can take hours.
+  CI uses the API key secrets. Apple accepted the first submission
+  (2026-11-02 20:35 UTC, ID 70b3f395-b964-4441-bdbc-722b05a5b890) after about
+  3 hours ("Accepted", no problems). A first submission of a new team takes
+  long. notarytool keeps the profile in the data protection keychain:
+  `security` does not list it, and notarytool cannot read it while the Mac
+  is locked ("No Keychain password item found").
 - **Velopack.** `vpk` 1.2.161 (the version of Windows) runs on macOS with
   .NET 10 (`brew install dotnet`, `DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec`).
   `build-velopack-release.sh` makes `BananaShot-osx-Setup.pkg`,
@@ -881,7 +884,7 @@ The checks for Velopack on macOS:
   the seal of the bundle cannot match there. The script checks only the
   files of that package.
 
-Still to do in step 11: the notarization result, a notarized `.pkg`
+Still to do in step 11: a notarized bundle and `.pkg` of the current build
 (`build-velopack-release.sh --notary-profile`), and the checks of "Installer
 and update" by hand: the install with no Gatekeeper warning, an update from
 the previous version, a moved app, no administrator rights, and the

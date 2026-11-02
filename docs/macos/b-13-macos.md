@@ -297,18 +297,22 @@ Test on the M1 (macOS 27.2) with the new files:
   "Metal does not support disabling primitive restart" to stderr. The
   Homebrew build does not show it. The picture is correct.
 
-Not verified yet:
+The workflow "macOS natives" (`.github/workflows/macos-natives.yml`) runs
+the script on a `macos-15` runner and uploads the release files as an
+artifact. The first run on 2026-11-02 took 14 minutes on macOS 15.8.2
+(Apple clang 17, Swift 6.1.2). All checks passed, and libmpv started. Thus
+macOS 15 has all the system libraries that libmpv links (also the Swift
+libraries). The files of that run also pass the diagnostics and the export
+tests on the M1 with macOS 27.2.
 
-- The files on a Mac with macOS 15. libmpv links Swift libraries of the
-  system (for example `libswift_Builtin_float.dylib`). Make sure that macOS
-  15 has all of them.
-- A build on a clean GitHub macOS runner.
+Not verified yet: the live preview on a Mac with macOS 15.
 
 ### Manifest and natives release
 
 - Add `distribution/macos/native-dependencies.json` with the same schema:
   version, URL, SHA-256, source URL, and source SHA-256 for each file. Set
-  `architecture` to `macos-arm64`.
+  `architecture` to `macos-arm64`. The steps are in "Natives release" in
+  `distribution/macos/README.md`.
 - Add the macOS files and their source archives to a new natives release
   (for example `natives-2026-11`). Follow the steps of "Natives release" in
   `distribution/windows/README.md`. Do not delete `natives-2026-09`.
@@ -756,7 +760,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike") |
 | 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. Still to do: deploy the analytics Worker and the cockpit (step 12) |
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | In progress. Enrollment sent on 2026-11-02. Approval pending |
-| 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | In progress. Done on 2026-11-02: `build-natives.sh` builds them from pinned sources (see "Result of the build script"). To do: a source archive, a GitHub Actions job that runs the script, the manifest, `get-native-dependencies.sh`, the natives release, `THIRD-PARTY-NOTICES.txt`, and a test on macOS 15 |
+| 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | In progress. Done on 2026-11-02: `build-natives.sh` (the build, the checks, and the release files with the source archive), the workflow "macOS natives" (it passes on macOS 15), `get-native-dependencies.sh`, and `distribution/macos/README.md`. To do: publish the natives release, then add `native-dependencies.json` and the macOS part of `THIRD-PARTY-NOTICES.txt` |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Partly done. Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the architecture and libmpv checks of the diagnostics. To do: the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, the proxy comments, the B-42 checks on a Mac |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Not started |

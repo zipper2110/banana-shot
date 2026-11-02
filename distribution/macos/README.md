@@ -54,7 +54,9 @@ this repository. Make a new natives release only when a pin in
 `build-natives.sh` changes.
 
 1. On GitHub, open Actions → "macOS natives" → "Run workflow". The workflow
-   builds the files on a macOS 15 runner (about 15 minutes).
+   builds the files on a macOS 15 runner (about 15 minutes). If the run
+   stops with "The job was not acquired by Runner", GitHub had no free macOS
+   runner. Run it again later.
 2. When the run is complete, download the artifact `macos-natives-<number>`
    and extract it. It contains the three archives, `SHA256SUMS.txt`, and
    `README.txt`.

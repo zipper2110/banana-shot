@@ -216,7 +216,8 @@ SIGN_OPTIONS=(--force --timestamp=none --sign "$IDENTITY")
 if [[ "$IDENTITY" != "-" ]]; then
   SIGN_OPTIONS=(--force --timestamp --options runtime --sign "$IDENTITY")
 fi
-is_macho() { file -b "$1" | grep -q "Mach-O"; }
+# grep reads a variable, not a pipe: with pipefail, "cmd | grep -q" fails when grep stops early and cmd gets SIGPIPE.
+is_macho() { local type; type="$(file -b "$1")"; [[ "$type" == *Mach-O* ]]; }
 
 # 1. Each Mach-O file except the launcher: the runtime, the native files, ffmpeg, and ffprobe. The programs of
 #    the runtime (bin/java) start a JVM, so they get the entitlements of the JVM. With the hardened runtime and no

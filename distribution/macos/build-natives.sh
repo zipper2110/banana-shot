@@ -480,7 +480,8 @@ package() {
 verify() {
   local failed=0 file minos deps
   while IFS= read -r file; do
-    file -b "$file" | grep -q "Mach-O" || continue
+    # A variable, not a pipe: with pipefail, "cmd | grep -q" fails when grep stops early.
+    [[ "$(file -b "$file")" == *Mach-O* ]] || continue
     if [[ "$(lipo -archs "$file")" != "arm64" ]]; then
       echo "Not arm64 only: $file ($(lipo -archs "$file"))" >&2; failed=1
     fi
@@ -502,7 +503,7 @@ verify() {
   grep -qw "subtitles" <<<"$filters" || { echo "No subtitles filter." >&2; failed=1; }
   grep -qw "libx264" <<<"$encoders" || { echo "No libx264 encoder." >&2; failed=1; }
   grep -qw "h264_videotoolbox" <<<"$encoders" || { echo "No VideoToolbox encoder." >&2; failed=1; }
-  if "$OUT/ffmpeg/bin/ffmpeg" -hide_banner -buildconf | grep -q -- "--enable-nonfree"; then
+  if grep -q -- "--enable-nonfree" <<<"$("$OUT/ffmpeg/bin/ffmpeg" -hide_banner -buildconf)"; then
     echo "FFmpeg must not have --enable-nonfree." >&2; failed=1
   fi
 

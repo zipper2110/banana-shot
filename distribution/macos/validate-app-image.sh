@@ -128,7 +128,9 @@ for path in mpv/libmpv.dylib mpv/libmpv.2.dylib mpv/libMoltenVK.dylib ffmpeg/bin
   [[ -e "$NATIVES/$path" ]] || fail "The native file is missing: $NATIVES/$path"
 done
 for jar in "$CONTENTS/app"/*.jar; do
-  if unzip -Z1 "$jar" | grep -qE '\.(dylib|jnilib)$'; then
+  # A variable, not a pipe: with pipefail, "unzip | grep -q" fails when grep stops early, and the check then misses
+  # the file.
+  if grep -qE '\.(dylib|jnilib)$' <<<"$(unzip -Z1 "$jar")"; then
     fail "The JAR has a macOS native file. Notarization refuses it: $jar"
   fi
 done
@@ -139,7 +141,7 @@ done
 # --- Code signature ----------------------------------------------------------------------------
 UNSIGNED=""
 while IFS= read -r -d '' file; do
-  if file -b "$file" | grep -q "Mach-O"; then
+  if [[ "$(file -b "$file")" == *Mach-O* ]]; then
     [[ "$(lipo -archs "$file")" == "arm64" ]] || fail "Not arm64 only: $file"
     codesign --verify --strict "$file" 2>/dev/null || UNSIGNED+="$file"$'\n'
   fi

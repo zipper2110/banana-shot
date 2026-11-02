@@ -26,7 +26,9 @@ fail() { echo "$*" >&2; exit 1; }
 
 [[ -d "$APP" ]] || fail "The app bundle was not found: $APP"
 codesign --verify --deep --strict "$APP" || fail "The signature of the app bundle is not valid."
-codesign -dvv "$APP" 2>&1 | grep -q "^Authority=Developer ID Application" \
+# Read the text first: with pipefail, "codesign | grep -q" fails when grep stops early and codesign gets SIGPIPE.
+SIGNATURE="$(codesign -dvv "$APP" 2>&1)"
+grep -q "^Authority=Developer ID Application" <<<"$SIGNATURE" \
   || fail "The app bundle has no Developer ID signature. Build it with build-app-image.sh --sign <identity>."
 
 WORK="$(mktemp -d)"

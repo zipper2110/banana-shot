@@ -618,15 +618,20 @@ passwords in a chat, a file of the repository, or a log.
 1. Enroll on developer.apple.com/programs/enroll, or in the Apple Developer
    app from the App Store. Pay the fee. Wait for the e-mail "Welcome to the
    Apple Developer Program". The Team ID is on the Membership page.
-2. Make a certificate request. In Keychain Access, select Certificate
-   Assistant → Request a Certificate From a Certificate Authority. Select
-   "Saved to disk". The private key stays in the login keychain. The
-   development Mac has no Xcode, so do not use the Xcode steps.
+2. Make two certificate requests (CSR), one for each certificate. Apple
+   refuses a CSR that already made a certificate ("An attribute specified
+   more than once"). In Keychain Access, select Certificate Assistant →
+   Request a Certificate From a Certificate Authority. Select "Saved to
+   disk". Do this two times, and give the files different names (for example
+   `developer-id-application.certSigningRequest` and
+   `developer-id-installer.certSigningRequest`). The private keys stay in the
+   login keychain. The development Mac has no Xcode, so do not use the Xcode
+   steps.
 3. On developer.apple.com, go to Certificates, IDs & Profiles →
-   Certificates → +. Make a "Developer ID Application" certificate and a
-   "Developer ID Installer" certificate (G2 Sub-CA) with the request. The
-   Velopack `.pkg` needs the Installer certificate. Install the two `.cer`
-   files with a double-click.
+   Certificates → +. Make a "Developer ID Application" certificate with the
+   first CSR. Then make a "Developer ID Installer" certificate with the
+   second CSR. Select the G2 Sub-CA for both. The Velopack `.pkg` needs the
+   Installer certificate. Install the two `.cer` files with a double-click.
 4. In Keychain Access, open login → My Certificates. Export the two
    Developer ID items as one `.p12` file with a strong password. Keep the
    file and the password in a password manager.

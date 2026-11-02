@@ -16,6 +16,12 @@ The public site of BananaShot: `https://banana-shot-editor.app/`. B-10 in
   and the URL.
 - Each page has its own copy of the header and the footer. When you add a
   page or change a link, change all pages, `404.html`, and `sitemap.xml`.
+- The root has icon files at fixed paths: `favicon.ico` (16, 32, and
+  48 px), `apple-touch-icon.png`, and `apple-touch-icon-precomposed.png`
+  (180 px). Browsers, link previews, and crawlers ask for these paths even
+  when a page does not link to them. Without the files, each request got
+  the 404 page (B-58). The source is `design/app-icon/`. When the app
+  icon changes, make these files again.
 - The guides are in `public/guides/<name>/index.html`. When you add a guide,
   add it to the list on `public/guides/index.html` and to `sitemap.xml`.
   The rules for the text are in `docs/marketing/seo.md`, section 6.

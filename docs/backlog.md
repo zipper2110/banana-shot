@@ -323,20 +323,6 @@ When item is done, move it under
 - Done when: each block of the list has a class, and each "Show" and "Log"
   block is fixed.
 
-### B-58 Analyze the 404 requests of the site
-
-- Get the list of the requests to the landing site that got a 404 page. The
-  404 page sends its path to the counter (`data-path` in
-  `site/public/assets/count.js`), and the site Worker reports the HTML
-  requests to the analytics Worker. Also look at the Cloudflare analytics of
-  the zone.
-- Put the paths in groups: old or wrong links to our pages, links from other
-  sites, bots and scanners (for example `/wp-admin`), and other.
-- For each group, find out if an action is useful. Examples: a redirect to
-  the correct page, a fix of a wrong link, a new page, or no action.
-- Done when: the groups and the decision for each group are in this item, and
-  the useful actions are new tasks or new backlog items.
-
 ### B-60 Feature demos with different sports
 
 - Added on 2026-10-29.

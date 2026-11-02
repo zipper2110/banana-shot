@@ -62,3 +62,13 @@ jobs:
 
       - name: Build and run tests
         run: mvn -B test
+
+      - name: Show the output of a crashed test process
+        # surefire keeps the output of a test JVM that crashed in .dumpstream files, and the JVM writes hs_err files.
+        if: failure()
+        run: |
+          for file in target/surefire-reports/*.dumpstream hs_err_pid*.log target/surefire-reports/*-output.txt; do
+            [ -f "$file" ] || continue
+            echo "===== $file"
+            tail -n 120 "$file"
+          done

@@ -7,6 +7,10 @@ The list comes from a review of the code on 2026-10-08 (version
 `1.0.1-SNAPSHOT`). Items with "Verify" are not tested yet. Do a test of each
 of them on a Mac before you start the related work.
 
+The status of each step is in "Order of the work" at the end of this file.
+Read it at the start of a work session. Update it when you finish or start a
+step, in the same commit as the work.
+
 ## Decisions
 
 The author made these decisions on 2026-10-08:
@@ -179,7 +183,10 @@ Test Mac: MacBook Air M1, macOS 27.2, JDK 27, Homebrew mpv 0.41.0.
 - Not verified yet (the test shell has no Screen Recording and no
   Accessibility permission): the picture on the screen, the mouse input
   through the mpv window, Swing popups and dialogs over the video, full
-  screen, and two displays.
+  screen, and two displays. For these checks, give the Screen Recording and
+  the Accessibility permission to the app that runs the test (for example
+  the terminal or the Claude app) in System Settings → Privacy & Security.
+  Then restart that app.
 - Risk: mpv calls `DispatchQueue.main.sync` when it makes and closes its
   window. The app closes mpv on a separate thread. `mpv_initialize` still
   runs on the event dispatch thread. If the main thread waits for the event
@@ -479,6 +486,12 @@ a small `MacIntegration` class that runs only on macOS:
 - Add `distribution/macos/validate-app-image.sh` with the same checks as
   `Validate-AppImage.ps1` (version, build and expiry dates, runtime
   modules, feedback and analytics properties).
+- Until the Developer ID certificate exists, sign the bundle with an ad-hoc
+  signature (`codesign -s -`), from the inside to the outside. An Apple
+  Silicon Mac does not run arm64 code with no signature. An ad-hoc bundle
+  opens on the development Mac. Gatekeeper blocks it on other Macs. Make the
+  signing identity a parameter of the script, so that step 11 only gives
+  the Developer ID.
 
 ### Architecture
 
@@ -510,13 +523,62 @@ contain more new Macs than the average.
   the major macOS version to the analytics only with a change of the
   contract and the privacy notice.
 
+### Apple Developer account
+
+Signing and notarization need a paid Apple Developer Program membership
+(99 USD for each year). A free Apple Account cannot make a Developer ID
+certificate and cannot notarize. If the membership stops, the versions that
+are already notarized still open. A new version cannot be signed until the
+membership is renewed.
+
+Status: the enrollment was sent on 2026-11-02. Approval is pending. Update
+this line and step 3 of "Order of the work" when Apple approves it.
+
+The author does these steps. Do not put the certificate, the key, or the
+passwords in a chat, a file of the repository, or a log.
+
+1. Enroll on developer.apple.com/programs/enroll, or in the Apple Developer
+   app from the App Store. Pay the fee. Wait for the e-mail "Welcome to the
+   Apple Developer Program". The Team ID is on the Membership page.
+2. Make a certificate request. In Keychain Access, select Certificate
+   Assistant → Request a Certificate From a Certificate Authority. Select
+   "Saved to disk". The private key stays in the login keychain. The
+   development Mac has no Xcode, so do not use the Xcode steps.
+3. On developer.apple.com, go to Certificates, IDs & Profiles →
+   Certificates → +. Make a "Developer ID Application" certificate and a
+   "Developer ID Installer" certificate (G2 Sub-CA) with the request. The
+   Velopack `.pkg` needs the Installer certificate. Install the two `.cer`
+   files with a double-click.
+4. In Keychain Access, open login → My Certificates. Export the two
+   Developer ID items as one `.p12` file with a strong password. Keep the
+   file and the password in a password manager.
+5. In App Store Connect, go to Users and Access → Integrations → App Store
+   Connect API → Team Keys. Make a key with the "Developer" access for
+   notarization. Download the `.p8` file at once. Apple lets you download it
+   only one time. Write down the Key ID and the Issuer ID.
+6. Put the values in the secrets of a new `macos-release` GitHub
+   environment. The release workflow (step 12) will use these names:
+
+   | Secret | Value |
+   |---|---|
+   | `MACOS_SIGNING_P12_BASE64` | The `.p12` file as base64 (`base64 -i file.p12`) |
+   | `MACOS_SIGNING_P12_PASSWORD` | The password of the `.p12` file |
+   | `APPLE_API_KEY_P8` | The text of the `.p8` file |
+   | `APPLE_API_KEY_ID` | The Key ID |
+   | `APPLE_API_ISSUER_ID` | The Issuer ID |
+   | `APPLE_TEAM_ID` | The Team ID |
+
+To check that the certificates are installed on the development Mac, run
+`security find-identity -v -p codesigning`. It must show "Developer ID
+Application". On 2026-11-02 it shows 0 identities.
+
 ### Code signing and notarization
 
-Without signing and notarization, Gatekeeper blocks the app.
+Without signing and notarization, Gatekeeper blocks the app. Since macOS 15,
+a user cannot open a blocked app with right-click → Open. The user must go to
+System Settings → Privacy & Security → "Open Anyway".
 
-- Join the Apple Developer Program (99 USD for each year). Make a
-  "Developer ID Application" certificate. Make a "Developer ID Installer"
-  certificate if we ship a `.pkg`.
+- Get the certificates and the API key (see "Apple Developer account").
 - Sign each Mach-O file in the bundle: each dylib, `ffmpeg`, `ffprobe`, the
   JDK runtime files, and the app launcher. Sign from the inside to the
   outside. Use the hardened runtime (`--options runtime`).
@@ -532,9 +594,10 @@ Without signing and notarization, Gatekeeper blocks the app.
   `-Djna.library.path` to the libmpv folder.
 - Send the result to Apple with `xcrun notarytool submit --wait`. Then
   attach the ticket with `xcrun stapler staple`.
-- Store the certificate (`.p12`), its password, and the App Store Connect
-  API key as secrets of a new `macos-release` GitHub environment. Only the
-  macOS build job gets them, as in the Windows workflow (B-27).
+- Read the certificate, its password, and the App Store Connect API key
+  from the `macos-release` GitHub environment (see "Apple Developer
+  account"). Only the macOS build job gets them, as in the Windows workflow
+  (B-27).
 - Add `distribution/macos/test-release-signatures.sh` with
   `codesign --verify --deep --strict` and `spctl --assess`.
 
@@ -624,23 +687,36 @@ The checks for Velopack on macOS:
 
 ## Order of the work
 
-1. **Bundled fonts** (about 1 week). Section 5. Do this on Windows and
-   release it in a Windows version. It does not need a Mac.
-2. **Preview spike** (1 to 2 weeks). Select the embed method. If no method
-   passes the checks, stop and tell the author before more work.
-3. **Apple Developer account.** Start early. The approval can take days.
-4. **Native files** (1 to 2 weeks). Build or select libmpv and FFmpeg for
-   macOS arm64. Make the manifest, the script, and the natives release.
-5. **Runtime layout and platform services** (about 1 week). Sections 3 and
-   6. The app starts from source on a Mac with export and the preview.
-6. **Preview implementation** (1 to 2 weeks). The method of the spike, with
-   all overlays and input.
-7. **Export** (a few days). Section 4.
-8. **macOS app behavior** (a few days). Section 7.
-9. **Packaging, signing, update** (1 to 2 weeks). Section 8. Do the
-   Velopack checks first.
-10. **CI, release, site, and texts** (about 1 week). Sections 9 and 10.
-11. **Beta.** Give a build to a few Mac users before the public release.
+Status on 2026-11-02. Update this table when a step changes.
+
+The column "Apple account" tells if the step needs the approved Apple
+Developer account. Do the steps with "No" while Apple reviews the enrollment.
+
+| # | Step | Size | Apple account | Status |
+|---|---|---|---|---|
+| 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike") |
+| 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. Still to do: deploy the analytics Worker and the cockpit (step 12) |
+| 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | In progress. Enrollment sent on 2026-11-02. Approval pending |
+| 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Not started. `distribution/macos/build-dev-ffmpeg.sh` makes a development FFmpeg only. It links Homebrew libraries |
+| 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Partly done. Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store. To do: the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, the proxy comments, the B-42 checks on a Mac |
+| 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
+| 7 | **macOS app behavior.** Section 7 | A few days | No | Not started |
+| 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Not started. Needs step 4 |
+| 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Not started |
+| 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
+| 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Not started. Needs steps 3 and 8. Do the Velopack checks first |
+| 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | Not started |
+| 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
+
+Notes on the order:
+
+- Step 4 is first of the open steps, because the app bundle (step 8), the
+  signing (step 11), and the release workflow (step 12) need the pinned
+  native files.
+- The first order of 2026-10-08 had the fonts first. The fonts can start at
+  any time. They must only be in a Windows release before the macOS release.
+- If the preview implementation (step 6) finds a problem that the child
+  window cannot solve, stop and tell the author before more work.
 
 ## Costs
 

@@ -620,8 +620,10 @@ are in `distribution/macos/README.md`.
   `LC_NUMERIC` to "C" before each `mpv_create` (not on Windows).
   `MpvLocaleStartTest` starts mpv with a Russian locale.
 
-Not verified yet: the live preview and an export in the bundle after the
-locale fix (open a project by hand), a Developer ID signature with the
+After the locale fix, the author opened a project in the bundle from the
+Dock on 2026-11-02: the video plays in the preview.
+
+Not verified yet: an export in the bundle, a Developer ID signature with the
 hardened runtime (step 11), and a build with JDK 25.
 
 ### Architecture
@@ -858,7 +860,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Not started |
-| 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). Not verified yet: the preview and an export in the bundle |
+| 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview plays in the bundle. Not verified yet: an export in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Not started |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Not started. Needs steps 3 and 8. Do the Velopack checks first |

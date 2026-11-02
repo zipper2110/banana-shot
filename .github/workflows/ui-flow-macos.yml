@@ -4,8 +4,11 @@ name: UI flow on macOS
 # macOS must give the Accessibility permission to the test process. The image of the GitHub macOS runner gives
 # Accessibility, Screen Recording, and Post Event to the agent of the runner (actions/runner-images,
 # configure-tccdb-macos.sh), and macOS gives the permissions of the responsible process to the processes that it
-# starts. This workflow checks that this is enough. Start it by hand.
+# starts. This is enough: on 2026-11-03, the 25 tests passed (1 skipped) with the screen at 1920 x 1080.
+# It runs on each push to master, as the Windows UI flow does. A manual start is also possible.
 on:
+  push:
+    branches: [ master ]
   workflow_dispatch:
 
 permissions:

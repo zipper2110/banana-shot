@@ -90,19 +90,18 @@ This places libmpv under `target/native/windows-x64/mpv` and FFmpeg under
 `target/native/windows-x64/ffmpeg`, which source runs prefer over machine-wide
 installations. Packaged Windows builds already include the same pinned runtime.
 
-On an Apple Silicon Mac (development only, B-13), build the pinned libmpv and
-FFmpeg from source. The script needs the Xcode Command Line Tools and these
-build tools. A full build takes about 10 minutes on an M1 Mac.
+On an Apple Silicon Mac (development only, B-13), get the pinned libmpv and
+FFmpeg for macOS:
 
 ```bash
-brew install meson ninja cmake pkgconf
-distribution/macos/build-natives.sh
+distribution/macos/get-native-dependencies.sh
 ```
 
 The script places libmpv under `target/native/macos-arm64/mpv` and FFmpeg
 under `target/native/macos-arm64/ffmpeg`. Source runs use these folders. If
 `target/native/macos-arm64/mpv` does not exist, source runs use the libmpv of
-Homebrew (`brew install mpv`) in `/opt/homebrew/lib`.
+Homebrew (`brew install mpv`) in `/opt/homebrew/lib`. To build the files from
+source, see [distribution/macos/README.md](distribution/macos/README.md).
 
 ### Data folder of a development run
 

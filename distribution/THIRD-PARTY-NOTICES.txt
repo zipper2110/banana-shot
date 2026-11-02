@@ -43,6 +43,45 @@ ffprobe.exe). The shared libraries and executables are unmodified and remain
 replaceable in the installation directory. The FFmpeg license text is
 installed at natives/windows-x64/ffmpeg/LICENSE.txt.
 
+macOS (Apple Silicon) native files
+The macOS distribution contains these files in place of the Windows files
+above. distribution/macos/build-natives.sh builds them from pinned sources.
+Each file has a SHA-256 or a Git commit in the script.
+
+mpv / libmpv v0.41.0, with FFmpeg 9.0.2 and libplacebo v7.387.0
+(natives/macos-arm64/mpv/libmpv.2.dylib)
+Copyright mpv, FFmpeg, libplacebo and libass developers and dependency
+authors.
+License: GNU Lesser General Public License version 2.1 or later. mpv is built
+with -Dgpl=false. The FFmpeg libraries are built without --enable-gpl,
+--enable-version3 and --enable-nonfree. libmpv.2.dylib also contains these
+libraries as static libraries: libass (ISC), FreeType (FTL), FriBidi (LGPL
+2.1 or later), HarfBuzz (MIT), Little CMS (MIT), and glslang (BSD-3-Clause,
+Apache 2.0, MIT, and GPL 3.0 or later with the Bison exception). FreeType is
+used under the FreeType License (FTL). Portions of this software are
+copyright (c) The FreeType Project (www.freetype.org). All rights reserved.
+natives/macos-arm64/mpv/libMoltenVK.dylib is MoltenVK 1.4.2, the release
+build of https://github.com/KhronosGroup/MoltenVK, under the Apache License
+2.0. natives/macos-arm64/mpv/LICENSES contains each license text.
+natives/macos-arm64/mpv/BUILD-INFO.txt lists each source.
+You can replace libmpv.2.dylib with your own build in the installation
+directory (natives/macos-arm64/mpv).
+
+FFmpeg 9.0.2, static build for macOS arm64
+(natives/macos-arm64/ffmpeg/bin/ffmpeg and ffprobe)
+Copyright FFmpeg developers and dependency authors.
+License: GNU General Public License version 2 or later. The build is
+configured with --enable-gpl and contains x264 (GPL 2.0 or later), libass,
+FreeType, FriBidi, and HarfBuzz. BananaShot runs FFmpeg only as separate
+programs (ffmpeg and ffprobe). The programs remain replaceable in the
+installation directory. natives/macos-arm64/ffmpeg/LICENSES contains each
+license text.
+
+The corresponding source code of the macOS files (each source archive, the
+Git sources of libplacebo and x264, and the build script) is published with
+a copy of the binaries in the natives release:
+https://github.com/zipper2110/banana-shot/releases/tag/natives-2026-11
+
 Eclipse Temurin OpenJDK 25 runtime
 Copyright Eclipse Foundation and OpenJDK contributors.
 License: GNU General Public License v2 with the Classpath Exception.

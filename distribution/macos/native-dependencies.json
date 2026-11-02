@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "architecture": "macos-arm64",
+  "minimumMacosVersion": "15.0",
+  "nativesRelease": {
+    "tag": "natives-2026-11",
+    "url": "https://github.com/zipper2110/banana-shot/releases/tag/natives-2026-11"
+  },
+  "buildScript": "distribution/macos/build-natives.sh",
+  "buildRun": "https://github.com/zipper2110/banana-shot/actions/runs/41495949661",
+  "buildCommit": "66c30974ba4a0973f13cbcce3517969cfa7cdc73",
+  "mpv": {
+    "version": "v0.41.0",
+    "variant": "bananashot-libmpv-macos-arm64",
+    "license": "LGPL-2.1-or-later",
+    "archiveName": "libmpv-v0.41.0-macos-arm64.tar.xz",
+    "url": "https://github.com/zipper2110/banana-shot/releases/download/natives-2026-11/libmpv-v0.41.0-macos-arm64.tar.xz",
+    "sha256": "b5daa80cdf7d169b995fd257d649d963f2a0f7f5e8b243b840b6e9234ac5ed84",
+    "sourceArchiveName": "natives-macos-arm64-source.tar",
+    "sourceUrl": "https://github.com/zipper2110/banana-shot/releases/download/natives-2026-11/natives-macos-arm64-source.tar",
+    "sourceSha256": "f49904549148f1514497e9e97235905090da8e655eacc2fce3a5beaaad696280",
+    "extractedDirectory": "mpv"
+  },
+  "ffmpeg": {
+    "version": "9.0.2",
+    "variant": "bananashot-ffmpeg-macos-arm64-gpl-static",
+    "license": "GPL-2.0-or-later",
+    "archiveName": "ffmpeg-9.0.2-macos-arm64.tar.xz",
+    "url": "https://github.com/zipper2110/banana-shot/releases/download/natives-2026-11/ffmpeg-9.0.2-macos-arm64.tar.xz",
+    "sha256": "88ce53507b75c3be58ce6b51533ffacaf2c267ae38dd9f936132d57694bd1b35",
+    "sourceArchiveName": "natives-macos-arm64-source.tar",
+    "sourceUrl": "https://github.com/zipper2110/banana-shot/releases/download/natives-2026-11/natives-macos-arm64-source.tar",
+    "sourceSha256": "f49904549148f1514497e9e97235905090da8e655eacc2fce3a5beaaad696280",
+    "extractedDirectory": "ffmpeg"
+  }
+}

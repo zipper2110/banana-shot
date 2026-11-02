@@ -31,7 +31,7 @@ class UpdateAndRestartTest {
 
     @Test
     fun `a newer latest version shows both buttons with the URLs of the file`() {
-        val options = UpdateOptions.of("1.3.0", latest)
+        val options = UpdateOptions.of("1.3.0", latest, osName = "Windows 11")
 
         assertTrue(options.showsUpdateAndRestart)
         assertEquals(latest.installerUrl, options.installerUrl)
@@ -47,7 +47,7 @@ class UpdateAndRestartTest {
 
     @Test
     fun `with no installerUrl the app uses the stable URL`() {
-        val options = UpdateOptions.of("1.3.0", latest.copy(installerUrl = null))
+        val options = UpdateOptions.of("1.3.0", latest.copy(installerUrl = null), osName = "Windows 11")
 
         assertEquals(
             "https://github.com/zipper2110/banana-shot/releases/latest/download/BananaShot-win-Setup.exe",
@@ -59,9 +59,37 @@ class UpdateAndRestartTest {
     fun `with no saved file both buttons show with the stable URL and the releases page`() {
         for (options in listOf(UpdateOptions.of("1.3.0", null as VersionRules?), UpdateOptions.of("1.3.0", VersionRules(null, emptyList())))) {
             assertTrue(options.showsUpdateAndRestart)
-            assertEquals(UpdateOptions.STABLE_INSTALLER_URL, options.installerUrl)
+            assertEquals(UpdateOptions.stableInstallerUrl(), options.installerUrl)
             assertEquals(UpdateOptions.RELEASES_PAGE_URL, options.downloadPageUrl)
         }
+    }
+
+    @Test
+    fun `on macOS the update uses the pkg of macInstallerUrl or the stable pkg URL`() {
+        val mac = latest.copy(macInstallerUrl = "https://example.org/BananaShot-osx-Setup.pkg")
+
+        assertEquals(mac.macInstallerUrl, UpdateOptions.of("1.3.0", mac, osName = "Mac OS X").installerUrl)
+        assertEquals(
+            "https://github.com/zipper2110/banana-shot/releases/latest/download/BananaShot-osx-Setup.pkg",
+            UpdateOptions.of("1.3.0", latest, osName = "Mac OS X").installerUrl,
+        )
+        assertEquals("BananaShot-osx-Setup.pkg", UpdateOptions.setupFileName("Mac OS X"))
+        assertEquals("BananaShot-win-Setup.exe", UpdateOptions.setupFileName("Windows 11"))
+    }
+
+    @Test
+    fun `the setup starts directly on Windows and with open on macOS`() {
+        val pkg = File("/tmp/BananaShot-osx-Setup.pkg")
+
+        assertEquals(listOf("open", pkg.absolutePath), ProcessSetupLauncher.command(pkg, osName = "Mac OS X"))
+        assertEquals(listOf(pkg.absolutePath), ProcessSetupLauncher.command(pkg, osName = "Windows 11"))
+    }
+
+    @Test
+    fun `the macOS release script makes the pkg that the app downloads`() {
+        val script = File("distribution/macos/build-velopack-release.sh").readText()
+
+        assertTrue(script.contains("SETUP=\"\$OUT/${UpdateOptions.MAC_SETUP_PKG_NAME}\""), "build-velopack-release.sh must check ${UpdateOptions.MAC_SETUP_PKG_NAME}")
     }
 
     @Test
@@ -99,7 +127,7 @@ class UpdateAndRestartTest {
                 "download ${latest.installerUrl}",
                 "progress 5/5",
                 "close",
-                "start BananaShot-win-Setup.exe (setup)",
+                "start ${UpdateOptions.setupFileName()} (setup)",
                 "exit",
             ),
             steps,
@@ -152,7 +180,7 @@ class UpdateAndRestartTest {
 
         assertEquals(UpdateAndRestart.Result.DownloadFailed("connection reset"), result)
         assertFalse(closed)
-        assertFalse(folder.resolve(UpdateOptions.SETUP_EXE_NAME).exists())
+        assertFalse(folder.resolve(UpdateOptions.setupFileName()).exists())
         assertFalse(update.isRunning)
     }
 

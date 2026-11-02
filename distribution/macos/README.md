@@ -91,7 +91,7 @@ legal files into the bundle, sets the `Info.plist` keys, and signs the bundle
 from the inside to the outside.
 
 - `--sign <identity>` signs with a Developer ID, the hardened runtime, and
-  `entitlements.plist`. The default `-` is an ad-hoc signature: the bundle
+  `BananaShot.entitlements`. The default `-` is an ad-hoc signature: the bundle
   then opens only on the Mac that built it. Give the SHA-1 hash of the
   certificate (`security find-identity -v -p codesigning`) when the keychain
   has two copies of it.
@@ -106,3 +106,26 @@ options are only for a local build.
 
 The icon is `assets/BananaShot.icns`. After a change of
 `src/main/resources/icons/app-icon.svg`, run `make-icon.sh`.
+
+## Signed release (local)
+
+```bash
+distribution/macos/build-app-image.sh --sign <SHA-1 of the Developer ID Application certificate>
+distribution/macos/notarize.sh --keychain-profile bananashot-notary
+export DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec
+distribution/macos/build-velopack-release.sh --version 1.4.0 --team-id <Team ID> --notary-profile bananashot-notary
+distribution/macos/test-release-signatures.sh --team-id <Team ID> --require-notarization
+```
+
+- `notarize.sh` sends the bundle to the Apple notary service, waits, and
+  staples the ticket. Make the keychain profile one time with
+  `xcrun notarytool store-credentials bananashot-notary --key <AuthKey_ID.p8> --key-id <key ID> --issuer <issuer ID>`.
+  The release workflow gives the API key in the variables `APPLE_API_KEY_P8`,
+  `APPLE_API_KEY_ID`, and `APPLE_API_ISSUER_ID` instead.
+- `build-velopack-release.sh` needs .NET (`brew install dotnet`) and the `vpk`
+  version of `windows-release.yml`
+  (`dotnet tool install --global vpk --version 1.2.161`). It makes
+  `BananaShot-osx-Setup.pkg` (the installer of "Update and restart"),
+  `BananaShot-osx-Portable.zip`, the update package, and `releases.osx.json`
+  in `target/package/velopack`. With `--notary-profile`, vpk also notarizes.
+- `test-release-signatures.sh` checks each signed file of the release.

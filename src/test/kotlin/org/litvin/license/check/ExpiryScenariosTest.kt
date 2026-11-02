@@ -108,7 +108,7 @@ class ExpiryScenariosTest {
         start()
         assertEquals(ExpiryMode.EXPIRED, state.mode)
         val options = UpdateOptions.of(appVersion, state.rules)
-        assertEquals(UpdateOptions.STABLE_INSTALLER_URL, options.installerUrl, "No saved file: the stable URL")
+        assertEquals(UpdateOptions.stableInstallerUrl(), options.installerUrl, "No saved file: the stable URL")
         assertEquals(UpdateOptions.RELEASES_PAGE_URL, options.downloadPageUrl)
         close()
 

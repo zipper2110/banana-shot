@@ -75,6 +75,7 @@ object VersionRulesParser {
             version = version,
             downloadUrl = downloadUrl,
             installerUrl = node.optionalText("installerUrl", "latest", problems),
+            macInstallerUrl = node.optionalText("macInstallerUrl", "latest", problems),
             notes = notes,
             whatsNewUrl = whatsNewUrl,
             pageUrl = node.optionalText("pageUrl", "latest", problems),

@@ -35,6 +35,8 @@ data class LatestRelease(
     val notesByLanguage: Map<AppLanguage, String> = emptyMap(),
     /** The [whatsNewUrl] in other languages (B-11 E6). */
     val whatsNewUrlByLanguage: Map<AppLanguage, String> = emptyMap(),
+    /** The macOS installer (.pkg) of "Update and restart" (B-13). Builds before the macOS version ignore it. */
+    val macInstallerUrl: String? = null,
 ) {
     /** The notes in [language], or the English [notes]. */
     fun notesIn(language: AppLanguage = I18n.language): String? = textIn(notesByLanguage, language) ?: notes

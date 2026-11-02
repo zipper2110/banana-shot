@@ -164,6 +164,29 @@ class VersionRulesParserTest {
     }
 
     @Test
+    fun `macInstallerUrl is read, and a value that is not a string is ignored`() {
+        val result = valid(
+            """
+            {"schema": 1, "rules": [],
+             "latest": {"version": "1.4.0", "downloadUrl": "https://example.invalid/releases",
+                        "installerUrl": "https://example.invalid/BananaShot-win-Setup.exe",
+                        "macInstallerUrl": "https://example.invalid/BananaShot-osx-Setup.pkg"}}
+            """,
+        )
+        assertEquals("https://example.invalid/BananaShot-osx-Setup.pkg", result.rules.latest?.macInstallerUrl)
+        assertEquals("https://example.invalid/BananaShot-win-Setup.exe", result.rules.latest?.installerUrl)
+
+        val wrong = valid(
+            """
+            {"schema": 1, "rules": [],
+             "latest": {"version": "1.4.0", "downloadUrl": "https://example.invalid/releases", "macInstallerUrl": 5}}
+            """,
+        )
+        assertEquals(null, wrong.rules.latest?.macInstallerUrl)
+        assertEquals(1, wrong.problems.size)
+    }
+
+    @Test
     fun `whatsNewUrl and pageUrl are read, and a value that is not a string is ignored`() {
         val result = valid(
             """

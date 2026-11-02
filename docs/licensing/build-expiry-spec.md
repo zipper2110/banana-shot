@@ -254,6 +254,13 @@ Example:
     The app reads this field from the first release. Thus, it is in the
     first release, also if the file does not use it yet (see "Changes to the
     file format").
+  - `macInstallerUrl`: the macOS installer (`BananaShot-osx-Setup.pkg`) that
+    "Update and restart" downloads and opens on macOS (B-13). Optional. With
+    no `macInstallerUrl`, the macOS app uses the stable URL
+    `https://github.com/zipper2110/banana-shot/releases/latest/download/BananaShot-osx-Setup.pkg`.
+    The Windows app uses only `installerUrl`. Builds before the macOS version
+    ignore this field, because the parser reads only the fields that it
+    knows.
   - `notes`: a short text about the release. Optional.
   - `whatsNewUrl`: the HTTPS address of the Markdown page of the "What's
     new" popup (B-54, see "What's new popup"). Optional. Builds before 1.3.0
@@ -353,9 +360,9 @@ other rules, the update notice, or the removal of an old rule (S-15 in
 
 An optional field is not valid in these cases:
 
-- `message`, `notes`, or `installerUrl` is present and is not a string. The
-  app ignores only this field. For `installerUrl`, the app then uses the
-  stable URL.
+- `message`, `notes`, `installerUrl`, or `macInstallerUrl` is present and is
+  not a string. The app ignores only this field. For an installer URL, the
+  app then uses the stable URL.
 - `latest` is not an object, or its `version` or `downloadUrl` is missing or
   is not a string. The app ignores all of `latest`: it shows no update notice
   and uses the default download URL (see "Expired mode").

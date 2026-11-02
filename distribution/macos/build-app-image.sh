@@ -28,7 +28,7 @@ NATIVE="$TARGET/native/macos-arm64"
 APP_IMAGE_ROOT="$TARGET/package/app-image"
 APP="$APP_IMAGE_ROOT/BananaShot.app"
 ICON="$ROOT/distribution/macos/assets/BananaShot.icns"
-ENTITLEMENTS="$ROOT/distribution/macos/entitlements.plist"
+ENTITLEMENTS="$ROOT/distribution/macos/BananaShot.entitlements"
 BUNDLE_ID="app.banana-shot-editor.bananashot"
 MINIMUM_MACOS="15.0"
 
@@ -208,6 +208,9 @@ plist_set CFBundleLocalizations -json '["en","es","es-419","ru","pt-BR","pt-PT",
 plist_set CFBundleDevelopmentRegion -string en
 plist_set NSHighResolutionCapable -bool true
 plutil -lint "$PLIST" >/dev/null
+# jpackage gives the runtime bundle the bundle ID of the app. The macOS Installer finds an installed app by its
+# bundle ID (also after the user moved it), so two bundles with one ID in the .pkg can confuse the update.
+plutil -replace CFBundleIdentifier -string "$BUNDLE_ID.runtime" "$CONTENTS/runtime/Contents/Info.plist"
 
 # --- Code signature ----------------------------------------------------------------------------
 # Sign from the inside to the outside. The hardened runtime is for a Developer ID signature. With an ad-hoc

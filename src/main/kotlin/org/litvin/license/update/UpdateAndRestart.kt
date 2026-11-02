@@ -69,17 +69,25 @@ class HttpSetupDownloader(
     }
 }
 
-/** Starts the setup with no argument. Do not give `--silent`: then the setup does not start the new version. */
+/**
+ * Starts the setup with no argument. Do not give `--silent`: then the setup does not start the new version.
+ * On macOS, `open` shows the .pkg in the macOS Installer (B-13). The user confirms the install there, and the
+ * script of the .pkg starts the new version.
+ */
 object ProcessSetupLauncher : SetupLauncher {
     override fun start(setup: File) {
-        ProcessBuilder(setup.absolutePath).directory(setup.parentFile).start()
+        ProcessBuilder(command(setup)).directory(setup.parentFile).start()
     }
+
+    internal fun command(setup: File, osName: String = System.getProperty("os.name").orEmpty()): List<String> =
+        if (osName.startsWith("Mac", ignoreCase = true)) listOf("open", setup.absolutePath) else listOf(setup.absolutePath)
 }
 
 /**
  * "Update and restart" (B-30, build-expiry-spec.md "Update and restart"): download the setup EXE of
  * the newest release, close the app, and start the setup as the last step. The Velopack setup asks
- * "Update" or "Cancel", stops the app, installs the new version, and starts it.
+ * "Update" or "Cancel", stops the app, installs the new version, and starts it. On macOS, the macOS
+ * Installer shows the .pkg. This process has exited before the user clicks "Install".
  *
  * The user interface calls [run] on a background thread and shows the progress. It works the same in
  * expired mode.
@@ -134,7 +142,7 @@ class UpdateAndRestart(
             if (exportRuns() && !confirmExportRestart()) return Result.Canceled
 
             val folder = temporaryFolder()
-            val setup = File(folder, UpdateOptions.SETUP_EXE_NAME)
+            val setup = File(folder, UpdateOptions.setupFileName())
             try {
                 logger.info { "Downloading the setup from $installerUrl" }
                 downloader.download(URI(installerUrl), setup, progress)

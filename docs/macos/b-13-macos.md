@@ -604,7 +604,7 @@ are in `distribution/macos/README.md`.
 - **Signature.** `--sign <identity>`. The default `-` is ad-hoc, with no
   hardened runtime: with the hardened runtime, an ad-hoc process refuses
   libraries with no Team ID. With a Developer ID, the script uses the
-  hardened runtime, a timestamp, and `entitlements.plist` (`allow-jit` and
+  hardened runtime, a timestamp, and `BananaShot.entitlements` (`allow-jit` and
   `allow-unsigned-executable-memory`). Give the SHA-1 hash of the
   certificate as the identity when the keychain has two copies of it.
 - **Test on the M1 (macOS 27.2, JDK 27, ad-hoc).** `validate-app-image.sh`
@@ -800,6 +800,62 @@ The checks for Velopack on macOS:
 - The app must exit after it starts the installer, as on Windows. Verify
   that the macOS installer waits for the app to exit.
 
+### Result of step 11 so far (2026-11-02)
+
+- **Signature.** `build-app-image.sh --sign <identity>` signs each file with
+  the Developer ID, the hardened runtime, and a timestamp. The programs of
+  the runtime (`bin/java`) also need `BananaShot.entitlements`: with the
+  hardened runtime and no `allow-jit`, the JVM stops at once with SIGTRAP
+  (exit code 133). Two entitlements are enough: `allow-jit` and
+  `allow-unsigned-executable-memory`. Library validation accepts libmpv,
+  MoltenVK, JNA, FlatLaf, and FFmpeg, because the same team signed them.
+  The validation, the packaged diagnostics, and a start passed.
+- **Notarization.** `notarize.sh` sends the bundle with `notarytool` and
+  staples the ticket. On the development Mac, the login is the keychain
+  profile `bananashot-notary` (`xcrun notarytool store-credentials`). The
+  CI uses the API key secrets. The first submission (2026-11-02 20:35 UTC)
+  was still "In Progress" after 40 minutes. A first submission of a new
+  team can take hours.
+- **Velopack.** `vpk` 1.2.161 (the version of Windows) runs on macOS with
+  .NET 10 (`brew install dotnet`, `DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec`).
+  `build-velopack-release.sh` makes `BananaShot-osx-Setup.pkg`,
+  `BananaShot-osx-Portable.zip`, `BananaShot-<version>-osx-full.nupkg`, and
+  `releases.osx.json`. vpk keeps our signatures (`--signDisableDeep`), adds
+  `Contents/MacOS/UpdateMac`, signs the bundle again, and signs the `.pkg`
+  with the Developer ID Installer certificate. vpk needs the extension
+  `.entitlements`. The `.pkg` lets the user install for all users
+  (`/Applications`) or for the current user only (no administrator rights).
+  Its script opens the new app after the install. macOS has no "veloapp"
+  check, so `vpk` needs no `--skipVeloAppCheck` there.
+- **Bundle ID of the runtime.** jpackage gives the runtime bundle the bundle
+  ID of the app. The `.pkg` then listed two bundles with one ID. The macOS
+  Installer finds an installed app by its ID, also after the user moved it.
+  `build-app-image.sh` now gives the runtime the ID
+  `app.banana-shot-editor.bananashot.runtime`.
+- **Intel Macs.** The `.pkg` says `hostArchitectures="x86_64,arm64"`, also
+  with `--runtime osx-arm64`. On an Intel Mac, the installer runs, and then
+  macOS refuses to open the arm64 app. Accept this, or change the
+  Distribution file of the `.pkg` later.
+- **Update and restart.** On macOS, `UpdateOptions` uses
+  `latest.macInstallerUrl` (a new optional field of the rules file, see
+  `build-expiry-spec.md`) or the stable URL of `BananaShot-osx-Setup.pkg`.
+  `ProcessSetupLauncher` starts `open <file>.pkg`: the macOS Installer
+  shows, and the app exits. Add `macInstallerUrl` to
+  `release/version-policy.json` with the first macOS release (step 12).
+- **Signature check.** `test-release-signatures.sh` checks each Mach-O file
+  of the app in the `.pkg`, the portable zip, and the update package (team,
+  timestamp, hardened runtime), the `.pkg` signature, and the JAR files.
+  With `--require-notarization`, it also checks the tickets and
+  Gatekeeper. The update package stores the links as `.__symlink` files, so
+  the seal of the bundle cannot match there. The script checks only the
+  files of that package.
+
+Still to do in step 11: the notarization result, a notarized `.pkg`
+(`build-velopack-release.sh --notary-profile`), and the checks of "Installer
+and update" by hand: the install with no Gatekeeper warning, an update from
+the previous version, a moved app, no administrator rights, and the
+uninstall.
+
 ## 9. CI and release workflow
 
 - **CI:** add a `macos-15` (arm64) job to `.github/workflows/ci.yml` that
@@ -862,7 +918,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Not started |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
-| 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Not started. Needs steps 3 and 8. Do the Velopack checks first |
+| 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | In progress (see "Result of step 11 so far"). Done: the Developer ID signature, the scripts of the notarization, the Velopack installer, and the signature check, and "Update and restart" on macOS. To do: the notarization result and the install and update checks by hand |
 | 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | Not started |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
 

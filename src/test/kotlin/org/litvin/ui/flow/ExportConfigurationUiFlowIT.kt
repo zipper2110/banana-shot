@@ -112,7 +112,7 @@ class ExportConfigurationUiFlowIT {
         val application = ApplicationScreen(context)
 
         application.projects.open().openRecent(project.manifest.id)
-        application.points.markPoint(1_000, 2_000)
+        application.points.markScoredPoint(1_000, 2_000, Outcome.NONE)
 
         application.export.open()
             .initialize(output)

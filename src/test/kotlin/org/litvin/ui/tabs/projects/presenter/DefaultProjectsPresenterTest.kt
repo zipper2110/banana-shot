@@ -99,7 +99,6 @@ class DefaultProjectsPresenterTest {
                     durationMs = 5_025_000,
                     fileSizeBytes = 2_500_000_000,
                     pointCount = 40,
-                    scoredCount = 12,
                     favoriteCount = 3,
                 ),
             ),
@@ -112,8 +111,8 @@ class DefaultProjectsPresenterTest {
         drainEdt()
 
         val projects = view.states.last().visibleProjects
-        assertEquals(ProjectStatsState("1:23:45", "2.50\u00A0GB", "12/40", "3", scoredCount = 12, pointCount = 40, favoriteCount = 3), projects.first().stats)
-        assertEquals(ProjectStatsState("—", "—", "0/0", "0"), projects[1].stats)
+        assertEquals(ProjectStatsState("1:23:45", "2.50\u00A0GB", "40", "3", favoriteCount = 3), projects.first().stats)
+        assertEquals(ProjectStatsState("—", "—", "0", "0"), projects[1].stats)
         assertEquals((1..10).map { "project-$it.trproj" }, repository.statsRequests)
 
         repository.statsRequests.clear()
@@ -434,7 +433,7 @@ class DefaultProjectsPresenterTest {
         ScoreIO.writeForProjectDir(projectDir, ScoreV1(outcomes = mapOf("a" to Outcome.P1, "c" to Outcome.NONE, "gone" to Outcome.P2)))
 
         assertEquals(
-            ProjectStats(durationMs = 83_000, fileSizeBytes = 5, pointCount = 3, scoredCount = 2, favoriteCount = 2),
+            ProjectStats(durationMs = 83_000, fileSizeBytes = 5, pointCount = 3, favoriteCount = 2),
             repository.stats(project.path),
         )
         assertEquals(listOf(video.absolutePath), probedPaths)
@@ -442,7 +441,7 @@ class DefaultProjectsPresenterTest {
         video.delete()
 
         assertEquals(
-            ProjectStats(videoMissing = true, pointCount = 3, scoredCount = 2, favoriteCount = 2),
+            ProjectStats(videoMissing = true, pointCount = 3, favoriteCount = 2),
             repository.stats(project.path),
         )
     }

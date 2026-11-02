@@ -1,7 +1,6 @@
 package org.litvin.ui.tabs.points
 
 import org.litvin.adjustments.AdjustmentsStore
-import org.litvin.i18n.tr
 import org.litvin.media.MediaScreen
 import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
@@ -9,6 +8,8 @@ import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.projects.ManifestIO
 import org.litvin.projects.ProjectManifestV1
+import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.ScoreV1
 import org.litvin.ui.flow.fakes.FakeMediaPlayer
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.flow.fakes.ScriptedDialogService
@@ -60,7 +61,7 @@ class PointsProjectSwitchTest {
         player.seek(2_000)
         SwingUtilities.invokeAndWait { target.actionMap.get("points.pointStart").actionPerformed(null) }
         player.seek(3_000)
-        SwingUtilities.invokeAndWait { target.actionMap.get("points.pointEnd").actionPerformed(null) }
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.scoreNone").actionPerformed(null) }
         // The change schedules the debounced autosave. Open project B before the autosave runs.
         SwingUtilities.invokeAndWait { }
         SwingUtilities.invokeAndWait { target.setProjectManifest(manifest(projectB)) }
@@ -86,12 +87,12 @@ class PointsProjectSwitchTest {
         SwingUtilities.invokeAndWait { target.setProjectManifest(manifest(projectB)) }
         drainEventQueue()
         player.seek(3_000)
-        SwingUtilities.invokeAndWait { target.actionMap.get("points.pointEnd").actionPerformed(null) }
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.scoreNone").actionPerformed(null) }
         drainEventQueue()
         SwingUtilities.invokeAndWait { target.saveNow() }
 
-        // V finds no Start, so it makes no point and shows the hint.
-        assertEquals(listOf(tr("dispatch.point.noStart")), dialogs.messages)
+        // W finds no Start, so it makes no point.
+        assertEquals(emptyList(), dialogs.messages)
         val savedB = EdlIO.readForProjectDir(projectB.absolutePath)
         assertEquals(listOf("b-1"), savedB.points.map { it.id })
     }
@@ -105,11 +106,12 @@ class PointsProjectSwitchTest {
         SwingUtilities.invokeAndWait { target.actionMap.get("points.pointStart").actionPerformed(null) }
         SwingUtilities.invokeAndWait { target.actionMap.get("points.cancelPending").actionPerformed(null) }
         player.seek(3_000)
-        SwingUtilities.invokeAndWait { target.actionMap.get("points.pointEnd").actionPerformed(null) }
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.scoreNone").actionPerformed(null) }
         drainEventQueue()
         SwingUtilities.invokeAndWait { target.saveNow() }
 
-        assertEquals(listOf(tr("dispatch.point.noStart")), dialogs.messages)
+        // W finds no Start, so it makes no point.
+        assertEquals(emptyList(), dialogs.messages)
         val savedA = EdlIO.readForProjectDir(projectA.absolutePath)
         assertEquals(listOf("a-1"), savedA.points.map { it.id })
     }
@@ -158,6 +160,8 @@ class PointsProjectSwitchTest {
                 nextCommentId = 2,
             ),
         )
+        // The Scoring settings dialog cannot open in a headless test.
+        ScoreIO.writeForProjectDir(dir.absolutePath, ScoreV1(scoreSettingsReviewed = true))
         return dir
     }
 

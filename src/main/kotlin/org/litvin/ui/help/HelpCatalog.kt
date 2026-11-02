@@ -211,7 +211,6 @@ object HelpCatalog {
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.PLAY_PAUSE, tr("help.points.shortcut.playPause")),
                 HelpShortcut(AppShortcuts.POINT_START, tr("help.points.shortcut.pointStart")),
-                HelpShortcut(AppShortcuts.POINT_END, tr("help.points.shortcut.pointEnd")),
                 HelpShortcut(AppShortcuts.CANCEL_PENDING, tr("help.points.shortcut.cancelPending")),
                 HelpShortcut(AppShortcuts.SCORE_PLAYER_1, tr("help.points.shortcut.scorePlayer1")),
                 HelpShortcut(AppShortcuts.SCORE_NO_POINT, tr("help.points.shortcut.scoreNoPoint")),

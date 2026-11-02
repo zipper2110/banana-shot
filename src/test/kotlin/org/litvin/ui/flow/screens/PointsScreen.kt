@@ -17,8 +17,6 @@ internal class PointsScreen(application: ApplicationScreen) : UserFlowScreen(app
 
     fun assertReady() = assertVisible("points-point-start")
 
-    fun markPoint(startMs: Long, endMs: Long): PointsScreen = mark(startMs, endMs, AppShortcuts.POINT_END)
-
     /** Marks a point and ends it with the key of its outcome (Q, W, or E). The key also gives the outcome. */
     fun markScoredPoint(startMs: Long, endMs: Long, outcome: Outcome): PointsScreen = mark(
         startMs,

@@ -136,13 +136,11 @@ class FileProjectsRepository(
         val projectDir = EdlIO.projectDirFromManifest(path)
         val points = EdlIO.readForProjectDir(projectDir).points
         val score = ScoreIO.readForProjectDir(projectDir)
-        val outcomes = score.outcomes
         return ProjectStats(
             videoMissing = videoPath != null && video == null,
             durationMs = video?.let { durationProbe.durationMs(it.absolutePath) },
             fileSizeBytes = video?.length(),
             pointCount = points.size,
-            scoredCount = points.count { outcomes.containsKey(it.id) },
             favoriteCount = points.count { it.favorite },
             sport = score.sport,
         )

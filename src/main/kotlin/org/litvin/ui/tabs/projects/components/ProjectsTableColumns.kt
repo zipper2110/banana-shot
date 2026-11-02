@@ -21,16 +21,16 @@ import org.litvin.ui.commons.Palette
  * Thus the cells of all rows align below the column names.
  *
  * The columns are the status icon, the project name, the video path, the sport, the duration, the size,
- * the scored points, the favorite points and the row actions. The name and the path share the free width 1 : 1.6.
+ * the number of points, the favorite points and the row actions. The name and the path share the free width 1 : 1.6.
  * A narrow table hides the size column first and then the duration column, so that the name and the path keep
  * [NAME_MIN] each (B-11 E4-T8). A hidden column has the width 0 and no gap.
- * The sport column and the actions column fit their texts in the current language, for example "Beach tennis"
- * and the Open button in Russian.
+ * The sport column, the points column and the actions column fit their texts in the current language, for example
+ * "Beach tennis", the Russian column name of the points, and the Open button in Russian.
  */
 internal object ProjectsTableColumns {
     /** The names of the figure columns, in display order. */
     val FIGURE_COLUMNS: List<String>
-        get() = listOf(tr("projects.column.duration"), tr("projects.column.size"), tr("projects.column.scored"), tr("projects.column.favorites"))
+        get() = listOf(tr("projects.column.duration"), tr("projects.column.size"), tr("projects.column.points"), tr("projects.column.favorites"))
 
     const val STATUS = 0
     const val NAME = 1
@@ -38,14 +38,15 @@ internal object ProjectsTableColumns {
     const val SPORT = 3
     const val DURATION = 4
     const val SIZE = 5
-    const val SCORED = 6
+    const val POINTS = 6
     const val FAVORITES = 7
     const val ACTIONS = 8
 
     private val FIXED = mapOf(
-        STATUS to 20, DURATION to 64, SIZE to 76, SCORED to 104, FAVORITES to 48,
+        STATUS to 20, DURATION to 64, SIZE to 76, FAVORITES to 48,
     )
     private const val SPORT_MIN = 52
+    private const val POINTS_MIN = 48
     private const val ACTIONS_MIN = 112
 
     /** The rename button, the delete button, and the gap before the Open button. */
@@ -55,10 +56,6 @@ internal object ProjectsTableColumns {
     private const val VIDEO_SHARE = 1.6
     private const val COLUMN_GAP = 14
     private const val SIDE_PADDING = 10
-
-    /** The width of the scored bar and the gap before it. The header text of "Scored" aligns with the number. */
-    const val SCORED_BAR = 44
-    const val SCORED_BAR_GAP = 8
 
     private const val COLUMN_COUNT = 9
 
@@ -75,6 +72,12 @@ internal object ProjectsTableColumns {
         return maxOf(SPORT_MIN, ceil(maxOf(longestName, columnName)).toInt() + 2)
     }
 
+    /** The width of the points column: the column name in the current language. The numbers are shorter. */
+    private fun pointsWidth(): Int {
+        val columnName = ProjectsUi.textWidth(DisplayFormats.upper(FIGURE_COLUMNS[2]), headerFont)
+        return maxOf(POINTS_MIN, ceil(columnName).toInt() + 2)
+    }
+
     /** Makes the Open button of a row. The actions column measures this button. */
     fun openButton(): ProjectsButton = ProjectsButton(tr("common.open"), buttonHeight = 26, fontSize = 12f, limeHover = true)
 
@@ -88,7 +91,7 @@ internal object ProjectsTableColumns {
         return maxOf(ACTIONS_MIN, ACTION_ICONS + openButton().preferredSize.width).also { actionsCache = text to it }
     }
 
-    private fun fixedWidth(): Int = FIXED.values.sum() + sportWidth() + actionsWidth()
+    private fun fixedWidth(): Int = FIXED.values.sum() + sportWidth() + pointsWidth() + actionsWidth()
 
     /** The columns that a narrow table hides, in the order in which it hides them. */
     private val OPTIONAL = listOf(SIZE, DURATION)
@@ -101,7 +104,8 @@ internal object ProjectsTableColumns {
     /** The free width for the name and the path when the [hidden] columns are not shown. */
     private fun freeWidth(width: Int, hidden: Set<Int>): Int {
         val shownFixed = FIXED.filterKeys { it !in hidden }.values.sum()
-        return width - SIDE_PADDING * 2 - COLUMN_GAP * (COLUMN_COUNT - 1 - hidden.size) - shownFixed - sportWidth() - actionsWidth()
+        return width - SIDE_PADDING * 2 - COLUMN_GAP * (COLUMN_COUNT - 1 - hidden.size) - shownFixed - sportWidth() -
+            pointsWidth() - actionsWidth()
     }
 
     /** The columns to hide in a row of [width] pixels: the fewest optional columns that give the name and the path [NAME_MIN] each. */
@@ -117,6 +121,7 @@ internal object ProjectsTableColumns {
     /** Returns the left edge and the width of each column for a row of [width] pixels. A hidden column has the width 0. */
     fun columns(width: Int): List<Pair<Int, Int>> {
         val sport = sportWidth()
+        val points = pointsWidth()
         val actions = actionsWidth()
         val hidden = hiddenColumns(width)
         val free = max(0, freeWidth(width, hidden))
@@ -130,6 +135,7 @@ internal object ProjectsTableColumns {
                 NAME -> nameWidth
                 VIDEO -> videoWidth
                 SPORT -> sport
+                POINTS -> points
                 ACTIONS -> actions
                 else -> FIXED.getValue(column)
             }
@@ -167,7 +173,7 @@ internal object ProjectsTableColumns {
             add(HeaderText(tr("projects.column.sport"), SwingConstants.LEFT))
             add(HeaderText(FIGURE_COLUMNS[0], SwingConstants.RIGHT))
             add(HeaderText(FIGURE_COLUMNS[1], SwingConstants.RIGHT))
-            add(HeaderText(FIGURE_COLUMNS[2], SwingConstants.RIGHT, SCORED_BAR + SCORED_BAR_GAP))
+            add(HeaderText(FIGURE_COLUMNS[2], SwingConstants.RIGHT))
             add(HeaderText(FIGURE_COLUMNS[3], SwingConstants.RIGHT))
             add(Gap(0, 0))
         }

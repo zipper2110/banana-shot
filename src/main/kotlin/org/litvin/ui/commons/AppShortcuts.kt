@@ -18,7 +18,6 @@ object AppShortcuts {
     val HELP = AppShortcut("F1")
     val PLAY_PAUSE = AppShortcut("SPACE")
     val POINT_START = AppShortcut("C")
-    val POINT_END = AppShortcut("V")
     val CANCEL_PENDING = AppShortcut("ESCAPE")
     val TOGGLE_FAVORITE = AppShortcut("A")
     /**

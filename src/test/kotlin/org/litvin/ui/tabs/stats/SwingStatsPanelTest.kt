@@ -67,7 +67,7 @@ class SwingStatsPanelTest {
         onEdt {
             val panel = openPanel(onOpenPoints = { opened++ })
 
-            assertEquals("No scored points", panel.label("stats-empty").text)
+            assertEquals("No points with a winner", panel.label("stats-empty").text)
             panel.find<AbstractButton>("stats-open-points")!!.doClick()
             assertEquals(1, opened)
         }

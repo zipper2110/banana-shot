@@ -406,7 +406,6 @@ class SwingPointsPanel(
         }
         override fun jumpToSelected() = this@SwingPointsPanel.jumpToSelected()
         override fun setStartAtPlayhead() = this@SwingPointsPanel.onStartAtPlayhead()
-        override fun setEndAtPlayhead() = this@SwingPointsPanel.onEndAtPlayhead()
         override fun createPointAt(ms: Long) = dispatcher.onPointStart(ms)
         override fun editPoint(id: String, patch: PointPatch) = this@SwingPointsPanel.editPoint(id, patch)
         override fun deletePoint(id: String) = this@SwingPointsPanel.deletePoint(id)
@@ -532,10 +531,6 @@ class SwingPointsPanel(
 
             override fun startAtPlayhead() {
                 onStartAtPlayhead()
-            }
-
-            override fun endAtPlayhead() {
-                onEndAtPlayhead()
             }
 
             override fun deleteSelected() {
@@ -1253,26 +1248,10 @@ class SwingPointsPanel(
         }
     }
 
-    private fun onEndAtPlayhead() {
-        if (replays.isActive) return
-        // Capture pending Start before finalization to select the created row afterwards
-        val prevPending = dispatcher.getPendingStart()
-        if (dispatcher.onPointEnd(player.currentTimeMs())) analytics.record(AnalyticsEvent.PointAdded)
-        maybeShowDispatcherHint()
-        EventQueue.invokeLater {
-            val nowPending = dispatcher.getPendingStart()
-            if (prevPending != null && nowPending == null) {
-                // A point was likely created; select the row matching prevPending start
-                val pts = dispatcher.getCompletedPoints()
-                pts.firstOrNull { it.startMs == prevPending }?.let { selectEventAndScroll("point:${it.id}") }
-            }
-        }
-    }
-
     /**
-     * Q, W and E. With a pending point, the key ends the point at the playhead
-     * (as V does) and gives the winner to the new point. Without a pending point, the key gives the winner
-     * to the active point. Between points, the key does nothing.
+     * Q, W and E. With a pending point, the key ends the point at the playhead and gives the winner to the new point.
+     * These keys are the only way to end a point. Without a pending point, the key gives the winner to the active
+     * point. Between points, the key does nothing.
      */
     private fun endPointWithWinner(outcome: Outcome) {
         if (replays.isActive) return

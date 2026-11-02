@@ -109,8 +109,7 @@ internal class ProjectRow(
             ProjectsTableColumns.SPORT to SportCell(stats?.sport).apply { name = "projects-sport-$id" },
             ProjectsTableColumns.DURATION to FigureCell(stats?.duration, skeletonWidth = 44).apply { name = "projects-duration-$id" },
             ProjectsTableColumns.SIZE to FigureCell(stats?.fileSize, skeletonWidth = 56).apply { name = "projects-size-$id" },
-            ProjectsTableColumns.SCORED to ScoredCell(stats?.scoredCount, stats?.pointCount, stats?.scoredPoints)
-                .apply { name = "projects-scored-$id" },
+            ProjectsTableColumns.POINTS to FigureCell(stats?.points, skeletonWidth = 24).apply { name = "projects-points-$id" },
             ProjectsTableColumns.FAVORITES to FavoritesCell(stats?.favoritePoints, stats?.favoriteCount).apply { name = "projects-favorites-$id" },
         )
         // The layout places the children by index, so each cell goes to the index of its column.
@@ -194,7 +193,7 @@ internal class ProjectRow(
             ProjectsTableColumns.SPORT,
             ProjectsTableColumns.DURATION,
             ProjectsTableColumns.SIZE,
-            ProjectsTableColumns.SCORED,
+            ProjectsTableColumns.POINTS,
             ProjectsTableColumns.FAVORITES,
         )
 
@@ -310,46 +309,3 @@ internal class FavoritesCell(text: String?, count: Int?) : FigureCell(
     skeletonWidth = 16,
     figureIcon = ProjectsUi.icon(Material2MZ.STAR, 14, if (count == null || count == 0) Palette.FG_3 else Palette.YELLOW),
 )
-
-/**
- * The scored points of all points, for example "96/128", and a thin progress bar.
- * The bar is lime when all points have a score, and sage when some points have a score.
- */
-internal class ScoredCell(
-    private val scored: Int?,
-    private val total: Int?,
-    text: String?,
-) : JLabel(text.orEmpty()) {
-    private val figureFont = ProjectsUi.font(12.5f)
-
-    init {
-        if (scored != null && total != null) toolTipText = tr("projects.row.scored.tooltip", "scored" to scored, "total" to total)
-    }
-
-    override fun paintComponent(g: Graphics) {
-        val g2 = ProjectsUi.smooth(g)
-        try {
-            val barX = width - ProjectsTableColumns.SCORED_BAR
-            val barY = (height - 4) / 2
-            ProjectsUi.paintBox(g2, barX, barY, ProjectsTableColumns.SCORED_BAR, 4, 2, Palette.TRACK, null)
-            val numberRight = (barX - ProjectsTableColumns.SCORED_BAR_GAP).toFloat()
-            if (scored == null || total == null) {
-                ProjectsUi.paintBox(g2, numberRight.toInt() - 40, (height - 10) / 2, 40, 10, 3, Palette.LINE, null)
-                return
-            }
-            if (total > 0 && scored > 0) {
-                val fill = (ProjectsTableColumns.SCORED_BAR * scored.coerceAtMost(total) / total.toFloat()).toInt().coerceAtLeast(2)
-                val color = if (scored >= total) Palette.LIME else Palette.SAGE
-                ProjectsUi.paintBox(g2, barX, barY, fill, 4, 2, color, null)
-            }
-            val suffix = "/$total"
-            val suffixWidth = ProjectsUi.textWidth(suffix, figureFont)
-            val main = scored.toString()
-            val mainWidth = ProjectsUi.textWidth(main, figureFont)
-            ProjectsUi.drawText(g2, suffix, figureFont, Palette.FG_3, numberRight - suffixWidth, 0f, height.toFloat())
-            ProjectsUi.drawText(g2, main, figureFont, Palette.FG, numberRight - suffixWidth - mainWidth, 0f, height.toFloat())
-        } finally {
-            g2.dispose()
-        }
-    }
-}

@@ -16,7 +16,6 @@ class PointsKeybindingsTest {
         val bindings = Keybindings(panel, { false }, object : PointsKeyActions {
             override fun toggle() {}
             override fun startAtPlayhead() {}
-            override fun endAtPlayhead() {}
             override fun cancelPending() {}
             override fun toggleFavoriteSelected() { favoriteToggles++ }
             override fun deleteSelected() {}
@@ -40,7 +39,6 @@ class PointsKeybindingsTest {
         val bindings = Keybindings(panel, { false }, object : PointsKeyActions {
             override fun toggle() {}
             override fun startAtPlayhead() {}
-            override fun endAtPlayhead() {}
             override fun cancelPending() {}
             override fun toggleFavoriteSelected() {}
             override fun deleteSelected() {}
@@ -65,7 +63,6 @@ class PointsKeybindingsTest {
         val bindings = Keybindings(panel, { false }, object : PointsKeyActions {
             override fun toggle() {}
             override fun startAtPlayhead() {}
-            override fun endAtPlayhead() {}
             override fun cancelPending() {}
             override fun toggleFavoriteSelected() {}
             override fun deleteSelected() {}
@@ -90,7 +87,6 @@ class PointsKeybindingsTest {
         val bindings = Keybindings(panel, { false }, object : PointsKeyActions {
             override fun toggle() {}
             override fun startAtPlayhead() {}
-            override fun endAtPlayhead() {}
             override fun cancelPending() { cancels++ }
             override fun toggleFavoriteSelected() {}
             override fun deleteSelected() {}

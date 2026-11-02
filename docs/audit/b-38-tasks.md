@@ -15,6 +15,7 @@ decision to keep the current behavior.
 |---|---|
 | 1 | Decided on 2026-10-05: do this work after the first release. One backlog item (B-38) holds all the findings. |
 | 2 | Q7, decided on 2026-10-24: a comment that starts outside the kept points starts at the start of the first kept point that it overlaps. It loses only its part before that point. From its start, a comment keeps its remaining time and can continue over the next points. No warning, and no cut at the end of a point. |
+| 3 | T12, decided on 2026-11-03: drop T12. The app has no "not scored" point now. The joined Points tab ends each point with its outcome (Q, W, or E), and the V key is removed. A point without a saved outcome counts as "No winner". The Projects tab and the Export tab do not show a "Scored x/y" figure now. |
 
 ## Open questions
 
@@ -45,11 +46,12 @@ decision in "Decisions" at once.
 | T9 | F-12 | Super-minor | Grand Slam deciding-set tiebreak | Q6 | open |
 | T10 | F-13 | Super-minor | Clear the pending Start | — | open |
 | T11 | F-14, F-15 | Super-minor | Reload the projects list; show damaged projects | — | open |
-| T12 | F-16 | Super-minor | Set a point back to "not scored" | — | open |
+| T12 | F-16 | Super-minor | Set a point back to "not scored" | Decision 3 | dropped |
 | T13 | F-17 | Super-minor | Comments between points in "Only points" | Q7 | done |
 
-Status values: `open`, `in-progress`, `done`. When a task is done, write
-the test classes in its "Tests" line. Do not remove the task.
+Status values: `open`, `in-progress`, `done`, `dropped`. When a task is
+done, write the test classes in its "Tests" line. When a task is dropped,
+write the reason in "Decisions". Do not remove the task.
 
 ## T1 Safe delete of a point (F-04)
 
@@ -184,7 +186,16 @@ the test classes in its "Tests" line. Do not remove the task.
   button in the point bar of the Points tab). Update the help text.
 - Code: `ui/tabs/points/PointsScoring.kt` (`setOutcome`),
   `ui/tabs/points/ui/ScoreButtons.kt`.
-- Tests:
+- Dropped on 2026-11-03 (decision 3). The app does not have the "not
+  scored" state now, so the action is not necessary:
+  - The V key is removed. Q, W, and E end a point and give its outcome.
+  - `ScoreV1.outcomeOf` gives `Outcome.NONE` for a point without a saved
+    outcome. The scoreboard starts at the first point.
+  - The Projects tab shows the number of points in a "Points" column. The
+    "Scored" column and the "x/y points scored" note of the Export tab are
+    removed. The texts say "with a winner" in place of "scored".
+- Tests: `PointsProjectSwitchTest`, `PointsCardSelectionTest`,
+  `ExportPlannerTest`, `ProjectRowTest`, `DefaultProjectsPresenterTest`
 
 ## T13 Comments between points in "Only points" (F-17)
 

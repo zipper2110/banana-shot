@@ -44,13 +44,11 @@ data class ProjectCardState(
 data class ProjectStatsState(
     val duration: String,
     val fileSize: String,
-    val scoredPoints: String,
+    /** The number of points. */
+    val points: String,
     val favoritePoints: String,
     /** A message for the user when the video file is not on the disk. Null when the video is available. */
     val videoMissingMessage: String? = null,
-    /** The numbers of [scoredPoints], for the progress bar of the Scored column. */
-    val scoredCount: Int = 0,
-    val pointCount: Int = 0,
     /** The number of [favoritePoints], for the color of the star. */
     val favoriteCount: Int = 0,
     /** The name of the sport, for example "Padel". */

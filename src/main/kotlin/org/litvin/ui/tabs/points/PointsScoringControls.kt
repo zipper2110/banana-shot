@@ -36,6 +36,7 @@ internal data class PointControlsState(
     val favorite: Boolean = false,
     val hasPrevious: Boolean = false,
     val hasNext: Boolean = false,
+    /** The outcome of the selected point. It is null only when no point is selected. */
     val outcome: Outcome? = null,
     /** False for a point without a valid length. Such a point gets no outcome. */
     val canScore: Boolean = false,

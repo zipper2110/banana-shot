@@ -102,7 +102,10 @@ class PointsDispatcher {
         }
     }
 
-    /** Called when user presses V or clicks Point End. Returns true when a point was created. */
+    /**
+     * Ends the pending point at [timeMs]. Returns true when a point was created.
+     * The Points tab calls it only for Q, W and E, and then gives the outcome to the new point at once.
+     */
     fun onPointEnd(timeMs: Long): Boolean {
         val s = pendingStartMs
         if (s == null) {

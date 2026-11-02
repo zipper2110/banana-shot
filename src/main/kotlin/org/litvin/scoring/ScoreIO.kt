@@ -56,6 +56,12 @@ data class ScoreV1(
     fun manualMarks(): ManualScoreMarks = ManualScoreMarks(manualGameWins, manualSetWins, scoreOverrides)
 
     /**
+     * The outcome of the point with [pointId]. Each point has an outcome: a point without an entry in [outcomes]
+     * (from an old project, or after a failed write) has no winner, as [Outcome.NONE].
+     */
+    fun outcomeOf(pointId: String): Outcome = outcomes[pointId] ?: Outcome.NONE
+
+    /**
      * A copy with the default texts of the app language: a blank side name or a default side name of any sport and
      * any language becomes [Sport.defaultSideName] of [sport], and a default title becomes the default title of the app
      * language. The file does not keep these texts, so they follow the app language (B-11 E3-T18).

@@ -13,7 +13,6 @@ import org.litvin.scoring.ScoreboardStyleId
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -38,7 +37,7 @@ class ExportPlannerTest {
     }
 
     @Test
-    fun summarizeCountsRawPointsValidFavoritesDurationAndScoredOutcomes() {
+    fun summarizeCountsRawPointsValidFavoritesAndDuration() {
         val edl = EdlV1(
             points = listOf(
                 point("p1", 0, 1_000, favorite = true),
@@ -46,19 +45,14 @@ class ExportPlannerTest {
                 point("bad", 2_000, 1_900, favorite = true),
             )
         )
-        val score = ScoreV1(outcomes = mapOf("p1" to Outcome.P1, "bad" to Outcome.NONE))
-
-        val summary = ExportPlanner.summarize(edl, score)
+        val summary = ExportPlanner.summarize(edl)
 
         assertEquals(3, summary.pointCount)
         assertEquals(1, summary.favoriteCount)
         assertEquals(1_500, summary.totalMs)
         assertEquals(1_000, summary.favoriteTotalMs)
-        assertEquals(2, summary.scoredCount)
-        assertEquals(1_000, summary.scoredTotalMs)
         assertEquals(2, summary.validPointCount)
         assertEquals(1_500, summary.validTotalMs)
-        assertFalse(summary.allScored)
     }
 
     @Test

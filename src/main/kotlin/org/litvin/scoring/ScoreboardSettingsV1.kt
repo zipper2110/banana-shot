@@ -74,7 +74,7 @@ enum class ScoreboardPosition {
 
 /** When the scoreboard comes into a "Full video" export and the Points tab preview (B-63). */
 enum class ScoreboardStart {
-    /** At the start of the first scored point, with a fade. */
+    /** At the start of the first point, with a fade. */
     @JsonEnumDefaultValue
     FIRST_POINT,
 

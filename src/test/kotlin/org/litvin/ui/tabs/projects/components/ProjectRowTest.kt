@@ -22,7 +22,7 @@ class ProjectRowTest {
         name = "Club final",
         secondary = "D:\\video\\2026\\PXL_20260920_153210877.mp4",
         id = "p1",
-        stats = ProjectStatsState("1:52:44", "14.61 GB", "96/128", "38", scoredCount = 96, pointCount = 128, favoriteCount = 38, sport = "Padel"),
+        stats = ProjectStatsState("1:52:44", "14.61 GB", "128", "38", favoriteCount = 38, sport = "Padel"),
     )
 
     @Test
@@ -34,8 +34,7 @@ class ProjectRowTest {
             assertEquals(project.secondary, find<JLabel>(row, "projects-video-p1").toolTipText)
             assertEquals("1:52:44", find<JLabel>(row, "projects-duration-p1").text)
             assertEquals("14.61 GB", find<JLabel>(row, "projects-size-p1").text)
-            assertEquals("96/128", find<JLabel>(row, "projects-scored-p1").text)
-            assertEquals("96 of 128 points have a score", find<JLabel>(row, "projects-scored-p1").toolTipText)
+            assertEquals("128", find<JLabel>(row, "projects-points-p1").text)
             assertEquals("38", find<JLabel>(row, "projects-favorites-p1").text)
             assertEquals("Padel", find<JLabel>(row, "projects-sport-p1").text)
             assertNull(findOrNull(row, "projects-video-missing-p1"))
@@ -74,8 +73,7 @@ class ProjectRowTest {
             val row = row(project.copy(stats = null))
 
             assertEquals("", find<JLabel>(row, "projects-duration-p1").text)
-            assertEquals("", find<JLabel>(row, "projects-scored-p1").text)
-            assertNull(find<JLabel>(row, "projects-scored-p1").toolTipText)
+            assertEquals("", find<JLabel>(row, "projects-points-p1").text)
         }
     }
 

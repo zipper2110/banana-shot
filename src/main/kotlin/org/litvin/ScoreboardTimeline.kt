@@ -247,18 +247,18 @@ object ScoreboardTimelineBuilder {
      */
     internal fun fullVideoRange(
         ordered: List<PointV1>,
-        outcomes: Map<String, Outcome>,
         matchEnded: Boolean,
         timing: ScoreboardTiming,
         preview: Boolean,
         videoEndMs: Long?,
     ): BoardRange? {
-        val firstScored = ordered.firstOrNull { it.id in outcomes } ?: return null
+        // Each point has an outcome (a missing outcome is "No winner"), so the board starts at the first point.
+        val firstPoint = ordered.firstOrNull() ?: return null
         val lastEnd = ordered.maxOf { it.endMs }.toLong()
         val start = when (timing.start) {
-            ScoreboardStart.FIRST_POINT -> firstScored.startMs.toLong()
+            ScoreboardStart.FIRST_POINT -> firstPoint.startMs.toLong()
             ScoreboardStart.VIDEO_START -> 0L
-            ScoreboardStart.FIXED_TIME -> timing.startMs ?: firstScored.startMs.toLong()
+            ScoreboardStart.FIXED_TIME -> timing.startMs ?: firstPoint.startMs.toLong()
         }
         // The board has no fade at the video start, also for a fixed start at 0.
         val untilVideoEnd = BoardRange(start, videoEndMs, fadeIn = start > 0L, fadeOut = false)
@@ -301,7 +301,7 @@ object ScoreboardTimelineBuilder {
         videoEndMs: Long?,
     ): List<OverlaySpan> {
         val ordered = points.sortedBy { it.startMs }
-        if (ordered.none { it.id in outcomes }) return emptyList()
+        if (ordered.isEmpty()) return emptyList()
         val last = ordered.last()
         // A point after the last point gives the span with the final score. It goes on to the end of the board.
         val finalScore = PointV1(id = FINAL_SCORE_ID, startMs = last.endMs, endMs = Int.MAX_VALUE)
@@ -319,7 +319,7 @@ object ScoreboardTimelineBuilder {
             sport = sport,
         )
         val matchEnded = spans.lastOrNull()?.matchEnded ?: false
-        val range = fullVideoRange(ordered, outcomes, matchEnded, timing, preview, videoEndMs) ?: return emptyList()
+        val range = fullVideoRange(ordered, matchEnded, timing, preview, videoEndMs) ?: return emptyList()
         val rangeEnd = range.endMs ?: Long.MAX_VALUE
         val shown = spans
             .filter { it.endMs > range.startMs && it.startMs < rangeEnd }

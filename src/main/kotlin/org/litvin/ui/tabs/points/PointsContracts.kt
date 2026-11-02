@@ -14,7 +14,6 @@ interface PointsActions {
     fun seekTo(ms: Long)
     fun jumpToSelected()
     fun setStartAtPlayhead()
-    fun setEndAtPlayhead()
 
     fun createPointAt(ms: Long)
     fun editPoint(id: String, patch: PointPatch)

@@ -229,7 +229,7 @@ class ComponentNameContractTest {
             "projects-table-header",
             "projects-duration-$PROJECT_ID",
             "projects-size-$PROJECT_ID",
-            "projects-scored-$PROJECT_ID",
+            "projects-points-$PROJECT_ID",
             "projects-favorites-$PROJECT_ID",
             "points-video",
             "points-play-pause",

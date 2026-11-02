@@ -837,7 +837,7 @@ private const val CARD_FRAME_WIDTH = 320
 
 /**
  * The video facts for the start and the end settings (B-63). [positionMs] is the preview position when the dialog
- * opens. [firstPointStartMs] is the start of the first scored point and [lastPointEndMs] the end of the last point,
+ * opens. [firstPointStartMs] is the start of the first point and [lastPointEndMs] the end of the last point,
  * or null without points.
  */
 data class TimingContext(

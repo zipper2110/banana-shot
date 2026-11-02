@@ -61,7 +61,6 @@ class EditPointDialogTest {
         override fun seekTo(ms: Long) = Unit
         override fun jumpToSelected() = Unit
         override fun setStartAtPlayhead() = Unit
-        override fun setEndAtPlayhead() = Unit
         override fun createPointAt(ms: Long) = Unit
         override fun editPoint(id: String, patch: PointPatch) { edits += patch }
         override fun deletePoint(id: String) = Unit

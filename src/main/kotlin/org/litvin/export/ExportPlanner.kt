@@ -39,15 +39,10 @@ data class ExportPointSummary(
     val favoriteCount: Int,
     val totalMs: Long,
     val favoriteTotalMs: Long,
-    val scoredCount: Int,
-    val scoredTotalMs: Long = 0,
     /** Points that an "Only points" export keeps: no empty or overlapping points. */
     val validPointCount: Int = pointCount,
     val validTotalMs: Long = totalMs,
-) {
-    val allScored: Boolean
-        get() = pointCount > 0 && scoredCount == pointCount
-}
+)
 
 data class ExportReadiness(
     val enabled: Boolean,
@@ -109,19 +104,15 @@ object ExportPlanner {
         return keeps
     }
 
-    fun summarize(edl: EdlV1?, score: ScoreV1): ExportPointSummary {
+    fun summarize(edl: EdlV1?): ExportPointSummary {
         val points = edl?.points ?: emptyList()
         val validPoints = validateEdl(edl)
         val validFavorites = validPoints.filter { it.favorite }
-        val outcomes = score.outcomes
-        val scored = points.filter { point -> outcomes.containsKey(point.id) }
         return ExportPointSummary(
             pointCount = points.size,
             favoriteCount = validFavorites.size,
             totalMs = points.sumOf { (it.endMs - it.startMs).coerceAtLeast(0).toLong() },
             favoriteTotalMs = validFavorites.sumOf { (it.endMs - it.startMs).toLong() },
-            scoredCount = scored.size,
-            scoredTotalMs = scored.sumOf { (it.endMs - it.startMs).coerceAtLeast(0).toLong() },
             validPointCount = validPoints.size,
             validTotalMs = validPoints.sumOf { (it.endMs - it.startMs).toLong() },
         )

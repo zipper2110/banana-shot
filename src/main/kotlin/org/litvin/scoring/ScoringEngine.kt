@@ -83,7 +83,7 @@ object ScoringEngine {
     }
 
     /**
-     * Computes the full [Timeline]. Missing and [Outcome.NONE] outcomes keep the score.
+     * Computes the full [Timeline]. [Outcome.NONE] keeps the score. A point without an outcome is [Outcome.NONE].
      *
      * Serve: [serverMarks] holds the server that the user marked on a point. Without marks, no point has a server.
      * With marks, every point has a server:

@@ -306,11 +306,9 @@ class DefaultProjectsPresenter(
         return ProjectStatsState(
             duration = durationMs?.let(RenderFormatting::formatDuration) ?: UNKNOWN,
             fileSize = fileSizeBytes?.let(RenderFormatting::formatSize) ?: UNKNOWN,
-            scoredPoints = "$scoredCount/$pointCount",
+            points = DisplayFormats.integer(pointCount),
             favoritePoints = DisplayFormats.integer(favoriteCount),
             videoMissingMessage = if (videoMissing) tr("projects.row.videoMissing.tooltip") else null,
-            scoredCount = scoredCount,
-            pointCount = pointCount,
             favoriteCount = favoriteCount,
             sport = sport.title,
         )

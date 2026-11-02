@@ -244,11 +244,10 @@ internal class PointsScoring(
         render()
     }
 
-    fun winnerColor(pointId: String): Color? = when (score.outcomes[pointId]) {
+    fun winnerColor(pointId: String): Color = when (score.outcomeOf(pointId)) {
         Outcome.P1 -> players().p1Color
         Outcome.P2 -> players().p2Color
         Outcome.NONE -> Palette.NEUTRAL_LIGHT
-        null -> null
     }
 
     /** The MATCH, SET or GAME badge, the serve mark and the after-match state of a point. */
@@ -492,7 +491,7 @@ internal class PointsScoring(
         val result = try {
             val timing = TimingContext(
                 positionMs = playheadMs,
-                firstPointStartMs = points.firstOrNull { it.id in score.outcomes }?.startMs?.toLong(),
+                firstPointStartMs = points.minOfOrNull { it.startMs }?.toLong(),
                 lastPointEndMs = points.maxOfOrNull { it.endMs }?.toLong(),
             )
             ScoreboardSettingsDialog.show(
@@ -625,7 +624,7 @@ internal class PointsScoring(
                 favorite = point.favorite,
                 hasPrevious = index > 0,
                 hasNext = index + 1 < points.size,
-                outcome = score.outcomes[point.id],
+                outcome = score.outcomeOf(point.id),
                 canScore = point.endMs > point.startMs,
                 pending = pending,
                 server = timeline?.serverOfPoint?.getOrNull(index),

@@ -16,7 +16,6 @@ data class ProjectStats(
     val durationMs: Long? = null,
     val fileSizeBytes: Long? = null,
     val pointCount: Int = 0,
-    val scoredCount: Int = 0,
     val favoriteCount: Int = 0,
     /** The sport in score.json. A project without score.json is a tennis project. */
     val sport: Sport = Sport.TENNIS,

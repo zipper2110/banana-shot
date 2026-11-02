@@ -700,10 +700,7 @@ class SwingExportPanel(
         }
     }
 
-    private fun loadExportSummary() = ExportPlanner.summarize(
-        readCurrentProjectEdl(),
-        readCurrentProjectScore(),
-    )
+    private fun loadExportSummary() = ExportPlanner.summarize(readCurrentProjectEdl())
 
     private fun readCurrentProjectEdl(): EdlV1? {
         val projectDir = currentProjectDir()
@@ -731,14 +728,15 @@ class SwingExportPanel(
         }
     }
 
-    private fun showScoredCount(summary: ExportPointSummary?) {
+    /** The note of the Scoreboard tile tells why the video cannot have a scoreboard: no points, or no point with a winner. */
+    private fun showScoreboardNote(summary: ExportPointSummary?) {
         scoreboardCheck.setNote(
             when {
                 summary == null -> ""
                 summary.pointCount == 0 -> tr("export.noPoints")
-                else -> tr("export.scored", "scored" to summary.scoredCount, "total" to summary.pointCount)
+                !hasAnyScoredPoints() -> tr("stats.empty.noScoredPoints")
+                else -> ""
             },
-            ok = summary?.allScored == true,
         )
     }
 
@@ -749,7 +747,7 @@ class SwingExportPanel(
             null
         }
         contentCards.show(summary, fullVideoDurationMs().takeIf { manifestPath != null })
-        showScoredCount(summary)
+        showScoreboardNote(summary)
         updateFavoriteOnlyAvailability()
         updateOutputDuration()
         updateFooter()

@@ -10,6 +10,8 @@ import org.litvin.points.PointV1
 import org.litvin.media.MediaScreen
 import org.litvin.projects.ManifestIO
 import org.litvin.projects.ProjectManifestV1
+import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.ScoreV1
 import org.litvin.ui.flow.fakes.FakeMediaPlayer
 import org.litvin.ui.flow.fakes.ScriptedDialogService
 import org.litvin.ui.tabs.points.ui.PointsTableView
@@ -59,6 +61,8 @@ class PointsCardSelectionTest {
                 nextCommentId = 8,
             ),
         )
+        // The Scoring settings dialog cannot open in a headless test.
+        ScoreIO.writeForProjectDir(projectDir.absolutePath, ScoreV1(scoreSettingsReviewed = true))
     }
 
     @AfterTest
@@ -128,7 +132,7 @@ class PointsCardSelectionTest {
         run("points.toggleFavorite", 500)
         run("points.toggleFavorite", 500)
         run("points.pointStart", 2_000)
-        run("points.pointEnd", 3_000)
+        run("points.scoreNone", 3_000)
         run("points.delete", 500)
 
         assertEquals(1, analytics.count(AnalyticsEvent.PointFavorited), "a favorite that is removed again does not count")

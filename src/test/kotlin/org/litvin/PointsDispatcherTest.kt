@@ -115,4 +115,33 @@ class PointsDispatcherTest {
         msg = d.consumeUserMessage()
         assertTrue(msg != null && msg.contains("The end must be after the start"), "Expect invalid end/start hint, but was: $msg")
     }
+
+    @Test
+    fun clearPending_removesThePendingStartAndKeepsThePoints() {
+        val d = newDispatcher()
+        d.onPointStart(1000)
+        d.onPointEnd(2000)
+        d.onPointStart(3000)
+        var changes = 0
+        d.onPointsChanged = { changes++ }
+
+        d.clearPending()
+
+        assertNull(d.getPendingStart())
+        assertEquals(listOf(1000 to 2000), d.getCompletedPoints().map { it.startMs to it.endMs })
+        assertEquals(1, changes)
+        // The next End does not use the cancelled Start.
+        assertEquals(false, d.onPointEnd(4000))
+    }
+
+    @Test
+    fun setPoints_keepsThePendingStart() {
+        // The Points tab loads the points again each time it opens. A pending Start stays until a project opens.
+        val d = newDispatcher()
+        d.onPointStart(3000)
+
+        d.setPoints(emptyList())
+
+        assertEquals(3000, d.getPendingStart())
+    }
 }

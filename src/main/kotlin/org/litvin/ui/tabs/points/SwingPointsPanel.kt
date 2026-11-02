@@ -542,6 +542,10 @@ class SwingPointsPanel(
                 this@SwingPointsPanel.deleteSelected()
             }
 
+            override fun cancelPending() {
+                dispatcher.clearPending()
+            }
+
             override fun nudge(deltaMs: Long) {
                 // With Frame step on, Left and Right step one frame while paused.
                 if (abs(deltaMs) == 1_000L && SessionSettings.frameStepWhenPaused && player.status() != PlayerStatus.PLAYING) {
@@ -660,6 +664,8 @@ class SwingPointsPanel(
     fun setProjectManifest(path: String) {
         // Write the pending changes to the current project before the project folder changes.
         autosave.flush()
+        // A pending Start belongs to the video of the previous project (B-38 T10).
+        dispatcher.clearPending()
         manifestPath = path
         projectDir = File(path).parentFile.absolutePath
         // Load adjustments for this project into the central store

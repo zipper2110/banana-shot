@@ -20,7 +20,8 @@ object AppRestart {
     fun isRestart(args: Array<String>): Boolean = args.contains(ARGUMENT) || System.getenv(ENVIRONMENT) == "1"
 
     /**
-     * The EXE that starts the installed app, or null for a start from the development build. The jpackage launcher
+     * The EXE that starts the installed app, or null for a start from the development build. On macOS, it is the
+     * launcher in `BananaShot.app/Contents/MacOS`, and [command] starts its bundle. The jpackage launcher
      * sets `jpackage.app-path`. Velopack installs it in `<install>\current`, and the stub `<install>\BananaShot.exe`
      * starts the current version. The stub is the better choice, because it also works after an update.
      */
@@ -39,7 +40,24 @@ object AppRestart {
             .start()
     }
 
-    /** The command of the new process. It keeps the window-size option of this process (B-11 E4-T8). */
-    internal fun command(launcher: File, windowSize: WindowSize? = WindowSize.requested()): List<String> =
-        listOfNotNull(launcher.absolutePath, ARGUMENT, windowSize?.let { "${WindowSize.ARGUMENT}$it" })
+    /**
+     * The command of the new process. It keeps the window-size option of this process (B-11 E4-T8).
+     *
+     * On macOS, `open -n` starts the app bundle of the launcher as a new app, as the Dock does (B-13). Without
+     * `-n`, `open` only shows the running app. `open` does not pass the environment, so `--env` gives [ENVIRONMENT].
+     */
+    internal fun command(
+        launcher: File,
+        windowSize: WindowSize? = WindowSize.requested(),
+        osName: String = System.getProperty("os.name").orEmpty(),
+    ): List<String> {
+        val arguments = listOfNotNull(ARGUMENT, windowSize?.let { "${WindowSize.ARGUMENT}$it" })
+        val bundle = launcher.absoluteFile.parentFile?.parentFile?.parentFile
+        if (osName.startsWith("Mac", ignoreCase = true) && bundle != null && bundle.name.endsWith(".app") &&
+            launcher.absoluteFile.parentFile.name == "MacOS"
+        ) {
+            return listOf("open", "-n", bundle.path, "--env", "$ENVIRONMENT=1", "--args") + arguments
+        }
+        return listOf(launcher.absolutePath) + arguments
+    }
 }

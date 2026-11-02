@@ -17,6 +17,7 @@ class PointsKeybindingsTest {
             override fun toggle() {}
             override fun startAtPlayhead() {}
             override fun endAtPlayhead() {}
+            override fun cancelPending() {}
             override fun toggleFavoriteSelected() { favoriteToggles++ }
             override fun deleteSelected() {}
             override fun nudge(deltaMs: Long) {}
@@ -40,6 +41,7 @@ class PointsKeybindingsTest {
             override fun toggle() {}
             override fun startAtPlayhead() {}
             override fun endAtPlayhead() {}
+            override fun cancelPending() {}
             override fun toggleFavoriteSelected() {}
             override fun deleteSelected() {}
             override fun nudge(deltaMs: Long) { nudges += deltaMs }
@@ -64,6 +66,7 @@ class PointsKeybindingsTest {
             override fun toggle() {}
             override fun startAtPlayhead() {}
             override fun endAtPlayhead() {}
+            override fun cancelPending() {}
             override fun toggleFavoriteSelected() {}
             override fun deleteSelected() {}
             override fun nudge(deltaMs: Long) {}
@@ -77,6 +80,31 @@ class PointsKeybindingsTest {
             .actionPerformed(ActionEvent(panel, ActionEvent.ACTION_PERFORMED, "test"))
 
         assertEquals(listOf("up", "down"), calls)
+        bindings.uninstall()
+    }
+
+    @Test
+    fun escapeCancelsThePendingPoint() {
+        val panel = JPanel()
+        var cancels = 0
+        val bindings = Keybindings(panel, { false }, object : PointsKeyActions {
+            override fun toggle() {}
+            override fun startAtPlayhead() {}
+            override fun endAtPlayhead() {}
+            override fun cancelPending() { cancels++ }
+            override fun toggleFavoriteSelected() {}
+            override fun deleteSelected() {}
+            override fun nudge(deltaMs: Long) {}
+            override fun speedUp() {}
+            override fun speedDown() {}
+        })
+
+        val esc = javax.swing.KeyStroke.getKeyStroke("ESCAPE")
+        assertEquals("points.cancelPending", panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).get(esc))
+        panel.actionMap.get("points.cancelPending")
+            .actionPerformed(ActionEvent(panel, ActionEvent.ACTION_PERFORMED, "test"))
+
+        assertEquals(1, cancels)
         bindings.uninstall()
     }
 }

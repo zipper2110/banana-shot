@@ -540,6 +540,37 @@ a small `MacIntegration` class that runs only on macOS:
 - **"Already running" text:** `SwingMainApp` says "look in the taskbar". On
   macOS, say "look in the Dock".
 
+### Result of step 7 (2026-11-03)
+
+- **Quit and About.** `MacIntegration` (macOS only) sets the quit handler:
+  it sends the close event of the main window, so Cmd+Q and "Quit
+  BananaShot" run the close sequence of the close button. A quit request to
+  the signed bundle (`osascript … quit`) ran the handler, and the app ended.
+  The About item opens More → About.
+- **Dock icon.** A source run sets the Dock icon from the SVG. The bundle
+  keeps its `.icns`.
+- **Delete key.** The key labeled "delete" on a Mac keyboard sends
+  Backspace. On macOS, the Delete shortcut of the points table and of the
+  replay editor is Backspace, and forward Delete (Fn+delete) also works.
+- **Help key.** F1 stays the Help key. On macOS, the shortcut lists show
+  "Fn+F1". A Cmd+? key is not done: Cmd+? is Shift+Cmd+/, and the keyboard
+  rule of B-11 E7-T3 (`KeyboardShortcutScanTest`) refuses punctuation keys,
+  because other keyboard layouts have other characters on them. The macOS
+  way is a Help menu in the menu bar (`apple.laf.useScreenMenuBar`), where
+  macOS handles the layouts. The texts `nav.help.tooltip`, `nav.help.hint`,
+  and `help.overview.action.1` still say "F1".
+- **Already running.** On macOS, the text `app.alreadyRunning.mac` says
+  "click the {app} icon in the Dock", in all languages.
+- **Restart.** After a language change, the restart on macOS runs
+  `open -n BananaShot.app --env BANANASHOT_RESTART=1 --args --restart`, as
+  the Dock starts an app.
+
+Not verified yet: a quit with an open project and a running export (check
+by hand that the project and the queue are saved), the About item, the
+restart after a language change in the bundle, full screen and the green
+window button with the preview, and the custom painting on a Retina display
+and on a normal display.
+
 ## 8. Packaging, signing, and update
 
 ### App bundle
@@ -914,7 +945,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
-| 7 | **macOS app behavior.** Section 7 | A few days | No | Not started |
+| 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Not started |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |

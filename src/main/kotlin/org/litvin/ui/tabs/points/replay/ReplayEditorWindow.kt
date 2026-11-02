@@ -20,6 +20,7 @@ import org.litvin.points.ReplayEffect
 import org.litvin.points.ReplayV1
 import org.litvin.points.Replays
 import org.litvin.shared.util.Timecode
+import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.CommentDialog
 import org.litvin.ui.commons.CommentInput
 import org.litvin.ui.commons.CommentLook
@@ -675,7 +676,10 @@ internal class ReplayEditorWindow(
                 else -> closeAsked()
             }
         }
-        bind("DELETE", "replay.deleteComment") { if (!picking) selectedCommentId?.let { deleteComment(it) } }
+        bind(AppShortcuts.DELETE.keyStroke, "replay.deleteComment") { if (!picking) selectedCommentId?.let { deleteComment(it) } }
+        AppShortcuts.alsoBound(AppShortcuts.DELETE).forEachIndexed { index, stroke ->
+            bind(stroke, "replay.deleteComment.$index") { if (!picking) selectedCommentId?.let { deleteComment(it) } }
+        }
         bind("ENTER", "replay.save") { if (picking) usePickedFrame() else close(save = true) }
     }
 

@@ -13,12 +13,19 @@ data class AppShortcut(
 }
 
 object AppShortcuts {
+    private val isMac: Boolean = System.getProperty("os.name").orEmpty().startsWith("Mac", ignoreCase = true)
+
     val HELP = AppShortcut("F1")
     val PLAY_PAUSE = AppShortcut("SPACE")
     val POINT_START = AppShortcut("C")
     val POINT_END = AppShortcut("V")
+    val CANCEL_PENDING = AppShortcut("ESCAPE")
     val TOGGLE_FAVORITE = AppShortcut("A")
-    val DELETE = AppShortcut("DELETE")
+    /**
+     * The key labeled "delete" on a Mac keyboard sends Backspace. A Mac keyboard has no forward Delete key, or only
+     * Fn+delete. Thus on macOS the shortcut is Backspace, and [alsoBound] keeps the forward Delete key (B-13).
+     */
+    val DELETE = AppShortcut(if (isMac) "BACK_SPACE" else "DELETE")
     val LEFT = AppShortcut("LEFT")
     val RIGHT = AppShortcut("RIGHT")
     val UP = AppShortcut("UP")
@@ -35,6 +42,10 @@ object AppShortcuts {
     val PREVIOUS_POINT = AppShortcut("shift R")
     val TOGGLE_FRAME_STEP = AppShortcut("F")
 
+    /** The other key strokes of [shortcut] that the app also binds. */
+    fun alsoBound(shortcut: AppShortcut): List<String> =
+        if (shortcut == DELETE && isMac) listOf("DELETE") else emptyList()
+
     /**
      * The key name of [keyStroke] from the catalog. The app does not use `KeyEvent.getKeyText`, because the JDK gives
      * that name in the language of Windows, not in the app language.
@@ -43,7 +54,9 @@ object AppShortcuts {
         if (keyStroke.startsWith("shift ")) return tr("key.withShift", "key" to displayName(keyStroke.removePrefix("shift ")))
         return when (keyStroke) {
             "SPACE" -> tr("key.space")
-            "DELETE" -> tr("key.delete")
+            "DELETE", "BACK_SPACE" -> tr("key.delete")
+            // Most Mac keyboards need Fn for F1 (B-13).
+            "F1" -> if (isMac) "Fn+F1" else "F1"
             "LEFT" -> tr("key.left")
             "RIGHT" -> tr("key.right")
             "UP" -> tr("key.up")

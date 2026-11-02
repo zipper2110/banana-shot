@@ -38,4 +38,21 @@ class WindowSizeTest {
         )
         assertEquals(listOf(launcher.absolutePath, AppRestart.ARGUMENT), AppRestart.command(launcher, windowSize = null))
     }
+
+    @Test
+    fun `on macOS a restart opens the app bundle as a new app`() {
+        val bundle = File("/Applications/BananaShot.app")
+        val launcher = File(bundle, "Contents/MacOS/BananaShot")
+
+        assertEquals(
+            listOf(
+                "open", "-n", bundle.absolutePath, "--env", "${AppRestart.ENVIRONMENT}=1", "--args",
+                AppRestart.ARGUMENT, "--window-size=1200x800",
+            ),
+            AppRestart.command(launcher, WindowSize(1200, 800), osName = "Mac OS X"),
+        )
+        // A launcher outside a bundle starts directly.
+        val loose = File("/tmp/BananaShot")
+        assertEquals(listOf(loose.absolutePath, AppRestart.ARGUMENT), AppRestart.command(loose, null, osName = "Mac OS X"))
+    }
 }

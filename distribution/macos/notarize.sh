@@ -55,6 +55,13 @@ xcrun notarytool submit "$ZIP" "${AUTH[@]}" --wait --timeout 1h --output-format 
 STATUS="$(plutil -extract status raw -o - "$RESULT" 2>/dev/null || true)"
 ID="$(plutil -extract id raw -o - "$RESULT" 2>/dev/null || true)"
 echo "Notarization $ID: ${STATUS:-no status}"
+if [[ -z "$STATUS" && -n "$ID" ]] && grep -q "Timeout" "$RESULT"; then
+  # The first submission of a new team can take hours. The check continues at Apple.
+  echo "Apple is still checking the app bundle. Wait for the result with:" >&2
+  echo "  xcrun notarytool wait $ID ${AUTH[*]}" >&2
+  echo "Then staple the ticket: xcrun stapler staple \"$APP\"" >&2
+  exit 2
+fi
 if [[ "$STATUS" != "Accepted" ]]; then
   cat "$RESULT" >&2
   if [[ -n "$ID" ]]; then

@@ -10,6 +10,7 @@ import org.litvin.i18n.Messages
 import org.litvin.app.AppServices
 import org.litvin.app.WindowSize
 import org.litvin.app.InstanceLock
+import org.litvin.app.MacIntegration
 import org.litvin.app.PreferencesProvider
 import org.litvin.app.SwingApplicationFactory
 import org.litvin.app.SwingApplicationHandle
@@ -27,7 +28,9 @@ import org.litvin.i18n.I18n
 object SwingMainApp {
     private val logger = KotlinLogging.logger {}
 
-    private val ALREADY_RUNNING_MESSAGE get() = tr("app.alreadyRunning", "app" to AppInfo.NAME)
+    // macOS has the Dock, not a taskbar (B-13).
+    private val ALREADY_RUNNING_MESSAGE
+        get() = tr(if (MacIntegration.isMac()) "app.alreadyRunning.mac" else "app.alreadyRunning", "app" to AppInfo.NAME)
 
     private val UNEXPECTED_ERROR get() = tr("app.unexpectedError")
 

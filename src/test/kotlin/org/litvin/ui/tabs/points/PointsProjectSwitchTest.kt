@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.points
 
 import org.litvin.adjustments.AdjustmentsStore
+import org.litvin.i18n.tr
 import org.litvin.media.MediaScreen
 import org.litvin.points.CommentV1
 import org.litvin.points.EdlIO
@@ -9,7 +10,9 @@ import org.litvin.points.PointV1
 import org.litvin.projects.ManifestIO
 import org.litvin.projects.ProjectManifestV1
 import org.litvin.ui.flow.fakes.FakeMediaPlayer
+import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.flow.fakes.ScriptedDialogService
+import java.awt.Component
 import java.awt.EventQueue
 import java.io.File
 import java.nio.file.Files
@@ -20,7 +23,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** A change that waits for the autosave goes to its own project when another project opens. */
+/** A change that waits for the autosave goes to its own project when another project opens. A pending Start does not go to the next project. */
 class PointsProjectSwitchTest {
     private lateinit var projectA: File
     private lateinit var projectB: File
@@ -70,6 +73,67 @@ class PointsProjectSwitchTest {
         val savedB = EdlIO.readForProjectDir(projectB.absolutePath)
         assertEquals(listOf("b-1"), savedB.points.map { it.id })
         assertEquals(listOf("Rally B"), savedB.comments.map { it.text })
+    }
+
+    @Test
+    fun openingAnotherProjectClearsThePendingStart() {
+        val dialogs = RecordingDialogs()
+        val (player, target) = openPanel(dialogs)
+
+        // A pending Start in project A, at a time that is free in project B.
+        player.seek(2_000)
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.pointStart").actionPerformed(null) }
+        SwingUtilities.invokeAndWait { target.setProjectManifest(manifest(projectB)) }
+        drainEventQueue()
+        player.seek(3_000)
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.pointEnd").actionPerformed(null) }
+        drainEventQueue()
+        SwingUtilities.invokeAndWait { target.saveNow() }
+
+        // V finds no Start, so it makes no point and shows the hint.
+        assertEquals(listOf(tr("dispatch.point.noStart")), dialogs.messages)
+        val savedB = EdlIO.readForProjectDir(projectB.absolutePath)
+        assertEquals(listOf("b-1"), savedB.points.map { it.id })
+    }
+
+    @Test
+    fun escapeCancelsThePendingStart() {
+        val dialogs = RecordingDialogs()
+        val (player, target) = openPanel(dialogs)
+
+        player.seek(2_000)
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.pointStart").actionPerformed(null) }
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.cancelPending").actionPerformed(null) }
+        player.seek(3_000)
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.pointEnd").actionPerformed(null) }
+        drainEventQueue()
+        SwingUtilities.invokeAndWait { target.saveNow() }
+
+        assertEquals(listOf(tr("dispatch.point.noStart")), dialogs.messages)
+        val savedA = EdlIO.readForProjectDir(projectA.absolutePath)
+        assertEquals(listOf("a-1"), savedA.points.map { it.id })
+    }
+
+    /** Records the messages. The tests run headless, so no dialog can show. */
+    private class RecordingDialogs : UserDialogService {
+        val messages = mutableListOf<String>()
+        override fun showInfo(parent: Component?, message: String, title: String) { messages += message }
+        override fun showError(parent: Component?, message: String, title: String) { messages += message }
+        override fun confirm(parent: Component?, message: String, title: String): Boolean = error("Unexpected confirm: $message")
+    }
+
+    private fun openPanel(dialogs: UserDialogService): Pair<FakeMediaPlayer, SwingPointsPanel> {
+        val player = FakeMediaPlayer(MediaScreen.POINTS)
+        SwingUtilities.invokeAndWait {
+            panel = SwingPointsPanel(
+                player,
+                AdjustmentsStore.legacySession(),
+                Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "test-autosave") },
+                dialogs,
+            ).also { it.setProjectManifest(manifest(projectA)) }
+        }
+        drainEventQueue()
+        return player to panel!!
     }
 
     private fun createProject(prefix: String, point: PointV1): File {

@@ -788,6 +788,12 @@ object SwingApplicationFactory {
                     }
                 }
             })
+            // Cmd+Q, the About item of the app menu, and the Dock icon on macOS (B-13).
+            MacIntegration.install(
+                mainWindow = frame,
+                openAbout = { moreDialog.value.open(AboutPage.ID) },
+                dockIcon = { AppIcon.windowImages().maxByOrNull { it.getWidth(null) } },
+            )
 
             // Active time (B-9): the main window or one of its dialogs is the active window.
             val focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager()

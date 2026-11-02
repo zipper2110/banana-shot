@@ -13,9 +13,11 @@ class NewProjectRulesTest {
 
     @Test
     fun suggestedNameIsTheVideoFileNameWithoutTheExtension() {
-        assertEquals("Club final", NewProjectRules.suggestedName("C:\\videos\\Club final.mp4"))
-        assertEquals("match.2026", NewProjectRules.suggestedName("C:\\videos\\match.2026.mov"))
-        assertEquals(NewProjectRules.DEFAULT_NAME, NewProjectRules.suggestedName("C:\\videos\\.mp4"))
+        // The paths of this system: "C:\\videos\\..." on Windows, "/videos/..." on macOS.
+        val videos = java.io.File(java.io.File.listRoots().first(), "videos")
+        assertEquals("Club final", NewProjectRules.suggestedName(java.io.File(videos, "Club final.mp4").path))
+        assertEquals("match.2026", NewProjectRules.suggestedName(java.io.File(videos, "match.2026.mov").path))
+        assertEquals(NewProjectRules.DEFAULT_NAME, NewProjectRules.suggestedName(java.io.File(videos, ".mp4").path))
     }
 
     @Test

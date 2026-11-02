@@ -108,6 +108,10 @@ internal fun fileLockKey(file: File): String {
     } catch (_: java.nio.file.InvalidPathException) {
         file.absolutePath
     }
-    // Windows paths do not depend on the case of the letters.
-    return if (File.separatorChar == '\\') path.lowercase(java.util.Locale.ROOT) else path
+    // Windows paths and the paths of the default macOS file system (APFS) do not depend on the case of the letters
+    // (B-13). On a case-sensitive Mac volume, two files that differ only in case then share a lock. That only
+    // makes one write wait.
+    val ignoresCase = File.separatorChar == '\\' ||
+        System.getProperty("os.name").orEmpty().startsWith("Mac", ignoreCase = true)
+    return if (ignoresCase) path.lowercase(java.util.Locale.ROOT) else path
 }

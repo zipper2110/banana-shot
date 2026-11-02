@@ -27,8 +27,12 @@ class LongTextRoomTest {
 
     @Test
     fun `the label column of the timeline fits a longer track name and its count`() {
-        assertEquals(124, SwingTimelineComponent.gutterWidth(listOf("VIDEO", "MARKS", "COMMENTS")))
-        assertTrue(SwingTimelineComponent.gutterWidth(listOf("VIDEO", "MARKEN", "KOMMENTARE")) > 124)
+        val english = SwingTimelineComponent.gutterWidth(listOf("VIDEO", "MARKS", "COMMENTS"))
+        val german = SwingTimelineComponent.gutterWidth(listOf("VIDEO", "MARKEN", "KOMMENTARE"))
+        // The exact width is for the UI font of Windows. macOS has no Segoe UI, and its fallback font is wider.
+        val segoe = "Segoe UI" in java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames
+        if (segoe) assertEquals(124, english)
+        assertTrue(german > english, "German $german px, English $english px")
     }
 
     @Test

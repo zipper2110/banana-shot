@@ -11,8 +11,8 @@ permissions:
 
 jobs:
   build-and-test:
-    # BananaShot is a Windows app. Some tests use Windows paths, and the Swing
-    # tests need a display. The release workflow uses the same runner.
+    # The Windows version. The Swing tests need a display. The release workflow
+    # uses the same runner.
     runs-on: windows-2022
     steps:
       - name: Checkout repository
@@ -36,3 +36,29 @@ jobs:
 
       - name: Test the workflow scripts
         run: node --test .github/scripts/release-age-reminder.test.js
+
+  macos-test:
+    # The macOS version (B-13): an Apple Silicon runner with the minimum macOS version of the app. The Swing tests
+    # have a display there. The robot tests of the ui-flow profile need the Accessibility permission and do not run
+    # here.
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'maven'
+
+      - name: Get the pinned macOS native files
+        # The tests then use the libmpv and FFmpeg of the app, not an ffmpeg of Homebrew on the runner.
+        run: distribution/macos/get-native-dependencies.sh
+
+      - name: Build and run tests
+        run: mvn -B test

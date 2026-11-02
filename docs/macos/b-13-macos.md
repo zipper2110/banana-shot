@@ -245,6 +245,65 @@ Recommendation: build both in a GitHub Actions job of our own, from pinned
 source commits. Then the corresponding source for the GPL and the LGPL is
 the input of the build, and we do not depend on a third party.
 
+### Result of the build script (2026-11-02)
+
+`distribution/macos/build-natives.sh` builds the native files from pinned
+sources on an Apple Silicon Mac. Each tarball has a SHA-256 in the script.
+libplacebo and x264 have a pinned Git commit. The output is in
+`target/native/macos-arm64`:
+
+| File | License | Content |
+|---|---|---|
+| `mpv/libmpv.2.dylib` (30 MB) | LGPL-2.1-or-later | mpv 0.41.0 with `-Dgpl=false`. FFmpeg 9.0.2 (no `--enable-gpl`), libplacebo 7.387.0, libass 0.17.5, FreeType, FriBidi, HarfBuzz, Little CMS, and glslang are static libraries in it |
+| `mpv/libmpv.dylib` | — | A link to `libmpv.2.dylib`. JNA loads the name `mpv` |
+| `mpv/libMoltenVK.dylib` (5 MB) | Apache-2.0 | MoltenVK 1.4.2, the KhronosGroup release file, arm64 only. A MoltenVK build needs Xcode |
+| `ffmpeg/bin/ffmpeg`, `ffprobe` (25 MB each) | GPL-2.0-or-later | FFmpeg 9.0.2, static, with libx264, libass, and VideoToolbox |
+| `LICENSES/`, `BUILD-INFO.txt` | — | The license texts, the sources, and the FFmpeg configuration |
+
+Decisions:
+
+- **Two FFmpeg builds.** The app has the Elastic License 2.0, not the GPL.
+  libmpv runs in the process of the app, so libmpv and all the code in it
+  must be LGPL or more permissive, as on Windows. Only the `ffmpeg` and
+  `ffprobe` programs contain GPL code (x264). The app runs them as separate
+  processes.
+- **Static libraries in libmpv.** Only two dylibs, and no Homebrew paths to
+  fix. A user can still replace `libmpv.2.dylib` with an own build (LGPL).
+- **No Vulkan loader.** libmpv links MoltenVK directly. Thus no ICD file is
+  necessary in the bundle.
+- **No Lua and no JavaScript.** The app uses only the client API. mpv
+  rejects the options `ytdl` and `osc` of the adapter with a warning, because
+  these options come from the Lua scripts. The warning is harmless.
+- **The only build tools from Homebrew** are meson, ninja, cmake, and
+  pkgconf. The script hides the `.pc` files, the CMake packages, and
+  `sdl2-config` of Homebrew.
+
+The script checks each Mach-O file: arm64 only, minimum macOS 15.0, a valid
+ad-hoc signature, and only libraries of macOS (`/usr/lib`, `/System`) or of
+the same folder. It also checks the `subtitles` filter, `libx264`, and
+`h264_videotoolbox`, that libmpv has `-Dgpl=false` and an LGPL FFmpeg with no
+x264 encoder, and that libmpv starts.
+
+Test on the M1 (macOS 27.2) with the new files:
+
+- The diagnostics (`--diagnostics`) pass. They now check arm64 and
+  `libmpv.dylib` on macOS.
+- The FFmpeg tests pass: `FfmpegToneFilterParityTest`, `UserTextExportTest`,
+  `NonSquarePixelExportTest`, `VideoToolboxExportTest`, and
+  `SourceVideoEndProbeTest`. An ASS text with libass and the macOS fonts
+  encodes with x264 and with VideoToolbox.
+- `MpvCropTabSpikeMain` shows the video in the preview with the child window,
+  the rotation, the zoom, and the crop frame. MoltenVK writes the warning
+  "Metal does not support disabling primitive restart" to stderr. The
+  Homebrew build does not show it. The picture is correct.
+
+Not verified yet:
+
+- The files on a Mac with macOS 15. libmpv links Swift libraries of the
+  system (for example `libswift_Builtin_float.dylib`). Make sure that macOS
+  15 has all of them.
+- A build on a clean GitHub macOS runner.
+
 ### Manifest and natives release
 
 - Add `distribution/macos/native-dependencies.json` with the same schema:
@@ -697,8 +756,8 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike") |
 | 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. Still to do: deploy the analytics Worker and the cockpit (step 12) |
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | In progress. Enrollment sent on 2026-11-02. Approval pending |
-| 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Not started. `distribution/macos/build-dev-ffmpeg.sh` makes a development FFmpeg only. It links Homebrew libraries |
-| 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Partly done. Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store. To do: the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, the proxy comments, the B-42 checks on a Mac |
+| 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | In progress. Done on 2026-11-02: `build-natives.sh` builds them from pinned sources (see "Result of the build script"). To do: a source archive, a GitHub Actions job that runs the script, the manifest, `get-native-dependencies.sh`, the natives release, `THIRD-PARTY-NOTICES.txt`, and a test on macOS 15 |
+| 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Partly done. Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the architecture and libmpv checks of the diagnostics. To do: the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, the proxy comments, the B-42 checks on a Mac |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Not started |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Not started. Needs step 4 |

@@ -34,6 +34,20 @@ class DistributionDiagnosticsTest {
     }
 
     @Test
+    fun `the architecture check expects x64 on Windows and arm64 on macOS`() {
+        assertTrue(DistributionDiagnostics.architectureCheck("Windows 11", "amd64").passed)
+        assertFalse(DistributionDiagnostics.architectureCheck("Windows 11", "aarch64").passed)
+        assertTrue(DistributionDiagnostics.architectureCheck("Mac OS X", "aarch64").passed)
+        assertFalse(DistributionDiagnostics.architectureCheck("Mac OS X", "x86_64").passed)
+    }
+
+    @Test
+    fun `the libmpv file name depends on the platform`() {
+        assertEquals("libmpv-2.dll", DistributionDiagnostics.libmpvFileName("Windows 11"))
+        assertEquals("libmpv.dylib", DistributionDiagnostics.libmpvFileName("Mac OS X"))
+    }
+
+    @Test
     fun `a key store that does not load fails the check`() {
         val check = DistributionDiagnostics.systemTrustStoreCheck { throw KeyStoreException("Windows-ROOT not found") }
 

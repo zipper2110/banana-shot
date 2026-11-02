@@ -109,7 +109,7 @@ class ApplicationLayoutResolver(
         environment[environmentName]?.trim()?.takeIf { it.isNotEmpty() }?.let {
             return File(it).absolutePath
         }
-        // The pinned build of Get-NativeDependencies.ps1 (Windows) or build-dev-ffmpeg.sh (macOS).
+        // The pinned build of Get-NativeDependencies.ps1 (Windows) or build-natives.sh (macOS).
         if (developmentFile.isFile) return developmentFile.absoluteFile.normalize().path
         return fallbackCommand
     }

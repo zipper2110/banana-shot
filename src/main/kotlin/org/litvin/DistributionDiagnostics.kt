@@ -24,19 +24,14 @@ object DistributionDiagnostics {
     }
 
     internal fun collect(layout: RuntimeLayout = ApplicationLayout.current()): List<DiagnosticCheck> {
-        val arch = System.getProperty("os.arch").orEmpty()
         return listOf(
-            DiagnosticCheck(
-                "Architecture",
-                arch.equals("amd64", true) || arch.equals("x86_64", true),
-                arch.ifBlank { "<unknown>" },
-            ),
+            architectureCheck(),
             DiagnosticCheck(
                 "Java runtime",
                 Runtime.version().feature() >= 17,
                 System.getProperty("java.runtime.version").orEmpty(),
             ),
-            fileCheck("libmpv", layout.mpvDirectory?.resolve("libmpv-2.dll")),
+            fileCheck("libmpv", layout.mpvDirectory?.resolve(libmpvFileName())),
             nativeMpvCheck(),
             executableCheck("FFmpeg", layout.ffmpegExecutable),
             executableCheck("FFprobe", layout.ffprobeExecutable),
@@ -45,6 +40,21 @@ object DistributionDiagnostics {
             httpsCheck(),
         )
     }
+
+    /** The build has native files for x64 on Windows and for Apple Silicon (arm64) on macOS (B-13). */
+    internal fun architectureCheck(
+        osName: String = System.getProperty("os.name").orEmpty(),
+        arch: String = System.getProperty("os.arch").orEmpty(),
+    ): DiagnosticCheck {
+        val expected = if (isMac(osName)) setOf("aarch64", "arm64") else setOf("amd64", "x86_64")
+        return DiagnosticCheck("Architecture", arch.lowercase() in expected, arch.ifBlank { "<unknown>" })
+    }
+
+    /** The libmpv file that JNA loads: `libmpv-2.dll` on Windows, `libmpv.dylib` (a link to `libmpv.2.dylib`) on macOS. */
+    internal fun libmpvFileName(osName: String = System.getProperty("os.name").orEmpty()): String =
+        if (isMac(osName)) "libmpv.dylib" else "libmpv-2.dll"
+
+    private fun isMac(osName: String): Boolean = osName.startsWith("Mac", ignoreCase = true)
 
     /**
      * The host of the rules file of build-expiry-spec.md. The check reads only the host, not the file:
@@ -57,7 +67,7 @@ object DistributionDiagnostics {
      * `jdk.crypto.mscapi`) and `KeychainStore-ROOT` on macOS.
      */
     internal fun systemTrustStoreType(osName: String = System.getProperty("os.name").orEmpty()): String =
-        if (osName.startsWith("Mac", ignoreCase = true)) "KeychainStore-ROOT" else "Windows-ROOT"
+        if (isMac(osName)) "KeychainStore-ROOT" else "Windows-ROOT"
 
     internal fun systemTrustStoreCheck(
         type: String = systemTrustStoreType(),

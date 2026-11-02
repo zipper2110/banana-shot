@@ -10,6 +10,7 @@ import org.litvin.export.RenderService
 import org.litvin.RenderStatus
 import org.litvin.export.ExportChunkPlanner
 import org.litvin.export.ExportFailureAdvice
+import org.litvin.export.ExportOutputGuard
 import org.litvin.export.ExportPlanner
 import org.litvin.export.ExportPointSummary
 import org.litvin.export.ExportReadiness
@@ -434,16 +435,10 @@ class SwingExportPanel(
                 resolutionLabel = target.resolution.label,
             )
         )
-        val chosen = filePicker.chooseExportDestination(
-            parent = this,
-            title = tr("export.saveAs"),
-            initialDirectory = initialDir,
-            suggestedFile = suggestedFile,
-        ) ?: return
-        settingsPreferences.saveOutputDirectory(chosen)
         // Ensure extension if user omitted
         val defaultExt = selPreset.container?.format?.lowercase()?.let { if (it.startsWith(".")) it.drop(1) else it } ?: "mp4"
-        val out = ExportPlanner.ensureExtension(chosen, defaultExt)
+        val (chosen, out) = chooseOutputFile(initialDir, suggestedFile, File(source), defaultExt) ?: return
+        settingsPreferences.saveOutputDirectory(chosen)
 
         // The file dialog asked to replace the file that the user selected. Ask here only for a name that the app changed.
         if (out != chosen && out.exists()) {
@@ -496,6 +491,29 @@ class SwingExportPanel(
             if (queued) tr("export.queued.text", "name" to out.name) else tr("export.started.text", "name" to out.name),
             if (queued) tr("export.queued") else tr("export.started"),
         )
+    }
+
+    /**
+     * Asks for the output file. Returns the file that the user selected and the output file with its extension, or
+     * null when the user cancels. The export must not replace the source video (B-38 T5): for the source path, the
+     * panel shows a message and opens the save dialog again.
+     */
+    private fun chooseOutputFile(initialDir: File?, suggestedFile: File, source: File, defaultExt: String): Pair<File, File>? {
+        var directory = initialDir
+        var suggested = suggestedFile
+        while (true) {
+            val chosen = filePicker.chooseExportDestination(
+                parent = this,
+                title = tr("export.saveAs"),
+                initialDirectory = directory,
+                suggestedFile = suggested,
+            ) ?: return null
+            val out = ExportPlanner.ensureExtension(chosen, defaultExt)
+            if (!ExportOutputGuard.isSourceVideo(out, source)) return chosen to out
+            dialogs.showWarning(this, tr("export.sameAsSource.text", "path" to out.path), tr("export.sameAsSource.title"))
+            directory = chosen.parentFile ?: directory
+            suggested = File(directory, suggestedFile.name)
+        }
     }
 
     override fun close() {

@@ -74,6 +74,84 @@ class SwingExportPanelTest {
         }
     }
 
+    /** B-38 T5: the save dialog refuses the source video, shows a message, and asks again. */
+    @Test
+    fun theSaveDialogRefusesTheSourceVideoAndAsksAgain(@TempDir root: File) {
+        val scheduler = ScheduledThreadPoolExecutor(1)
+        val adjustments = AdjustmentsSession(scheduler, saveDelayMs = 60_000L)
+        val render = RecordingRenderService()
+        val manifest = createProject(root, "a", AdjustmentsV1())
+        val source = File(root, "a.mp4")
+        val target = File(root, "a-export.mp4")
+        val picker = ScriptedFilePicker(listOf(source, target))
+        val dialogs = RecordingDialogs()
+        var panel: SwingExportPanel? = null
+        try {
+            SwingUtilities.invokeAndWait {
+                adjustments.load(File(manifest).parent)
+                panel = exportPanel(adjustments, render, picker, dialogs)
+                panel!!.setProjectManifest(manifest)
+                findButton(panel!!, "export-initialize").doClick()
+            }
+
+            assertEquals(1, dialogs.warnings.size)
+            assertTrue(source.path in dialogs.warnings.single(), dialogs.warnings.single())
+            assertEquals(2, picker.suggestions.size)
+            // The dialog opens again in the folder of the refused file, with the suggested name.
+            assertEquals(picker.suggestions[0].name, picker.suggestions[1].name)
+            assertEquals(source.parentFile, picker.suggestions[1].parentFile)
+            assertEquals(target.absolutePath, render.jobs.single().outputPath)
+            assertEquals("video", source.readText())
+        } finally {
+            SwingUtilities.invokeAndWait { panel?.close() }
+            adjustments.close()
+            scheduler.shutdownNow()
+        }
+    }
+
+    /** B-38 T5: a cancel after the message adds no export. */
+    @Test
+    fun aCancelAfterTheSourceVideoMessageAddsNoExport(@TempDir root: File) {
+        val scheduler = ScheduledThreadPoolExecutor(1)
+        val adjustments = AdjustmentsSession(scheduler, saveDelayMs = 60_000L)
+        val render = RecordingRenderService()
+        val manifest = createProject(root, "a", AdjustmentsV1())
+        val picker = ScriptedFilePicker(listOf(File(root, "sub/../a.mp4")))
+        val dialogs = RecordingDialogs()
+        var panel: SwingExportPanel? = null
+        try {
+            SwingUtilities.invokeAndWait {
+                adjustments.load(File(manifest).parent)
+                panel = exportPanel(adjustments, render, picker, dialogs)
+                panel!!.setProjectManifest(manifest)
+                findButton(panel!!, "export-initialize").doClick()
+            }
+
+            assertEquals(1, dialogs.warnings.size)
+            assertEquals(2, picker.suggestions.size)
+            assertTrue(render.jobs.isEmpty())
+        } finally {
+            SwingUtilities.invokeAndWait { panel?.close() }
+            adjustments.close()
+            scheduler.shutdownNow()
+        }
+    }
+
+    private fun exportPanel(
+        adjustments: AdjustmentsSession,
+        render: RenderService,
+        picker: FilePicker,
+        dialogs: UserDialogService,
+    ) = SwingExportPanel(
+        ExportSettingsPreferences(MemoryPreferences()),
+        render,
+        adjustments,
+        EmptyCompletedRendersRepository,
+        picker,
+        dialogs,
+        CompletableFuture.completedFuture(EncoderCapabilities.NONE),
+    )
+
     /** E8-S1: in expired mode, a click on the start button shows the dialog and does not add an export. */
     @Test
     fun inExpiredModeTheStartButtonCallsTheRefusalAndAddsNoExport(@TempDir root: File) {
@@ -325,6 +403,25 @@ class SwingExportPanelTest {
         override fun chooseSourceVideo(parent: Component?, title: String, initialDirectory: File?, suggestedFile: File?): File? = null
         override fun chooseExportDestination(parent: Component?, title: String, initialDirectory: File?, suggestedFile: File?): File =
             destination
+    }
+
+    /** Gives the files in order, then null (cancel). Records the suggested file of each call. */
+    private class ScriptedFilePicker(files: List<File>) : FilePicker {
+        private val remaining = ArrayDeque(files)
+        val suggestions = mutableListOf<File>()
+        override fun chooseSourceVideo(parent: Component?, title: String, initialDirectory: File?, suggestedFile: File?): File? = null
+        override fun chooseExportDestination(parent: Component?, title: String, initialDirectory: File?, suggestedFile: File?): File? {
+            suggestions += checkNotNull(suggestedFile)
+            return remaining.removeFirstOrNull()
+        }
+    }
+
+    private class RecordingDialogs : UserDialogService {
+        val warnings = mutableListOf<String>()
+        override fun showInfo(parent: Component?, message: String, title: String) = Unit
+        override fun showWarning(parent: Component?, message: String, title: String) { warnings += message }
+        override fun showError(parent: Component?, message: String, title: String) = error("$title: $message")
+        override fun confirm(parent: Component?, message: String, title: String): Boolean = true
     }
 
     private class AcceptingDialogs : UserDialogService {

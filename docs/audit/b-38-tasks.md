@@ -38,7 +38,7 @@ decision in "Decisions" at once.
 | T2 | F-05 | Minor | Tell the user about a skipped overlay or card | — | open |
 | T3 | F-06 | Minor | Keep the Scoreboard checkbox choice | Q2 | open |
 | T4 | F-07 | Minor | Precise marking in the Points tab | Q3 | open |
-| T5 | F-08 | Minor | Refuse an export to the source video path | — | open |
+| T5 | F-08 | Minor | Refuse an export to the source video path | — | done |
 | T6 | F-09 | Minor | Show a failed save of the adjustments | — | open |
 | T7 | F-10 | Super-minor | Show more sets on the scoreboard | Q4 | open |
 | T8 | F-11 | Super-minor | Show the final result on the scoreboard | Q5 | open |
@@ -100,7 +100,22 @@ the test classes in its "Tests" line. Do not remove the task.
 - Also check the path in `RenderQueue` before the final move. A saved queue
   can have an old job with this path.
 - Code: `ui/tabs/export/SwingExportPanel.kt:402-416`, `RenderQueue.kt:543`.
-- Tests:
+- Done on 2026-11-03:
+  - `ExportOutputGuard.isSourceVideo` compares the canonical paths. On
+    Windows it ignores the letter case. When both files exist, it also
+    uses `Files.isSameFile`. This finds a different letter case on a
+    case-insensitive macOS volume, a symbolic link, and a hard link.
+  - The Export tab checks the output file after it adds the extension. For
+    the source video, it shows "Source video" and opens the save dialog
+    again in the same folder with the suggested name. Cancel adds no
+    export. The native dialog can ask to replace the file before this
+    check. The source video does not change.
+  - `RenderQueue` checks the path before ffmpeg starts, so before the final
+    move. The job fails with "The output file is the source video" and the
+    reason `OUTPUT_WRITE`. The job path does not change after this check.
+  - New texts in all languages: `export.sameAsSource.title`,
+    `export.sameAsSource.text`, `export.failure.sameAsSource`.
+- Tests: `ExportOutputGuardTest`, `SwingExportPanelTest`
 
 ## T6 Show a failed save of the adjustments (F-09)
 

@@ -311,7 +311,20 @@ object RenderQueueManager {
                     notifyObservers()
                     continue
                 }
-                // 2) Output directory writable (attempt temp write)
+                // 2) The output is not the source. A saved queue can have an old job with this path (B-38 T5).
+                if (org.litvin.export.ExportOutputGuard.isSourceVideo(finalOut, srcFile)) {
+                    job.status = RenderStatus.FAILED
+                    job.failureReason = tr("export.failure.sameAsSource", "path" to job.outputPath)
+                    failRun(job, RenderFailReason.OUTPUT_WRITE)
+                    job.stderrTail = null
+                    job.updatedAtEpochMs = System.currentTimeMillis()
+                    logger.error { job.failureReason.orEmpty() }
+                    notifyObservers()
+                    clearCurrent(request)
+                    notifyObservers()
+                    continue
+                }
+                // 3) Output directory writable (attempt temp write)
                 val outDir = finalOut.parentFile ?: java.io.File(".")
                 try {
                     if (!outDir.exists()) outDir.mkdirs()

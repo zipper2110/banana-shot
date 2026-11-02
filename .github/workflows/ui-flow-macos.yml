@@ -49,6 +49,11 @@ jobs:
           sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
             "select service, client, auth_value from access where service in ('kTCCServiceAccessibility','kTCCServicePostEvent','kTCCServiceScreenCapture');" || true
 
+      - name: Make the screen larger than the app window
+        # The default screen of the runner is 1024 x 768. The app window of the tests is 1200 x 800, and the
+        # bottom buttons of the taller dialogs were below the screen.
+        run: swift .github/scripts/set-macos-resolution.swift 1920 1080
+
       - name: Get the pinned macOS native files
         run: distribution/macos/get-native-dependencies.sh
 

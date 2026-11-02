@@ -2,8 +2,9 @@
 
 The macOS version is in progress (B-13). The plan and its status are in
 [docs/macos/b-13-macos.md](../../docs/macos/b-13-macos.md). This folder has
-the native files (libmpv and FFmpeg) for Apple Silicon (arm64). The app
-bundle, the signing, and the installer are not ready yet.
+the native files (libmpv and FFmpeg) for Apple Silicon (arm64) and the
+scripts of the app bundle. The notarization and the installer are not ready
+yet.
 
 ## Native files
 
@@ -73,3 +74,35 @@ this repository. Make a new natives release only when a pin in
 9. In `native-dependencies.json`, set `nativesRelease`, `buildRun`, and the
    file names, URLs, and SHA-256 values from `SHA256SUMS.txt`.
 10. Run `get-native-dependencies.sh` to check the new pins.
+
+## App bundle
+
+```bash
+distribution/macos/get-native-dependencies.sh
+distribution/macos/build-app-image.sh
+distribution/macos/validate-app-image.sh --version 1.4.0 --allow-no-feedback-endpoint --allow-no-analytics
+target/package/app-image/BananaShot.app/Contents/MacOS/BananaShot --diagnostics
+open target/package/app-image/BananaShot.app
+```
+
+`build-app-image.sh` needs JDK 25 (a later JDK works with a warning). It runs
+the Maven distribution build and jpackage, copies the native files and the
+legal files into the bundle, sets the `Info.plist` keys, and signs the bundle
+from the inside to the outside.
+
+- `--sign <identity>` signs with a Developer ID, the hardened runtime, and
+  `entitlements.plist`. The default `-` is an ad-hoc signature: the bundle
+  then opens only on the Mac that built it. Give the SHA-1 hash of the
+  certificate (`security find-identity -v -p codesigning`) when the keychain
+  has two copies of it.
+- `--feedback-endpoint` and the three `--analytics-*` options are the same
+  as the options of `Build-AppImage.ps1` on Windows.
+
+`validate-app-image.sh` checks the build and expiry dates, the version, the
+runtime modules, the launcher options, the feedback and analytics
+properties, the `Info.plist` keys, the native files, the JAR files (no macOS
+native file in them), and the signature of each file. The two `--allow-*`
+options are only for a local build.
+
+The icon is `assets/BananaShot.icns`. After a change of
+`src/main/resources/icons/app-icon.svg`, run `make-icon.sh`.

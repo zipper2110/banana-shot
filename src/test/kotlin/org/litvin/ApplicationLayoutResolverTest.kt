@@ -274,9 +274,14 @@ class ApplicationLayoutResolverTest {
             writeText("")
         }
         val ffprobe = File(ffmpeg.parentFile, "ffprobe").apply { writeText("") }
+        val launcher = File(appHome, "MacOS/BananaShot").apply {
+            parentFile.mkdirs()
+            writeText("")
+        }
 
         val layout = resolver(appHome = appHome, properties = mapOf("os.name" to "Mac OS X", "user.home" to tempDir.toString())).resolve()
 
+        assertEquals(launcher.absoluteFile, layout.packagedLauncher?.absoluteFile)
         assertEquals(nativeRoot.absoluteFile, layout.nativeRoot.absoluteFile)
         assertEquals(mpv.absoluteFile, layout.mpvDirectory)
         assertEquals(ffmpeg.absolutePath, layout.ffmpegExecutable)

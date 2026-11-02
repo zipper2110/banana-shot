@@ -44,10 +44,14 @@ class ApplicationLayoutResolver(
             mpvDirectory = resolveMpvDirectory(nativeRoot),
             ffmpegExecutable = ffmpegExecutable,
             ffprobeExecutable = ffprobeExecutable,
-            packagedLauncher = File(appHome, "${AppInfo.NAME}.exe").takeIf { it.isFile },
+            packagedLauncher = packagedLauncher(appHome).takeIf { it.isFile },
             appDataDirectory = resolveAppDataDirectory(),
         )
     }
+
+    /** The jpackage launcher: `BananaShot.exe`, or `Contents/MacOS/BananaShot` in the app bundle on macOS. */
+    private fun packagedLauncher(appHome: File): File =
+        if (isMac()) File(appHome, "MacOS/${AppInfo.NAME}") else File(appHome, "${AppInfo.NAME}.exe")
 
     private fun resolveAppHome(): File {
         value("bananashot.appDir")?.let { return File(it).absoluteFile.normalize() }

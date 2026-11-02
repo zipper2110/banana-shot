@@ -571,6 +571,51 @@ a small `MacIntegration` class that runs only on macOS:
   signing identity a parameter of the script, so that step 11 only gives
   the Developer ID.
 
+### Result of the app bundle (2026-11-02)
+
+`distribution/macos/build-app-image.sh` makes
+`target/package/app-image/BananaShot.app` (223 MB: runtime 122 MB, native
+files 81 MB, JAR files 19 MB). `validate-app-image.sh` checks it. The steps
+are in `distribution/macos/README.md`.
+
+- **Layout.** jpackage puts the JAR files in `Contents/app`, so the app home
+  is `Contents`. The native files are in `Contents/natives/macos-arm64`, the
+  legal files in `Contents/legal`. `codesign --verify --deep --strict`
+  accepts the bundle with the native files in this folder.
+  `ApplicationLayout` finds the launcher in `Contents/MacOS/BananaShot`.
+- **Bundle ID** `app.banana-shot-editor.bananashot`. Do not change it after
+  a release: macOS keys the permissions and the settings of the app to it.
+- **Icon.** `MacIconRenderer.java` renders the SVG with the margin of the
+  Apple grid (an 824-pixel tile on 1024 pixels). `make-icon.sh` makes
+  `assets/BananaShot.icns` with `iconutil`.
+- **Runtime.** The modules of Windows without `jdk.crypto.mscapi`. `jdeps` on
+  macOS (2026-11-02) gives the same list as on Windows. The script copies
+  `bin/java` into the runtime for `validate-app-image.sh`, as on Windows.
+- **JNA and FlatLaf.** Both JAR files contain macOS native files, and both
+  libraries copy them to a temporary folder at run time. The hardened
+  runtime refuses such a file, and notarization refuses a JAR with an
+  unsigned native file. The script copies the arm64 files to
+  `natives/macos-arm64/java`, removes all macOS native files from the JAR
+  files of the bundle, and sets `jna.boot.library.path`, `jna.nounpack`,
+  and `flatlaf.nativeLibraryPath`. A run of the bundle loaded both files
+  from the bundle and none from a temporary folder.
+- **Info.plist.** `LSMinimumSystemVersion` 15.0, `LSArchitecturePriority`
+  arm64, `CFBundleLocalizations` with the 11 languages.
+- **Signature.** `--sign <identity>`. The default `-` is ad-hoc, with no
+  hardened runtime: with the hardened runtime, an ad-hoc process refuses
+  libraries with no Team ID. With a Developer ID, the script uses the
+  hardened runtime, a timestamp, and `entitlements.plist` (`allow-jit` and
+  `allow-unsigned-executable-memory`). Give the SHA-1 hash of the
+  certificate as the identity when the keychain has two copies of it.
+- **Test on the M1 (macOS 27.2, JDK 27, ad-hoc).** `validate-app-image.sh`
+  passes. `BananaShot.app/Contents/MacOS/BananaShot --diagnostics` passes:
+  libmpv, FFmpeg, and FFprobe from the bundle. `open BananaShot.app` starts
+  the app with no warning in the log.
+
+Not verified yet: the live preview and an export in the bundle (open a
+project by hand), a Developer ID signature with the hardened runtime (step
+11), and a build with JDK 25.
+
 ### Architecture
 
 The app is for Apple Silicon (arm64) only. The bundled JDK runtime and the
@@ -805,7 +850,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Not started |
-| 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Not started. Needs step 4 |
+| 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). Not verified yet: the preview and an export in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Not started |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Not started. Needs steps 3 and 8. Do the Velopack checks first |

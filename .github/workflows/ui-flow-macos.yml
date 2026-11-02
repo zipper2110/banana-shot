@@ -33,7 +33,19 @@ jobs:
         continue-on-error: true
         run: |
           sw_vers
-          system_profiler SPDisplaysDataType | grep -iE "Resolution|Display Type|Main Display" || true
+          system_profiler SPDisplaysDataType || true
+          osascript -e 'tell application "Finder" to get bounds of window of desktop' || true
+          cat > /tmp/Screen.java <<'EOF'
+          public class Screen { public static void main(String[] a) {
+            var env = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
+            for (var d : env.getScreenDevices()) {
+              var c = d.getDefaultConfiguration();
+              System.out.println(d.getIDstring() + " bounds=" + c.getBounds() + " scale=" + c.getDefaultTransform().getScaleX()
+                + " usable=" + java.awt.Toolkit.getDefaultToolkit().getScreenInsets(c));
+              for (var m : d.getDisplayModes()) System.out.println("  mode " + m.getWidth() + "x" + m.getHeight());
+            } } }
+          EOF
+          java /tmp/Screen.java || true
           sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
             "select service, client, auth_value from access where service in ('kTCCServiceAccessibility','kTCCServicePostEvent','kTCCServiceScreenCapture');" || true
 

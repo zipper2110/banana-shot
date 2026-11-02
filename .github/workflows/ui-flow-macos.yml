@@ -1,0 +1,58 @@
+name: UI flow on macOS
+
+# B-13, step 9: the robot tests of the ui-flow profile on a macOS runner. The robot moves the mouse and types, so
+# macOS must give the Accessibility permission to the test process. The image of the GitHub macOS runner gives
+# Accessibility, Screen Recording, and Post Event to the agent of the runner (actions/runner-images,
+# configure-tccdb-macos.sh), and macOS gives the permissions of the responsible process to the processes that it
+# starts. This workflow checks that this is enough. Start it by hand.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ui-flow-macos:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: 'maven'
+
+      - name: Show the screen and the permissions of the runner
+        # The app window of the tests is 1200 x 800. The screen must be larger.
+        continue-on-error: true
+        run: |
+          sw_vers
+          system_profiler SPDisplaysDataType | grep -iE "Resolution|Display Type|Main Display" || true
+          sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" \
+            "select service, client, auth_value from access where service in ('kTCCServiceAccessibility','kTCCServicePostEvent','kTCCServiceScreenCapture');" || true
+
+      - name: Get the pinned macOS native files
+        run: distribution/macos/get-native-dependencies.sh
+
+      - name: Run the UI flow tests
+        run: >-
+          mvn -B -Pui-flow verify -Dtest=NoSuchTest -Dsurefire.failIfNoSpecifiedTests=false -DfailIfNoTests=false
+          -Dbananashot.uiFlow.screenshots=true
+
+      - name: Keep the reports and the screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-flow-macos-${{ github.run_number }}
+          path: |
+            target/failsafe-reports/
+            target/ui-test-artifacts/
+            target/translator-screenshots/
+          if-no-files-found: ignore
+          retention-days: 14

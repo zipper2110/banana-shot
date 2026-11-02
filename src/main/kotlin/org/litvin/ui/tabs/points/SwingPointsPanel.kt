@@ -60,6 +60,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import org.litvin.projects.ProjectVideoLanguage
 import org.litvin.i18n.tr
+import org.litvin.shared.util.Timecode
 
 /**
  * Swing Points editor panel. The layout comes from design/points-redesign/final.html:
@@ -954,7 +955,22 @@ class SwingPointsPanel(
         if (updated) EventQueue.invokeLater { selectEventAndScroll("point:$id") }
     }
 
+    /**
+     * Deletes the point with [id] after the user confirms it (B-38 T1). The Delete key, the Delete button of a row,
+     * and Delete in the Edit dialog all come here, so they ask the same question. The id is fixed before the question,
+     * so a playhead that moves the selection during the question does not change the point to delete.
+     */
     private fun deletePoint(id: String) {
+        val point = dispatcher.getCompletedPoints().firstOrNull { it.id == id } ?: return
+        val name = Timecode.format(point.startMs.toLong()) + " - " + Timecode.format(point.endMs.toLong())
+        val confirmed = dialogs.confirm(
+            this,
+            tr("pointEdit.delete.question", "name" to name),
+            tr("pointEdit.delete.title"),
+            confirmLabel = tr("common.delete"),
+            destructive = true,
+        )
+        if (!confirmed) return
         hints.dismiss(HintId.POINT_ROW)
         if (dispatcher.deletePoint(id)) {
             analytics.record(AnalyticsEvent.PointDeleted)
@@ -962,7 +978,7 @@ class SwingPointsPanel(
         }
     }
 
-    /** Deletes the selected point. Comments have no active state, so they are deleted from their card. */
+    /** Deletes the selected point after a confirmation. Comments have no active state, so they are deleted from their card. */
     private fun deleteSelected() {
         (selectedEvent() as? PointEventDto)?.let { deletePoint(it.point.id) }
     }

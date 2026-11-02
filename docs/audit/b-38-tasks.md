@@ -16,6 +16,7 @@ decision to keep the current behavior.
 | 1 | Decided on 2026-10-05: do this work after the first release. One backlog item (B-38) holds all the findings. |
 | 2 | Q7, decided on 2026-10-24: a comment that starts outside the kept points starts at the start of the first kept point that it overlaps. It loses only its part before that point. From its start, a comment keeps its remaining time and can continue over the next points. No warning, and no cut at the end of a point. |
 | 3 | T12, decided on 2026-11-03: drop T12. The app has no "not scored" point now. The joined Points tab ends each point with its outcome (Q, W, or E), and the V key is removed. A point without a saved outcome counts as "No winner". The Projects tab and the Export tab do not show a "Scored x/y" figure now. |
+| 4 | Q1, decided on 2026-11-03: a delete of a point asks for a confirmation. No undo. The Delete key, the Delete button of a row, and Delete in the Edit dialog ask the same question. |
 
 ## Open questions
 
@@ -24,7 +25,6 @@ decision in "Decisions" at once.
 
 | # | Task | Question |
 |---|---|---|
-| Q1 | T1 | Delete a point: ask for a confirmation, or delete at once and give an undo (Ctrl+Z, or an "Undo" link in a status message)? |
 | Q2 | T3 | Scoreboard checkbox: keep the choice of the user for each project, as the other checkboxes do? Or set it from the score data only for a project that has no saved choice? |
 | Q3 | T4 | Points tab precision: the Points tab now has a frame step (F). Is this enough, or add a timeline zoom too? |
 | Q4 | T7 | Scoreboard sets: show all completed sets, or let the user select the number in the scoreboard style? |
@@ -35,7 +35,7 @@ decision in "Decisions" at once.
 
 | Task | Finding | Severity | Scope | Depends on | Status |
 |---|---|---|---|---|---|
-| T1 | F-04 | Minor | Safe delete of a point | Q1 | open |
+| T1 | F-04 | Minor | Safe delete of a point | Q1 | done |
 | T2 | F-05 | Minor | Tell the user about a skipped overlay or card | — | open |
 | T3 | F-06 | Minor | Keep the Scoreboard checkbox choice | Q2 | open |
 | T4 | F-07 | Minor | Precise marking in the Points tab | Q3 | open |
@@ -64,7 +64,15 @@ write the reason in "Decisions". Do not remove the task.
   same. The behavior depends on Q1.
 - Code: `ui/tabs/points/ui/Keybindings.kt:50`,
   `ui/tabs/points/SwingPointsPanel.kt:658-669`, `:698-719`.
-- Tests:
+- Done on 2026-11-03 (decision 4):
+  - `SwingPointsPanel.deletePoint` asks "Delete marked point …?" with a red
+    Delete button and the focus on Cancel. All three delete paths call it.
+  - The Edit dialog closes and calls `deletePoint`. It does not ask a
+    second time.
+  - The point to delete is fixed before the question. Thus a playhead that
+    moves the selection during the question does not change the point.
+  - The Points help says that a delete of a point asks first.
+- Tests: `PointsCardSelectionTest`, `EditPointDialogTest`
 
 ## T2 Tell the user about a skipped overlay or card (F-05)
 

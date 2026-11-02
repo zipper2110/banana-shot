@@ -13,6 +13,7 @@ import org.litvin.projects.ProjectManifestV1
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.ui.flow.fakes.FakeMediaPlayer
+import org.litvin.ui.flow.fakes.DialogCall
 import org.litvin.ui.flow.fakes.ScriptedDialogService
 import org.litvin.ui.tabs.points.ui.PointsTableView
 import java.awt.Component
@@ -74,12 +75,13 @@ class PointsCardSelectionTest {
     @Test
     fun commentCardsHaveNoActiveStateAndDeleteRemovesTheSelectedPoint() {
         val player = FakeMediaPlayer(MediaScreen.POINTS)
+        val dialogs = ScriptedDialogService().apply { answerNextConfirmation(true) }
         SwingUtilities.invokeAndWait {
             panel = SwingPointsPanel(
                 player,
                 AdjustmentsStore.legacySession(),
                 Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "test-autosave") },
-                ScriptedDialogService(),
+                dialogs,
             ).also { it.setProjectManifest(ManifestIO.manifestFilePath(projectDir.absolutePath)) }
         }
         val target = panel!!
@@ -104,6 +106,36 @@ class PointsCardSelectionTest {
         }
         drainEventQueue()
         assertEquals(listOf("Comment #7"), cards.visibleTitles())
+        assertEquals(listOf(DialogCall("confirm", "Delete point", "Delete marked point **00:00:00.0 - 00:00:01.0**?")), dialogs.calls)
+    }
+
+    @Test
+    fun cancelInTheDeleteQuestionKeepsThePoint() {
+        val player = FakeMediaPlayer(MediaScreen.POINTS)
+        val analytics = RecordingAnalytics()
+        val dialogs = ScriptedDialogService().apply { answerNextConfirmation(false) }
+        SwingUtilities.invokeAndWait {
+            panel = SwingPointsPanel(
+                player,
+                AdjustmentsStore.legacySession(),
+                Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "test-autosave") },
+                dialogs,
+                analytics = analytics,
+            ).also { it.setProjectManifest(ManifestIO.manifestFilePath(projectDir.absolutePath)) }
+        }
+        val target = panel!!
+        drainEventQueue()
+        val cards = findCardsView(target)
+        player.seek(500)
+        drainEventQueue()
+        drainEventQueue()
+
+        SwingUtilities.invokeAndWait { target.actionMap.get("points.delete").actionPerformed(null) }
+        drainEventQueue()
+
+        assertEquals(1, dialogs.calls.size, "the Delete key asks before it deletes")
+        assertEquals(listOf("#1", "Comment #7"), cards.visibleTitles())
+        assertEquals(0, analytics.count(AnalyticsEvent.PointDeleted))
     }
 
     @Test
@@ -115,7 +147,8 @@ class PointsCardSelectionTest {
                 player,
                 AdjustmentsStore.legacySession(),
                 Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "test-autosave") },
-                ScriptedDialogService(),
+                // Delete asks for a confirmation (B-38 T1). The test answers yes.
+                ScriptedDialogService().apply { answerNextConfirmation(true) },
                 analytics = analytics,
             ).also { it.setProjectManifest(ManifestIO.manifestFilePath(projectDir.absolutePath)) }
         }

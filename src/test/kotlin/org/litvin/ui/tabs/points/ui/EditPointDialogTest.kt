@@ -49,6 +49,19 @@ class EditPointDialogTest {
         }
     }
 
+    @Test
+    fun deleteClosesTheDialogAndLeavesTheConfirmationToThePanel() {
+        val deletes = mutableListOf<String>()
+        SwingUtilities.invokeAndWait {
+            val dialog = EditPointDialog.build(JPanel(), PointDto("p1", 1_000, 2_000, null), 1, RecordingActions(mutableListOf(), deletes))
+            (dialog.find("points-edit-delete") as JButton).doClick()
+
+            // The panel asks for the confirmation (B-38 T1), so the dialog does not ask a second time.
+            assertEquals(listOf("p1"), deletes)
+            assertFalse(dialog.isDisplayable, "the dialog closes before the question")
+        }
+    }
+
     private fun Component.find(name: String): Component = descendants().first { it.name == name }
 
     private fun Component.descendants(): List<Component> {
@@ -56,14 +69,17 @@ class EditPointDialogTest {
         return listOf(this) + children
     }
 
-    private class RecordingActions(private val edits: MutableList<PointPatch>) : PointsActions {
+    private class RecordingActions(
+        private val edits: MutableList<PointPatch>,
+        private val deletes: MutableList<String> = mutableListOf(),
+    ) : PointsActions {
         override fun togglePlayPause() = Unit
         override fun seekTo(ms: Long) = Unit
         override fun jumpToSelected() = Unit
         override fun setStartAtPlayhead() = Unit
         override fun createPointAt(ms: Long) = Unit
         override fun editPoint(id: String, patch: PointPatch) { edits += patch }
-        override fun deletePoint(id: String) = Unit
+        override fun deletePoint(id: String) { deletes += id }
         override fun toggleFavorite(id: String) = Unit
         override fun selectByVisualIndex(index: Int) = Unit
         override fun saveNow() = Unit

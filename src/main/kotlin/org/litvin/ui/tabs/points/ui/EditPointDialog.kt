@@ -3,7 +3,6 @@ package org.litvin.ui.tabs.points.ui
 import org.kordamp.ikonli.material2.Material2AL
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.DialogKit
-import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.formatSeconds
 import org.litvin.ui.tabs.points.PointDto
@@ -29,7 +28,7 @@ object EditPointDialog {
 
     /**
      * Shows the dialog for the point with the ordinal [number]. Save calls actions.editPoint().
-     * Delete asks for confirmation and calls actions.deletePoint(). A time that does not parse shows
+     * Delete closes the dialog and calls actions.deletePoint(), which asks for a confirmation. A time that does not parse shows
      * an error line and keeps the dialog open.
      */
     fun show(parent: Component, point: PointDto, number: Int, actions: PointsActions) {
@@ -65,15 +64,7 @@ object EditPointDialog {
         cancel.addActionListener { dialog.dispose() }
         delete.addActionListener {
             dialog.dispose()
-            val name = Timecode.format(point.startMs) + " - " + (point.endMs?.let { Timecode.format(it) } ?: "?")
-            val confirmed = MessageDialog.confirm(
-                parent,
-                tr("pointEdit.delete.title"),
-                tr("pointEdit.delete.question", "name" to name),
-                confirmLabel = tr("common.delete"),
-                destructive = true,
-            )
-            if (confirmed) actions.deletePoint(point.id)
+            actions.deletePoint(point.id)
         }
 
         val length = point.endMs?.let { formatSeconds(it - point.startMs) }

@@ -97,6 +97,10 @@ fi
 [[ -e "$NATIVE/mpv/libmpv.dylib" && -x "$NATIVE/ffmpeg/bin/ffmpeg" ]] \
   || fail "The native files are missing. Run distribution/macos/get-native-dependencies.sh."
 [[ -f "$ICON" ]] || fail "The icon is missing: $ICON. Run distribution/macos/make-icon.sh."
+# The script deletes the bundle. An app that runs from it then uses deleted files.
+if pgrep -f "$APP/Contents/MacOS/BananaShot" >/dev/null; then
+  fail "BananaShot runs from $APP. Quit it first (Cmd+Q)."
+fi
 
 # --- Maven build -------------------------------------------------------------------------------
 if ! $SKIP_BUILD; then
@@ -214,11 +218,17 @@ if [[ "$IDENTITY" != "-" ]]; then
 fi
 is_macho() { file -b "$1" | grep -q "Mach-O"; }
 
-# 1. Each Mach-O file except the launcher: the runtime, the native files, ffmpeg, and ffprobe.
+# 1. Each Mach-O file except the launcher: the runtime, the native files, ffmpeg, and ffprobe. The programs of
+#    the runtime (bin/java) start a JVM, so they get the entitlements of the JVM. With the hardened runtime and no
+#    allow-jit, the JVM stops at once with SIGTRAP (exit code 133).
 while IFS= read -r -d '' file; do
   [[ "$file" == "$CONTENTS/MacOS/BananaShot" ]] && continue
   if is_macho "$file"; then
-    codesign "${SIGN_OPTIONS[@]}" "$file"
+    if [[ "$file" == "$CONTENTS/runtime/Contents/Home/bin/"* ]]; then
+      codesign "${SIGN_OPTIONS[@]}" --entitlements "$ENTITLEMENTS" "$file"
+    else
+      codesign "${SIGN_OPTIONS[@]}" "$file"
+    fi
   fi
 done < <(find "$CONTENTS" -type f -print0)
 # 2. The runtime is a bundle of its own.

@@ -25,7 +25,11 @@ internal class MpvCore(
         private val logger = KotlinLogging.logger {}
     }
 
-    private val handle: Pointer = lib.mpv_create() ?: error("mpv_create returned null")
+    private val handle: Pointer = run {
+        // mpv_create returns null when LC_NUMERIC is not "C" (B-13).
+        CNumericLocale.ensure()
+        lib.mpv_create()
+    } ?: error("mpv_create returned null (LC_NUMERIC=${CNumericLocale.current()})")
     private val lock = ReentrantReadWriteLock()
     @Volatile private var closing = false
     private val eventThread: Thread

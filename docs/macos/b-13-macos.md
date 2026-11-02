@@ -612,9 +612,17 @@ are in `distribution/macos/README.md`.
   libmpv, FFmpeg, and FFprobe from the bundle. `open BananaShot.app` starts
   the app with no warning in the log.
 
-Not verified yet: the live preview and an export in the bundle (open a
-project by hand), a Developer ID signature with the hardened runtime (step
-11), and a build with JDK 25.
+- **Locale.** The first test by hand showed "The video player cannot start"
+  in the bundle: `mpv_create` returned null. mpv refuses to start when the C
+  locale for numbers (`LC_NUMERIC`) is not "C". An app that the Dock starts
+  gets the locale of the user (here `ru_RU.UTF-8`). A start from a terminal
+  has "C", so the source runs did not show it. `CNumericLocale` now sets
+  `LC_NUMERIC` to "C" before each `mpv_create` (not on Windows).
+  `MpvLocaleStartTest` starts mpv with a Russian locale.
+
+Not verified yet: the live preview and an export in the bundle after the
+locale fix (open a project by hand), a Developer ID signature with the
+hardened runtime (step 11), and a build with JDK 25.
 
 ### Architecture
 

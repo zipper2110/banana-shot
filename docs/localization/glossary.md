@@ -87,6 +87,7 @@ Style:
 | best of 3 sets | al mejor de 3 sets | |
 | momentum | dinámica | Statistics group and chart |
 | no point (outcome) | sin punto | |
+| point with a winner | punto con ganador | Do not say "scored" for it: each point has an outcome. |
 
 ### App terms
 
@@ -219,6 +220,7 @@ Style:
 | pro set | про-сет | |
 | best of 3 sets | до 2 выигранных сетов | "Best of {count}" in the set control = "Из {count}" |
 | momentum | динамика | |
+| point with a winner | розыгрыш с победителем | Do not say "scored" for it: each point has an outcome. |
 
 ### App terms
 
@@ -345,6 +347,7 @@ Style:
 | best of 3 sets | melhor de 3 sets | |
 | momentum | dinâmica | |
 | no point (outcome) | sem ponto | |
+| point with a winner | ponto com vencedor | Do not say "scored" for it: each point has an outcome. |
 
 #### App terms
 
@@ -474,7 +477,7 @@ Style:
 | best of 3 sets | au meilleur des 3 sets | |
 | momentum | dynamique | |
 | no point (outcome) | sans point | |
-| scored (a point with a winner) | attribué | "Score each point" = "Attribuez les points" |
+| point with a winner | point avec un gagnant | Do not say "scored" for it: each point has an outcome. |
 
 #### App terms
 
@@ -596,7 +599,7 @@ Style:
 | best of 3 sets | Best of 3 Sätze | |
 | momentum | Momentum | |
 | no point (outcome) | Kein Punkt | |
-| scored (a point with a winner) | gewertet | "Score each point" = "Punkte werten" |
+| point with a winner | Punkt mit Gewinner | Do not say "scored" for it: each point has an outcome. |
 
 #### App terms
 
@@ -719,7 +722,7 @@ Style:
 | pro set | プロセット | |
 | momentum | 流れ | |
 | no point (outcome) | 得点なし | |
-| scored (a point with a winner) | 記録済み | "Score each point" = "各ポイントを記録する" |
+| point with a winner | 勝者のいるポイント | Do not say "scored" for it: each point has an outcome. |
 
 #### App terms
 
@@ -837,6 +840,7 @@ Style:
 | momentum | 势头 | |
 | pressure (statistics group) | 关键分 | |
 | no point (outcome) | 不计分 | |
+| point with a winner | 有得分方的回合 | Do not say "scored" for it: each point has an outcome. 得分方 is the winner of a point. |
 | scored | 已计分 | "Score each point" = "为每个回合计分" |
 
 #### App terms

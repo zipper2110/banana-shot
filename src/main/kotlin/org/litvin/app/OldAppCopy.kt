@@ -34,7 +34,7 @@ class OldAppCopy(
     val isOutsideApplications: Boolean
         get() {
             val parent = currentBundle?.absoluteFile?.parentFile ?: return false
-            return parent != File("/Applications") && parent != File(home, "Applications")
+            return parent != File("/Applications").absoluteFile && parent != File(home, "Applications").absoluteFile
         }
 
     /** Saves the bundle of this process. Call it before the installer starts. */

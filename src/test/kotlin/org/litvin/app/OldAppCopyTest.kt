@@ -94,7 +94,7 @@ class OldAppCopyTest {
 
     @Test
     fun `the bundle of the launcher`() {
-        assertEquals(File("/Applications/BananaShot.app"), OldAppCopy.bundleOf("/Applications/BananaShot.app/Contents/MacOS/BananaShot"))
+        assertEquals(File("/Applications/BananaShot.app").absoluteFile, OldAppCopy.bundleOf("/Applications/BananaShot.app/Contents/MacOS/BananaShot"))
         assertNull(OldAppCopy.bundleOf("C:\\Users\\a\\AppData\\Local\\BananaShot\\current\\BananaShot.exe"))
         assertNull(OldAppCopy.bundleOf(null))
     }

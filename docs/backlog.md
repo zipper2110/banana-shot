@@ -93,17 +93,22 @@ When item is done, move it under
   after `ComponentNameContractTest` (class 2) that makes a native window.
   Later window tests (for example `SwingApplicationFactoryTest`) do not
   crash.
-- Hypothesis, not proven: `ComponentNameContractTest` builds a hidden app
-  (`show = false`). `SwingApplicationFactory` then calls
-  `MacIntegration.install`, which sets global state of the process: the
-  Quit and About handlers (they change the native app menu), the Dock
-  icon, and a key dispatcher. This state stays after the close, and the
-  next native window crashes on it. A possible fix: do not install the
-  macOS integration for a hidden app. The release uses JDK 25 also, so
-  find the cause before a user can get the same crash.
-- Since eaac20d, the crash step of the job shows the first 200 lines of
-  the `hs_err` file. At the next crash, read the stack of the crashed
-  thread there.
+- The stack (run 41706359520, 2026-11-03, the first crash after eaac20d):
+  the crashed thread is "Java2D Queue Flusher", in
+  `sun.java2d.metal.MTLRenderQueue.flushBuffer` →
+  `-[MTLContext pullCommandBufferWrapper]` → `objc_msgSend` (SIGSEGV,
+  SEGV_ACCERR). Thus the crash is in the Metal pipeline of Java2D (JDK
+  25.0.5), not in the code of the app or of the tests. The runner is a
+  virtual Mac ("VirtualMac2,1", macOS 15.8.2) with a virtual GPU.
+- The earlier hypothesis (the global state of `MacIntegration.install`
+  from `ComponentNameContractTest`) is not supported by the stack.
+- Risk for users: the app uses the same Metal pipeline. No crash on a real
+  Mac is known (28 local runs on the M1 test Mac, and the manual checks).
+  The crash can be special to the virtual GPU of the runner.
+- Next steps: look for a JDK bug about `MTLRenderQueue.flushBuffer` and
+  `pullCommandBufferWrapper`, and check if a newer JDK fixes it. For CI
+  only, try `JAVA_TOOL_OPTIONS=-Dsun.java2d.metal=false` in the job
+  `macos-test`, if the JDK 25 still has another pipeline on macOS.
 - Done when: the cause is known and fixed, and the job passes 10 runs in
   a row.
 

@@ -47,6 +47,9 @@ internal object ExpiryTexts {
 
     val UPDATE_TITLE get() = tr("expiry.update.title")
 
+    /** macOS: the app runs outside the Applications folder (B-13, step 11). */
+    val OUTSIDE_APPLICATIONS get() = tr("expiry.update.outsideApplications", "app" to name)
+
     /** The title of the "What's new" popup (B-54). */
     val WHATS_NEW_TITLE get() = tr("expiry.whatsNew.title")
 

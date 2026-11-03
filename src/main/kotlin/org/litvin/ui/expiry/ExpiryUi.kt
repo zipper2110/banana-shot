@@ -33,6 +33,11 @@ internal class ExpiryUi(
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     /** The "What's new" popup (B-54). Null shows no popup. */
     private val whatsNew: WhatsNewSupport? = null,
+    /**
+     * True when the app runs on macOS from a folder that is not an Applications folder. Then the update notice tells
+     * that the update installs the new version in the Applications folder (B-13, step 11).
+     */
+    private val outsideApplications: Boolean = false,
 ) : ExpiryListener, AutoCloseable {
     val bar = ExpiryBar()
 
@@ -137,7 +142,10 @@ internal class ExpiryUi(
         val latest = state.updateNotice
         updateNotice.isVisible = normal && latest != null
         if (normal && latest != null) {
-            updateNotice.setTexts(ExpiryTexts.UPDATE_TITLE, listOf(ExpiryTexts.versionAvailable(latest.version), latest.notesIn()))
+            updateNotice.setTexts(
+                ExpiryTexts.UPDATE_TITLE,
+                listOf(ExpiryTexts.versionAvailable(latest.version), latest.notesIn(), ExpiryTexts.OUTSIDE_APPLICATIONS.takeIf { outsideApplications }),
+            )
             noticePageUrl = latest.pageUrl
             noticeReadMoreRow.isVisible = latest.pageUrl != null
         }

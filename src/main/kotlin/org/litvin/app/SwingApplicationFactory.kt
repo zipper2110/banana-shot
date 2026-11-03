@@ -682,6 +682,9 @@ object SwingApplicationFactory {
                 }
             }
 
+            // macOS: the installer puts the new version into the Applications folder. A copy in another folder stays
+            // old, so the next start offers to move it to the Trash (B-13, step 11).
+            val oldAppCopy = OldAppCopy(applicationPreferences)
             val updateRunner = UpdateRunner(
                 update = updateAndRestart,
                 // Not an executor of services.executors: the close sequence stops those executors, but this thread
@@ -691,6 +694,7 @@ object SwingApplicationFactory {
                 },
                 exportRuns = { exportPanel.activeExportCount > 0 },
                 closeSequence = {
+                    oldAppCopy.rememberBeforeUpdate()
                     beginAnalyticsExit()
                     handle.close()
                 },
@@ -712,6 +716,7 @@ object SwingApplicationFactory {
                     // A daemon thread: a slow page must not stop the close of the app.
                     background = Executor { task -> Thread(task, "bananashot-whats-new").apply { isDaemon = true }.start() },
                 ),
+                outsideApplications = MacIntegration.isMac() && oldAppCopy.isOutsideApplications,
             )
             closeActions += expiryUi::close
             exportPanel.onNewExportRefused = services.expiry::showExpiredDialog
@@ -834,6 +839,9 @@ object SwingApplicationFactory {
             }
 
             if (show && !askConsent) showFirstLaunchOverview()
+            if (show && MacIntegration.isMac()) {
+                EventQueue.invokeLater { OldAppCopyNotice.offer(frame, oldAppCopy, OldAppCopy.bundleOf(System.getProperty("jpackage.app-path"))?.parentFile) }
+            }
             if (show) {
                 SystemLanguageNotice(languageSettings, languageSetting, languageNoticeDialogs(frame))
                     .start(SwingMainApp.languageResolution, firstStart) { task -> EventQueue.invokeLater(task) }

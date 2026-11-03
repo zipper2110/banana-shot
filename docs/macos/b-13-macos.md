@@ -693,11 +693,18 @@ a small `MacIntegration` class that runs only on macOS:
   `open -n BananaShot.app --env BANANASHOT_RESTART=1 --args --restart`, as
   the Dock starts an app.
 
-Not verified yet: a quit with an open project and a running export (check
-by hand that the project and the queue are saved), the About item, the
-restart after a language change in the bundle, full screen and the green
-window button with the preview, and the custom painting on a Retina display
-and on a normal display.
+Checked by hand on 2026-11-03 (the bundle of `build-app-image.sh`):
+
+- **Quit during an export.** Cmd+Q ran the close sequence. The change of a
+  project (a slider of the Color tab) was saved at the quit. The export
+  stopped, and `render-queue.json` kept the job. At the next start the app
+  restored it ("Restoring 1 export(s) from the saved queue") and ran it to
+  the end.
+- **About.** The About item of the app menu opens More → About.
+- **Restart after a language change.** The old process exited, and the new
+  one started 0.6 s later with `--restart` and the new language.
+- Full screen, the green window button, and the painting on a Retina and a
+  normal display: see "Result of the step 6 checks".
 
 ## 8. Packaging, signing, and update
 
@@ -990,10 +997,11 @@ The checks for Velopack on macOS:
   Its script opens the new app after the install. macOS has no "veloapp"
   check, so `vpk` needs no `--skipVeloAppCheck` there.
 - **Bundle ID of the runtime.** jpackage gives the runtime bundle the bundle
-  ID of the app. The `.pkg` then listed two bundles with one ID. The macOS
-  Installer finds an installed app by its ID, also after the user moved it.
+  ID of the app. The `.pkg` then listed two bundles with one ID.
   `build-app-image.sh` now gives the runtime the ID
-  `app.banana-shot-editor.bananashot.runtime`.
+  `app.banana-shot-editor.bananashot.runtime`. (A note here said that the
+  macOS Installer finds a moved app by its ID. The test of 2026-11-03 showed
+  that this is not true for our `.pkg`: see "Update of a moved app".)
 - **Intel Macs.** The `.pkg` says `hostArchitectures="x86_64,arm64"`, also
   with `--runtime osx-arm64`. On an Intel Mac, the installer runs, and then
   macOS refuses to open the arm64 app. Accept this, or change the
@@ -1049,9 +1057,19 @@ The checks for Velopack on macOS:
   a reinstall over the same version, and the update from the previous
   version.
 
-Still to do in step 11: an update of an app that the user moved to another
-folder, and the uninstall (drag the app to the Trash; the data folder
-stays).
+- **Update of a moved app (2026-11-03). Problem found.** Setup: only one
+  copy of the bundle ID on the Mac (the notarized 1.3.99, installed "for me
+  only" and moved to `~/Desktop`), the test rules file, and a local server
+  with the notarized 1.4.0 `.pkg`. "Update and restart" worked on the
+  screen: the Installer ran, and 1.4.0 started. But the Installer put 1.4.0
+  into `~/Applications` as a new copy, and the copy on the Desktop stayed
+  1.3.99. Cause: vpk makes the component package with
+  `relocatable="false"` and `install-location="/Applications"`, so the
+  Installer never looks for a moved copy. A user who starts the old copy
+  again gets the old version and the update notice again.
+
+Still to do in step 11: a decision on the moved app (see above), and the
+uninstall (drag the app to the Trash; the data folder stays).
 
 ## 9. CI and release workflow
 

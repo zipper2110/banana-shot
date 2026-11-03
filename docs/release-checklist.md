@@ -108,7 +108,8 @@ See `distribution/windows/README.md`, "Code signing".
 
 ## 6. Dry run
 
-- [ ] Start the "Windows release" workflow by hand with the version number.
+- [ ] Start the "Release" workflow by hand with the version number. Select
+      "macos" for a release with macOS files.
       Start only one signed run at a time. Two runs that log in to
       SimplySign at the same time can use the same TOTP code, and the
       second login fails.
@@ -181,6 +182,39 @@ Uninstall (B-26, check 5):
 
 If a check fails, fix the cause and start again at step 5.
 
+## 7a. macOS release (B-13)
+
+Do this section when the release has macOS files: the repository variable
+`MACOS_RELEASE` is `true`, or this is the first macOS release. The plan is in
+`docs/macos/b-13-macos.md`. The scripts are in `distribution/macos`.
+
+- [ ] The secrets of the GitHub environment `macos-release` are set:
+      `MACOS_SIGNING_P12_BASE64`, `MACOS_SIGNING_P12_PASSWORD`,
+      `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, and
+      `APPLE_TEAM_ID`. The Developer ID Application certificate is valid for
+      the release date (it expires on 2027-12-02).
+- [ ] The analytics Worker and the cockpit are deployed with the
+      `videotoolbox` counter keys. The Worker refuses a summary with an
+      unknown key.
+- [ ] The dry run of the "Release" workflow had the input "macos" selected,
+      and the job `macos-installer` passed. The job notarizes the bundle and
+      the `.pkg` and runs `test-release-signatures.sh --require-notarization`.
+- [ ] Download the macOS artifact. Install `BananaShot-osx-Setup.pkg` with a
+      double-click (it has the quarantine attribute of a download). No
+      Gatekeeper warning shows. "Install for me only" needs no administrator
+      password and puts the app in `~/Applications`.
+- [ ] `BananaShot.app/Contents/MacOS/BananaShot --diagnostics` passes.
+- [ ] The app menu shows "About BananaShot" and "Quit BananaShot". Cmd+Q
+      saves the open project. About opens More → About.
+- [ ] Open a project from the Dock: the preview plays, and an export with
+      VideoToolbox works.
+- [ ] Update from the previous macOS release: install it, make a project,
+      and use "Update and restart". For the first macOS release, use the
+      test of "Update test by hand" in `docs/macos/b-13-macos.md` (a test
+      rules file and a local web server).
+- [ ] Uninstall: drag the app to the Trash. The data folder
+      (`~/Library/Application Support/BananaShot`) stays.
+
 ## 8. Release
 
 - [ ] Push the tag `v<version>` on `master`. The release workflow makes a
@@ -197,6 +231,10 @@ If a check fails, fix the cause and start again at step 5.
       day of the publish.
 - [ ] Publish the release with "Set as the latest release" selected. The
       stable URL of the setup file points to the latest release.
+- [ ] With macOS files: the release has `BananaShot-osx-Setup.pkg` (no
+      version in the name), the `osx-full.nupkg` update package,
+      `releases.osx.json`, and `native-dependencies-macos.json`. The release
+      notes also link the macOS natives release.
 
 ## 9. After the release
 
@@ -213,6 +251,9 @@ If a check fails, fix the cause and start again at step 5.
       - `downloadUrl`: `https://github.com/zipper2110/banana-shot/releases/latest`.
       - `installerUrl`:
         `https://github.com/zipper2110/banana-shot/releases/download/v<version>/BananaShot-win-Setup.exe`.
+      - `macInstallerUrl` (only with macOS files):
+        `https://github.com/zipper2110/banana-shot/releases/download/v<version>/BananaShot-osx-Setup.pkg`.
+        Builds before the macOS version ignore it.
       - `notes` (optional): a short text about the release. The app shows it
         as plain text. Builds before 1.3.0 show only this text.
       - `whatsNewUrl` (optional):
@@ -257,6 +298,17 @@ If a check fails, fix the cause and start again at step 5.
 - When you add a rule with a `message`, also add `messageByLanguage` with
   the message in each shipped language (B-11 E6). Read each text before the
   push.
+
+- [ ] First macOS release only: update the site (B-13, section 10 of
+      `docs/macos/b-13-macos.md`) and deploy it after the publish. The
+      download page gets "Download for Mac"
+      (`releases/latest/download/BananaShot-osx-Setup.pkg`), the system needs
+      (macOS 15 or later, a Mac with Apple Silicon), the install steps (with
+      "Install for me only", the app is in the Applications folder of the
+      home folder, not in the Applications folder of the sidebar), and the
+      uninstall steps. Change the page title and the texts that say
+      "Windows" on the home page, the FAQ, and the pricing page. Do not
+      deploy these changes before the release has the `.pkg`.
 
 ## Emergency rebuild
 

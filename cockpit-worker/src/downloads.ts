@@ -2,6 +2,14 @@ import type { Env } from './env';
 import { type Period, dataStart, dates, isoDate, parseDate, weekOf, weeks } from './period';
 
 export const SETUP_ASSET = 'BananaShot-win-Setup.exe';
+/** The macOS installer of the release workflow (B-13). It counts as a setup download, as the Windows setup. */
+export const MAC_SETUP_ASSET = 'BananaShot-osx-Setup.pkg';
+const SETUP_ASSETS = new Set([SETUP_ASSET, MAC_SETUP_ASSET]);
+
+/** True for the installer of each system. The other files of a release are "other" downloads. */
+export function isSetupAsset(name: string): boolean {
+  return SETUP_ASSETS.has(name);
+}
 export const SNAPSHOT_JOB = 'download_snapshot';
 
 interface GithubRelease {
@@ -91,7 +99,7 @@ export function dailyIncreases(rows: SnapshotRow[]): Map<string, { setup: number
       const value = { setup: 0, other: 0 };
       for (const [key, row] of current) {
         const increase = Math.max(0, row.download_count - (previous.get(key)?.download_count ?? 0));
-        if (row.asset_name === SETUP_ASSET) value.setup += increase;
+        if (isSetupAsset(row.asset_name)) value.setup += increase;
         else value.other += increase;
       }
       result.set(day, value);
@@ -136,7 +144,7 @@ export async function loadDownloads(env: Env, period: Period): Promise<Downloads
   for (const row of rows.filter(row => row.day === lastDay && row.day >= floorDate)) {
     const release = releases.get(row.release_tag) ?? { tag: row.release_tag, publishedAt: row.published_at, setup: 0, other: 0 };
     const count = Math.max(0, row.download_count - (base.get(`${row.release_tag}\u0000${row.asset_name}`) ?? 0));
-    if (row.asset_name === SETUP_ASSET) release.setup += count;
+    if (isSetupAsset(row.asset_name)) release.setup += count;
     else release.other += count;
     releases.set(row.release_tag, release);
   }

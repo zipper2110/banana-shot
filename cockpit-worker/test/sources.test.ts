@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadAppUsage } from '../src/app-usage';
 import { loadWorkerHealth } from '../src/cloudflare';
-import { SETUP_ASSET, dailyIncreases, loadDownloads, takeSnapshot } from '../src/downloads';
+import { MAC_SETUP_ASSET, SETUP_ASSET, dailyIncreases, isSetupAsset, loadDownloads, takeSnapshot } from '../src/downloads';
 import { errorLine, loadFeedback } from '../src/feedback';
 import { makePeriod } from '../src/period';
 import { loadSite } from '../src/site';
@@ -23,6 +23,19 @@ describe('download history', () => {
     expect(increases.get('2026-10-02')).toEqual({ setup: 4, other: 1 });
     // No snapshot on 10-03: 10-04 gets the downloads of both days. A new release counts from 0.
     expect(increases.get('2026-10-04')).toEqual({ setup: 9, other: 0 });
+  });
+
+  it('counts the macOS installer as a setup download, as the Windows setup', () => {
+    expect(isSetupAsset(SETUP_ASSET)).toBe(true);
+    expect(isSetupAsset(MAC_SETUP_ASSET)).toBe(true);
+    expect(isSetupAsset(OTHER)).toBe(false);
+    const rows = [
+      { day: '2026-10-01', release_tag: 'v1.4.0', asset_name: SETUP_ASSET, download_count: 10, published_at: null },
+      { day: '2026-10-01', release_tag: 'v1.4.0', asset_name: MAC_SETUP_ASSET, download_count: 2, published_at: null },
+      { day: '2026-10-02', release_tag: 'v1.4.0', asset_name: SETUP_ASSET, download_count: 13, published_at: null },
+      { day: '2026-10-02', release_tag: 'v1.4.0', asset_name: MAC_SETUP_ASSET, download_count: 7, published_at: null },
+    ];
+    expect(dailyIncreases(rows).get('2026-10-02')).toEqual({ setup: 8, other: 0 });
   });
 
   it('never counts a negative increase', () => {

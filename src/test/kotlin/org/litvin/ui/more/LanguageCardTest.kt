@@ -46,7 +46,7 @@ class LanguageCardTest {
     fun `the list shows each language in its own language`() {
         I18n.install(Messages.of(AppLanguage.SPANISH_SPAIN))
         val names = onEdt { combo(page()).let { combo -> (0 until combo.itemCount).map { combo.getItemAt(it).toString() } } }
-        assertEquals(listOf("Igual que Windows: English") + AppLanguage.entries.map { it.nativeName }, names)
+        assertEquals(listOf("Igual que el sistema: English") + AppLanguage.entries.map { it.nativeName }, names)
     }
 
     @Test

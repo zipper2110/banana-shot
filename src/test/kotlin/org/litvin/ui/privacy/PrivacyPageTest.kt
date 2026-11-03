@@ -69,7 +69,7 @@ class PrivacyPageTest {
             "Essential statistics are on by default: app version, OS family, session length, the number of errors",
             "Turn them off to send no statistics at all",
             "Extended statistics also send counts of the tabs and features you use, the export results",
-            "the app language, and the Windows language (only the language, not the country)",
+            "the app language, and the system language (only the language, not the country)",
             "the theme settings, and the sports of your projects",
             "user or device IDs",
             "text that you type",

@@ -14,5 +14,9 @@ retention of the Worker changes, update the "Feedback reports" section of the
 site page.
 
 - Since B-11 E2 (2026-10-19), a report also has the app language and the
-  Windows display language (`app_language`, `os_language`). The site page
-  and the Privacy page in the app name them.
+  display language of the operating system (`app_language`, `os_language`).
+  The site page and the Privacy page in the app name them.
+- Since B-13 (2026-11-03), the site page and the texts of the app say "the
+  operating system" or "the system" in place of "Windows", because the app
+  also runs on macOS. The data did not change, so the notice version of the
+  usage statistics stays 3.

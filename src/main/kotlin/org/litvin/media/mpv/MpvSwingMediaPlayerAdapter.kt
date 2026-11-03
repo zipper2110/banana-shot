@@ -140,6 +140,13 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     @Volatile private var videoHeight = 0
     @Volatile private var colorMatrix: String? = null
     @Volatile private var colorLevels: String? = null
+
+    /**
+     * The last values of the playback counts, from the property events of mpv. The log reads them here and does not
+     * ask mpv: a call into mpv on the event dispatch thread can wait for the main thread of macOS while VoiceOver
+     * makes the main thread wait for the event dispatch thread (B-13, step 6).
+     */
+    @Volatile private var playback = PlaybackCounts()
     @Volatile private var adjustments = AdjustmentsV1()
     @Volatile private var appliedShaderOpts: String? = null
 
@@ -298,6 +305,11 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                 created.observe("osd-dimensions/h", LibMpv.FORMAT_INT64)
                 created.observe("osd-dimensions/mt", LibMpv.FORMAT_INT64)
                 created.observe("osd-dimensions/mb", LibMpv.FORMAT_INT64)
+                created.observe("hwdec-current", LibMpv.FORMAT_STRING)
+                created.observe("current-vo", LibMpv.FORMAT_STRING)
+                created.observe("decoder-frame-drop-count", LibMpv.FORMAT_INT64)
+                created.observe("frame-drop-count", LibMpv.FORMAT_INT64)
+                created.observe("vo-delayed-frame-count", LibMpv.FORMAT_INT64)
                 created.observe("osd-dimensions/ml", LibMpv.FORMAT_INT64)
                 created.observe("osd-dimensions/mr", LibMpv.FORMAT_INT64)
                 core = created
@@ -315,8 +327,8 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         releaseActive()
         val old = core ?: return
         core = null
-        // The counts belong to a loaded file. Without a file, mpv gives no values.
-        val stats = if (fileLoaded) ". ${playbackStats(old)}" else ""
+        // The counts belong to a loaded file.
+        val stats = if (fileLoaded) ". $playback" else ""
         fileLoaded = false
         appliedShaderOpts = null
         imageOverlaySize = null
@@ -402,7 +414,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         if (!fileLoaded) return
         lastKnownTimeMs = currentTimeMs()
         fileLoaded = false
-        logger.info { "Unloading mpv preview #$playerId at ${lastKnownTimeMs}ms: $reason. ${playbackStats(current)}" }
+        logger.info { "Unloading mpv preview #$playerId at ${lastKnownTimeMs}ms: $reason. $playback" }
         current.commandSync("stop")
     }
 
@@ -410,17 +422,6 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         active = false
         destroyCore("close")
     }
-
-    /**
-     * The decoder, the video output, and the dropped frames of the file in [mpv], for the log (B-13, step 6). The
-     * counts start again at each file. "decoder" counts the frames that the decoder skipped, "vo" the frames that
-     * the video output did not show, and "late" the frames that came too late to the screen.
-     */
-    private fun playbackStats(mpv: MpvCore): String = runCatching {
-        "hwdec=${mpv.getProperty("hwdec-current")}, vo=${mpv.getProperty("current-vo")}, " +
-            "dropped frames: decoder=${mpv.getProperty("decoder-frame-drop-count")}, " +
-            "vo=${mpv.getProperty("frame-drop-count")}, late=${mpv.getProperty("vo-delayed-frame-count")}"
-    }.getOrElse { "No playback statistics: ${it.message}" }
 
     // ---- Media -----------------------------------------------------------------------------------------
 
@@ -876,6 +877,11 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
             "osd-dimensions/mb" -> osdMarginBottom = event.int64OrZero(format).also { scheduleBoundsChanged() }
             "osd-dimensions/ml" -> osdMarginLeft = event.int64OrZero(format).also { scheduleBoundsChanged() }
             "osd-dimensions/mr" -> osdMarginRight = event.int64OrZero(format).also { scheduleBoundsChanged() }
+            "hwdec-current" -> playback = playback.copy(hwdec = event.stringOrNull(format))
+            "current-vo" -> playback = playback.copy(vo = event.stringOrNull(format))
+            "decoder-frame-drop-count" -> playback = playback.copy(decoderDrops = event.longOrNull(format))
+            "frame-drop-count" -> playback = playback.copy(voDrops = event.longOrNull(format))
+            "vo-delayed-frame-count" -> playback = playback.copy(lateFrames = event.longOrNull(format))
         }
     }
 
@@ -927,6 +933,25 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
 
     private fun MpvEvent.stringOrNull(format: Int): String? =
         if (format == LibMpv.FORMAT_STRING) propertyString() else null
+
+    private fun MpvEvent.longOrNull(format: Int): Long? =
+        if (format == LibMpv.FORMAT_INT64) propertyLong() else null
+}
+
+/**
+ * The decoder, the video output, and the dropped frames of the current file, for the log (B-13, step 6). mpv starts
+ * the counts again at each file. [decoderDrops] counts the frames that the decoder skipped, [voDrops] the frames
+ * that the video output did not show, and [lateFrames] the frames that came too late to the screen.
+ */
+internal data class PlaybackCounts(
+    val hwdec: String? = null,
+    val vo: String? = null,
+    val decoderDrops: Long? = null,
+    val voDrops: Long? = null,
+    val lateFrames: Long? = null,
+) {
+    override fun toString(): String =
+        "hwdec=$hwdec, vo=$vo, dropped frames: decoder=$decoderDrops, vo=$voDrops, late=$lateFrames"
 }
 
 /** user32 functions that JNA's User32 mapping does not include. */

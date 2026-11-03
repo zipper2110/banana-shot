@@ -270,7 +270,9 @@ used the log and screenshots.
   properties in `destroyCore`. The video thread of a closing mpv waited for
   the main thread (`dispatch_sync`). Fix: the adapter now gets the counts
   from property events (`PlaybackCounts`), so the log line makes no call
-  into mpv. The author decided not to repeat the VoiceOver check. Still a
+  into mpv. A run of the app after the fix showed the counts in the log
+  and closed with no problem. The author decided not to repeat the
+  VoiceOver check. Still a
   risk: other synchronous calls into mpv on the event dispatch thread, for
   example `mpv_initialize` and the `stop` command at an unload. Move them to
   another thread if a user reports a freeze with VoiceOver.

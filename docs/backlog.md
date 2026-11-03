@@ -79,6 +79,34 @@ When item is done, move it under
 - Build, package, and test the app on macOS.
 - The list of changes is in `docs/macos/b-13-macos.md`.
 
+### B-64 Intermittent JVM crash in the macOS CI job
+
+- Added on 2026-11-03. It does not block 1.4.0 (decision of the author).
+- The job `macos-test` of `ci.yml` (macOS 15, JDK 25) crashes in about 1
+  of 3 runs: 13 of 37 runs from 2026-11-02 to 2026-11-03. The JVM stops
+  with SIGSEGV in `objc_msgSend` (`libobjc.A.dylib`). Surefire then
+  reports `OverrideScoreDialogTest` as the crashed test. Re-run the job
+  to get a green result.
+- It did not crash on the M1 test Mac (macOS 27.2, JDK 27) in 28 runs.
+- The order of the test classes is the same in all 37 runs. The crash is
+  always in class 21, `OverrideScoreDialogTest`. It is the first class
+  after `ComponentNameContractTest` (class 2) that makes a native window.
+  Later window tests (for example `SwingApplicationFactoryTest`) do not
+  crash.
+- Hypothesis, not proven: `ComponentNameContractTest` builds a hidden app
+  (`show = false`). `SwingApplicationFactory` then calls
+  `MacIntegration.install`, which sets global state of the process: the
+  Quit and About handlers (they change the native app menu), the Dock
+  icon, and a key dispatcher. This state stays after the close, and the
+  next native window crashes on it. A possible fix: do not install the
+  macOS integration for a hidden app. The release uses JDK 25 also, so
+  find the cause before a user can get the same crash.
+- Since eaac20d, the crash step of the job shows the first 200 lines of
+  the `hs_err` file. At the next crash, read the stack of the crashed
+  thread there.
+- Done when: the cause is known and fixed, and the job passes 10 runs in
+  a row.
+
 ### B-45 Padel improvements
 
 - The baseline is the padel support of the first release with padel

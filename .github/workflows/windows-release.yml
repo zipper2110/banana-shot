@@ -334,7 +334,10 @@ jobs:
           # The intermediate certificate of the Developer ID certificates (G2), pinned by its SHA-256.
           curl -fsSL -o "$work/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
           echo "f16cd3c54c7f83cea4bf1a3e6a0819c8aaa8e4a1528fd144715f350643d2df3a  $work/DeveloperIDG2CA.cer" | shasum -a 256 -c -
-          security import "$work/DeveloperIDG2CA.cer" -k "$KEYCHAIN"
+          # The .p12 file can already contain it. Then the import tells "already exists", and that is correct.
+          if ! output="$(security import "$work/DeveloperIDG2CA.cer" -k "$KEYCHAIN" 2>&1)"; then
+            grep -q "already exists" <<<"$output" || { echo "$output"; exit 1; }
+          fi
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$KEYCHAIN" >/dev/null
           security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
           printf '%s\n' "$API_KEY_P8" >"$work/AuthKey.p8"

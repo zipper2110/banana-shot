@@ -262,8 +262,13 @@ used the log and screenshots.
 - **Not checked yet:**
   - seek, frame step, and the playback rate one by one (the author used
     them during the checks and saw no problem, but did not check each one);
-  - macOS 15 (the oldest supported version) and VoiceOver (the risk of a
-    stop when the main thread waits, see above).
+  - VoiceOver (the risk of a stop when the main thread waits, see above).
+- **macOS 15: no check by hand (decision of the author, 2026-11-03).** The
+  app counts as working on macOS 15 until a user reports a problem. The
+  natives build and the CI job run on macOS 15 runners, and the build
+  script checks that each file needs only macOS 15.0. If a user reports a
+  problem on macOS 15, test there first. `PreviewExportColorParityTest`
+  can then also check the colors.
 
 ### Other work in the preview code
 
@@ -362,7 +367,9 @@ macOS 15 has all the system libraries that libmpv links (also the Swift
 libraries). The files of that run also pass the diagnostics and the export
 tests on the M1 with macOS 27.2.
 
-Not verified yet: the live preview on a Mac with macOS 15.
+Not verified yet: the live preview on a Mac with macOS 15. The author
+decided on 2026-11-03 not to test it by hand before user reports (see "Result
+of the step 6 checks").
 
 ### Manifest and natives release
 
@@ -1155,7 +1162,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | Done on 2026-11-02. The certificates, the API key, and the six secrets of the `macos-release` environment are in place. The Application certificate expires on 2027-12-02. Not tested yet: a real signature and a notarization (step 11) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
-| 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, tab and project changes, the colors (1 code of 255 from the export), a normal display, and two displays. To do: macOS 15 and VoiceOver |
+| 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, tab and project changes, the colors (1 code of 255 from the export), a normal display, and two displays. To do: VoiceOver. macOS 15 counts as working until a user reports a problem (decision of 2026-11-03) |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
@@ -1184,8 +1191,9 @@ Notes on the order:
 
 - A signed and notarized macOS build is in a GitHub release, next to the
   Windows build.
-- A clean Apple Silicon Mac with macOS 15 installs and opens it with no
-  Gatekeeper warning.
+- A clean Apple Silicon Mac installs and opens it with no Gatekeeper
+  warning. (A check on macOS 15 waits for user reports, see "Result of the
+  step 6 checks".)
 - The packaged smoke test of `qa/macos/ui-smoke.md` passes.
 - "Update and restart" updates from the previous macOS version.
 - The B-42 checks (sleep, proxy, TLS inspection) pass on a Mac.

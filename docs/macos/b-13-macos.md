@@ -1001,8 +1001,21 @@ stays).
   `releases.osx.json`, and `native-dependencies-macos.json`. The job
   `publish` puts the files of both jobs into one draft release. A tag runs
   the macOS job only when the repository variable `MACOS_RELEASE` is
-  `true`. A dry run runs it with the input "macos". The `.p12` file contains
-  the G2 intermediate, so its import tells "already exists".
+  `true`. A dry run runs it with the input "macos".
+- **Dry runs (2026-11-03).** The fifth dry run (41615736128) passed the job
+  `macos-installer` in about 20 minutes. Its `.pkg` has a stapled ticket,
+  and Gatekeeper accepts it with a quarantine attribute. Fixes on the way:
+  the `.p12` file contains the G2 intermediate, so its import tells
+  "already exists"; vpk needs `DOTNET_ROOT` (the runner has dotnet in
+  `~/.dotnet`); and the staple on the runner often loses the connection to
+  the ticket service of Apple (CloudKit). vpk stops at a failed staple, so
+  vpk now only signs, and `notarize.sh --pkg` notarizes the `.pkg`, tries the
+  staple 5 times, and continues with a warning when Gatekeeper accepts the
+  file online (`--allow-unstapled`). The app in the `.pkg` and in the zip
+  has no own staple; the notarization of the `.pkg` covers it, and
+  Gatekeeper accepts it online. In that run the Windows job failed in
+  SimplySign ("SignerSign() failed", 0x80090020) after it had signed many
+  files. The same job passed in the three runs before.
 - **Texts.** The texts that a Mac user also sees use neutral words, in all
   11 languages: "the system" or "the operating system" in place of
   "Windows" (the access error, the language list, the language notice, the
@@ -1021,9 +1034,9 @@ stays).
   link must not go live before a release has the `.pkg`. The release
   checklist has the changes for the first macOS release.
 
-Still to do in step 12: a passed dry run of the job `macos-installer`, the
-deploy of the analytics Worker and the cockpit, and, at the first macOS
-release, the variable `MACOS_RELEASE`, `macInstallerUrl`, and the site.
+Still to do in step 12: the deploy of the analytics Worker and the cockpit,
+and, at the first macOS release, the variable `MACOS_RELEASE`,
+`macInstallerUrl`, and the site.
 
 ## Order of the work
 
@@ -1045,7 +1058,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03, except two small checks by hand (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, and "Update and restart" from 1.3.99 to 1.4.0. To do: an update of a moved app, and the uninstall |
-| 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job, the texts, the cockpit, the checklist. To do: a passed dry run, the Worker deploys, and the site at the first macOS release |
+| 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job (the dry run passed), the texts, the cockpit, the checklist. To do: the Worker deploys, and the site at the first macOS release |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
 
 Notes on the order:

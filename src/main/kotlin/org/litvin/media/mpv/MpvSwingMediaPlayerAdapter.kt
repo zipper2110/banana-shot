@@ -315,10 +315,12 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         releaseActive()
         val old = core ?: return
         core = null
+        // The counts belong to a loaded file. Without a file, mpv gives no values.
+        val stats = if (fileLoaded) ". ${playbackStats(old)}" else ""
         fileLoaded = false
         appliedShaderOpts = null
         imageOverlaySize = null
-        logger.info { "Destroying mpv preview #$playerId: $reason. ${playbackStats(old)}" }
+        logger.info { "Destroying mpv preview #$playerId: $reason$stats" }
         if (isMac) {
             macWindow?.close()
             macWindow = null

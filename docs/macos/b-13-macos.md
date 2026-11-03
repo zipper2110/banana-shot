@@ -905,9 +905,25 @@ The checks for Velopack on macOS:
   will be atomically shoved" in `/var/log/install.log`). The installed
   JAR was the JAR of the new build.
 
-Still to do in step 11: the checks of "Installer and update" by hand: the
-install with no Gatekeeper warning, an update from the previous version, a
-moved app, no administrator rights, and the uninstall.
+- **Update test by hand (2026-11-03).** Passed. Setup: two notarized
+  builds of 7924700 (1.3.99 and 1.4.0), a test rules file in the data
+  folder with `latest.version` 1.4.0 and `macInstallerUrl`
+  `http://127.0.0.1:8765/BananaShot-osx-Setup.pkg`, a local web server
+  (`python3 -m http.server 8765 --bind 127.0.0.1`) with the 1.4.0 `.pkg`,
+  and Wi-Fi off, so that the app used the saved test file and not the real
+  rules file. 1.3.99 showed the update notice. "Update and restart"
+  downloaded the `.pkg`, ran the close sequence, opened the macOS Installer,
+  and exited. After "Install for me only", 1.4.0 started 9 seconds after the
+  click, and the project change was still there. A downgrade over a newer
+  installed version does not install, so move the newer app away first.
+- **Checked:** the install with no Gatekeeper warning (a `.pkg` with a
+  quarantine attribute), no administrator rights ("Install for me only"),
+  a reinstall over the same version, and the update from the previous
+  version.
+
+Still to do in step 11: an update of an app that the user moved to another
+folder, and the uninstall (drag the app to the Trash; the data folder
+stays).
 
 ## 9. CI and release workflow
 
@@ -991,7 +1007,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
-| 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | In progress (see "Result of step 11 so far"). Done: the Developer ID signature, the scripts of the notarization, the Velopack installer, and the signature check, and "Update and restart" on macOS. To do: the notarization result and the install and update checks by hand |
+| 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03, except two small checks by hand (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, and "Update and restart" from 1.3.99 to 1.4.0. To do: an update of a moved app, and the uninstall |
 | 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | Not started |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
 

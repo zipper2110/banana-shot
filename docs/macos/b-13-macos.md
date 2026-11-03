@@ -238,11 +238,21 @@ used the log and screenshots.
   project list reads it. macOS keeps the answer for the app. The beta must
   check that this request is clear to users. It can also come for Desktop
   and Documents, and for an external disk.
+- **Colors.** `FfmpegToneFilterParityTest` runs on the Mac with the macOS
+  ffmpeg and passes: the export filters give the codes of the reference
+  curves. The new `PreviewExportColorParityTest` compares the preview with
+  the export. It makes a video of 32 color patches (H.264, BT.709, limited
+  range). For 11 color settings (neutral, contrast, saturation, brightness,
+  shadows and highlights, temperature, and all together), it renders one
+  frame with libmpv (the app options, `gpu-next` on Vulkan through
+  MoltenVK, `tr-adjust.hook`) and the same frame with the export `-vf`
+  filter. The largest difference of a patch mean is 1 code of 255. The mean
+  difference is 0.1 to 0.3 codes. The test runs only with
+  `-Dbananashot.previewParity=true` and a screen, so CI skips it. It does
+  not check the color management of macOS between mpv and the display.
 - **Not checked yet:**
   - seek, frame step, and the playback rate one by one (the author used
     them during the checks and saw no problem, but did not check each one);
-  - the color and tone parity with the export (`FfmpegToneFilterParityTest`
-    and `ExportPreviewParityMain`);
   - a normal display (not Retina) and two displays: the test Mac has only
     its built-in display;
   - macOS 15 (the oldest supported version) and VoiceOver (the risk of a
@@ -1138,7 +1148,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | Done on 2026-11-02. The certificates, the API key, and the six secrets of the `macos-release` environment are in place. The Application certificate expires on 2027-12-02. Not tested yet: a real signature and a notarization (step 11) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
-| 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, and tab and project changes. To do: the color parity with the export, a normal display and two displays, macOS 15, and VoiceOver |
+| 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, tab and project changes, and the colors (1 code of 255 from the export). To do: a normal display and two displays, macOS 15, and VoiceOver |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |

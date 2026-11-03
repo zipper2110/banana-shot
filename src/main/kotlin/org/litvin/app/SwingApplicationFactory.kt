@@ -108,7 +108,7 @@ object SwingApplicationFactory {
     private const val CARD_TEST = "test"
     private const val SIDEBAR_BUTTON_GAP = 6
     private const val SIDEBAR_GROUP_GAP = 28
-    private val HELP_BUTTON_HINT get() = tr("nav.help.hint")
+    private val HELP_BUTTON_HINT get() = tr("nav.help.hint", "key" to AppShortcuts.helpKey)
 
     /**
      * The reply address of the feedback (decision 7 of B-8). When the app domain exists (B-10), change it here to an
@@ -565,7 +565,7 @@ object SwingApplicationFactory {
                 openContextHelp()
             }.apply {
                 name = "nav-help"
-                toolTipText = tr("nav.help.tooltip")
+                toolTipText = tr("nav.help.tooltip", "key" to AppShortcuts.helpKey)
                 alignmentX = 0f
                 maximumSize = Dimension(Int.MAX_VALUE, 64)
             }
@@ -749,7 +749,8 @@ object SwingApplicationFactory {
                 frame.setSize(requestedSize.width, requestedSize.height)
                 frame.setLocationRelativeTo(null)
             } else if (savedX != Int.MIN_VALUE && savedY != Int.MIN_VALUE && savedW > 0 && savedH > 0) {
-                frame.setBounds(savedX, savedY, savedW, savedH)
+                // The screen of the saved place can be disconnected now (B-13).
+                frame.bounds = WindowPlacement.onScreen(java.awt.Rectangle(savedX, savedY, savedW, savedH))
                 frame.extendedState = savedState
             } else {
                 frame.setSize(WindowSize.DEFAULT.width, WindowSize.DEFAULT.height)
@@ -798,6 +799,7 @@ object SwingApplicationFactory {
                 mainWindow = frame,
                 openAbout = { moreDialog.value.open(AboutPage.ID) },
                 dockIcon = { AppIcon.windowImages().maxByOrNull { it.getWidth(null) } },
+                openHelp = ::openContextHelp,
             )
 
             // Active time (B-9): the main window or one of its dialogs is the active window.

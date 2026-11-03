@@ -16,6 +16,12 @@ object AppShortcuts {
     private val isMac: Boolean = System.getProperty("os.name").orEmpty().startsWith("Mac", ignoreCase = true)
 
     val HELP = AppShortcut("F1")
+
+    /** The Help key of macOS apps, in the Help menu of the menu bar. F1 also works. */
+    const val MAC_HELP = "⌘?"
+
+    /** The key of the Help texts: [MAC_HELP] on macOS, else F1. */
+    val helpKey: String get() = if (isMac) MAC_HELP else "F1"
     val PLAY_PAUSE = AppShortcut("SPACE")
     val POINT_START = AppShortcut("C")
     val CANCEL_PENDING = AppShortcut("ESCAPE")
@@ -54,8 +60,8 @@ object AppShortcuts {
         return when (keyStroke) {
             "SPACE" -> tr("key.space")
             "DELETE", "BACK_SPACE" -> tr("key.delete")
-            // Most Mac keyboards need Fn for F1 (B-13).
-            "F1" -> if (isMac) "Fn+F1" else "F1"
+            // Most Mac keyboards need Fn for F1. On macOS, the Help menu has Cmd+? (B-13, MacIntegration).
+            "F1" -> if (isMac) MAC_HELP else "F1"
             "LEFT" -> tr("key.left")
             "RIGHT" -> tr("key.right")
             "UP" -> tr("key.up")

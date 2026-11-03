@@ -15,12 +15,18 @@ import kotlin.test.assertTrue
  * - a shortcut with a punctuation key ("[", "]", "+", "/", ";"). Many layouts have other characters on these keys.
  *
  * A key stroke text is the first text argument of `getKeyStroke`, `AppShortcut`, `bind`, or `bindStepKey`.
+ *
+ * One exception: Cmd+?, the Help key of macOS, in `MacIntegration.kt`. The Help item of the macOS menu bar shows the
+ * character "?", and the key check reads the character "?" (and Shift+/ of a US keyboard), so it works on each
+ * layout (B-13).
  */
 class KeyboardShortcutScanTest {
     @Test
     fun `no shortcut in the app binds a typed character, Ctrl+Alt, or a punctuation key`() {
         val sources = File("src/main/kotlin").walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
-        val problems = sources.flatMap { file -> problems(file.readText(Charsets.UTF_8)).map { "${file.name}: $it" } }
+        val problems = sources.flatMap { file ->
+            problems(file.readText(Charsets.UTF_8)).map { "${file.name}: $it" }.filterNot { problem -> problem.startsWith("MacIntegration.kt: line") && MAC_HELP_KEY.any(problem::endsWith) }
+        }
         assertEquals(emptyList<String>(), problems)
     }
 
@@ -93,7 +99,14 @@ class KeyboardShortcutScanTest {
 
     private companion object {
         val STROKE_TEXT = Regex("""\b(?:getKeyStroke|AppShortcut|bind|bindStepKey)\(\s*"([^"$]+)"""")
-        val CHAR_STROKE = Regex("""\bgetKeyStroke\(\s*'""")
+        val CHAR_STROKE = Regex("""\bgetKeyStroke\(\s*(?:'|Character\.valueOf)""")
+
+        /** The allowed problems of Cmd+?, the Help key of macOS, in `MacIntegration.kt`. */
+        val MAC_HELP_KEY = listOf(
+            ": a typed character (getKeyStroke with a Char)",
+            ": a typed character (keyChar)",
+            ": a punctuation key (VK_SLASH)",
+        )
         val TYPED_WORDS = Regex("""\b(?:keyChar|getKeyChar|KEY_TYPED|keyTyped)\b""")
         val CTRL_MASK = Regex("""\bCTRL_(?:DOWN_)?MASK\b""")
         val ALT_MASK = Regex("""\bALT_(?:DOWN_)?MASK\b|\bALT_GRAPH_(?:DOWN_)?MASK\b""")

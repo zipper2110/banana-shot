@@ -705,6 +705,22 @@ Checked by hand on 2026-11-03 (the bundle of `build-app-image.sh`):
   one started 0.6 s later with `--restart` and the new language.
 - Full screen, the green window button, and the painting on a Retina and a
   normal display: see "Result of the step 6 checks".
+- **Help menu (2026-11-03).** On macOS, the main window has a menu bar with
+  a Help menu, and `SwingMainApp` sets `apple.laf.useScreenMenuBar`, so it
+  shows in the menu bar of macOS. Its item "BananaShot Help ⌘?" opens the
+  help of the current tab. Java does not run a menu item for a key
+  equivalent while one of its windows is active, and Swing gets no typed
+  "?" while Cmd is down. Thus a key event dispatcher of `MacIntegration`
+  opens the help for a key press with Cmd and the character "?" or Shift+/
+  (`isHelpKey`). The author checked it with the US and the Russian layout.
+  F1 still works. On macOS, the Help tooltip, the Help hint, the first line
+  of the Overview help, and the shortcut lists show "⌘?" (the texts have a
+  `{key}` placeholder now). `KeyboardShortcutScanTest` allows the character
+  "?" and the slash key only for this key in `MacIntegration.kt`.
+- **Window on a disconnected screen (2026-11-03).** The app saves the place
+  of the main window. `WindowPlacement` now opens the window in the middle
+  of the main screen when its title bar is not on a connected screen, for
+  example after the user disconnects a second display.
 
 ## 8. Packaging, signing, and update
 
@@ -1222,7 +1238,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, tab and project changes, the colors (1 code of 255 from the export), a normal display, and two displays. VoiceOver: one freeze at the close, caused by a new log line, fixed (see the result). macOS 15 counts as working until a user reports a problem (decision of 2026-11-03) |
-| 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, also the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
+| 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, also the checks by hand and the Help menu with Cmd+? (see "Result of step 7") |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
 | 10 | **Bundled fonts.** Section 5. Check them on Windows before a release that has them. It does not need a Mac | About 1 week | No | Done on 2026-11-03 (see "Result of step 10"): font set A, the fonts in the export, the preview, and Java, and a "Font" setting for the scoreboard. The author checked them on Windows. To do at the next release: the changelog note and the site screenshots |

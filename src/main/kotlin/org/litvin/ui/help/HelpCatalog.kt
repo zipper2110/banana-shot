@@ -50,7 +50,7 @@ object HelpCatalog {
                 tr("help.overview.workflow.7"),
             ),
             actions = listOf(
-                tr("help.overview.action.1"),
+                tr("help.overview.action.1", "key" to AppShortcuts.helpKey),
                 tr("help.overview.action.2"),
                 tr("help.overview.action.3"),
                 tr("help.overview.action.4"),

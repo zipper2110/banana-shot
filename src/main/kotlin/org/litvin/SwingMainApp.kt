@@ -53,6 +53,8 @@ object SwingMainApp {
         // The name in the app menu of macOS ("About BananaShot", "Quit BananaShot"). Without it, macOS shows the
         // name of the main class there. AWT reads it one time, before the first window (B-13).
         System.setProperty("apple.awt.application.name", AppInfo.NAME)
+        // The menu bar of the main window (the Help menu) goes into the menu bar of macOS (B-13).
+        System.setProperty(MacIntegration.SCREEN_MENU_BAR, "true")
         // 2. The Velopack setup starts the app with a hook argument when it installs, updates, or
         //    removes the app. The app has no task for a hook: exit at once, with no UI, no lock,
         //    and no read or write of the saved time.

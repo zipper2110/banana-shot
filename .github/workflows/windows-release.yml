@@ -378,9 +378,18 @@ jobs:
         run: target/package/app-image/BananaShot.app/Contents/MacOS/BananaShot --diagnostics
 
       - name: Build, sign, and notarize the Velopack installer
-        run: >-
-          distribution/macos/build-velopack-release.sh --version "$APP_VERSION" --team-id "$APPLE_TEAM_ID"
-          --notary-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN"
+        # The staple of the ticket asks the ticket service of Apple. On 2026-11-03 it failed once with "The network
+        # connection was lost" after Apple had accepted the bundle. vpk does not try again, so the step does.
+        run: |
+          for attempt in 1 2 3; do
+            if distribution/macos/build-velopack-release.sh --version "$APP_VERSION" --team-id "$APPLE_TEAM_ID" \
+              --notary-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN"; then
+              exit 0
+            fi
+            echo "::warning::Velopack failed (try $attempt of 3)."
+            sleep 60
+          done
+          exit 1
 
       - name: Check signatures and stage release files
         run: |

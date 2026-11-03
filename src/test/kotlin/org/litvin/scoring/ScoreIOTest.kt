@@ -161,4 +161,18 @@ class ScoreIOTest {
         assertEquals(settings, ScoreIO.scoreboardFromJson(ScoreIO.scoreboardToJson(settings)))
         assertNull(ScoreIO.scoreboardFromJson("not json"))
     }
+
+    @Test
+    fun scoreboardJson_keepsAChosenFontAndLeavesOutTheStyleFont() {
+        val chosen = ScoreboardSettingsV1(font = ScoreboardFont.GELASIO)
+        val json = ScoreIO.scoreboardToJson(chosen)
+        assertTrue(json.contains("\"font\" : \"GELASIO\""), json)
+        assertEquals(chosen, ScoreIO.scoreboardFromJson(json))
+
+        // An older build reads the same file: the file has no font field for the fonts of the style.
+        assertFalse(ScoreIO.scoreboardToJson(ScoreboardSettingsV1()).contains("font"))
+        assertEquals(ScoreboardFont.STYLE, ScoreIO.scoreboardFromJson("{}")?.font)
+        // A font of a newer build gives the fonts of the style.
+        assertEquals(ScoreboardFont.STYLE, ScoreIO.scoreboardFromJson("{\"font\":\"NEW_FONT\"}")?.font)
+    }
 }

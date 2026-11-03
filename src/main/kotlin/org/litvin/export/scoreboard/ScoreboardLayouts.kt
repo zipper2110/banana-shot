@@ -50,9 +50,12 @@ object ScoreboardLayouts {
             playerColors = normalized.showPlayerColors,
             serve = normalized.showServe,
         )
-        val board = board(display, look, normalized.style)
-        val badge = display.badge?.takeIf { normalized.showDecidingPoint } ?: return board
-        return ScoreboardBadge.add(board, badge, look.accentRgb, normalized.position)
+        // The font that the user chose replaces the fonts of the style, also in the badge (B-13, step 10).
+        return ScoreboardFonts.withChosenFamily(normalized.font.family) {
+            val board = board(display, look, normalized.style)
+            val badge = display.badge?.takeIf { normalized.showDecidingPoint }
+            if (badge == null) board else ScoreboardBadge.add(board, badge, look.accentRgb, normalized.position)
+        }
     }
 
     private fun board(display: ScoreboardDisplay, look: Look, style: ScoreboardStyleId): ScoreboardScene =

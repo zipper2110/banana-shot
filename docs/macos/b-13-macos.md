@@ -472,6 +472,52 @@ no change. For the other fonts, check the box sizes of each style.
 - Update the screenshots on the site (`site/public/assets/frames`) and in
   `design/` if they show the old fonts.
 
+### Result of step 10 (2026-11-03)
+
+- **Font set A.** The author selected it in a review of all 19 styles:
+  Inter (Regular, Bold, Black) for Segoe UI and Segoe UI Black, Liberation
+  Sans for Arial, Archivo Black for Arial Black, Gelasio for Georgia, Fira
+  Sans for Trebuchet MS, Open Sans for Tahoma, Cascadia Mono for Consolas,
+  and Caveat for Ink Free. All have the SIL OFL 1.1. The 16 files (about
+  6.4 MB) are in `src/main/resources/fonts`, with `SOURCES.txt` (the URL and
+  the SHA-256 of each file) and the licenses in `licenses/`.
+  `THIRD-PARTY-NOTICES.txt` has them, so the `legal` folder of the app has
+  them too.
+- **Code.** `BundledFonts` registers the fonts in Java and writes them to
+  `<app data>/fonts`. It writes a file again only when its bytes change.
+  `FFmpegCommandBuilder` gives the folder to the `subtitles` filter
+  (`fontsdir`). The mpv preview gets `osd-fonts-dir` and `sub-fonts-dir`.
+  The libass log of a test export showed the bundled faces.
+- **Letters that a font does not have.** Gelasio and Archivo Black have no
+  Cyrillic, and Caveat has no Greek. `ScoreboardFonts.family` then uses
+  Inter Black (for Archivo Black) or Inter. Java and libass get the same
+  family name, so they draw the same font.
+- **Font setting (the author asked for it on 2026-11-03).** The Scoreboard
+  settings dialog has a "Font" list in "On the board": "Font of the style"
+  and the seven bundled fonts with a Regular and a Bold face. The chosen
+  font draws all text of the board and of the deciding point badge. A
+  black style font becomes the Bold face of the chosen font. The project
+  file keeps the font as `"font"` in the scoreboard settings. It does not
+  keep "Font of the style", so an older build reads the same file. A font
+  name that this build does not know gives "Font of the style". The
+  layouts do not change: `ScoreboardLayouts.scene` runs the layout in
+  `ScoreboardFonts.withChosenFamily`, and `ScoreboardFonts.face` puts the
+  chosen font in place of each style font. The statistics card, the
+  comments, and the replay badge keep their fonts.
+- **Tests.** `ScoreboardFontCoverageTest` checks that each bundled family is
+  registered. `ScoreboardFontFallbackTest` checks the fallbacks.
+  `ScoreboardFontChoiceTest` checks the font setting in all styles: all
+  text in the chosen font, the bold faces, the fallback, and that each
+  text stays inside the board. `ScoreIOTest` checks the JSON.
+- **Still to do.**
+  - Release it in a Windows version (1.4.0) before the macOS release. The
+    changelog note is in `docs/version-scope/1.4.0.md`.
+  - Check the site screenshots (`site/public/assets/frames`) at the 1.4.0
+    release. They show the old fonts in the scoreboards.
+  - Optional cleanup: `fonts/thumbnail` has older copies of Inter Bold and
+    Archivo Black for the thumbnails. They are not registered, so they do
+    not conflict.
+
 ## 6. Platform services
 
 - **GPU preference (B-35):** call
@@ -1056,7 +1102,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
-| 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
+| 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Done on 2026-11-03 (see "Result of step 10"): font set A, the fonts in the export, the preview, and Java, and a "Font" setting for the scoreboard. To do: release it in 1.4.0 for Windows, and check the site screenshots |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03, except two small checks by hand (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, and "Update and restart" from 1.3.99 to 1.4.0. To do: an update of a moved app, and the uninstall |
 | 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job (the dry run passed), the texts, the cockpit, the checklist. To do: the Worker deploys, and the site at the first macOS release |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |

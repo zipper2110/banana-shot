@@ -7,6 +7,7 @@ import org.litvin.ScoreboardDisplay
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
 import org.litvin.scoring.ScoreboardEnd
+import org.litvin.scoring.ScoreboardFont
 import org.litvin.scoring.ScoreboardPosition
 import org.litvin.scoring.ScoreboardStart
 import org.litvin.scoring.ScoreboardSettingsV1
@@ -36,6 +37,7 @@ import java.awt.Cursor
 import java.awt.Dialog
 import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.Font
 import java.awt.GradientPaint
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -50,9 +52,11 @@ import java.awt.image.BufferedImage
 import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JComboBox
+import javax.swing.DefaultListCellRenderer
 import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JLabel
+import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JTextField
@@ -71,7 +75,7 @@ import org.litvin.i18n.tr
 
 /**
  * Modal "Scoreboard settings" dialog. It sets up the scoreboard: style, title, player colors, serve ball, app credit line,
- * position, size, background opacity, accent color, and the start and the end of the board in the video (B-63). The layout comes from design/dialogs-redesign/scoreboard-style.html:
+ * font, position, size, background opacity, accent color, and the start and the end of the board in the video (B-63). The layout comes from design/dialogs-redesign/scoreboard-style.html:
  * the preview and the style gallery on the left, a side panel with three groups on the right.
  *
  * The dialog shows the result in a 16:9 frame. It also sends each change to the `onPreview` callback,
@@ -177,6 +181,21 @@ class ScoreboardSettingsDialog private constructor(
         name = "scoreboard-show-app-credit"
         toolTipText = tr("scoreboard.appCredit.tooltip")
     }
+    private val fontChoice = JComboBox(ScoreboardFont.entries.map { Option(it, it.title) }.toTypedArray()).apply {
+        name = "scoreboard-font"
+        DialogKit.styleCombo(this)
+        toolTipText = tr("scoreboard.font.tooltip")
+        getAccessibleContext().accessibleName = tr("scoreboard.font")
+        maximumRowCount = ScoreboardFont.entries.size
+        renderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(list: JList<*>?, value: Any?, index: Int, selected: Boolean, focus: Boolean): Component =
+                super.getListCellRendererComponent(list, value, index, selected, focus).also { cell ->
+                    // Each font shows in its own letters. "Font of the style" uses the font of the list.
+                    val family = ((value as? Option<*>)?.value as? ScoreboardFont)?.family
+                    if (family != null && list != null) cell.font = Font(family, Font.PLAIN, list.font.size)
+                }
+        }
+    }
     private val sizeRow = SliderValueRow(
         "scoreboard-size", tr("scoreboard.size"), tr("scoreboard.size.tooltip"),
         ScoreboardSettingsV1.MIN_SIZE_PERCENT, ScoreboardSettingsV1.MAX_SIZE_PERCENT, ScoreboardSettingsV1().sizePercent,
@@ -255,6 +274,10 @@ class ScoreboardSettingsDialog private constructor(
         showPlayerColors.addActionListener { update { it.copy(showPlayerColors = showPlayerColors.isSelected) } }
         showServe.addActionListener { update { it.copy(showServe = showServe.isSelected) } }
         showDecidingPoint.addActionListener { update { it.copy(showDecidingPoint = showDecidingPoint.isSelected) } }
+        fontChoice.addActionListener {
+            val chosen = (fontChoice.selectedItem as? Option<*>)?.value as? ScoreboardFont ?: return@addActionListener
+            update { it.copy(font = chosen) }
+        }
         sizeSlider.addChangeListener { update { it.copy(sizePercent = sizeSlider.value) } }
         opacitySlider.addChangeListener { update { it.copy(backgroundOpacityPercent = opacitySlider.value) } }
         accentButton.addActionListener {
@@ -394,6 +417,7 @@ class ScoreboardSettingsDialog private constructor(
             wide(showServe)
             wide(showDecidingPoint)
             wide(showAppCredit)
+            row(tr("scoreboard.font"), fontChoice, line = true)
         }
         val place = DialogGroup(tr("scoreboard.placeAndSize"), Material2MZ.PICTURE_IN_PICTURE, labelWidth = 92).apply {
             row(tr("scoreboard.position"), positionChoice)
@@ -545,6 +569,7 @@ class ScoreboardSettingsDialog private constructor(
             showPlayerColors.isSelected = settings.showPlayerColors
             showServe.isSelected = settings.showServe
             showDecidingPoint.isSelected = settings.showDecidingPoint
+            fontChoice.selectedItem = fontChoice.options().first { it.value == settings.font }
             sizeSlider.value = settings.sizePercent
             // The default of the background slider is the opacity of the style.
             opacityRow.default = defaults.backgroundOpacityPercent

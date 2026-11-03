@@ -20,6 +20,10 @@ import java.util.concurrent.ConcurrentHashMap
  * The fonts of the styles have no Japanese letters. [family] gives the font of the script for such a text (B-11
  * E8-T2), and [textWidth] measures the text in that font. Thus the export, the preview, and the Java2D images use
  * the same font.
+ *
+ * The user can choose one font for all text of the board (B-13, step 10). [withChosenFamily] sets it while a layout
+ * builds the scene. Then [family], [textWidth], and [capHeight] use the chosen font in place of a bundled style font
+ * ([face]). The other functions take the family of a drawn label, so they use the family as it is.
  */
 object ScoreboardFonts {
     init {
@@ -33,6 +37,42 @@ object ScoreboardFonts {
 
     private data class Metrics(val lineHeightPerEm: Double, val ascentShare: Double, val capHeightShare: Double)
 
+    /** A family name and a weight. */
+    data class Face(val family: String, val bold: Boolean)
+
+    /** The font that the user chose for the scene that this thread builds now, or null for the fonts of the style. */
+    private val chosenFamily = ThreadLocal<String?>()
+
+    /** The bundled fonts of the styles. The chosen font replaces them, but not a font of a script such as Japanese. */
+    private val STYLE_FAMILIES = setOf(INTER, INTER_BLACK, LIBERATION_SANS, ARCHIVO_BLACK, GELASIO, FIRA_SANS, OPEN_SANS, CASCADIA_MONO, CAVEAT)
+
+    /** The fonts with only one heavy face. The styles use them with a regular weight. */
+    private val BLACK_FAMILIES = setOf(INTER_BLACK, ARCHIVO_BLACK)
+
+    /** Runs [block] with [family] in place of the style fonts. A null [family] keeps the style fonts. */
+    fun <T> withChosenFamily(family: String?, block: () -> T): T {
+        if (family == null) return block()
+        val previous = chosenFamily.get()
+        chosenFamily.set(family)
+        try {
+            return block()
+        } finally {
+            chosenFamily.set(previous)
+        }
+    }
+
+    /**
+     * The face that draws a text that a style gives in [family] and [bold]. Without a chosen font, it is the same face.
+     * With a chosen font, a style font becomes the chosen font. A black font becomes the bold face of the chosen font,
+     * so that a heavy text stays heavy. A second call with the result gives the same result.
+     */
+    fun face(family: String, bold: Boolean): Face {
+        val chosen = chosenFamily.get() ?: return Face(family, bold)
+        if (family !in STYLE_FAMILIES) return Face(family, bold)
+        return Face(chosen, bold || family in BLACK_FAMILIES)
+    }
+
+    /** The AWT font of a drawn label: [family] is the family of the label, not a style font. */
     fun awtFont(family: String, bold: Boolean, assSize: Double): Font {
         val metrics = metrics(family, bold)
         return Font(family, if (bold) Font.BOLD else Font.PLAIN, 1)
@@ -52,15 +92,18 @@ object ScoreboardFonts {
         return capCenterY - (capCenterFromTop - assSize / 2.0)
     }
 
-    /** The height of the capital letters and digits for the libass size [assSize]. */
-    fun capHeight(family: String, bold: Boolean, assSize: Double): Double = metrics(family, bold).capHeightShare * assSize
+    /** The height of the capital letters and digits for the libass size [assSize]. [family] can be a style font. */
+    fun capHeight(family: String, bold: Boolean, assSize: Double): Double =
+        face(family, bold).let { metrics(it.family, it.bold).capHeightShare * assSize }
 
     /**
-     * [family] when it shows all characters of [text]. If not, the font of the script of the text in the video
+     * The family that draws [text] of the style font [styleFamily]: first the chosen font or [styleFamily] ([face]).
+     * Then: [family] when it shows all characters of [text]. If not, the font of the script of the text in the video
      * language (outside of a video block, the app language), when that font shows the text. If not, the first
      * installed font of [FALLBACKS] that shows the text. Else [family].
      */
-    fun family(family: String, text: String): String {
+    fun family(styleFamily: String, text: String): String {
+        val family = face(styleFamily, false).family
         val drawn = DrawnText.composed(text)
         if (displays(family, drawn)) return family
         val language = I18n.videoLanguage ?: I18n.language
@@ -92,14 +135,21 @@ object ScoreboardFonts {
     fun textWidth(text: String, family: String, bold: Boolean, assSize: Double, spacing: Double = 0.0): Double {
         if (text.isEmpty()) return 0.0
         val drawn = DrawnText.composed(text)
-        val width = awtFont(family(family, drawn), bold, assSize).getStringBounds(drawn, frc).width
+        return drawnWidth(drawn, family(family, drawn), face(family, bold).bold, assSize, spacing)
+    }
+
+    /** The width of the composed text [drawn] in the family of a drawn label. */
+    private fun drawnWidth(drawn: String, family: String, bold: Boolean, assSize: Double, spacing: Double): Double {
+        if (drawn.isEmpty()) return 0.0
+        val width = awtFont(family, bold, assSize).getStringBounds(drawn, frc).width
         // The video adds the spacing once for each character. An emoji is one character, but two Java chars.
         return width + spacing * drawn.codePointCount(0, drawn.length)
     }
 
     /**
      * Fits [text] and the [suffix] after it in [maxWidth] (B-11 E3-T19): a smaller font, and then a cut with "…".
-     * See [TextFit]. [family] is the family that draws the text.
+     * See [TextFit]. [family] is the family that draws the text, for example a result of [family]: it shows all
+     * characters of [text].
      */
     fun fit(
         text: String,
@@ -113,7 +163,7 @@ object ScoreboardFonts {
         text = text,
         size = assSize,
         maxWidth = maxWidth,
-        width = { shown, size -> textWidth(shown, family, bold, size, spacing) },
+        width = { shown, size -> drawnWidth(DrawnText.composed(shown), family, bold, size, spacing) },
         suffix = suffix,
         hasEllipsis = displays(family, TextFit.ELLIPSIS),
     )

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import org.litvin.i18n.tr
 import org.litvin.i18n.I18n
 import org.litvin.i18n.TextFit
+import org.litvin.shared.util.BundledFonts
 
 /** The look of the scoreboard. The scoring preview and the export use the same style. */
 enum class ScoreboardStyleId {
@@ -52,6 +53,31 @@ enum class ScoreboardStyleId {
             STADIUM -> tr("style.stadium")
             STADIUM_COMPACT -> tr("style.stadiumCompact")
         }
+}
+
+/**
+ * The font of all text on the scoreboard (B-13, step 10). [STYLE] keeps the fonts of the style. The other values
+ * are bundled fonts with a regular and a bold face, so that the bold text of each style stays bold.
+ */
+enum class ScoreboardFont(
+    /** The family name of the font, or null for [STYLE]. */
+    val family: String?,
+) {
+    /** A value from a newer build that this build does not know also gives the fonts of the style. */
+    @JsonEnumDefaultValue
+    STYLE(null),
+    INTER(BundledFonts.INTER),
+    LIBERATION_SANS(BundledFonts.LIBERATION_SANS),
+    OPEN_SANS(BundledFonts.OPEN_SANS),
+    FIRA_SANS(BundledFonts.FIRA_SANS),
+    GELASIO(BundledFonts.GELASIO),
+    CASCADIA_MONO(BundledFonts.CASCADIA_MONO),
+    CAVEAT(BundledFonts.CAVEAT),
+    ;
+
+    /** The text in the font list. A family name is the same in all languages. */
+    val title: String
+        get() = family ?: tr("scoreboard.font.style")
 }
 
 /** The corner of the video that shows the scoreboard. */
@@ -147,6 +173,9 @@ data class ScoreboardSettingsV1(
     val sizePercent: Int = 100,
     val backgroundOpacityPercent: Int? = null,
     val accentColorHex: String? = null,
+    /** The font of all text on the board. The file does not keep [ScoreboardFont.STYLE], so an older build reads the same file. */
+    @get:JsonInclude(JsonInclude.Include.CUSTOM, valueFilter = StyleFontFilter::class)
+    val font: ScoreboardFont = ScoreboardFont.STYLE,
     /** When the board comes in (B-63). */
     val start: ScoreboardStart = ScoreboardStart.FIRST_POINT,
     /** The source time of a [ScoreboardStart.FIXED_TIME] start. Null for the other starts. */
@@ -231,6 +260,13 @@ data class ScoreboardSettingsV1(
 /** Jackson leaves out a default title, so that the project file keeps "not set" (B-11 E3-T18). */
 class DefaultTitleFilter {
     override fun equals(other: Any?): Boolean = other is String && ScoreboardSettingsV1.isDefaultTitle(other)
+
+    override fun hashCode(): Int = 0
+}
+
+/** Jackson leaves out [ScoreboardFont.STYLE], the default font. */
+class StyleFontFilter {
+    override fun equals(other: Any?): Boolean = other == ScoreboardFont.STYLE
 
     override fun hashCode(): Int = 0
 }

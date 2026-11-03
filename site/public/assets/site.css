@@ -427,6 +427,15 @@ button.btn-primary:disabled:hover { background: var(--lime); }
 .disclosure-body { padding: 0 18px 8px; border-top: 1px solid var(--line); }
 .disclosure .spec { margin-top: 0; }
 
+/* Download pages: the system bar on /download/ (Windows), /download/windows/, and /download/mac/. */
+.system-bar {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 28px; padding: 12px 18px;
+  border: 1px solid var(--line-2); border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.03); color: var(--fg-2);
+}
+.system-bar a { font-weight: 600; }
+.system-bar a[aria-current] { color: var(--fg-strong); text-decoration: none; }
+.download-other { margin-top: 12px; }
+
 /* Changelog. */
 .release { border-left: 2px solid var(--line-2); padding: 0 0 8px 24px; margin: 32px 0; position: relative; }
 .release::before { content: ""; position: absolute; left: -7px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--lime); }

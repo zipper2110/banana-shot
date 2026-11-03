@@ -37,6 +37,9 @@ jobs:
       - name: Test the workflow scripts
         run: node --test .github/scripts/release-age-reminder.test.js
 
+      - name: Test the site scripts
+        run: node --test site/tools/download.test.js
+
   macos-test:
     # The macOS version (B-13): an Apple Silicon runner with the minimum macOS version of the app. The Swing tests
     # have a display there. The robot tests of the ui-flow profile need the Accessibility permission and do not run

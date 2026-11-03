@@ -21,6 +21,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#151a21">
   <link rel="stylesheet" href="/assets/site.css">
+  <script src="/assets/download.js"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to the content</a>
@@ -39,21 +40,31 @@
 </header>
 
 <main id="main" class="page">
+  <!-- /download/ and /download/windows/ have the same <main>. Change both (site/tools/download.test.js checks it).
+       /download/ also has download.js, which opens /download/mac/ for a Mac visitor. -->
   <div class="wrap narrow">
-    <h1>Download BananaShot</h1>
+    <nav class="system-bar" aria-label="Systems">
+      <span>Available for:</span>
+      <a href="/download/windows/" aria-current="page">Windows</a>
+      <span aria-hidden="true">|</span>
+      <a href="/download/mac/">Mac</a>
+    </nav>
+
+    <p class="eyebrow">Download for free</p>
+    <h1>BananaShot for Windows</h1>
     <p class="lead">BananaShot is free. You do not need an account.</p>
 
-    <div class="card">
+    <div class="card download-card">
       <div class="actions">
         <a class="btn btn-primary" href="https://github.com/zipper2110/banana-shot/releases/latest/download/BananaShot-win-Setup.exe">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
-          Start the download
+          Download for Windows
         </a>
-        <a class="btn btn-secondary" href="https://github.com/zipper2110/banana-shot/releases/latest">All files of the release</a>
       </div>
-      <!-- At each release, change the version, the date, and the size (docs/release-checklist.md). -->
-      <span class="btn-note">Version 1.3.1, released on 2026-10-31. The setup file is about 176 MB. <a href="/changelog/">What's new</a></span>
+      <!-- At each release, change the version, the date, and the size of the file (docs/release-checklist.md). -->
+      <span class="btn-note">For Windows 10 and 11, 64-bit. The setup file is about 176 MB. Version 1.3.1, released on 2026-10-31. <a href="/changelog/">What's new</a></span>
     </div>
+    <p class="muted small download-other">Do you need other files? See <a href="https://github.com/zipper2110/banana-shot/releases/latest">all files of the release</a> on GitHub.</p>
 
     <details class="disclosure" id="system-needs">
       <summary>System needs <span class="muted">Windows 10 or 11, 64-bit</span><span class="disclosure-toggle" aria-hidden="true"></span></summary>
@@ -65,7 +76,6 @@
           <tr><th scope="row">Faster export</th><td>Optional: a graphics card with a video encoder from NVIDIA, AMD, or Intel. Without it, the app uses the software encoder. It is slower, but it works on all PCs.</td></tr>
           <tr><th scope="row">Administrator rights</th><td>Not necessary. The app installs only for your Windows account.</td></tr>
         </table>
-        <p class="muted small">macOS and Linux are not available now.</p>
       </div>
     </details>
 

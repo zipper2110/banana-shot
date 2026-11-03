@@ -276,13 +276,18 @@ Do this section when the release has macOS files: the repository variable
 - [ ] Site changelog (`site/public/changelog/index.html`): write the release
       date (YYYY-MM-DD) of the new version, and deploy the site. For the
       first release, replace "coming soon" of 1.0.0. Also change
-      `softwareVersion` in the JSON-LD of `site/public/index.html`, and the
-      version, the date, and the size of the setup file on
-      `site/public/download/index.html`. Change the `<lastmod>` of these
+      `softwareVersion` in the JSON-LD of `site/public/index.html`. Change the
+      version and the date on the three download pages
+      (`site/public/download/index.html`, `download/windows/index.html`, and
+      `download/mac/index.html`), and the size of the setup file on the
+      two Windows pages and of the installer on the Mac page. `/download/`
+      and `/download/windows/` have the same `<main>`. Change the `<lastmod>` of these
       pages and the changelog in `sitemap.xml`.
-- [ ] Site: "Download for Windows" on `https://banana-shot-editor.app/download/`
-      downloads `BananaShot-win-Setup.exe` of the new release. Before the
-      first release, this link returns 404.
+- [ ] Site: open `https://banana-shot-editor.app/download/` on Windows and on
+      a Mac. Windows shows the Windows page there. A Mac opens
+      `/download/mac/` (`assets/download.js`). The button downloads
+      `BananaShot-win-Setup.exe` or `BananaShot-osx-Setup.pkg` of the new
+      release.
 - [ ] Set `<revision>` in `pom.xml` to the next version with `-SNAPSHOT`.
 - [ ] "Update and restart" (B-26, check 4). Skip this for the first release.
       Install the previous release, and start it. GitHub can need about 5
@@ -309,6 +314,8 @@ Do this section when the release has macOS files: the repository variable
       uninstall steps. Change the page title and the texts that say
       "Windows" on the home page, the FAQ, and the pricing page. Do not
       deploy these changes before the release has the `.pkg`.
+      For 1.4.0, these changes are ready on the site pages, also the
+      changelog entry with the date `YYYY-MM-DD`.
 
 ## Emergency rebuild
 

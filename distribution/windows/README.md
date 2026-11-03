@@ -104,7 +104,7 @@ release. It gives the release steps in sequence. The open work is in
 - The release workflow creates a draft release. Check it on the GitHub
   releases page, then click "Publish release".
 - To test the release workflow without a release, start it by hand: open the
-  Actions tab, select "Windows release", click "Run workflow", and type a
+  Actions tab, select "Release", click "Run workflow", and type a
   version. This dry run builds, tests and checks everything. It uploads the
   files as the workflow artifact `bananashot-v<version>-dry-run-windows-x64`
   and does not create a tag or a release.

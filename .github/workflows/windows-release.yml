@@ -1,4 +1,4 @@
-name: Windows release
+name: Release
 
 on:
   push:
@@ -12,6 +12,10 @@ on:
         description: "App version for the dry run (MAJOR.MINOR.PATCH)"
         required: true
         default: "0.0.1"
+      macos:
+        description: "Also build, sign, and notarize the macOS files (B-13)"
+        type: boolean
+        default: false
 
 # Each job gets only the permissions that it needs (B-27). Only the publish job can write.
 permissions:
@@ -237,23 +241,194 @@ jobs:
           path: target/release/*
           if-no-files-found: error
 
+  macos-installer:
+    # Builds, signs, notarizes, and checks the macOS release files (B-13) and uploads them as a workflow
+    # artifact. Only this job gets the secrets of the macos-release environment. A release runs it only when the
+    # repository variable MACOS_RELEASE is "true", so that a Windows release does not depend on a macOS runner
+    # before the first macOS release. A dry run runs it with the input "macos".
+    if: vars.MACOS_RELEASE == 'true' || (github.event_name == 'workflow_dispatch' && inputs.macos)
+    needs: test
+    runs-on: macos-15
+    timeout-minutes: 120
+    environment: macos-release
+    outputs:
+      natives-tag: ${{ steps.natives.outputs.natives-tag }}
+    env:
+      KEYCHAIN: ${{ runner.temp }}/bananashot-release.keychain-db
+      NOTARY_PROFILE: bananashot-notary
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Validate release gates
+        env:
+          DRY_RUN_VERSION: ${{ inputs.version }}
+          HAS_SECRETS: ${{ secrets.MACOS_SIGNING_P12_BASE64 != '' && secrets.APPLE_API_KEY_P8 != '' }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            release_name="${{ github.ref_name }}"
+            [[ "$release_name" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Release tag must use vMAJOR.MINOR.PATCH."; exit 1; }
+            version="${release_name#v}"
+          else
+            version="$DRY_RUN_VERSION"
+            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "The dry-run version must use MAJOR.MINOR.PATCH."; exit 1; }
+            release_name="v$version-dry-run"
+          fi
+          # Gatekeeper blocks a macOS app with no Developer ID signature and no notarization.
+          [ "$HAS_SECRETS" = "true" ] || { echo "Set the secrets of the macos-release environment (docs/macos/b-13-macos.md)."; exit 1; }
+          echo "APP_VERSION=$version" >>"$GITHUB_ENV"
+          echo "RELEASE_NAME=$release_name" >>"$GITHUB_ENV"
+
+      - name: Check native sources in the natives release
+        # The GPL and the LGPL require the corresponding source of the bundled native builds.
+        id: natives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          manifest=distribution/macos/native-dependencies.json
+          tag="$(plutil -extract nativesRelease.tag raw -o - "$manifest")"
+          echo "natives-tag=$tag" >>"$GITHUB_OUTPUT"
+          assets="$(gh release view "$tag" --repo "${{ github.repository }}" --json assets -q '.assets[] | "\(.name) \(.digest)"')"
+          for dependency in mpv ffmpeg; do
+            name="$(plutil -extract "$dependency.sourceArchiveName" raw -o - "$manifest")"
+            sha="$(plutil -extract "$dependency.sourceSha256" raw -o - "$manifest")"
+            grep -qx "$name sha256:$sha" <<<"$assets" || { echo "The natives release $tag has no $name with SHA-256 $sha."; exit 1; }
+          done
+
+      - name: Install Velopack CLI
+        # The same pinned vpk version as the Windows job (B-26). The runner has the .NET SDK.
+        run: |
+          dotnet tool install --global vpk --version 1.2.161
+          echo "$HOME/.dotnet/tools" >>"$GITHUB_PATH"
+
+      - name: Import the signing certificates and the notary login
+        # A temporary keychain with a random password. The step deletes the key files at once.
+        env:
+          P12_BASE64: ${{ secrets.MACOS_SIGNING_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_SIGNING_P12_PASSWORD }}
+          API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          work="$RUNNER_TEMP/signing"
+          mkdir -p "$work"
+          chmod 700 "$work"
+          keychain_password="$(openssl rand -base64 24)"
+          security create-keychain -p "$keychain_password" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$keychain_password" "$KEYCHAIN"
+          printf '%s' "$P12_BASE64" | base64 --decode >"$work/signing.p12"
+          security import "$work/signing.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" -f pkcs12 \
+            -T /usr/bin/codesign -T /usr/bin/productsign -T /usr/bin/pkgbuild -T /usr/bin/productbuild
+          # The intermediate certificate of the Developer ID certificates (G2), pinned by its SHA-256.
+          curl -fsSL -o "$work/DeveloperIDG2CA.cer" https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          echo "f16cd3c54c7f83cea4bf1a3e6a0819c8aaa8e4a1528fd144715f350643d2df3a  $work/DeveloperIDG2CA.cer" | shasum -a 256 -c -
+          security import "$work/DeveloperIDG2CA.cer" -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          printf '%s\n' "$API_KEY_P8" >"$work/AuthKey.p8"
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" --key "$work/AuthKey.p8" --key-id "$API_KEY_ID" \
+            --issuer "$API_ISSUER_ID" --keychain "$KEYCHAIN"
+          rm -rf "$work"
+          identity="$(security find-identity -v -p codesigning "$KEYCHAIN" | sed -n "s/.*) \([0-9A-F]\{40\}\) \"Developer ID Application: .*($TEAM_ID)\"/\1/p")"
+          # The first line only. The keychain can show the identity more than one time.
+          identity="${identity%%$'\n'*}"
+          [ -n "$identity" ] || { echo "The keychain has no Developer ID Application identity of the team."; exit 1; }
+          echo "SIGNING_IDENTITY=$identity" >>"$GITHUB_ENV"
+          echo "APPLE_TEAM_ID=$TEAM_ID" >>"$GITHUB_ENV"
+
+      - name: Assemble verified native dependencies
+        run: distribution/macos/get-native-dependencies.sh
+
+      - name: Build the app bundle
+        env:
+          FEEDBACK_ENDPOINT: ${{ vars.FEEDBACK_ENDPOINT }}
+          ANALYTICS_ENDPOINT: ${{ vars.ANALYTICS_ENDPOINT }}
+          ANALYTICS_PRIVACY_URL: ${{ vars.ANALYTICS_PRIVACY_URL }}
+          ANALYTICS_NOTICE_VERSION: ${{ vars.ANALYTICS_NOTICE_VERSION }}
+        run: >-
+          distribution/macos/build-app-image.sh --version "$APP_VERSION" --sign "$SIGNING_IDENTITY"
+          --feedback-endpoint "$FEEDBACK_ENDPOINT"
+          --analytics-endpoint "$ANALYTICS_ENDPOINT"
+          --analytics-privacy-url "$ANALYTICS_PRIVACY_URL"
+          --analytics-notice-version "$ANALYTICS_NOTICE_VERSION"
+
+      - name: Validate the app bundle
+        run: distribution/macos/validate-app-image.sh --version "$APP_VERSION"
+
+      - name: Run packaged diagnostics
+        run: target/package/app-image/BananaShot.app/Contents/MacOS/BananaShot --diagnostics
+
+      - name: Build, sign, and notarize the Velopack installer
+        run: >-
+          distribution/macos/build-velopack-release.sh --version "$APP_VERSION" --team-id "$APPLE_TEAM_ID"
+          --notary-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN"
+
+      - name: Check signatures and stage release files
+        run: |
+          distribution/macos/test-release-signatures.sh --team-id "$APPLE_TEAM_ID" --require-notarization
+          release=target/release
+          mkdir -p "$release"
+          velopack=target/package/velopack
+          # The Velopack files. The license files, the SBOM, and the source archive come from the Windows job.
+          cp "$velopack/BananaShot-osx-Setup.pkg" "$velopack"/*-osx-full.nupkg "$velopack/releases.osx.json" "$release/"
+          cp distribution/macos/native-dependencies.json "$release/native-dependencies-macos.json"
+          (cd "$release" && shasum -a 256 BananaShot-osx-Setup.pkg | sed 's/  / */' >BananaShot-osx-Setup.pkg.sha256)
+          ls -la "$release"
+
+      - name: Delete the temporary keychain
+        if: always()
+        run: |
+          if [ -f "$KEYCHAIN" ]; then security delete-keychain "$KEYCHAIN"; fi
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bananashot-${{ env.RELEASE_NAME }}-macos-arm64
+          path: target/release/*
+          if-no-files-found: error
+
   publish:
-    # Creates the draft release from the workflow artifact. Only a tag push starts this job.
-    # It does not get the signing secrets.
-    if: github.event_name == 'push'
-    needs: windows-installer
+    # Creates the draft release from the workflow artifacts. Only a tag push starts this job.
+    # It does not get the signing secrets. The macOS files are in the release when the macOS job ran.
+    if: >-
+      always() && github.event_name == 'push' && needs.windows-installer.result == 'success' &&
+      (needs.macos-installer.result == 'success' || needs.macos-installer.result == 'skipped')
+    needs: [windows-installer, macos-installer]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
       RELEASE_NAME: ${{ needs.windows-installer.outputs.release-name }}
       NATIVES_TAG: ${{ needs.windows-installer.outputs.natives-tag }}
+      MACOS_NATIVES_TAG: ${{ needs.macos-installer.outputs.natives-tag }}
     steps:
-      - name: Download workflow artifact
+      - name: Download workflow artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: bananashot-${{ env.RELEASE_NAME }}-windows-x64
+          pattern: bananashot-${{ env.RELEASE_NAME }}-*
+          merge-multiple: true
           path: target/release
+
+      - name: Describe the macOS natives release
+        if: env.MACOS_NATIVES_TAG != ''
+        run: |
+          {
+            echo "MACOS_NATIVES_TEXT<<EOF"
+            echo "The macOS builds and their corresponding source code are in the natives release:"
+            echo "https://github.com/${{ github.repository }}/releases/tag/$MACOS_NATIVES_TAG"
+            echo "EOF"
+          } >>"$GITHUB_ENV"
 
       - name: Create draft GitHub release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
@@ -263,6 +438,8 @@ jobs:
           body: |
             The bundled FFmpeg and libmpv builds and their corresponding source code are in the natives release:
             https://github.com/${{ github.repository }}/releases/tag/${{ env.NATIVES_TAG }}
+
+            ${{ env.MACOS_NATIVES_TEXT }}
           generate_release_notes: true
           files: target/release/*
           fail_on_unmatched_files: true

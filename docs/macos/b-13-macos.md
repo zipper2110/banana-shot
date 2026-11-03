@@ -235,8 +235,9 @@ used the log and screenshots.
   so no instance leaks. The close is clean (exit code 0).
 - **Downloads folder.** At the first start, macOS asked for access to the
   Downloads folder, because the video of a recent project was there and the
-  project list reads it. macOS keeps the answer for the app. The beta must
-  check that this request is clear to users. It can also come for Desktop
+  project list reads it. macOS keeps the answer for the app. There is no
+  beta (decision of 2026-11-03). User reports must show if this request is
+  clear to users. It can also come for Desktop
   and Documents, and for an external disk.
 - **Colors.** `FfmpegToneFilterParityTest` runs on the Mac with the macOS
   ffmpeg and passes: the export filters give the codes of the reference
@@ -1232,7 +1233,7 @@ Still to do in step 12, at the first macOS release (1.4.0): the variable
 
 ## Order of the work
 
-Status on 2026-11-02. Update this table when a step changes.
+Status on 2026-11-03. Update this table when a step changes.
 
 The column "Apple account" tells if the step needs the approved Apple
 Developer account. Do the steps with "No" while Apple reviews the enrollment.
@@ -1243,7 +1244,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. The analytics Worker and the cockpit were deployed on 2026-11-03 |
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | Done on 2026-11-02. The certificates, the API key, and the six secrets of the `macos-release` environment are in place. The Application certificate expires on 2027-12-02. Not tested yet: a real signature and a notarization (step 11) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
-| 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
+| 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). The author skipped these checks for 1.4.0 on 2026-11-03. They stay in B-42. Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, tab and project changes, the colors (1 code of 255 from the export), a normal display, and two displays. VoiceOver: one freeze at the close, caused by a new log line, fixed (see the result). macOS 15 counts as working until a user reports a problem (decision of 2026-11-03) |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, also the checks by hand and the Help menu with Cmd+? (see "Result of step 7") |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
@@ -1251,7 +1252,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 10 | **Bundled fonts.** Section 5. Check them on Windows before a release that has them. It does not need a Mac | About 1 week | No | Done on 2026-11-03 (see "Result of step 10"): font set A, the fonts in the export, the preview, and Java, and a "Font" setting for the scoreboard. The author checked them on Windows. To do at the next release: the changelog note and the site screenshots |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03 (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, "Update and restart" from 1.3.99 to 1.4.0, the update of a moved app (the old copy goes to the Trash), and the uninstall |
 | 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job (the dry run passed), the texts, the cockpit, the checklist, and the deploy of the analytics Worker and the cockpit (2026-11-03). To do at the first macOS release (1.4.0): `MACOS_RELEASE`, `macInstallerUrl`, and the site |
-| 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
+| 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Dropped on 2026-11-03 (decision of the author). 1.4.0 has no Mac beta |
 
 Notes on the order:
 
@@ -1279,5 +1280,6 @@ Notes on the order:
   step 6 checks".)
 - The packaged smoke test of `qa/macos/ui-smoke.md` passes.
 - "Update and restart" updates from the previous macOS version.
-- The B-42 checks (sleep, proxy, TLS inspection) pass on a Mac.
+- The B-42 checks (sleep, proxy, TLS inspection) pass on a Mac. (The author
+  skipped them for 1.4.0 on 2026-11-03. They stay in B-42.)
 - CI runs the tests on macOS and on Windows.

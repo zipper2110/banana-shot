@@ -10,6 +10,8 @@ When item is done, move it under
 
 - Moved from B-26 check 2 and E11-S2 (proxy) and from E11-S1 (sleep) on
   2026-10-06. The author postponed them to after the first release.
+- Decided on 2026-11-03: the release 1.4.0 (the first macOS release) does
+  not wait for these checks on a Mac. Do them later, on Windows and on a Mac.
 - Sleep (E11-S1): on a laptop, start the app, sleep for 10 minutes, and
   wake it. The log shows a run time that includes the 10 minutes.
 - Set a manual proxy in Windows (for example a local Fiddler or mitmproxy),

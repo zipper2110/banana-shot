@@ -310,6 +310,10 @@ jobs:
         run: |
           dotnet tool install --global vpk --version 1.2.161
           echo "$HOME/.dotnet/tools" >>"$GITHUB_PATH"
+          # vpk finds the .NET runtime only with DOTNET_ROOT. The runner has dotnet in another folder than
+          # the default /usr/local/share/dotnet.
+          echo "DOTNET_ROOT=$(dirname "$(readlink -f "$(command -v dotnet)")")" >>"$GITHUB_ENV"
+          dotnet --list-runtimes
 
       - name: Import the signing certificates and the notary login
         # A temporary keychain with a random password. The step deletes the key files at once.

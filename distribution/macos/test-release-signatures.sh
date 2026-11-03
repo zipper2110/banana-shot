@@ -8,18 +8,22 @@
 # checks that no JAR file contains a macOS native file (notarization refuses it).
 #
 # Usage: distribution/macos/test-release-signatures.sh --team-id <ID> [--velopack-dir <dir>] [--require-notarization]
+#          [--allow-unstapled]
 # With --require-notarization, the .pkg and the app must have a stapled ticket, and Gatekeeper must accept them.
+# With --allow-unstapled, a missing staple is allowed: Gatekeeper must then accept the file online (see notarize.sh).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DIR="$ROOT/target/package/velopack"
 TEAM_ID=""
 REQUIRE_NOTARIZATION=false
+ALLOW_UNSTAPLED=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --team-id) TEAM_ID="$2"; shift 2 ;;
     --velopack-dir) DIR="$2"; shift 2 ;;
     --require-notarization) REQUIRE_NOTARIZATION=true; shift ;;
+    --allow-unstapled) ALLOW_UNSTAPLED=true; shift ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -45,7 +49,10 @@ grep -q "Developer ID Installer: .*($TEAM_ID)" <<<"$PKG_SIGNATURE" \
 grep -q "Signed with a trusted timestamp" <<<"$PKG_SIGNATURE" \
   || FAILURES+=("BananaShot-osx-Setup.pkg: no trusted timestamp")
 if $REQUIRE_NOTARIZATION; then
-  xcrun stapler validate "$SETUP" >/dev/null 2>&1 || FAILURES+=("BananaShot-osx-Setup.pkg: no stapled notarization ticket")
+  if ! xcrun stapler validate "$SETUP" >/dev/null 2>&1; then
+    if $ALLOW_UNSTAPLED; then echo "WARNING: BananaShot-osx-Setup.pkg has no stapled ticket." >&2
+    else FAILURES+=("BananaShot-osx-Setup.pkg: no stapled notarization ticket"); fi
+  fi
   spctl --assess --type install "$SETUP" >/dev/null 2>&1 || FAILURES+=("BananaShot-osx-Setup.pkg: Gatekeeper refuses it")
 fi
 
@@ -85,7 +92,10 @@ check_app() {
     fi
   done
   if $REQUIRE_NOTARIZATION && [[ "$mode" == "bundle" ]]; then
-    xcrun stapler validate "$app" >/dev/null 2>&1 || FAILURES+=("$label: no stapled notarization ticket")
+    if ! xcrun stapler validate "$app" >/dev/null 2>&1; then
+      if $ALLOW_UNSTAPLED; then echo "WARNING: $label: the app has no stapled ticket." >&2
+      else FAILURES+=("$label: no stapled notarization ticket"); fi
+    fi
     spctl --assess --type execute "$app" >/dev/null 2>&1 || FAILURES+=("$label: Gatekeeper refuses the app")
   fi
   echo "$label: $checked Mach-O files checked"

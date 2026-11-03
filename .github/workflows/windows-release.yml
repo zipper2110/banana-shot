@@ -377,23 +377,24 @@ jobs:
       - name: Run packaged diagnostics
         run: target/package/app-image/BananaShot.app/Contents/MacOS/BananaShot --diagnostics
 
-      - name: Build, sign, and notarize the Velopack installer
-        # The staple of the ticket asks the ticket service of Apple. On 2026-11-03 it failed once with "The network
-        # connection was lost" after Apple had accepted the bundle. vpk does not try again, so the step does.
+      - name: Build and sign the Velopack installer
+        # vpk signs the bundle and the .pkg. It does not notarize here: its notarization stops at a failed staple,
+        # and the staple failed on each try on this runner (2026-11-03). The next step notarizes.
+        run: >-
+          distribution/macos/build-velopack-release.sh --version "$APP_VERSION" --team-id "$APPLE_TEAM_ID"
+          --keychain "$KEYCHAIN"
+
+      - name: Notarize the installer
+        # The notarization of the .pkg also covers the app in it. The staple asks the ticket service of Apple
+        # (CloudKit), and the runner lost the connection to it each time ("The network connection was lost").
+        # Without the staple, Gatekeeper gets the ticket online at the first start, so a failed staple is a warning.
         run: |
-          for attempt in 1 2 3; do
-            if distribution/macos/build-velopack-release.sh --version "$APP_VERSION" --team-id "$APPLE_TEAM_ID" \
-              --notary-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN"; then
-              exit 0
-            fi
-            echo "::warning::Velopack failed (try $attempt of 3)."
-            sleep 60
-          done
-          exit 1
+          distribution/macos/notarize.sh --pkg target/package/velopack/BananaShot-osx-Setup.pkg \
+            --keychain-profile "$NOTARY_PROFILE" --keychain "$KEYCHAIN" --staple-tries 5 --allow-unstapled
 
       - name: Check signatures and stage release files
         run: |
-          distribution/macos/test-release-signatures.sh --team-id "$APPLE_TEAM_ID" --require-notarization
+          distribution/macos/test-release-signatures.sh --team-id "$APPLE_TEAM_ID" --require-notarization --allow-unstapled
           release=target/release
           mkdir -p "$release"
           velopack=target/package/velopack

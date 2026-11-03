@@ -884,11 +884,16 @@ The checks for Velopack on macOS:
   the seal of the bundle cannot match there. The script checks only the
   files of that package.
 
-Still to do in step 11: a notarized bundle and `.pkg` of the current build
-(`build-velopack-release.sh --notary-profile`), and the checks of "Installer
-and update" by hand: the install with no Gatekeeper warning, an update from
-the previous version, a moved app, no administrator rights, and the
-uninstall.
+- **Notarized release (2026-11-03).** A clean build of `master` (be8d3a9)
+  with `build-app-image.sh --sign` and `build-velopack-release.sh
+  --notary-profile`: vpk notarized the bundle and the `.pkg` in about 2
+  minutes each. `test-release-signatures.sh --require-notarization`
+  passed, and Gatekeeper accepts the `.pkg` and the app as "Notarized
+  Developer ID", also with a quarantine attribute.
+
+Still to do in step 11: the checks of "Installer and update" by hand: the
+install with no Gatekeeper warning, an update from the previous version, a
+moved app, no administrator rights, and the uninstall.
 
 ## 9. CI and release workflow
 

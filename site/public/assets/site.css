@@ -440,6 +440,9 @@ button.btn-primary:disabled:hover { background: var(--lime); }
 .release { border-left: 2px solid var(--line-2); padding: 0 0 8px 24px; margin: 32px 0; position: relative; }
 .release::before { content: ""; position: absolute; left: -7px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--lime); }
 .release h2 { margin: 0 0 4px; font-size: 1.3rem; }
+.release h3 { margin: 28px 0 8px; font-size: 1.08rem; }
+/* An image of a release (the same images as the "What's new" popup of the app). */
+.release-shot { width: 100%; max-width: 546px; height: auto; margin: 10px 0 14px; border-radius: 10px; }
 
 /* ---- Footer ---- */
 .site-footer {

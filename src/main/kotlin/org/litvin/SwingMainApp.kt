@@ -50,6 +50,9 @@ object SwingMainApp {
         // 1. Use the proxy settings of the system (Windows or macOS). Java reads this property only one time,
         //    at the first network request of the process, so it must come before all other code ("Proxy").
         System.setProperty("java.net.useSystemProxies", "true")
+        // The name in the app menu of macOS ("About BananaShot", "Quit BananaShot"). Without it, macOS shows the
+        // name of the main class there. AWT reads it one time, before the first window (B-13).
+        System.setProperty("apple.awt.application.name", AppInfo.NAME)
         // 2. The Velopack setup starts the app with a hook argument when it installs, updates, or
         //    removes the app. The app has no task for a hook: exit at once, with no UI, no lock,
         //    and no read or write of the saved time.

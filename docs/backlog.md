@@ -72,6 +72,8 @@ When item is done, move it under
 
 ### B-13 macOS
 
+- Target: 1.4.0, the first release with the macOS version (decision of the
+  author on 2026-11-03).
 - Build, package, and test the app on macOS.
 - The list of changes is in `docs/macos/b-13-macos.md`.
 

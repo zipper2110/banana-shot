@@ -67,6 +67,9 @@ object SwingMainApp {
             "${AppInfo.NAME} ${AppInfo.version} started on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, " +
                 "Java ${System.getProperty("java.version")}."
         }
+        // The bundled scoreboard fonts (B-13, step 10): Java measures with them, and libass and mpv read the folder.
+        org.litvin.shared.util.BundledFonts.registerInJava()
+        org.litvin.shared.util.BundledFonts.directoryOrNull()
         // A fixed size of the main window, for a check of the layout (B-11 E4-T8). The argument sets the property, so
         // the window and a restart after a language change read the same value.
         (WindowSize.argumentValue(args) ?: System.getProperty(WindowSize.PROPERTY))?.let { value ->

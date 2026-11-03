@@ -6,13 +6,14 @@ import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardFonts
 import java.util.Locale
 import kotlin.math.roundToInt
+import org.litvin.shared.util.BundledFonts
 
 /**
  * The "REPLAY" badge of a replay (B-50) as ASS event texts. The badge is a lime box with dark bold text at the
  * upper right of the frame, as in the design mockup. The sizes are relative to the frame height.
  */
 object ReplayBadgeAss {
-    private const val FONT = "Arial"
+    private const val FONT = BundledFonts.LIBERATION_SANS
     private const val BADGE_COLOR = 0xC8EC46
     private const val TEXT_COLOR = 0x142000
 

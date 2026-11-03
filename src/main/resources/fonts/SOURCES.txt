@@ -1,0 +1,21 @@
+The bundled scoreboard fonts (B-13, step 10). All fonts have the SIL Open Font License 1.1 (licenses/).
+The files are not modified. The app copies them to the "fonts" folder of the app data folder at the start, and
+registers them in Java. libass (the export) and mpv (the preview) read them from that folder.
+
+File | Source | SHA-256
+ArchivoBlack-Regular.ttf | https://github.com/google/fonts/blob/main/ofl/archivoblack/ArchivoBlack-Regular.ttf | dd9a89a019b4849f66ab75455fe7bdf931311042cbb0f0f97acc061539703180
+CascadiaMono-Bold.ttf | https://github.com/microsoft/cascadia-code/releases/download/v2407.24/CascadiaCode-2407.24.zip (ttf/static/CascadiaMono-Bold.ttf) | b22cb603ed23cac36e8444846e1841caca21719a5e852780a8d37ae7a49b0a36
+CascadiaMono-Regular.ttf | https://github.com/microsoft/cascadia-code/releases/download/v2407.24/CascadiaCode-2407.24.zip (ttf/static/CascadiaMono-Regular.ttf) | 06520d032ec274fa5040b22c6f4a1d829081b24ba40b2da56dae89bf10c7b481
+Caveat-Bold.ttf | https://github.com/googlefonts/caveat/blob/main/fonts/ttf/Caveat-Bold.ttf | 29e5cf4177d79af56c256c24f687fd6a74c3d04c3c4660ccca87b0a6d1fa3452
+Caveat-Regular.ttf | https://github.com/googlefonts/caveat/blob/main/fonts/ttf/Caveat-Regular.ttf | 7af58d70e539c9195cc328617a68c9961ed804a4404b0b818989ba7c013e8776
+FiraSans-Bold.ttf | https://github.com/google/fonts/blob/main/ofl/firasans/FiraSans-Bold.ttf | a4d8e149ecdd4874a0726eb0af894488b3b31c423d6b0017c8f415ed1b795b45
+FiraSans-Regular.ttf | https://github.com/google/fonts/blob/main/ofl/firasans/FiraSans-Regular.ttf | c29556a2719bf613ef3d5e070e40d903a8965d9c081beca1375dc1e6e0f93c23
+Gelasio-Bold.ttf | https://github.com/SorkinType/Gelasio/blob/main/fonts/ttf/Gelasio-Bold.ttf | e0ef3addf1acf35f5c6aef2be00d0a2c01363bf70a5950e16650976051a0c462
+Gelasio-Regular.ttf | https://github.com/SorkinType/Gelasio/blob/main/fonts/ttf/Gelasio-Regular.ttf | 48c797fbe0e07c48a18cb962e7bdfa23f19618327dddf54093265328dc9eb39d
+Inter-Black.ttf | https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip (extras/ttf/Inter-Black.ttf) | 6342d3ea6dc088b43867f615e807d898adf100c93edb978b8e52c5eb71a264da
+Inter-Bold.ttf | https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip (extras/ttf/Inter-Bold.ttf) | 288316099b1e0a47a4716d159098005eef7c0066921f34e3200393dbdb01947f
+Inter-Regular.ttf | https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip (extras/ttf/Inter-Regular.ttf) | 40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82
+LiberationSans-Bold.ttf | https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz (2.1.5) | 788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173
+LiberationSans-Regular.ttf | https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz (2.1.5) | 76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8
+OpenSans-Bold.ttf | https://github.com/googlefonts/opensans/blob/main/fonts/ttf/OpenSans-Bold.ttf | 27da758f4dcac9a65abe914c13b463b42982b9909bc65713424099f4810bd1e6
+OpenSans-Regular.ttf | https://github.com/googlefonts/opensans/blob/main/fonts/ttf/OpenSans-Regular.ttf | c53aceea2dcf5b4098099c0c4d0a061d17e178a049317b42a422b1a9f7f8eb59

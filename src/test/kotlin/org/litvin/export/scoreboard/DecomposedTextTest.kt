@@ -33,7 +33,7 @@ class DecomposedTextTest {
 
     @Test
     fun `the font and the width of a decomposed text are those of the composed text`() {
-        listOf(ARIAL_BLACK, GEORGIA, TREBUCHET, INK_FREE).forEach { family ->
+        listOf(ARCHIVO_BLACK, GELASIO, FIRA_SANS, CAVEAT).forEach { family ->
             assertEquals(ScoreboardFonts.family(family, composed), ScoreboardFonts.family(family, decomposed), family)
             assertEquals(
                 ScoreboardFonts.textWidth(composed, family, false, 40.0),

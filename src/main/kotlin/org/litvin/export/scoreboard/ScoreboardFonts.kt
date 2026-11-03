@@ -4,6 +4,7 @@ import org.litvin.shared.util.DrawnText
 import org.litvin.i18n.I18n
 import org.litvin.i18n.ScriptFonts
 import org.litvin.i18n.TextFit
+import org.litvin.shared.util.BundledFonts
 import java.awt.Font
 import java.awt.font.FontRenderContext
 import java.util.Locale
@@ -21,6 +22,11 @@ import java.util.concurrent.ConcurrentHashMap
  * the same font.
  */
 object ScoreboardFonts {
+    init {
+        // Java measures with the same fonts as libass and mpv (B-13, step 10).
+        BundledFonts.registerInJava()
+    }
+
     private val frc = FontRenderContext(null, true, true)
     private val metricsCache = ConcurrentHashMap<Pair<String, Boolean>, Metrics>()
     private val displayCache = ConcurrentHashMap<String, Font>()
@@ -71,13 +77,16 @@ object ScoreboardFonts {
     private fun font(family: String): Font = displayCache.getOrPut(family) { Font(family, Font.PLAIN, 1) }
 
     /**
-     * The fallback fonts of a style font that cannot show the letters of a language. The Ink Free font of Windows 10
-     * has no Cyrillic and no Greek letters. Segoe Print is also a handwriting font, and all Windows versions have it.
+     * The fallback fonts of a style font that cannot show the letters of a language. Archivo Black has no Cyrillic
+     * letters. Inter Black is also a very heavy font, so a Russian name keeps the look of the style.
      */
-    private val FALLBACKS = mapOf(INK_FREE to listOf("Segoe Print"))
+    private val FALLBACKS = mapOf(ARCHIVO_BLACK to listOf(INTER_BLACK))
 
-    /** All Windows versions have Segoe UI, with the Latin, the Cyrillic, and the Greek letters. */
-    private const val LAST_FALLBACK = "Segoe UI"
+    /**
+     * The bundled Inter has the Latin, the Cyrillic, and the Greek letters. Gelasio (no Cyrillic) and Caveat (no
+     * Greek) fall back to it.
+     */
+    private const val LAST_FALLBACK = INTER
 
     /** The width of [text] in the composed form, as the video draws it (see [DrawnText]). */
     fun textWidth(text: String, family: String, bold: Boolean, assSize: Double, spacing: Double = 0.0): Double {

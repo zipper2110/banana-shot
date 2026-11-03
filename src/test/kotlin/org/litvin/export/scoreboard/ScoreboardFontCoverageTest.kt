@@ -2,7 +2,6 @@ package org.litvin.export.scoreboard
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.I18n
@@ -11,17 +10,19 @@ import java.awt.Font
 import java.awt.GraphicsEnvironment
 import java.io.File
 import java.text.Normalizer
+import org.litvin.shared.util.BundledFonts
 
 /**
  * B-11 E7-T4: each scoreboard font can show all letters of each shipped language, so that the video texts and
  * the player names never show empty boxes. The letters are the CLDR exemplar characters.
  *
- * A user can also type the letters in the decomposed form (NFD). Arial Black, Georgia, Trebuchet MS, and Ink Free have
- * no combining accents (U+0301, U+0303, U+0306, U+0308), so the video draws each text in the composed form (NFC, see
- * [org.litvin.shared.util.DrawnText]). The second test checks the letters after this step.
+ * A user can also type the letters in the decomposed form (NFD). Some fonts have no combining accents (U+0301, U+0303,
+ * U+0306, U+0308), so the video draws each text in the composed form (NFC, see [org.litvin.shared.util.DrawnText]).
+ * The second test checks the letters after this step.
  *
- * The fonts are the Windows fonts of the scoreboards, the statistics card, and the thumbnails. A font that is not
- * installed (for example on a server image) is not checked.
+ * The fonts are the bundled fonts of the scoreboards, the statistics card, and the comments (B-13, step 10). The app
+ * has them on each system, so the test checks each of them on each system. A font without the letters of a
+ * language passes when [ScoreboardFonts.family] gives a fallback font that has them.
  *
  * The style fonts have no Japanese or Chinese letters. For a Japanese or a Chinese video, the check uses the font
  * that [ScoreboardFonts.family] gives for the text (B-11 E8-T2). The letters are the punctuation of the script, the
@@ -30,11 +31,9 @@ import java.text.Normalizer
  */
 class ScoreboardFontCoverageTest {
     @Test
-    fun `each installed scoreboard font shows all letters of each language`() {
-        val installed = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
-        val fonts = FONTS.filter { it in installed }
-        assumeTrue(fonts.isNotEmpty(), "No scoreboard font is installed")
-        val failures = fonts.flatMap { family ->
+    fun `each scoreboard font shows all letters of each language`() {
+        assertAllRegistered()
+        val failures = FONTS.flatMap { family ->
             AppLanguage.entries.flatMap { language ->
                 val letters = LETTERS[language.baseCode] ?: scriptLetters(language)
                 val text = Normalizer.normalize(letters, Normalizer.Form.NFC)
@@ -48,11 +47,9 @@ class ScoreboardFontCoverageTest {
     }
 
     @Test
-    fun `each installed scoreboard font shows the letters of each language that a user types in the decomposed form`() {
-        val installed = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
-        val fonts = FONTS.filter { it in installed }
-        assumeTrue(fonts.isNotEmpty(), "No scoreboard font is installed")
-        val failures = fonts.flatMap { family ->
+    fun `each scoreboard font shows the letters of each language that a user types in the decomposed form`() {
+        assertAllRegistered()
+        val failures = FONTS.flatMap { family ->
             AppLanguage.entries.flatMap { language ->
                 val typed = Normalizer.normalize(LETTERS[language.baseCode] ?: scriptLetters(language), Normalizer.Form.NFD)
                 val text = DrawnText.composed(typed)
@@ -63,6 +60,13 @@ class ScoreboardFontCoverageTest {
             }
         }
         assertEquals(emptyList<String>(), failures)
+    }
+
+    /** Each bundled font is in Java, also on a computer that does not have it. */
+    private fun assertAllRegistered() {
+        BundledFonts.registerInJava()
+        val families = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
+        assertEquals(emptyList<String>(), FONTS.filterNot { it in families })
     }
 
     /**
@@ -81,7 +85,7 @@ class ScoreboardFontCoverageTest {
     }
 
     private companion object {
-        val FONTS = listOf(SEGOE, "Segoe UI Semibold", "Segoe UI Variable", SEGOE_BLACK, ARIAL, ARIAL_BLACK, GEORGIA, TREBUCHET, TAHOMA, CONSOLAS, INK_FREE)
+        val FONTS = listOf(INTER, INTER_BLACK, LIBERATION_SANS, ARCHIVO_BLACK, GELASIO, FIRA_SANS, OPEN_SANS, CASCADIA_MONO, CAVEAT)
 
         private const val LATIN = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 

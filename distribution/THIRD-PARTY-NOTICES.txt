@@ -139,6 +139,19 @@ font files are in the application JAR (fonts/thumbnail). They are unmodified.
   Copyright (c) 2010 by Font Diner, Inc. All rights reserved.
   License: Apache License 2.0. https://fonts.google.com/specimen/Permanent+Marker
 
+Scoreboard fonts
+The scoreboards, the statistics card, and the comments of the videos use these
+fonts on each system. The font files are in the application JAR (fonts), with
+their license files (fonts/licenses) and their sources (fonts/SOURCES.txt).
+They are unmodified. At the start, the app copies them to the "fonts" folder
+of its data folder, so that FFmpeg and libmpv can read them.
+- Inter 4.1 (Regular, Bold, Black), Liberation Sans 2.1.5, Archivo Black,
+  Gelasio, Fira Sans, Open Sans, Cascadia Mono 2407.24, and Caveat
+  License: SIL Open Font License 1.1. The copyright lines and the full
+  license text are at the end of this file. Liberation Sans has the Reserved
+  Font Name "Liberation", and Cascadia Mono has the Reserved Font Name
+  "Cascadia Code".
+
 BananaShot
 Copyright (c) 2026 Dmitrii Litvin.
 License: Elastic License 2.0. The complete license text is in LICENSE.txt.
@@ -612,7 +625,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ===============================================================================
 SIL OPEN FONT LICENSE 1.1
 Anton, Archivo Black, Barlow Condensed, Big Shoulders Display, Bungee, Exo 2,
-and Inter
+Inter, Liberation Sans, Gelasio, Fira Sans, Open Sans, Cascadia Mono, and Caveat
 ===============================================================================
 
 Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFont.git)
@@ -622,6 +635,13 @@ Copyright 2019 The Big Shoulders Project Authors (https://github.com/xotypeco/bi
 Copyright 2023 The Bungee Project Authors (https://github.com/djrrb/Bungee)
 Copyright 2013 The Exo 2 Project Authors (https://github.com/googlefonts/Exo-2.0)
 Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+Digitized data copyright (c) 2010 Google Corporation
+Copyright (c) 2012 Red Hat, Inc. (Liberation Sans), with Reserved Font Name Liberation.
+Copyright 2022 The Gelasio Project Authors (https://github.com/SorkinType/Gelasio)
+Copyright (c) 2012-2015, The Mozilla Foundation and Telefonica S.A. (Fira Sans)
+Copyright 2020 The Open Sans Project Authors (https://github.com/googlefonts/opensans)
+Copyright (c) 2019 - Present, Microsoft Corporation (Cascadia Mono), with Reserved Font Name Cascadia Code.
+Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

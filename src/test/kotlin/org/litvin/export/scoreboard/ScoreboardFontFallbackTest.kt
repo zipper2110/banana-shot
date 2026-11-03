@@ -1,41 +1,48 @@
 package org.litvin.export.scoreboard
 
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.I18n
-import java.awt.GraphicsEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * A style font that cannot show the letters of a language gets a fallback font (B-11 E7-T4). The Ink Free font of
- * Windows 10 and Windows Server 2022 has no Cyrillic letters. The Ink Free font of Windows 11 has them, so this test
- * uses the symbol font Wingdings, which has no letters.
+ * A style font that cannot show the letters of a language gets a fallback font (B-11 E7-T4). The bundled fonts
+ * (B-13, step 10): Gelasio and Archivo Black have no Cyrillic letters, and Caveat has no Greek letters. The app has
+ * the fonts on each system, so these checks run on each system.
  */
 class ScoreboardFontFallbackTest {
-    private val installed = GraphicsEnvironment.getLocalGraphicsEnvironment().availableFontFamilyNames.toSet()
+    @Test
+    fun `a Russian text in a font without Cyrillic letters uses Inter`() {
+        I18n.inVideo(AppLanguage.RUSSIAN) {
+            assertEquals(INTER, ScoreboardFonts.family(GELASIO, "Решающее очко"))
+        }
+    }
 
     @Test
-    fun `a Russian text in a font without Cyrillic letters uses Segoe UI`() {
-        assumeTrue("Wingdings" in installed && "Segoe UI" in installed, "Wingdings or Segoe UI is not installed")
+    fun `a Russian text in Archivo Black uses the heavy Inter Black`() {
         I18n.inVideo(AppLanguage.RUSSIAN) {
-            assertEquals("Segoe UI", ScoreboardFonts.family("Wingdings", "Решающее очко"))
+            assertEquals(INTER_BLACK, ScoreboardFonts.family(ARCHIVO_BLACK, "Решающее очко"))
         }
     }
 
     @Test
     fun `a text that the style font shows keeps the style font`() {
-        assumeTrue(INK_FREE in installed, "Ink Free is not installed")
         I18n.inVideo(AppLanguage.RUSSIAN) {
-            assertEquals(INK_FREE, ScoreboardFonts.family(INK_FREE, "Nadal 40"))
+            assertEquals(CAVEAT, ScoreboardFonts.family(CAVEAT, "Nadal 40"))
+            assertEquals(CAVEAT, ScoreboardFonts.family(CAVEAT, "Решающее очко"))
+            assertEquals(GELASIO, ScoreboardFonts.family(GELASIO, "Nadal 40"))
         }
     }
 
     @Test
+    fun `a Greek text in Caveat uses Inter`() {
+        assertEquals(INTER, ScoreboardFonts.family(CAVEAT, "Παπαδόπουλος"))
+    }
+
+    @Test
     fun `a Chinese text that no fallback font shows keeps the style font`() {
-        assumeTrue("Georgia" in installed, "Georgia is not installed")
         I18n.inVideo(AppLanguage.RUSSIAN) {
-            assertEquals("Georgia", ScoreboardFonts.family("Georgia", "田中"))
+            assertEquals(GELASIO, ScoreboardFonts.family(GELASIO, "田中"))
         }
     }
 }

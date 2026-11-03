@@ -101,9 +101,9 @@ object ScoreboardLayouts {
         val columns = display.completedSets.size + 1
         val serveW = serveColumnWidth(display, look, 30.0)
 
-        val contentW = nameX + nameWidth(rows, SEGOE, nameSize, 150.0) + 24.0 + serveW + columns * setColW + pointColW
+        val contentW = nameX + nameWidth(rows, INTER, nameSize, 150.0) + 24.0 + serveW + columns * setColW + pointColW
         val titleW = if (title != null) {
-            padX + 10.0 + 12.0 + ScoreboardFonts.textWidth(title, SEGOE, true, titleSize, titleSpacing) + padX
+            padX + 10.0 + 12.0 + ScoreboardFonts.textWidth(title, INTER, true, titleSize, titleSpacing) + padX
         } else {
             0.0
         }
@@ -122,7 +122,7 @@ object ScoreboardLayouts {
         if (title != null) {
             items += SceneItem.Box(0.0, 0.0, width, headerH, BLACK, look.opacity * 0.28, Corners(radius, radius, 0.0, 0.0))
             items += SceneItem.Box(padX, headerH / 2 - 5.0, 10.0, 10.0, look.accentRgb, 1.0, Corners.all(5.0))
-            items += centered(padX + 22.0, headerH / 2, title, SEGOE, titleSize, look.accentRgb, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
+            items += centered(padX + 22.0, headerH / 2, title, INTER, titleSize, look.accentRgb, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
             items += SceneItem.Box(0.0, headerH - 1.0, width, 1.0, rule, 0.10)
         }
         // The point column is a little darker, and the leading player's cell has an accent tint.
@@ -148,27 +148,27 @@ object ScoreboardLayouts {
         rows.forEachIndexed { index, row ->
             val cy = headerH + index * rowH + rowH / 2
             if (look.playerColors) items += SceneItem.Box(padX, cy - square / 2, square, square, row.rgb, 1.0, Corners.all(2.5))
-            items += centered(nameX, cy, row.name, SEGOE, nameSize, 0xF4F6F5, TextAnchor.MIDDLE_LEFT)
+            items += centered(nameX, cy, row.name, INTER, nameSize, 0xF4F6F5, TextAnchor.MIDDLE_LEFT)
             if (row.serving) items += serveBall(setsX - serveW / 2, cy, 13.0, look.accentRgb)
             // The winner of a completed set is bright and bold. The loser is dim.
             row.sets.forEachIndexed { setIndex, games ->
                 val won = row.wonSets[setIndex]
                 items += centered(
-                    setsX + setIndex * setColW + setColW / 2, cy, games.toString(), SEGOE, setSize,
+                    setsX + setIndex * setColW + setColW / 2, cy, games.toString(), INTER, setSize,
                     if (won) 0xF4F6F5 else 0x6E7571, TextAnchor.CENTER, bold = won,
                 )
             }
-            items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), SEGOE, setSize, 0xDDE2DF, TextAnchor.CENTER)
+            items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), INTER, setSize, 0xDDE2DF, TextAnchor.CENTER)
             val pointRgb = when {
                 row.leading -> look.accentRgb
                 row.trailing -> 0x8A918D
                 else -> 0xF4F6F5
             }
-            if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, pointRgb, TextAnchor.CENTER)
+            if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, INTER, pointSize, pointRgb, TextAnchor.CENTER)
         }
         if (look.credit != null) {
             items += SceneItem.Box(0.0, rowsBottom - 0.5, width, 1.0, rule, 0.10)
-            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, SEGOE, 19.2, 0x8A918D, TextAnchor.CENTER, bold = false, spacing = 0.6)
+            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, INTER, 19.2, 0x8A918D, TextAnchor.CENTER, bold = false, spacing = 0.6)
         }
         return ScoreboardScene(width, height, items)
     }
@@ -192,8 +192,8 @@ object ScoreboardLayouts {
         val columns = display.completedSets.size + 1
         val serveW = serveColumnWidth(display, look, 28.0)
 
-        val contentW = nameX + nameWidth(rows, SEGOE, nameSize, 150.0) + 22.0 + serveW + columns * setColW + pointColW
-        val titleW = if (title != null) 18.0 + ScoreboardFonts.textWidth(title, SEGOE, true, titleSize, titleSpacing) + 18.0 else 0.0
+        val contentW = nameX + nameWidth(rows, INTER, nameSize, 150.0) + 22.0 + serveW + columns * setColW + pointColW
+        val titleW = if (title != null) 18.0 + ScoreboardFonts.textWidth(title, INTER, true, titleSize, titleSpacing) + 18.0 else 0.0
         val width = max(contentW, titleW)
         val rowsBottom = headerH + 2 * rowH
         val footerH = if (look.credit != null) 32.0 else 0.0
@@ -207,7 +207,7 @@ object ScoreboardLayouts {
         if (title != null) {
             items += SceneItem.Box(0.0, 0.0, width, headerH, navy, look.opacity, Corners(radius, radius, 0.0, 0.0))
             items += SceneItem.Box(0.0, headerH - 3.0, width, 3.0, look.accentRgb, 1.0)
-            items += centered(18.0, (headerH - 3.0) / 2, title, SEGOE, titleSize, WHITE, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
+            items += centered(18.0, (headerH - 3.0) / 2, title, INTER, titleSize, WHITE, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing)
         }
         if (pointColW > 0.0) {
             items += SceneItem.Box(pointX, headerH, pointColW, 2 * rowH, navy, look.opacity, Corners(0.0, if (title == null) radius else 0.0, bottomRadius, 0.0))
@@ -223,25 +223,25 @@ object ScoreboardLayouts {
                 bottomLeft = if (index == 1) bottomRadius else 0.0,
             )
             if (look.playerColors) items += SceneItem.Box(0.0, top, 7.0, rowH, row.rgb, 1.0, barCorners)
-            items += centered(nameX, cy, row.name, SEGOE, nameSize, navy, TextAnchor.MIDDLE_LEFT)
+            items += centered(nameX, cy, row.name, INTER, nameSize, navy, TextAnchor.MIDDLE_LEFT)
             // The accent color is light, so a navy ring makes the ball visible on the white board.
             if (row.serving) items += serveBall(setsX - serveW / 2, cy, 15.0, look.accentRgb, ringRgb = navy)
             // The winner of a completed set is navy and bold. The loser is light gray.
             row.sets.forEachIndexed { setIndex, games ->
                 val won = row.wonSets[setIndex]
                 items += centered(
-                    setsX + setIndex * setColW + setColW / 2, cy, games.toString(), SEGOE, setSize,
+                    setsX + setIndex * setColW + setColW / 2, cy, games.toString(), INTER, setSize,
                     if (won) navy else 0xA3AAB7, TextAnchor.CENTER, bold = won,
                 )
             }
-            items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), SEGOE, setSize, navy, TextAnchor.CENTER)
+            items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), INTER, setSize, navy, TextAnchor.CENTER)
             val pointRgb = if (row.leading) look.accentRgb else WHITE
-if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.7 else 1.0)
+if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, INTER, pointSize, pointRgb, TextAnchor.CENTER, opacity = if (row.trailing) 0.7 else 1.0)
         }
         if (look.credit != null) {
             items += SceneItem.Box(0.0, rowsBottom, width, footerH, 0xEEF1F5, look.opacity, Corners(0.0, 0.0, radius, radius))
             items += SceneItem.Box(0.0, rowsBottom - 0.5, width, 1.0, 0xD9DEE7, 1.0)
-            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, SEGOE, 19.2, 0x5E6878, TextAnchor.CENTER, bold = false, spacing = 0.6)
+            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, INTER, 19.2, 0x5E6878, TextAnchor.CENTER, bold = false, spacing = 0.6)
         }
         return ScoreboardScene(width, height, items)
     }
@@ -265,9 +265,9 @@ if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, S
         val dark = 0x0B0F0D
 
         val serveW = serveColumnWidth(display, look, 24.0)
-        val width = nameX + nameWidth(rows, SEGOE, nameSize, 110.0) + 18.0 + serveW + columns * setColW + pointColW
+        val width = nameX + nameWidth(rows, INTER, nameSize, 110.0) + 18.0 + serveW + columns * setColW + pointColW
         val tabW = if (title != null) {
-            minOf(width, 10.0 + ScoreboardFonts.textWidth(title, SEGOE, true, titleSize, titleSpacing) + 10.0)
+            minOf(width, 10.0 + ScoreboardFonts.textWidth(title, INTER, true, titleSize, titleSpacing) + 10.0)
         } else {
             0.0
         }
@@ -281,7 +281,7 @@ if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, S
 
         if (title != null) {
             items += SceneItem.Box(0.0, 0.0, tabW, tabH, look.accentRgb, 1.0, Corners(radius, radius, 0.0, 0.0))
-            items += centered(10.0, tabH / 2, title, SEGOE, titleSize, dark, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing, maxWidth = width - 20.0)
+            items += centered(10.0, tabH / 2, title, INTER, titleSize, dark, TextAnchor.MIDDLE_LEFT, spacing = titleSpacing, maxWidth = width - 20.0)
         }
         val boardCorners = Corners(if (title == null) radius else 0.0, radius, radius, radius)
         items += SceneItem.Box(0.0, tabH, width, 2 * rowH + footerH, BLACK, look.opacity, boardCorners)
@@ -294,21 +294,21 @@ if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, S
         rows.forEachIndexed { index, row ->
             val cy = tabH + index * rowH + rowH / 2
             if (look.playerColors) items += SceneItem.Box(10.0, cy - 10.0, 4.0, 20.0, row.rgb, 1.0, Corners.all(2.0))
-            items += centered(nameX, cy, row.name, SEGOE, nameSize, WHITE, TextAnchor.MIDDLE_LEFT)
+            items += centered(nameX, cy, row.name, INTER, nameSize, WHITE, TextAnchor.MIDDLE_LEFT)
             if (row.serving) items += serveBall(setsX - serveW / 2, cy, 11.0, look.accentRgb)
             // The winner of a completed set is white and bold. The loser is dim.
             row.sets.forEachIndexed { setIndex, games ->
                 val won = row.wonSets[setIndex]
                 items += centered(
-                    setsX + setIndex * setColW + setColW / 2, cy, games.toString(), SEGOE, setSize,
+                    setsX + setIndex * setColW + setColW / 2, cy, games.toString(), INTER, setSize,
                     if (won) WHITE else 0x7F8582, TextAnchor.CENTER, bold = won,
                 )
             }
-            items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), SEGOE, setSize, WHITE, TextAnchor.CENTER)
-if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, SEGOE, pointSize, dark, TextAnchor.CENTER, opacity = if (row.trailing) 0.55 else 1.0)
+            items += centered(setsX + row.sets.size * setColW + setColW / 2, cy, row.games.toString(), INTER, setSize, WHITE, TextAnchor.CENTER)
+if (pointColW > 0.0) items += centered(pointX + pointColW / 2, cy, row.points, INTER, pointSize, dark, TextAnchor.CENTER, opacity = if (row.trailing) 0.55 else 1.0)
         }
         if (look.credit != null) {
-            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, SEGOE, 16.8, WHITE, TextAnchor.CENTER, bold = false, opacity = 0.6, spacing = 0.5)
+            items += centered(width / 2, rowsBottom + footerH / 2, look.credit, INTER, 16.8, WHITE, TextAnchor.CENTER, bold = false, opacity = 0.6, spacing = 0.5)
         }
         return ScoreboardScene(width, height, items)
     }

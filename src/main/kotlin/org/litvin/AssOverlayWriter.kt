@@ -9,6 +9,7 @@ import org.litvin.stats.StatsCard
 import org.litvin.stats.StatsCardVideo
 import java.io.File
 import java.util.Locale
+import org.litvin.shared.util.BundledFonts
 
 /**
  * Task 3.19 — Helper to generate an ASS subtitles file for the scoreboard overlay.
@@ -53,7 +54,7 @@ object AssOverlayWriter {
     ) {
         val playResX = outWidth.coerceAtLeast(16)
         val playResY = outHeight.coerceAtLeast(16)
-        val fontFamily = "Arial"
+        val fontFamily = BundledFonts.LIBERATION_SANS
 
         file.parentFile?.mkdirs()
         file.bufferedWriter(Charsets.UTF_8).use { w ->

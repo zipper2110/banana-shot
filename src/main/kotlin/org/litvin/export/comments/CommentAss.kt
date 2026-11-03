@@ -14,6 +14,7 @@ import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.roundToInt
+import org.litvin.shared.util.BundledFonts
 
 /**
  * Converts a comment to ASS event texts (the Text field of a Dialogue line).
@@ -29,7 +30,7 @@ import kotlin.math.roundToInt
  * Every event sets all of its override tags, so the event style has no effect on the result.
  */
 object CommentAss {
-    private const val FONT = "Arial"
+    private const val FONT = BundledFonts.LIBERATION_SANS
 
     /** The shadows under the card and the pills are 56% transparent black. */
     private const val SHADOW_OPACITY = 0.44

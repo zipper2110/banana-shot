@@ -1,7 +1,7 @@
 package org.litvin.stats
 
 import org.litvin.export.scoreboard.Corners
-import org.litvin.export.scoreboard.SEGOE
+import org.litvin.export.scoreboard.INTER
 import org.litvin.export.scoreboard.SceneItem
 import org.litvin.export.scoreboard.ScenePoint
 import org.litvin.export.scoreboard.ScoreboardFonts
@@ -195,8 +195,8 @@ object StatsCard {
 
     /** A small muted detail of a value, for example "36%", on the baseline of the value of the row at [rowTop]. */
     private fun detail(x: Double, rowTop: Double, text: String, anchor: TextAnchor): SceneItem.Label {
-        val baseline = rowTop + VALUE_Y + ScoreboardFonts.capHeight(SEGOE, true, VALUE_SIZE) / 2
-        val capCenter = baseline - ScoreboardFonts.capHeight(SEGOE, false, DETAIL_SIZE) / 2
+        val baseline = rowTop + VALUE_Y + ScoreboardFonts.capHeight(INTER, true, VALUE_SIZE) / 2
+        val capCenter = baseline - ScoreboardFonts.capHeight(INTER, false, DETAIL_SIZE) / 2
         return label(x, capCenter, text, DETAIL_SIZE, MUTED, anchor, bold = false)
     }
 
@@ -233,7 +233,7 @@ object StatsCard {
             maxWidth = area.width * 0.3, suffix = " +${lead.p2}")
 
         // The set lines. A set label that would cover the label of player 1 is left out.
-        val p1LabelRight = area.left + ScoreboardFonts.textWidth(p1Label.text, SEGOE, p1Label.bold, p1Label.size)
+        val p1LabelRight = area.left + ScoreboardFonts.textWidth(p1Label.text, INTER, p1Label.bold, p1Label.size)
         for (start in momentum.setStarts) {
             val lineX = x(start.toDouble())
             var dashY = plotTop
@@ -242,7 +242,7 @@ object StatsCard {
                 dashY += DASH + DASH_GAP
             }
             val text = tr("override.set", "number" to points[start].set)
-            val halfWidth = ScoreboardFonts.textWidth(text, SEGOE, false, 26.0) / 2
+            val halfWidth = ScoreboardFonts.textWidth(text, INTER, false, 26.0) / 2
             if (lineX - halfWidth > p1LabelRight + 20) {
                 items += label(lineX, plotTop - 18, text, 26.0, MUTED, TextAnchor.CENTER, bold = false)
             }
@@ -302,7 +302,7 @@ object StatsCard {
         suffix: String = "",
     ): SceneItem.Label {
         // A Japanese text uses the Japanese font (B-11 E8-T2).
-        val family = ScoreboardFonts.family(SEGOE, text + suffix)
+        val family = ScoreboardFonts.family(INTER, text + suffix)
         val fitted = ScoreboardFonts.fit(text, family, bold, size, maxWidth, spacing, suffix)
         val middleY = if (anchor == TextAnchor.TOP_LEFT || anchor == TextAnchor.TOP_RIGHT) y else
             ScoreboardFonts.middleYForCapCenter(y, family, bold, fitted.size)

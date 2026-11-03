@@ -21,7 +21,7 @@ internal object ScoreboardBadge {
     private const val DARK_TEXT = 0x111111
 
     fun add(scene: ScoreboardScene, text: String, accentRgb: Int, position: ScoreboardPosition): ScoreboardScene {
-        val textWidth = ScoreboardFonts.textWidth(text, SEGOE, true, FONT_SIZE, SPACING)
+        val textWidth = ScoreboardFonts.textWidth(text, INTER, true, FONT_SIZE, SPACING)
         val badgeWidth = textWidth + 2 * PAD_X
         val width = max(scene.width, badgeWidth)
         val right = position == ScoreboardPosition.TOP_RIGHT || position == ScoreboardPosition.BOTTOM_RIGHT
@@ -34,7 +34,7 @@ internal object ScoreboardBadge {
         val badge = listOf(
             SceneItem.Box(badgeX, badgeY, badgeWidth, HEIGHT, accentRgb, 1.0, Corners.all(RADIUS)),
             centered(
-                badgeX + badgeWidth / 2, badgeY + HEIGHT / 2, text, SEGOE, FONT_SIZE,
+                badgeX + badgeWidth / 2, badgeY + HEIGHT / 2, text, INTER, FONT_SIZE,
                 textRgbOn(accentRgb), TextAnchor.CENTER, spacing = SPACING,
             ),
         )

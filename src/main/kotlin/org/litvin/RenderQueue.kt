@@ -480,6 +480,7 @@ object RenderQueueManager {
                         fadeIn = fadeIn,
                         fadeOut = fadeOut,
                         replay = replay,
+                        fontsDir = org.litvin.shared.util.BundledFonts.directoryOrNull()?.absolutePath,
                     )
                 )
 

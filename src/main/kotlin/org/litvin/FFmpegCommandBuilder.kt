@@ -61,6 +61,8 @@ object FFmpegCommandBuilder {
         val fadeOut: org.litvin.export.PassFade? = null,
         // When set, the output is one play of a replay part (B-50), in place of the keeps.
         val replay: ReplayRender? = null,
+        // The folder of the bundled fonts for libass (B-13, step 10). Null uses only the fonts of the computer.
+        val fontsDir: String? = null,
     )
 
     /**
@@ -366,8 +368,16 @@ object FFmpegCommandBuilder {
      * With non-square pixels, "original_size" gives that size to libass, so that libass makes the text and the
      * drawings narrower or wider in the stored frame. The player then shows them with their correct shape.
      */
-    internal fun subtitlesFilter(assPath: String, outWidth: Int, outHeight: Int, sampleAspect: org.litvin.export.SampleAspect): String {
-        val filter = "subtitles='${escapeForFilterPath(assPath)}'"
+    internal fun subtitlesFilter(
+        assPath: String,
+        outWidth: Int,
+        outHeight: Int,
+        sampleAspect: org.litvin.export.SampleAspect,
+        fontsDir: String? = null,
+    ): String {
+        // libass finds the bundled fonts of the ASS files in fontsdir (B-13, step 10).
+        val fonts = fontsDir?.let { ":fontsdir='${escapeForFilterPath(it)}'" }.orEmpty()
+        val filter = "subtitles='${escapeForFilterPath(assPath)}'$fonts"
         if (sampleAspect.square || outWidth <= 0 || outHeight <= 0) return filter
         return "$filter:original_size=${sampleAspect.displayWidth(outWidth)}x$outHeight"
     }
@@ -638,7 +648,7 @@ object FFmpegCommandBuilder {
         var aMap = "[aout]"
 
         fun buildColorFilter(adj: org.litvin.adjustments.AdjustmentsV1?): String? = colorFilter(adj, p.toneRange)
-        fun burnInFilter(assPath: String): String = subtitlesFilter(assPath, p.outWidth, p.outHeight, p.sampleAspect)
+        fun burnInFilter(assPath: String): String = subtitlesFilter(assPath, p.outWidth, p.outHeight, p.sampleAspect, p.fontsDir)
         // A freeze shows the geometry of its frame. Without change points, the time has no effect.
         // A replay shows the geometry and the colors of its start.
         val geometryAtMs = freeze?.let { it.atMs?.minus(STILL_FRAME_OFFSET_MS) ?: Long.MAX_VALUE } ?: replay?.startMs ?: 0L

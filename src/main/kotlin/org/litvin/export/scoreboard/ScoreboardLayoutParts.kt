@@ -1,19 +1,22 @@
 package org.litvin.export.scoreboard
 
 import org.litvin.ScoreboardDisplay
+import org.litvin.shared.util.BundledFonts
 import kotlin.math.max
 
 // Shared parts of the scoreboard layouts in ScoreboardLayouts and ScoreboardMoreLayouts.
 
-internal const val SEGOE = "Segoe UI"
-internal const val SEGOE_BLACK = "Segoe UI Black"
-internal const val ARIAL = "Arial"
-internal const val ARIAL_BLACK = "Arial Black"
-internal const val GEORGIA = "Georgia"
-internal const val TREBUCHET = "Trebuchet MS"
-internal const val TAHOMA = "Tahoma"
-internal const val CONSOLAS = "Consolas"
-internal const val INK_FREE = "Ink Free"
+// The bundled open fonts (B-13, step 10). Windows and macOS draw the same text with them. Before, the styles used
+// Segoe UI, Segoe UI Black, Arial, Arial Black, Georgia, Trebuchet MS, Tahoma, Consolas, and Ink Free.
+internal const val INTER = BundledFonts.INTER
+internal const val INTER_BLACK = BundledFonts.INTER_BLACK
+internal const val LIBERATION_SANS = BundledFonts.LIBERATION_SANS
+internal const val ARCHIVO_BLACK = BundledFonts.ARCHIVO_BLACK
+internal const val GELASIO = BundledFonts.GELASIO
+internal const val FIRA_SANS = BundledFonts.FIRA_SANS
+internal const val OPEN_SANS = BundledFonts.OPEN_SANS
+internal const val CASCADIA_MONO = BundledFonts.CASCADIA_MONO
+internal const val CAVEAT = BundledFonts.CAVEAT
 internal const val WHITE = 0xFFFFFF
 internal const val BLACK = 0x000000
 

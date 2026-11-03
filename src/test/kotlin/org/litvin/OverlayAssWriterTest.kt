@@ -65,8 +65,8 @@ class OverlayAssWriterTest {
         val perSpan = dialogues.count { it.contains(",0:00:00.00,0:00:01.00,") }
         assertTrue(perSpan > 5)
         assertEquals(perSpan * 2, dialogues.size)
-        // Chalkboard keeps the title case and uses Ink Free.
-        assertTrue(dialogues.any { it.endsWith("Club Final") && it.contains("\\fnInk Free") })
+        // Chalkboard keeps the title case and uses the bundled handwriting font Caveat.
+        assertTrue(dialogues.any { it.endsWith("Club Final") && it.contains("\\fnCaveat") })
         // The board is in the bottom-right corner: every x position is in the right half of the frame.
         val xs = dialogues.flatMap { line ->
             Regex("""\\pos\(([0-9.]+),""").findAll(line).map { it.groupValues[1].toDouble() }.toList()

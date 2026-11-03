@@ -277,6 +277,12 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
             add("background-color" to "#000000")
             if (!isMac) add("wid" to wid.toString())
             if (shader != null) add("glsl-shaders" to shader.absolutePath)
+            // The scoreboard and the comments of the preview (osd-overlay and sub-add) use the bundled fonts, as
+            // the export does (B-13, step 10).
+            org.litvin.shared.util.BundledFonts.directoryOrNull()?.let { fonts ->
+                add("osd-fonts-dir" to fonts.absolutePath)
+                add("sub-fonts-dir" to fonts.absolutePath)
+            }
         }
         return try {
             MpvCore(lib, options, "player-$playerId", ::handleEvent).also { created ->

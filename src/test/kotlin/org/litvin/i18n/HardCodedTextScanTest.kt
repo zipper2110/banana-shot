@@ -199,6 +199,8 @@ class HardCodedTextScanTest {
         val FONT_FAMILIES = setOf(
             "Segoe UI", "Segoe UI Black", "Segoe UI Semibold", "Segoe UI Variable", "Arial", "Arial Black", "Georgia",
             "Trebuchet MS", "Tahoma", "Consolas", "Cascadia Mono", "Ink Free", "Yu Gothic", "Yu Gothic UI",
+            // The bundled scoreboard fonts (B-13, step 10).
+            "Inter", "Inter Black", "Liberation Sans", "Archivo Black", "Gelasio", "Fira Sans", "Open Sans", "Caveat",
         )
 
         /** Letters that are not part of an id, a key, a path, or a call. */

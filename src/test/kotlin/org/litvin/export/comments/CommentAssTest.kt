@@ -39,7 +39,7 @@ class CommentAssTest {
         assertTrue(card.contains(" b "), "The card has rounded corners: $card")
         // The text is centered in the video area, above the lower-third line.
         assertTrue(text.startsWith("{\\an2\\pos(580.0,"), text)
-        assertTrue(text.contains("\\fnArial"), text)
+        assertTrue(text.contains("\\fnLiberation Sans"), text)
         assertTrue(text.contains("\\1c&HFFAA22&\\1a&H00&"), "The text has the opaque comment color (ASS uses BGR): $text")
         assertTrue(text.endsWith("IN \\{review\\}\\NGreat point"), text)
 

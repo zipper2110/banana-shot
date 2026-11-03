@@ -1067,9 +1067,32 @@ The checks for Velopack on macOS:
   `relocatable="false"` and `install-location="/Applications"`, so the
   Installer never looks for a moved copy. A user who starts the old copy
   again gets the old version and the update notice again.
+- **Fix: the old copy goes to the Trash (2026-11-03, decision of the
+  author).** Before the update, `OldAppCopy` saves the bundle path of the
+  running app (key `update-previous-bundle` of the application
+  preferences). At the first start after the update, the new app finds
+  an older copy of the app at that path, and `OldAppCopyNotice` asks to
+  move it to the Trash (`Desktop.moveToTrash` on a background thread). The
+  update notice also tells that the update installs the new version in the
+  Applications folder when the app runs outside it. The `.pkg` stays not
+  relocatable. Test with notarized 1.3.99 and 1.4.0 installers of the new
+  code: the update from the Desktop copy installed 1.4.0 in
+  `~/Applications`, 1.4.0 asked, and the Desktop copy went to the Trash.
+- **Uninstall (2026-11-03).** Passed. The author dragged the app from
+  `~/Applications` to the Trash. Nothing of the app runs after that. These
+  items stay: the data folder `~/Library/Application Support/BananaShot`
+  (on purpose: the projects and the settings), the Java preferences in
+  `~/Library/Preferences/com.apple.java.util.prefs.plist`,
+  `~/Library/Preferences/app.banana-shot-editor.bananashot.plist`, and the
+  installer receipt (`pkgutil --pkgs --volume ~`). The download page tells
+  how to remove the data folder too (step 12).
+- **Downloaded installers.** Each "Update and restart" leaves its `.pkg`
+  (about 95 MB) in a `bananashot-update…` folder of the temporary folder.
+  The app cannot delete it, because the Installer opens it after the app
+  exits. macOS deletes such files after about 3 days without access. Some
+  unit tests also leave empty `bananashot-update…` folders there.
 
-Still to do in step 11: a decision on the moved app (see above), and the
-uninstall (drag the app to the Trash; the data folder stays).
+Step 11 is done.
 
 ## 9. CI and release workflow
 
@@ -1199,11 +1222,11 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
 | 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, tab and project changes, the colors (1 code of 255 from the export), a normal display, and two displays. VoiceOver: one freeze at the close, caused by a new log line, fixed (see the result). macOS 15 counts as working until a user reports a problem (decision of 2026-11-03) |
-| 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
+| 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, also the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
 | 10 | **Bundled fonts.** Section 5. Check them on Windows before a release that has them. It does not need a Mac | About 1 week | No | Done on 2026-11-03 (see "Result of step 10"): font set A, the fonts in the export, the preview, and Java, and a "Font" setting for the scoreboard. The author checked them on Windows. To do at the next release: the changelog note and the site screenshots |
-| 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03, except two small checks by hand (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, and "Update and restart" from 1.3.99 to 1.4.0. To do: an update of a moved app, and the uninstall |
+| 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03 (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, "Update and restart" from 1.3.99 to 1.4.0, the update of a moved app (the old copy goes to the Trash), and the uninstall |
 | 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job (the dry run passed), the texts, the cockpit, the checklist. To do: the Worker deploys, and the site at the first macOS release |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
 

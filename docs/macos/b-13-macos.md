@@ -898,7 +898,12 @@ The checks for Velopack on macOS:
   "Applications" in the sidebar. Spotlight and Launchpad find the app. Tell
   this on the download page (step 12). The app menu showed "About
   SwingMainApp" and "Quit SwingMainApp": main now sets
-  `apple.awt.application.name` (fixed in 7924700).
+  `apple.awt.application.name` (fixed in 7924700). The author installed
+  the new `.pkg` over the old one: the menu shows "BananaShot". The macOS
+  Installer does not tell that the app is installed and shows no "Update"
+  page, but it replaces the installed copy in place ("Parent bundle …
+  will be atomically shoved" in `/var/log/install.log`). The installed
+  JAR was the JAR of the new build.
 
 Still to do in step 11: the checks of "Installer and update" by hand: the
 install with no Gatekeeper warning, an update from the previous version, a

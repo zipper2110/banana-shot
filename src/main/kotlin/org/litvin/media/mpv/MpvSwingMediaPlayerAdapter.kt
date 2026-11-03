@@ -318,7 +318,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         fileLoaded = false
         appliedShaderOpts = null
         imageOverlaySize = null
-        logger.info { "Destroying mpv preview #$playerId: $reason" }
+        logger.info { "Destroying mpv preview #$playerId: $reason. ${playbackStats(old)}" }
         if (isMac) {
             macWindow?.close()
             macWindow = null
@@ -400,7 +400,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         if (!fileLoaded) return
         lastKnownTimeMs = currentTimeMs()
         fileLoaded = false
-        logger.info { "Unloading mpv preview #$playerId at ${lastKnownTimeMs}ms: $reason" }
+        logger.info { "Unloading mpv preview #$playerId at ${lastKnownTimeMs}ms: $reason. ${playbackStats(current)}" }
         current.commandSync("stop")
     }
 
@@ -408,6 +408,17 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         active = false
         destroyCore("close")
     }
+
+    /**
+     * The decoder, the video output, and the dropped frames of the file in [mpv], for the log (B-13, step 6). The
+     * counts start again at each file. "decoder" counts the frames that the decoder skipped, "vo" the frames that
+     * the video output did not show, and "late" the frames that came too late to the screen.
+     */
+    private fun playbackStats(mpv: MpvCore): String = runCatching {
+        "hwdec=${mpv.getProperty("hwdec-current")}, vo=${mpv.getProperty("current-vo")}, " +
+            "dropped frames: decoder=${mpv.getProperty("decoder-frame-drop-count")}, " +
+            "vo=${mpv.getProperty("frame-drop-count")}, late=${mpv.getProperty("vo-delayed-frame-count")}"
+    }.getOrElse { "No playback statistics: ${it.message}" }
 
     // ---- Media -----------------------------------------------------------------------------------------
 

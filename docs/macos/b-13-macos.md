@@ -208,6 +208,46 @@ Test Mac: MacBook Air M1, macOS 27.2, JDK 27, Homebrew mpv 0.41.0.
 - A tab change, a project change, and a window resize do not crash the app
   and do not leak mpv instances.
 
+### Result of the step 6 checks (2026-11-03)
+
+Test Mac: MacBook Air M1, macOS 27.2, one built-in Retina display. The app was
+the bundle of `build-app-image.sh` with an ad-hoc signature. The author did the
+clicks, because the Claude app has no Accessibility permission. The checks
+used the log and screenshots.
+
+- **4K 60 fps.** Test files of 30 s (3840x2160, 60 fps, made with the
+  VideoToolbox encoders): H.264 at 40 Mbit/s and HEVC at 30 Mbit/s. Both
+  played with `hwdec=videotoolbox` and `vo=gpu-next`, with 0 dropped frames
+  (decoder and video output) and 0 late frames. The picture was smooth and
+  sharp. The app now writes these counts to the log when it unloads or
+  closes a preview (`playbackStats` in `MpvSwingMediaPlayerAdapter`).
+- **Mouse.** The crop frame, its handles, and the rotate handle follow the
+  mouse on the video. A comment can be dragged on the video. The keyboard
+  stays in Java (Space plays and pauses).
+- **Items over the video.** Lists, hint balloons, and dialogs show in front
+  of the video.
+- **Window.** A resize, full screen (the green button), and a move of the
+  window keep the video in its area. One unload after these changes showed
+  7 frames that the video output did not show. This is normal during a
+  change of the window size.
+- **Changes.** All tabs, and a change between three projects, work with no
+  stop. The app made 2 mpv instances for the whole run and used them again,
+  so no instance leaks. The close is clean (exit code 0).
+- **Downloads folder.** At the first start, macOS asked for access to the
+  Downloads folder, because the video of a recent project was there and the
+  project list reads it. macOS keeps the answer for the app. The beta must
+  check that this request is clear to users. It can also come for Desktop
+  and Documents, and for an external disk.
+- **Not checked yet:**
+  - seek, frame step, and the playback rate one by one (the author used
+    them during the checks and saw no problem, but did not check each one);
+  - the color and tone parity with the export (`FfmpegToneFilterParityTest`
+    and `ExportPreviewParityMain`);
+  - a normal display (not Retina) and two displays: the test Mac has only
+    its built-in display;
+  - macOS 15 (the oldest supported version) and VoiceOver (the risk of a
+    stop when the main thread waits, see above).
+
 ### Other work in the preview code
 
 - `LibMpv.LIBRARY_NAME`: JNA maps `libmpv-2` to `liblibmpv-2.dylib` on macOS.
@@ -1098,7 +1138,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | Done on 2026-11-02. The certificates, the API key, and the six secrets of the `macos-release` environment are in place. The Application certificate expires on 2027-12-02. Not tested yet: a real signature and a notarization (step 11) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
-| 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Partly done. The child window works in a source run. To do: the checks of the spike that are "Not verified yet" |
+| 6 | **Preview implementation.** Section 1 | 1 to 2 weeks | No | Mostly done on 2026-11-03 (see "Result of the step 6 checks"): 4K 60 fps H.264 and HEVC with no dropped frames, the mouse, items over the video, full screen, and tab and project changes. To do: the color parity with the export, a normal display and two displays, macOS 15, and VoiceOver |
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |

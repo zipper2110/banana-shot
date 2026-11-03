@@ -491,9 +491,11 @@ Microsoft fonts, because their license does not permit it.
 fonts. Then the export and the preview do not depend on the fonts of the
 computer, and the scoreboards look the same on Windows and on macOS.
 
-This step does not need macOS. Do it on Windows first and release it in a
-Windows version. Then the macOS work starts with fonts that are known to
-work.
+This step does not need macOS. Check the fonts on Windows before a release
+that has them. (The first plan also asked for a separate Windows release
+before the macOS release. The author dropped that on 2026-11-03: the
+release workflow builds Windows and macOS from the same tag, so the fonts
+can ship in any release.)
 
 #### Candidate fonts
 
@@ -586,10 +588,13 @@ no change. For the other fonts, check the box sizes of each style.
   `ScoreboardFontChoiceTest` checks the font setting in all styles: all
   text in the chosen font, the bold faces, the fallback, and that each
   text stays inside the board. `ScoreIOTest` checks the JSON.
+- **Windows check.** The author checked the fonts on Windows on 2026-11-03.
+  They look correct. No separate Windows release is necessary (decision of
+  2026-11-03).
 - **Still to do.**
-  - Release it in a Windows version (1.4.0) before the macOS release. The
-    changelog note is in `docs/version-scope/1.4.0.md`.
-  - Check the site screenshots (`site/public/assets/frames`) at the 1.4.0
+  - Write the changelog note at the next release. The text is in
+    `docs/version-scope/1.4.0.md`.
+  - Check the site screenshots (`site/public/assets/frames`) at the next
     release. They show the old fonts in the scoreboards.
   - Optional cleanup: `fonts/thumbnail` has older copies of Inter Bold and
     Archivo Black for the thumbnails. They are not registered, so they do
@@ -1179,7 +1184,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 7 | **macOS app behavior.** Section 7 | A few days | No | Done on 2026-11-03, except the checks by hand (see "Result of step 7"). Open: a Help menu with Cmd+? |
 | 8 | **Local app bundle.** Section 8, "App bundle" and "Architecture". Use an ad-hoc signature until the certificates exist | About 1 week | No | Done on 2026-11-02 (see "Result of the app bundle"). The preview and an export work in the bundle |
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
-| 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Done on 2026-11-03 (see "Result of step 10"): font set A, the fonts in the export, the preview, and Java, and a "Font" setting for the scoreboard. To do: release it in 1.4.0 for Windows, and check the site screenshots |
+| 10 | **Bundled fonts.** Section 5. Check them on Windows before a release that has them. It does not need a Mac | About 1 week | No | Done on 2026-11-03 (see "Result of step 10"): font set A, the fonts in the export, the preview, and Java, and a "Font" setting for the scoreboard. The author checked them on Windows. To do at the next release: the changelog note and the site screenshots |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03, except two small checks by hand (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, and "Update and restart" from 1.3.99 to 1.4.0. To do: an update of a moved app, and the uninstall |
 | 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job (the dry run passed), the texts, the cockpit, the checklist. To do: the Worker deploys, and the site at the first macOS release |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
@@ -1188,8 +1193,9 @@ Notes on the order:
 
 - Step 4 is done. The app bundle (step 8), the signing (step 11), and the
   release workflow (step 12) use its pinned native files.
-- The first order of 2026-10-08 had the fonts first. The fonts can start at
-  any time. They must only be in a Windows release before the macOS release.
+- The first order of 2026-10-08 had the fonts first. Step 10 is done. The
+  fonts can ship in any release, also in the first macOS release (decision
+  of 2026-11-03).
 - If the preview implementation (step 6) finds a problem that the child
   window cannot solve, stop and tell the author before more work.
 

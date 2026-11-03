@@ -254,7 +254,6 @@ jobs:
     outputs:
       natives-tag: ${{ steps.natives.outputs.natives-tag }}
     env:
-      KEYCHAIN: ${{ runner.temp }}/bananashot-release.keychain-db
       NOTARY_PROFILE: bananashot-notary
     steps:
       - name: Check out source
@@ -287,6 +286,8 @@ jobs:
           [ "$HAS_SECRETS" = "true" ] || { echo "Set the secrets of the macos-release environment (docs/macos/b-13-macos.md)."; exit 1; }
           echo "APP_VERSION=$version" >>"$GITHUB_ENV"
           echo "RELEASE_NAME=$release_name" >>"$GITHUB_ENV"
+          # The temporary keychain of the signing certificates. The runner context is not available in the job env.
+          echo "KEYCHAIN=$RUNNER_TEMP/bananashot-release.keychain-db" >>"$GITHUB_ENV"
 
       - name: Check native sources in the natives release
         # The GPL and the LGPL require the corresponding source of the bundled native builds.

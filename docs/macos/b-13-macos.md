@@ -1219,9 +1219,16 @@ Step 11 is done.
   link must not go live before a release has the `.pkg`. The release
   checklist has the changes for the first macOS release.
 
-Still to do in step 12: the deploy of the analytics Worker and the cockpit,
-and, at the first macOS release, the variable `MACOS_RELEASE`,
-`macInstallerUrl`, and the site.
+- **Deploy (2026-11-03).** The workflow "Cloudflare deploy" (run
+  41676500858, `master` 7eee222) deployed the analytics Worker and the
+  cockpit. Before it, the tests passed here (366 and 49). No migration was
+  necessary. The smoke check of the analytics Worker gave 204. The cockpit
+  answers 401 without its password. The analytics Worker now accepts the
+  `videotoolbox` keys, and the cockpit counts `BananaShot-osx-Setup.pkg` as
+  a setup download.
+
+Still to do in step 12, at the first macOS release (1.4.0): the variable
+`MACOS_RELEASE`, `macInstallerUrl`, and the site.
 
 ## Order of the work
 
@@ -1233,7 +1240,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | # | Step | Size | Apple account | Status |
 |---|---|---|---|---|
 | 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike") |
-| 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. Still to do: deploy the analytics Worker and the cockpit (step 12) |
+| 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. The analytics Worker and the cockpit were deployed on 2026-11-03 |
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | Done on 2026-11-02. The certificates, the API key, and the six secrets of the `macos-release` environment are in place. The Application certificate expires on 2027-12-02. Not tested yet: a real signature and a notarization (step 11) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |
 | 5 | **Runtime layout and platform services.** Sections 3 and 6 | About 1 week | No | Done on 2026-11-02, except the manual B-42 checks on a Mac (sleep, proxy, TLS inspection). Done: the native folders, `LibMpv` on macOS, the run time counter, the trust store, the diagnostics checks, the data folder in `~/Library/Application Support`, the macOS texts for blocked files, "Show in folder" with `open -R`, and the proxy comments |
@@ -1243,7 +1250,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
 | 10 | **Bundled fonts.** Section 5. Check them on Windows before a release that has them. It does not need a Mac | About 1 week | No | Done on 2026-11-03 (see "Result of step 10"): font set A, the fonts in the export, the preview, and Java, and a "Font" setting for the scoreboard. The author checked them on Windows. To do at the next release: the changelog note and the site screenshots |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03 (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, "Update and restart" from 1.3.99 to 1.4.0, the update of a moved app (the old copy goes to the Trash), and the uninstall |
-| 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job (the dry run passed), the texts, the cockpit, the checklist. To do: the Worker deploys, and the site at the first macOS release |
+| 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job (the dry run passed), the texts, the cockpit, the checklist, and the deploy of the analytics Worker and the cockpit (2026-11-03). To do at the first macOS release (1.4.0): `MACOS_RELEASE`, `macInstallerUrl`, and the site |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
 
 Notes on the order:

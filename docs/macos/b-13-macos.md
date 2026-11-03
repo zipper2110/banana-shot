@@ -891,6 +891,15 @@ The checks for Velopack on macOS:
   passed, and Gatekeeper accepts the `.pkg` and the app as "Notarized
   Developer ID", also with a quarantine attribute.
 
+- **First install by hand (2026-11-03).** The author installed the
+  notarized `.pkg` with "Install for me only": no administrator password,
+  and the app went to `~/Applications/BananaShot.app`, not to
+  `/Applications`. Finder shows that folder under Home, not under
+  "Applications" in the sidebar. Spotlight and Launchpad find the app. Tell
+  this on the download page (step 12). The app menu showed "About
+  SwingMainApp" and "Quit SwingMainApp": main now sets
+  `apple.awt.application.name` (fixed in 7924700).
+
 Still to do in step 11: the checks of "Installer and update" by hand: the
 install with no Gatekeeper warning, an update from the previous version, a
 moved app, no administrator rights, and the uninstall.

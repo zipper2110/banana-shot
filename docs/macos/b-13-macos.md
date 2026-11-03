@@ -988,6 +988,43 @@ stays).
   name Windows-only parts (`Windows-ROOT`, `GetTickCount64`, the setup EXE).
   Add the macOS parts.
 
+### Result of step 12 so far (2026-11-03)
+
+- **Release workflow.** `windows-release.yml` is now the workflow
+  "Release". The job `macos-installer` (macos-15, environment
+  `macos-release`) imports the `.p12` file and the pinned G2 intermediate
+  into a temporary keychain, saves the notary login there, and runs the
+  scripts of `distribution/macos`: the native files, the bundle (with the
+  feedback and analytics variables), the validation, the diagnostics,
+  Velopack with notarization, and the signature check with
+  `--require-notarization`. It uploads the `.pkg`, the `osx-full.nupkg`,
+  `releases.osx.json`, and `native-dependencies-macos.json`. The job
+  `publish` puts the files of both jobs into one draft release. A tag runs
+  the macOS job only when the repository variable `MACOS_RELEASE` is
+  `true`. A dry run runs it with the input "macos". The `.p12` file contains
+  the G2 intermediate, so its import tells "already exists".
+- **Texts.** The texts that a Mac user also sees use neutral words, in all
+  11 languages: "the system" or "the operating system" in place of
+  "Windows" (the access error, the language list, the language notice, the
+  contact text, and the privacy and consent texts), and "computer" in place
+  of "PC" (the hardware encoder advice and two export help notes). The site
+  privacy and contact pages and `docs/feedback/privacy-notice.md` say the
+  same. The data did not change, so the notice version stays 3.
+- **Cockpit.** It counts `BananaShot-osx-Setup.pkg` as a setup download.
+  Deploy it before the first macOS release.
+- **Documents.** The release checklist has the section "7a. macOS release",
+  `macInstallerUrl` for `release/version-policy.json`, and the site changes
+  for the first macOS release. The checklist has the packaged checks, so
+  there is no separate `qa/macos/ui-smoke.md`. `build-expiry-spec.md` tells
+  the macOS update. The README tells the status of the macOS version.
+- **Site download page.** Not changed yet on purpose: a "Download for Mac"
+  link must not go live before a release has the `.pkg`. The release
+  checklist has the changes for the first macOS release.
+
+Still to do in step 12: a passed dry run of the job `macos-installer`, the
+deploy of the analytics Worker and the cockpit, and, at the first macOS
+release, the variable `MACOS_RELEASE`, `macInstallerUrl`, and the site.
+
 ## Order of the work
 
 Status on 2026-11-02. Update this table when a step changes.
@@ -1008,7 +1045,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 | 9 | **CI test job on macOS.** Section 9, "CI" and "UI tests" | A few days | No | Done on 2026-11-03 (see "Result of the CI step"). The unit tests and the UI flow tests run on macOS |
 | 10 | **Bundled fonts.** Section 5. Release it in a Windows version before the macOS release. It does not need a Mac | About 1 week | No | Not started |
 | 11 | **Signing, notarization, installer, and update.** Section 8, "Code signing and notarization", "Installer and update", and "Changes for Update and restart" | 1 to 2 weeks | Yes | Done on 2026-11-03, except two small checks by hand (see "Result of step 11 so far"): the Developer ID signature, the notarization, the Velopack `.pkg`, the signature check, and "Update and restart" from 1.3.99 to 1.4.0. To do: an update of a moved app, and the uninstall |
-| 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | Not started |
+| 12 | **Release workflow, site, and texts.** Sections 9 and 10. Deploy the analytics Worker and the cockpit before the release | About 1 week | Yes, for the release workflow | In progress (see "Result of step 12 so far"). Done: the macOS release job, the texts, the cockpit, the checklist. To do: a passed dry run, the Worker deploys, and the site at the first macOS release |
 | 13 | **Beta.** Give a build to a few Mac users before the public release | — | Yes | Not started |
 
 Notes on the order:

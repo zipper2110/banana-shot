@@ -1001,6 +1001,13 @@ This is the simple update from the app (B-30). The full automatic update
   no write left when it starts the setup EXE.
 - Do not start the setup EXE with `--silent`. In silent mode, the setup does
   not show its dialog, but it also does not start the new version.
+- On macOS (B-13), the installer is `BananaShot-osx-Setup.pkg` from
+  `latest.macInstallerUrl`, or the stable URL with this name. The app opens
+  it with `open`, and the macOS Installer shows it. The app does the same
+  close sequence and exits before the user clicks "Install". The Installer
+  replaces the installed app in place (also an app that the user moved) and
+  then starts the new version. It does not install an older version over a
+  newer one. The update test of 2026-11-03 (1.3.99 to 1.4.0) passed.
 - If the download fails, the app shows the error, deletes the partial file,
   and stays open. "Manually download update" stays available.
 - Only one download runs at a time. While it runs, "Update and restart"

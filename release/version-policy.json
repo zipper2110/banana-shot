@@ -1,10 +1,36 @@
 {
   "schema": 1,
   "latest": {
-    "version": "1.3.1",
+    "version": "1.4.0",
     "downloadUrl": "https://github.com/zipper2110/banana-shot/releases/latest",
-    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.3.1/BananaShot-win-Setup.exe",
-    "notes": "New: trim the start and the end of the video · Fixed: the full-video scoreboard now shows the final score · Fixed: the overlay shape on videos with non-square pixels"
+    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.0/BananaShot-win-Setup.exe",
+    "macInstallerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.0/BananaShot-osx-Setup.pkg",
+    "notes": "New: BananaShot for Mac · New: select when the scoreboard shows, and its font · Statistics: the games and the sets come from the score",
+    "notesByLanguage": {
+      "es": "Nuevo: BananaShot para Mac · Nuevo: elige cuándo se muestra el marcador y su fuente · Estadísticas: los juegos y los sets se calculan a partir del marcador",
+      "pt": "Novo: BananaShot para Mac · Novo: escolha quando o placar aparece e a fonte dele · Estatísticas: os games e os sets vêm do placar",
+      "pt-PT": "Novo: BananaShot para Mac · Novo: escolha quando o marcador aparece e a fonte dele · Estatísticas: os jogos e os sets vêm do resultado",
+      "fr": "Nouveau : BananaShot pour Mac · Nouveau : choisissez quand le tableau de score s’affiche, et sa police · Statistiques : les jeux et les sets viennent du score",
+      "de": "Neu: BananaShot für Mac · Neu: Wähle, wann die Spielstandsanzeige erscheint, und ihre Schrift · Statistik: Spiele und Sätze kommen aus dem Spielstand",
+      "ru": "Новое: BananaShot для Mac · Новое: выбор, когда показывать табло, и его шрифт · Статистика: геймы и сеты считаются по счёту",
+      "ja": "新機能: Mac 版 BananaShot · 新機能: スコアボードを表示するタイミングとフォントを選べます · 統計: ゲームとセットをスコアから数えます",
+      "zh-Hans": "新功能：BananaShot Mac 版 · 新功能：选择记分牌何时显示及其字体 · 统计：局数和盘数根据比分计算",
+      "zh-Hant": "新功能：BananaShot Mac 版 · 新功能：選擇記分板何時顯示及其字體 · 統計：局數和盤數根據比分計算"
+    },
+    "whatsNewUrl": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.md",
+    "whatsNewUrlByLanguage": {
+      "es": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.es.md",
+      "es-419": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.es-419.md",
+      "pt": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.pt.md",
+      "pt-PT": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.pt-PT.md",
+      "fr": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.fr.md",
+      "de": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.de.md",
+      "ru": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.ru.md",
+      "ja": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.ja.md",
+      "zh-Hans": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.zh-Hans.md",
+      "zh-Hant": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.zh-Hant.md"
+    },
+    "pageUrl": "https://banana-shot-editor.app/changelog/#v1.4.0"
   },
   "rules": []
 }

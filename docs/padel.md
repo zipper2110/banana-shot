@@ -210,6 +210,21 @@ P-7 and P-6: the site first, then Spanish.
   - The site tells about tennis only. The FAQ says "Padel support is
     planned". Change these texts (`docs/marketing/strategy.md`).
   - Add padel screenshots and one padel FAQ entry (star point, team names).
+  - Done on 2026-11-04 (decision of the author):
+    - The site changelog has the padel note in the 1.1.0 part. The update
+      `notes` need no change: the version policy had no `notes` field at
+      1.1.0, and the notes are now for a later version.
+    - The FAQ says that the app scores padel since 1.1.0. The text
+      "Padel support is planned" is gone. The sports page and the guide
+      `/guides/padel-match-video-scoreboard/` tell about padel.
+    - The FAQ answer gives the basic answer (the deuce rules and
+      Americano). The guide tells the steps: the team names, the deuce
+      rule, the Padel Glass style, and the badge.
+    - The home page keeps the tennis title. `docs/marketing/seo.md` uses
+      the home page for the tennis phrases and the padel guide for the
+      padel phrases. The app has the tagline "Tennis & Padel Video Editor".
+    - No padel screenshots. The padel demos of B-60 show padel on the home
+      page.
 
 ## Release note of the baseline
 

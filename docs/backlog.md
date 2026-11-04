@@ -120,8 +120,7 @@ write the reason.
 - The baseline is the padel support of the first release with padel
   (B-14, done on 2026-10-10). `padel.md` describes the baseline.
 - The tasks P-1 to P-7 are in `padel.md`, section "Improvements".
-- Do P-7 (site and FAQ) after the release with padel support, then P-6
-  (Spanish, with B-11).
+- P-7 (site and FAQ) is done (2026-11-04). Do P-6 (Spanish) with B-11.
 
 ### B-43 Padel Americano events
 
@@ -364,4 +363,6 @@ write the reason.
   padel, and beach tennis. Padel and beach tennis are usually doubles, so
   their demos show two teams.
 - Update the `aria-label` text of each demo to match its sport.
+- The site has no padel screenshots. The padel demos replace them (decided
+  on 2026-11-04, when B-45 P-7 closed).
 - Open question: which demo shows which sport.

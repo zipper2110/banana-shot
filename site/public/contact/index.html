@@ -108,9 +108,32 @@
     <ul>
       <li>Tell what you did, what happened, and what you expected.</li>
       <li>Add the app version and the version of the operating system. The app shows its version in More &rarr; Contact.</li>
-      <li>Attach the log files. They are in the folder <code>%APPDATA%\BananaShot\logs</code>. More &rarr; Contact also has an <strong>Open log folder</strong> button.</li>
+      <li>If you can, attach the log files. This is optional, but the logs help to find the cause of the problem.</li>
     </ul>
-    <p class="meta">The log files contain the names and folders of your videos and projects. They do not contain your videos. Open the files to see all the data before you send them.</p>
+    <!-- os-switch.js selects Mac for a Mac visitor. Without JavaScript, Windows stays selected. -->
+    <details class="disclosure" id="logs">
+      <summary>How to find the log files<span class="disclosure-toggle" aria-hidden="true"></span></summary>
+      <div class="disclosure-body os-switch">
+        <fieldset class="os-switch-pick">
+          <legend class="visually-hidden">Operating system</legend>
+          <div class="segments">
+            <label><input type="radio" name="log-os" value="windows" checked><span>Windows</span></label>
+            <label><input type="radio" name="log-os" value="mac"><span>Mac</span></label>
+          </div>
+        </fieldset>
+        <ol class="os-windows">
+          <li>In the app, open <strong>More</strong> &rarr; <strong>Contact</strong>.</li>
+          <li>Click <strong>Open log folder</strong>. Or press <kbd>Win</kbd>+<kbd>R</kbd>, type <code>%APPDATA%\BananaShot\logs</code>, and press <kbd>Enter</kbd>.</li>
+          <li>Attach the files from this folder to your email.</li>
+        </ol>
+        <ol class="os-mac">
+          <li>In the app, open <strong>More</strong> &rarr; <strong>Contact</strong>.</li>
+          <li>Click <strong>Open log folder</strong>. Or in the Finder, select <strong>Go</strong> &rarr; <strong>Go to Folder</strong>, type <code>~/Library/Application Support/BananaShot/logs</code>, and press <kbd>Return</kbd>.</li>
+          <li>Attach the files from this folder to your email.</li>
+        </ol>
+        <p class="meta">The log files contain the names and folders of your videos and projects. They do not contain your videos. Open the files to see all the data before you send them.</p>
+      </div>
+    </details>
 
     <h2 id="privacy">Your data</h2>
     <p>The <a href="/privacy/#feedback">privacy notice</a> tells what a feedback report contains and how long the data stays. To ask for a copy or a deletion of your data, write to the address above.</p>
@@ -136,6 +159,7 @@
 </footer>
 <script src="/assets/email.js"></script>
 <script src="/assets/feedback.js"></script>
+<script src="/assets/os-switch.js"></script>
 <script src="/assets/count.js" defer></script>
 </body>
 </html>

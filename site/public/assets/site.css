@@ -441,6 +441,18 @@ button.btn-primary:disabled:hover { background: var(--lime); }
 .disclosure-body { padding: 0 18px 8px; border-top: 1px solid var(--line); }
 .disclosure .spec { margin-top: 0; }
 
+/* A Windows / Mac switch: it shows only the steps of the selected system. os-switch.js selects Mac on a Mac. */
+.os-switch-pick { margin: 16px 0 4px; padding: 0; border: 0; }
+.os-switch:has(input[value="windows"]:checked) .os-mac,
+.os-switch:has(input[value="mac"]:checked) .os-windows { display: none; }
+.os-switch ol { padding-left: 1.3em; }
+.os-switch li + li { margin-top: 6px; }
+.os-switch code { overflow-wrap: anywhere; }
+kbd {
+  display: inline-block; padding: 1px 6px; border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 5px;
+  background: var(--inset); color: var(--fg-strong); font-family: inherit; font-size: 0.85em; font-weight: 500; line-height: 1.4;
+}
+
 /* Download pages: the system bar on /download/ (Windows), /download/windows/, and /download/mac/. */
 .system-bar {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0 0 28px; padding: 12px 18px;

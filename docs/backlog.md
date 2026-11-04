@@ -6,6 +6,9 @@ This file lists the open work. For the steps of a release, see
 When item is done, move it under 
 `docs/version-scope/<upcoming-release-version-number>.md` file.
 
+When an item closes without the work, move it to `backlog-closed.md`, and
+write the reason.
+
 ### B-42 Manual checks after the first release
 
 - Moved from B-26 check 2 and E11-S2 (proxy) and from E11-S1 (sleep) on
@@ -307,15 +310,6 @@ When item is done, move it under
 - Build FFmpeg in our own CI with only the codecs and filters that the app
   uses. Do this together with B-20.
 - Measure the installer size before and after the change.
-
-### B-31 License dialog at the first start
-
-- The Velopack setup EXE shows no license page (B-24). Show the ELv2 text,
-  `LICENSE-NOTICE`, and the third-party notices in a dialog at the first
-  start of the app.
-- Keep a flag in the preferences, so that the dialog shows only one time.
-- Done when: the first start with empty preferences shows the dialog. The
-  next start does not show it.
 
 ### B-38 Minor findings of the feature audit
 

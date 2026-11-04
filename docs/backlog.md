@@ -332,7 +332,8 @@ When item is done, move it under
 - Problem: many code paths catch all errors and continue with no log and no
   message. Some of them can hide data loss from the user. Two known cases
   are in B-38: a skipped overlay or statistics card in an export (T2), and a
-  failed save of `adjustments.json` (T6).
+  failed save of `adjustments.json` (T6). T6 is done (2026-11-04):
+  `AdjustmentsSession.persist` in `AdjustmentsStore.kt` is a "Show" block.
 - On 2026-10-05, `src/main/kotlin` had 90 blocks
   `catch (_: Throwable)` or `catch (_: Exception)`. Most are in
   `RenderQueue.kt` (15), `SwingExportPanel.kt` (10), `SwingScoringPanel.kt`

@@ -40,7 +40,7 @@ decision in "Decisions" at once.
 | T3 | F-06 | Minor | Keep the Scoreboard checkbox choice | Q2 | open |
 | T4 | F-07 | Minor | Precise marking in the Points tab | Q3 | open |
 | T5 | F-08 | Minor | Refuse an export to the source video path | — | done |
-| T6 | F-09 | Minor | Show a failed save of the adjustments | — | open |
+| T6 | F-09 | Minor | Show a failed save of the adjustments | — | done |
 | T7 | F-10 | Super-minor | Show more sets on the scoreboard | Q4 | open |
 | T8 | F-11 | Super-minor | Show the final result on the scoreboard | Q5 | open |
 | T9 | F-12 | Super-minor | Grand Slam deciding-set tiebreak | Q6 | open |
@@ -136,7 +136,18 @@ write the reason in "Decisions". Do not remove the task.
 - Give the error to the Colors and the Transform tabs. Show the same
   "Autosave failed" status there.
 - Code: `AdjustmentsStore.kt:96-101`.
-- Tests:
+- Done on 2026-11-04:
+  - `AdjustmentsSession.persist` catches `Exception`, not `Throwable`. It
+    gives the error to the subscribers of `subscribeSaveErrors` on the EDT.
+  - A series of failed saves gives only the first error, so a slider drag
+    does not open many dialogs. After a save succeeds or a project loads,
+    the next failed save gives its error again.
+  - The presenter of the Colors & Transform tab subscribes while the view
+    is attached. Thus a failed save when the user leaves the tab also
+    shows. The view shows an error box "Autosave failed" with the reason,
+    as the Points tab does.
+  - New text in all languages: `adjust.error.autosave`.
+- Tests: `AdjustmentsSessionTest`, `DefaultAdjustVideoPresenterAutosaveTest`
 
 ## T7 Show more sets on the scoreboard (F-10)
 

@@ -309,6 +309,9 @@ class SwingAdjustVideoPanel(
         when (effect) {
             // The message is short, so it is the title. The tab behind the box tells where it comes from.
             is AdjustVideoViewEffect.ShowError -> MessageDialog.show(this, MessageKind.WARNING, effect.message, "")
+            // The same box as a failed autosave on the Points tab.
+            is AdjustVideoViewEffect.AutosaveFailed ->
+                MessageDialog.show(this, MessageKind.ERROR, tr("adjust.error.autosave"), effect.message)
             is AdjustVideoViewEffect.TrimCutsPoints -> MessageDialog.show(
                 this,
                 MessageKind.WARNING,

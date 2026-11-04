@@ -116,6 +116,9 @@ sealed class AdjustVideoIntent {
 
 sealed class AdjustVideoViewEffect {
     data class ShowError(val message: String) : AdjustVideoViewEffect()
+
+    /** The app could not save `adjustments.json` (B-38 T6). [message] tells the reason. */
+    data class AutosaveFailed(val message: String) : AdjustVideoViewEffect()
     data class SeekTo(val ms: Long) : AdjustVideoViewEffect()
 
     /** The first time in a project that the trim cuts off points: a dialog tells it (B-62). */

@@ -14,6 +14,7 @@ import javax.swing.SwingUtilities
  * - Holds the current AdjustmentsV1 for the open project
  * - Subscribers are notified on the EDT within ~100 ms budget
  * - Debounced autosave (350 ms) to adjustments.json in the current project directory
+ * - Tells the save-error subscribers about a failed save (B-38 T6)
  * - Thread-safe; prevents feedback loops by diffing state
  */
 class AdjustmentsSession(
@@ -23,6 +24,10 @@ class AdjustmentsSession(
     @Volatile private var state: AdjustmentsV1 = AdjustmentsV1()
     @Volatile private var projectDir: String? = null
     private val listeners = CopyOnWriteArrayList<(AdjustmentsV1) -> Unit>()
+    private val saveErrorListeners = CopyOnWriteArrayList<(Exception) -> Unit>()
+
+    /** True after a failed save, until a save succeeds or a project loads. */
+    private var lastSaveFailed = false
     private val closed = AtomicBoolean(false)
     private var pendingSave: ScheduledFuture<*>? = null
 
@@ -69,10 +74,21 @@ class AdjustmentsSession(
         listeners.remove(listener)
     }
 
+    /**
+     * Subscribe to failed saves; returns an unsubscribe function. The listener is called on the EDT. It gets only
+     * the first error of a series of failed saves, so a slider drag does not open many dialogs. After a save
+     * succeeds or a project loads, the next failed save calls it again.
+     */
+    fun subscribeSaveErrors(listener: (Exception) -> Unit): () -> Unit {
+        saveErrorListeners.add(listener)
+        return { saveErrorListeners.remove(listener) }
+    }
+
     /** Load adjustments for a project directory and update state. Notifies listeners. */
     @Synchronized
     fun load(projectDirPath: String) {
         projectDir = File(projectDirPath).absolutePath
+        lastSaveFailed = false
         val loaded = try { AdjustmentsIO.readForProjectDir(projectDir!!) } catch (_: Throwable) { AdjustmentsV1() }
         state = clamp(loaded)
         // Fresh state from disk – notify subscribers so all tabs reflect it
@@ -94,10 +110,24 @@ class AdjustmentsSession(
     }
 
     private fun persist() {
+        val dir = projectDir ?: return
         try {
-            val dir = projectDir ?: return
             AdjustmentsIO.writeForProjectDir(dir, state)
-        } catch (_: Throwable) { }
+            lastSaveFailed = false
+        } catch (e: Exception) {
+            if (lastSaveFailed) return
+            lastSaveFailed = true
+            notifySaveError(e)
+        }
+    }
+
+    private fun notifySaveError(error: Exception) {
+        val deliver = {
+            for (l in saveErrorListeners) {
+                try { l(error) } catch (_: Exception) { }
+            }
+        }
+        if (SwingUtilities.isEventDispatchThread()) deliver() else SwingUtilities.invokeLater(deliver)
     }
 
     /** Ensure values are within safe ranges per spec, and have non-null WB. */
@@ -176,6 +206,7 @@ class AdjustmentsSession(
         if (!closed.compareAndSet(false, true)) return
         flush()
         listeners.clear()
+        saveErrorListeners.clear()
     }
 }
 

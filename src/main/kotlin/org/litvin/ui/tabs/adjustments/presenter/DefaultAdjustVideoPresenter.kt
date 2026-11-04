@@ -45,6 +45,7 @@ class DefaultAdjustVideoPresenter(
 
     private var view: AdjustVideoView? = null
     private var unsubscribeStore: (() -> Unit)? = null
+    private var unsubscribeSaveErrors: (() -> Unit)? = null
     private var projectDir: String? = null
     private var state = AdjustVideoViewState()
 
@@ -56,12 +57,19 @@ class DefaultAdjustVideoPresenter(
 
     override fun attach(view: AdjustVideoView) {
         this.view = view
+        // The tab saves when the user leaves it, so the subscription stays while the view is attached.
+        unsubscribeSaveErrors?.invoke()
+        unsubscribeSaveErrors = adjustments.subscribeSaveErrors { error ->
+            postEffect(AdjustVideoViewEffect.AutosaveFailed(ErrorTexts.of(error)))
+        }
         render()
     }
 
     override fun detach() {
         unsubscribeStore?.invoke()
         unsubscribeStore = null
+        unsubscribeSaveErrors?.invoke()
+        unsubscribeSaveErrors = null
         view = null
     }
 

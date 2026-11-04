@@ -279,6 +279,20 @@ main > .section-noai .section-head { margin-bottom: 48px; }
 @media (max-width: 880px) { .section { padding-top: 88px; } }
 @media (max-width: 560px) { .cta { padding: 56px 22px; border-radius: 22px; } }
 
+/* ---- Questions: a small panel under the call to action that links to the FAQ ---- */
+.section-faq { padding-top: 40px; }
+.faq-cta {
+  display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: center; justify-content: space-between;
+  max-width: 960px; margin: 0 auto; padding: 36px 40px;
+  border: 1px solid var(--line-2); border-radius: 24px; background: rgba(255, 255, 255, 0.03);
+}
+.faq-cta > div:first-child { flex: 1 1 380px; }
+.faq-cta h2 { font-size: 1.6rem; letter-spacing: -0.02em; margin-bottom: 6px; }
+.faq-cta p { margin: 0; color: var(--fg-2); }
+.faq-cta-actions { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; }
+@media (max-width: 880px) { .section-faq { padding-top: 32px; } }
+@media (max-width: 560px) { .faq-cta { padding: 28px 22px; border-radius: 18px; } }
+
 /* ---- Text pages ---- */
 .page { padding: 56px 0 80px; }
 .page h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); }

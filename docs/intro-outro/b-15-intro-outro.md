@@ -18,6 +18,13 @@ The outro also solves an open question of a user report (2026-10-30): a
 highlights export ends at the end of the last point, so the final score
 never shows. A final score block in the outro shows it.
 
+## Reference
+
+- Intro reference video (added on 2026-11-11):
+  https://www.youtube.com/watch?v=h68cFc_meyU
+- The intro has an audio track, multiple text frames and images.
+- The block types below have no image block yet. Audio is open question 2.
+
 ## Concept
 
 ### Blocks in a list, not a free timeline

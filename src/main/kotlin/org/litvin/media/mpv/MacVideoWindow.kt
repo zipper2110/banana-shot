@@ -117,13 +117,10 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
 
     private fun apply(target: Target) {
         val video = mpvWindow ?: return
-        if (!target.visible) {
-            detach(video)
-            Objc.send(video, "orderOut:", null as Pointer?)
-            return
-        }
-        val parentWindow = parentFor(target)
-        if (parentWindow == null) {
+        // Without a screen, hide the window. The next update after a screen comes back shows it again.
+        val screenHeight = if (target.visible) Objc.mainScreenHeight() else null
+        val parentWindow = if (screenHeight != null) parentFor(target, screenHeight) else null
+        if (screenHeight == null || parentWindow == null) {
             detach(video)
             Objc.send(video, "orderOut:", null as Pointer?)
             return
@@ -134,7 +131,6 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
             Objc.send(video, "orderWindow:relativeTo:", WINDOW_ABOVE, parentNumber)
             attached = true
         }
-        val screenHeight = Objc.mainScreenHeight()
         val frame = Objc.NSRect.ByValue().apply {
             x = target.canvas.x.toDouble()
             y = screenHeight - (target.canvas.y + target.canvas.height)
@@ -157,12 +153,11 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
      * Finds the `NSWindow` of the Java window. The JDK has no public API that gives it, and JNA gives 0 on macOS.
      * Thus the search compares the frame and the title of each window of the app with the Java window.
      */
-    private fun parentFor(target: Target): Pointer? {
+    private fun parentFor(target: Target, screenHeight: Double): Pointer? {
         if (parent != null && parentKey == target.windowKey) return parent
         val video = mpvWindow
         if (video != null) detach(video)
         releaseParent()
-        val screenHeight = Objc.mainScreenHeight()
         val app = Objc.send(Objc.cls("NSApplication"), "sharedApplication") ?: return null
         val windows = Objc.send(app, "windows") ?: return null
         val count = Objc.sendLong(windows, "count")
@@ -297,10 +292,17 @@ private object Objc {
     fun string(nsString: Pointer?): String? =
         nsString?.let { send(it, "UTF8String") }?.getString(0, "UTF-8")
 
-    /** The height of the first screen. Java places the origin at its top left corner, AppKit at its bottom left corner. */
-    fun mainScreenHeight(): Double {
-        val screens = send(cls("NSScreen"), "screens") ?: return 0.0
-        val first = send(screens, "objectAtIndex:", 0L) ?: return 0.0
+    /**
+     * The height of the first screen, or null when macOS has no screen. Java places the origin at its top left
+     * corner, AppKit at its bottom left corner.
+     *
+     * The screen list can be empty, for example when the lid closes and no other display is connected. Then
+     * `objectAtIndex:` throws an Objective-C exception, and that exception stops the process at once.
+     */
+    fun mainScreenHeight(): Double? {
+        val screens = send(cls("NSScreen"), "screens") ?: return null
+        if (sendLong(screens, "count") <= 0L) return null
+        val first = send(screens, "objectAtIndex:", 0L) ?: return null
         return frame(first).height
     }
 }

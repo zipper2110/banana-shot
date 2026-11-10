@@ -170,6 +170,19 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     @Volatile private var boundsChangePending = false
     override var onVideoBoundsChanged: (() -> Unit)? = null
 
+    /** macOS only: mpv closed for a sleep, and the wake must load the file again. Use it on the event dispatch thread. */
+    private var closedForSleep = false
+
+    // The guard keeps only a weak reference, so the player keeps this object.
+    private val sleepHook = object : SleepAwarePreview {
+        override fun suspendForSleep() = closeForSleep()
+        override fun resumeAfterSleep() = reopenAfterSleep()
+    }
+
+    init {
+        if (isMac) MacPreviewSleep.register(sleepHook)
+    }
+
     private inner class VideoCanvas : Canvas() {
         init {
             background = Color.BLACK
@@ -425,7 +438,25 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
 
     override fun close() {
         active = false
+        MacPreviewSleep.unregister(sleepHook)
         destroyCore("close")
+    }
+
+    /** Closes mpv before a sleep. The player keeps the file and the position, and shows the video as paused. */
+    private fun closeForSleep() {
+        if (core == null) return
+        val wasPlaying = fileLoaded && !paused
+        closedForSleep = true
+        destroyCore("sleep")
+        paused = true
+        if (wasPlaying) setStatus(PlayerStatus.PAUSED)
+    }
+
+    /** Loads the file again after a sleep, paused at the last position, when this player showed it. */
+    private fun reopenAfterSleep() {
+        if (!closedForSleep) return
+        closedForSleep = false
+        if (active && mediaFile != null && !fileLoaded && canvas.isDisplayable) loadCurrentFile("wake")
     }
 
     // ---- Media -----------------------------------------------------------------------------------------
@@ -475,7 +506,8 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         val startSeconds = String.format(Locale.US, "%.3f", loadStartMs / 1000.0)
         logger.info { "Loading into mpv preview #$playerId: ${file.absolutePath} at ${startSeconds}s ($reason)" }
         mpv.setProperty("pause", "yes")
-        mpv.setProperty("speed", String.format(Locale.US, "%.3f", effectiveSpeed()))
+        // A new mpv instance (after a sleep or a removed canvas) does not know the sound of the replay.
+        applyReplaySound(mpv)
         mpv.command("loadfile", file.absolutePath, "replace", "-1", "start=$startSeconds")
     }
 
@@ -545,7 +577,12 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
 
     override fun setReplaySound(sound: ReplaySound?) {
         replaySound = sound
-        val mpv = core ?: return
+        applyReplaySound(core ?: return)
+    }
+
+    /** Sends the speed and the sound of [replaySound] to [mpv]. */
+    private fun applyReplaySound(mpv: MpvCore) {
+        val sound = replaySound
         mpv.setProperty("speed", String.format(Locale.US, "%.3f", effectiveSpeed()))
         // Without the pitch correction, the slow sound has a lower pitch (B-50 decision 4).
         mpv.setProperty("audio-pitch-correction", if (sound != null && sound.speed < 1.0) "no" else "yes")

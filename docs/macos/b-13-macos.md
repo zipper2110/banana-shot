@@ -321,6 +321,48 @@ used the log and screenshots.
   Do not set `ao=coreaudio` until the build has the patch or a new mpv
   version fixes it.
 
+### Other sleep and display risks (2026-11-11)
+
+A review after the crash above found these risks:
+
+- **No screen check in `MacVideoWindow` (fixed).** `mainScreenHeight()` read
+  the first item of `NSScreen.screens` without a count check. The list can
+  be empty, for example when the lid closes and no other display is
+  connected. Then AppKit throws an Objective-C exception. A test showed that
+  such an exception inside a JNA call stops the process at once, and a Java
+  `try/catch` does not stop it. Now the function returns null without a
+  screen, and the mpv window stays hidden until a screen comes back.
+- **CoreVideo display link at sleep (made less likely).** An older crash
+  (2026-11-01) happened in the display link thread of CoreVideo
+  (`CVXTime::translateTime`), in the display link of the Java Metal renderer.
+  Other apps report the same type of crash at sleep or wake (Firefox bug
+  1201401, a Zed commit). mpv runs one display link for each preview window
+  until mpv closes, also while the video is paused. Now `PreviewSleepGuard`
+  closes the mpv previews when macOS sends a system sleep or a display sleep
+  event (`java.awt.desktop`). At the wake, the preview that showed the video
+  loads it again, paused at the same position. The display link of Java
+  itself stays. The app cannot control it.
+- **Replay sound after a new mpv instance (fixed).** The mute and the pitch
+  setting of a replay went to mpv only when they changed. A new mpv instance
+  (after a sleep or a removed canvas) lost them. Now each file load sends
+  them again.
+- **Check of the sleep flow.** A test program played a video at 5.5 s, sent
+  the sleep event, and then the wake event. mpv closed, the status changed to
+  paused, and the wake loaded the file again at 5.5 s, paused. Play worked
+  after the wake. A second wake event did nothing. The test did not put the
+  Mac to sleep.
+- **Open: mpv window when the app is not in front.** In the test program, a
+  preview that started while its window was not in front got no mpv window:
+  mpv wrote "Couldn't start DisplayLink, no Screen", and the file did not
+  load. In the app, a preview usually starts while the app is in front. Check
+  if the app has the same problem when it opens a video in the background.
+- **Low risks.** `MpvCore.close()` waits 5 s for the event thread and then
+  destroys mpv. A handler that blocks longer would cause a crash. No handler
+  blocks now. The app reads the `window-id` of mpv only at the start. If mpv
+  makes a new window later, the preview can show in the wrong place.
+  `Objc.frame()` gets a struct through `objc_msgSend`. That works only on
+  Apple Silicon. An Intel build must use `objc_msgSend_stret`.
+
 ## 2. Native files (libmpv and FFmpeg)
 
 ### Builds

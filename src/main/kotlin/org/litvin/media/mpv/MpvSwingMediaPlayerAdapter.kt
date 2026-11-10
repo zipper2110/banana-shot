@@ -352,6 +352,11 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         add("gpu-api" to "vulkan")
         add("gpu-context" to "macvk")
         add("hwdec" to "videotoolbox,auto-safe")
+        // Do not use the coreaudio audio output. In mpv 0.41.0 its init can fail ("unable to set the input
+        // channel layout", -50). Then mpv frees the audio output but keeps its CoreAudio device listener. At the
+        // next device change (for example, sleep), CoreAudio calls the listener with freed memory and the app
+        // crashes. The avfoundation output adds its listener only after a successful init.
+        add("ao" to "avfoundation")
         // The window exists also without a file. Then the window-id stays the same for the life of the mpv instance.
         add("force-window" to "yes")
         add("border" to "no")

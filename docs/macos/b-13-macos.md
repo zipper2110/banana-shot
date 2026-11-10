@@ -297,6 +297,30 @@ used the log and screenshots.
   Windows. Keep it for Windows. The macOS input path depends on the method
   that the spike selects.
 
+### Crash at sleep with an open video (2026-11-10)
+
+- **Symptom.** The app crashed when the Mac went to sleep while a video was
+  open in the preview. The crash report shows 3 libmpv frames under
+  `HALSystem::ObjectsPublishedAndDied` of CoreAudio.
+- **Cause (mpv 0.41.0, `audio/out/ao_coreaudio.c`).** `init()` adds a
+  CoreAudio device listener with a pointer to the audio output. Then
+  `init_audiounit()` fails: "unable to set the input channel layout on the
+  audio unit (-50)". mpv frees the audio output, but it does not remove the
+  listener, because `uninit()` runs only after a successful `init()`. mpv
+  then uses the `avfoundation` output. Each file load adds one more stale
+  listener. At sleep, the audio devices change, CoreAudio calls a stale
+  listener, and the listener reads freed memory.
+- **Fix.** The preview sets `ao=avfoundation` on macOS. Audio does not
+  change: mpv used `avfoundation` already after the failure. The
+  `avfoundation` output adds its observer only after a successful init.
+- **Check.** A test process played a video with sound, closed mpv, and then
+  added and removed a private aggregate audio device. Without
+  `ao=avfoundation`, the process crashed with the same stack. With
+  `ao=avfoundation`, it did not crash after 3 device changes.
+- **Open.** The libmpv build does not have a patch for the stale listener.
+  Do not set `ao=coreaudio` until the build has the patch or a new mpv
+  version fixes it.
+
 ## 2. Native files (libmpv and FFmpeg)
 
 ### Builds

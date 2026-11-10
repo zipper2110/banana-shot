@@ -397,6 +397,8 @@ write the reason.
 - Features of the paid version:
   - Short vertical videos with camera movement (see B-16).
   - An intro and outro constructor (see B-15).
+  - Audio tracks: the user can add an audio track (for example music) to the
+    intro, the outro, and the main video.
   - More styles for scoreboards and thumbnails, or a constructor for a
     personal style.
   - Maybe other features.

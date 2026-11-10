@@ -44,7 +44,7 @@ decision in "Decisions" at once.
 | T7 | F-10 | Super-minor | Show more sets on the scoreboard | Q4 | open |
 | T8 | F-11 | Super-minor | Show the final result on the scoreboard | Q5 | open |
 | T9 | F-12 | Super-minor | Grand Slam deciding-set tiebreak | Q6 | open |
-| T10 | F-13 | Super-minor | Clear the pending Start | — | open |
+| T10 | F-13 | Super-minor | Clear the pending Start | — | done |
 | T11 | F-14, F-15 | Super-minor | Reload the projects list; show damaged projects | — | open |
 | T12 | F-16 | Super-minor | Set a point back to "not scored" | Decision 3 | dropped |
 | T13 | F-17 | Super-minor | Comments between points in "Only points" | Q7 | done |
@@ -181,7 +181,17 @@ write the reason in "Decisions". Do not remove the task.
   (`clearPending()` has no caller now). Update the help text.
 - Code: `PointsDispatcher.kt:136-140`,
   `ui/tabs/points/SwingPointsPanel.kt:459-489`.
-- Tests:
+- Done on 2026-11-03:
+  - `SwingPointsPanel.setProjectManifest` clears the pending Start when a
+    project opens. `setPoints` does not clear it, because the Points tab
+    also calls `setPoints` each time the tab opens. A tab change keeps the
+    pending Start.
+  - Esc (`AppShortcuts.CANCEL_PENDING`) calls `clearPending()` on the
+    Points tab. The completed points do not change.
+  - The Points help lists Esc ("Cancel the pending point") in all
+    languages.
+- Tests: `PointsDispatcherTest`, `PointsKeybindingsTest`,
+  `PointsProjectSwitchTest`
 
 ## T11 Reload the projects list; show damaged projects (F-14, F-15)
 

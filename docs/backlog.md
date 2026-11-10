@@ -366,3 +366,19 @@ write the reason.
 - The site has no padel screenshots. The padel demos replace them (decided
   on 2026-11-04, when B-45 P-7 closed).
 - Open question: which demo shows which sport.
+
+### B-65 Quick feedback popup
+
+- Added on 2026-11-10.
+- Show a popup that asks the user to rate the app. The popup has 4 or 5 key
+  parameters (for example: ease of use, speed, export quality, and overall
+  rating).
+- The user must be able to answer very quickly: one click or one tap for
+  each parameter (for example stars or emoji faces), and one button to send.
+  The user can close the popup without an answer.
+- Open questions: which parameters to ask about, when to show the popup
+  (for example after the first export, or after some days of use), and how
+  often to show it again.
+- Send the answers with the feedback channel of B-8, or with analytics.
+- Done when: the popup shows at the selected time, and the author receives
+  the answers.

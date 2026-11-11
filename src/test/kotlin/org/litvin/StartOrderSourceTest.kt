@@ -32,7 +32,7 @@ class StartOrderSourceTest {
         val proxy = mainBody.indexOf("java.net.useSystemProxies")
         val hook = mainBody.indexOf("VelopackHooks.isHookProcess(args)")
         val lock = mainBody.indexOf("takeInstanceLock(")
-        val services = mainBody.indexOf("AppServices.production()")
+        val services = mainBody.indexOf("AppServices.production(")
 
         assertTrue(proxy in 0 until hook, "The proxy property comes before the hook check.")
         assertTrue(hook < lock, "The hook check comes before the lock of B-19.")
@@ -40,9 +40,19 @@ class StartOrderSourceTest {
     }
 
     @Test
+    fun `main starts the crash marker after the lock and before the services`() {
+        val lock = mainBody.indexOf("takeInstanceLock(")
+        val marker = mainBody.indexOf("CrashReporting.start()")
+        val services = mainBody.indexOf("AppServices.production(")
+
+        assertTrue(lock in 0 until marker, "Two instances must not write the same crash marker (B-67).")
+        assertTrue(marker < services, "The analytics of the services get the crash of the previous session (B-67).")
+    }
+
+    @Test
     fun `main starts the expiry check after the lock and the services, and before the main window`() {
         val lock = mainBody.indexOf("takeInstanceLock(")
-        val services = mainBody.indexOf("AppServices.production()")
+        val services = mainBody.indexOf("AppServices.production(")
         val expiry = mainBody.indexOf("services.expiry.start()")
         val dateCheck = mainBody.indexOf("services.expiry.runDateCheck()")
         val window = mainBody.indexOf("EventQueue.invokeLater")

@@ -93,7 +93,7 @@ class LanguageValuesTest {
         val executor = EnabledAnalytics.newDaemonExecutor()
         val session = EnabledAnalytics(
             { body -> bodies.put(body); 204 }, "1.0.0", "windows", os,
-            AnalyticsPreferences.SessionStart(1, uncleanExit = false), AnalyticsLevel.ESSENTIAL, executor = executor,
+            AnalyticsPreferences.SessionStart(1), AnalyticsLevel.ESSENTIAL, executor = executor,
         )
         try {
             next(bodies)

@@ -15,7 +15,7 @@ class AnalyticsControllerTest {
         val preferences = AnalyticsPreferences(node)
         val levels = mutableListOf<AnalyticsLevel>()
         val session = RecordingSession()
-        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, level -> levels += level; session }, FakeHooks())
+        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, level -> levels += level; session })
 
         controller.record(AnalyticsEvent.ProjectCreated)
         assertTrue(session.events.isEmpty())
@@ -33,7 +33,7 @@ class AnalyticsControllerTest {
         val preferences = AnalyticsPreferences(node)
         preferences.record(AnalyticsPreferences.Choice.EXTENDED)
         val levels = mutableListOf<AnalyticsLevel>()
-        AnalyticsController(enabledConfig(), preferences, { _, _, level -> levels += level; RecordingSession() }, FakeHooks()).start()
+        AnalyticsController(enabledConfig(), preferences, { _, _, level -> levels += level; RecordingSession() }).start()
         assertEquals(listOf(AnalyticsLevel.EXTENDED), levels)
     }
 
@@ -42,7 +42,7 @@ class AnalyticsControllerTest {
         val preferences = AnalyticsPreferences(node)
         val session = RecordingSession()
         var created = 0
-        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, _ -> created++; session }, FakeHooks())
+        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, _ -> created++; session })
         controller.start()
 
         controller.choose(AnalyticsPreferences.Choice.EXTENDED)
@@ -59,13 +59,11 @@ class AnalyticsControllerTest {
     }
 
     @Test
-    fun `off stops the session without a send, ends it, and removes the shutdown hook`() = withPreferences { node ->
+    fun `off stops the session without a send`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
         val session = RecordingSession()
-        val hooks = FakeHooks()
-        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, _ -> session }, hooks)
+        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, _ -> session })
         controller.start()
-        assertEquals(1, hooks.actions.size)
 
         controller.choose(AnalyticsPreferences.Choice.OFF)
         controller.record(AnalyticsEvent.PointAdded)
@@ -73,9 +71,7 @@ class AnalyticsControllerTest {
         assertTrue(session.closed)
         assertFalse(session.finalSendStarted)
         assertFalse(AnalyticsEvent.PointAdded in session.events)
-        assertTrue(hooks.actions.isEmpty())
         assertNull(preferences.resolve().level)
-        assertFalse(preferences.startSession().uncleanExit)
     }
 
     @Test
@@ -83,7 +79,7 @@ class AnalyticsControllerTest {
         val preferences = AnalyticsPreferences(node)
         preferences.record(AnalyticsPreferences.Choice.OFF)
         val levels = mutableListOf<AnalyticsLevel>()
-        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, level -> levels += level; RecordingSession() }, FakeHooks())
+        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, level -> levels += level; RecordingSession() })
 
         controller.start()
         assertTrue(levels.isEmpty())
@@ -98,7 +94,7 @@ class AnalyticsControllerTest {
         val preferences = AnalyticsPreferences(node)
         val session = RecordingSession()
         var created = 0
-        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, _ -> created++; session }, FakeHooks())
+        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, _ -> created++; session })
         controller.start()
         controller.choose(AnalyticsPreferences.Choice.EXTENDED)
 
@@ -115,7 +111,7 @@ class AnalyticsControllerTest {
     @Test
     fun `beginFinalSend goes to the running session`() = withPreferences { node ->
         val session = RecordingSession()
-        val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, _, _ -> session }, FakeHooks())
+        val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, _, _ -> session })
         controller.beginFinalSend()
         assertFalse(session.finalSendStarted)
         controller.start()
@@ -124,25 +120,56 @@ class AnalyticsControllerTest {
     }
 
     @Test
-    fun `each session start counts the session and the open flag gives unclean_exit`() = withPreferences { node ->
+    fun `each session start counts the session and gets the crash of the previous app session`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
         val starts = mutableListOf<AnalyticsPreferences.SessionStart>()
-        val hooks = FakeHooks()
-        fun controller() = AnalyticsController(enabledConfig(), preferences, { _, start, _ -> starts += start; RecordingSession() }, hooks)
+        fun controller() = AnalyticsController(enabledConfig(), preferences, { _, start, _ -> starts += start; RecordingSession() })
+        val crash = AnalyticsCrash(AnalyticsCrash.Kind.NATIVE, AnalyticsCrash.Library.COREVIDEO, emptySet())
 
         controller().apply { start(); close() }
-        controller().apply { start(); close() }
-        hooks.runAll()
+        controller().apply { start(crash); close() }
         controller().apply { start(); close() }
 
         assertEquals(
             listOf(
-                AnalyticsPreferences.SessionStart(1, uncleanExit = false),
-                AnalyticsPreferences.SessionStart(2, uncleanExit = true),
-                AnalyticsPreferences.SessionStart(3, uncleanExit = false),
+                AnalyticsPreferences.SessionStart(1),
+                AnalyticsPreferences.SessionStart(2, crash),
+                AnalyticsPreferences.SessionStart(3),
             ),
             starts,
         )
+        assertEquals(listOf(false, true, false), starts.map { it.uncleanExit })
+    }
+
+    @Test
+    fun `only the first session of the process counts the crash`() = withPreferences { node ->
+        val starts = mutableListOf<AnalyticsPreferences.SessionStart>()
+        val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, start, _ -> starts += start; RecordingSession() })
+        val crash = AnalyticsCrash(AnalyticsCrash.Kind.FREEZE, null, setOf(AnalyticsCrash.Activity.EXPORT))
+
+        controller.start(crash)
+        controller.choose(AnalyticsPreferences.Choice.OFF)
+        controller.choose(AnalyticsPreferences.Choice.ESSENTIAL)
+
+        assertEquals(listOf(crash, null), starts.map { it.crash })
+    }
+
+    @Test
+    fun `a crash stays for a later session when the first start fails`() = withPreferences { node ->
+        val starts = mutableListOf<AnalyticsPreferences.SessionStart>()
+        var fail = true
+        val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, start, _ ->
+            if (fail) error("no session")
+            starts += start
+            RecordingSession()
+        })
+        val crash = AnalyticsCrash(AnalyticsCrash.Kind.UNKNOWN, null, emptySet())
+
+        controller.start(crash)
+        fail = false
+        controller.choose(AnalyticsPreferences.Choice.ESSENTIAL)
+
+        assertEquals(listOf(crash), starts.map { it.crash })
     }
 
     @Test
@@ -151,7 +178,7 @@ class AnalyticsControllerTest {
         var fail = true
         val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, _, _ ->
             if (fail) error("no session") else session
-        }, FakeHooks())
+        })
         controller.start()
         controller.record(AnalyticsEvent.TabShown(AnalyticsEvent.Tab.STATS, byUser = true))
         controller.record(AnalyticsEvent.WindowActive(true))
@@ -170,7 +197,7 @@ class AnalyticsControllerTest {
         val sessions = mutableListOf<RecordingSession>()
         val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, _, _ ->
             RecordingSession().also { sessions += it }
-        }, FakeHooks())
+        })
         val settings = AnalyticsEvent.Settings(AnalyticsEvent.Theme.LIGHT, AnalyticsEvent.Accent.CUSTOM, AnalyticsEvent.Language.EN)
         controller.start()
         controller.record(settings)
@@ -185,23 +212,18 @@ class AnalyticsControllerTest {
     }
 
     @Test
-    fun `a session that cannot start leaves no open flag and no shutdown hook`() = withPreferences { node ->
-        val preferences = AnalyticsPreferences(node)
-        val hooks = FakeHooks()
-        val controller = AnalyticsController(enabledConfig(), preferences, { _, _, _ -> error("no session") }, hooks)
+    fun `a session that cannot start records nothing`() = withPreferences { node ->
+        val controller = AnalyticsController(enabledConfig(), AnalyticsPreferences(node), { _, _, _ -> error("no session") })
 
         controller.start()
         controller.record(AnalyticsEvent.PointAdded)
-
-        assertTrue(hooks.actions.isEmpty())
-        assertFalse(preferences.startSession().uncleanExit)
     }
 
     @Test
     fun `a disabled build never starts a session`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
         var created = false
-        val controller = AnalyticsController(AnalyticsBuildConfig.Disabled("test"), preferences, { _, _, _ -> created = true; RecordingSession() }, FakeHooks())
+        val controller = AnalyticsController(AnalyticsBuildConfig.Disabled("test"), preferences, { _, _, _ -> created = true; RecordingSession() })
         controller.start()
         controller.choose(AnalyticsPreferences.Choice.EXTENDED)
         assertFalse(created)
@@ -228,14 +250,5 @@ class AnalyticsControllerTest {
         override fun beginFinalSend() { finalSendStarted = true }
         override fun setLevel(level: AnalyticsLevel) { levels += level }
         override fun close() { closed = true }
-    }
-
-    private class FakeHooks : ShutdownHooks {
-        val actions = mutableListOf<() -> Unit>()
-        override fun add(action: () -> Unit): AutoCloseable {
-            actions += action
-            return AutoCloseable { actions -= action }
-        }
-        fun runAll() = actions.toList().forEach { it() }
     }
 }

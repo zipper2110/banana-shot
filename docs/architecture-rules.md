@@ -14,6 +14,7 @@ Top‑level feature and shared packages:
 - `org.litvin.export` — export/pipeline/FFmpeg/queue/overlay writing.
 - `org.litvin.analytics` — opt‑in usage analytics (B-9): the events, the session counters, the summary transport, consent state.
 - `org.litvin.feedback` — feedback reports (B-8): the report and its JSON, the log data, the sender, the endpoint setting.
+- `org.litvin.crash` — crash evidence (B-67): the session marker, the JVM crash file, the freeze watchdog.
 - `org.litvin.shared.util` — cross‑cutting utilities and primitives (timecode, debouncers, pagination, OS tweaks, etc.).
 - `org.litvin.i18n` — the texts of the app languages and the formats (B-11): `I18n` and `tr`, the message catalog, `DisplayFormats`, and `MachineFormats`.
 - `org.litvin.ui` — UI layer only.
@@ -41,6 +42,7 @@ Allowed directions:
 - `analytics` must not depend on any other `org.litvin` package — it is a leaf service. `app` gives it the app version and the HTTP client.
 - Feature and UI packages can use only `Analytics`, `AnalyticsEvent` (with its nested types), and `DisabledAnalytics`. They get `Analytics` from `app` through the constructor; the default is `DisabledAnalytics`. Only `app` and `ui.privacy` use the rest of `analytics`. A feature that has no constructor from `app` (for example `RenderQueueManager`) gives plain facts to a listener, and `app` changes them into events. `AnalyticsDependencyTest` checks these rules.
 - `ui.feedback` → `feedback` and `ui.commons`. `feedback` must not depend on any other `org.litvin` package: `app` gives it the HTTP client with the trust of `license.online`. The other UI packages open the form only through callbacks from `app`.
+- `crash` → `shared.util` only. `app` wires it and changes its facts into analytics values. The features tell what the app does through `shared.util.AppActivities`, not through `crash`.
 - `shared.util` must not depend on any feature/ui/app.
 - `i18n` is a leaf package: it must not depend on any other `org.litvin` package. All packages can depend on it, also `shared.util`, `ui.commons`, and the leaf services. `ArchitectureDependencyHygieneTest` checks this rule.
 - Cycles are forbidden.

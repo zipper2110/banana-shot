@@ -8,24 +8,11 @@ interface ManagedAnalytics : Analytics, AutoCloseable {
     fun setLevel(level: AnalyticsLevel) = Unit
 }
 
-/** Runs an action at JVM shutdown. Tests give a fake. */
-fun interface ShutdownHooks {
-    /** Adds [action]. Closing the result removes it. */
-    fun add(action: () -> Unit): AutoCloseable
-
-    object Jvm : ShutdownHooks {
-        override fun add(action: () -> Unit): AutoCloseable {
-            val thread = Thread({ runCatching(action) }, "analytics-shutdown")
-            Runtime.getRuntime().addShutdownHook(thread)
-            return AutoCloseable { runCatching { Runtime.getRuntime().removeShutdownHook(thread) } }
-        }
-    }
-}
-
 /**
  * The stable analytics facade for the features (`docs/analytics/design.md`, "Levels").
  *
- * - [start]: app start. Starts the session with the saved level. Without a choice, the level is essential.
+ * - [start]: app start. Starts the session with the saved level. Without a choice, the level is essential. The first
+ *   session of the process gets the crash of the previous app session (B-67). A later session does not count it again.
  * - [choose]: the user made a choice. Saves it and changes the level of the running session. The choice
  *   [AnalyticsPreferences.Choice.OFF] stops the session without a send and deletes its counters.
  * - [close]: app shutdown. Stops delivery and does not change the choice.
@@ -37,12 +24,12 @@ class AnalyticsController(
     private val config: AnalyticsBuildConfig,
     private val preferences: AnalyticsPreferences,
     private val sessionFactory: (AnalyticsBuildConfig.Enabled, AnalyticsPreferences.SessionStart, AnalyticsLevel) -> ManagedAnalytics,
-    private val shutdownHooks: ShutdownHooks = ShutdownHooks.Jvm,
 ) : Analytics, AutoCloseable {
     @Volatile private var delegate: Analytics = DisabledAnalytics
     private var managed: ManagedAnalytics? = null
-    private var sessionHook: AutoCloseable? = null
     private var closed = false
+    /** The crash of the previous app session, until the first session of the process counts it. */
+    private var pendingCrash: AnalyticsCrash? = null
     @Volatile private var lastTab = AnalyticsEvent.TabShown(null, byUser = false)
     @Volatile private var lastWindow = AnalyticsEvent.WindowActive(false)
     @Volatile private var lastSettings: AnalyticsEvent.Settings? = null
@@ -57,9 +44,13 @@ class AnalyticsController(
         runCatching { delegate.record(event) }
     }
 
-    /** App start: starts the session with the saved level. The choice [AnalyticsPreferences.Choice.OFF] starts nothing. */
+    /**
+     * App start: starts the session with the saved level. The choice [AnalyticsPreferences.Choice.OFF] starts nothing.
+     * [previousCrash] is the crash of the previous app session, or null after a normal exit.
+     */
     @Synchronized
-    fun start() {
+    fun start(previousCrash: AnalyticsCrash? = null) {
+        pendingCrash = previousCrash
         preferences.resolve().level?.let(::startSession)
     }
 
@@ -77,13 +68,9 @@ class AnalyticsController(
     private fun startSession(level: AnalyticsLevel) {
         val enabled = config as? AnalyticsBuildConfig.Enabled ?: return
         if (managed != null || closed) return
-        val start = runCatching { preferences.startSession() }.getOrNull() ?: return
-        val created = runCatching { sessionFactory(enabled, start, level) }.getOrNull()
-        if (created == null) {
-            runCatching { preferences.endSession() }
-            return
-        }
-        sessionHook = runCatching { shutdownHooks.add { preferences.endSession() } }.getOrNull()
+        val start = runCatching { preferences.startSession(pendingCrash) }.getOrNull() ?: return
+        val created = runCatching { sessionFactory(enabled, start, level) }.getOrNull() ?: return
+        pendingCrash = null
         managed = created
         runCatching { created.record(lastTab) }
         runCatching { created.record(lastWindow) }
@@ -102,12 +89,9 @@ class AnalyticsController(
     private fun stopSession() {
         if (managed == null) return
         stopDelivery()
-        runCatching { sessionHook?.close() }
-        sessionHook = null
-        runCatching { preferences.endSession() }
     }
 
-    /** App shutdown. Stops delivery and keeps the saved choice. The shutdown hook ends the session. */
+    /** App shutdown. Stops delivery and keeps the saved choice. */
     @Synchronized
     override fun close() {
         closed = true

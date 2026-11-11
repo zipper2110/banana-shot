@@ -645,6 +645,16 @@
     ranked($('export-res'), list(RESOLUTIONS, 'c1'), { emptyText: 'No exports in this period.' });
   }
 
+  /** B-67: the crash keys (`crash_<kind>`, `crash_lib_<library>`, `crash_at_<activity>`) as three ranked lists. */
+  function renderCrashes(crashes) {
+    const group = (prefix, exclude) => crashes
+      .filter(row => row.key.startsWith(prefix) && !exclude.some(other => row.key.startsWith(other)))
+      .map(row => ({ name: row.key.slice(prefix.length).replace('_', ' '), value: row.sessions, cls: 'crit' }));
+    ranked($('crash-kinds'), group('crash_', ['crash_lib_', 'crash_at_']), { emptyText: 'No crash with a type in this period.' });
+    ranked($('crash-libraries'), group('crash_lib_', []), { emptyText: 'No crash file in this period.' });
+    ranked($('crash-activities'), group('crash_at_', []), { emptyText: 'No crash with an activity in this period.' });
+  }
+
   function renderErrors(data) {
     if (data.app.ok) {
       window.Charts.columns($('errors-daily'), {
@@ -656,8 +666,10 @@
           { key: 'exports_failed', label: 'Export failed', color: 4 },
         ],
       });
+      renderCrashes(data.app.data.crashes || []);
     } else {
       sourceError($('errors-daily'), data.app.error);
+      for (const id of ['crash-kinds', 'crash-libraries', 'crash-activities']) sourceError($(id), data.app.error);
     }
 
     if (data.feedback.ok) {

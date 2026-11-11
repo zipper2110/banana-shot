@@ -56,8 +56,18 @@ FROM analytics_session WHERE ${IN_PERIOD}`;
 const COUNTERS = `SELECT c.key AS key, COUNT(*) AS sessions, SUM(c.value) AS total
 FROM analytics_session, json_each(analytics_session.counters) AS c
 WHERE ${IN_PERIOD} AND level = 'extended'
-  AND c.key NOT LIKE 'session\\_n\\_%' ESCAPE '\\' AND c.key NOT IN ('unclean_exit', 'uncaught_error')
+  AND c.key NOT LIKE 'session\\_n\\_%' ESCAPE '\\' AND c.key NOT LIKE 'crash\\_%' ESCAPE '\\'
+  AND c.key NOT IN ('unclean_exit', 'uncaught_error')
 GROUP BY c.key ORDER BY c.key`;
+
+/**
+ * B-67: the crash keys of all sessions (essential and extended): the type (`crash_<kind>`), the library
+ * (`crash_lib_<library>`), and the activity (`crash_at_<activity>`) of the crash of the previous session.
+ */
+const CRASHES = `SELECT c.key AS key, COUNT(*) AS sessions
+FROM analytics_session, json_each(analytics_session.counters) AS c
+WHERE ${IN_PERIOD} AND c.key LIKE 'crash\\_%' ESCAPE '\\'
+GROUP BY c.key ORDER BY sessions DESC, c.key`;
 
 /**
  * The session attributes (B-44) of the extended sessions. Only schema 3 and later summaries have them.
@@ -104,8 +114,10 @@ export interface AppUsage {
   versions: { version: string; sessions: number; first_sessions: number; unclean_exits: number; uncaught_errors: number; last_seen: number }[];
   osFamilies: { name: string; sessions: number }[];
   sessionShape: Record<string, number | null>;
-  /** Counter key -> sessions that used it and the total. Only the extended sessions. */
+  /** Counter key -> sessions that used it and the total. Only the extended sessions. No crash keys. */
   counters: { key: string; sessions: number; total: number }[];
+  /** B-67: crash key -> sessions with it. All sessions. */
+  crashes: { key: string; sessions: number }[];
   /** Attribute key and value -> extended sessions. An array value is its JSON text, for example '["padel","tennis"]'. */
   attributes: { key: string; value: string; sessions: number }[];
   encoders: { encoder: string; started: number; completed: number; failed: number; cancelled: number; interrupted: number; speed: number | null }[];
@@ -145,12 +157,13 @@ export async function loadAppUsage(env: Env, period: Period, includeDev: boolean
   const after = (time: number) => Math.max(time, floor);
   const from = after(Math.min(period.prevStart, period.weeksStart));
   const start = after(period.start);
-  const [dailyRows, versions, osFamilies, shape, counters, attributes, languageRows, retention] = await Promise.all([
+  const [dailyRows, versions, osFamilies, shape, counters, crashes, attributes, languageRows, retention] = await Promise.all([
     db.prepare(DAILY).bind(dev, from, period.end).all<DailyRow>(),
     db.prepare(VERSIONS).bind(dev, start, period.end).all<AppUsage['versions'][number]>(),
     db.prepare(OS_FAMILIES).bind(dev, start, period.end).all<AppUsage['osFamilies'][number]>(),
     db.prepare(SESSION_SHAPE).bind(dev, start, period.end).first<Record<string, number | null>>(),
     db.prepare(COUNTERS).bind(dev, start, period.end).all<AppUsage['counters'][number]>(),
+    db.prepare(CRASHES).bind(dev, start, period.end).all<AppUsage['crashes'][number]>(),
     db.prepare(ATTRIBUTES).bind(dev, start, period.end).all<AppUsage['attributes'][number]>(),
     db.prepare(LANGUAGES).bind(dev, after(Math.min(period.start, period.weeksStart)), period.end).all<LanguageDayRow>(),
     db.prepare(RETENTION).first<{ ran_at: number; deleted_count: number; oldest_received_at: number | null }>(),
@@ -177,6 +190,7 @@ export async function loadAppUsage(env: Env, period: Period, includeDev: boolean
     osFamilies: osFamilies.results,
     sessionShape: shape ?? {},
     counters: counters.results,
+    crashes: crashes.results,
     attributes: attributes.results,
     encoders: encoderTable(counters.results),
     languages: languageTables(languageRows.results, period),

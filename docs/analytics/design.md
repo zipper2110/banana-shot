@@ -29,7 +29,7 @@ cannot decide the direction of the app.
 
 | Level | When | Counters |
 |---|---|---|
-| `essential` | On by default, from the app start. The user can turn it off. | `unclean_exit`, `uncaught_error`, `session_n_<bucket>`, and the attributes `language` and `os_language` (since schema 4, B-11 E2) |
+| `essential` | On by default, from the app start. The user can turn it off. | `unclean_exit`, `uncaught_error`, `session_n_<bucket>`, the crash keys (`crash_*`, B-67), and the attributes `language` and `os_language` (since schema 4, B-11 E2) |
 | `extended` | Only when the user selects it. It needs the essential level. | All counter keys, and the attributes (see "Attributes") |
 | (off) | Only when the user turns off the essential level. | Nothing is sent. |
 
@@ -229,14 +229,23 @@ loses all of its sessions.
 
 | Key | Meaning |
 |---|---|
-| `unclean_exit` | 1 if the previous analytics session on this install did not close normally. |
+| `unclean_exit` | 1 if the previous app session on this install did not close normally. |
 | `uncaught_error` | Uncaught exceptions in this session. The app sends only the count, not the exception. |
 | `session_n_<bucket>` | Always 1. `<bucket>` is the number of this analytics session on this install: `1`, `2_5`, `6_20`, `21p`. |
+| `crash_<kind>` | 1 with `unclean_exit`. `<kind>`: `native`, `memory`, `freeze`, `unknown` (B-67). |
+| `crash_lib_<library>` | 1 if the JVM crash file names the crashed library. `<library>`: `corevideo`, `graphics`, `mpv`, `ffmpeg`, `jvm`, `system`, `other`. |
+| `crash_at_<activity>` | 1 for each activity at the crash. `<activity>`: `export`, `playback`, `sleep_wake`, `idle`. |
 
-- `unclean_exit`: at session start, the app sets a flag in Preferences. A JVM
-  shutdown hook clears it. A shutdown hook runs at a normal
-  exit and at a Windows logoff. It does not run at a JVM crash or a kill. At
-  the next session start, a set flag gives `unclean_exit = 1`.
+- `unclean_exit` and the crash keys: since B-67, the crash marker of the app
+  (`docs/crashes/b-67-crash-evidence.md`) finds an unclean exit, also when
+  analytics was off in the previous session. At the app start, the marker
+  file in the app data folder gets the state "open". A JVM shutdown hook
+  writes the state "closed". A shutdown hook runs at a normal exit and at a
+  Windows logoff. It does not run at a JVM crash or a kill. Only the first
+  analytics session of the process counts the crash. The crash keys are
+  values of closed lists, never a text of the crash.
+- Before B-67, the flag `analytics.sessionOpen` in Preferences gave
+  `unclean_exit`. The app now removes this flag.
 - `session_n_<bucket>`: the app keeps a session count in Preferences. It
   increases the count at each session start. Without an install ID, session
   rows cannot tell one user with 10 sessions from 10 users with 1 session.
@@ -468,7 +477,7 @@ CREATE TABLE analytics_session (
   them with `npm run query -- queries/<name>.sql` in `analytics-worker`. There is
   no dashboard. Exclude `app_version = 'synthetic-smoke'`.
 - The queries do not use `final = 0` as a crash count. They use
-  `unclean_exit`.
+  `unclean_exit`. The cockpit shows the crash keys (B-67) in "Errors".
 
 ## Privacy notice
 

@@ -49,7 +49,14 @@ for (let day = today - 89 * DAY; day <= today; day += DAY) {
     const first = chance(sinceRelease < 7 ? 0.5 : 0.22);
     const counters = {};
     counters[first ? 'session_n_1' : pick(['session_n_2_5', 'session_n_2_5', 'session_n_6_20', 'session_n_21p'])] = 1;
-    if (chance(version === '1.0.0' ? 0.04 : 0.015)) counters.unclean_exit = 1;
+    if (chance(version === '1.0.0' ? 0.04 : 0.015)) {
+      counters.unclean_exit = 1;
+      // B-67: the type, the library, and the activity of the crash.
+      const kind = pick(['native', 'native', 'native', 'freeze', 'unknown']);
+      counters[`crash_${kind}`] = 1;
+      if (kind === 'native') counters[`crash_lib_${pick(['corevideo', 'corevideo', 'graphics', 'mpv', 'jvm'])}`] = 1;
+      counters[`crash_at_${pick(['playback', 'sleep_wake', 'export', 'idle'])}`] = 1;
+    }
     if (chance(0.02)) counters.uncaught_error = int(1, 2);
     const active = Math.round(Math.exp(random() * 8.6));
     if (level === 'extended') {

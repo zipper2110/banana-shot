@@ -46,21 +46,22 @@ class AnalyticsPreferencesTest {
     }
 
     @Test
-    fun `each session start increases the count, and a session that did not end gives an unclean exit`() = withPreferences { node ->
+    fun `each session start increases the count and keeps the crash of the previous app session`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
-        assertEquals(AnalyticsPreferences.SessionStart(1, uncleanExit = false), preferences.startSession())
-        assertEquals(AnalyticsPreferences.SessionStart(2, uncleanExit = true), preferences.startSession())
-        preferences.endSession()
-        assertEquals(AnalyticsPreferences.SessionStart(3, uncleanExit = false), preferences.startSession())
+        val crash = AnalyticsCrash(AnalyticsCrash.Kind.NATIVE, AnalyticsCrash.Library.MPV, emptySet())
+        assertEquals(AnalyticsPreferences.SessionStart(1), preferences.startSession())
+        assertEquals(AnalyticsPreferences.SessionStart(2, crash), preferences.startSession(crash))
+        assertEquals(AnalyticsPreferences.SessionStart(3), preferences.startSession())
     }
 
     @Test
-    fun `stores only the choice, the count, and the flag`() = withPreferences { node ->
+    fun `stores only the choice and the count, and removes the old open-session flag`() = withPreferences { node ->
         val preferences = AnalyticsPreferences(node)
+        node.putBoolean("analytics.sessionOpen", true)
         preferences.record(AnalyticsPreferences.Choice.EXTENDED)
         preferences.startSession()
         assertEquals(
-            setOf("analytics.choice", "analytics.noticeVersion", "analytics.decidedAt", "analytics.sessionCount", "analytics.sessionOpen"),
+            setOf("analytics.choice", "analytics.noticeVersion", "analytics.decidedAt", "analytics.sessionCount"),
             node.keys().toSet(),
         )
     }

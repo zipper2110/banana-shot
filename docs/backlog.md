@@ -409,3 +409,16 @@ write the reason.
   features, so an export limit changes that promise.
 - Done when: the user can buy the paid version, and the paid features work
   only with a valid subscription or license.
+
+### B-67 Crash evidence
+
+- Added on 2026-11-11.
+- A crash now gives only a count in the cockpit. A native crash shows no
+  popup, and the next start shows nothing.
+- Keep the JVM crash file and the log end on the computer. Show a popup at
+  the next start that opens the feedback form. Send the crash type, library,
+  and activity as essential counters.
+- The plan, the decisions, and the status are in
+  `docs/crashes/b-67-crash-evidence.md`.
+- Done when: after a native crash, the next start shows the popup, the report
+  has the crash stack, and the cockpit shows the crash type.

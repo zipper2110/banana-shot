@@ -6,6 +6,9 @@ Update for the language attributes (B-11 E2, task E2-T8): draft by Claude,
 2026-10-19. Reviewed and approved by the author, 2026-10-29. The two
 attributes are on the essential level.
 
+Update for the crash keys (B-67): draft by Claude, 2026-11-11. Not reviewed
+yet. The author must review it before the app release with the crash keys.
+
 This assessment covers only the essential level of the usage statistics
 (`docs/analytics/design.md`, "Levels"). The extended level uses consent
 (GDPR Article 6(1)(a)), so it needs no assessment. Review this file when an
@@ -19,14 +22,21 @@ essential key, the retention, or the processor changes.
   the level, the app version, the OS family, the summary number, the final
   flag, the session length, the active time, the notice version, and the
   counters `unclean_exit`, `uncaught_error`, and `session_n_<bucket>`.
+- Since B-67: the crash keys `crash_<kind>`, `crash_lib_<library>`, and
+  `crash_at_<activity>`. Each is a value of a closed list: 4 types, 7
+  libraries, and 4 activities. The app never sends a text of the crash.
 - Since schema 4 (B-11 E2): the attributes `language` (the language of the
   app interface) and `os_language` (the Windows display language). Each is
   one code from a fixed list of about 40 primary language subtags, or
   `other`. Never a region or a full locale.
 - Data that Cloudflare receives for the delivery: the IP address. The Worker
   does not store it. The rate limit keeps a keyed hash of it for one hour.
-- Data on the device: the session count and the open-session flag in the
-  Java preferences. They give `session_n_<bucket>` and `unclean_exit`.
+- Data on the device: the session count in the Java preferences gives
+  `session_n_<bucket>`. The session marker file in the app data folder
+  (B-67) gives `unclean_exit` and the crash keys. The crash folder in the
+  log folder keeps the safe part of the last 5 JVM crash files. These files
+  stay on the device. Only a feedback report that the user sends contains
+  them.
 - Retention: 90 days after the last summary of a session.
 
 ## 1. Purpose test
@@ -117,6 +127,21 @@ Safeguards:
   not show a language combined with an app version.
 - The notice version increases from 2 to 3. The first-start dialog shows
   again, and it names the two languages under the essential level.
+
+The crash keys (B-67):
+
+- Purpose: the same interest as `unclean_exit` ("if a new version crashes").
+  A count without a cause does not tell the author what to fix. The type,
+  the library, and the activity tell where to look.
+- Necessity: feedback reports are rare, and a user who turned off the
+  statistics usually does not send a report. The keys are the minimum: no
+  stack, no file name, no fingerprint, and no time. A fingerprint of the
+  stack is not a value of a closed list, so it is not in the essential level.
+- Balance: the keys add 15 values of closed lists to a session that already
+  has `unclean_exit`. They do not identify a person, and they do not link two
+  sessions. The notice version does not change, because the keys tell the
+  same type of data as `unclean_exit`: if and how the app crashed. The site
+  notice lists the keys.
 
 Result: the interest of the author is not overridden by the interests or
 rights of the users, with the safeguards above.

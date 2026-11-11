@@ -2,6 +2,8 @@ package org.litvin
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.export.ExportFailureAdvice
+import org.litvin.shared.util.AppActivities
+import org.litvin.shared.util.AppActivity
 import org.litvin.export.RenderFailReason
 import org.litvin.export.RenderRequestCoordinator
 import org.litvin.export.RenderRunFacts
@@ -150,6 +152,8 @@ object RenderQueueManager {
     private fun startRun(job: RenderJob) {
         val record = RunRecord(RenderRunFacts.of(job), System.nanoTime())
         runs[job.id] = record
+        // The crash marker keeps the export as an activity (B-67).
+        AppActivities.set(AppActivity.EXPORT, job.id, true)
         try {
             runListener?.started(record.facts)
         } catch (failure: Throwable) {
@@ -163,6 +167,7 @@ object RenderQueueManager {
 
     private fun endRun(job: RenderJob) {
         val record = runs.remove(job.id) ?: return
+        AppActivities.set(AppActivity.EXPORT, job.id, false)
         val result = when (job.status) {
             RenderStatus.COMPLETED -> RenderRunResult.Completed((System.nanoTime() - record.startedAtNanos) / 1_000_000, record.videoMs)
             RenderStatus.CANCELED -> RenderRunResult.Canceled

@@ -37,6 +37,7 @@ import org.litvin.ui.commons.VideoErrorPanel
 import org.litvin.ui.commons.UserDialogService
 import org.litvin.analytics.AnalyticsBuildConfig
 import org.litvin.analytics.AnalyticsController
+import org.litvin.analytics.AnalyticsCrash
 import org.litvin.analytics.AnalyticsEvent
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.I18n
@@ -70,6 +71,8 @@ internal data class AppServicesProductionFactory(
     },
     val encoderCapabilities: () -> EncoderCapabilities = EncoderCapabilities::production,
     val feedbackSender: () -> FeedbackSender? = ::productionFeedbackSender,
+    /** The crash of the previous app session (B-67). The first analytics session counts it. */
+    val previousCrash: AnalyticsCrash? = null,
     val afterConstruction: (AppServices) -> Unit = { },
 )
 
@@ -126,7 +129,8 @@ data class AppServices(
     }
 
     companion object {
-        fun production(): AppServices = production(AppServicesProductionFactory())
+        fun production(previousCrash: AnalyticsCrash? = null): AppServices =
+            production(AppServicesProductionFactory(previousCrash = previousCrash))
 
         internal fun production(factory: AppServicesProductionFactory): AppServices {
             val constructedResources = mutableListOf<AutoCloseable>()
@@ -153,7 +157,8 @@ data class AppServices(
                     AnalyticsPreferences(preferences.node(PreferencesProvider.ANALYTICS))
                 } else null
                 val analyticsController = analyticsPreferences?.let { preferencesForAnalytics ->
-                    construct { productionAnalyticsController(analyticsConfig, preferencesForAnalytics) }.also { it.start() }
+                    construct { productionAnalyticsController(analyticsConfig, preferencesForAnalytics) }
+                        .also { it.start(factory.previousCrash) }
                 }
                 val services = AppServices(
                     paths = paths,

@@ -88,7 +88,7 @@
         <ul>
           <li>A range for the number of sessions on this computer (1, 2 to 5, 6 to 20, or more than 20). Thus we can tell new users from users who come back, without a user ID.</li>
           <li>Errors that the app did not expect. The app sends only the number, not the error.</li>
-          <li>If the previous session did not close normally.</li>
+          <li>If the previous session did not close normally. Then also: the type of the problem (a crash of the app, a crash because of no memory, a frozen window, or not known), the part of the app or the system where the crash happened (for example the video player, the graphics driver, or Java), and what the app did at that time (an export, a video playback, a sleep of the computer, or nothing). Each is a value from a fixed list. The app never sends the text of the crash.</li>
         </ul>
       </li>
     </ul>
@@ -141,7 +141,7 @@
       <li>The language of the app and the display language of the operating system, as language codes from the fixed list of the usage statistics. Thus the author can answer in your language. You can write in any language.</li>
       <li>Your email address, only if you give it. The author can reply only to this address. The app keeps it on your computer for the next report. You can delete it in the form.</li>
       <li>The text of the error message, only if you open the form from an error message. You can remove it before you send.</li>
-      <li>The last 2 MB of the log files of the app, only if you select "Attach the log files". The log files contain the names and folders of your videos and projects. They do not contain your videos. Before you send, "Show the data" shows the exact data that the app sends.</li>
+      <li>The last 2 MB of the log files of the app, only if you select "Attach the log files". The log files contain the names and folders of your videos and projects. They do not contain your videos. After a crash, the log files also contain a part of the crash file of Java: the stack of the crashed thread, the computer model, and the version of the operating system. The app removes the environment variables, the command line, and the memory content from this part. Before you send, "Show the data" shows the exact data that the app sends.</li>
     </ul>
     <p>A message from the form on the site contains only the topic, your message, your email address (only if you give it), and a random report ID. It contains no app data, no error text, and no log files. The site does not keep your email address.</p>
 

@@ -139,6 +139,27 @@ describe('app usage', () => {
     expect(usage.totals).toMatchObject({ exports_started: 2, exports_completed: 1, exports_failed: 1, unclean_exits: 1 });
     expect(usage.sessionShape).toMatchObject({ sessions: 3, extended_sessions: 2 });
   });
+
+  it('counts the crash keys of all sessions and keeps them out of the feature counters (B-67)', async () => {
+    const env = makeEnv();
+    addSession(env, { receivedAt: at('2026-10-06'), level: 'essential', counters: {
+      unclean_exit: 1, crash_native: 1, crash_lib_corevideo: 1, crash_at_sleep_wake: 1,
+    } });
+    addSession(env, { receivedAt: at('2026-10-06'), counters: {
+      unclean_exit: 1, crash_native: 1, crash_lib_corevideo: 1, crash_at_playback: 1, point_added: 2,
+    } });
+    addSession(env, { receivedAt: at('2026-10-06'), counters: { unclean_exit: 1, crash_unknown: 1, crash_at_idle: 1 } });
+
+    const usage = await loadAppUsage(env, makePeriod(7, NOW), false);
+
+    expect(usage.crashes.slice(0, 2)).toEqual([
+      { key: 'crash_lib_corevideo', sessions: 2 },
+      { key: 'crash_native', sessions: 2 },
+    ]);
+    expect(usage.crashes.find(row => row.key === 'crash_at_sleep_wake')).toEqual({ key: 'crash_at_sleep_wake', sessions: 1 });
+    expect(usage.crashes).toHaveLength(6);
+    expect(usage.counters.some(row => row.key.startsWith('crash_'))).toBe(false);
+  });
 });
 
 describe('app usage attributes', () => {

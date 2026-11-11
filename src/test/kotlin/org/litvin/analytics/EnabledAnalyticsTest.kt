@@ -49,8 +49,28 @@ class EnabledAnalyticsTest {
 
     @Test
     fun `counts an unclean exit of the previous session and uses the session bucket`() {
-        start(AnalyticsPreferences.SessionStart(number = 7, uncleanExit = true))
-        assertEquals(mapOf("session_n_6_20" to 1, "unclean_exit" to 1), counters(transport.next()))
+        start(AnalyticsPreferences.SessionStart(number = 7, crash = AnalyticsCrash(AnalyticsCrash.Kind.UNKNOWN, null, emptySet())))
+        assertEquals(
+            mapOf("session_n_6_20" to 1, "unclean_exit" to 1, "crash_unknown" to 1, "crash_at_idle" to 1),
+            counters(transport.next()),
+        )
+    }
+
+    @Test
+    fun `counts the crash type, the library, and each activity of the previous session on the essential level`() {
+        val crash = AnalyticsCrash(
+            AnalyticsCrash.Kind.NATIVE,
+            AnalyticsCrash.Library.COREVIDEO,
+            setOf(AnalyticsCrash.Activity.SLEEP_WAKE, AnalyticsCrash.Activity.PLAYBACK),
+        )
+        start(AnalyticsPreferences.SessionStart(number = 1, crash = crash), level = AnalyticsLevel.ESSENTIAL)
+        assertEquals(
+            mapOf(
+                "session_n_1" to 1, "unclean_exit" to 1, "crash_native" to 1, "crash_lib_corevideo" to 1,
+                "crash_at_playback" to 1, "crash_at_sleep_wake" to 1,
+            ),
+            counters(transport.next()),
+        )
     }
 
     @Test
@@ -180,10 +200,10 @@ class EnabledAnalyticsTest {
 
     @Test
     fun `the essential level sends only the essential keys, the session length, and the active time`() {
-        val session = start(AnalyticsPreferences.SessionStart(number = 3, uncleanExit = true), level = AnalyticsLevel.ESSENTIAL)
+        val session = start(AnalyticsPreferences.SessionStart(number = 3, crash = AnalyticsCrash(AnalyticsCrash.Kind.UNKNOWN, null, emptySet())), level = AnalyticsLevel.ESSENTIAL)
         val first = transport.next()
         assertEquals("essential", first["level"].textValue())
-        assertEquals(mapOf("session_n_2_5" to 1, "unclean_exit" to 1), counters(first))
+        assertEquals(mapOf("session_n_2_5" to 1, "unclean_exit" to 1, "crash_unknown" to 1, "crash_at_idle" to 1), counters(first))
 
         session.record(AnalyticsEvent.TabShown(AnalyticsEvent.Tab.POINTS, byUser = true))
         session.record(AnalyticsEvent.WindowActive(true))
@@ -196,7 +216,10 @@ class EnabledAnalyticsTest {
 
         val summary = transport.next()
         assertEquals(30, summary["active_s"].intValue())
-        assertEquals(mapOf("session_n_2_5" to 1, "unclean_exit" to 1, "uncaught_error" to 1), counters(summary))
+        assertEquals(
+            mapOf("session_n_2_5" to 1, "unclean_exit" to 1, "crash_unknown" to 1, "crash_at_idle" to 1, "uncaught_error" to 1),
+            counters(summary),
+        )
     }
 
     @Test
@@ -400,7 +423,7 @@ class EnabledAnalyticsTest {
     }
 
     private fun start(
-        sessionStart: AnalyticsPreferences.SessionStart = AnalyticsPreferences.SessionStart(1, uncleanExit = false),
+        sessionStart: AnalyticsPreferences.SessionStart = AnalyticsPreferences.SessionStart(1),
         finalSendLimit: Duration = Duration.ofSeconds(2),
         level: AnalyticsLevel = AnalyticsLevel.EXTENDED,
     ): EnabledAnalytics = EnabledAnalytics(

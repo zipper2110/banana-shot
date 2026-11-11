@@ -29,6 +29,22 @@ object AnalyticsSchema {
         add(UNCLEAN_EXIT)
         add(UNCAUGHT_ERROR)
         listOf("1", "2_5", "6_20", "21p").forEach { add("session_n_$it") }
+        // The crash of the previous session (B-67).
+        AnalyticsCrash.Kind.entries.forEach { add(crashKind(it)) }
+        AnalyticsCrash.Library.entries.forEach { add(crashLibrary(it)) }
+        AnalyticsCrash.Activity.entries.forEach { add(crashActivity(it)) }
+    }
+
+    fun crashKind(kind: AnalyticsCrash.Kind) = "crash_${kind.key}"
+    fun crashLibrary(library: AnalyticsCrash.Library) = "crash_lib_${library.key}"
+    fun crashActivity(activity: AnalyticsCrash.Activity) = "crash_at_${activity.key}"
+
+    /** The counter keys of [crash]: the kind, the library (if known), and each activity, or `idle`. */
+    fun crashKeys(crash: AnalyticsCrash): List<String> = buildList {
+        add(crashKind(crash.kind))
+        crash.library?.let { add(crashLibrary(it)) }
+        val activities = crash.activities.ifEmpty { setOf(AnalyticsCrash.Activity.IDLE) }
+        activities.sortedBy { it.ordinal }.forEach { add(crashActivity(it)) }
     }
 
     val COUNTER_KEYS: Set<String> = buildSet {

@@ -57,6 +57,7 @@ internal class EnabledAnalytics(
     init {
         count(AnalyticsSchema.sessionBucket(start.number))
         if (start.uncleanExit) count(AnalyticsSchema.UNCLEAN_EXIT)
+        start.crash?.let { crash -> AnalyticsSchema.crashKeys(crash).forEach { count(it) } }
         sendSummary(final = false)
         val intervalMs = sendInterval.toMillis()
         executor.scheduleWithFixedDelay({ runCatching { sendIfChanged() } }, intervalMs, intervalMs, TimeUnit.MILLISECONDS)

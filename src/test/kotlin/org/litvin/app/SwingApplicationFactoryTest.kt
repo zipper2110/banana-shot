@@ -345,7 +345,7 @@ class SwingApplicationFactoryTest {
                 osFamily = "windows",
             )
             val preferences = AnalyticsPreferences(MemoryPreferences())
-            return AnalyticsController(config, preferences, { _, _, _ -> this }, { AutoCloseable {} }).apply { start(); choose(AnalyticsPreferences.Choice.EXTENDED) }
+            return AnalyticsController(config, preferences, { _, _, _ -> this }).apply { start(); choose(AnalyticsPreferences.Choice.EXTENDED) }
         }
 
         override fun record(event: AnalyticsEvent) { recorded += event }

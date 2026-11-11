@@ -23,6 +23,8 @@ import org.litvin.media.SwingMediaPlayer
 import org.litvin.media.VideoErrorViewFactory
 import org.litvin.media.VideoOverlay
 import org.litvin.media.VideoProblem
+import org.litvin.shared.util.AppActivities
+import org.litvin.shared.util.AppActivity
 import java.awt.Canvas
 import java.awt.CardLayout
 import java.awt.Color
@@ -338,6 +340,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
 
     private fun destroyCore(reason: String) {
         releaseActive()
+        AppActivities.set(AppActivity.PLAYBACK, this, false)
         val old = core ?: return
         core = null
         // The counts belong to a loaded file.
@@ -967,6 +970,8 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
 
     private fun setStatus(status: PlayerStatus) {
         lastStatus = status
+        // The crash marker keeps the playback as an activity (B-67).
+        AppActivities.set(AppActivity.PLAYBACK, this, status == PlayerStatus.PLAYING)
         onStatusChanged?.invoke(status)
     }
 

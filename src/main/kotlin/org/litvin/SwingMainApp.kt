@@ -8,6 +8,7 @@ import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.LanguageSettings
 import org.litvin.i18n.Messages
 import org.litvin.app.AppServices
+import org.litvin.app.CrashReporting
 import org.litvin.app.WindowSize
 import org.litvin.app.InstanceLock
 import org.litvin.app.MacIntegration
@@ -67,7 +68,7 @@ object SwingMainApp {
         }
         logger.info {
             "${AppInfo.NAME} ${AppInfo.version} started on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, " +
-                "Java ${System.getProperty("java.version")}."
+                "Java ${System.getProperty("java.version")}, pid ${ProcessHandle.current().pid()}."
         }
         // The bundled scoreboard fonts (B-13, step 10): Java measures with them, and libass and mpv read the folder.
         org.litvin.shared.util.BundledFonts.registerInJava()
@@ -107,9 +108,11 @@ object SwingMainApp {
         if (!takeInstanceLock(AppRestart.isRestart(args))) {
             kotlin.system.exitProcess(0)
         }
+        // The crash marker comes after the lock: two instances must not write the same marker (B-67).
+        val previousCrash = CrashReporting.start()
 
         val services = try {
-            AppServices.production()
+            AppServices.production(CrashReporting.analyticsCrash(previousCrash))
         } catch (failure: Throwable) {
             logger.error(failure) { "Application startup failed." }
             SwingUserDialogService().showError(null, failure.message ?: failure.toString(), STARTUP_ERROR)
@@ -149,6 +152,12 @@ object SwingMainApp {
                     services = services,
                     onWindowClosed = { kotlin.system.exitProcess(0) },
                 )
+                CrashReporting.startWatchdog()
+                // After the other start dialogs of this event: the popup of a crash of the previous session (B-67).
+                val created = handle
+                EventQueue.invokeLater {
+                    CrashReporting.showPopup(previousCrash, created?.frame, services.dialogs, created?.reportProblem)
+                }
             } catch (failure: Throwable) {
                 logger.error(failure) { "Application startup failed." }
                 services.dialogs.showError(null, failure.message ?: failure.toString(), STARTUP_ERROR)

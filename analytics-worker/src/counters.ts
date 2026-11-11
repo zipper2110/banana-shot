@@ -9,9 +9,16 @@ const EXPORT_RESULTS = ['started', 'completed', 'failed', 'cancelled', 'interrup
 const FAIL_REASONS = ['source_missing', 'output_write', 'process_start', 'ffmpeg_exit', 'other'];
 const EXPORT_OPTIONS = ['scoreboard', 'comments', 'stats_card', 'favorites_only', 'idle_trim'];
 const RESOLUTIONS = ['720', '1080', '1440', '2160', 'other'];
+// The crash of the previous app session (B-67, docs/crashes/b-67-crash-evidence.md).
+export const CRASH_KINDS = ['native', 'memory', 'freeze', 'unknown'];
+export const CRASH_LIBRARIES = ['corevideo', 'graphics', 'mpv', 'ffmpeg', 'jvm', 'system', 'other'];
+export const CRASH_ACTIVITIES = ['export', 'playback', 'sleep_wake', 'idle'];
 
 export const ESSENTIAL_COUNTER_KEYS: ReadonlySet<string> = new Set([
   'unclean_exit', 'uncaught_error', 'session_n_1', 'session_n_2_5', 'session_n_6_20', 'session_n_21p',
+  ...CRASH_KINDS.map(kind => `crash_${kind}`),
+  ...CRASH_LIBRARIES.map(library => `crash_lib_${library}`),
+  ...CRASH_ACTIVITIES.map(activity => `crash_at_${activity}`),
 ]);
 
 export const COUNTER_KEYS: ReadonlySet<string> = new Set([

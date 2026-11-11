@@ -154,6 +154,11 @@
     <div class="card-head"><h3>Errors per day</h3><p class="hint">A crash shows on the day of the next start of the app. Failed video opens and failed exports come only from extended sessions.</p></div>
     <div class="chart" id="errors-daily"></div>
   </section>
+  <div class="grid three">
+    <section class="card"><div class="card-head"><h3>Crash type</h3><p class="hint">Native: the JVM wrote a crash file. Freeze: the UI did not answer at the end. Unknown: a kill, a force quit, or a power loss.</p></div><div id="crash-kinds"></div></section>
+    <section class="card"><div class="card-head"><h3>Crash library</h3><p class="hint">The library of the crashed frame. Only crashes with a crash file.</p></div><div id="crash-libraries"></div></section>
+    <section class="card"><div class="card-head"><h3>Crash activity</h3><p class="hint">What the app did at the crash. One crash can have more than one activity.</p></div><div id="crash-activities"></div></section>
+  </div>
   <div class="grid two">
     <section class="card"><div class="card-head"><h3>Errors in feedback reports</h3><p class="hint">The first line of the error that the user sent with "Report this problem".</p></div><div id="top-errors"></div></section>
     <section class="card"><div class="card-head"><h3>Workers</h3><p class="hint">Requests and exceptions of the Cloudflare Workers.</p></div><div id="workers"></div></section>

@@ -43,9 +43,35 @@ never shows. A final score block in the outro shows it.
 | Match card | yes | | Uses the thumbnail styles. The background is a still frame, a video fragment (dim or blurred), or a slow zoom over a frame. |
 | Text card | yes | yes | Background: a color, a still frame, or a video fragment, with dim and blur. |
 | Fragment of this match | yes | yes | For example a teaser of the favorite points. It needs no other file. |
+| Coming up | yes | | A fragment of this match with a text over it, for example "Coming up...". See below. |
 | Separate video clip | yes | yes | A video file of the user, for example a channel intro or a sponsor clip. |
 | Final score card | | yes | Uses the final scoreboard display, larger. |
 | Statistics card | | yes | Uses the existing statistics card. |
+
+### Coming up block
+
+A short fragment of the match that shows a good moment before the match
+starts. A text shows over it, by default "Coming up...". The user can
+repeat the block to show two or three moments.
+
+- Fragment: the user selects a point in the points list, or sets a start
+  and an end in the video. The user can trim the start and the end. The
+  default length is 3 to 6 s.
+- Suggested points: the app shows the points that are good teasers first.
+  For example the match point, the longest point, the set points and break
+  points that the player won (`PointStakes`), and the start of the longest
+  point run (`KeyPoints`).
+- Text: the user can change the text and its position. The text can have
+  placeholders. Examples: "Coming up...", "Watch this", "{player1} saves a
+  match point".
+- Second line (optional): the stake and the score at that moment, for
+  example "Match point · 6-4 5-4". The app takes it from the score of the
+  point.
+- No spoiler: by default the fragment stops before the end of the point,
+  and the scoreboard of the video does not show. Thus the teaser does not
+  tell the result. The user can turn this off.
+- Effects (optional): slow motion, and a freeze on the last frame while
+  the text stays. Dim and blur as on the other video backgrounds.
 
 ### Blocks use the project data
 
@@ -65,7 +91,7 @@ never shows. A final score block in the outro shows it.
   - Outro: the final score for 4 s, then the statistics for 6 s, when the
     project has a score.
 - Presets are start points that the user can then change: None, Simple,
-  Full (teaser and match card, final score and statistics), Short (for
+  Full (coming up, match card, final score and statistics), Short (for
   social media clips).
 - "Use as my default" keeps the user's own intro and outro for new
   projects, as the scoreboard style does (`ScoreboardStyleDefaults`).
@@ -80,6 +106,9 @@ never shows. A final score block in the outro shows it.
    The app gives no music library.
 3. Transitions: a short fade between the blocks and into the match is
    enough at first.
+4. Coming up: how long before the end of the point the fragment must stop
+   to keep the result secret. A fixed time (for example 1 s) is simple. The
+   time of the last shot is better, but the app does not mark it now.
 
 ## Technical notes
 
@@ -108,7 +137,8 @@ never shows. A final score block in the outro shows it.
 
 ### E2 Video fragments and presets
 
-- Video fragment backgrounds, the teaser block, the fades between blocks.
+- Video fragment backgrounds, the teaser block, the coming up block, the
+  fades between blocks.
 - The presets and "Use as my default".
 - Done when: the user can select a preset, change it, and keep it as the
   default for new projects.

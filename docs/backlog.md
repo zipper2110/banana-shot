@@ -9,6 +9,8 @@ When item is done, move it under
 When an item closes without the work, move it to `backlog-closed.md`, and
 write the reason.
 
+The work for the paid version is in `backlog-paid.md`.
+
 ### B-42 Manual checks after the first release
 
 - Moved from B-26 check 2 and E11-S2 (proxy) and from E11-S1 (sleep) on
@@ -385,30 +387,8 @@ write the reason.
 
 ### B-66 Milestone: paid version
 
-- Added on 2026-11-11. This is a milestone. It collects other items.
-- The site calls this version "Pro" (Pricing page, decision 32 of
-  `docs/site/b-10-tasks.md`). `docs/marketing/strategy.md` says: decide on
-  the Pro version only after the free version has steady users.
-- Price: a monthly subscription. The default price is $9 per month. The user
-  can change the price to any value. The minimum price is $3 or $5 (not
-  decided).
-- Option: a one-time payment for a lifetime license to the current version
-  and its features.
-- Features of the paid version:
-  - Short vertical videos with camera movement (see B-16).
-  - An intro and outro constructor (see B-15).
-  - Audio tracks: the user can add an audio track (for example music) to the
-    intro, the outro, and the main video.
-  - More styles for scoreboards and thumbnails, or a constructor for a
-    personal style.
-  - Maybe other features.
-  - Maybe more than 5 exported videos per month. Probably not.
-- Open questions: the minimum price; whether to offer the lifetime license;
-  which other features go in the paid version; whether the free version gets
-  an export limit. The Pricing page now says that the free version has all
-  features, so an export limit changes that promise.
-- Done when: the user can buy the paid version, and the paid features work
-  only with a valid subscription or license.
+- Moved to `backlog-paid.md` on 2026-11-12. All work for the paid version
+  is in that file.
 
 ### B-67 Crash evidence
 

@@ -3,6 +3,7 @@ package org.litvin.export.comments
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentPosition
 import org.litvin.points.CommentV1
+import org.litvin.shared.util.Edition
 import java.awt.geom.Rectangle2D
 import java.util.Locale
 import kotlin.test.Test
@@ -11,6 +12,17 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CommentAssTest {
+    /** Runs [block] in the paid version (docs/backlog-paid.md). */
+    private fun <T> paid(block: () -> T): T {
+        val old = System.getProperty(Edition.PROPERTY)
+        System.setProperty(Edition.PROPERTY, "true")
+        try {
+            return block()
+        } finally {
+            if (old == null) System.clearProperty(Edition.PROPERTY) else System.setProperty(Edition.PROPERTY, old)
+        }
+    }
+
     private fun comment(id: Int, startMs: Int, durationMs: Int, text: String = "Comment $id") =
         CommentV1(id = id, startMs = startMs, durationMs = durationMs, text = text, colorHex = "#22AAFF")
 
@@ -70,6 +82,73 @@ class CommentAssTest {
         val onNavy = CommentAss.events("whoops", "#102060", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.OUTLINE)
         assertTrue(onNavy[0].contains("\\3c&HFFFFFF&"), "A dark color gets a light outline: ${onNavy[0]}")
         assertTrue(onNavy[0].contains("\\shad0"), "A light outline has no shadow: ${onNavy[0]}")
+    }
+
+    @Test
+    fun plainIsOneTextEventWithNoOutlineAndNoShadow() {
+        val events = CommentAss.events("plain", "#F2E14B", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.PLAIN)
+        assertEquals(1, events.size)
+        assertTrue(events[0].contains("\\bord0\\shad0\\blur0"), events[0])
+        assertTrue(events[0].contains("\\1c&H4BE1F2&"), "The text has the comment color: ${events[0]}")
+    }
+
+    @Test
+    fun shadowIsABlurredBlackCopyBelowASharpText() {
+        val events = CommentAss.events("soft", "#F2E14B", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.SHADOW)
+        assertEquals(2, events.size)
+        assertTrue(events[0].contains("\\1c&H000000&") && events[0].contains("\\blur3.0"), "The shadow: ${events[0]}")
+        assertTrue(events[1].contains("\\bord0\\shad0\\blur0") && events[1].contains("\\1c&H4BE1F2&"), "The text: ${events[1]}")
+    }
+
+    @Test
+    fun glowHasTwoHalosAndALighterText() {
+        val events = paid { CommentAss.events("neon", "#FF0000", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.GLOW) }
+        assertEquals(4, events.size)
+        assertTrue(events[0].contains("\\3c&H000000&"), "The dark halo: ${events[0]}")
+        assertTrue(events[1].contains("\\3c&H0000FF&") && events[1].contains("\\blur10.0"), "The wide halo: ${events[1]}")
+        assertTrue(events[3].contains("\\1c&H6666FF&"), "The text is the comment color with 40% white: ${events[3]}")
+    }
+
+    @Test
+    fun captionIsCapitalsInABlackFontWithAThickOutline() {
+        val event = CommentAss.events("what a lob", "#FFFFFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CAPTION).single()
+        assertTrue(event.endsWith("WHAT A LOB"), event)
+        assertTrue(event.contains("\\fnArchivo Black") && event.contains("\\b0"), "A black font has no bold face: $event")
+        assertTrue(event.contains("\\bord8.0\\3c&H141414&"), "A light color gets a dark outline: $event")
+    }
+
+    @Test
+    fun lowerThirdIsADarkBoxWithAColorBarAndALeftAlignedWhiteText() {
+        val events = paid { CommentAss.events("Ana\nPoint 14", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.LOWER_THIRD) }
+        assertEquals(3, events.size)
+        assertTrue(events[0].contains("\\1c&H1A1614&"), "The dark box: ${events[0]}")
+        assertTrue(events[1].contains("\\1c&HFFAA22&"), "The bar has the comment color: ${events[1]}")
+        assertTrue(events[2].startsWith("{\\an1") && events[2].contains("\\1c&HFFFFFF&"), "The text: ${events[2]}")
+        val box = paid { CommentAss.placement("Ana\nPoint 14", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.LOWER_THIRD)!!.box }
+        val textX = Regex("""\\pos\(([0-9.]+),""").find(events[2])!!.groupValues[1].toDouble()
+        assertEquals(box.x + 10 + 30, textX, 0.6, "The text starts after the bar and the space")
+    }
+
+    @Test
+    fun bubbleHasAPointerBelowTheBoxAndAContrastingText() {
+        val path = CommentAss.bubblePath(200, 100, 20, 20)
+        assertTrue(path.contains("l 36 120"), "The tip of the pointer is 20 below the box, under 18% of the width: $path")
+        val events = paid { CommentAss.events("Nice", "#FFFFFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.BUBBLE) }
+        assertEquals(3, events.size)
+        assertTrue(events[1].contains("\\1c&HFFFFFF&"), "The bubble has the comment color: ${events[1]}")
+        assertTrue(events[2].contains("\\1c&H141414&"), "A white bubble has a dark text: ${events[2]}")
+    }
+
+    @Test
+    fun freeVersionDrawsThePaidStylesAsOutline() {
+        val paidStyles = listOf(CommentStyle.GLOW, CommentStyle.LOWER_THIRD, CommentStyle.BUBBLE)
+        assertEquals(paidStyles, CommentStyle.entries.filter { it.paid })
+        val outline = CommentAss.events("Nice", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.OUTLINE)
+        val outlineBox = CommentAss.placement("Nice", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.OUTLINE)!!.box
+        for (style in paidStyles) {
+            assertEquals(outline, CommentAss.events("Nice", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, style), "$style")
+            assertEquals(outlineBox, CommentAss.placement("Nice", 0.0, 0.0, 1920.0, 1080.0, style)!!.box, "$style")
+        }
     }
 
     @Test

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.JsonFileIO
+import org.litvin.shared.util.Edition
 import java.io.File
 import java.util.Locale
 import java.util.UUID
@@ -100,8 +101,18 @@ data class ReplayV1(
 /**
  * How the video shows a comment (decided on 2026-10-05). `CommentAss` draws each style.
  * The text, the card and the outline use black or white, whichever has the higher contrast with the comment color.
+ * More styles were added on 2026-11-12: Plain, Shadow, Glow, Bold caption, TV label (lower third), and Bubble.
  */
-enum class CommentStyle {
+enum class CommentStyle(
+    /** True for a style of the paid version (docs/backlog-paid.md, P-1). The free version does not show it. */
+    val paid: Boolean = false,
+) {
+    /** No backdrop and no outline: only the text in the comment color, as the plain text of other video editors. */
+    PLAIN,
+
+    /** No backdrop and no outline: the text has the comment color and a soft drop shadow. */
+    SHADOW,
+
     /**
      * No backdrop: the text has the comment color, an outline and a soft shadow.
      * Comments saved before the styles existed use it, and new comments use it until the user selects a style.
@@ -109,11 +120,30 @@ enum class CommentStyle {
     @JsonEnumDefaultValue
     OUTLINE,
 
+    /** A light text with a glow of the comment color, like a neon tube. */
+    GLOW(paid = true),
+
+    /** Capital letters in a black font, with a thick outline, like the captions of short videos. */
+    CAPTION,
+
     /** The text has the comment color, on a rounded card that fits the text. */
     CARD,
 
     /** Each line is on a rounded pill with the comment color. */
     PILL,
+
+    /** A white text on a dark box with a bar of the comment color, like the lower third of a TV broadcast. */
+    LOWER_THIRD(paid = true),
+
+    /** The text is in a speech bubble with the comment color. The bubble has a pointer below its left part. */
+    BUBBLE(paid = true),
+    ;
+
+    /** True when this edition of the app has the style. */
+    val available: Boolean get() = !paid || Edition.isPaid
+
+    /** This style, or [OUTLINE] for a paid style in the free version. The free version draws and edits it as Outline. */
+    fun orAvailable(): CommentStyle = if (available) this else OUTLINE
 }
 
 data class CommentV1(

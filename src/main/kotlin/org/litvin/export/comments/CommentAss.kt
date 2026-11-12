@@ -63,18 +63,20 @@ object CommentAss {
         rotationDeg: Int = 0,
         motion: CommentMotion = CommentMotion.Still,
     ): List<String> {
-        val frame = CommentAnimations.frame(motion)
+        // The free version draws a paid animation as no animation (docs/backlog-paid.md).
+        val animated = CommentAnimations.available(motion)
+        val frame = CommentAnimations.frame(animated)
         if (frame.opacity <= 0.0) return emptyList()
         val placed = place(text, frameX, frameY, frameWidth, frameHeight, style, position, sizePercent, opacityPercent, rotationDeg, frame)
             ?: return emptyList()
-        placed.layout.motion = motion
+        placed.layout.motion = animated
         val rgb = colorHex.removePrefix("#").toIntOrNull(16) ?: LIGHT
         val events = when (style) {
             CommentStyle.OUTLINE -> outline(placed.lines, rgb, placed.layout)
             CommentStyle.CARD -> card(placed.lines, rgb, placed.layout)
             CommentStyle.PILL -> pills(placed.lines, rgb, placed.layout)
         }
-        return CommentAnimations.timed(events, motion)
+        return CommentAnimations.timed(events, animated)
     }
 
     /**

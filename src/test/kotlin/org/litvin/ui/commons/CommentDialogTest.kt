@@ -5,6 +5,7 @@ import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.Messages
 import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
+import org.litvin.shared.util.Edition
 import java.awt.Component
 import java.awt.Container
 import java.awt.EventQueue
@@ -164,9 +165,45 @@ class CommentDialogTest {
         assertEquals("Hello", saved?.text)
     }
 
+    /** Runs [block] in the paid version (docs/backlog-paid.md) or in the free version. */
+    private fun <T> edition(paid: Boolean, block: () -> T): T {
+        val old = System.getProperty(Edition.PROPERTY)
+        System.setProperty(Edition.PROPERTY, paid.toString())
+        try {
+            return block()
+        } finally {
+            if (old == null) System.clearProperty(Edition.PROPERTY) else System.setProperty(Edition.PROPERTY, old)
+        }
+    }
+
+    /** The free version has no Animation switch. An edit of a comment with a paid animation saves no animation. */
+    @Test
+    fun freeVersionHidesTheAnimationsAndSavesNone() {
+        assumeFalse(GraphicsEnvironment.isHeadless())
+        var saved: CommentInput? = null
+        var hidden = false
+        edition(paid = false) {
+            EventQueue.invokeAndWait {
+                val frame = JFrame()
+                try {
+                    val initial = CommentInput(0L, 2_000L, "Old", "#FFFFFF", CommentStyle.CARD, 100, 100, animation = CommentAnimation.POP)
+                    val dialog = CommentDialog.buildEdit(frame, "test", 1, initial) { saved = it }
+                    val choice = find<SegmentedChoice<*>>(dialog.contentPane, "test-comment-animation")
+                    hidden = generateSequence(choice as Component) { it.parent }.takeWhile { it !== dialog.contentPane }.any { !it.isVisible }
+                    find<AbstractButton>(dialog.contentPane, "test-comment-save").doClick()
+                    dialog.dispose()
+                } finally {
+                    frame.dispose()
+                }
+            }
+        }
+        assertTrue(hidden, "The free version shows the Animation switch")
+        assertEquals(CommentAnimation.NONE, saved?.animation)
+    }
+
     /** A new comment starts with the given animation. A click on None goes to the preview, and Save returns it. */
     @Test
-    fun createStartsWithTheGivenAnimationAndSaveReturnsTheChoice() {
+    fun createStartsWithTheGivenAnimationAndSaveReturnsTheChoice() = edition(paid = true) {
         assumeFalse(GraphicsEnvironment.isHeadless())
         val previews = mutableListOf<CommentInput?>()
         var saved: CommentInput? = null
@@ -194,7 +231,7 @@ class CommentDialogTest {
 
     /** The dialog is 420 px wide. The Animation labels of all languages fit in their buttons, so none is cut with "…". */
     @Test
-    fun animationLabelsFitInAllLanguages() {
+    fun animationLabelsFitInAllLanguages() = edition(paid = true) {
         assumeFalse(GraphicsEnvironment.isHeadless())
         val widths = mutableListOf<Int>()
         EventQueue.invokeAndWait {

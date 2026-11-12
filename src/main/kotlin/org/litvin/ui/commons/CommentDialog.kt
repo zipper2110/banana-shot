@@ -66,7 +66,10 @@ object CommentDialog {
         SegmentedChoice.Option(CommentStyle.PILL, tr("comment.style.pill"), sub = tr("comment.style.pill.sub"), tooltip = tr("comment.style.pill.tooltip")),
     )
 
-    /** The choices of the Animation switch. The order is the order of the buttons "<prefix>-comment-animation-<index>". */
+    /**
+     * The choices of the Animation switch. The order is the order of the buttons "<prefix>-comment-animation-<index>".
+     * The animations are for the paid version (docs/backlog-paid.md). The free version does not show the switch.
+     */
     private val ANIMATION_OPTIONS = listOf(
         SegmentedChoice.Option(CommentAnimation.NONE, tr("comment.animation.none"), tooltip = tr("comment.animation.none.tooltip")),
         SegmentedChoice.Option(CommentAnimation.FADE, tr("comment.animation.fade"), tooltip = tr("comment.animation.fade.tooltip")),
@@ -176,7 +179,10 @@ object CommentDialog {
             toolTipText = colorHex
         }
         val style = SegmentedChoice("$namePrefix-comment-style", STYLE_OPTIONS).apply { selected = initial.style }
-        val animation = SegmentedChoice("$namePrefix-comment-animation", ANIMATION_OPTIONS).apply { selected = initial.animation }
+        val animationOptions = ANIMATION_OPTIONS.filter { it.value.available }
+        val animation = SegmentedChoice("$namePrefix-comment-animation", animationOptions).apply {
+            selected = initial.animation.orAvailable()
+        }
         val size = SliderValueRow(
             "$namePrefix-comment-size", tr("comment.size"), tr("comment.size.tooltip"),
             CommentV1.MIN_SIZE_PERCENT, CommentV1.MAX_SIZE_PERCENT, CommentV1.DEFAULT_SIZE_PERCENT,
@@ -209,7 +215,7 @@ object CommentDialog {
             sizePercent = size.slider.value,
             opacityPercent = opacity.slider.value,
             rotationDeg = rotation.slider.value,
-            animation = animation.selected ?: initial.animation,
+            animation = animation.selected ?: initial.animation.orAvailable(),
         )
         val showChange = { preview(current()) }
         val fieldListener = object : DocumentListener {
@@ -245,7 +251,7 @@ object CommentDialog {
             } else {
                 val parsed = parseFields(start.text, duration.text, text.text, colorHex, style.selected ?: initial.style)
                     ?.copy(sizePercent = size.slider.value, opacityPercent = opacity.slider.value, rotationDeg = rotation.slider.value)
-                    ?.copy(animation = animation.selected ?: initial.animation)
+                    ?.copy(animation = animation.selected ?: initial.animation.orAvailable())
                 if (parsed == null) {
                     error.text = tr("comment.error.color")
                 } else {
@@ -281,7 +287,7 @@ object CommentDialog {
                     add(opacity)
                     add(rotation)
                 },
-                DialogKit.field(tr("comment.animation"), animation),
+                DialogKit.field(tr("comment.animation"), animation).apply { isVisible = animationOptions.size > 1 },
                 error,
             ),
             DialogKit.footer(left = emptyList(), right = listOf(cancelButton, saveButton)),

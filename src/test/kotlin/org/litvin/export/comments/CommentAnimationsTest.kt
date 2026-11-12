@@ -11,15 +11,66 @@ import org.litvin.points.CommentV1
 import org.litvin.points.PointV1
 import org.litvin.points.ReplayFreeze
 import org.litvin.points.ReplayV1
+import org.litvin.shared.util.Edition
 import java.awt.geom.Rectangle2D
 import java.nio.file.Files
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** The comment animations: the times, the export tags, the frozen preview states, and the clocks of the preview. */
+/**
+ * The comment animations: the times, the export tags, the frozen preview states, and the clocks of the preview.
+ * The animations are for the paid version (docs/backlog-paid.md), so the tests run in the paid version. [free] runs a
+ * part in the free version.
+ */
 class CommentAnimationsTest {
+    private var oldPaid: String? = null
+
+    @BeforeTest
+    fun usePaidVersion() {
+        oldPaid = System.getProperty(Edition.PROPERTY)
+        System.setProperty(Edition.PROPERTY, "true")
+    }
+
+    @AfterTest
+    fun restoreVersion() {
+        oldPaid?.let { System.setProperty(Edition.PROPERTY, it) } ?: System.clearProperty(Edition.PROPERTY)
+    }
+
+    private fun <T> free(block: () -> T): T {
+        System.setProperty(Edition.PROPERTY, "false")
+        try {
+            return block()
+        } finally {
+            System.setProperty(Edition.PROPERTY, "true")
+        }
+    }
+
+    @Test
+    fun theFreeVersionDrawsEveryCommentWithoutAnimation() {
+        assertEquals(
+            listOf(CommentAnimation.FADE, CommentAnimation.POP, CommentAnimation.SLIDE_UP),
+            CommentAnimation.entries.filter { it.paid },
+            "Only None is free",
+        )
+        for (animation in CommentAnimation.entries.filter { it.paid }) {
+            val comment = CommentV1(1, 0, 5_000, "Paid", animation = animation)
+            free {
+                assertEquals(CommentAnimation.NONE, animation.orAvailable())
+                for (style in CommentStyle.entries) {
+                    val still = events(style, CommentMotion.Still)
+                    assertEquals(still, events(style, CommentMotion.Timed(animation, 5_000)), "Export of $animation $style")
+                    assertEquals(still, events(style, CommentMotion.Frozen(animation, CommentClock(0, 5_000))), "Preview of $animation $style")
+                }
+                assertEquals(CommentMotion.Still, CommentAnimations.preview(comment, CommentClock(100, 5_000)))
+                assertEquals(listOf(CommentAnimations.Frame.REST), CommentAnimations.previewFrames(listOf(comment), listOf(CommentClock(100, 5_000))))
+            }
+            assertEquals(animation, animation.orAvailable(), "The paid version has $animation")
+        }
+    }
     private val pos = Regex("""\\pos\([^)]*\)""")
     private val turn = Regex("""\\org\([^)]*\)\\frz-?\d+""")
 

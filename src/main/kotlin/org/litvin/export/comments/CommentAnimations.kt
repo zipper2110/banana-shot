@@ -167,12 +167,20 @@ object CommentAnimations {
         }
     }
 
+    /** [motion], or [CommentMotion.Still] when this edition of the app does not have its animation. */
+    fun available(motion: CommentMotion): CommentMotion = when (motion) {
+        CommentMotion.Still -> motion
+        is CommentMotion.Timed -> if (motion.animation.available) motion else CommentMotion.Still
+        is CommentMotion.Frozen -> if (motion.animation.available) motion else CommentMotion.Still
+    }
+
     /**
-     * The motion of a preview comment at [clock]. A null clock or no animation is still. A clock outside the time of the
+     * The motion of a preview comment at [clock]. A null clock or no animation is still. The free version shows a paid
+     * animation as still. A clock outside the time of the
      * comment is also still: only a drag or the open comment dialog shows a comment outside its time.
      */
     fun preview(comment: CommentV1, clock: CommentClock?): CommentMotion = when {
-        clock == null || comment.animation == CommentAnimation.NONE -> CommentMotion.Still
+        clock == null || comment.animation.orAvailable() == CommentAnimation.NONE -> CommentMotion.Still
         clock.elapsedMs < 0 || clock.elapsedMs >= clock.durationMs -> CommentMotion.Still
         else -> CommentMotion.Frozen(comment.animation, clock)
     }

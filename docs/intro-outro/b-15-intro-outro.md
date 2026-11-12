@@ -43,7 +43,7 @@ never shows. A final score block in the outro shows it.
 | Match card | yes | | Uses the thumbnail styles. The background is a still frame, a video fragment (dim or blurred), or a slow zoom over a frame. |
 | Text card | yes | yes | Background: a color, a still frame, or a video fragment, with dim and blur. |
 | Fragment of this match | yes | yes | For example a teaser of the favorite points. It needs no other file. |
-| Coming up | yes | | A fragment of this match with a text over it, for example "Coming up...". See below. |
+| Coming up | yes | | One or more fragments of this match with a text over them, for example "Coming up...". See below. |
 | Separate video clip | yes | yes | A video file of the user, for example a channel intro or a sponsor clip. |
 | Final score card | | yes | Uses the final scoreboard display, larger. |
 | Statistics card | | yes | Uses the existing statistics card. |
@@ -51,12 +51,17 @@ never shows. A final score block in the outro shows it.
 ### Coming up block
 
 A short fragment of the match that shows a good moment before the match
-starts. A text shows over it, by default "Coming up...". The user can
-repeat the block to show two or three moments.
+starts. A text shows over it, by default "Coming up...".
 
-- Fragment: the user selects a point in the points list, or sets a start
-  and an end in the video. The user can trim the start and the end. The
-  default length is 3 to 6 s.
+- Fragments: the block has one or more fragments. They play one after the
+  other as quick cuts, and the text stays over all of them. The user can
+  add, remove and move the fragments in the block.
+- Each fragment: the user selects a point in the points list, or sets a
+  start and an end in the video. The user can trim the start and the end.
+  The default length is 3 to 6 s for one fragment, and 2 to 3 s for each
+  fragment when there are more.
+- Text for each fragment (optional): a fragment can have its own text in
+  place of the text of the block, for example "Match point".
 - Suggested points: the app shows the points that are good teasers first.
   For example the match point, the longest point, the set points and break
   points that the player won (`PointStakes`), and the start of the longest
@@ -66,7 +71,9 @@ repeat the block to show two or three moments.
   match point".
 - Second line (optional): the stake and the score at that moment, for
   example "Match point · 6-4 5-4". The app takes it from the score of the
-  point.
+  point, so it changes with each fragment.
+- Quick fill: "Add suggested points" adds the top 3 suggested points in
+  match order.
 - No spoiler: by default the fragment stops before the end of the point,
   and the scoreboard of the video does not show. Thus the teaser does not
   tell the result. The user can turn this off.

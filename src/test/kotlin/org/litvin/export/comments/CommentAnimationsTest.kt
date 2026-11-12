@@ -31,10 +31,14 @@ class CommentAnimationsTest {
 
     @Test
     fun aShortCommentGetsShorterFades() {
-        assertEquals(300L to 300L, CommentAnimations.fadeMs(5_000))
-        assertEquals(300L to 300L, CommentAnimations.fadeMs(600))
-        assertEquals(200L to 200L, CommentAnimations.fadeMs(400))
-        assertEquals(0L to 0L, CommentAnimations.fadeMs(0))
+        assertEquals(300L to 300L, CommentAnimations.times(CommentAnimation.FADE, 5_000))
+        assertEquals(300L to 300L, CommentAnimations.times(CommentAnimation.FADE, 600))
+        assertEquals(200L to 200L, CommentAnimations.times(CommentAnimation.FADE, 400))
+        assertEquals(0L to 0L, CommentAnimations.times(CommentAnimation.FADE, 0))
+        assertEquals(200L to 300L, CommentAnimations.times(CommentAnimation.POP, 5_000))
+        assertEquals(350L to 300L, CommentAnimations.times(CommentAnimation.SLIDE_UP, 5_000))
+        assertEquals(175L to 150L, CommentAnimations.times(CommentAnimation.SLIDE_UP, 325), "Both times get shorter in the same ratio")
+        assertEquals(0L to 0L, CommentAnimations.times(CommentAnimation.NONE, 5_000))
     }
 
     @Test
@@ -62,6 +66,81 @@ class CommentAnimationsTest {
         }
         val short = events(CommentStyle.CARD, CommentMotion.Timed(CommentAnimation.FADE, 400))
         assertTrue(short.all { it.startsWith("{\\fad(200,200)}") }, short.toString())
+    }
+
+    private val move = Regex("""\\move\(([-\d.]+),([-\d.]+),([-\d.]+),([-\d.]+),0,(\d+)\)""")
+    private val posXY = Regex("""\\pos\(([-\d.]+),([-\d.]+)\)""")
+    private val scaleX = Regex("""\\fscx([\d.]+)""")
+
+    @Test
+    fun aTimedPopGrowsEachPartAroundTheCenterOfTheComment() {
+        val box = CommentAss.placement("Great\nshot", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD)!!.box
+        val (shadow, card, text) = events(CommentStyle.CARD, CommentMotion.Timed(CommentAnimation.POP, 5_000))
+
+        for ((event, originY) in listOf(shadow to box.centerY + 8, card to box.centerY, text to box.centerY)) {
+            assertTrue(event.startsWith("{\\fad(200,300)}"), event)
+            assertTrue(event.contains("\\fscx50.0\\fscy50.0\\t(0,200,\\fscx100\\fscy100)"), event)
+            val (x1, y1, x2, y2, time) = move.find(event)!!.destructured
+            assertEquals("200", time)
+            // The part starts at half its distance from its rotation center, so the parts stay together.
+            assertEquals(box.centerX + 0.5 * (x2.toDouble() - box.centerX), x1.toDouble(), 0.11, event)
+            assertEquals(originY + 0.5 * (y2.toDouble() - originY), y1.toDouble(), 0.11, event)
+        }
+    }
+
+    @Test
+    fun aTimedSlideUpMovesEachPartUpByTheSameDistance() {
+        for (style in CommentStyle.entries) {
+            for ((size, distance) in listOf(100 to 48.0, 200 to 96.0)) {
+                val timed = CommentAss.events(
+                    "Great\nshot", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, style, sizePercent = size,
+                    motion = CommentMotion.Timed(CommentAnimation.SLIDE_UP, 5_000),
+                )
+                for (event in timed) {
+                    assertTrue(event.startsWith("{\\fad(350,300)}"), event)
+                    assertTrue(event.contains("\\fscx100\\fscy100"), "A slide does not change the size: $event")
+                    val (x1, y1, x2, y2, time) = move.find(event)!!.destructured
+                    assertEquals("350", time)
+                    assertEquals(x2, x1, event)
+                    assertEquals(distance, y1.toDouble() - y2.toDouble(), 0.11, "$style $size%: $event")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun theFrozenPreviewIsTheStateOfTheExportTagsAtThatTime() {
+        // libass interpolates \move, \t, and \fad linearly. Halfway through the in time, the frozen preview must
+        // show the same place, size, and opacity as the export.
+        for (animation in listOf(CommentAnimation.POP, CommentAnimation.SLIDE_UP)) {
+            for (style in CommentStyle.entries) {
+                val inMs = CommentAnimations.times(animation, 5_000).first
+                val timed = events(style, CommentMotion.Timed(animation, 5_000), rotationDeg = 30)
+                val frozen = events(style, CommentMotion.Frozen(animation, CommentClock(inMs / 2, 5_000)), rotationDeg = 30)
+                assertEquals(timed.size, frozen.size)
+                timed.zip(frozen).forEach { (export, preview) ->
+                    val (x1, y1, x2, y2) = move.find(export)!!.destructured
+                    val (x, y) = posXY.find(preview)!!.destructured
+                    assertEquals((x1.toDouble() + x2.toDouble()) / 2, x.toDouble(), 0.11, "$animation $style: $preview")
+                    assertEquals((y1.toDouble() + y2.toDouble()) / 2, y.toDouble(), 0.11, "$animation $style: $preview")
+                    val size = scaleX.find(preview)!!.groupValues[1].toDouble()
+                    assertEquals(if (animation == CommentAnimation.POP) 75.0 else 100.0, size, "$animation $style: $preview")
+                    assertEquals(turn.find(export)?.value, turn.find(preview)?.value, "The rotation center does not move")
+                }
+                // The text is half transparent, as \fad gives halfway through the fade in.
+                assertTrue(frozen.last().contains("\\1a${ScoreboardAss.alpha(128 / 255.0)}"), frozen.last())
+            }
+        }
+    }
+
+    @Test
+    fun aPopOrSlideAtRestIsTheStillComment() {
+        for (animation in listOf(CommentAnimation.POP, CommentAnimation.SLIDE_UP)) {
+            for (style in CommentStyle.entries) {
+                val rest = events(style, CommentMotion.Frozen(animation, CommentClock(2_000, 5_000)), rotationDeg = -15)
+                assertEquals(events(style, CommentMotion.Still, rotationDeg = -15), rest, "$animation $style")
+            }
+        }
     }
 
     @Test

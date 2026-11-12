@@ -207,7 +207,7 @@ class CommentDialogTest {
                 frame.dispose()
             }
         }
-        val keys = listOf("comment.animation.none", "comment.animation.fade")
+        val keys = listOf("comment.animation.none", "comment.animation.fade", "comment.animation.pop", "comment.animation.slideUp")
         assertEquals(CommentAnimation.entries.size, keys.size)
         val font = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
         for (language in AppLanguage.entries) {

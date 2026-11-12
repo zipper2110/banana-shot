@@ -67,6 +67,7 @@ object CommentAss {
         if (frame.opacity <= 0.0) return emptyList()
         val placed = place(text, frameX, frameY, frameWidth, frameHeight, style, position, sizePercent, opacityPercent, rotationDeg, frame)
             ?: return emptyList()
+        placed.layout.motion = motion
         val rgb = colorHex.removePrefix("#").toIntOrNull(16) ?: LIGHT
         val events = when (style) {
             CommentStyle.OUTLINE -> outline(placed.lines, rgb, placed.layout)
@@ -225,6 +226,18 @@ object CommentAss {
     ) {
         val lineHeight = fontSize // libass sets the font size to the height of the line box.
 
+        /** The animation of the comment. Each part gets its place and size tags from it ([at], [sizeTags]). */
+        var motion: CommentMotion = CommentMotion.Still
+
+        /**
+         * The place tag of a part at ([x], [y]). The rotation center of the part is [originOffset] below the center of
+         * the comment (a shadow), so a Pop grows the part around the same point that the part turns around.
+         */
+        fun at(x: Double, y: Double, originOffset: Double = 0.0): String =
+            CommentAnimations.placeTag(motion, x, y, centerX, centerY + originOffset, CommentAnimations.SLIDE_PX * scale)
+
+        fun sizeTags(): String = CommentAnimations.scaleTags(motion)
+
         /**
          * The rotation tags of an event. A shadow that is [shadowOffset] below its shape turns around a center that
          * is the same distance below, so the shadow stays below the comment.
@@ -259,7 +272,7 @@ object CommentAss {
         val cardColor = if (isLight(rgb)) DARK_CARD else LIGHT_CARD
         return listOf(
             shadow(left, top, 8 * layout.scale, path, 14 * layout.scale, layout),
-            shape(left, top, path, cardColor, ScoreboardAss.alpha(CARD_OPACITY * layout.opacity), layout.turn()),
+            shape(left, top, path, cardColor, ScoreboardAss.alpha(CARD_OPACITY * layout.opacity), layout),
             text(layout.centerX, layout.bottom - padY, lines, rgb, layout, NO_EDGE),
         )
     }
@@ -280,7 +293,7 @@ object CommentAss {
             val top = bottom - pillHeight
             val path = roundedRect(width, pillHeight, pillHeight / 2)
             shadows += shadow(left, top, 6 * layout.scale, path, 10 * layout.scale, layout)
-            pills += shape(left, top, path, rgb, ScoreboardAss.alpha(layout.opacity), layout.turn())
+            pills += shape(left, top, path, rgb, ScoreboardAss.alpha(layout.opacity), layout)
             texts += text(layout.centerX, bottom - padY, listOf(line), contrastColor(rgb), layout, NO_EDGE)
         }
         return shadows + pills + texts
@@ -295,20 +308,32 @@ object CommentAss {
     private fun pillHeight(layout: Layout): Double = (layout.lineHeight + 2 * PILL_PAD_Y * layout.scale).roundToInt().toDouble()
 
     private fun text(x: Double, y: Double, lines: List<String>, rgb: Int, layout: Layout, edgeTags: String): String = buildString {
-        append("{\\an2\\pos(${fmt(x)},${fmt(y)})\\q2")
-        append("\\fn${layout.family}\\fs${fmt(layout.fontSize)}\\b1\\i0\\u0\\s0\\fsp0\\fscx100\\fscy100${layout.turn()}")
+        append("{\\an2${layout.at(x, y)}\\q2")
+        append("\\fn${layout.family}\\fs${fmt(layout.fontSize)}\\b1\\i0\\u0\\s0\\fsp0${layout.sizeTags()}${layout.turn()}")
         append("\\1c${ScoreboardAss.color(rgb)}\\1a${ScoreboardAss.alpha(layout.opacity)}$edgeTags}")
         append(lines.joinToString("\\N") { escape(it) })
     }
 
-    /** A filled path. The path starts at (0, 0) of its bounds, so \an7\pos places the top-left corner exactly. */
-    private fun shape(left: Double, top: Double, path: String, rgb: Int, alpha: String, turn: String, blur: Double = 0.0): String =
-        "{\\an7\\pos(${fmt(left)},${fmt(top)})\\bord0\\shad0\\blur${fmt(blur)}\\fscx100\\fscy100$turn" +
+    /**
+     * A filled path. The path starts at (0, 0) of its bounds, so \an7\pos places the top-left corner exactly.
+     * The rotation center of the shape is [originOffset] below the center of the comment.
+     */
+    private fun shape(
+        left: Double,
+        top: Double,
+        path: String,
+        rgb: Int,
+        alpha: String,
+        layout: Layout,
+        blur: Double = 0.0,
+        originOffset: Double = 0.0,
+    ): String =
+        "{\\an7${layout.at(left, top, originOffset)}\\bord0\\shad0\\blur${fmt(blur)}${layout.sizeTags()}${layout.turn(originOffset)}" +
             "\\1c${ScoreboardAss.color(rgb)}\\1a$alpha\\p1}$path{\\p0}"
 
     /** The shadow of the shape at ([left], [top]). It is [offset] below the shape, also when the comment turns. */
     private fun shadow(left: Double, top: Double, offset: Double, path: String, blur: Double, layout: Layout): String =
-        shape(left, top + offset, path, 0x000000, ScoreboardAss.alpha(SHADOW_OPACITY * layout.opacity), layout.turn(offset), blur)
+        shape(left, top + offset, path, 0x000000, ScoreboardAss.alpha(SHADOW_OPACITY * layout.opacity), layout, blur, offset)
 
     /** A rectangle with rounded corners, as an ASS drawing. Each corner is a Bezier curve. */
     internal fun roundedRect(width: Int, height: Int, radius: Int): String {

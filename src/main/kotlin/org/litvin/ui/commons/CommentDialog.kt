@@ -70,6 +70,12 @@ object CommentDialog {
     private val ANIMATION_OPTIONS = listOf(
         SegmentedChoice.Option(CommentAnimation.NONE, tr("comment.animation.none"), tooltip = tr("comment.animation.none.tooltip")),
         SegmentedChoice.Option(CommentAnimation.FADE, tr("comment.animation.fade"), tooltip = tr("comment.animation.fade.tooltip")),
+        SegmentedChoice.Option(CommentAnimation.POP, tr("comment.animation.pop"), tooltip = tr("comment.animation.pop.tooltip")),
+        SegmentedChoice.Option(
+            CommentAnimation.SLIDE_UP,
+            tr("comment.animation.slideUp"),
+            tooltip = tr("comment.animation.slideUp.tooltip"),
+        ),
     )
 
     fun showCreate(

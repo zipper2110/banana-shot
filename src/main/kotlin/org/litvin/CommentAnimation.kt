@@ -16,4 +16,10 @@ enum class CommentAnimation {
 
     /** The comment fades in at its start and fades out at its end. */
     FADE,
+
+    /** The comment grows from half size into place around its center while it fades in. It fades out at its end. */
+    POP,
+
+    /** The comment moves up into place while it fades in. It fades out at its end. */
+    SLIDE_UP,
 }

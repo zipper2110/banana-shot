@@ -136,8 +136,8 @@ class ThumbnailRendererTest {
         }
         val marker = ThumbnailFonts.base(ThumbnailFace.MARKER)!!.family
 
-        // Under the logo, at the side of the logo, and in the info line of the official bar.
-        for (style in listOf(ThumbnailStyle.SPLASH, ThumbnailStyle.SIDE_PANEL, ThumbnailStyle.OFFICIAL_BAR, ThumbnailStyle.SCORE_BUG)) {
+        // Under the logo, at the side of the logo, in the info line of the official bar, and in the strip of the labels.
+        for (style in listOf(ThumbnailStyle.SPLASH, ThumbnailStyle.SIDE_PANEL, ThumbnailStyle.OFFICIAL_BAR, ThumbnailStyle.SCORE_BUG, ThumbnailStyle.LABELS)) {
             val styled = brand(style, ThumbnailFace.MARKER, 0xFF2E88)
             assertEquals(marker, styled.font.family, "$style")
             assertEquals(0xFF2E88, styled.color!!.rgb and 0xFFFFFF, "$style")
@@ -205,7 +205,7 @@ class ThumbnailRendererTest {
 
     @Test
     fun eachGroupHasItsStyles() {
-        assertEquals(31, ThumbnailStyle.entries.size)
+        assertEquals(36, ThumbnailStyle.entries.size)
         assertEquals(6, StyleGroup.CLASSIC.styles.size)
         StyleGroup.entries.filter { it != StyleGroup.CLASSIC }.forEach { assertEquals(5, it.styles.size, "$it") }
         assertTrue(StyleGroup.CLASSIC.styles.none { it.showsLogo })

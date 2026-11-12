@@ -8,9 +8,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * The fonts of the thumbnail styles of B-53. The app bundles them (Google Fonts, SIL Open Font License, and Apache
  * License 2.0 for Permanent Marker), so that the PNG looks the same on each computer.
- * The files are in src/main/resources/fonts/thumbnail.
+ * The files are in src/main/resources/fonts/thumbnail. Gelasio is in src/main/resources/fonts.
  */
-enum class ThumbnailFace(internal val file: String, val title: String) {
+enum class ThumbnailFace(internal val file: String, val title: String, internal val folder: String = "/fonts/thumbnail/") {
     ANTON("Anton-Regular.ttf", "Anton"),
     MARKER("PermanentMarker-Regular.ttf", "Permanent Marker"),
     BUNGEE("Bungee-Regular.ttf", "Bungee"),
@@ -20,6 +20,9 @@ enum class ThumbnailFace(internal val file: String, val title: String) {
     INTER_BOLD("Inter-Bold.ttf", "Inter"),
     ARCHIVO("ArchivoBlack-Regular.ttf", "Archivo Black"),
     EXO_ITALIC("Exo2-BlackItalic.ttf", "Exo 2"),
+
+    /** The serif font of the scoreboards. It is in the folder of the scoreboard fonts. */
+    GELASIO("Gelasio-Bold.ttf", "Gelasio", "/fonts/"),
     ;
 
     companion object {
@@ -40,7 +43,7 @@ internal object ThumbnailFonts {
         loaded[face]?.let { return it }
         if (fallbacks[face] == true) return null
         val font = runCatching {
-            ThumbnailFonts::class.java.getResourceAsStream("/fonts/thumbnail/${face.file}").use { stream ->
+            ThumbnailFonts::class.java.getResourceAsStream(face.folder + face.file).use { stream ->
                 requireNotNull(stream) { "No font file ${face.file}" }
                 Font.createFont(Font.TRUETYPE_FONT, stream)
             }

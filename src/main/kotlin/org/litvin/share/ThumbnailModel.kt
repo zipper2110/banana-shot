@@ -144,17 +144,22 @@ object ThumbnailColorSets {
     val NEON = ColorSet("neon", "share.set.neon", 0xFFFFFF, 0xFF2E88, 0x111111, 0x0A0A0A, card = PAPER)
     val CUP = ColorSet("cup", "share.set.cup", 0xFFFFFF, 0xFFC629, 0x0B1E3A, 0x0B1E3A)
     val FIGHT = ColorSet("fight", "share.set.fight", 0xFFFFFF, 0xFFD54A, 0x111111, 0x08080A)
+    val LIGHT = ColorSet("light", "share.set.light", 0x141414, 0x4D8BFF, 0xFFFFFF, 0xFFFFFF)
+
+    /** The colors of a college TV score box: gray bars, light cells, and orange and navy team colors. */
+    val GRAPHITE = ColorSet("graphite", "share.set.graphite", 0xFFFFFF, 0xFFD54A, 0x2A2C30, 0x0A0A0A, card = 0xF2F2F2, second = 0xBF5700, third = 0x232D4B)
     val all: List<ColorSet> = listOf(
         LIME,
         BROADCAST,
         ColorSet("sunset", "style.sunset", 0xFFFFFF, 0xFF8A3D, 0x3A0D14, 0x3A0D14),
         ColorSet("ocean", "share.set.ocean", 0xFFFFFF, 0x3DD6F5, 0x0B1E3A, 0x0B1E3A),
         ColorSet("red", "share.color.red", 0xFFFFFF, 0xFF4D4D, 0x0E1014, 0x0A0E14),
-        ColorSet("light", "share.set.light", 0x141414, 0x4D8BFF, 0xFFFFFF, 0xFFFFFF),
+        LIGHT,
         STREET,
         NEON,
         CUP,
         FIGHT,
+        GRAPHITE,
     )
 
     fun byId(id: String?): ColorSet? = all.firstOrNull { it.id == id }
@@ -200,7 +205,10 @@ object ThumbnailColorSets {
     fun brandSwatches(): List<NamedColor> = swatches(ColorRole.ACCENT) + NamedColor(0x141414, "share.color.black")
 }
 
-/** The groups of the style cards. Classic has the six styles of B-46. The other groups are the styles of B-53. */
+/**
+ * The groups of the style cards. Classic has the six styles of B-46. Simple has the styles of popular match channels on
+ * YouTube. The other groups are the styles of B-53.
+ */
 enum class StyleGroup(val key: String, private val titleKey: String) {
     CLASSIC("classic", "share.group.classic"),
     STREET("street", "share.group.street"),
@@ -208,6 +216,7 @@ enum class StyleGroup(val key: String, private val titleKey: String) {
     FIGHT("fight", "share.group.fight"),
     BOLD("bold", "share.group.bold"),
     TV("tv", "share.group.tv"),
+    SIMPLE("simple", "share.group.simple"),
     ;
 
     val title: String get() = tr(titleKey)
@@ -441,6 +450,38 @@ enum class ThumbnailStyle(
         "alert", "share.style.alert", setOf(B53.HEAD, B53.ROUND, B53.KIND, B53.TEAM1, B53.TEAM2, B53.CLUB),
         ThumbnailColorSets.BROADCAST, listOf(TextPlace.RIGHT),
         B53.roles(B53.text, B53.accent, B53.onShapes, ColorRole.SECOND to "share.use.behindWords", B53.panel), StyleGroup.TV, showsLogo = true,
+    ),
+
+    // ---------- Simple: the styles of popular match channels ----------
+    SCORE_BOX(
+        "scoreBox", "share.style.scoreBox", setOf(B53.EVENT, B53.TEAM1, B53.TEAM2, B53.SCORE, B53.CLUB),
+        ThumbnailColorSets.GRAPHITE, listOf(TextPlace.BOTTOM),
+        B53.roles(
+            B53.players, B53.team1, B53.team2, ColorRole.PANEL to "share.use.playersBox", ColorRole.CARD to "share.use.titleCells",
+            B53.onCard,
+        ),
+        StyleGroup.SIMPLE, showsLogo = true,
+    ),
+    UNDERLINED(
+        "underlined", "share.style.underlined", setOf(B53.HEAD, B53.EVENT, B53.KIND, B53.ROUND, B53.CLUB),
+        ThumbnailColorSets.LIME, listOf(TextPlace.TOP), B53.roles(B53.text, ColorRole.SHADE to "share.use.behindWords"),
+        StyleGroup.SIMPLE, showsLogo = true,
+    ),
+    SERIF(
+        "serif", "share.style.serif", setOf(B53.KIND, B53.HEAD, B53.CLUB),
+        ThumbnailColorSets.LIGHT, listOf(TextPlace.RIGHT), B53.roles(B53.text, ColorRole.SHADE to "share.use.behindWords"),
+        StyleGroup.SIMPLE, showsLogo = true,
+    ),
+    HEADLINE(
+        "headline", "share.style.headline", setOf(B53.HEAD, B53.CLUB),
+        ThumbnailColorSets.STREET, listOf(TextPlace.BOTTOM),
+        B53.roles(ColorRole.ACCENT to "share.field.head", B53.panel, ColorRole.SHADE to "share.use.behindWords"),
+        StyleGroup.SIMPLE, showsLogo = true,
+    ),
+    LABELS(
+        "labels", "share.style.labels", setOf(B53.TEAM1, B53.TEAM2, B53.CLUB),
+        ThumbnailColorSets.LIME, listOf(TextPlace.CENTER), B53.roles(B53.accent, B53.onShapes),
+        StyleGroup.SIMPLE, showsLogo = true,
     ),
     ;
 

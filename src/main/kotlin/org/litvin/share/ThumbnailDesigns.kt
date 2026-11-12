@@ -31,7 +31,7 @@ import kotlin.math.sin
 import kotlin.math.tan
 
 /**
- * The layouts of the 25 thumbnail styles of B-53. Each layout follows its artboard of the Claude Design canvas
+ * The layouts of the 25 thumbnail styles of B-53, and of the 5 styles of the Simple group. Each layout follows its artboard of the Claude Design canvas
  * "Thumbnail Styles" (see docs/backlog.md). All sizes are in the 1280 × 720 coordinates of the PNG, as in the artboards.
  *
  * The texts come from the fields. The artboards show sample texts: "SEMI-FINAL" is the round, "SPRING CUP 2026" is the
@@ -82,6 +82,11 @@ internal object ThumbnailDesigns {
             ThumbnailStyle.SCORE_BUG -> ctx.scoreBug()
             ThumbnailStyle.LOWER_THIRD -> ctx.lowerThird()
             ThumbnailStyle.ALERT -> ctx.alert()
+            ThumbnailStyle.SCORE_BOX -> ctx.scoreBox()
+            ThumbnailStyle.UNDERLINED -> ctx.underlined()
+            ThumbnailStyle.SERIF -> ctx.serif()
+            ThumbnailStyle.HEADLINE -> ctx.headline()
+            ThumbnailStyle.LABELS -> ctx.labels()
             ThumbnailStyle.WORDS, ThumbnailStyle.VERSUS, ThumbnailStyle.CARD, ThumbnailStyle.SPLIT, ThumbnailStyle.BROADCAST,
             ThumbnailStyle.POSTER,
             -> error("${scene.style} is a style of B-46")
@@ -1308,5 +1313,211 @@ internal object ThumbnailDesigns {
             b.tag(runs, font, c.panel, rx - 24, y, Pad(10.0, 26.0, 12.0, 26.0), Align.RIGHT)
         }
         corner(ThumbnailFace.EXO_ITALIC)
+    }
+
+    // ---------- 6 · Simple ----------
+
+    /** 6.1 Score box: a college TV score box at the bottom left: a title bar, a row for each team, and a cell for each set. */
+    private fun Ctx.scoreBox() {
+        val left = 56.0
+        val bottom = H - 40
+        val chipW = 92.0
+        val rowH = 92.0
+        val cellW = 84.0
+        val cellGap = 6.0
+        // The right edge stays at the left of the video length in the bottom-right corner.
+        val right = 1020.0
+        val names = listOf(raw(ThumbnailField.TEAM1), raw(ThumbnailField.TEAM2))
+        val shown = names.indices.filter { names[it].isNotEmpty() }
+        val scoreText = raw(ThumbnailField.SCORE)
+        val sets = if (shown.isEmpty()) emptyList() else sets(scoreText)
+        // A score that is not sets shows as the user types it, in one cell at the right of the team rows.
+        val freeScore = scoreText.takeIf { it.isNotEmpty() && sets.isEmpty() && shown.isNotEmpty() }
+        val freeFont = freeScore?.let { b.fitted(ThumbnailFace.BARLOW_EXTRA_BOLD, 64.0, it, 300.0) }
+        val cellsW = if (freeScore != null && freeFont != null) width(freeScore, freeFont) + 48 + cellGap else sets.size * (cellW + cellGap)
+        val maxNameW = right - left - chipW - cellsW
+        val nameFonts = shown.associateWith { b.fitted(ThumbnailFace.BARLOW_BOLD, 62.0, names[it], maxNameW - 48) }
+        val nameW = (nameFonts.maxOfOrNull { (side, font) -> width(names[side], font) + 48 } ?: 0.0).coerceIn(min(360.0, maxNameW), maxNameW)
+        val event = raw(ThumbnailField.EVENT)
+        val titleFont = event.takeIf { it.isNotEmpty() }?.let { b.fitted(ThumbnailFace.BARLOW_EXTRA_BOLD, 46.0, it, right - left - 40) }
+        val titleH = if (titleFont != null) 64.0 else 0.0
+        val rowsH = shown.size * rowH + (if (shown.size == 2) 3.0 else 0.0)
+        if (titleH + rowsH > 0) {
+            val top = bottom - titleH - rowsH
+            if (titleFont != null) {
+                val w = max(if (shown.isEmpty()) 0.0 else chipW + nameW, width(event, titleFont) + 40)
+                b.fill(Rectangle2D.Double(left, top, w, titleH), color(c.card))
+                b.line(event, titleFont, c.onCard, left + 20, top, titleH)
+            }
+            val won = sets.map { (a, z) -> (a.toIntOrNull() ?: 0).compareTo(z.toIntOrNull() ?: 0) }
+            var y = top + titleH
+            val cellsLeft = left + chipW + nameW + cellGap
+            shown.forEachIndexed { row, side ->
+                b.fill(Rectangle2D.Double(left, y, chipW, rowH), color(if (side == 0) c.second else c.third))
+                b.fill(Rectangle2D.Double(left + chipW, y, nameW, rowH), color(c.panel))
+                b.line(names[side], nameFonts.getValue(side), c.text, left + chipW + 24, y, rowH)
+                sets.forEachIndexed { index, set ->
+                    val cell = Rectangle2D.Double(cellsLeft + index * (cellW + cellGap), y, cellW, rowH)
+                    b.fill(cell, color(c.card))
+                    val digits = if (side == 0) set.first else set.second
+                    // The games of the set winner are dark. The games of the other team are gray.
+                    val lost = won[index] != 0 && (won[index] > 0) != (side == 0)
+                    val digitFont = b.fitted(ThumbnailFace.BARLOW_EXTRA_BOLD, 70.0, digits, cellW - 12)
+                    b.line(digits, digitFont, if (lost) blend(c.card, c.onCard, 0.45) else c.onCard, cell.centerX, y, rowH, Align.CENTER)
+                }
+                y += rowH
+                if (row == 0 && shown.size == 2) {
+                    b.fill(Rectangle2D.Double(left, y, chipW + nameW, 3.0), color(blend(c.panel, BLACK, 0.5)))
+                    y += 3
+                }
+            }
+            if (freeScore != null && freeFont != null) {
+                val cell = Rectangle2D.Double(cellsLeft, top + titleH, cellsW - cellGap, rowsH)
+                b.fill(cell, color(c.card))
+                b.line(freeScore, freeFont, c.onCard, cell.centerX, cell.y, cell.height, Align.CENTER)
+            }
+        }
+        corner(ThumbnailFace.BARLOW_EXTRA_BOLD)
+    }
+
+    /** A line under a text, as wide as the text. [base] is the baseline of the text. */
+    private fun Builder.underline(left: Double, w: Double, base: Double, font: Font, rgb: Int, alpha: Double = 1.0) {
+        val size = font.size2D.toDouble()
+        fill(Rectangle2D.Double(left, base + 0.14 * size, w, max(3.0, 0.05 * size)), color(rgb, alpha))
+    }
+
+    /** 6.2 Underlined: the large words at the top in the middle, and the event, the match type, and the round at the right. */
+    private fun Ctx.underlined() {
+        val shadow = b.textShadow(0.6, 3.0, 14.0)
+        val rows = ThumbnailRenderer.rows(head)
+        val fonts = rowFonts(rows, ThumbnailFace.INTER_BOLD, listOf(140.0), 740.0)
+        var y = 34.0
+        rows.forEachIndexed { index, row ->
+            val font = fonts[index]
+            val line = 1.24 * font.size2D
+            val w = b.line(row, font, c.text, W / 2, y, line, Align.CENTER, shadow)
+            b.underline(W / 2 - w / 2, w, baseline(font, y, line), font, c.text)
+            y += line
+        }
+        // The lines at the right end above the video length in the bottom-right corner.
+        val lines = listOf(up(ThumbnailField.EVENT), up(ThumbnailField.KIND), raw(ThumbnailField.ROUND)).filter { it.isNotEmpty() }
+        val lineFonts = lines.map { b.fitted(ThumbnailFace.INTER_BOLD, 50.0, it, 700.0) }
+        var bottom = 600.0
+        lines.indices.reversed().forEach { index ->
+            val font = lineFonts[index]
+            val line = 1.3 * font.size2D
+            bottom -= line
+            val w = b.line(lines[index], font, c.text, W - 48, bottom, line, Align.RIGHT, shadow)
+            b.underline(W - 48 - w, w, baseline(font, bottom, line), font, c.text)
+        }
+        // The logo and the club are at the bottom left, because the large words are at the top.
+        corner(ThumbnailFace.INTER_BOLD, logoTop = 512.0, clubTop = 616.0)
+    }
+
+    /** 6.3 Serif: the match type with a thin line under it, and the large words under it, in light serif letters. */
+    private fun Ctx.serif() {
+        val x = 520.0
+        val max = 700.0
+        val alpha = 0.78
+        val shadow = b.textShadow(0.45, 0.0, 14.0)
+        val kind = raw(ThumbnailField.KIND)
+        val words = raw(ThumbnailField.HEAD)
+        val kindFont = kind.takeIf { it.isNotEmpty() }?.let { b.fitted(ThumbnailFace.GELASIO, 84.0, it, max) }
+        val headFont = words.takeIf { it.isNotEmpty() }?.let { b.fitted(ThumbnailFace.GELASIO, 104.0, it, max) }
+        val kindH = kindFont?.let { 1.25 * it.size2D } ?: 0.0
+        val headH = headFont?.let { 1.15 * it.size2D } ?: 0.0
+        var y = 596.0 - kindH - headH
+        if (kindFont != null) {
+            val w = b.line(kind, kindFont, c.text, x, y, kindH, shadow = shadow, alpha = alpha)
+            b.underline(x, w, baseline(kindFont, y, kindH), kindFont, c.text, alpha)
+            y += kindH
+        }
+        if (headFont != null) b.line(words, headFont, c.text, x, y, headH, shadow = shadow, alpha = alpha)
+        corner(ThumbnailFace.GELASIO)
+    }
+
+    /** 6.4 Headline: the large words in very large accent letters with a dark edge at the bottom left. */
+    private fun Ctx.headline() {
+        if (head.isNotEmpty()) {
+            // The words end at the left of the video length in the bottom-right corner.
+            val max = 1000.0
+            val shadow = b.textShadow(0.8, 6.0, 16.0)
+            val rows = ThumbnailRenderer.rows(head)
+            val one = b.fitted(ThumbnailFace.ARCHIVO, 150.0, head, max, normal = 0.0, spacing = -2.0)
+            // A long text goes in two rows when one row becomes too small.
+            val split = one.size2D < 96 && rows.size > 1
+            val lines = if (split) rows else listOf(head)
+            val fonts = if (split) rowFonts(rows, ThumbnailFace.ARCHIVO, listOf(130.0), max, listOf(-2.0))
+            else listOf(b.fitted(ThumbnailFace.ARCHIVO, 150.0, head, max, spacing = -2.0))
+            var bottom = H - 36
+            lines.indices.reversed().forEach { index ->
+                val font = fonts[index]
+                val line = 1.02 * font.size2D
+                bottom -= line
+                b.line(lines[index], font, c.accent, 44.0, bottom, line, shadow = shadow, outline = TextOutline(c.panel, 7.0))
+            }
+        }
+        corner(ThumbnailFace.ARCHIVO)
+    }
+
+    /** 6.5 Labels: a strip at the left with the logo and the club, and the teams on accent labels with a "vs" label. */
+    private fun Ctx.labels() {
+        val stripW = 170.0
+        b.fill(Rectangle2D.Double(0.0, 0.0, stripW, H), color(c.accent))
+        val box = logo(stripW / 2, 28.0, 130.0, 130.0, Align.CENTER)
+        val club = raw(ThumbnailField.CLUB)
+        if (club.isNotEmpty()) {
+            // The club reads from the bottom to the top, in the middle of the strip.
+            val from = if (box != null) 190.0 else 24.0
+            val font = b.fitted(scene.brandFace ?: ThumbnailFace.INTER_BOLD, 76.0, club, H - 24 - from, normal = 0.6)
+            val cy = (from + H - 24) / 2
+            b.group(rotate(-90.0, stripW / 2, cy)) {
+                b.line(club, font, scene.brandRgb ?: c.onAccent, stripW / 2, cy - 0.6 * font.size2D, 1.2 * font.size2D, Align.CENTER)
+            }
+        }
+        val pad = Pad(14.0, 28.0, 18.0, 28.0)
+        val maxText = 640.0
+        val rightLimit = 1236.0
+
+        /** A team on a label: one row, or two rows when one row becomes too small. [left] moves left when the label is too wide. */
+        fun label(team: String, left: Double, top: Double): Rectangle2D {
+            val one = b.fitted(ThumbnailFace.INTER_BOLD, 72.0, team, maxText, normal = 0.0)
+            val rows = ThumbnailRenderer.rows(team)
+            val split = one.size2D < 56 && rows.size > 1
+            val lines = if (split) rows else listOf(team)
+            val fonts = if (split) rowFonts(rows, ThumbnailFace.INTER_BOLD, listOf(64.0), maxText, normal = 0.5)
+            else listOf(b.fitted(ThumbnailFace.INTER_BOLD, 72.0, team, maxText, normal = 0.5))
+            val textW = lines.indices.maxOf { width(lines[it], fonts[it]) }
+            val w = pad.left + textW + pad.right
+            val h = pad.top + fonts.sumOf { 1.15 * it.size2D } + pad.bottom
+            val rect = Rectangle2D.Double(min(left, rightLimit - w), top, w, h)
+            b.fill(rect, color(c.accent))
+            var y = top + pad.top
+            lines.forEachIndexed { index, line ->
+                val font = fonts[index]
+                b.line(line, font, c.onAccent, rect.centerX, y, 1.15 * font.size2D, Align.CENTER)
+                y += 1.15 * font.size2D
+            }
+            return rect
+        }
+
+        val team1 = raw(ThumbnailField.TEAM1)
+        val team2 = raw(ThumbnailField.TEAM2)
+        val start = 260.0
+        var top = 96.0
+        var anchor = start
+        if (team1.isNotEmpty()) {
+            val rect = label(team1, start, top)
+            top = rect.maxY + 44
+            anchor = rect.maxX
+        }
+        if (team1.isNotEmpty() && team2.isNotEmpty()) {
+            // The "vs" label is under the right end of the first label. The second label starts under the "vs" label.
+            val font = face(ThumbnailFace.INTER_BOLD, 60.0, "vs")
+            val rect = b.tag(listOf(Run("vs", c.onAccent)), font, c.accent, anchor, top, Pad(8.0, 24.0, 14.0, 24.0), Align.RIGHT, 1.15 * 60)
+            top = rect.maxY + 44
+            anchor = rect.minX + 16
+        }
+        if (team2.isNotEmpty()) label(team2, anchor, top)
     }
 }

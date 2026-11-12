@@ -1,5 +1,6 @@
 package org.litvin
 
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentDefaultsV1
 import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
@@ -58,6 +59,21 @@ class CommentDispatcherTest {
 
         assertTrue(dispatcher.update(1, CommentPatch(style = CommentStyle.CARD)))
         assertEquals(CommentStyle.CARD, dispatcher.state().comments.single().style)
+    }
+
+    @Test
+    fun createAndUpdateKeepTheAnimation() {
+        val dispatcher = CommentDispatcher()
+        dispatcher.load(CommentState(emptyList(), CommentDefaultsV1(), nextCommentId = 1))
+
+        val created = dispatcher.create(startMs = 0, durationMs = 1_000, text = "In", animation = CommentAnimation.FADE)
+        assertEquals(CommentAnimation.FADE, created?.animation)
+
+        assertTrue(dispatcher.update(1, CommentPatch(style = CommentStyle.CARD)))
+        assertEquals(CommentAnimation.FADE, dispatcher.state().comments.single().animation, "A patch without an animation keeps it")
+
+        assertTrue(dispatcher.update(1, CommentPatch(animation = CommentAnimation.NONE)))
+        assertEquals(CommentAnimation.NONE, dispatcher.state().comments.single().animation)
     }
 
     @Test

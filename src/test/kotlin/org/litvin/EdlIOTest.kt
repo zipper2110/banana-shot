@@ -2,6 +2,7 @@ package org.litvin
 
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentDefaultsV1
 import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
@@ -138,6 +139,26 @@ class EdlIOTest {
         val read = EdlIO.read(edlPath.toFile().absolutePath)
 
         assertEquals(listOf(CommentStyle.OUTLINE, CommentStyle.OUTLINE), read.comments.map { it.style })
+    }
+
+    @Test
+    fun read_commentWithoutOrWithUnknownAnimation_hasNone_andFadeRoundTrips() {
+        val tmpDir: Path = Files.createTempDirectory("edl_comments_animation_")
+        val edlPath = tmpDir.resolve("edl.json")
+        Files.writeString(
+            edlPath,
+            """{"version":1,"points":[],"nextCommentId":4,"comments":[""" +
+                """{"id":1,"startMs":0,"durationMs":1000,"text":"Old","colorHex":"#FFFFFF"},""" +
+                """{"id":2,"startMs":0,"durationMs":1000,"text":"Future","colorHex":"#FFFFFF","animation":"SPIN"},""" +
+                """{"id":3,"startMs":0,"durationMs":1000,"text":"Fade","colorHex":"#FFFFFF","animation":"FADE"}]}""",
+        )
+
+        val read = EdlIO.read(edlPath.toFile().absolutePath)
+
+        assertEquals(listOf(CommentAnimation.NONE, CommentAnimation.NONE, CommentAnimation.FADE), read.comments.map { it.animation })
+        val written = tmpDir.resolve("written.json").toFile().absolutePath
+        EdlIO.write(written, read)
+        assertEquals(read, EdlIO.read(written))
     }
 
     @Test

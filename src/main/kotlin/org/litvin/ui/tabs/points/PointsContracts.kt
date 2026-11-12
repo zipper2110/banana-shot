@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points
 
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
 import org.litvin.ui.commons.CommentInput
 
@@ -80,6 +81,7 @@ data class CommentDto(
     val sizePercent: Int = 100,
     val opacityPercent: Int = 100,
     val rotationDeg: Int = 0,
+    val animation: CommentAnimation = CommentAnimation.NONE,
 ) : TimelineEventDto {
     override val stableKey: String get() = "comment:$id"
 }
@@ -131,6 +133,7 @@ data class CommentPatch(
     val sizePercent: Int? = null,
     val opacityPercent: Int? = null,
     val rotationDeg: Int? = null,
+    val animation: CommentAnimation? = null,
 )
 
 /** Autosave status surfaced to the toolbar and other indicators. */

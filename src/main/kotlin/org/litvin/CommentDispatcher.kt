@@ -2,6 +2,7 @@ package org.litvin.points.components
 
 import org.litvin.i18n.tr
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentDefaultsV1
 import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
@@ -20,6 +21,7 @@ data class CommentPatch(
     val sizePercent: Int? = null,
     val opacityPercent: Int? = null,
     val rotationDeg: Int? = null,
+    val animation: CommentAnimation? = null,
 )
 
 data class CommentState(
@@ -70,6 +72,7 @@ class CommentDispatcher {
         sizePercent: Int = CommentV1.DEFAULT_SIZE_PERCENT,
         opacityPercent: Int = 100,
         rotationDeg: Int = 0,
+        animation: CommentAnimation = CommentAnimation.NONE,
     ): CommentV1? {
         val requestedColor = colorHex?.let(EdlIO::normalizeColorHex)
         if (colorHex != null && requestedColor == null) {
@@ -89,6 +92,7 @@ class CommentDispatcher {
             sizePercent = EdlIO.normalizeSizePercent(sizePercent),
             opacityPercent = EdlIO.normalizeOpacityPercent(opacityPercent),
             rotationDeg = EdlIO.normalizeRotationDeg(rotationDeg),
+            animation = animation,
         )
         comments += comment
         comments.sortWith(compareBy<CommentV1> { it.startMs }.thenBy { it.id })
@@ -123,6 +127,7 @@ class CommentDispatcher {
             sizePercent = patch.sizePercent?.let(EdlIO::normalizeSizePercent) ?: existing.sizePercent,
             opacityPercent = patch.opacityPercent?.let(EdlIO::normalizeOpacityPercent) ?: existing.opacityPercent,
             rotationDeg = patch.rotationDeg?.let(EdlIO::normalizeRotationDeg) ?: existing.rotationDeg,
+            animation = patch.animation ?: existing.animation,
         )
         if (!isValid(updated.startMs, updated.durationMs, updated.text, updated.colorHex)) return false
 

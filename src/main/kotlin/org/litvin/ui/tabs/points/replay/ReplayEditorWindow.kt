@@ -5,7 +5,9 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.export.ReplayBadgeAss
+import org.litvin.export.comments.CommentAnimations
 import org.litvin.export.comments.CommentAss
+import org.litvin.export.comments.CommentClock
 import org.litvin.i18n.DisplayFormats
 import org.litvin.i18n.tr
 import org.litvin.media.PlayerStatus
@@ -809,6 +811,21 @@ internal class ReplayEditorWindow(
         return point + replayComments
     }
 
+    /**
+     * The animation clocks of the preview comments, in the order of [previewOverlay]. The comments animate while the
+     * preview plays or shows the still frame, with the times of the export. A paused preview shows them without animation.
+     */
+    private fun previewClocks(): List<CommentClock?> {
+        if (player.status() != PlayerStatus.PLAYING && !director.isHolding) return emptyList()
+        val play = director.activePlay
+        val point = if (play != null && !play.replay.showPointComments) emptyList() else CommentAss.activeAt(pointComments, shownMs)
+        if (play == null) return point.map { CommentAnimations.sourceClock(it, shownMs) }
+        val offset = commentClock.playOffsetMs(play.replay, shownMs, director.isHolding)
+        val replayComments = commentClock.comments(play.replay, shownMs, director.isHolding)
+        return point.map { CommentAnimations.replayPointClock(play.replay, it, offset) } +
+            replayComments.map { CommentAnimations.replayCommentClock(play.replay, it, offset) }
+    }
+
     /** [comments] with the comment of the open dialog in place of its saved version, or added to the end. */
     private fun withDialogComment(comments: List<CommentV1>): List<CommentV1> {
         val changed = dialogComment ?: return comments
@@ -833,10 +850,11 @@ internal class ReplayEditorWindow(
             defaultSizePercent = newCommentLook.sizePercent,
             defaultOpacityPercent = newCommentLook.opacityPercent,
             initialDurationMs = NEW_COMMENT_MS,
+            defaultAnimation = newCommentLook.animation,
             onPreview = { previewDialogComment(null, it) },
         ) { input ->
             val added = edits.addComment(input.toComment(id = 0, position = null))
-            onCommentLook(CommentLook(input.style, input.sizePercent, input.opacityPercent))
+            onCommentLook(CommentLook(input.style, input.sizePercent, input.opacityPercent, input.animation))
             refresh()
             added?.let { selectComment(it.id) }
         }
@@ -848,7 +866,7 @@ internal class ReplayEditorWindow(
         selectComment(id)
         val input = CommentInput(
             comment.startMs.toLong(), comment.durationMs.toLong(), comment.text, comment.colorHex, comment.style,
-            comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
+            comment.sizePercent, comment.opacityPercent, comment.rotationDeg, comment.animation,
         )
         previewDialogComment(id, input)
         CommentDialog.showEdit(this, "replay", id, input, onPreview = { previewDialogComment(id, it) }) { saved ->
@@ -892,6 +910,7 @@ internal class ReplayEditorWindow(
         sizePercent = sizePercent,
         opacityPercent = opacityPercent,
         rotationDeg = rotationDeg,
+        animation = animation,
     )
 
     // ---- Pick mode (decision 23) ----
@@ -1124,6 +1143,9 @@ internal class ReplayEditorWindow(
     /** The badge text and the comments that the video shows now, or null before the first overlay. */
     private var overlayShown: Pair<String?, List<CommentV1>>? = null
 
+    /** The animation states of the comments that the video shows now. */
+    private var framesShown: List<CommentAnimations.Frame> = emptyList()
+
     /**
      * The overlay of the video. The preview shows the comments (decision 24), and the badge while it plays a replay with
      * the badge on. The preview plays only the selected replay, so the badge has the label of the selected replay. The
@@ -1141,15 +1163,18 @@ internal class ReplayEditorWindow(
             commentViewOn -> commentViewOverlay()
             else -> emptyList()
         }
+        val clocks = if (previewing) previewClocks() else emptyList()
+        val frames = CommentAnimations.previewFrames(comments, clocks)
         val shown = badge to comments
-        if (shown != overlayShown) {
+        if (shown != overlayShown || frames != framesShown) {
             overlayShown = shown
+            framesShown = frames
             player.setPreviewOverlay(
                 if (badge == null && comments.isEmpty()) {
                     null
                 } else {
                     VideoOverlay { area ->
-                        CommentAss.previewEvents(comments, area) +
+                        CommentAss.previewEvents(comments, area, clocks) +
                             (badge?.let { ReplayBadgeAss.events(it, area.width, area.height, area.x, area.y) } ?: emptyList())
                     }
                 },

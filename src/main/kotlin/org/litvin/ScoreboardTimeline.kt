@@ -1,5 +1,6 @@
 package org.litvin
 
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
 import org.litvin.points.PointV1
@@ -64,6 +65,8 @@ data class CommentOverlaySpan(
     val sizePercent: Int = 100,
     val opacityPercent: Int = 100,
     val rotationDeg: Int = 0,
+    /** The animation plays from [startMs] to [endMs]: when the comment comes on screen and goes away in the output. */
+    val animation: CommentAnimation = CommentAnimation.NONE,
 )
 
 object ScoreboardTimelineBuilder {

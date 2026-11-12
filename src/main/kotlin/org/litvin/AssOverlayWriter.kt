@@ -1,6 +1,7 @@
 package org.litvin
 
 import org.litvin.export.comments.CommentAss
+import org.litvin.export.comments.CommentMotion
 import org.litvin.export.scoreboard.BoardPlacement
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
@@ -95,6 +96,7 @@ object AssOverlayWriter {
                 val events = CommentAss.events(
                     comment.text, comment.colorHex, 0.0, 0.0, playResX.toDouble(), playResY.toDouble(), comment.style,
                     comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
+                    CommentMotion.Timed(comment.animation, comment.endMs - comment.startMs),
                 )
                 events.forEachIndexed { index, text ->
                     w.appendLine("Dialogue: ${COMMENT_LAYER + index},$start,$end,Comment,,0,0,0,,$text")
@@ -156,6 +158,7 @@ object AssOverlayWriter {
                 val events = CommentAss.events(
                     comment.text, comment.colorHex, 0.0, 0.0, playResX.toDouble(), playResY.toDouble(), comment.style,
                     comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
+                    CommentMotion.Timed(comment.animation, comment.endMs - comment.startMs),
                 )
                 events.forEachIndexed { index, text ->
                     w.appendLine("Dialogue: ${COMMENT_LAYER + index},$start,$end,Comment,,0,0,0,,$text")

@@ -1,6 +1,9 @@
 package org.litvin.ui.commons
 
 import org.junit.jupiter.api.Assumptions.assumeFalse
+import org.litvin.i18n.AppLanguage
+import org.litvin.i18n.Messages
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
 import java.awt.Component
 import java.awt.Container
@@ -159,6 +162,62 @@ class CommentDialogTest {
         assertNull(previews.last(), "Save did not stop the preview")
         assertEquals(1, previews.count { it == null }, "The preview stopped more than one time")
         assertEquals("Hello", saved?.text)
+    }
+
+    /** A new comment starts with the given animation. A click on None goes to the preview, and Save returns it. */
+    @Test
+    fun createStartsWithTheGivenAnimationAndSaveReturnsTheChoice() {
+        assumeFalse(GraphicsEnvironment.isHeadless())
+        val previews = mutableListOf<CommentInput?>()
+        var saved: CommentInput? = null
+        var start: CommentAnimation? = null
+        EventQueue.invokeAndWait {
+            val frame = JFrame()
+            try {
+                val dialog = CommentDialog.buildCreate(
+                    frame, "test", 1_000L, "#FFFFFF", CommentStyle.CARD, defaultAnimation = CommentAnimation.FADE,
+                    onPreview = { previews += it },
+                ) { saved = it }
+                start = find<SegmentedChoice<*>>(dialog.contentPane, "test-comment-animation").selected as CommentAnimation?
+                find<JTextArea>(dialog.contentPane, "test-comment-text").text = "Hi"
+                find<AbstractButton>(dialog.contentPane, "test-comment-animation-0").doClick()
+                find<AbstractButton>(dialog.contentPane, "test-comment-save").doClick()
+                dialog.dispose()
+            } finally {
+                frame.dispose()
+            }
+        }
+        assertEquals(CommentAnimation.FADE, start)
+        assertEquals(CommentAnimation.NONE, previews.filterNotNull().last().animation)
+        assertEquals(CommentAnimation.NONE, saved?.animation)
+    }
+
+    /** The dialog is 420 px wide. The Animation labels of all languages fit in their buttons, so none is cut with "…". */
+    @Test
+    fun animationLabelsFitInAllLanguages() {
+        assumeFalse(GraphicsEnvironment.isHeadless())
+        val widths = mutableListOf<Int>()
+        EventQueue.invokeAndWait {
+            val frame = JFrame()
+            try {
+                val dialog = CommentDialog.buildCreate(frame, "test", 1_000L, "#FFFFFF", CommentStyle.OUTLINE) {}
+                CommentAnimation.entries.indices.forEach { widths += find<AbstractButton>(dialog.contentPane, "test-comment-animation-$it").width }
+                dialog.dispose()
+            } finally {
+                frame.dispose()
+            }
+        }
+        val keys = listOf("comment.animation.none", "comment.animation.fade")
+        assertEquals(CommentAnimation.entries.size, keys.size)
+        val font = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
+        for (language in AppLanguage.entries) {
+            val messages = Messages.of(language)
+            keys.forEachIndexed { index, key ->
+                val label = messages.text(key)
+                // The button cuts a label that is wider than the button less 8 px.
+                assertTrue(UiKit.textWidth(label, font) <= widths[index] - 8f, "$language: \"$label\" in ${widths[index]} px")
+            }
+        }
     }
 
     private inline fun <reified T : Component> find(root: Container, name: String): T {

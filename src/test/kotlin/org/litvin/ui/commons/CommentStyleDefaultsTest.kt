@@ -1,5 +1,6 @@
 package org.litvin.ui.commons
 
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
 import org.litvin.ui.flow.fakes.InMemoryPreferencesProvider
@@ -38,5 +39,16 @@ class CommentStyleDefaultsTest {
 
         assertEquals(CommentV1.MAX_SIZE_PERCENT, look.sizePercent)
         assertEquals(CommentV1.MIN_OPACITY_PERCENT, look.opacityPercent)
+    }
+
+    @Test
+    fun `the last animation is read back, and no or an unknown saved animation gives None`() {
+        assertEquals(CommentAnimation.NONE, PreferencesCommentStyleDefaults(node).load().animation)
+
+        PreferencesCommentStyleDefaults(node).save(CommentLook(CommentStyle.CARD, 120, 90, CommentAnimation.FADE))
+        assertEquals(CommentLook(CommentStyle.CARD, 120, 90, CommentAnimation.FADE), PreferencesCommentStyleDefaults(node).load())
+
+        node.put("default-comment-animation", "SPIN")
+        assertEquals(CommentAnimation.NONE, PreferencesCommentStyleDefaults(node).load().animation)
     }
 }

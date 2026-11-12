@@ -10,6 +10,7 @@ import org.litvin.projects.ManifestIO
 import org.litvin.adjustments.AdjustmentsStore
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.TrimRange
+import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentPosition
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
@@ -22,7 +23,9 @@ import org.litvin.points.components.CommentPatch as DispatcherCommentPatch
 import org.litvin.points.components.CommentState
 import org.litvin.points.components.PointsDispatcher
 import org.litvin.scoring.Outcome
+import org.litvin.export.comments.CommentAnimations
 import org.litvin.export.comments.CommentAss
+import org.litvin.export.comments.CommentClock
 import org.litvin.export.comments.CommentPreview
 import org.litvin.media.PlayerStatus
 import org.litvin.media.VideoOverlay
@@ -127,7 +130,7 @@ class SwingPointsPanel(
     private var pointCommentsHidden = false
     private val replayCommentTicker = javax.swing.Timer(REPLAY_COMMENT_TICK_MS) {
         if (!replays.isHolding) (it.source as javax.swing.Timer).stop()
-        if (updateReplayComments(player.currentTimeMs())) refreshOverlay()
+        if (updateReplayComments(player.currentTimeMs()) || commentFramesChanged()) refreshOverlay()
     }
 
     /** The replay badge text over the video, or null when the video shows no badge. */
@@ -140,6 +143,10 @@ class SwingPointsPanel(
 
     // The comment that the comment dialog shows on the video before Save, or null when no dialog is open.
     private var dialogComment: CommentV1? = null
+
+    // The source time of the comments on the video, and the animation states that the video shows now.
+    private var commentTimeMs = 0L
+    private var commentFramesShown: List<CommentAnimations.Frame> = emptyList()
 
     // Drags a comment on the video (B-51)
     private val commentDrag = CommentDragController(
@@ -328,6 +335,7 @@ class SwingPointsPanel(
                 sizePercent = comment.sizePercent,
                 opacityPercent = comment.opacityPercent,
                 rotationDeg = comment.rotationDeg,
+                animation = comment.animation,
             )
         }
         return (pointEvents + comments).sortedWith(compareBy<TimelineEventDto> { it.startMs }.thenBy { it.stableKey })
@@ -818,11 +826,12 @@ class SwingPointsPanel(
             defaultStyle = look.style,
             defaultSizePercent = look.sizePercent,
             defaultOpacityPercent = look.opacityPercent,
+            defaultAnimation = look.animation,
             onPreview = { previewComment(null, it) },
         ) { comment ->
             createComment(
                 comment.startMs, comment.durationMs, comment.text, comment.colorHex, comment.style, comment.sizePercent,
-                comment.opacityPercent, comment.rotationDeg,
+                comment.opacityPercent, comment.rotationDeg, comment.animation,
             )
         }
     }
@@ -836,6 +845,7 @@ class SwingPointsPanel(
         sizePercent: Int = CommentV1.DEFAULT_SIZE_PERCENT,
         opacityPercent: Int = 100,
         rotationDeg: Int = 0,
+        animation: CommentAnimation = CommentAnimation.NONE,
     ) {
         val comment = commentDispatcher.create(
             startMs = startMs.toCommentIntOrNull() ?: return showCommentRangeError(),
@@ -846,10 +856,11 @@ class SwingPointsPanel(
             sizePercent = sizePercent,
             opacityPercent = opacityPercent,
             rotationDeg = rotationDeg,
+            animation = animation,
         )
         maybeShowCommentHint()
         if (comment != null) {
-            commentStyles.save(CommentLook(comment.style, comment.sizePercent, comment.opacityPercent))
+            commentStyles.save(CommentLook(comment.style, comment.sizePercent, comment.opacityPercent, comment.animation))
             analytics.record(AnalyticsEvent.CommentAdded)
         }
         comment?.let { EventQueue.invokeLater { scrollToEvent("comment:${it.id}") } }
@@ -878,6 +889,7 @@ class SwingPointsPanel(
             sizePercent = input.sizePercent,
             opacityPercent = input.opacityPercent,
             rotationDeg = input.rotationDeg,
+            animation = input.animation,
         )
         refreshOverlay()
     }
@@ -894,10 +906,12 @@ class SwingPointsPanel(
                 sizePercent = patch.sizePercent,
                 opacityPercent = patch.opacityPercent,
                 rotationDeg = patch.rotationDeg,
+                animation = patch.animation,
             ),
         )
         maybeShowCommentHint()
         if (updated) rememberLook(patch.style, patch.sizePercent, patch.opacityPercent)
+        if (updated) rememberAnimation(patch.animation)
         if (updated) EventQueue.invokeLater { scrollToEvent("comment:$id") }
     }
 
@@ -915,7 +929,15 @@ class SwingPointsPanel(
     private fun rememberLook(style: CommentStyle? = null, sizePercent: Int? = null, opacityPercent: Int? = null) {
         if (style == null && sizePercent == null && opacityPercent == null) return
         val look = commentStyles.load()
-        commentStyles.save(CommentLook(style ?: look.style, sizePercent ?: look.sizePercent, opacityPercent ?: look.opacityPercent))
+        commentStyles.save(
+            look.copy(style = style ?: look.style, sizePercent = sizePercent ?: look.sizePercent, opacityPercent = opacityPercent ?: look.opacityPercent),
+        )
+    }
+
+    /** Remembers a new animation choice for the next new comment. A null [animation] does not change it. */
+    private fun rememberAnimation(animation: CommentAnimation?) {
+        if (animation == null) return
+        commentStyles.save(commentStyles.load().copy(animation = animation))
     }
 
     /** Removes one replay of a point. While the replay editor is open, it owns the replays, so the editor comes to the front. */
@@ -1073,8 +1095,9 @@ class SwingPointsPanel(
         playbackBar.setTime(shown, player.totalDurationMs())
         showPendingStart()
         scoring.moveTo(shown)
+        commentTimeMs = shown
         val replayChanged = updateReplayComments(ms)
-        showComments(commentPreview.moveTo(shown) || replayChanged)
+        showComments(commentPreview.moveTo(shown) || replayChanged || commentFramesChanged())
     }
 
     /**
@@ -1109,17 +1132,54 @@ class SwingPointsPanel(
 
     /** The scoreboard and the comments at the playhead over the video. */
     private fun refreshOverlay() {
-        // The replay comments draw over the point comments. Only the point comments can be dragged on this tab.
-        val shown = withDialogComment(commentDrag.displayed(visiblePointComments())) + replayCommentsShown
+        val (shown, clocks) = overlayComments()
+        commentFramesShown = CommentAnimations.previewFrames(shown, clocks)
         // The comments draw after the scoreboard, so they are on top of it. A replay hides the scoreboard (B-50).
         val showBoard = !replays.isActive
         val badgeText = activeBadgeText()
         badgeShown = badgeText
         player.setPreviewOverlay(VideoOverlay { area ->
-            (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area) +
+            (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area, clocks) +
                 (badgeText?.let { org.litvin.export.ReplayBadgeAss.events(it, area.width, area.height, area.x, area.y) } ?: emptyList())
         })
         commentDrag.refresh()
+    }
+
+    /** The comments on the video, in drawing order, and their animation clocks in the same order. */
+    private fun overlayComments(): Pair<List<CommentV1>, List<CommentClock?>> {
+        // The replay comments draw over the point comments. Only the point comments can be dragged on this tab.
+        val point = withDialogComment(commentDrag.displayed(visiblePointComments()))
+        return (point + replayCommentsShown) to commentClocks(point, replayCommentsShown)
+    }
+
+    /** True when an animation of a comment on the video is at a new state, so the video must show it. */
+    private fun commentFramesChanged(): Boolean {
+        val (shown, clocks) = overlayComments()
+        return CommentAnimations.previewFrames(shown, clocks) != commentFramesShown
+    }
+
+    /**
+     * The animation clocks of [pointComments] and then [replayComments]. The comments animate only while the video plays
+     * or a replay shows its still frame, with the times of the export. When the video is paused, the comments show
+     * without animation, so that the user can see and edit them. The comment of the open dialog also shows without
+     * animation.
+     */
+    private fun commentClocks(pointComments: List<CommentV1>, replayComments: List<CommentV1>): List<CommentClock?> {
+        if (player.status() != PlayerStatus.PLAYING && !replays.isHolding) return emptyList()
+        val play = replays.activePlay
+        val playOffset = play?.let { replayCommentClock.playOffsetMs(it.replay, commentTimeMs, replays.isHolding) }
+        val dialogId = dialogComment?.id
+        val point = pointComments.map { comment ->
+            when {
+                comment.id == dialogId -> null
+                play == null || playOffset == null -> CommentAnimations.sourceClock(comment, commentTimeMs)
+                else -> CommentAnimations.replayPointClock(play.replay, comment, playOffset)
+            }
+        }
+        val replay = replayComments.map { comment ->
+            if (play == null || playOffset == null) null else CommentAnimations.replayCommentClock(play.replay, comment, playOffset)
+        }
+        return point + replay
     }
 
     /** The badge text of the replay that plays now, or null when no replay with a badge plays. */
@@ -1182,6 +1242,7 @@ class SwingPointsPanel(
             pointComments = commentDispatcher.state().comments,
             newCommentLook = commentStyles.load().let { look ->
                 CommentInput(0, 0, "", commentDispatcher.state().defaults.colorHex, look.style, look.sizePercent, look.opacityPercent)
+                    .copy(animation = look.animation)
             },
             onCommentLook = { look -> commentStyles.save(look) },
             onClosed = {

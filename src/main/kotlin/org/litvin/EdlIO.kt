@@ -131,6 +131,8 @@ data class CommentV1(
     val opacityPercent: Int = 100,
     /** The rotation of the comment around the center of its box, in whole degrees (B-51). Positive is clockwise. */
     val rotationDeg: Int = 0,
+    /** How the comment comes on screen and goes away. Comments saved before the animations existed have none. */
+    val animation: CommentAnimation = CommentAnimation.NONE,
 ) {
     companion object {
         /** The color of a new comment: white. */

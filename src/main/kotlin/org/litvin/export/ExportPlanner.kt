@@ -390,6 +390,7 @@ object ExportPlanner {
                     sizePercent = comment.sizePercent,
                     opacityPercent = comment.opacityPercent,
                     rotationDeg = comment.rotationDeg,
+                    animation = comment.animation,
                 )
             }
         }
@@ -419,6 +420,7 @@ object ExportPlanner {
                         sizePercent = comment.sizePercent,
                         opacityPercent = comment.opacityPercent,
                         rotationDeg = comment.rotationDeg,
+                        animation = comment.animation,
                     )
                 }
                 elapsedMs += (pointEnd - pointStart).coerceAtLeast(0L)

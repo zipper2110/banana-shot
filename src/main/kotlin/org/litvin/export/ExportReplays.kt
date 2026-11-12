@@ -99,6 +99,7 @@ object ExportReplays {
                 sizePercent = comment.sizePercent,
                 opacityPercent = comment.opacityPercent,
                 rotationDeg = comment.rotationDeg,
+                animation = comment.animation,
             )
         }
 
@@ -124,6 +125,7 @@ object ExportReplays {
                     sizePercent = comment.sizePercent,
                     opacityPercent = comment.opacityPercent,
                     rotationDeg = comment.rotationDeg,
+                    animation = comment.animation,
                 )
             }
             .sortedWith(compareBy<CommentOverlaySpan> { it.startMs }.thenBy { it.id })

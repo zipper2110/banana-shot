@@ -28,6 +28,7 @@ import org.litvin.shared.util.BundledFonts
  * The export writes these texts into the ASS file for FFmpeg. The Points preview sends the same
  * texts to the mpv `osd-overlay` command. Both use libass, so a comment looks the same in the preview and the export.
  * Every event sets all of its override tags, so the event style has no effect on the result.
+ * The [CommentMotion] of a comment selects how [events] draws its animation (see [CommentAnimations]).
  */
 object CommentAss {
     private const val FONT = BundledFonts.LIBERATION_SANS
@@ -46,7 +47,7 @@ object CommentAss {
     /**
      * Returns the events of a comment, in drawing order: first the shadows, then the backdrops, then the texts.
      * The frame is the video area: the whole output frame for the export, or the video area of the preview window.
-     * A blank text gives no events.
+     * A blank text gives no events. A [motion] that makes the comment fully transparent at this moment also gives no events.
      */
     fun events(
         text: String,
@@ -60,15 +61,19 @@ object CommentAss {
         sizePercent: Int = CommentV1.DEFAULT_SIZE_PERCENT,
         opacityPercent: Int = 100,
         rotationDeg: Int = 0,
+        motion: CommentMotion = CommentMotion.Still,
     ): List<String> {
-        val placed = place(text, frameX, frameY, frameWidth, frameHeight, style, position, sizePercent, opacityPercent, rotationDeg)
+        val frame = CommentAnimations.frame(motion)
+        if (frame.opacity <= 0.0) return emptyList()
+        val placed = place(text, frameX, frameY, frameWidth, frameHeight, style, position, sizePercent, opacityPercent, rotationDeg, frame)
             ?: return emptyList()
         val rgb = colorHex.removePrefix("#").toIntOrNull(16) ?: LIGHT
-        return when (style) {
+        val events = when (style) {
             CommentStyle.OUTLINE -> outline(placed.lines, rgb, placed.layout)
             CommentStyle.CARD -> card(placed.lines, rgb, placed.layout)
             CommentStyle.PILL -> pills(placed.lines, rgb, placed.layout)
         }
+        return CommentAnimations.timed(events, motion)
     }
 
     /**
@@ -116,10 +121,11 @@ object CommentAss {
         sizePercent: Int,
         opacityPercent: Int,
         rotationDeg: Int,
+        frame: CommentAnimations.Frame = CommentAnimations.Frame.REST,
     ): Placed? {
         if (text.isBlank() || frameWidth <= 0.0 || frameHeight <= 0.0) return null
         val size = sizePercent.coerceIn(CommentV1.MIN_SIZE_PERCENT, CommentV1.MAX_SIZE_PERCENT) / 100.0
-        val opacity = opacityPercent.coerceIn(CommentV1.MIN_OPACITY_PERCENT, 100) / 100.0
+        val opacity = opacityPercent.coerceIn(CommentV1.MIN_OPACITY_PERCENT, 100) / 100.0 * frame.opacity
         val frameScale = (frameHeight / 1080.0).coerceAtLeast(0.25)
         val scale = frameScale * size
         val fontSize = (66 * frameScale).coerceIn(24.0, 128.0) * size
@@ -178,11 +184,19 @@ object CommentAss {
         comment.text.isNotBlank() && comment.startMs <= timeMs && timeMs < comment.startMs.toLong() + comment.durationMs
     }
 
-    /** The events of all [comments] in the video area of a preview, in drawing order. */
-    fun previewEvents(comments: List<CommentV1>, videoArea: Rectangle2D.Double): List<String> = comments.flatMap { comment ->
+    /**
+     * The events of all [comments] in the video area of a preview, in drawing order. [clocks] has the animation clock of
+     * each comment, in the same order. A missing or null clock shows the comment without animation.
+     */
+    fun previewEvents(
+        comments: List<CommentV1>,
+        videoArea: Rectangle2D.Double,
+        clocks: List<CommentClock?> = emptyList(),
+    ): List<String> = comments.flatMapIndexed { index, comment ->
         events(
             comment.text, comment.colorHex, videoArea.x, videoArea.y, videoArea.width, videoArea.height, comment.style,
             comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
+            CommentAnimations.preview(comment, clocks.getOrNull(index)),
         )
     }
 

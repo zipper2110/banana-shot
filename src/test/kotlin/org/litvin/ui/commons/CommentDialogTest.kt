@@ -75,6 +75,33 @@ class CommentDialogTest {
         assertEquals(45, saved?.rotationDeg)
     }
 
+    /**
+     * The free version shows only the free styles (docs/backlog-paid.md, P-1). A comment with a paid style opens as
+     * Outline, and Save keeps Outline.
+     */
+    @Test
+    fun freeVersionHidesThePaidStyles() {
+        assumeFalse(GraphicsEnvironment.isHeadless())
+        var saved: CommentInput? = null
+        var labels = emptyList<String>()
+        EventQueue.invokeAndWait {
+            val frame = JFrame()
+            try {
+                val initial = CommentInput(0L, 2_000L, "Neon", "#FFFFFF", CommentStyle.GLOW, 100, 100)
+                val dialog = CommentDialog.buildEdit(frame, "test", 1, initial) { saved = it }
+                labels = all(dialog.contentPane).filterIsInstance<AbstractButton>()
+                    .filter { it.name.orEmpty().startsWith("test-comment-style-") }.map { it.text }.toList()
+                find<AbstractButton>(dialog.contentPane, "test-comment-save").doClick()
+                dialog.dispose()
+            } finally {
+                frame.dispose()
+            }
+        }
+        val free = listOf("plain", "shadow", "outline", "caption", "card", "pill").map { org.litvin.i18n.tr("comment.style.$it") }
+        assertEquals(free, labels)
+        assertEquals(CommentStyle.OUTLINE, saved?.style)
+    }
+
     /** A new comment starts with the size and the opacity that the panel gives. Save returns the slider values. */
     @Test
     fun createStartsWithTheGivenSizeAndOpacity() {

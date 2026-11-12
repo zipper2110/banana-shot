@@ -66,8 +66,9 @@ object SwingMainApp {
         if (args.contains("--diagnostics")) {
             kotlin.system.exitProcess(DistributionDiagnostics.run())
         }
+        org.litvin.shared.util.Edition.readArguments(args)
         logger.info {
-            "${AppInfo.NAME} ${AppInfo.version} started on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, " +
+            "${AppInfo.NAME} ${AppInfo.version}${if (org.litvin.shared.util.Edition.isPaid) " (paid)" else ""} started on ${System.getProperty("os.name")} ${System.getProperty("os.version")}, " +
                 "Java ${System.getProperty("java.version")}, pid ${ProcessHandle.current().pid()}."
         }
         // The bundled scoreboard fonts (B-13, step 10): Java measures with them, and libass and mpv read the folder.

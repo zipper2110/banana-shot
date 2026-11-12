@@ -1,5 +1,6 @@
 package org.litvin.app
 
+import org.litvin.shared.util.Edition
 import java.io.File
 
 /**
@@ -41,7 +42,8 @@ object AppRestart {
     }
 
     /**
-     * The command of the new process. It keeps the window-size option of this process (B-11 E4-T8).
+     * The command of the new process. It keeps the window-size option of this process (B-11 E4-T8) and the paid
+     * switch ([Edition]).
      *
      * On macOS, `open -n` starts the app bundle of the launcher as a new app, as the Dock does (B-13). Without
      * `-n`, `open` only shows the running app. `open` does not pass the environment, so `--env` gives [ENVIRONMENT].
@@ -50,8 +52,11 @@ object AppRestart {
         launcher: File,
         windowSize: WindowSize? = WindowSize.requested(),
         osName: String = System.getProperty("os.name").orEmpty(),
+        paid: Boolean = Edition.isPaid,
     ): List<String> {
-        val arguments = listOfNotNull(ARGUMENT, windowSize?.let { "${WindowSize.ARGUMENT}$it" })
+        val arguments = listOfNotNull(
+            ARGUMENT, windowSize?.let { "${WindowSize.ARGUMENT}$it" }, Edition.ARGUMENT.takeIf { paid },
+        )
         val bundle = launcher.absoluteFile.parentFile?.parentFile?.parentFile
         if (osName.startsWith("Mac", ignoreCase = true) && bundle != null && bundle.name.endsWith(".app") &&
             launcher.absoluteFile.parentFile.name == "MacOS"

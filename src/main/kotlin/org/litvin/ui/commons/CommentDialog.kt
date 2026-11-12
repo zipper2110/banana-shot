@@ -52,17 +52,21 @@ object CommentDialog {
 
     private val COLOR_HEX = Regex("^#?([0-9A-Fa-f]{6})$")
 
-    /** The choices of the Style switch. The order is the order of the buttons "<prefix>-comment-style-<index>". */
-    private val STYLE_OPTIONS = listOf(
-        SegmentedChoice.Option(
-            CommentStyle.OUTLINE,
-            tr("comment.style.outline"),
-            sub = tr("comment.style.outline.sub"),
-            tooltip = tr("comment.style.outline.tooltip"),
-        ),
-        SegmentedChoice.Option(CommentStyle.CARD, tr("comment.style.card"), sub = tr("comment.style.card.sub"), tooltip = tr("comment.style.card.tooltip")),
-        SegmentedChoice.Option(CommentStyle.PILL, tr("comment.style.pill"), sub = tr("comment.style.pill.sub"), tooltip = tr("comment.style.pill.tooltip")),
-    )
+    /**
+     * The choices of the Style switch, in rows of three: first the texts without a box, then the boxes.
+     * The order is the order of the buttons "<prefix>-comment-style-<index>".
+     * The free version does not show the paid styles (docs/backlog-paid.md, P-1).
+     */
+    private val styleOptions get() = listOf(
+        CommentStyle.PLAIN to "plain", CommentStyle.SHADOW to "shadow", CommentStyle.OUTLINE to "outline",
+        CommentStyle.GLOW to "glow", CommentStyle.CAPTION to "caption", CommentStyle.CARD to "card",
+        CommentStyle.PILL to "pill", CommentStyle.LOWER_THIRD to "lowerThird", CommentStyle.BUBBLE to "bubble",
+    ).filter { (style, _) -> style.available }.map { (style, key) ->
+        SegmentedChoice.Option(style, tr("comment.style.$key"), sub = tr("comment.style.$key.sub"), tooltip = tr("comment.style.$key.tooltip"))
+    }
+
+    /** The number of style buttons in one row. */
+    private const val STYLE_COLUMNS = 3
 
     fun showCreate(
         parent: Component,
@@ -127,6 +131,8 @@ object CommentDialog {
 
     private fun JDialog.showOver(parent: Component) {
         setLocationRelativeTo(parent)
+        // The nine style buttons make the dialog tall. It must not go below the taskbar.
+        DialogKit.keepOnScreen(this)
         isVisible = true
     }
 
@@ -158,7 +164,7 @@ object CommentDialog {
             swatch = colorFor(colorHex)
             toolTipText = colorHex
         }
-        val style = SegmentedChoice("$namePrefix-comment-style", STYLE_OPTIONS).apply { selected = initial.style }
+        val style = SegmentedChoice("$namePrefix-comment-style", styleOptions, STYLE_COLUMNS).apply { selected = initial.style.orAvailable() }
         val size = SliderValueRow(
             "$namePrefix-comment-size", tr("comment.size"), tr("comment.size.tooltip"),
             CommentV1.MIN_SIZE_PERCENT, CommentV1.MAX_SIZE_PERCENT, CommentV1.DEFAULT_SIZE_PERCENT,

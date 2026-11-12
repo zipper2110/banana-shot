@@ -37,6 +37,11 @@ class WindowSizeTest {
             AppRestart.command(launcher, WindowSize(1200, 800)),
         )
         assertEquals(listOf(launcher.absolutePath, AppRestart.ARGUMENT), AppRestart.command(launcher, windowSize = null))
+        // The restart keeps the paid switch (docs/backlog-paid.md).
+        assertEquals(
+            listOf(launcher.absolutePath, AppRestart.ARGUMENT, "--paid"),
+            AppRestart.command(launcher, windowSize = null, paid = true),
+        )
     }
 
     @Test

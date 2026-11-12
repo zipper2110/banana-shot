@@ -79,11 +79,16 @@ internal class SwitchBox(text: String, private val fontSize: Float = 13f) : JChe
 
 /**
  * Two or three choices side by side, of which one is selected: the `.seg` element of the designs.
+ * With [columns], the choices wrap into rows of that many choices, for example nine comment styles in three rows.
  * An option can have a second, smaller line, for example "No-ad" and "deciding point at 40–40".
  * An option with a [Glyph] and no label shows only the glyph, for example the corner of the scoreboard position.
  * Each option is a button with the name "<componentName>-<index>", so the tests can click it.
  */
-internal class SegmentedChoice<T>(private val componentName: String, options: List<Option<T>>) : JPanel(null) {
+internal class SegmentedChoice<T>(
+    private val componentName: String,
+    options: List<Option<T>>,
+    private val columns: Int = Int.MAX_VALUE,
+) : JPanel(null) {
     data class Option<T>(
         val value: T,
         val label: String,
@@ -137,21 +142,29 @@ internal class SegmentedChoice<T>(private val componentName: String, options: Li
     private val twoLines get() = segments.any { it.option.sub != null }
     private val segmentHeight get() = if (twoLines) 36 else 26
 
+    /** The number of choices in one row. */
+    private val perRow get() = segments.size.coerceIn(1, columns.coerceAtLeast(1))
+    private val rows get() = (segments.size + perRow - 1) / perRow
+
     override fun getPreferredSize(): Dimension {
         val widest = segments.maxOfOrNull { it.preferredSize.width } ?: 60
-        return Dimension(PAD * 2 + widest * segments.size + GAP * (segments.size - 1), segmentHeight + PAD * 2)
+        val rows = rows.coerceAtLeast(1)
+        return Dimension(PAD * 2 + widest * perRow + GAP * (perRow - 1), segmentHeight * rows + GAP * (rows - 1) + PAD * 2)
     }
 
     override fun getMinimumSize() = Dimension(0, preferredSize.height)
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
 
     override fun doLayout() {
-        val count = segments.size.coerceAtLeast(1)
+        val count = perRow
         val inner = width - PAD * 2 - GAP * (count - 1)
+        val rowHeight = (height - PAD * 2 - GAP * (rows - 1)) / rows.coerceAtLeast(1)
         segments.forEachIndexed { index, segment ->
-            val left = PAD + index * inner / count + index * GAP
-            val right = PAD + (index + 1) * inner / count + index * GAP
-            segment.setBounds(left, PAD, right - left, height - PAD * 2)
+            val column = index % count
+            val top = PAD + index / count * (rowHeight + GAP)
+            val left = PAD + column * inner / count + column * GAP
+            val right = PAD + (column + 1) * inner / count + column * GAP
+            segment.setBounds(left, top, right - left, rowHeight)
         }
     }
 

@@ -553,9 +553,9 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
 | E1 mode switch, E2 | Done | The mode switch is `ScoringModeBar` above the point bar (tennis only). The default mode of new projects is `ScoringModeDefaults` (More → Settings, card Scoring). The Points tab gives it to a new project with the default scoreboard style (`useDefaultScoreboard`). The domain rules are in `scoring/PointEndings.kt`: `EndingChoice`, `PointEndings` (the ending keys, Q, W, and E), and `ServerChanges` (the preview of a server change). The point bar shows `EndingButtons` and the "Who serves?" answers (`PointsScoringControls`). `ServeQuestion` keeps the state of the question. `ServerChangeText` makes the message of the confirmation. `PointsScoring.change` calls `PointDetails.resolve` after each change, and `setPoints` writes the new winners when the points change. The help page is `HelpPage.ADVANCED_SCORING`. Tests: `PointEndingsTest`, `ServeQuestionTest`, `PointsScoringEndingsTest`. |
 | E3 | Not started | |
 | E3b | Not started | |
-| E4 | Not started | |
+| E4 | Done | `MatchStats.compute` has `details` and `advanced`. `DetailStats` has the serve and ending counts. `StatRows` has the rows of advanced mode (`MatchStat.advanced`), the group `ENDINGS`, and `StatCoverage` ("In 40 points with details" under the row in the Stats tab; the card shows no coverage). The point lengths skip the fault, double fault, and let clips in all modes. `AVERAGE_GAP` is removed. Tests: `MatchStatsTest`, `StatRowsTest`. |
 | E5 | Not started | |
-| E6 | Not started | |
+| E6 | Done | `OverlaySpan.serveMark` and `ScoreboardDisplay.serveMark`. `ScoreboardTimelineBuilder.secondServeIds(points, score)` gives the 2nd-serve clips, and `build` takes them as `secondServeIds`. `ScoreboardBadge` shows the mark as a dark tab in one row with the deciding point badge. In a full video, the mark shows from the end of the fault to the end of the 2nd-serve clip. Tests: `ScoreboardServeMarkTest`, `VideoTextFit`. |
 
 ### Domain rules in the code
 

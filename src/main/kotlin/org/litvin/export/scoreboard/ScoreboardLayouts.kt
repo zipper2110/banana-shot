@@ -53,8 +53,11 @@ object ScoreboardLayouts {
         // The font that the user chose replaces the fonts of the style, also in the badge (B-13, step 10).
         return ScoreboardFonts.withChosenFamily(normalized.font.family) {
             val board = board(display, look, normalized.style)
-            val badge = display.badge?.takeIf { normalized.showDecidingPoint }
-            if (badge == null) board else ScoreboardBadge.add(board, badge, look.accentRgb, normalized.position)
+            val tabs = listOfNotNull(
+                display.badge?.takeIf { normalized.showDecidingPoint }?.let { ScoreboardBadge.Tab(it, look.accentRgb) },
+                display.serveMark?.let { ScoreboardBadge.Tab(it, ScoreboardBadge.MARK_RGB, ScoreboardBadge.MARK_OPACITY) },
+            )
+            ScoreboardBadge.add(board, tabs, normalized.position)
         }
     }
 

@@ -1,6 +1,8 @@
 package org.litvin.stats
 
+import org.litvin.scoring.DetailStats
 import org.litvin.scoring.DeuceRule
+import org.litvin.scoring.ErrorKind
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.MatchStats
 import org.litvin.scoring.MatchStructure
@@ -15,6 +17,8 @@ import org.litvin.i18n.DisplayFormats
 enum class StatGroup {
     OVERVIEW,
     SERVE,
+    /** How the points ended (B-68). Only a project in advanced mode has these rows. */
+    ENDINGS,
     PRESSURE,
     POINT_LENGTH,
     MOMENTUM,
@@ -25,6 +29,7 @@ enum class StatGroup {
         get() = when (this) {
             OVERVIEW -> tr("stats.group.overview")
             SERVE -> tr("stats.group.serve")
+            ENDINGS -> tr("stats.group.endings")
             PRESSURE -> tr("stats.group.pressure")
             POINT_LENGTH -> tr("stats.group.pointLength")
             MOMENTUM -> tr("stats.group.momentum")
@@ -35,15 +40,35 @@ enum class StatGroup {
 /**
  * The statistics that the app can show, in display order.
  * [key] is stored in stats.json. Do not change a key after a release.
+ * [advanced] is true for a row from the point details (B-68). Only a project in advanced mode shows these rows.
  */
-enum class MatchStat(val key: String, val group: StatGroup, val inVideoByDefault: Boolean = false) {
+enum class MatchStat(
+    val key: String,
+    val group: StatGroup,
+    val inVideoByDefault: Boolean = false,
+    val advanced: Boolean = false,
+) {
     POINTS_WON("points_won", StatGroup.OVERVIEW, inVideoByDefault = true),
     GAMES_WON("games_won", StatGroup.OVERVIEW),
     SETS_WON("sets_won", StatGroup.OVERVIEW),
+    ACES("aces", StatGroup.SERVE, inVideoByDefault = true, advanced = true),
+    DOUBLE_FAULTS("double_faults", StatGroup.SERVE, inVideoByDefault = true, advanced = true),
+    FIRST_SERVE_IN("first_serve_in", StatGroup.SERVE, advanced = true),
+    FIRST_SERVE_POINTS_WON("first_serve_points_won", StatGroup.SERVE, advanced = true),
+    SECOND_SERVE_POINTS_WON("second_serve_points_won", StatGroup.SERVE, advanced = true),
     SERVICE_POINTS_WON("service_points_won", StatGroup.SERVE, inVideoByDefault = true),
     RETURN_POINTS_WON("return_points_won", StatGroup.SERVE),
     SERVICE_GAMES_WON("service_games_won", StatGroup.SERVE, inVideoByDefault = true),
     RETURN_GAMES_WON("return_games_won", StatGroup.SERVE),
+    WINNERS("winners", StatGroup.ENDINGS, inVideoByDefault = true, advanced = true),
+    FORCED_ERRORS("forced_errors", StatGroup.ENDINGS, advanced = true),
+    UNFORCED_ERRORS("unforced_errors", StatGroup.ENDINGS, inVideoByDefault = true, advanced = true),
+    /** The winners of a player divided by the unforced errors of the same player. */
+    WINNERS_TO_UNFORCED_ERRORS("winners_to_unforced_errors", StatGroup.ENDINGS, advanced = true),
+    /** The errors with the error kind [ErrorKind.NET]. */
+    ERRORS_NET("errors_net", StatGroup.ENDINGS, advanced = true),
+    ERRORS_LONG("errors_long", StatGroup.ENDINGS, advanced = true),
+    ERRORS_WIDE("errors_wide", StatGroup.ENDINGS, advanced = true),
     BREAK_POINTS_WON("break_points_won", StatGroup.PRESSURE, inVideoByDefault = true),
     BREAK_POINTS_SAVED("break_points_saved", StatGroup.PRESSURE),
     SET_POINTS_WON("set_points_won", StatGroup.PRESSURE),
@@ -61,7 +86,6 @@ enum class MatchStat(val key: String, val group: StatGroup, val inVideoByDefault
     PLAYING_TIME("playing_time", StatGroup.TIME),
     AVERAGE_POINT("average_point", StatGroup.TIME),
     LONGEST_POINT("longest_point", StatGroup.TIME),
-    AVERAGE_GAP("average_gap", StatGroup.TIME),
     ;
 
     /** The name of the statistic in the app language. */
@@ -70,10 +94,22 @@ enum class MatchStat(val key: String, val group: StatGroup, val inVideoByDefault
             POINTS_WON -> tr("stats.row.pointsWon")
             GAMES_WON -> tr("stats.row.gamesWon")
             SETS_WON -> tr("stats.row.setsWon")
+            ACES -> tr("stats.row.aces")
+            DOUBLE_FAULTS -> tr("stats.row.doubleFaults")
+            FIRST_SERVE_IN -> tr("stats.row.firstServeIn")
+            FIRST_SERVE_POINTS_WON -> tr("stats.row.firstServePointsWon")
+            SECOND_SERVE_POINTS_WON -> tr("stats.row.secondServePointsWon")
             SERVICE_POINTS_WON -> tr("stats.row.servicePointsWon")
             RETURN_POINTS_WON -> tr("stats.row.returnPointsWon")
             SERVICE_GAMES_WON -> tr("stats.row.serviceGamesWon")
             RETURN_GAMES_WON -> tr("stats.row.returnGamesWon")
+            WINNERS -> tr("stats.row.winners")
+            FORCED_ERRORS -> tr("stats.row.forcedErrors")
+            UNFORCED_ERRORS -> tr("stats.row.unforcedErrors")
+            WINNERS_TO_UNFORCED_ERRORS -> tr("stats.row.winnersToUnforcedErrors")
+            ERRORS_NET -> tr("stats.row.errorsNet")
+            ERRORS_LONG -> tr("stats.row.errorsLong")
+            ERRORS_WIDE -> tr("stats.row.errorsWide")
             BREAK_POINTS_WON -> tr("stats.row.breakPointsWon")
             BREAK_POINTS_SAVED -> tr("stats.row.breakPointsSaved")
             SET_POINTS_WON -> tr("stats.row.setPointsWon")
@@ -90,7 +126,6 @@ enum class MatchStat(val key: String, val group: StatGroup, val inVideoByDefault
             PLAYING_TIME -> tr("stats.row.playingTime")
             AVERAGE_POINT -> tr("stats.row.averagePoint")
             LONGEST_POINT -> tr("stats.row.longestPoint")
-            AVERAGE_GAP -> tr("stats.row.averageGap")
         }
 
     companion object {
@@ -99,6 +134,21 @@ enum class MatchStat(val key: String, val group: StatGroup, val inVideoByDefault
         val defaultVideoKeys: List<String> = entries.filter { it.inVideoByDefault }.map { it.key }
     }
 }
+
+/** What the [StatCoverage.count] of a row counts (B-68). */
+enum class CoverageKind {
+    /** The points with a known ending. See [DetailStats.detailedPoints]. */
+    DETAILED_POINTS,
+
+    /** The errors with an error kind. See [DetailStats.errorsWithKind]. */
+    ERRORS_WITH_KIND,
+}
+
+/**
+ * The part of the points that a row of advanced mode counts, when the row does not count all of them (B-68). For
+ * example, a row of the endings counts only the points with a known ending. The UI makes the sentence.
+ */
+data class StatCoverage(val kind: CoverageKind, val count: Int)
 
 /** A value in the table: the main [text], and an optional [detail], for example "64%" and "32/50". */
 data class StatValue(val text: String, val detail: String? = null)
@@ -121,6 +171,8 @@ data class StatRow(
     val sharedPointId: String? = null,
     /** The text of the row. Some rows add their settings to [MatchStat.label]. */
     val label: String = stat.label,
+    /** The part of the points that the row counts, or null when the row counts all points. */
+    val coverage: StatCoverage? = null,
 ) {
     val available: Boolean get() = unavailableReason == null
 }
@@ -135,11 +187,18 @@ object StatRows {
     val NO_VALUE: String get() = tr("stats.reason.noValue")
     val NO_POINTS_OF_LENGTH: String get() = tr("stats.reason.noPointsOfLength")
     val NO_DECIDING_POINT: String get() = tr("stats.reason.noDecidingPoint")
+    val NO_DETAILS: String get() = tr("stats.reason.noDetails")
+    val NO_ERROR_KIND: String get() = tr("stats.reason.noErrorKind")
 
+    /** The rows of [stats]. The rows of advanced mode ([MatchStat.advanced]) are only in a result with details. */
     fun build(stats: MatchStats, rules: MatchRulesV1, settings: StatsSettingsV1 = StatsSettingsV1()): List<StatRow> {
         val normalized = settings.normalized()
-        return MatchStat.entries.map { row(it, stats, rules, normalized) }
+        return shownStats(stats).map { row(it, stats, rules, normalized) }
     }
+
+    /** The statistics that a table of [stats] shows: in basic mode, the rows of advanced mode are hidden. */
+    fun shownStats(stats: MatchStats): List<MatchStat> =
+        if (stats.details != null) MatchStat.entries else MatchStat.entries.filterNot { it.advanced }
 
     /**
      * The text of a row with its setting, for example "Short points won (≤ 7 s)".
@@ -166,6 +225,7 @@ object StatRows {
         val manual = rules.manualScoring
         val serve = stats.serve
         val time = stats.time
+        val details = stats.details
 
         fun unavailable(reason: String) = StatRow(stat, unavailableReason = reason)
         fun perPlayer(values: PerPlayer<StatValue>, bar: PerPlayer<Double>? = null) = StatRow(stat, values = values, bar = bar)
@@ -249,12 +309,64 @@ object StatRows {
             MatchStat.LONGEST_POINT -> shared(time.longestPoint?.let { StatValue(seconds((it.endMs - it.startMs).toLong())) })
                 .copy(sharedPointId = time.longestPoint?.id)
             MatchStat.AVERAGE_POINT_WON -> perPlayer(time.averagePointMsWon.map { ms -> StatValue(ms?.let(::seconds) ?: "—") })
-            MatchStat.AVERAGE_GAP -> shared(time.averageGapMs?.let { StatValue(seconds(it)) })
+            MatchStat.ACES, MatchStat.DOUBLE_FAULTS, MatchStat.FIRST_SERVE_IN, MatchStat.FIRST_SERVE_POINTS_WON,
+            MatchStat.SECOND_SERVE_POINTS_WON, MatchStat.WINNERS, MatchStat.FORCED_ERRORS, MatchStat.UNFORCED_ERRORS,
+            MatchStat.WINNERS_TO_UNFORCED_ERRORS, MatchStat.ERRORS_NET, MatchStat.ERRORS_LONG, MatchStat.ERRORS_WIDE ->
+                if (details == null || details.detailedPoints == 0) unavailable(NO_DETAILS)
+                else detailRow(stat, details, stats.scoredPoints, serve != null)
             MatchStat.SHORT_POINTS_WON ->
                 lengthShares(time.scoredDurations.filter { it.durationMs <= settings.shortPointMaxSeconds * 1000L })
             MatchStat.LONG_POINTS_WON ->
                 lengthShares(time.scoredDurations.filter { it.durationMs >= settings.longPointMinSeconds * 1000L })
         }.copy(label = label(stat, settings, rules))
+    }
+
+    /**
+     * A row of advanced mode (B-68). The serve rows need the server. The rows of the error kinds need an error with a
+     * kind. When the row does not count all points with a winner, it has a [StatCoverage].
+     */
+    private fun detailRow(stat: MatchStat, details: DetailStats, scoredPoints: Int, hasServer: Boolean): StatRow {
+        fun counts(values: PerPlayer<Int>) = StatRow(stat, values = values.map(::count), bar = values.map { it.toDouble() })
+        fun shares(values: PerPlayer<Ratio>): StatRow = if (!hasServer) {
+            StatRow(stat, unavailableReason = NEEDS_SERVER)
+        } else {
+            StatRow(stat, values = values.map(::share), bar = values.map { (it.percent ?: 0).toDouble() })
+        }
+        fun errorKind(kind: ErrorKind): StatRow = if (details.errorsWithKind == 0) {
+            StatRow(stat, unavailableReason = NO_ERROR_KIND)
+        } else {
+            counts(details.errorKinds.getValue(kind))
+        }
+        val row = when (stat) {
+            MatchStat.ACES -> counts(details.aces)
+            MatchStat.DOUBLE_FAULTS -> counts(details.doubleFaults)
+            MatchStat.FIRST_SERVE_IN -> shares(details.firstServeIn)
+            MatchStat.FIRST_SERVE_POINTS_WON -> shares(details.firstServePointsWon)
+            MatchStat.SECOND_SERVE_POINTS_WON -> shares(details.secondServePointsWon)
+            MatchStat.WINNERS -> counts(details.winners)
+            MatchStat.FORCED_ERRORS -> counts(details.forcedErrors)
+            MatchStat.UNFORCED_ERRORS -> counts(details.unforcedErrors)
+            MatchStat.WINNERS_TO_UNFORCED_ERRORS -> StatRow(
+                stat,
+                values = PerPlayer(1, 2).map { player ->
+                    val winners = details.winners[player]
+                    val errors = details.unforcedErrors[player]
+                    val ratio = if (errors == 0) "—" else DisplayFormats.decimal(winners.toDouble() / errors, 2)
+                    StatValue(ratio, "$winners/$errors")
+                },
+            )
+            MatchStat.ERRORS_NET -> errorKind(ErrorKind.NET)
+            MatchStat.ERRORS_LONG -> errorKind(ErrorKind.LONG)
+            MatchStat.ERRORS_WIDE -> errorKind(ErrorKind.WIDE)
+            else -> error("Not a row of advanced mode: $stat")
+        }
+        if (!row.available) return row
+        val coverage = when (stat) {
+            MatchStat.ERRORS_NET, MatchStat.ERRORS_LONG, MatchStat.ERRORS_WIDE ->
+                StatCoverage(CoverageKind.ERRORS_WITH_KIND, details.errorsWithKind).takeIf { it.count < details.errors }
+            else -> StatCoverage(CoverageKind.DETAILED_POINTS, details.detailedPoints).takeIf { it.count < scoredPoints }
+        }
+        return row.copy(coverage = coverage)
     }
 
     private fun <T, R> PerPlayer<T>.map(transform: (T) -> R): PerPlayer<R> = PerPlayer(transform(p1), transform(p2))

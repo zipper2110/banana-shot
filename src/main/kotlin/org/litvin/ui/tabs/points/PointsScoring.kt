@@ -725,6 +725,7 @@ internal class PointsScoring(
                     fullVideo = true,
                     timing = ScoreboardTiming.of(style()),
                     preview = true,
+                    secondServeIds = ScoreboardTimelineBuilder.secondServeIds(points, score),
                 )
             }
         }.getOrDefault(emptyList())

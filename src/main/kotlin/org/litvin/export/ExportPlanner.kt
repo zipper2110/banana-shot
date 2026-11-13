@@ -455,6 +455,8 @@ object ExportPlanner {
             // The "Only points" and "Only favorites" exports ignore the start and the end settings (B-63).
             timing = ScoreboardTiming.of(score.scoreboard),
             videoEndMs = videoEndMs,
+            // The packs need all clips, also the fault clips of zero length that the export skips (B-68).
+            secondServeIds = ScoreboardTimelineBuilder.secondServeIds(edl?.points ?: scoringPoints, score),
             exportedPointIds = if (effectiveIdleTrim && overlayPoints.isNotEmpty()) {
                 overlayPoints.map { it.id }.toSet()
             } else {

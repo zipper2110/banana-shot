@@ -4,7 +4,9 @@ import org.kordamp.ikonli.material2.Material2MZ
 import org.kordamp.ikonli.material2.Material2OutlinedAL
 import org.kordamp.ikonli.material2.Material2OutlinedMZ
 import org.litvin.scoring.PerPlayer
+import org.litvin.stats.CoverageKind
 import org.litvin.stats.MatchStat
+import org.litvin.stats.StatCoverage
 import org.litvin.stats.StatGroup
 import org.litvin.stats.StatRow
 import org.litvin.stats.StatValue
@@ -664,7 +666,10 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
                 p2.show(values.p2, if (lead == 2) Palette.FG_STRONG else Palette.FG_2, row.pointIds?.p2)
                 bar.values = row.bar
                 bar.colors = colors
-                setParts(sides = true, bar = row.bar != null, reason = false, shared = false)
+                // A row of advanced mode tells which part of the points it counts, under the bar (B-68).
+                val coverage = row.coverage?.let(::coverageText)
+                reason.text = coverage.orEmpty()
+                setParts(sides = true, bar = row.bar != null, reason = coverage != null, shared = false)
             }
         }
         check.isSelected = inVideo
@@ -761,6 +766,12 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
         private val INFO_ICON = UiKit.icon(Material2OutlinedAL.INFO, 14, Palette.FG_3)
         private val HELP_ICON = UiKit.icon(Material2OutlinedAL.HELP_OUTLINE, 14, Palette.FG_3)
 
+        /** The sentence under a row that does not count all points, for example "In 40 points with details". */
+        fun coverageText(coverage: StatCoverage): String = when (coverage.kind) {
+            CoverageKind.DETAILED_POINTS -> tr("stats.coverage.detailedPoints", "count" to coverage.count)
+            CoverageKind.ERRORS_WITH_KIND -> tr("stats.coverage.errorKinds", "count" to coverage.count)
+        }
+
         /** The player that leads the row: 1, 2, or 0 for equal values and for rows without a bar. */
         fun leader(bar: PerPlayer<Double>?): Int = when {
             bar == null || bar.p1 == bar.p2 -> 0
@@ -826,10 +837,20 @@ internal class StatsTable(
         revalidate()
     }
 
-    /** Shows the count of rows in the video in each group title. */
+    /**
+     * Shows only the rows of [shown], for example no rows of advanced mode in basic mode (B-68). A group without a
+     * shown row has no title.
+     */
+    fun showStats(shown: Collection<MatchStat>) {
+        for ((stat, view) in rows) view.isVisible = stat in shown
+        for ((group, header) in groups) header.isVisible = shown.any { it.group == group }
+        revalidate()
+    }
+
+    /** Shows the count of rows in the video in each group title. Only the shown rows count. */
     fun showGroupCounts(inVideo: (MatchStat) -> Boolean) {
         for ((group, header) in groups) {
-            val groupStats = MatchStat.entries.filter { it.group == group }
+            val groupStats = MatchStat.entries.filter { it.group == group && rows.getValue(it).isVisible }
             header.showCount(groupStats.count(inVideo), groupStats.size)
         }
     }

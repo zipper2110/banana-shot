@@ -215,7 +215,107 @@ class MatchStatsTest {
         assertEquals(5_333L, time.averagePointMs)
         assertEquals("p3", time.longestPoint?.id)
         assertEquals(PerPlayer<Long?>(6_500, 3_000), time.averagePointMsWon)
-        assertEquals(2_000L, time.averageGapMs)
+    }
+
+    @Test
+    fun thePointLengthsSkipTheServeClipsAndThePlayingTimeIncludesThem() {
+        val (points, outcomes, details) = advancedMatch()
+        val timeline = ScoringEngine.timeline(points, outcomes)
+
+        val time = MatchStats.compute(points, outcomes, timeline, MatchRulesV1(), details = details).time
+
+        // The match starts with the first fault clip.
+        assertEquals(40_000L, time.durationMs)
+        // The clip of zero length adds nothing.
+        assertEquals(29_000L, time.playingMs)
+        // Only p1, p2, p3, and p4 are point clips.
+        assertEquals(6_000L, time.averagePointMs)
+        assertEquals("p4", time.longestPoint?.id)
+        // The double fault is not a point length of player 2.
+        assertEquals(PerPlayer<Long?>(5_333, 8_000), time.averagePointMsWon)
+        assertEquals(listOf(7_000L, 2_000L, 7_000L, 8_000L), time.scoredDurations.map { it.durationMs })
+    }
+
+    @Test
+    fun basicModeHasNoDetailStatistics() {
+        val (points, outcomes, details) = advancedMatch()
+        val timeline = ScoringEngine.timeline(points, outcomes)
+
+        assertNull(MatchStats.compute(points, outcomes, timeline, MatchRulesV1(), details = details).details)
+    }
+
+    @Test
+    fun theDetailStatisticsCountTheEndingsAndTheServesOfThePacks() {
+        val (points, outcomes, details) = advancedMatch()
+        val timeline = ScoringEngine.timeline(points, outcomes, serverMarks = mapOf("p1" to Outcome.P1))
+
+        val stats = MatchStats.compute(points, outcomes, timeline, MatchRulesV1(), details = details, advanced = true).details!!
+
+        // p4 has a winner but no ending.
+        assertEquals(4, stats.detailedPoints)
+        assertEquals(PerPlayer(1, 0), stats.aces)
+        assertEquals(PerPlayer(1, 0), stats.doubleFaults)
+        assertEquals(PerPlayer(1, 0), stats.winners)
+        assertEquals(PerPlayer(0, 0), stats.forcedErrors)
+        // Player 1 won p3 with an unforced error of player 2.
+        assertEquals(PerPlayer(0, 1), stats.unforcedErrors)
+        assertEquals(1, stats.errors)
+        assertEquals(1, stats.errorsWithKind)
+        assertEquals(PerPlayer(0, 1), stats.errorKinds.getValue(ErrorKind.NET))
+        // Player 1 served 5 packs. The 1st serve was in for p2, p3, and p4.
+        assertEquals(Ratio(3, 5), stats.firstServeIn.p1)
+        assertEquals(Ratio(2, 3), stats.firstServePointsWon.p1)
+        // The 2nd serves: p1 (won) and the double fault (lost).
+        assertEquals(Ratio(1, 2), stats.secondServePointsWon.p1)
+        assertEquals(Ratio(0, 0), stats.firstServeIn.p2)
+    }
+
+    @Test
+    fun aFaultClipOfZeroLengthAndAFaultClipWithVideoCountTheSame() {
+        val (points, outcomes, details) = advancedMatch()
+        // The fault before the double fault gets video.
+        val withVideo = points.map { if (it.id == "z") it.copy(endMs = 16_500) else it }
+        fun detailStats(clips: List<PointV1>) = MatchStats.compute(
+            clips, outcomes, ScoringEngine.timeline(clips, outcomes, serverMarks = mapOf("p1" to Outcome.P1)), MatchRulesV1(),
+            details = details, advanced = true,
+        ).details
+
+        assertEquals(detailStats(points), detailStats(withVideo))
+    }
+
+    /**
+     * Five packs of one game. Player 1 serves:
+     * - a fault, then a winner of player 1 on the 2nd serve,
+     * - an ace,
+     * - a fault of zero length, then a double fault,
+     * - a let, then an unforced error of player 2 into the net,
+     * - a point of player 2 with no ending (Q or E).
+     */
+    private fun advancedMatch(): Triple<List<PointV1>, Map<String, Outcome>, Map<String, PointDetailV1>> {
+        val points = listOf(
+            PointV1(id = "f1", startMs = 0, endMs = 2_000),
+            PointV1(id = "p1", startMs = 3_000, endMs = 10_000),
+            PointV1(id = "p2", startMs = 12_000, endMs = 14_000),
+            PointV1(id = "z", startMs = 16_000, endMs = 16_000),
+            PointV1(id = "d", startMs = 17_000, endMs = 19_000),
+            PointV1(id = "l", startMs = 21_000, endMs = 22_000),
+            PointV1(id = "p3", startMs = 23_000, endMs = 30_000),
+            PointV1(id = "p4", startMs = 32_000, endMs = 40_000),
+        )
+        val outcomes = mapOf(
+            "f1" to Outcome.NONE, "p1" to Outcome.P1, "p2" to Outcome.P1, "z" to Outcome.NONE,
+            "d" to Outcome.P2, "l" to Outcome.NONE, "p3" to Outcome.P1, "p4" to Outcome.P2,
+        )
+        val details = mapOf(
+            "f1" to PointDetailV1(Ending.SERVE_FAULT),
+            "p1" to PointDetailV1(Ending.WINNER),
+            "p2" to PointDetailV1(Ending.ACE),
+            "z" to PointDetailV1(Ending.SERVE_FAULT),
+            "d" to PointDetailV1(Ending.SERVE_FAULT),
+            "l" to PointDetailV1(Ending.LET),
+            "p3" to PointDetailV1(Ending.UNFORCED_ERROR, ErrorKind.NET),
+        )
+        return Triple(points, outcomes, details)
     }
 
     @Test

@@ -23,6 +23,8 @@ data class ScoreboardDisplay(
     val server: Int = 0,
     /** The badge of a deciding point, for example "STAR POINT", or null. All styles show it in the same way. */
     val badge: String? = null,
+    /** The "2ND SERVE" mark of a 2nd serve (B-68), or null. All styles show it next to the board, as the badge. */
+    val serveMark: String? = null,
     /**
      * The tiebreak points of each completed set, in the order of [completedSets]. Null for a set without a tiebreak.
      * The list can be shorter than [completedSets].
@@ -66,6 +68,7 @@ object ScoreboardComponent {
             pointLeader = 0,
             server = 0,
             badge = null,
+            serveMark = null,
             showsPoints = false,
         )
     }
@@ -101,6 +104,7 @@ object ScoreboardComponent {
             },
             server = span.server?.takeIf { it == 1 || it == 2 } ?: 0,
             badge = span.badge?.takeIf { it.isNotBlank() },
+            serveMark = span.serveMark?.takeIf { it.isNotBlank() },
         )
     }
 

@@ -85,11 +85,19 @@ internal object VideoTextFit {
                 for ((rule, badge) in badges) {
                     add("$sport $style $rule badge") { ScoreboardLayouts.scene(display(sport, badge), ScoreboardSettingsV1(style = style)) }
                 }
+                // Only tennis has advanced mode and the "2nd serve" mark (B-68). The mark is in one row with the badge.
+                if (sport == Sport.TENNIS) {
+                    val mark = DisplayFormats.upper(org.litvin.i18n.tr("video.badge.secondServe"))
+                    val badge = badges.lastOrNull()?.second
+                    add("$sport $style 2nd serve") {
+                        ScoreboardLayouts.scene(display(sport, badge, serveMark = mark), ScoreboardSettingsV1(style = style))
+                    }
+                }
             }
         }
     }
 
-    private fun display(sport: Sport, badge: String?) = ScoreboardComponent.display(
+    private fun display(sport: Sport, badge: String?, serveMark: String? = null) = ScoreboardComponent.display(
         OverlaySpan(
             startMs = 0L,
             endMs = 1_000L,
@@ -105,6 +113,7 @@ internal object VideoTextFit {
             completedSets = listOf(7 to 6, 6 to 7),
             server = 1,
             badge = badge,
+            serveMark = serveMark,
         ),
     )
 

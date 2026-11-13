@@ -247,7 +247,9 @@ class SwingStatsPanel(
         val normalized = settings.normalized()
         table.shortLimit.show(normalized.shortPointMaxSeconds)
         table.longLimit.show(normalized.longPointMinSeconds)
-        for (row in StatRows.build(stats, report.score.rules.normalized(), settings)) {
+        val rows = StatRows.build(stats, report.score.rules.normalized(), settings)
+        table.showStats(rows.map { it.stat })
+        for (row in rows) {
             table.rows[row.stat]?.show(row, description(row.stat), settings.inVideo(row.stat), colors)
         }
         table.showGroupCounts(settings::inVideo)
@@ -272,6 +274,8 @@ class SwingStatsPanel(
         MatchStat.LONG_POINTS_WON -> tr("stats.description.long", "seconds" to settings.normalized().longPointMinSeconds)
         MatchStat.RETURN_GAMES_WON -> tr("stats.description.returnGames")
         MatchStat.DURATION -> tr("stats.description.duration")
+        MatchStat.FIRST_SERVE_IN -> tr("stats.description.firstServeIn")
+        MatchStat.WINNERS_TO_UNFORCED_ERRORS -> tr("stats.description.winnersToUnforcedErrors")
         else -> null
     }
 

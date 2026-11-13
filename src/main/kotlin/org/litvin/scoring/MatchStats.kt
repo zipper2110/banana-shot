@@ -39,7 +39,13 @@ data class ServeStats(
     private fun lostBy(opponent: Ratio) = Ratio(opponent.total - opponent.won, opponent.total)
 }
 
-/** Statistics from the start and end times of the points. */
+/**
+ * Statistics from the start and end times of the points.
+ *
+ * The point lengths (the average point, the average point won, the longest point, and the short and long points) use
+ * only the point clips and the W clips. They skip the fault clips, the double faults, and the let clips (B-68). The
+ * playing time includes all clips.
+ */
 data class TimeStats(
     /**
      * The match duration: from the start of the first point with a winner to the end of the last point with a winner.
@@ -54,11 +60,42 @@ data class TimeStats(
     val longestPoint: PointV1?,
     /** The average duration of the points that each player won, or null when the player won no points. */
     val averagePointMsWon: PerPlayer<Long?>,
-    /** The average time from the end of a point to the start of the next point, or null when no two points follow in order. */
-    val averageGapMs: Long?,
     /** The duration and the winner of each point that has a winner. */
     val scoredDurations: List<ScoredDuration> = emptyList(),
 )
+
+/**
+ * Statistics from the point details (B-68). Only a project in advanced mode has them.
+ *
+ * A pack counts in the range when its last clip (the point clip or the double fault) is in the range. A pack at the end
+ * of the list with no point clip yet does not count. Each player is the player who made the ending (see
+ * [PointDetails.playerOfEnding]): the double faults are the faults of the server.
+ */
+data class DetailStats(
+    /**
+     * The points with a known ending: an ace, a winner, an error, or a double fault. A point with a winner and no ending
+     * (from basic mode, or from Q and E) is not a detailed point.
+     */
+    val detailedPoints: Int,
+    val aces: PerPlayer<Int>,
+    val doubleFaults: PerPlayer<Int>,
+    /** The packs where the 1st serve was in, of the packs that the player served. Only packs with a known server count. */
+    val firstServeIn: PerPlayer<Ratio>,
+    /** The points that the server won on the 1st serve, of the points that the player played on the 1st serve. */
+    val firstServePointsWon: PerPlayer<Ratio>,
+    /** The points that the server won on the 2nd serve, of the points that the player played on the 2nd serve. */
+    val secondServePointsWon: PerPlayer<Ratio>,
+    val winners: PerPlayer<Int>,
+    val forcedErrors: PerPlayer<Int>,
+    val unforcedErrors: PerPlayer<Int>,
+    /** The forced and unforced errors. */
+    val errors: Int,
+    /** The errors of each player with each error kind. A kind with no error has the value 0 for both players. */
+    val errorKinds: Map<ErrorKind, PerPlayer<Int>>,
+) {
+    /** The errors that have an error kind. */
+    val errorsWithKind: Int get() = errorKinds.values.sumOf { it.p1 + it.p2 }
+}
 
 /** The duration of a point that has a winner. [winner] is 1 or 2. */
 data class ScoredDuration(val durationMs: Long, val winner: Int)
@@ -110,11 +147,17 @@ data class MatchStats(
     val largestPointLead: PerPlayer<Int>,
     val time: TimeStats,
     val keyPoints: KeyPoints = KeyPoints(),
+    /** The statistics from the point details, or null for a project in basic mode (B-68). */
+    val details: DetailStats? = null,
 ) {
     companion object {
         /**
          * Calculates the statistics for the points in [range].
          * [timeline] must come from [ScoringEngine.timeline] with the same [points] and [outcomes].
+         *
+         * [details] are the point details of the project (B-68). The time statistics use them in all modes to find the
+         * fault clips and the let clips. [advanced] is true for a project in advanced mode: only then the result has
+         * [MatchStats.details].
          */
         fun compute(
             points: List<PointV1>,
@@ -122,10 +165,14 @@ data class MatchStats(
             timeline: ScoringEngine.Timeline,
             rules: MatchRulesV1,
             range: IntRange = points.indices,
+            details: Map<String, PointDetailV1> = emptyMap(),
+            advanced: Boolean = false,
         ): MatchStats {
             val indices = range.filter { it in points.indices }
             val winners = points.map { winner(outcomes[it.id]) }
             val scored = indices.filter { winners[it] != null }
+            val packs = ServePacks.of(points, outcomes, details)
+            val kinds = points.map { packs.of(it.id)?.kind }
 
             return MatchStats(
                 points = indices.size,
@@ -145,7 +192,7 @@ data class MatchStats(
                 longestPointRun = longestRun(scored.map { winners[it]!! }),
                 longestGameRun = longestRun(gameWinners(indices, timeline)),
                 largestPointLead = largestLead(scored.map { winners[it]!! }),
-                time = timeStats(indices.map { points[it] }, indices.map { winners[it] }),
+                time = timeStats(indices.map { points[it] }, indices.map { winners[it] }, indices.map { kinds[it] }),
                 keyPoints = scored.map { winners[it]!! }.let { players ->
                     fun idOf(position: Int?) = position?.let { points[scored[it]].id }
                     val runs = longestRunStarts(players)
@@ -155,6 +202,7 @@ data class MatchStats(
                         largestPointLeadAt = PerPlayer(idOf(leads.p1), idOf(leads.p2)),
                     )
                 },
+                details = if (advanced) detailStats(points, outcomes, details, packs, indices, timeline) else null,
             )
         }
 
@@ -360,23 +408,111 @@ data class MatchStats(
             return PerPlayer(p1Lead, p2Lead)
         }
 
-        private fun timeStats(points: List<PointV1>, winners: List<Int?>): TimeStats {
+        /**
+         * The time statistics of [points]. [kinds] gives the kind of each clip in the packs. A fault clip, a double
+         * fault, or a let clip is not a point for the point lengths, but it is playing time. Without details, all clips
+         * are point clips or W clips, as before B-68.
+         */
+        private fun timeStats(points: List<PointV1>, winners: List<Int?>, kinds: List<ClipKind?>): TimeStats {
             val durations = points.map { (it.endMs - it.startMs).coerceAtLeast(0).toLong() }
-            val gaps = points.zipWithNext { a, b -> (b.startMs - a.endMs).toLong() }.filter { it >= 0 }
-            val first = points.indices.firstOrNull { winners[it] != null }?.let(points::get)
-            val last = points.indices.lastOrNull { winners[it] != null }?.let(points::get)
-            fun averageWonBy(player: Int): Long? =
-                durations.filterIndexed { index, _ -> winners[index] == player }.averageOrNull()
+            val isPoint = kinds.map { it != ClipKind.FAULT && it != ClipKind.DOUBLE_FAULT && it != ClipKind.LET }
+            val pointIndices = points.indices.filter { isPoint[it] }
+            // The match starts with the first clip of the first pack, also when it is a fault clip.
+            val inPack = points.indices.filter { winners[it] != null || !isPoint[it] }
+            val first = inPack.firstOrNull()?.let(points::get)
+            val last = inPack.lastOrNull()?.let(points::get)
+            fun averageWonBy(player: Int): Long? = pointIndices.filter { winners[it] == player }.map { durations[it] }.averageOrNull()
             return TimeStats(
                 durationMs = if (first == null || last == null) 0 else (last.endMs - first.startMs).coerceAtLeast(0).toLong(),
                 playingMs = durations.sum(),
-                averagePointMs = durations.averageOrNull(),
-                longestPoint = points.indices.maxByOrNull { durations[it] }?.let(points::get),
+                averagePointMs = pointIndices.map { durations[it] }.averageOrNull(),
+                longestPoint = pointIndices.maxByOrNull { durations[it] }?.let(points::get),
                 averagePointMsWon = PerPlayer(averageWonBy(1), averageWonBy(2)),
-                averageGapMs = gaps.averageOrNull(),
-                scoredDurations = durations.indices.mapNotNull { index ->
+                scoredDurations = pointIndices.mapNotNull { index ->
                     winners[index]?.let { ScoredDuration(durations[index], it) }
                 },
+            )
+        }
+
+        /** The statistics from the point details of the packs that end in [indices]. See [DetailStats]. */
+        private fun detailStats(
+            points: List<PointV1>,
+            outcomes: Map<String, Outcome>,
+            details: Map<String, PointDetailV1>,
+            packs: ServePacks,
+            indices: List<Int>,
+            timeline: ScoringEngine.Timeline,
+        ): DetailStats {
+            val indexOf = points.withIndex().associate { (index, point) -> point.id to index }
+            val inRange = indices.toSet()
+            var detailed = 0
+            var errors = 0
+            val aces = IntArray(3)
+            val doubleFaults = IntArray(3)
+            val winners = IntArray(3)
+            val forced = IntArray(3)
+            val unforced = IntArray(3)
+            val kinds = ErrorKind.entries.associateWith { IntArray(3) }
+            val served = IntArray(3)
+            val firstIn = IntArray(3)
+            val firstPlayed = IntArray(3)
+            val firstWon = IntArray(3)
+            val secondPlayed = IntArray(3)
+            val secondWon = IntArray(3)
+            for (pack in packs.packs) {
+                if (!pack.complete) continue
+                val id = pack.clipIds.last()
+                val index = indexOf[id]?.takeIf { it in inRange } ?: continue
+                val clip = packs.of(id) ?: continue
+                val outcome = outcomes[id] ?: Outcome.NONE
+                val winner = winner(outcome)
+                val server = timeline.serverOfPoint.getOrNull(index)
+                val detail = details[id]
+                if (clip.kind == ClipKind.DOUBLE_FAULT) {
+                    detailed++
+                    (server ?: winner?.let { 3 - it })?.let { doubleFaults[it]++ }
+                } else if (detail?.ending?.endsRally == true) {
+                    detailed++
+                    val player = PointDetails.playerOfEnding(detail.ending, outcome)
+                    if (player != null) {
+                        when (detail.ending) {
+                            Ending.ACE -> aces[player]++
+                            Ending.WINNER -> winners[player]++
+                            Ending.FORCED_ERROR -> forced[player]++
+                            Ending.UNFORCED_ERROR -> unforced[player]++
+                            else -> Unit
+                        }
+                        if (detail.ending.isError) {
+                            errors++
+                            detail.errorKind?.let { kinds.getValue(it)[player]++ }
+                        }
+                    }
+                }
+                if (server == null || winner == null) continue
+                served[server]++
+                if (clip.serve == 1) {
+                    firstIn[server]++
+                    firstPlayed[server]++
+                    if (winner == server) firstWon[server]++
+                } else {
+                    secondPlayed[server]++
+                    if (winner == server) secondWon[server]++
+                }
+            }
+            fun perPlayer(values: IntArray) = PerPlayer(values[1], values[2])
+            fun ratios(won: IntArray, total: IntArray) = PerPlayer(Ratio(won[1], total[1]), Ratio(won[2], total[2]))
+            return DetailStats(
+                detailedPoints = detailed,
+                aces = perPlayer(aces),
+                doubleFaults = perPlayer(doubleFaults),
+                firstServeIn = ratios(firstIn, served),
+                firstServePointsWon = ratios(firstWon, firstPlayed),
+                secondServePointsWon = ratios(secondWon, secondPlayed),
+                winners = perPlayer(winners),
+                forcedErrors = perPlayer(forced),
+                unforcedErrors = perPlayer(unforced),
+                errors = errors,
+                errorKinds = kinds.mapValues { perPlayer(it.value) },
             )
         }
 

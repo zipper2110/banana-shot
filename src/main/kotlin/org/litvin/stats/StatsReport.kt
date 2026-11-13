@@ -56,13 +56,15 @@ data class StatsReport(
             val timeline = ScoringEngine.timeline(points, score.outcomes, rules, score.manualMarks(), serverMarks)
             val matchRange = 0..(MatchStats.matchEndIndex(timeline, rules) ?: points.lastIndex)
             val setRanges = MatchStats.setRanges(timeline, matchRange)
+            fun compute(range: IntRange) =
+                MatchStats.compute(points, score.outcomes, timeline, rules, range, score.details, score.isAdvanced)
             return StatsReport(
                 score = score,
                 points = points,
                 timeline = timeline,
-                match = MatchStats.compute(points, score.outcomes, timeline, rules, matchRange),
+                match = compute(matchRange),
                 setRanges = setRanges,
-                sets = setRanges.map { MatchStats.compute(points, score.outcomes, timeline, rules, it) },
+                sets = setRanges.map(::compute),
                 pointsAfterMatchEnd = points.size - (matchRange.last + 1),
             )
         }

@@ -7,11 +7,15 @@ import org.litvin.points.PointV1
 import org.litvin.scoring.ManualScoreMarks
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.Outcome
+import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoreboardEnd
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.scoring.ScoreboardStart
 import org.litvin.scoring.ScoringRules
+import org.litvin.scoring.ServePacks
 import org.litvin.scoring.Sport
+import org.litvin.i18n.DisplayFormats
+import org.litvin.i18n.tr
 
 /**
  * Task 3.18 — Scoreboard overlay: timeline generation
@@ -46,6 +50,12 @@ data class OverlaySpan(
     val server: Int? = null,
     /** The badge of a deciding point, for example "STAR POINT", or null for a normal point. */
     val badge: String? = null,
+    /**
+     * The mark of a 2nd serve in the video language, for example "2ND SERVE", or null (B-68). Only a project in advanced
+     * mode has it, on the span of a clip on the 2nd serve: the 2nd-serve point clip, the double fault, or a let on the
+     * 2nd serve.
+     */
+    val serveMark: String? = null,
     /** True when the match ended before this span. The scoreboard then shows the final score. */
     val matchEnded: Boolean = false,
     /** The length of the fade at the start of the span, in ms. 0 shows the board at once. */
@@ -88,6 +98,7 @@ object ScoreboardTimelineBuilder {
         manualMarks: ManualScoreMarks = ManualScoreMarks(),
         serverMarks: Map<String, Outcome> = emptyMap(),
         sport: Sport = Sport.TENNIS,
+        secondServeIds: Set<String> = emptySet(),
     ): List<OverlaySpan> {
         val ordered = points.sortedBy { it.startMs }
         val base = build(
@@ -102,6 +113,7 @@ object ScoreboardTimelineBuilder {
             manualMarks = manualMarks,
             serverMarks = serverMarks,
             sport = sport,
+            secondServeIds = secondServeIds,
         )
         return base.mapIndexedNotNull { index, span ->
             val point = ordered.getOrNull(index) ?: return@mapIndexedNotNull null
@@ -119,6 +131,10 @@ object ScoreboardTimelineBuilder {
      * [fullVideo] is for a video with all the time between the points (a full export and the Points tab preview,
      * with [idleTrim] false). [timing] then sets when the board comes in and goes out (B-63). Without a scored point,
      * the video has no board. See [fullVideoRange] for [preview] and [videoEndMs].
+     *
+     * [secondServeIds] are the clips on the 2nd serve (see [secondServeIds]). Their spans get the "2nd serve" mark. A
+     * span goes from the end of the clip before it to the end of its clip, so in a full video the mark shows from the
+     * end of the fault to the end of the 2nd-serve clip.
      */
     fun build(
         points: List<PointV1>,
@@ -137,12 +153,13 @@ object ScoreboardTimelineBuilder {
         timing: ScoreboardTiming = ScoreboardTiming(),
         preview: Boolean = false,
         videoEndMs: Long? = null,
+        secondServeIds: Set<String> = emptySet(),
     ): List<OverlaySpan> {
         if (points.isEmpty()) return emptyList()
         if (fullVideo) {
             return buildFullVideo(
                 points, outcomes, player1Name, player2Name, player1ColorHex, player2ColorHex, rules, manualMarks, serverMarks, sport,
-                timing, preview, videoEndMs,
+                timing, preview, videoEndMs, secondServeIds,
             )
         }
         val ordered = points.sortedBy { it.startMs }
@@ -188,6 +205,7 @@ object ScoreboardTimelineBuilder {
         val n1 = sport.videoSideName(player1Name, 1)
         val n2 = sport.videoSideName(player2Name, 2)
         val badge = sport.decidingPointBadge(rules.deuce)
+        val serveMark = if (secondServeIds.isEmpty()) null else DisplayFormats.upper(tr("video.badge.secondServe"))
         for (i in ordered.indices) {
             if (!shouldEmit[i]) continue
             val start = startsOut[i]
@@ -235,10 +253,21 @@ object ScoreboardTimelineBuilder {
                 completedSetTiebreaks = st?.completedSetTiebreaks ?: emptyList(),
                 server = st?.server,
                 badge = badge?.takeIf { st?.decidingPoint == true },
+                serveMark = serveMark?.takeIf { ordered[i].id in secondServeIds },
                 matchEnded = st?.matchEnded ?: false,
             )
         }
         return out
+    }
+
+    /**
+     * The ids of the clips on the 2nd serve in a project in advanced mode (B-68): the 2nd-serve point clip, the double
+     * fault, and a let on the 2nd serve. The serve numbers come from the packs of all [points], so give all clips of
+     * the project, also the clips of zero length that the export skips. A project in basic mode has no 2nd serves.
+     */
+    fun secondServeIds(points: List<PointV1>, score: ScoreV1): Set<String> {
+        if (!score.isAdvanced || score.details.isEmpty()) return emptySet()
+        return ServePacks.of(points, score.outcomes, score.details).clips.filter { it.serve == 2 }.mapTo(HashSet()) { it.pointId }
     }
 
     /**
@@ -302,6 +331,7 @@ object ScoreboardTimelineBuilder {
         timing: ScoreboardTiming,
         preview: Boolean,
         videoEndMs: Long?,
+        secondServeIds: Set<String>,
     ): List<OverlaySpan> {
         val ordered = points.sortedBy { it.startMs }
         if (ordered.isEmpty()) return emptyList()
@@ -320,6 +350,7 @@ object ScoreboardTimelineBuilder {
             manualMarks = manualMarks,
             serverMarks = serverMarks,
             sport = sport,
+            secondServeIds = secondServeIds,
         )
         val matchEnded = spans.lastOrNull()?.matchEnded ?: false
         val range = fullVideoRange(ordered, matchEnded, timing, preview, videoEndMs) ?: return emptyList()

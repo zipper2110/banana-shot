@@ -6,13 +6,17 @@ import org.litvin.i18n.Messages
 import org.litvin.i18n.ScriptFonts
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
+import org.litvin.scoring.Ending
+import org.litvin.scoring.ErrorKind
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.MatchStructure
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.PerPlayer
+import org.litvin.scoring.PointDetailV1
 import org.litvin.scoring.ScoreOverrideV1
 import org.litvin.scoring.ScorePairV1
 import org.litvin.scoring.ScoreV1
+import org.litvin.scoring.ScoringMode
 import java.awt.Font
 import java.nio.file.Files
 import kotlin.test.Test
@@ -26,7 +30,8 @@ class StatRowsTest {
     fun theRowsHaveTheCatalogOrder() {
         val rows = rows(report("1111"))
 
-        assertEquals(MatchStat.entries.toList(), rows.map { it.stat })
+        // A project in basic mode has no rows of advanced mode.
+        assertEquals(MatchStat.entries.filterNot { it.advanced }, rows.map { it.stat })
     }
 
     @Test
@@ -212,6 +217,66 @@ class StatRowsTest {
         }
     }
 
+    @Test
+    fun aSavedAverageGapKeyHasNoEffect() {
+        // B-68 removed the average time between points. An old stats.json can keep its key.
+        assertNull(MatchStat.ofKey("average_gap"))
+        val settings = StatsSettingsV1(videoStats = listOf("average_gap", MatchStat.DURATION.key))
+
+        assertEquals(listOf(MatchStat.DURATION), MatchStat.entries.filter(settings::inVideo))
+        assertEquals(listOf(MatchStat.GAMES_WON.key, MatchStat.DURATION.key), settings.withInVideo(MatchStat.GAMES_WON, true).videoStats)
+    }
+
+    @Test
+    fun advancedModeShowsTheRowsOfTheEndingsWithTheirCoverage() {
+        // p1: a winner of player 1. p2: an unforced error of player 2. p3: no ending. p4: a forced error of player 1.
+        val details = mapOf(
+            "p1" to PointDetailV1(Ending.WINNER),
+            "p2" to PointDetailV1(Ending.UNFORCED_ERROR),
+            "p4" to PointDetailV1(Ending.FORCED_ERROR),
+        )
+        val rows = rows(report("1122", serverMarks = mapOf("p1" to Outcome.P1), details = details))
+
+        assertEquals(MatchStat.entries.toList(), rows.map { it.stat })
+        val winners = rows.of(MatchStat.WINNERS)
+        assertEquals(PerPlayer(StatValue("1"), StatValue("0")), winners.values)
+        assertEquals(StatCoverage(CoverageKind.DETAILED_POINTS, 3), winners.coverage)
+        assertEquals(PerPlayer(StatValue("0"), StatValue("1")), rows.of(MatchStat.UNFORCED_ERRORS).values)
+        assertEquals(PerPlayer(StatValue("1"), StatValue("0")), rows.of(MatchStat.FORCED_ERRORS).values)
+        assertEquals(
+            PerPlayer(StatValue("—", "1/0"), StatValue("0.00", "0/1")),
+            rows.of(MatchStat.WINNERS_TO_UNFORCED_ERRORS).values,
+        )
+        assertEquals(StatRows.NO_ERROR_KIND, rows.of(MatchStat.ERRORS_NET).unavailableReason)
+        // Player 1 served all points. All 1st serves were in.
+        assertEquals(PerPlayer(StatValue("100%", "4/4"), StatValue("—", "0/0")), rows.of(MatchStat.FIRST_SERVE_IN).values)
+    }
+
+    @Test
+    fun theRowsOfTheErrorKindsCountOnlyTheErrorsWithAKind() {
+        val details = mapOf(
+            "p1" to PointDetailV1(Ending.UNFORCED_ERROR, ErrorKind.LONG),
+            "p2" to PointDetailV1(Ending.UNFORCED_ERROR),
+        )
+        val rows = rows(report("11", details = details))
+
+        val long = rows.of(MatchStat.ERRORS_LONG)
+        assertEquals(PerPlayer(StatValue("0"), StatValue("1")), long.values)
+        assertEquals(StatCoverage(CoverageKind.ERRORS_WITH_KIND, 1), long.coverage)
+        // All points have an ending, so the other rows count all points.
+        assertNull(rows.of(MatchStat.UNFORCED_ERRORS).coverage)
+        // No server mark.
+        assertEquals(StatRows.NEEDS_SERVER, rows.of(MatchStat.FIRST_SERVE_IN).unavailableReason)
+    }
+
+    @Test
+    fun advancedModeWithoutDetailsHasNoValues() {
+        val rows = rows(report("1122", details = emptyMap()))
+
+        assertEquals(StatRows.NO_DETAILS, rows.of(MatchStat.ACES).unavailableReason)
+        assertEquals(StatRows.NO_DETAILS, rows.of(MatchStat.WINNERS).unavailableReason)
+    }
+
     private fun rows(report: StatsReport): List<StatRow> = StatRows.build(report.match, report.score.rules)
 
     private fun List<StatRow>.of(stat: MatchStat): StatRow = single { it.stat == stat }
@@ -221,6 +286,8 @@ class StatRowsTest {
         rules: MatchRulesV1 = MatchRulesV1(),
         serverMarks: Map<String, Outcome> = emptyMap(),
         durationsSeconds: List<Int>? = null,
+        /** The point details of a project in advanced mode, or null for a project in basic mode. */
+        details: Map<String, PointDetailV1>? = null,
     ): StatsReport {
         // Points of 5 s every 10 s. Points with a set duration start every 100 s, so that they do not overlap.
         val spacingMs = if (durationsSeconds == null) 10_000 else 100_000
@@ -229,6 +296,8 @@ class StatRowsTest {
             PointV1(id = "p$it", startMs = it * spacingMs, endMs = it * spacingMs + durationMs)
         }
         val outcomes = points.zip(winners.toList()).associate { (point, c) -> point.id to if (c == '1') Outcome.P1 else Outcome.P2 }
-        return StatsReport.build(EdlV1(points = points), ScoreV1(outcomes = outcomes, rules = rules, serverMarks = serverMarks))
+        val score = ScoreV1(outcomes = outcomes, rules = rules, serverMarks = serverMarks)
+        val withDetails = if (details == null) score else score.copy(scoringMode = ScoringMode.ADVANCED, details = details)
+        return StatsReport.build(EdlV1(points = points), withDetails)
     }
 }

@@ -46,6 +46,7 @@ import org.litvin.ui.commons.UserDialogService
 import org.litvin.ui.commons.VideoFrameLoader
 import org.litvin.ui.commons.VideoFrameRequest
 import org.litvin.ui.tabs.points.ui.SwingTimelineComponent
+import org.litvin.ui.tabs.points.ui.TimelineMarks
 import org.litvin.ui.tabs.points.components.Keybindings
 import org.litvin.ui.tabs.points.components.PointsKeyActions
 import org.litvin.ui.tabs.points.ui.EventsHeader
@@ -212,6 +213,7 @@ class SwingPointsPanel(
         appCreditRequest = appCreditRequest,
         isActive = { active },
         onGoToPoint = { id -> selectPoint(id) },
+        onPlayPoint = { id -> selectPoint(id); player.play(); updatePlayPauseButton() },
         modeDefaults = modeDefaults,
         confirmServerChange = { title, message ->
             dialogs.confirm(this, message, title, confirmLabel = tr("points.serverChange.confirm"))
@@ -363,7 +365,7 @@ class SwingPointsPanel(
                 refreshUiAtCurrentTime()
                 // If user clicked on a point interval on the timeline, select and scroll to it
 
-                val point = dispatcher.getCompletedPoints().firstOrNull { it.startMs <= t && t < it.endMs }
+                val point = TimelineMarks.clipAt(dispatcher.getCompletedPoints(), t)
                 if (point != null) {
                     selectEventAndScroll("point:${point.id}")
                 }
@@ -378,6 +380,7 @@ class SwingPointsPanel(
         selectedPointIdProvider = { (selectedEvent() as? PointEventDto)?.point?.id },
         pendingStartProvider = { dispatcher.getPendingStart()?.toLong() },
         winnerColorProvider = { id -> scoring.winnerColor(id) },
+        dimmedProvider = { id -> scoring.isDimmedClip(id) },
         replayPlayheadProvider = { replays.activePlay?.playAt(player.currentTimeMs()) },
         onReplaySelected = { id, index -> EventQueue.invokeLater { openReplayEditor(pointId = id, replayIndex = index) } },
         // The timeline shows only the trimmed part of the video (B-62).
@@ -517,6 +520,7 @@ class SwingPointsPanel(
         cardsView = PointsTableView(panelActions)
         cardsView.winnerColor = scoring::winnerColor
         cardsView.pointMarks = scoring::pointMarks
+        cardsView.pointRowInfo = scoring::pointRowInfo
         add(buildMainArea(leftColumn, buildSideColumn()), BorderLayout.CENTER)
         // Push initial state to views
         pushCardsState()

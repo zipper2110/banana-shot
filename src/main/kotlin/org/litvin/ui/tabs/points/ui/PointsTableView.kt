@@ -55,6 +55,9 @@ class PointsTableView(
 
     /** The game, set and serve marks of a point, or null for a point without marks. */
     internal var pointMarks: (pointId: String) -> PointMarks? = { null }
+
+    /** The pack number, the pack position, and the label of a point row in advanced mode (B-68), or null. */
+    internal var pointRowInfo: (pointId: String) -> PointRowInfo? = { null }
     private var lastState: PointsViewState? = null
     private var hoveredRow: TableRow? = null
 
@@ -138,10 +141,34 @@ class PointsTableView(
         return rows[position].takeIf { scroll.viewport.viewRect.intersects(rowRect(position)) }
     }
 
-    /** The bounds of the row at [position] in the list, from the heights of the rows above it. */
-    private fun rowRect(position: Int): Rectangle {
-        val top = rows.take(position).sumOf { it.rowHeight }
-        return Rectangle(0, top, rowsPanel.width.coerceAtLeast(1), rows[position].rowHeight)
+    /** The bounds of the row at [position] in the list, from the heights of the rows above it and the pack gaps. */
+    private fun rowRect(position: Int): Rectangle =
+        Rectangle(0, rowTops()[position], rowsPanel.width.coerceAtLeast(1), rows[position].rowHeight)
+
+    /** The top of each row and, as the last value, the height of all rows. A pack gap comes before some rows (B-68). */
+    private fun rowTops(): IntArray {
+        val tops = IntArray(rows.size + 1)
+        var y = 0
+        rows.forEachIndexed { index, row ->
+            y += packGapBefore(index)
+            tops[index] = y
+            y += row.rowHeight
+        }
+        tops[rows.size] = y
+        return tops
+    }
+
+    /**
+     * The gap before the row at [index]: a pack with two clips or more has a gap before its first row and after its
+     * last row (B-68). The replay rows of the last clip stay under it, so the gap comes after them.
+     */
+    private fun packGapBefore(index: Int): Int {
+        if (index == 0) return 0
+        val row = rows[index]
+        if (row is ReplayRow) return 0
+        if (row.packPosition == PackPosition.FIRST) return TableRow.PACK_GAP
+        val previous = rows.subList(0, index).lastOrNull { it !is ReplayRow } ?: return 0
+        return if (previous.packPosition == PackPosition.LAST) TableRow.PACK_GAP else 0
     }
 
     internal fun visibleTitles(): List<String> = rows.map { it.title }
@@ -153,6 +180,9 @@ class PointsTableView(
             else -> ""
         }
     }
+
+    /** The labels of the point rows in advanced mode (B-68), or null for a row with no label. */
+    internal fun visibleLabels(): List<String?> = rows.filterIsInstance<PointRow>().map { it.labelText }
 
     /** Title of the selected row, or null when no row shows the selected state. */
     internal fun selectedTitle(): String? = rows.firstOrNull { it.selected && it.selectable }?.title
@@ -169,13 +199,15 @@ class PointsTableView(
             val row = when (event) {
                 is PointEventDto -> {
                     pointNumber++
-                    val number = pointNumber
+                    // In advanced mode, the numbers go over the packs and the W clips (B-68).
+                    val number = pointRowInfo(event.point.id)?.number ?: pointNumber
                     PointRow(
                         visualIndex = visualIndex,
                         number = number,
                         point = event.point,
                         stripColor = { winnerColor(event.point.id) },
                         marks = { pointMarks(event.point.id) },
+                        info = { pointRowInfo(event.point.id) },
                         onToggleFavorite = { actions.toggleFavorite(event.point.id) },
                         onReplays = { actions.openReplays(event.point.id) },
                         onEdit = { EditPointDialog.show(this, event.point, number, actions) },
@@ -273,22 +305,23 @@ class PointsTableView(
         }
 
         override fun doLayout() {
-            var y = 0
-            for (child in components) {
-                val h = (child as? TableRow)?.rowHeight ?: TableRow.HEIGHT
-                child.setBounds(0, y, width, h)
-                y += h
-            }
+            val tops = rowTops()
+            rows.forEachIndexed { index, row -> row.setBounds(0, tops[index], width, row.rowHeight) }
         }
 
         override fun getPreferredSize(): Dimension {
             val viewportWidth = (parent as? JViewport)?.width ?: 0
-            val rowsHeight = components.sumOf { (it as? TableRow)?.rowHeight ?: TableRow.HEIGHT }
-            return Dimension(viewportWidth, if (componentCount == 0) EMPTY_HEIGHT else rowsHeight)
+            return Dimension(viewportWidth, if (componentCount == 0) EMPTY_HEIGHT else rowTops()[rows.size])
         }
 
         override fun paintComponent(g: Graphics) {
             super.paintComponent(g)
+            // A change of the score can change the packs without a rebuild of the rows. Then the gaps move (B-68).
+            val tops = rowTops()
+            if (rows.indices.any { rows[it].y != tops[it] }) {
+                revalidate()
+                repaint()
+            }
             if (componentCount > 0) return
             val g2 = UiKit.smooth(g)
             try {

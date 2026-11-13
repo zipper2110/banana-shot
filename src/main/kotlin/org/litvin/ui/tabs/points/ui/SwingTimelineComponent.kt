@@ -63,6 +63,8 @@ class SwingTimelineComponent(
     private val pendingStartProvider: () -> Long? = { null },
     /** The winner color of a scored point. Null keeps the normal color. */
     private val winnerColorProvider: (pointId: String) -> java.awt.Color? = { null },
+    /** True for a fault clip and a let clip in advanced mode (B-68). The track shows them dimmed. */
+    private val dimmedProvider: (pointId: String) -> Boolean = { false },
     /** The play time of the replay that plays now, or null outside a replay. The playhead is in the block then. */
     private val replayPlayheadProvider: () -> Long? = { null },
     /** A click on a replay block (B-50 T5). */
@@ -212,11 +214,11 @@ class SwingTimelineComponent(
         if (!markRect.contains(point)) return null
         val points = pointsProvider()
         val scale = scale(points)
-        return points.firstOrNull { mark ->
-            val x1 = xAt(mark.startMs.toLong(), scale)
-            val x2 = xAt(mark.endMs.toLong(), scale)
-            point.x in x1..max(x1 + 1, x2)
-        }
+        fun hits(mark: PointV1) = TimelineMarks.hits(
+            point.x, xAt(mark.startMs.toLong(), scale), xAt(mark.endMs.toLong(), scale), TimelineMarks.isZeroLength(mark),
+        )
+        // A thin mark of zero length comes first, so that a clip next to it does not hide it.
+        return points.firstOrNull { TimelineMarks.isZeroLength(it) && hits(it) } ?: points.firstOrNull(::hits)
     }
 
     /** Hand over the discrete targets (comment labels, marks), crosshair over the scrubbable rest. */
@@ -392,9 +394,14 @@ class SwingTimelineComponent(
         return path
     }
 
-    /** A scored point has the winner color. Otherwise a favorite is yellow and a point is green. */
-    private fun markColor(point: PointV1) =
-        winnerColorProvider(point.id) ?: if (point.favorite) Palette.YELLOW else Palette.GREEN
+    /**
+     * A scored point has the winner color. Otherwise a favorite is yellow and a point is green. A fault clip and a let
+     * clip of advanced mode are dimmed (B-68).
+     */
+    private fun markColor(point: PointV1): Color {
+        val color = winnerColorProvider(point.id) ?: if (point.favorite) Palette.YELLOW else Palette.GREEN
+        return if (dimmedProvider(point.id)) Palette.withAlpha(color, DIMMED_ALPHA) else color
+    }
 
     private fun paintMarksTrack(g: Graphics2D, points: List<PointV1>, scale: TimelineScale) {
         val top = marksTrackTop()
@@ -403,14 +410,16 @@ class SwingTimelineComponent(
         val selectedId = selectedPointIdProvider()
         var selected: Rectangle? = null
         points.forEach { point ->
-            val x1 = xAt(point.startMs.toLong(), scale)
-            val w = max(2, xAt(point.endMs.toLong(), scale) - x1)
+            // A clip of zero length is a thin mark over the full height of the track (B-68).
+            val zeroLength = TimelineMarks.isZeroLength(point)
+            val (x1, w) = TimelineMarks.span(xAt(point.startMs.toLong(), scale), xAt(point.endMs.toLong(), scale), zeroLength)
             if (point.id == selectedId) {
                 selected = Rectangle(x1, top + 1, w, TRACK_HEIGHT - 2)
                 return@forEach
             }
             g.color = markColor(point)
-            g.fill(RoundRectangle2D.Double(x1.toDouble(), top + 4.0, w.toDouble(), TRACK_HEIGHT - 8.0, 2.0, 2.0))
+            val inset = if (zeroLength) 2.0 else 4.0
+            g.fill(RoundRectangle2D.Double(x1.toDouble(), top + inset, w.toDouble(), TRACK_HEIGHT - 2 * inset, 2.0, 2.0))
         }
         pendingStartProvider()?.let { start -> paintPending(g, start, scale, top) }
         selected?.let { box ->
@@ -519,6 +528,8 @@ class SwingTimelineComponent(
     internal fun commentsTrackTopForTest(): Int = commentsTrackTop()
     internal fun commentTrackBottomForTest(): Int = commentsTrackTop() + commentTrackHeight(commentLaneCountForTest())
     internal fun cursorAtForTest(x: Int, y: Int): Cursor = cursorFor(Point(x, y))
+    internal fun markAtForTest(x: Int, y: Int): PointV1? = markAt(Point(x, y))
+    internal fun xAtForTest(ms: Long): Int = xAt(ms, scale())
     internal fun replayBlockBoundsForTest(): List<Rectangle> = scale().let { s -> s.blocks.map { blockBounds(it, s) } }
 
     override fun getPreferredSize(): Dimension {
@@ -563,5 +574,8 @@ class SwingTimelineComponent(
         const val SPIKY_BLOCK_PX = 16
         const val SPIKE_WIDTH = 4
         const val SPIKE_DEPTH = 2
+
+        /** The alpha of a dimmed mark: a fault clip or a let clip in advanced mode (B-68). */
+        const val DIMMED_ALPHA = 90
     }
 }

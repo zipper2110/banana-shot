@@ -116,6 +116,9 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
     /** The height of the row. A replay row is lower than a point row or a comment row. */
     open val rowHeight: Int get() = HEIGHT
 
+    /** The place of a point row in its pack in advanced mode (B-68), or null. The list adds a gap around a pack. */
+    open val packPosition: PackPosition? get() = null
+
     protected open fun onStateChanged() = Unit
 
     init {
@@ -126,7 +129,8 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
     override fun getMaximumSize() = Dimension(Int.MAX_VALUE, rowHeight)
     override fun getMinimumSize() = Dimension(0, rowHeight)
 
-    protected fun paintRowBackground(g2: Graphics2D, rest: Color?, bar: Color?, barWidth: Int = BAR) {
+    /** [lineFrom] is the x where the line at the bottom of the row starts. The rows of a pack have an indented line. */
+    protected fun paintRowBackground(g2: Graphics2D, rest: Color?, bar: Color?, barWidth: Int = BAR, lineFrom: Int = 0) {
         val fill = when {
             selected && selectable -> Palette.SELECTED
             hovered -> Palette.ROW_HOVER
@@ -137,7 +141,7 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
             g2.fillRect(0, 0, width, height)
         }
         g2.color = Palette.ROW_LINE
-        g2.fillRect(0, height - 1, width, 1)
+        g2.fillRect(lineFrom, height - 1, width - lineFrom, 1)
         if (bar != null) {
             g2.color = bar
             g2.fillRect(0, 0, barWidth, height)
@@ -167,6 +171,9 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
 
         /** The width of the winner color strip of a scored point. */
         const val WINNER_STRIP = 8
+
+        /** The gap in px before and after a pack with two clips or more (B-68). */
+        const val PACK_GAP = 6
     }
 }
 
@@ -203,6 +210,8 @@ internal class PointRow(
     private val stripColor: () -> Color? = { null },
     /** The game, set and serve marks. */
     private val marks: () -> PointMarks? = { null },
+    /** The pack number, the pack position, and the label in advanced mode (B-68). Null in basic mode. */
+    private val info: () -> PointRowInfo? = { null },
     onToggleFavorite: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -210,8 +219,15 @@ internal class PointRow(
     onReplays: () -> Unit = {},
 ) : TableRow(visualIndex, point.startMs) {
 
-    override val title = "#$number"
+    /** The number of the row: the pack number in advanced mode (B-68), else the position of the clip in the list. */
+    private val shownNumber: Int get() = info()?.number ?: number
+
+    override val title: String get() = "#$shownNumber"
     override val selectable = true
+    override val packPosition: PackPosition? get() = info()?.position
+
+    /** The label of the row in advanced mode, for example "2nd serve · UE net", or null in basic mode. */
+    internal val labelText: String? get() = info()?.label?.text()
 
     val favoriteButton = RowIconButton(
         if (point.favorite) Material2MZ.STAR else Material2MZ.STAR_BORDER,
@@ -224,6 +240,7 @@ internal class PointRow(
     val deleteButton = RowIconButton(Material2AL.CLOSE, tr("pointEdit.delete.title"), danger = true).apply { name = "delete-point-${point.id}" }
 
     private val textFont get() = UiKit.font(12.5f)
+    private val labelFont get() = UiKit.font(11.5f)
     private val numberFont get() = UiKit.font(12.5f, UiKit.Weight.BOLD)
     private val badgeFont get() = UiKit.trackedFont(9.5f, 0.05, UiKit.Weight.BOLD)
     private val racketIcons = HashMap<Color, javax.swing.Icon>()
@@ -264,28 +281,56 @@ internal class PointRow(
         try {
             val showSelection = selected
             val marks = marks()
+            val info = info()
             val afterMatch = marks?.afterMatch == true
+            // A fault clip and a let clip do not give the point (B-68): their strip and their texts are dim, as for a
+            // point after the end of the match.
+            val dim = afterMatch || info?.dimmed == true
             // A point after the end of the match does not count: its winner strip and its texts are dim.
-            val strip = stripColor()?.let { if (afterMatch) Palette.withAlpha(it, AFTER_MATCH_ALPHA) else it }
-            if (strip != null) paintRowBackground(g2, null, strip, WINNER_STRIP)
-            else paintRowBackground(g2, null, if (showSelection) Palette.LIME else null)
+            val strip = stripColor()?.let { if (dim) Palette.withAlpha(it, AFTER_MATCH_ALPHA) else it }
+            val columns = TableColumns(width)
+            // The rows of a pack have an indented line between them, and the last row has the full line.
+            val position = info?.position ?: PackPosition.SINGLE
+            val lineFrom = if (position == PackPosition.FIRST || position == PackPosition.MIDDLE) columns.number else 0
+            if (strip != null) paintRowBackground(g2, null, strip, WINNER_STRIP, lineFrom)
+            else paintRowBackground(g2, null, if (showSelection) Palette.LIME else null, lineFrom = lineFrom)
             // A scored point keeps its winner strip; the selection shows as a lime outline.
             if (showSelection && strip != null) UiKit.paintBox(g2, 0, 0, width, height, 0, null, Palette.LIME_LINE)
-            val columns = TableColumns(width)
-            val h = height - 1f
+            if (position.grouped) paintPackLine(g2, position)
+            // In advanced mode, the row has two lines: the number and the times, then the label (B-68).
+            val label = info?.label?.text()
+            val top = if (label != null) LINE_TOP else 0f
+            val h = if (label != null) LINE_HEIGHT else height - 1f
             val numberColor = when {
                 showSelection -> Palette.LIME
-                afterMatch -> Palette.FG_3
+                dim -> Palette.FG_3
                 else -> Palette.FG_2
             }
-            UiKit.drawText(g2, number.toString(), numberFont, numberColor, columns.number.toFloat(), 0f, h)
-            UiKit.drawText(g2, Timecode.format(point.startMs), textFont, if (afterMatch) Palette.FG_3 else Palette.FG, columns.start.toFloat(), 0f, h)
+            // The number of a pack shows only on its first row.
+            if (info?.showNumber != false) {
+                UiKit.drawText(g2, shownNumber.toString(), numberFont, numberColor, columns.number.toFloat(), top, h)
+            }
+            UiKit.drawText(g2, Timecode.format(point.startMs), textFont, if (dim) Palette.FG_3 else Palette.FG, columns.start.toFloat(), top, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
-            UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), 0f, h)
-            marks?.let { paintMarks(g2, it, columns.marksRight) }
+            UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), top, h)
+            val marksLeft = marks?.let { paintMarks(g2, it, columns.marksRight) } ?: columns.marksRight
+            if (label != null) {
+                // The label ends before the marks. A label that does not fit ends with "…".
+                val right = minOf(marksLeft, columns.marksRight) - TableColumns.GAP
+                val shown = UiKit.ellipsize(label, labelFont, (right - columns.number).toFloat())
+                UiKit.drawText(g2, shown, labelFont, if (dim) Palette.FG_3 else Palette.FG_2, columns.number.toFloat(), top + h, LABEL_HEIGHT)
+            }
         } finally {
             g2.dispose()
         }
+    }
+
+    /** The thin line at the left of the rows of a pack (B-68). It starts in the first row and ends in the last row. */
+    private fun paintPackLine(g2: Graphics2D, position: PackPosition) {
+        val from = if (position == PackPosition.FIRST) PACK_LINE_INSET else 0
+        val to = if (position == PackPosition.LAST) height - PACK_LINE_INSET else height
+        g2.color = Palette.LINE_5
+        g2.fillRect(PACK_LINE_X, from, PACK_LINE_WIDTH, to - from)
     }
 
     private fun badgeWidth(text: String) = ceil(UiKit.textWidth(text, badgeFont)).toInt() + 10
@@ -364,6 +409,16 @@ internal class PointRow(
 
         /** The alpha of the winner strip of a point after the end of the match. */
         const val AFTER_MATCH_ALPHA = 70
+
+        /** The two lines of a row with a label (B-68): the top of the first line and the height of each line. */
+        const val LINE_TOP = 5f
+        const val LINE_HEIGHT = 19f
+        const val LABEL_HEIGHT = 16f
+
+        /** The line at the left of the rows of a pack: after the winner strip, before the number. */
+        const val PACK_LINE_X = TableRow.WINNER_STRIP + 2
+        const val PACK_LINE_WIDTH = 2
+        const val PACK_LINE_INSET = 8
     }
 }
 

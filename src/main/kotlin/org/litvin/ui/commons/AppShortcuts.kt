@@ -45,6 +45,13 @@ object AppShortcuts {
     val NEXT_POINT = AppShortcut("R")
     val SWITCH_SERVE = AppShortcut("S")
     val PREVIOUS_POINT = AppShortcut("shift R")
+
+    /**
+     * Ctrl+R and Ctrl+Shift+R (Cmd on macOS) go to the first clip of the next and the previous pack (B-68). The key
+     * stroke has the modifier, so the binding of R does not fire for it. On macOS, the menu bar has no item with Cmd+R.
+     */
+    val NEXT_PACK = AppShortcut(if (isMac) "meta R" else "ctrl R")
+    val PREVIOUS_PACK = AppShortcut(if (isMac) "meta shift R" else "ctrl shift R")
     val TOGGLE_FRAME_STEP = AppShortcut("F")
 
     /** Advanced mode (B-68): X ends the pending point as a serve fault, and L as a let. */
@@ -83,10 +90,13 @@ object AppShortcuts {
 
     /**
      * The key name of [keyStroke] from the catalog. The app does not use `KeyEvent.getKeyText`, because the JDK gives
-     * that name in the language of Windows, not in the app language.
+     * that name in the language of Windows, not in the app language. The modifiers "shift", "ctrl", and "meta" (Cmd on
+     * macOS) come first, in the order of [keyStroke]: "meta shift R" gives "Cmd+Shift+R".
      */
     fun displayName(keyStroke: String): String {
         if (keyStroke.startsWith("shift ")) return tr("key.withShift", "key" to displayName(keyStroke.removePrefix("shift ")))
+        if (keyStroke.startsWith("ctrl ")) return tr("key.withCtrl", "key" to displayName(keyStroke.removePrefix("ctrl ")))
+        if (keyStroke.startsWith("meta ")) return tr("key.withCmd", "key" to displayName(keyStroke.removePrefix("meta ")))
         return when (keyStroke) {
             "SPACE" -> tr("key.space")
             "DELETE", "BACK_SPACE" -> tr("key.delete")

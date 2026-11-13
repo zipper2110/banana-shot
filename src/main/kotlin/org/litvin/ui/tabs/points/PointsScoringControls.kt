@@ -28,6 +28,8 @@ import org.litvin.i18n.tr
 internal data class PointControlsState(
     val index: Int = -1,
     val total: Int = 0,
+    /** "Point x / y" in advanced mode: the number of the pack and the count (B-68). Null shows [index] + 1 / [total]. */
+    val number: PointNumber? = null,
     val favorite: Boolean = false,
     val hasPrevious: Boolean = false,
     val hasNext: Boolean = false,
@@ -217,7 +219,8 @@ internal class PointsScoringControls(
                 pointLabel.foreground = Palette.FG_2
             }
             state.selected -> {
-                pointLabel.text = tr("points.current", "number" to state.index + 1, "total" to state.total)
+                val number = state.number ?: PointNumber(state.index + 1, state.total)
+                pointLabel.text = tr("points.current", "number" to number.number, "total" to number.total)
                 pointLabel.foreground = Palette.FG
             }
             else -> {
@@ -236,6 +239,7 @@ internal class PointsScoringControls(
             tr("points.override.tooltip")
         }
         renderServe(state)
+        renderStepTips(state.advanced)
         // A pending point gets its winner from these buttons, so they are the next step. A fault clip of zero length
         // can get no other outcome (B-68).
         val enabled = state.pending || (state.selected && state.canScore && !state.zeroLength)
@@ -287,6 +291,22 @@ internal class PointsScoringControls(
         letButton.isVisible = state.advanced && !asking
         serveQuestion.isVisible = asking
         serveAnswers.forEach { it.isVisible = asking }
+    }
+
+    /** In advanced mode, the tooltips of Previous and Next also name Ctrl+R and Ctrl+Shift+R (B-68). */
+    private fun renderStepTips(advanced: Boolean) {
+        val previous = AppShortcuts.PREVIOUS_POINT.display
+        val next = AppShortcuts.NEXT_POINT.display
+        previousButton.toolTipText = if (advanced) {
+            tr("points.previous.pack.tooltip", "key" to previous, "packKey" to AppShortcuts.PREVIOUS_PACK.display)
+        } else {
+            tr("points.previous.tooltip", "key" to previous)
+        }
+        nextButton.toolTipText = if (advanced) {
+            tr("points.next.pack.tooltip", "key" to next, "packKey" to AppShortcuts.NEXT_PACK.display)
+        } else {
+            tr("points.next.tooltip", "key" to next)
+        }
     }
 
     private fun renderServe(state: PointControlsState) {

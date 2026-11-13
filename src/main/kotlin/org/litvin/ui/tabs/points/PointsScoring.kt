@@ -40,6 +40,7 @@ import org.litvin.ui.tabs.points.ui.MatchEndNotice
 import org.litvin.ui.tabs.points.ui.OverrideScoreDialog
 import org.litvin.ui.tabs.points.ui.OverrideScoreInput
 import org.litvin.ui.tabs.points.ui.PointMarks
+import org.litvin.ui.tabs.points.ui.PointRowInfo
 import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.Palette
 import org.kordamp.ikonli.material2.Material2MZ
@@ -105,6 +106,8 @@ internal class PointsScoring(
     private val isActive: () -> Boolean = { true },
     /** Selects the point with this id and seeks to its start. */
     private val onGoToPoint: (pointId: String) -> Unit = {},
+    /** Selects the point with this id, seeks to its start, and plays it: Ctrl+R and Ctrl+Shift+R (B-68). */
+    private val onPlayPoint: (pointId: String) -> Unit = onGoToPoint,
     /** The user's default scoring mode: a new project starts with it (B-68). */
     private val modeDefaults: ScoringModeDefaults = ScoringModeDefaults.NONE,
     /** Asks the user to confirm a server change with this title and message. Returns true for "Change server". */
@@ -192,6 +195,9 @@ internal class PointsScoring(
 
     // The packs of the clips (B-68): the serve number of each clip and of a new clip.
     private var packs: ServePacks = ServePacks.EMPTY
+
+    // The pack rows of the points list and the navigator numbers (B-68).
+    private val packRows = PointPacksCache()
     private val states: List<ScoringEngine.MatchState> get() = timeline?.statesAfterPoint.orEmpty()
     private var scene: ScoreboardScene? = null
 
@@ -320,6 +326,12 @@ internal class PointsScoring(
         Outcome.NONE -> Palette.NEUTRAL_LIGHT
     }
 
+    /** The pack number, the pack position, and the label of a point row in advanced mode (B-68), or null. */
+    fun pointRowInfo(pointId: String): PointRowInfo? = packRows.of(points, score).row(pointId)
+
+    /** True for a fault clip and a let clip in advanced mode. The timeline shows them dimmed (B-68). */
+    fun isDimmedClip(pointId: String): Boolean = packRows.of(points, score).isDimmed(pointId)
+
     /** The MATCH, SET or GAME badge, the serve mark and the after-match state of a point. */
     fun pointMarks(pointId: String): PointMarks? {
         val index = points.indexOfFirst { it.id == pointId }
@@ -417,6 +429,16 @@ internal class PointsScoring(
         bind(AppShortcuts.SWITCH_SERVE.keyStroke, "points.switchServe") { switchServer() }
         bind(AppShortcuts.SERVE_FAULT.keyStroke, "points.serveFault") { requestServeEnding(ScoreRequest.Fault) }
         bind(AppShortcuts.LET.keyStroke, "points.let") { requestServeEnding(ScoreRequest.Let) }
+        bind(AppShortcuts.NEXT_PACK.keyStroke, "points.nextPack") { goToPack(+1) }
+        bind(AppShortcuts.PREVIOUS_PACK.keyStroke, "points.previousPack") { goToPack(-1) }
+    }
+
+    /** Ctrl+R and Ctrl+Shift+R (B-68): the first clip of the next or the previous pack. Basic mode does as R and Shift+R. */
+    private fun goToPack(delta: Int) {
+        hints.dismiss(HintId.SCORING_KEYS)
+        val current = packRows.of(points, score)
+        if (!current.advanced) return onStep(delta)
+        current.packTarget(selectedId, playheadMs, delta)?.let(onPlayPoint)
     }
 
     /**
@@ -856,6 +878,7 @@ internal class PointsScoring(
             PointControlsState(
                 index = index,
                 total = points.size,
+                number = packRows.of(points, score).number(point.id),
                 favorite = point.favorite,
                 hasPrevious = index > 0,
                 hasNext = index + 1 < points.size,

@@ -218,6 +218,8 @@ object HelpCatalog {
                 HelpShortcut(AppShortcuts.SCORE_PLAYER_2, tr("help.points.shortcut.scorePlayer2")),
                 HelpShortcut(AppShortcuts.NEXT_POINT, tr("help.points.shortcut.nextPoint")),
                 HelpShortcut(AppShortcuts.PREVIOUS_POINT, tr("help.points.shortcut.previousPoint")),
+                HelpShortcut(AppShortcuts.NEXT_PACK, tr("help.points.shortcut.nextPack")),
+                HelpShortcut(AppShortcuts.PREVIOUS_PACK, tr("help.points.shortcut.previousPack")),
                 HelpShortcut(AppShortcuts.SWITCH_SERVE, tr("help.points.shortcut.switchServe")),
                 HelpShortcut(AppShortcuts.TOGGLE_FAVORITE, tr("help.points.shortcut.toggleFavorite")),
                 HelpShortcut(AppShortcuts.DELETE, tr("help.points.shortcut.delete")),

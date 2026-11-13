@@ -402,3 +402,16 @@ The work for the paid version is in `backlog-paid.md`.
   `docs/crashes/b-67-crash-evidence.md`.
 - Done when: after a native crash, the next start shows the popup, the report
   has the crash stack, and the cockpit shows the crash type.
+
+### B-68 Point details
+
+- Added on 2026-11-13. Tennis only. Other sports can get the same or an
+  adapted version later.
+- The user records more than the winner: serve faults, double faults,
+  lets, aces, winners, and the kinds of errors. A switch selects the
+  scoring mode: basic (as now), advanced, or shot by shot.
+- The concept, the open questions, and the epics are in
+  `docs/point-details/b-68-point-details.md`.
+- Done when: in advanced mode, the user marks a match with the ending
+  buttons, X, and L, and the Stats tab shows the double faults, the 1st
+  serve in %, and the unforced errors of each player.

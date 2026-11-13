@@ -1,6 +1,7 @@
 package org.litvin.media.mpv
 
 import com.sun.jna.Callback
+import com.sun.jna.Function
 import com.sun.jna.FunctionMapper
 import com.sun.jna.Library
 import com.sun.jna.Native
@@ -204,6 +205,64 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
     }
 }
 
+/**
+ * Keeps the mpv window out of the full screen of macOS.
+ *
+ * The mpv window class (`swift.Window`) sets the collection behavior `fullScreenPrimary`, and mpv shows the window
+ * when it starts. When the Java window is in full screen at that time, macOS puts the mpv window in full screen on
+ * a new Space and goes to that Space. Then the Java window and its open dialogs are on a Space that the user cannot
+ * get to. A change of the behavior after mpv shows the window is too late. Thus this object adds a
+ * `setCollectionBehavior:` method to the mpv window class before mpv starts. The method replaces
+ * `fullScreenPrimary` with `fullScreenAuxiliary`, so the mpv window stays on the Space of the Java window. As a
+ * child window, it goes into full screen with the Java window.
+ */
+internal object MacMpvWindowClass {
+    private val logger = KotlinLogging.logger {}
+
+    /** The Objective-C name of `swift.Window` in libmpv. */
+    private const val MPV_WINDOW_CLASS = "_TtC5swift6Window"
+    private const val SET_BEHAVIOR = "setCollectionBehavior:"
+    private const val FULL_SCREEN_PRIMARY = 1L shl 7
+    private const val FULL_SCREEN_AUXILIARY = 1L shl 8
+
+    fun interface SetBehavior : Callback {
+        fun invoke(self: Pointer, selector: Pointer, behavior: Long)
+    }
+
+    private var original: Function? = null
+
+    // The Objective-C runtime keeps only the function pointer, so this object must stay reachable.
+    private val setBehavior = SetBehavior { self, selector, behavior ->
+        val changed = (behavior and FULL_SCREEN_PRIMARY.inv()) or FULL_SCREEN_AUXILIARY
+        original?.invoke(Void::class.java, arrayOf(self, selector, changed))
+    }
+
+    private val installed by lazy {
+        try {
+            install()
+        } catch (t: Throwable) {
+            logger.warn(t) { "Cannot change the mpv window class. Full screen can move the video to another Space." }
+        }
+    }
+
+    /** Adds the method one time. Call it after libmpv loads and before mpv starts. */
+    fun ensureInstalled() {
+        installed
+    }
+
+    private fun install() {
+        val mpvWindow = Objc.clsOrNull(MPV_WINDOW_CLASS)
+        if (mpvWindow == null) {
+            logger.warn { "No mpv window class $MPV_WINDOW_CLASS. Full screen can move the video to another Space." }
+            return
+        }
+        val method = Objc.instanceMethod(Objc.cls("NSWindow"), SET_BEHAVIOR) ?: error("No NSWindow $SET_BEHAVIOR")
+        original = Function.getFunction(Objc.implementation(method))
+        val added = Objc.addMethod(mpvWindow, SET_BEHAVIOR, setBehavior, Objc.typeEncoding(method))
+        logger.info { "mpv window class: $SET_BEHAVIOR ${if (added) "added" else "not added, the class has one"}" }
+    }
+}
+
 /** Runs blocks on the main thread of macOS (the AppKit thread) with `dispatch_async_f`. */
 private object MainQueue {
     private val logger = KotlinLogging.logger {}
@@ -254,6 +313,10 @@ private object Objc {
     private interface Runtime : Library {
         fun objc_getClass(name: String): Pointer?
         fun sel_registerName(name: String): Pointer
+        fun class_getInstanceMethod(cls: Pointer, selector: Pointer): Pointer?
+        fun class_addMethod(cls: Pointer, selector: Pointer, imp: Callback, types: String): Byte
+        fun method_getImplementation(method: Pointer): Pointer
+        fun method_getTypeEncoding(method: Pointer): String
         fun msgSend(receiver: Pointer, selector: Pointer): Pointer?
         fun msgSend(receiver: Pointer, selector: Pointer, argument: Pointer?): Pointer?
         fun msgSend(receiver: Pointer, selector: Pointer, argument: Long): Pointer?
@@ -275,6 +338,13 @@ private object Objc {
     private fun sel(name: String): Pointer = selectors.getOrPut(name) { runtime.sel_registerName(name) }
 
     fun cls(name: String): Pointer = runtime.objc_getClass(name) ?: error("No Objective-C class $name")
+    fun clsOrNull(name: String): Pointer? = runtime.objc_getClass(name)
+
+    fun instanceMethod(cls: Pointer, selector: String): Pointer? = runtime.class_getInstanceMethod(cls, sel(selector))
+    fun implementation(method: Pointer): Pointer = runtime.method_getImplementation(method)
+    fun typeEncoding(method: Pointer): String = runtime.method_getTypeEncoding(method)
+    fun addMethod(cls: Pointer, selector: String, imp: Callback, types: String): Boolean =
+        runtime.class_addMethod(cls, sel(selector), imp, types) != 0.toByte()
 
     fun send(receiver: Pointer, selector: String): Pointer? = runtime.msgSend(receiver, sel(selector))
     fun send(receiver: Pointer, selector: String, argument: Pointer?): Pointer? = runtime.msgSend(receiver, sel(selector), argument)

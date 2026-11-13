@@ -306,6 +306,8 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
                 add("sub-fonts-dir" to fonts.absolutePath)
             }
         }
+        // Before mpv makes its window: in full screen, the window must not go to a new Space.
+        if (isMac) MacMpvWindowClass.ensureInstalled()
         return try {
             MpvCore(lib, options, "player-$playerId", ::handleEvent).also { created ->
                 created.observe("time-pos", LibMpv.FORMAT_DOUBLE)

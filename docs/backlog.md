@@ -414,18 +414,21 @@ The work for the paid version is in `backlog-paid.md`.
   `docs/point-details/b-68-point-details.md`.
 - Done when: in advanced mode, the user marks a match with the ending
   buttons, X, and L, and the Stats tab shows the double faults, the 1st
-  serve in %, and the unforced errors of each player.
+  serve in %, and the unforced errors of each player. Also, the user can
+  record the error kind after an error ending, and the scoreboard shows
+  the "2nd serve" mark on a 2nd serve.
 
 ### B-69 Filter and export by point detail
 
 - Added on 2026-11-13. Do this after B-68.
 - Let the user filter the points by their details and export only these
-  points. For example: "all my backhand unforced errors" or "all my double
-  faults". This is good for training and for a coach.
+  points. For example: "all my unforced errors into the net" or "all my
+  double faults". This is good for training and for a coach.
 - The details come from B-68 (`docs/point-details/b-68-point-details.md`).
 - Open questions: where the filter is (the Points tab, the Export tab, or
   both), and if the filter can combine details (for example "player 1" and
-  "unforced error" and "backhand").
+  "unforced error" and "net"). A filter by stroke needs B-70, because
+  advanced mode records no strokes.
 - Done when: the user selects a filter, and the export has only the points
   that match it.
 
@@ -435,7 +438,9 @@ The work for the paid version is in `backlog-paid.md`.
 - A third scoring mode: the user presses a stroke key at each ball contact.
   The app knows who hit each shot, because the sides alternate. Each shot
   keeps its video time.
-- The concept is in `docs/point-details/b-68-point-details.md`, section
-  "Shot by shot (B-70)".
+- The concept and the open questions are in
+  `docs/point-details/b-70-shot-by-shot.md`.
+- Advanced mode (B-68) records no strokes. The strokes come only from this
+  mode.
 - Done when: the user marks a rally shot by shot, and the Stats tab shows
   the rally length in shots.

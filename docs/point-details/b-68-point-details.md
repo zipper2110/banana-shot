@@ -1,6 +1,6 @@
 # B-68 Point details
 
-Status: concept. The review on 2026-11-13 left open questions, but none blocks the work (see "Open questions"). No code yet.
+Status: concept, ready for implementation. The review on 2026-11-13 closed all open questions. No code yet.
 
 ## Goal
 
@@ -33,7 +33,8 @@ plays, with one key press at each event.
 | Shot by shot | Each shot with its stroke, and often its direction and depth | The Match Charting Project |
 
 The app already has the break points and the point duration. The point
-duration is a good stand-in for the rally length.
+duration is a good stand-in for the rally length. B-68 records the error
+kind, but not the stroke. The strokes need shot-by-shot mode (B-70).
 
 ## Scoring modes
 
@@ -43,8 +44,8 @@ shows.
 | Mode | The user records | Controls |
 |---|---|---|
 | Basic | The winner | As now: S, C (Point start), Q, W, E |
-| Advanced | Serve faults, lets, and how the point ended | S, C (1st serve / 2nd serve), X, L, W, and the ending buttons. No winner buttons. |
-| Shot by shot | Each shot, and how the rally ended | Not in B-68. B-70 adds it later. See "Shot by shot (B-70)". |
+| Advanced | Serve faults, lets, and how the point ended | S, C (1st serve / 2nd serve), X, L, W, and the ending buttons. Q and E give the winner only. |
+| Shot by shot | Each shot with its stroke, and how the rally ended | Not in B-68. B-70 adds it later. See `docs/point-details/b-70-shot-by-shot.md`. |
 
 - B-68 makes the basic mode and the advanced mode. The switch shows only
   these two modes until B-70.
@@ -58,14 +59,18 @@ shows.
   only the important games in detail.
 - A mode change deletes no data. A lower mode hides the extra data. The
   data shows again in the higher mode.
+- Basic mode with fault clips and let clips: decided on 2026-11-13. The
+  list shows them as normal points with no winner, as W clips. The list
+  shows no packs and no labels. A double fault clip shows its winner, the
+  receiver.
 
 ## Advanced mode
 
 ### Ending buttons
 
-The ending buttons replace the winner buttons. One key press gives the
-winner and how the point ended. An ending key ends the pending point, as a
-winner key does now.
+The ending buttons replace the winner buttons in the point bar. One key
+press gives the winner and how the point ended. An ending key ends the
+pending point, as a winner key does now.
 
 The buttons are in two groups. The group is the player who wins the point,
 not the player who hit the last shot. Thus the left group gives the point
@@ -87,6 +92,14 @@ does now. This prevents wrong scores.
   need them. One key records both facts, so this costs no extra time. A
   "player 1 only" option can come later if users ask for it.
 - A double fault is not an ending button. The user presses X (see below).
+- Q and E stay as "winner only". Decided on 2026-11-13. They give the
+  point to player 1 or player 2 with no ending. This is for a point where
+  the video does not show how the point ended. The point counts as a point
+  with no details in the statistics (see "Statistics").
+- Q and E have no buttons in advanced mode, so that the point bar has
+  space for the ending buttons. The tooltips and the help name the keys.
+- Q or E on a clip with an ending removes the ending and the error kind,
+  because they can disagree with the new winner.
 - Only the server's group shows the ace button. Thus 7 buttons are
   active at a time.
 
@@ -144,22 +157,32 @@ under pressure."
 
 ### Follow-up questions
 
-After the ending, a strip under the point bar can ask more questions:
-
-1. Shot: forehand, backhand, volley, smash, drop shot, or return.
-2. Error kind: net, long, or wide. Only for errors.
+After an error ending, a strip under the point bar can ask the error
+kind: net, long, or wide.
 
 Decided on 2026-11-13:
 
-- The questions are off by default. The user turns them on with an option
+- Advanced mode records no strokes (forehand, backhand, and so on). The
+  strokes are part of shot-by-shot mode (B-70).
+- The question is off by default. The user turns it on with an option
   of the advanced mode. The project has the option, and Settings has the
   default for new projects.
-- While a question is open, the digit keys answer the question. They do
+- While the question is open, the digit keys answer the question. They do
   not select an ending. The strip shows the label of each digit.
 - C (the next serve start), R (next point), or Esc closes the question
-  without an answer. The answers are optional.
-- The risk: a user presses a digit for the next ending while a question is
-  open, and gives an answer by mistake. This is why the questions are off
+  without an answer. The answer is optional. Decided on 2026-11-13: Esc
+  closes only the question. It does not cancel a pending point.
+- The user can answer or change the error kind at any time. Decided on
+  2026-11-13:
+  - When the option is on, the strip shows for each active clip with an
+    error ending, also after the question closes. It shows the current
+    answer. A click on an answer sets or changes it.
+  - A click on the strip opens the question again. Then the digit keys
+    answer it again.
+  - In advanced mode, the Edit dialog can change the error kind. Thus the
+    user can set it also when the option is off (see "Corrections").
+- The risk: a user presses a digit for the next ending while the question
+  is open, and gives an answer by mistake. This is why the question is off
   by default.
 
 ### Serve faults and lets
@@ -234,6 +257,16 @@ Decided on 2026-11-13:
   the reverse.
 - The packs, the serve numbers, the labels, and the winners then change
   automatically (see "Packs").
+- In advanced mode, the Edit dialog of a clip can change the full
+  outcome. Decided on 2026-11-13. It has:
+  - the kind of the clip: point, serve fault, let, or no point,
+  - the winner, for a point clip,
+  - the ending, for a point clip: ace, winner, forced error, unforced
+    error, or none (winner only, as Q and E),
+  - the error kind, for an error ending: net, long, wide, or none.
+  The dialog shows the serve number, but the user cannot change it. It
+  comes from the pack. The rules for the winner of an ace and a double
+  fault apply, as for the keys.
 - To fix a missed X, the user adds the fault: C and X at the 1st serve, or
   X alone in the gap. The point clip after it becomes a 2nd serve.
 - Known limit, accepted on 2026-11-13: X in the 2 seconds before or after a
@@ -280,9 +313,16 @@ Decided on 2026-11-13:
 ### Hints
 
 - The hints are toasts, not dialogs. A toast does not stop the video and
-  does not take the keyboard focus.
-- Each hint has "Don't show again". The hints use the existing hint system,
-  so "Show all hints again" in More → Settings shows them again.
+  does not take the keyboard focus. It closes by itself after some
+  seconds.
+- Decided on 2026-11-13: the toast is new UI. The app has no toast now.
+  The existing hints are balloons that stay until the user closes them.
+- The toast is in its own window, as `HintBalloon`. A Swing component
+  over the video shows a black rectangle, because the video preview is a
+  native window.
+- Each toast has "Don't show again". The toasts keep this choice in the
+  existing hint registry (`HintId`), so "Show all hints again" in
+  More → Settings shows them again.
 - L with no open point: "A let without a point start has no effect. Press C
   at the serve start, then L, to keep the let in the video."
 - X with no open point in a pack that already has a fault clip or a let
@@ -301,6 +341,10 @@ Decided on 2026-11-13:
 - Each project has the option. Settings has the default for new projects.
   The default is off (decided on 2026-11-13), so the exported video stays
   as it is now.
+- Basic mode has no option. Decided on 2026-11-13. The Export tab does not
+  show it, and the exports include all clips, as now. The fault clips and
+  the let clips are then normal points with no winner (see "Scoring
+  modes").
 - The fault clips are always in the data. Thus the user can change the
   decision after the marking, and can make two exports from one marking.
 - A clip of zero length has no video, so the export skips it. The score
@@ -320,7 +364,7 @@ Decided on 2026-11-13:
 - A fault clip or a let clip belongs to the next point clip in time order.
   A pack ends with the clip that gives the point: an ending, a double
   fault, or a winner from basic mode. A W clip ("No point") is not in a
-  pack.
+  pack. It stands alone.
 - The app computes the serve number of each clip from its pack. Decided on
   2026-11-13. A clip after no fault clip of its pack is on the 1st serve.
   A clip after one fault clip is on the 2nd serve. A let clip does not
@@ -338,6 +382,8 @@ Decided on 2026-11-13:
 - Fault clips and let clips do not count as points. The pack is one point,
   so the navigator and the list number the packs, not the clips. The
   number shows on the first row of the pack.
+- A W clip also gets a number. Decided on 2026-11-13. Thus the numbers go
+  over the packs and the W clips in time order.
 - R and Shift+R go to the next and the previous clip, as now. Ctrl+R and
   Ctrl+Shift+R go to the first clip of the next and the previous pack. On
   macOS, the keys are Cmd+R and Cmd+Shift+R. Decided on 2026-11-13. Thus
@@ -350,10 +396,11 @@ Decided on 2026-11-13:
 Decided on 2026-11-13:
 
 - In advanced mode, each row has a label for its serve: "1st serve",
-  "2nd serve", or "Let".
+  "2nd serve", or "Let". A W clip has the label "No point". Decided on
+  2026-11-13.
 - After the label, the row shows the ending in a short form. For example:
   "1st serve · Fault", "2nd serve · Double fault", or
-  "2nd serve · UE BH net".
+  "2nd serve · UE net".
 - Basic mode shows no labels.
 
 ### Timeline
@@ -377,13 +424,25 @@ New rows in the Stats tab, and on the statistics card of the export:
   2nd serve points won.
 - Endings: winners, forced errors, unforced errors, and the ratio of
   winners to unforced errors.
-- Errors by stroke and by error kind, when the follow-up questions have
-  answers.
+- Errors by error kind, when the follow-up question has answers.
 
 Rules:
 
 - The serve statistics use the serve numbers of the packs. A fault clip
   with video and a fault clip of zero length count the same.
+- Decided on 2026-11-13: the average point length, the average length of
+  the points that each player won, and the longest point use only the
+  point clips. They skip the fault clips and the let clips. A double fault
+  is a fault clip, so it is also skipped.
+- The playing time includes the fault clips and the let clips, because the
+  players play during these clips.
+- Decided on 2026-11-13: the Stats tab no longer shows the average time
+  between points, in all modes. Fault clips make this value wrong, and it
+  was already wrong for a video with cuts. Remove `MatchStat.AVERAGE_GAP`,
+  `TimeStats.averageGapMs`, the text `stats.row.averageGap` in all
+  languages, and the sentence about this value in
+  `help.statistics.note.4`. The stats settings ignore unknown keys, so a
+  saved `average_gap` key does no harm.
 - A point that the user scored in basic mode has no details. The advanced
   rows show their coverage, for example "Unforced errors: 12 (in 40
   detailed points)".
@@ -399,7 +458,6 @@ val details: Map<String, PointDetailV1> = emptyMap(), // key: the point id, as s
 
 data class PointDetailV1(
     val ending: Ending? = null,      // SERVE_FAULT, LET, ACE, WINNER, FORCED_ERROR, UNFORCED_ERROR
-    val stroke: Stroke? = null,      // FOREHAND, BACKHAND, VOLLEY, SMASH, DROP, RETURN
     val errorKind: ErrorKind? = null, // NET, LONG, WIDE
 )
 ```
@@ -421,69 +479,31 @@ data class PointDetailV1(
   code ignores clips with `endMs <= startMs` (for example `setOutcome` and
   `switchServer` in `PointsScoring`). A fault clip of zero length must be
   an exception in each of these places.
-- The time statistics skip clips of zero length.
+- A clip of zero length adds nothing to the playing time. It is a fault
+  clip, so the other time statistics skip it (see "Statistics").
 - If the server of a point is not known, an ace and a double fault cannot
   give the winner. The app asks for the server first (see "The server").
 
-## Shot by shot (B-70)
-
-Decided on 2026-11-13: shot-by-shot mode is not in the scope of B-68.
-Backlog item B-70 keeps it for later. The concept:
-
-- The app knows who hit each shot. The server hits first, and then the
-  sides alternate. This is also true in doubles and padel.
-- The user presses a stroke key at each ball contact: 1 forehand,
-  2 backhand, 3 volley, 4 smash, 5 drop shot, 6 lob. The first shot is the
-  serve, and the app adds it.
-- X and L work as in advanced mode. The first stroke key can start the
-  point, so C is not necessary.
-- Enter ends the rally. The strip then asks about the last shot: winner,
-  forced error, or unforced error, and then the error kind. The app knows
-  who hit the last shot, so it sets the winner. Q and E are not necessary.
-- Each shot keeps its video time. The timeline shows the shots as ticks.
-  The statistics get the rally length in shots.
-- A rally strip shows the shots as chips in the player colors. A click on a
-  chip changes its stroke. Delete removes the selected chip.
-- Option: the video plays slower in this mode.
-- Not planned now: the direction and the depth of each shot.
-
 ## Open questions
 
-A review of the concept against the code (2026-11-13) found these
-questions. None of them blocks the start of the work. Decide each one
-before the work on the related epic starts.
+None. A review of the concept against the code (2026-11-13) found more
+questions. The author decided them on 2026-11-13.
 
-1. Do Q and E work in advanced mode, as "winner only"? Without them, the
-   user must select a wrong ending when the video does not show the end of
-   the point.
-2. One stroke list for B-68 and B-70. B-68 has "return" and no "lob". B-70
-   has "lob" and no "return". A return is also a forehand or a backhand, so
-   B-69 does not find "backhand unforced errors" on returns. Proposal: keep
-   only strokes in the list. The app knows a return from the order of the
-   shots.
-3. The time statistics (average point, playing time, longest point, average
-   gap) now use all clips. Fault clips and let clips make these values
-   lower. Proposal: these statistics skip fault clips and let clips.
-4. Basic mode with fault clips: are the fault clips hidden, or do they show
-   as numbered "no point" clips? Does the list show the packs? Does the
-   export option apply? Are W clips still numbered in advanced mode?
-5. The hints: the app has no toasts. The existing hints are balloons that
-   stay until the user closes them. Use balloons, or make a new toast?
-6. Esc while a follow-up question is open: does Esc close the question
-   only, or also cancel the pending point?
-7. The row labels, for example "2nd serve · UE BH net", must fit in the
-   fixed width of the side column in all app languages.
-8. The digit keys: on an AZERTY keyboard (French), the top-row digits need
+Checks for later. Decided on 2026-11-13: do these checks during the work
+on the related epic, not now.
+
+1. The row labels, for example "2nd serve · UE net", must fit in the fixed
+   width of the side column in all app languages.
+2. The digit keys: on an AZERTY keyboard (French), the top-row digits need
    Shift. Test the bindings on AZERTY, and also bind the numpad digits.
-9. "Done when" of B-68 does not include E5 and E6. Are they part of B-68?
 
 Decided on 2026-11-13. The decisions are in the sections above:
 
 - The keys of the follow-up questions: see "Follow-up questions".
 - Details for both players: see "Ending buttons".
 - The default of "Include serve faults and lets": see "Export".
-- Filter and export by detail, for example "all my backhand unforced
-  errors": a separate backlog item, B-69.
+- Filter and export by detail, for example "all my unforced errors into
+  the net": a separate backlog item, B-69.
 - The server question and the confirmation of a server change: see "The
   server".
 - No confirmation when other edits move the server: see "The server".
@@ -496,6 +516,20 @@ Decided on 2026-11-13. The decisions are in the sections above:
   pack: see "Packs".
 - The correction of mistakes, and the 2-second window of X: see
   "Corrections".
+- Q and E give the winner only: see "Ending buttons".
+- No strokes in advanced mode: see "Follow-up questions". Shot-by-shot
+  mode has its own spec, `docs/point-details/b-70-shot-by-shot.md`.
+- The time statistics and fault clips: see "Statistics".
+- Basic mode with fault clips: see "Scoring modes" and "Export".
+- The hints are a new toast: see "Hints".
+- No average time between points in the Stats tab: see "Statistics".
+- W clips have a number and the label "No point": see "Packs" and
+  "Labels".
+- Esc closes the follow-up question, and the error kind can change at any
+  time: see "Follow-up questions".
+- B-68 is done only with the follow-up question (epic E5) and the
+  "2nd serve" mark on the scoreboard (epic E6). The "Done when" text of
+  B-68 in `docs/backlog.md` names both.
 
 ## Epics
 
@@ -503,8 +537,8 @@ Decided on 2026-11-13. The decisions are in the sections above:
 |---|---|
 | E1 | The scoring mode switch (basic and advanced) and the data model |
 | E2 | The ending buttons, the automatic winner, the "Who serves?" question, the confirmation of a server change |
-| E3 | Serve faults and lets: X, L, the serve labels on the buttons, fault clips, clips of zero length, the corrections, the hints, the export option |
+| E3 | Serve faults and lets: X, L, the serve labels on the buttons, fault clips, clips of zero length, the corrections, the Edit dialog with the full outcome, the toast for the hints, the export option |
 | E3b | The points list: packs, serve numbers from the packs, pack numbers, Ctrl+R and Ctrl+Shift+R (Cmd on macOS), the row labels with the endings, the timeline marks |
-| E4 | The new rows in the Stats tab and on the statistics card |
-| E5 | The follow-up questions |
+| E4 | The new rows in the Stats tab and on the statistics card, the time statistics without fault clips, no average time between points |
+| E5 | The follow-up question (the error kind), the strip for the active clip |
 | E6 | The "2nd serve" mark on the scoreboard |

@@ -409,9 +409,33 @@ The work for the paid version is in `backlog-paid.md`.
   adapted version later.
 - The user records more than the winner: serve faults, double faults,
   lets, aces, winners, and the kinds of errors. A switch selects the
-  scoring mode: basic (as now), advanced, or shot by shot.
+  scoring mode: basic (as now) or advanced. Shot-by-shot mode is B-70.
 - The concept, the open questions, and the epics are in
   `docs/point-details/b-68-point-details.md`.
 - Done when: in advanced mode, the user marks a match with the ending
   buttons, X, and L, and the Stats tab shows the double faults, the 1st
   serve in %, and the unforced errors of each player.
+
+### B-69 Filter and export by point detail
+
+- Added on 2026-11-13. Do this after B-68.
+- Let the user filter the points by their details and export only these
+  points. For example: "all my backhand unforced errors" or "all my double
+  faults". This is good for training and for a coach.
+- The details come from B-68 (`docs/point-details/b-68-point-details.md`).
+- Open questions: where the filter is (the Points tab, the Export tab, or
+  both), and if the filter can combine details (for example "player 1" and
+  "unforced error" and "backhand").
+- Done when: the user selects a filter, and the export has only the points
+  that match it.
+
+### B-70 Shot-by-shot scoring mode
+
+- Added on 2026-11-13. Out of scope for now. Do this after B-68.
+- A third scoring mode: the user presses a stroke key at each ball contact.
+  The app knows who hit each shot, because the sides alternate. Each shot
+  keeps its video time.
+- The concept is in `docs/point-details/b-68-point-details.md`, section
+  "Shot by shot (B-70)".
+- Done when: the user marks a rally shot by shot, and the Stats tab shows
+  the rally length in shots.

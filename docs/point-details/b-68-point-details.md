@@ -44,8 +44,10 @@ shows.
 |---|---|---|
 | Basic | The winner | As now: S, C (Point start), Q, W, E |
 | Advanced | Serve faults, lets, and how the point ended | S, C (1st serve / 2nd serve), X, L, W, and the ending buttons. No winner buttons. |
-| Shot by shot | Each shot, and how the rally ended | Later. See "Shot by shot". |
+| Shot by shot | Each shot, and how the rally ended | Not in B-68. B-70 adds it later. See "Shot by shot (B-70)". |
 
+- B-68 makes the basic mode and the advanced mode. The switch shows only
+  these two modes until B-70.
 - The modes are nested. Each mode gives all the data of the modes below it.
   Shot-by-shot data gives the advanced data, and the advanced data gives
   the winner. Thus the statistics read one model.
@@ -80,6 +82,10 @@ does now. This prevents wrong scores.
 - The buttons show the player names, for example "Ben unforced error".
 - The outer keys (1 and 0) are the winners. The keys mirror the two sides.
 - W ("No point") stays. It is for clips that are not points.
+- Decided on 2026-11-13: the user records the details of both players.
+  The errors of the opponent are points of the user, so the statistics
+  need them. One key records both facts, so this costs no extra time. A
+  "player 1 only" option can come later if users ask for it.
 - A double fault is not an ending button. The user presses X (see below).
 - Only the server's group shows the ace button. Thus 7 buttons are
   active at a time.
@@ -143,8 +149,18 @@ After the ending, a strip under the point bar can ask more questions:
 1. Shot: forehand, backhand, volley, smash, drop shot, or return.
 2. Error kind: net, long, or wide. Only for errors.
 
-The questions are optional. C (the next serve start) or R (next point)
-skips them. The keys of the questions are open question 1.
+Decided on 2026-11-13:
+
+- The questions are off by default. The user turns them on with an option
+  of the advanced mode. The project has the option, and Settings has the
+  default for new projects.
+- While a question is open, the digit keys answer the question. They do
+  not select an ending. The strip shows the label of each digit.
+- C (the next serve start), R (next point), or Esc closes the question
+  without an answer. The answers are optional.
+- The risk: a user presses a digit for the next ending while a question is
+  open, and gives an answer by mistake. This is why the questions are off
+  by default.
 
 ### Serve faults and lets
 
@@ -213,6 +229,8 @@ know yet if the serve is a fault. The user presses X at every fault.
 - Off: the exports skip them. The video has only the serve that counts, as
   the author marks it now.
 - Each project has the option. Settings has the default for new projects.
+  The default is off (decided on 2026-11-13), so the exported video stays
+  as it is now.
 - The fault clips are always in the data. Thus the user can change the
   decision after the marking, and can make two exports from one marking.
 - A fault that X recorded without a clip has no clip to include.
@@ -226,8 +244,14 @@ know yet if the serve is a fault. The user presses X at every fault.
 - The timeline shows the fault clips and the let clips dimmed.
 - The points table gets a short code column, for example
   "2nd · UE BH net".
-- The scoreboard can show a small "2nd serve" mark during a 2nd-serve
-  clip (optional).
+
+## Scoreboard
+
+- Decided on 2026-11-13: the scoreboard shows a small "2nd serve" mark
+  during a 2nd-serve clip. Broadcasts often show this mark.
+- All scoreboard styles show the mark, in the preview and in the export.
+- Projects in basic mode have no serve numbers, so their scoreboard does
+  not change.
 
 ## Statistics
 
@@ -255,7 +279,7 @@ The score file (`ScoreV1`) gets two fields. Old projects open with no
 change: a missing field means "basic" and "no details".
 
 ```kotlin
-val scoringMode: ScoringMode = ScoringMode.BASIC, // BASIC, ADVANCED, SHOT_BY_SHOT
+val scoringMode: ScoringMode = ScoringMode.BASIC, // BASIC, ADVANCED. B-70 adds SHOT_BY_SHOT.
 val details: Map<String, PointDetailV1> = emptyMap(), // key: the point id, as serverMarks
 
 data class PointDetailV1(
@@ -280,9 +304,10 @@ data class PointDetailV1(
 - If the server of a point is not known, an ace and a double fault cannot
   give the winner. The app asks for the server first.
 
-## Shot by shot
+## Shot by shot (B-70)
 
-This mode comes after advanced mode. The concept:
+Decided on 2026-11-13: shot-by-shot mode is not in the scope of B-68.
+Backlog item B-70 keeps it for later. The concept:
 
 - The app knows who hit each shot. The server hits first, and then the
   sides alternate. This is also true in doubles and padel.
@@ -303,22 +328,22 @@ This mode comes after advanced mode. The concept:
 
 ## Open questions
 
-1. The keys of the follow-up questions. The ending keys use the digits. One
-   option: while a question is open, the digits answer the question.
-2. Details for both players, or an option "record details only for player
-   1" for faster marking. The proposal is both players.
-3. The default of "Include serve faults and lets" for new projects. The
-   proposal is off, so the video stays as it is now.
-4. Filter and export by detail, for example "all my backhand unforced
-   errors". It is good for training. It is not in the epics yet.
+None. The author decided the last open questions on 2026-11-13. The
+decisions are in the sections above:
+
+- The keys of the follow-up questions: see "Follow-up questions".
+- Details for both players: see "Ending buttons".
+- The default of "Include serve faults and lets": see "Export".
+- Filter and export by detail, for example "all my backhand unforced
+  errors": a separate backlog item, B-69.
 
 ## Epics
 
 | Epic | Content |
 |---|---|
-| E1 | The scoring mode switch and the data model |
+| E1 | The scoring mode switch (basic and advanced) and the data model |
 | E2 | The ending buttons, the automatic winner, the code column in the points table |
 | E3 | Serve faults and lets: X, L, the serve labels, fault clips, X without a clip, the hints, the export option |
 | E4 | The new rows in the Stats tab and on the statistics card |
-| E5 | The follow-up questions (after open question 1) |
-| E6 | Shot-by-shot mode |
+| E5 | The follow-up questions |
+| E6 | The "2nd serve" mark on the scoreboard |

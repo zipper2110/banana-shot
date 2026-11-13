@@ -502,6 +502,8 @@ class SwingPointsPanel(
                 // The scoring mode switch is above the point bar (B-68).
                 add(scoring.modeBar, BorderLayout.NORTH)
                 add(buildPointBar(), BorderLayout.CENTER)
+                // The error kind strip is under the point bar, out of the video area (B-68, "Follow-up questions").
+                add(scoring.errorStrip, BorderLayout.SOUTH)
             }, BorderLayout.NORTH)
             add(playbackBar, BorderLayout.CENTER)
         }, BorderLayout.SOUTH)
@@ -564,6 +566,8 @@ class SwingPointsPanel(
             }
 
             override fun cancelPending() {
+                // Esc closes the open error kind question first, and then it does not cancel the pending point (B-68).
+                if (scoring.onEscape()) return
                 dispatcher.clearPending()
             }
 

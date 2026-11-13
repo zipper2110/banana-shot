@@ -14,6 +14,7 @@ import org.litvin.scoring.ClipOutcome
 import org.litvin.scoring.ClipOutcomes
 import org.litvin.scoring.Ending
 import org.litvin.scoring.EndingChoice
+import org.litvin.scoring.ErrorKind
 import org.litvin.scoring.ServePacks
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.PointDetails
@@ -36,6 +37,8 @@ import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.tabs.points.ui.ComputedScore
 import org.litvin.ui.tabs.points.ui.EndingButtons
+import org.litvin.ui.tabs.points.ui.ErrorKindStrip
+import org.litvin.ui.tabs.points.ui.ErrorKindStripState
 import org.litvin.ui.tabs.points.ui.MatchEndNotice
 import org.litvin.ui.tabs.points.ui.OverrideScoreDialog
 import org.litvin.ui.tabs.points.ui.OverrideScoreInput
@@ -75,12 +78,14 @@ import org.litvin.i18n.DisplayFormats
  * - [scoreboardEvents] draws the scoreboard over the video at the playhead (see [moveTo]).
  * - [modeBar] switches the scoring mode of a tennis project (B-68). In advanced mode, the point bar shows the ending
  *   buttons, and asks "Who serves?" when the project has no serve mark (see [ServeQuestion]).
+ * - [errorStrip], under the point bar, asks the error kind after an error ending when the project option is on
+ *   (B-68, see [ErrorKindQuestion]).
  * - After each change of the score file, [PointDetails.resolve] writes the winners of the aces and the double faults
  *   into the outcomes, in all modes. Thus basic mode and the scoreboard show the same score.
  *
  * The file is longer than 500 lines. The scoring keeps one state (the score file, the points, the selected point, and
  * the pending point), and each action reads and writes it through [change]. The pure rules are in other files:
- * `scoring.PointEndings`, `scoring.ServerChanges`, `scoring.ClipOutcomes`, [ScoreKeys], [ServeQuestion], and
+ * `scoring.PointEndings`, `scoring.ServerChanges`, `scoring.ClipOutcomes`, [ScoreKeys], [ServeQuestion], [ErrorKindQuestion], and
  * [ServerChangeText]. The next split can move
  * [pointMarks] and the dialogs (Override score, Scoring rules, Scoreboard style) into their own classes.
  */
@@ -130,7 +135,7 @@ internal class PointsScoring(
         onSwitchServe = { switchServer() },
         onOverrideScore = { openOverride() },
         onEnding = {
-            requestEnding(it)
+            requestEnding(it, fromKey = false)
             showScoringKeysHint()
         },
         onServeAnswer = { answerServer(it) },
@@ -139,8 +144,21 @@ internal class PointsScoring(
     )
 
     /** The scoring mode switch above the point bar. Only tennis projects show it. */
-    val modeBar = ScoringModeBar { selectMode(it) }
+    val modeBar = ScoringModeBar(onSelect = { selectMode(it) }, onAskErrorKind = { setAskErrorKind(it) })
     private val serveQuestion = ServeQuestion()
+    private val errorQuestion = ErrorKindQuestion()
+
+    /**
+     * The error kind strip under the point bar (B-68, "Follow-up questions"). It shows in advanced mode with the option
+     * "Ask error kind" on, for the open question and for the active clip with an error ending.
+     */
+    val errorStrip = ErrorKindStrip(
+        answers = ErrorKindQuestion.ANSWERS,
+        keyOf = { ErrorKindQuestion.keyOf(it).display },
+        closeKeys = Triple(AppShortcuts.POINT_START.display, AppShortcuts.NEXT_POINT.display, AppShortcuts.CANCEL_PENDING.display),
+        onAnswer = { answerErrorKind(it) },
+        onOpen = { openErrorQuestion() },
+    )
 
     private val scoreSettingsButton = ScoringButton(tr("points.scoringRules"), Material2MZ.TUNE, alignLeft = true).apply {
         name = "points-score-settings"
@@ -253,12 +271,18 @@ internal class PointsScoring(
         this.videoLanguage = videoLanguage
         val exists = dir != null && ScoreIO.existsForProjectDir(dir)
         serveQuestion.close()
+        errorQuestion.close()
         score = readScore() ?: ScoreV1()
         refresh()
         if (dir != null && (!exists || score.useDefaultScoreboard)) {
             val style = runCatching { styleDefaults.load() }.getOrNull()
             val mode = runCatching { modeDefaults.load() }.getOrDefault(ScoringMode.BASIC)
-            change { it.copy(scoreboard = style ?: it.scoreboard, scoringMode = mode, useDefaultScoreboard = false) }
+            val askErrorKind = runCatching { modeDefaults.loadAskErrorKind() }.getOrDefault(false)
+            change {
+                it.copy(
+                    scoreboard = style ?: it.scoreboard, scoringMode = mode, askErrorKind = askErrorKind, useDefaultScoreboard = false,
+                )
+            }
         }
     }
 
@@ -293,6 +317,7 @@ internal class PointsScoring(
     fun select(pointId: String?) {
         if (pointId == selectedId) return
         selectedId = pointId
+        syncErrorQuestion()
         render()
     }
 
@@ -315,6 +340,8 @@ internal class PointsScoring(
 
     /** C started the pending point (B-68). In advanced mode with no known server, the point bar asks "Who serves?". */
     fun onPointStart() {
+        // C closes the error kind question without an answer (B-68).
+        errorQuestion.close()
         val id = pendingId ?: return
         val answer = serveQuestion.onPointStart(score.isAdvanced, serverKnown())
         if (answer != null) markNewServer(id, answer) else render()
@@ -415,14 +442,17 @@ internal class PointsScoring(
             val shortcut = EndingButtons.keyOf(choice)
             val name = "points.ending.${choice.name}"
             (listOf(shortcut.keyStroke) + AppShortcuts.alsoBound(shortcut)).forEachIndexed { index, stroke ->
-                bind(stroke, "$name.$index") { requestEnding(choice) }
+                bind(stroke, "$name.$index") { requestEnding(choice, fromKey = true) }
             }
         }
         bind(AppShortcuts.NEXT_POINT.keyStroke, "points.nextPoint") {
+            // R closes the error kind question without an answer (B-68).
+            closeErrorQuestion()
             onStep(+1)
             hints.dismiss(HintId.SCORING_KEYS)
         }
         bind(AppShortcuts.PREVIOUS_POINT.keyStroke, "points.previousPoint") {
+            closeErrorQuestion()
             onStep(-1)
             hints.dismiss(HintId.SCORING_KEYS)
         }
@@ -436,6 +466,7 @@ internal class PointsScoring(
     /** Ctrl+R and Ctrl+Shift+R (B-68): the first clip of the next or the previous pack. Basic mode does as R and Shift+R. */
     private fun goToPack(delta: Int) {
         hints.dismiss(HintId.SCORING_KEYS)
+        closeErrorQuestion()
         val current = packRows.of(points, score)
         if (!current.advanced) return onStep(delta)
         current.packTarget(selectedId, playheadMs, delta)?.let(onPlayPoint)
@@ -454,6 +485,11 @@ internal class PointsScoring(
             is ScoreRequest.WithEnding -> setEnding(request.choice)
             ScoreRequest.Fault -> setServeEnding(Ending.SERVE_FAULT)
             ScoreRequest.Let -> setServeEnding(Ending.LET)
+        }
+        // An error ending opens the error kind question when the option is on (B-68, "Follow-up questions").
+        if (request is ScoreRequest.WithEnding) {
+            errorQuestion.onEnding(asksErrorKind(), pointId, score.detailOf(pointId).ending)
+            render()
         }
         showServeMarkHint()
     }
@@ -508,8 +544,21 @@ internal class PointsScoring(
     /**
      * An ending key or button (B-68). It works only in advanced mode and after the answer to "Who serves?". The ace
      * works only for the server of the pending point or of the selected point.
+     * While the error kind question is open, a digit key ([fromKey]) answers the question and selects no ending. A
+     * click on an ending button closes the question and selects the ending.
      */
-    private fun requestEnding(choice: EndingChoice) {
+    private fun requestEnding(choice: EndingChoice, fromKey: Boolean) {
+        if (errorQuestion.isOpen) {
+            if (fromKey) {
+                when (val result = errorQuestion.onKey(EndingButtons.keyOf(choice))) {
+                    is ErrorKindKey.Answer -> setErrorKind(result.pointId, result.kind)
+                    ErrorKindKey.Ignored -> Unit
+                    ErrorKindKey.SelectsEnding -> Unit
+                }
+                return
+            }
+            closeErrorQuestion()
+        }
         if (!score.isAdvanced || serveQuestion.isOpen) return
         if (!PointEndings.isAvailable(choice, endingServer())) return
         onScoreRequest(ScoreRequest.WithEnding(choice))
@@ -529,6 +578,64 @@ internal class PointsScoring(
 
     /** True when a point or the pending point has a serve mark. Then the engine knows the server of each point. */
     private fun serverKnown(): Boolean = score.serverMarks.keys.any { id -> id == pendingId || points.any { it.id == id } }
+
+    /** True when advanced mode asks the error kind after an error ending: the project option is on (B-68). */
+    private fun asksErrorKind(): Boolean = score.isAdvanced && score.askErrorKind
+
+    /** True when the clip with [pointId] has an error ending: a forced or an unforced error. */
+    private fun isErrorClip(pointId: String?): Boolean =
+        pointId != null && points.any { it.id == pointId } && score.detailOf(pointId).ending?.isError == true
+
+    /** Closes the error kind question when it does not apply any more. See [ErrorKindQuestion.sync]. */
+    private fun syncErrorQuestion() = errorQuestion.sync(asksErrorKind(), isErrorClip(errorQuestion.target), selectedId)
+
+    /**
+     * Esc (B-68): closes the open error kind question. Returns true when Esc closed it. Then Esc does nothing more, and
+     * the pending point stays.
+     */
+    fun onEscape(): Boolean {
+        if (!errorQuestion.onEscape()) return false
+        render()
+        return true
+    }
+
+    /** C, R, Shift+R, Ctrl+R, or a click on an ending button closes the question without an answer. */
+    private fun closeErrorQuestion() {
+        if (!errorQuestion.isOpen) return
+        errorQuestion.close()
+        render()
+    }
+
+    /** A click on the strip: the question opens again for the clip of the strip. Then the digit keys answer it. */
+    private fun openErrorQuestion() {
+        val pointId = errorStripClip() ?: return
+        errorQuestion.open(pointId)
+        render()
+    }
+
+    /** A click on an answer of the strip: sets or changes the error kind of the clip of the strip. */
+    private fun answerErrorKind(kind: ErrorKind) {
+        val pointId = errorStripClip() ?: return
+        errorQuestion.close()
+        setErrorKind(pointId, kind)
+    }
+
+    /** Gives [kind] to the error of the clip with [pointId]. The question is closed. */
+    private fun setErrorKind(pointId: String, kind: ErrorKind) {
+        if (!isErrorClip(pointId)) return render()
+        val detail = score.detailOf(pointId)
+        if (detail.errorKind == kind) return render()
+        change { it.withDetail(pointId, it.detailOf(pointId).copy(errorKind = kind)) }
+    }
+
+    /** The clip of the error kind strip, or null when the strip does not show. */
+    private fun errorStripClip(): String? = errorQuestion.stripClip(asksErrorKind(), selectedId, isErrorClip(selectedId))
+
+    /** The option "Ask error kind" of the project (B-68). Off closes the question. */
+    private fun setAskErrorKind(ask: Boolean) {
+        if (ask == score.askErrorKind) return
+        change { it.copy(askErrorKind = ask) }
+    }
 
     /** The user selected a mode in the mode switch. A mode change deletes no data. */
     private fun selectMode(mode: ScoringMode) {
@@ -788,6 +895,7 @@ internal class PointsScoring(
         timeline = runCatching { timelineOf(score) }.getOrNull()
         packs = ServePacks.of(points, score.outcomes, score.details)
         serveQuestion.sync(score.isAdvanced, serverKnown())
+        syncErrorQuestion()
         controls.setPlayers(players())
         render()
         rebuildSpans()
@@ -857,7 +965,8 @@ internal class PointsScoring(
     private var shownServeLabels: Pair<Int?, Int>? = null
 
     private fun renderPanel() {
-        modeBar.render(visible = projectDir != null && score.sport == Sport.TENNIS, mode = score.scoringMode)
+        modeBar.render(visible = projectDir != null && score.sport == Sport.TENNIS, mode = score.scoringMode, askErrorKind = score.askErrorKind)
+        renderErrorStrip()
         val labels = serveLabels()
         shownServeLabels = labels
         onServeNumber(labels.first)
@@ -895,6 +1004,20 @@ internal class PointsScoring(
                 serve = labels.second,
                 serveEnding = score.detailOf(point.id).ending?.takeIf { it == Ending.SERVE_FAULT || it == Ending.LET },
                 zeroLength = PointEndings.isZeroLength(point),
+            ),
+        )
+    }
+
+    /** The error kind strip: the open question, or the active clip with an error ending (B-68). */
+    private fun renderErrorStrip() {
+        val pointId = errorStripClip()
+        val choice = pointId?.let { EndingChoice.of(score.outcomeOf(it), score.detailOf(it).ending) }
+        errorStrip.render(
+            ErrorKindStripState(
+                visible = pointId != null && choice != null,
+                open = errorQuestion.isOpen,
+                answer = pointId?.let { score.detailOf(it).errorKind },
+                ending = choice?.let(controls::endingLabel).orEmpty(),
             ),
         )
     }

@@ -204,6 +204,9 @@ internal class PointsScoringControls(
         render(state)
     }
 
+    /** The full label of the ending [choice], with the name of the player who made it, for example "Ben unforced error". */
+    fun endingLabel(choice: EndingChoice): String = endings.fullLabel(choice)
+
     private fun outcomeTip(key: String, text: String) =
         "<html>$key — $text.<br>${tr("points.outcome.pending.tooltip")}</html>"
 

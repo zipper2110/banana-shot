@@ -350,8 +350,8 @@ object HelpCatalog {
     )
 
     /**
-     * Advanced scoring (B-68): the ending keys and the decision rules of the ATP and WTA statisticians. The shortcut
-     * texts use the labels of the ending buttons with the default names of the players.
+     * Advanced scoring (B-68): the ending keys, the decision rules of the ATP and WTA statisticians, and the error kind
+     * question. The shortcut texts use the labels of the ending buttons with the default names of the players.
      */
     private fun advancedScoring(): HelpContent {
         val player1 = tr("sport.tennis.side", "number" to 1)
@@ -383,6 +383,8 @@ object HelpCatalog {
                 tr("help.advanced.note.6"),
                 tr("help.advanced.note.7"),
                 tr("help.advanced.note.8"),
+                tr("help.advanced.note.9"),
+                tr("help.advanced.note.10"),
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.ENDING_P1_WINNER, tr("points.ending.winner", "name" to player1)),

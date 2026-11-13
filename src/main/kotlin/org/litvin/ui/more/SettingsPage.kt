@@ -28,6 +28,7 @@ import javax.swing.JComboBox
  * [language] adds the Language card. It is the first card, so that a user who cannot read the current language
  * finds it (B-11, "Path back to English").
  * [scoringMode] adds the Scoring card with the default scoring mode of new tennis projects (B-68).
+ * [askErrorKind] adds the default of the option "Ask error kind" of advanced mode to the Scoring card (B-68).
  * [serveClips] adds the default of the export option "Include serve faults and lets" to the Scoring card (B-68).
  */
 internal class SettingsPage(
@@ -38,11 +39,12 @@ internal class SettingsPage(
     language: LanguageSetting? = null,
     scoringMode: ChoiceSetting? = null,
     serveClips: FlagSetting? = null,
+    askErrorKind: FlagSetting? = null,
 ) : SectionPage(TITLE) {
     init {
         name = "more-settings"
         if (language != null) languageCard(language)
-        if (scoringMode != null) scoringCard(scoringMode, serveClips)
+        if (scoringMode != null) scoringCard(scoringMode, serveClips, askErrorKind)
 
         subheading(tr("settings.theme"))
         paragraph(tr("settings.theme.text"))
@@ -92,7 +94,7 @@ internal class SettingsPage(
         folderStatus = statusLine()
     }
 
-    private fun scoringCard(setting: ChoiceSetting, serveClips: FlagSetting?) {
+    private fun scoringCard(setting: ChoiceSetting, serveClips: FlagSetting?, askErrorKind: FlagSetting?) {
         subheading(tr("settings.scoring"))
         paragraph(tr("settings.scoring.text"))
         val choice = SegmentedChoice(
@@ -103,6 +105,16 @@ internal class SettingsPage(
             onChange(setting.save)
         }
         buttonRow(choice)
+        if (askErrorKind != null) {
+            paragraph(tr("settings.scoring.askErrorKind.text"))
+            buttonRow(
+                SwitchBox(tr("settings.scoring.askErrorKind")).apply {
+                    name = "more-settings-ask-error-kind"
+                    isSelected = askErrorKind.load()
+                    addActionListener { askErrorKind.save(isSelected) }
+                },
+            )
+        }
         if (serveClips == null) return
         paragraph(tr("settings.scoring.serveClips.text"))
         val switch = SwitchBox(tr("settings.scoring.serveClips")).apply {

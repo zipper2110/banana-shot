@@ -621,6 +621,7 @@ object SwingApplicationFactory {
                                     save = { id -> ScoringMode.entries.firstOrNull { it.name == id }?.let(scoringModeDefaults::save) },
                                 ),
                                 serveClips = FlagSetting(exportSettings::loadServeClipsDefault, exportSettings::saveServeClipsDefault),
+                                askErrorKind = FlagSetting(scoringModeDefaults::loadAskErrorKind, scoringModeDefaults::saveAskErrorKind),
                             ),
                             SettingsPage.ID,
                         ),

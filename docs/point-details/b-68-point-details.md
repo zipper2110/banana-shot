@@ -554,7 +554,7 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
 | E3 | Done | X and L are `AppShortcuts.SERVE_FAULT` and `AppShortcuts.LET`, with buttons between the two groups of ending buttons (`PointsScoringControls`). `ScoreKeys.decide` gives the action of a scoring key with and without a pending point and an active clip. `PointsDispatcher.addZeroLengthPoint` adds a fault clip of zero length. `PointEndings.withServeEnding`, `canScore`, and `allowsZeroLength` are the rules of X, L, and the clips of zero length. `PointStartButton.serve` shows "1st serve" or "2nd serve". The Edit dialog uses `PointOutcomeFields` and `scoring/ClipOutcomes.kt` (`ClipChoice`, `ClipOutcome`), and sends the outcome in `PointPatch.outcome`. The toast is `HintToast` (`HintController.toast`), with one `KeyHint` for each key. The export option is `ExportClips` and the tile `export-serve-clips`. `ExportPlanner.scoringPoints` gives the scoreboard the clips of zero length. Tests: `ScoreKeysTest`, `ClipOutcomesTest`, `ExportClipsTest`, `PointsScoringServeTest`, `EditPointDialogTest`, `HintControllerTest`, `PointsDispatcherTest`. |
 | E3b | Done | `ui/tabs/points/PointPacks.kt`: `PointPacks` gives the row info, the navigator number (`PointNumber`), the dimmed clips, and the target of Ctrl+R (`packTarget`). Basic mode has no packs, and Ctrl+R does the same as R. `ui/PointRowLabels.kt`: `PointRowInfo`, `PackPosition`, and `RowLabel` (one key for each part, and the pattern keys `points.row.label` and `points.row.ending.withKind`). A row with a label has two lines; the label ends before the marks and ends with "…" when it does not fit. A pack with two clips or more has a line at the left, indented lines between its rows, and a gap of 6 px before and after it. `ui/TimelineMarks.kt`: a clip of zero length is a thin mark of 2 px with a hit area of ±3 px. `AppShortcuts.NEXT_PACK` and `PREVIOUS_PACK` (Ctrl, or Cmd on macOS). `displayName` shows Ctrl (`key.withCtrl`) and Cmd (`key.withCmd`). Tests: `PointPacksTest`, `PointsTablePacksTest`, `TimelineMarksTest`, `AppShortcutsTest`, `PointRowLabelFitTest` (check 1: the longest label of each language fits in 205 px). Not checked in the running app. |
 | E4 | Done | `MatchStats.compute` has `details` and `advanced`. `DetailStats` has the serve and ending counts. `StatRows` has the rows of advanced mode (`MatchStat.advanced`), the group `ENDINGS`, and `StatCoverage` ("In 40 points with details" under the row in the Stats tab; the card shows no coverage). The point lengths skip the fault, double fault, and let clips in all modes. `AVERAGE_GAP` is removed. Tests: `MatchStatsTest`, `StatRowsTest`. |
-| E5 | Not started | |
+| E5 | Done | `ui/tabs/points/ErrorKindQuestion.kt`: `ErrorKindQuestion` keeps the state of the question (open or closed, the target clip, the digit keys) and gives the clip of the strip (`stripClip`). `ui/ErrorKindStrip.kt` is the strip under the point bar (`SwingPointsPanel`, south of the point bar, out of the video area). The option "Ask error kind" is a switch in `ScoringModeBar` (advanced mode only) and writes `ScoreV1.askErrorKind`. The default for new projects is in More → Settings, card Scoring (`ScoringModeDefaults.loadAskErrorKind`, default off). `PointsScoring.load` gives it to a new project with the default mode. `PointsScoring.onEscape` closes the question before `Keybindings.cancelPending` cancels the pending point. Help: `help.advanced.note.9` and `help.advanced.note.10`. Tests: `ErrorKindQuestionTest`, `PointsScoringErrorKindTest`. Not checked in the running app. |
 | E6 | Done | `OverlaySpan.serveMark` and `ScoreboardDisplay.serveMark`. `ScoreboardTimelineBuilder.secondServeIds(points, score)` gives the 2nd-serve clips, and `build` takes them as `secondServeIds`. `ScoreboardBadge` shows the mark as a dark tab in one row with the deciding point badge. In a full video, the mark shows from the end of the fault to the end of the 2nd-serve clip. Tests: `ScoreboardServeMarkTest`, `VideoTextFit`. |
 
 ### Domain rules in the code
@@ -632,7 +632,26 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
 - The toasts use `HintController.toast`. A new toast replaces the toast on the
   screen. A toast stays while the pointer is on it. To add a hint for another
   key, add a `HintId` and a `KeyHint`.
-- For E5: the digit keys go through `PointsScoring.requestEnding`. A strip that
-  takes the digits while the question is open must check its state there,
-  before `onScoreRequest`. Esc is bound in `Keybindings` (`cancelPending`),
-  so the question must close there first and not cancel the pending point.
+- The error kind question (E5): the answers are 1 net, 2 long, and 3 wide,
+  with the top-row digit, the numpad digit, and the Shift form. While the
+  question is open, the other digits do nothing. The digit keys go through
+  `PointsScoring.requestEnding`, which checks the question before
+  `onScoreRequest`.
+- The question opens after an ending key or an ending button that gives an
+  error ending, also when the error kind of the clip is already set. It does
+  not open for an error ending from the Edit dialog.
+- A click on an ending button while the question is open closes the question
+  and selects the ending. Only the digit keys answer the question.
+- C, R, Shift+R, Ctrl+R, and Ctrl+Shift+R close the question with no answer.
+  Q, E, W, X, L, or the Edit dialog on the target clip close it, because the
+  clip then has no error ending.
+- When the playhead leaves the clip and no clip is active, the question stays
+  open, so that the user can answer while the video plays on. When another
+  clip becomes active, the question closes.
+- Esc closes an open question and does nothing more. The next Esc cancels the
+  pending point.
+- The strip shows the open question. When the question is closed, the strip
+  shows for the active clip with an error ending, in advanced mode with the
+  option on. A click on an answer sets or changes the error kind. A click on
+  the strip outside the answers opens the question again. The strip cannot
+  remove an answer. The Edit dialog can ("Not set").

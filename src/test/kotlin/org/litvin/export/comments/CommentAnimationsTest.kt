@@ -4,6 +4,8 @@ import org.litvin.AssOverlayWriter
 import org.litvin.CommentOverlaySpan
 import org.litvin.export.ExportPlanner
 import org.litvin.export.ExportReplays
+import org.litvin.export.comments.CommentMotion.Timed.Part.ARRIVE
+import org.litvin.export.comments.CommentMotion.Timed.Part.LEAVE
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
@@ -126,10 +128,10 @@ class CommentAnimationsTest {
     @Test
     fun aTimedPopGrowsEachPartAroundTheCenterOfTheComment() {
         val box = CommentAss.placement("Great\nshot", 0.0, 0.0, 1920.0, 1080.0, CommentStyle.CARD)!!.box
-        val (shadow, card, text) = events(CommentStyle.CARD, CommentMotion.Timed(CommentAnimation.POP, 5_000))
+        val (shadow, card, text) = events(CommentStyle.CARD, CommentMotion.Timed(CommentAnimation.POP, 5_000, ARRIVE))
 
         for ((event, originY) in listOf(shadow to box.centerY + 8, card to box.centerY, text to box.centerY)) {
-            assertTrue(event.startsWith("{\\fad(200,300)}"), event)
+            assertTrue(event.startsWith("{\\fad(200,0)}"), event)
             assertTrue(event.contains("\\fscx50.0\\fscy50.0\\t(0,200,\\fscx100\\fscy100)"), event)
             val (x1, y1, x2, y2, time) = move.find(event)!!.destructured
             assertEquals("200", time)
@@ -145,10 +147,10 @@ class CommentAnimationsTest {
             for ((size, distance) in listOf(100 to 48.0, 200 to 96.0)) {
                 val timed = CommentAss.events(
                     "Great\nshot", "#22AAFF", 0.0, 0.0, 1920.0, 1080.0, style, sizePercent = size,
-                    motion = CommentMotion.Timed(CommentAnimation.SLIDE_UP, 5_000),
+                    motion = CommentMotion.Timed(CommentAnimation.SLIDE_UP, 5_000, ARRIVE),
                 )
                 for (event in timed) {
-                    assertTrue(event.startsWith("{\\fad(350,300)}"), event)
+                    assertTrue(event.startsWith("{\\fad(350,0)}"), event)
                     assertTrue(event.contains("\\fscx100\\fscy100"), "A slide does not change the size: $event")
                     val (x1, y1, x2, y2, time) = move.find(event)!!.destructured
                     assertEquals("350", time)
@@ -179,6 +181,59 @@ class CommentAnimationsTest {
                     assertEquals(turn.find(export)?.value, turn.find(preview)?.value, "The rotation center does not move")
                 }
                 // The text is half transparent, as \fad gives halfway through the fade in.
+                assertTrue(frozen.last().contains("\\1a${ScoreboardAss.alpha(128 / 255.0)}"), frozen.last())
+            }
+        }
+    }
+
+    @Test
+    fun aTimedPopShrinksAndASlideUpMovesOnUpAtItsEnd() {
+        for (style in CommentStyle.entries) {
+            val still = events(style, CommentMotion.Still)
+            val pop = events(style, CommentMotion.Timed(CommentAnimation.POP, 5_000, LEAVE))
+            val slide = events(style, CommentMotion.Timed(CommentAnimation.SLIDE_UP, 5_000, LEAVE))
+            assertEquals(still.size, pop.size)
+            assertEquals(still.size, slide.size)
+            for ((rest, event) in still.zip(pop)) {
+                assertTrue(event.startsWith("{\\fad(0,300)}"), event)
+                assertTrue(event.contains("\\fscx100\\fscy100\\t(0,300,\\fscx50.0\\fscy50.0)"), event)
+                val (x1, y1, _, _, time) = move.find(event)!!.destructured
+                assertEquals("300", time)
+                // The leave part starts at rest.
+                assertEquals(posXY.find(rest)!!.groupValues.drop(1), listOf(x1, y1), "$style: $event")
+            }
+            for ((rest, event) in still.zip(slide)) {
+                assertTrue(event.startsWith("{\\fad(0,300)}"), event)
+                val (x1, y1, x2, y2, time) = move.find(event)!!.destructured
+                assertEquals("300", time)
+                assertEquals(posXY.find(rest)!!.groupValues.drop(1), listOf(x1, y1), "$style: $event")
+                assertEquals(x1, x2, event)
+                assertEquals(48.0, y1.toDouble() - y2.toDouble(), 0.11, "The comment moves up: $style $event")
+            }
+            // Fade has no out motion: one event for the full time.
+            assertEquals(listOf(0L to 5_000L), CommentAnimations.exportParts(CommentAnimation.FADE, 5_000).map { it.second to it.third })
+        }
+    }
+
+    @Test
+    fun theFrozenPreviewIsTheStateOfTheLeaveTagsAtThatTime() {
+        for (animation in listOf(CommentAnimation.POP, CommentAnimation.SLIDE_UP)) {
+            val parts = CommentAnimations.exportParts(animation, 5_000)
+            assertEquals(listOf(0L to 4_700L, 4_700L to 5_000L), parts.map { it.second to it.third })
+            for (style in CommentStyle.entries) {
+                val timed = events(style, parts.last().first, rotationDeg = 30)
+                val frozen = events(style, CommentMotion.Frozen(animation, CommentClock(4_850, 5_000)), rotationDeg = 30)
+                assertEquals(timed.size, frozen.size)
+                timed.zip(frozen).forEach { (export, preview) ->
+                    val (x1, y1, x2, y2) = move.find(export)!!.destructured
+                    val (x, y) = posXY.find(preview)!!.destructured
+                    assertEquals((x1.toDouble() + x2.toDouble()) / 2, x.toDouble(), 0.11, "$animation $style: $preview")
+                    assertEquals((y1.toDouble() + y2.toDouble()) / 2, y.toDouble(), 0.11, "$animation $style: $preview")
+                    val size = scaleX.find(preview)!!.groupValues[1].toDouble()
+                    assertEquals(if (animation == CommentAnimation.POP) 75.0 else 100.0, size, "$animation $style: $preview")
+                    assertEquals(turn.find(export)?.value, turn.find(preview)?.value, "The rotation center does not move")
+                }
+                // The text is half transparent, as \fad gives halfway through the fade out.
                 assertTrue(frozen.last().contains("\\1a${ScoreboardAss.alpha(128 / 255.0)}"), frozen.last())
             }
         }
@@ -305,6 +360,28 @@ class CommentAnimationsTest {
             assertTrue(fadingLines.all { ",,{\\fad(300,300)}{" in it }, fadingLines.toString())
             assertTrue(dialogues.filter { ",0:00:04.00," in it }.none { "\\fad" in it }, dialogues.toString())
             assertTrue(dialogues.single { ",0:00:05.00," in it }.contains(",,{\\fad(200,200)}{"), dialogues.toString())
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun theAssFileWritesAPopAsAnArrivePartAndALeavePart() {
+        val pop = CommentOverlaySpan(1, 1_000, 3_000, "Pop", "#FFFFFF", CommentStyle.CARD, animation = CommentAnimation.POP)
+        val file = Files.createTempFile("comment_animation", ".ass").toFile()
+        try {
+            AssOverlayWriter.write(file, emptyList(), listOf(pop), 1920, 1080)
+            val dialogues = file.readLines().filter { it.startsWith("Dialogue:") }
+
+            val arrive = dialogues.filter { ",0:00:01.00,0:00:02.70,Comment," in it }
+            val leave = dialogues.filter { ",0:00:02.70,0:00:03.00,Comment," in it }
+            assertEquals(3, arrive.size, "Shadow, card, text: $dialogues")
+            assertEquals(3, leave.size, "Shadow, card, text: $dialogues")
+            assertEquals(6, dialogues.size, dialogues.toString())
+            assertTrue(arrive.all { ",,{\\fad(200,0)}{" in it }, arrive.toString())
+            assertTrue(leave.all { ",,{\\fad(0,300)}{" in it }, leave.toString())
+            // The two parts of one layer follow each other.
+            assertEquals(arrive.map { it.substringBefore(',') }, leave.map { it.substringBefore(',') })
         } finally {
             file.delete()
         }

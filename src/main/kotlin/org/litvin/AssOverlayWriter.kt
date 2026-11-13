@@ -1,7 +1,7 @@
 package org.litvin
 
 import org.litvin.export.comments.CommentAss
-import org.litvin.export.comments.CommentMotion
+import org.litvin.export.comments.CommentAnimations
 import org.litvin.export.scoreboard.BoardPlacement
 import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
@@ -89,19 +89,7 @@ object AssOverlayWriter {
                 }
             }
 
-            for (comment in commentSpans) {
-                if (comment.endMs <= comment.startMs || comment.text.isBlank()) continue
-                val start = toAssTs(comment.startMs)
-                val end = toAssTs(comment.endMs)
-                val events = CommentAss.events(
-                    comment.text, comment.colorHex, 0.0, 0.0, playResX.toDouble(), playResY.toDouble(), comment.style,
-                    comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
-                    CommentMotion.Timed(comment.animation, comment.endMs - comment.startMs),
-                )
-                events.forEachIndexed { index, text ->
-                    w.appendLine("Dialogue: ${COMMENT_LAYER + index},$start,$end,Comment,,0,0,0,,$text")
-                }
-            }
+            for (comment in commentSpans) w.commentEvents(comment, playResX, playResY)
         }
     }
 
@@ -151,19 +139,7 @@ object AssOverlayWriter {
             w.appendLine()
             w.appendLine("[Events]")
             w.appendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text")
-            for (comment in replay.comments) {
-                if (comment.endMs <= comment.startMs || comment.text.isBlank()) continue
-                val start = toAssTs(comment.startMs)
-                val end = toAssTs(comment.endMs)
-                val events = CommentAss.events(
-                    comment.text, comment.colorHex, 0.0, 0.0, playResX.toDouble(), playResY.toDouble(), comment.style,
-                    comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg,
-                    CommentMotion.Timed(comment.animation, comment.endMs - comment.startMs),
-                )
-                events.forEachIndexed { index, text ->
-                    w.appendLine("Dialogue: ${COMMENT_LAYER + index},$start,$end,Comment,,0,0,0,,$text")
-                }
-            }
+            for (comment in replay.comments) w.commentEvents(comment, playResX, playResY)
             replay.badgeText?.let { badge ->
                 val end = toAssTs(replay.playMs)
                 org.litvin.export.ReplayBadgeAss.events(badge, playResX.toDouble(), playResY.toDouble()).forEachIndexed { index, text ->
@@ -260,6 +236,25 @@ object AssOverlayWriter {
             }
         } catch (_: Throwable) { }
         return State(p1Pts, p2Pts, g1, g2, s1, s2, sets)
+    }
+
+    /**
+     * Writes the events of [comment]. A Pop or a Slide up comment has an arrive part and a leave part, because one ASS
+     * event can have only one \move (see [CommentAnimations.exportParts]). The two parts of one layer do not overlap.
+     */
+    private fun Appendable.commentEvents(comment: CommentOverlaySpan, playResX: Int, playResY: Int) {
+        if (comment.endMs <= comment.startMs || comment.text.isBlank()) return
+        for ((motion, partStart, partEnd) in CommentAnimations.exportParts(comment.animation, comment.endMs - comment.startMs)) {
+            val start = toAssTs(comment.startMs + partStart)
+            val end = toAssTs(comment.startMs + partEnd)
+            val events = CommentAss.events(
+                comment.text, comment.colorHex, 0.0, 0.0, playResX.toDouble(), playResY.toDouble(), comment.style,
+                comment.position, comment.sizePercent, comment.opacityPercent, comment.rotationDeg, motion,
+            )
+            events.forEachIndexed { index, text ->
+                appendLine("Dialogue: ${COMMENT_LAYER + index},$start,$end,Comment,,0,0,0,,$text")
+            }
+        }
     }
 
     // ----- ASS helpers -----

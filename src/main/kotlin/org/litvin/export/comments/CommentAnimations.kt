@@ -19,10 +19,23 @@ sealed interface CommentMotion {
     data object Still : CommentMotion
 
     /**
-     * The export: each event animates with its own ASS tags. The tag times are relative to the event start, and the
-     * event shows for [durationMs]. So the animation starts when the comment comes on screen in the output video.
+     * The export: each event animates with its own ASS tags. The tag times are relative to the event start. [durationMs]
+     * is the time of the full comment on screen. So the animation starts when the comment comes on screen in the output
+     * video. One ASS event can have only one \move, so a Pop or a Slide up comment has two events for each part: the
+     * [Part.ARRIVE] event to the start of the out time, and the [Part.LEAVE] event for the out time.
      */
-    data class Timed(val animation: CommentAnimation, val durationMs: Long) : CommentMotion
+    data class Timed(val animation: CommentAnimation, val durationMs: Long, val part: Part = Part.ALL) : CommentMotion {
+        enum class Part {
+            /** One event for the full comment time: the in motion and a fade out. */
+            ALL,
+
+            /** The event from the comment start to the start of the out time: the in motion. */
+            ARRIVE,
+
+            /** The event for the out time: the out motion. */
+            LEAVE,
+        }
+    }
 
     /**
      * The preview: the events show the animation state at one moment, without timing tags. An mpv `osd-overlay` has no
@@ -40,10 +53,10 @@ object CommentAnimations {
     /** The time of a fade in and of a fade out. */
     const val FADE_MS = 300L
 
-    /** The time of the Pop growth and of its fade in. */
+    /** The time of the Pop growth and of its fade in. The Pop shrinks back to its start size in the [FADE_MS] at its end. */
     const val POP_MS = 200L
 
-    /** The time of the Slide up move and of its fade in. */
+    /** The time of the Slide up move and of its fade in. The comment moves up by the same distance in the [FADE_MS] at its end. */
     const val SLIDE_MS = 350L
 
     /** The size of a Pop comment at its start, as a part of its size. */
@@ -55,7 +68,7 @@ object CommentAnimations {
     /**
      * The state of a comment at one moment. [opacity] (0 to 1) multiplies the opacity of all parts of the comment.
      * [scale] multiplies the size of each part around the rotation center of the part. [rise] is the part of the
-     * Slide up distance that the comment is still below its place: 1 at the start, 0 in place.
+     * Slide up distance that the comment is below its place: 1 at the start, 0 in place, -1 at the end.
      * The values are in small steps (the opacity in steps of 1/255, the step of an ASS alpha value), so a preview
      * sends a new overlay only for a visible change.
      */
@@ -94,13 +107,21 @@ object CommentAnimations {
         val remaining = duration - elapsed
         // How far the comment came in: 0 at the start, 1 at the end of the in time.
         val entered = if (inMs > 0 && elapsed < inMs) elapsed.toDouble() / inMs else 1.0
-        val opacity = when {
-            entered < 1.0 -> entered
-            outMs > 0 && remaining < outMs -> remaining.toDouble() / outMs
-            else -> 1.0
+        // How much of the out time is still to come: 1 before and at the start of the out time, 0 at the end.
+        val leaving = if (entered >= 1.0 && outMs > 0 && remaining < outMs) remaining.toDouble() / outMs else 1.0
+        val opacity = if (entered < 1.0) entered else leaving
+        // The in motion goes from the start state to the rest state. The out motion goes from the rest state to the
+        // end state: a Pop shrinks back to its start size, and a Slide up moves up by the same distance.
+        val scale = when {
+            animation != CommentAnimation.POP -> 1.0
+            entered < 1.0 -> POP_START_SCALE + (1 - POP_START_SCALE) * entered
+            else -> POP_START_SCALE + (1 - POP_START_SCALE) * leaving
         }
-        val scale = if (animation == CommentAnimation.POP) POP_START_SCALE + (1 - POP_START_SCALE) * entered else 1.0
-        val rise = if (animation == CommentAnimation.SLIDE_UP) 1.0 - entered else 0.0
+        val rise = when {
+            animation != CommentAnimation.SLIDE_UP -> 0.0
+            entered < 1.0 -> 1.0 - entered
+            else -> leaving - 1.0
+        }
         return Frame(alphaStep(opacity), fine(scale), fine(rise))
     }
 
@@ -118,9 +139,33 @@ object CommentAnimations {
     fun timed(events: List<String>, motion: CommentMotion): List<String> {
         if (motion !is CommentMotion.Timed || motion.animation == CommentAnimation.NONE) return events
         val (inMs, outMs) = times(motion.animation, motion.durationMs)
-        if (inMs <= 0 && outMs <= 0) return events
-        val tags = "{\\fad($inMs,$outMs)}"
+        val (fadeIn, fadeOut) = when (motion.part) {
+            CommentMotion.Timed.Part.ALL -> inMs to outMs
+            CommentMotion.Timed.Part.ARRIVE -> inMs to 0L
+            CommentMotion.Timed.Part.LEAVE -> 0L to outMs
+        }
+        if (fadeIn <= 0 && fadeOut <= 0) return events
+        val tags = "{\\fad($fadeIn,$fadeOut)}"
         return events.map { tags + it }
+    }
+
+    /**
+     * The parts of the export events of [animation] for a comment that shows for [durationMs], with the start and the
+     * end of each part relative to the comment start. Pop and Slide up have an out motion, so they have an arrive part
+     * and a leave part. The other animations have one part for the full time.
+     */
+    fun exportParts(animation: CommentAnimation, durationMs: Long): List<Triple<CommentMotion, Long, Long>> {
+        val duration = durationMs.coerceAtLeast(0L)
+        val outMs = times(animation, duration).second
+        val hasOutMotion = animation == CommentAnimation.POP || animation == CommentAnimation.SLIDE_UP
+        if (!hasOutMotion || !animation.available || outMs <= 0 || outMs >= duration) {
+            return listOf(Triple(CommentMotion.Timed(animation, duration), 0L, duration))
+        }
+        val split = duration - outMs
+        return listOf(
+            Triple(CommentMotion.Timed(animation, duration, CommentMotion.Timed.Part.ARRIVE), 0L, split),
+            Triple(CommentMotion.Timed(animation, duration, CommentMotion.Timed.Part.LEAVE), split, duration),
+        )
     }
 
     /**
@@ -138,30 +183,45 @@ object CommentAnimations {
             CommentMotion.Still -> "\\pos(${at(1.0, 0.0)})"
             is CommentMotion.Frozen -> frame(motion).let { "\\pos(${at(it.scale, it.rise)})" }
             is CommentMotion.Timed -> {
-                val inMs = times(motion.animation, motion.durationMs).first
-                val start = when (motion.animation) {
-                    CommentAnimation.POP -> at(POP_START_SCALE, 0.0)
-                    CommentAnimation.SLIDE_UP -> at(1.0, 1.0)
-                    else -> null
+                val (inMs, outMs) = times(motion.animation, motion.durationMs)
+                val rest = at(1.0, 0.0)
+                if (motion.part == CommentMotion.Timed.Part.LEAVE) {
+                    val end = when (motion.animation) {
+                        CommentAnimation.POP -> at(POP_START_SCALE, 0.0)
+                        CommentAnimation.SLIDE_UP -> at(1.0, -1.0)
+                        else -> null
+                    }
+                    if (end == null || outMs <= 0) "\\pos($rest)" else "\\move($rest,$end,0,$outMs)"
+                } else {
+                    val start = when (motion.animation) {
+                        CommentAnimation.POP -> at(POP_START_SCALE, 0.0)
+                        CommentAnimation.SLIDE_UP -> at(1.0, 1.0)
+                        else -> null
+                    }
+                    if (start == null || inMs <= 0) "\\pos($rest)" else "\\move($start,$rest,0,$inMs)"
                 }
-                if (start == null || inMs <= 0) "\\pos(${at(1.0, 0.0)})" else "\\move($start,${at(1.0, 0.0)},0,$inMs)"
             }
         }
     }
 
-    /** The size tags of one part of a comment: \fscx and \fscy, and for a timed Pop the \t that grows the part. */
+    /**
+     * The size tags of one part of a comment: \fscx and \fscy, and for a timed Pop the \t that grows the part (arrive)
+     * or shrinks it (leave).
+     */
     fun scaleTags(motion: CommentMotion): String {
         val rest = "\\fscx100\\fscy100"
         return when (motion) {
             CommentMotion.Still -> rest
             is CommentMotion.Frozen -> frame(motion).scale.let { if (it == 1.0) rest else "\\fscx${fmt(it * 100)}\\fscy${fmt(it * 100)}" }
             is CommentMotion.Timed -> {
-                val inMs = times(motion.animation, motion.durationMs).first
-                if (motion.animation != CommentAnimation.POP || inMs <= 0) {
-                    rest
-                } else {
-                    val start = fmt(POP_START_SCALE * 100)
-                    "\\fscx$start\\fscy$start\\t(0,$inMs,$rest)"
+                val (inMs, outMs) = times(motion.animation, motion.durationMs)
+                val small = fmt(POP_START_SCALE * 100)
+                when {
+                    motion.animation != CommentAnimation.POP -> rest
+                    motion.part == CommentMotion.Timed.Part.LEAVE ->
+                        if (outMs <= 0) rest else "$rest\\t(0,$outMs,\\fscx$small\\fscy$small)"
+                    inMs <= 0 -> rest
+                    else -> "\\fscx$small\\fscy$small\\t(0,$inMs,$rest)"
                 }
             }
         }

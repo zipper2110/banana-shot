@@ -48,7 +48,8 @@ data class ScoreV1(
     val sport: Sport = Sport.TENNIS,
     /**
      * True when the Projects tab wrote this file for a new project (with the sport and the rules from the "New project"
-     * dialog). The Points tab then gives the project the default scoreboard style, as for a project without score.json.
+     * dialog). The Points tab then gives the project the default scoreboard style and the default scoring mode (B-68),
+     * as for a project without score.json.
      */
     val useDefaultScoreboard: Boolean = false,
     /** The scores that the user typed for the end of a point (see [ScoreOverrideV1]). */

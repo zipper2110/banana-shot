@@ -168,6 +168,9 @@ class PointsDispatcher {
 
     fun getPendingStart(): Int? = pendingStartMs
 
+    /** The id that the pending point gets when it ends, or null when no point is pending. Marks can use it before (B-68). */
+    fun getPendingId(): String? = pendingId
+
     /** Delete a point by id. Returns true if removed. */
     fun deletePoint(id: String): Boolean {
         val idx = points.indexOfFirst { it.id == id }

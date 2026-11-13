@@ -29,7 +29,7 @@ class PointsScoringPreviewTest {
             SwingUtilities.invokeAndWait {
                 val scoring = PointsScoring(
                     onStep = {}, onToggleFavorite = {}, onScoreChanged = {}, onError = {},
-                    onOverlayChanged = { overlayChanges++ }, onOutcomeRequest = {}, loadFrame = {},
+                    onOverlayChanged = { overlayChanges++ }, onScoreRequest = {}, loadFrame = {},
                 )
                 save(ScoreboardStart.VIDEO_START)
                 scoring.load(dir.path)

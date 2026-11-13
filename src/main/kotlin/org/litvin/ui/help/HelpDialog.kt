@@ -209,6 +209,7 @@ class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayou
             HelpPage.OVERVIEW -> Material2AL.HOME
             HelpPage.PROJECTS -> Material2MZ.SOURCE
             HelpPage.POINTS -> Material2MZ.SPORTS_TENNIS
+            HelpPage.ADVANCED_SCORING -> Material2AL.FACT_CHECK
             HelpPage.STATISTICS -> Material2AL.BAR_CHART
             HelpPage.COLORS -> Material2AL.COLOR_LENS
             HelpPage.CROP -> Material2AL.CROP_ROTATE

@@ -37,6 +37,10 @@ import org.litvin.ui.tabs.export.ExportSettingsPreferences
 import org.litvin.ui.tabs.export.SwingExportPanel
 import org.litvin.ui.tabs.points.PreferencesAppCreditRequest
 import org.litvin.ui.tabs.points.PreferencesScoreboardStyleDefaults
+import org.litvin.ui.tabs.points.PreferencesScoringModeDefaults
+import org.litvin.ui.tabs.points.ScoringModeDefaults
+import org.litvin.scoring.ScoringMode
+import org.litvin.ui.more.ChoiceSetting
 import org.litvin.ui.tabs.points.SwingPointsPanel
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
@@ -327,6 +331,8 @@ object SwingApplicationFactory {
             val hints = HintController(PreferencesHintRegistry(applicationPreferences))
             val commentStyles = PreferencesCommentStyleDefaults(applicationPreferences)
             val scoreboardPreferences = services.preferences.node(PreferencesProvider.SCOREBOARD)
+            // The default scoring mode of new projects (B-68). The Points tab and More > Settings share it.
+            val scoringModeDefaults = PreferencesScoringModeDefaults(scoreboardPreferences)
 
             val pointsPanel = SwingPointsPanel(
                 services.mediaPlayers.create(MediaScreen.POINTS),
@@ -339,6 +345,7 @@ object SwingApplicationFactory {
                 PreferencesScoreboardStyleDefaults(scoreboardPreferences),
                 PreferencesAppCreditRequest(scoreboardPreferences),
                 replayPlayers = { services.mediaPlayers.create(MediaScreen.REPLAY_EDITOR) },
+                modeDefaults = scoringModeDefaults,
             )
             closeActions += pointsPanel::close
 
@@ -605,6 +612,13 @@ object SwingApplicationFactory {
                                 },
                                 onOpenFolder = ::openWithDesktop,
                                 language = languageSetting,
+                                scoringMode = ChoiceSetting(
+                                    options = ScoringMode.entries.map {
+                                        ChoiceSetting.Option(it.name, ScoringModeDefaults.label(it), ScoringModeDefaults.tooltip(it))
+                                    },
+                                    load = { scoringModeDefaults.load().name },
+                                    save = { id -> ScoringMode.entries.firstOrNull { it.name == id }?.let(scoringModeDefaults::save) },
+                                ),
                             ),
                             SettingsPage.ID,
                         ),

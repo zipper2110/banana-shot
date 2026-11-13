@@ -8,6 +8,7 @@ import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SectionPage
+import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.SwatchButton
 import org.litvin.ui.commons.ThemeSettings
 import org.litvin.ui.commons.UiButton
@@ -25,6 +26,7 @@ import javax.swing.JComboBox
  * [onShowHintsAgain] makes all hints show again, and [onOpenFolder] opens a folder in the file manager.
  * [language] adds the Language card. It is the first card, so that a user who cannot read the current language
  * finds it (B-11, "Path back to English").
+ * [scoringMode] adds the Scoring card with the default scoring mode of new tennis projects (B-68).
  */
 internal class SettingsPage(
     dataFolder: File,
@@ -32,10 +34,12 @@ internal class SettingsPage(
     private val onShowHintsAgain: () -> Unit,
     private val onOpenFolder: (File) -> Boolean,
     language: LanguageSetting? = null,
+    scoringMode: ChoiceSetting? = null,
 ) : SectionPage(TITLE) {
     init {
         name = "more-settings"
         if (language != null) languageCard(language)
+        if (scoringMode != null) scoringCard(scoringMode)
 
         subheading(tr("settings.theme"))
         paragraph(tr("settings.theme.text"))
@@ -83,6 +87,19 @@ internal class SettingsPage(
             folderStatus.text = if (onOpenFolder(dataFolder)) "" else tr("settings.data.openFailed")
         }.apply { name = "more-settings-open-data-folder" })
         folderStatus = statusLine()
+    }
+
+    private fun scoringCard(setting: ChoiceSetting) {
+        subheading(tr("settings.scoring"))
+        paragraph(tr("settings.scoring.text"))
+        val choice = SegmentedChoice(
+            "more-settings-scoring-mode",
+            setting.options.map { SegmentedChoice.Option(it.id, it.label, tooltip = it.tooltip) },
+        ).apply {
+            selected = setting.load()
+            onChange(setting.save)
+        }
+        buttonRow(choice)
     }
 
     /** One entry of the language list. The list shows each language in its own language. */
@@ -143,4 +160,16 @@ internal class SettingsPage(
         val TITLE: String get() = tr("more.settings")
         private const val SWATCH_WIDTH = 40
     }
+}
+
+/**
+ * A setting with a few choices, for example the default scoring mode of new projects (B-68). The Settings page knows no
+ * domain types: `app` gives the IDs, the labels, and the store. [load] and [save] use the [Option.id] values.
+ */
+class ChoiceSetting(
+    val options: List<Option>,
+    val load: () -> String,
+    val save: (String) -> Unit,
+) {
+    data class Option(val id: String, val label: String, val tooltip: String? = null)
 }

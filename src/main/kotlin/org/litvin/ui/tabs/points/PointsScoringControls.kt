@@ -1,25 +1,19 @@
 package org.litvin.ui.tabs.points
 
 import org.kordamp.ikonli.material2.Material2AL
-import org.kordamp.ikonli.material2.Material2MZ
+import org.litvin.scoring.Ending
+import org.litvin.scoring.EndingChoice
 import org.litvin.scoring.Outcome
 import org.litvin.ui.commons.KeyChipStyle
-import org.litvin.ui.commons.KeyChips
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
+import org.litvin.ui.tabs.points.ui.EndingButtons
 import org.litvin.ui.tabs.points.ui.FavoriteButton
 import org.litvin.ui.tabs.points.ui.OutcomeButton
 import org.litvin.ui.tabs.points.ui.ScorePlayers
 import org.litvin.ui.tabs.points.ui.ScoringButton
-import org.litvin.ui.tabs.points.ui.ScoringUi
-import java.awt.AlphaComposite
-import java.awt.Color
-import java.awt.Cursor
 import java.awt.Dimension
-import java.awt.Graphics
-import java.awt.geom.RoundRectangle2D
 import javax.swing.BorderFactory
-import javax.swing.Icon
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -48,6 +42,14 @@ internal data class PointControlsState(
     val serverMarked: Boolean = false,
     /** True when the point has an override of the score. */
     val overridden: Boolean = false,
+    /** True in advanced mode (B-68): the point bar shows the ending buttons in place of the Q and E buttons. */
+    val advanced: Boolean = false,
+    /** True while the point bar asks "Who serves?". The ending buttons are not active until the user answers. */
+    val askServer: Boolean = false,
+    /** The server (1 or 2) of the clip that the ending keys change: the pending point, or the selected point. */
+    val endingServer: Int? = null,
+    /** The ending button of the selected point, or null when the point has no ending. */
+    val ending: EndingChoice? = null,
 ) {
     val selected: Boolean get() = index >= 0
 }
@@ -57,6 +59,8 @@ internal data class PointControlsState(
  * - [navigator], at the top of the side column: "Point x / y" with the favorite star, and Previous and Next under it.
  * - This panel, in the point bar under the video, after Point start: "Winner:", the three outcome buttons,
  *   and Override score at the right end. The outcome buttons fill the remaining width.
+ *   In advanced mode (B-68), the ending buttons and W take the place of the outcome buttons. Q and E have no buttons.
+ *   While the bar asks "Who serves?", it shows the question and one button for each player.
  * - [serveButton], at the start of the point bar, before Point start. The point bar places it.
  */
 internal class PointsScoringControls(
@@ -67,6 +71,10 @@ internal class PointsScoringControls(
     /** S or a click: the other side serves this point. */
     onSwitchServe: () -> Unit,
     onOverrideScore: () -> Unit,
+    /** An ending button of advanced mode (B-68). */
+    onEnding: (EndingChoice) -> Unit = {},
+    /** The answer (1 or 2) to "Who serves?". */
+    onServeAnswer: (Int) -> Unit = {},
 ) : JPanel(null) {
 
     val previousButton = ScoringButton(
@@ -110,6 +118,18 @@ internal class PointsScoringControls(
         addActionListener { onOutcome(Outcome.P2) }
     }
     private val outcomeButtons = listOf(player1Button, noPointButton, player2Button)
+    private val endings = EndingButtons(onEnding)
+    private val serveQuestion = JLabel(tr("points.serveQuestion")).apply {
+        name = "points-serve-question"
+        font = UiKit.font(12.5f, UiKit.Weight.SEMIBOLD)
+        foreground = Palette.FG
+    }
+    private val serveAnswers = listOf(1, 2).map { player ->
+        OutcomeButton(player, "").apply {
+            name = "points-serve-answer-$player"
+            addActionListener { onServeAnswer(player) }
+        }
+    }
     private val winnerLabel = JLabel(tr("points.outcome.caption")).apply {
         name = "points-winner-label"
         font = UiKit.font(12f)
@@ -124,7 +144,9 @@ internal class PointsScoringControls(
 
     init {
         isOpaque = false
-        listOf(winnerLabel, player1Button, noPointButton, player2Button, overrideButton).forEach(::add)
+        listOf(winnerLabel, player1Button, noPointButton, player2Button, overrideButton, serveQuestion).forEach(::add)
+        endings.buttons.values.forEach(::add)
+        serveAnswers.forEach(::add)
         previousButton.addActionListener { onPrevious() }
         nextButton.addActionListener { onNext() }
         favoriteButton.addActionListener { onToggleFavorite() }
@@ -143,6 +165,12 @@ internal class PointsScoringControls(
         player1Button.toolTipText = outcomeTip("Q", tr("points.outcome.won.tooltip", "name" to players.p1Name))
         player2Button.toolTipText = outcomeTip("E", tr("points.outcome.won.tooltip", "name" to players.p2Name))
         noPointButton.toolTipText = outcomeTip("W", tr("points.outcome.none.tooltip"))
+        endings.setPlayers(players)
+        serveAnswers.forEach { button ->
+            val player = if (button === serveAnswers[0]) 1 else 2
+            button.setPlayer(players.name(player), players.color(player))
+            button.toolTipText = tr("points.serveQuestion.tooltip", "name" to players.name(player))
+        }
         render(state)
     }
 
@@ -184,13 +212,32 @@ internal class PointsScoringControls(
         val enabled = state.pending || (state.selected && state.canScore)
         val next = state.pending || (enabled && state.outcome == null)
         val outcome = state.outcome.takeUnless { state.pending }
-        player1Button.update(enabled, outcome == Outcome.P1, next)
+        player1Button.update(enabled, outcome == Outcome.P1 && !state.advanced, next)
         noPointButton.update(enabled, outcome == Outcome.NONE, next)
-        player2Button.update(enabled, outcome == Outcome.P2, next)
+        player2Button.update(enabled, outcome == Outcome.P2 && !state.advanced, next)
+        val ending = state.ending.takeUnless { state.pending }
+        endings.buttons.forEach { (choice, button) ->
+            button.update(enabled, ending == choice, next)
+        }
+        renderMode(state)
         revalidate()
         repaint()
         navigator.revalidate()
         navigator.repaint()
+    }
+
+    /** Shows the buttons of the mode: Q, W, E in basic mode; the ending buttons and W in advanced mode; or the question. */
+    private fun renderMode(state: PointControlsState) {
+        val asking = state.advanced && state.askServer
+        player1Button.isVisible = !state.advanced
+        player2Button.isVisible = !state.advanced
+        noPointButton.isVisible = !asking
+        endings.buttons.forEach { (choice, button) ->
+            // Only the group of the server shows the ace button.
+            button.isVisible = state.advanced && !asking && (choice.ending != Ending.ACE || state.endingServer == choice.winner)
+        }
+        serveQuestion.isVisible = asking
+        serveAnswers.forEach { it.isVisible = asking }
     }
 
     private fun renderServe(state: PointControlsState) {
@@ -211,16 +258,47 @@ internal class PointsScoringControls(
 
     private fun outcomesWidth() = OUTCOME_MIN * 3 + OUTCOME_GAP * 2
 
-    override fun getPreferredSize() = Dimension(
-        labelWidth() + LABEL_GAP + outcomesWidth() + GROUP_GAP + overrideFullWidth,
-        HEIGHT,
-    )
+    override fun getPreferredSize(): Dimension {
+        val outcomes = if (state.advanced) {
+            advancedWidths(full = false).let { it.sum() + gapsOf(it.size) }
+        } else {
+            labelWidth() + LABEL_GAP + outcomesWidth()
+        }
+        return Dimension(outcomes + GROUP_GAP + overrideFullWidth, HEIGHT)
+    }
 
     override fun getMinimumSize() = Dimension(0, HEIGHT)
 
-    /** The width that shows "Winner:" and the full names of the outcome buttons, with the pencil of Override score. */
-    fun fullNamesWidth(): Int = labelWidth() + LABEL_GAP + outcomeButtons.sumOf { it.fullWidth() } + OUTCOME_GAP * 2 +
-        GROUP_GAP + overrideButton.preferredWidthFor("")
+    /**
+     * The width that shows "Winner:" and the full names of the outcome buttons, with the pencil of Override score.
+     * In advanced mode, it is the width of the short labels of the ending buttons, so that Point start keeps its text
+     * when the short labels fit.
+     */
+    fun fullNamesWidth(): Int {
+        val pencil = GROUP_GAP + overrideButton.preferredWidthFor("")
+        if (!state.advanced) return labelWidth() + LABEL_GAP + outcomeButtons.sumOf { it.fullWidth() } + OUTCOME_GAP * 2 + pencil
+        return advancedWidths(full = false).let { it.sum() + gapsOf(it.size) } + pencil
+    }
+
+    /** The buttons of advanced mode in the order of the point bar: the left group, W, and the right group. */
+    private fun advancedButtons(): List<OutcomeButton> {
+        val visible = endings.buttons.values.filter { it.isVisible }
+        val left = EndingButtons.ORDER.filter { it.winner == 1 }.mapNotNull { endings.buttons[it] }.filter { it in visible }
+        val right = EndingButtons.ORDER.filter { it.winner == 2 }.mapNotNull { endings.buttons[it] }.filter { it in visible }
+        return left + noPointButton + right
+    }
+
+    /** The widths of [advancedButtons] with the full labels or with the short labels. */
+    private fun advancedWidths(full: Boolean): List<Int> {
+        val choices = endings.buttons.entries.associate { (choice, button) -> button to choice }
+        return advancedButtons().map { button ->
+            val choice = choices[button] ?: return@map button.fullWidth()
+            button.widthFor(if (full) endings.fullLabel(choice) else endings.shortLabel(choice))
+        }
+    }
+
+    /** The gaps between [count] buttons of advanced mode. The two groups and W have a wider gap between them. */
+    private fun gapsOf(count: Int): Int = (count - 1).coerceAtLeast(0) * OUTCOME_GAP + 2 * (GROUP_SPLIT - OUTCOME_GAP)
 
     override fun doLayout() {
         // A narrow bar shows only the pencil of Override score, so that the outcome buttons keep their width.
@@ -230,6 +308,11 @@ internal class PointsScoringControls(
         val override = overrideButton.preferredWidthFor(text)
         val outcomesEnd = max(0, width - override - GROUP_GAP)
         overrideButton.setBounds(outcomesEnd + GROUP_GAP, 0, override, HEIGHT)
+        if (state.advanced) {
+            winnerLabel.isVisible = false
+            if (state.askServer) layoutQuestion(outcomesEnd) else layoutEndings(outcomesEnd)
+            return
+        }
         // When the full names do not fit, the bar hides "Winner:". The colors and the tooltips of the buttons still
         // tell what they do (B-11 E4-T8, E3-T22).
         val needs = outcomeButtons.map { it.fullWidth() }
@@ -254,8 +337,46 @@ internal class PointsScoringControls(
         }
     }
 
+    /** "Who serves?" and one button for each player. */
+    private fun layoutQuestion(end: Int) {
+        val label = min(ceil(UiKit.textWidth(serveQuestion.text, serveQuestion.font)).toInt() + 2, end / 3)
+        serveQuestion.setBounds(0, 0, label, HEIGHT)
+        val x = label + LABEL_GAP
+        val w = max(0, (end - x - OUTCOME_GAP) / 2)
+        serveAnswers[0].setBounds(x, 0, w, HEIGHT)
+        serveAnswers[1].setBounds(x + w + OUTCOME_GAP, 0, max(0, end - x - w - OUTCOME_GAP), HEIGHT)
+    }
+
+    /**
+     * The ending buttons and W. The full labels show when they all fit, else the short labels. When the short labels
+     * also do not fit, each button gets a part of the width for its short label, and the label ends with "…".
+     */
+    private fun layoutEndings(end: Int) {
+        val buttons = advancedButtons()
+        val area = max(0, end - gapsOf(buttons.size))
+        val full = advancedWidths(full = true)
+        val useFull = full.sum() <= area
+        val needs = if (useFull) full else advancedWidths(full = false)
+        val choices = endings.buttons.entries.associate { (choice, button) -> button to choice }
+        buttons.forEach { button ->
+            val choice = choices[button] ?: return@forEach
+            val label = if (useFull) endings.fullLabel(choice) else endings.shortLabel(choice)
+            if (button.text != label) button.text = label
+        }
+        val extra = max(0, area - needs.sum())
+        var x = 0
+        buttons.forEachIndexed { i, button ->
+            val share = if (needs.sum() <= area) needs[i] + extra / buttons.size else (needs[i].toLong() * area / needs.sum().coerceAtLeast(1)).toInt()
+            val w = if (i == buttons.lastIndex) end - x else share
+            button.setBounds(x, 0, max(0, w), HEIGHT)
+            x += w + if (button === noPointButton || buttons.getOrNull(i + 1) === noPointButton) GROUP_SPLIT else OUTCOME_GAP
+        }
+    }
+
     internal companion object {
         const val HEIGHT = OutcomeButton.HEIGHT
+        /** The gap between the two groups of ending buttons and W. */
+        private const val GROUP_SPLIT = 12
         const val STAR = 24
         private const val GROUP_GAP = 16
         private const val LABEL_GAP = 8
@@ -313,74 +434,5 @@ internal class PointNavigator(
         const val ICON_GAP = 2
         const val ROW_GAP = 8
         const val BUTTON_GAP = 6
-    }
-}
-
-/**
- * The serve button: a strip on the left and a racket in the color of the side that serves, and the S key chip.
- * Gray when the server is not known. A dark side color stands on a light disc, so that the racket stays visible on the dark button.
- */
-internal class ServeButton(private val buttonHeight: Int) : JButton() {
-    var color: Color? = null
-        set(value) {
-            if (field == value) return
-            field = value
-            repaint()
-        }
-    private val icons = HashMap<Color, Icon>()
-
-    init {
-        isContentAreaFilled = false
-        isBorderPainted = false
-        isFocusPainted = false
-        // Space must stay the play hotkey, so the button never keeps the focus.
-        isFocusable = false
-        isOpaque = false
-        isRolloverEnabled = true
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-    }
-
-    override fun getPreferredSize() =
-        Dimension(STRIP + PAD * 2 + BADGE + GAP + KeyChips.width(KEY, KeyChipStyle.SMALL), buttonHeight)
-
-    override fun paintComponent(g: Graphics) {
-        val g2 = UiKit.smooth(g)
-        try {
-            if (!isEnabled) g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, ScoringUi.DISABLED_ALPHA)
-            val hover = model.isRollover && isEnabled
-            val sideColor = color
-            // The strip on the left has the color of the side that serves, as the strips of the outcome buttons.
-            val shape = RoundRectangle2D.Double(0.0, 0.0, width.toDouble(), height.toDouble(), 8.0, 8.0)
-            g2.color = if (hover) Palette.RAISED_2 else Palette.RAISED
-            g2.fill(shape)
-            val clip = g2.clip
-            g2.clip(shape)
-            g2.color = sideColor ?: Palette.LINE_6
-            g2.fillRect(0, 0, STRIP, height)
-            g2.clip = clip
-            UiKit.paintBox(g2, 0, 0, width, height, 4, null, if (hover) Palette.HOVER_LINE else Palette.LINE_2)
-            val iconColor = sideColor ?: Palette.FG_2
-            val y = (height - BADGE) / 2
-            val badgeX = STRIP + PAD
-            if (sideColor != null && ScoringUi.needsBadge(sideColor)) {
-                g2.color = Palette.NEUTRAL_LIGHT
-                g2.fillOval(badgeX, y, BADGE, BADGE)
-            }
-            val icon = icons.getOrPut(iconColor) { UiKit.icon(Material2MZ.SPORTS_TENNIS, ICON, iconColor) }
-            icon.paintIcon(this, g2, badgeX + (BADGE - icon.iconWidth) / 2, (height - icon.iconHeight) / 2)
-            val chipX = badgeX + BADGE + GAP
-            KeyChips.paint(g2, KEY, chipX, (height - KeyChipStyle.SMALL.height) / 2, KeyChipStyle.SMALL)
-        } finally {
-            g2.dispose()
-        }
-    }
-
-    private companion object {
-        const val STRIP = OutcomeButton.STRIP
-        const val PAD = 10
-        const val GAP = 6
-        const val ICON = 17
-        const val BADGE = 22
-        const val KEY = "S"
     }
 }

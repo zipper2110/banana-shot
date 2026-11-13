@@ -74,6 +74,9 @@ Style:
 | star point | punto estrella | |
 | deciding point | punto decisivo | |
 | serve, server | saque, quién saca | "Switch the server" = "cambiar quién saca" |
+| ace, double fault | ace, doble falta | B-68 |
+| winner (shot), forced error, unforced error | golpe ganador, error forzado, error no forzado | The short labels: "Ganador", "Forzado", "No forzado" |
+| scoring mode: Basic, Advanced | modo de puntuación: Básico, Avanzado | |
 | return | resto | "Return games won" = "Juegos al resto ganados" |
 | break point | punto de break | |
 | set point, match point | punto de set, punto de partido | |
@@ -208,6 +211,9 @@ Style:
 | star point | звёздное очко | |
 | deciding point | решающее очко | |
 | serve, server | подача, подающий | "Switch the server" = "сменить подающего" |
+| ace, double fault | эйс, двойная ошибка | B-68 |
+| winner (shot), forced error, unforced error | виннер, вынужденная ошибка, невынужденная ошибка | "{name}: эйс", so that the name needs no case. The short labels: "Вынужд.", "Невынужд." |
+| scoring mode: Basic, Advanced | режим счёта: Базовый, Расширенный | |
 | return | приём | "Return games won" = "Выиграно геймов на приёме" |
 | break point | брейк-пойнт | "Break points saved" = "Отыграно брейк-пойнтов" |
 | set point, match point | сетбол, матчбол | |
@@ -335,6 +341,9 @@ Style:
 | star point | ponto estrela | |
 | deciding point | ponto decisivo | |
 | serve, server | saque, quem saca (`pt`); serviço, quem serve (`pt-PT`) | |
+| ace, double fault | ace, dupla falta | B-68 |
+| winner (shot), forced error, unforced error | winner, erro forçado, erro não forçado | |
+| scoring mode: Basic, Advanced | modo de pontuação: Básico, Avançado | |
 | return | devolução | "Return games won" = "Games de devolução ganhos" |
 | break point | break point | |
 | set point, match point | set point, match point | |
@@ -465,6 +474,9 @@ Style:
 | star point | star point | French padel media use the English name |
 | deciding point | point décisif | |
 | serve, server | service, serveur | "{name} au service", "changer de serveur" |
+| ace, double fault | ace, double faute | B-68 |
+| winner (shot), forced error, unforced error | coup gagnant, faute provoquée, faute directe | "{name} : faute directe". The short labels: "Gagnant", "Provoquée", "Directe" |
+| scoring mode: Basic, Advanced | mode de score : Simple, Avancé | |
 | return | retour | "Return games won" = "Jeux de retour gagnés" |
 | break point, set point, match point | balle de break, balle de set, balle de match | "Break points saved" = "Balles de break sauvées" |
 | player | joueur | Default name "Joueur 1" |
@@ -586,6 +598,9 @@ Style:
 | deciding point | Entscheidungspunkt | The video badge "ENTSCHEIDUNGSPUNKT" (18 letters) |
 | deciding set | Entscheidungssatz | |
 | serve, server | Aufschlag, Aufschläger | "{name} schlägt auf" |
+| ace, double fault | Ass, Doppelfehler | B-68 |
+| winner (shot), forced error, unforced error | Winner, erzwungener Fehler, unerzwungener Fehler | "how the point ended" = "Punktende" |
+| scoring mode: Basic, Advanced | Zählmodus: Einfach, Erweitert | |
 | return | Return | "Return games won" = "Returnspiele gewonnen" |
 | break point, set point, match point | Breakball, Satzball, Matchball | "Break points won" = "Breakbälle genutzt", "Break points saved" = "Breakbälle abgewehrt" |
 | player | Spieler | Default name "Spieler 1" |
@@ -710,6 +725,9 @@ Style:
 | deciding point | 決定ポイント | The video badge "決定ポイント" |
 | deciding set | 最終セット | |
 | serve, server | サーブ, サーバー | "{name} がサーブ" |
+| ace, double fault | サービスエース, ダブルフォールト | B-68. The short label "エース" |
+| winner (shot), forced error, unforced error | ウィナー, フォーストエラー, アンフォーストエラー | "how the point ended" = "終わり方" |
+| scoring mode: Basic, Advanced | 記録モード: 基本, 詳細 | |
 | return | リターン | |
 | break point, set point, match point | ブレークポイント, セットポイント, マッチポイント | "Break points saved" = "ブレークポイントのセーブ" |
 | player | プレイヤー | Default name "プレイヤー1" |
@@ -827,6 +845,9 @@ Style:
 | deciding point | 决胜分 | Also the video badge |
 | deciding set | 决胜盘 | |
 | serve, server | 发球, 发球方 | "Switch the server" = "更换发球方" |
+| ace, double fault | Ace 球, 双误 | B-68. Traditional: Ace 球, 雙誤 |
+| winner (shot), forced error, unforced error | 制胜分, 受迫性失误, 非受迫性失误 | Traditional: 致勝球, 受迫性失誤, 非受迫性失誤 |
+| scoring mode: Basic, Advanced | 计分模式: 基础, 高级 | Traditional: 計分模式: 基本, 進階 |
 | return | 接发球 | "Return games won" = "接发球局获胜" |
 | break point, set point, match point | 破发点, 盘点, 赛点 | "Break points saved" = "挽救破发点" |
 | player | 球员 | Default name "球员 1" |

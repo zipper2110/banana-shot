@@ -15,6 +15,7 @@ class HelpCatalogTest {
                 HelpPage.COLORS,
                 HelpPage.CROP,
                 HelpPage.POINTS,
+                HelpPage.ADVANCED_SCORING,
                 HelpPage.STATISTICS,
                 HelpPage.EXPORT,
                 HelpPage.SHARE,

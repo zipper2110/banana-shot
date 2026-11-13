@@ -33,6 +33,8 @@ internal data class ScorePlayers(
  * An outcome button: a color strip, the player name (or "No point") and the key chip.
  * The selected outcome fills the button with the player color. When the point has no outcome yet,
  * the buttons have a lime outline: choosing the winner is the next step.
+ * The ending buttons of advanced mode (B-68) and the answers of "Who serves?" use the same button. An answer has no
+ * key: an empty [key] shows no key chip.
  */
 internal class OutcomeButton(private val player: Int, private val key: String) : JButton() {
     private var color: Color = Palette.LINE_6
@@ -74,8 +76,12 @@ internal class OutcomeButton(private val player: Int, private val key: String) :
     override fun getMinimumSize() = preferredSize
 
     /** The width that shows the full name and the key chip. The point bar uses it to share its width. */
-    fun fullWidth(): Int = STRIP + GAP + ceil(UiKit.textWidth(text.orEmpty(), labelFont)).toInt() + LABEL_GAP +
-        KeyChips.width(key, KeyChipStyle.DEFAULT) + PAD_RIGHT
+    fun fullWidth(): Int = widthFor(text.orEmpty())
+
+    /** The width that shows [label] and the key chip. */
+    fun widthFor(label: String): Int = STRIP + GAP + ceil(UiKit.textWidth(label, labelFont)).toInt() + chipSpace() + PAD_RIGHT
+
+    private fun chipSpace(): Int = if (key.isEmpty()) 0 else LABEL_GAP + KeyChips.width(key, KeyChipStyle.DEFAULT)
 
     override fun paintComponent(g: Graphics) {
         val g2 = UiKit.smooth(g)
@@ -114,9 +120,14 @@ internal class OutcomeButton(private val player: Int, private val key: String) :
                 on -> ScoringUi.onPlayerKeyStyle(color)
                 else -> KeyChipStyle.DEFAULT
             }
+            val x = STRIP + GAP
+            if (key.isEmpty()) {
+                val label = UiKit.ellipsize(text.orEmpty(), labelFont, (width - PAD_RIGHT - x).toFloat())
+                UiKit.drawText(g2, label, labelFont, textColor, x.toFloat(), 0f, height.toFloat())
+                return
+            }
             val chipWidth = KeyChips.width(key, chipStyle)
             val chipX = width - PAD_RIGHT - chipWidth
-            val x = STRIP + GAP
             val label = UiKit.ellipsize(text.orEmpty(), labelFont, (chipX - LABEL_GAP - x).toFloat())
             UiKit.drawText(g2, label, labelFont, textColor, x.toFloat(), 0f, height.toFloat())
             KeyChips.paint(g2, key, chipX, (height - chipStyle.height) / 2, chipStyle)

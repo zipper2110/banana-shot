@@ -550,7 +550,7 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
 | Epic | Status | Notes |
 |---|---|---|
 | E1 data model | Done | `scoring/PointDetails.kt`: `ScoringMode`, `Ending`, `ErrorKind`, `PointDetailV1`, `ServePacks`, `PointDetails`. `ScoreV1` has `scoringMode`, `details`, and `askErrorKind`. Tests: `PointDetailsTest`. |
-| E1 mode switch, E2 | Not started | |
+| E1 mode switch, E2 | Done | The mode switch is `ScoringModeBar` above the point bar (tennis only). The default mode of new projects is `ScoringModeDefaults` (More → Settings, card Scoring). The Points tab gives it to a new project with the default scoreboard style (`useDefaultScoreboard`). The domain rules are in `scoring/PointEndings.kt`: `EndingChoice`, `PointEndings` (the ending keys, Q, W, and E), and `ServerChanges` (the preview of a server change). The point bar shows `EndingButtons` and the "Who serves?" answers (`PointsScoringControls`). `ServeQuestion` keeps the state of the question. `ServerChangeText` makes the message of the confirmation. `PointsScoring.change` calls `PointDetails.resolve` after each change, and `setPoints` writes the new winners when the points change. The help page is `HelpPage.ADVANCED_SCORING`. Tests: `PointEndingsTest`, `ServeQuestionTest`, `PointsScoringEndingsTest`. |
 | E3 | Not started | |
 | E3b | Not started | |
 | E4 | Not started | |
@@ -581,3 +581,19 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
   an ending, the key removes the ending and the error kind. A key that gives
   the same winner keeps them. In advanced mode, Q and E always remove the
   ending (see "Ending buttons").
+- An ending key keeps the error kind only when the new ending is an error of
+  the same player as before, for example a forced error that becomes an
+  unforced error. Else the key removes the error kind.
+- The digit keys bind the top row, the numpad, and the Shift form of the top
+  row (`AppShortcuts.alsoBound`). On an AZERTY keyboard, the top-row digits
+  need Shift. The bindings on a real AZERTY keyboard are not tested yet.
+- The serve mark of a pending point uses the id that the point gets
+  (`PointsDispatcher.getPendingId`). The engine ignores the mark until the
+  point exists. Esc removes the mark of the cancelled pending point.
+- When "Who serves?" has no pending point and no selected point, the question
+  keeps the answer, and the next C gives it to the new point.
+- The confirmation of a server change numbers the points as the list does: the
+  pack number in advanced mode, and the position in the list in basic mode. It
+  compares the games and the sets in the order that the players won them.
+- A narrow point bar shows the short labels of the ending buttons ("Unforced").
+  The color strip of a button is the color of the player who gets the point.

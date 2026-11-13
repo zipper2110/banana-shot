@@ -22,7 +22,6 @@ import org.litvin.points.components.CommentDispatcher
 import org.litvin.points.components.CommentPatch as DispatcherCommentPatch
 import org.litvin.points.components.CommentState
 import org.litvin.points.components.PointsDispatcher
-import org.litvin.scoring.Outcome
 import org.litvin.export.comments.CommentAnimations
 import org.litvin.export.comments.CommentAss
 import org.litvin.export.comments.CommentClock
@@ -89,6 +88,8 @@ class SwingPointsPanel(
     appCreditRequest: AppCreditRequest = AppCreditRequest.NONE,
     // Creates the player of the replay editor (B-50). The editor closes it.
     private val replayPlayers: () -> SwingMediaPlayer = { MpvSwingMediaPlayerAdapter() },
+    // The default scoring mode of new projects (B-68).
+    modeDefaults: ScoringModeDefaults = ScoringModeDefaults.NONE,
 ) : JPanel(BorderLayout()), AutoCloseable {
 
     constructor() : this(
@@ -199,7 +200,7 @@ class SwingPointsPanel(
         },
         onError = { message -> dialogs.showError(this, message, tr("points.error.scoring")) },
         onOverlayChanged = { refreshOverlay() },
-        onOutcomeRequest = { outcome -> endPointWithWinner(outcome) },
+        onScoreRequest = { request -> endPoint(request) },
         loadFrame = { onLoaded ->
             pendingMediaFile?.let { file ->
                 frameLoader.load(VideoFrameRequest(file.absolutePath, player.currentTimeMs(), adjustments.get()), onLoaded)
@@ -211,6 +212,10 @@ class SwingPointsPanel(
         appCreditRequest = appCreditRequest,
         isActive = { active },
         onGoToPoint = { id -> selectPoint(id) },
+        modeDefaults = modeDefaults,
+        confirmServerChange = { title, message ->
+            dialogs.confirm(this, message, title, confirmLabel = tr("points.serverChange.confirm"))
+        },
     )
     private val frameLoader = VideoFrameLoader()
 
@@ -486,7 +491,12 @@ class SwingPointsPanel(
         leftColumn.add(videoArea, BorderLayout.CENTER)
         leftColumn.add(JPanel(BorderLayout()).apply {
             isOpaque = false
-            add(buildPointBar(), BorderLayout.NORTH)
+            add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                // The scoring mode switch is above the point bar (B-68).
+                add(scoring.modeBar, BorderLayout.NORTH)
+                add(buildPointBar(), BorderLayout.CENTER)
+            }, BorderLayout.NORTH)
             add(playbackBar, BorderLayout.CENTER)
         }, BorderLayout.SOUTH)
         leftColumn.minimumSize = Dimension(320, 0)
@@ -1121,7 +1131,7 @@ class SwingPointsPanel(
     private fun showPendingStart() {
         val pendingStart = dispatcher.getPendingStart()?.toLong()
         markPanel.setState(pendingStart)
-        scoring.setPending(pendingStart != null)
+        scoring.setPending(pendingStart, dispatcher.getPendingId())
     }
 
     /** Draws the comments at the playhead over the video, after [changed] comments on screen. */
@@ -1315,6 +1325,9 @@ class SwingPointsPanel(
         if (replays.isActive) return
         dispatcher.onPointStart(player.currentTimeMs())
         maybeShowDispatcherHint()
+        // In advanced mode, the point bar can ask "Who serves?" for the new point (B-68).
+        showPendingStart()
+        scoring.onPointStart()
         // Refresh cards and select the pending visual row (0)
         EventQueue.invokeLater {
             rebuildCards()
@@ -1326,15 +1339,15 @@ class SwingPointsPanel(
     }
 
     /**
-     * Q, W and E. With a pending point, the key ends the point at the playhead and gives the winner to the new point.
-     * These keys are the only way to end a point. Without a pending point, the key gives the winner to the active
-     * point. Between points, the key does nothing.
+     * Q, W, E and the ending keys of advanced mode (B-68). With a pending point, the key ends the point at the playhead
+     * and gives the winner (and the ending) to the new point. These keys are the only way to end a point. Without a
+     * pending point, the key changes the active point. Between points, the key does nothing.
      */
-    private fun endPointWithWinner(outcome: Outcome) {
+    private fun endPoint(request: ScoreRequest) {
         if (replays.isActive) return
         val pendingStart = dispatcher.getPendingStart()
         if (pendingStart == null) {
-            (selectedEvent() as? PointEventDto)?.let { scoring.score(outcome, it.point.id) }
+            (selectedEvent() as? PointEventDto)?.let { scoring.score(request, it.point.id) }
             return
         }
         val created = dispatcher.onPointEnd(player.currentTimeMs())
@@ -1345,7 +1358,7 @@ class SwingPointsPanel(
         val point = points.firstOrNull { it.startMs == pendingStart } ?: return
         // The dispatcher tells the panel about the new point later, so the scoring gets the points now.
         scoring.setPoints(points)
-        scoring.score(outcome, point.id)
+        scoring.score(request, point.id)
         EventQueue.invokeLater { selectEventAndScroll("point:${point.id}") }
     }
 

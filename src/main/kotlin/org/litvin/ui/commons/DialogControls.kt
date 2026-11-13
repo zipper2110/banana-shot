@@ -83,11 +83,14 @@ internal class SwitchBox(text: String, private val fontSize: Float = 13f) : JChe
  * An option can have a second, smaller line, for example "No-ad" and "deciding point at 40–40".
  * An option with a [Glyph] and no label shows only the glyph, for example the corner of the scoreboard position.
  * Each option is a button with the name "<componentName>-<index>", so the tests can click it.
+ * A choice with [focusable] false never takes the keyboard focus, for example in the point bar, where Space must stay
+ * the play key.
  */
 internal class SegmentedChoice<T>(
     private val componentName: String,
     options: List<Option<T>>,
     private val columns: Int = Int.MAX_VALUE,
+    private val focusable: Boolean = true,
 ) : JPanel(null) {
     data class Option<T>(
         val value: T,
@@ -188,6 +191,7 @@ internal class SegmentedChoice<T>(
             isFocusPainted = false
             isOpaque = false
             isRolloverEnabled = true
+            isFocusable = focusable
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             addActionListener {
                 if (selected == option.value) return@addActionListener

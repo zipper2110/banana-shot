@@ -9,7 +9,12 @@ import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
 import org.litvin.export.scoreboard.ScoreboardScene
 import org.litvin.points.PointV1
+import org.litvin.scoring.EndingChoice
 import org.litvin.scoring.Outcome
+import org.litvin.scoring.PointDetails
+import org.litvin.scoring.PointEndings
+import org.litvin.scoring.ScoringMode
+import org.litvin.scoring.ServerChanges
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoringEngine
@@ -25,6 +30,7 @@ import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.tabs.points.ui.ComputedScore
+import org.litvin.ui.tabs.points.ui.EndingButtons
 import org.litvin.ui.tabs.points.ui.MatchEndNotice
 import org.litvin.ui.tabs.points.ui.OverrideScoreDialog
 import org.litvin.ui.tabs.points.ui.OverrideScoreInput
@@ -42,10 +48,8 @@ import org.litvin.ui.tabs.points.ui.ScorePlayers
 import org.litvin.ui.tabs.points.ui.ScoringUi
 import java.awt.Color
 import java.awt.EventQueue
-import java.awt.Dimension
 import java.awt.image.BufferedImage
 import javax.swing.BorderFactory
-import javax.swing.JPanel
 import java.awt.event.ActionEvent
 import java.awt.geom.Rectangle2D
 import javax.swing.AbstractAction
@@ -63,6 +67,15 @@ import org.litvin.i18n.DisplayFormats
  * - Each change reads score.json, changes the outcomes or marks, and writes the file at once.
  * - [winnerColor] gives the color strip of a point row, and [pointMarks] its game, set and serve marks.
  * - [scoreboardEvents] draws the scoreboard over the video at the playhead (see [moveTo]).
+ * - [modeBar] switches the scoring mode of a tennis project (B-68). In advanced mode, the point bar shows the ending
+ *   buttons, and asks "Who serves?" when the project has no serve mark (see [ServeQuestion]).
+ * - After each change of the score file, [PointDetails.resolve] writes the winners of the aces and the double faults
+ *   into the outcomes, in all modes. Thus basic mode and the scoreboard show the same score.
+ *
+ * The file is longer than 500 lines. The scoring keeps one state (the score file, the points, the selected point, and
+ * the pending point), and each action reads and writes it through [change]. The pure rules are in other files:
+ * `scoring.PointEndings`, `scoring.ServerChanges`, [ServeQuestion], and [ServerChangeText]. The next split can move
+ * [pointMarks] and the dialogs (Override score, Scoring rules, Scoreboard style) into their own classes.
  */
 internal class PointsScoring(
     /** Previous (-1) or Next (+1): the Points tab goes to the start of that point and plays it. */
@@ -73,8 +86,8 @@ internal class PointsScoring(
     private val onError: (String) -> Unit,
     /** The scoreboard over the video changed. */
     private val onOverlayChanged: () -> Unit,
-    /** Q, W, E or an outcome button. The Points tab ends a pending point first, then calls [score]. */
-    private val onOutcomeRequest: (Outcome) -> Unit,
+    /** Q, W, E, an ending key, or a button. The Points tab ends a pending point first, then calls [score]. */
+    private val onScoreRequest: (ScoreRequest) -> Unit,
     /** Loads the video frame at the playhead for the preview of the scoreboard style dialog. */
     private val loadFrame: ((BufferedImage?) -> Unit) -> Unit,
     private val hints: HintController = HintController.NONE,
@@ -86,6 +99,10 @@ internal class PointsScoring(
     private val isActive: () -> Boolean = { true },
     /** Selects the point with this id and seeks to its start. */
     private val onGoToPoint: (pointId: String) -> Unit = {},
+    /** The user's default scoring mode: a new project starts with it (B-68). */
+    private val modeDefaults: ScoringModeDefaults = ScoringModeDefaults.NONE,
+    /** Asks the user to confirm a server change with this title and message. Returns true for "Change server". */
+    private val confirmServerChange: (title: String, message: String) -> Boolean = { _, _ -> true },
 ) {
     /**
      * The serve button and the outcome buttons, in the point bar under the video.
@@ -96,12 +113,21 @@ internal class PointsScoring(
         onNext = { onStep(+1) },
         onToggleFavorite = { selectedId?.let(onToggleFavorite) },
         onOutcome = {
-            onOutcomeRequest(it)
+            onScoreRequest(ScoreRequest.Winner(it))
             showScoringKeysHint()
         },
         onSwitchServe = { switchServer() },
         onOverrideScore = { openOverride() },
+        onEnding = {
+            requestEnding(it)
+            showScoringKeysHint()
+        },
+        onServeAnswer = { answerServer(it) },
     )
+
+    /** The scoring mode switch above the point bar. Only tennis projects show it. */
+    val modeBar = ScoringModeBar { selectMode(it) }
+    private val serveQuestion = ServeQuestion()
 
     private val scoreSettingsButton = ScoringButton(tr("points.scoringRules"), Material2MZ.TUNE, alignLeft = true).apply {
         name = "points-score-settings"
@@ -146,6 +172,10 @@ internal class PointsScoring(
     private var points: List<PointV1> = emptyList()
     private var selectedId: String? = null
     private var pending = false
+
+    // The start and the id of the pending point. The id is the id of the point that the pending point becomes.
+    private var pendingStart: Long? = null
+    private var pendingId: String? = null
 
     // The score after each point, in the order of [points], and the server of each point.
     private var timeline: ScoringEngine.Timeline? = null
@@ -199,11 +229,13 @@ internal class PointsScoring(
         projectDir = dir
         this.videoLanguage = videoLanguage
         val exists = dir != null && ScoreIO.existsForProjectDir(dir)
+        serveQuestion.close()
         score = readScore() ?: ScoreV1()
         refresh()
         if (dir != null && (!exists || score.useDefaultScoreboard)) {
             val style = runCatching { styleDefaults.load() }.getOrNull()
-            change { it.copy(scoreboard = style ?: it.scoreboard, useDefaultScoreboard = false) }
+            val mode = runCatching { modeDefaults.load() }.getOrDefault(ScoringMode.BASIC)
+            change { it.copy(scoreboard = style ?: it.scoreboard, scoringMode = mode, useDefaultScoreboard = false) }
         }
     }
 
@@ -228,6 +260,8 @@ internal class PointsScoring(
         points = newPoints.sortedBy { it.startMs }
         if (points.none { it.id == selectedId }) selectedId = null
         refresh()
+        // A deleted or a moved point can move the server, and thus the winner of an ace or a double fault (B-68).
+        if (projectDir != null && PointDetails.resolveOutcomes(points, score) != score.outcomes) change { it }
     }
 
     /** A null id shows no point. */
@@ -237,11 +271,28 @@ internal class PointsScoring(
         render()
     }
 
-    /** True while a point waits for its end: the outcome buttons then end the point. */
-    fun setPending(value: Boolean) {
-        if (value == pending) return
-        pending = value
-        render()
+    /**
+     * A point waits for its end while [start] is not null: the outcome buttons then end the point. [id] is the id of
+     * the point that the pending point becomes. When the user cancels the pending point, its serve mark goes away.
+     */
+    fun setPending(start: Long?, id: String?) {
+        if ((start != null) == pending && start == pendingStart && id == pendingId) return
+        val old = pendingId
+        pending = start != null
+        pendingStart = start
+        pendingId = id
+        if (old != null && old != id && points.none { it.id == old } && old in score.serverMarks) {
+            change { it.copy(serverMarks = it.serverMarks - old) }
+        } else {
+            render()
+        }
+    }
+
+    /** C started the pending point (B-68). In advanced mode with no known server, the point bar asks "Who serves?". */
+    fun onPointStart() {
+        val id = pendingId ?: return
+        val answer = serveQuestion.onPointStart(score.isAdvanced, serverKnown())
+        if (answer != null) markNewServer(id, answer) else render()
     }
 
     fun winnerColor(pointId: String): Color = when (score.outcomeOf(pointId)) {
@@ -313,7 +364,7 @@ internal class PointsScoring(
         else -> null
     }
 
-    /** Q, W, E give the score. R and Shift+R go to the next and the previous point and play it. S switches the server. */
+    /** Q, W, E and the ending keys give the score. R and Shift+R go to the next and the previous point and play it. S switches the server. */
     fun installKeys(target: JComponent, isTextEditingFocus: () -> Boolean) {
         fun bind(key: String, name: String, action: () -> Unit) {
             val stroke = KeyStroke.getKeyStroke(key)
@@ -325,9 +376,17 @@ internal class PointsScoring(
                 }
             })
         }
-        bind(AppShortcuts.SCORE_PLAYER_1.keyStroke, "points.scoreP1") { onOutcomeRequest(Outcome.P1) }
-        bind(AppShortcuts.SCORE_NO_POINT.keyStroke, "points.scoreNone") { onOutcomeRequest(Outcome.NONE) }
-        bind(AppShortcuts.SCORE_PLAYER_2.keyStroke, "points.scoreP2") { onOutcomeRequest(Outcome.P2) }
+        bind(AppShortcuts.SCORE_PLAYER_1.keyStroke, "points.scoreP1") { onScoreRequest(ScoreRequest.Winner(Outcome.P1)) }
+        bind(AppShortcuts.SCORE_NO_POINT.keyStroke, "points.scoreNone") { onScoreRequest(ScoreRequest.Winner(Outcome.NONE)) }
+        bind(AppShortcuts.SCORE_PLAYER_2.keyStroke, "points.scoreP2") { onScoreRequest(ScoreRequest.Winner(Outcome.P2)) }
+        // The ending keys of advanced mode: the top-row digit, the numpad digit, and the Shift form (B-68).
+        EndingChoice.entries.forEach { choice ->
+            val shortcut = EndingButtons.keyOf(choice)
+            val name = "points.ending.${choice.name}"
+            (listOf(shortcut.keyStroke) + AppShortcuts.alsoBound(shortcut)).forEachIndexed { index, stroke ->
+                bind(stroke, "$name.$index") { requestEnding(choice) }
+            }
+        }
         bind(AppShortcuts.NEXT_POINT.keyStroke, "points.nextPoint") {
             onStep(+1)
             hints.dismiss(HintId.SCORING_KEYS)
@@ -343,12 +402,59 @@ internal class PointsScoring(
      * Gives [outcome] to the point with [pointId]. The point becomes the selected point.
      * When the user did not see the Scoring settings of the project yet, they open before the score.
      */
-    fun score(outcome: Outcome, pointId: String) {
+    fun score(request: ScoreRequest, pointId: String) {
         if (points.none { it.id == pointId }) return
         selectedId = pointId
         promptScoreSettings()
-        setOutcome(outcome)
+        when (request) {
+            is ScoreRequest.Winner -> setOutcome(request.outcome)
+            is ScoreRequest.WithEnding -> setEnding(request.choice)
+        }
         showServeMarkHint()
+    }
+
+    /**
+     * An ending key or button (B-68). It works only in advanced mode and after the answer to "Who serves?". The ace
+     * works only for the server of the pending point or of the selected point.
+     */
+    private fun requestEnding(choice: EndingChoice) {
+        if (!score.isAdvanced || serveQuestion.isOpen) return
+        if (!PointEndings.isAvailable(choice, endingServer())) return
+        onScoreRequest(ScoreRequest.WithEnding(choice))
+    }
+
+    /** The server of the clip that an ending key changes: the pending point, or else the selected point. */
+    private fun endingServer(): Int? = if (pending) pendingServer() else timeline?.serverOfPoint?.getOrNull(selectedIndex())
+
+    /** The server of the pending point: the engine computes it with a point at the pending start. */
+    private fun pendingServer(): Int? {
+        val id = pendingId ?: return null
+        val start = pendingStart?.toInt() ?: return null
+        val virtual = PointV1(id = id, startMs = start, endMs = start + 1)
+        val all = (points + virtual).sortedBy { it.startMs }
+        return runCatching { timelineOf(score, all).serverOfPoint.getOrNull(all.indexOf(virtual)) }.getOrNull()
+    }
+
+    /** True when a point or the pending point has a serve mark. Then the engine knows the server of each point. */
+    private fun serverKnown(): Boolean = score.serverMarks.keys.any { id -> id == pendingId || points.any { it.id == id } }
+
+    /** The user selected a mode in the mode switch. A mode change deletes no data. */
+    private fun selectMode(mode: ScoringMode) {
+        if (mode == score.scoringMode) return
+        change { it.copy(scoringMode = mode) }
+        serveQuestion.onModeSelected(score.isAdvanced, serverKnown())
+        render()
+    }
+
+    /** The answer to "Who serves?": the serve mark of the pending point, or of the selected point. */
+    private fun answerServer(player: Int) {
+        val mark = serveQuestion.answer(player, pendingId ?: selectedId)
+        if (mark != null) markNewServer(mark.first, mark.second) else render()
+    }
+
+    private fun markNewServer(pointId: String, player: Int) {
+        change { it.copy(serverMarks = it.serverMarks + (pointId to if (player == 1) Outcome.P1 else Outcome.P2)) }
+        hints.dismiss(HintId.SERVE_MARK)
     }
 
     /**
@@ -377,33 +483,36 @@ internal class PointsScoring(
         hints.show(HintId.SERVE_MARK, controls.serveButton, SERVE_MARK_HINT, HintBalloon.Placement.ABOVE)
     }
 
-    /** S or the serve button: the other side serves the selected point. Without a known server, side 1 serves. */
+    /**
+     * S or the serve button: the other side serves the selected point. Without a known server, side 1 serves.
+     * When the change gives a new winner to an ace or a double fault, the user confirms it first (B-68).
+     */
     private fun switchServer() {
         val index = selectedIndex()
         val point = points.getOrNull(index) ?: return
         if (point.endMs <= point.startMs) return
         val next = if (timeline?.serverOfPoint?.getOrNull(index) == 1) Outcome.P2 else Outcome.P1
-        markServer(next)
+        val preview = runCatching { ServerChanges.preview(points, score, withServer(score, index, point, next)) }.getOrNull()
+        if (preview != null) {
+            val message = ServerChangeText.message(preview, players())
+            if (!confirmServerChange(tr("points.serverChange.title"), message)) return
+        }
+        change { withServer(it, index, point, next) }
+        if (score.serverMarks.isNotEmpty()) hints.dismiss(HintId.SERVE_MARK)
     }
 
-    /** A mark that only repeats the computed server is not kept. */
-    private fun markServer(server: Outcome) {
-        val index = selectedIndex()
-        val point = points.getOrNull(index) ?: return
-        if (server == Outcome.NONE) return
+    /** [current] with [server] on the point at [index]. A mark that only repeats the computed server is not kept. */
+    private fun withServer(current: ScoreV1, index: Int, point: PointV1, server: Outcome): ScoreV1 {
         val serverNumber = if (server == Outcome.P1) 1 else 2
-        change { current ->
-            when {
-                current.serverMarks[point.id] == server -> current.copy(serverMarks = current.serverMarks - point.id)
-                timeline?.serverOfPoint?.getOrNull(index) == serverNumber -> current
-                else -> {
-                    val without = current.serverMarks - point.id
-                    val computed = timelineOf(current.copy(serverMarks = without)).serverOfPoint.getOrNull(index)
-                    current.copy(serverMarks = if (computed != serverNumber) without + (point.id to server) else without)
-                }
+        return when {
+            current.serverMarks[point.id] == server -> current.copy(serverMarks = current.serverMarks - point.id)
+            timelineOf(current).serverOfPoint.getOrNull(index) == serverNumber -> current
+            else -> {
+                val without = current.serverMarks - point.id
+                val computed = timelineOf(current.copy(serverMarks = without)).serverOfPoint.getOrNull(index)
+                current.copy(serverMarks = if (computed != serverNumber) without + (point.id to server) else without)
             }
         }
-        if (score.serverMarks.isNotEmpty()) hints.dismiss(HintId.SERVE_MARK)
     }
 
     /**
@@ -445,8 +554,8 @@ internal class PointsScoring(
         }
     }
 
-    private fun timelineOf(s: ScoreV1) =
-        ScoringEngine.timeline(points, s.outcomes, s.rules.normalized(), s.manualMarks(), s.serverMarks)
+    private fun timelineOf(s: ScoreV1, of: List<PointV1> = points) =
+        ScoringEngine.timeline(of, s.outcomes, s.rules.normalized(), s.manualMarks(), s.serverMarks)
 
     private fun openScoreSettings() {
         val current = ScoreSettings(
@@ -531,14 +640,25 @@ internal class PointsScoring(
         val point = points.getOrNull(selectedIndex()) ?: return
         if (point.endMs <= point.startMs) return
         if (score.outcomes[point.id] != outcome) analytics.record(AnalyticsEvent.ScoreRecorded)
-        change { it.copy(outcomes = it.outcomes + (point.id to outcome)) }
+        change { PointEndings.withWinnerOnly(it, point.id, outcome) }
     }
 
-    /** Reads score.json, applies [update], and writes the file, so that the other fields stay as they are. */
+    /** An ending key of advanced mode: the new winner and the new ending of the selected point (B-68). */
+    private fun setEnding(choice: EndingChoice) {
+        val point = points.getOrNull(selectedIndex()) ?: return
+        if (point.endMs <= point.startMs) return
+        if (score.outcomes[point.id] != choice.outcome) analytics.record(AnalyticsEvent.ScoreRecorded)
+        change { PointEndings.withEnding(it, point.id, choice) }
+    }
+
+    /**
+     * Reads score.json, applies [update], and writes the file, so that the other fields stay as they are. The winners
+     * of the aces and the double faults then come from the details (B-68).
+     */
     private fun change(update: (ScoreV1) -> ScoreV1) {
         val dir = projectDir ?: return
         val current = readScore() ?: return
-        val updated = update(current)
+        val updated = PointDetails.resolve(points, update(current))
         if (updated != current) {
             try {
                 ScoreIO.writeForProjectDir(dir, updated)
@@ -564,6 +684,7 @@ internal class PointsScoring(
 
     private fun refresh() {
         timeline = runCatching { timelineOf(score) }.getOrNull()
+        serveQuestion.sync(score.isAdvanced, serverKnown())
         controls.setPlayers(players())
         render()
         rebuildSpans()
@@ -611,10 +732,17 @@ internal class PointsScoring(
     }
 
     private fun renderPanel() {
+        modeBar.render(visible = projectDir != null && score.sport == Sport.TENNIS, mode = score.scoringMode)
         val index = selectedIndex()
         val point = points.getOrNull(index)
+        val advanced = score.isAdvanced
+        val asking = serveQuestion.isOpen
         if (point == null) {
-            controls.render(PointControlsState(total = points.size, pending = pending))
+            controls.render(
+                PointControlsState(
+                    total = points.size, pending = pending, advanced = advanced, askServer = asking, endingServer = endingServer(),
+                ),
+            )
             return
         }
         controls.render(
@@ -630,6 +758,10 @@ internal class PointsScoring(
                 server = timeline?.serverOfPoint?.getOrNull(index),
                 serverMarked = point.id in score.serverMarks,
                 overridden = score.scoreOverrides[point.id]?.isEmpty() == false,
+                advanced = advanced,
+                askServer = asking,
+                endingServer = endingServer(),
+                ending = EndingChoice.of(score.outcomeOf(point.id), score.detailOf(point.id).ending),
             ),
         )
     }
@@ -654,48 +786,11 @@ private fun Sport.analyticsSport(): AnalyticsEvent.Sport = when (this) {
     Sport.BEACH_TENNIS -> AnalyticsEvent.Sport.BEACH_TENNIS
 }
 
-/**
- * The two settings buttons under the points list: in one row, each in one half of the width, or in two rows when one
- * text does not fit in its half (B-11 E4-T8). The side column has a fixed width, so the rows change only with a
- * language or with the screen scale.
- */
-private class SettingsButtonRows : JPanel(null) {
-    private val buttons get() = components.filter { it.isVisible }
+/** A scoring key or button (B-68). */
+internal sealed interface ScoreRequest {
+    /** Q, W, or E: the winner only, with no ending. */
+    data class Winner(val outcome: Outcome) : ScoreRequest
 
-    /** The rows that the last preferred size used. */
-    private var preferredTwoRows = false
-
-    private fun twoRows(w: Int): Boolean {
-        val half = (w - insets.left - insets.right - GAP) / 2
-        return w > 0 && buttons.any { it.preferredSize.width > half }
-    }
-
-    private fun rowHeight() = buttons.maxOfOrNull { it.preferredSize.height } ?: 0
-
-    override fun getPreferredSize(): Dimension {
-        preferredTwoRows = twoRows(width)
-        val rows = if (preferredTwoRows) buttons.size else 1
-        return Dimension(0, insets.top + insets.bottom + rowHeight() * rows + GAP * (rows - 1))
-    }
-
-    override fun doLayout() {
-        val twoRows = twoRows(width)
-        val x = insets.left
-        val w = width - insets.left - insets.right
-        val h = rowHeight()
-        if (twoRows) {
-            buttons.forEachIndexed { i, button -> button.setBounds(x, insets.top + i * (h + GAP), w, h) }
-        } else {
-            val half = (w - GAP) / 2
-            buttons.forEachIndexed { i, button ->
-                button.setBounds(x + i * (half + GAP), insets.top, if (i == buttons.lastIndex) w - i * (half + GAP) else half, h)
-            }
-        }
-        // The first layout comes after the first preferred size, which did not know the width.
-        if (twoRows != preferredTwoRows) javax.swing.SwingUtilities.invokeLater { revalidate() }
-    }
-
-    private companion object {
-        const val GAP = 8
-    }
+    /** An ending key of advanced mode: the winner and the ending. */
+    data class WithEnding(val choice: EndingChoice) : ScoreRequest
 }

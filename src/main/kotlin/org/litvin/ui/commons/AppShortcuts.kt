@@ -47,9 +47,35 @@ object AppShortcuts {
     val PREVIOUS_POINT = AppShortcut("shift R")
     val TOGGLE_FRAME_STEP = AppShortcut("F")
 
+    /**
+     * The ending keys of advanced mode (B-68). The keys 1 to 4 give the point to player 1, and the keys 0 to 7 give it
+     * to player 2. The outer keys are the winners, so the keys mirror the two sides. [alsoBound] adds the numpad digit
+     * and the Shift form: on an AZERTY keyboard, the digits of the top row need Shift.
+     */
+    val ENDING_P1_WINNER = AppShortcut("1")
+    val ENDING_P2_FORCED_ERROR = AppShortcut("2")
+    val ENDING_P2_UNFORCED_ERROR = AppShortcut("3")
+    val ENDING_P1_ACE = AppShortcut("4")
+    val ENDING_P2_ACE = AppShortcut("7")
+    val ENDING_P1_UNFORCED_ERROR = AppShortcut("8")
+    val ENDING_P1_FORCED_ERROR = AppShortcut("9")
+    val ENDING_P2_WINNER = AppShortcut("0")
+    private val ENDING_ALSO_BOUND = mapOf(
+        ENDING_P1_WINNER to listOf("NUMPAD1", "shift 1"),
+        ENDING_P2_FORCED_ERROR to listOf("NUMPAD2", "shift 2"),
+        ENDING_P2_UNFORCED_ERROR to listOf("NUMPAD3", "shift 3"),
+        ENDING_P1_ACE to listOf("NUMPAD4", "shift 4"),
+        ENDING_P2_ACE to listOf("NUMPAD7", "shift 7"),
+        ENDING_P1_UNFORCED_ERROR to listOf("NUMPAD8", "shift 8"),
+        ENDING_P1_FORCED_ERROR to listOf("NUMPAD9", "shift 9"),
+        ENDING_P2_WINNER to listOf("NUMPAD0", "shift 0"),
+    )
+
     /** The other key strokes of [shortcut] that the app also binds. */
-    fun alsoBound(shortcut: AppShortcut): List<String> =
-        if (shortcut == DELETE && isMac) listOf("DELETE") else emptyList()
+    fun alsoBound(shortcut: AppShortcut): List<String> = when {
+        shortcut == DELETE && isMac -> listOf("DELETE")
+        else -> ENDING_ALSO_BOUND[shortcut].orEmpty()
+    }
 
     /**
      * The key name of [keyStroke] from the catalog. The app does not use `KeyEvent.getKeyText`, because the JDK gives

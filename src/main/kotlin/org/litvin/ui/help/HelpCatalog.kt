@@ -9,6 +9,7 @@ enum class HelpPage(private val titleKey: String) {
     OVERVIEW("help.page.overview"),
     PROJECTS("tab.projects"),
     POINTS("tab.points"),
+    ADVANCED_SCORING("help.page.advancedScoring"),
     STATISTICS("tab.statistics"),
     COLORS("adjust.colors"),
     CROP("adjust.transform"),
@@ -230,6 +231,7 @@ object HelpCatalog {
                 HelpShortcut(AppShortcuts.HELP, tr("help.points.shortcut.help")),
             ),
         ),
+        advancedScoring(),
         HelpContent(
             page = HelpPage.STATISTICS,
             summary = tr("help.statistics.summary"),
@@ -344,6 +346,53 @@ object HelpCatalog {
             ),
         ),
     )
+
+    /**
+     * Advanced scoring (B-68): the ending keys and the decision rules of the ATP and WTA statisticians. The shortcut
+     * texts use the labels of the ending buttons with the default names of the players.
+     */
+    private fun advancedScoring(): HelpContent {
+        val player1 = tr("sport.tennis.side", "number" to 1)
+        val player2 = tr("sport.tennis.side", "number" to 2)
+        return HelpContent(
+            page = HelpPage.ADVANCED_SCORING,
+            summary = tr("help.advanced.summary"),
+            workflow = listOf(
+                tr("help.advanced.workflow.1"),
+                tr("help.advanced.workflow.2"),
+                tr("help.advanced.workflow.3"),
+            ),
+            actions = listOf(
+                tr("help.advanced.action.1"),
+                tr("help.advanced.action.2"),
+                tr("help.advanced.action.3"),
+                tr("help.advanced.action.4"),
+                tr("help.advanced.action.5"),
+                tr("help.advanced.action.6"),
+            ),
+            goodToKnow = listOf(
+                tr("help.advanced.note.1"),
+                tr("help.advanced.note.2"),
+                tr("help.advanced.note.3"),
+                tr("help.advanced.note.4"),
+                tr("help.advanced.note.5"),
+                tr("help.advanced.note.6"),
+            ),
+            shortcuts = listOf(
+                HelpShortcut(AppShortcuts.ENDING_P1_WINNER, tr("points.ending.winner", "name" to player1)),
+                HelpShortcut(AppShortcuts.ENDING_P2_FORCED_ERROR, tr("points.ending.forcedError", "name" to player2)),
+                HelpShortcut(AppShortcuts.ENDING_P2_UNFORCED_ERROR, tr("points.ending.unforcedError", "name" to player2)),
+                HelpShortcut(AppShortcuts.ENDING_P1_ACE, tr("points.ending.ace", "name" to player1)),
+                HelpShortcut(AppShortcuts.ENDING_P2_ACE, tr("points.ending.ace", "name" to player2)),
+                HelpShortcut(AppShortcuts.ENDING_P1_UNFORCED_ERROR, tr("points.ending.unforcedError", "name" to player1)),
+                HelpShortcut(AppShortcuts.ENDING_P1_FORCED_ERROR, tr("points.ending.forcedError", "name" to player1)),
+                HelpShortcut(AppShortcuts.ENDING_P2_WINNER, tr("points.ending.winner", "name" to player2)),
+                HelpShortcut(AppShortcuts.SCORE_PLAYER_1, tr("help.advanced.shortcut.winnerOnly1")),
+                HelpShortcut(AppShortcuts.SCORE_PLAYER_2, tr("help.advanced.shortcut.winnerOnly2")),
+                HelpShortcut(AppShortcuts.HELP, tr("help.advanced.shortcut.help")),
+            ),
+        )
+    }
 
     fun content(page: HelpPage): HelpContent = pages.first { it.page == page }
 }

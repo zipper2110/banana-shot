@@ -81,6 +81,60 @@ does now. This prevents wrong scores.
 - The outer keys (1 and 0) are the winners. The keys mirror the two sides.
 - W ("No point") stays. It is for clips that are not points.
 - A double fault is not an ending button. The user presses X (see below).
+- Only the server's group shows the ace button. Thus 7 buttons are
+  active at a time.
+
+### Decision rules for the ending buttons
+
+The help page of advanced mode and the button tooltips use these rules.
+They are the rules of the ATP and WTA statisticians and of the Match
+Charting Project.
+
+The user looks at the last shot of the rally and asks two questions:
+
+1. Who hit the last shot?
+2. Did the opponent touch the ball?
+
+| The last shot | Button | The point goes to |
+|---|---|---|
+| The serve lands in, and the receiver does not touch it | Ace of the server | The server |
+| Any other shot lands in, and the opponent does not touch it | Winner of the player who hit it | The player who hit it |
+| The ball goes into the net or out, and the player was under pressure | Forced error of the player who hit it | The opponent |
+| The ball goes into the net or out, and the player was not under pressure | Unforced error of the player who hit it | The opponent |
+
+- "Touched or not touched" separates a winner from an error. The user can
+  see this in the video, so this decision needs no judgment.
+- If the opponent touches the ball and the ball does not go back in, it is
+  an error of the opponent, not a winner. This is also true for a serve:
+  if the receiver touches the serve and the return does not go back in, it
+  is a forced or unforced error of the receiver, not an ace.
+- Decided on 2026-11-13: there is no "service winner" ending. A forced
+  return error records the same point.
+- Forced or unforced is the only judgment. The question is: "Could this
+  player make this shot most of the time?"
+  - Forced error: the player had to run far, or the ball was very fast,
+    very deep, or at the body. The player hit the ball late or with a
+    stretched arm.
+  - Unforced error: the player was in position, had time, and the ball was
+    normal. The player missed.
+  - Professional statisticians also do not always agree on this decision.
+    The help tells the user that a consistent rule is more important than
+    a perfect decision.
+- Return errors use the same rule. A return that goes out after a strong
+  serve is usually a forced error. A return that goes out after a slow
+  2nd serve is usually an unforced error.
+
+Unusual cases:
+
+| Case | Button |
+|---|---|
+| The ball touches the net and lands in, and the opponent does not touch it | Winner of the player who hit it |
+| The ball hits the opponent's body | Winner of the player who hit it |
+| A player touches the net, or hits the ball after two bounces | Unforced error of that player |
+
+Tooltips: each ending button has a short form of its rule, for example
+"Ana unforced error: Ana's shot went into the net or out, and Ana was not
+under pressure."
 
 ### Follow-up questions
 
@@ -253,10 +307,9 @@ This mode comes after advanced mode. The concept:
    option: while a question is open, the digits answer the question.
 2. Details for both players, or an option "record details only for player
    1" for faster marking. The proposal is both players.
-3. Service winner: a separate ending, or the same as an ace.
-4. The default of "Include serve faults and lets" for new projects. The
+3. The default of "Include serve faults and lets" for new projects. The
    proposal is off, so the video stays as it is now.
-5. Filter and export by detail, for example "all my backhand unforced
+4. Filter and export by detail, for example "all my backhand unforced
    errors". It is good for training. It is not in the epics yet.
 
 ## Epics

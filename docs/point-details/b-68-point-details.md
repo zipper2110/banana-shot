@@ -1,6 +1,6 @@
 # B-68 Point details
 
-Status: implementation started on 2026-11-13. See "Implementation" at the end for the status of each epic.
+Status: implemented on 2026-11-13. All epics are done. The checks in the running app are still open (see "Checks in the running app" at the end).
 
 ## Goal
 
@@ -655,3 +655,22 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
   option on. A click on an answer sets or changes the error kind. A click on
   the strip outside the answers opens the question again. The strip cannot
   remove an answer. The Edit dialog can ("Not set").
+
+### Checks in the running app
+
+The unit tests and the headless paint tests pass. Nobody saw the new UI in
+the running app yet. Do these checks before the release:
+
+1. The point bar in advanced mode: the ending buttons, X, L, and W, in the
+   full and in the narrow form, in all app languages (also `qps`).
+2. The mode bar, the "Ask error kind" switch, the "Who serves?" row, and the
+   error kind strip.
+3. The toast over the native video window.
+4. The digit keys on an AZERTY keyboard and on the numpad.
+5. Cmd+R and Cmd+Shift+R on macOS, and Delete (Backspace) on a clip of zero
+   length.
+6. The row labels and the pack lines in the points list, and the dimmed
+   clips and the thin marks on the timeline.
+7. The "2nd serve" mark in each scoreboard style, in the preview and in an
+   export.
+8. A translator check of the new tennis terms in `docs/localization/glossary.md`.

@@ -1,5 +1,6 @@
 package org.litvin.scoring
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -52,8 +53,29 @@ data class ScoreV1(
     val useDefaultScoreboard: Boolean = false,
     /** The scores that the user typed for the end of a point (see [ScoreOverrideV1]). */
     val scoreOverrides: Map<String, ScoreOverrideV1> = emptyMap(),
+    /** The scoring mode (B-68). A file without this field is in basic mode. */
+    val scoringMode: ScoringMode = ScoringMode.BASIC,
+    /**
+     * The details of the clips (B-68): the serve faults, the lets, and how each point ended. The key is the point id,
+     * as in [serverMarks]. A file without this field has no details.
+     */
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    val details: Map<String, PointDetailV1> = emptyMap(),
+    /** True when advanced mode asks the error kind after an error ending (B-68, the follow-up question). */
+    val askErrorKind: Boolean = false,
 ) {
     fun manualMarks(): ManualScoreMarks = ManualScoreMarks(manualGameWins, manualSetWins, scoreOverrides)
+
+    /** True in advanced mode (B-68). */
+    @get:JsonIgnore
+    val isAdvanced: Boolean get() = scoringMode == ScoringMode.ADVANCED
+
+    /** The details of the clip with [pointId]. A clip without an entry has no details. */
+    fun detailOf(pointId: String): PointDetailV1 = details[pointId] ?: PointDetailV1()
+
+    /** A copy with [detail] for the clip with [pointId]. An empty detail removes the entry. */
+    fun withDetail(pointId: String, detail: PointDetailV1): ScoreV1 =
+        copy(details = if (detail.isEmpty()) details - pointId else details + (pointId to detail))
 
     /**
      * The outcome of the point with [pointId]. Each point has an outcome: a point without an entry in [outcomes]

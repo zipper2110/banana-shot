@@ -1,6 +1,6 @@
 # B-68 Point details
 
-Status: concept, ready for implementation. The review on 2026-11-13 closed all open questions. No code yet.
+Status: implementation started on 2026-11-13. See "Implementation" at the end for the status of each epic.
 
 ## Goal
 
@@ -542,3 +542,42 @@ Decided on 2026-11-13. The decisions are in the sections above:
 | E4 | The new rows in the Stats tab and on the statistics card, the time statistics without fault clips, no average time between points |
 | E5 | The follow-up question (the error kind), the strip for the active clip |
 | E6 | The "2nd serve" mark on the scoreboard |
+
+## Implementation
+
+Started on 2026-11-13. Update this table when an epic starts or ends.
+
+| Epic | Status | Notes |
+|---|---|---|
+| E1 data model | Done | `scoring/PointDetails.kt`: `ScoringMode`, `Ending`, `ErrorKind`, `PointDetailV1`, `ServePacks`, `PointDetails`. `ScoreV1` has `scoringMode`, `details`, and `askErrorKind`. Tests: `PointDetailsTest`. |
+| E1 mode switch, E2 | Not started | |
+| E3 | Not started | |
+| E3b | Not started | |
+| E4 | Not started | |
+| E5 | Not started | |
+| E6 | Not started | |
+
+### Domain rules in the code
+
+- `ServePacks.of` computes the packs from the clips, the outcomes, and the
+  details. The time order is the start, then the end. Thus a clip of zero
+  length comes before a clip that starts at the same time.
+- A clip is a fault clip when its ending is `SERVE_FAULT`, and a let clip
+  when its ending is `LET`. Else, a clip with the winner P1 or P2 is a point
+  clip. A clip with no winner is a W clip (`ClipKind.NO_POINT`).
+- `ServePacks.serveAt(t)` gives the serve number of a new clip at `t`. The
+  clips that end at or before `t` are before it.
+- `ServePacks.packAtHasServeClip(t)` is the check for X with no open point.
+- `PointDetails.resolve` writes the winners that the details give into
+  `outcomes`: no winner for a fault clip and a let clip, the receiver for a
+  double fault, and the server for an ace. The app calls it after each change
+  of the score file, in all modes. Thus basic mode and the scoreboard show
+  the same score. `PointDetails.changedWinners` lists the clips with a new
+  winner, for the confirmation of a server change.
+- The export option "Include serve faults and lets" is a project choice in
+  `ExportSettingsPreferences`, as "Include comments". It is not in
+  `ScoreV1`.
+- Q, E, and W in basic mode: when the key changes the winner of a clip with
+  an ending, the key removes the ending and the error kind. A key that gives
+  the same winner keeps them. In advanced mode, Q and E always remove the
+  ending (see "Ending buttons").

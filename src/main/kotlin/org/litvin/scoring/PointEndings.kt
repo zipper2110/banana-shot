@@ -67,6 +67,32 @@ object PointEndings {
         val updated = score.copy(outcomes = score.outcomes + (pointId to outcome))
         return if (score.isAdvanced || changesWinner) updated.withDetail(pointId, PointDetailV1()) else updated
     }
+
+    /**
+     * [score] after X or L on the clip with [pointId] (B-68, "Serve faults and lets"). [ending] is [Ending.SERVE_FAULT]
+     * or [Ending.LET]. The clip gets no winner and no error kind. [PointDetails.resolve] then gives the receiver the
+     * point when the fault is the second fault of its pack (the double fault).
+     */
+    fun withServeEnding(score: ScoreV1, pointId: String, ending: Ending): ScoreV1 {
+        require(ending == Ending.SERVE_FAULT || ending == Ending.LET) { "Not a serve ending: $ending" }
+        return score.copy(outcomes = score.outcomes + (pointId to Outcome.NONE)).withDetail(pointId, PointDetailV1(ending))
+    }
+
+    /**
+     * True when [point] is a clip of zero length (B-68). Only a fault clip can have zero length: X with no open point
+     * and no active clip adds it at the playhead. It has no video, so the exports skip it.
+     */
+    fun isZeroLength(point: PointV1): Boolean = point.endMs <= point.startMs
+
+    /**
+     * True when the scoring keys can change [point]: a clip with a length, or a fault clip of zero length. On a fault
+     * clip of zero length, only X and the server change work (see [allowsZeroLength]).
+     */
+    fun canScore(point: PointV1, score: ScoreV1): Boolean =
+        !isZeroLength(point) || score.detailOf(point.id).ending == Ending.SERVE_FAULT
+
+    /** True when a clip of zero length can have [ending]. Only a serve fault can. */
+    fun allowsZeroLength(ending: Ending?): Boolean = ending == Ending.SERVE_FAULT
 }
 
 /** A point that gets a new winner from a server change (B-68, "The server"). [number] is the number in the list. */

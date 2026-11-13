@@ -166,6 +166,57 @@ class HintControllerTest {
         assertTrue(HintRegistry.NONE.isDismissed(HintId.SERVE_MARK))
     }
 
+    @Test
+    fun aToastDoesNotTakeTheFocusAndItsButtonClosesTheHintForGood() {
+        onEdt { hints.toast(HintId.LET_WITHOUT_POINT, first, "let") }
+        val toast = toasts().single()
+        assertEquals(HintId.LET_WITHOUT_POINT, hints.shownToast)
+        assertFalse((SwingUtilities.getWindowAncestor(toast) as JWindow).focusableWindowState)
+        assertEquals(emptyList(), balloonTexts(), "A toast is not a balloon")
+
+        // A new toast replaces the toast on the screen.
+        onEdt { hints.toast(HintId.FAULT_IN_SERVE_PACK, second, "fault") }
+        assertEquals(1, toasts().size)
+        assertEquals(HintId.FAULT_IN_SERVE_PACK, hints.shownToast)
+
+        val shown = toasts().single()
+        onEdt { (find(shown, "hint-toast-dont-show") as AbstractButton).doClick() }
+        assertTrue(registry.isDismissed(HintId.FAULT_IN_SERVE_PACK))
+        assertFalse(registry.isDismissed(HintId.LET_WITHOUT_POINT))
+        assertEquals(emptyList(), toasts())
+        assertNull(hints.shownToast)
+
+        onEdt { hints.toast(HintId.FAULT_IN_SERVE_PACK, second, "fault") }
+        assertEquals(emptyList(), toasts(), "A closed hint does not show again")
+    }
+
+    @Test
+    fun aToastClosesByItselfAndHideTakesItOff() {
+        onEdt { hints.toast(HintId.LET_WITHOUT_POINT, first, "let") }
+        onEdt { hints.hide(HintId.LET_WITHOUT_POINT) }
+        assertEquals(emptyList(), toasts())
+
+        var shown = true
+        onEdt {
+            val toast = HintToast("short", durationMs = 50) {}
+            toast.showAbove(first)
+            shown = toast.isShown
+        }
+        assertTrue(shown)
+        Thread.sleep(400)
+        assertEquals(emptyList(), toasts(), "The toast closes after its time")
+    }
+
+    private fun toasts(): List<HintToast> {
+        val found = mutableListOf<HintToast>()
+        onEdt {
+            found += frame!!.ownedWindows
+                .filter { it.name == HintToast.HOST_NAME && it.isShowing }
+                .mapNotNull { (it as? JWindow)?.contentPane as? HintToast }
+        }
+        return found
+    }
+
     private fun onEdt(block: () -> Unit) = SwingUtilities.invokeAndWait(block)
 
     private fun balloons(): List<HintBalloon> {

@@ -551,7 +551,7 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
 |---|---|---|
 | E1 data model | Done | `scoring/PointDetails.kt`: `ScoringMode`, `Ending`, `ErrorKind`, `PointDetailV1`, `ServePacks`, `PointDetails`. `ScoreV1` has `scoringMode`, `details`, and `askErrorKind`. Tests: `PointDetailsTest`. |
 | E1 mode switch, E2 | Done | The mode switch is `ScoringModeBar` above the point bar (tennis only). The default mode of new projects is `ScoringModeDefaults` (More → Settings, card Scoring). The Points tab gives it to a new project with the default scoreboard style (`useDefaultScoreboard`). The domain rules are in `scoring/PointEndings.kt`: `EndingChoice`, `PointEndings` (the ending keys, Q, W, and E), and `ServerChanges` (the preview of a server change). The point bar shows `EndingButtons` and the "Who serves?" answers (`PointsScoringControls`). `ServeQuestion` keeps the state of the question. `ServerChangeText` makes the message of the confirmation. `PointsScoring.change` calls `PointDetails.resolve` after each change, and `setPoints` writes the new winners when the points change. The help page is `HelpPage.ADVANCED_SCORING`. Tests: `PointEndingsTest`, `ServeQuestionTest`, `PointsScoringEndingsTest`. |
-| E3 | Not started | |
+| E3 | Done | X and L are `AppShortcuts.SERVE_FAULT` and `AppShortcuts.LET`, with buttons between the two groups of ending buttons (`PointsScoringControls`). `ScoreKeys.decide` gives the action of a scoring key with and without a pending point and an active clip. `PointsDispatcher.addZeroLengthPoint` adds a fault clip of zero length. `PointEndings.withServeEnding`, `canScore`, and `allowsZeroLength` are the rules of X, L, and the clips of zero length. `PointStartButton.serve` shows "1st serve" or "2nd serve". The Edit dialog uses `PointOutcomeFields` and `scoring/ClipOutcomes.kt` (`ClipChoice`, `ClipOutcome`), and sends the outcome in `PointPatch.outcome`. The toast is `HintToast` (`HintController.toast`), with one `KeyHint` for each key. The export option is `ExportClips` and the tile `export-serve-clips`. `ExportPlanner.scoringPoints` gives the scoreboard the clips of zero length. Tests: `ScoreKeysTest`, `ClipOutcomesTest`, `ExportClipsTest`, `PointsScoringServeTest`, `EditPointDialogTest`, `HintControllerTest`, `PointsDispatcherTest`. |
 | E3b | Not started | |
 | E4 | Done | `MatchStats.compute` has `details` and `advanced`. `DetailStats` has the serve and ending counts. `StatRows` has the rows of advanced mode (`MatchStat.advanced`), the group `ENDINGS`, and `StatCoverage` ("In 40 points with details" under the row in the Stats tab; the card shows no coverage). The point lengths skip the fault, double fault, and let clips in all modes. `AVERAGE_GAP` is removed. Tests: `MatchStatsTest`, `StatRowsTest`. |
 | E5 | Not started | |
@@ -597,3 +597,42 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
   compares the games and the sets in the order that the players won them.
 - A narrow point bar shows the short labels of the ending buttons ("Unforced").
   The color strip of a button is the color of the player who gets the point.
+- X and L have no short labels. As W, they keep their full label. X keeps
+  the width of its longer label ("Serve fault" or "Double fault"), so that the
+  bar does not move when the serve number changes.
+- The serve number of the start button comes from `ServePacks.serveAt` at the
+  pending start, or else at the playhead. The X label uses the pending point,
+  else the serve of the selected clip, else the playhead.
+- A clip of zero length is a fault clip, or nothing. `PointEndings.canScore`
+  is true for a clip with a length and for a fault clip of zero length. On a
+  fault clip of zero length, only X, S, Override score, the Edit dialog, and
+  Delete work. The ending keys, Q, W, E, and L do nothing on it.
+- `PointsDispatcher` keeps the clips in the time order: the start, then the
+  end. `PointsScoring.setPoints` uses the same order. A pending point ends by
+  its id, not by its start, because a clip of zero length can have the same
+  start.
+- X with no pending point uses the active clip of the panel: the selected
+  clip, which `pointNear` selects in the 2 seconds around the playhead. Thus
+  the known limit of "Corrections" applies.
+- X is not active while "Who serves?" is open. L is active, because a let needs
+  no server.
+- The Edit dialog of advanced mode gives an ace to the server when the server
+  is known (`ClipOutcomes.normalized`). The dialog sends `PointPatch.outcome`
+  only when the outcome changed. The panel writes the times first, then the
+  outcome through `PointsScoring.editOutcome`, which goes through `change`.
+- Export: without the option, "Only points" and "Only favorites" skip the fault
+  clips and the let clips, but keep the double faults, because a double fault
+  is the serve that gives the point. With the option, a fault clip or a let
+  clip of a complete pack uses the favorite flag of the clip that ends its
+  pack. The clips of zero length are never in the video. The scoreboard of the
+  export counts them (`ExportPlanner.scoringPoints`).
+- The project choice of the export option is saved at the first visit of the
+  Export tab, from the default in More → Settings. Thus a later change of the
+  default changes only the projects that the Export tab did not show yet.
+- The toasts use `HintController.toast`. A new toast replaces the toast on the
+  screen. A toast stays while the pointer is on it. To add a hint for another
+  key, add a `HintId` and a `KeyHint`.
+- For E5: the digit keys go through `PointsScoring.requestEnding`. A strip that
+  takes the digits while the question is open must check its state there,
+  before `onScoreRequest`. Esc is bound in `Keybindings` (`cancelPending`),
+  so the question must close there first and not cancel the pending point.

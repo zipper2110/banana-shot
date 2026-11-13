@@ -85,6 +85,22 @@ class ExportSettingsPreferences(
     fun saveIncludeSetSummaries(projectDir: String, include: Boolean) =
         saveProjectChoice(KEY_SET_SUMMARIES_PREFIX, projectDir, include)
 
+    /**
+     * Reads the "Include serve faults and lets" choice of one project (B-68).
+     * Returns null if the project has no choice yet.
+     */
+    fun loadIncludeServeClips(projectDir: String): Boolean? = loadProjectChoice(KEY_SERVE_CLIPS_PREFIX, projectDir)
+
+    fun saveIncludeServeClips(projectDir: String, include: Boolean) =
+        saveProjectChoice(KEY_SERVE_CLIPS_PREFIX, projectDir, include)
+
+    /** The default of "Include serve faults and lets" for new projects (B-68). More → Settings changes it. It is off. */
+    fun loadServeClipsDefault(): Boolean = preferences.getBoolean(KEY_SERVE_CLIPS_DEFAULT, false)
+
+    fun saveServeClipsDefault(include: Boolean) {
+        preferences.putBoolean(KEY_SERVE_CLIPS_DEFAULT, include)
+    }
+
     private fun loadProjectChoice(prefix: String, projectDir: String): Boolean? {
         val key = projectKey(prefix, projectDir) ?: return null
         if (preferences.get(key, null) == null) return null
@@ -121,5 +137,7 @@ class ExportSettingsPreferences(
         const val KEY_COMMENTS_PREFIX = "export.comments."
         const val KEY_STATS_CARD_PREFIX = "export.statsCard."
         const val KEY_SET_SUMMARIES_PREFIX = "export.setSummaries."
+        const val KEY_SERVE_CLIPS_PREFIX = "export.serveClips."
+        const val KEY_SERVE_CLIPS_DEFAULT = "export.serveClips.default"
     }
 }

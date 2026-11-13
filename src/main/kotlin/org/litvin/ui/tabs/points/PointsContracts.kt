@@ -2,6 +2,7 @@ package org.litvin.ui.tabs.points
 
 import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
+import org.litvin.scoring.ClipOutcome
 import org.litvin.ui.commons.CommentInput
 
 /**
@@ -20,6 +21,9 @@ interface PointsActions {
     fun editPoint(id: String, patch: PointPatch)
     fun deletePoint(id: String)
     fun toggleFavorite(id: String)
+
+    /** The outcome of the point with [id] for the Edit dialog in advanced mode (B-68), or null in basic mode. */
+    fun outcomeForm(id: String): PointOutcomeForm? = null
 
     fun addCommentAtPlayhead() {}
     fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) {}
@@ -121,6 +125,25 @@ data class PointPatch(
     val label: String? = null,
     val flags: Set<String>? = null,
     val favorite: Boolean? = null,
+    /** The new outcome from the Edit dialog in advanced mode (B-68), or null for no change. */
+    val outcome: ClipOutcome? = null,
+)
+
+/**
+ * The outcome of one clip for the Edit dialog in advanced mode (B-68, "Corrections").
+ * - [serve] is the serve number (1 or 2) from the pack, or null for a W clip. The dialog shows it, read only.
+ * - [doubleFault] is true for the second fault of a pack.
+ * - [server] (1, 2, or null) is the server of the clip. An ace goes to the server.
+ * - [zeroLength] is true for a fault clip of zero length. Only a fault clip can have zero length.
+ */
+data class PointOutcomeForm(
+    val current: ClipOutcome,
+    val serve: Int?,
+    val doubleFault: Boolean,
+    val server: Int?,
+    val p1Name: String,
+    val p2Name: String,
+    val zeroLength: Boolean,
 )
 
 /** Partial update to a comment. Fields set to null are not modified. */

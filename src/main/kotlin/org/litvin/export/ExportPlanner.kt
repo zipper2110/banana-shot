@@ -87,6 +87,11 @@ data class ExportRenderPlanRequest(
     val adjustments: AdjustmentsV1 = AdjustmentsV1(),
     /** The language of the texts in the video (B-11 E5). */
     val videoLanguage: AppLanguage = I18n.language,
+    /**
+     * The option "Include serve faults and lets" (B-68). Only a project in advanced mode uses it: "Only points" and
+     * "Only favorites" then keep the fault clips and the let clips.
+     */
+    val includeServeClips: Boolean = false,
 )
 
 object ExportPlanner {
@@ -104,10 +109,24 @@ object ExportPlanner {
         return keeps
     }
 
-    fun summarize(edl: EdlV1?): ExportPointSummary {
+    /**
+     * The clips that the score of an export uses: the [validPoints] and the clips of zero length (B-68). A fault clip of
+     * zero length has no video, but it can give the point (a double fault). Thus the scoreboard still shows its score.
+     * A clip of zero length inside a valid clip is not used, as an overlapping clip.
+     */
+    fun scoringPoints(edl: EdlV1?, validPoints: List<PointV1> = validateEdl(edl)): List<PointV1> {
+        val zeroLength = edl?.points.orEmpty().filter { point ->
+            point.startMs == point.endMs && validPoints.none { it.startMs < point.startMs && point.startMs < it.endMs }
+        }
+        if (zeroLength.isEmpty()) return validPoints
+        return (validPoints + zeroLength).sortedWith(compareBy({ it.startMs }, { it.endMs }))
+    }
+
+    /** [clips] gives the clips of "Only points" and "Only favorites" (B-68). */
+    fun summarize(edl: EdlV1?, clips: ExportClips = ExportClips.ALL): ExportPointSummary {
         val points = edl?.points ?: emptyList()
-        val validPoints = validateEdl(edl)
-        val validFavorites = validPoints.filter { it.favorite }
+        val validPoints = clips.keep(validateEdl(edl), favoriteOnly = false)
+        val validFavorites = clips.keep(validPoints, favoriteOnly = true)
         return ExportPointSummary(
             pointCount = points.size,
             favoriteCount = validFavorites.size,
@@ -118,13 +137,15 @@ object ExportPlanner {
         )
     }
 
+    /** [clips] says which fault clips and let clips the export keeps (B-68). */
     fun selectedKeepPoints(
         validPoints: List<PointV1>,
         idleTrim: Boolean,
         favoriteOnly: Boolean,
+        clips: ExportClips = ExportClips.ALL,
     ): List<PointV1> {
         if (!idleTrim) return emptyList()
-        return if (favoriteOnly) validPoints.filter { it.favorite } else validPoints
+        return clips.keep(validPoints, favoriteOnly)
     }
 
     fun effectiveIdleTrim(idleTrim: Boolean, keptPoints: List<PointV1>): Boolean {
@@ -210,6 +231,7 @@ object ExportPlanner {
         idleTrim: Boolean,
         favoriteOnly: Boolean,
         validPoints: List<PointV1>,
+        clips: ExportClips = ExportClips.ALL,
     ): ExportReadiness {
         if (!hasProject) {
             return ExportReadiness(false, tr("export.readiness.noProject"))
@@ -219,7 +241,7 @@ object ExportPlanner {
         }
         if (!idleTrim) return ExportReadiness(true)
 
-        val keptPoints = selectedKeepPoints(validPoints, idleTrim = true, favoriteOnly = favoriteOnly)
+        val keptPoints = selectedKeepPoints(validPoints, idleTrim = true, favoriteOnly = favoriteOnly, clips = clips)
         return when {
             favoriteOnly && keptPoints.isEmpty() -> ExportReadiness(
                 false,
@@ -265,6 +287,7 @@ object ExportPlanner {
             validPoints = allValidPoints,
             idleTrim = request.idleTrim,
             favoriteOnly = request.favoriteOnly,
+            clips = ExportClips.of(request.edl, request.score, request.includeServeClips),
         )
         val effectiveIdleTrim = effectiveIdleTrim(request.idleTrim, keptPoints)
         // Only a full video export uses the trim of the video (B-62). Its overlays move back by the trim start.
@@ -437,7 +460,8 @@ object ExportPlanner {
         effectiveIdleTrim: Boolean,
         videoEndMs: Long?,
     ): List<OverlaySpan> {
-        val scoringPoints = allValidPoints.ifEmpty { edl?.points ?: emptyList() }
+        // The score also uses the fault clips of zero length, which have no video (B-68).
+        val scoringPoints = scoringPoints(edl, allValidPoints).ifEmpty { edl?.points ?: emptyList() }
         val overlayPoints = if (effectiveIdleTrim) keptPoints else scoringPoints
         return ScoreboardTimelineBuilder.build(
             points = scoringPoints,

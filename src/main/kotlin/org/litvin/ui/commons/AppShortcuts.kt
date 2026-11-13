@@ -47,6 +47,10 @@ object AppShortcuts {
     val PREVIOUS_POINT = AppShortcut("shift R")
     val TOGGLE_FRAME_STEP = AppShortcut("F")
 
+    /** Advanced mode (B-68): X ends the pending point as a serve fault, and L as a let. */
+    val SERVE_FAULT = AppShortcut("X")
+    val LET = AppShortcut("L")
+
     /**
      * The ending keys of advanced mode (B-68). The keys 1 to 4 give the point to player 1, and the keys 0 to 7 give it
      * to player 2. The outer keys are the winners, so the keys mirror the two sides. [alsoBound] adds the numpad digit

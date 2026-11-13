@@ -75,6 +75,7 @@ Style:
 | deciding point | punto decisivo | |
 | serve, server | saque, quién saca | "Switch the server" = "cambiar quién saca" |
 | ace, double fault | ace, doble falta | B-68 |
+| serve fault, let, 1st serve, 2nd serve | falta de saque, let, 1.er saque, 2.º saque | B-68 |
 | winner (shot), forced error, unforced error | golpe ganador, error forzado, error no forzado | The short labels: "Ganador", "Forzado", "No forzado" |
 | scoring mode: Basic, Advanced | modo de puntuación: Básico, Avanzado | |
 | return | resto | "Return games won" = "Juegos al resto ganados" |
@@ -212,6 +213,7 @@ Style:
 | deciding point | решающее очко | |
 | serve, server | подача, подающий | "Switch the server" = "сменить подающего" |
 | ace, double fault | эйс, двойная ошибка | B-68 |
+| serve fault, let, 1st serve, 2nd serve | ошибка подачи, лет, 1-я подача, 2-я подача | B-68. The short forms fit the start button |
 | winner (shot), forced error, unforced error | виннер, вынужденная ошибка, невынужденная ошибка | "{name}: эйс", so that the name needs no case. The short labels: "Вынужд.", "Невынужд." |
 | scoring mode: Basic, Advanced | режим счёта: Базовый, Расширенный | |
 | return | приём | "Return games won" = "Выиграно геймов на приёме" |
@@ -342,6 +344,7 @@ Style:
 | deciding point | ponto decisivo | |
 | serve, server | saque, quem saca (`pt`); serviço, quem serve (`pt-PT`) | |
 | ace, double fault | ace, dupla falta | B-68 |
+| serve fault, let, 1st serve, 2nd serve | falta de saque, let, 1º saque, 2º saque (`pt`); falta de serviço, let, 1.º serviço, 2.º serviço (`pt-PT`) | B-68 |
 | winner (shot), forced error, unforced error | winner, erro forçado, erro não forçado | |
 | scoring mode: Basic, Advanced | modo de pontuação: Básico, Avançado | |
 | return | devolução | "Return games won" = "Games de devolução ganhos" |
@@ -475,6 +478,7 @@ Style:
 | deciding point | point décisif | |
 | serve, server | service, serveur | "{name} au service", "changer de serveur" |
 | ace, double fault | ace, double faute | B-68 |
+| serve fault, let, 1st serve, 2nd serve | faute de service, let, 1re balle, 2e balle | B-68 |
 | winner (shot), forced error, unforced error | coup gagnant, faute provoquée, faute directe | "{name} : faute directe". The short labels: "Gagnant", "Provoquée", "Directe" |
 | scoring mode: Basic, Advanced | mode de score : Simple, Avancé | |
 | return | retour | "Return games won" = "Jeux de retour gagnés" |
@@ -599,6 +603,7 @@ Style:
 | deciding set | Entscheidungssatz | |
 | serve, server | Aufschlag, Aufschläger | "{name} schlägt auf" |
 | ace, double fault | Ass, Doppelfehler | B-68 |
+| serve fault, let, 1st serve, 2nd serve | Aufschlagfehler, Let, 1. Aufschlag, 2. Aufschlag | B-68 |
 | winner (shot), forced error, unforced error | Winner, erzwungener Fehler, unerzwungener Fehler | "how the point ended" = "Punktende" |
 | scoring mode: Basic, Advanced | Zählmodus: Einfach, Erweitert | |
 | return | Return | "Return games won" = "Returnspiele gewonnen" |
@@ -726,6 +731,7 @@ Style:
 | deciding set | 最終セット | |
 | serve, server | サーブ, サーバー | "{name} がサーブ" |
 | ace, double fault | サービスエース, ダブルフォールト | B-68. The short label "エース" |
+| serve fault, let, 1st serve, 2nd serve | フォールト, レット, ファーストサーブ, セカンドサーブ | B-68 |
 | winner (shot), forced error, unforced error | ウィナー, フォーストエラー, アンフォーストエラー | "how the point ended" = "終わり方" |
 | scoring mode: Basic, Advanced | 記録モード: 基本, 詳細 | |
 | return | リターン | |
@@ -846,6 +852,7 @@ Style:
 | deciding set | 决胜盘 | |
 | serve, server | 发球, 发球方 | "Switch the server" = "更换发球方" |
 | ace, double fault | Ace 球, 双误 | B-68. Traditional: Ace 球, 雙誤 |
+| serve fault, let, 1st serve, 2nd serve | 发球失误, 擦网重发, 一发, 二发 | B-68. Traditional: 發球失誤, 觸網重發, 一發, 二發. The app uses 雙發失誤 for the double fault in Traditional Chinese |
 | winner (shot), forced error, unforced error | 制胜分, 受迫性失误, 非受迫性失误 | Traditional: 致勝球, 受迫性失誤, 非受迫性失誤 |
 | scoring mode: Basic, Advanced | 计分模式: 基础, 高级 | Traditional: 計分模式: 基本, 進階 |
 | return | 接发球 | "Return games won" = "接发球局获胜" |

@@ -9,6 +9,7 @@ import org.litvin.export.EncoderCapabilities
 import org.litvin.export.RenderService
 import org.litvin.RenderStatus
 import org.litvin.export.ExportChunkPlanner
+import org.litvin.export.ExportClips
 import org.litvin.export.ExportFailureAdvice
 import org.litvin.export.ExportOutputGuard
 import org.litvin.export.ExportPlanner
@@ -107,6 +108,7 @@ class SwingExportPanel(
         updateCommentsDefault()
         updateStatsCardDefault()
         updateSetSummariesDefault()
+        updateServeClipsDefault()
         updateVideoLanguage()
     }
     // Project context (manifest path) — optional; user can still pick output file.
@@ -139,6 +141,11 @@ class SwingExportPanel(
     private val setSummariesCheck = IncludeTile("export-set-summaries", tr("export.include.setSummaries")).apply {
         toolTipText = tr("export.include.setSummaries.tooltip")
     }
+    // Only a project in advanced mode shows this option (B-68).
+    private val serveClipsCheck = IncludeTile("export-serve-clips", tr("export.include.serveClips")).apply {
+        toolTipText = tr("export.include.serveClips.tooltip")
+        isVisible = false
+    }
     private val videoLanguageRow = VideoLanguageRow(::onVideoLanguageSelected)
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
     private val initButton = StartExportButton(START_EXPORT).apply {
@@ -162,6 +169,7 @@ class SwingExportPanel(
             add(commentsCheck)
             add(statsCardCheck)
             add(setSummariesCheck)
+            add(serveClipsCheck)
         }
         val steps = ScrollableStack(0).apply {
             border = EmptyBorder(18, 20, 20, 20)
@@ -257,6 +265,11 @@ class SwingExportPanel(
             currentProjectDir()?.let { settingsPreferences.saveIncludeSetSummaries(it, setSummariesCheck.isSelected) }
             updateOutputDuration()
         }
+        serveClipsCheck.addActionListener {
+            currentProjectDir()?.let { settingsPreferences.saveIncludeServeClips(it, serveClipsCheck.isSelected) }
+            updatePointsSummary()
+            onContentChanged()
+        }
 
         // The encoder detection runs test encodes in the background. Show its result when it is ready.
         val detection = encoderCapabilities.exceptionally { EncoderCapabilities.NONE }
@@ -318,6 +331,7 @@ class SwingExportPanel(
         updateInitButtonState()
         updateScoreboardDefault()
         updateCommentsDefault()
+        updateServeClipsDefault()
         updateVideoLanguage()
     }
 
@@ -407,6 +421,7 @@ class SwingExportPanel(
             validPoints = allValidPoints,
             idleTrim = idleTrim,
             favoriteOnly = favoriteOnly,
+            clips = currentClips(),
         )
         if (favoriteOnly && keeps.isEmpty()) {
             dialogs.showWarning(this, tr("export.favorites.none"), tr("export.favorites.unavailable"))
@@ -481,6 +496,7 @@ class SwingExportPanel(
                 statsSettings = readCurrentStatsSettings(),
                 adjustments = adjustments.get(),
                 videoLanguage = videoLanguageRow.language,
+                includeServeClips = serveClipsSelected(),
             )
         )
 
@@ -541,7 +557,7 @@ class SwingExportPanel(
     private fun updateOutputDuration() {
         val validPoints = ExportPlanner.validateEdl(readCurrentProjectEdl())
         val kept = if (idleTrimSelected()) {
-            ExportPlanner.selectedKeepPoints(validPoints, idleTrim = true, favoriteOnly = favoriteOnlySelected())
+            ExportPlanner.selectedKeepPoints(validPoints, idleTrim = true, favoriteOnly = favoriteOnlySelected(), clips = currentClips())
         } else {
             emptyList()
         }
@@ -672,6 +688,7 @@ class SwingExportPanel(
                 ExportPlanner.validateEdl(edl),
                 idleTrim = true,
                 favoriteOnly = favoriteOnlySelected(),
+                clips = currentClips(),
             )
             ExportPlanner.setSummaryCards(edl, readCurrentProjectScore(), readCurrentStatsSettings(), kept, 1920, 1080)
         }
@@ -700,7 +717,31 @@ class SwingExportPanel(
         }
     }
 
-    private fun loadExportSummary() = ExportPlanner.summarize(readCurrentProjectEdl())
+    private fun loadExportSummary() = ExportPlanner.summarize(readCurrentProjectEdl(), currentClips())
+
+    /** True when the option "Include serve faults and lets" is on. Only a project in advanced mode shows it (B-68). */
+    private fun serveClipsSelected(): Boolean = serveClipsCheck.isVisible && serveClipsCheck.isSelected
+
+    /** The fault clips and the let clips that "Only points" and "Only favorites" keep (B-68). */
+    private fun currentClips(): ExportClips =
+        ExportClips.of(readCurrentProjectEdl(), readCurrentProjectScore(), serveClipsSelected())
+
+    /**
+     * Shows the option "Include serve faults and lets" for a project in advanced mode (B-68). A project with no choice
+     * gets the default of More → Settings, and keeps it. Thus a later change of the default changes only new projects.
+     */
+    private fun updateServeClipsDefault() {
+        val dir = currentProjectDir()
+        val advanced = dir != null && readCurrentProjectScore().isAdvanced
+        serveClipsCheck.isVisible = advanced
+        serveClipsCheck.parent?.revalidate()
+        if (dir == null) return
+        val saved = settingsPreferences.loadIncludeServeClips(dir)
+        val include = saved ?: settingsPreferences.loadServeClipsDefault().also { settingsPreferences.saveIncludeServeClips(dir, it) }
+        serveClipsCheck.isSelected = include
+        updatePointsSummary()
+        onContentChanged()
+    }
 
     private fun readCurrentProjectEdl(): EdlV1? {
         val projectDir = currentProjectDir()
@@ -769,6 +810,7 @@ class SwingExportPanel(
             idleTrim = idleTrimSelected(),
             favoriteOnly = favoriteOnlySelected(),
             validPoints = validPoints,
+            clips = currentClips(),
         )
     } catch (_: Throwable) {
         ExportReadiness(false, tr("export.readiness.error"))

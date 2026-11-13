@@ -10,6 +10,7 @@ import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SectionPage
 import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.SwatchButton
+import org.litvin.ui.commons.SwitchBox
 import org.litvin.ui.commons.ThemeSettings
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiFonts
@@ -27,6 +28,7 @@ import javax.swing.JComboBox
  * [language] adds the Language card. It is the first card, so that a user who cannot read the current language
  * finds it (B-11, "Path back to English").
  * [scoringMode] adds the Scoring card with the default scoring mode of new tennis projects (B-68).
+ * [serveClips] adds the default of the export option "Include serve faults and lets" to the Scoring card (B-68).
  */
 internal class SettingsPage(
     dataFolder: File,
@@ -35,11 +37,12 @@ internal class SettingsPage(
     private val onOpenFolder: (File) -> Boolean,
     language: LanguageSetting? = null,
     scoringMode: ChoiceSetting? = null,
+    serveClips: FlagSetting? = null,
 ) : SectionPage(TITLE) {
     init {
         name = "more-settings"
         if (language != null) languageCard(language)
-        if (scoringMode != null) scoringCard(scoringMode)
+        if (scoringMode != null) scoringCard(scoringMode, serveClips)
 
         subheading(tr("settings.theme"))
         paragraph(tr("settings.theme.text"))
@@ -89,7 +92,7 @@ internal class SettingsPage(
         folderStatus = statusLine()
     }
 
-    private fun scoringCard(setting: ChoiceSetting) {
+    private fun scoringCard(setting: ChoiceSetting, serveClips: FlagSetting?) {
         subheading(tr("settings.scoring"))
         paragraph(tr("settings.scoring.text"))
         val choice = SegmentedChoice(
@@ -100,6 +103,14 @@ internal class SettingsPage(
             onChange(setting.save)
         }
         buttonRow(choice)
+        if (serveClips == null) return
+        paragraph(tr("settings.scoring.serveClips.text"))
+        val switch = SwitchBox(tr("settings.scoring.serveClips")).apply {
+            name = "more-settings-serve-clips"
+            isSelected = serveClips.load()
+            addActionListener { serveClips.save(isSelected) }
+        }
+        buttonRow(switch)
     }
 
     /** One entry of the language list. The list shows each language in its own language. */
@@ -166,6 +177,12 @@ internal class SettingsPage(
  * A setting with a few choices, for example the default scoring mode of new projects (B-68). The Settings page knows no
  * domain types: `app` gives the IDs, the labels, and the store. [load] and [save] use the [Option.id] values.
  */
+/** An on/off setting, for example the default of an export option for new projects (B-68). */
+class FlagSetting(
+    val load: () -> Boolean,
+    val save: (Boolean) -> Unit,
+)
+
 class ChoiceSetting(
     val options: List<Option>,
     val load: () -> String,

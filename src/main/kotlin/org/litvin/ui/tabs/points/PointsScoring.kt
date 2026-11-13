@@ -9,7 +9,12 @@ import org.litvin.export.scoreboard.ScoreboardAss
 import org.litvin.export.scoreboard.ScoreboardLayouts
 import org.litvin.export.scoreboard.ScoreboardScene
 import org.litvin.points.PointV1
+import org.litvin.scoring.ClipKind
+import org.litvin.scoring.ClipOutcome
+import org.litvin.scoring.ClipOutcomes
+import org.litvin.scoring.Ending
 import org.litvin.scoring.EndingChoice
+import org.litvin.scoring.ServePacks
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.PointDetails
 import org.litvin.scoring.PointEndings
@@ -74,7 +79,8 @@ import org.litvin.i18n.DisplayFormats
  *
  * The file is longer than 500 lines. The scoring keeps one state (the score file, the points, the selected point, and
  * the pending point), and each action reads and writes it through [change]. The pure rules are in other files:
- * `scoring.PointEndings`, `scoring.ServerChanges`, [ServeQuestion], and [ServerChangeText]. The next split can move
+ * `scoring.PointEndings`, `scoring.ServerChanges`, `scoring.ClipOutcomes`, [ScoreKeys], [ServeQuestion], and
+ * [ServerChangeText]. The next split can move
  * [pointMarks] and the dialogs (Override score, Scoring rules, Scoreboard style) into their own classes.
  */
 internal class PointsScoring(
@@ -103,6 +109,8 @@ internal class PointsScoring(
     private val modeDefaults: ScoringModeDefaults = ScoringModeDefaults.NONE,
     /** Asks the user to confirm a server change with this title and message. Returns true for "Change server". */
     private val confirmServerChange: (title: String, message: String) -> Boolean = { _, _ -> true },
+    /** The serve number (1 or 2) of the start button in advanced mode, or null in basic mode (B-68). */
+    private val onServeNumber: (Int?) -> Unit = {},
 ) {
     /**
      * The serve button and the outcome buttons, in the point bar under the video.
@@ -123,6 +131,8 @@ internal class PointsScoring(
             showScoringKeysHint()
         },
         onServeAnswer = { answerServer(it) },
+        onFault = { requestServeEnding(ScoreRequest.Fault) },
+        onLet = { requestServeEnding(ScoreRequest.Let) },
     )
 
     /** The scoring mode switch above the point bar. Only tennis projects show it. */
@@ -179,6 +189,9 @@ internal class PointsScoring(
 
     // The score after each point, in the order of [points], and the server of each point.
     private var timeline: ScoringEngine.Timeline? = null
+
+    // The packs of the clips (B-68): the serve number of each clip and of a new clip.
+    private var packs: ServePacks = ServePacks.EMPTY
     private val states: List<ScoringEngine.MatchState> get() = timeline?.statesAfterPoint.orEmpty()
     private var scene: ScoreboardScene? = null
 
@@ -193,7 +206,11 @@ internal class PointsScoring(
      * Shows the scoreboard of the playhead, as the full export shows it. The preview shows no fade: the board comes
      * and goes at the start and the end of the fades.
      */
-    fun moveTo(timeMs: Long) = showScoreboardAt(timeMs, redraw = false)
+    fun moveTo(timeMs: Long) {
+        showScoreboardAt(timeMs, redraw = false)
+        // The serve labels come from the pack at the playhead (B-68).
+        if (score.isAdvanced && serveLabels() != shownServeLabels) render()
+    }
 
     /**
      * Shows the scoreboard at [timeMs]. Without [redraw], the overlay does not change when the span stays the same.
@@ -254,10 +271,12 @@ internal class PointsScoring(
         hints.hide(HintId.SCORE_SETTINGS)
         hints.hide(HintId.SCORING_KEYS)
         hints.hide(HintId.SERVE_MARK)
+        KeyHint.entries.forEach { hints.hide(it.id) }
     }
 
     fun setPoints(newPoints: List<PointV1>) {
-        points = newPoints.sortedBy { it.startMs }
+        // A clip of zero length comes before a clip that starts at the same time, as in the packs (B-68).
+        points = newPoints.sortedWith(compareBy({ it.startMs }, { it.endMs }))
         if (points.none { it.id == selectedId }) selectedId = null
         refresh()
         // A deleted or a moved point can move the server, and thus the winner of an ace or a double fault (B-68).
@@ -396,6 +415,8 @@ internal class PointsScoring(
             hints.dismiss(HintId.SCORING_KEYS)
         }
         bind(AppShortcuts.SWITCH_SERVE.keyStroke, "points.switchServe") { switchServer() }
+        bind(AppShortcuts.SERVE_FAULT.keyStroke, "points.serveFault") { requestServeEnding(ScoreRequest.Fault) }
+        bind(AppShortcuts.LET.keyStroke, "points.let") { requestServeEnding(ScoreRequest.Let) }
     }
 
     /**
@@ -409,8 +430,57 @@ internal class PointsScoring(
         when (request) {
             is ScoreRequest.Winner -> setOutcome(request.outcome)
             is ScoreRequest.WithEnding -> setEnding(request.choice)
+            ScoreRequest.Fault -> setServeEnding(Ending.SERVE_FAULT)
+            ScoreRequest.Let -> setServeEnding(Ending.LET)
         }
         showServeMarkHint()
+    }
+
+    /**
+     * X or L (B-68). They work only in advanced mode. X does not work while the point bar asks "Who serves?", because
+     * the double fault needs the server.
+     */
+    private fun requestServeEnding(request: ScoreRequest) {
+        if (!score.isAdvanced) return
+        if (request == ScoreRequest.Fault && serveQuestion.isOpen) return
+        onScoreRequest(request)
+    }
+
+    /** True when the pack at [timeMs] already has a fault clip or a let clip. Then X with no point adds no clip (B-68). */
+    fun packAtHasServeClip(timeMs: Long): Boolean = packs.packAtHasServeClip(timeMs)
+
+    /** Shows the toast of a key that did nothing (B-68, "Hints"), above the point bar. */
+    fun showKeyHint(hint: KeyHint) {
+        if (!isActive()) return
+        hints.toast(hint.id, controls, hint.message)
+    }
+
+    /**
+     * The outcome of the clip with [pointId] for the Edit dialog, or null in basic mode: then the dialog shows no
+     * outcome (B-68, "Corrections").
+     */
+    fun outcomeForm(pointId: String): PointOutcomeForm? {
+        if (!score.isAdvanced) return null
+        val index = points.indexOfFirst { it.id == pointId }
+        val point = points.getOrNull(index) ?: return null
+        val clip = packs.of(pointId)
+        return PointOutcomeForm(
+            current = ClipOutcomes.current(score, pointId),
+            serve = clip?.serve,
+            doubleFault = clip?.kind == ClipKind.DOUBLE_FAULT,
+            server = timeline?.serverOfPoint?.getOrNull(index),
+            p1Name = players().p1Name,
+            p2Name = players().p2Name,
+            zeroLength = PointEndings.isZeroLength(point),
+        )
+    }
+
+    /** The Edit dialog of advanced mode gave the clip with [pointId] a new outcome (B-68). */
+    fun editOutcome(pointId: String, outcome: ClipOutcome) {
+        val point = points.firstOrNull { it.id == pointId } ?: return
+        if (!score.isAdvanced || !ClipOutcomes.allows(point, outcome)) return
+        if (ClipOutcomes.current(score, pointId) == ClipOutcomes.normalized(outcome)) return
+        change { ClipOutcomes.apply(it, pointId, outcome) }
     }
 
     /**
@@ -490,7 +560,7 @@ internal class PointsScoring(
     private fun switchServer() {
         val index = selectedIndex()
         val point = points.getOrNull(index) ?: return
-        if (point.endMs <= point.startMs) return
+        if (!PointEndings.canScore(point, score)) return
         val next = if (timeline?.serverOfPoint?.getOrNull(index) == 1) Outcome.P2 else Outcome.P1
         val preview = runCatching { ServerChanges.preview(points, score, withServer(score, index, point, next)) }.getOrNull()
         if (preview != null) {
@@ -652,6 +722,16 @@ internal class PointsScoring(
     }
 
     /**
+     * X or L on the selected point (B-68): the clip becomes a fault clip or a let clip. Only a fault clip can have zero
+     * length, so L does nothing on a clip of zero length.
+     */
+    private fun setServeEnding(ending: Ending) {
+        val point = points.getOrNull(selectedIndex()) ?: return
+        if (PointEndings.isZeroLength(point) && !PointEndings.allowsZeroLength(ending)) return
+        change { PointEndings.withServeEnding(it, point.id, ending) }
+    }
+
+    /**
      * Reads score.json, applies [update], and writes the file, so that the other fields stay as they are. The winners
      * of the aces and the double faults then come from the details (B-68).
      */
@@ -684,6 +764,7 @@ internal class PointsScoring(
 
     private fun refresh() {
         timeline = runCatching { timelineOf(score) }.getOrNull()
+        packs = ServePacks.of(points, score.outcomes, score.details)
         serveQuestion.sync(score.isAdvanced, serverKnown())
         controls.setPlayers(players())
         render()
@@ -732,8 +813,32 @@ internal class PointsScoring(
         redrawScoreboard()
     }
 
+    /**
+     * The serve labels (B-68): the serve number of the start button (null in basic mode), and the serve number of the
+     * clip that X changes or ends.
+     * - The start button uses the pack at the pending start or at the playhead.
+     * - X uses the pending point, else the selected clip, else the playhead.
+     */
+    private fun serveLabels(): Pair<Int?, Int> {
+        if (!score.isAdvanced) return null to 1
+        val start = packs.serveAt(pendingStart ?: playheadMs)
+        val point = points.getOrNull(selectedIndex())
+        val fault = when {
+            pending -> start
+            point != null -> packs.of(point.id)?.serve ?: packs.serveAt(point.startMs.toLong())
+            else -> start
+        }
+        return start to fault
+    }
+
+    // The serve labels that the point bar shows now.
+    private var shownServeLabels: Pair<Int?, Int>? = null
+
     private fun renderPanel() {
         modeBar.render(visible = projectDir != null && score.sport == Sport.TENNIS, mode = score.scoringMode)
+        val labels = serveLabels()
+        shownServeLabels = labels
+        onServeNumber(labels.first)
         val index = selectedIndex()
         val point = points.getOrNull(index)
         val advanced = score.isAdvanced
@@ -742,6 +847,7 @@ internal class PointsScoring(
             controls.render(
                 PointControlsState(
                     total = points.size, pending = pending, advanced = advanced, askServer = asking, endingServer = endingServer(),
+                    serve = labels.second,
                 ),
             )
             return
@@ -754,7 +860,7 @@ internal class PointsScoring(
                 hasPrevious = index > 0,
                 hasNext = index + 1 < points.size,
                 outcome = score.outcomeOf(point.id),
-                canScore = point.endMs > point.startMs,
+                canScore = PointEndings.canScore(point, score),
                 pending = pending,
                 server = timeline?.serverOfPoint?.getOrNull(index),
                 serverMarked = point.id in score.serverMarks,
@@ -763,6 +869,9 @@ internal class PointsScoring(
                 askServer = asking,
                 endingServer = endingServer(),
                 ending = EndingChoice.of(score.outcomeOf(point.id), score.detailOf(point.id).ending),
+                serve = labels.second,
+                serveEnding = score.detailOf(point.id).ending?.takeIf { it == Ending.SERVE_FAULT || it == Ending.LET },
+                zeroLength = PointEndings.isZeroLength(point),
             ),
         )
     }
@@ -794,4 +903,10 @@ internal sealed interface ScoreRequest {
 
     /** An ending key of advanced mode: the winner and the ending. */
     data class WithEnding(val choice: EndingChoice) : ScoreRequest
+
+    /** X in advanced mode: a serve fault. The second fault of a pack is the double fault. */
+    data object Fault : ScoreRequest
+
+    /** L in advanced mode: a let. */
+    data object Let : ScoreRequest
 }

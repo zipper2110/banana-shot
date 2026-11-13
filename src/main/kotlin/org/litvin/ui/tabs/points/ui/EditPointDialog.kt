@@ -1,6 +1,7 @@
 package org.litvin.ui.tabs.points.ui
 
 import org.kordamp.ikonli.material2.Material2AL
+import org.litvin.scoring.ClipChoice
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.UiButton
@@ -20,6 +21,7 @@ import org.litvin.i18n.tr
  *
  * Responsibilities:
  * - Show/edit fields: start time, end time, label
+ * - In advanced mode (B-68), also the outcome: the kind of the clip, the winner, the ending, and the error kind
  * - Save the changes, or delete the point after a confirmation; Cancel just closes the dialog
  * - Communicate changes strictly via PointsActions
  * - Keep work lightweight on EDT (no long-running operations)
@@ -45,6 +47,8 @@ object EditPointDialog {
         val end = JTextField(point.endMs?.let { Timecode.format(it) } ?: "").apply { name = "points-edit-end" }
         val label = JTextField(point.label ?: "").apply { name = "points-edit-label" }
         val error = DialogKit.errorLine()
+        // Advanced mode: the full outcome of the clip (B-68, "Corrections").
+        val outcome = actions.outcomeForm(point.id)?.let(::PointOutcomeFields)
 
         val save = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply { name = "points-edit-save" }
         val cancel = UiButton(tr("common.cancel"))
@@ -54,8 +58,15 @@ object EditPointDialog {
             try {
                 val newStart = Timecode.parse(start.text)
                 val newEnd = Timecode.parse(end.text)
+                val newOutcome = outcome?.outcome()
+                // Only a fault clip can have zero length (B-68).
+                if (newOutcome != null && newEnd <= newStart && newOutcome.kind != ClipChoice.FAULT) {
+                    error.text = tr("pointEdit.error.zeroLength")
+                    return@addActionListener
+                }
                 dialog.dispose()
-                actions.editPoint(point.id, PointPatch(startMs = newStart, endMs = newEnd, label = label.text))
+                val patch = PointPatch(startMs = newStart, endMs = newEnd, label = label.text)
+                actions.editPoint(point.id, if (outcome?.changed() == true) patch.copy(outcome = newOutcome) else patch)
             } catch (t: IllegalArgumentException) {
                 // The message of Timecode.parse is English only, so the dialog shows its own text.
                 error.text = tr("pointEdit.error.time")
@@ -77,6 +88,7 @@ object EditPointDialog {
                     DialogKit.field(tr("pointEdit.end"), DialogKit.inputBox(end)),
                 ),
                 DialogKit.field(tr("pointEdit.label"), DialogKit.inputBox(label), note = tr("pointEdit.label.note")),
+                *outcome?.rows().orEmpty().toTypedArray(),
                 error,
             ),
             DialogKit.footer(left = listOf(delete), right = listOf(cancel, save)),

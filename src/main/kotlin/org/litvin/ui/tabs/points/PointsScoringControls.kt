@@ -4,6 +4,7 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.litvin.scoring.Ending
 import org.litvin.scoring.EndingChoice
 import org.litvin.scoring.Outcome
+import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.KeyChipStyle
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
@@ -50,6 +51,15 @@ internal data class PointControlsState(
     val endingServer: Int? = null,
     /** The ending button of the selected point, or null when the point has no ending. */
     val ending: EndingChoice? = null,
+    /**
+     * The serve number (1 or 2) of the clip that X changes or ends (B-68). The X button shows "Serve fault" on a 1st
+     * serve and "Double fault" on a 2nd serve.
+     */
+    val serve: Int = 1,
+    /** [Ending.SERVE_FAULT] or [Ending.LET] when the selected point is a fault clip or a let clip, else null. */
+    val serveEnding: Ending? = null,
+    /** True when the selected point has zero length (B-68). Only X and the serve button change such a fault clip. */
+    val zeroLength: Boolean = false,
 ) {
     val selected: Boolean get() = index >= 0
 }
@@ -59,7 +69,8 @@ internal data class PointControlsState(
  * - [navigator], at the top of the side column: "Point x / y" with the favorite star, and Previous and Next under it.
  * - This panel, in the point bar under the video, after Point start: "Winner:", the three outcome buttons,
  *   and Override score at the right end. The outcome buttons fill the remaining width.
- *   In advanced mode (B-68), the ending buttons and W take the place of the outcome buttons. Q and E have no buttons.
+ *   In advanced mode (B-68), the ending buttons take the place of the outcome buttons. X, L, and W are between the
+ *   two groups. Q and E have no buttons.
  *   While the bar asks "Who serves?", it shows the question and one button for each player.
  * - [serveButton], at the start of the point bar, before Point start. The point bar places it.
  */
@@ -75,6 +86,10 @@ internal class PointsScoringControls(
     onEnding: (EndingChoice) -> Unit = {},
     /** The answer (1 or 2) to "Who serves?". */
     onServeAnswer: (Int) -> Unit = {},
+    /** The X button of advanced mode: a serve fault (B-68). */
+    onFault: () -> Unit = {},
+    /** The L button of advanced mode: a let (B-68). */
+    onLet: () -> Unit = {},
 ) : JPanel(null) {
 
     val previousButton = ScoringButton(
@@ -118,6 +133,17 @@ internal class PointsScoringControls(
         addActionListener { onOutcome(Outcome.P2) }
     }
     private val outcomeButtons = listOf(player1Button, noPointButton, player2Button)
+    val faultButton = OutcomeButton(0, AppShortcuts.SERVE_FAULT.display).apply {
+        name = "points-serve-fault"
+        addActionListener { onFault() }
+    }
+    val letButton = OutcomeButton(0, AppShortcuts.LET.display).apply {
+        name = "points-let"
+        addActionListener { onLet() }
+    }
+
+    /** The buttons between the two groups of ending buttons in advanced mode: X, L, and W. */
+    private val middleButtons = listOf(faultButton, letButton, noPointButton)
     private val endings = EndingButtons(onEnding)
     private val serveQuestion = JLabel(tr("points.serveQuestion")).apply {
         name = "points-serve-question"
@@ -144,7 +170,7 @@ internal class PointsScoringControls(
 
     init {
         isOpaque = false
-        listOf(winnerLabel, player1Button, noPointButton, player2Button, overrideButton, serveQuestion).forEach(::add)
+        listOf(winnerLabel, player1Button, noPointButton, player2Button, overrideButton, serveQuestion, faultButton, letButton).forEach(::add)
         endings.buttons.values.forEach(::add)
         serveAnswers.forEach(::add)
         previousButton.addActionListener { onPrevious() }
@@ -165,6 +191,8 @@ internal class PointsScoringControls(
         player1Button.toolTipText = outcomeTip("Q", tr("points.outcome.won.tooltip", "name" to players.p1Name))
         player2Button.toolTipText = outcomeTip("E", tr("points.outcome.won.tooltip", "name" to players.p2Name))
         noPointButton.toolTipText = outcomeTip("W", tr("points.outcome.none.tooltip"))
+        letButton.setPlayer(tr("points.let"), Palette.LINE_6)
+        letButton.toolTipText = tr("points.let.tooltip", "key" to AppShortcuts.LET.display)
         endings.setPlayers(players)
         serveAnswers.forEach { button ->
             val player = if (button === serveAnswers[0]) 1 else 2
@@ -208,8 +236,9 @@ internal class PointsScoringControls(
             tr("points.override.tooltip")
         }
         renderServe(state)
-        // A pending point gets its winner from these buttons, so they are the next step.
-        val enabled = state.pending || (state.selected && state.canScore)
+        // A pending point gets its winner from these buttons, so they are the next step. A fault clip of zero length
+        // can get no other outcome (B-68).
+        val enabled = state.pending || (state.selected && state.canScore && !state.zeroLength)
         val next = state.pending || (enabled && state.outcome == null)
         val outcome = state.outcome.takeUnless { state.pending }
         player1Button.update(enabled, outcome == Outcome.P1 && !state.advanced, next)
@@ -219,12 +248,30 @@ internal class PointsScoringControls(
         endings.buttons.forEach { (choice, button) ->
             button.update(enabled, ending == choice, next)
         }
+        renderServeEndings(state)
         renderMode(state)
         revalidate()
         repaint()
         navigator.revalidate()
         navigator.repaint()
     }
+
+    /**
+     * X and L of advanced mode (B-68). X works with no point too: it then adds a fault clip of zero length. L with no
+     * point shows a hint, so it stays active. L does not work on a fault clip of zero length.
+     */
+    private fun renderServeEndings(state: PointControlsState) {
+        val label = faultLabel(state.serve)
+        if (faultButton.text != label) {
+            faultButton.setPlayer(label, Palette.LINE_6)
+            faultButton.toolTipText = tr("points.fault.tooltip", "key" to AppShortcuts.SERVE_FAULT.display)
+        }
+        val serveEnding = state.serveEnding.takeIf { state.selected && !state.pending }
+        faultButton.update(true, serveEnding == Ending.SERVE_FAULT, false)
+        letButton.update(state.pending || !(state.selected && state.zeroLength), serveEnding == Ending.LET, false)
+    }
+
+    private fun faultLabel(serve: Int): String = if (serve == 2) tr("points.fault.double") else tr("points.fault")
 
     /** Shows the buttons of the mode: Q, W, E in basic mode; the ending buttons and W in advanced mode; or the question. */
     private fun renderMode(state: PointControlsState) {
@@ -236,6 +283,8 @@ internal class PointsScoringControls(
             // Only the group of the server shows the ace button.
             button.isVisible = state.advanced && !asking && (choice.ending != Ending.ACE || state.endingServer == choice.winner)
         }
+        faultButton.isVisible = state.advanced && !asking
+        letButton.isVisible = state.advanced && !asking
         serveQuestion.isVisible = asking
         serveAnswers.forEach { it.isVisible = asking }
     }
@@ -280,18 +329,20 @@ internal class PointsScoringControls(
         return advancedWidths(full = false).let { it.sum() + gapsOf(it.size) } + pencil
     }
 
-    /** The buttons of advanced mode in the order of the point bar: the left group, W, and the right group. */
+    /** The buttons of advanced mode in the order of the point bar: the left group, X, L, W, and the right group. */
     private fun advancedButtons(): List<OutcomeButton> {
         val visible = endings.buttons.values.filter { it.isVisible }
         val left = EndingButtons.ORDER.filter { it.winner == 1 }.mapNotNull { endings.buttons[it] }.filter { it in visible }
         val right = EndingButtons.ORDER.filter { it.winner == 2 }.mapNotNull { endings.buttons[it] }.filter { it in visible }
-        return left + noPointButton + right
+        return left + middleButtons + right
     }
 
     /** The widths of [advancedButtons] with the full labels or with the short labels. */
     private fun advancedWidths(full: Boolean): List<Int> {
         val choices = endings.buttons.entries.associate { (choice, button) -> button to choice }
         return advancedButtons().map { button ->
+            // X keeps the width of its longer label, so that the bar does not move when the serve number changes.
+            if (button === faultButton) return@map maxOf(button.widthFor(faultLabel(1)), button.widthFor(faultLabel(2)))
             val choice = choices[button] ?: return@map button.fullWidth()
             button.widthFor(if (full) endings.fullLabel(choice) else endings.shortLabel(choice))
         }
@@ -369,7 +420,8 @@ internal class PointsScoringControls(
             val share = if (needs.sum() <= area) needs[i] + extra / buttons.size else (needs[i].toLong() * area / needs.sum().coerceAtLeast(1)).toInt()
             val w = if (i == buttons.lastIndex) end - x else share
             button.setBounds(x, 0, max(0, w), HEIGHT)
-            x += w + if (button === noPointButton || buttons.getOrNull(i + 1) === noPointButton) GROUP_SPLIT else OUTCOME_GAP
+            val next = buttons.getOrNull(i + 1)
+            x += w + if (next != null && (button in middleButtons) != (next in middleButtons)) GROUP_SPLIT else OUTCOME_GAP
         }
     }
 

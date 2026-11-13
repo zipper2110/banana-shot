@@ -21,6 +21,12 @@ enum class HintId(val key: String) {
 
     /** The active export: the user can continue to edit, and more exports go into a queue. */
     EXPORT_QUEUE("export-queue"),
+
+    /** A toast (B-68): L with no pending point and no active clip does nothing. */
+    LET_WITHOUT_POINT("let-without-point"),
+
+    /** A toast (B-68): X with no pending point in a pack that already has a fault clip or a let clip adds nothing. */
+    FAULT_IN_SERVE_PACK("fault-in-serve-pack"),
 }
 
 /** Keeps which hints the user closed. A closed hint never shows again until [resetAll]. */

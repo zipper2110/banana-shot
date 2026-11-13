@@ -361,6 +361,8 @@ object HelpCatalog {
                 tr("help.advanced.workflow.1"),
                 tr("help.advanced.workflow.2"),
                 tr("help.advanced.workflow.3"),
+                tr("help.advanced.workflow.4"),
+                tr("help.advanced.workflow.5"),
             ),
             actions = listOf(
                 tr("help.advanced.action.1"),
@@ -377,6 +379,8 @@ object HelpCatalog {
                 tr("help.advanced.note.4"),
                 tr("help.advanced.note.5"),
                 tr("help.advanced.note.6"),
+                tr("help.advanced.note.7"),
+                tr("help.advanced.note.8"),
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.ENDING_P1_WINNER, tr("points.ending.winner", "name" to player1)),
@@ -389,6 +393,8 @@ object HelpCatalog {
                 HelpShortcut(AppShortcuts.ENDING_P2_WINNER, tr("points.ending.winner", "name" to player2)),
                 HelpShortcut(AppShortcuts.SCORE_PLAYER_1, tr("help.advanced.shortcut.winnerOnly1")),
                 HelpShortcut(AppShortcuts.SCORE_PLAYER_2, tr("help.advanced.shortcut.winnerOnly2")),
+                HelpShortcut(AppShortcuts.SERVE_FAULT, tr("help.advanced.shortcut.fault")),
+                HelpShortcut(AppShortcuts.LET, tr("help.advanced.shortcut.let")),
                 HelpShortcut(AppShortcuts.HELP, tr("help.advanced.shortcut.help")),
             ),
         )

@@ -13,6 +13,8 @@ import org.litvin.shared.util.Timecode
  * - Maintains a single pending Start until End is set or replaced
  * - Rounds incoming timestamps to nearest 10 ms
  * - Validates duration >= 200 ms and start < end on finalize
+ * - Keeps a fault clip of zero length (B-68): X with no open point adds it at the playhead. Only such a clip has zero
+ *   length. The list is in time order: the start, then the end.
  */
 class PointsDispatcher {
     private companion object {
@@ -49,7 +51,9 @@ class PointsDispatcher {
         }
         val s = Timecode.roundTo10ms(newStartMsRaw)
         val e = Timecode.roundTo10ms(newEndMsRaw)
-        if (s < 0 || e < 0 || e <= s || (e - s) < 200) {
+        // A clip of zero length can keep zero length (B-68), for example when the Edit dialog changes only its outcome.
+        val keepsZeroLength = e == s && points[idx].endMs <= points[idx].startMs
+        if (s < 0 || e < 0 || (!keepsZeroLength && (e <= s || (e - s) < 200))) {
             notifyUser(tr("dispatch.point.invalidEdit"))
             return false
         }
@@ -66,8 +70,7 @@ class PointsDispatcher {
         // The replays keep their source times and stay inside the new window of the point (B-50).
         val updated = Replays.fitted(old.copy(startMs = s, endMs = e, label = newLabel))
         points[idx] = updated
-        // Keep list sorted by startMs
-        points.sortBy { it.startMs }
+        sortPoints()
         onPointsChanged?.invoke()
         return true
     }
@@ -128,7 +131,7 @@ class PointsDispatcher {
         val id = pendingId ?: EdlIO.generateId()
         points.add(PointV1(id = id, startMs = s, endMs = e))
         // Keep list sorted by start time to satisfy 2.4/2.6 acceptance
-        points.sortBy { it.startMs }
+        sortPoints()
         // Clear pending after successful creation
         pendingStartMs = null
         pendingId = null
@@ -137,11 +140,34 @@ class PointsDispatcher {
         return true
     }
 
+    /**
+     * Adds a fault clip of zero length at [timeMs] (B-68): X with no open point and no active clip. Returns the id of
+     * the new clip, or null when [timeMs] is inside a clip or a clip of zero length is already at [timeMs]. The
+     * scoring then gives the clip the ending SERVE_FAULT.
+     */
+    fun addZeroLengthPoint(timeMs: Long): String? {
+        val t = Timecode.roundTo10ms(timeMs)
+        if (t < 0) return null
+        if (points.any { p -> (t >= p.startMs && t < p.endMs) || (p.startMs == t && p.endMs == t) }) {
+            notifyUser(tr("dispatch.point.startInside"))
+            return null
+        }
+        val id = EdlIO.generateId()
+        points.add(PointV1(id = id, startMs = t, endMs = t))
+        sortPoints()
+        logger.debug { "Fault clip of zero length created: $id [$t]" }
+        onPointsChanged?.invoke()
+        return id
+    }
+
+    /** The time order: the start, then the end. Thus a clip of zero length comes before a clip that starts at the same time. */
+    private fun sortPoints() = points.sortWith(compareBy({ it.startMs }, { it.endMs }))
+
     fun getCompletedPoints(): List<PointV1> = points.toList()
 
     fun setPoints(newPoints: List<PointV1>) {
         points.clear()
-        points.addAll(newPoints.sortedBy { it.startMs })
+        points.addAll(newPoints.sortedWith(compareBy({ it.startMs }, { it.endMs })))
         onPointsChanged?.invoke()
     }
 

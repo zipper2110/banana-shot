@@ -41,6 +41,7 @@ import org.litvin.ui.tabs.points.PreferencesScoringModeDefaults
 import org.litvin.ui.tabs.points.ScoringModeDefaults
 import org.litvin.scoring.ScoringMode
 import org.litvin.ui.more.ChoiceSetting
+import org.litvin.ui.more.FlagSetting
 import org.litvin.ui.tabs.points.SwingPointsPanel
 import org.litvin.ui.tabs.projects.SwingProjectsPanel
 import org.litvin.ui.tabs.projects.presenter.DefaultProjectsPresenter
@@ -619,6 +620,7 @@ object SwingApplicationFactory {
                                     load = { scoringModeDefaults.load().name },
                                     save = { id -> ScoringMode.entries.firstOrNull { it.name == id }?.let(scoringModeDefaults::save) },
                                 ),
+                                serveClips = FlagSetting(exportSettings::loadServeClipsDefault, exportSettings::saveServeClipsDefault),
                             ),
                             SettingsPage.ID,
                         ),

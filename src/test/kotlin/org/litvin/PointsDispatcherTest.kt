@@ -144,4 +144,36 @@ class PointsDispatcherTest {
 
         assertEquals(3000, d.getPendingStart())
     }
+
+    @Test
+    fun addZeroLengthPoint_addsAFaultClipOfZeroLengthOutsideTheOtherClips() {
+        // B-68: X with no open point adds a fault clip of zero length at the playhead.
+        val d = newDispatcher()
+        d.onPointStart(1000)
+        d.onPointEnd(2000)
+
+        val id = d.addZeroLengthPoint(3004)
+
+        assertEquals(listOf(1000 to 2000, 3000 to 3000), d.getCompletedPoints().map { it.startMs to it.endMs })
+        assertEquals(id, d.getCompletedPoints().last().id)
+        assertNull(d.addZeroLengthPoint(1500), "inside a clip")
+        assertNull(d.addZeroLengthPoint(3000), "a clip of zero length is already there")
+        assertEquals(2, d.getCompletedPoints().size)
+    }
+
+    @Test
+    fun zeroLengthClip_staysInTheTimeOrderAndKeepsItsLengthInAnEdit() {
+        val d = newDispatcher()
+        val id = d.addZeroLengthPoint(3000)!!
+        d.onPointStart(3000)
+        d.onPointEnd(4000)
+        // The clip of zero length comes before the clip that starts at the same time.
+        assertEquals(listOf(3000 to 3000, 3000 to 4000), d.getCompletedPoints().map { it.startMs to it.endMs })
+
+        assertTrue(d.updatePoint(id, 3000, 3000, "fault"))
+        assertEquals("fault", d.getCompletedPoints().first().label)
+        // A clip with a length cannot become a clip of zero length.
+        val other = d.getCompletedPoints().last().id
+        assertEquals(false, d.updatePoint(other, 3000, 3000, null))
+    }
 }

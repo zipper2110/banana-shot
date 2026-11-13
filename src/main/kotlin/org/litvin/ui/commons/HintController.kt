@@ -23,6 +23,13 @@ class HintController(private val registry: HintRegistry) {
     private var shown: Shown? = null
     private val waiting = ArrayDeque<Request>()
 
+    // The toast on the screen and its hint. A toast does not wait in the queue: a new toast replaces it.
+    private var toast: Pair<HintId, HintToast>? = null
+
+    /** The hint of the toast on the screen, or null. */
+    val shownToast: HintId?
+        get() = toast?.first
+
     /** The hint on the screen, or null. */
     val shownHint: HintId?
         get() = shown?.request?.hint
@@ -65,8 +72,26 @@ class HintController(private val registry: HintRegistry) {
         hide(hint)
     }
 
+    /**
+     * Shows [hint] as a [HintToast] above [anchor] (B-68, "Hints"). The toast closes by itself, does not stop the video,
+     * and does not take the focus. Its "Don't show again" closes the hint, as the close button of a balloon. Does
+     * nothing for a closed hint. A toast on the screen goes, so that only the newest toast shows.
+     */
+    fun toast(hint: HintId, anchor: JComponent, message: String) {
+        if (registry.isDismissed(hint)) return
+        toast?.second?.hideToast()
+        if (!anchor.isShowing) return
+        val view = HintToast(message) { registry.dismiss(hint) }
+        val entry = hint to view
+        view.onHidden = { if (toast === entry) toast = null }
+        toast = entry
+        view.showAbove(anchor)
+        if (!view.isShown && toast === entry) toast = null
+    }
+
     /** Takes the hint off the screen and out of the queue. It can show again at its next trigger. */
     fun hide(hint: HintId) {
+        toast?.let { (id, view) -> if (id == hint) view.hideToast() }
         waiting.removeAll { it.hint == hint }
         val current = shown ?: return
         if (current.request.hint == hint) current.balloon.hideBalloon()

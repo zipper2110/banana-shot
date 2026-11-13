@@ -216,6 +216,8 @@ class SwingPointsPanel(
         confirmServerChange = { title, message ->
             dialogs.confirm(this, message, title, confirmLabel = tr("points.serverChange.confirm"))
         },
+        // In advanced mode, Point start shows the serve number (B-68).
+        onServeNumber = { markPanel.serve = it },
     )
     private val frameLoader = VideoFrameLoader()
 
@@ -422,6 +424,7 @@ class SwingPointsPanel(
         override fun setStartAtPlayhead() = this@SwingPointsPanel.onStartAtPlayhead()
         override fun createPointAt(ms: Long) = dispatcher.onPointStart(ms)
         override fun editPoint(id: String, patch: PointPatch) = this@SwingPointsPanel.editPoint(id, patch)
+        override fun outcomeForm(id: String) = scoring.outcomeForm(id)
         override fun deletePoint(id: String) = this@SwingPointsPanel.deletePoint(id)
         override fun toggleFavorite(id: String) = this@SwingPointsPanel.toggleFavorite(id)
         override fun selectByVisualIndex(index: Int) = this@SwingPointsPanel.setSelectedVisualAndScroll(index)
@@ -984,7 +987,13 @@ class SwingPointsPanel(
         )
         maybeShowDispatcherHint()
         hints.dismiss(HintId.POINT_ROW)
-        if (updated) EventQueue.invokeLater { selectEventAndScroll("point:$id") }
+        if (!updated) return
+        // The Edit dialog of advanced mode can also change the outcome (B-68). The scoring needs the new times first.
+        patch.outcome?.let { outcome ->
+            scoring.setPoints(dispatcher.getCompletedPoints())
+            scoring.editOutcome(id, outcome)
+        }
+        EventQueue.invokeLater { selectEventAndScroll("point:$id") }
     }
 
     /**
@@ -1222,7 +1231,9 @@ class SwingPointsPanel(
         replayEditor?.let { it.toFront(); return }
         val playhead = player.currentTimeMs()
         val points = dispatcher.getCompletedPoints()
-        val point = (pointId?.let { id -> points.firstOrNull { it.id == id } } ?: pointNear(playhead)) ?: run {
+        // A fault clip of zero length has no video, so it has no replay (B-68).
+        val near = pointId?.let { id -> points.firstOrNull { it.id == id } } ?: pointNear(playhead)
+        val point = near?.takeUnless { it.endMs <= it.startMs } ?: run {
             dialogs.showHint(this, tr("points.replay.noPoint"))
             return
         }
@@ -1339,27 +1350,51 @@ class SwingPointsPanel(
     }
 
     /**
-     * Q, W, E and the ending keys of advanced mode (B-68). With a pending point, the key ends the point at the playhead
-     * and gives the winner (and the ending) to the new point. These keys are the only way to end a point. Without a
-     * pending point, the key changes the active point. Between points, the key does nothing.
+     * Q, W, E, and the ending keys, X, and L of advanced mode (B-68). With a pending point, the key ends the point at the
+     * playhead and gives the outcome to the new point. These keys are the only way to end a point. Without a pending
+     * point, the key changes the active point. Between points, X adds a fault clip of zero length, L shows a hint, and
+     * the other keys do nothing (see [ScoreKeys]).
      */
     private fun endPoint(request: ScoreRequest) {
         if (replays.isActive) return
         val pendingStart = dispatcher.getPendingStart()
-        if (pendingStart == null) {
-            (selectedEvent() as? PointEventDto)?.let { scoring.score(request, it.point.id) }
-            return
+        val pendingId = dispatcher.getPendingId()
+        val active = (selectedEvent() as? PointEventDto)?.point?.id
+        val playhead = player.currentTimeMs()
+        // X and L also work with no pending point: see ScoreKeys (B-68).
+        val decision = ScoreKeys.decide(request, pendingStart != null, active != null) { scoring.packAtHasServeClip(playhead) }
+        when (decision.action) {
+            ScoreKeyAction.END_PENDING -> Unit
+            ScoreKeyAction.CHANGE_ACTIVE -> active?.let { scoring.score(request, it) }
+            ScoreKeyAction.ADD_ZERO_LENGTH_FAULT -> addZeroLengthFault(playhead)
+            ScoreKeyAction.HINT -> decision.hint?.let(scoring::showKeyHint)
+            ScoreKeyAction.NONE -> Unit
         }
-        val created = dispatcher.onPointEnd(player.currentTimeMs())
+        if (decision.action != ScoreKeyAction.END_PENDING) return
+        val created = dispatcher.onPointEnd(playhead)
         maybeShowDispatcherHint()
         if (!created) return
         analytics.record(AnalyticsEvent.PointAdded)
         val points = dispatcher.getCompletedPoints()
-        val point = points.firstOrNull { it.startMs == pendingStart } ?: return
+        val point = points.firstOrNull { it.id == pendingId } ?: points.firstOrNull { it.startMs == pendingStart } ?: return
         // The dispatcher tells the panel about the new point later, so the scoring gets the points now.
         scoring.setPoints(points)
         scoring.score(request, point.id)
         EventQueue.invokeLater { selectEventAndScroll("point:${point.id}") }
+    }
+
+    /**
+     * X with no pending point and no active clip (B-68): a fault clip of zero length at [timeMs]. It has no video, but
+     * it is in the points list, so that the user can select, edit, and delete it.
+     */
+    private fun addZeroLengthFault(timeMs: Long) {
+        val id = dispatcher.addZeroLengthPoint(timeMs)
+        maybeShowDispatcherHint()
+        id ?: return
+        analytics.record(AnalyticsEvent.PointAdded)
+        scoring.setPoints(dispatcher.getCompletedPoints())
+        scoring.score(ScoreRequest.Fault, id)
+        EventQueue.invokeLater { selectEventAndScroll("point:$id") }
     }
 
     /**

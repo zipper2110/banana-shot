@@ -91,12 +91,54 @@ class ProjectRowTest {
             find<AbstractButton>(row, "projects-rename-p1").doClick()
             find<AbstractButton>(row, "projects-delete-p1").doClick()
             find<AbstractButton>(row, "projects-open-p1").doClick()
+            layOut(row)
             val name = find<JLabel>(row, "projects-name-p1")
-            name.dispatchEvent(click(name, clickCount = 1))
-            name.dispatchEvent(click(name, clickCount = 2))
+            click(name, clickCount = 1)
+            // The second click of a double-click does not open the project again.
+            click(name, clickCount = 2)
             assertEquals(Cursor.HAND_CURSOR, row.cursor.type)
         }
         assertEquals(listOf("rename", "delete", "open", "open"), calls)
+    }
+
+    @Test
+    fun aClickOpensTheProjectAlsoWhenThePointerMovesToAnotherCell() {
+        val calls = mutableListOf<String>()
+        SwingUtilities.invokeAndWait {
+            val row = ProjectRow(project, isCurrent = false, onRename = {}, onDelete = {}, onOpen = { calls += "open" })
+            layOut(row)
+            val name = find<JLabel>(row, "projects-name-p1")
+            val path = find<JLabel>(row, "projects-video-p1")
+            name.dispatchEvent(mouse(name, MouseEvent.MOUSE_PRESSED, 5, 5, clickCount = 1))
+            // Swing sends the release to the component of the press, with a point in its coordinates.
+            val release = SwingUtilities.convertPoint(path, 5, 5, name)
+            name.dispatchEvent(mouse(name, MouseEvent.MOUSE_RELEASED, release.x, release.y, clickCount = 1))
+        }
+        assertEquals(listOf("open"), calls)
+    }
+
+    @Test
+    fun aReleaseOutsideTheRowOrOnAButtonDoesNotOpenTheProject() {
+        val calls = mutableListOf<String>()
+        SwingUtilities.invokeAndWait {
+            val row = ProjectRow(
+                project,
+                isCurrent = false,
+                onRename = { calls += "rename" },
+                onDelete = {},
+                onOpen = { calls += "open" },
+            )
+            layOut(row)
+            val name = find<JLabel>(row, "projects-name-p1")
+            name.dispatchEvent(mouse(name, MouseEvent.MOUSE_PRESSED, 5, 5, clickCount = 1))
+            name.dispatchEvent(mouse(name, MouseEvent.MOUSE_RELEASED, 5, 200, clickCount = 1))
+
+            val rename = find<AbstractButton>(row, "projects-rename-p1")
+            val onRename = SwingUtilities.convertPoint(rename, 5, 5, name)
+            name.dispatchEvent(mouse(name, MouseEvent.MOUSE_PRESSED, 5, 5, clickCount = 1))
+            name.dispatchEvent(mouse(name, MouseEvent.MOUSE_RELEASED, onRename.x, onRename.y, clickCount = 1))
+        }
+        assertEquals(emptyList<String>(), calls)
     }
 
     @Test
@@ -104,8 +146,9 @@ class ProjectRowTest {
         val calls = mutableListOf<String>()
         SwingUtilities.invokeAndWait {
             val row = ProjectRow(project, isCurrent = true, onRename = {}, onDelete = {}, onOpen = { calls += "open" })
+            layOut(row)
             val name = find<JLabel>(row, "projects-name-p1")
-            name.dispatchEvent(click(name, clickCount = 1))
+            click(name, clickCount = 1)
 
             assertNull(findOrNull(row, "projects-open-p1"))
             assertEquals(Cursor.DEFAULT_CURSOR, row.cursor.type)
@@ -148,8 +191,28 @@ class ProjectRowTest {
     private fun row(project: ProjectCardState, isCurrent: Boolean = false) =
         ProjectRow(project, isCurrent, onRename = {}, onDelete = {}, onOpen = {})
 
-    private fun click(c: Component, clickCount: Int) =
-        MouseEvent(c, MouseEvent.MOUSE_CLICKED, 0L, 0, 5, 5, clickCount, false, MouseEvent.BUTTON1)
+    /** A press and a release at the same point of [c]. */
+    private fun click(c: Component, clickCount: Int) {
+        c.dispatchEvent(mouse(c, MouseEvent.MOUSE_PRESSED, 5, 5, clickCount))
+        c.dispatchEvent(mouse(c, MouseEvent.MOUSE_RELEASED, 5, 5, clickCount))
+    }
+
+    private fun mouse(c: Component, id: Int, x: Int, y: Int, clickCount: Int): MouseEvent {
+        val modifiers = if (id == MouseEvent.MOUSE_PRESSED) MouseEvent.BUTTON1_DOWN_MASK else 0
+        return MouseEvent(c, id, 0L, modifiers, x, y, clickCount, false, MouseEvent.BUTTON1)
+    }
+
+    /** Gives the row a size and places all its children, so that the points of the events are in the row. */
+    private fun layOut(row: ProjectRow) {
+        row.setSize(1152, 44)
+        fun layOutDeep(c: Component) {
+            if (c is Container) {
+                c.doLayout()
+                c.components.forEach(::layOutDeep)
+            }
+        }
+        layOutDeep(row)
+    }
 
     private inline fun <reified T : Component> find(root: Component, name: String): T =
         assertNotNull(findOrNull(root, name) as? T, "No component $name")

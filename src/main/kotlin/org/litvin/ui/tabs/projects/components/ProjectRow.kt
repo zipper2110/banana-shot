@@ -47,12 +47,32 @@ internal class ProjectRow(
     /** True while the pointer is over the row or over one of its children. */
     private val hovered get() = isShowing && getMousePosition(true) != null
 
+    /**
+     * A left press and a release on the row open the project.
+     * The row does not use mouseClicked: on Windows, AWT sends no click when the pointer moves 1 pixel
+     * between the press and the release. Then many clicks on the row did nothing.
+     */
     private val mouse = object : MouseAdapter() {
+        /** True after a left press on the row, until the release. */
+        private var pressed = false
+
         override fun mouseEntered(e: MouseEvent) = repaint()
         override fun mouseExited(e: MouseEvent) = repaint()
-        override fun mouseClicked(e: MouseEvent) {
-            // A double-click also sends a first event with one click, so only that event opens the project.
-            if (e.clickCount != 1 || !SwingUtilities.isLeftMouseButton(e) || e.component is AbstractButton) return
+
+        override fun mousePressed(e: MouseEvent) {
+            // A double-click also sends a first press with one click, so only that press can open the project.
+            pressed = e.clickCount == 1 && SwingUtilities.isLeftMouseButton(e) && e.component !is AbstractButton
+        }
+
+        override fun mouseReleased(e: MouseEvent) {
+            if (!pressed) return
+            pressed = false
+            if (!SwingUtilities.isLeftMouseButton(e)) return
+            // Swing sends the release to the component of the press, so find the component under the pointer.
+            val row = this@ProjectRow
+            val point = SwingUtilities.convertPoint(e.component, e.point, row)
+            if (!row.contains(point)) return
+            if (SwingUtilities.getDeepestComponentAt(row, point.x, point.y) is AbstractButton) return
             openButton?.doClick()
         }
     }

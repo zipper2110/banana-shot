@@ -357,7 +357,8 @@ internal object ColorPickerDialog {
             init {
                 toolTipText = tr("colorPicker.current.tooltip")
                 addMouseListener(object : MouseAdapter() {
-                    override fun mouseClicked(e: MouseEvent) {
+                    // Use the press, not the click: Swing drops a click if the mouse moves between press and release.
+                    override fun mousePressed(e: MouseEvent) {
                         if (e.x < width / 2) setColor(initial)
                     }
                 })
@@ -521,7 +522,9 @@ internal object ColorPickerDialog {
             name = componentName
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             val mouse = object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent) {
+                // Use the press, not the click: Swing drops a click if the mouse moves between press and release.
+                // The press also has the click count, so a double-click still confirms the color.
+                override fun mousePressed(e: MouseEvent) {
                     val index = indexAt(e.x, e.y)
                     if (index < 0) return
                     onPick(colors[index])

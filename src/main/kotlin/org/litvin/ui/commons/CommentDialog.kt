@@ -60,11 +60,29 @@ object CommentDialog {
      * The free version does not show the paid styles (docs/backlog-paid.md, P-1).
      */
     private val styleOptions get() = listOf(
-        CommentStyle.PLAIN to "plain", CommentStyle.SHADOW to "shadow", CommentStyle.OUTLINE to "outline",
-        CommentStyle.GLOW to "glow", CommentStyle.CAPTION to "caption", CommentStyle.CARD to "card",
-        CommentStyle.PILL to "pill", CommentStyle.LOWER_THIRD to "lowerThird", CommentStyle.BUBBLE to "bubble",
-    ).filter { (style, _) -> style.available }.map { (style, key) ->
-        SegmentedChoice.Option(style, tr("comment.style.$key"), sub = tr("comment.style.$key.sub"), tooltip = tr("comment.style.$key.tooltip"))
+        CommentStyle.PLAIN, CommentStyle.SHADOW, CommentStyle.OUTLINE,
+        CommentStyle.GLOW, CommentStyle.CAPTION, CommentStyle.CARD,
+        CommentStyle.PILL, CommentStyle.LOWER_THIRD, CommentStyle.BUBBLE,
+    ).filter { it.available }.map(::styleOption)
+
+    /**
+     * The button of [style]: the name, the line under the name, and the tooltip. Each key is written out in full, so that
+     * the catalog checks (`MessageCatalogTest`, `HardCodedTextScanTest`) can find it.
+     */
+    private fun styleOption(style: CommentStyle): SegmentedChoice.Option<CommentStyle> {
+        val (label, sub, tooltip) = when (style) {
+            CommentStyle.PLAIN -> Triple(tr("comment.style.plain"), tr("comment.style.plain.sub"), tr("comment.style.plain.tooltip"))
+            CommentStyle.SHADOW -> Triple(tr("comment.style.shadow"), tr("comment.style.shadow.sub"), tr("comment.style.shadow.tooltip"))
+            CommentStyle.OUTLINE -> Triple(tr("comment.style.outline"), tr("comment.style.outline.sub"), tr("comment.style.outline.tooltip"))
+            CommentStyle.GLOW -> Triple(tr("comment.style.glow"), tr("comment.style.glow.sub"), tr("comment.style.glow.tooltip"))
+            CommentStyle.CAPTION -> Triple(tr("comment.style.caption"), tr("comment.style.caption.sub"), tr("comment.style.caption.tooltip"))
+            CommentStyle.CARD -> Triple(tr("comment.style.card"), tr("comment.style.card.sub"), tr("comment.style.card.tooltip"))
+            CommentStyle.PILL -> Triple(tr("comment.style.pill"), tr("comment.style.pill.sub"), tr("comment.style.pill.tooltip"))
+            CommentStyle.LOWER_THIRD ->
+                Triple(tr("comment.style.lowerThird"), tr("comment.style.lowerThird.sub"), tr("comment.style.lowerThird.tooltip"))
+            CommentStyle.BUBBLE -> Triple(tr("comment.style.bubble"), tr("comment.style.bubble.sub"), tr("comment.style.bubble.tooltip"))
+        }
+        return SegmentedChoice.Option(style, label, sub = sub, tooltip = tooltip)
     }
 
     /** The number of style buttons in one row. */

@@ -101,6 +101,13 @@ class ExportSettingsPreferences(
         preferences.putBoolean(KEY_SERVE_CLIPS_DEFAULT, include)
     }
 
+    /** True when the computer stays awake while an export runs. It is on when the user did not set it. */
+    fun loadPreventSleep(): Boolean = preferences.getBoolean(KEY_PREVENT_SLEEP, true)
+
+    fun savePreventSleep(prevent: Boolean) {
+        preferences.putBoolean(KEY_PREVENT_SLEEP, prevent)
+    }
+
     private fun loadProjectChoice(prefix: String, projectDir: String): Boolean? {
         val key = projectKey(prefix, projectDir) ?: return null
         if (preferences.get(key, null) == null) return null
@@ -139,5 +146,6 @@ class ExportSettingsPreferences(
         const val KEY_SET_SUMMARIES_PREFIX = "export.setSummaries."
         const val KEY_SERVE_CLIPS_PREFIX = "export.serveClips."
         const val KEY_SERVE_CLIPS_DEFAULT = "export.serveClips.default"
+        const val KEY_PREVENT_SLEEP = "export.preventSleep"
     }
 }

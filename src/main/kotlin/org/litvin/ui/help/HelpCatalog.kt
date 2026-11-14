@@ -305,6 +305,7 @@ object HelpCatalog {
                 tr("help.export.note.11"),
                 tr("help.export.note.12"),
                 tr("help.export.note.13"),
+                tr("help.export.note.14"),
             ),
             shortcuts = listOf(
                 HelpShortcut(AppShortcuts.HELP, tr("help.export.shortcut.help")),

@@ -79,6 +79,24 @@ class MorePanelTest {
     }
 
     @Test
+    fun `the Export card shows the sleep setting and saves a change`() {
+        System.setProperty("java.awt.headless", "true")
+        val saved = mutableListOf<Boolean>()
+
+        SwingUtilities.invokeAndWait {
+            val page = SettingsPage(
+                File("data"), RecordingThemeSettings(), onShowHintsAgain = {}, onOpenFolder = { true },
+                preventSleep = FlagSetting(load = { true }, save = { saved += it }),
+            )
+            val switch = checkNotNull(findButton(page, "more-settings-prevent-sleep"))
+            assertTrue(switch.isSelected)
+            switch.doClick()
+        }
+
+        assertEquals(listOf(false), saved)
+    }
+
+    @Test
     fun `selecting a theme calls the theme callback`() {
         System.setProperty("java.awt.headless", "true")
         val settings = RecordingThemeSettings()

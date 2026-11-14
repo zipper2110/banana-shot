@@ -138,6 +138,18 @@ object RenderQueueManager {
     /** The listener of the usage analytics (B-9). It gets only [RenderRunFacts], not the job. */
     @Volatile var runListener: RenderRunListener? = null
 
+    /** Keeps the computer awake while an export runs. Null when the app does not stop the sleep (tests). */
+    @Volatile private var sleepBlock: org.litvin.export.ExportSleepBlock? = null
+
+    /**
+     * Sets the sleep block. Null removes it. The new block also gets the exports that run now, for example a queued
+     * export that continued at the start of the app before the window opened.
+     */
+    fun useSleepBlock(block: org.litvin.export.ExportSleepBlock?) {
+        sleepBlock = block
+        runs.keys.forEach { block?.exportStarted(it) }
+    }
+
     private class RunRecord(val facts: RenderRunFacts, val startedAtNanos: Long) {
         @Volatile var failReason: RenderFailReason? = null
         @Volatile var videoMs: Long? = null
@@ -154,6 +166,7 @@ object RenderQueueManager {
         runs[job.id] = record
         // The crash marker keeps the export as an activity (B-67).
         AppActivities.set(AppActivity.EXPORT, job.id, true)
+        sleepBlock?.exportStarted(job.id)
         try {
             runListener?.started(record.facts)
         } catch (failure: Throwable) {
@@ -168,6 +181,7 @@ object RenderQueueManager {
     private fun endRun(job: RenderJob) {
         val record = runs.remove(job.id) ?: return
         AppActivities.set(AppActivity.EXPORT, job.id, false)
+        sleepBlock?.exportEnded(job.id)
         val result = when (job.status) {
             RenderStatus.COMPLETED -> RenderRunResult.Completed((System.nanoTime() - record.startedAtNanos) / 1_000_000, record.videoMs)
             RenderStatus.CANCELED -> RenderRunResult.Canceled

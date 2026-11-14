@@ -20,6 +20,8 @@ import org.litvin.ui.expiry.WhatsNewSupport
 import org.litvin.license.update.UpdateAndRestart
 import org.litvin.license.update.PreferencesWhatsNewSeen
 import org.litvin.license.update.WhatsNewLoader
+import org.litvin.export.ExportSleepBlock
+import org.litvin.export.SleepBlocker
 import org.litvin.feedback.FeedbackLog
 import org.litvin.feedback.FeedbackPreferences
 import org.litvin.feedback.FeedbackSystemInfo
@@ -367,6 +369,13 @@ object SwingApplicationFactory {
             )
 
             val exportSettings = ExportSettingsPreferences(services.preferences.node(PreferencesProvider.EXPORT))
+            // The computer stays awake while an export runs, when the setting is on.
+            val exportSleepBlock = ExportSleepBlock(SleepBlocker.forPlatform(), exportSettings.loadPreventSleep())
+            RenderQueueManager.useSleepBlock(exportSleepBlock)
+            closeActions += {
+                RenderQueueManager.useSleepBlock(null)
+                exportSleepBlock.close()
+            }
             val exportPanel = SwingExportPanel(
                 exportSettings,
                 services.renderService,
@@ -621,6 +630,10 @@ object SwingApplicationFactory {
                                     save = { id -> ScoringMode.entries.firstOrNull { it.name == id }?.let(scoringModeDefaults::save) },
                                 ),
                                 serveClips = FlagSetting(exportSettings::loadServeClipsDefault, exportSettings::saveServeClipsDefault),
+                                preventSleep = FlagSetting(exportSettings::loadPreventSleep) { prevent ->
+                                    exportSettings.savePreventSleep(prevent)
+                                    exportSleepBlock.setEnabled(prevent)
+                                },
                                 askErrorKind = FlagSetting(scoringModeDefaults::loadAskErrorKind, scoringModeDefaults::saveAskErrorKind),
                             ),
                             SettingsPage.ID,

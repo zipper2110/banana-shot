@@ -30,6 +30,7 @@ import javax.swing.JComboBox
  * [scoringMode] adds the Scoring card with the default scoring mode of new tennis projects (B-68).
  * [askErrorKind] adds the default of the option "Ask error kind" of advanced mode to the Scoring card (B-68).
  * [serveClips] adds the default of the export option "Include serve faults and lets" to the Scoring card (B-68).
+ * [preventSleep] adds the Export card with the option that keeps the computer awake while an export runs.
  */
 internal class SettingsPage(
     dataFolder: File,
@@ -40,11 +41,13 @@ internal class SettingsPage(
     scoringMode: ChoiceSetting? = null,
     serveClips: FlagSetting? = null,
     askErrorKind: FlagSetting? = null,
+    preventSleep: FlagSetting? = null,
 ) : SectionPage(TITLE) {
     init {
         name = "more-settings"
         if (language != null) languageCard(language)
         if (scoringMode != null) scoringCard(scoringMode, serveClips, askErrorKind)
+        if (preventSleep != null) exportCard(preventSleep)
 
         subheading(tr("settings.theme"))
         paragraph(tr("settings.theme.text"))
@@ -123,6 +126,18 @@ internal class SettingsPage(
             addActionListener { serveClips.save(isSelected) }
         }
         buttonRow(switch)
+    }
+
+    private fun exportCard(preventSleep: FlagSetting) {
+        subheading(tr("settings.export"))
+        paragraph(tr("settings.export.preventSleep.text"))
+        buttonRow(
+            SwitchBox(tr("settings.export.preventSleep")).apply {
+                name = "more-settings-prevent-sleep"
+                isSelected = preventSleep.load()
+                addActionListener { preventSleep.save(isSelected) }
+            },
+        )
     }
 
     /** One entry of the language list. The list shows each language in its own language. */

@@ -54,9 +54,10 @@ shows.
   the winner. Thus the statistics read one model.
 - The mode is a project setting, because it sets which data the project
   has. Settings has the default mode for new projects.
-- The switch is a segmented control above the point bar in the Points tab.
-  The user can change the mode during the match, for example to record
-  only the important games in detail.
+- The switch is a segmented control in the Scoring rules dialog of the
+  project, in the group "Scoring mode" (B-73). Until B-73, it was above the
+  point bar. The user can change the mode during the match, for example to
+  record only the important games in detail.
 - A mode change deletes no data. A lower mode hides the extra data. The
   data shows again in the higher mode.
 - Basic mode with fault clips and let clips: decided on 2026-11-13. The
@@ -550,11 +551,11 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
 | Epic | Status | Notes |
 |---|---|---|
 | E1 data model | Done | `scoring/PointDetails.kt`: `ScoringMode`, `Ending`, `ErrorKind`, `PointDetailV1`, `ServePacks`, `PointDetails`. `ScoreV1` has `scoringMode`, `details`, and `askErrorKind`. Tests: `PointDetailsTest`. |
-| E1 mode switch, E2 | Done | The mode switch is `ScoringModeBar` above the point bar (tennis only). The default mode of new projects is `ScoringModeDefaults` (More → Settings, card Scoring). The Points tab gives it to a new project with the default scoreboard style (`useDefaultScoreboard`). The domain rules are in `scoring/PointEndings.kt`: `EndingChoice`, `PointEndings` (the ending keys, Q, W, and E), and `ServerChanges` (the preview of a server change). The point bar shows `EndingButtons` and the "Who serves?" answers (`PointsScoringControls`). `ServeQuestion` keeps the state of the question. `ServerChangeText` makes the message of the confirmation. `PointsScoring.change` calls `PointDetails.resolve` after each change, and `setPoints` writes the new winners when the points change. The help page is `HelpPage.ADVANCED_SCORING`. Tests: `PointEndingsTest`, `ServeQuestionTest`, `PointsScoringEndingsTest`. |
+| E1 mode switch, E2 | Done | The mode switch is in `ScoreSettingsDialog` (Scoring rules, group "Scoring mode", tennis only, B-73). Until B-73, it was `ScoringModeBar` above the point bar. The default mode of new projects is `ScoringModeDefaults` (More → Settings, card Scoring). The Points tab gives it to a new project with the default scoreboard style (`useDefaultScoreboard`). The domain rules are in `scoring/PointEndings.kt`: `EndingChoice`, `PointEndings` (the ending keys, Q, W, and E), and `ServerChanges` (the preview of a server change). The point bar shows `EndingButtons` and the "Who serves?" answers (`PointsScoringControls`). `ServeQuestion` keeps the state of the question. `ServerChangeText` makes the message of the confirmation. `PointsScoring.change` calls `PointDetails.resolve` after each change, and `setPoints` writes the new winners when the points change. The help page is `HelpPage.ADVANCED_SCORING`. Tests: `PointEndingsTest`, `ServeQuestionTest`, `PointsScoringEndingsTest`. |
 | E3 | Done | X and L are `AppShortcuts.SERVE_FAULT` and `AppShortcuts.LET`, with buttons between the two groups of ending buttons (`PointsScoringControls`). `ScoreKeys.decide` gives the action of a scoring key with and without a pending point and an active clip. `PointsDispatcher.addZeroLengthPoint` adds a fault clip of zero length. `PointEndings.withServeEnding`, `canScore`, and `allowsZeroLength` are the rules of X, L, and the clips of zero length. `PointStartButton.serve` shows "1st serve" or "2nd serve". The Edit dialog uses `PointOutcomeFields` and `scoring/ClipOutcomes.kt` (`ClipChoice`, `ClipOutcome`), and sends the outcome in `PointPatch.outcome`. The toast is `HintToast` (`HintController.toast`), with one `KeyHint` for each key. The export option is `ExportClips` and the tile `export-serve-clips`. `ExportPlanner.scoringPoints` gives the scoreboard the clips of zero length. Tests: `ScoreKeysTest`, `ClipOutcomesTest`, `ExportClipsTest`, `PointsScoringServeTest`, `EditPointDialogTest`, `HintControllerTest`, `PointsDispatcherTest`. |
 | E3b | Done | `ui/tabs/points/PointPacks.kt`: `PointPacks` gives the row info, the navigator number (`PointNumber`), the dimmed clips, and the target of Ctrl+R (`packTarget`). Basic mode has no packs, and Ctrl+R does the same as R. `ui/PointRowLabels.kt`: `PointRowInfo`, `PackPosition`, and `RowLabel` (one key for each part, and the pattern keys `points.row.label` and `points.row.ending.withKind`). A row with a label has two lines; the label ends before the marks and ends with "…" when it does not fit. A pack with two clips or more has a line at the left, indented lines between its rows, and a gap of 6 px before and after it. `ui/TimelineMarks.kt`: a clip of zero length is a thin mark of 2 px with a hit area of ±3 px. `AppShortcuts.NEXT_PACK` and `PREVIOUS_PACK` (Ctrl, or Cmd on macOS). `displayName` shows Ctrl (`key.withCtrl`) and Cmd (`key.withCmd`). Tests: `PointPacksTest`, `PointsTablePacksTest`, `TimelineMarksTest`, `AppShortcutsTest`, `PointRowLabelFitTest` (check 1: the longest label of each language fits in 205 px). Not checked in the running app. |
 | E4 | Done | `MatchStats.compute` has `details` and `advanced`. `DetailStats` has the serve and ending counts. `StatRows` has the rows of advanced mode (`MatchStat.advanced`), the group `ENDINGS`, and `StatCoverage` ("In 40 points with details" under the row in the Stats tab; the card shows no coverage). The point lengths skip the fault, double fault, and let clips in all modes. `AVERAGE_GAP` is removed. Tests: `MatchStatsTest`, `StatRowsTest`. |
-| E5 | Done | `ui/tabs/points/ErrorKindQuestion.kt`: `ErrorKindQuestion` keeps the state of the question (open or closed, the target clip, the digit keys) and gives the clip of the strip (`stripClip`). `ui/ErrorKindStrip.kt` is the strip under the point bar (`SwingPointsPanel`, south of the point bar, out of the video area). The option "Ask error kind" is a switch in `ScoringModeBar` (advanced mode only) and writes `ScoreV1.askErrorKind`. The default for new projects is in More → Settings, card Scoring (`ScoringModeDefaults.loadAskErrorKind`, default off). `PointsScoring.load` gives it to a new project with the default mode. `PointsScoring.onEscape` closes the question before `Keybindings.cancelPending` cancels the pending point. Help: `help.advanced.note.9` and `help.advanced.note.10`. Tests: `ErrorKindQuestionTest`, `PointsScoringErrorKindTest`. Not checked in the running app. |
+| E5 | Done | `ui/tabs/points/ErrorKindQuestion.kt`: `ErrorKindQuestion` keeps the state of the question (open or closed, the target clip, the digit keys) and gives the clip of the strip (`stripClip`). `ui/ErrorKindStrip.kt` is the strip under the point bar (`SwingPointsPanel`, south of the point bar, out of the video area). The option "Ask error kind" is a switch in `ScoreSettingsDialog` (dim in basic mode, B-73) and writes `ScoreV1.askErrorKind`. The default for new projects is in More → Settings, card Scoring (`ScoringModeDefaults.loadAskErrorKind`, default off). `PointsScoring.load` gives it to a new project with the default mode. `PointsScoring.onEscape` closes the question before `Keybindings.cancelPending` cancels the pending point. Help: `help.advanced.note.9` and `help.advanced.note.10`. Tests: `ErrorKindQuestionTest`, `PointsScoringErrorKindTest`. Not checked in the running app. |
 | E6 | Done | `OverlaySpan.serveMark` and `ScoreboardDisplay.serveMark`. `ScoreboardTimelineBuilder.secondServeIds(points, score)` gives the 2nd-serve clips, and `build` takes them as `secondServeIds`. `ScoreboardBadge` shows the mark as a dark tab in one row with the deciding point badge. In a full video, the mark shows from the end of the fault to the end of the 2nd-serve clip. Tests: `ScoreboardServeMarkTest`, `VideoTextFit`. |
 
 ### Domain rules in the code
@@ -667,8 +668,8 @@ the running app yet. Do these checks before the release:
    each button, and no label was readable. Now the ending buttons are in a
    second row of the point bar (`EndingsRow`), over the full width. With
    the short labels, each half starts with "Point for {name}".
-2. The mode bar, the "Ask error kind" switch, the "Who serves?" row, and the
-   error kind strip. With "Ask error kind" on, the video does not move when
+2. The "Scoring mode" group in Scoring rules (B-73), the "Ask error kind"
+   switch, the "Who serves?" row, and the error kind strip. With "Ask error kind" on, the video does not move when
    the strip shows or hides (B-72).
 3. The toast over the native video window.
    Found on 2026-11-14: in full screen and after a wake, the mpv window was
@@ -691,5 +692,6 @@ Added on 2026-11-14. The items are in `docs/backlog.md`.
 - B-72: the error kind strip changes the height of the video area. Thus
   the video jumps. Implemented on 2026-11-14 with `ErrorKindSlot`.
 - B-73: move the mode switch and "Ask error kind" from the Points tab to
-  the settings of the project.
+  the settings of the project. Implemented on 2026-11-15: they are in the
+  Scoring rules dialog.
 - B-74: statistics insights from the data of advanced mode.

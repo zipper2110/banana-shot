@@ -8,6 +8,7 @@ import org.litvin.scoring.PointDetailV1
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoringMode
+import org.litvin.ui.tabs.points.ui.ScoreSettingsEditor
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.ActionEvent
@@ -103,7 +104,8 @@ class PointsScoringEndingsTest {
     fun `with no serve mark, advanced mode asks who serves before the ending keys work`() = withScoring(
         ScoreV1(),
     ) { dir, scoring, requests, keys ->
-        scoring.controls.button("points-scoring-mode-1").doClick()
+        // Scoring rules → Advanced (B-73).
+        scoring.saveScoringRules()
         keys.press("1")
         assertEquals(emptyList(), requests)
 
@@ -126,13 +128,13 @@ class PointsScoringEndingsTest {
                 val scoring = PointsScoring(
                     onStep = {}, onToggleFavorite = {}, onScoreChanged = {}, onError = {}, onOverlayChanged = {},
                     onScoreRequest = { requests += it }, loadFrame = {}, confirmServerChange = confirm,
+                    scoreSettingsEditor = ScoreSettingsEditor { _, current -> current.copy(scoringMode = ScoringMode.ADVANCED) },
                 )
                 scoring.load(dir.path)
                 scoring.setPoints(listOf(point))
                 scoring.select("A")
                 val target = JPanel()
                 // The mode bar is a part of the test tree, so that its buttons can be found by name.
-                scoring.controls.add(scoring.modeBar)
                 scoring.installKeys(target) { false }
                 block(dir, scoring, requests, Keys(target))
             }

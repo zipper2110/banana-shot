@@ -9,6 +9,7 @@ import org.litvin.scoring.PointDetailV1
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoringMode
+import org.litvin.ui.tabs.points.ui.ScoreSettingsEditor
 import java.awt.Component
 import java.awt.Container
 import java.io.File
@@ -44,7 +45,8 @@ class PointsScoringServeTest {
 
     @Test
     fun `X is not active while the point bar asks who serves`() = withScoring(ScoreV1()) { _, scoring, requests, keys, _ ->
-        scoring.controls.button("points-scoring-mode-1").doClick()
+        // Scoring rules → Advanced (B-73).
+        scoring.saveScoringRules()
         keys.press("X")
         assertEquals(emptyList(), requests)
         keys.press("L")
@@ -138,12 +140,12 @@ class PointsScoringServeTest {
                 val scoring = PointsScoring(
                     onStep = {}, onToggleFavorite = {}, onScoreChanged = {}, onError = {}, onOverlayChanged = {},
                     onScoreRequest = { requests += it }, loadFrame = {}, onServeNumber = { serves += it },
+                    scoreSettingsEditor = ScoreSettingsEditor { _, current -> current.copy(scoringMode = ScoringMode.ADVANCED) },
                 )
                 scoring.load(dir.path)
                 scoring.setPoints(listOf(fault, zero))
                 scoring.select("F")
                 val target = JPanel()
-                scoring.controls.add(scoring.modeBar)
                 scoring.installKeys(target) { false }
                 block(dir, scoring, requests, PointsScoringEndingsTest.Keys(target), serves)
             }

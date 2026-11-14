@@ -8,6 +8,7 @@ import org.litvin.scoring.FinalSetRule
 import org.litvin.scoring.MatchFormatPreset
 import org.litvin.scoring.MatchRulesV1
 import org.litvin.scoring.MatchStructure
+import org.litvin.scoring.ScoringMode
 import org.litvin.scoring.Sport
 import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DialogGroup
@@ -21,6 +22,7 @@ import org.litvin.ui.commons.TextRun
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.WrapText
+import org.litvin.ui.tabs.points.ScoringModeDefaults
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -53,6 +55,10 @@ data class ScoreSettings(
     val player2ColorHex: String,
     val rules: MatchRulesV1,
     val sport: Sport = Sport.TENNIS,
+    /** The scoring mode of the project (B-68). Only tennis projects show it (B-73). */
+    val scoringMode: ScoringMode = ScoringMode.BASIC,
+    /** The option "Ask error kind" of advanced mode (B-68, "Follow-up questions"). */
+    val askErrorKind: Boolean = false,
 )
 
 /** Opens the score settings and returns the saved values, or null after Cancel. Tests replace the dialog with a fake. */
@@ -62,7 +68,7 @@ fun interface ScoreSettingsEditor {
 
 /**
  * Modal "Scoring settings" dialog: player names and colors, the sport, the match format (point counting rules),
- * and the fully manual scoring option. The layout comes from design/dialogs-redesign/scoring-settings.html.
+ * the scoring mode of a tennis project (B-73), and the fully manual scoring option. The layout comes from design/dialogs-redesign/scoring-settings.html.
  *
  * The format list holds popular formats. The deuce rule shows under the format, because the formats do not set it.
  * The other rule controls are under "Custom scoring rules". They show the rules of the selected format.
@@ -72,7 +78,7 @@ fun interface ScoreSettingsEditor {
  * The sport sets the formats in the list, the deuce rules, and the names of the sides ("Player" or "Team").
  * A change of the sport resets the rules to the defaults of the new sport.
  */
-class ScoreSettingsDialog private constructor(
+class ScoreSettingsDialog internal constructor(
     owner: Window?,
     initial: ScoreSettings,
 ) : JDialog(owner, tr("points.scoringRules"), Dialog.ModalityType.APPLICATION_MODAL) {
@@ -100,9 +106,12 @@ class ScoreSettingsDialog private constructor(
 
     private var rules = initial.rules.normalized()
     private var sport = initial.sport
+    private var mode = initial.scoringMode
     private var player1Color = initial.player1ColorHex
     private var player2Color = initial.player2ColorHex
-    private var result: ScoreSettings? = null
+    /** The saved values, or null while the dialog is open and after Cancel. */
+    internal var result: ScoreSettings? = null
+        private set
     private var updatingControls = false
 
     private val player1Name = nameField("score-settings-player-1-name", initial.player1Name)
@@ -153,6 +162,24 @@ class ScoreSettingsDialog private constructor(
         "score-settings-serve-turn",
         MatchRulesV1.SERVE_TURN_POINTS_OPTIONS.map { SegmentedChoice.Option(it, tr("rules.serveTurn.points", "count" to it)) },
     )
+    private val modeChoice = SegmentedChoice(
+        "score-settings-mode",
+        ScoringMode.entries.map {
+            SegmentedChoice.Option(it, ScoringModeDefaults.label(it), tooltip = ScoringModeDefaults.tooltip(it))
+        },
+    )
+    private val modeDescription = WrapText("", UiKit.font(12f), Palette.FG_2, 1.5f, WIDTH).apply {
+        name = "score-settings-mode-description"
+    }
+    private val askErrorKind = SwitchBox(tr("points.mode.askErrorKind")).apply {
+        name = "score-settings-ask-error-kind"
+        isSelected = initial.askErrorKind
+    }
+    private val askErrorKindHint = WrapText(ASK_ERROR_KIND_HINT, UiKit.font(12f), Palette.FG_2, 1.5f, WIDTH)
+
+    /** The scoring mode: only for tennis projects (B-68, B-73). */
+    private val modeGroup = DialogGroup(tr("points.mode.caption"), Material2MZ.SPORTS_TENNIS, "score-settings-mode-group")
+
     private val manualScoring = SwitchBox(tr("scoreSettings.manual")).apply {
         name = "score-settings-manual"
         toolTipText = tr("scoreSettings.manual.tooltip")
@@ -197,6 +224,12 @@ class ScoreSettingsDialog private constructor(
         totalPoints.onChange { value -> update { it.copy(totalPoints = value) } }
         serveTurn.onChange { value -> update { it.copy(serveTurnPoints = value) } }
         manualScoring.addActionListener { update { it.copy(manualScoring = manualScoring.isSelected) } }
+        modeChoice.onChange { value ->
+            if (updatingControls) return@onChange
+            mode = value
+            syncControls()
+        }
+        askErrorKind.addActionListener { syncControls() }
         player1ColorButton.addActionListener {
             chooseColor(tr("scoreSettings.sideColor", "side" to sport.defaultSideName(1)), player1Color)?.let { player1Color = it }
             syncControls()
@@ -226,6 +259,7 @@ class ScoreSettingsDialog private constructor(
         val body = Stack(pad = Insets(8, DialogKit.PAD_X, 14, DialogKit.PAD_X), gap = 12).apply {
             add(playersGroup())
             add(formatGroup())
+            add(modeGroup())
             add(manualGroup())
         }
         contentPane = DialogKit.content(
@@ -273,10 +307,23 @@ class ScoreSettingsDialog private constructor(
         }
     }
 
+    /** Basic or Advanced, with the description of the selected mode, and the option "Ask error kind" of advanced mode. */
+    private fun modeGroup() = modeGroup.apply {
+        wide(modeChoice)
+        text(modeDescription, top = 2)
+        wide(askErrorKind, line = true)
+        text(askErrorKindHint, top = 2)
+    }
+
     /** Opens or closes "Custom scoring rules". The dialog grows or shrinks, and its top edge stays. */
     private fun showCustomRules(open: Boolean) {
         if (open == customRulesToggle.open) return
         setCustomRulesVisible(open)
+        packKeepingTop()
+    }
+
+    /** Sizes the dialog to its content again. The top edge stays. */
+    private fun packKeepingTop() {
         val left = x
         val top = y
         DialogKit.packToScreen(this)
@@ -342,6 +389,8 @@ class ScoreSettingsDialog private constructor(
         player2ColorButton.getAccessibleContext().accessibleName = tr("scoreSettings.sideColor", "side" to value.defaultSideName(2))
         fillFormats()
         syncControls()
+        // A tennis project shows the scoring mode, and the other sports do not.
+        if (isShowing) packKeepingTop()
     }
 
     private fun manualGroup() = DialogGroup(tr("scoreSettings.manualGroup"), Material2MZ.TOUCH_APP).apply {
@@ -416,6 +465,14 @@ class ScoreSettingsDialog private constructor(
             formatGroup.aside.text = if (automatic) "" else tr("scoreSettings.formatGroup.manual")
             manualHint.runs = listOf(TextRun(MANUAL_HINT, UiKit.font(12f), if (rules.manualScoring) Palette.FG_2 else Palette.FG_3))
 
+            modeGroup.isVisible = sport == Sport.TENNIS
+            modeChoice.selected = mode
+            modeDescription.runs = listOf(TextRun(ScoringModeDefaults.tooltip(mode), UiKit.font(12f), Palette.FG_2))
+            // "Ask error kind" is an option of advanced mode. In basic mode, it keeps its value but is dim.
+            val advanced = mode == ScoringMode.ADVANCED
+            askErrorKind.isEnabled = advanced
+            askErrorKindHint.runs = listOf(TextRun(ASK_ERROR_KIND_HINT, UiKit.font(12f), if (advanced) Palette.FG_2 else Palette.FG_3))
+
             player1ColorButton.color = colorOf(player1Color)
             player2ColorButton.color = colorOf(player2Color)
         } finally {
@@ -436,6 +493,8 @@ class ScoreSettingsDialog private constructor(
             player2ColorHex = player2Color,
             rules = rules.normalized(),
             sport = sport,
+            scoringMode = mode,
+            askErrorKind = askErrorKind.isSelected,
         )
         dispose()
     }
@@ -487,6 +546,7 @@ class ScoreSettingsDialog private constructor(
 }
 
 private val MANUAL_HINT: String get() = tr("scoreSettings.manual.hint")
+private val ASK_ERROR_KIND_HINT: String get() = tr("points.mode.askErrorKind.tooltip")
 
 /** A full-width row that opens and closes the rows under it: the text on the left and a chevron on the right. */
 private class DisclosureRow(private val text: String, componentName: String) : JButton() {

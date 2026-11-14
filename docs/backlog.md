@@ -498,6 +498,19 @@ The work for the paid version is in `backlog-paid.md`.
   Points tab shows the current mode in a small label.
 - Done when: the Points tab has no mode bar, and the user changes the mode
   and "Ask error kind" of the project in the settings.
+- Implemented on 2026-11-15. Decisions for the open questions:
+  - The project settings are the Scoring rules dialog
+    (`ScoreSettingsDialog`). It has a new group "Scoring mode" with Basic
+    and Advanced, and the switch "Ask error kind". Only a tennis project
+    shows the group. In basic mode, the switch is dim. A new project opens
+    this dialog one time, so the user sets the mode at the start.
+  - The Points tab shows no label of the mode. The point bar already shows
+    the mode: advanced mode has the ending buttons.
+- `ScoringModeBar` is removed. The help texts and the More → Settings text
+  name Scoring rules in all languages. Tests: `ScoreSettingsDialogModeTest`,
+  `PointsScoringServeTest`, `PointsScoringEndingsTest`,
+  `PointsScoringErrorKindTest`. Not checked in the running app (check 2 in
+  `docs/point-details/b-68-point-details.md`).
 
 ### B-74 Statistics insights from advanced scoring
 

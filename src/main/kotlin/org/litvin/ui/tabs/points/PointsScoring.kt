@@ -51,6 +51,7 @@ import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.scoring.ScoreboardSettingsV1
 import org.litvin.ui.tabs.points.ui.ScoreSettings
 import org.litvin.ui.tabs.points.ui.ScoreSettingsDialog
+import org.litvin.ui.tabs.points.ui.ScoreSettingsEditor
 import org.litvin.ui.tabs.points.ui.ScoreboardSettingsDialog
 import org.litvin.ui.tabs.points.ui.TimingContext
 import org.litvin.ui.tabs.points.ui.ScoringButton
@@ -77,8 +78,8 @@ import org.litvin.i18n.DisplayFormats
  * - Each change reads score.json, changes the outcomes or marks, and writes the file at once.
  * - [winnerColor] gives the color strip of a point row, and [pointMarks] its game, set and serve marks.
  * - [scoreboardEvents] draws the scoreboard over the video at the playhead (see [moveTo]).
- * - [modeBar] switches the scoring mode of a tennis project (B-68). In advanced mode, the point bar shows the ending
- *   buttons, and asks "Who serves?" when the project has no serve mark (see [ServeQuestion]).
+ * - The Scoring rules dialog sets the scoring mode of a tennis project (B-68, B-73). In advanced mode, the point bar
+ *   shows the ending buttons, and asks "Who serves?" when the project has no serve mark (see [ServeQuestion]).
  * - [errorStrip], under the point bar, asks the error kind after an error ending when the project option is on
  *   (B-68, see [ErrorKindQuestion]). The panel adds [errorStripSlot], which keeps the space of the strip (B-72).
  * - After each change of the score file, [PointDetails.resolve] writes the winners of the aces and the double faults
@@ -120,6 +121,8 @@ internal class PointsScoring(
     private val confirmServerChange: (title: String, message: String) -> Boolean = { _, _ -> true },
     /** The serve number (1 or 2) of the start button in advanced mode, or null in basic mode (B-68). */
     private val onServeNumber: (Int?) -> Unit = {},
+    /** Opens the Scoring rules dialog. Tests give a fake. */
+    private val scoreSettingsEditor: ScoreSettingsEditor = ScoreSettingsDialog,
 ) {
     /**
      * The serve button and the outcome buttons, in the point bar under the video.
@@ -144,8 +147,6 @@ internal class PointsScoring(
         onLet = { requestServeEnding(ScoreRequest.Let) },
     )
 
-    /** The scoring mode switch above the point bar. Only tennis projects show it. */
-    val modeBar = ScoringModeBar(onSelect = { selectMode(it) }, onAskErrorKind = { setAskErrorKind(it) })
     private val serveQuestion = ServeQuestion()
     private val errorQuestion = ErrorKindQuestion()
 
@@ -638,19 +639,6 @@ internal class PointsScoring(
     /** The clip of the error kind strip, or null when the strip does not show. */
     private fun errorStripClip(): String? = errorQuestion.stripClip(asksErrorKind(), selectedId, isErrorClip(selectedId))
 
-    /** The option "Ask error kind" of the project (B-68). Off closes the question. */
-    private fun setAskErrorKind(ask: Boolean) {
-        if (ask == score.askErrorKind) return
-        change { it.copy(askErrorKind = ask) }
-    }
-
-    /** The user selected a mode in the mode switch. A mode change deletes no data. */
-    private fun selectMode(mode: ScoringMode) {
-        if (mode == score.scoringMode) return
-        change { it.copy(scoringMode = mode) }
-        serveQuestion.onModeSelected(score.isAdvanced, serverKnown())
-        render()
-    }
 
     /** The answer to "Who serves?": the serve mark of the pending point, or of the selected point. */
     private fun answerServer(player: Int) {
@@ -771,8 +759,11 @@ internal class PointsScoring(
             player2ColorHex = score.player2ColorHex,
             rules = score.rules,
             sport = score.sport,
+            scoringMode = score.scoringMode,
+            askErrorKind = score.askErrorKind,
         )
-        val result = ScoreSettingsDialog.edit(controls, current) ?: return
+        val result = scoreSettingsEditor.edit(controls, current) ?: return
+        val wasAdvanced = score.isAdvanced
         if (result.sport != score.sport) analytics.record(AnalyticsEvent.SportUsed(result.sport.analyticsSport()))
         change {
             it.copy(
@@ -782,8 +773,15 @@ internal class PointsScoring(
                 player2ColorHex = result.player2ColorHex,
                 rules = result.rules.normalized(),
                 sport = result.sport,
+                // A mode change deletes no data (B-68). "Ask error kind" off closes the question.
+                scoringMode = result.scoringMode,
+                askErrorKind = result.askErrorKind,
                 scoreSettingsReviewed = true,
             )
+        }
+        if (score.isAdvanced != wasAdvanced) {
+            serveQuestion.onModeSelected(score.isAdvanced, serverKnown())
+            render()
         }
     }
 
@@ -972,7 +970,6 @@ internal class PointsScoring(
     private var shownServeLabels: Pair<Int?, Int>? = null
 
     private fun renderPanel() {
-        modeBar.render(visible = projectDir != null && score.sport == Sport.TENNIS, mode = score.scoringMode, askErrorKind = score.askErrorKind)
         renderErrorStrip()
         val labels = serveLabels()
         shownServeLabels = labels

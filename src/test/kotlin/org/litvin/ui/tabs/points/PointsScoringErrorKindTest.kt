@@ -9,6 +9,7 @@ import org.litvin.scoring.PointDetailV1
 import org.litvin.scoring.ScoreIO
 import org.litvin.scoring.ScoreV1
 import org.litvin.scoring.ScoringMode
+import org.litvin.ui.tabs.points.ui.ScoreSettingsEditor
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.ActionEvent
@@ -154,15 +155,17 @@ class PointsScoringErrorKindTest {
     }
 
     @Test
-    fun `the option in the mode bar turns the question on and off for the project`() = withScoring(
+    fun `the option in Scoring rules turns the question on and off for the project`() = withScoring(
         asking.copy(askErrorKind = false),
     ) { dir, scoring, _, _ ->
-        val option = scoring.controls.find("points-ask-error-kind") as AbstractButton
-        assertTrue(option.isVisible)
-        option.doClick()
+        // The fake Scoring rules dialog turns the option over at each save (B-73).
+        scoring.saveScoringRules()
         assertTrue(ScoreIO.readForProjectDir(dir.path).askErrorKind)
-        option.doClick()
+        scoring.score(ScoreRequest.WithEnding(EndingChoice.P2_UNFORCED_ERROR), "A")
+        assertTrue(scoring.strip().isVisible)
+        scoring.saveScoringRules()
         assertFalse(ScoreIO.readForProjectDir(dir.path).askErrorKind)
+        assertFalse(scoring.strip().isVisible)
     }
 
     @Test
@@ -209,13 +212,12 @@ class PointsScoringErrorKindTest {
                 val scoring = PointsScoring(
                     onStep = {}, onToggleFavorite = {}, onScoreChanged = {}, onError = {}, onOverlayChanged = {},
                     onScoreRequest = { requests += it }, loadFrame = {},
+                    scoreSettingsEditor = ScoreSettingsEditor { _, current -> current.copy(askErrorKind = !current.askErrorKind) },
                 )
                 scoring.load(dir.path)
                 scoring.setPoints(listOf(point))
                 scoring.select("A")
                 val target = JPanel()
-                // The mode bar is a part of the test tree, so that its controls can be found by name.
-                scoring.controls.add(scoring.modeBar)
                 scoring.installKeys(target) { false }
                 block(dir, scoring, requests, Keys(target))
             }

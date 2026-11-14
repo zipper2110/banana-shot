@@ -502,8 +502,6 @@ class SwingPointsPanel(
             isOpaque = false
             add(JPanel(BorderLayout()).apply {
                 isOpaque = false
-                // The scoring mode switch is above the point bar (B-68).
-                add(scoring.modeBar, BorderLayout.NORTH)
                 add(buildPointBar(), BorderLayout.CENTER)
                 // The error kind strip is under the point bar, out of the video area (B-68, "Follow-up questions"). Its slot keeps
                 // the space of the strip, so that the video does not move when the strip shows or hides (B-72).

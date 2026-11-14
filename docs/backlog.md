@@ -444,3 +444,19 @@ The work for the paid version is in `backlog-paid.md`.
   mode.
 - Done when: the user marks a rally shot by shot, and the Stats tab shows
   the rally length in shots.
+
+### B-71 Announcements for viewers
+
+- Added on 2026-11-14. Show short announcements in the video for the
+  viewers, for example "Set point", "Match point", "Break point", "Break"
+  (after a break of serve), and maybe other events.
+- `ScoringEngine.PointStakes` already finds the set points, the match
+  points, and the break points. Now only the Stats tab (`MatchStats`) uses
+  them. The teaser concept of B-15 uses them too.
+- Related items: B-56 (the scoreboard after each point), P-1 and P-3 in
+  `backlog-paid.md` (the comment styles and the animations).
+- Open questions: free or paid version (B-66); the list of announcements;
+  where the announcement shows and for how long; whether the user can turn
+  off each announcement or change its text.
+- Done when: the export shows an announcement before each point that has a
+  set point, a match point, or a break point.

@@ -45,9 +45,10 @@ An item here has the prefix `P-`. The milestone B-66 is in this file too.
   - Maybe other features.
   - Maybe more than 5 exported videos per month. Probably not.
 - Open questions: the minimum price; whether to offer the lifetime license;
-  which other features go in the paid version; whether the free version gets
-  an export limit. The Pricing page now says that the free version has all
-  features, so an export limit changes that promise.
+  which other features go in the paid version (for example the announcements
+  of B-71); whether the free version gets an export limit. The Pricing page
+  now says that the free version has all features, so an export limit
+  changes that promise.
 - Done when: the user can buy the paid version, and the paid features work
   only with a valid subscription or license.
 

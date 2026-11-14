@@ -363,6 +363,158 @@ A review after the crash above found these risks:
   `Objc.frame()` gets a struct through `objc_msgSend`. That works only on
   Apple Silicon. An Intel build must use `objc_msgSend_stret`.
 
+### Result of the embed spike (2026-11-14)
+
+**Question.** Can the preview render inside the Java window, and not in a
+separate mpv child window? On 2026-11-14, macOS moved the child window about
+30 pt down over the controls, in full screen and after a wake. Commit
+`1ad1f03` fixed this, but the child window stays fragile. The first spike
+rejected the render API only because `glsl-shader-opts` works only with
+`gpu-next`. This spike checks a workaround for that blocker.
+
+**Test program.** Test Mac: MacBook Air M1, macOS 27.2, JDK 27, Homebrew mpv
+0.41.0, 60 Hz built-in display. The spike code is not production code:
+
+- `src/test/native/macos/mpv_gl_layer.m`: a `CAOpenGLLayer` that calls
+  `mpv_render_context_render` (`vo=libmpv`, OpenGL 3.2 core,
+  `hwdec=videotoolbox`). JNI attaches the layer to a heavyweight AWT `Canvas`
+  through the JAWT surface layers. The draw method is the method of the mpv
+  `cocoa-cb` layer: the mpv update callback calls `-display` on a serial
+  queue.
+- `src/test/kotlin/org/litvin/media/mpv/MpvRenderApiSpikeMain.kt`: the
+  modes `play`, `shader`, `osd`, `parity`, and `swing`. The build and run
+  commands are in the comments of the two files.
+
+Facts from the test program:
+
+- JAWT accepts only `JAWT_VERSION_9` (or 1.7) on macOS. The flag
+  `JAWT_MACOSX_USE_CALAYER` is only for version 1.4.
+- The JDK adds the layer as a sublayer of the `MTLLayer` of the Java window.
+  The JDK does not set the frame of the layer. The app must set it from the
+  bounds of the canvas (a component listener, as `MacVideoWindow` does now).
+- The bundled libmpv (`build-natives.sh`) has `macos-cocoa-cb`, which needs
+  OpenGL, so it most likely has the OpenGL render API too. Verify this before
+  you use it. The spike used the Homebrew libmpv.
+- Core Animation does not draw the layer while the Mac is locked or the
+  display is off. Thus all on-screen numbers below come from an unlocked Mac.
+  An own offscreen mode (a 60 Hz timer and an OpenGL framebuffer) gave the
+  same playback numbers.
+
+**1. 4K 60 fps playback.** Each run played 15 s in a 1200x675 pt canvas
+(2400x1350 pixels):
+
+| File | Renders/s | Dropped frames (decoder, output) | Render time mean / max | Intervals over 25 ms | CPU |
+|---|---|---|---|---|---|
+| H.264, 3840x2160, 60 fps, 40 Mbit/s | 60.0 | 0, 0 | 2.7 ms / 5.4 ms | 1 | 0.35 cores |
+| HEVC from a Pixel camera, 3840x2160, 60 fps | 60.0 | 0, 0 | 2.8 ms / 5.3 ms | 0 | 0.36 cores |
+
+`hwdec-current` was `videotoolbox`. The asynchronous layer mode
+(`asynchronous = YES`) also played with 0 dropped frames, but it had 14
+intervals over 25 ms. Use the `cocoa-cb` method. Answer: yes, 4K 60 fps
+plays smoothly.
+
+**2. Color and geometry controls with the shader values in the text.** The
+app can write the values into `tr-adjust.hook`: remove the `//!PARAM`
+blocks and the `//!WHEN` line, and add one `#define` for each value after the
+`//!HOOK` header. If `tr_active` is 0, the app sets no shader. `vo=gpu`
+compiles this shader with no change in the math. Results:
+
+- mpv keeps a loaded shader file by its path. A new text in the same file has
+  no effect. Each change needs a new file path in `glsl-shaders`.
+- Delay of one change while the video is paused, from the property set to the
+  first frame with the new values: median 40 ms, 38 to 77 ms (16 changes).
+  Add the debounce of the app to this.
+- During playback, one change each 100 ms (color and rotation): 59.5
+  renders/s, 5 dropped frames in 10 s, but 92 frame intervals over 25 ms (up
+  to 55 ms). Each change compiles the shader and stops the video for one to
+  three frames. The user sees a stutter at each change.
+- Now, with `gpu-next`, `glsl-shader-opts` changes only the shader uniforms
+  and does not compile the shader again.
+
+Answer: the controls work, but a change is slower than now, and a drag during
+playback stutters. The crop editor and the replay zoom (B-50) change the
+values on each mouse move, so they get the same stutter.
+
+**3. Scoreboard and comments.** The `osd-overlay` scoreboard and a `sub-add`
+ASS comment show in the correct place, also with the shader on (rotation 8°,
+contrast 1.4). The shader does not change them. Answer: yes.
+
+**4. Preview against the export.**
+
+- SDR: the 11 cases of `PreviewExportColorParityTest`, with the values in the
+  shader text. The largest difference of a patch mean is 1.3 codes of 255
+  (with `gpu-next`: 1 code). The mean difference is 0.2 to 0.4 codes. This
+  passes the limit of 4 codes.
+- HDR (the 32 patches as PQ BT.2020, 10 bit): the export does no tone
+  mapping, so the test compared the render API (`gpu`) with the current
+  preview (`gpu-next` in its own window). The mean difference is 26.6 codes,
+  the largest is 164 codes. The `gpu` renderer makes the mid grays brighter
+  (code 109 becomes 122, and with `gpu-next` 96) and keeps more saturation.
+  The `tone-mapping` values `spline`, `bt.2390`, and `bt.2446a` gave the same
+  result. `hable` was the closest (mean 17.6 codes). `gpu` has no
+  `tone-mapping-mode` option.
+
+Answer: SDR yes. HDR no: the tone mapping and the gamut mapping of `gpu` are
+different from `gpu-next`. HDR videos look different from now.
+
+**5. Swing over the video.** Screen captures on an unlocked Mac:
+
+- The video shows in the correct place in the Java window, also under the
+  title bar. The controls under the video stay visible.
+- A `JPopupMenu` and a modeless `JDialog` show over the video. Swing selects
+  a `HeavyWeightWindow` for a popup over a heavyweight canvas, also when
+  lightweight popups are enabled.
+- A Swing label in a higher `JLayeredPane` layer over the canvas does **not**
+  show. The video layer is a sublayer of the Java window layer, so it is
+  always on top of all Swing painting in that window.
+- A test put the video layer under the Java window layer and made that layer
+  not opaque. The video area was black, because Java paints the window layer
+  opaque. A transparent Java window must be undecorated, so this is not a
+  solution for the main window.
+- Another method: render offscreen, read the frame back, and paint it as a
+  `BufferedImage` in Swing. The readback of 2400x1350 pixels added 12 ms to
+  each frame (15.2 ms of 16.7 ms), and the upload in Java2D took 3 ms. This is
+  at the limit for 60 fps on an M1, and a larger window makes it worse.
+
+Answer: popups and dialogs yes (as now). A Swing component over the video
+no. The hints and the toasts still need separate windows.
+
+**What the embed solves.** mpv makes no window, so these risks go away:
+the move of the mpv window in full screen and after a wake, the search of the
+Java `NSWindow` by its frame and title, the `window-id` that can change, the
+`DispatchQueue.main.sync` calls of mpv at the window creation and close
+(the VoiceOver freeze), the window that does not start when the app is not in
+front, and the mpv Dock icon in a source run. The canvas gets the mouse
+events directly.
+
+**What the embed costs.** A new native part (a `CAOpenGLLayer` subclass and
+JAWT: a signed dylib in the natives, or JNA calls to the Objective-C runtime
+as in `MacMpvWindowClass`), OpenGL (deprecated by Apple), a stutter at each
+control change, the slower shader change, and a different HDR look. It does
+not give Swing over the video.
+
+**Recommendation: keep the child window.** The embed does not reach the main
+goal (Swing over the video), and it makes the color controls, the crop
+editor, and HDR worse. The child window works after `1ad1f03`. Look at the
+embed again if one of these occurs:
+
+- mpv adds `gpu-next` to the render API (libmpv). Then `glsl-shader-opts` and
+  the current tone mapping work with the render API, and the costs above
+  except the native part go away.
+- Users report more problems with the child window that a frame check cannot
+  fix.
+
+**Size of the work.**
+
+- Recommended way (keep the child window): no new work. Keep the frame check
+  of `1ad1f03`.
+- If the author selects the embed: about 2 to 3 weeks. The native layer and
+  its build and signing (about 1 week); the macOS path of
+  `MpvSwingMediaPlayerAdapter` (layer frame, lifecycle, sleep and wake, two
+  displays); the shader text and the debounce in `MpvShaderParams`; a new HDR
+  tone mapping check and a parity test for the render API; the checks by hand
+  of step 6 again.
+
 ## 2. Native files (libmpv and FFmpeg)
 
 ### Builds
@@ -1306,7 +1458,7 @@ Developer account. Do the steps with "No" while Apple reviews the enrollment.
 
 | # | Step | Size | Apple account | Status |
 |---|---|---|---|---|
-| 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike") |
+| 1 | **Preview spike.** Section 1 | 1 to 2 weeks | No | Done on 2026-11-01. Method: a child window (see "Result of the first spike"). The embed spike of 2026-11-14 recommends to keep the child window (see "Result of the embed spike") |
 | 2 | **Export.** Section 4 | A few days | No | Done on 2026-11-01. The analytics Worker and the cockpit were deployed on 2026-11-03 |
 | 3 | **Apple Developer account.** Section 8, "Apple Developer account" | Days of waiting | — | Done on 2026-11-02. The certificates, the API key, and the six secrets of the `macos-release` environment are in place. The Application certificate expires on 2027-12-02. Not tested yet: a real signature and a notarization (step 11) |
 | 4 | **Native files.** Section 2. Pinned, self-contained libmpv and FFmpeg for macOS arm64, the manifest, the script, and the natives release | 1 to 2 weeks | No | Done on 2026-11-02. `build-natives.sh`, the workflow "macOS natives" (it passes on macOS 15), the natives release `natives-2026-11`, `native-dependencies.json`, `get-native-dependencies.sh`, and the macOS part of `THIRD-PARTY-NOTICES.txt`. Not verified yet: the live preview on a Mac with macOS 15 |

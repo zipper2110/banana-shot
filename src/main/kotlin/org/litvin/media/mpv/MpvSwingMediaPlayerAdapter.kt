@@ -78,6 +78,12 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         private const val EDITOR_OVERLAY_ID = "1"
         private const val SCOREBOARD_OVERLAY_ID = "2"
 
+        /**
+         * The z order of the editor overlay. The scoreboard and the comments have z 0, so the outline and the handles
+         * draw above them. Without it, the shadow of a comment can hide the lower edge of the outline.
+         */
+        private const val EDITOR_OVERLAY_Z = "1"
+
         /** The id of the image overlay. The `overlay-add` ids are separate from the `osd-overlay` ids. */
         private const val IMAGE_OVERLAY_ID = "0"
         private const val EDITOR_MARGIN_VERTICAL = 0.07
@@ -738,7 +744,7 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
         val scale = osdWidth.toDouble() / canvas.width
         mpv.command(
             "osd-overlay", EDITOR_OVERLAY_ID, "ass-events", MpvAssOverlay.events(shapes, scale),
-            osdWidth.toString(), osdHeight.toString(), "0",
+            osdWidth.toString(), osdHeight.toString(), EDITOR_OVERLAY_Z,
         )
     }
 

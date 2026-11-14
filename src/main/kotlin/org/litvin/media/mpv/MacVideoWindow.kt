@@ -148,6 +148,7 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
             Objc.send(video, "orderWindow:relativeTo:", WINDOW_ABOVE, parentNumber)
             attached = true
         }
+        resetMousePassthrough(video)
         val frame = Objc.NSRect.ByValue().apply {
             x = target.canvas.x.toDouble()
             y = screenHeight - (target.canvas.y + target.canvas.height)
@@ -169,6 +170,20 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
         // mpv makes its window the key and the main window when it starts. The keyboard focus must stay in Java.
         if (Objc.sendByte(video, "isKeyWindow") != 0.toByte()) Objc.send(parentWindow, "makeKeyWindow")
         if (Objc.sendByte(video, "isMainWindow") != 0.toByte()) Objc.send(parentWindow, "makeMainWindow")
+    }
+
+    /**
+     * Sends the mouse passthrough of the mpv window to the window server again.
+     *
+     * The window server can lose the passthrough, for example after a change of the window order. AppKit then keeps
+     * `ignoresMouseEvents` true, so a second set to true sends nothing. Without the passthrough, the window server
+     * uses the alpha of the window: the mpv window gets the mouse on the comments and the scoreboard, and the canvas
+     * gets the mouse only on the video. Then the user cannot drag a comment by its text.
+     * A set to false and then to true makes AppKit send the value again.
+     */
+    private fun resetMousePassthrough(video: Pointer) {
+        Objc.sendByte(video, "setIgnoresMouseEvents:", 0)
+        Objc.sendByte(video, "setIgnoresMouseEvents:", 1)
     }
 
     private fun detach(video: Pointer) {

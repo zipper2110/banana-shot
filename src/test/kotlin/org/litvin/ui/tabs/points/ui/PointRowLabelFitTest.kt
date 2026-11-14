@@ -8,9 +8,9 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * B-68, check 1 of "Open questions": the row labels of advanced mode fit in the fixed width of the side column (360 px)
- * in all app languages. The label of a row starts at the number column and ends before the marks column ends. A row
- * with a GAME or SET badge has less space: there the label ends with "…".
+ * B-68, check 1 of "Open questions": the row labels of advanced mode fit in the fixed width of the side column
+ * ([TableColumns.SIDE_COLUMN_WIDTH]) in all app languages. The label of a row starts at the number column and ends
+ * before the marks column ends. A row with a GAME or SET badge has less space: there the label ends with "…".
  */
 class PointRowLabelFitTest {
     @Test
@@ -39,8 +39,8 @@ class PointRowLabelFitTest {
     }
 
     private companion object {
-        /** The side column is 360 px. The list has a scroll bar of about 12 px. */
-        const val ROW_WIDTH = 360 - 12
+        /** The list has a scroll bar of about 12 px. */
+        const val ROW_WIDTH = TableColumns.SIDE_COLUMN_WIDTH - 12
         const val LABEL_FONT_SIZE = 11.5f
     }
 }

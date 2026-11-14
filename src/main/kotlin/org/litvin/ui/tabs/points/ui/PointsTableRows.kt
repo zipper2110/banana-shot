@@ -24,26 +24,36 @@ import kotlin.math.ceil
 import org.litvin.i18n.tr
 
 /**
- * The columns of the points table: #, Start, Length, the marks, ★ and the row actions.
- * The widths: 34 px, 70 px, 50 px, the rest, 24 px and 82 px, with 5 px gaps.
+ * The columns of the points table: #, Start, Length, the marks and ★.
+ * The widths: 34 px, 70 px, 50 px, the rest and 24 px, with 5 px gaps.
  * The marks (game, set and serve) are at the right end of their column.
+ * The row actions have no column. They show only on hover, over the marks (see [TableRow.layoutActions]).
  */
 internal data class TableColumns(val width: Int) {
     val number = PAD_LEFT
     val start = number + 34 + GAP
     val length = start + 70 + GAP
     val lengthRight = length + 50
-    val actionsRight = width - PAD_RIGHT
-    val actions = actionsRight - ACTIONS
-    val star = actions - GAP - STAR
+
+    /** The right end of the row content. */
+    val right = width - PAD_RIGHT
+    val star = right - STAR
     val marksRight = star - GAP
+
+    /**
+     * The right end of the hover actions of all rows, before the ★ column. Thus the same buttons of different rows,
+     * for example Delete, are one above the other.
+     */
+    val actionsRight = star - GAP
 
     companion object {
         const val PAD_LEFT = 14
         const val PAD_RIGHT = 8
         const val GAP = 5
         const val STAR = 24
-        const val ACTIONS = 82
+
+        /** The width of the side column (B-11). The hover actions of a point row fit between Length and ★. */
+        const val SIDE_COLUMN_WIDTH = 300
     }
 }
 
@@ -148,16 +158,24 @@ internal abstract class TableRow(val visualIndex: Int, val startMs: Long) : JPan
         }
     }
 
-    /** Places the action buttons at the right end of the actions column, 2 px apart. */
-    protected fun layoutActions(buttons: List<JComponent>) {
-        val columns = TableColumns(width)
-        var x = columns.actionsRight
+    /** The left end of the action buttons, from the last layout. */
+    protected var actionsLeft = 0
+        private set
+
+    /**
+     * Places the action buttons 2 px apart, with the last button at [TableColumns.actionsRight]. The buttons show only
+     * on hover, so they have no column of their own: they cover the marks of a point row. [centerY] is the vertical
+     * center of the buttons.
+     */
+    protected fun layoutActions(buttons: List<JComponent>, centerY: Int = height / 2) {
+        var x = TableColumns(width).actionsRight
         for (button in buttons.asReversed()) {
             val size = button.preferredSize
             x -= size.width
-            button.setBounds(x, (height - size.height) / 2, size.width, size.height)
+            button.setBounds(x, centerY - size.height / 2, size.width, size.height)
             x -= 2
         }
+        actionsLeft = x + 2
     }
 
     companion object {
@@ -215,8 +233,6 @@ internal class PointRow(
     onToggleFavorite: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    /** Opens the replay editor of the point (B-50). */
-    onReplays: () -> Unit = {},
 ) : TableRow(visualIndex, point.startMs) {
 
     /** The number of the row: the pack number in advanced mode (B-68), else the position of the clip in the list. */
@@ -235,7 +251,6 @@ internal class PointRow(
         color = if (point.favorite) Palette.YELLOW else Palette.FG_3,
         side = 22,
     ).apply { name = "favorite-point-${point.id}" }
-    val replayButton = RowIconButton(Material2MZ.SLOW_MOTION_VIDEO, tr("points.replay.row.tooltip")).apply { name = "replays-point-${point.id}" }
     val editButton = RowIconButton(Material2AL.EDIT, tr("points.row.edit.tooltip")).apply { name = "edit-point-${point.id}" }
     val deleteButton = RowIconButton(Material2AL.CLOSE, tr("pointEdit.delete.title"), danger = true).apply { name = "delete-point-${point.id}" }
 
@@ -251,11 +266,9 @@ internal class PointRow(
         // The row shows the tooltips of the marks (see getToolTipText).
         toolTipText = ""
         add(favoriteButton)
-        add(replayButton)
         add(editButton)
         add(deleteButton)
         favoriteButton.addActionListener { onToggleFavorite() }
-        replayButton.addActionListener { onReplays() }
         editButton.addActionListener { onEdit() }
         deleteButton.addActionListener { onDelete() }
         onStateChanged()
@@ -264,16 +277,19 @@ internal class PointRow(
     override fun onStateChanged() {
         // The star of a favorite stays visible. The other buttons show only while the pointer is over the row.
         favoriteButton.isVisible = point.favorite || hovered
-        replayButton.isVisible = hovered
         editButton.isVisible = hovered
         deleteButton.isVisible = hovered
     }
 
     override fun doLayout() {
         val columns = TableColumns(width)
+        // The star and the actions have the same vertical center. In a row with a label, it is the center of the first
+        // line, so that the buttons are above the label.
+        val centerY = if (labelText != null) (LINE_TOP + LINE_HEIGHT / 2).toInt() else height / 2
         val star = favoriteButton.preferredSize
-        favoriteButton.setBounds(columns.star + (TableColumns.STAR - star.width) / 2, (height - star.height) / 2, star.width, star.height)
-        layoutActions(listOf(replayButton, editButton, deleteButton))
+        favoriteButton.setBounds(columns.star + (TableColumns.STAR - star.width) / 2, centerY - star.height / 2, star.width, star.height)
+        // The actions come before the star.
+        layoutActions(listOf(editButton, deleteButton), centerY)
     }
 
     override fun paintComponent(g: Graphics) {
@@ -313,7 +329,8 @@ internal class PointRow(
             UiKit.drawText(g2, Timecode.format(point.startMs), textFont, if (dim) Palette.FG_3 else Palette.FG, columns.start.toFloat(), top, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
             UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), top, h)
-            val marksLeft = marks?.let { paintMarks(g2, it, columns.marksRight) } ?: columns.marksRight
+            // On hover, the action buttons cover the marks, so the row does not paint the marks.
+            val marksLeft = marks?.takeUnless { hovered }?.let { paintMarks(g2, it, columns.marksRight) } ?: columns.marksRight
             if (label != null) {
                 // The label ends before the marks. A label that does not fit ends with "…".
                 val right = minOf(marksLeft, columns.marksRight) - TableColumns.GAP
@@ -383,6 +400,8 @@ internal class PointRow(
 
     override fun getToolTipText(event: MouseEvent): String? {
         val marks = marks() ?: return null
+        // On hover, the action buttons cover the marks. The texts of the row (number, start, length) give all tips.
+        if (hovered) return if (event.x < TableColumns(width).lengthRight + TableColumns.GAP) allTips(marks) else null
         var right = TableColumns(width).marksRight
         marks.milestone?.let { text ->
             val left = right - milestoneWidth(marks, text)
@@ -396,6 +415,21 @@ internal class PointRow(
         }
         if (marks.overridden && event.x in (right - OVERRIDE)..right) return tr("points.row.override.tooltip")
         return if (marks.afterMatch) tr("points.row.afterMatch.tooltip") else null
+    }
+
+    /** The tips of all marks of the row, one on each line, or null when the row has no tip. */
+    private fun allTips(marks: PointMarks): String? {
+        val tips = listOfNotNull(
+            marks.overridden.takeIf { it }?.let { tr("points.row.override.tooltip") },
+            marks.serveTip.takeIf { marks.serveColor != null && it.isNotBlank() },
+            marks.milestoneTip.takeIf { marks.milestone != null && it.isNotBlank() },
+            marks.afterMatch.takeIf { it }?.let { tr("points.row.afterMatch.tooltip") },
+        )
+        return when (tips.size) {
+            0 -> null
+            1 -> tips.single()
+            else -> "<html>" + tips.joinToString("<br>") { Html.escapeHtml(it) } + "</html>"
+        }
     }
 
     private companion object {
@@ -460,7 +494,8 @@ internal class CommentRow(
             paintRowBackground(g2, Palette.INSET, color)
             val columns = TableColumns(width)
             val left = TableColumns.PAD_LEFT.toFloat()
-            val textRight = columns.actions - TableColumns.GAP
+            // The text uses the full width. On hover, it ends before Edit and Delete.
+            val textRight = if (hovered) actionsLeft - TableColumns.GAP else columns.right
 
             // Line 1: bubble icon, "Comment #1" in the comment color, then the time and duration.
             val lineTop = 5f
@@ -567,7 +602,7 @@ internal class ReplayRow(
             UiKit.drawText(g2, added, textFont, Palette.FG_3, addedX, 0f, h)
             // A replay row has no marks and no star, so the details can use these columns, up to Delete on hover.
             val metaX = columns.lengthRight + DETAILS_GAP
-            val metaRight = if (hovered) columns.actions - TableColumns.GAP else columns.actionsRight
+            val metaRight = if (hovered) actionsLeft - TableColumns.GAP else columns.right
             ReplayDetails.paint(g2, detailItems, textFont, Palette.FG_3, metaX, 0f, h, metaRight)
         } finally {
             g2.dispose()

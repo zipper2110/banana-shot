@@ -3,20 +3,22 @@ package org.litvin.ui.tabs.points.ui
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.Graphics
 import javax.swing.BorderFactory
-import javax.swing.Box
 import javax.swing.Icon
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import kotlin.math.ceil
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
 
-/** The "Points & events" title with the counts of marked points, favorites and comments. */
+/**
+ * The "Points & events" title with the counts of marked points, favorites and comments. The counts are on one line.
+ * When they do not fit in the width of the side column, a count goes to the next line.
+ */
 internal class EventsHeader : JPanel(null) {
     val markedCount = CountLabel(UiKit.icon(Material2AL.FLAG, 14, Palette.LIME), "points.count.marked", tr("points.count.marked.tooltip")).apply {
         name = "points-point-count"
@@ -27,20 +29,13 @@ internal class EventsHeader : JPanel(null) {
     val commentCount = CountLabel(UiKit.icon(Material2AL.CHAT_BUBBLE_OUTLINE, 14, Palette.FG_2), "points.count.comments", tr("points.count.comments.tooltip")).apply {
         name = "points-comment-count"
     }
-    private val counts = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-        isOpaque = false
-        add(markedCount)
-        add(Box.createHorizontalStrut(14))
-        add(favoriteCount)
-        add(Box.createHorizontalStrut(14))
-        add(commentCount)
-    }
+    private val counts = listOf(markedCount, favoriteCount, commentCount)
     private val titleFont get() = UiKit.font(16f, UiKit.Weight.SEMIBOLD)
 
     init {
         isOpaque = false
         border = BorderFactory.createEmptyBorder(16, 14, 12, 14)
-        add(counts)
+        counts.forEach(::add)
     }
 
     fun setCounts(marked: Int, favorites: Int, comments: Int) {
@@ -49,14 +44,47 @@ internal class EventsHeader : JPanel(null) {
         commentCount.count = comments
     }
 
+    /** The number of lines of the counts at the last preferred size. */
+    private var preferredLines = 1
+
     override fun getPreferredSize(): Dimension {
         val insets = insets
-        return Dimension(0, insets.top + TITLE_HEIGHT + TITLE_GAP + counts.preferredSize.height + insets.bottom)
+        preferredLines = placeCounts(width) { _, _, _ -> }
+        return Dimension(0, insets.top + TITLE_HEIGHT + TITLE_GAP + countsHeight(preferredLines) + insets.bottom)
     }
 
     override fun doLayout() {
+        val lines = placeCounts(width) { label, x, y -> label.setBounds(x, y, label.preferredSize.width, label.preferredSize.height) }
+        // The first layout comes after the first preferred size, which did not know the width.
+        if (lines != preferredLines) SwingUtilities.invokeLater { revalidate() }
+    }
+
+    /**
+     * Places the counts from left to right, [COUNT_GAP] apart. A count that does not fit in [width] goes to the next
+     * line. A width of 0 (before the first layout) gives one line. Returns the number of lines.
+     */
+    private fun placeCounts(width: Int, place: (CountLabel, Int, Int) -> Unit): Int {
         val insets = insets
-        counts.setBounds(insets.left, insets.top + TITLE_HEIGHT + TITLE_GAP, width - insets.left - insets.right, counts.preferredSize.height)
+        val right = if (width > 0) width - insets.right else Int.MAX_VALUE
+        var x = insets.left
+        var y = insets.top + TITLE_HEIGHT + TITLE_GAP
+        var lines = 1
+        counts.forEach { label ->
+            val w = label.preferredSize.width
+            if (x > insets.left && x + w > right) {
+                x = insets.left
+                y += label.preferredSize.height + LINE_GAP
+                lines++
+            }
+            place(label, x, y)
+            x += w + COUNT_GAP
+        }
+        return lines
+    }
+
+    private fun countsHeight(lines: Int): Int {
+        val h = counts.maxOf { it.preferredSize.height }
+        return h * lines + LINE_GAP * (lines - 1)
     }
 
     override fun paintComponent(g: Graphics) {
@@ -71,6 +99,8 @@ internal class EventsHeader : JPanel(null) {
     private companion object {
         const val TITLE_HEIGHT = 20
         const val TITLE_GAP = 6
+        const val COUNT_GAP = 14
+        const val LINE_GAP = 4
     }
 }
 

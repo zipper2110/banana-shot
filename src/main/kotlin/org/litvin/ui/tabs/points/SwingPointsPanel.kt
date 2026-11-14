@@ -181,7 +181,7 @@ class SwingPointsPanel(
     private var keybindings: Keybindings? = null
 
     // The width of the side column
-    private val SIDE_COLUMN_WIDTH = 360
+    private val SIDE_COLUMN_WIDTH = org.litvin.ui.tabs.points.ui.TableColumns.SIDE_COLUMN_WIDTH
     private val POINT_BAR_GAP = 16
 
     // The gap between the two rows of the point bar in advanced mode (B-68)

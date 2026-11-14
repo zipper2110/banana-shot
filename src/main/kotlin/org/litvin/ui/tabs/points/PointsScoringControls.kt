@@ -71,9 +71,9 @@ internal data class PointControlsState(
  * - [navigator], at the top of the side column: "Point x / y" with the favorite star, and Previous and Next under it.
  * - This panel, in the point bar under the video, after Point start: "Winner:", the three outcome buttons,
  *   and Override score at the right end. The outcome buttons fill the remaining width.
- *   In advanced mode (B-68), the ending buttons take the place of the outcome buttons. X, L, and W are between the
- *   two groups. Q and E have no buttons.
- *   While the bar asks "Who serves?", it shows the question and one button for each player.
+ *   In advanced mode (B-68), X, L, and W take the place of the outcome buttons. Q and E have no buttons.
+ * - [endingsRow], a second row of the point bar in advanced mode: the ending buttons over the full width of the bar,
+ *   or the question "Who serves?" with one button for each player.
  * - [serveButton], at the start of the point bar, before Point start. The point bar places it.
  */
 internal class PointsScoringControls(
@@ -158,6 +158,10 @@ internal class PointsScoringControls(
             addActionListener { onServeAnswer(player) }
         }
     }
+
+    /** The second row of the point bar in advanced mode (B-68). The point bar places it under the first row. */
+    val endingsRow = EndingsRow(endings, serveQuestion, serveAnswers)
+
     private val winnerLabel = JLabel(tr("points.outcome.caption")).apply {
         name = "points-winner-label"
         font = UiKit.font(12f)
@@ -172,9 +176,7 @@ internal class PointsScoringControls(
 
     init {
         isOpaque = false
-        listOf(winnerLabel, player1Button, noPointButton, player2Button, overrideButton, serveQuestion, faultButton, letButton).forEach(::add)
-        endings.buttons.values.forEach(::add)
-        serveAnswers.forEach(::add)
+        listOf(winnerLabel, player1Button, noPointButton, player2Button, overrideButton, faultButton, letButton).forEach(::add)
         previousButton.addActionListener { onPrevious() }
         nextButton.addActionListener { onNext() }
         favoriteButton.addActionListener { onToggleFavorite() }
@@ -196,6 +198,7 @@ internal class PointsScoringControls(
         letButton.setPlayer(tr("points.let"), Palette.LINE_6)
         letButton.toolTipText = tr("points.let.tooltip", "key" to AppShortcuts.LET.display)
         endings.setPlayers(players)
+        endingsRow.setPlayers(players)
         serveAnswers.forEach { button ->
             val player = if (button === serveAnswers[0]) 1 else 2
             button.setPlayer(players.name(player), players.color(player))
@@ -259,6 +262,8 @@ internal class PointsScoringControls(
         renderMode(state)
         revalidate()
         repaint()
+        endingsRow.revalidate()
+        endingsRow.repaint()
         navigator.revalidate()
         navigator.repaint()
     }
@@ -274,24 +279,28 @@ internal class PointsScoringControls(
             faultButton.toolTipText = tr("points.fault.tooltip", "key" to AppShortcuts.SERVE_FAULT.display)
         }
         val serveEnding = state.serveEnding.takeIf { state.selected && !state.pending }
-        faultButton.update(true, serveEnding == Ending.SERVE_FAULT, false)
+        // X needs the server, so it is not active while the bar asks "Who serves?".
+        faultButton.update(!state.askServer, serveEnding == Ending.SERVE_FAULT, false)
         letButton.update(state.pending || !(state.selected && state.zeroLength), serveEnding == Ending.LET, false)
     }
 
     private fun faultLabel(serve: Int): String = if (serve == 2) tr("points.fault.double") else tr("points.fault")
 
-    /** Shows the buttons of the mode: Q, W, E in basic mode; the ending buttons and W in advanced mode; or the question. */
+    /**
+     * Shows the buttons of the mode: Q, W, E in basic mode; X, L, W, and the row of the ending buttons in advanced mode.
+     * While the bar asks "Who serves?", that row shows the question.
+     */
     private fun renderMode(state: PointControlsState) {
         val asking = state.advanced && state.askServer
         player1Button.isVisible = !state.advanced
         player2Button.isVisible = !state.advanced
-        noPointButton.isVisible = !asking
+        endingsRow.isVisible = state.advanced
         endings.buttons.forEach { (choice, button) ->
             // Only the group of the server shows the ace button.
             button.isVisible = state.advanced && !asking && (choice.ending != Ending.ACE || state.endingServer == choice.winner)
         }
-        faultButton.isVisible = state.advanced && !asking
-        letButton.isVisible = state.advanced && !asking
+        faultButton.isVisible = state.advanced
+        letButton.isVisible = state.advanced
         serveQuestion.isVisible = asking
         serveAnswers.forEach { it.isVisible = asking }
     }
@@ -332,7 +341,7 @@ internal class PointsScoringControls(
 
     override fun getPreferredSize(): Dimension {
         val outcomes = if (state.advanced) {
-            advancedWidths(full = false).let { it.sum() + gapsOf(it.size) }
+            middleWidths().let { it.sum() + OUTCOME_GAP * (it.size - 1) }
         } else {
             labelWidth() + LABEL_GAP + outcomesWidth()
         }
@@ -343,36 +352,19 @@ internal class PointsScoringControls(
 
     /**
      * The width that shows "Winner:" and the full names of the outcome buttons, with the pencil of Override score.
-     * In advanced mode, it is the width of the short labels of the ending buttons, so that Point start keeps its text
-     * when the short labels fit.
+     * In advanced mode, it is the width of X, L, and W, because the ending buttons are in [endingsRow].
      */
     fun fullNamesWidth(): Int {
         val pencil = GROUP_GAP + overrideButton.preferredWidthFor("")
         if (!state.advanced) return labelWidth() + LABEL_GAP + outcomeButtons.sumOf { it.fullWidth() } + OUTCOME_GAP * 2 + pencil
-        return advancedWidths(full = false).let { it.sum() + gapsOf(it.size) } + pencil
+        return middleWidths().let { it.sum() + OUTCOME_GAP * (it.size - 1) } + pencil
     }
 
-    /** The buttons of advanced mode in the order of the point bar: the left group, X, L, W, and the right group. */
-    private fun advancedButtons(): List<OutcomeButton> {
-        val visible = endings.buttons.values.filter { it.isVisible }
-        val left = EndingButtons.ORDER.filter { it.winner == 1 }.mapNotNull { endings.buttons[it] }.filter { it in visible }
-        val right = EndingButtons.ORDER.filter { it.winner == 2 }.mapNotNull { endings.buttons[it] }.filter { it in visible }
-        return left + middleButtons + right
+    /** The widths of X, L, and W in advanced mode. */
+    private fun middleWidths(): List<Int> = middleButtons.map { button ->
+        // X keeps the width of its longer label, so that the bar does not move when the serve number changes.
+        if (button === faultButton) maxOf(button.widthFor(faultLabel(1)), button.widthFor(faultLabel(2))) else button.fullWidth()
     }
-
-    /** The widths of [advancedButtons] with the full labels or with the short labels. */
-    private fun advancedWidths(full: Boolean): List<Int> {
-        val choices = endings.buttons.entries.associate { (choice, button) -> button to choice }
-        return advancedButtons().map { button ->
-            // X keeps the width of its longer label, so that the bar does not move when the serve number changes.
-            if (button === faultButton) return@map maxOf(button.widthFor(faultLabel(1)), button.widthFor(faultLabel(2)))
-            val choice = choices[button] ?: return@map button.fullWidth()
-            button.widthFor(if (full) endings.fullLabel(choice) else endings.shortLabel(choice))
-        }
-    }
-
-    /** The gaps between [count] buttons of advanced mode. The two groups and W have a wider gap between them. */
-    private fun gapsOf(count: Int): Int = (count - 1).coerceAtLeast(0) * OUTCOME_GAP + 2 * (GROUP_SPLIT - OUTCOME_GAP)
 
     override fun doLayout() {
         // A narrow bar shows only the pencil of Override score, so that the outcome buttons keep their width.
@@ -384,7 +376,7 @@ internal class PointsScoringControls(
         overrideButton.setBounds(outcomesEnd + GROUP_GAP, 0, override, HEIGHT)
         if (state.advanced) {
             winnerLabel.isVisible = false
-            if (state.askServer) layoutQuestion(outcomesEnd) else layoutEndings(outcomesEnd)
+            layoutMiddle(outcomesEnd)
             return
         }
         // When the full names do not fit, the bar hides "Winner:". The colors and the tooltips of the buttons still
@@ -411,47 +403,19 @@ internal class PointsScoringControls(
         }
     }
 
-    /** "Who serves?" and one button for each player. */
-    private fun layoutQuestion(end: Int) {
-        val label = min(ceil(UiKit.textWidth(serveQuestion.text, serveQuestion.font)).toInt() + 2, end / 3)
-        serveQuestion.setBounds(0, 0, label, HEIGHT)
-        val x = label + LABEL_GAP
-        val w = max(0, (end - x - OUTCOME_GAP) / 2)
-        serveAnswers[0].setBounds(x, 0, w, HEIGHT)
-        serveAnswers[1].setBounds(x + w + OUTCOME_GAP, 0, max(0, end - x - w - OUTCOME_GAP), HEIGHT)
-    }
-
-    /**
-     * The ending buttons and W. The full labels show when they all fit, else the short labels. When the short labels
-     * also do not fit, each button gets a part of the width for its short label, and the label ends with "…".
-     */
-    private fun layoutEndings(end: Int) {
-        val buttons = advancedButtons()
-        val area = max(0, end - gapsOf(buttons.size))
-        val full = advancedWidths(full = true)
-        val useFull = full.sum() <= area
-        val needs = if (useFull) full else advancedWidths(full = false)
-        val choices = endings.buttons.entries.associate { (choice, button) -> button to choice }
-        buttons.forEach { button ->
-            val choice = choices[button] ?: return@forEach
-            val label = if (useFull) endings.fullLabel(choice) else endings.shortLabel(choice)
-            if (button.text != label) button.text = label
-        }
-        val extra = max(0, area - needs.sum())
+    /** X, L, and W of advanced mode share the width up to Override score. */
+    private fun layoutMiddle(end: Int) {
+        val area = max(0, end - OUTCOME_GAP * (middleButtons.size - 1))
         var x = 0
-        buttons.forEachIndexed { i, button ->
-            val share = if (needs.sum() <= area) needs[i] + extra / buttons.size else (needs[i].toLong() * area / needs.sum().coerceAtLeast(1)).toInt()
-            val w = if (i == buttons.lastIndex) end - x else share
+        middleButtons.forEachIndexed { i, button ->
+            val w = if (i == middleButtons.lastIndex) end - x else area / middleButtons.size
             button.setBounds(x, 0, max(0, w), HEIGHT)
-            val next = buttons.getOrNull(i + 1)
-            x += w + if (next != null && (button in middleButtons) != (next in middleButtons)) GROUP_SPLIT else OUTCOME_GAP
+            x += w + OUTCOME_GAP
         }
     }
 
     internal companion object {
         const val HEIGHT = OutcomeButton.HEIGHT
-        /** The gap between the two groups of ending buttons and W. */
-        private const val GROUP_SPLIT = 12
         const val STAR = 24
         private const val GROUP_GAP = 16
         private const val LABEL_GAP = 8

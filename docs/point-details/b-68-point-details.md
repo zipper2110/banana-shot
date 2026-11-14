@@ -662,10 +662,18 @@ The unit tests and the headless paint tests pass. Nobody saw the new UI in
 the running app yet. Do these checks before the release:
 
 1. The point bar in advanced mode: the ending buttons, X, L, and W, in the
-   full and in the narrow form, in all app languages (also `qps`).
+   full and in the narrow form, in all app languages (also `qps`). Checked
+   in English on a 13-inch screen on 2026-11-14: one row had about 70 pt for
+   each button, and no label was readable. Now the ending buttons are in a
+   second row of the point bar (`EndingsRow`), over the full width. With
+   the short labels, each half starts with "Point for {name}".
 2. The mode bar, the "Ask error kind" switch, the "Who serves?" row, and the
    error kind strip.
 3. The toast over the native video window.
+   Found on 2026-11-14: in full screen and after a wake, the mpv window was
+   about 30 pt too low and covered the mode bar. The mpv window class now
+   keeps its frame (`constrainFrameRect:toScreen:`), and `MacVideoWindow`
+   checks the frame each second. Checked in a window and in full screen.
 4. The digit keys on an AZERTY keyboard and on the numpad.
 5. Cmd+R and Cmd+Shift+R on macOS, and Delete (Backspace) on a clip of zero
    length.

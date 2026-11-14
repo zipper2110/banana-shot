@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.swing.SwingUtilities
+import javax.swing.Timer
 import kotlin.math.abs
 
 /**
@@ -39,6 +40,9 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
 
         /** `NSWindowAbove` of `NSWindowOrderingMode`. */
         const val WINDOW_ABOVE = 1L
+
+        /** The time between two checks of the frame of the mpv window. */
+        const val RECHECK_MS = 1_000
     }
 
     /** The state that the event dispatch thread wants. The main thread applies the newest one. */
@@ -58,7 +62,17 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
     private var parent: Pointer? = null
     private var parentKey = 0
     private var attached = false
+
+    // The frame that the app set last on the attached window, or null before the first frame.
+    private var lastFrame: Objc.NSRect.ByValue? = null
     private var parentMissingLogged = false
+
+    /**
+     * macOS can move the mpv window after the app sets its frame, for example when a new mpv window opens after the
+     * computer wakes. No Swing event then tells the app. Thus a check each second sets the frame again when it is
+     * different from the canvas. The check uses only a few calls, and it sets no frame when the frame is correct.
+     */
+    private val recheck = Timer(RECHECK_MS) { update() }.apply { isRepeats = true }
 
     /** Gives the `window-id` of mpv: the `NSWindow` pointer. 0 removes the window. */
     fun setMpvWindow(windowId: Long) {
@@ -76,6 +90,7 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
             }
             apply(latest)
         }
+        if (windowId != 0L) recheck.start() else recheck.stop()
         update()
     }
 
@@ -107,6 +122,7 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
 
     /** Removes the mpv window from the Java window. Call it before mpv closes its window. */
     fun close() {
+        recheck.stop()
         latest = Target(visible = false)
         MainQueue.async {
             releaseMpvWindow()
@@ -138,13 +154,25 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
             width = target.canvas.width.toDouble()
             height = target.canvas.height.toDouble()
         }
-        Objc.setFrame(video, frame)
+        val current = Objc.frame(video)
+        val same = abs(current.x - frame.x) < 0.5 && abs(current.y - frame.y) < 0.5 &&
+            abs(current.width - frame.width) < 0.5 && abs(current.height - frame.height) < 0.5
+        if (!same) {
+            // The frame that the app set last is the same as the new frame: thus macOS moved the window.
+            val last = lastFrame
+            if (last != null && abs(last.y - frame.y) < 0.5 && abs(last.x - frame.x) < 0.5 && abs(last.height - frame.height) < 0.5) {
+                logger.info { "mpv preview $name: macOS moved the video window to y ${current.y}. It goes back to y ${frame.y}." }
+            }
+            Objc.setFrame(video, frame)
+        }
+        lastFrame = frame
         // mpv makes its window the key and the main window when it starts. The keyboard focus must stay in Java.
         if (Objc.sendByte(video, "isKeyWindow") != 0.toByte()) Objc.send(parentWindow, "makeKeyWindow")
         if (Objc.sendByte(video, "isMainWindow") != 0.toByte()) Objc.send(parentWindow, "makeMainWindow")
     }
 
     private fun detach(video: Pointer) {
+        lastFrame = null
         if (!attached) return
         parent?.let { Objc.send(it, "removeChildWindow:", video) }
         attached = false
@@ -215,6 +243,11 @@ internal class MacVideoWindow(private val canvas: Component, private val name: S
  * `setCollectionBehavior:` method to the mpv window class before mpv starts. The method replaces
  * `fullScreenPrimary` with `fullScreenAuxiliary`, so the mpv window stays on the Space of the Java window. As a
  * child window, it goes into full screen with the Java window.
+ *
+ * The mpv window class also has its own `constrainFrameRect:toScreen:`. It keeps the top of the window under the menu
+ * bar. In full screen, the canvas starts at the top of the screen, so macOS moved the video down by the height of the
+ * menu bar, over the controls under the video. The mpv window is a child window that must cover the canvas exactly.
+ * Thus this object also replaces that method with one that keeps the frame.
  */
 internal object MacMpvWindowClass {
     private val logger = KotlinLogging.logger {}
@@ -222,6 +255,7 @@ internal object MacMpvWindowClass {
     /** The Objective-C name of `swift.Window` in libmpv. */
     private const val MPV_WINDOW_CLASS = "_TtC5swift6Window"
     private const val SET_BEHAVIOR = "setCollectionBehavior:"
+    private const val CONSTRAIN_FRAME = "constrainFrameRect:toScreen:"
     private const val FULL_SCREEN_PRIMARY = 1L shl 7
     private const val FULL_SCREEN_AUXILIARY = 1L shl 8
 
@@ -229,7 +263,14 @@ internal object MacMpvWindowClass {
         fun invoke(self: Pointer, selector: Pointer, behavior: Long)
     }
 
+    fun interface ConstrainFrame : Callback {
+        fun invoke(self: Pointer, selector: Pointer, frame: MacRect.ByValue, screen: Pointer?): MacRect.ByValue
+    }
+
     private var original: Function? = null
+
+    // The frame of the mpv window comes from the canvas. It must not move under the menu bar.
+    private val keepFrame = ConstrainFrame { _, _, frame, _ -> frame }
 
     // The Objective-C runtime keeps only the function pointer, so this object must stay reachable.
     private val setBehavior = SetBehavior { self, selector, behavior ->
@@ -260,7 +301,21 @@ internal object MacMpvWindowClass {
         original = Function.getFunction(Objc.implementation(method))
         val added = Objc.addMethod(mpvWindow, SET_BEHAVIOR, setBehavior, Objc.typeEncoding(method))
         logger.info { "mpv window class: $SET_BEHAVIOR ${if (added) "added" else "not added, the class has one"}" }
+        val constrain = Objc.instanceMethod(Objc.cls("NSWindow"), CONSTRAIN_FRAME) ?: error("No NSWindow $CONSTRAIN_FRAME")
+        Objc.replaceMethod(mpvWindow, CONSTRAIN_FRAME, keepFrame, Objc.typeEncoding(constrain))
+        logger.info { "mpv window class: $CONSTRAIN_FRAME replaced" }
     }
+}
+
+/** An `NSRect` for the callbacks of [MacMpvWindowClass]. */
+@Structure.FieldOrder("x", "y", "width", "height")
+internal open class MacRect : Structure() {
+    @JvmField var x = 0.0
+    @JvmField var y = 0.0
+    @JvmField var width = 0.0
+    @JvmField var height = 0.0
+
+    class ByValue : MacRect(), Structure.ByValue
 }
 
 /** Runs blocks on the main thread of macOS (the AppKit thread) with `dispatch_async_f`. */
@@ -315,6 +370,7 @@ private object Objc {
         fun sel_registerName(name: String): Pointer
         fun class_getInstanceMethod(cls: Pointer, selector: Pointer): Pointer?
         fun class_addMethod(cls: Pointer, selector: Pointer, imp: Callback, types: String): Byte
+        fun class_replaceMethod(cls: Pointer, selector: Pointer, imp: Callback, types: String): Pointer?
         fun method_getImplementation(method: Pointer): Pointer
         fun method_getTypeEncoding(method: Pointer): String
         fun msgSend(receiver: Pointer, selector: Pointer): Pointer?
@@ -345,6 +401,9 @@ private object Objc {
     fun typeEncoding(method: Pointer): String = runtime.method_getTypeEncoding(method)
     fun addMethod(cls: Pointer, selector: String, imp: Callback, types: String): Boolean =
         runtime.class_addMethod(cls, sel(selector), imp, types) != 0.toByte()
+    fun replaceMethod(cls: Pointer, selector: String, imp: Callback, types: String) {
+        runtime.class_replaceMethod(cls, sel(selector), imp, types)
+    }
 
     fun send(receiver: Pointer, selector: String): Pointer? = runtime.msgSend(receiver, sel(selector))
     fun send(receiver: Pointer, selector: String, argument: Pointer?): Pointer? = runtime.msgSend(receiver, sel(selector), argument)

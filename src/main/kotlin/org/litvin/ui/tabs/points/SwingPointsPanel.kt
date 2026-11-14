@@ -184,6 +184,9 @@ class SwingPointsPanel(
     private val SIDE_COLUMN_WIDTH = 360
     private val POINT_BAR_GAP = 16
 
+    // The gap between the two rows of the point bar in advanced mode (B-68)
+    private val POINT_BAR_ROW_GAP = 8
+
     // Idle UI refresher to keep time label and timeline handle in sync when paused/seeking
     private val idleUiTimer = Timer(100) { _ ->
         if (player.status() != PlayerStatus.PLAYING) {
@@ -626,9 +629,10 @@ class SwingPointsPanel(
 
     /**
      * The point bar under the video: the serve button, Point start, and the outcome buttons. A narrow bar shows the
-     * compact Point start, so that the outcome buttons have space for the names (B-11 E4-T8).
+     * compact Point start, so that the outcome buttons have space for the names (B-11 E4-T8). In advanced mode, a
+     * second row has the ending buttons over the full width of the bar (B-68).
      */
-    private fun buildPointBar(): JComponent = object : JPanel(BorderLayout(POINT_BAR_GAP, 0)) {
+    private fun buildPointBar(): JComponent = object : JPanel(BorderLayout(POINT_BAR_GAP, POINT_BAR_ROW_GAP)) {
         override fun doLayout() {
             val inner = width - insets.left - insets.right
             val fullStart = scoring.controls.serveButton.preferredSize.width + POINT_BAR_GAP + markPanel.fullWidth() + POINT_BAR_GAP
@@ -649,6 +653,7 @@ class SwingPointsPanel(
             add(markPanel, BorderLayout.CENTER)
         }, BorderLayout.WEST)
         add(scoring.controls, BorderLayout.CENTER)
+        add(scoring.controls.endingsRow, BorderLayout.SOUTH)
     }
 
     /**

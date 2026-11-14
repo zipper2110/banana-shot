@@ -152,7 +152,9 @@ class PointsScoringServeTest {
         }
     }
 
-    private fun Container.button(name: String): JButton = find(this, name) as JButton
+    // The ending buttons and the question "Who serves?" are in the second row of the point bar.
+    private fun Container.button(name: String): JButton =
+        (find(this, name) ?: (this as? PointsScoringControls)?.endingsRow?.let { find(it, name) }) as JButton
 
     private fun find(root: Component, name: String): Component? {
         if (root.name == name) return root

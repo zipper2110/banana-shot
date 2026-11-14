@@ -169,7 +169,7 @@ object CommentDialog {
 
     private fun JDialog.showOver(parent: Component) {
         setLocationRelativeTo(parent)
-        // The nine style buttons make the dialog tall. It must not go below the taskbar.
+        // DialogKit.content keeps the dialog in the screen height. The dialog must also not go below the taskbar.
         DialogKit.keepOnScreen(this)
         isVisible = true
     }

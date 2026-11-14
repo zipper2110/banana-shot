@@ -80,13 +80,41 @@ internal object DialogKit {
         })
     }
 
-    /** The content of a dialog of [width] pixels: the head, the body, and the foot, on the dark dialog background. */
+    /**
+     * The content of a dialog of [width] pixels: the head, the body, and the foot, on the dark dialog background.
+     * The content is never taller than the screen (see [DialogContent]). The body is in a scroll pane, so that
+     * a tall body scrolls and the foot with the buttons stays visible. A [body] that is a scroll pane already
+     * does not get a second one.
+     */
     fun content(width: Int, head: JComponent?, body: JComponent, footer: JComponent?): JPanel =
-        Stack(background = Palette.OVERLAY, fixedWidth = width).apply {
+        DialogContent(width).apply {
             head?.let { add(it) }
-            add(body, fill = true)
+            add(body as? JScrollPane ?: scrollBody(body), fill = true)
             footer?.let { add(it) }
         }
+
+    /** The space between a dialog that fills the screen height and the edges of the screen area. */
+    const val SCREEN_MARGIN = 24
+
+    /** A dialog content is not made lower than this height, also on a very small screen. */
+    const val MIN_CONTENT_HEIGHT = 240
+
+    /**
+     * The largest height of the content of [window], so that the window fits in the screen area without the
+     * menu bar, the Dock, or the taskbar. The title bar of the window is not part of the content.
+     * Returns null when [window] is null or has no screen.
+     */
+    fun contentHeightLimit(window: Window?): Int? {
+        if (window == null) return null
+        val config = window.graphicsConfiguration ?: window.owner?.graphicsConfiguration ?: return null
+        val screen = runCatching { window.toolkit.getScreenInsets(config) }.getOrDefault(Insets(0, 0, 0, 0))
+        val area = config.bounds.height - screen.top - screen.bottom
+        return fittedContentHeight(area, window.insets.top + window.insets.bottom)
+    }
+
+    /** The largest content height in a screen area of [areaHeight], for a window with a frame of [frameHeight]. */
+    internal fun fittedContentHeight(areaHeight: Int, frameHeight: Int): Int =
+        max(MIN_CONTENT_HEIGHT, areaHeight - frameHeight - SCREEN_MARGIN)
 
     /** The title of the dialog. [sub] is a short value on the right, for example the length of a point. */
     fun head(title: String, sub: String? = null): JComponent = JPanel(BorderLayout(10, 0)).apply {
@@ -413,6 +441,22 @@ internal open class Stack(
             child.setBounds(pad.left, y, inner, h)
             y += h + gapAfter(child, index == children.lastIndex)
         }
+    }
+}
+
+/**
+ * The content of a dialog from [DialogKit.content]. Its preferred height is not more than [heightLimit], so that
+ * `pack()` gives a dialog that fits on the screen. When the height is less than the natural height, the body
+ * (the fill child, a scroll pane) gets the smaller height and scrolls. The head and the foot keep their height.
+ */
+internal class DialogContent(width: Int) : Stack(background = Palette.OVERLAY, fixedWidth = width) {
+    /** The largest preferred height, or null for no limit. The normal limit comes from the screen of the window. */
+    var heightLimit: () -> Int? = { DialogKit.contentHeightLimit(SwingUtilities.getWindowAncestor(this)) }
+
+    override fun getPreferredSize(): Dimension {
+        val natural = super.getPreferredSize()
+        val limit = heightLimit() ?: return natural
+        return Dimension(natural.width, min(natural.height, limit))
     }
 }
 

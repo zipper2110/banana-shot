@@ -417,6 +417,8 @@ The work for the paid version is in `backlog-paid.md`.
   serve in %, and the unforced errors of each player. Also, the user can
   record the error kind after an error ending, and the scoreboard shows
   the "2nd serve" mark on a 2nd serve.
+- Follow-up items: B-72 (the error kind strip moves the video), B-73 (the
+  scoring mode in the project settings), and B-74 (statistics insights).
 
 ### B-69 Filter and export by point detail
 
@@ -460,3 +462,47 @@ The work for the paid version is in `backlog-paid.md`.
   off each announcement or change its text.
 - Done when: the export shows an announcement before each point that has a
   set point, a match point, or a break point.
+
+### B-72 Error kind strip moves the video
+
+- Added on 2026-11-14. A follow-up of B-68.
+- The error kind strip (`ErrorKindStrip`) is under the point bar in
+  `SwingPointsPanel`. When the strip shows or hides, the video area
+  changes its height. Thus the video jumps.
+- Keep the video area the same when the strip shows or hides. Possible
+  ways: keep the space for the strip always, or show the strip over a part
+  of the point bar.
+- Done when: in advanced mode with "Ask error kind" on, the strip shows and
+  hides, and the video does not move or change its size.
+
+### B-73 Scoring mode in the project settings
+
+- Added on 2026-11-14. A follow-up of B-68.
+- The mode bar (`ScoringModeBar`) above the point bar has the switch
+  (basic or advanced) and the "Ask error kind" switch. The user usually
+  sets the mode one time for each project. The bar uses space in the
+  Points tab all the time.
+- Remove the mode bar from the Points tab. Put the two switches in the
+  settings of the project. More → Settings keeps the defaults for new
+  projects.
+- Update the help page (`HelpPage.ADVANCED_SCORING`) and the B-68 concept
+  (`docs/point-details/b-68-point-details.md`, section "Scoring modes").
+- Open questions: where the project settings are in the UI, and if the
+  Points tab shows the current mode in a small label.
+- Done when: the Points tab has no mode bar, and the user changes the mode
+  and "Ask error kind" of the project in the settings.
+
+### B-74 Statistics insights from advanced scoring
+
+- Added on 2026-11-14. A follow-up of B-68.
+- The Stats tab shows the numbers of advanced mode (`MatchStats`,
+  `DetailStats`). Add insights: short sentences that tell the user what the
+  numbers mean. For example: "Player 1 lost 60% of the 2nd serve points",
+  "Most unforced errors of Player 2 went into the net", or "Player 1 made
+  more winners than unforced errors".
+- Open questions: the list of insights and their thresholds; where they
+  show (the Stats tab, the statistics card of the export, or both); the
+  minimum number of points with details before an insight shows; free or
+  paid version (B-66).
+- Done when: for a match marked in advanced mode, the Stats tab shows the
+  insights that match the data.

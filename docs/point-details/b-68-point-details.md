@@ -682,3 +682,13 @@ the running app yet. Do these checks before the release:
 7. The "2nd serve" mark in each scoreboard style, in the preview and in an
    export.
 8. A translator check of the new tennis terms in `docs/localization/glossary.md`.
+
+### Follow-up items
+
+Added on 2026-11-14. The items are in `docs/backlog.md`.
+
+- B-72: the error kind strip changes the height of the video area. Thus
+  the video jumps.
+- B-73: move the mode switch and "Ask error kind" from the Points tab to
+  the settings of the project.
+- B-74: statistics insights from the data of advanced mode.

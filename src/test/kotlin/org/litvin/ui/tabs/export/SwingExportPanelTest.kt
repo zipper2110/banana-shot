@@ -19,6 +19,9 @@ import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
 import org.litvin.projects.ManifestIO
 import org.litvin.projects.ProjectManifestV1
+import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.ScoreV1
+import org.litvin.scoring.ScoringMode
 import org.litvin.ui.commons.FilePicker
 import org.litvin.ui.commons.UserDialogService
 import java.awt.Component
@@ -29,6 +32,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.prefs.AbstractPreferences
 import javax.swing.JButton
 import javax.swing.JComboBox
+import javax.swing.JToggleButton
 import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -130,6 +134,37 @@ class SwingExportPanelTest {
             assertEquals(1, dialogs.warnings.size)
             assertEquals(2, picker.suggestions.size)
             assertTrue(render.jobs.isEmpty())
+        } finally {
+            SwingUtilities.invokeAndWait { panel?.close() }
+            adjustments.close()
+            scheduler.shutdownNow()
+        }
+    }
+
+    /** The option "Serve faults and lets" is only for "Only points" and "Only favorites". A full video does not show it. */
+    @Test
+    fun aFullVideoExportDoesNotShowTheServeFaultsOption(@TempDir root: File) {
+        val scheduler = ScheduledThreadPoolExecutor(1)
+        val adjustments = AdjustmentsSession(scheduler, saveDelayMs = 60_000L)
+        val manifest = createProject(root, "a", AdjustmentsV1())
+        ScoreIO.writeForProjectDir(File(manifest).parent, ScoreV1(scoringMode = ScoringMode.ADVANCED))
+        var panel: SwingExportPanel? = null
+        try {
+            val shown = mutableListOf<Boolean>()
+            SwingUtilities.invokeAndWait {
+                adjustments.load(File(manifest).parent)
+                panel = newPanel(RecordingRenderService(), adjustments, root)
+                panel!!.setProjectManifest(manifest)
+                val tile = findNamed(panel!!, "export-serve-clips")
+                (findNamed(panel!!, "export-content-points") as JToggleButton).doClick()
+                shown += tile.isVisible
+                (findNamed(panel!!, "export-content-full") as JToggleButton).doClick()
+                shown += tile.isVisible
+                (findNamed(panel!!, "export-content-points") as JToggleButton).doClick()
+                shown += tile.isVisible
+            }
+
+            assertEquals(listOf(true, false, true), shown)
         } finally {
             SwingUtilities.invokeAndWait { panel?.close() }
             adjustments.close()

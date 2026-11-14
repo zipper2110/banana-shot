@@ -141,11 +141,13 @@ class SwingExportPanel(
     private val setSummariesCheck = IncludeTile("export-set-summaries", tr("export.include.setSummaries")).apply {
         toolTipText = tr("export.include.setSummaries.tooltip")
     }
-    // Only a project in advanced mode shows this option (B-68).
+    // Only a project in advanced mode has this option (B-68). A full video export does not show it.
     private val serveClipsCheck = IncludeTile("export-serve-clips", tr("export.include.serveClips")).apply {
         toolTipText = tr("export.include.serveClips.tooltip")
         isVisible = false
     }
+    /** True when the project is in advanced mode, so that it has the option "Include serve faults and lets" (B-68). */
+    private var serveClipsAvailable = false
     private val videoLanguageRow = VideoLanguageRow(::onVideoLanguageSelected)
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
     private val initButton = StartExportButton(START_EXPORT).apply {
@@ -369,6 +371,7 @@ class SwingExportPanel(
     private fun favoriteOnlySelected(): Boolean = favoritesCard.isSelected
 
     private fun onContentChanged() {
+        updateServeClipsVisibility()
         updateSetSummariesState()
         updateOutputDuration()
         updateInitButtonState()
@@ -719,8 +722,20 @@ class SwingExportPanel(
 
     private fun loadExportSummary() = ExportPlanner.summarize(readCurrentProjectEdl(), currentClips())
 
-    /** True when the option "Include serve faults and lets" is on. Only a project in advanced mode shows it (B-68). */
-    private fun serveClipsSelected(): Boolean = serveClipsCheck.isVisible && serveClipsCheck.isSelected
+    /**
+     * True when the option "Include serve faults and lets" is on. The tile visibility does not change this value, so
+     * that the counts of "Only points" and "Only favorites" stay the same when the user selects "Full video".
+     */
+    private fun serveClipsSelected(): Boolean = serveClipsAvailable && serveClipsCheck.isSelected
+
+    /** Shows the option only for a project in advanced mode, and not for a full video export. */
+    private fun updateServeClipsVisibility() {
+        val visible = serveClipsAvailable && idleTrimSelected()
+        if (serveClipsCheck.isVisible == visible) return
+        serveClipsCheck.isVisible = visible
+        serveClipsCheck.parent?.revalidate()
+        serveClipsCheck.parent?.repaint()
+    }
 
     /** The fault clips and the let clips that "Only points" and "Only favorites" keep (B-68). */
     private fun currentClips(): ExportClips =
@@ -732,9 +747,8 @@ class SwingExportPanel(
      */
     private fun updateServeClipsDefault() {
         val dir = currentProjectDir()
-        val advanced = dir != null && readCurrentProjectScore().isAdvanced
-        serveClipsCheck.isVisible = advanced
-        serveClipsCheck.parent?.revalidate()
+        serveClipsAvailable = dir != null && readCurrentProjectScore().isAdvanced
+        updateServeClipsVisibility()
         if (dir == null) return
         val saved = settingsPreferences.loadIncludeServeClips(dir)
         val include = saved ?: settingsPreferences.loadServeClipsDefault().also { settingsPreferences.saveIncludeServeClips(dir, it) }

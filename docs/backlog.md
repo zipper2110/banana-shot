@@ -474,6 +474,13 @@ The work for the paid version is in `backlog-paid.md`.
   of the point bar.
 - Done when: in advanced mode with "Ask error kind" on, the strip shows and
   hides, and the video does not move or change its size.
+- Implemented on 2026-11-14: `ErrorKindSlot` holds the strip. While the
+  project asks the error kind (advanced mode and "Ask error kind" on), the
+  slot keeps the height of the strip, also when the strip is hidden. The
+  empty slot shows the background and the top line of the strip. The video
+  moves only when the user turns the option on or off. Test:
+  `ErrorKindSlotTest`. Not checked in the running app (check 2 in
+  `docs/point-details/b-68-point-details.md`).
 
 ### B-73 Scoring mode in the project settings
 

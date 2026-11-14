@@ -38,6 +38,7 @@ import org.litvin.ui.commons.HintId
 import org.litvin.ui.tabs.points.ui.ComputedScore
 import org.litvin.ui.tabs.points.ui.EndingButtons
 import org.litvin.ui.tabs.points.ui.ErrorKindStrip
+import org.litvin.ui.tabs.points.ui.ErrorKindSlot
 import org.litvin.ui.tabs.points.ui.ErrorKindStripState
 import org.litvin.ui.tabs.points.ui.MatchEndNotice
 import org.litvin.ui.tabs.points.ui.OverrideScoreDialog
@@ -79,7 +80,7 @@ import org.litvin.i18n.DisplayFormats
  * - [modeBar] switches the scoring mode of a tennis project (B-68). In advanced mode, the point bar shows the ending
  *   buttons, and asks "Who serves?" when the project has no serve mark (see [ServeQuestion]).
  * - [errorStrip], under the point bar, asks the error kind after an error ending when the project option is on
- *   (B-68, see [ErrorKindQuestion]).
+ *   (B-68, see [ErrorKindQuestion]). The panel adds [errorStripSlot], which keeps the space of the strip (B-72).
  * - After each change of the score file, [PointDetails.resolve] writes the winners of the aces and the double faults
  *   into the outcomes, in all modes. Thus basic mode and the scoreboard show the same score.
  *
@@ -159,6 +160,12 @@ internal class PointsScoring(
         onAnswer = { answerErrorKind(it) },
         onOpen = { openErrorQuestion() },
     )
+
+    /**
+     * The space for [errorStrip] under the point bar (B-72). It keeps the height of the strip while the project asks the
+     * error kind, so that the video does not move when the strip shows or hides.
+     */
+    val errorStripSlot = ErrorKindSlot(errorStrip)
 
     private val scoreSettingsButton = ScoringButton(tr("points.scoringRules"), Material2MZ.TUNE, alignLeft = true).apply {
         name = "points-score-settings"
@@ -1010,6 +1017,7 @@ internal class PointsScoring(
 
     /** The error kind strip: the open question, or the active clip with an error ending (B-68). */
     private fun renderErrorStrip() {
+        errorStripSlot.reserved = asksErrorKind()
         val pointId = errorStripClip()
         val choice = pointId?.let { EndingChoice.of(score.outcomeOf(it), score.detailOf(it).ending) }
         errorStrip.render(

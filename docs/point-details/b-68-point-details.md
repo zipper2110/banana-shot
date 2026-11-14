@@ -668,7 +668,8 @@ the running app yet. Do these checks before the release:
    second row of the point bar (`EndingsRow`), over the full width. With
    the short labels, each half starts with "Point for {name}".
 2. The mode bar, the "Ask error kind" switch, the "Who serves?" row, and the
-   error kind strip.
+   error kind strip. With "Ask error kind" on, the video does not move when
+   the strip shows or hides (B-72).
 3. The toast over the native video window.
    Found on 2026-11-14: in full screen and after a wake, the mpv window was
    about 30 pt too low and covered the mode bar. The mpv window class now
@@ -688,7 +689,7 @@ the running app yet. Do these checks before the release:
 Added on 2026-11-14. The items are in `docs/backlog.md`.
 
 - B-72: the error kind strip changes the height of the video area. Thus
-  the video jumps.
+  the video jumps. Implemented on 2026-11-14 with `ErrorKindSlot`.
 - B-73: move the mode switch and "Ask error kind" from the Points tab to
   the settings of the project.
 - B-74: statistics insights from the data of advanced mode.

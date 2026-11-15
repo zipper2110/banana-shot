@@ -106,7 +106,7 @@ analytics session after the crash.
 | Layer 2: crash popup | Done (2026-11-11). Checked in a development run with a separate data folder: the popup opened after a frozen session. The click on "Report this problem" is not checked. |
 | Layer 3: app counters, contract, Worker, cockpit | Done (2026-11-11). Not deployed. |
 | Privacy texts: site text | Done (2026-11-11). Not deployed. |
-| Legitimate interest update | Draft (2026-11-11). The author must review it. |
+| Legitimate interest update | Reviewed and approved by the author (2026-11-16). |
 | Check on a packaged build: where the JVM writes the crash file, on Windows and macOS | Not started |
 
 ### Activities

@@ -6,8 +6,8 @@ Update for the language attributes (B-11 E2, task E2-T8): draft by Claude,
 2026-10-19. Reviewed and approved by the author, 2026-10-29. The two
 attributes are on the essential level.
 
-Update for the crash keys (B-67): draft by Claude, 2026-11-11. Not reviewed
-yet. The author must review it before the app release with the crash keys.
+Update for the crash keys (B-67): draft by Claude, 2026-11-11. Reviewed and
+approved by the author, 2026-11-16, with the new privacy text of the site.
 
 This assessment covers only the essential level of the usage statistics
 (`docs/analytics/design.md`, "Levels"). The extended level uses consent

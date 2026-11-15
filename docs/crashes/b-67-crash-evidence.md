@@ -107,7 +107,7 @@ analytics session after the crash.
 | Layer 3: app counters, contract, Worker, cockpit | Done (2026-11-11). Deployed on 2026-11-16 (run 43757193559, smoke check 204). |
 | Privacy texts: site text | Done (2026-11-11). Deployed on 2026-11-16 (run 43757193559). |
 | Legitimate interest update | Reviewed and approved by the author (2026-11-16). |
-| Check on a packaged build: where the JVM writes the crash file, on Windows and macOS | Not started |
+| Check on a packaged build: where the JVM writes the crash file, on Windows and macOS | macOS done (2026-11-16, the 1.4.1 dry run): the app started from the Dock has the start folder `/`. After `kill -SEGV`, the JVM wrote `hs_err_pid<pid>.log` in `$TMPDIR` (`java.io.tmpdir`). The next start found it, logged the safe part, and wrote `logs/crashes/crash-<time>-pid<pid>.txt` (crash `native`, library `system`, no command line, environment, registers, or paths). Windows: not started. |
 
 ### Activities
 

@@ -31,6 +31,7 @@ import org.litvin.media.VideoOverlay
 import org.litvin.media.relativeSeekDeltaMs
 import org.litvin.media.mpv.MpvSwingMediaPlayerAdapter
 import org.litvin.media.SwingMediaPlayer
+import org.litvin.ui.commons.ClickListener
 import org.litvin.ui.commons.CommentDialog
 import org.litvin.ui.commons.CommentInput
 import org.litvin.ui.commons.CommentLook
@@ -239,6 +240,8 @@ class SwingPointsPanel(
         ensurePlayerLoaded()
         player.activatePreview("points activated")
         player.pause()
+        // The trim can change on the Trim sub-tab while this tab is closed.
+        moveIntoTrim()
 
         // Do not auto-play; optionally restore focus to player area
         EventQueue.invokeLater {
@@ -483,10 +486,8 @@ class SwingPointsPanel(
         geometryViewport = GeometryViewportPanel(player.component)
         geometryViewport.name = "points-video"
         // A left click on the video plays or pauses it. A click on a comment selects the comment instead.
-        player.component.addMouseListener(object : java.awt.event.MouseAdapter() {
-            override fun mouseClicked(e: java.awt.event.MouseEvent) {
-                if (SwingUtilities.isLeftMouseButton(e) && isMediaLoaded && !commentDrag.pressedOnComment) togglePlayPause()
-            }
+        player.component.addMouseListener(ClickListener { e ->
+            if (SwingUtilities.isLeftMouseButton(e) && isMediaLoaded && !commentDrag.pressedOnComment) togglePlayPause()
         })
         videoArea.add(geometryViewport, VIDEO_CARD)
         videoArea.add(JPanel(java.awt.GridBagLayout()).apply {
@@ -545,8 +546,15 @@ class SwingPointsPanel(
             }
         }
         player.onPlaybackRestart = { EventQueue.invokeLater { replays.onRestart() } }
-        player.onReady =
-            { EventQueue.invokeLater { updateTimeUI(player.currentTimeMs()); timeline.repaint(); updatePlayPauseButton() } }
+        player.onReady = {
+            EventQueue.invokeLater {
+                // A new video starts at 0. With a trim, the playhead goes to the trim start (B-62).
+                moveIntoTrim()
+                updateTimeUI(player.currentTimeMs())
+                timeline.repaint()
+                updatePlayPauseButton()
+            }
+        }
         player.onStatusChanged = { _ -> EventQueue.invokeLater { updatePlayPauseButton(); refreshUiAtCurrentTime() } }
 
         // Dispatcher callback to refresh UI for all leaf components
@@ -576,7 +584,13 @@ class SwingPointsPanel(
             override fun nudge(deltaMs: Long) {
                 // With Frame step on, Left and Right step one frame while paused.
                 if (abs(deltaMs) == 1_000L && SessionSettings.frameStepWhenPaused && player.status() != PlayerStatus.PLAYING) {
-                    if (deltaMs > 0) player.stepFrameForward() else player.stepFrameBackward()
+                    // A frame step stays in the trim (B-62).
+                    val trim = trimRange()
+                    when {
+                        trim != null && player.currentTimeMs() !in trim -> moveIntoTrim()
+                        deltaMs > 0 -> player.stepFrameForward(trim?.endMs ?: Long.MAX_VALUE)
+                        else -> player.stepFrameBackward(trim?.startMs ?: 0L)
+                    }
                     EventQueue.invokeLater { refreshUiAtCurrentTime() }
                     return
                 }
@@ -685,9 +699,36 @@ class SwingPointsPanel(
 
     private fun nudge(deltaMs: Long) {
         val playing = player.status() == PlayerStatus.PLAYING
-        val newTime = max(0L, player.currentTimeMs() + relativeSeekDeltaMs(deltaMs, playing))
+        // The seek stays in the trim (B-62).
+        val newTime = insideTrim(max(0L, player.currentTimeMs() + relativeSeekDeltaMs(deltaMs, playing)))
         player.seek(newTime)
         EventQueue.invokeLater { refreshUiAtCurrentTime(); player.component.requestFocusInWindow() }
+    }
+
+    /**
+     * The trim of the project on the loaded video (B-62). Null without a trim, and while the player does not know
+     * the length of the video.
+     */
+    private fun trimRange(): TrimRange? {
+        val total = player.totalDurationMs()
+        if (total <= 0L) return null
+        return adjustments.get().takeIf(TrimRange::isSet)?.let { TrimRange.of(it, total) }
+    }
+
+    /** The time nearest to [ms] in the trim. Without a trim, it is [ms]. */
+    private fun insideTrim(ms: Long): Long = trimRange()?.let { ms.coerceIn(it.startMs, it.endMs) } ?: ms
+
+    /**
+     * Seeks into the trim when the playhead is outside it. The timeline shows only the trim, so the playhead must be
+     * in it. A playhead before the trim goes to the trim start, and a playhead after the trim goes to the trim end.
+     */
+    private fun moveIntoTrim() {
+        val now = player.currentTimeMs()
+        val target = insideTrim(now)
+        if (target == now) return
+        player.seek(target)
+        updateTimeUI(target)
+        timeline.repaint()
     }
 
     fun setProjectManifest(path: String) {

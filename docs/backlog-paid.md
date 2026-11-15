@@ -5,6 +5,9 @@ This file lists the work for the paid version ("Pro"). The main backlog is
 
 An item here has the prefix `P-`. The milestone B-66 is in this file too.
 
+The paid features that the code has now are in `paid-features.md`. When a
+paid feature is implemented, add it to that list.
+
 ## The paid switch
 
 - Decided on 2026-11-12: until the paid version has a subscription check

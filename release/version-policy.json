@@ -1,36 +1,23 @@
 {
   "schema": 1,
   "latest": {
-    "version": "1.4.0",
+    "version": "1.4.1",
     "downloadUrl": "https://github.com/zipper2110/banana-shot/releases/latest",
-    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.0/BananaShot-win-Setup.exe",
-    "macInstallerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.0/BananaShot-osx-Setup.pkg",
-    "notes": "New: BananaShot for Mac · New: select when the scoreboard shows, and its font · Statistics: the games and the sets come from the score",
+    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.1/BananaShot-win-Setup.exe",
+    "macInstallerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.1/BananaShot-osx-Setup.pkg",
+    "notes": "New: styles for the statistics card · New: 5 simple thumbnail styles · The computer stays awake during exports · Fixes for macOS",
     "notesByLanguage": {
-      "es": "Nuevo: BananaShot para Mac · Nuevo: elige cuándo se muestra el marcador y su fuente · Estadísticas: los juegos y los sets se calculan a partir del marcador",
-      "pt": "Novo: BananaShot para Mac · Novo: escolha quando o placar aparece e a fonte dele · Estatísticas: os games e os sets vêm do placar",
-      "pt-PT": "Novo: BananaShot para Mac · Novo: escolha quando o marcador aparece e a fonte dele · Estatísticas: os jogos e os sets vêm do resultado",
-      "fr": "Nouveau : BananaShot pour Mac · Nouveau : choisissez quand le tableau de score s’affiche, et sa police · Statistiques : les jeux et les sets viennent du score",
-      "de": "Neu: BananaShot für Mac · Neu: Wähle, wann die Spielstandsanzeige erscheint, und ihre Schrift · Statistik: Spiele und Sätze kommen aus dem Spielstand",
-      "ru": "Новое: BananaShot для Mac · Новое: выбор, когда показывать табло, и его шрифт · Статистика: геймы и сеты считаются по счёту",
-      "ja": "新機能: Mac 版 BananaShot · 新機能: スコアボードを表示するタイミングとフォントを選べます · 統計: ゲームとセットをスコアから数えます",
-      "zh-Hans": "新功能：BananaShot Mac 版 · 新功能：选择记分牌何时显示及其字体 · 统计：局数和盘数根据比分计算",
-      "zh-Hant": "新功能：BananaShot Mac 版 · 新功能：選擇記分板何時顯示及其字體 · 統計：局數和盤數根據比分計算"
+      "es": "Nuevo: estilos para la tarjeta de estadísticas · Nuevo: 5 estilos sencillos de miniatura · El ordenador se mantiene activo durante las exportaciones · Correcciones para Mac",
+      "pt": "Novo: estilos para o cartão de estatísticas · Novo: 5 estilos simples de miniatura · O computador fica ativo durante as exportações · Correções para Mac",
+      "pt-PT": "Novo: estilos para o cartão de estatísticas · Novo: 5 estilos simples de miniatura · O computador mantém-se ativo durante as exportações · Correções para Mac",
+      "fr": "Nouveau : styles pour la carte des statistiques · Nouveau : 5 styles simples de miniature · L’ordinateur reste éveillé pendant les exports · Corrections pour Mac",
+      "de": "Neu: Stile für die Statistikkarte · Neu: 5 schlichte Thumbnail-Stile · Der Computer bleibt während Exporten wach · Fehlerbehebungen für Mac",
+      "ru": "Новое: стили карточки статистики · Новое: 5 простых стилей обложки · Компьютер не засыпает во время экспорта · Исправления для Mac",
+      "ja": "新機能: 統計カードのスタイル · 新機能: シンプルなサムネイルのスタイル 5 種類 · エクスポート中はスリープしません · Mac 版の修正",
+      "zh-Hans": "新功能：统计卡片样式 · 新功能：5 种简约封面样式 · 导出时电脑保持唤醒 · Mac 版修复",
+      "zh-Hant": "新功能：統計卡片樣式 · 新功能：5 種簡約縮圖樣式 · 匯出時電腦保持喚醒 · Mac 版修正"
     },
-    "whatsNewUrl": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.md",
-    "whatsNewUrlByLanguage": {
-      "es": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.es.md",
-      "es-419": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.es-419.md",
-      "pt": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.pt.md",
-      "pt-PT": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.pt-PT.md",
-      "fr": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.fr.md",
-      "de": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.de.md",
-      "ru": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.ru.md",
-      "ja": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.ja.md",
-      "zh-Hans": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.zh-Hans.md",
-      "zh-Hant": "https://banana-shot-editor.app/changelog/1.4.0/whats-new.zh-Hant.md"
-    },
-    "pageUrl": "https://banana-shot-editor.app/changelog/#v1.4.0"
+    "pageUrl": "https://banana-shot-editor.app/changelog/#v1.4.1"
   },
   "rules": []
 }

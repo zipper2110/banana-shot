@@ -14,6 +14,7 @@ import java.awt.Graphics
 import java.awt.GraphicsEnvironment
 import java.awt.GridLayout
 import java.awt.Insets
+import java.awt.KeyboardFocusManager
 import java.awt.LayoutManager
 import java.awt.Point
 import java.awt.Window
@@ -69,6 +70,24 @@ internal object DialogKit {
         return JDialog(owner, title, modality).apply {
             defaultCloseOperation = JDialog.DISPOSE_ON_CLOSE
             onEscape(this) { dispose() }
+        }
+    }
+
+    /**
+     * Shows the modal [dialog] and waits until it closes. Then the focus goes back to the component that had it before.
+     * On macOS, the native mpv video window can become the key window when a dialog closes. Then the Java window gets
+     * no keys, and the shortcuts of the tab work only after a click. [Component.requestFocus] also makes the Java
+     * window active again, thus this function does not use requestFocusInWindow.
+     */
+    fun showModal(dialog: JDialog) {
+        val owner = dialog.owner
+        val before = KeyboardFocusManager.getCurrentKeyboardFocusManager().permanentFocusOwner
+            ?.takeIf { SwingUtilities.getWindowAncestor(it) === owner }
+            ?: owner?.mostRecentFocusOwner
+        dialog.isVisible = true
+        // The focus events of the closed dialog are in the queue. The request must come after them.
+        SwingUtilities.invokeLater {
+            if (before != null && before.isShowing && before.isFocusable) before.requestFocus()
         }
     }
 

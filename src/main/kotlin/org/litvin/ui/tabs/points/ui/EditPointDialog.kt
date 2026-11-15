@@ -34,10 +34,10 @@ object EditPointDialog {
      * an error line and keeps the dialog open.
      */
     fun show(parent: Component, point: PointDto, number: Int, actions: PointsActions) {
-        build(parent, point, number, actions).apply {
-            setLocationRelativeTo(parent)
-            isVisible = true
-        }
+        val dialog = build(parent, point, number, actions)
+        dialog.setLocationRelativeTo(parent)
+        // After the dialog closes, R and the other keys of the tab must work without a click.
+        DialogKit.showModal(dialog)
     }
 
     /** Builds the packed dialog without showing it. */

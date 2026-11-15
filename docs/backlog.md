@@ -407,6 +407,9 @@ The work for the paid version is in `backlog-paid.md`.
 
 - Added on 2026-11-13. Tennis only. Other sports can get the same or an
   adapted version later.
+- Decided on 2026-11-15: advanced mode is a paid feature
+  (`docs/paid-features.md`). The free version uses basic mode and does not
+  show the scoring mode.
 - The user records more than the winner: serve faults, double faults,
   lets, aces, winners, and the kinds of errors. A switch selects the
   scoring mode: basic (as now) or advanced. Shot-by-shot mode is B-70.
@@ -427,6 +430,8 @@ The work for the paid version is in `backlog-paid.md`.
   points. For example: "all my unforced errors into the net" or "all my
   double faults". This is good for training and for a coach.
 - The details come from B-68 (`docs/point-details/b-68-point-details.md`).
+  Advanced mode is a paid feature since 2026-11-15
+  (`docs/paid-features.md`).
 - Open questions: where the filter is (the Points tab, the Export tab, or
   both), and if the filter can combine details (for example "player 1" and
   "unforced error" and "net"). A filter by stroke needs B-70, because
@@ -522,7 +527,8 @@ The work for the paid version is in `backlog-paid.md`.
   more winners than unforced errors".
 - Open questions: the list of insights and their thresholds; where they
   show (the Stats tab, the statistics card of the export, or both); the
-  minimum number of points with details before an insight shows; free or
-  paid version (B-66).
+  minimum number of points with details before an insight shows. The
+  insights use the data of advanced mode, which is a paid feature since
+  2026-11-15 (`docs/paid-features.md`).
 - Done when: for a match marked in advanced mode, the Stats tab shows the
   insights that match the data.

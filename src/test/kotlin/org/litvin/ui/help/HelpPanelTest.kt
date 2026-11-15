@@ -15,7 +15,7 @@ class HelpPanelTest {
 
         SwingUtilities.invokeAndWait {
             val panel = HelpPanel()
-            assertEquals(HelpPage.entries.map { it.title }, panel.pageTitles())
+            assertEquals(HelpPage.shown.map { it.title }, panel.pageTitles())
             assertEquals(HelpPage.OVERVIEW, panel.selectedPage)
 
             panel.selectPage(HelpPage.EXPORT)

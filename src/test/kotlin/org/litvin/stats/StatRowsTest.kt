@@ -1,5 +1,7 @@
 package org.litvin.stats
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.i18n.AppLanguage
 import org.litvin.i18n.I18n
 import org.litvin.i18n.Messages
@@ -25,6 +27,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@ExtendWith(PaidEdition::class)
 class StatRowsTest {
     @Test
     fun theRowsHaveTheCatalogOrder() {

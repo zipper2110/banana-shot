@@ -40,6 +40,8 @@ import kotlin.random.Random
  */
 fun main(args: Array<String>) {
     System.setProperty("java.awt.headless", "true")
+    // The preview shows the rows of advanced scoring, a paid feature (docs/paid-features.md).
+    System.setProperty(org.litvin.shared.util.Edition.PROPERTY, "true")
     val known = setOf("out", "rows", "momentum", "compact", "groupTitles", "style", "light", "advanced", "scale", "language")
     val options = args.associate { arg ->
         require(arg.startsWith("--") && "=" in arg) { "Unknown argument: $arg. Use ${known.joinToString { "--$it=" }}." }

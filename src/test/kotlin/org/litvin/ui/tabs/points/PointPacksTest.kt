@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import org.litvin.scoring.Ending
 import org.litvin.scoring.ErrorKind
@@ -23,6 +25,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** B-68 E3b: the packs in the points list, the row labels, the navigator numbers, and Ctrl+R. */
+@ExtendWith(PaidEdition::class)
 class PointPacksTest {
     // Pack 1: a 1st serve fault of zero length, a let, then a 2nd serve point with an unforced error into the net.
     // Then a W clip (number 2). Pack 3: a double fault (two fault clips). Pack 4: an ace on the 1st serve.
@@ -48,7 +51,8 @@ class PointPacksTest {
         ),
         serverMarks = mapOf("F1" to Outcome.P1),
     )
-    private val packs = PointPacks(points, score)
+    // A getter: the test runs in the paid version only after the class instance exists (PaidEdition).
+    private val packs: PointPacks get() = PointPacks(points, score)
 
     @Test
     fun `each row has the label of its serve and its ending`() {

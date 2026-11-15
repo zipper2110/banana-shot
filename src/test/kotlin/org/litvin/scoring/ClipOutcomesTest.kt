@@ -1,5 +1,7 @@
 package org.litvin.scoring
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -7,6 +9,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** B-68 E3: X and L, the clips of zero length, and the outcome of the Edit dialog. */
+@ExtendWith(PaidEdition::class)
 class ClipOutcomesTest {
     private val points = listOf(PointV1("a", 1_000, 2_000), PointV1("b", 3_000, 4_000))
     private val advanced = ScoreV1(scoringMode = ScoringMode.ADVANCED, serverMarks = mapOf("a" to Outcome.P1))

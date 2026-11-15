@@ -66,7 +66,8 @@ class HelpDialog(owner: Window?, onTellUs: (() -> Unit)? = null) : JDialog(owner
 class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayout()) {
     private val navigation = ToolNav(
         "help-navigation",
-        HelpPage.entries.map { page -> ToolNavItem(page, page.title, iconOf(page), captionOf(page)) },
+        // The free version does not list the pages about paid features (docs/paid-features.md).
+        HelpPage.shown.map { page -> ToolNavItem(page, page.title, iconOf(page), captionOf(page)) },
         markerText = tr("help.thisTab"),
     ) { renderPage(it) }
     private val page = ToolPage().apply { name = "help-content" }
@@ -89,12 +90,14 @@ class HelpPanel(private val onTellUs: (() -> Unit)? = null) : JPanel(BorderLayou
         selectPage(HelpPage.OVERVIEW)
     }
 
+    /** Shows [page]. A page that this edition of the app does not have shows the Overview. */
     fun selectPage(page: HelpPage) {
-        navigation.selected = page
-        renderPage(page)
+        val shown = if (page.available) page else HelpPage.OVERVIEW
+        navigation.selected = shown
+        renderPage(shown)
     }
 
-    fun pageTitles(): List<String> = HelpPage.entries.map { it.title }
+    fun pageTitles(): List<String> = HelpPage.shown.map { it.title }
 
     private fun renderPage(help: HelpPage) {
         selectedPage = help

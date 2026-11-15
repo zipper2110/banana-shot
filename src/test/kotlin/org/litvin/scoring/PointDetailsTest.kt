@@ -1,5 +1,7 @@
 package org.litvin.scoring
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import java.io.File
 import java.nio.file.Files
@@ -9,6 +11,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@ExtendWith(PaidEdition::class)
 class PointDetailsTest {
     @Test
     fun aFaultThenAPointMakeOnePackOnTheSecondServe() {

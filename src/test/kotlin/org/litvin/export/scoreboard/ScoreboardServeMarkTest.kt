@@ -1,5 +1,7 @@
 package org.litvin.export.scoreboard
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.OverlaySpan
 import org.litvin.ScoreboardComponent
 import org.litvin.ScoreboardTimelineBuilder
@@ -19,6 +21,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** B-68: the "2ND SERVE" mark next to the scoreboard during a 2nd-serve clip. */
+@ExtendWith(PaidEdition::class)
 class ScoreboardServeMarkTest {
     private fun display(badge: String? = null, serveMark: String? = null) = ScoreboardComponent.display(
         OverlaySpan(

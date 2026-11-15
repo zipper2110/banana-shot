@@ -465,7 +465,8 @@ class ScoreSettingsDialog internal constructor(
             formatGroup.aside.text = if (automatic) "" else tr("scoreSettings.formatGroup.manual")
             manualHint.runs = listOf(TextRun(MANUAL_HINT, UiKit.font(12f), if (rules.manualScoring) Palette.FG_2 else Palette.FG_3))
 
-            modeGroup.isVisible = sport == Sport.TENNIS
+            // Advanced mode is a paid feature. The free version does not show the group and keeps the stored mode.
+            modeGroup.isVisible = sport == Sport.TENNIS && ScoringMode.ADVANCED.available
             modeChoice.selected = mode
             modeDescription.runs = listOf(TextRun(ScoringModeDefaults.tooltip(mode), UiKit.font(12f), Palette.FG_2))
             // "Ask error kind" is an option of advanced mode. In basic mode, it keeps its value but is dim.

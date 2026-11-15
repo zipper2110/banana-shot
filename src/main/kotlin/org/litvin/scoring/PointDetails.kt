@@ -3,18 +3,32 @@ package org.litvin.scoring
 import com.fasterxml.jackson.annotation.JsonEnumDefaultValue
 import com.fasterxml.jackson.annotation.JsonIgnore
 import org.litvin.points.PointV1
+import org.litvin.shared.util.Edition
 
 /**
  * The scoring mode of a project (B-68). The mode sets which controls the point bar shows. The modes are nested: each
  * mode gives all the data of the modes below it. A mode change deletes no data. A lower mode hides the extra data.
+ *
+ * Advanced mode is for the paid version (docs/paid-features.md). The free version does not show it and uses basic
+ * mode for a project in advanced mode. The project keeps its mode and its details.
  */
-enum class ScoringMode {
+enum class ScoringMode(
+    /** True for a mode of the paid version. The free version does not show it. */
+    val paid: Boolean = false,
+) {
     /** The user records the winner of each point. */
     @JsonEnumDefaultValue
     BASIC,
 
     /** The user records the serve faults, the lets, and how each point ended. */
-    ADVANCED,
+    ADVANCED(paid = true),
+    ;
+
+    /** True when this edition of the app has the mode. */
+    val available: Boolean get() = !paid || Edition.isPaid
+
+    /** This mode, or [BASIC] for a paid mode in the free version. */
+    fun orAvailable(): ScoringMode = if (available) this else BASIC
 }
 
 /** How a clip ended (B-68). The details keep no DOUBLE_FAULT ending: the packs give it (see [ServePacks]). */

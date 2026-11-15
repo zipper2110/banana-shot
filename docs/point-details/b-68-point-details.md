@@ -1,5 +1,7 @@
 # B-68 Point details
 
+Decided on 2026-11-15: advanced mode is a paid feature (`docs/paid-features.md`). The free version uses basic mode, and `ScoreV1.isAdvanced` is false. The project keeps its mode and its details.
+
 Status: implemented on 2026-11-13. All epics are done. The checks in the running app are still open (see "Checks in the running app" at the end).
 
 ## Goal

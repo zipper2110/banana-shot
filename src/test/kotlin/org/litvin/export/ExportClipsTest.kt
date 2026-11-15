@@ -1,5 +1,7 @@
 package org.litvin.export
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.ExportPreset
 import org.litvin.points.EdlV1
 import org.litvin.points.PointV1
@@ -12,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** B-68 E3: which clips "Only points" and "Only favorites" keep, and the score of a fault clip of zero length. */
+@ExtendWith(PaidEdition::class)
 class ExportClipsTest {
     // Pack 1: a fault, then a favorite point on the 2nd serve. Pack 2: a let, then a point. Then a W clip.
     private val edl = EdlV1(

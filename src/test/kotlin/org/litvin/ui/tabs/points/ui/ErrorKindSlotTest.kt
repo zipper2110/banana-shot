@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import org.litvin.scoring.EndingChoice
 import org.litvin.scoring.Outcome
@@ -18,6 +20,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** B-72: the slot of the error kind strip keeps its height, so that the video does not move. */
+@ExtendWith(PaidEdition::class)
 class ErrorKindSlotTest {
     private val stripSize = Dimension(300, 41)
 

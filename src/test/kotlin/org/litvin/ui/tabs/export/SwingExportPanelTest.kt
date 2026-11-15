@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.export
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.litvin.ActiveQueueSnapshot
@@ -39,6 +41,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@ExtendWith(PaidEdition::class)
 class SwingExportPanelTest {
     @Test
     fun aQueuedExportKeepsTheAdjustmentsOfItsProjectWhenTheUserOpensAnotherProject(@TempDir root: File) {

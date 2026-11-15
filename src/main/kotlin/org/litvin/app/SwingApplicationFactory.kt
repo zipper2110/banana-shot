@@ -622,13 +622,14 @@ object SwingApplicationFactory {
                                 },
                                 onOpenFolder = ::openWithDesktop,
                                 language = languageSetting,
+                                // Advanced mode is a paid feature. The free version has no Scoring card.
                                 scoringMode = ChoiceSetting(
                                     options = ScoringMode.entries.map {
                                         ChoiceSetting.Option(it.name, ScoringModeDefaults.label(it), ScoringModeDefaults.tooltip(it))
                                     },
                                     load = { scoringModeDefaults.load().name },
                                     save = { id -> ScoringMode.entries.firstOrNull { it.name == id }?.let(scoringModeDefaults::save) },
-                                ),
+                                ).takeIf { ScoringMode.ADVANCED.available },
                                 serveClips = FlagSetting(exportSettings::loadServeClipsDefault, exportSettings::saveServeClipsDefault),
                                 preventSleep = FlagSetting(exportSettings::loadPreventSleep) { prevent ->
                                     exportSettings.savePreventSleep(prevent)

@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import org.litvin.scoring.Ending
 import org.litvin.scoring.EndingChoice
@@ -27,6 +29,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** B-68 E5: the error kind question, its strip under the point bar, and the project option. */
+@ExtendWith(PaidEdition::class)
 class PointsScoringErrorKindTest {
     private val point = PointV1(id = "A", startMs = 10_000, endMs = 15_000)
     private val asking = ScoreV1(scoringMode = ScoringMode.ADVANCED, serverMarks = mapOf("A" to Outcome.P1), askErrorKind = true)
@@ -187,6 +190,27 @@ class PointsScoringErrorKindTest {
             val score = ScoreIO.readForProjectDir(dir.path)
             assertEquals(ScoringMode.ADVANCED, score.scoringMode)
             assertTrue(score.askErrorKind)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `in the free version, a new project gets basic mode also when the default is advanced`() = PaidEdition.with(paid = false) {
+        val dir = Files.createTempDirectory("b68-free-default").toFile()
+        try {
+            val defaults = object : ScoringModeDefaults {
+                override fun load() = ScoringMode.ADVANCED
+                override fun save(mode: ScoringMode) = Unit
+            }
+            SwingUtilities.invokeAndWait {
+                val scoring = PointsScoring(
+                    onStep = {}, onToggleFavorite = {}, onScoreChanged = {}, onError = {}, onOverlayChanged = {},
+                    onScoreRequest = {}, loadFrame = {}, modeDefaults = defaults,
+                )
+                scoring.load(dir.path)
+            }
+            assertEquals(ScoringMode.BASIC, ScoreIO.readForProjectDir(dir.path).scoringMode)
         } finally {
             dir.deleteRecursively()
         }

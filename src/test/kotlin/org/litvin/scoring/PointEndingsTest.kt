@@ -1,5 +1,7 @@
 package org.litvin.scoring
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,6 +10,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** B-68 E2: the ending keys, Q, W, and E, and the confirmation of a server change. */
+@ExtendWith(PaidEdition::class)
 class PointEndingsTest {
     @Test
     fun `each ending button gives the point to its group and names the player who made the ending`() {

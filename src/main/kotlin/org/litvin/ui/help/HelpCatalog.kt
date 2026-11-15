@@ -3,13 +3,17 @@ package org.litvin.ui.help
 import org.litvin.ui.commons.AppShortcut
 import org.litvin.ui.commons.AppShortcuts
 import org.litvin.i18n.tr
+import org.litvin.scoring.ScoringMode
 
-/** The pages of the Help window. [titleKey] is the catalog key of the page title. */
-enum class HelpPage(private val titleKey: String) {
+/**
+ * The pages of the Help window. [titleKey] is the catalog key of the page title. [paid] is true for a page about a paid
+ * feature (docs/paid-features.md). The free version does not show it.
+ */
+enum class HelpPage(private val titleKey: String, private val paid: Boolean = false) {
     OVERVIEW("help.page.overview"),
     PROJECTS("tab.projects"),
     POINTS("tab.points"),
-    ADVANCED_SCORING("help.page.advancedScoring"),
+    ADVANCED_SCORING("help.page.advancedScoring", paid = true),
     STATISTICS("tab.statistics"),
     COLORS("adjust.colors"),
     CROP("adjust.transform"),
@@ -18,6 +22,14 @@ enum class HelpPage(private val titleKey: String) {
     ;
 
     val title: String get() = tr(titleKey)
+
+    /** True when this edition of the app has the page. */
+    val available: Boolean get() = !paid || ScoringMode.ADVANCED.available
+
+    companion object {
+        /** The pages that this edition of the app shows, in their order. */
+        val shown: List<HelpPage> get() = entries.filter { it.available }
+    }
 }
 
 data class HelpShortcut(
@@ -37,7 +49,10 @@ data class HelpContent(
 object HelpCatalog {
     /** The help pages in the app language. The texts are in the help catalog files. */
     val pages: List<HelpContent>
-        get() = listOf(
+        get() = pages(advanced = ScoringMode.ADVANCED.available)
+
+    /** The help pages. [advanced] is true when this edition of the app has advanced scoring (a paid feature). */
+    fun pages(advanced: Boolean): List<HelpContent> = listOf(
         HelpContent(
             page = HelpPage.OVERVIEW,
             summary = tr("help.overview.summary"),
@@ -177,7 +192,8 @@ object HelpCatalog {
                 tr("help.points.action.2"),
                 tr("help.points.action.3"),
                 tr("help.points.action.4"),
-                tr("help.points.action.5"),
+                // The free version has no scoring mode (advanced mode is a paid feature).
+                tr(if (advanced) "help.points.action.5" else "help.points.action.5.free"),
                 tr("help.points.action.6"),
                 tr("help.points.action.7"),
                 tr("help.points.action.8"),
@@ -218,8 +234,12 @@ object HelpCatalog {
                 HelpShortcut(AppShortcuts.SCORE_PLAYER_2, tr("help.points.shortcut.scorePlayer2")),
                 HelpShortcut(AppShortcuts.NEXT_POINT, tr("help.points.shortcut.nextPoint")),
                 HelpShortcut(AppShortcuts.PREVIOUS_POINT, tr("help.points.shortcut.previousPoint")),
-                HelpShortcut(AppShortcuts.NEXT_PACK, tr("help.points.shortcut.nextPack")),
-                HelpShortcut(AppShortcuts.PREVIOUS_PACK, tr("help.points.shortcut.previousPack")),
+            ) + listOfNotNull(
+                // In basic mode, these keys do the same as the next and the previous point. Only the paid version
+                // has advanced mode, so the free version does not show them.
+                HelpShortcut(AppShortcuts.NEXT_PACK, tr("help.points.shortcut.nextPack")).takeIf { advanced },
+                HelpShortcut(AppShortcuts.PREVIOUS_PACK, tr("help.points.shortcut.previousPack")).takeIf { advanced },
+            ) + listOf(
                 HelpShortcut(AppShortcuts.SWITCH_SERVE, tr("help.points.shortcut.switchServe")),
                 HelpShortcut(AppShortcuts.TOGGLE_FAVORITE, tr("help.points.shortcut.toggleFavorite")),
                 HelpShortcut(AppShortcuts.DELETE, tr("help.points.shortcut.delete")),
@@ -258,7 +278,8 @@ object HelpCatalog {
                 tr("help.statistics.note.1"),
                 tr("help.statistics.note.2"),
                 tr("help.statistics.note.3"),
-                tr("help.statistics.note.4"),
+                // The free version has no serve faults and no lets (advanced mode is a paid feature).
+                tr(if (advanced) "help.statistics.note.4" else "help.statistics.note.4.free"),
                 tr("help.statistics.note.5"),
                 tr("help.statistics.note.6"),
                 tr("help.statistics.note.7"),

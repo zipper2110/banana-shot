@@ -45,6 +45,8 @@ paid feature is implemented, add it to that list.
     personal style.
   - More comment styles (P-1).
   - Comment animations (P-3).
+  - Advanced scoring for tennis (B-68 in `backlog.md`). Decided on
+    2026-11-15. It is implemented. See `paid-features.md`.
   - Maybe other features.
   - Maybe more than 5 exported videos per month. Probably not.
 - Open questions: the minimum price; whether to offer the lifetime license;

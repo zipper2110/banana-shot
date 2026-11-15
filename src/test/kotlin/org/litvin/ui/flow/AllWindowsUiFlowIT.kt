@@ -56,7 +56,7 @@ class AllWindowsUiFlowIT {
         shots.capture("projects-import-match", "tab-projects")
 
         openWindow(application, "nav-help", "help-content")
-        HelpPage.entries.forEach { page ->
+        HelpPage.shown.forEach { page ->
             openSection(application, "help-navigation-${page.name.lowercase()}", "help-content")
             shots.capture("help-content", "help-${page.name.lowercase()}")
         }

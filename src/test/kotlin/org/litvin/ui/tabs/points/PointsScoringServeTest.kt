@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import org.litvin.scoring.ClipChoice
 import org.litvin.scoring.ClipOutcome
@@ -24,6 +26,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** B-68 E3: X, L, the serve labels, the clips of zero length, and the outcome of the Edit dialog. */
+@ExtendWith(PaidEdition::class)
 class PointsScoringServeTest {
     private val fault = PointV1(id = "F", startMs = 10_000, endMs = 12_000)
     private val zero = PointV1(id = "Z", startMs = 14_000, endMs = 14_000)

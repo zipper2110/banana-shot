@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.points.PointV1
 import org.litvin.scoring.Ending
 import org.litvin.scoring.EndingChoice
@@ -24,6 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /** B-68 E2: the ending keys, the automatic winners, "Who serves?", and the confirmation of a server change. */
+@ExtendWith(PaidEdition::class)
 class PointsScoringEndingsTest {
     private val point = PointV1(id = "A", startMs = 10_000, endMs = 15_000)
 

@@ -69,10 +69,12 @@ data class ScoreV1(
 
     /**
      * True when the project uses advanced mode (B-68). Only tennis projects have advanced mode. A padel or beach tennis
-     * project uses basic mode, and keeps the stored mode for a later change of the sport.
+     * project uses basic mode, and keeps the stored mode for a later change of the sport. The free version also uses
+     * basic mode, because advanced mode is a paid feature (docs/paid-features.md). The project keeps the stored mode.
      */
     @get:JsonIgnore
-    val isAdvanced: Boolean get() = scoringMode == ScoringMode.ADVANCED && sport == Sport.TENNIS
+    val isAdvanced: Boolean
+        get() = scoringMode == ScoringMode.ADVANCED && scoringMode.available && sport == Sport.TENNIS
 
     /** The details of the clip with [pointId]. A clip without an entry has no details. */
     fun detailOf(pointId: String): PointDetailV1 = details[pointId] ?: PointDetailV1()

@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.junit.jupiter.api.extension.ExtendWith
+import org.litvin.shared.util.PaidEdition
 import org.litvin.scoring.ScoringMode
 import org.litvin.scoring.Sport
 import java.awt.Component
@@ -12,6 +14,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** B-73: the scoring mode and "Ask error kind" are in the Scoring rules dialog of the project. */
+@ExtendWith(PaidEdition::class)
 class ScoreSettingsDialogModeTest {
     private fun settings(sport: Sport = Sport.TENNIS, mode: ScoringMode = ScoringMode.BASIC, ask: Boolean = false) =
         ScoreSettings(
@@ -72,6 +75,16 @@ class ScoreSettingsDialogModeTest {
         assertFalse(dialog.find("score-settings-mode-group")!!.isVisible)
         dialog.button("score-settings-save").doClick()
         assertEquals(ScoringMode.ADVANCED, dialog.result?.scoringMode)
+    }
+
+    @Test
+    fun `the free version does not show the scoring mode and keeps the mode of the project`() = PaidEdition.with(paid = false) {
+        onDialog(settings(mode = ScoringMode.ADVANCED, ask = true)) { dialog ->
+            assertFalse(dialog.find("score-settings-mode-group")!!.isVisible)
+            dialog.button("score-settings-save").doClick()
+            assertEquals(ScoringMode.ADVANCED, dialog.result?.scoringMode)
+            assertEquals(true, dialog.result?.askErrorKind)
+        }
     }
 
     private fun Container.button(name: String): AbstractButton = find(name) as AbstractButton

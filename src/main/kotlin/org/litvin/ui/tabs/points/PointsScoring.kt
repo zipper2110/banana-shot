@@ -284,7 +284,8 @@ internal class PointsScoring(
         refresh()
         if (dir != null && (!exists || score.useDefaultScoreboard)) {
             val style = runCatching { styleDefaults.load() }.getOrNull()
-            val mode = runCatching { modeDefaults.load() }.getOrDefault(ScoringMode.BASIC)
+            // The free version gives a new project basic mode, also when the default of the paid version is advanced.
+            val mode = runCatching { modeDefaults.load() }.getOrDefault(ScoringMode.BASIC).orAvailable()
             val askErrorKind = runCatching { modeDefaults.loadAskErrorKind() }.getOrDefault(false)
             change {
                 it.copy(

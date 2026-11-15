@@ -104,8 +104,8 @@ analytics session after the crash.
 |---|---|
 | Layer 1: crash marker, crash file, freeze watchdog | Done (2026-11-11). Checked with a real JVM crash (JNA, JDK 27, macOS) from a development run: the next start found the file and wrote the safe part. |
 | Layer 2: crash popup | Done (2026-11-11). Checked in a development run with a separate data folder: the popup opened after a frozen session. The click on "Report this problem" is not checked. |
-| Layer 3: app counters, contract, Worker, cockpit | Done (2026-11-11). Not deployed. |
-| Privacy texts: site text | Done (2026-11-11). Not deployed. |
+| Layer 3: app counters, contract, Worker, cockpit | Done (2026-11-11). Deployed on 2026-11-16 (run 43757193559, smoke check 204). |
+| Privacy texts: site text | Done (2026-11-11). Deployed on 2026-11-16 (run 43757193559). |
 | Legitimate interest update | Reviewed and approved by the author (2026-11-16). |
 | Check on a packaged build: where the JVM writes the crash file, on Windows and macOS | Not started |
 

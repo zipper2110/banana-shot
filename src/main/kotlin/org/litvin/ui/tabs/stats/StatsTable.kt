@@ -11,6 +11,7 @@ import org.litvin.stats.StatGroup
 import org.litvin.stats.StatRow
 import org.litvin.stats.StatValue
 import org.litvin.stats.StatsSettingsV1
+import org.litvin.ui.commons.ClickListener
 import org.litvin.ui.commons.HeightForWidth
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
@@ -513,11 +514,10 @@ internal class ValueCell(
     private var pointId: String? = null
     private var color: Color = Palette.FG_2
     private var hover = false
+    private val click = ClickListener { pointId?.let(onOpenPoint) }
     private val mouse = object : MouseAdapter() {
-        override fun mouseClicked(e: MouseEvent) {
-            pointId?.let(onOpenPoint)
-        }
-
+        override fun mousePressed(e: MouseEvent) = click.mousePressed(e)
+        override fun mouseReleased(e: MouseEvent) = click.mouseReleased(e)
         override fun mouseEntered(e: MouseEvent) = setHover(true)
         override fun mouseExited(e: MouseEvent) = setHover(false)
     }

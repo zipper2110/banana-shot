@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points.ui
 
+import org.litvin.ui.commons.ClickListener
 import org.litvin.ui.commons.CommentDialog
 import org.litvin.ui.commons.CommentInput
 import org.litvin.ui.commons.Palette
@@ -77,17 +78,17 @@ class PointsTableView(
                 if (!inside && hoveredRow === row) setHovered(null)
             }
         }
+    }
 
-        override fun mouseClicked(event: MouseEvent) {
-            if (!SwingUtilities.isLeftMouseButton(event)) return
-            val row = event.component as? TableRow ?: return
-            if (row is ReplayRow) {
-                row.open()
-                return
-            }
-            actions.selectByVisualIndex(row.visualIndex)
-            actions.seekTo(row.startMs)
+    private val clickListener = ClickListener { event ->
+        if (!SwingUtilities.isLeftMouseButton(event)) return@ClickListener
+        val row = event.component as? TableRow ?: return@ClickListener
+        if (row is ReplayRow) {
+            row.open()
+            return@ClickListener
         }
+        actions.selectByVisualIndex(row.visualIndex)
+        actions.seekTo(row.startMs)
     }
 
     init {
@@ -252,6 +253,7 @@ class PointsTableView(
     private fun add(row: TableRow, selected: Boolean) {
         row.selected = selected
         row.addMouseListener(hoverListener)
+        row.addMouseListener(clickListener)
         row.components.forEach { it.addMouseListener(hoverListener) }
         rows += row
         rowsPanel.add(row)

@@ -3,6 +3,7 @@ package org.litvin.ui.tabs.stats
 import org.litvin.scoring.PerPlayer
 import org.litvin.scoring.Sport
 import org.litvin.stats.Momentum
+import org.litvin.ui.commons.ClickListener
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.BasicStroke
@@ -53,12 +54,12 @@ class MomentumChart(private val onOpenPoint: (String) -> Unit) : JComponent() {
         val mouse = object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) = setHover(pointAt(e.x))
             override fun mouseExited(e: MouseEvent) = setHover(-1)
-            override fun mouseClicked(e: MouseEvent) {
-                val index = pointAt(e.x)
-                if (index >= 0) onOpenPoint(momentum.points[index].pointId)
-            }
         }
         addMouseListener(mouse)
+        addMouseListener(ClickListener { e ->
+            val index = pointAt(e.x)
+            if (index >= 0) onOpenPoint(momentum.points[index].pointId)
+        })
         addMouseMotionListener(mouse)
     }
 

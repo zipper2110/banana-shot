@@ -194,10 +194,13 @@ class PointsScoringErrorKindTest {
 
     private fun PointsScoring.strip(): JComponent = errorStrip
 
+    /** A press and a release. The strip does not use the click event of Swing. */
     private fun JComponent.clickOnStrip() {
-        mouseListeners.forEach {
-            it.mouseClicked(java.awt.event.MouseEvent(this, java.awt.event.MouseEvent.MOUSE_CLICKED, 0L, 0, 5, 5, 1, false))
-        }
+        // A release outside the strip is not a click, so the strip must have a size.
+        setSize(400, 40)
+        fun event(id: Int) = java.awt.event.MouseEvent(this, id, 0L, 0, 5, 5, 1, false, java.awt.event.MouseEvent.BUTTON1)
+        mouseListeners.forEach { it.mousePressed(event(java.awt.event.MouseEvent.MOUSE_PRESSED)) }
+        mouseListeners.forEach { it.mouseReleased(event(java.awt.event.MouseEvent.MOUSE_RELEASED)) }
     }
 
     private fun withScoring(

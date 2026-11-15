@@ -4,6 +4,7 @@ import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.i18n.tr
 import org.litvin.points.ReplayV1
+import org.litvin.ui.commons.ClickListener
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.UiKit
@@ -97,12 +98,9 @@ internal class ReplayList(
 
                 // The pointer can go from the row onto one of its buttons. The row stays hovered then.
                 override fun mouseExited(e: MouseEvent) = setHovered(getMousePosition(true) != null)
-
-                override fun mouseClicked(e: MouseEvent) {
-                    if (e.source === this@Row) onSelect(index)
-                }
             }
             addMouseListener(mouse)
+            addMouseListener(ClickListener { onSelect(index) })
             buttons.forEach { it.addMouseListener(mouse) }
             refreshButtons()
         }

@@ -2,13 +2,12 @@ package org.litvin.ui.tabs.points.ui
 
 import org.litvin.i18n.tr
 import org.litvin.scoring.ErrorKind
+import org.litvin.ui.commons.ClickListener
 import org.litvin.ui.commons.KeyChipStyle
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
 import java.awt.Cursor
 import java.awt.FlowLayout
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import javax.swing.BorderFactory
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -74,11 +73,7 @@ internal class ErrorKindStrip(
         buttons.values.forEach(::add)
         add(closeHint)
         // A click on the strip, outside the answers, opens the question again.
-        val reopen = object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) {
-                if (!state.open) onOpen()
-            }
-        }
+        val reopen = ClickListener { if (!state.open) onOpen() }
         addMouseListener(reopen)
         caption.addMouseListener(reopen)
         isVisible = false

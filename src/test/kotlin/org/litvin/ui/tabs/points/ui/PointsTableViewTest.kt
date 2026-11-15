@@ -130,9 +130,12 @@ class PointsTableViewTest {
         SwingUtilities.invokeAndWait {
             val view = PointsTableView(actions)
             view.setState(state(PointEventDto(PointDto("pt-a", 1_000, 2_000, null)), CommentDto(4, 3_000, 2_000, "In", "#FFFFFF")))
+            // A release outside the row is not a click, so the rows must have a size.
+            view.setSize(360, 400)
+            view.layoutRecursively()
             val rows = view.descendants().filterIsInstance<TableRow>()
 
-            dispatch(rows[1], MouseEvent.MOUSE_CLICKED)
+            click(rows[1])
 
             assertEquals(listOf("select 1", "seek 3000"), calls)
         }
@@ -174,9 +177,9 @@ class PointsTableViewTest {
             assertEquals("0.5× · 2×", replayRows[0].details)
             assertEquals("0.25× · Muted", replayRows[1].details)
 
-            dispatch(replayRows[1], MouseEvent.MOUSE_CLICKED)
+            click(replayRows[1])
             (findByName(view, "delete-replay-pt-a-0") as javax.swing.AbstractButton).doClick()
-            dispatch(rows[4], MouseEvent.MOUSE_CLICKED)
+            click(rows[4])
             assertEquals(listOf("open pt-a 1", "delete pt-a 0", "select 2", "seek 3000"), calls)
 
             // On hover, the first replay can move down only, and the last replay can move up only.
@@ -227,9 +230,14 @@ class PointsTableViewTest {
         autosave = AutosaveState(false, null),
     )
 
-    private fun dispatch(target: Component, id: Int) {
-        val modifiers = if (id == MouseEvent.MOUSE_CLICKED) MouseEvent.BUTTON1_DOWN_MASK else 0
+    private fun dispatch(target: Component, id: Int, modifiers: Int = 0) {
         target.dispatchEvent(MouseEvent(target, id, System.currentTimeMillis(), modifiers, 1, 1, 1, false, MouseEvent.BUTTON1))
+    }
+
+    /** A press and a release. The rows do not use the click event of Swing. */
+    private fun click(target: Component) {
+        dispatch(target, MouseEvent.MOUSE_PRESSED, MouseEvent.BUTTON1_DOWN_MASK)
+        dispatch(target, MouseEvent.MOUSE_RELEASED)
     }
 
     private fun findByName(root: Component, name: String): Component? =

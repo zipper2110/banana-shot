@@ -241,8 +241,9 @@ class SwingStatsPanelTest {
             val panel = openPanel(onOpenPoint = { opened += it })
 
             // Player 2 wins the longest run, from point 2. All points are 5 s long, so the first point is the longest.
-            panel.find<JComponent>("stats-value-longest_point_run-p2")!!.click(0, 0)
-            panel.find<JComponent>("stats-value-longest_point")!!.click(0, 0)
+            // A release outside the value is not a click, so the values must have a size.
+            panel.find<JComponent>("stats-value-longest_point_run-p2")!!.apply { setSize(100, 40) }.click(5, 5)
+            panel.find<JComponent>("stats-value-longest_point")!!.apply { setSize(100, 40) }.click(5, 5)
             assertTrue(panel.find<JComponent>("stats-value-points_won-p1")!!.mouseListeners.isEmpty())
         }
 
@@ -316,9 +317,12 @@ class SwingStatsPanelTest {
         assertEquals(50, StatsIO.readForProjectDir(projectDir.path).cardTransparencyPercent)
     }
 
+    /** A press and a release. The values and the chart do not use the click event of Swing. */
     private fun JComponent.click(x: Int, y: Int) {
-        val event = MouseEvent(this, MouseEvent.MOUSE_CLICKED, 0L, 0, x, y, 1, false, MouseEvent.BUTTON1)
-        mouseListeners.forEach { it.mouseClicked(event) }
+        val press = MouseEvent(this, MouseEvent.MOUSE_PRESSED, 0L, 0, x, y, 1, false, MouseEvent.BUTTON1)
+        val release = MouseEvent(this, MouseEvent.MOUSE_RELEASED, 0L, 0, x, y, 1, false, MouseEvent.BUTTON1)
+        mouseListeners.forEach { it.mousePressed(press) }
+        mouseListeners.forEach { it.mouseReleased(release) }
     }
 
     private fun openPanel(onOpenPoints: () -> Unit = {}, onOpenPoint: (String) -> Unit = {}): SwingStatsPanel =

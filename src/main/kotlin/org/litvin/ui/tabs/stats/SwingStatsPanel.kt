@@ -6,6 +6,7 @@ import org.litvin.adjustments.AdjustmentsIO
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.projects.ManifestIO
 import org.litvin.scoring.PerPlayer
+import org.litvin.stats.CardStyle
 import org.litvin.stats.MatchStat
 import org.litvin.stats.Momentum
 import org.litvin.stats.StatRows
@@ -85,7 +86,7 @@ class SwingStatsPanel(
         onOpenPoint = { pointId -> onOpenPoint(pointId) },
     )
     private val preview = StatsCardPreview()
-    private val cardColumn = StatsCardColumn(preview, ::showPreviewPage, ::setCardTransparency)
+    private val cardColumn = StatsCardColumn(preview, ::showPreviewPage, ::setCardTransparency, ::setCompactCard, ::setCardGroupTitles, ::setCardStyle, ::setLightCard)
     private val emptyView = StatsEmptyView { onOpenPoints() }
 
     init {
@@ -234,6 +235,7 @@ class SwingStatsPanel(
         table.chart.momentum = Momentum.of(report, scope)
         table.momentumCheck.isSelected = settings.videoMomentum
         cardColumn.showTransparency(settings.normalized().cardTransparencyPercent)
+        cardColumn.showLayout(CardStyle.ofKey(settings.cardStyle), settings.compactCard, settings.cardGroupTitles, settings.lightCard)
         showRows(colors)
         updatePreview()
         revalidate()
@@ -366,6 +368,37 @@ class SwingStatsPanel(
             StatsIO.writeForProjectDir(dir, settings)
         } catch (failure: Exception) {
             logger.warn(failure) { "Cannot save stats.json in $dir" }
+            dialogs.showError(this, ErrorTexts.of(failure), tr("stats.error.save"))
+        }
+    }
+
+    private fun setCompactCard(selected: Boolean) {
+        saveCardLayout(settings.copy(compactCard = selected)) { cardColumn.compact.isSelected = !selected }
+    }
+
+    private fun setCardStyle(style: CardStyle) {
+        val previous = CardStyle.ofKey(settings.cardStyle)
+        saveCardLayout(settings.copy(cardStyle = style.key)) { cardColumn.style.selected = previous }
+    }
+
+    private fun setLightCard(selected: Boolean) {
+        saveCardLayout(settings.copy(lightCard = selected)) { cardColumn.light.isSelected = !selected }
+    }
+
+    private fun setCardGroupTitles(selected: Boolean) {
+        saveCardLayout(settings.copy(cardGroupTitles = selected)) { cardColumn.groupTitles.isSelected = !selected }
+    }
+
+    /** Saves stats.json with the [updated] card layout, and shows the new pages. When the save fails, [revert] resets the switch. */
+    private fun saveCardLayout(updated: StatsSettingsV1, revert: () -> Unit) {
+        val dir = projectDir ?: return
+        try {
+            StatsIO.writeForProjectDir(dir, updated)
+            settings = updated
+            updatePreview()
+        } catch (failure: Exception) {
+            logger.warn(failure) { "Cannot save stats.json in $dir" }
+            revert()
             dialogs.showError(this, ErrorTexts.of(failure), tr("stats.error.save"))
         }
     }

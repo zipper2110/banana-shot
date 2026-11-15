@@ -2,10 +2,13 @@ package org.litvin.ui.tabs.stats
 
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2OutlinedAL
+import org.litvin.stats.CardStyle
 import org.litvin.stats.StatsCard
 import org.litvin.stats.StatsSettingsV1
 import org.litvin.ui.commons.DefaultFillSliderUI
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.SegmentedChoice
+import org.litvin.ui.commons.SwitchBox
 import org.litvin.ui.commons.UiKit
 import java.awt.Dimension
 import java.awt.Graphics
@@ -24,13 +27,17 @@ import org.litvin.i18n.DisplayFormats
 
 /**
  * The right side of the tab: the statistics card as the exported video shows it, the page buttons,
- * the card transparency and a short help. The column uses all the height; the preview gets smaller
- * in a low window, so that the controls under it stay visible.
+ * the card style, the card transparency, the switches of the card (compact, group titles, light), and a short help.
+ * The column uses all the height; the preview gets smaller in a low window, so that the controls under it stay visible.
  */
 internal class StatsCardColumn(
     val preview: StatsCardPreview,
     onPage: (Int) -> Unit,
     onTransparency: (percent: Int, adjusting: Boolean) -> Unit,
+    onCompact: (Boolean) -> Unit,
+    onGroupTitles: (Boolean) -> Unit,
+    onStyle: (CardStyle) -> Unit,
+    onLight: (Boolean) -> Unit,
 ) : JPanel(null), Scrollable {
     private val title = JLabel(tr("stats.card.inVideo")).apply {
         font = UiKit.font(15f, UiKit.Weight.BOLD)
@@ -53,6 +60,14 @@ internal class StatsCardColumn(
         name = "stats-preview-page"
         font = UiKit.font(12.5f)
         foreground = Palette.FG_2
+    }
+    private val styleCaption = JLabel(tr("stats.card.style")).apply {
+        font = UiKit.font(12.5f)
+        foreground = Palette.FG
+    }
+    val style = SegmentedChoice("stats-card-style", CardStyle.entries.map { SegmentedChoice.Option(it, styleLabel(it), tooltip = styleTooltip(it)) }).apply {
+        selected = CardStyle.CLASSIC
+        onChange(onStyle)
     }
     private val transparencyCaption = JLabel(tr("stats.card.transparency")).apply {
         font = UiKit.font(12.5f)
@@ -77,6 +92,22 @@ internal class StatsCardColumn(
     }
     private val solid = scaleLabel(tr("stats.card.solid"), SwingConstants.LEFT)
     private val moreVideo = scaleLabel(tr("stats.card.moreVideo"), SwingConstants.RIGHT)
+    val compact = SwitchBox(tr("stats.card.compact"), 12.5f).apply {
+        name = "stats-card-compact"
+        toolTipText = tr("stats.card.compact.tooltip", "count" to StatsCard.COMPACT_ROWS_PER_PAGE)
+        addActionListener { onCompact(isSelected) }
+    }
+    val groupTitles = SwitchBox(tr("stats.card.groupTitles"), 12.5f).apply {
+        name = "stats-card-group-titles"
+        toolTipText = tr("stats.card.groupTitles.tooltip")
+        addActionListener { onGroupTitles(isSelected) }
+    }
+    val light = SwitchBox(tr("stats.card.light"), 12.5f).apply {
+        name = "stats-card-light"
+        toolTipText = tr("stats.card.light.tooltip")
+        addActionListener { onLight(isSelected) }
+    }
+    private val switches = listOf(compact, groupTitles, light)
     private val about = AboutSection()
 
     /** True while the column sets the slider value from the settings. */
@@ -86,8 +117,10 @@ internal class StatsCardColumn(
         name = "stats-card-column"
         isOpaque = true
         background = Palette.CARD
-        listOf(title, summary, preview, previous, pageLabel, next, transparencyCaption, transparencyValue, transparency, solid, moreVideo, about)
-            .forEach { add(it) }
+        listOf(
+            title, summary, preview, previous, pageLabel, next, styleCaption, style, transparencyCaption, transparencyValue, transparency, solid, moreVideo,
+            compact, groupTitles, light, about,
+        ).forEach { add(it) }
     }
 
     private fun scaleLabel(text: String, align: Int) = JLabel(text, align).apply {
@@ -126,6 +159,14 @@ internal class StatsCardColumn(
         transparencyValue.text = DisplayFormats.percent(percent)
     }
 
+    /** Sets the style choice and the switches of the card. A change from the code does not call the listeners. */
+    fun showLayout(cardStyle: CardStyle, compactCard: Boolean, cardGroupTitles: Boolean, lightCard: Boolean) {
+        style.selected = cardStyle
+        compact.isSelected = compactCard
+        groupTitles.isSelected = cardGroupTitles
+        light.isSelected = lightCard
+    }
+
     private val viewportHeight get() = (parent as? JViewport)?.height?.takeIf { it > 0 } ?: height.takeIf { it > 0 } ?: 700
 
     /** The width of the content. The preview grows with the column, but it stays short enough to show the controls. */
@@ -158,6 +199,12 @@ internal class StatsCardColumn(
             place(pageLabel, labelX, (inner - previous.preferredSize.width - next.preferredSize.width - 16).coerceAtLeast(0), buttonHeight)
             y += buttonHeight + GAP
         }
+        val styleCaptionHeight = styleCaption.preferredSize.height
+        place(styleCaption, left, inner, styleCaptionHeight)
+        y += styleCaptionHeight + 4
+        val styleHeight = style.preferredSize.height
+        place(style, left, inner, styleHeight)
+        y += styleHeight + GAP
         val captionHeight = transparencyCaption.preferredSize.height
         // The labels get more than their preferred width, because some text paints wider than measured.
         place(transparencyCaption, left, (inner - VALUE_WIDTH).coerceAtLeast(0), captionHeight)
@@ -169,6 +216,19 @@ internal class StatsCardColumn(
         place(solid, left, inner / 2, scaleHeight)
         place(moreVideo, left + inner / 2, inner - inner / 2, scaleHeight)
         y += scaleHeight + GAP
+        // The switches are on one line when they fit. A switch that does not fit goes to the next line.
+        val switchHeight = compact.preferredSize.height
+        var x = 0
+        for (switch in switches) {
+            val switchWidth = min(switch.preferredSize.width, inner)
+            if (x > 0 && x + switchWidth > inner) {
+                x = 0
+                y += switchHeight + SWITCH_ROW_GAP
+            }
+            if (apply) switch.setBounds(left + x, y, switchWidth, switchHeight)
+            x += switchWidth + SWITCH_GAP
+        }
+        y += switchHeight + GAP
         val aboutHeight = about.heightForWidth(inner)
         place(about, left, inner, aboutHeight)
         y += aboutHeight
@@ -277,11 +337,28 @@ internal class StatsCardColumn(
     }
 
     companion object {
+        /** The name of [style] in the style choice. */
+        fun styleLabel(style: CardStyle): String = when (style) {
+            CardStyle.CLASSIC -> tr("stats.card.style.classic")
+            CardStyle.MIRROR -> tr("stats.card.style.mirror")
+            CardStyle.STRIPES -> tr("stats.card.style.stripes")
+            CardStyle.LABELS -> tr("stats.card.style.labels")
+            CardStyle.SHEET -> tr("stats.card.style.sheet")
+        }
+
+        private fun styleTooltip(style: CardStyle): String = when (style) {
+            CardStyle.CLASSIC -> tr("stats.card.style.classic.tooltip")
+            CardStyle.MIRROR -> tr("stats.card.style.mirror.tooltip")
+            CardStyle.STRIPES -> tr("stats.card.style.stripes.tooltip")
+            CardStyle.LABELS -> tr("stats.card.style.labels.tooltip")
+            CardStyle.SHEET -> tr("stats.card.style.sheet.tooltip")
+        }
+
         val TRANSPARENCY_TIP: String get() = tr("stats.card.transparency.tooltip")
         val HELP: List<String>
             get() = listOf(
                 tr("stats.card.help.1"),
-                tr("stats.card.help.2", "count" to StatsCard.ROWS_PER_PAGE),
+                tr("stats.card.help.2", "count" to StatsCard.ROWS_PER_PAGE, "compactCount" to StatsCard.COMPACT_ROWS_PER_PAGE),
                 tr("stats.card.help.3"),
             )
         private const val PAD_X = 20
@@ -292,12 +369,14 @@ internal class StatsCardColumn(
         private const val PARAGRAPH_GAP = 8
         private const val SLIDER_HEIGHT = 22
         private const val VALUE_WIDTH = 60
+        private const val SWITCH_GAP = 28
+        private const val SWITCH_ROW_GAP = 8
         private const val MIN_INNER = 280
 
         /** The content is never narrower than this width when the column has the space. */
         private const val MIN_MAX_WIDTH = 460
 
         /** The height of the parts under and over the preview, so that the preview keeps them visible. */
-        private const val RESERVED_HEIGHT = 296
+        private const val RESERVED_HEIGHT = 380
     }
 }

@@ -27,6 +27,14 @@ data class StatsSettingsV1(
     val videoMomentum: Boolean = false,
     /** How much of the video shows through the card panel, in percent. 0 is a solid panel. */
     val cardTransparencyPercent: Int = DEFAULT_CARD_TRANSPARENCY_PERCENT,
+    /** True when the card uses smaller rows, so that each page shows more rows. */
+    val compactCard: Boolean = false,
+    /** True when the card shows the title of each group above its rows, for example "Serve". */
+    val cardGroupTitles: Boolean = false,
+    /** The [CardStyle.key] of the look of the card rows. The app uses the classic style for an unknown key. */
+    val cardStyle: String = CardStyle.CLASSIC.key,
+    /** True when the card has dark text on a light panel. The default card is dark. */
+    val lightCard: Boolean = false,
 ) {
     fun inVideo(stat: MatchStat): Boolean = stat.key in videoStats
 

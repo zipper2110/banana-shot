@@ -157,6 +157,8 @@ data class StatValue(val text: String, val detail: String? = null)
  * One row of the statistics table.
  * A row has one value for each player ([values]) or one value for both players ([shared]).
  * [bar] holds the numbers that the video compares in a bar, or null when the row has no bar.
+ * [barMax] is the largest possible bar number, for example 100 for a percentage. It is null when only the two numbers
+ * give the scale, for example for a count.
  * When the row has no value, [unavailableReason] tells the user why.
  */
 data class StatRow(
@@ -165,6 +167,7 @@ data class StatRow(
     val shared: StatValue? = null,
     val unavailableReason: String? = null,
     val bar: PerPlayer<Double>? = null,
+    val barMax: Double? = null,
     /** The point that each value comes from, when the value comes from one point. */
     val pointIds: PerPlayer<String?>? = null,
     /** The point that the shared value comes from. */
@@ -230,7 +233,8 @@ object StatRows {
         fun unavailable(reason: String) = StatRow(stat, unavailableReason = reason)
         fun perPlayer(values: PerPlayer<StatValue>, bar: PerPlayer<Double>? = null) = StatRow(stat, values = values, bar = bar)
         fun counts(values: PerPlayer<Int>) = perPlayer(values.map(::count), values.map { it.toDouble() })
-        fun shares(values: PerPlayer<Ratio>) = perPlayer(values.map(::share), values.map { (it.percent ?: 0).toDouble() })
+        fun shares(values: PerPlayer<Ratio>) =
+            perPlayer(values.map(::share), values.map { (it.percent ?: 0).toDouble() }).copy(barMax = PERCENT_MAX)
         fun fractions(values: PerPlayer<Ratio>) = perPlayer(values.map(::fraction), values.map { it.won.toDouble() })
         fun shared(value: StatValue?) = if (value == null) unavailable(NO_VALUE) else StatRow(stat, shared = value)
         /** The share of the points of one length that each player won. */
@@ -330,7 +334,7 @@ object StatRows {
         fun shares(values: PerPlayer<Ratio>): StatRow = if (!hasServer) {
             StatRow(stat, unavailableReason = NEEDS_SERVER)
         } else {
-            StatRow(stat, values = values.map(::share), bar = values.map { (it.percent ?: 0).toDouble() })
+            StatRow(stat, values = values.map(::share), bar = values.map { (it.percent ?: 0).toDouble() }, barMax = PERCENT_MAX)
         }
         fun errorKind(kind: ErrorKind): StatRow = if (details.errorsWithKind == 0) {
             StatRow(stat, unavailableReason = NO_ERROR_KIND)
@@ -370,6 +374,8 @@ object StatRows {
     }
 
     private fun <T, R> PerPlayer<T>.map(transform: (T) -> R): PerPlayer<R> = PerPlayer(transform(p1), transform(p2))
+
+    private const val PERCENT_MAX = 100.0
 
     private fun count(value: Int) = StatValue(value.toString())
 

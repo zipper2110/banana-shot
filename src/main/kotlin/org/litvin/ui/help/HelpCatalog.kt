@@ -250,6 +250,9 @@ object HelpCatalog {
                 tr("help.statistics.action.5"),
                 tr("help.statistics.action.6"),
                 tr("help.statistics.action.7"),
+                tr("help.statistics.action.8"),
+                tr("help.statistics.action.9"),
+                tr("help.statistics.action.10"),
             ),
             goodToKnow = listOf(
                 tr("help.statistics.note.1"),

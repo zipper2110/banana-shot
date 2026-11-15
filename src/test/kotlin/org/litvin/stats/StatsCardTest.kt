@@ -110,7 +110,7 @@ class StatsCardTest {
         // 3 overview rows, 4 serve rows and 1 pressure row. An equal split (4 + 4) breaks the serve group.
         val rows = rowsOf(StatGroup.OVERVIEW, 3) + rowsOf(StatGroup.SERVE, 4) + rowsOf(StatGroup.PRESSURE, 1)
 
-        val pages = StatsCard.splitRows(rows, 2)
+        val pages = StatsCard.splitRows(rows)
 
         assertEquals(listOf(3, 5), pages.map { it.size })
     }
@@ -120,9 +120,65 @@ class StatsCardTest {
         // 4 + 5 + 3 rows. Each split between the groups gives a page with more than 7 rows.
         val rows = rowsOf(StatGroup.SERVE, 4) + rowsOf(StatGroup.PRESSURE, 5) + rowsOf(StatGroup.POINT_LENGTH, 3)
 
-        val pages = StatsCard.splitRows(rows, 2)
+        val pages = StatsCard.splitRows(rows)
 
         assertEquals(listOf(6, 6), pages.map { it.size })
+    }
+
+    @Test
+    fun aCompactPageHasMoreRows() {
+        val rows = rowsOf(StatGroup.OVERVIEW, 3) + rowsOf(StatGroup.SERVE, 9)
+
+        assertEquals(listOf(6, 6), StatsCard.splitRows(rows).map { it.size })
+        assertEquals(listOf(12), StatsCard.splitRows(rows, StatsCard.RowLayout.COMPACT).map { it.size })
+    }
+
+    @Test
+    fun groupTitlesUseTheSpaceOfSomeRows() {
+        // 7 rows fit on one page without titles. With two titles, the serve group goes to a second page.
+        val rows = rowsOf(StatGroup.OVERVIEW, 3) + rowsOf(StatGroup.SERVE, 4)
+
+        assertEquals(listOf(7), StatsCard.splitRows(rows).map { it.size })
+        assertEquals(listOf(3, 4), StatsCard.splitRows(rows, groupTitles = true).map { it.size })
+    }
+
+    @Test
+    fun aGroupThatGoesOnTheNextPageShowsItsTitleAgain() {
+        val rows = rowsOf(StatGroup.SERVE, 9)
+
+        val pages = StatsCard.splitRows(rows, groupTitles = true)
+
+        assertEquals(listOf(5, 4), pages.map { it.size })
+        assertTrue(pages.all { StatsCard.RowLayout.NORMAL.height(it, groupTitles = true) <= StatsCard.RowLayout.NORMAL.bodyHeight })
+    }
+
+    @Test
+    fun theCompactCardShowsAllRowsOnFewerPages() {
+        val all = StatsSettingsV1(videoMomentum = false, videoStats = MatchStat.entries.map { it.key })
+        val normal = StatsCard.content(report("1111" + "2222"), all)
+        val compact = StatsCard.content(report("1111" + "2222"), all.copy(compactCard = true))
+
+        val normalPages = StatsCard.pages(normal)
+        val compactPages = StatsCard.pages(compact)
+
+        assertTrue(compactPages.size < normalPages.size, "${compactPages.size} < ${normalPages.size}")
+        val labels = compactPages.flatMap { it.labels() }
+        assertTrue(compact.rows.all { it.label in labels })
+        // The panel stays in the frame.
+        val panel = compactPages.first().items.filterIsInstance<SceneItem.Box>()[1]
+        assertTrue(panel.y >= 0 && panel.y + panel.height <= StatsCard.HEIGHT)
+    }
+
+    @Test
+    fun theCardShowsTheGroupTitlesWhenTheSettingIsOn() {
+        val keys = listOf("points_won", "games_won", "duration")
+        val settings = StatsSettingsV1(videoMomentum = false, videoStats = keys)
+
+        val without = StatsCard.pages(StatsCard.content(report("11112211"), settings)).single().labels()
+        val with = StatsCard.pages(StatsCard.content(report("11112211"), settings.copy(cardGroupTitles = true))).single().labels()
+
+        assertTrue("OVERVIEW" !in without)
+        assertTrue(with.containsAll(listOf("OVERVIEW", "TIME")), with.toString())
     }
 
     private fun rowsOf(group: StatGroup, count: Int): List<StatRow> =
@@ -222,6 +278,82 @@ class StatsCardTest {
         val chart = StatsCard.pages(content).single()
 
         assertTrue("Set 2" in chart.labels(), chart.labels().toString())
+    }
+
+    @Test
+    fun eachStyleShowsAllRowsInBothLayouts() {
+        val keys = listOf("points_won", "games_won", "deuce_points_won", "longest_point_run", "duration")
+        for (style in CardStyle.entries) for (compact in listOf(false, true)) for (titles in listOf(false, true)) for (light in listOf(false, true)) {
+            val settings = StatsSettingsV1(videoMomentum = true, videoStats = keys, cardStyle = style.key, compactCard = compact,
+                cardGroupTitles = titles, lightCard = light)
+            val content = StatsCard.content(report("11112211" + "2121"), settings)
+
+            val pages = StatsCard.pages(content)
+            val labels = pages.flatMap { it.labels() }.map { it.lowercase() }
+
+            val case = "$style compact=$compact titles=$titles light=$light"
+            assertTrue(content.rows.all { it.label.lowercase() in labels }, "$case: $labels")
+            assertTrue("point difference" in labels, case)
+            for (page in pages) {
+                val panel = page.items.filterIsInstance<SceneItem.Box>()[1]
+                assertTrue(panel.y >= 0 && panel.y + panel.height <= StatsCard.HEIGHT, case)
+            }
+        }
+    }
+
+    @Test
+    fun anUnknownStyleKeyGivesTheClassicStyle() {
+        assertEquals(CardStyle.CLASSIC, CardStyle.ofKey("future-style"))
+        assertEquals(CardStyle.SHEET, CardStyle.ofKey("sheet"))
+    }
+
+    @Test
+    fun theLightCardHasALightPanelAndDarkerPlayerColors() {
+        val score = ScoreV1(player1Name = "Alex", player2Name = "Sam", player1ColorHex = "#F2F2F2")
+        val content = StatsCard.content(report("1122", score), StatsSettingsV1(videoMomentum = false, lightCard = true))
+
+        val page = StatsCard.pages(content).single()
+
+        val panel = page.items.filterIsInstance<SceneItem.Box>()[1]
+        assertTrue(StatsCard.luminance(panel.rgb) > 0.8, Integer.toHexString(panel.rgb))
+        assertTrue(StatsCard.luminance(content.cardColors.p1) <= 0.2, Integer.toHexString(content.cardColors.p1))
+        assertEquals(content.lightColors, content.cardColors)
+    }
+
+    @Test
+    fun theMirrorBarsOfAPercentageUseAScaleOf100() {
+        val row = StatRow(MatchStat.SERVICE_POINTS_WON, values = PerPlayer(StatValue("50%"), StatValue("25%")),
+            bar = PerPlayer(50.0, 25.0), barMax = 100.0)
+        val content = StatsCardContent(PerPlayer("Alex", "Sam"), PerPlayer(0x4DA3FF, 0xFF6B6B), "Match statistics", "6-4",
+            listOf(row), style = CardStyle.MIRROR)
+
+        val boxes = StatsCard.pages(content).single().items.filterIsInstance<SceneItem.Box>()
+
+        val p1 = boxes.single { it.rgb == 0x4DA3FF }
+        val p2 = boxes.single { it.rgb == 0xFF6B6B }
+        assertEquals(2.0, p1.width / p2.width, 0.001)
+        // Each bar starts at the center of the card.
+        assertEquals(StatsCard.WIDTH_16_9 / 2, p1.x + p1.width + 4.0, 0.001)
+        assertEquals(StatsCard.WIDTH_16_9 / 2, p2.x - 4.0, 0.001)
+        // 50% is half of the full length.
+        val track = boxes.filter { it.rgb == 0xFFFFFF && it.width > p1.width && it.height == p1.height }
+        assertEquals(p1.width * 2, track.first().width, 0.001)
+    }
+
+    @Test
+    fun theStripesShowTheBetterValueInThePlayerColor() {
+        val won = StatRow(MatchStat.WINNERS, values = PerPlayer(StatValue("9"), StatValue("4")), bar = PerPlayer(9.0, 4.0))
+        val errors = StatRow(MatchStat.UNFORCED_ERRORS, values = PerPlayer(StatValue("12"), StatValue("5")), bar = PerPlayer(12.0, 5.0))
+        val content = StatsCardContent(PerPlayer("Alex", "Sam"), PerPlayer(0x4DA3FF, 0xFF6B6B), "Match statistics", "6-4",
+            listOf(won, errors), style = CardStyle.STRIPES)
+
+        val labels = StatsCard.pages(content).single().items.filterIsInstance<SceneItem.Label>()
+
+        assertEquals(0x4DA3FF, labels.single { it.text == "9" }.rgb)
+        assertEquals(0xFFFFFF, labels.single { it.text == "4" }.rgb)
+        // Fewer unforced errors is better.
+        assertEquals(0xFFFFFF, labels.single { it.text == "12" }.rgb)
+        assertEquals(0xFF6B6B, labels.single { it.text == "5" }.rgb)
     }
 
     private fun org.litvin.export.scoreboard.ScoreboardScene.labels(): List<String> =

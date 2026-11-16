@@ -22,16 +22,20 @@ import kotlin.math.abs
  * from that time.
  *
  * At the still frame of a replay (decision 22), the director gives [Command.Hold]. The caller pauses the player on the
- * frame, waits, and then calls [endHold] and plays again.
+ * frame, waits, and then calls [endHold] and plays again. The still frame is the frame nearest to its time
+ * ([Replays.stillFrameFromMs]). [frameMs] gives the time of one frame of the video.
  */
-class ReplayDirector {
+class ReplayDirector(private val frameMs: () -> Double = { DEFAULT_FRAME_MS }) {
     sealed interface Command {
         data class Seek(val sourceMs: Long) : Command
         data class Look(val view: ReplayView?) : Command
         data class Sound(val sound: ReplaySound?) : Command
 
-        /** Pause the player on the frame at [sourceMs] for [durationMs], then call [endHold] and play again. */
-        data class Hold(val sourceMs: Long, val durationMs: Long) : Command
+        /**
+         * Pause the player on the still frame at [sourceMs] for [durationMs], then call [endHold] and play again. The
+         * still frame is the first frame at or after the source time [frameFromMs].
+         */
+        data class Hold(val sourceMs: Long, val durationMs: Long, val frameFromMs: Double) : Command
     }
 
     private var timeline = ReplayTimeline.EMPTY
@@ -100,12 +104,17 @@ class ReplayDirector {
             if (sourceMs < part.startMs - JUMP_MS || sourceMs > part.endMs + JUMP_MS) return stop()
             if (freeze != null && playing && !frozen) {
                 // The still frame comes when the video plays over its frame. A frame step past it shows no still frame.
-                val trigger = minOf(freeze.atMs.toLong(), part.endMs - END_TOLERANCE_MS)
+                // The hold starts on the frame before the still frame. Then the seek to the still frame goes one frame
+                // forward, as the play does. A hold on the still frame itself can show the next frame before the pause,
+                // and then the seek goes back one frame.
+                val frame = frameMs()
+                val stillFrom = Replays.stillFrameFromMs(part, frame) ?: freeze.atMs.toDouble()
+                val trigger = (stillFrom - frame).toLong().coerceIn(part.startMs.toLong(), part.endMs - END_TOLERANCE_MS)
                 if ((previous ?: sourceMs) <= trigger && sourceMs >= trigger) {
                     frozen = true
                     isHolding = true
                     return look(viewIn(play, freeze.atMs.toLong())) +
-                        Command.Hold(freeze.atMs.toLong(), freeze.durationMs.toLong())
+                        Command.Hold(freeze.atMs.toLong(), freeze.durationMs.toLong(), stillFrom)
                 }
             }
             if (sourceMs >= part.endMs - END_TOLERANCE_MS) return next(active)
@@ -239,6 +248,9 @@ class ReplayDirector {
     }
 
     private companion object {
+        /** The time of one frame when the player does not know the frame rate: 30 frames each second. */
+        const val DEFAULT_FRAME_MS = 1000.0 / 30
+
         /** A time this far from the seek target is an old time of the player. */
         const val SEEK_TOLERANCE_MS = 150L
 

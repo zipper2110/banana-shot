@@ -580,6 +580,7 @@ object RenderQueueManager {
                                     sampleRate = replaySampleRate,
                                     freezeAtMs = Replays.freezeOffsetMs(part),
                                     freezeMs = Replays.freezeMs(part),
+                                    freezeSourceMs = part.freeze?.atMs?.toLong(),
                                 )
                                 buildFor(
                                     emptyList(), passFile, 0L, chunkOutput = true,

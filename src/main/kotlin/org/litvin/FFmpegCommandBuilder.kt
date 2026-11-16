@@ -87,6 +87,11 @@ object FFmpegCommandBuilder {
         val freezeAtMs: Long? = null,
         /** The time of the still frame. */
         val freezeMs: Long = 0L,
+        /**
+         * The source time of the still frame ([org.litvin.points.ReplayFreeze.atMs]). The still frame is the source
+         * frame nearest to it, as in the preview. Null uses the first frame after the cut.
+         */
+        val freezeSourceMs: Long? = null,
     ) {
         /** The output time of the moving part, without the still frame. */
         val motionMs: Long get() = Math.round((endMs - startMs).coerceAtLeast(0L) / speed)
@@ -406,19 +411,48 @@ object FFmpegCommandBuilder {
     internal fun videoToolboxQuality(crf: Int?): Int =
         (75.0 + ((crf ?: 21) - 21) * -2.5).roundToInt().coerceIn(1, 100)
 
-    internal fun replayFreezeVideo(before: List<String>, after: List<String>, replay: ReplayRender): String {
+    /**
+     * The video of a replay. [prepared] gets the frames with their source times from the part start, [motion] slows
+     * them, and [after] comes after the still frame. The still frame is cut in at [ReplayRender.freezeAtMs] of the play.
+     * Its picture is the source frame nearest to [ReplayRender.freezeSourceMs] (decision 22), as in the preview. It
+     * does not come from the slowed frames, because their first frame and their frame rate move it to a neighbor frame
+     * when the part start changes.
+     */
+    internal fun replayFreezeVideo(prepared: List<String>, motion: List<String>, after: List<String>, replay: ReplayRender): String {
+        val before = prepared + motion
         val at = replay.freezeAtMs
         if (at == null || replay.freezeMs <= 0) return "[0:v]" + (before + after).joinToString(",")
         val hold = (replay.freezeMs / 1000.0).formatSecs()
+        val stillAtMs = replay.freezeSourceMs
         return when {
             at <= 0L -> "[0:v]" + (before + "tpad=start_mode=clone:start_duration=$hold" + after).joinToString(",")
             at >= replay.motionMs -> "[0:v]" + (before + "tpad=stop_mode=clone:stop_duration=$hold" + after).joinToString(",")
-            else -> {
+            stillAtMs == null -> {
                 val cut = (at / 1000.0).formatSecs()
                 "[0:v]" + (before + "split[rfa][rfb]").joinToString(",") +
                     ";[rfa]trim=end=$cut,setpts=PTS-STARTPTS[rfa1]" +
                     ";[rfb]trim=start=$cut,setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration=$hold[rfb1]" +
                     ";[rfa1][rfb1]" + (listOf("concat=n=2:v=1:a=0") + after).joinToString(",")
+            }
+            else -> {
+                val cut = (at / 1000.0).formatSecs()
+                val fps = replay.sourceFrameRate?.framesPerSecond?.takeIf { it > 0.0 } ?: FALLBACK_FPS
+                val fromMs = org.litvin.points.Replays.nearestFrameFromMs(stillAtMs, replay.startMs, replay.endMs, 1000.0 / fps)
+                val from = ((fromMs - replay.startMs).coerceAtLeast(0.0) / 1000.0).formatSecs()
+                val still = listOfNotNull(
+                    "trim=start=$from",
+                    "setpts=PTS-STARTPTS",
+                    "trim=end_frame=1",
+                    replay.sourceFrameRate?.let { "fps=${it.ffmpegArgument}" },
+                    "tpad=stop_mode=clone:stop_duration=$hold",
+                    "trim=duration=$hold",
+                )
+                "[0:v]" + (prepared + "split[rfm][rfs]").joinToString(",") +
+                    ";[rfm]" + (motion + "split[rfa][rfb]").joinToString(",") +
+                    ";[rfa]trim=end=$cut,setpts=PTS-STARTPTS[rfa1]" +
+                    ";[rfb]trim=start=$cut,setpts=PTS-STARTPTS[rfb1]" +
+                    ";[rfs]" + still.joinToString(",") + "[rfs1]" +
+                    ";[rfa1][rfs1][rfb1]" + (listOf("concat=n=3:v=1:a=0") + after).joinToString(",")
             }
         }
     }
@@ -759,7 +793,8 @@ object FFmpegCommandBuilder {
             val durationSecs = replay.durationMs / 1000.0
             val duration = durationSecs.formatSecs()
             val zoom = replayZoomFilter(replay)
-            val video = mutableListOf("setpts=PTS-STARTPTS")
+            // The prepared frames keep the source times from the part start, so the still frame can find its frame.
+            val video = mutableListOf<String>()
             if (timedAdjustments != null) {
                 video += timedFilters(timedAdjustments, replay.startMs, replay.endMs)
                 zoom?.let { video += it }
@@ -770,8 +805,8 @@ object FFmpegCommandBuilder {
                 video += scale
                 buildColorFilter(p.adjustments)?.let { video += it }
             }
-            video += "setpts=PTS/${fmt6(replay.speed)}"
-            replay.sourceFrameRate?.let { video += "fps=${it.ffmpegArgument}" }
+            val motion = mutableListOf("setpts=PTS-STARTPTS", "setpts=PTS/${fmt6(replay.speed)}")
+            replay.sourceFrameRate?.let { motion += "fps=${it.ffmpegArgument}" }
             // The subtitles and the fades come after the still frame, because their times count it.
             val after = mutableListOf<String>()
             p.subtitlesAssPath?.let { after += burnInFilter(it) }
@@ -788,7 +823,7 @@ object FFmpegCommandBuilder {
                     replayFreezeAudio(slow, listOf("apad", "atrim=duration=$duration") + audioFades, replay)
                 }
             }
-            filterComplex = "${replayFreezeVideo(video, after, replay)}$vMap;$audio$aMap"
+            filterComplex = "${replayFreezeVideo(video, motion, after, replay)}$vMap;$audio$aMap"
         } else if (segmentInputs) {
             // Build the concat graph over the per-segment inputs. Each input was already seeked and
             // length-limited on the command line, so the segment only needs its timestamps rebased.

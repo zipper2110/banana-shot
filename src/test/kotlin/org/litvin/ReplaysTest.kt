@@ -358,4 +358,20 @@ class ReplaysTest {
         val replays = org.litvin.export.ExportReplays.of(listOf(withTwo), emptyList())
         assertEquals(listOf(0, 1), replays.map { it.replayIndex })
     }
+
+    @Test
+    fun theStillFrameIsTheFrameNearestToItsTime() {
+        // At 25 fps, the frames start at 960, 1 000, 1 040 ms. Times up to half a frame away give the frame at 1 000 ms.
+        assertEquals(980.0, Replays.nearestFrameFromMs(1_000, 0, 2_000, 40.0), 1e-9)
+        assertEquals(990.0, Replays.nearestFrameFromMs(1_010, 0, 2_000, 40.0), 1e-9)
+        assertEquals(970.0, Replays.nearestFrameFromMs(990, 0, 2_000, 40.0), 1e-9)
+
+        // The frame stays inside the part: the first frame at the start, the last frame at the end.
+        assertEquals(500.0, Replays.nearestFrameFromMs(510, 500, 2_000, 40.0), 1e-9)
+        assertEquals(1_960.0, Replays.nearestFrameFromMs(2_000, 500, 2_000, 40.0), 1e-9)
+
+        val replay = ReplayV1(500, 2_000, freeze = ReplayFreeze(1_000))
+        assertEquals(980.0, Replays.stillFrameFromMs(replay, 40.0)!!, 1e-9)
+        assertNull(Replays.stillFrameFromMs(replay.copy(freeze = null), 40.0))
+    }
 }

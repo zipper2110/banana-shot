@@ -30,4 +30,11 @@ class FramePickTest {
         assertEquals(12_000, FramePick.step(11_950, 5, 10_000, 12_000, 30.0))
         assertEquals(10_000, FramePick.step(10_050, -5, 10_000, 12_000, 30.0))
     }
+
+    @Test
+    fun theSeekGoesFiveMsLaterBecauseMpvShowsAFrameUpToFiveMsBeforeTheTarget() {
+        assertEquals(985L, FramePick.seekMs(980.0))
+        assertEquals(988L, FramePick.seekMs(983.3))
+        assertEquals(5L, FramePick.seekMs(-10.0))
+    }
 }

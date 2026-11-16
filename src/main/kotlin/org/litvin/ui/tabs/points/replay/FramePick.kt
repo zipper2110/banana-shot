@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.points.replay
 
+import org.litvin.media.mpv.MpvFrameReader
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -22,6 +23,12 @@ internal object FramePick {
     /** The number of the frame at [timeMs] in the part from [startMs] to [endMs]. The first frame is 1. */
     fun index(timeMs: Long, startMs: Long, endMs: Long, fps: Double): Int =
         (((timeMs - startMs) * fps / 1000.0).roundToInt() + 1).coerceIn(1, count(startMs, endMs, fps))
+
+    /**
+     * The seek time of the player that shows the first frame at or after [fromMs]. An exact seek of mpv also shows a
+     * frame that starts up to 5 ms before its target, so the seek goes 5 ms later.
+     */
+    fun seekMs(fromMs: Double): Long = fromMs.coerceAtLeast(0.0).roundToLong() + MpvFrameReader.HR_SEEK_TOLERANCE_MS
 
     /** The time [frames] frames after [timeMs] (before it for a negative count), inside the part. */
     fun step(timeMs: Long, frames: Int, startMs: Long, endMs: Long, fps: Double): Long =

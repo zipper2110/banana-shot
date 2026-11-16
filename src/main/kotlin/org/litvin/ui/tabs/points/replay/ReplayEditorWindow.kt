@@ -116,7 +116,7 @@ internal class ReplayEditorWindow(
     private val onCommentLook: (CommentLook) -> Unit = {},
 ) : JFrame(tr("replay.editor.title", "point" to pointTitle)) {
     private val edits = ReplayEditorModel(point, selectIndex ?: 0)
-    private val director = ReplayDirector()
+    private val director = ReplayDirector { FramePick.frameMs(fps()) }
     private var previewing = false
 
     /** Ends the still frame of the preview (decision 22) after its time. */
@@ -133,7 +133,7 @@ internal class ReplayEditorWindow(
         onStart = { ms -> edits.setStart(ms); seek(ms); refresh() },
         onEnd = { ms -> edits.setEnd(ms); seek(ms); refresh() },
         onSeek = { ms -> stopPreview(); seek(ms) },
-        onFreeze = { ms -> edits.setFreezeAt(ms); seek(ms); refresh() },
+        onFreeze = { ms -> edits.setFreezeAt(ms); seekStill(); refresh() },
         onCommentSelect = { id -> stopPreview(); selectComment(id, seekToStart = false) },
         onCommentMove = { id, ms ->
             edits.moveComment(id, ms)
@@ -697,7 +697,11 @@ internal class ReplayEditorWindow(
         refreshOverlay()
     }
 
-    private fun seek(ms: Long) {
+    /**
+     * Moves the playhead to [ms]. In pick mode, and with [nearestFrame], the video shows the frame nearest to [ms], as
+     * the still frame does ([Replays.nearestFrameFromMs]). Otherwise it shows the first frame at the time.
+     */
+    private fun seek(ms: Long, nearestFrame: Boolean = picking) {
         val part = edits.selected
         val target = if (picking && part != null) {
             ms.coerceIn(part.startMs.toLong(), part.endMs.toLong())
@@ -705,7 +709,12 @@ internal class ReplayEditorWindow(
             ms.coerceIn(edits.windowStartMs.toLong(), edits.windowEndMs.toLong())
         }
         if (picking) pickMs = target
-        player.seek(target)
+        if (nearestFrame && part != null) {
+            val from = Replays.nearestFrameFromMs(target, part.startMs.toLong(), part.endMs.toLong(), FramePick.frameMs(fps()))
+            player.seek(FramePick.seekMs(from))
+        } else {
+            player.seek(target)
+        }
         partBar.setPlayhead(target)
         refreshClock(target)
         shownMs = target
@@ -714,6 +723,11 @@ internal class ReplayEditorWindow(
 
     private fun seekToSelected() {
         edits.selected?.let { seek(it.startMs.toLong()) }
+    }
+
+    /** Shows the still frame of the selected replay, the same frame as the preview and the export. */
+    private fun seekStill() {
+        edits.selected?.freeze?.let { seek(it.atMs.toLong(), nearestFrame = true) }
     }
 
     private fun nudge(deltaMs: Long) {
@@ -945,7 +959,7 @@ internal class ReplayEditorWindow(
         showCards(CARD_EDIT)
         sideLock.isVisible = false
         refresh()
-        seek(pickMs)
+        seek(pickMs, nearestFrame = true)
     }
 
     /** Puts the still frame on the frame that pick mode shows, and ends pick mode. */
@@ -1119,7 +1133,7 @@ internal class ReplayEditorWindow(
                 is ReplayDirector.Command.Sound -> player.setReplaySound(command.sound)
                 is ReplayDirector.Command.Hold -> {
                     player.pause()
-                    player.seek(command.sourceMs)
+                    player.seek(FramePick.seekMs(command.frameFromMs))
                     holdTimer.initialDelay = command.durationMs.toInt()
                     holdTimer.restart()
                     commentClock.holdStarted()

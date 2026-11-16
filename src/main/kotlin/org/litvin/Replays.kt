@@ -197,6 +197,22 @@ object Replays {
         replay.freeze?.let { Math.round((it.atMs - replay.startMs).coerceAtLeast(0) / replay.speed).coerceAtMost(motionMs(replay)) }
 
     /**
+     * The source time from where the frame nearest to [ms] is the first frame (decision 22): half a frame before [ms].
+     * A time some ms before or after a frame start gives the same frame. The frame stays inside the part from
+     * [startMs] to [endMs]. [frameMs] is the time of one frame.
+     */
+    fun nearestFrameFromMs(ms: Long, startMs: Long, endMs: Long, frameMs: Double): Double =
+        (ms - frameMs / 2).coerceAtMost(endMs - frameMs).coerceAtLeast(startMs.toDouble())
+
+    /**
+     * The still frame of [replay] is the frame nearest to its time. The result is the source time from where the still
+     * frame is the first frame, or null without a still frame. The preview and the export use the same frame.
+     */
+    fun stillFrameFromMs(replay: ReplayV1, frameMs: Double): Double? = replay.freeze?.let {
+        nearestFrameFromMs(it.atMs.toLong(), replay.startMs.toLong(), replay.endMs.toLong(), frameMs)
+    }
+
+    /**
      * The time from the play start of the frame at [sourceMs] of the part. A frame after the still frame comes later by
      * the still frame. The frame of the still frame is at the start of the still frame.
      */

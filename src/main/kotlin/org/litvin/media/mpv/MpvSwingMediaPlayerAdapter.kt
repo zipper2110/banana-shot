@@ -140,7 +140,8 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     @Volatile private var pendingSeekMs: Long? = null
     @Volatile private var frameDurationMs = 40L
     @Volatile private var framesPerSecond = 0.0
-    @Volatile private var frameStepCursorMs: Long? = null
+    /** The time of the frame that the last frame step shows. It has the exact frame time, so many steps do not drift. */
+    @Volatile private var frameStepCursorMs: Double? = null
     @Volatile private var playbackRate = 1.0f
     @Volatile private var lastStatus = PlayerStatus.STOPPED
 
@@ -601,20 +602,38 @@ class MpvSwingMediaPlayerAdapter(errorViews: VideoErrorViewFactory? = null) : Sw
     }
 
     override fun stepFrameForward(maximumTimeMs: Long): Long {
-        val base = frameStepCursorMs ?: currentTimeMs()
-        val limit = maximumTimeMs.coerceAtLeast(0L)
-        val target = (base + frameDurationMs).coerceAtMost(limit)
+        val frame = exactFrameMs()
+        val base = frameStepCursorMs ?: currentTimeMs().toDouble()
+        val limit = maximumTimeMs.coerceAtLeast(0L).toDouble()
+        val target = (base + frame).coerceAtMost(limit)
+        if (target >= limit) {
+            // The last frame that starts before the limit.
+            seekFrameFrom((limit - frame).coerceAtLeast(0.0))
+        } else {
+            core?.command("frame-step")
+        }
         frameStepCursorMs = target
-        if (target >= limit) seekExact(target) else core?.command("frame-step")
-        return target
+        return target.roundToLong()
     }
 
     override fun stepFrameBackward(minimumTimeMs: Long): Long {
-        val base = frameStepCursorMs ?: currentTimeMs()
-        val target = (base - frameDurationMs).coerceAtLeast(minimumTimeMs.coerceAtLeast(0L))
+        val frame = exactFrameMs()
+        val minimum = minimumTimeMs.coerceAtLeast(0L).toDouble()
+        val base = frameStepCursorMs ?: currentTimeMs().toDouble()
+        val target = (base - frame).coerceAtLeast(minimum)
+        // The frame nearest to the target. A seek to the target itself can show the next frame when the target is
+        // some ms after the frame start.
+        seekFrameFrom((target - frame / 2).coerceAtLeast(minimum))
         frameStepCursorMs = target
-        seekExact(target)
-        return target
+        return target.roundToLong()
+    }
+
+    /** The time of one frame, without rounding. */
+    private fun exactFrameMs(): Double = if (framesPerSecond > 0.0) 1000.0 / framesPerSecond else frameDurationMs.toDouble()
+
+    /** Shows the first frame at or after [fromMs]. mpv also shows a frame up to 5 ms before the target, so the seek goes 5 ms later. */
+    private fun seekFrameFrom(fromMs: Double) {
+        seekExact(fromMs.roundToLong() + MpvFrameReader.HR_SEEK_TOLERANCE_MS)
     }
 
     override fun frameRate(): Double? = framesPerSecond.takeIf { it > 0.0 }

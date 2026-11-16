@@ -105,6 +105,36 @@ class FFmpegCommandBuilderReplayTest {
     }
 
     @Test
+    fun theStillFrameIsTheSourceFrameNearestToItsTime() {
+        // The still frame at 13 000 ms of the source is 2 000 ms after the play start at half speed.
+        val replay = render().copy(freezeAtMs = 2_000, freezeMs = 800, freezeSourceMs = 13_000)
+        val filter = build(replay).valueOf("-filter_complex")
+
+        // The frames keep their source times until the split, so the still frame does not depend on the first frame.
+        assertTrue(filter.startsWith("[0:v]scale=1920:-2,split[rfm][rfs]"), filter)
+        assertTrue("[rfm]setpts=PTS-STARTPTS,setpts=PTS/0.500000,fps=30000/1001,split[rfa][rfb]" in filter, filter)
+        assertTrue("[rfa]trim=end=2.000,setpts=PTS-STARTPTS[rfa1]" in filter, filter)
+        assertTrue("[rfb]trim=start=2.000,setpts=PTS-STARTPTS[rfb1]" in filter, filter)
+        // Half a frame of 29.97 fps (16.7 ms) before 1 000 ms of the part.
+        assertTrue(
+            "[rfs]trim=start=0.983,setpts=PTS-STARTPTS,trim=end_frame=1,fps=30000/1001," +
+                "tpad=stop_mode=clone:stop_duration=0.800,trim=duration=0.800[rfs1]" in filter,
+            filter,
+        )
+        assertTrue("[rfa1][rfs1][rfb1]concat=n=3:v=1:a=0[vout]" in filter, filter)
+    }
+
+    @Test
+    fun anotherPartStartKeepsTheSameStillFrame() {
+        // The same still frame at 13 000 ms, with the part start 300 ms earlier.
+        val later = render().copy(freezeAtMs = 2_000, freezeMs = 800, freezeSourceMs = 13_000)
+        val earlier = render().copy(startMs = 11_700, freezeAtMs = 2_600, freezeMs = 800, freezeSourceMs = 13_000)
+
+        assertTrue("[rfs]trim=start=0.983," in build(later).valueOf("-filter_complex"))
+        assertTrue("[rfs]trim=start=1.283," in build(earlier).valueOf("-filter_complex"))
+    }
+
+    @Test
     fun aStillFrameAtTheStartOrTheEndNeedsNoCut() {
         val atStart = build(render().copy(freezeAtMs = 0, freezeMs = 500)).valueOf("-filter_complex")
         assertTrue("fps=30000/1001,tpad=start_mode=clone:start_duration=0.500[vout]" in atStart, atStart)

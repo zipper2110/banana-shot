@@ -49,6 +49,7 @@ import org.litvin.ui.commons.VideoFrameRequest
 import org.litvin.ui.tabs.points.ui.SwingTimelineComponent
 import org.litvin.ui.tabs.points.ui.TimelineMarks
 import org.litvin.ui.tabs.points.components.Keybindings
+import org.litvin.ui.tabs.points.replay.FramePick
 import org.litvin.ui.tabs.points.components.PointsKeyActions
 import org.litvin.ui.tabs.points.ui.EventsHeader
 import org.litvin.ui.tabs.points.ui.PointStartButton
@@ -121,7 +122,7 @@ class SwingPointsPanel(
     private val commentPreview = CommentPreview()
 
     // Plays the replays of the points after their ends (B-50)
-    private val replays = ReplayDirector()
+    private val replays = ReplayDirector { FramePick.frameMs(player.frameRate() ?: FramePick.FALLBACK_FPS) }
     private var replayShown = false
 
     /** Ends the still frame of a replay (decision 22) after its time. */
@@ -1356,7 +1357,7 @@ class SwingPointsPanel(
                 is ReplayDirector.Command.Sound -> player.setReplaySound(command.sound)
                 is ReplayDirector.Command.Hold -> {
                     player.pause()
-                    player.seek(command.sourceMs)
+                    player.seek(FramePick.seekMs(command.frameFromMs))
                     replayHold.initialDelay = command.durationMs.toInt()
                     replayHold.restart()
                     replayCommentClock.holdStarted()

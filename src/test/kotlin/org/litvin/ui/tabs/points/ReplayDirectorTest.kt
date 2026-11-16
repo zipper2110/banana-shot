@@ -59,7 +59,8 @@ class ReplayDirectorTest {
         assertTrue(director.onTime(8_500, playing = true).none { it is Command.Hold })
 
         val hold = director.onTime(9_020, playing = true)
-        assertEquals(listOf(Command.Hold(9_000, 800)), hold.filterIsInstance<Command.Hold>())
+        // The still frame is the first frame from half a frame (30 fps) before its time.
+        assertEquals(listOf(Command.Hold(9_000, 800, 9_000 - 1000.0 / 60)), hold.filterIsInstance<Command.Hold>())
         assertTrue(director.isHolding)
         // The player shows the still frame. Its time does not end the replay.
         assertTrue(director.onTime(9_000, playing = false).isEmpty())
@@ -70,6 +71,28 @@ class ReplayDirectorTest {
         // The play goes on, and the still frame does not come again.
         assertTrue(director.onTime(9_100, playing = true).none { it is Command.Hold })
         assertFalse(director.endHold())
+    }
+
+    @Test
+    fun theHoldStartsOnTheFrameBeforeTheStillFrame() {
+        // At 25 fps, the frames start at 8 920, 8 960, 9 000 ms. The still frame at 9 000 ms starts from 8 980 ms.
+        val director = ReplayDirector { 40.0 }.also { it.setPoints(listOf(point(freeze = org.litvin.points.ReplayFreeze(9_000, 800)))) }
+        director.onTime(9_900, playing = true)
+        director.onTime(10_010, playing = true)
+        director.onRestart()
+        assertTrue(director.onTime(8_920, playing = true).none { it is Command.Hold })
+
+        // The player pauses on the frame before the still frame. The seek to the still frame then goes forward.
+        val hold = director.onTime(8_960, playing = true).filterIsInstance<Command.Hold>().single()
+        assertEquals(9_000L, hold.sourceMs)
+        assertEquals(8_980.0, hold.frameFromMs, 1e-9)
+    }
+
+    @Test
+    fun aStillFrameAtThePartStartHoldsOnTheFirstFrame() {
+        val director = entered(point(freeze = org.litvin.points.ReplayFreeze(8_000, 800)))
+        val hold = director.onTime(8_000, playing = true).filterIsInstance<Command.Hold>().single()
+        assertEquals(8_000.0, hold.frameFromMs, 1e-9)
     }
 
     @Test

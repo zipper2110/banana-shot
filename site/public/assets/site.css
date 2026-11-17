@@ -111,11 +111,14 @@ p { margin: 0 0 1em; }
 .nav a:hover { color: var(--fg-strong); background: rgba(255, 255, 255, 0.07); }
 /* The current page has a light pill, so that the reader sees where they are. */
 .nav a[aria-current="page"] { color: var(--fg-strong); background: rgba(255, 255, 255, 0.09); box-shadow: inset 0 0 0 1px var(--glass-edge); }
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   /* The menu goes under the logo. The row gap keeps the current-page pill away from the logo. */
   .site-header .wrap { flex-wrap: wrap; gap: 10px 0; padding-top: 10px; padding-bottom: 8px; }
   .nav { gap: 2px; margin-left: -7px; width: calc(100% + 7px); }
   .nav a { padding: 6px 7px; font-size: 0.88rem; }
+  /* The menu has seven items. On a phone, the header hides Changelog (except on the Changelog page), so that the
+     menu stays on one line. The footer has the link. */
+  .nav a[href="/changelog/"]:not([aria-current]) { display: none; }
 }
 @media (max-width: 420px) {
   /* Six items fit in one line down to 360 px. A narrower screen wraps them. */
@@ -488,3 +491,52 @@ kbd {
   background: var(--yellow-tint); border: 1px solid var(--yellow-line); color: var(--yellow);
   font-size: 12px; font-weight: 600;
 }
+
+/* ---- Features page (/features/) ---- */
+.features-hero { padding: 96px 0 0; text-align: center; }
+.features-hero h1 { font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: -0.035em; line-height: 1.04; }
+.features-hero .lead { max-width: 36em; margin: 0 auto; font-size: 1.2rem; color: var(--fg-2); }
+/* The links to the parts of the page. */
+.jump { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 900px; margin: 36px auto 0; padding: 0; list-style: none; }
+.jump a { display: inline-block; padding: 7px 14px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge); color: var(--fg); font-size: 0.92rem; text-decoration: none; }
+.jump a:hover { border-color: var(--lime-edge); color: var(--fg-strong); }
+.features-page .section-head { margin-bottom: 72px; }
+.features-page .feature-rows { gap: 112px; }
+.features-page .feature-row { scroll-margin-top: 96px; }
+.feature-row ul.feature-points { margin: 18px 0 0; padding: 0; list-style: none; color: var(--fg-2); }
+.feature-points li { position: relative; padding-left: 22px; margin-bottom: 8px; line-height: 1.5; }
+.feature-points li::before { content: ""; position: absolute; left: 2px; top: 0.6em; width: 8px; height: 8px; border-radius: 50%; background: var(--lime); opacity: 0.8; }
+.tag-new { display: inline-block; margin-left: 10px; padding: 3px 8px; border-radius: 6px; background: var(--lime); color: var(--on-lime); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; vertical-align: middle; }
+.features-page .features { margin-top: 0; }
+.features-page .feature { scroll-margin-top: 96px; }
+@media (max-width: 880px) {
+  .features-hero { padding-top: 64px; }
+  .features-page .feature-rows { gap: 80px; }
+}
+
+/* An image gallery (assets/gallery.js). The track scrolls sideways, one image at a time. */
+.gallery { min-width: 0; }
+.gallery-track { display: flex; margin: 0; padding: 0; list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); background: #000; box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7); }
+.gallery-track::-webkit-scrollbar { display: none; }
+.gallery-track:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+.gallery-track > li { flex: 0 0 100%; scroll-snap-align: start; }
+.gallery-track figure { position: relative; margin: 0; }
+.gallery-track img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.gallery-track figcaption { position: absolute; left: 12px; bottom: 12px; padding: 5px 11px; border-radius: 8px; background: rgba(10, 12, 16, 0.78); color: var(--fg-strong); font-size: 0.88rem; font-weight: 600; }
+.gallery-bar { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; }
+.gallery-btn { width: 38px; height: 38px; display: grid; place-items: center; padding: 0; border-radius: 50%; border: 1px solid var(--line-2); background: var(--raised); color: var(--fg-strong); cursor: pointer; }
+.gallery-btn svg { width: 18px; height: 18px; }
+.gallery-btn:hover:not(:disabled) { border-color: var(--lime); color: var(--lime); }
+.gallery-btn:disabled { opacity: 0.35; cursor: default; }
+.gallery-count { min-width: 4em; text-align: center; color: var(--fg-2); font-size: 0.92rem; font-variant-numeric: tabular-nums; }
+.gallery-thumbs { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; padding: 2px; scrollbar-width: thin; }
+.gallery-thumbs button { flex: 0 0 auto; width: 84px; padding: 0; border-radius: 6px; border: 2px solid transparent; background: none; overflow: hidden; cursor: pointer; opacity: 0.6; }
+.gallery-thumbs button.on { border-color: var(--lime); opacity: 1; }
+.gallery-thumbs button:hover { opacity: 1; }
+.gallery-thumbs img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+@media (max-width: 560px) { .gallery-thumbs button { width: 64px; } }
+/* Home: the link to the features page under the feature rows. */
+.all-features { margin: 96px 0 0; text-align: center; }
+@media (max-width: 880px) { .all-features { margin-top: 64px; } }
+/* A gallery of scoreboards: the small images show the top left corner, where the board is. */
+.gallery.corner .gallery-thumbs img { transform: scale(2.4); transform-origin: 0 0; }

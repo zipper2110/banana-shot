@@ -7,8 +7,8 @@
   var ROWS = [
     { group: "SERVE", label: "Points won on serve", match: [38, 29], set1: [20, 15], inVideo: true },
     { label: "Service games won", match: [9, 7], set1: [5, 4], inVideo: true },
-    { label: "Aces", match: [4, 2], set1: [2, 1], inVideo: false },
-    { group: "RETURN", label: "Break points won", match: [3, 1], set1: [2, 1], inVideo: true },
+    { group: "RETURN", label: "Points won on return", match: [31, 27], set1: [16, 12], inVideo: false },
+    { label: "Break points won", match: [3, 1], set1: [2, 1], inVideo: true },
     { group: "POINT LENGTH", label: "Short points won", match: [21, 17], set1: [11, 9], inVideo: true },
     { label: "Long points won", match: [12, 14], set1: [6, 8], inVideo: false }
   ];
@@ -182,18 +182,18 @@
       preview: { x: 504, y: 26, w: 456, h: 290 }
     });
     var ui = st.ui;
-    var ACES = 2;
+    var RETURN_ROW = 2;
 
     async function play() {
       await ui.sleep(700);
       ui.camera("lane");
       await ui.sleep(700);
       // A new row for the card.
-      var check = st.rowEls[ACES].querySelector(".ui-check");
+      var check = st.rowEls[RETURN_ROW].querySelector(".ui-check");
       await ui.press(check);
-      st.setInVideo(ACES, true);
-      st.rowEls[ACES].classList.add("new");
-      st.renderCard("stats", ACES);
+      st.setInVideo(RETURN_ROW, true);
+      st.rowEls[RETURN_ROW].classList.add("new");
+      st.renderCard("stats", RETURN_ROW);
       ui.label("check", "Add to the video");
       await ui.sleep(1400);
       // The momentum chart is a second page of the card.
@@ -217,11 +217,11 @@
       ui.hideLabel();
       ui.camera("wide");
       await ui.sleep(900);
-      st.rowEls[ACES].classList.remove("new");
+      st.rowEls[RETURN_ROW].classList.remove("new");
     }
 
     ui.run(st.reset, play, function () {
-      st.setInVideo(ACES, true);
+      st.setInVideo(RETURN_ROW, true);
       st.setMomentum(true);
       st.renderCard("stats");
     });

@@ -150,6 +150,18 @@ The work for the paid version is in `backlog-paid.md`.
 - The site does not tell about this limit now (decided on 2026-10-18). When
   the feature is done, add it to the FAQ answer "Can I use a video from any
   phone or camera?" (`site/public/faq/index.html`, `#any-camera`).
+- Decided on 2026-11-17: the files make one continuous timeline. The
+  points, replays, comments and adjustments keep their times on this
+  timeline. The export uses the ffmpeg concat filter, not the concat
+  demuxer. Each kept segment opens the file that contains it. A segment
+  that crosses a file boundary becomes two inputs.
+- Decided on 2026-11-17: the feature supports only files with the same
+  format (codec, resolution, frame rate and audio). The app compares the
+  files when the user adds them. If the files are the same, the app shows
+  no warning. If they are different, the app warns the user: the app does
+  not support different files yet, and some features can work
+  incorrectly. The warning asks the user to request the support for their
+  case through the feedback form.
 
 ### B-52 Add comment during a replay
 
@@ -520,3 +532,21 @@ The work for the paid version is in `backlog-paid.md`.
   2026-11-15 (`docs/paid-features.md`).
 - Done when: for a match marked in advanced mode, the Stats tab shows the
   insights that match the data.
+
+### B-75 Export preview
+
+- Added on 2026-11-17. Now the user sees the export result only after the
+  encode. An encode can take an hour. When the result is not correct, the
+  user must encode again.
+- A Preview button on the Export tab opens a separate window. The window
+  plays the export result with libmpv, before the encode: the kept points,
+  the scoreboard, the comments, the replays, the cards, the colors, the
+  crop, and the rotation. A strip of items under the player goes from
+  point to point.
+- Decided on 2026-11-17: libmpv, not FFmpeg; a separate modal window (the
+  main window gets no input while it is open); a free feature; the item
+  strip; no preview of a queued job and no sample encode.
+- The plan, the open questions, and the tasks are in
+  `docs/export-preview/b-75-tasks.md`.
+- Done when: the preview of "Only points" and of "Only favorites" shows
+  the same content, scoreboard, comments, replays, and cards as the export.

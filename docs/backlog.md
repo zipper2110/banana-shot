@@ -166,6 +166,11 @@ The work for the paid version is in `backlog-paid.md`.
   videos, then releases it. The user who asked for it (DJI camera) checks
   it with their files. If it does not work, the author asks that user for
   the files.
+- Decided on 2026-11-17: the feature is in the free version.
+- Decided on 2026-11-17: the "New project" dialog sorts the selected files
+  by file name. Then the user can move a file up or down in the list.
+- Decided on 2026-11-17: the file list is fixed after the user makes the
+  project. The user can only find a missing file again.
 
 ### B-52 Add comment during a replay
 

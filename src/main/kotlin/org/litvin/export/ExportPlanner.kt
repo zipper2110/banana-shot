@@ -92,6 +92,8 @@ data class ExportRenderPlanRequest(
      * "Only favorites" then keep the fault clips and the let clips.
      */
     val includeServeClips: Boolean = false,
+    /** The point filter of a paid export (B-69). Only a project in advanced mode uses it. */
+    val pointFilter: PointFilter = PointFilter.NONE,
 )
 
 object ExportPlanner {
@@ -172,9 +174,13 @@ object ExportPlanner {
         }
     }
 
-    /** The part of the file name that tells the content of the export: "full", "points" or "favs". */
-    fun contentLabel(keptPoints: List<PointV1>, favoriteOnly: Boolean): String = when {
+    /**
+     * The part of the file name that tells the content of the export: "full", "points", "favs", or "filtered" when a
+     * point filter is active (B-69).
+     */
+    fun contentLabel(keptPoints: List<PointV1>, favoriteOnly: Boolean, filtered: Boolean = false): String = when {
         keptPoints.isEmpty() -> "full"
+        filtered -> "filtered"
         favoriteOnly -> "favs"
         else -> "points"
     }
@@ -243,6 +249,7 @@ object ExportPlanner {
 
         val keptPoints = selectedKeepPoints(validPoints, idleTrim = true, favoriteOnly = favoriteOnly, clips = clips)
         return when {
+            clips.filtered && keptPoints.isEmpty() -> ExportReadiness(false, tr("export.filter.none"))
             favoriteOnly && keptPoints.isEmpty() -> ExportReadiness(
                 false,
                 tr("export.readiness.noFavorites"),
@@ -287,7 +294,7 @@ object ExportPlanner {
             validPoints = allValidPoints,
             idleTrim = request.idleTrim,
             favoriteOnly = request.favoriteOnly,
-            clips = ExportClips.of(request.edl, request.score, request.includeServeClips),
+            clips = ExportClips.of(request.edl, request.score, request.includeServeClips, request.pointFilter),
         )
         val effectiveIdleTrim = effectiveIdleTrim(request.idleTrim, keptPoints)
         // Only a full video export uses the trim of the video (B-62). Its overlays move back by the trim start.

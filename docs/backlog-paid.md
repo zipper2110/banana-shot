@@ -45,6 +45,7 @@ paid feature is implemented, add it to that list.
     personal style.
   - More comment styles (P-1).
   - Comment animations (P-3).
+  - Filter and export by point detail (B-69).
   - Advanced scoring for tennis (B-68 in `backlog.md`). Decided on
     2026-11-15. It is implemented. See `paid-features.md`.
   - Maybe other features.
@@ -93,3 +94,43 @@ paid feature is implemented, add it to that list.
 - The texts of the animations are in all languages already.
 - Done when: the paid version shows and draws the animations, and the
   free version does not.
+
+### B-69 Filter and export by point detail
+
+- Added on 2026-11-13. Moved from `backlog.md` on 2026-11-17.
+- Let the user filter the points by their details and export only these
+  points. For example: "all my unforced errors", "all my winners", or "all
+  my forced and unforced errors". This is good for training and for a
+  coach.
+- Decided on 2026-11-17:
+  - The filter is for the paid version. It uses only the details of
+    advanced scoring (B-68), and advanced scoring is paid. Basic scoring
+    has only the winner, so it gets no filter.
+  - The filter is in the Export tab. It is a multi-select: the user can
+    select more than one value, for example "Forced errors" and "Unforced
+    errors".
+- The rules of the filter (2026-11-17):
+  - The filter is in step 1, under the content cards. It shows only for a
+    project in advanced mode in the paid version, and not for "Full video".
+  - It has three groups: player, ending (aces, winners, forced errors,
+    unforced errors, double faults), and error kind (net, long, wide).
+    Strokes need B-70, because advanced mode records no strokes.
+  - "Player" is the player who made the ending: the winner of an ace or a
+    winner, and the other player for an error or a double fault. Thus "all
+    my unforced errors" is "player 1" and "Unforced errors".
+  - In one group, a point matches when it has one of the selected values.
+    A point must match each group that has a selection. A group with no
+    selection keeps all points. A filter with no selection keeps all
+    points.
+  - With a selection, a point with no ending does not match: a point with
+    only the winner (Q, E, or basic mode), a W clip, and a pack with no
+    point clip.
+  - The fault clips and the let clips of a point that matches go in with
+    the option "Include serve faults and lets".
+  - The filter works with "Only points" and "Only favorites". The content
+    cards show the length and the count of the points that match.
+  - The filter is not saved. It is empty when the user opens a project.
+  - The file name gets "filtered" in place of "points" or "favs".
+- Done when: in the paid version, the user selects a filter in the Export
+  tab, and the export has only the points that match it. The free version
+  does not show the filter.

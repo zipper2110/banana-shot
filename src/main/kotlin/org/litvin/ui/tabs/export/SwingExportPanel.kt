@@ -14,6 +14,7 @@ import org.litvin.export.ExportFailureAdvice
 import org.litvin.export.ExportOutputGuard
 import org.litvin.export.ExportPlanner
 import org.litvin.export.ExportPointSummary
+import org.litvin.export.PointFilter
 import org.litvin.export.ExportReadiness
 import org.litvin.export.ExportSourceInfo
 import org.litvin.export.ExportSourceProbe
@@ -109,6 +110,7 @@ class SwingExportPanel(
         updateStatsCardDefault()
         updateSetSummariesDefault()
         updateServeClipsDefault()
+        updatePointFilter(projectChanged = false)
         updateVideoLanguage()
     }
     // Project context (manifest path) — optional; user can still pick output file.
@@ -148,6 +150,13 @@ class SwingExportPanel(
     }
     /** True when the project is in advanced mode, so that it has the option "Include serve faults and lets" (B-68). */
     private var serveClipsAvailable = false
+    // The point filter of a paid export (B-69). Only a project in advanced mode shows it, and advanced mode is paid.
+    private val pointFilterPanel = PointFilterPanel { onPointFilterChanged() }
+    private val pointFilterRow = Stack(0).apply {
+        border = EmptyBorder(10, 0, 0, 0)
+        add(pointFilterPanel)
+        isVisible = false
+    }
     private val videoLanguageRow = VideoLanguageRow(::onVideoLanguageSelected)
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
     private val initButton = StartExportButton(START_EXPORT).apply {
@@ -178,6 +187,7 @@ class SwingExportPanel(
             add(StepHeader(1, tr("export.step.content")))
             add(VGap(10))
             add(contentCards)
+            add(pointFilterRow)
             add(VGap(22))
             add(StepHeader(2, tr("export.step.include")))
             add(VGap(10))
@@ -334,6 +344,7 @@ class SwingExportPanel(
         updateScoreboardDefault()
         updateCommentsDefault()
         updateServeClipsDefault()
+        updatePointFilter(projectChanged = true)
         updateVideoLanguage()
     }
 
@@ -372,6 +383,7 @@ class SwingExportPanel(
 
     private fun onContentChanged() {
         updateServeClipsVisibility()
+        updatePointFilterVisibility()
         updateSetSummariesState()
         updateOutputDuration()
         updateInitButtonState()
@@ -381,7 +393,11 @@ class SwingExportPanel(
     /** The footer shows the estimated file size, the content and the video settings of the next export. */
     private fun updateFooter() {
         val content = RenderFormatting.formatCutMode(idleTrim = idleTrimSelected(), favoriteOnly = favoriteOnlySelected())
-        footer.show(qualityPanel.selectedSize(), listOf(content, qualityPanel.selectedVideoSummary()).filter { it.isNotEmpty() }.joinToString(" · "))
+        val filtered = if (idleTrimSelected() && pointFilterSelected().isActive) tr("export.filter.active") else ""
+        footer.show(
+            qualityPanel.selectedSize(),
+            listOf(content, filtered, qualityPanel.selectedVideoSummary()).filter { it.isNotEmpty() }.joinToString(" · "),
+        )
     }
 
     private fun onInitializeRender() {
@@ -420,11 +436,12 @@ class SwingExportPanel(
         val allValidPoints = ExportPlanner.validateEdl(edl)
         val idleTrim = idleTrimSelected()
         val favoriteOnly = favoriteOnlySelected()
+        val clips = currentClips()
         val keeps: List<PointV1> = ExportPlanner.selectedKeepPoints(
             validPoints = allValidPoints,
             idleTrim = idleTrim,
             favoriteOnly = favoriteOnly,
-            clips = currentClips(),
+            clips = clips,
         )
         if (favoriteOnly && keeps.isEmpty()) {
             dialogs.showWarning(this, tr("export.favorites.none"), tr("export.favorites.unavailable"))
@@ -448,7 +465,7 @@ class SwingExportPanel(
             initialDir,
             ExportPlanner.suggestFilename(
                 projectName = manifest?.name ?: File(source).nameWithoutExtension,
-                contentLabel = ExportPlanner.contentLabel(keeps, favoriteOnly),
+                contentLabel = ExportPlanner.contentLabel(keeps, favoriteOnly, filtered = clips.filtered),
                 presetId = selPreset.id,
                 resolutionLabel = target.resolution.label,
             )
@@ -500,6 +517,7 @@ class SwingExportPanel(
                 adjustments = adjustments.get(),
                 videoLanguage = videoLanguageRow.language,
                 includeServeClips = serveClipsSelected(),
+                pointFilter = pointFilterSelected(),
             )
         )
 
@@ -737,9 +755,43 @@ class SwingExportPanel(
         serveClipsCheck.parent?.repaint()
     }
 
-    /** The fault clips and the let clips that "Only points" and "Only favorites" keep (B-68). */
+    /** The clips that "Only points" and "Only favorites" keep: the serve clips (B-68) and the point filter (B-69). */
     private fun currentClips(): ExportClips =
-        ExportClips.of(readCurrentProjectEdl(), readCurrentProjectScore(), serveClipsSelected())
+        ExportClips.of(readCurrentProjectEdl(), readCurrentProjectScore(), serveClipsSelected(), pointFilterSelected())
+
+    /**
+     * The point filter (B-69). Only a project in advanced mode has it. As for the serve clips, a full video export hides
+     * the filter but keeps it, so that the counts of "Only points" and "Only favorites" stay the same.
+     */
+    private fun pointFilterSelected(): PointFilter = if (serveClipsAvailable) pointFilterPanel.filter else PointFilter.NONE
+
+    /** Shows the filter only for a project in advanced mode, and not for a full video export. */
+    private fun updatePointFilterVisibility() {
+        val visible = serveClipsAvailable && idleTrimSelected()
+        if (pointFilterRow.isVisible == visible) return
+        pointFilterRow.isVisible = visible
+        pointFilterRow.parent?.revalidate()
+        pointFilterRow.parent?.repaint()
+    }
+
+    /**
+     * Shows the side names on the player chips. The filter is not saved: a new project starts with an empty filter.
+     * Call it after [updateServeClipsDefault], which finds out if the project is in advanced mode.
+     */
+    private fun updatePointFilter(projectChanged: Boolean) {
+        if (projectChanged) pointFilterPanel.clear()
+        val score = readCurrentProjectScore()
+        pointFilterPanel.setPlayers(score.player1Name, score.player2Name)
+        updatePointFilterVisibility()
+        updatePointsSummary()
+        onContentChanged()
+    }
+
+    private fun onPointFilterChanged() {
+        pointFilterPanel.repaint()
+        updatePointsSummary()
+        onContentChanged()
+    }
 
     /**
      * Shows the option "Include serve faults and lets" for a project in advanced mode (B-68). A project with no choice

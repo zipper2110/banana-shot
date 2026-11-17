@@ -425,19 +425,7 @@ The work for the paid version is in `backlog-paid.md`.
 
 ### B-69 Filter and export by point detail
 
-- Added on 2026-11-13. Do this after B-68.
-- Let the user filter the points by their details and export only these
-  points. For example: "all my unforced errors into the net" or "all my
-  double faults". This is good for training and for a coach.
-- The details come from B-68 (`docs/point-details/b-68-point-details.md`).
-  Advanced mode is a paid feature since 2026-11-15
-  (`docs/paid-features.md`).
-- Open questions: where the filter is (the Points tab, the Export tab, or
-  both), and if the filter can combine details (for example "player 1" and
-  "unforced error" and "net"). A filter by stroke needs B-70, because
-  advanced mode records no strokes.
-- Done when: the user selects a filter, and the export has only the points
-  that match it.
+- Moved to `backlog-paid.md` on 2026-11-17. It is a paid feature.
 
 ### B-70 Shot-by-shot scoring mode
 

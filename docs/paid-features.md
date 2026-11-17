@@ -25,6 +25,7 @@ to see which features are paid and which are free. Added on 2026-11-15.
 | Comment animation Pop | P-3 | `CommentAnimation.POP` (`paid = true`) | Does not show the Animation switch. Draws the comment with no animation. | 2026-11-12 (4025faa) | Pending |
 | Comment animation Slide up | P-3 | `CommentAnimation.SLIDE_UP` (`paid = true`) | Does not show the Animation switch. Draws the comment with no animation. | 2026-11-12 (4025faa) | Pending |
 | Advanced scoring for tennis (serve faults, lets, endings, error kind, and their statistics) | B-68, B-72, B-73 | `ScoringMode.ADVANCED` (`paid = true`), `HelpPage.ADVANCED_SCORING` (`paid = true`) | Uses basic mode for each project. Does not show the Scoring mode group in Scoring rules, the Scoring card in More → Settings, or the Advanced scoring help page. A project in advanced mode keeps its mode and its details. A new project gets basic mode. | 2026-11-13 (fe2f36b to 778ae43). Paid since 2026-11-15. | Pending |
+| Point filter of the export (player, ending, error kind) | B-69 | `PointFilter`, `ExportClips.of(filter = ...)`, `PointFilterPanel` | Does not show the filter. It needs advanced mode, so `ExportClips` ignores it without advanced mode. | 2026-11-17 | Pending |
 
 The decision that advanced scoring is paid was made on 2026-11-15. The
 statistics insights (B-74) and the filter by point detail (B-69) use the

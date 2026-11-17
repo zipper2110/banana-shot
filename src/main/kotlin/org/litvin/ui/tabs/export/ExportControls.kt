@@ -26,7 +26,7 @@ import kotlin.math.ceil
 import kotlin.math.max
 
 /** Makes a button paint only what its own paintComponent paints, with a hand cursor and a hover state. */
-private fun AbstractButton.plain() {
+internal fun AbstractButton.plain() {
     layout = null
     isContentAreaFilled = false
     isBorderPainted = false

@@ -1,4 +1,6 @@
 package org.litvin.ui.tabs.export
+import org.litvin.projects.ProjectSource
+import org.litvin.media.SourceVideo
 import org.litvin.ui.commons.ErrorTexts
 import org.litvin.ActiveQueueSnapshot
 import org.litvin.ApplicationLayout
@@ -423,8 +425,9 @@ class SwingExportPanel(
             showReportableError(ErrorTexts.of(t), tr("export.error.manifest"))
             return
         }
-        val source = manifest?.sourceVideo
-        if (source.isNullOrBlank() || !File(source).exists()) {
+        // A match of several files (B-49) exports its EDL file, and needs all its files.
+        val source = manifestPath?.let { path -> manifest?.let { ProjectSource.mediaPath(path, it) } }
+        if (source.isNullOrBlank() || !SourceVideo.of(source).filesExist()) {
             dialogs.showError(this, tr("export.error.selectSource"), tr("points.error.videoMissing.title"))
             return
         }
@@ -544,7 +547,7 @@ class SwingExportPanel(
                 suggestedFile = suggested,
             ) ?: return null
             val out = ExportPlanner.ensureExtension(chosen, defaultExt)
-            if (!ExportOutputGuard.isSourceVideo(out, source)) return chosen to out
+            if (!ExportOutputGuard.isSourceVideo(out, source.path)) return chosen to out
             dialogs.showWarning(this, tr("export.sameAsSource.text", "path" to out.path), tr("export.sameAsSource.title"))
             directory = chosen.parentFile ?: directory
             suggested = File(directory, suggestedFile.name)
@@ -560,10 +563,10 @@ class SwingExportPanel(
     /** Reads the size, frame rate, bitrate and duration of the source video with ffprobe. */
     private fun refreshSourceInfo() {
         val sourcePath = try {
-            manifestPath?.let(ManifestIO::read)?.sourceVideo
+            manifestPath?.let { ProjectSource.mediaPath(it) }
         } catch (_: Throwable) {
             null
-        }?.takeIf { File(it).isFile }
+        }?.takeIf { SourceVideo.of(it).filesExist() }
         if (sourcePath != null && sourcePath == probedSourcePath) return
         probedSourcePath = sourcePath
         sourceInfo = sourcePath
@@ -876,7 +879,7 @@ class SwingExportPanel(
         }
         ExportPlanner.initializationReadiness(
             hasProject = !mp.isNullOrBlank(),
-            sourceVideoExists = manifest?.sourceVideo?.let { File(it).isFile } == true,
+            sourceVideoExists = manifest?.let(ProjectSource::files)?.let { it.isNotEmpty() && it.all { f -> File(f).isFile } } == true,
             idleTrim = idleTrimSelected(),
             favoriteOnly = favoriteOnlySelected(),
             validPoints = validPoints,

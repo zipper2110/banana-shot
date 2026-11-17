@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.projects.ProjectSource
 import org.litvin.ui.commons.ErrorTexts
 import org.litvin.i18n.DisplayFormats
 import org.litvin.analytics.Analytics
@@ -58,7 +59,7 @@ class DefaultProjectsPresenter(
     override fun onIntent(intent: ProjectsIntent) {
         when (intent) {
             ProjectsIntent.ImportNewMatch -> emitEffect(ProjectsViewEffect.ChooseSourceVideo(lastVideoDir()))
-            is ProjectsIntent.SourceVideoSelected -> confirmNewProject(intent.path)
+            is ProjectsIntent.SourceVideoSelected -> confirmNewProject(intent.paths)
             is ProjectsIntent.CreateProject -> createProject(intent)
             is ProjectsIntent.OpenProject -> openProject(intent.manifestPath)
             is ProjectsIntent.RenameProject -> renameProject(intent.manifestPath, intent.name)
@@ -80,8 +81,10 @@ class DefaultProjectsPresenter(
         }
     }
 
-    private fun confirmNewProject(sourceVideoPath: String) {
-        if (sourceVideoPath.isBlank()) return
+    private fun confirmNewProject(selectedPaths: List<String>) {
+        // Several files are the parts of one match. They play in the order of their names (B-49).
+        val paths = NewProjectRules.sortedVideoPaths(selectedPaths.filter { it.isNotBlank() })
+        val sourceVideoPath = paths.firstOrNull() ?: return
         rememberVideoDir(sourceVideoPath)
         emitEffect(
             ProjectsViewEffect.ConfirmNewProject(
@@ -89,6 +92,7 @@ class DefaultProjectsPresenter(
                 sourceVideoPath = sourceVideoPath,
                 sport = lastSport(),
                 padelRules = lastPadelRules(),
+                sourceVideoPaths = paths,
             )
         )
     }
@@ -96,16 +100,23 @@ class DefaultProjectsPresenter(
     private fun createProject(intent: ProjectsIntent.CreateProject) {
         val name = intent.name
         val sourceVideoPath = intent.sourceVideoPath
+        val sourceVideoPaths = intent.sourceVideoPaths.map { it.trim() }.ifEmpty { listOf(sourceVideoPath.trim()) }
         runIo(tr("projects.error.create")) {
             // The dialog also validates. This check stops a request that skips the dialog.
-            val error = NewProjectRules.nameError(name) ?: NewProjectRules.sourceVideoError(sourceVideoPath)
+            val error = NewProjectRules.nameError(name) ?: sourceVideoPaths.firstNotNullOfOrNull(NewProjectRules::sourceVideoError)
             if (error != null) {
                 emitEffect(ProjectsViewEffect.ShowError(tr("projects.error.create"), error))
                 return@runIo
             }
             rememberVideoDir(sourceVideoPath)
             rememberMatchSetup(intent.sport, intent.rules)
-            val created = repository.createProject(sourceVideoPath.trim(), name.trim(), intent.sport, intent.rules).toCardState()
+            var formatReport: String? = null
+            val created = if (sourceVideoPaths.size > 1) {
+                repository.createProject(sourceVideoPaths, name.trim(), intent.sport, intent.rules)
+                    .also { formatReport = it.formatReport }.summary.toCardState()
+            } else {
+                repository.createProject(sourceVideoPath.trim(), name.trim(), intent.sport, intent.rules).toCardState()
+            }
             analytics.record(AnalyticsEvent.ProjectCreated)
             analytics.record(AnalyticsEvent.SportUsed(intent.sport.analyticsSport()))
             val refreshed = repository.getRecents().map { it.toCardState() }
@@ -116,6 +127,7 @@ class DefaultProjectsPresenter(
             }
             renderState()
             emitEffect(ProjectsViewEffect.ProjectOpened(created.path))
+            formatReport?.let { emitEffect(ProjectsViewEffect.ShowFormatWarning(created.name, it)) }
             loadVisibleStats()
         }
     }
@@ -141,7 +153,20 @@ class DefaultProjectsPresenter(
                     return@runIo
                 }
             }
-            val video = sourceVideoPath?.takeIf { it.isNotBlank() } ?: manifest.sourceVideo.orEmpty()
+            // A match of several files (B-49) needs all its files. The user locates one missing file at a time,
+            // and the app looks for the other files in its folder.
+            val joined = manifest.sourceVideos?.takeIf { it.size > 1 }
+            val video = when {
+                joined != null -> {
+                    val files = if (sourceVideoPath.isNullOrBlank()) joined else ProjectSource.relink(joined, sourceVideoPath)
+                    files.firstOrNull { !File(it.path).isFile }?.path ?: files.first().path
+                }
+                else -> sourceVideoPath?.takeIf { it.isNotBlank() } ?: manifest.sourceVideo.orEmpty()
+            }
+            if (joined != null && !sourceVideoPath.isNullOrBlank() && !File(video).isFile) {
+                // Keep the files that the user located. The next request asks for the other files.
+                repository.openProject(manifestPath, sourceVideoPath)
+            }
             if (!File(video).isFile) {
                 // The other tabs cannot load the project without the video. Thus the project stays closed.
                 analytics.record(AnalyticsEvent.VideoOpenFailed)

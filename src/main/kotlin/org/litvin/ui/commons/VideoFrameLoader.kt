@@ -11,11 +11,11 @@ import org.litvin.adjustments.GeometryTimeline
 import org.litvin.export.ExportResolution
 import org.litvin.export.ExportResolutionProbe
 import org.litvin.export.SourceToneRangeProbe
+import org.litvin.media.SourceVideo
 import org.litvin.media.mpv.MpvFrameReader
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.DataInputStream
-import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -163,7 +163,7 @@ class VideoFrameLoader(
         }
 
         private fun extractWithMpv(reader: MpvFrameReader, request: VideoFrameRequest): BufferedImage? {
-            if (!File(request.sourcePath).isFile) return null
+            if (!SourceVideo.of(request.sourcePath).filesExist()) return null
             val sourceSize = sourceSize(request.adjustments, request.sourcePath, request.width)
             val filters = FFmpegCommandBuilder.stillFrameFilters(
                 atMs = request.atMs,
@@ -178,7 +178,7 @@ class VideoFrameLoader(
         }
 
         private fun extractWithFfmpeg(request: VideoFrameRequest): BufferedImage? {
-            if (!File(request.sourcePath).isFile) return null
+            if (!SourceVideo.of(request.sourcePath).filesExist()) return null
             val sourceSize = sourceSize(request.adjustments, request.sourcePath, request.width)
             val args = listOf(ApplicationLayout.current().ffmpegExecutable) + FFmpegCommandBuilder.stillFrameArgs(
                 sourcePath = request.sourcePath,
@@ -194,10 +194,19 @@ class VideoFrameLoader(
         }
 
         private fun extractKeyFramesWithFfmpeg(request: KeyFramesRequest): List<KeyFrame> {
-            if (!File(request.sourcePath).isFile) return emptyList()
+            val source = SourceVideo.of(request.sourcePath)
+            if (!source.filesExist()) return emptyList()
+            // A source of several files (B-49) reads each file part of the range with its own ffmpeg process.
+            return source.splitAtFiles(request.startMs.coerceAtLeast(0), request.endMs).flatMap { (startMs, endMs) ->
+                extractKeyFramesWithFfmpeg(request.copy(startMs = startMs, endMs = endMs), source)
+            }
+        }
+
+        /** The key frames of a range in one file of [source]. */
+        private fun extractKeyFramesWithFfmpeg(request: KeyFramesRequest, source: SourceVideo): List<KeyFrame> {
             val sourceSize = sourceSize(request.adjustments, request.sourcePath, request.width)
             val args = listOf(ApplicationLayout.current().ffmpegExecutable) + FFmpegCommandBuilder.keyFramesArgs(
-                sourcePath = request.sourcePath,
+                sourcePath = source.path,
                 startMs = request.startMs,
                 endMs = request.endMs,
                 width = request.width,

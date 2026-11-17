@@ -171,6 +171,17 @@ The work for the paid version is in `backlog-paid.md`.
   by file name. Then the user can move a file up or down in the list.
 - Decided on 2026-11-17: the file list is fixed after the user makes the
   project. The user can only find a missing file again.
+- Decided on 2026-11-17 (implementation): the project file keeps the list
+  of files (`sourceVideos`, with the start and the length of each file).
+  The preview plays an mpv EDL file (`source.edl` in the project folder)
+  that the app makes from this list. The format probes read the first
+  file. The end of the video is the end of the last file.
+- Decided on 2026-11-17 (implementation): the format warning shows after
+  the project opens. Its "Send feedback" button opens the feedback form
+  with the topic "Idea" and the formats of the files in the message.
+- Decided on 2026-11-17 (implementation): when the user finds one missing
+  file, the app also finds the other missing files with the same names in
+  the same folder. Then the app asks for each file that is still missing.
 
 ### B-52 Add comment during a replay
 

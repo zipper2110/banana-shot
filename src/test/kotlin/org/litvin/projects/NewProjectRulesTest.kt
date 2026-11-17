@@ -21,6 +21,21 @@ class NewProjectRulesTest {
     }
 
     @Test
+    fun theFilesOfOneMatchSortByNameWithTheNumbersAsNumbers() {
+        val folder = java.io.File(java.io.File.listRoots().first(), "videos")
+        fun path(name: String) = java.io.File(folder, name).path
+
+        assertEquals(
+            listOf(path("DJI_0001.MP4"), path("DJI_0002.MP4"), path("DJI_0010.MP4")),
+            NewProjectRules.sortedVideoPaths(listOf(path("DJI_0010.MP4"), path("DJI_0001.MP4"), path("DJI_0002.MP4"))),
+        )
+        assertEquals(
+            listOf(path("part2.mp4"), path("Part10.mp4")),
+            NewProjectRules.sortedVideoPaths(listOf(path("Part10.mp4"), path("part2.mp4"), path("part2.mp4"))),
+        )
+    }
+
+    @Test
     fun nameMustNotBeEmptyOrTooLong() {
         assertNull(NewProjectRules.nameError("Club final"))
         assertNull(NewProjectRules.nameError("  Club final (2)  "))

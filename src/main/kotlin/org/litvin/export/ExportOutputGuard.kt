@@ -25,6 +25,10 @@ object ExportOutputGuard {
         }
     }
 
+    /** True when [output] is one of the files of the source [sourcePath], also a source of several files (B-49). */
+    fun isSourceVideo(output: File, sourcePath: String, windows: Boolean = isWindows()): Boolean =
+        org.litvin.media.SourceVideo.of(sourcePath).files.any { isSourceVideo(output, File(it), windows) }
+
     private fun canonical(file: File): File =
         try {
             file.canonicalFile

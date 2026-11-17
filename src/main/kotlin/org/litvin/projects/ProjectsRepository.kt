@@ -1,5 +1,10 @@
 package org.litvin.projects
 
+import org.litvin.media.VideoProblem
+import org.litvin.media.SourceFormats
+import org.litvin.media.SourceFileProbe
+import org.litvin.media.SourceFile
+import org.litvin.media.FfprobeSourceFileProbe
 import org.litvin.license.ExpiredVersionException
 import org.litvin.license.NewWorkGate
 import org.litvin.points.EdlIO
@@ -18,6 +23,9 @@ data class ProjectSummary(
     val id: String = path,
 )
 
+/** A new project of several files (B-49). [formatReport] lists the formats when the files have different formats. */
+data class CreatedProject(val summary: ProjectSummary, val formatReport: String? = null)
+
 interface ProjectsRepository {
     fun projectsRootPath(): String
     fun getRecents(): List<ProjectSummary>
@@ -32,6 +40,13 @@ interface ProjectsRepository {
     /** Creates a project like [createProject]. The score file of the project gets [sport] and [rules]. */
     fun createProject(sourceVideoPath: String, name: String, sport: Sport, rules: MatchRulesV1): ProjectSummary =
         createProject(sourceVideoPath, name)
+
+    /**
+     * Creates a project like [createProject] for several video files of one match, in play order (B-49).
+     * The files play one after the other as one video.
+     */
+    fun createProject(sourceVideoPaths: List<String>, name: String, sport: Sport, rules: MatchRulesV1): CreatedProject =
+        CreatedProject(createProject(sourceVideoPaths.first(), name, sport, rules))
     fun openProject(path: String, sourceVideoPath: String? = null): ProjectSummary
 
     /** Changes the name in the manifest. The project folder and the manifest file keep their names. */
@@ -51,6 +66,7 @@ class FileProjectsRepository(
     private val newWork: NewWorkGate,
     private val durationProbe: VideoDurationProbe = CachingVideoDurationProbe(FfprobeVideoDurationProbe()),
     private val removeFolder: (File) -> Unit = ::moveToTrashOrDelete,
+    private val sourceFileProbe: SourceFileProbe = FfprobeSourceFileProbe(),
 ) : ProjectsRepository {
     private val recentsProvider = RecentsProvider(projectsRoot)
 
@@ -70,16 +86,29 @@ class FileProjectsRepository(
     }
 
     override fun createProject(sourceVideoPath: String, name: String): ProjectSummary =
-        create(sourceVideoPath, name, score = null)
+        create(listOf(SourceFile(File(sourceVideoPath).absolutePath)), name, score = null)
 
     override fun createProject(sourceVideoPath: String, name: String, sport: Sport, rules: MatchRulesV1): ProjectSummary =
-        create(sourceVideoPath, name, ScoreV1.newProject(sport, rules))
+        create(listOf(SourceFile(File(sourceVideoPath).absolutePath)), name, ScoreV1.newProject(sport, rules))
 
-    /** Creates the project folder and the manifest. Writes [score] as score.json when it is not null. */
-    private fun create(sourceVideoPath: String, name: String, score: ScoreV1?): ProjectSummary {
+    override fun createProject(sourceVideoPaths: List<String>, name: String, sport: Sport, rules: MatchRulesV1): CreatedProject {
+        if (sourceVideoPaths.size < 2) return CreatedProject(createProject(sourceVideoPaths.single(), name, sport, rules))
         if (!newWork.allowsNewWork()) throw ExpiredVersionException()
         NewProjectRules.nameError(name)?.let { throw IllegalArgumentException(it) }
-        val selected = File(sourceVideoPath)
+        // The times of each file make the timeline. A file that ffprobe cannot read cannot join.
+        val infos = sourceVideoPaths.map { path ->
+            sourceFileProbe.probe(File(path).absolutePath)
+                ?: throw IllegalArgumentException("${VideoProblem.UNREADABLE.title}\n${File(path).name}")
+        }
+        val summary = create(infos.map { it.file }, name, ScoreV1.newProject(sport, rules))
+        val different = SourceFormats.different(infos)
+        return CreatedProject(summary, SourceFormats.report(infos).takeIf { different.isNotEmpty() })
+    }
+
+    /** Creates the project folder and the manifest. Writes [score] as score.json when it is not null. */
+    private fun create(sourceFiles: List<SourceFile>, name: String, score: ScoreV1?): ProjectSummary {
+        if (!newWork.allowsNewWork()) throw ExpiredVersionException()
+        NewProjectRules.nameError(name)?.let { throw IllegalArgumentException(it) }
         val targetRoot = projectsRoot.apply {
             if (!exists()) mkdirs()
         }
@@ -95,17 +124,21 @@ class FileProjectsRepository(
         }
 
         val now = ManifestIO.nowIsoUtc()
-        val manifest = ProjectManifestV1(
-            id = UUID.randomUUID().toString(),
-            name = projectName,
-            createdAt = now,
-            lastOpenedAt = now,
-            version = 1,
-            sourceVideo = selected.absolutePath,
+        val manifest = ProjectSource.withFiles(
+            ProjectManifestV1(
+                id = UUID.randomUUID().toString(),
+                name = projectName,
+                createdAt = now,
+                lastOpenedAt = now,
+                version = 1,
+            ),
+            sourceFiles,
         )
         val manifestPath = File(projectDir, "$folderName.trproj").absolutePath
         score?.let { ScoreIO.writeForProjectDir(projectDir.absolutePath, it) }
         ManifestIO.write(manifestPath, manifest)
+        // A match of several files gets its EDL file now (B-49).
+        ProjectSource.mediaPath(manifestPath, manifest)
         recentsProvider.refresh()
         return summaryFor(manifestPath, manifest)
     }
@@ -113,11 +146,16 @@ class FileProjectsRepository(
     override fun openProject(path: String, sourceVideoPath: String?): ProjectSummary {
         if (!newWork.allowsNewWork()) throw ExpiredVersionException()
         val manifest = ManifestIO.read(path)
-        val updated = manifest.copy(
-            lastOpenedAt = ManifestIO.nowIsoUtc(),
-            sourceVideo = sourceVideoPath?.takeIf { it.isNotBlank() } ?: manifest.sourceVideo,
-        )
+        val selected = sourceVideoPath?.takeIf { it.isNotBlank() }
+        val joined = manifest.sourceVideos?.takeIf { it.size > 1 }
+        val updated = if (joined != null && selected != null) {
+            // The user located a missing file of a match of several files (B-49). The other files can be in its folder.
+            ProjectSource.withFiles(manifest, ProjectSource.relink(joined, selected)).copy(lastOpenedAt = ManifestIO.nowIsoUtc())
+        } else {
+            manifest.copy(lastOpenedAt = ManifestIO.nowIsoUtc(), sourceVideo = selected ?: manifest.sourceVideo)
+        }
         ManifestIO.write(path, updated)
+        ProjectSource.mediaPath(path, updated)
         recentsProvider.refresh()
         return summaryFor(path, updated)
     }
@@ -131,11 +169,25 @@ class FileProjectsRepository(
     }
 
     override fun stats(path: String): ProjectStats {
-        val videoPath = ManifestIO.read(path).sourceVideo?.takeIf { it.isNotBlank() }
+        val manifest = ManifestIO.read(path)
+        val videoPath = manifest.sourceVideo?.takeIf { it.isNotBlank() }
         val video = videoPath?.let(::File)?.takeIf { it.isFile }
         val projectDir = EdlIO.projectDirFromManifest(path)
         val points = EdlIO.readForProjectDir(projectDir).points
         val score = ScoreIO.readForProjectDir(projectDir)
+        // A match of several files (B-49) keeps the length of each file. The size is the size of all files.
+        val joined = manifest.sourceVideos?.takeIf { it.size > 1 }
+        if (joined != null) {
+            val missing = ProjectSource.missingFiles(manifest).isNotEmpty()
+            return ProjectStats(
+                videoMissing = missing,
+                durationMs = joined.sumOf { it.durationMs }.takeUnless { missing },
+                fileSizeBytes = joined.sumOf { File(it.path).length() }.takeUnless { missing },
+                pointCount = points.size,
+                favoriteCount = points.count { it.favorite },
+                sport = score.sport,
+            )
+        }
         return ProjectStats(
             videoMissing = videoPath != null && video == null,
             durationMs = video?.let { durationProbe.durationMs(it.absolutePath) },

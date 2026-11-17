@@ -80,6 +80,9 @@ class SwingProjectsPanel(
 
     var onProjectOpened: ((String) -> Unit)? = null
 
+    /** Opens the feedback form with a text, to ask for the support of video files with different formats (B-49). */
+    var onRequestFormatSupport: ((String) -> Unit)? = null
+
     /** Receives the name of the current project after an open, a create, or a rename. */
     var onCurrentProjectNameChanged: ((String?) -> Unit)? = null
 
@@ -124,8 +127,9 @@ class SwingProjectsPanel(
     override fun renderEffect(effect: ProjectsViewEffect) {
         when (effect) {
             is ProjectsViewEffect.ChooseSourceVideo -> {
-                chooseSourceVideo(tr("projects.chooseVideo"), effect.initialDirectory)?.let { path ->
-                    presenter.onIntent(ProjectsIntent.SourceVideoSelected(path))
+                // The user can select several files of one match (B-49).
+                chooseSourceVideos(tr("projects.chooseVideo"), effect.initialDirectory)?.let { paths ->
+                    presenter.onIntent(ProjectsIntent.SourceVideoSelected(paths))
                 }
             }
             is ProjectsViewEffect.ConfirmNewProject -> {
@@ -136,9 +140,10 @@ class SwingProjectsPanel(
                         sourceVideoPath = effect.sourceVideoPath,
                         sport = effect.sport,
                         rules = if (effect.sport == Sport.PADEL) effect.padelRules else effect.sport.defaultRules(),
+                        sourceVideoPaths = effect.sourceVideoPaths,
                     ),
                     chooseVideo = { dialog, current ->
-                        chooseSourceVideo(
+                        chooseSourceVideos(
                             tr("projects.chooseVideo"),
                             File(current).parent ?: File(effect.sourceVideoPath).parent,
                             suggestedFile = File(current),
@@ -147,7 +152,13 @@ class SwingProjectsPanel(
                     },
                 )?.let { request ->
                     presenter.onIntent(
-                        ProjectsIntent.CreateProject(request.name, request.sourceVideoPath, request.sport, request.rules)
+                        ProjectsIntent.CreateProject(
+                            request.name,
+                            request.sourceVideoPath,
+                            request.sport,
+                            request.rules,
+                            request.sourceVideoPaths,
+                        )
                     )
                 }
             }
@@ -161,6 +172,7 @@ class SwingProjectsPanel(
             }
             is ProjectsViewEffect.LocateMovedSourceVideo -> locateMovedSourceVideo(effect)
             is ProjectsViewEffect.ProjectOpened -> onProjectOpened?.invoke(effect.manifestPath)
+            is ProjectsViewEffect.ShowFormatWarning -> showFormatWarning(effect)
             is ProjectsViewEffect.ShowError ->
                 if (effect.warning) dialogs.showWarning(this, effect.message, effect.title)
                 else dialogs.showError(this, effect.message, effect.title)
@@ -303,6 +315,40 @@ class SwingProjectsPanel(
             presenter.onIntent(ProjectsIntent.MissingSourceVideoSelected(effect.manifestPath, path))
         }
     }
+
+    /**
+     * The video files of the new project have different formats (B-49). The warning asks the user to request the
+     * support through the feedback form. "Send feedback" opens the form with the formats of the files.
+     */
+    private fun showFormatWarning(effect: ProjectsViewEffect.ShowFormatWarning) {
+        val requestSupport = onRequestFormatSupport
+        val message = tr("projects.formats.text", "project" to effect.projectName)
+        if (requestSupport == null) {
+            dialogs.showWarning(this, message, tr("projects.formats.title"))
+            return
+        }
+        val send = dialogs.confirm(
+            parent = this,
+            message = message,
+            title = tr("projects.formats.title"),
+            confirmLabel = tr("projects.formats.feedback"),
+            cancelLabel = tr("common.close"),
+        )
+        if (send) requestSupport(tr("projects.formats.report", "formats" to effect.report))
+    }
+
+    private fun chooseSourceVideos(
+        title: String,
+        initialDirectory: String?,
+        suggestedFile: File? = null,
+        parent: Component = this,
+    ): List<String>? =
+        filePicker.chooseSourceVideos(
+            parent = parent,
+            title = title,
+            initialDirectory = initialDirectory?.let(::File),
+            suggestedFile = suggestedFile?.takeIf { it.isFile },
+        )?.map { it.absolutePath }?.takeIf { it.isNotEmpty() }
 
     private fun chooseSourceVideo(
         title: String,

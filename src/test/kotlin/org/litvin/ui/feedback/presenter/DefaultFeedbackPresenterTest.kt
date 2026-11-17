@@ -320,6 +320,25 @@ class DefaultFeedbackPresenterTest {
     }
 
     @Test
+    fun `a request with a start text puts the text into the message once`() {
+        val presenter = presenter()
+        presenter.onIntent(FeedbackIntent.Open(FeedbackRequest(FeedbackTopic.IDEA, message = "Please support it.")))
+        assertEquals(FeedbackTopic.IDEA, presenter.state.topic)
+        assertEquals("Please support it.", presenter.state.message)
+
+        presenter.onIntent(FeedbackIntent.Open(FeedbackRequest(FeedbackTopic.IDEA, message = "Please support it.")))
+        assertEquals("Please support it.", presenter.state.message)
+    }
+
+    @Test
+    fun `a start text comes after the text of the draft`() {
+        val presenter = presenter()
+        presenter.fill(message = "Draft")
+        presenter.onIntent(FeedbackIntent.Open(FeedbackRequest(message = "Please support it.")))
+        assertEquals("Draft\n\nPlease support it.", presenter.state.message)
+    }
+
+    @Test
     fun `a sent report clears the form for a new report with a new ID and keeps the email address`() {
         val presenter = presenter()
         presenter.fill(email = "user@example.test")

@@ -1,5 +1,6 @@
 package org.litvin.export
 
+import org.litvin.media.SourceVideo
 import java.util.concurrent.TimeUnit
 
 /** Video properties of the source file. A null field means that ffprobe did not report it. */
@@ -30,6 +31,13 @@ data class ExportSourceInfo(
 object ExportSourceProbe {
     /** Reads the size, pixel shape, frame rate, bitrate and duration of the source with one ffprobe call. */
     fun probe(sourcePath: String, ffprobeExecutable: String): ExportSourceInfo {
+        // A source of several files (B-49) has the format of its first file and the length of all files.
+        val source = SourceVideo.of(sourcePath)
+        val info = probeFile(source.firstFile, ffprobeExecutable)
+        return source.durationMs?.let { info.copy(durationMs = it) } ?: info
+    }
+
+    private fun probeFile(sourcePath: String, ffprobeExecutable: String): ExportSourceInfo {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable,

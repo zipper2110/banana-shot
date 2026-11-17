@@ -57,12 +57,18 @@ data class ProjectStatsState(
 
 sealed class ProjectsIntent {
     object ImportNewMatch : ProjectsIntent()
-    data class SourceVideoSelected(val path: String) : ProjectsIntent()
+    /** The user selected the video files of a new match. Several files are the parts of one match (B-49). */
+    data class SourceVideoSelected(val paths: List<String>) : ProjectsIntent() {
+        constructor(path: String) : this(listOf(path))
+        val path: String get() = paths.first()
+    }
     data class CreateProject(
         val name: String,
         val sourceVideoPath: String,
         val sport: Sport = Sport.TENNIS,
         val rules: MatchRulesV1 = sport.defaultRules(),
+        /** All video files of the match in play order (B-49). The first is [sourceVideoPath]. */
+        val sourceVideoPaths: List<String> = listOf(sourceVideoPath),
     ) : ProjectsIntent()
     data class OpenProject(val manifestPath: String) : ProjectsIntent()
     data class RenameProject(val manifestPath: String, val name: String) : ProjectsIntent()
@@ -85,6 +91,8 @@ sealed class ProjectsViewEffect {
         val sourceVideoPath: String,
         val sport: Sport = Sport.TENNIS,
         val padelRules: MatchRulesV1 = Sport.PADEL.defaultRules(),
+        /** All video files of the match, sorted by name (B-49). The first is [sourceVideoPath]. */
+        val sourceVideoPaths: List<String> = listOf(sourceVideoPath),
     ) : ProjectsViewEffect()
     data class ChooseMissingSourceVideo(
         val manifestPath: String,
@@ -104,6 +112,12 @@ sealed class ProjectsViewEffect {
     ) : ProjectsViewEffect()
 
     data class ProjectOpened(val manifestPath: String) : ProjectsViewEffect()
+
+    /**
+     * The video files of the new project have different formats (B-49). The app does not support this yet.
+     * [report] has the format of each file, for a feedback report.
+     */
+    data class ShowFormatWarning(val projectName: String, val report: String) : ProjectsViewEffect()
     /** A message box. [warning] is true for an action that the app cannot do now, when nothing failed. */
     data class ShowError(val title: String, val message: String, val warning: Boolean = false) : ProjectsViewEffect()
 }

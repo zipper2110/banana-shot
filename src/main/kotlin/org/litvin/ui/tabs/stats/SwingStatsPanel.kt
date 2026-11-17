@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.stats
 
+import org.litvin.projects.ProjectSource
+import org.litvin.media.SourceVideo
 import org.litvin.ui.commons.ErrorTexts
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.litvin.adjustments.AdjustmentsIO
@@ -308,7 +310,7 @@ class SwingStatsPanel(
      */
     private fun updatePreviewFrame(report: StatsReport) {
         val request = try {
-            val source = manifestPath?.let { ManifestIO.read(it).sourceVideo }?.takeIf { File(it).isFile }
+            val source = manifestPath?.let { ProjectSource.mediaPath(it) }?.takeIf { SourceVideo.of(it).filesExist() }
             val lastPoint = if (scope == 0) report.points.lastOrNull() else report.setRanges.getOrNull(scope - 1)?.let { report.points[it.last] }
             if (source == null || lastPoint == null) {
                 null

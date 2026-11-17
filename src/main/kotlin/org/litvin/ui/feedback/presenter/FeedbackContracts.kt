@@ -2,11 +2,17 @@ package org.litvin.ui.feedback.presenter
 
 import org.litvin.feedback.FeedbackTopic
 
-/** What an entry point fills in (T3 of B-8). The user can change all of it. */
+/**
+ * What an entry point fills in (T3 of B-8). The user can change all of it.
+ *
+ * [message] is a start text for the message. The form adds it after the text of the draft, if the draft does not
+ * already contain it.
+ */
 data class FeedbackRequest(
     val topic: FeedbackTopic? = null,
     val error: String? = null,
     val attachLog: Boolean = false,
+    val message: String? = null,
 )
 
 /** After a successful send, the form closes and starts a new report, so there is no "sent" phase. */

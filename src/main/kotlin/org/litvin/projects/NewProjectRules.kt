@@ -38,6 +38,34 @@ object NewProjectRules {
     /** Returns a correct Windows folder name for the project name. For example, "Who won?" gives "Who won_". */
     fun folderName(name: String): String = SafeFileName.of(name.trim(), FALLBACK_FOLDER_NAME)
 
+    /**
+     * The video files of one match in play order (B-49): sorted by file name, with the numbers in the names compared
+     * as numbers. Thus "GH2.MP4" comes before "GH10.MP4". A file that is two times in the list stays only one time.
+     */
+    fun sortedVideoPaths(paths: List<String>): List<String> =
+        paths.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { File(it).absolutePath.lowercase() }
+            .sortedWith { a, b -> compareNatural(File(a).name, File(b).name) }
+
+    /** Compares [a] and [b] without the letter case. A sequence of digits compares as a number. */
+    internal fun compareNatural(a: String, b: String): Int {
+        val tokens = Regex("""\d+|\D+""")
+        val left = tokens.findAll(a.lowercase()).map { it.value }.toList()
+        val right = tokens.findAll(b.lowercase()).map { it.value }.toList()
+        for (i in 0 until minOf(left.size, right.size)) {
+            val x = left[i]
+            val y = right[i]
+            val result = if (x[0].isDigit() && y[0].isDigit()) {
+                x.trimStart('0').length.compareTo(y.trimStart('0').length).takeIf { it != 0 }
+                    ?: x.trimStart('0').compareTo(y.trimStart('0')).takeIf { it != 0 }
+                    ?: x.length.compareTo(y.length)
+            } else {
+                x.compareTo(y)
+            }
+            if (result != 0) return result
+        }
+        return left.size.compareTo(right.size).takeIf { it != 0 } ?: a.compareTo(b)
+    }
+
     /** Returns an error message for a path that is not a supported video file, or null for a correct path. */
     fun sourceVideoError(path: String): String? {
         val trimmed = path.trim()

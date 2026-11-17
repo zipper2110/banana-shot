@@ -61,6 +61,9 @@ data class VideoProblem(
          * The checks read only some bytes of the file, so they are fast also for a large file.
          */
         fun find(file: File): VideoProblem? = when {
+            // A match of several files (B-49) has the problem of its first file with a problem.
+            SourceVideo.isEdlPath(file.path) && SourceVideo.of(file.path).isJoined ->
+                SourceVideo.of(file.path).files.firstNotNullOfOrNull { find(File(it)) }
             !file.isFile -> NOT_FOUND
             FileWriteCheck.isOpenForWriting(file) -> STILL_WRITING
             else -> when (Mp4Structure.inspect(file)) {

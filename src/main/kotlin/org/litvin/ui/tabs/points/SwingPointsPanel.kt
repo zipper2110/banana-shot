@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.points
 
+import org.litvin.projects.ProjectSource
+import org.litvin.media.SourceVideo
 import org.litvin.ui.commons.ErrorTexts
 import org.litvin.GeometryViewportPanel
 import org.litvin.analytics.Analytics
@@ -737,8 +739,9 @@ class SwingPointsPanel(
         // Load manifest and media
         try {
             val manifest = ManifestIO.read(path)
-            val src = manifest.sourceVideo
-            if (src.isNullOrBlank() || !File(src).exists()) {
+            // A match of several files (B-49) plays its EDL file, and needs all its files.
+            val src = ProjectSource.mediaPath(path, manifest)
+            if (src.isNullOrBlank() || !SourceVideo.of(src).filesExist()) {
                 dialogs.showError(
                     this,
                     tr("points.error.videoMissing", "name" to manifest.name),

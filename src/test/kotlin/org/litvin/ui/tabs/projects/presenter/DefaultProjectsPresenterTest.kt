@@ -1,5 +1,6 @@
 package org.litvin.ui.tabs.projects.presenter
 
+import org.litvin.projects.CreatedProject
 import org.litvin.scoring.Sport
 import org.litvin.scoring.MatchStructure
 import org.litvin.scoring.MatchRulesV1
@@ -159,6 +160,55 @@ class DefaultProjectsPresenterTest {
         drainEdt()
 
         assertEquals(ProjectsViewEffect.ConfirmNewProject("Club final", video), view.effects.last())
+    }
+
+    @Test
+    fun selectedFilesOfOneMatchAreSortedByNameAndTheFirstFileNamesTheProject() {
+        val view = RecordingProjectsView()
+        val presenter = presenter(FakeProjectsRepository())
+        val second = tempDir.resolve("GH10.MP4").toString()
+        val first = tempDir.resolve("GH2.MP4").toString()
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.SourceVideoSelected(listOf(second, first)))
+        drainEdt()
+
+        assertEquals(
+            ProjectsViewEffect.ConfirmNewProject("GH2", first, sourceVideoPaths = listOf(first, second)),
+            view.effects.last(),
+        )
+    }
+
+    @Test
+    fun aProjectOfSeveralFilesWithDifferentFormatsShowsTheFormatWarning() {
+        val repository = FakeProjectsRepository().apply { formatReport = "A.MP4: h264\nB.MP4: hevc" }
+        val view = RecordingProjectsView()
+        val presenter = presenter(repository)
+        val a = tempDir.resolve("A.MP4").toFile().apply { writeText("video") }.absolutePath
+        val b = tempDir.resolve("B.MP4").toFile().apply { writeText("video") }.absolutePath
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.CreateProject("Final", a, sourceVideoPaths = listOf(a, b)))
+        drainEdt()
+
+        assertEquals(listOf(listOf(a, b)), repository.createdPaths)
+        assertEquals(ProjectsViewEffect.ProjectOpened("created.trproj"), view.effects[view.effects.size - 2])
+        assertEquals(ProjectsViewEffect.ShowFormatWarning("Final", "A.MP4: h264\nB.MP4: hevc"), view.effects.last())
+    }
+
+    @Test
+    fun aProjectOfSeveralFilesWithTheSameFormatShowsNoWarning() {
+        val repository = FakeProjectsRepository()
+        val view = RecordingProjectsView()
+        val presenter = presenter(repository)
+        val a = tempDir.resolve("A.MP4").toFile().apply { writeText("video") }.absolutePath
+        val b = tempDir.resolve("B.MP4").toFile().apply { writeText("video") }.absolutePath
+
+        presenter.attach(view)
+        presenter.onIntent(ProjectsIntent.CreateProject("Final", a, sourceVideoPaths = listOf(a, b)))
+        drainEdt()
+
+        assertEquals(ProjectsViewEffect.ProjectOpened("created.trproj"), view.effects.last())
     }
 
     @Test
@@ -601,6 +651,13 @@ class DefaultProjectsPresenterTest {
 
         val createdNames = mutableListOf<String>()
         val createdSetups = mutableListOf<Pair<Sport, MatchRulesV1>>()
+        val createdPaths = mutableListOf<List<String>>()
+        var formatReport: String? = null
+
+        override fun createProject(sourceVideoPaths: List<String>, name: String, sport: Sport, rules: MatchRulesV1): CreatedProject {
+            createdPaths += sourceVideoPaths
+            return CreatedProject(createProject(sourceVideoPaths.first(), name, sport, rules), formatReport)
+        }
 
         override fun createProject(sourceVideoPath: String, name: String, sport: Sport, rules: MatchRulesV1): ProjectSummary {
             createdSetups += sport to rules

@@ -1,5 +1,6 @@
 package org.litvin.projects
 
+import org.litvin.media.SourceVideo
 import org.litvin.ApplicationLayout
 import org.litvin.scoring.Sport
 import java.io.File
@@ -31,6 +32,8 @@ class FfprobeVideoDurationProbe(
     private val ffprobeExecutable: () -> String = { ApplicationLayout.current().ffprobeExecutable },
 ) : VideoDurationProbe {
     override fun durationMs(videoPath: String): Long? {
+        // A source of several files (B-49) knows the length of its files.
+        SourceVideo.of(videoPath).durationMs?.let { return it }
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable(),

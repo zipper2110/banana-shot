@@ -15,3 +15,4 @@ ui/feedback/presenter/DefaultFeedbackPresenter.kt | Report ID: $reportId | A fie
 ui/feedback/presenter/DefaultFeedbackPresenter.kt | App: ${draft.systemSummary} | A field name of the feedback report. The author reads it.
 export/ExportSleepBlock.kt | PreventUserIdleSystemSleep | The type of a macOS power assertion. It is an API value.
 export/ExportSleepBlock.kt | BananaShot video export | The name of the macOS power assertion. Only `pmset -g assertions` shows it.
+media/SourceVideo.kt | # mpv EDL v0 | The header of an mpv EDL file. mpv reads it; the user does not see it.

@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.projects.components
 
+import java.io.File
+import java.awt.CardLayout
 import org.kordamp.ikonli.material2.Material2AL
 import org.litvin.media.FfprobeVideoReadCheck
 import org.litvin.media.VideoProblem
@@ -37,19 +39,21 @@ data class NewProjectRequest(
     val sourceVideoPath: String,
     val sport: Sport = Sport.TENNIS,
     val rules: MatchRulesV1 = sport.defaultRules(),
+    /** All video files of the match in play order (B-49). The first is [sourceVideoPath]. */
+    val sourceVideoPaths: List<String> = listOf(sourceVideoPath),
 )
 
 /** Opens the "New project" dialog and returns the confirmed values, or null after Cancel. Tests replace the dialog with a fake. */
 fun interface NewProjectEditor {
     /**
      * Shows [initial] for edit.
-     * [chooseVideo] opens the video picker over the dialog at the current path and returns the selected path,
-     * or null after Cancel.
+     * [chooseVideo] opens the video picker over the dialog at the current path and returns the selected paths,
+     * or null after Cancel. Several paths are the files of one match (B-49).
      */
     fun edit(
         parent: Component,
         initial: NewProjectRequest,
-        chooseVideo: (dialog: Component, currentPath: String) -> String?,
+        chooseVideo: (dialog: Component, currentPath: String) -> List<String>?,
     ): NewProjectRequest?
 }
 
@@ -62,11 +66,14 @@ fun interface NewProjectEditor {
  *
  * "Create project" also opens the video with [videoCheck] in the background. A file that does not open,
  * for example a copy that is not finished, keeps the dialog open with the problem under the video field.
+ *
+ * A match of several files (B-49) shows a list of the files in place of the path field. The files play in the
+ * order of the list. The user can move a file up or down and remove it.
  */
 class NewProjectDialog private constructor(
     owner: Window?,
     initial: NewProjectRequest,
-    private val chooseVideo: (dialog: Component, currentPath: String) -> String?,
+    private val chooseVideo: (dialog: Component, currentPath: String) -> List<String>?,
     private val videoCheck: VideoReadCheck,
 ) : JDialog(owner, tr("projects.new.title"), Dialog.ModalityType.APPLICATION_MODAL) {
 
@@ -76,7 +83,7 @@ class NewProjectDialog private constructor(
         override fun edit(
             parent: Component,
             initial: NewProjectRequest,
-            chooseVideo: (dialog: Component, currentPath: String) -> String?,
+            chooseVideo: (dialog: Component, currentPath: String) -> List<String>?,
         ): NewProjectRequest? {
             val dialog = NewProjectDialog(SwingUtilities.getWindowAncestor(parent), initial, chooseVideo, videoCheck)
             dialog.setLocationRelativeTo(parent)
@@ -95,6 +102,21 @@ class NewProjectDialog private constructor(
     private val nameError = DialogKit.errorLine("new-project-name-error")
     private val videoField = JTextField(initial.sourceVideoPath, 36).apply { name = "new-project-video" }
     private val videoError = DialogKit.errorLine("new-project-video-error")
+
+    /** The files of a match of several files (B-49). Empty for one file: then [videoField] has the path. */
+    private var files: List<String> = initial.sourceVideoPaths.takeIf { it.size > 1 }.orEmpty()
+    private val filesList = VideoFilesList(onChange = ::onFilesChanged).apply { paths = files }
+    private val filesBrowseButton = UiButton(tr("projects.new.browse"), buttonHeight = 34).apply {
+        name = "new-project-files-browse"
+        toolTipText = tr("projects.new.browse.tooltip")
+        addActionListener { browse() }
+    }
+    private val videoCards = CardLayout()
+    private val videoArea = JPanel(videoCards).apply { isOpaque = false }
+    private val videoHint = DialogKit.errorLine("new-project-video-hint").apply {
+        font = UiKit.font(11.5f)
+        foreground = Palette.FG_3
+    }
 
     /** What happened to a video that does not open, and what the user can do. It shows only after a failed video check. */
     private val videoExplanation = WrapText(" ", UiKit.font(12.5f), Palette.FG_2, lineFactor = 1.45f).apply {
@@ -154,6 +176,7 @@ class NewProjectDialog private constructor(
         nameField.document.addDocumentListener(revalidate)
         videoField.document.addDocumentListener(revalidate)
 
+        showFilesMode()
         validateFields()
         pack()
         minimumSize = size
@@ -166,10 +189,21 @@ class NewProjectDialog private constructor(
             add(DialogKit.inputBox(videoField) { videoError.text.isNotBlank() }, BorderLayout.CENTER)
             add(browseButton, BorderLayout.EAST)
         }
+        val filesRow = JPanel(BorderLayout(8, 0)).apply {
+            isOpaque = false
+            add(filesList, BorderLayout.CENTER)
+            add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                add(filesBrowseButton, BorderLayout.NORTH)
+            }, BorderLayout.EAST)
+        }
+        videoArea.add(videoRow, CARD_ONE_FILE)
+        videoArea.add(filesRow, CARD_FILES)
         return DialogKit.form(
             DialogKit.field(tr("projects.name"), DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
             nameError,
-            DialogKit.field(tr("projects.new.video"), videoRow, note = tr("projects.new.video.note")),
+            DialogKit.field(tr("projects.new.video"), videoArea, note = tr("projects.new.video.note")),
+            videoHint,
             videoError,
             videoExplanation,
             DialogKit.field(tr("projects.new.sport"), sportChoice),
@@ -192,7 +226,11 @@ class NewProjectDialog private constructor(
     /** Shows the error messages and enables "Create project" only for correct values. Returns true for correct values. */
     private fun validateFields(): Boolean {
         val nameMessage = NewProjectRules.nameError(nameField.text)
-        val videoMessage = NewProjectRules.sourceVideoError(videoField.text)
+        val videoMessage = if (files.size > 1) {
+            files.firstNotNullOfOrNull { path -> NewProjectRules.sourceVideoError(path)?.let { "$it (${File(path).name})" } }
+        } else {
+            NewProjectRules.sourceVideoError(videoField.text)
+        }
         showError(nameError, nameMessage)
         showError(videoError, videoMessage)
         showVideoExplanation(null)
@@ -204,13 +242,49 @@ class NewProjectDialog private constructor(
     }
 
     private fun browse() {
-        val selected = chooseVideo(this, videoField.text.trim()) ?: return
-        // Follow the new video with the name, but keep a name that the user typed.
-        if (nameField.text.trim() == suggestedName.trim()) {
-            nameField.text = NewProjectRules.suggestedName(selected)
+        val current = files.firstOrNull() ?: videoField.text.trim()
+        val selected = NewProjectRules.sortedVideoPaths(chooseVideo(this, current) ?: return)
+        if (selected.isEmpty()) return
+        files = selected.takeIf { it.size > 1 }.orEmpty()
+        filesList.paths = files
+        followName(selected.first())
+        videoField.text = selected.first()
+        showFilesMode()
+    }
+
+    /** The user moved or removed a file of the list (B-49). One file left goes back to the path field. */
+    private fun onFilesChanged(changed: List<String>) {
+        changed.firstOrNull()?.let(::followName)
+        if (changed.size < 2) {
+            files = emptyList()
+            videoField.text = changed.firstOrNull().orEmpty()
+            showFilesMode()
+        } else {
+            files = changed
+            validateFields()
         }
-        suggestedName = NewProjectRules.suggestedName(selected)
-        videoField.text = selected
+    }
+
+    /** Follows the first video with the name, but keeps a name that the user typed. */
+    private fun followName(firstVideo: String) {
+        if (nameField.text.trim() == suggestedName.trim()) {
+            nameField.text = NewProjectRules.suggestedName(firstVideo)
+        }
+        suggestedName = NewProjectRules.suggestedName(firstVideo)
+    }
+
+    /** Shows the path field for one file, or the list for several files, and the hint under them. */
+    private fun showFilesMode() {
+        val several = files.size > 1
+        videoCards.show(videoArea, if (several) CARD_FILES else CARD_ONE_FILE)
+        videoHint.text = tr(if (several) "projects.new.files.order" else "projects.new.files.hint")
+        validateFields()
+        if (isDisplayable) {
+            minimumSize = null
+            pack()
+            minimumSize = size
+            DialogKit.keepOnScreen(this)
+        }
     }
 
     private fun create() {
@@ -220,7 +294,12 @@ class NewProjectDialog private constructor(
         createButton.isEnabled = false
         createButton.text = tr("projects.new.checking")
         Thread({
-            val problem = videoCheck.problem(request.sourceVideoPath)
+            // Each file of a match of several files must open (B-49). The problem names the file.
+            val problem = request.sourceVideoPaths.firstNotNullOfOrNull { path ->
+                videoCheck.problem(path)?.let { problem ->
+                    if (request.sourceVideoPaths.size > 1) problem.copy(title = "${problem.title} (${File(path).name})") else problem
+                }
+            }
             SwingUtilities.invokeLater { onVideoChecked(request, problem) }
         }, "new-project-video-check").apply { isDaemon = true }.start()
     }
@@ -246,12 +325,16 @@ class NewProjectDialog private constructor(
         contentPane?.repaint()
     }
 
-    private fun currentRequest() = NewProjectRequest(
-        name = nameField.text.trim(),
-        sourceVideoPath = videoField.text.trim(),
-        sport = sport,
-        rules = if (sport == Sport.PADEL) padelRules.rules else sport.defaultRules(),
-    )
+    private fun currentRequest(): NewProjectRequest {
+        val paths = files.takeIf { it.size > 1 } ?: listOf(videoField.text.trim())
+        return NewProjectRequest(
+            name = nameField.text.trim(),
+            sourceVideoPath = paths.first(),
+            sport = sport,
+            rules = if (sport == Sport.PADEL) padelRules.rules else sport.defaultRules(),
+            sourceVideoPaths = paths,
+        )
+    }
 
     private fun showVideoExplanation(explanation: String?) {
         videoExplanation.runs = listOf(TextRun(explanation ?: " ", UiKit.font(12.5f), Palette.FG_2))
@@ -267,3 +350,6 @@ class NewProjectDialog private constructor(
         label.text = message ?: " "
     }
 }
+
+private const val CARD_ONE_FILE = "one-file"
+private const val CARD_FILES = "files"

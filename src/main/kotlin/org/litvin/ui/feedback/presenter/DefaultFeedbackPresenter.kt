@@ -82,14 +82,21 @@ class DefaultFeedbackPresenter(
     private fun open(request: FeedbackRequest) {
         if (state.phase == FeedbackPhase.SENDING) return
         // A request with no values (the sidebar button) keeps the draft as it is.
-        if (request.topic == null && request.error == null) return
+        if (request.topic == null && request.error == null && request.message == null) return
         update(
             state.copy(
                 topic = request.topic ?: state.topic,
+                message = startMessage(state.message, request.message),
                 error = FeedbackRules.errorText(request.error) ?: state.error,
                 attachLog = request.attachLog || state.attachLog,
             ),
         )
+    }
+
+    private fun startMessage(draft: String, start: String?): String = when {
+        start.isNullOrBlank() || start.trim() in draft -> draft
+        draft.isBlank() -> start.trim()
+        else -> draft.trimEnd() + "\n\n" + start.trim()
     }
 
     private fun edit(change: FeedbackViewState.() -> FeedbackViewState) {

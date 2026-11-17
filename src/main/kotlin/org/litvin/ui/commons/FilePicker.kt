@@ -15,6 +15,17 @@ interface FilePicker {
     ): File?
 
     /**
+     * Asks for one or more video files of one match (B-49). The default asks for one file.
+     * Returns null when the user cancels.
+     */
+    fun chooseSourceVideos(
+        parent: Component?,
+        title: String,
+        initialDirectory: File? = null,
+        suggestedFile: File? = null,
+    ): List<File>? = chooseSourceVideo(parent, title, initialDirectory, suggestedFile)?.let(::listOf)
+
+    /**
      * Asks where to save an export. The extension of [suggestedFile] is the file type of the export.
      * When the user selects a file that exists, the picker asks to replace it, so the caller does not ask again.
      */
@@ -43,6 +54,22 @@ class SystemFilePicker : FilePicker {
             fileFilter = SystemFileChooser.FileNameExtensionFilter(tr("filePicker.videoFiles"), *NewProjectRules.VIDEO_EXTENSIONS.toTypedArray())
         }
         return if (chooser.showOpenDialog(parent) == SystemFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+    }
+
+    override fun chooseSourceVideos(
+        parent: Component?,
+        title: String,
+        initialDirectory: File?,
+        suggestedFile: File?,
+    ): List<File>? {
+        val chooser = chooser(title, initialDirectory, suggestedFile).apply {
+            fileSelectionMode = SystemFileChooser.FILES_ONLY
+            isMultiSelectionEnabled = true
+            isAcceptAllFileFilterUsed = false
+            fileFilter = SystemFileChooser.FileNameExtensionFilter(tr("filePicker.videoFiles"), *NewProjectRules.VIDEO_EXTENSIONS.toTypedArray())
+        }
+        if (chooser.showOpenDialog(parent) != SystemFileChooser.APPROVE_OPTION) return null
+        return chooser.selectedFiles?.toList()?.takeIf { it.isNotEmpty() } ?: chooser.selectedFile?.let(::listOf)
     }
 
     override fun chooseExportDestination(

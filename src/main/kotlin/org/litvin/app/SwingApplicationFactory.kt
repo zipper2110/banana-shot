@@ -487,6 +487,8 @@ object SwingApplicationFactory {
                 services.dialogs,
                 themeSettings = themeSettings,
             ).apply {
+                // B-49: the warning about different video formats opens the feedback form with the formats.
+                onRequestFormatSupport = { text -> feedback.open(FeedbackRequest(FeedbackTopic.IDEA, message = text)) }
                 onProjectOpened = { path ->
                     projectOpen = true
                     pointsPanel.setProjectManifest(path)

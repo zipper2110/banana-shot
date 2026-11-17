@@ -1,5 +1,7 @@
 package org.litvin.ui.tabs.adjustments.presenter
 
+import org.litvin.projects.ProjectSource
+import org.litvin.media.SourceVideo
 import org.litvin.ui.commons.ErrorTexts
 import org.litvin.adjustments.AdjustmentsSession
 import org.litvin.adjustments.AdjustmentsStore
@@ -295,19 +297,21 @@ class DefaultAdjustVideoPresenter(
         projectDir = File(manifestPath).parentFile?.absolutePath
         videoSize = null
         projectDir?.let { adjustments.load(it) }
+        // A match of several files (B-49) plays its EDL file, and needs all its files.
         val source = try {
-            ManifestIO.read(manifestPath).sourceVideo?.let { File(it) }
+            ProjectSource.mediaPath(manifestPath, ManifestIO.read(manifestPath))?.let { File(it) }
         } catch (t: Throwable) {
             postEffect(AdjustVideoViewEffect.ShowError(ErrorTexts.of(t, tr("adjust.error.read"))))
             null
         }
-        if (source != null && !source.exists()) {
+        val sourceExists = source != null && SourceVideo.of(source.path).filesExist()
+        if (source != null && !sourceExists) {
             postEffect(AdjustVideoViewEffect.ShowError(tr("adjust.error.videoMissing")))
         }
         updateState {
             it.copy(
                 adjustments = adjustments.get(),
-                sourceVideo = source?.takeIf { file -> file.exists() },
+                sourceVideo = source?.takeIf { sourceExists },
                 points = readPoints(),
             )
         }

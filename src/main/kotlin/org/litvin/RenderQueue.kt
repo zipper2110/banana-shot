@@ -317,10 +317,12 @@ object RenderQueueManager {
 
                 // Pre-run validations
                 // 1) Source exists
-                val srcFile = java.io.File(job.sourcePath)
-                if (!srcFile.exists()) {
+                // A source of several files (B-49) needs all its files.
+                val source = org.litvin.media.SourceVideo.of(job.sourcePath)
+                val missingSource = source.missingFiles().firstOrNull()
+                if (missingSource != null) {
                     job.status = RenderStatus.FAILED
-                    job.failureReason = tr("export.failure.sourceMissing", "path" to job.sourcePath)
+                    job.failureReason = tr("export.failure.sourceMissing", "path" to missingSource)
                     failRun(job, RenderFailReason.SOURCE_MISSING)
                     job.stderrTail = null
                     job.updatedAtEpochMs = System.currentTimeMillis()
@@ -331,7 +333,7 @@ object RenderQueueManager {
                     continue
                 }
                 // 2) The output is not the source. A saved queue can have an old job with this path (B-38 T5).
-                if (org.litvin.export.ExportOutputGuard.isSourceVideo(finalOut, srcFile)) {
+                if (org.litvin.export.ExportOutputGuard.isSourceVideo(finalOut, job.sourcePath)) {
                     job.status = RenderStatus.FAILED
                     job.failureReason = tr("export.failure.sameAsSource", "path" to job.outputPath)
                     failRun(job, RenderFailReason.OUTPUT_WRITE)
@@ -379,8 +381,9 @@ object RenderQueueManager {
                 if (abortIfCanceled(request, partOut, assFile)) continue
 
                 // Pre-probe total duration when not using EDL trimming (needed for percentage)
-                var probedDurationMs: Long? = null
-                if (!(job.idleTrim && job.edlSnapshot.isNotEmpty())) {
+                // A source of several files (B-49) knows the length of its files.
+                var probedDurationMs: Long? = source.durationMs
+                if (probedDurationMs == null && !(job.idleTrim && job.edlSnapshot.isNotEmpty())) {
                     try {
                         val pbProbe = ProcessBuilder(
                             ApplicationLayout.current().ffprobeExecutable,

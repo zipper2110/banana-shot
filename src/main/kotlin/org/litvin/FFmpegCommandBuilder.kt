@@ -4,6 +4,7 @@ import org.litvin.adjustments.ColorTimeline
 import org.litvin.adjustments.CropRect
 import org.litvin.adjustments.GeometryPlan
 import org.litvin.adjustments.GeometryTimeline
+import org.litvin.media.SourceVideo
 import org.litvin.points.PointV1
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -112,6 +113,7 @@ object FFmpegCommandBuilder {
 
     /** The length of the source window that the freeze reads. The last frame of the window is the still frame. */
     private const val FREEZE_WINDOW_SECS = 0.25
+    private const val FREEZE_WINDOW_MS = 250L
 
     data class Result(
         val args: List<String>,
@@ -418,18 +420,24 @@ object FFmpegCommandBuilder {
      * does not come from the slowed frames, because their first frame and their frame rate move it to a neighbor frame
      * when the part start changes.
      */
-    internal fun replayFreezeVideo(prepared: List<String>, motion: List<String>, after: List<String>, replay: ReplayRender): String {
+    internal fun replayFreezeVideo(
+        prepared: List<String>,
+        motion: List<String>,
+        after: List<String>,
+        replay: ReplayRender,
+        input: String = "[0:v]",
+    ): String {
         val before = prepared + motion
         val at = replay.freezeAtMs
-        if (at == null || replay.freezeMs <= 0) return "[0:v]" + (before + after).joinToString(",")
+        if (at == null || replay.freezeMs <= 0) return input + (before + after).joinToString(",")
         val hold = (replay.freezeMs / 1000.0).formatSecs()
         val stillAtMs = replay.freezeSourceMs
         return when {
-            at <= 0L -> "[0:v]" + (before + "tpad=start_mode=clone:start_duration=$hold" + after).joinToString(",")
-            at >= replay.motionMs -> "[0:v]" + (before + "tpad=stop_mode=clone:stop_duration=$hold" + after).joinToString(",")
+            at <= 0L -> input + (before + "tpad=start_mode=clone:start_duration=$hold" + after).joinToString(",")
+            at >= replay.motionMs -> input + (before + "tpad=stop_mode=clone:stop_duration=$hold" + after).joinToString(",")
             stillAtMs == null -> {
                 val cut = (at / 1000.0).formatSecs()
-                "[0:v]" + (before + "split[rfa][rfb]").joinToString(",") +
+                input + (before + "split[rfa][rfb]").joinToString(",") +
                     ";[rfa]trim=end=$cut,setpts=PTS-STARTPTS[rfa1]" +
                     ";[rfb]trim=start=$cut,setpts=PTS-STARTPTS,tpad=start_mode=clone:start_duration=$hold[rfb1]" +
                     ";[rfa1][rfb1]" + (listOf("concat=n=2:v=1:a=0") + after).joinToString(",")
@@ -447,7 +455,7 @@ object FFmpegCommandBuilder {
                     "tpad=stop_mode=clone:stop_duration=$hold",
                     "trim=duration=$hold",
                 )
-                "[0:v]" + (prepared + "split[rfm][rfs]").joinToString(",") +
+                input + (prepared + "split[rfm][rfs]").joinToString(",") +
                     ";[rfm]" + (motion + "split[rfa][rfb]").joinToString(",") +
                     ";[rfa]trim=end=$cut,setpts=PTS-STARTPTS[rfa1]" +
                     ";[rfb]trim=start=$cut,setpts=PTS-STARTPTS[rfb1]" +
@@ -536,10 +544,12 @@ object FFmpegCommandBuilder {
         toneRange: ToneRange = ToneRange.LIMITED,
     ): List<String> {
         val filters = stillFrameFilters(atMs, width, adjustments, sourceWidth, sourceHeight, toneRange)
-        val seekSecs = (stillFrameSeekMs(atMs) / 1000.0).formatSecs()
+        // A source of several files (B-49) reads the frame from its file.
+        val seek = SourceVideo.of(sourcePath).at(stillFrameSeekMs(atMs))
+        val seekSecs = (seek.startMs / 1000.0).formatSecs()
         val output = if (outputPath == PIPE) BMP_PIPE_OUTPUT else listOf("-update", "1", outputPath)
         return listOf(
-            "-y", "-v", "error", "-ss", seekSecs, "-i", sourcePath,
+            "-y", "-v", "error", "-ss", seekSecs, "-i", seek.path,
             "-frames:v", "1", "-vf", filters,
         ) + output
     }
@@ -574,6 +584,7 @@ object FFmpegCommandBuilder {
      * ffmpeg decodes only the key frames, so this is fast also for a 4K video: one key frame for each second for most cameras.
      * The "showinfo" filter writes the time of each frame to the error output (see [keyFrameTimeMs]).
      * The frames get the adjustments of the middle of the range.
+     * For a source of several files (B-49), the range must be in one file (see [SourceVideo.splitAtFiles]).
      */
     fun keyFramesArgs(
         sourcePath: String,
@@ -594,9 +605,10 @@ object FFmpegCommandBuilder {
             "showinfo",
         )
         val start = startMs.coerceAtLeast(0)
+        val seek = SourceVideo.of(sourcePath).at(start)
         return listOf(
             "-hide_banner", "-nostats", "-v", "info", "-skip_frame", "nokey",
-            "-ss", (start / 1000.0).formatSecs(), "-t", ((endMs - start).coerceAtLeast(1) / 1000.0).formatSecs(), "-i", sourcePath,
+            "-ss", (seek.startMs / 1000.0).formatSecs(), "-t", ((endMs - start).coerceAtLeast(1) / 1000.0).formatSecs(), "-i", seek.path,
             "-vf", filters.joinToString(","), "-fps_mode", "passthrough",
         ) + BMP_PIPE_OUTPUT
     }
@@ -648,32 +660,34 @@ object FFmpegCommandBuilder {
         // segment durations still match what ScoreboardTimelineBuilder assumes.
         val freeze = p.freezeFrame
         val replay = p.replay?.takeIf { freeze == null }
-        val segmentInputs = freeze == null && replay == null && p.idleTrim && p.keeps.isNotEmpty()
+        // A source of several files (B-49) has no one input for the whole video. Then the whole video is one kept range,
+        // and its inputs are the files.
+        val source = SourceVideo.of(p.sourcePath)
+        val wholeJoined = freeze == null && replay == null && !(p.idleTrim && p.keeps.isNotEmpty()) && source.isJoined
+        val keeps = if (wholeJoined) {
+            listOf(PointV1(startMs = 0, endMs = (source.durationMs ?: 0L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()))
+        } else {
+            p.keeps
+        }
+        val segmentInputs = freeze == null && replay == null && (wholeJoined || (p.idleTrim && p.keeps.isNotEmpty()))
+        val inputs = SourceInputs(source, p.sourceHasAudio)
         if (replay != null) {
-            val lengthSecs = (replay.endMs - replay.startMs).coerceAtLeast(0L) / 1000.0
-            args += listOf("-ss", (replay.startMs / 1000.0).formatSecs(), "-t", lengthSecs.formatSecs())
-            args += listOf("-i", p.sourcePath)
+            inputs.span(replay.startMs, replay.endMs)
         } else if (freeze != null) {
             val atMs = freeze.atMs
             if (atMs == null) {
-                args += listOf("-sseof", (-FREEZE_WINDOW_SECS).formatSecs())
+                inputs.raw("-sseof", (-FREEZE_WINDOW_SECS).formatSecs(), "-i", source.lastFile)
             } else {
-                val startSecs = ((atMs / 1000.0) - FREEZE_WINDOW_SECS).coerceAtLeast(0.0)
-                args += listOf("-ss", startSecs.formatSecs(), "-t", FREEZE_WINDOW_SECS.formatSecs())
+                val startMs = (atMs - FREEZE_WINDOW_MS).coerceAtLeast(0L)
+                inputs.span(startMs, startMs + FREEZE_WINDOW_MS)
             }
-            args += listOf("-i", p.sourcePath)
         } else if (segmentInputs) {
-            p.keeps.forEach { keep ->
-                val startSecs = keep.startMs / 1000.0
-                val durationSecs = (keep.endMs - keep.startMs).coerceAtLeast(0) / 1000.0
-                args += listOf("-ss", startSecs.formatSecs(), "-t", durationSecs.formatSecs())
-                args += listOf("-i", p.sourcePath)
-            }
+            keeps.forEach { keep -> inputs.span(keep.startMs.toLong(), keep.endMs.toLong()) }
         } else {
-            args += listOf("-i", p.sourcePath)
+            inputs.raw("-i", p.sourcePath)
             if (!p.sourceHasAudio) {
                 // The second input gives the audio. -shortest stops it at the end of the video.
-                args += listOf("-f", "lavfi", "-i", SILENT_AUDIO)
+                inputs.raw("-f", "lavfi", "-i", SILENT_AUDIO)
             }
         }
 
@@ -699,20 +713,8 @@ object FFmpegCommandBuilder {
 
         // A color fade reads its part of the source from one more input, without audio. These inputs come
         // after the other inputs.
-        val baseInputCount = when {
-            freeze != null || replay != null -> 1
-            segmentInputs -> p.keeps.size
-            p.sourceHasAudio -> 1
-            else -> 2
-        }
-        val extraInputs = mutableListOf<String>()
-        fun addVideoInput(startMs: Long, endMs: Long): Int {
-            val index = baseInputCount + extraInputs.count { it == "-i" }
-            extraInputs += listOf("-an", "-ss", (startMs / 1000.0).formatSecs())
-            if (endMs != Long.MAX_VALUE) extraInputs += listOf("-t", ((endMs - startMs) / 1000.0).formatSecs())
-            extraInputs += listOf("-i", p.sourcePath)
-            return index
-        }
+        fun addVideoInput(startMs: Long, endMs: Long): Int =
+            inputs.span(startMs, endMs.takeIf { it != Long.MAX_VALUE }, videoOnly = true)
 
         /**
          * The video of the source span [startMs, endMs) from input [spanInput], as the label [label].
@@ -727,7 +729,7 @@ object FFmpegCommandBuilder {
         ): List<String> {
             fun chain(piece: ColorTimeline.Piece, input: Int, out: String): List<String> {
                 val filters = listOf("setpts=PTS-STARTPTS") + timedFilters(adj, piece.startMs, piece.endMs)
-                val base = "[$input:v]" + filters.joinToString(",")
+                val base = inputs.video(input) + filters.joinToString(",")
                 return when (piece) {
                     is ColorTimeline.Piece.Hold ->
                         listOf(base + buildColorFilter(piece.colors)?.let { ",$it" }.orEmpty() + "[$out]")
@@ -782,11 +784,11 @@ object FFmpegCommandBuilder {
             p.subtitlesAssPath?.let { video += burnInFilter(it) }
             // The source audio keeps its sample rate and channels, so the AAC settings match the other passes.
             val audio = if (p.sourceHasAudio) {
-                "[0:a]asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
+                "${inputs.audio(0)}asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
             } else {
                 "$SILENT_AUDIO,atrim=duration=$duration"
             }
-            filterComplex = "[0:v]${video.joinToString(",")}$vMap;$audio$aMap"
+            filterComplex = "${inputs.video(0)}${video.joinToString(",")}$vMap;$audio$aMap"
         } else if (replay != null) {
             // The zoom works on the frame after the Transform geometry, at the source resolution when it can.
             // The speed and the frame rate come after it, because the zoom counts the source frames.
@@ -814,32 +816,32 @@ object FFmpegCommandBuilder {
             val audioFades = audioFadeFilters(p.fadeIn, p.fadeOut, durationSecs)
             val audio = when {
                 !p.sourceHasAudio -> "$SILENT_AUDIO,atrim=duration=$duration"
-                replay.muted -> "[0:a]asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
+                replay.muted -> "${inputs.audio(0)}asetpts=PTS-STARTPTS,volume=0,apad,atrim=duration=$duration"
                 else -> {
                     // A lower sample rate plays the samples slower, so the pitch goes down with the speed (decision 4).
                     // The resample keeps the sample rate of the other passes, so the join can copy the streams.
                     val slowRate = Math.round(replay.sampleRate * replay.speed).coerceAtLeast(1L)
-                    val slow = listOf("[0:a]asetpts=PTS-STARTPTS", "asetrate=$slowRate", "aresample=${replay.sampleRate}")
+                    val slow = listOf("${inputs.audio(0)}asetpts=PTS-STARTPTS", "asetrate=$slowRate", "aresample=${replay.sampleRate}")
                     replayFreezeAudio(slow, listOf("apad", "atrim=duration=$duration") + audioFades, replay)
                 }
             }
-            filterComplex = "${replayFreezeVideo(video, motion, after, replay)}$vMap;$audio$aMap"
+            filterComplex = "${replayFreezeVideo(video, motion, after, replay, inputs.video(0))}$vMap;$audio$aMap"
         } else if (segmentInputs) {
             // Build the concat graph over the per-segment inputs. Each input was already seeked and
             // length-limited on the command line, so the segment only needs its timestamps rebased.
             val parts = mutableListOf<String>()
             val vLabels = mutableListOf<String>()
             val aLabels = mutableListOf<String>()
-            p.keeps.forEachIndexed { idx, keep ->
+            keeps.forEachIndexed { idx, keep ->
                 val vLbl = "v$idx"
                 val aLbl = "a$idx"
                 parts += if (timedAdjustments != null) {
                     timedSpan(timedAdjustments, keep.startMs.toLong(), keep.endMs.toLong(), idx, vLbl)
                 } else {
-                    listOf("[$idx:v]setpts=PTS-STARTPTS[$vLbl]")
+                    listOf("${inputs.video(idx)}setpts=PTS-STARTPTS[$vLbl]")
                 }
                 parts += if (p.sourceHasAudio) {
-                    "[$idx:a]asetpts=PTS-STARTPTS[$aLbl]"
+                    "${inputs.audio(idx)}asetpts=PTS-STARTPTS[$aLbl]"
                 } else {
                     val durationSecs = (keep.endMs - keep.startMs).coerceAtLeast(0) / 1000.0
                     "$SILENT_AUDIO,atrim=duration=${durationSecs.formatSecs()}[$aLbl]"
@@ -848,7 +850,7 @@ object FFmpegCommandBuilder {
                 aLabels += "[$aLbl]"
             }
             // Concat and scale after concat
-            parts += vLabels.joinToString(separator = "") + "concat=n=" + p.keeps.size + ":v=1:a=0[vcat]"
+            parts += vLabels.joinToString(separator = "") + "concat=n=" + keeps.size + ":v=1:a=0[vcat]"
             // Output scaled video into an intermediate label; we may append subtitles next
             parts += if (timedAdjustments != null) {
                 // Each segment already has its geometry and the output size.
@@ -857,15 +859,15 @@ object FFmpegCommandBuilder {
                 "[vcat]" + listOfNotNull(geometry, scale).joinToString(",") + "[vsc]"
             }
             // A chunk next to a replay dips to black or white (B-50).
-            val chunkSecs = p.keeps.sumOf { (it.endMs - it.startMs).coerceAtLeast(0).toLong() } / 1000.0
+            val chunkSecs = keeps.sumOf { (it.endMs - it.startMs).coerceAtLeast(0).toLong() } / 1000.0
             val videoFades = fadeFilters(p.fadeIn, p.fadeOut, chunkSecs)
             val audioFades = audioFadeFilters(p.fadeIn, p.fadeOut, chunkSecs)
             val finalVideo = vMap
             if (videoFades.isNotEmpty()) vMap = "[vfd]"
             if (audioFades.isEmpty()) {
-                parts += aLabels.joinToString(separator = "") + "concat=n=${p.keeps.size}:v=0:a=1" + aMap
+                parts += aLabels.joinToString(separator = "") + "concat=n=${keeps.size}:v=0:a=1" + aMap
             } else {
-                parts += aLabels.joinToString(separator = "") + "concat=n=${p.keeps.size}:v=0:a=1[acat]"
+                parts += aLabels.joinToString(separator = "") + "concat=n=${keeps.size}:v=0:a=1[acat]"
                 parts += "[acat]${audioFades.joinToString(",")}$aMap"
             }
             // Apply color adjustments after scale to match preview, before subtitles
@@ -908,7 +910,10 @@ object FFmpegCommandBuilder {
             aMap = if (p.sourceHasAudio) "0:a:0" else "1:a:0"
             filterComplex = parts.joinToString(";")
         }
-        args += extraInputs
+        args += inputs.args
+        // The inputs of a range across files join first (B-49).
+        val joins = inputs.joins()
+        if (joins.isNotEmpty()) filterComplex = (joins + listOfNotNull(filterComplex)).joinToString(";")
 
         // Video options
         args += listOf("-c:v", videoCodec)
@@ -1019,6 +1024,84 @@ object FFmpegCommandBuilder {
         }.trim()
 
         return Result(args = args, preview = preview)
+    }
+
+    /**
+     * The inputs of one ffmpeg command, and the filter labels of their streams.
+     *
+     * Each call adds one slot and returns its number. A slot is one input for a range in one file. For a range across
+     * the files of a source of several files (B-49), the slot has one input for each file, and [joins] gives the
+     * concat filters that join them. For one video file, the slot number is the input number, and [video] and [audio]
+     * give the input labels, for example "[0:v]".
+     */
+    private class SourceInputs(private val source: SourceVideo, private val sourceHasAudio: Boolean) {
+        val args = mutableListOf<String>()
+        private var inputCount = 0
+        private val slots = mutableListOf<Slot>()
+
+        private class Slot(val inputs: List<Int>, val withAudio: Boolean) {
+            var videoUsed = false
+            var audioUsed = false
+        }
+
+        /** Adds the inputs of the source range [startMs, endMs). A null [endMs] reads to the end. */
+        fun span(startMs: Long, endMs: Long?, videoOnly: Boolean = false): Int {
+            val indices = source.spans(startMs, endMs).map { span ->
+                if (videoOnly) args += "-an"
+                args += listOf("-ss", (span.startMs / 1000.0).formatSecs())
+                span.durationMs?.let { args += listOf("-t", (it / 1000.0).formatSecs()) }
+                args += listOf("-i", span.path)
+                inputCount++
+            }
+            slots += Slot(indices, withAudio = !videoOnly && sourceHasAudio)
+            return slots.lastIndex
+        }
+
+        /** Adds one input with the arguments [inputArgs]. */
+        fun raw(vararg inputArgs: String): Int {
+            args += inputArgs
+            slots += Slot(listOf(inputCount++), withAudio = true)
+            return slots.lastIndex
+        }
+
+        /** The label of the video of [slot]. */
+        fun video(slot: Int): String {
+            val s = slots[slot]
+            if (s.inputs.size == 1) return "[${s.inputs.single()}:v]"
+            s.videoUsed = true
+            return "[j${slot}v]"
+        }
+
+        /** The label of the audio of [slot]. */
+        fun audio(slot: Int): String {
+            val s = slots[slot]
+            if (s.inputs.size == 1) return "[${s.inputs.single()}:a]"
+            check(s.withAudio) { "The input $slot has no audio" }
+            s.audioUsed = true
+            return "[j${slot}a]"
+        }
+
+        /** The concat filters of the slots with several inputs, for the streams that the graph uses. */
+        fun joins(): List<String> = slots.mapIndexedNotNull { slot, s ->
+            if (s.inputs.size < 2 || (!s.videoUsed && !s.audioUsed)) return@mapIndexedNotNull null
+            val parts = mutableListOf<String>()
+            val segments = StringBuilder()
+            s.inputs.forEachIndexed { k, input ->
+                if (s.videoUsed) {
+                    parts += "[$input:v]setpts=PTS-STARTPTS[j${slot}v$k]"
+                    segments.append("[j${slot}v$k]")
+                }
+                if (s.audioUsed) {
+                    parts += "[$input:a]asetpts=PTS-STARTPTS[j${slot}a$k]"
+                    segments.append("[j${slot}a$k]")
+                }
+            }
+            val v = if (s.videoUsed) 1 else 0
+            val a = if (s.audioUsed) 1 else 0
+            val outputs = (if (s.videoUsed) "[j${slot}v]" else "") + (if (s.audioUsed) "[j${slot}a]" else "")
+            parts += "${segments}concat=n=${s.inputs.size}:v=$v:a=$a$outputs"
+            parts.joinToString(";")
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 package org.litvin.share
 
+import org.litvin.projects.ProjectSource
 import org.litvin.points.EdlIO
 import org.litvin.points.EdlV1
 import org.litvin.projects.ManifestIO
@@ -126,8 +127,9 @@ data class ShareProject(
             val manifest = ManifestIO.read(manifestPath)
             val edl = EdlIO.readForProjectDir(projectDir)
             val score = ScoreIO.readForProjectDir(projectDir)
-            val source = manifest.sourceVideo
-            return build(projectDir, manifest.name, source, edl, score, source?.let(::fileDate))
+            // A match of several files (B-49) shows its EDL file. The date is the date of the first file.
+            val source = ProjectSource.mediaPath(manifestPath, manifest)
+            return build(projectDir, manifest.name, source, edl, score, manifest.sourceVideo?.let(::fileDate))
         }
 
         fun build(projectDir: String, name: String, sourcePath: String?, edl: EdlV1, score: ScoreV1, videoDate: LocalDate?): ShareProject {

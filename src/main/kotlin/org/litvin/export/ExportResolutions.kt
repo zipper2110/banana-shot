@@ -1,5 +1,6 @@
 package org.litvin.export
 
+import org.litvin.media.SourceVideo
 import org.litvin.ToneRange
 import java.util.concurrent.TimeUnit
 
@@ -8,7 +9,7 @@ object ExportResolutionProbe {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable, "-v", "error", "-select_streams", "v:0",
-                "-show_entries", "stream=width,height,sample_aspect_ratio", "-of", "csv=p=0", sourcePath,
+                "-show_entries", "stream=width,height,sample_aspect_ratio", "-of", "csv=p=0", SourceVideo.of(sourcePath).firstFile,
             ).redirectErrorStream(true).start()
             if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 process.destroyForcibly()
@@ -42,7 +43,7 @@ object SourceToneRangeProbe {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable, "-v", "error", "-select_streams", "v:0",
-                "-show_entries", "stream=pix_fmt,color_range", "-of", "default=nw=1", sourcePath,
+                "-show_entries", "stream=pix_fmt,color_range", "-of", "default=nw=1", SourceVideo.of(sourcePath).firstFile,
             ).redirectErrorStream(true).start()
             if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 process.destroyForcibly()
@@ -75,7 +76,7 @@ object SourceAudioProbe {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable, "-v", "error", "-select_streams", "a",
-                "-show_entries", "stream=codec_type", "-of", "csv=p=0", sourcePath,
+                "-show_entries", "stream=codec_type", "-of", "csv=p=0", SourceVideo.of(sourcePath).firstFile,
             ).redirectErrorStream(true).start()
             if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 process.destroyForcibly()
@@ -103,7 +104,7 @@ object SourceSampleRateProbe {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable, "-v", "error", "-select_streams", "a:0",
-                "-show_entries", "stream=sample_rate", "-of", "csv=p=0", sourcePath,
+                "-show_entries", "stream=sample_rate", "-of", "csv=p=0", SourceVideo.of(sourcePath).firstFile,
             ).redirectErrorStream(true).start()
             if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 process.destroyForcibly()
@@ -131,6 +132,13 @@ object SourceSampleRateProbe {
  */
 object SourceVideoEndProbe {
     fun probe(sourcePath: String, ffprobeExecutable: String): Long? {
+        // A source of several files (B-49) ends with its last file.
+        val source = SourceVideo.of(sourcePath)
+        val lastPart = source.parts.lastOrNull() ?: return probeFile(sourcePath, ffprobeExecutable)
+        return probeFile(lastPart.path, ffprobeExecutable)?.let { lastPart.offsetMs + it }
+    }
+
+    private fun probeFile(sourcePath: String, ffprobeExecutable: String): Long? {
         return try {
             val process = ProcessBuilder(
                 ffprobeExecutable, "-v", "error", "-select_streams", "v:0",

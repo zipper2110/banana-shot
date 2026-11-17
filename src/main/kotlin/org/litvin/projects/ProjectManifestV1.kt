@@ -1,5 +1,7 @@
 package org.litvin.projects
 
+import org.litvin.media.SourceFile
+
 /**
  * Project manifest schema v1 (stored as JSON in project.trproj).
  *
@@ -9,8 +11,9 @@ package org.litvin.projects
  * - createdAt: ISO-8601 UTC timestamp string (e.g., 2026-04-01T21:00:00Z)
  * - lastOpenedAt: ISO-8601 UTC timestamp string
  * - version: manifest schema version (always 1 for v1)
- * - sourceVideo: optional absolute path to the selected source video file
+ * - sourceVideo: optional absolute path to the selected source video file. For a match of several files, the first file.
  * - videoLanguage: optional language code of the texts in the video (B-11 E5). See [ProjectVideoLanguage].
+ * - sourceVideos: the files of a match of several files, in play order (B-49). Null for one file. See [ProjectSource].
  */
 data class ProjectManifestV1(
     val id: String,
@@ -20,4 +23,5 @@ data class ProjectManifestV1(
     val version: Int = 1,
     val sourceVideo: String? = null,
     val videoLanguage: String? = null,
+    val sourceVideos: List<SourceFile>? = null,
 )

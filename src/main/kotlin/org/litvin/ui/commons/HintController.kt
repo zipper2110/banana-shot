@@ -23,12 +23,16 @@ class HintController(private val registry: HintRegistry) {
     private var shown: Shown? = null
     private val waiting = ArrayDeque<Request>()
 
-    // The toast on the screen and its hint. A toast does not wait in the queue: a new toast replaces it.
-    private var toast: Pair<HintId, HintToast>? = null
+    // The toast on the screen and its hint (null for a notice). A toast does not wait in the queue: a new toast replaces it.
+    private var toast: Pair<HintId?, HintToast>? = null
 
     /** The hint of the toast on the screen, or null. */
     val shownToast: HintId?
         get() = toast?.first
+
+    /** True while a notice (see [notice]) is on the screen. */
+    val isNoticeShown: Boolean
+        get() = toast.let { it != null && it.first == null }
 
     /** The hint on the screen, or null. */
     val shownHint: HintId?
@@ -79,9 +83,18 @@ class HintController(private val registry: HintRegistry) {
      */
     fun toast(hint: HintId, anchor: JComponent, message: String) {
         if (registry.isDismissed(hint)) return
+        showToast(hint, anchor, HintToast(message) { registry.dismiss(hint) })
+    }
+
+    /**
+     * Shows [message] as a toast above [anchor], with no "Don't show again". Use it when an action of the user did
+     * nothing and the user must know why each time. A toast on the screen goes, so that only the newest toast shows.
+     */
+    fun notice(anchor: JComponent, message: String) = showToast(null, anchor, HintToast(message, onDontShowAgain = null))
+
+    private fun showToast(hint: HintId?, anchor: JComponent, view: HintToast) {
         toast?.second?.hideToast()
         if (!anchor.isShowing) return
-        val view = HintToast(message) { registry.dismiss(hint) }
         val entry = hint to view
         view.onHidden = { if (toast === entry) toast = null }
         toast = entry

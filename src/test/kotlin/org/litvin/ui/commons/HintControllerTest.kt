@@ -191,6 +191,23 @@ class HintControllerTest {
     }
 
     @Test
+    fun aNoticeHasNoDontShowAgainAndShowsEachTime() {
+        onEdt { hints.notice(first, "server first") }
+        val notice = toasts().single()
+        assertTrue(hints.isNoticeShown)
+        assertNull(hints.shownToast)
+        assertNull(find(notice, "hint-toast-dont-show"), "A notice has no \"Don't show again\"")
+
+        // A toast replaces the notice, and a notice replaces the toast.
+        onEdt { hints.toast(HintId.LET_WITHOUT_POINT, second, "let") }
+        assertEquals(1, toasts().size)
+        assertFalse(hints.isNoticeShown)
+        onEdt { hints.notice(first, "server first") }
+        assertEquals(1, toasts().size)
+        assertTrue(hints.isNoticeShown)
+    }
+
+    @Test
     fun aToastClosesByItselfAndHideTakesItOff() {
         onEdt { hints.toast(HintId.LET_WITHOUT_POINT, first, "let") }
         onEdt { hints.hide(HintId.LET_WITHOUT_POINT) }

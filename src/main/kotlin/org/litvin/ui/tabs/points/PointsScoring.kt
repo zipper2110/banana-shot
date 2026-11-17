@@ -347,6 +347,18 @@ internal class PointsScoring(
         }
     }
 
+    /**
+     * Enter (or the old key C) or the start button tries to start a point (B-68). Advanced mode needs the server.
+     * While the server is not known, no point starts: the point bar asks "Who serves?", and a toast tells the user to
+     * answer first. Returns false when no point must start.
+     */
+    fun allowsPointStart(): Boolean {
+        if (serveQuestion.allowsPointStart(score.isAdvanced, serverKnown())) return true
+        render()
+        if (isActive()) hints.notice(controls, tr("points.notice.serverFirst"))
+        return false
+    }
+
     /** C started the pending point (B-68). In advanced mode with no known server, the point bar asks "Who serves?". */
     fun onPointStart() {
         // C closes the error kind question without an answer (B-68).

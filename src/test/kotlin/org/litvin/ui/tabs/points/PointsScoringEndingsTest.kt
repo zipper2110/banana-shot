@@ -23,6 +23,7 @@ import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /** B-68 E2: the ending keys, the automatic winners, "Who serves?", and the confirmation of a server change. */
@@ -116,6 +117,24 @@ class PointsScoringEndingsTest {
         assertEquals(Outcome.P2, ScoreIO.readForProjectDir(dir.path).serverMarks["A"])
         keys.press("0")
         assertEquals(listOf<ScoreRequest>(ScoreRequest.WithEnding(EndingChoice.P2_WINNER)), requests)
+    }
+
+    @Test
+    fun `with no serve mark, advanced mode starts no point until the user answers who serves`() = withScoring(
+        ScoreV1(scoringMode = ScoringMode.ADVANCED),
+    ) { dir, scoring, _, _ ->
+        assertFalse(scoring.controls.button("points-serve-answer-1").isVisible)
+        assertFalse(scoring.allowsPointStart())
+        assertTrue(scoring.controls.button("points-serve-answer-1").isVisible, "The point bar asks \"Who serves?\"")
+
+        scoring.controls.button("points-serve-answer-1").doClick()
+        assertEquals(Outcome.P1, ScoreIO.readForProjectDir(dir.path).serverMarks["A"])
+        assertTrue(scoring.allowsPointStart())
+    }
+
+    @Test
+    fun `basic mode starts a point with no serve mark`() = withScoring(ScoreV1()) { _, scoring, _, _ ->
+        assertTrue(scoring.allowsPointStart())
     }
 
     private fun withScoring(

@@ -595,6 +595,16 @@ Started on 2026-11-13. Update this table when an epic starts or ends.
   point exists. Esc removes the mark of the cancelled pending point.
 - When "Who serves?" has no pending point and no selected point, the question
   keeps the answer, and the next C gives it to the new point.
+- Decided on 2026-11-17: in advanced mode, the point start key and the start
+  button start no point while the server is not known (no serve mark and no
+  kept answer). The start button stays active. The point bar asks "Who
+  serves?", and a toast says that the user must answer first. The toast has no
+  "Don't show again", so it shows at each blocked start
+  (`HintController.notice`, `ServeQuestion.allowsPointStart`).
+- Decided on 2026-11-17: Enter is the only official point start key
+  (`AppShortcuts.POINT_START`). All texts, tooltips, toasts, and help pages name
+  Enter. C, the old key, still starts a point (`AppShortcuts.alsoBound`), but no
+  text names it. In this document, "C" means the point start key.
 - The confirmation of a server change numbers the points as the list does: the
   pack number in advanced mode, and the position in the list in basic mode. It
   compares the games and the sets in the order that the players won them.

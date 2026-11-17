@@ -25,7 +25,8 @@ import org.litvin.i18n.tr
 
 /**
  * A toast: a short hint that closes by itself after [durationMs] (B-68, "Hints"). It does not stop the video and does
- * not take the keyboard focus. It has a "Don't show again" button, which calls [onDontShowAgain].
+ * not take the keyboard focus. It has a "Don't show again" button, which calls [onDontShowAgain]. With no
+ * [onDontShowAgain], the toast is a notice: it has no "Don't show again" button.
  *
  * The toast is in its own window, owned by the window of the anchor, as [HintBalloon]. The video preview is a native
  * window, and a Swing component above it shows a black rectangle. A window does not.
@@ -34,7 +35,7 @@ import org.litvin.i18n.tr
 class HintToast(
     message: String,
     private val durationMs: Int = DEFAULT_DURATION_MS,
-    private val onDontShowAgain: () -> Unit,
+    private val onDontShowAgain: (() -> Unit)?,
 ) : JPanel(BorderLayout(12, 0)) {
     private var anchor: JComponent? = null
     private var host: JWindow? = null
@@ -67,26 +68,30 @@ class HintToast(
             foreground = Palette.FG
         }
         add(label, BorderLayout.CENTER)
-        val dontShow = JButton(tr("hint.toast.dontShowAgain")).apply {
-            name = "hint-toast-dont-show"
-            foreground = Palette.LIME
-            font = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
-            isFocusPainted = false
-            isBorderPainted = false
-            isContentAreaFilled = false
-            isFocusable = false
-            border = EmptyBorder(2, 2, 2, 2)
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            addActionListener {
-                hideToast()
-                onDontShowAgain()
+        val dontShow = onDontShowAgain?.let { dontShowAgain ->
+            JButton(tr("hint.toast.dontShowAgain")).apply {
+                name = "hint-toast-dont-show"
+                foreground = Palette.LIME
+                font = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
+                isFocusPainted = false
+                isBorderPainted = false
+                isContentAreaFilled = false
+                isFocusable = false
+                border = EmptyBorder(2, 2, 2, 2)
+                cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                addActionListener {
+                    hideToast()
+                    dontShowAgain()
+                }
             }
         }
-        add(JPanel(BorderLayout()).apply {
-            isOpaque = false
-            add(dontShow, BorderLayout.CENTER)
-        }, BorderLayout.EAST)
-        listOf(this, label, dontShow).forEach { it.addMouseListener(hoverListener) }
+        if (dontShow != null) {
+            add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                add(dontShow, BorderLayout.CENTER)
+            }, BorderLayout.EAST)
+        }
+        listOfNotNull(this, label, dontShow).forEach { it.addMouseListener(hoverListener) }
     }
 
     val isShown: Boolean

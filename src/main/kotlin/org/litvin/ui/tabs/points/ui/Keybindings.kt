@@ -8,7 +8,7 @@ import javax.swing.*
  * Installs and uninstalls keyboard shortcuts for the Points tab.
  *
  * Responsibilities:
- * - Bind Space/C/Esc/Delete, Left/Right (with Shift for big step), and Up/Down (speed) to provided actions
+ * - Bind Space/Enter/Esc/Delete, Left/Right (with Shift for big step), and Up/Down (speed) to provided actions
  * - Respect text-editing focus to avoid hijacking typing
  * - Cleanly uninstall all registered key strokes and actions
  */
@@ -45,6 +45,10 @@ class Keybindings(
         // Primary controls
         bind(AppShortcuts.PLAY_PAUSE.keyStroke, "points.toggle") { actions.toggle() }
         bind(AppShortcuts.POINT_START.keyStroke, "points.pointStart") { actions.startAtPlayhead() }
+        // C is the old point start key. It still works, but no text shows it.
+        AppShortcuts.alsoBound(AppShortcuts.POINT_START).forEachIndexed { index, stroke ->
+            bind(stroke, "points.pointStart.$index") { actions.startAtPlayhead() }
+        }
         bind(AppShortcuts.CANCEL_PENDING.keyStroke, "points.cancelPending") { actions.cancelPending() }
         bind(AppShortcuts.TOGGLE_FAVORITE.keyStroke, "points.toggleFavorite") { actions.toggleFavoriteSelected() }
         bind(AppShortcuts.DELETE.keyStroke, "points.delete") { actions.deleteSelected() }

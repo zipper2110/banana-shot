@@ -6,6 +6,9 @@ package org.litvin.ui.tabs.points
  * - when the user selects advanced mode,
  * - when the user presses C in advanced mode.
  *
+ * In advanced mode, no point starts until the server is known (see [allowsPointStart]). Enter is the point start key.
+ * "C" in this file is the old key, which still works.
+ *
  * The answer becomes the serve mark of the pending point or of the selected point. When there is no such point, the
  * question keeps the answer, and the next C gives it to the new point.
  */
@@ -21,6 +24,16 @@ internal class ServeQuestion {
     fun onModeSelected(advanced: Boolean, serverKnown: Boolean) {
         isOpen = advanced && !serverKnown
         kept = null
+    }
+
+    /**
+     * C tries to start a point. Returns false in advanced mode when the server is not known ([serverKnown] is false)
+     * and the question keeps no answer. Then C starts no point, and the question opens.
+     */
+    fun allowsPointStart(advanced: Boolean, serverKnown: Boolean): Boolean {
+        if (!advanced || serverKnown || kept != null) return true
+        isOpen = true
+        return false
     }
 
     /** C started a point. Returns the kept answer (1 or 2), which becomes the serve mark of the new point, or null. */

@@ -23,7 +23,11 @@ object AppShortcuts {
     /** The key of the Help texts: [MAC_HELP] on macOS, else F1. */
     val helpKey: String get() = if (isMac) MAC_HELP else "F1"
     val PLAY_PAUSE = AppShortcut("SPACE")
-    val POINT_START = AppShortcut("C")
+    /**
+     * Enter starts a point. It is the only point start key that the app shows. [alsoBound] keeps C, the old key, so
+     * that it still works for users who know it. No text names C.
+     */
+    val POINT_START = AppShortcut("ENTER")
     val CANCEL_PENDING = AppShortcut("ESCAPE")
     val TOGGLE_FAVORITE = AppShortcut("A")
     /**
@@ -85,6 +89,7 @@ object AppShortcuts {
     /** The other key strokes of [shortcut] that the app also binds. */
     fun alsoBound(shortcut: AppShortcut): List<String> = when {
         shortcut == DELETE && isMac -> listOf("DELETE")
+        shortcut == POINT_START -> listOf("C")
         else -> ENDING_ALSO_BOUND[shortcut].orEmpty()
     }
 

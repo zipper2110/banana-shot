@@ -6,6 +6,7 @@ import java.awt.Dimension
 import java.awt.Graphics
 import javax.swing.JButton
 import kotlin.math.ceil
+import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.KeyChips
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.UiKit
@@ -69,7 +70,7 @@ internal class PointStartButton(onStart: () -> Unit) : JButton() {
 
     private fun updateTooltip() {
         toolTipText = when {
-            !pending -> tr("points.pointStart.tooltip", "key" to tr("key.enter"))
+            !pending -> tr("points.pointStart.tooltip", "key" to AppShortcuts.POINT_START.display)
             serve != null -> tr("points.pointStart.serve.pending.tooltip", "time" to value)
             else -> tr("points.pointStart.pending.tooltip", "time" to value)
         }
@@ -152,7 +153,7 @@ internal class PointStartButton(onStart: () -> Unit) : JButton() {
         private const val PAD_X = 12
         private const val GAP = 10
         private val TITLE: String get() = tr("points.pointStart")
-        private val KEY: String get() = tr("key.enter")
+        private val KEY: String get() = AppShortcuts.POINT_START.display
         private const val TIME_SAMPLE = "00:00:00.0"
     }
 }

@@ -59,6 +59,27 @@ class ServeQuestionTest {
     }
 
     @Test
+    fun `advanced mode starts no point until the server is known`() {
+        val question = ServeQuestion()
+
+        assertFalse(question.allowsPointStart(advanced = true, serverKnown = false))
+        assertTrue(question.isOpen, "The blocked point start asks the question")
+
+        assertTrue(question.allowsPointStart(advanced = false, serverKnown = false))
+        assertTrue(question.allowsPointStart(advanced = true, serverKnown = true))
+    }
+
+    @Test
+    fun `a kept answer allows the point start`() {
+        val question = ServeQuestion()
+        question.onModeSelected(advanced = true, serverKnown = false)
+        question.answer(2, target = null)
+
+        assertTrue(question.allowsPointStart(advanced = true, serverKnown = false))
+        assertEquals(2, question.onPointStart(advanced = true, serverKnown = false))
+    }
+
+    @Test
     fun `a serve mark or basic mode closes the question and forgets a kept answer`() {
         val question = ServeQuestion()
         question.onModeSelected(advanced = true, serverKnown = false)

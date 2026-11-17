@@ -622,14 +622,6 @@ class SwingPointsPanel(
                 if (!isTextEditingFocus()) toggleFrameStep()
             }
         })
-        // Enter starts a point, as C does.
-        listOf(WHEN_IN_FOCUSED_WINDOW, WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-            .forEach { getInputMap(it).put(KeyStroke.getKeyStroke("ENTER"), "points.pointStartEnter") }
-        actionMap.put("points.pointStartEnter", object : AbstractAction() {
-            override fun actionPerformed(e: java.awt.event.ActionEvent?) {
-                if (!isTextEditingFocus()) onStartAtPlayhead()
-            }
-        })
 
         rebuildCards()
     }
@@ -1388,6 +1380,8 @@ class SwingPointsPanel(
     private fun onStartAtPlayhead() {
         // The marking keys do not work during a replay (B-50).
         if (replays.isActive) return
+        // In advanced mode, Enter starts no point until the server is known (B-68).
+        if (!scoring.allowsPointStart()) return
         dispatcher.onPointStart(player.currentTimeMs())
         maybeShowDispatcherHint()
         // In advanced mode, the point bar can ask "Who serves?" for the new point (B-68).

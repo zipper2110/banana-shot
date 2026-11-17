@@ -162,6 +162,10 @@ The work for the paid version is in `backlog-paid.md`.
   not support different files yet, and some features can work
   incorrectly. The warning asks the user to request the support for their
   case through the feedback form.
+- Decided on 2026-11-17: the author tests the feature with their own
+  videos, then releases it. The user who asked for it (DJI camera) checks
+  it with their files. If it does not work, the author asks that user for
+  the files.
 
 ### B-52 Add comment during a replay
 

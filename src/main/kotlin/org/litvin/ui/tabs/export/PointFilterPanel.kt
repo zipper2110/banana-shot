@@ -7,19 +7,180 @@ import org.litvin.i18n.tr
 import org.litvin.scoring.ErrorKind
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.tabs.export.ExportUi.Weight
+import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
 import javax.swing.BorderFactory
+import javax.swing.JButton
 import javax.swing.JPanel
+import javax.swing.JPopupMenu
+import javax.swing.event.PopupMenuEvent
+import javax.swing.event.PopupMenuListener
 import javax.swing.JToggleButton
 import kotlin.math.ceil
 import kotlin.math.max
 
 /**
- * The point filter of a paid export (B-69, in docs/backlog-paid.md). Three groups of toggle chips: the player who made
- * the ending, the ending, and the error kind. The user can select more than one chip in a group. [onChange] gets the
- * new filter after each click.
+ * The filter buttons of a paid export (B-69, in docs/backlog-paid.md). "Only points" and "Only favorites" each get a
+ * [FilterButton] on the right side. A click opens [PointFilterPanel] in a dropdown under the button, on top of the tab
+ * content. Both buttons show the same filter. [onChange] gets the new filter after each click on a chip.
+ */
+internal class PointFilterDropdown(onChange: (PointFilter) -> Unit) {
+    private val buttons = mutableListOf<FilterButton>()
+    val panel = PointFilterPanel { filter ->
+        buttons.forEach { it.selectedCount = filter.selectedCount }
+        onChange(filter)
+    }
+
+    /** The time when the dropdown closed last. A press on a filter button closes the dropdown before its click. */
+    private var closedAtMs = 0L
+
+    private val popup = JPopupMenu().apply {
+        name = "export-filter-popup"
+        isFocusable = false
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Palette.LINE_2),
+            BorderFactory.createEmptyBorder(PAD, PAD, PAD, PAD),
+        )
+        background = Palette.RAISED
+        layout = BorderLayout()
+        add(panel, BorderLayout.CENTER)
+        addPopupMenuListener(object : PopupMenuListener {
+            override fun popupMenuWillBecomeVisible(e: PopupMenuEvent) = Unit
+            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent) {
+                closedAtMs = System.currentTimeMillis()
+            }
+            override fun popupMenuCanceled(e: PopupMenuEvent) = Unit
+        })
+    }
+
+    /** The filter of the selected chips. */
+    val filter: PointFilter get() = panel.filter
+
+    /** True while the dropdown shows. */
+    val isOpen: Boolean get() = popup.isVisible
+
+    /** A new filter button, for example for the "Only points" card. */
+    fun newButton(componentName: String): FilterButton = FilterButton(componentName).also { button ->
+        buttons += button
+        button.isVisible = available
+        button.addActionListener { toggle(button) }
+    }
+
+    /** Shows or hides the filter buttons. Hidden buttons also close the dropdown. */
+    var available: Boolean = false
+        set(value) {
+            field = value
+            buttons.forEach { it.isVisible = value }
+            if (!value) popup.isVisible = false
+        }
+
+    /** Shows the side names on the player chips. */
+    fun setPlayers(name1: String, name2: String) = panel.setPlayers(name1, name2)
+
+    /** Selects no chip. The buttons then show no count. */
+    fun clear() {
+        panel.clear()
+        buttons.forEach { it.selectedCount = 0 }
+    }
+
+    /** Opens the dropdown under [button], or closes it when it shows. */
+    fun toggle(button: FilterButton) {
+        // The press that closed the dropdown is part of this click: then the click only closes it.
+        if (popup.isVisible || System.currentTimeMillis() - closedAtMs < REOPEN_DELAY_MS) {
+            popup.isVisible = false
+            return
+        }
+        val inner = POPUP_WIDTH - PAD * 2 - 2
+        panel.preferredSize = Dimension(inner, panel.heightForWidth(inner))
+        popup.pack()
+        // The dropdown opens under the button, with its right edge at the right edge of the button.
+        popup.show(button, button.width - popup.preferredSize.width, button.height + 4)
+    }
+
+    private companion object {
+        const val PAD = 12
+        const val POPUP_WIDTH = 380
+        const val REOPEN_DELAY_MS = 250L
+    }
+}
+
+/**
+ * The filter button on a content card: a filter icon in a small frame. With a filter, the icon is lime and a badge
+ * shows the number of selected values.
+ */
+internal class FilterButton(componentName: String) : JButton() {
+    private val normalIcon = ExportUi.icon(Material2AL.FILTER_ALT, 16, Palette.FG_2)
+    private val hoverIcon = ExportUi.icon(Material2AL.FILTER_ALT, 16, Palette.FG)
+    private val activeIcon = ExportUi.icon(Material2AL.FILTER_ALT, 16, Palette.LIME)
+
+    /** The number of selected values. 0 shows no badge. */
+    var selectedCount: Int = 0
+        set(value) {
+            field = value
+            getAccessibleContext().accessibleDescription = if (value > 0) tr("export.filter.active") else null
+            revalidate()
+            repaint()
+        }
+
+    init {
+        name = componentName
+        plain()
+        toolTipText = tr("export.filter.title")
+        getAccessibleContext().accessibleName = tr("export.filter.title")
+    }
+
+    private val badge: String get() = selectedCount.toString()
+    private val badgeFont get() = ExportUi.font(11f, Weight.BOLD)
+
+    override fun getPreferredSize(): Dimension {
+        val extra = if (selectedCount > 0) BADGE_GAP + ceil(ExportUi.textWidth(badge, badgeFont)).toInt() + 3 else 0
+        return Dimension(SIZE + extra, SIZE)
+    }
+
+    override fun getMinimumSize() = preferredSize
+    override fun getMaximumSize() = preferredSize
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = ExportUi.smooth(g)
+        try {
+            val hover = isEnabled && model.isRollover
+            val active = selectedCount > 0
+            val border = when {
+                active -> Palette.LIME_LINE
+                hover -> Palette.HOVER_LINE
+                else -> Palette.LINE_2
+            }
+            ExportUi.paintBox(g2, 0, 0, width, height, 4, if (hover) Palette.RAISED_2 else Palette.RAISED, border)
+            val icon = when {
+                active -> activeIcon
+                hover -> hoverIcon
+                else -> normalIcon
+            }
+            val iconX = (SIZE - icon.iconWidth) / 2
+            icon.paintIcon(this, g2, iconX, (height - icon.iconHeight) / 2)
+            if (active) {
+                val metrics = badgeFont.getLineMetrics(badge, ExportUi.frc)
+                g2.font = badgeFont
+                g2.color = Palette.LIME
+                g2.drawString(badge, (iconX + icon.iconWidth + BADGE_GAP).toFloat(), (height - metrics.ascent - metrics.descent) / 2f + metrics.ascent)
+            }
+        } finally {
+            g2.dispose()
+        }
+    }
+
+    private companion object {
+        const val SIZE = 30
+        const val BADGE_GAP = 3
+    }
+}
+
+/**
+ * The content of the filter dropdown (B-69). Three groups of toggle chips: the player who made the ending, the ending,
+ * and the error kind. The user can select more than one chip in a group. [onChange] gets the new filter after each
+ * click.
  */
 internal class PointFilterPanel(private val onChange: (PointFilter) -> Unit) : Stack(8) {
     private val player1 = FilterChip("export-filter-player-1", "")
@@ -56,7 +217,6 @@ internal class PointFilterPanel(private val onChange: (PointFilter) -> Unit) : S
 
     init {
         name = "export-point-filter"
-        border = BorderFactory.createEmptyBorder(PAD, PAD, PAD, PAD)
         add(FilterHeader(tr("export.filter.title"), clearButton))
         add(WrapText(tr("export.filter.summary"), ExportUi.font(11.5f), Palette.FG_2, lineHeight = 1.35f))
         add(group(tr("export.filter.player"), listOf(player1, player2)))
@@ -95,19 +255,10 @@ internal class PointFilterPanel(private val onChange: (PointFilter) -> Unit) : S
         add(ChipFlow().apply { chips.forEach(::add) })
     }
 
-    override fun paintComponent(g: Graphics) {
-        val g2 = ExportUi.smooth(g)
-        try {
-            ExportUi.paintBox(g2, 0, 0, width, height, 6, Palette.RAISED, if (filter.isActive) Palette.LIME_DIM_LINE else Palette.LINE)
-        } finally {
-            g2.dispose()
-        }
-    }
-
-    private companion object {
-        const val PAD = 11
-    }
 }
+
+/** The number of selected values of all groups. */
+internal val PointFilter.selectedCount: Int get() = players.size + endings.size + errorKinds.size
 
 /** The title of the filter box on the left and the Clear button on the right. */
 private class FilterHeader(title: String, private val button: Component) : JPanel(null), HeightForWidth {

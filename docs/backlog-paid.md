@@ -110,8 +110,13 @@ paid feature is implemented, add it to that list.
     select more than one value, for example "Forced errors" and "Unforced
     errors".
 - The rules of the filter (2026-11-17):
-  - The filter is in step 1, under the content cards. It shows only for a
-    project in advanced mode in the paid version, and not for "Full video".
+  - Decided on 2026-11-17: the filter is a button with a filter icon on
+    the right side of the "Only points" card and of the "Only favorites"
+    card. A click opens the filter as a dropdown menu on top of the tab
+    content. Both buttons open the same filter. With a selection, the
+    button is lime and shows the number of selected values.
+  - The buttons show only for a project in advanced mode in the paid
+    version.
   - It has three groups: player, ending (aces, winners, forced errors,
     unforced errors, double faults), and error kind (net, long, wide).
     Strokes need B-70, because advanced mode records no strokes.

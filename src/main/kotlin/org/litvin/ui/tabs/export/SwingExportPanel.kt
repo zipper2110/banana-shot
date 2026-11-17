@@ -150,12 +150,11 @@ class SwingExportPanel(
     }
     /** True when the project is in advanced mode, so that it has the option "Include serve faults and lets" (B-68). */
     private var serveClipsAvailable = false
-    // The point filter of a paid export (B-69). Only a project in advanced mode shows it, and advanced mode is paid.
-    private val pointFilterPanel = PointFilterPanel { onPointFilterChanged() }
-    private val pointFilterRow = Stack(0).apply {
-        border = EmptyBorder(10, 0, 0, 0)
-        add(pointFilterPanel)
-        isVisible = false
+    // The point filter of a paid export (B-69): a filter button on "Only points" and "Only favorites" opens it in a
+    // dropdown. Only a project in advanced mode shows the buttons, and advanced mode is paid.
+    private val pointFilter = PointFilterDropdown { onPointFilterChanged() }.also { dropdown ->
+        pointsCard.accessory = dropdown.newButton("export-filter-points")
+        favoritesCard.accessory = dropdown.newButton("export-filter-favorites")
     }
     private val videoLanguageRow = VideoLanguageRow(::onVideoLanguageSelected)
     private val qualityPanel = ExportQualityPanel(settingsPreferences)
@@ -187,7 +186,6 @@ class SwingExportPanel(
             add(StepHeader(1, tr("export.step.content")))
             add(VGap(10))
             add(contentCards)
-            add(pointFilterRow)
             add(VGap(22))
             add(StepHeader(2, tr("export.step.include")))
             add(VGap(10))
@@ -383,7 +381,7 @@ class SwingExportPanel(
 
     private fun onContentChanged() {
         updateServeClipsVisibility()
-        updatePointFilterVisibility()
+        updatePointFilterAvailability()
         updateSetSummariesState()
         updateOutputDuration()
         updateInitButtonState()
@@ -760,18 +758,20 @@ class SwingExportPanel(
         ExportClips.of(readCurrentProjectEdl(), readCurrentProjectScore(), serveClipsSelected(), pointFilterSelected())
 
     /**
-     * The point filter (B-69). Only a project in advanced mode has it. As for the serve clips, a full video export hides
-     * the filter but keeps it, so that the counts of "Only points" and "Only favorites" stay the same.
+     * The point filter (B-69). Only a project in advanced mode has it. A full video export keeps the filter, so that the
+     * counts of "Only points" and "Only favorites" stay the same.
      */
-    private fun pointFilterSelected(): PointFilter = if (serveClipsAvailable) pointFilterPanel.filter else PointFilter.NONE
+    private fun pointFilterSelected(): PointFilter = if (serveClipsAvailable) pointFilter.filter else PointFilter.NONE
 
-    /** Shows the filter only for a project in advanced mode, and not for a full video export. */
-    private fun updatePointFilterVisibility() {
-        val visible = serveClipsAvailable && idleTrimSelected()
-        if (pointFilterRow.isVisible == visible) return
-        pointFilterRow.isVisible = visible
-        pointFilterRow.parent?.revalidate()
-        pointFilterRow.parent?.repaint()
+    /** Shows the filter buttons on the content cards only for a project in advanced mode. */
+    private fun updatePointFilterAvailability() {
+        if (pointFilter.available == serveClipsAvailable) return
+        pointFilter.available = serveClipsAvailable
+        listOf(pointsCard, favoritesCard).forEach {
+            it.revalidate()
+            it.repaint()
+        }
+        contentCards.revalidate()
     }
 
     /**
@@ -779,16 +779,20 @@ class SwingExportPanel(
      * Call it after [updateServeClipsDefault], which finds out if the project is in advanced mode.
      */
     private fun updatePointFilter(projectChanged: Boolean) {
-        if (projectChanged) pointFilterPanel.clear()
+        if (projectChanged) pointFilter.clear()
         val score = readCurrentProjectScore()
-        pointFilterPanel.setPlayers(score.player1Name, score.player2Name)
-        updatePointFilterVisibility()
+        pointFilter.setPlayers(score.player1Name, score.player2Name)
+        updatePointFilterAvailability()
         updatePointsSummary()
         onContentChanged()
     }
 
     private fun onPointFilterChanged() {
-        pointFilterPanel.repaint()
+        // The badge of a filter button changes the width of the button.
+        listOf(pointsCard, favoritesCard).forEach {
+            it.revalidate()
+            it.repaint()
+        }
         updatePointsSummary()
         onContentChanged()
     }

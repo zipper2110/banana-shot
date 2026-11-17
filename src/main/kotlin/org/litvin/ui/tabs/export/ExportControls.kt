@@ -121,8 +121,21 @@ internal class ChoiceCard(componentName: String) : JToggleButton(), HeightForWid
         addItemListener { repaint() }
     }
 
+    /** A small control on the right side, after the value, for example the filter button (B-69). */
+    var accessory: JComponent? = null
+        set(value) {
+            field?.let(::remove)
+            field = value
+            value?.let(::add)
+            revalidate()
+            repaint()
+        }
+
+    /** The width of the accessory and the gap before it, or 0 when the card has no visible accessory. */
+    private fun accessoryWidth() = accessory?.takeIf { it.isVisible }?.let { it.preferredSize.width + GAP } ?: 0
+
     private fun metaWidth() = max(metaValue.naturalWidth(), metaUnit.naturalWidth())
-    private fun textWidth(width: Int) = (width - TEXT_X - GAP - metaWidth() - PAD_X).coerceAtLeast(0)
+    private fun textWidth(width: Int) = (width - TEXT_X - GAP - metaWidth() - accessoryWidth() - PAD_X).coerceAtLeast(0)
     private fun textHeight(textWidth: Int) = titleText.heightForWidth(textWidth) + 1 + subText.heightForWidth(textWidth)
     private fun metaHeight() = metaValue.heightForWidth(metaWidth()) + metaUnit.heightForWidth(metaWidth())
 
@@ -141,7 +154,11 @@ internal class ChoiceCard(componentName: String) : JToggleButton(), HeightForWid
         y += titleHeight + 1
         subText.setBounds(TEXT_X, y, tw, subText.heightForWidth(tw))
         val mw = metaWidth()
-        val mx = width - PAD_X - mw
+        val mx = width - PAD_X - accessoryWidth() - mw
+        accessory?.let { control ->
+            val size = control.preferredSize
+            control.setBounds(width - PAD_X - size.width, (height - size.height) / 2, size.width, size.height)
+        }
         val valueHeight = metaValue.heightForWidth(mw)
         val my = (height - metaHeight()) / 2
         metaValue.setBounds(mx, my, mw, valueHeight)

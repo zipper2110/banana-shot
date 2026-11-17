@@ -150,6 +150,8 @@ The work for the paid version is in `backlog-paid.md`.
 - The site does not tell about this limit now (decided on 2026-10-18). When
   the feature is done, add it to the FAQ answer "Can I use a video from any
   phone or camera?" (`site/public/faq/index.html`, `#any-camera`).
+- Decided on 2026-11-17: the FAQ answer has the sentence about several
+  files now. Deploy the site only after the app release with B-49.
 - Decided on 2026-11-17: the files make one continuous timeline. The
   points, replays, comments and adjustments keep their times on this
   timeline. The export uses the ffmpeg concat filter, not the concat

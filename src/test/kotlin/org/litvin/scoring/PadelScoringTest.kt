@@ -132,23 +132,41 @@ class PadelScoringTest {
         // Two games that reach 40–40 with the golden point: player 1 wins the first, player 2 the second.
         val rules = MatchRulesV1(deuce = DeuceRule.NO_AD)
         val report = report("111222" + "1" + "111222" + "2", rules)
-        val row = StatRows.build(report.match, rules).single { it.stat == MatchStat.DECIDING_POINTS_WON }
+        val row = StatRows.build(report.match, rules, sport = Sport.PADEL).single { it.stat == MatchStat.DECIDING_POINTS_WON }
 
         assertEquals("Golden points won", row.label)
         assertEquals(PerPlayer(Ratio(1, 2), Ratio(1, 2)), report.match.decidingPointsWon)
         assertEquals("1/2", row.values?.p1?.text)
+        // Tennis and beach tennis call the no-ad point the deciding point.
+        for (sport in listOf(Sport.TENNIS, Sport.BEACH_TENNIS)) {
+            assertEquals(
+                "Deciding points won",
+                StatRows.build(report.match, rules, sport = sport).single { it.stat == MatchStat.DECIDING_POINTS_WON }.label,
+            )
+        }
     }
 
     @Test
-    fun theDecidingPointsRowNeedsAGoldenOrAStarPoint() {
+    fun eachDeuceRuleShowsItsRowsFor40All() {
         val report = report("1111", MatchRulesV1())
-        val row = StatRows.build(report.match, MatchRulesV1()).single { it.stat == MatchStat.DECIDING_POINTS_WON }
+        val deuceRows = listOf(MatchStat.DEUCE_GAMES_WON, MatchStat.DECIDING_POINTS_WON)
+        fun shown(rules: MatchRulesV1) = StatRows.build(report.match, rules, sport = Sport.PADEL).filter { it.stat in deuceRows }
 
-        assertFalse(row.available)
-        assertEquals(
-            "Star points won",
-            StatRows.build(report.match, starPoint).single { it.stat == MatchStat.DECIDING_POINTS_WON }.label,
-        )
+        assertEquals(listOf(MatchStat.DEUCE_GAMES_WON), shown(MatchRulesV1()).map { it.stat })
+        assertEquals(listOf(MatchStat.DECIDING_POINTS_WON), shown(MatchRulesV1(deuce = DeuceRule.NO_AD)).map { it.stat })
+        val star = shown(starPoint)
+        assertEquals(deuceRows, star.map { it.stat })
+        assertEquals(listOf("Deuce games won", "Star points won"), star.map { it.label })
+    }
+
+    @Test
+    fun theDeuceGamesRowCountsTheStarPointGamesToo() {
+        // Game 1 goes to the third deuce, and player 2 wins the star point. Player 1 wins game 2 at the first advantage.
+        val report = report("111222" + "12" + "21" + "2" + "111222" + "11", starPoint)
+        val rows = StatRows.build(report.match, starPoint, sport = Sport.PADEL)
+
+        assertEquals("1/2", rows.single { it.stat == MatchStat.DEUCE_GAMES_WON }.values?.p1?.text)
+        assertEquals("0/1", rows.single { it.stat == MatchStat.DECIDING_POINTS_WON }.values?.p1?.text)
     }
 
     @Test

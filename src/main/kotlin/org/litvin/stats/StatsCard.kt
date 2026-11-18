@@ -89,7 +89,8 @@ object StatsCard {
             colors = colors,
             title = if (scope == 0) tr("stats.card.match") else tr("stats.card.set", "number" to scope),
             score = if (scope == 0) setScores.joinToString("   ") else setScores.getOrElse(scope - 1) { "" },
-            rows = StatRows.build(stats, score.rules.normalized(), settings).filter { it.available && settings.inVideo(it.stat) },
+            rows = StatRows.build(stats, score.rules.normalized(), settings, score.sport)
+                .filter { it.available && settings.inVideo(it.stat) },
             credit = ScoreboardSettingsV1.APP_CREDIT.takeIf { scoreboard.showAppCredit },
             momentum = Momentum.of(report, scope).takeIf { settings.videoMomentum && it.points.size >= MIN_CHART_POINTS },
             panelOpacity = 1.0 - settings.normalized().cardTransparencyPercent / 100.0,

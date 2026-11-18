@@ -33,8 +33,11 @@ class StatRowsTest {
     fun theRowsHaveTheCatalogOrder() {
         val rows = rows(report("1111"))
 
-        // A project in basic mode has no rows of advanced mode.
-        assertEquals(MatchStat.entries.filterNot { it.advanced }, rows.map { it.stat })
+        // A project in basic mode has no rows of advanced mode. Advantage scoring has no deciding points row.
+        assertEquals(
+            MatchStat.entries.filterNot { it.advanced || it == MatchStat.DECIDING_POINTS_WON },
+            rows.map { it.stat },
+        )
     }
 
     @Test
@@ -240,7 +243,7 @@ class StatRowsTest {
         )
         val rows = rows(report("1122", serverMarks = mapOf("p1" to Outcome.P1), details = details))
 
-        assertEquals(MatchStat.entries.toList(), rows.map { it.stat })
+        assertEquals(MatchStat.entries.filterNot { it == MatchStat.DECIDING_POINTS_WON }, rows.map { it.stat })
         val winners = rows.of(MatchStat.WINNERS)
         assertEquals(PerPlayer(StatValue("1"), StatValue("0")), winners.values)
         assertEquals(StatCoverage(CoverageKind.DETAILED_POINTS, 3), winners.coverage)

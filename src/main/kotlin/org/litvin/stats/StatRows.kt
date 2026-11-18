@@ -9,6 +9,7 @@ import org.litvin.scoring.MatchStructure
 import org.litvin.scoring.PerPlayer
 import org.litvin.scoring.Ratio
 import org.litvin.scoring.ScoredDuration
+import org.litvin.scoring.Sport
 import java.util.Locale
 import org.litvin.i18n.tr
 import org.litvin.i18n.DisplayFormats
@@ -73,8 +74,15 @@ enum class MatchStat(
     BREAK_POINTS_SAVED("break_points_saved", StatGroup.PRESSURE),
     SET_POINTS_WON("set_points_won", StatGroup.PRESSURE),
     MATCH_POINTS_WON("match_points_won", StatGroup.PRESSURE),
-    DEUCE_POINTS_WON("deuce_points_won", StatGroup.PRESSURE),
-    /** The golden points or star points. [StatRows.label] gives the name of the deuce rule. */
+    /**
+     * The games that reached deuce. With no-ad scoring, the table does not show this row, because it has the same
+     * values as [DECIDING_POINTS_WON].
+     */
+    DEUCE_GAMES_WON("deuce_games_won", StatGroup.PRESSURE),
+    /**
+     * The golden points, the deciding points of no-ad tennis, or the star points. [StatRows.label] gives the name.
+     * With advantage scoring, the table does not show this row.
+     */
     DECIDING_POINTS_WON("deciding_points_won", StatGroup.PRESSURE),
     AVERAGE_POINT_WON("average_point_won", StatGroup.POINT_LENGTH),
     SHORT_POINTS_WON("short_points_won", StatGroup.POINT_LENGTH, inVideoByDefault = true),
@@ -114,7 +122,7 @@ enum class MatchStat(
             BREAK_POINTS_SAVED -> tr("stats.row.breakPointsSaved")
             SET_POINTS_WON -> tr("stats.row.setPointsWon")
             MATCH_POINTS_WON -> tr("stats.row.matchPointsWon")
-            DEUCE_POINTS_WON -> tr("stats.row.deucePointsWon")
+            DEUCE_GAMES_WON -> tr("stats.row.deuceGamesWon")
             DECIDING_POINTS_WON -> tr("stats.row.decidingPointsWon")
             AVERAGE_POINT_WON -> tr("stats.row.averagePointWon")
             SHORT_POINTS_WON -> tr("stats.row.shortPointsWon")
@@ -129,6 +137,9 @@ enum class MatchStat(
         }
 
     companion object {
+        /** The old keys in stats.json and the keys that replace them. */
+        val REPLACED_KEYS: Map<String, String> = mapOf("deuce_points_won" to "deuce_games_won")
+
         fun ofKey(key: String): MatchStat? = entries.firstOrNull { it.key == key }
 
         val defaultVideoKeys: List<String> = entries.filter { it.inVideoByDefault }.map { it.key }
@@ -189,36 +200,58 @@ object StatRows {
     val NO_MATCH_END: String get() = tr("stats.reason.noMatchEnd")
     val NO_VALUE: String get() = tr("stats.reason.noValue")
     val NO_POINTS_OF_LENGTH: String get() = tr("stats.reason.noPointsOfLength")
-    val NO_DECIDING_POINT: String get() = tr("stats.reason.noDecidingPoint")
     val NO_DETAILS: String get() = tr("stats.reason.noDetails")
     val NO_ERROR_KIND: String get() = tr("stats.reason.noErrorKind")
 
-    /** The rows of [stats]. The rows of advanced mode ([MatchStat.advanced]) are only in a result with details. */
-    fun build(stats: MatchStats, rules: MatchRulesV1, settings: StatsSettingsV1 = StatsSettingsV1()): List<StatRow> {
+    /**
+     * The rows of [stats]. The rows of advanced mode ([MatchStat.advanced]) are only in a result with details.
+     * [sport] gives the name of the deciding points row.
+     */
+    fun build(
+        stats: MatchStats,
+        rules: MatchRulesV1,
+        settings: StatsSettingsV1 = StatsSettingsV1(),
+        sport: Sport = Sport.TENNIS,
+    ): List<StatRow> {
         val normalized = settings.normalized()
-        return shownStats(stats).map { row(it, stats, rules, normalized) }
+        return shownStats(stats, rules).map { row(it, stats, rules, normalized, sport) }
     }
 
-    /** The statistics that a table of [stats] shows: in basic mode, the rows of advanced mode are hidden. */
-    fun shownStats(stats: MatchStats): List<MatchStat> =
-        if (stats.details != null) MatchStat.entries else MatchStat.entries.filterNot { it.advanced }
+    /**
+     * The statistics that a table of [stats] shows. In basic mode, the rows of advanced mode are hidden. The deuce rule
+     * shows one row for the 40–40 games: the deuce games with advantage scoring, the deciding points with no-ad
+     * scoring. Star point scoring shows the two rows.
+     */
+    fun shownStats(stats: MatchStats, rules: MatchRulesV1): List<MatchStat> {
+        val hidden = when (rules.deuce) {
+            DeuceRule.ADVANTAGE -> MatchStat.DECIDING_POINTS_WON
+            DeuceRule.NO_AD -> MatchStat.DEUCE_GAMES_WON
+            DeuceRule.STAR_POINT -> null
+        }
+        return MatchStat.entries.filter { it != hidden && (stats.details != null || !it.advanced) }
+    }
 
     /**
      * The text of a row with its setting, for example "Short points won (≤ 7 s)".
-     * With [rules], the deciding points row gets the name of the deuce rule, for example "Golden points won".
+     * With [rules], the deciding points row gets the name of the deuce rule in [sport], for example "Golden points won".
      */
-    fun label(stat: MatchStat, settings: StatsSettingsV1, rules: MatchRulesV1? = null): String = when (stat) {
+    fun label(
+        stat: MatchStat,
+        settings: StatsSettingsV1,
+        rules: MatchRulesV1? = null,
+        sport: Sport = Sport.TENNIS,
+    ): String = when (stat) {
         MatchStat.SHORT_POINTS_WON -> tr("stats.row.shortPointsWon.limit", "seconds" to settings.normalized().shortPointMaxSeconds)
         MatchStat.LONG_POINTS_WON -> tr("stats.row.longPointsWon.limit", "seconds" to settings.normalized().longPointMinSeconds)
         MatchStat.DECIDING_POINTS_WON -> when (rules?.deuce) {
-            DeuceRule.NO_AD -> tr("stats.row.goldenPointsWon")
+            DeuceRule.NO_AD -> if (sport == Sport.PADEL) tr("stats.row.goldenPointsWon") else stat.label
             DeuceRule.STAR_POINT -> tr("stats.row.starPointsWon")
             DeuceRule.ADVANTAGE, null -> stat.label
         }
         else -> stat.label
     }
 
-    private fun row(stat: MatchStat, stats: MatchStats, rules: MatchRulesV1, settings: StatsSettingsV1): StatRow {
+    private fun row(stat: MatchStat, stats: MatchStats, rules: MatchRulesV1, settings: StatsSettingsV1, sport: Sport): StatRow {
         val structure = rules.structure
         val hasGames = structure == MatchStructure.SETS || structure == MatchStructure.GAMES_ONLY
         val hasSets = structure == MatchStructure.SETS
@@ -293,15 +326,14 @@ object StatRows {
                 manual -> unavailable(MANUAL_SCORING)
                 else -> fractions(stats.matchPointsWon)
             }
-            MatchStat.DEUCE_POINTS_WON -> when {
+            MatchStat.DEUCE_GAMES_WON -> when {
                 !hasGames -> unavailable(NO_GAMES)
                 manual -> unavailable(MANUAL_SCORING)
-                else -> counts(stats.deucePointsWon)
+                else -> fractions(stats.deuceGamesWon)
             }
             MatchStat.DECIDING_POINTS_WON -> when {
                 !hasGames -> unavailable(NO_GAMES)
                 manual -> unavailable(MANUAL_SCORING)
-                rules.deuce == DeuceRule.ADVANTAGE -> unavailable(NO_DECIDING_POINT)
                 else -> fractions(stats.decidingPointsWon)
             }
             MatchStat.LONGEST_POINT_RUN -> counts(stats.longestPointRun).copy(pointIds = stats.keyPoints.longestPointRunStart)
@@ -322,7 +354,7 @@ object StatRows {
                 lengthShares(time.scoredDurations.filter { it.durationMs <= settings.shortPointMaxSeconds * 1000L })
             MatchStat.LONG_POINTS_WON ->
                 lengthShares(time.scoredDurations.filter { it.durationMs >= settings.longPointMinSeconds * 1000L })
-        }.copy(label = label(stat, settings, rules))
+        }.copy(label = label(stat, settings, rules, sport))
     }
 
     /**

@@ -74,18 +74,44 @@ class MatchStatsTest {
     }
 
     @Test
-    fun deucePointsAreThePointsAtEqualScoreFrom40All() {
-        // 40–40, advantage player 1, deuce, advantage player 1, game.
-        assertEquals(PerPlayer(2, 0), stats("111222" + "1211").deucePointsWon)
-        // With no-ad scoring, the deciding point is the only deuce point.
-        assertEquals(PerPlayer(1, 0), stats("111222" + "1", MatchRulesV1(deuce = DeuceRule.NO_AD)).deucePointsWon)
+    fun deuceGamesAreTheGamesThatReach40All() {
+        // Game 1: 40–40, advantage player 1, deuce, advantage player 1, game. Game 2: player 1 wins to love.
+        // Game 3: 40–40, then player 2 wins two points.
+        val stats = stats("111222" + "1211" + "1111" + "111222" + "22")
+
+        assertEquals(PerPlayer(Ratio(1, 2), Ratio(1, 2)), stats.deuceGamesWon)
     }
 
     @Test
-    fun manualScoringHasNoStakesAndNoDeucePoints() {
+    fun aDeuceGameCountsOneTimeAndOnlyWhenItEnds() {
+        // Three deuces in one game, then player 2 wins it. The second game is at deuce and has no winner yet.
+        val stats = stats("111222" + "12" + "21" + "22" + "111222" + "1")
+
+        assertEquals(PerPlayer(Ratio(0, 1), Ratio(1, 1)), stats.deuceGamesWon)
+    }
+
+    @Test
+    fun withNoAdScoringEachDeuceGameHasOneDecidingPoint() {
+        val stats = stats("111222" + "1" + "111222" + "2", MatchRulesV1(deuce = DeuceRule.NO_AD))
+
+        assertEquals(PerPlayer(Ratio(1, 2), Ratio(1, 2)), stats.deuceGamesWon)
+        assertEquals(stats.decidingPointsWon, stats.deuceGamesWon)
+    }
+
+    @Test
+    fun aTiebreakHasNoDeuceGames() {
+        // Sets to 1 game: at 1–1 the players play a tiebreak, which goes to 3–3 and further.
+        val rules = MatchRulesV1(gamesPerSet = 1)
+        val stats = stats("1111" + "2222" + "111222" + "1212" + "11", rules)
+
+        assertEquals(PerPlayer(Ratio(0, 0), Ratio(0, 0)), stats.deuceGamesWon)
+    }
+
+    @Test
+    fun manualScoringHasNoStakesAndNoDeuceGames() {
         val stats = stats("111222" + "1211", MatchRulesV1(manualScoring = true))
 
-        assertEquals(PerPlayer(0, 0), stats.deucePointsWon)
+        assertEquals(PerPlayer(Ratio(0, 0), Ratio(0, 0)), stats.deuceGamesWon)
         assertEquals(PerPlayer(Ratio(0, 0), Ratio(0, 0)), stats.setPointsWon)
     }
 

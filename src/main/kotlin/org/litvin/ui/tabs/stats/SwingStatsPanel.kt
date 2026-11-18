@@ -251,7 +251,7 @@ class SwingStatsPanel(
         val normalized = settings.normalized()
         table.shortLimit.show(normalized.shortPointMaxSeconds)
         table.longLimit.show(normalized.longPointMinSeconds)
-        val rows = StatRows.build(stats, report.score.rules.normalized(), settings)
+        val rows = StatRows.build(stats, report.score.rules.normalized(), settings, report.score.sport)
         table.showStats(rows.map { it.stat })
         for (row in rows) {
             table.rows[row.stat]?.show(row, description(row.stat), settings.inVideo(row.stat), colors)

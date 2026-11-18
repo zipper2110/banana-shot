@@ -38,6 +38,12 @@ data class StatsSettingsV1(
 ) {
     fun inVideo(stat: MatchStat): Boolean = stat.key in videoStats
 
+    /** Returns a copy where the old keys in [videoStats] have their new keys ([MatchStat.REPLACED_KEYS]). */
+    fun withCurrentKeys(): StatsSettingsV1 {
+        if (videoStats.none { it in MatchStat.REPLACED_KEYS }) return this
+        return copy(videoStats = videoStats.map { MatchStat.REPLACED_KEYS[it] ?: it }.distinct())
+    }
+
     /** Returns a copy where [stat] is in the video or not. The keys keep the order of [MatchStat]. */
     fun withInVideo(stat: MatchStat, selected: Boolean): StatsSettingsV1 {
         val keys = videoStats.toMutableSet()
@@ -97,11 +103,14 @@ object StatsIO {
 
     fun statsFilePath(projectDir: String): String = File(projectDir, "stats.json").absolutePath
 
-    /** Returns the default settings of the project sport (from score.json) when the file does not exist. */
+    /**
+     * Returns the default settings of the project sport (from score.json) when the file does not exist.
+     * The old statistics keys get their new keys.
+     */
     fun readForProjectDir(projectDir: String): StatsSettingsV1 {
         val path = statsFilePath(projectDir)
         if (!File(path).exists()) return StatsSettingsV1.defaults(ScoreIO.readForProjectDir(projectDir).sport)
-        return JsonFileIO.read(mapper, path, StatsSettingsV1::class.java)
+        return JsonFileIO.read(mapper, path, StatsSettingsV1::class.java).withCurrentKeys()
     }
 
     fun writeForProjectDir(projectDir: String, settings: StatsSettingsV1) {

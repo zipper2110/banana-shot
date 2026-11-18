@@ -45,4 +45,14 @@ class StatsIOTest {
         assertEquals(7, settings.shortPointMaxSeconds)
         assertEquals(20, settings.longPointMinSeconds)
     }
+
+    @Test
+    fun theOldDeucePointsKeyBecomesTheDeuceGamesKey() {
+        StatsIO.writeForProjectDir(dir.absolutePath, StatsSettingsV1(videoStats = listOf("points_won", "deuce_points_won")))
+
+        val settings = StatsIO.readForProjectDir(dir.absolutePath)
+
+        assertEquals(listOf("points_won", "deuce_games_won"), settings.videoStats)
+        assertEquals(true, settings.inVideo(MatchStat.DEUCE_GAMES_WON))
+    }
 }

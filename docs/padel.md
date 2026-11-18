@@ -112,7 +112,12 @@ Scoreboard and export:
 Statistics:
 
 - The row "Deciding points won". Its label is "Golden points won" or "Star
-  points won". An Americano match shows the points as its score (for
+  points won" (tennis no-ad: "Deciding points won"). The deuce rule selects
+  the 40–40 rows: advantage shows "Deuce games won", no-ad shows only the
+  deciding points (each deuce game has one deciding point), and the star
+  point shows both rows. "Deuce games won" replaced "Deuce points won"; the
+  old key `deuce_points_won` in `stats.json` reads as `deuce_games_won`.
+  An Americano match shows the points as its score (for
   example "13-11") and has match points, but no sets or games.
 - The Stats tab and the statistics card use "Team 1" and "Team 2" when a
   padel team has no name.
@@ -137,7 +142,7 @@ Other:
 - Export pipeline (`FFmpegCommandBuilder`, `RenderService`, the chunk and
   pass planners). It uses the scoreboard images.
 - `MatchStats`: the statistics are correct for teams. "Break points",
-  "Service games", and "Deuce points" are also padel terms.
+  "Service games", and "Deuce games" are also padel terms.
 - `RulesEngine.kt`: an old tennis engine that only tests use.
 
 ### Known limits

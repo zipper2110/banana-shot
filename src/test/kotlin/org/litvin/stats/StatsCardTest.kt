@@ -97,7 +97,7 @@ class StatsCardTest {
 
     @Test
     fun thePagesShareTheRowsEqually() {
-        val keys = listOf("points_won", "games_won", "sets_won", "deuce_points_won", "longest_point_run", "largest_point_lead", "duration", "average_point")
+        val keys = listOf("points_won", "games_won", "sets_won", "deuce_games_won", "longest_point_run", "largest_point_lead", "duration", "average_point")
         val content = StatsCard.content(report("1111" + "2222"), StatsSettingsV1(videoMomentum = false, videoStats = keys))
 
         val rowsOnPages = StatsCard.pages(content).map { page -> page.labels().count { it in keys.map { key -> MatchStat.ofKey(key)!!.label } } }
@@ -282,7 +282,7 @@ class StatsCardTest {
 
     @Test
     fun eachStyleShowsAllRowsInBothLayouts() {
-        val keys = listOf("points_won", "games_won", "deuce_points_won", "longest_point_run", "duration")
+        val keys = listOf("points_won", "games_won", "deuce_games_won", "longest_point_run", "duration")
         for (style in CardStyle.entries) for (compact in listOf(false, true)) for (titles in listOf(false, true)) for (light in listOf(false, true)) {
             val settings = StatsSettingsV1(videoMomentum = true, videoStats = keys, cardStyle = style.key, compactCard = compact,
                 cardGroupTitles = titles, lightCard = light)

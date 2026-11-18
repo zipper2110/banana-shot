@@ -132,8 +132,11 @@ data class MatchStats(
     val setPointsWon: PerPlayer<Ratio>,
     /** The match points that the player won, of the match points that the player had. */
     val matchPointsWon: PerPlayer<Ratio>,
-    /** The points played at deuce (40–40 or later) that the player won. Tiebreaks and manual scoring have no deuce points. */
-    val deucePointsWon: PerPlayer<Int>,
+    /**
+     * The games that reached deuce (40–40) and that the player won, of the deuce games that ended in the range. Both
+     * players have the same total. Tiebreaks and manual scoring have no deuce games.
+     */
+    val deuceGamesWon: PerPlayer<Ratio>,
     /**
      * The deciding points (golden points or star points, see [ScoringEngine.isDecidingPoint]) that the player won,
      * of the deciding points in the range. Both players have the same total.
@@ -183,7 +186,7 @@ data class MatchStats(
                 serve = serveStats(indices, scored, winners, timeline),
                 setPointsWon = chances(scored, winners, timeline, Stake.SET),
                 matchPointsWon = chances(scored, winners, timeline, Stake.MATCH),
-                deucePointsWon = count(scored.filter { isDeucePoint(timeline.stateBefore(it), rules) }) { winners[it] },
+                deuceGamesWon = deuceGames(indices, timeline, rules),
                 decidingPointsWon = scored.filter { ScoringEngine.isDecidingPoint(timeline.stateBefore(it), rules) }
                     .let { deciding ->
                         fun wonBy(player: Int) = Ratio(deciding.count { winners[it] == player }, deciding.size)
@@ -349,6 +352,26 @@ data class MatchStats(
 
         private fun isDeucePoint(before: ScoringEngine.MatchState, rules: MatchRulesV1): Boolean =
             !rules.manualScoring && !before.isTiebreak && before.p1Pts == before.p2Pts && before.p1Pts >= 3
+
+        /**
+         * The games that reached deuce and ended in [indices], and the winner of each. A game reaches deuce when a point
+         * starts at 40–40 or at a later equal score.
+         */
+        private fun deuceGames(indices: List<Int>, timeline: ScoringEngine.Timeline, rules: MatchRulesV1): PerPlayer<Ratio> {
+            val won = IntArray(3)
+            var total = 0
+            var reachedDeuce = false
+            for (i in indices) {
+                if (isDeucePoint(timeline.stateBefore(i), rules)) reachedDeuce = true
+                val gameWinner = timeline.statesAfterPoint[i].lastGameWonBy ?: continue
+                if (reachedDeuce) {
+                    total++
+                    won[gameWinner]++
+                }
+                reachedDeuce = false
+            }
+            return PerPlayer(Ratio(won[1], total), Ratio(won[2], total))
+        }
 
         private fun longestRun(players: List<Int>): PerPlayer<Int> {
             val best = IntArray(3)

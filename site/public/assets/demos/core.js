@@ -134,15 +134,7 @@ window.Demos = (function () {
       ty = Math.min(0, Math.max(H - STAGE_H * s, ty));
       stageEl.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + s + ")";
     }
-    // A new size applies at once, with no camera move. A hidden demo has no size, so it waits.
-    // The features page sends "resize" when it shows a demo that was hidden (assets/showcase.js).
-    window.addEventListener("resize", function () {
-      if (!demo.clientWidth) return;
-      stageEl.style.transition = "none";
-      camera(view);
-      void stageEl.offsetWidth;
-      stageEl.style.transition = "";
-    });
+    window.addEventListener("resize", function () { camera(view); });
 
     // Each pass of the loop has a number. When the demo goes off the screen, the number changes:
     // the timing functions of the old pass then never finish, so the old pass stops where it is.

@@ -404,36 +404,3 @@
 .ex-row.wait .ic { background: rgba(111, 140, 255, 0.16); color: #8ea5ff; }
 .ex-row.wait .st { color: #8ea5ff; }
 
-
-/* ---- Features page: the export preview window (demos/preview.js) ----
-   The window covers the Export tab. It has the video, the note about the stops, the playback bar, and the strip of parts. */
-.pv-behind { position: absolute; left: 48px; top: 0; width: 380px; height: 540px; display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--card); border-right: 1px solid var(--line); }
-.pv-behind i { display: block; border-radius: 8px; background: var(--raised); }
-.pv-behind i.pv-go { margin-top: auto; height: 36px; width: 120px; align-self: flex-end; background: var(--lime); }
-.pv-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); opacity: 0; transition: opacity 0.3s; }
-.pv-dim.open { opacity: 1; }
-.pv-win { position: absolute; left: 60px; top: 16px; width: 840px; height: 508px; display: flex; flex-direction: column; overflow: hidden; border-radius: 10px; background: var(--panel); border: 1px solid var(--line-2); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6); opacity: 0; transform: scale(0.96); transition: opacity 0.3s, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.pv-win.open { opacity: 1; transform: none; }
-.pv-title { flex: none; height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 12px; color: var(--fg-2); background: var(--inset); border-bottom: 1px solid var(--line); }
-.pv-title b { font-weight: 400; color: var(--fg-3); }
-.pv-video { flex: none; height: 300px; display: grid; place-items: center; background: #000; }
-.pv-frame { position: relative; width: 533px; height: 300px; overflow: hidden; }
-.pv-img { width: 100%; height: 100%; object-fit: cover; transform-origin: 70% 55%; transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1); }
-.pv-frame.pv-replay .pv-img { transform: scale(1.6); }
-.pv-card { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.25s; }
-.pv-frame.pv-showcard .pv-card { opacity: 1; }
-.pv-frame .sb { font-size: 8px; }
-.pv-frame.pv-showcard .sb { opacity: 0; }
-.pv-badge { position: absolute; right: 3%; top: 4%; padding: 4px 8px; border-radius: 4px; background: var(--lime); color: var(--on-lime); font: 700 10px/1 var(--font-display); letter-spacing: 0.12em; opacity: 0; transform: translateY(-4px); transition: opacity 0.25s, transform 0.25s; }
-.pv-frame.pv-replay .pv-badge { opacity: 1; transform: none; }
-.pv-note { flex: none; height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 12px; font-size: 11px; color: var(--fg-3); }
-.pv-note i { width: 14px; height: 14px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--fg-3); font: italic 700 9px/1 serif; }
-.pv-bar { flex: none; height: 50px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.pv-btns { justify-self: end; display: flex; gap: 6px; }
-.pv-btns span { height: 28px; padding: 0 12px; display: grid; place-items: center; border-radius: 6px; background: var(--raised); border: 1px solid var(--line-2); font-size: 11px; color: var(--fg-2); transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s; }
-.pv-strip { position: relative; flex: none; height: 64px; margin: 14px 12px 0; }
-.pv-part { position: absolute; top: 0; bottom: 0; display: flex; align-items: flex-start; padding: 7px 6px; overflow: hidden; white-space: nowrap; border-radius: 5px; background: #232323; border: 1px solid var(--line-2); font-size: 10px; color: var(--fg-2); transition: box-shadow 0.15s, color 0.15s, transform 0.1s, background 0.15s; }
-.pv-part.pv-k-replay { background: rgba(111, 140, 255, 0.16); border-color: rgba(111, 140, 255, 0.45); }
-.pv-part.pv-k-card { background: var(--yellow-tint); border-color: var(--yellow-line); }
-.pv-part.on { box-shadow: inset 0 0 0 1.5px var(--lime); color: var(--fg-strong); }
-.pv-ph { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--red); }

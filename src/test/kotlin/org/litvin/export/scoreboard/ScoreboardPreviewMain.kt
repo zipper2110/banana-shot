@@ -137,35 +137,12 @@ object ScoreboardPreviewSheet {
         ),
     )
 
-    /**
-     * The sample of the site (the feature images of `site/public/features/`): the player names and colors of the
-     * site animations, in the second set. These names are not real players.
-     */
-    private val siteSample = ScoreboardComponent.display(
-        OverlaySpan(
-            startMs = 0L,
-            endMs = 1L,
-            text = "",
-            p1Name = "J. Park",
-            p2Name = "M. Silva",
-            p1ColorHex = "#6F8CFF",
-            p2ColorHex = "#E0574A",
-            p1Pts = 2,
-            p2Pts = 1,
-            gamesP1 = 4,
-            gamesP2 = 2,
-            completedSets = listOf(6 to 4),
-            server = 1,
-        ),
-    )
-
     val variants = listOf(
         Variant("Title and credit", fullNames) { it.copy(title = "Round 4 | Stadium court") },
         Variant("No title, no credit", fullNames) { it.copy(showTitle = false, showAppCredit = false) },
         Variant("Padel, golden point, no colors", padelTeams) { it.copy(showTitle = false, showAppCredit = false, showPlayerColors = false) },
         Variant("Default title, deciding point", tennisDecidingPoint) { it.copy(title = ScoreboardSettingsV1.DEFAULT_TITLE) },
         Variant("Match ended", matchEnded) { it.copy(title = "Westgate - Men's 6.5 practice") },
-        Variant("Site sample", siteSample) { it.copy(title = "Club final") },
     )
 
     private const val GAP = 24

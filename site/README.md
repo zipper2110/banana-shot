@@ -25,11 +25,6 @@ The public site of BananaShot: `https://banana-shot-editor.app/`. B-10 in
 - The guides are in `public/guides/<name>/index.html`. When you add a guide,
   add it to the list on `public/guides/index.html` and to `sitemap.xml`.
   The rules for the text are in `docs/marketing/seo.md`, section 6.
-- `public/features/index.html` shows the main features. Put only free
-  features there (`docs/paid-features.md`). The gallery images in
-  `public/assets/features/` come from the preview tools of the app
-  (decision 49 in `docs/site/b-10-tasks.md`). When a style changes, make
-  the image again with the tool.
 
 ## Rules
 

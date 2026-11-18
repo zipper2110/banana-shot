@@ -1,23 +1,36 @@
 {
   "schema": 1,
   "latest": {
-    "version": "1.4.1",
+    "version": "1.5.0",
     "downloadUrl": "https://github.com/zipper2110/banana-shot/releases/latest",
-    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.1/BananaShot-win-Setup.exe",
-    "macInstallerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.4.1/BananaShot-osx-Setup.pkg",
-    "notes": "New: styles for the statistics card · New: 5 simple thumbnail styles · The computer stays awake during exports · Fixes for macOS",
+    "installerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.5.0/BananaShot-win-Setup.exe",
+    "macInstallerUrl": "https://github.com/zipper2110/banana-shot/releases/download/v1.5.0/BananaShot-osx-Setup.pkg",
+    "notes": "New: a match from several video files · New: export preview",
     "notesByLanguage": {
-      "es": "Nuevo: estilos para la tarjeta de estadísticas · Nuevo: 5 estilos sencillos de miniatura · El ordenador se mantiene activo durante las exportaciones · Correcciones para Mac",
-      "pt": "Novo: estilos para o cartão de estatísticas · Novo: 5 estilos simples de miniatura · O computador fica ativo durante as exportações · Correções para Mac",
-      "pt-PT": "Novo: estilos para o cartão de estatísticas · Novo: 5 estilos simples de miniatura · O computador mantém-se ativo durante as exportações · Correções para Mac",
-      "fr": "Nouveau : styles pour la carte des statistiques · Nouveau : 5 styles simples de miniature · L’ordinateur reste éveillé pendant les exports · Corrections pour Mac",
-      "de": "Neu: Stile für die Statistikkarte · Neu: 5 schlichte Thumbnail-Stile · Der Computer bleibt während Exporten wach · Fehlerbehebungen für Mac",
-      "ru": "Новое: стили карточки статистики · Новое: 5 простых стилей обложки · Компьютер не засыпает во время экспорта · Исправления для Mac",
-      "ja": "新機能: 統計カードのスタイル · 新機能: シンプルなサムネイルのスタイル 5 種類 · エクスポート中はスリープしません · Mac 版の修正",
-      "zh-Hans": "新功能：统计卡片样式 · 新功能：5 种简约封面样式 · 导出时电脑保持唤醒 · Mac 版修复",
-      "zh-Hant": "新功能：統計卡片樣式 · 新功能：5 種簡約縮圖樣式 · 匯出時電腦保持喚醒 · Mac 版修正"
+      "es": "Nuevo: un partido de varios archivos de vídeo · Nuevo: vista previa de la exportación",
+      "pt": "Novo: uma partida de vários arquivos de vídeo · Novo: pré-visualização da exportação",
+      "pt-PT": "Novo: um jogo de vários ficheiros de vídeo · Novo: pré-visualização da exportação",
+      "fr": "Nouveau : un match en plusieurs fichiers vidéo · Nouveau : aperçu de l’export",
+      "de": "Neu: ein Match aus mehreren Videodateien · Neu: Exportvorschau",
+      "ru": "Новое: матч из нескольких видеофайлов · Новое: предпросмотр экспорта",
+      "ja": "新機能: 複数の動画ファイルから 1 試合 · 新機能: エクスポートのプレビュー",
+      "zh-Hans": "新功能：一场比赛可用多个视频文件 · 新功能：导出预览",
+      "zh-Hant": "新功能：一場比賽可用多個影片檔案 · 新功能：匯出預覽"
     },
-    "pageUrl": "https://banana-shot-editor.app/changelog/#v1.4.1"
+    "whatsNewUrl": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.md",
+    "whatsNewUrlByLanguage": {
+      "es": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.es.md",
+      "es-419": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.es-419.md",
+      "pt": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.pt.md",
+      "pt-PT": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.pt-PT.md",
+      "fr": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.fr.md",
+      "de": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.de.md",
+      "ru": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.ru.md",
+      "ja": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.ja.md",
+      "zh-Hans": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.zh-Hans.md",
+      "zh-Hant": "https://banana-shot-editor.app/changelog/1.5.0/whats-new.zh-Hant.md"
+    },
+    "pageUrl": "https://banana-shot-editor.app/changelog/#v1.5.0"
   },
   "rules": []
 }

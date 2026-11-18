@@ -1,4 +1,4 @@
-package org.litvin.ui.tabs.points
+package org.litvin.export.preview
 
 import org.litvin.media.ReplaySound
 import org.litvin.media.ReplayView
@@ -6,7 +6,7 @@ import org.litvin.points.PointV1
 import org.litvin.points.ReplayEffect
 import org.litvin.points.ReplayV1
 import org.litvin.points.ReplayZoom
-import org.litvin.ui.tabs.points.ReplayDirector.Command
+import org.litvin.export.preview.ReplayDirector.Command
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

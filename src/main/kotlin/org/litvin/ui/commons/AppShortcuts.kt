@@ -75,6 +75,12 @@ object AppShortcuts {
     val ENDING_P1_UNFORCED_ERROR = AppShortcut("8")
     val ENDING_P1_FORCED_ERROR = AppShortcut("9")
     val ENDING_P2_WINNER = AppShortcut("0")
+
+    /**
+     * The unreturned serve (B-76). It always gives the point to the server, so one key is sufficient: Z selects the
+     * button of the server. With no known server, Z does nothing, as the ace keys.
+     */
+    val ENDING_UNRETURNED_SERVE = AppShortcut("Z")
     private val ENDING_ALSO_BOUND = mapOf(
         ENDING_P1_WINNER to listOf("NUMPAD1", "shift 1"),
         ENDING_P2_FORCED_ERROR to listOf("NUMPAD2", "shift 2"),

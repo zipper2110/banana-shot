@@ -10,6 +10,7 @@ enum class MediaScreen {
     ADJUST_VIDEO,
     REPLAY_EDITOR,
     SHARE,
+    EXPORT_PREVIEW,
     TEST,
 }
 

@@ -64,8 +64,8 @@ internal class PointOutcomeFields(private val form: PointOutcomeForm) {
         kind.addActionListener { updateEnabled() }
         winner.addActionListener { fillEndings(selectedEnding()) }
         ending.addActionListener {
-            // An ace goes to the server, as for the ace keys.
-            if (selectedEnding() == Ending.ACE && form.server != null && selectedWinner() != form.server) {
+            // An ace and an unreturned serve go to the server, as for their keys.
+            if (selectedEnding()?.isServeWin == true && form.server != null && selectedWinner() != form.server) {
                 winner.selectedIndex = form.server - 1
             }
             updateEnabled()
@@ -113,6 +113,7 @@ internal class PointOutcomeFields(private val form: PointOutcomeForm) {
             val label = when (item) {
                 null -> tr("pointEdit.ending.none")
                 Ending.ACE -> tr("points.ending.ace", "name" to names[won - 1])
+                Ending.UNRETURNED_SERVE -> tr("points.ending.unreturnedServe", "name" to names[won - 1])
                 Ending.WINNER -> tr("points.ending.winner", "name" to names[won - 1])
                 Ending.FORCED_ERROR -> tr("points.ending.forcedError", "name" to names[2 - won])
                 else -> tr("points.ending.unforcedError", "name" to names[2 - won])
@@ -137,7 +138,7 @@ internal class PointOutcomeFields(private val form: PointOutcomeForm) {
     }
 
     private companion object {
-        val ENDINGS = listOf(null, Ending.ACE, Ending.WINNER, Ending.FORCED_ERROR, Ending.UNFORCED_ERROR)
+        val ENDINGS = listOf(null, Ending.ACE, Ending.UNRETURNED_SERVE, Ending.WINNER, Ending.FORCED_ERROR, Ending.UNFORCED_ERROR)
 
         fun kindLabel(kind: ClipChoice): String = when (kind) {
             ClipChoice.POINT -> tr("pointEdit.kind.point")

@@ -283,6 +283,40 @@ class StatRowsTest {
         assertEquals(StatRows.NO_DETAILS, rows.of(MatchStat.WINNERS).unavailableReason)
     }
 
+    @Test
+    fun theUnreturnedServesAndTheReturnRowsOfTheServes() {
+        // Player 1 serves all points: an ace, an unreturned serve, and two points that player 2 won on the 1st serve.
+        val details = mapOf("p1" to PointDetailV1(Ending.ACE), "p2" to PointDetailV1(Ending.UNRETURNED_SERVE))
+        val rows = rows(report("1122", serverMarks = mapOf("p1" to Outcome.P1), details = details))
+
+        assertEquals(PerPlayer(StatValue("2"), StatValue("0")), rows.of(MatchStat.UNRETURNED_SERVES).values)
+        assertEquals(PerPlayer(StatValue("1"), StatValue("0")), rows.of(MatchStat.ACES).values)
+        assertEquals(
+            PerPlayer(StatValue("—", "0/0"), StatValue("50%", "2/4")),
+            rows.of(MatchStat.FIRST_SERVE_RETURN_POINTS_WON).values,
+        )
+        assertEquals(
+            PerPlayer(StatValue("—", "0/0"), StatValue("—", "0/0")),
+            rows.of(MatchStat.SECOND_SERVE_RETURN_POINTS_WON).values,
+        )
+    }
+
+    @Test
+    fun theTiebreaksWonRowNeedsATiebreak() {
+        val tiebreak = ("1111" + "2222").repeat(6) + "1".repeat(7)
+
+        assertEquals(PerPlayer(StatValue("1/1", "100%"), StatValue("0/1", "0%")), rows(report(tiebreak)).of(MatchStat.TIEBREAKS_WON).values)
+        assertEquals(StatRows.NO_TIEBREAKS, rows(report("1111")).of(MatchStat.TIEBREAKS_WON).unavailableReason)
+        assertEquals(
+            StatRows.MANUAL_SCORING,
+            rows(report(tiebreak, MatchRulesV1(manualScoring = true))).of(MatchStat.TIEBREAKS_WON).unavailableReason,
+        )
+        assertEquals(
+            StatRows.NO_SETS,
+            rows(report("1212", MatchRulesV1(structure = MatchStructure.PLAIN_POINTS))).of(MatchStat.TIEBREAKS_WON).unavailableReason,
+        )
+    }
+
     private fun rows(report: StatsReport): List<StatRow> = StatRows.build(report.match, report.score.rules)
 
     private fun List<StatRow>.of(stat: MatchStat): StatRow = single { it.stat == stat }

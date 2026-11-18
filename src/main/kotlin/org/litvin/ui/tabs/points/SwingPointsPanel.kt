@@ -25,6 +25,7 @@ import org.litvin.points.components.CommentPatch as DispatcherCommentPatch
 import org.litvin.points.components.CommentState
 import org.litvin.points.components.PointsDispatcher
 import org.litvin.export.comments.CommentAnimations
+import org.litvin.export.preview.ReplayDirector
 import org.litvin.export.comments.CommentAss
 import org.litvin.export.comments.CommentClock
 import org.litvin.export.comments.CommentPreview
@@ -1318,10 +1319,13 @@ class SwingPointsPanel(
             onSave = { list -> dispatcher.setReplays(point.id, list) },
             pointComments = commentDispatcher.state().comments,
             newCommentLook = commentStyles.load().let { look ->
-                CommentInput(0, 0, "", commentDispatcher.state().defaults.colorHex, look.style, look.sizePercent, look.opacityPercent)
-                    .copy(animation = look.animation)
+                CommentInput(
+                    0, commentStyles.loadReplayDurationMs(), "", commentDispatcher.state().defaults.colorHex,
+                    look.style, look.sizePercent, look.opacityPercent,
+                ).copy(animation = look.animation)
             },
             onCommentLook = { look -> commentStyles.save(look) },
+            onCommentDuration = { durationMs -> commentStyles.saveReplayDurationMs(durationMs) },
             onClosed = {
                 replayEditor = null
                 videoCards.show(videoArea, VIDEO_CARD)

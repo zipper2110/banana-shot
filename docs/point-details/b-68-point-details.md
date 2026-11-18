@@ -86,6 +86,7 @@ does now. This prevents wrong scores.
 | Player 2 forced error | 2 | Player 1 forced error | 9 |
 | Player 2 unforced error | 3 | Player 1 unforced error | 8 |
 | Ace (only when player 1 serves) | 4 | Ace (only when player 2 serves) | 7 |
+| Unreturned serve (only when player 1 serves) | Z | Unreturned serve (only when player 2 serves) | Z |
 
 - The buttons show the player names, for example "Ben unforced error".
 - The outer keys (1 and 0) are the winners. The keys mirror the two sides.
@@ -103,8 +104,11 @@ does now. This prevents wrong scores.
   space for the ending buttons. The tooltips and the help name the keys.
 - Q or E on a clip with an ending removes the ending and the error kind,
   because they can disagree with the new winner.
-- Only the server's group shows the ace button. Thus 7 buttons are
-  active at a time.
+- Only the server's group shows the ace button and the unreturned serve
+  button. Thus 8 buttons are active at a time.
+- Added by B-76 on 2026-11-18: the unreturned serve. Z selects the button
+  of the server, so one key is sufficient. With no known server, Z does
+  nothing, as the ace keys.
 
 ### Decision rules for the ending buttons
 
@@ -120,6 +124,7 @@ The user looks at the last shot of the rally and asks two questions:
 | The last shot | Button | The point goes to |
 |---|---|---|
 | The serve lands in, and the receiver does not touch it | Ace of the server | The server |
+| The serve lands in, the receiver touches it, and the return does not go back in | Unreturned serve of the server | The server |
 | Any other shot lands in, and the opponent does not touch it | Winner of the player who hit it | The player who hit it |
 | The ball goes into the net or out, and the player was under pressure | Forced error of the player who hit it | The opponent |
 | The ball goes into the net or out, and the player was not under pressure | Unforced error of the player who hit it | The opponent |
@@ -127,11 +132,13 @@ The user looks at the last shot of the rally and asks two questions:
 - "Touched or not touched" separates a winner from an error. The user can
   see this in the video, so this decision needs no judgment.
 - If the opponent touches the ball and the ball does not go back in, it is
-  an error of the opponent, not a winner. This is also true for a serve:
-  if the receiver touches the serve and the return does not go back in, it
-  is a forced or unforced error of the receiver, not an ace.
+  an error of the opponent, not a winner. A serve is different: if the
+  receiver touches the serve and the return does not go back in, it is an
+  unreturned serve, not an error of the receiver.
 - Decided on 2026-11-13: there is no "service winner" ending. A forced
-  return error records the same point.
+  return error records the same point. Changed by B-76 on 2026-11-18: the
+  ending "Unreturned serve" records this point, because TV statistics show
+  the unreturned serves.
 - Forced or unforced is the only judgment. The question is: "Could this
   player make this shot most of the time?"
   - Forced error: the player had to run far, or the ball was very fast,
@@ -423,8 +430,9 @@ Decided on 2026-11-13:
 
 New rows in the Stats tab, and on the statistics card of the export:
 
-- Serve: aces, double faults, 1st serve in %, 1st serve points won,
-  2nd serve points won.
+- Serve: aces, unreturned serves, double faults, 1st serve in %, 1st
+  serve points won, 2nd serve points won, 1st serve return points won,
+  and 2nd serve return points won (the last three rows since B-76).
 - Endings: winners, forced errors, unforced errors, and the ratio of
   winners to unforced errors.
 - Errors by error kind, when the follow-up question has answers.
@@ -446,6 +454,8 @@ Rules:
   languages, and the sentence about this value in
   `help.statistics.note.4`. The stats settings ignore unknown keys, so a
   saved `average_gap` key does no harm.
+- Decided by B-76 on 2026-11-18: "Unreturned serves" counts the aces and
+  the unreturned serve endings. The "Aces" row stays.
 - A point that the user scored in basic mode has no details. The advanced
   rows show their coverage, for example "Unforced errors: 12 (in 40
   detailed points)".
@@ -460,15 +470,16 @@ val scoringMode: ScoringMode = ScoringMode.BASIC, // BASIC, ADVANCED. B-70 adds 
 val details: Map<String, PointDetailV1> = emptyMap(), // key: the point id, as serverMarks
 
 data class PointDetailV1(
-    val ending: Ending? = null,      // SERVE_FAULT, LET, ACE, WINNER, FORCED_ERROR, UNFORCED_ERROR
+    val ending: Ending? = null,      // SERVE_FAULT, LET, ACE, UNRETURNED_SERVE, WINNER, FORCED_ERROR, UNFORCED_ERROR
     val errorKind: ErrorKind? = null, // NET, LONG, WIDE
 )
 ```
 
-- The winner stays in `outcomes`. The ending key sets the winner. An ace
-  and a double fault need the server, and the server is known from
+- The winner stays in `outcomes`. The ending key sets the winner. An ace,
+  an unreturned serve, and a double fault need the server, and the server is known from
   `serverMarks`.
-- The player who made a winner or an ace is the point winner. The player
+- The player who made a winner, an ace, or an unreturned serve is the
+  point winner. The player
   who made an error is the other player. Thus the details need no player
   field.
 - The details keep no serve number and no DOUBLE_FAULT ending. The app

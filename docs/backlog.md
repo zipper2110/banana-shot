@@ -590,6 +590,16 @@ The work for the paid version is in `backlog-paid.md`.
   `docs/export-preview/b-75-tasks.md`.
 - Done when: the preview of "Only points" and of "Only favorites" shows
   the same content, scoreboard, comments, replays, and cards as the export.
+- Implemented on 2026-11-17 (T0 to T6, decisions 11 to 18 in the tasks
+  file). Tests: `ExportPreviewTimelineTest`, `ExportPreviewDirectorTest`,
+  `ExportPreviewOverlayTest`, `ExportPreviewStripTest`, and
+  `ExportPreviewSettingsTest` (each combination of the content, scoreboard,
+  comments, statistics card, set cards, replays, and trim goes through
+  `ExportPlanner` into the preview). Checked in the running app on Windows on
+  2026-11-17 with a 4K project: full video, only points, only favorites,
+  replays with comments, the statistics card, the keys, and the modal
+  window. Not compared frame by frame with a real export, and not on
+  macOS (T7).
 
 ### B-76 More serve and return statistics
 
@@ -612,6 +622,58 @@ The work for the paid version is in `backlog-paid.md`.
 - Decided on 2026-11-18: Z is the key of the new ending for now
   (`AppShortcuts`). The ending always gives the point to the server, so one
   key is sufficient, as for X (serve fault).
-- Open question: what Z does when the point has no known server.
+- Decided on 2026-11-18: with no known server, Z does nothing, as the ace
+  keys. Only the group of the server shows the unreturned serve button.
+- Decided on 2026-11-18: the export filter (B-69) has an "Unreturned
+  serves" chip. It keeps the aces too, as the statistic counts them.
 - Done when: the Stats tab shows the four new rows for a match marked in
   advanced mode, and "Tiebreaks won" also in basic mode.
+- Implemented on 2026-11-18. "Tiebreaks won" counts the tiebreaks that end
+  in the points: the set tiebreaks, the match tiebreak, and the single
+  tiebreak. Without a tiebreak, the row shows no value. Tests:
+  `MatchStatsTest`, `StatRowsTest`, `PointEndingsTest`, `PointDetailsTest`,
+  `PointFilterTest`, `PointsScoringEndingsTest`. Not checked in the running
+  app.
+
+### B-77 Performance ratings (experimental)
+
+- Added on 2026-11-18. The Stats tab shows a rating from 0 to 10 for each
+  player in some areas of play: Serve, Return, Attack, Consistency, and
+  Pressure, and an Overall rating. The ratings use the statistics, not the
+  score. For example: "Player 1 served better (7.5 vs 6.3)".
+- Research: the ATP and Infosys leaderboards add up percentages (for
+  example, the Return rating). Tennis Abstract uses the Dominance Ratio and
+  the Aggression score. No consumer app that we found publishes a 0 to 10
+  rating.
+- Decided on 2026-11-18: the ratings are experimental. The group title
+  says "experimental". The formulas and the anchors can change in a later
+  version. The ratings are not in the video by default.
+- Decided on 2026-11-18: a fixed scale for amateur tennis. Each input has
+  two anchors: the value for 0 and the value for 10. A value between the
+  anchors gives a value on a straight line, and a value outside the anchors
+  gives 0 or 10. A rating is the average of its inputs. The two players get
+  independent values, thus both players can have a high value. This was the
+  recommendation of the agent. The user did not choose between this scale
+  and a head-to-head scale (5 = even, the two values add up to 10).
+- Decided on 2026-11-18: a rating that uses advanced scoring is paid.
+  Attack and Consistency need advanced mode, thus they are paid. In advanced
+  mode, Serve and Return also use the data of advanced mode. In basic mode,
+  Serve, Return, Pressure, and Overall use only the basic data, and they are
+  free.
+- Decided on 2026-11-18: an input counts only with sufficient data (for
+  example, 10 service points or 3 service games). A rating without an input
+  shows no value. Overall needs two ratings or more.
+- The formulas and the anchors are in `PerformanceRatings`.
+- Decided on 2026-11-18: 50% of the points and of the games won on serve or
+  on return gives 5. With anchors near pro level, a real club match with
+  both players near 50% on serve gave Serve ratings of 3.3 and 4.1.
+- Decided on 2026-11-18: without a server mark, the Serve, Return, and
+  Overall rows tell the user to mark the server.
+- Related item: B-74 (statistics insights) can use the ratings in its
+  sentences.
+- Done when: the Stats tab shows the Ratings group with a value for each
+  player, and the free version shows only the ratings of basic mode.
+- Implemented on 2026-11-18. Tests: `PerformanceRatingsTest`. Checked with an
+  off-screen image of the Stats tab of a real basic project (171 points, a
+  server mark added to a copy). No project with advanced mode was available,
+  thus the Attack and Consistency rows were not checked in the app.

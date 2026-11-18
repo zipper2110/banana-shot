@@ -1,4 +1,4 @@
-package org.litvin.ui.tabs.points
+package org.litvin.export.preview
 
 import org.litvin.export.ExportReplays
 import org.litvin.export.PassFade
@@ -155,6 +155,21 @@ class ReplayDirector(private val frameMs: () -> Double = { DEFAULT_FRAME_MS }) {
         shownView = null
         if (wasActive) commands += Command.Sound(null)
         return commands
+    }
+
+    /**
+     * Starts the replays of the point with [pointId] at the play [fromPlay], without a play over the point end. The
+     * export preview (B-75) uses it at a cut and after a seek of the user into a replay. Returns no commands when the
+     * director has no replays of that point.
+     */
+    fun start(pointId: String, fromPlay: Int = 0): List<Command> {
+        val next = timeline.insertOf(pointId) ?: return emptyList()
+        val index = fromPlay.coerceIn(0, next.plays.lastIndex)
+        val reset = stop()
+        insert = next
+        playIndex = index
+        fadeInAt = null
+        return reset + startPlay(next.plays[index])
     }
 
     private fun enter(next: ReplayTimeline.Insert): List<Command> {

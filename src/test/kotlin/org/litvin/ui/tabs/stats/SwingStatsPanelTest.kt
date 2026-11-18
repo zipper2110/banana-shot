@@ -119,12 +119,12 @@ class SwingStatsPanelTest {
         onEdt {
             val panel = openPanel()
             val overview = panel.find<GroupHeaderRow>("stats-group-overview")!!
-            assertEquals("1 of 3", overview.countText)
+            assertEquals("1 of 4", overview.countText)
             assertEquals("1 of 4", panel.find<GroupHeaderRow>("stats-group-time")!!.countText)
 
             panel.find<JCheckBox>("stats-in-video-${MatchStat.GAMES_WON.key}")!!.doClick()
 
-            assertEquals("2 of 3", overview.countText)
+            assertEquals("2 of 4", overview.countText)
         }
     }
 

@@ -458,12 +458,16 @@ internal class PointsScoring(
         bind(AppShortcuts.SCORE_PLAYER_1.keyStroke, "points.scoreP1") { onScoreRequest(ScoreRequest.Winner(Outcome.P1)) }
         bind(AppShortcuts.SCORE_NO_POINT.keyStroke, "points.scoreNone") { onScoreRequest(ScoreRequest.Winner(Outcome.NONE)) }
         bind(AppShortcuts.SCORE_PLAYER_2.keyStroke, "points.scoreP2") { onScoreRequest(ScoreRequest.Winner(Outcome.P2)) }
-        // The ending keys of advanced mode: the top-row digit, the numpad digit, and the Shift form (B-68).
-        EndingChoice.entries.forEach { choice ->
-            val shortcut = EndingButtons.keyOf(choice)
-            val name = "points.ending.${choice.name}"
+        // The ending keys of advanced mode: the top-row digit, the numpad digit, and the Shift form (B-68). Z has two
+        // buttons, one in each group (B-76): the key selects the button that the server can use.
+        EndingChoice.entries.groupBy(EndingButtons::keyOf).forEach { (shortcut, choices) ->
+            val name = "points.ending.${shortcut.keyStroke}"
             (listOf(shortcut.keyStroke) + AppShortcuts.alsoBound(shortcut)).forEachIndexed { index, stroke ->
-                bind(stroke, "$name.$index") { requestEnding(choice, fromKey = true) }
+                bind(stroke, "$name.$index") {
+                    val server = endingServer()
+                    val choice = choices.firstOrNull { PointEndings.isAvailable(it, server) } ?: choices.first()
+                    requestEnding(choice, fromKey = true)
+                }
             }
         }
         bind(AppShortcuts.NEXT_POINT.keyStroke, "points.nextPoint") {
@@ -563,8 +567,8 @@ internal class PointsScoring(
     }
 
     /**
-     * An ending key or button (B-68). It works only in advanced mode and after the answer to "Who serves?". The ace
-     * works only for the server of the pending point or of the selected point.
+     * An ending key or button (B-68). It works only in advanced mode and after the answer to "Who serves?". The ace and
+     * the unreturned serve work only for the server of the pending point or of the selected point.
      * While the error kind question is open, a digit key ([fromKey]) answers the question and selects no ending. A
      * click on an ending button closes the question and selects the ending.
      */

@@ -279,7 +279,16 @@ class SwingStatsPanel(
         MatchStat.RETURN_GAMES_WON -> tr("stats.description.returnGames")
         MatchStat.DURATION -> tr("stats.description.duration")
         MatchStat.FIRST_SERVE_IN -> tr("stats.description.firstServeIn")
+        MatchStat.UNRETURNED_SERVES -> tr("stats.description.unreturnedServes")
+        MatchStat.FIRST_SERVE_RETURN_POINTS_WON -> tr("stats.description.firstServeReturn")
+        MatchStat.SECOND_SERVE_RETURN_POINTS_WON -> tr("stats.description.secondServeReturn")
         MatchStat.WINNERS_TO_UNFORCED_ERRORS -> tr("stats.description.winnersToUnforcedErrors")
+        MatchStat.RATING_OVERALL -> tr("stats.description.ratingOverall")
+        MatchStat.RATING_SERVE -> tr("stats.description.ratingServe")
+        MatchStat.RATING_RETURN -> tr("stats.description.ratingReturn")
+        MatchStat.RATING_ATTACK -> tr("stats.description.ratingAttack")
+        MatchStat.RATING_CONSISTENCY -> tr("stats.description.ratingConsistency")
+        MatchStat.RATING_PRESSURE -> tr("stats.description.ratingPressure")
         else -> null
     }
 

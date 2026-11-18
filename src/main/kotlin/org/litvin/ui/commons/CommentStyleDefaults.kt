@@ -3,6 +3,7 @@ package org.litvin.ui.commons
 import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
+import org.litvin.points.Replays
 import java.util.prefs.Preferences
 
 /**
@@ -26,19 +27,32 @@ interface CommentStyleDefaults {
 
     fun save(look: CommentLook)
 
+    /** Returns the last time of a new replay comment, or [DEFAULT_REPLAY_COMMENT_MS] when the user did not save one yet. */
+    fun loadReplayDurationMs(): Long
+
+    fun saveReplayDurationMs(durationMs: Long)
+
     companion object {
+        /** The time of a new replay comment before the user saves another time. */
+        const val DEFAULT_REPLAY_COMMENT_MS = 3_000L
+
         /** Keeps the look in memory only. Tests and the standalone panels use it. */
         fun inMemory(): CommentStyleDefaults = object : CommentStyleDefaults {
             private var look = CommentLook()
+            private var replayDurationMs = DEFAULT_REPLAY_COMMENT_MS
             override fun load(): CommentLook = look
             override fun save(look: CommentLook) {
                 this.look = look
+            }
+            override fun loadReplayDurationMs(): Long = replayDurationMs
+            override fun saveReplayDurationMs(durationMs: Long) {
+                replayDurationMs = durationMs
             }
         }
     }
 }
 
-/** Keeps the look of new comments in the user preferences, so it applies to all projects. */
+/** Keeps the look of new comments and the time of new replay comments in the user preferences, so they apply to all projects. */
 class PreferencesCommentStyleDefaults(private val preferences: Preferences) : CommentStyleDefaults {
     override fun load(): CommentLook = CommentLook(
         style = preferences.get(KEY_STYLE, null)?.let { name -> CommentStyle.entries.firstOrNull { it.name == name } }
@@ -60,10 +74,19 @@ class PreferencesCommentStyleDefaults(private val preferences: Preferences) : Co
         preferences.put(KEY_ANIMATION, look.animation.name)
     }
 
+    override fun loadReplayDurationMs(): Long =
+        preferences.getLong(KEY_REPLAY_DURATION, CommentStyleDefaults.DEFAULT_REPLAY_COMMENT_MS)
+            .coerceIn(Replays.MIN_COMMENT_MS.toLong(), Replays.MAX_COMMENT_MS.toLong())
+
+    override fun saveReplayDurationMs(durationMs: Long) {
+        preferences.putLong(KEY_REPLAY_DURATION, durationMs)
+    }
+
     private companion object {
         const val KEY_STYLE = "default-comment-style"
         const val KEY_SIZE = "default-comment-size-percent"
         const val KEY_OPACITY = "default-comment-opacity-percent"
         const val KEY_ANIMATION = "default-comment-animation"
+        const val KEY_REPLAY_DURATION = "default-replay-comment-duration-ms"
     }
 }

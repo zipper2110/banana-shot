@@ -85,6 +85,14 @@ class PointFilterTest {
     }
 
     @Test
+    fun `unreturned serves include the aces, and aces do not include the unreturned serves`() {
+        val withUnreturned = score.copy(details = score.details + ("win2" to PointDetailV1(Ending.UNRETURNED_SERVE)))
+
+        assertEquals(listOf("ace1", "win2"), kept(PointFilter(endings = setOf(FilterEnding.UNRETURNED_SERVE)), withUnreturned))
+        assertEquals(listOf("ace1"), kept(PointFilter(endings = setOf(FilterEnding.ACE)), withUnreturned))
+    }
+
+    @Test
     fun `the player is the player who made the ending`() {
         assertEquals(listOf("win2", "fe2", "ue2"), kept(PointFilter(players = setOf(2))))
         assertEquals(listOf("ace1", "ue1", "df"), kept(PointFilter(players = setOf(1))))

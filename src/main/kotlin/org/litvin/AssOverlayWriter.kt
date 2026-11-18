@@ -79,18 +79,32 @@ object AssOverlayWriter {
                 if (s.endMs <= s.startMs) continue
                 val start = toAssTs(s.startMs)
                 val end = toAssTs(s.endMs)
-                val display = ScoreboardComponent.display(withStructuredState(s))
-                val scene = ScoreboardLayouts.scene(display, settings)
-                val placement = ScoreboardAss.place(scene, settings, 0.0, 0.0, playResX.toDouble(), playResY.toDouble())
                 // Each board event fades in the same way, so the whole board fades as one.
                 val fade = if (s.fadeInMs > 0 || s.fadeOutMs > 0) "{\\fad(${s.fadeInMs},${s.fadeOutMs})}" else ""
-                ScoreboardAss.events(scene, placement).forEachIndexed { layer, text ->
+                scoreboardEvents(s, settings, 0.0, 0.0, playResX.toDouble(), playResY.toDouble()).forEachIndexed { layer, text ->
                     w.appendLine("Dialogue: $layer,$start,$end,Board,,0,0,0,,$fade$text")
                 }
             }
 
             for (comment in commentSpans) w.commentEvents(comment, playResX, playResY)
         }
+    }
+
+    /**
+     * The board events of the scoreboard span [span] in the frame at ([x], [y]) with the size [width] × [height],
+     * without the fade. The export file and the export preview (B-75) use them.
+     */
+    fun scoreboardEvents(
+        span: OverlaySpan,
+        settings: ScoreboardSettingsV1,
+        x: Double,
+        y: Double,
+        width: Double,
+        height: Double,
+    ): List<String> {
+        val display = ScoreboardComponent.display(withStructuredState(span))
+        val scene = ScoreboardLayouts.scene(display, settings)
+        return ScoreboardAss.events(scene, ScoreboardAss.place(scene, settings, x, y, width, height))
     }
 
     /**

@@ -38,7 +38,7 @@ internal data class PointRowInfo(
 internal enum class RowServe { FIRST, SECOND, LET, NO_POINT }
 
 /** The ending part of a row label, in a short form. */
-internal enum class RowEnding { FAULT, DOUBLE_FAULT, ACE, WINNER, FORCED_ERROR, UNFORCED_ERROR }
+internal enum class RowEnding { FAULT, DOUBLE_FAULT, ACE, UNRETURNED_SERVE, WINNER, FORCED_ERROR, UNFORCED_ERROR }
 
 /**
  * The label of a row in advanced mode (B-68, "Labels"): the serve, then the ending in a short form, then the error
@@ -64,6 +64,7 @@ internal data class RowLabel(
             RowEnding.FAULT -> tr("points.row.ending.fault")
             RowEnding.DOUBLE_FAULT -> tr("points.row.ending.doubleFault")
             RowEnding.ACE -> tr("points.row.ending.ace")
+            RowEnding.UNRETURNED_SERVE -> tr("points.row.ending.unreturnedServe")
             RowEnding.WINNER -> tr("points.row.ending.winner")
             RowEnding.FORCED_ERROR -> tr("points.row.ending.forcedError")
             RowEnding.UNFORCED_ERROR -> tr("points.row.ending.unforcedError")
@@ -89,6 +90,7 @@ internal data class RowLabel(
                 ClipKind.POINT -> {
                     val ending = when (detail?.ending) {
                         Ending.ACE -> RowEnding.ACE
+                        Ending.UNRETURNED_SERVE -> RowEnding.UNRETURNED_SERVE
                         Ending.WINNER -> RowEnding.WINNER
                         Ending.FORCED_ERROR -> RowEnding.FORCED_ERROR
                         Ending.UNFORCED_ERROR -> RowEnding.UNFORCED_ERROR

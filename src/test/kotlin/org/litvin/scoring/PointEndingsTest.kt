@@ -134,6 +134,32 @@ class PointEndingsTest {
         assertEquals(listOf(WinnerChange("p2", 1, doubleFault = true, from = Outcome.P2, to = Outcome.P1)), preview.winners)
     }
 
+    @Test
+    fun `only the group of the server has the unreturned serve, and it goes to the server`() {
+        assertTrue(PointEndings.isAvailable(EndingChoice.P2_UNRETURNED_SERVE, server = 2))
+        assertFalse(PointEndings.isAvailable(EndingChoice.P1_UNRETURNED_SERVE, server = 2))
+        assertFalse(PointEndings.isAvailable(EndingChoice.P2_UNRETURNED_SERVE, server = null))
+        assertEquals(2, EndingChoice.P2_UNRETURNED_SERVE.player)
+        assertEquals(EndingChoice.P1_UNRETURNED_SERVE, EndingChoice.of(Outcome.P1, Ending.UNRETURNED_SERVE))
+    }
+
+    @Test
+    fun `a server change shows an unreturned serve as an unreturned serve`() {
+        val points = points(1)
+        val before = advanced().copy(
+            outcomes = mapOf("p1" to Outcome.P1),
+            details = mapOf("p1" to PointDetailV1(Ending.UNRETURNED_SERVE)),
+            serverMarks = mapOf("p1" to Outcome.P1),
+        )
+
+        val preview = ServerChanges.preview(points, before, before.copy(serverMarks = mapOf("p1" to Outcome.P2)))!!
+
+        assertEquals(
+            listOf(WinnerChange("p1", 1, doubleFault = false, from = Outcome.P1, to = Outcome.P2, unreturnedServe = true)),
+            preview.winners,
+        )
+    }
+
     private fun advanced() = ScoreV1(scoringMode = ScoringMode.ADVANCED)
 
     private fun points(count: Int): List<PointV1> =

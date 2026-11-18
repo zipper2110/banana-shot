@@ -26,6 +26,7 @@ import org.litvin.ui.commons.AppShortcuts
 import org.litvin.ui.commons.CommentDialog
 import org.litvin.ui.commons.CommentInput
 import org.litvin.ui.commons.CommentLook
+import org.litvin.ui.commons.CommentStyleDefaults
 import org.litvin.ui.commons.DialogGroup
 import org.litvin.ui.commons.DialogKit
 import org.litvin.ui.commons.MessageDialog
@@ -37,7 +38,7 @@ import org.litvin.ui.commons.UiKit
 import org.litvin.ui.commons.WrapText
 import org.litvin.ui.tabs.points.CommentDragController
 import org.litvin.ui.tabs.points.ReplayCommentClock
-import org.litvin.ui.tabs.points.ReplayDirector
+import org.litvin.export.preview.ReplayDirector
 import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.CardLayout
@@ -110,10 +111,13 @@ internal class ReplayEditorWindow(
     private val onClosed: () -> Unit,
     /** The comments of the project. The preview and the comment view show the point comments (decision 24). */
     private val pointComments: List<CommentV1> = emptyList(),
-    /** The color and the look of a new comment. */
-    private val newCommentLook: CommentInput = CommentInput(0, 0, "", CommentV1.DEFAULT_COLOR_HEX),
+    /** The color, the look, and the time of a new comment. */
+    private var newCommentLook: CommentInput =
+        CommentInput(0, CommentStyleDefaults.DEFAULT_REPLAY_COMMENT_MS, "", CommentV1.DEFAULT_COLOR_HEX),
     /** Remembers the look of a saved comment for the next new comment. */
     private val onCommentLook: (CommentLook) -> Unit = {},
+    /** Remembers the time of a saved new comment for the next new comment. */
+    private val onCommentDuration: (Long) -> Unit = {},
 ) : JFrame(tr("replay.editor.title", "point" to pointTitle)) {
     private val edits = ReplayEditorModel(point, selectIndex ?: 0)
     private val director = ReplayDirector { FramePick.frameMs(fps()) }
@@ -853,7 +857,7 @@ internal class ReplayEditorWindow(
         val now = player.currentTimeMs()
         val start = if (now in replay.startMs.toLong()..replay.endMs.toLong()) now else replay.startMs.toLong()
         seek(start)
-        val first = newCommentLook.copy(startMs = start, durationMs = NEW_COMMENT_MS, text = "")
+        val first = newCommentLook.copy(startMs = start, text = "")
         previewDialogComment(null, first)
         CommentDialog.showCreate(
             this,
@@ -863,12 +867,17 @@ internal class ReplayEditorWindow(
             defaultStyle = newCommentLook.style,
             defaultSizePercent = newCommentLook.sizePercent,
             defaultOpacityPercent = newCommentLook.opacityPercent,
-            initialDurationMs = NEW_COMMENT_MS,
+            initialDurationMs = newCommentLook.durationMs,
             defaultAnimation = newCommentLook.animation,
             onPreview = { previewDialogComment(null, it) },
         ) { input ->
             val added = edits.addComment(input.toComment(id = 0, position = null))
             onCommentLook(CommentLook(input.style, input.sizePercent, input.opacityPercent, input.animation))
+            onCommentDuration(input.durationMs)
+            newCommentLook = newCommentLook.copy(
+                durationMs = input.durationMs, style = input.style, sizePercent = input.sizePercent,
+                opacityPercent = input.opacityPercent, animation = input.animation,
+            )
             refresh()
             added?.let { selectComment(it.id) }
         }
@@ -1411,8 +1420,6 @@ internal class ReplayEditorWindow(
         /** The id of a new comment in the dialog preview. Saved comments have positive ids. */
         const val NEW_COMMENT_ID = -1
 
-        /** The first time of a new replay comment. A replay is short, so it is shorter than for a point comment. */
-        const val NEW_COMMENT_MS = 2_000L
         const val COMMENT_TICK_MS = 40
         const val CARD_PICK = "pick"
 

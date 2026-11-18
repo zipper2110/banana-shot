@@ -16,6 +16,8 @@ import org.litvin.i18n.DisplayFormats
 
 /** The groups of the statistics table, in display order. */
 enum class StatGroup {
+    /** The performance ratings from 0 to 10 (B-77, experimental). */
+    RATINGS,
     OVERVIEW,
     SERVE,
     /** How the points ended (B-68). Only a project in advanced mode has these rows. */
@@ -27,6 +29,7 @@ enum class StatGroup {
 
     val title: String
         get() = when (this) {
+            RATINGS -> tr("stats.group.ratings")
             OVERVIEW -> tr("stats.group.overview")
             SERVE -> tr("stats.group.serve")
             ENDINGS -> tr("stats.group.endings")
@@ -47,16 +50,29 @@ enum class MatchStat(
     val inVideoByDefault: Boolean = false,
     val advanced: Boolean = false,
 ) {
+    /** The performance ratings (B-77). [PerformanceRatings] has the formulas. Attack and Consistency need advanced mode. */
+    RATING_OVERALL("rating_overall", StatGroup.RATINGS),
+    RATING_SERVE("rating_serve", StatGroup.RATINGS),
+    RATING_RETURN("rating_return", StatGroup.RATINGS),
+    RATING_ATTACK("rating_attack", StatGroup.RATINGS, advanced = true),
+    RATING_CONSISTENCY("rating_consistency", StatGroup.RATINGS, advanced = true),
+    RATING_PRESSURE("rating_pressure", StatGroup.RATINGS),
     POINTS_WON("points_won", StatGroup.OVERVIEW, inVideoByDefault = true),
     GAMES_WON("games_won", StatGroup.OVERVIEW),
     SETS_WON("sets_won", StatGroup.OVERVIEW),
+    /** The set tiebreaks, the match tiebreaks, and the single tiebreak that the player won (B-76). */
+    TIEBREAKS_WON("tiebreaks_won", StatGroup.OVERVIEW),
     ACES("aces", StatGroup.SERVE, inVideoByDefault = true, advanced = true),
+    /** The aces and the unreturned serves (B-76). */
+    UNRETURNED_SERVES("unreturned_serves", StatGroup.SERVE, advanced = true),
     DOUBLE_FAULTS("double_faults", StatGroup.SERVE, inVideoByDefault = true, advanced = true),
     FIRST_SERVE_IN("first_serve_in", StatGroup.SERVE, advanced = true),
     FIRST_SERVE_POINTS_WON("first_serve_points_won", StatGroup.SERVE, advanced = true),
     SECOND_SERVE_POINTS_WON("second_serve_points_won", StatGroup.SERVE, advanced = true),
     SERVICE_POINTS_WON("service_points_won", StatGroup.SERVE, inVideoByDefault = true),
     RETURN_POINTS_WON("return_points_won", StatGroup.SERVE),
+    FIRST_SERVE_RETURN_POINTS_WON("first_serve_return_points_won", StatGroup.SERVE, advanced = true),
+    SECOND_SERVE_RETURN_POINTS_WON("second_serve_return_points_won", StatGroup.SERVE, advanced = true),
     SERVICE_GAMES_WON("service_games_won", StatGroup.SERVE, inVideoByDefault = true),
     RETURN_GAMES_WON("return_games_won", StatGroup.SERVE),
     WINNERS("winners", StatGroup.ENDINGS, inVideoByDefault = true, advanced = true),
@@ -94,16 +110,26 @@ enum class MatchStat(
     /** The name of the statistic in the app language. */
     val label: String
         get() = when (this) {
+            RATING_OVERALL -> tr("stats.row.ratingOverall")
+            RATING_SERVE -> tr("stats.row.ratingServe")
+            RATING_RETURN -> tr("stats.row.ratingReturn")
+            RATING_ATTACK -> tr("stats.row.ratingAttack")
+            RATING_CONSISTENCY -> tr("stats.row.ratingConsistency")
+            RATING_PRESSURE -> tr("stats.row.ratingPressure")
             POINTS_WON -> tr("stats.row.pointsWon")
             GAMES_WON -> tr("stats.row.gamesWon")
             SETS_WON -> tr("stats.row.setsWon")
+            TIEBREAKS_WON -> tr("stats.row.tiebreaksWon")
             ACES -> tr("stats.row.aces")
+            UNRETURNED_SERVES -> tr("stats.row.unreturnedServes")
             DOUBLE_FAULTS -> tr("stats.row.doubleFaults")
             FIRST_SERVE_IN -> tr("stats.row.firstServeIn")
             FIRST_SERVE_POINTS_WON -> tr("stats.row.firstServePointsWon")
             SECOND_SERVE_POINTS_WON -> tr("stats.row.secondServePointsWon")
             SERVICE_POINTS_WON -> tr("stats.row.servicePointsWon")
             RETURN_POINTS_WON -> tr("stats.row.returnPointsWon")
+            FIRST_SERVE_RETURN_POINTS_WON -> tr("stats.row.firstServeReturnPointsWon")
+            SECOND_SERVE_RETURN_POINTS_WON -> tr("stats.row.secondServeReturnPointsWon")
             SERVICE_GAMES_WON -> tr("stats.row.serviceGamesWon")
             RETURN_GAMES_WON -> tr("stats.row.returnGamesWon")
             WINNERS -> tr("stats.row.winners")
@@ -195,6 +221,7 @@ object StatRows {
     val NO_POINTS_OF_LENGTH: String get() = tr("stats.reason.noPointsOfLength")
     val NO_DETAILS: String get() = tr("stats.reason.noDetails")
     val NO_ERROR_KIND: String get() = tr("stats.reason.noErrorKind")
+    val NO_TIEBREAKS: String get() = tr("stats.reason.noTiebreaks")
 
     /**
      * The rows of [stats]. The rows of advanced mode ([MatchStat.advanced]) are only in a result with details.
@@ -207,7 +234,11 @@ object StatRows {
         sport: Sport = Sport.TENNIS,
     ): List<StatRow> {
         val normalized = settings.normalized()
-        return shownStats(stats, rules).map { row(it, stats, rules, normalized, sport) }
+        val ratings by lazy { PerformanceRatings.of(stats, rules) }
+        return shownStats(stats, rules).map { stat ->
+            if (stat.group == StatGroup.RATINGS) ratingRow(stat, ratings, stats.serve != null).copy(label = label(stat, normalized, rules, sport))
+            else row(stat, stats, rules, normalized, sport)
+        }
     }
 
     /**
@@ -285,6 +316,12 @@ object StatRows {
                 )
             }
             MatchStat.SETS_WON -> if (!hasSets) unavailable(NO_SETS) else counts(stats.setsWon)
+            MatchStat.TIEBREAKS_WON -> when {
+                !hasEnd -> unavailable(NO_SETS)
+                manual -> unavailable(MANUAL_SCORING)
+                stats.tiebreaksWon.p1.total == 0 -> unavailable(NO_TIEBREAKS)
+                else -> fractions(stats.tiebreaksWon)
+            }
             MatchStat.SERVICE_POINTS_WON -> if (serve == null) unavailable(NEEDS_SERVER) else shares(serve.servicePointsWon)
             MatchStat.RETURN_POINTS_WON -> if (serve == null) unavailable(NEEDS_SERVER) else shares(serve.returnPointsWon)
             MatchStat.SERVICE_GAMES_WON -> when {
@@ -335,16 +372,42 @@ object StatRows {
             MatchStat.LONGEST_POINT -> shared(time.longestPoint?.let { StatValue(seconds((it.endMs - it.startMs).toLong())) })
                 .copy(sharedPointId = time.longestPoint?.id)
             MatchStat.AVERAGE_POINT_WON -> perPlayer(time.averagePointMsWon.map { ms -> StatValue(ms?.let(::seconds) ?: "—") })
-            MatchStat.ACES, MatchStat.DOUBLE_FAULTS, MatchStat.FIRST_SERVE_IN, MatchStat.FIRST_SERVE_POINTS_WON,
-            MatchStat.SECOND_SERVE_POINTS_WON, MatchStat.WINNERS, MatchStat.FORCED_ERRORS, MatchStat.UNFORCED_ERRORS,
+            MatchStat.ACES, MatchStat.UNRETURNED_SERVES, MatchStat.DOUBLE_FAULTS, MatchStat.FIRST_SERVE_IN,
+            MatchStat.FIRST_SERVE_POINTS_WON, MatchStat.SECOND_SERVE_POINTS_WON, MatchStat.FIRST_SERVE_RETURN_POINTS_WON,
+            MatchStat.SECOND_SERVE_RETURN_POINTS_WON, MatchStat.WINNERS, MatchStat.FORCED_ERRORS, MatchStat.UNFORCED_ERRORS,
             MatchStat.WINNERS_TO_UNFORCED_ERRORS, MatchStat.ERRORS_NET, MatchStat.ERRORS_LONG, MatchStat.ERRORS_WIDE ->
                 if (details == null || details.detailedPoints == 0) unavailable(NO_DETAILS)
                 else detailRow(stat, details, stats.scoredPoints, serve != null)
+            MatchStat.RATING_OVERALL, MatchStat.RATING_SERVE, MatchStat.RATING_RETURN, MatchStat.RATING_ATTACK,
+            MatchStat.RATING_CONSISTENCY, MatchStat.RATING_PRESSURE -> error("build() makes the rating rows: $stat")
             MatchStat.SHORT_POINTS_WON ->
                 lengthShares(time.scoredDurations.filter { it.durationMs <= settings.shortPointMaxSeconds * 1000L })
             MatchStat.LONG_POINTS_WON ->
                 lengthShares(time.scoredDurations.filter { it.durationMs >= settings.longPointMinSeconds * 1000L })
         }.copy(label = label(stat, settings, rules, sport))
+    }
+
+    /**
+     * A row of the performance ratings (B-77): a value from 0 to 10 with one decimal for each player. Without a server
+     * mark, the Serve, Return, and Overall rows ask for the server, because these ratings need it.
+     */
+    private fun ratingRow(stat: MatchStat, ratings: PerformanceRatings, hasServer: Boolean): StatRow {
+        val values = when (stat) {
+            MatchStat.RATING_OVERALL -> ratings.overall
+            MatchStat.RATING_SERVE -> ratings.areas[RatingArea.SERVE]
+            MatchStat.RATING_RETURN -> ratings.areas[RatingArea.RETURN]
+            MatchStat.RATING_ATTACK -> ratings.areas[RatingArea.ATTACK]
+            MatchStat.RATING_CONSISTENCY -> ratings.areas[RatingArea.CONSISTENCY]
+            MatchStat.RATING_PRESSURE -> ratings.areas[RatingArea.PRESSURE]
+            else -> error("Not a rating: $stat")
+        } ?: return StatRow(stat, unavailableReason = if (!hasServer && stat in NEEDS_SERVER_RATINGS) NEEDS_SERVER else NO_VALUE)
+        val rounded = values.map { Math.round(it * 10) / 10.0 }
+        return StatRow(
+            stat,
+            values = rounded.map { StatValue(DisplayFormats.decimal(it, 1)) },
+            bar = rounded,
+            barMax = PerformanceRatings.MAX,
+        )
     }
 
     /**
@@ -365,10 +428,13 @@ object StatRows {
         }
         val row = when (stat) {
             MatchStat.ACES -> counts(details.aces)
+            MatchStat.UNRETURNED_SERVES -> counts(details.unreturnedServes)
             MatchStat.DOUBLE_FAULTS -> counts(details.doubleFaults)
             MatchStat.FIRST_SERVE_IN -> shares(details.firstServeIn)
             MatchStat.FIRST_SERVE_POINTS_WON -> shares(details.firstServePointsWon)
             MatchStat.SECOND_SERVE_POINTS_WON -> shares(details.secondServePointsWon)
+            MatchStat.FIRST_SERVE_RETURN_POINTS_WON -> shares(details.firstServeReturnPointsWon)
+            MatchStat.SECOND_SERVE_RETURN_POINTS_WON -> shares(details.secondServeReturnPointsWon)
             MatchStat.WINNERS -> counts(details.winners)
             MatchStat.FORCED_ERRORS -> counts(details.forcedErrors)
             MatchStat.UNFORCED_ERRORS -> counts(details.unforcedErrors)
@@ -398,6 +464,8 @@ object StatRows {
     private fun <T, R> PerPlayer<T>.map(transform: (T) -> R): PerPlayer<R> = PerPlayer(transform(p1), transform(p2))
 
     private const val PERCENT_MAX = 100.0
+
+    private val NEEDS_SERVER_RATINGS = setOf(MatchStat.RATING_OVERALL, MatchStat.RATING_SERVE, MatchStat.RATING_RETURN)
 
     private fun count(value: Int) = StatValue(value.toString())
 

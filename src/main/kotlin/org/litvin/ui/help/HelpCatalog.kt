@@ -417,6 +417,7 @@ object HelpCatalog {
                 HelpShortcut(AppShortcuts.ENDING_P2_UNFORCED_ERROR, tr("points.ending.unforcedError", "name" to player2)),
                 HelpShortcut(AppShortcuts.ENDING_P1_ACE, tr("points.ending.ace", "name" to player1)),
                 HelpShortcut(AppShortcuts.ENDING_P2_ACE, tr("points.ending.ace", "name" to player2)),
+                HelpShortcut(AppShortcuts.ENDING_UNRETURNED_SERVE, tr("help.advanced.shortcut.unreturnedServe")),
                 HelpShortcut(AppShortcuts.ENDING_P1_UNFORCED_ERROR, tr("points.ending.unforcedError", "name" to player1)),
                 HelpShortcut(AppShortcuts.ENDING_P1_FORCED_ERROR, tr("points.ending.forcedError", "name" to player1)),
                 HelpShortcut(AppShortcuts.ENDING_P2_WINNER, tr("points.ending.winner", "name" to player2)),

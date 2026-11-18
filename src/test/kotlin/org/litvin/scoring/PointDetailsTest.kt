@@ -166,6 +166,19 @@ class PointDetailsTest {
     }
 
     @Test
+    fun anUnreturnedServeGoesToTheServer() {
+        val points = points(1)
+        val score = ScoreV1(
+            outcomes = mapOf("p1" to Outcome.P1),
+            serverMarks = mapOf("p1" to Outcome.P2),
+            details = mapOf("p1" to PointDetailV1(Ending.UNRETURNED_SERVE)),
+        )
+
+        assertEquals(Outcome.P2, PointDetails.resolveOutcomes(points, score)["p1"])
+        assertEquals(1, PointDetails.playerOfEnding(Ending.UNRETURNED_SERVE, Outcome.P1))
+    }
+
+    @Test
     fun withoutAServerAnAceKeepsItsOutcome() {
         val points = points(1)
         val score = ScoreV1(outcomes = mapOf("p1" to Outcome.P2), details = mapOf("p1" to PointDetailV1(Ending.ACE)))

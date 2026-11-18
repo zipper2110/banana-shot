@@ -6,16 +6,23 @@ import org.litvin.scoring.ErrorKind
 /** An ending that the point filter can select (B-69). A double fault is a serve fault, so [Ending] does not have it. */
 enum class FilterEnding {
     ACE,
+
+    /** The unreturned serves and the aces, as the "Unreturned serves" statistic counts them (B-76). */
+    UNRETURNED_SERVE,
     WINNER,
     FORCED_ERROR,
     UNFORCED_ERROR,
     DOUBLE_FAULT,
     ;
 
+    /** True when a point with the filter ending [ending] matches this selection. */
+    fun covers(ending: FilterEnding): Boolean = ending == this || (this == UNRETURNED_SERVE && ending == ACE)
+
     companion object {
         /** The filter ending of a point clip with [ending], or null for a serve fault, a let, or no ending. */
         fun of(ending: Ending?): FilterEnding? = when (ending) {
             Ending.ACE -> ACE
+            Ending.UNRETURNED_SERVE -> UNRETURNED_SERVE
             Ending.WINNER -> WINNER
             Ending.FORCED_ERROR -> FORCED_ERROR
             Ending.UNFORCED_ERROR -> UNFORCED_ERROR
@@ -26,8 +33,8 @@ enum class FilterEnding {
 
 /**
  * The point filter of the Export tab (B-69, in docs/backlog-paid.md). It uses the details of advanced scoring.
- * - [players] are the players (1 or 2) who made the ending: the winner of an ace or a winner, and the other player
- *   for an error or a double fault.
+ * - [players] are the players (1 or 2) who made the ending: the winner of an ace, an unreturned serve, or a winner,
+ *   and the other player for an error or a double fault.
  * - In one group, a point matches when it has one of the selected values. A point must match each group that has a
  *   selection. A group with no selection keeps all points.
  */
@@ -47,7 +54,7 @@ data class PointFilter(
         if (!isActive) return true
         if (ending == null || player == null) return false
         if (players.isNotEmpty() && player !in players) return false
-        if (endings.isNotEmpty() && ending !in endings) return false
+        if (endings.isNotEmpty() && endings.none { it.covers(ending) }) return false
         if (errorKinds.isNotEmpty() && errorKind !in errorKinds) return false
         return true
     }

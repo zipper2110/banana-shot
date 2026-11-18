@@ -16,12 +16,17 @@ enum class EndingChoice(val winner: Int, val ending: Ending) {
     P1_FORCED_ERROR(2, Ending.FORCED_ERROR),
     P1_UNFORCED_ERROR(2, Ending.UNFORCED_ERROR),
     P2_ACE(2, Ending.ACE),
+    P1_UNRETURNED_SERVE(1, Ending.UNRETURNED_SERVE),
+    P2_UNRETURNED_SERVE(2, Ending.UNRETURNED_SERVE),
     ;
 
     /** The outcome that the button gives. */
     val outcome: Outcome get() = if (winner == 1) Outcome.P1 else Outcome.P2
 
-    /** The player (1 or 2) who made the ending: the winner for an ace and a winner, the other player for an error. */
+    /**
+     * The player (1 or 2) who made the ending: the winner for an ace, an unreturned serve, and a winner, the other
+     * player for an error.
+     */
     val player: Int get() = if (ending.isError) 3 - winner else winner
 
     companion object {
@@ -37,9 +42,9 @@ enum class EndingChoice(val winner: Int, val ending: Ending) {
 object PointEndings {
     /**
      * True when the user can use [choice] on a point that [server] serves. Only the group of the server has the ace
-     * button. When the server is not known, no group has it.
+     * button and the unreturned serve button. When the server is not known, no group has them.
      */
-    fun isAvailable(choice: EndingChoice, server: Int?): Boolean = choice.ending != Ending.ACE || server == choice.winner
+    fun isAvailable(choice: EndingChoice, server: Int?): Boolean = !choice.ending.isServeWin || server == choice.winner
 
     /**
      * [score] after an ending key on the clip with [pointId]: the new winner and the new ending. On a fault clip or a
@@ -99,10 +104,12 @@ object PointEndings {
 data class WinnerChange(
     val pointId: String,
     val number: Int,
-    /** True for a double fault, false for an ace. */
+    /** True for a double fault. False for an ace or an unreturned serve: see [unreturnedServe]. */
     val doubleFault: Boolean,
     val from: Outcome,
     val to: Outcome,
+    /** True for an unreturned serve (B-76). */
+    val unreturnedServe: Boolean = false,
 )
 
 /** A game or a set that goes to another player after a server change. [game] is null for a set. [from] and [to] are 1, 2, or null. */
@@ -133,6 +140,7 @@ object ServerChanges {
                 doubleFault = packs.of(point.id)?.kind == ClipKind.DOUBLE_FAULT,
                 from = oldOutcomes[point.id] ?: Outcome.NONE,
                 to = newOutcomes[point.id] ?: Outcome.NONE,
+                unreturnedServe = before.details[point.id]?.ending == Ending.UNRETURNED_SERVE,
             )
         }
         val oldResults = results(sorted, oldOutcomes, before)

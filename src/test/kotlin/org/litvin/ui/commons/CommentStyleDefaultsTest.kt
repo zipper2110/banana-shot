@@ -3,6 +3,7 @@ package org.litvin.ui.commons
 import org.litvin.points.CommentAnimation
 import org.litvin.points.CommentStyle
 import org.litvin.points.CommentV1
+import org.litvin.points.Replays
 import org.litvin.ui.flow.fakes.InMemoryPreferencesProvider
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,5 +51,31 @@ class CommentStyleDefaultsTest {
 
         node.put("default-comment-animation", "SPIN")
         assertEquals(CommentAnimation.NONE, PreferencesCommentStyleDefaults(node).load().animation)
+    }
+
+    @Test
+    fun `a new replay comment has 3 s until the user saves another time`() {
+        assertEquals(3_000L, PreferencesCommentStyleDefaults(node).loadReplayDurationMs())
+
+        PreferencesCommentStyleDefaults(node).saveReplayDurationMs(4_500L)
+
+        assertEquals(4_500L, PreferencesCommentStyleDefaults(node).loadReplayDurationMs())
+    }
+
+    @Test
+    fun `a saved replay comment time outside its range moves into the range`() {
+        node.putLong("default-replay-comment-duration-ms", 0L)
+        assertEquals(Replays.MIN_COMMENT_MS.toLong(), PreferencesCommentStyleDefaults(node).loadReplayDurationMs())
+
+        node.putLong("default-replay-comment-duration-ms", 999_999L)
+        assertEquals(Replays.MAX_COMMENT_MS.toLong(), PreferencesCommentStyleDefaults(node).loadReplayDurationMs())
+    }
+
+    @Test
+    fun `a saved look does not change the replay comment time`() {
+        PreferencesCommentStyleDefaults(node).saveReplayDurationMs(5_000L)
+        PreferencesCommentStyleDefaults(node).save(CommentLook(CommentStyle.CARD, 120, 90))
+
+        assertEquals(5_000L, PreferencesCommentStyleDefaults(node).loadReplayDurationMs())
     }
 }

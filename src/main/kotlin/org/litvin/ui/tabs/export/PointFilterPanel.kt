@@ -187,6 +187,7 @@ internal class PointFilterPanel(private val onChange: (PointFilter) -> Unit) : S
     private val player2 = FilterChip("export-filter-player-2", "")
     private val endings = linkedMapOf(
         FilterEnding.ACE to FilterChip("export-filter-ace", tr("stats.row.aces")),
+        FilterEnding.UNRETURNED_SERVE to FilterChip("export-filter-unreturned-serve", tr("stats.row.unreturnedServes")),
         FilterEnding.WINNER to FilterChip("export-filter-winner", tr("stats.row.winners")),
         FilterEnding.FORCED_ERROR to FilterChip("export-filter-forced-error", tr("stats.row.forcedErrors")),
         FilterEnding.UNFORCED_ERROR to FilterChip("export-filter-unforced-error", tr("stats.row.unforcedErrors")),

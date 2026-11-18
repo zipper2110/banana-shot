@@ -16,8 +16,9 @@ import kotlin.math.min
 
 /**
  * The second row of the point bar in advanced mode (B-68). It has the ending buttons over the full width of the bar,
- * so that their labels stay readable on a small screen. The left half gives the point to player 1, and the right half
- * gives it to player 2.
+ * so that their labels stay readable on a small screen. The left part gives the point to player 1, and the right part
+ * gives it to player 2. Each part gets the width that its buttons need, so the group of the server, with the ace and
+ * the unreturned serve, gets more width (B-76).
  * - The buttons show the full labels ("Ben unforced error") when all of them fit.
  * - Else they show the short labels ("Unforced"). A caption "Point for Ana" then starts each half, because a short
  *   label does not tell who gets the point. When the caption does not fit on one line, it shows on two lines.
@@ -63,7 +64,7 @@ internal class EndingsRow(
             layoutQuestion()
             return
         }
-        val half = max(0, (width - GROUP_SPLIT) / 2)
+        val total = max(0, width - GROUP_SPLIT)
         val groups = listOf(1, 2).map(::group)
         val full = groups.map { group -> group.map { (choice, button) -> button.widthFor(endings.fullLabel(choice)) } }
         val short = groups.map { group -> group.map { (choice, button) -> button.widthFor(endings.shortLabel(choice)) } }
@@ -71,11 +72,24 @@ internal class EndingsRow(
         val oneLine = captionTexts.map { ceil(UiKit.textWidth(it, font)).toInt() + CAPTION_GAP }
         val twoLines = captionTexts.map { text -> CaptionLines.split(text) { UiKit.textWidth(it, font) } }
         val twoLineWidths = twoLines.map { lines -> ceil(lines.maxOf { UiKit.textWidth(it, font) }).toInt() + CAPTION_GAP }
-        fun fits(widths: List<Int>, caption: Int) = caption + widths.sum() + gaps(widths.size) <= half
-        val useFull = groups.indices.all { fits(full[it], 0) }
-        val useOneLine = !useFull && groups.indices.all { fits(short[it], oneLine[it]) }
-        val showCaptions = useOneLine || (!useFull && groups.indices.all { fits(short[it], twoLineWidths[it]) })
+        fun need(widths: List<Int>, caption: Int) = caption + widths.sum() + gaps(widths.size)
+        val fullNeeds = groups.indices.map { need(full[it], 0) }
+        val oneLineNeeds = groups.indices.map { need(short[it], oneLine[it]) }
+        val twoLineNeeds = groups.indices.map { need(short[it], twoLineWidths[it]) }
+        val useFull = fullNeeds.sum() <= total
+        val useOneLine = !useFull && oneLineNeeds.sum() <= total
+        val showCaptions = useOneLine || (!useFull && twoLineNeeds.sum() <= total)
         val captionWidths = if (useOneLine) oneLine else twoLineWidths
+        // The server's group has more buttons (the ace and the unreturned serve, B-76). Thus each group gets a part of
+        // the width that agrees with the width that it needs, not one half.
+        val needs = when {
+            useFull -> fullNeeds
+            useOneLine -> oneLineNeeds
+            showCaptions -> twoLineNeeds
+            else -> groups.indices.map { need(short[it], 0) }
+        }
+        val firstWidth = if (needs.sum() <= 0) total / 2 else (total.toLong() * needs[0] / needs.sum()).toInt()
+        val groupWidths = listOf(firstWidth, total - firstWidth)
         captions.forEachIndexed { i, caption ->
             val text = if (useOneLine) captionTexts[i] else twoLines[i].joinToString("<br>", "<html>", "</html>", transform = ::escape)
             if (caption.text != text) caption.text = text
@@ -85,14 +99,14 @@ internal class EndingsRow(
             if (button.text != label) button.text = label
         }
         groups.forEachIndexed { i, group ->
-            val start = if (i == 0) 0 else width - half
+            val start = if (i == 0) 0 else width - groupWidths[1]
             var x = start
             captions[i].isVisible = showCaptions
             if (showCaptions) {
                 captions[i].setBounds(x, 0, captionWidths[i] - CAPTION_GAP, HEIGHT)
                 x += captionWidths[i]
             }
-            layoutGroup(group.map { it.second }, if (useFull) full[i] else short[i], x, start + half)
+            layoutGroup(group.map { it.second }, if (useFull) full[i] else short[i], x, start + groupWidths[i])
         }
     }
 

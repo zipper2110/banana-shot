@@ -42,6 +42,12 @@ enum class Ending {
     /** The serve lands in, and the receiver does not touch it. The server wins. */
     ACE,
 
+    /**
+     * The serve lands in, and the receiver touches it but does not return it in play (B-76). The server wins. The
+     * "Unreturned serves" statistic counts these endings and the aces.
+     */
+    UNRETURNED_SERVE,
+
     /** A shot lands in, and the opponent does not touch it. The player who hit it wins. */
     WINNER,
 
@@ -55,16 +61,19 @@ enum class Ending {
     /** True for a forced or an unforced error. Only these endings have an [ErrorKind]. */
     val isError: Boolean get() = this == FORCED_ERROR || this == UNFORCED_ERROR
 
-    /** True for an ending that gives the point: an ace, a winner, or an error. */
-    val endsRally: Boolean get() = this == ACE || this == WINNER || isError
+    /** True for an ending that always gives the point to the server: an ace or an unreturned serve. */
+    val isServeWin: Boolean get() = this == ACE || this == UNRETURNED_SERVE
+
+    /** True for an ending that gives the point: an ace, an unreturned serve, a winner, or an error. */
+    val endsRally: Boolean get() = isServeWin || this == WINNER || isError
 }
 
 /** Where an error went (B-68, the follow-up question). */
 enum class ErrorKind { NET, LONG, WIDE }
 
 /**
- * The details of one clip (B-68). The winner stays in [ScoreV1.outcomes]. The player who made a winner or an ace is the
- * point winner. The player who made an error is the other player. Thus the details need no player field.
+ * The details of one clip (B-68). The winner stays in [ScoreV1.outcomes]. The player who made a winner, an ace, or an
+ * unreturned serve is the point winner. The player who made an error is the other player. Thus the details need no player field.
  */
 data class PointDetailV1(
     val ending: Ending? = null,
@@ -241,9 +250,9 @@ object PointDetails {
      * The outcomes with the winners that the details give:
      * - a fault clip and a let clip have no winner,
      * - a double fault goes to the receiver,
-     * - an ace goes to the server.
+     * - an ace and an unreturned serve go to the server.
      *
-     * When the server of a clip is not known, an ace and a double fault keep their stored outcome. The server of a point
+     * When the server of a clip is not known, these endings keep their stored outcome. The server of a point
      * depends only on the points before it, so the loop ends after at most one round for each derived winner.
      */
     fun resolveOutcomes(points: List<PointV1>, score: ScoreV1): Map<String, Outcome> {
@@ -261,7 +270,7 @@ object PointDetails {
                 val derived = when (packs.of(point.id)?.kind) {
                     ClipKind.FAULT, ClipKind.LET -> Outcome.NONE
                     ClipKind.DOUBLE_FAULT -> server?.let { playerOutcome(3 - it) }
-                    ClipKind.POINT -> if (score.details[point.id]?.ending == Ending.ACE) server?.let(::playerOutcome) else null
+                    ClipKind.POINT -> if (score.details[point.id]?.ending?.isServeWin == true) server?.let(::playerOutcome) else null
                     ClipKind.NO_POINT, null -> null
                 }
                 if (derived != null) next[point.id] = derived
@@ -290,7 +299,7 @@ object PointDetails {
             Outcome.NONE -> return null
         }
         return when {
-            ending == Ending.ACE || ending == Ending.WINNER -> won
+            ending?.isServeWin == true || ending == Ending.WINNER -> won
             ending?.isError == true -> 3 - won
             else -> null
         }

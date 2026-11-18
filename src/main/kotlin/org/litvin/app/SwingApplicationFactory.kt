@@ -385,6 +385,7 @@ object SwingApplicationFactory {
                 services.dialogs,
                 services.encoderCapabilities,
                 hints,
+                previewPlayers = { services.mediaPlayers.create(MediaScreen.EXPORT_PREVIEW) },
             )
             closeActions += exportPanel::close
 

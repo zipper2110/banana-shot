@@ -78,6 +78,8 @@ data class DetailStats(
      */
     val detailedPoints: Int,
     val aces: PerPlayer<Int>,
+    /** The aces and the [Ending.UNRETURNED_SERVE] endings of the player (B-76). */
+    val unreturnedServes: PerPlayer<Int>,
     val doubleFaults: PerPlayer<Int>,
     /** The packs where the 1st serve was in, of the packs that the player served. Only packs with a known server count. */
     val firstServeIn: PerPlayer<Ratio>,
@@ -85,6 +87,10 @@ data class DetailStats(
     val firstServePointsWon: PerPlayer<Ratio>,
     /** The points that the server won on the 2nd serve, of the points that the player played on the 2nd serve. */
     val secondServePointsWon: PerPlayer<Ratio>,
+    /** The points that the player won on the 1st serve of the opponent, of the points that the opponent played on it (B-76). */
+    val firstServeReturnPointsWon: PerPlayer<Ratio>,
+    /** The points that the player won on the 2nd serve of the opponent, of the points that the opponent played on it (B-76). */
+    val secondServeReturnPointsWon: PerPlayer<Ratio>,
     val winners: PerPlayer<Int>,
     val forcedErrors: PerPlayer<Int>,
     val unforcedErrors: PerPlayer<Int>,
@@ -134,6 +140,12 @@ data class MatchStats(
      * of the deciding points in the range. Both players have the same total.
      */
     val decidingPointsWon: PerPlayer<Ratio> = PerPlayer(Ratio(0, 0), Ratio(0, 0)),
+    /**
+     * The tiebreaks that the player won, of the tiebreaks that ended in the range (B-76): the set tiebreaks, the match
+     * tiebreaks, and the single tiebreak of a tiebreak match. Both players have the same total. They come from the
+     * points, so a tiebreak that the user sets with a score override does not count. Manual scoring has no tiebreaks.
+     */
+    val tiebreaksWon: PerPlayer<Ratio> = PerPlayer(Ratio(0, 0), Ratio(0, 0)),
     val time: TimeStats,
     /** The statistics from the point details, or null for a project in basic mode (B-68). */
     val details: DetailStats? = null,
@@ -177,6 +189,7 @@ data class MatchStats(
                         fun wonBy(player: Int) = Ratio(deciding.count { winners[it] == player }, deciding.size)
                         PerPlayer(wonBy(1), wonBy(2))
                     },
+                tiebreaksWon = tiebreaks(indices, timeline),
                 time = timeStats(indices.map { points[it] }, indices.map { winners[it] }, indices.map { kinds[it] }),
                 details = if (advanced) detailStats(points, outcomes, details, packs, indices, timeline) else null,
             )
@@ -316,6 +329,20 @@ data class MatchStats(
             return PerPlayer(forPlayer(1), forPlayer(2))
         }
 
+        /** The tiebreaks that ended in [indices], and the winner of each. See [MatchStats.tiebreaksWon]. */
+        private fun tiebreaks(indices: List<Int>, timeline: ScoringEngine.Timeline): PerPlayer<Ratio> {
+            val won = IntArray(3)
+            var total = 0
+            for (i in indices) {
+                if (!timeline.stateBefore(i).isTiebreak) continue
+                val after = timeline.statesAfterPoint[i]
+                val winner = after.lastSetWonBy ?: after.lastGameWonBy ?: continue
+                total++
+                won[winner]++
+            }
+            return PerPlayer(Ratio(won[1], total), Ratio(won[2], total))
+        }
+
         private fun isDeucePoint(before: ScoringEngine.MatchState, rules: MatchRulesV1): Boolean =
             !rules.manualScoring && !before.isTiebreak && before.p1Pts == before.p2Pts && before.p1Pts >= 3
 
@@ -379,6 +406,7 @@ data class MatchStats(
             var detailed = 0
             var errors = 0
             val aces = IntArray(3)
+            val unreturned = IntArray(3)
             val doubleFaults = IntArray(3)
             val winners = IntArray(3)
             val forced = IntArray(3)
@@ -408,6 +436,7 @@ data class MatchStats(
                     if (player != null) {
                         when (detail.ending) {
                             Ending.ACE -> aces[player]++
+                            Ending.UNRETURNED_SERVE -> unreturned[player]++
                             Ending.WINNER -> winners[player]++
                             Ending.FORCED_ERROR -> forced[player]++
                             Ending.UNFORCED_ERROR -> unforced[player]++
@@ -432,13 +461,21 @@ data class MatchStats(
             }
             fun perPlayer(values: IntArray) = PerPlayer(values[1], values[2])
             fun ratios(won: IntArray, total: IntArray) = PerPlayer(Ratio(won[1], total[1]), Ratio(won[2], total[2]))
+            /** The points that each player won on the serves of the opponent: the points that the opponent lost. */
+            fun returnRatios(serverWon: IntArray, played: IntArray) = PerPlayer(
+                Ratio(played[2] - serverWon[2], played[2]),
+                Ratio(played[1] - serverWon[1], played[1]),
+            )
             return DetailStats(
                 detailedPoints = detailed,
                 aces = perPlayer(aces),
+                unreturnedServes = PerPlayer(aces[1] + unreturned[1], aces[2] + unreturned[2]),
                 doubleFaults = perPlayer(doubleFaults),
                 firstServeIn = ratios(firstIn, served),
                 firstServePointsWon = ratios(firstWon, firstPlayed),
                 secondServePointsWon = ratios(secondWon, secondPlayed),
+                firstServeReturnPointsWon = returnRatios(firstWon, firstPlayed),
+                secondServeReturnPointsWon = returnRatios(secondWon, secondPlayed),
                 winners = perPlayer(winners),
                 forcedErrors = perPlayer(forced),
                 unforcedErrors = perPlayer(unforced),

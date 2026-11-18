@@ -275,6 +275,44 @@ class MatchStatsTest {
         // The 2nd serves: p1 (won) and the double fault (lost).
         assertEquals(Ratio(1, 2), stats.secondServePointsWon.p1)
         assertEquals(Ratio(0, 0), stats.firstServeIn.p2)
+        // Player 1 served all packs, so only player 2 has return points: the points that player 1 lost.
+        assertEquals(Ratio(1, 3), stats.firstServeReturnPointsWon.p2)
+        assertEquals(Ratio(1, 2), stats.secondServeReturnPointsWon.p2)
+        assertEquals(Ratio(0, 0), stats.firstServeReturnPointsWon.p1)
+        // With no unreturned serve ending, the unreturned serves are the aces.
+        assertEquals(PerPlayer(1, 0), stats.unreturnedServes)
+    }
+
+    @Test
+    fun theUnreturnedServesCountTheAcesAndTheUnreturnedServeEndings() {
+        val (points, outcomes, details) = advancedMatch()
+        val withUnreturned = details + ("p1" to PointDetailV1(Ending.UNRETURNED_SERVE))
+        val timeline = ScoringEngine.timeline(points, outcomes, serverMarks = mapOf("p1" to Outcome.P1))
+
+        val stats = MatchStats.compute(points, outcomes, timeline, MatchRulesV1(), details = withUnreturned, advanced = true).details!!
+
+        assertEquals(PerPlayer(1, 0), stats.aces)
+        assertEquals(PerPlayer(2, 0), stats.unreturnedServes)
+        assertEquals(PerPlayer(0, 0), stats.winners)
+        assertEquals(4, stats.detailedPoints)
+    }
+
+    @Test
+    fun theTiebreaksWonCountTheSetTiebreaksAndTheMatchTiebreak() {
+        val rules = MatchRulesV1(finalSet = FinalSetRule.MATCH_TIEBREAK)
+        // Set 1: 6–6, then player 1 wins the tiebreak 7–0. Set 2: player 2 wins 6–0. Player 2 wins the match tiebreak 10–0.
+        val winners = ("1111" + "2222").repeat(6) + "1".repeat(7) + "2222".repeat(6) + "2".repeat(10)
+
+        val stats = stats(winners, rules)
+
+        assertEquals(PerPlayer(Ratio(1, 2), Ratio(1, 2)), stats.tiebreaksWon)
+    }
+
+    @Test
+    fun aMatchWithoutTiebreaksHasNoTiebreaksAndManualScoringHasNone() {
+        assertEquals(PerPlayer(Ratio(0, 0), Ratio(0, 0)), stats("1111".repeat(6)).tiebreaksWon)
+        val manual = ("1111" + "2222").repeat(6) + "1".repeat(7)
+        assertEquals(PerPlayer(Ratio(0, 0), Ratio(0, 0)), stats(manual, MatchRulesV1(manualScoring = true)).tiebreaksWon)
     }
 
     @Test

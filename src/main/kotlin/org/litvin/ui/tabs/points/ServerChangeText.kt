@@ -22,7 +22,11 @@ internal object ServerChangeText {
         fun name(player: Int?) = player?.let(players::name) ?: tr("points.outcome.noWinner")
         val winners = preview.winners.map { change ->
             val args = arrayOf("number" to change.number, "from" to name(change.from), "to" to name(change.to))
-            if (change.doubleFault) tr("points.serverChange.doubleFault", *args) else tr("points.serverChange.ace", *args)
+            when {
+                change.doubleFault -> tr("points.serverChange.doubleFault", *args)
+                change.unreturnedServe -> tr("points.serverChange.unreturnedServe", *args)
+                else -> tr("points.serverChange.ace", *args)
+            }
         }
         val scores = preview.scoreChanges.map { change ->
             if (change.game == null) {

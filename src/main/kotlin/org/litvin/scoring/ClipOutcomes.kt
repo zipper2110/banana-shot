@@ -20,8 +20,8 @@ enum class ClipChoice {
 /**
  * The full outcome of one clip in the Edit dialog of advanced mode (B-68, "Corrections").
  * - [winner] (1 or 2) is only for a [ClipChoice.POINT] clip.
- * - [ending] is only for a point clip: [Ending.ACE], [Ending.WINNER], [Ending.FORCED_ERROR], [Ending.UNFORCED_ERROR], or
- *   null for the winner only (as Q and E).
+ * - [ending] is only for a point clip: [Ending.ACE], [Ending.UNRETURNED_SERVE], [Ending.WINNER], [Ending.FORCED_ERROR],
+ *   [Ending.UNFORCED_ERROR], or null for the winner only (as Q and E).
  * - [errorKind] is only for an error ending.
  */
 data class ClipOutcome(
@@ -48,13 +48,14 @@ object ClipOutcomes {
     }
 
     /**
-     * [outcome] with only the fields that its kind uses. A point clip with no winner gets player 1. An ace goes to the
-     * [server] when the server is known, as for the ace keys. Only an error ending keeps an error kind.
+     * [outcome] with only the fields that its kind uses. A point clip with no winner gets player 1. An ace and an
+     * unreturned serve go to the [server] when the server is known, as for their keys. Only an error ending keeps an
+     * error kind.
      */
     fun normalized(outcome: ClipOutcome, server: Int? = null): ClipOutcome {
         if (outcome.kind != ClipChoice.POINT) return ClipOutcome(outcome.kind)
         val ending = outcome.ending?.takeIf { it.endsRally }
-        val winner = if (ending == Ending.ACE && server != null) server else outcome.winner?.takeIf { it == 1 || it == 2 } ?: 1
+        val winner = if (ending?.isServeWin == true && server != null) server else outcome.winner?.takeIf { it == 1 || it == 2 } ?: 1
         return ClipOutcome(ClipChoice.POINT, winner, ending, outcome.errorKind?.takeIf { ending?.isError == true })
     }
 

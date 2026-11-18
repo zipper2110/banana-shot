@@ -49,6 +49,29 @@ class PointsScoringEndingsTest {
     }
 
     @Test
+    fun `Z sends the unreturned serve of the server, and only the group of the server shows its button`() {
+        for (server in listOf(Outcome.P1, Outcome.P2)) {
+            withScoring(ScoreV1(scoringMode = ScoringMode.ADVANCED, serverMarks = mapOf("A" to server))) { _, scoring, requests, keys ->
+                keys.press("Z")
+                val expected = if (server == Outcome.P1) EndingChoice.P1_UNRETURNED_SERVE else EndingChoice.P2_UNRETURNED_SERVE
+                assertEquals(listOf<ScoreRequest>(ScoreRequest.WithEnding(expected)), requests)
+                assertEquals(server == Outcome.P1, scoring.controls.button("points-ending-p1-unreturned-serve").isVisible)
+                assertEquals(server == Outcome.P2, scoring.controls.button("points-ending-p2-unreturned-serve").isVisible)
+            }
+        }
+    }
+
+    @Test
+    fun `an unreturned serve gets the winner from the server`() = withScoring(
+        ScoreV1(scoringMode = ScoringMode.ADVANCED, serverMarks = mapOf("A" to Outcome.P2)),
+    ) { dir, scoring, _, _ ->
+        scoring.score(ScoreRequest.WithEnding(EndingChoice.P1_UNRETURNED_SERVE), "A")
+        val scored = ScoreIO.readForProjectDir(dir.path)
+        assertEquals(Outcome.P2, scored.outcomeOf("A"))
+        assertEquals(PointDetailV1(Ending.UNRETURNED_SERVE), scored.detailOf("A"))
+    }
+
+    @Test
     fun `basic mode ignores the ending keys`() = withScoring(ScoreV1(serverMarks = mapOf("A" to Outcome.P1))) { _, _, requests, keys ->
         keys.press("1")
         keys.press("NUMPAD8")

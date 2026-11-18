@@ -296,8 +296,8 @@ internal class PointsScoringControls(
         player2Button.isVisible = !state.advanced
         endingsRow.isVisible = state.advanced
         endings.buttons.forEach { (choice, button) ->
-            // Only the group of the server shows the ace button.
-            button.isVisible = state.advanced && !asking && (choice.ending != Ending.ACE || state.endingServer == choice.winner)
+            // Only the group of the server shows the ace button and the unreturned serve button.
+            button.isVisible = state.advanced && !asking && (!choice.ending.isServeWin || state.endingServer == choice.winner)
         }
         faultButton.isVisible = state.advanced
         letButton.isVisible = state.advanced

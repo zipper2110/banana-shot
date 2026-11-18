@@ -40,7 +40,10 @@ import org.litvin.ui.commons.HintBalloon
 import org.litvin.ui.commons.HintController
 import org.litvin.ui.commons.HintId
 import org.litvin.ui.commons.Palette
+import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UserDialogService
+import org.litvin.media.SwingMediaPlayer
+import org.kordamp.ikonli.feather.Feather
 import org.litvin.ui.commons.applyDarkScrollbar
 
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -69,6 +72,8 @@ class SwingExportPanel(
     private val dialogs: UserDialogService,
     encoderCapabilities: CompletableFuture<EncoderCapabilities>,
     private val hints: HintController = HintController.NONE,
+    /** Makes the player of the export preview (B-75). Null shows no Preview button. */
+    private val previewPlayers: (() -> SwingMediaPlayer)? = null,
 ) : JPanel(BorderLayout()), AutoCloseable {
     private val logger = KotlinLogging.logger {}
     private val closed = AtomicBoolean(false)
@@ -164,7 +169,14 @@ class SwingExportPanel(
         name = "export-initialize"
         addActionListener { onInitializeRender() }
     }
-    private val footer = ExportFooter(initButton)
+    private val previewButton = previewPlayers?.let {
+        UiButton(tr("export.preview.button"), Feather.EYE, buttonHeight = 46, fontSize = 14f).apply {
+            name = "export-preview-open"
+            toolTipText = tr("export.preview.button.tooltip")
+            addActionListener { onPreview() }
+        }
+    }
+    private val footer = ExportFooter(initButton, previewButton)
     // The left column: the export settings, or a notice when no project is open
     private val leftCards = JPanel(CardLayout())
 
@@ -488,37 +500,17 @@ class SwingExportPanel(
             ) return
         }
 
-        val score = try {
-            if (projectDir != null) ScoreIO.readForProjectDir(projectDir) else ScoreV1()
-        } catch (_: Throwable) {
-            ScoreV1()
-        }
         val plan = ExportPlanner.buildRenderPlan(
-            ExportRenderPlanRequest(
+            planRequest(
                 manifest = manifest,
-                sourcePath = source,
+                source = source,
                 edl = edl,
-                score = score,
+                projectDir = projectDir,
                 preset = selPreset,
-                resolution = target.resolution,
-                outputFrameRate = target.frameRate?.ffmpegArgument,
-                videoBitrateK = target.bitrateK,
-                encoderLabel = quality.encoder.jobLabel,
-                idleTrim = idleTrim,
-                favoriteOnly = favoriteOnly,
-                includeScoreboard = scoreboardCheck.isSelected,
-                includeComments = commentsCheck.isSelected,
+                quality = quality,
                 outputPath = out.absolutePath,
                 // The file dialog or the prompt above asked the user to replace an existing file.
                 replaceableOutputModifiedMs = out.takeIf { it.exists() }?.lastModified(),
-                sourceDurationMs = sourceInfo.durationMs,
-                includeStatsCard = statsCardCheck.isSelected,
-                includeSetSummaries = setSummariesCheck.isEnabled && setSummariesCheck.isSelected,
-                statsSettings = readCurrentStatsSettings(),
-                adjustments = adjustments.get(),
-                videoLanguage = videoLanguageRow.language,
-                includeServeClips = serveClipsSelected(),
-                pointFilter = pointFilterSelected(),
             )
         )
 
@@ -529,6 +521,105 @@ class SwingExportPanel(
             if (queued) tr("export.queued.text", "name" to out.name) else tr("export.started.text", "name" to out.name),
             if (queued) tr("export.queued") else tr("export.started"),
         )
+    }
+
+    /**
+     * The plan request of the current settings. The Export button and the Preview button (B-75) use it, so the preview
+     * shows the export that the same settings make.
+     */
+    private fun planRequest(
+        manifest: org.litvin.projects.ProjectManifestV1?,
+        source: String,
+        edl: EdlV1?,
+        projectDir: String?,
+        preset: org.litvin.ExportPreset,
+        quality: ExportQualitySelection,
+        outputPath: String,
+        replaceableOutputModifiedMs: Long?,
+    ): ExportRenderPlanRequest {
+        val score = try {
+            if (projectDir != null) ScoreIO.readForProjectDir(projectDir) else ScoreV1()
+        } catch (_: Throwable) {
+            ScoreV1()
+        }
+        val target = quality.target
+        return ExportRenderPlanRequest(
+            manifest = manifest,
+            sourcePath = source,
+            edl = edl,
+            score = score,
+            preset = preset,
+            resolution = target.resolution,
+            outputFrameRate = target.frameRate?.ffmpegArgument,
+            videoBitrateK = target.bitrateK,
+            encoderLabel = quality.encoder.jobLabel,
+            idleTrim = idleTrimSelected(),
+            favoriteOnly = favoriteOnlySelected(),
+            includeScoreboard = scoreboardCheck.isSelected,
+            includeComments = commentsCheck.isSelected,
+            outputPath = outputPath,
+            replaceableOutputModifiedMs = replaceableOutputModifiedMs,
+            sourceDurationMs = sourceInfo.durationMs,
+            includeStatsCard = statsCardCheck.isSelected,
+            includeSetSummaries = setSummariesCheck.isEnabled && setSummariesCheck.isSelected,
+            statsSettings = readCurrentStatsSettings(),
+            adjustments = adjustments.get(),
+            videoLanguage = videoLanguageRow.language,
+            includeServeClips = serveClipsSelected(),
+            pointFilter = pointFilterSelected(),
+        )
+    }
+
+    /**
+     * Opens the export preview (B-75) with the current settings. The preview window is modal (decision 6), so this
+     * function returns after the window closes.
+     */
+    private fun onPreview() {
+        val players = previewPlayers ?: return
+        val readiness = initializationReadiness()
+        if (!readiness.enabled) {
+            dialogs.showWarning(this, readiness.disabledReason ?: tr("export.readiness.notNow"), tr("export.preview.blocked"))
+            updateFavoriteOnlyAvailability()
+            updateInitButtonState()
+            return
+        }
+        val manifestPath = this.manifestPath
+        val manifest = try {
+            if (manifestPath.isNullOrBlank()) null else ManifestIO.read(manifestPath)
+        } catch (t: Throwable) {
+            showReportableError(ErrorTexts.of(t), tr("export.error.manifest"))
+            return
+        }
+        // A match of several files (B-49) exports its EDL file, and needs all its files.
+        val source = manifestPath?.let { path -> manifest?.let { ProjectSource.mediaPath(path, it) } }
+        if (source.isNullOrBlank() || !SourceVideo.of(source).filesExist()) {
+            dialogs.showError(this, tr("export.error.selectSource"), tr("points.error.videoMissing.title"))
+            return
+        }
+        val projectDir = if (manifestPath != null) EdlIO.projectDirFromManifest(manifestPath) else null
+        val edl = try { if (projectDir != null) EdlIO.readForProjectDir(projectDir) else null } catch (_: Throwable) { null }
+        val quality = qualityPanel.selection()
+        val presets = ExportPresetsIO.load()
+        val preset = presets.firstOrNull { it.id == quality.target.presetId } ?: presets[ExportPresetsIO.defaultBalancedIndex(presets)]
+        val plan = try {
+            ExportPlanner.buildRenderPlan(planRequest(manifest, source, edl, projectDir, preset, quality, "", null))
+        } catch (t: Throwable) {
+            logger.warn(t) { "Export preview: cannot make the plan" }
+            showReportableError(ErrorTexts.of(t), tr("export.preview.blocked"))
+            return
+        }
+        val pointNumbers = plan.allValidPoints.withIndex().associate { (index, point) -> point.id to index + 1 }
+        val content = RenderFormatting.formatCutMode(idleTrim = idleTrimSelected(), favoriteOnly = favoriteOnlySelected())
+        val title = tr("export.preview.title", "content" to content, "resolution" to quality.target.resolution.label)
+        ExportPreviewWindow(
+            owner = SwingUtilities.getWindowAncestor(this),
+            player = players(),
+            job = plan.job,
+            sourceFile = File(source),
+            sourceDurationMs = sourceInfo.durationMs,
+            pointNumbers = pointNumbers,
+            title = title,
+        ).showModal()
     }
 
     /**
@@ -951,7 +1042,11 @@ private class NoProjectNotice : JPanel(GridBagLayout()) {
     }
 }
 
-private class ExportFooter(private val button: StartExportButton) : JPanel(null) {
+/**
+ * The footer of the settings: the size and the settings of the next export, and the start button. With [preview], the
+ * size and the settings are on top, and the Preview button (B-75) is left of the start button in a row under them.
+ */
+private class ExportFooter(private val button: StartExportButton, private val preview: JComponent? = null) : JPanel(null) {
     private val sizeText = WrapText("", ExportUi.font(16f, ExportUi.Weight.BOLD), Palette.FG, lineHeight = 1.45f).apply {
         name = "export-footer-size"
     }
@@ -968,6 +1063,7 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
         background = BACKGROUND
         add(summary)
         add(button)
+        preview?.let { add(it) }
     }
 
     /** Shows the size, for example "~9.72 GB", and the settings, for example "Only points · 4K · 60 fps". */
@@ -978,19 +1074,34 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
         repaint()
     }
 
-    private fun summaryWidth() = (width - PAD_X * 2 - GAP - BUTTON_WIDTH).coerceAtLeast(0)
+    private fun summaryWidth() = if (preview != null) {
+        (width - PAD_X * 2).coerceAtLeast(0)
+    } else {
+        (width - PAD_X * 2 - GAP - BUTTON_WIDTH).coerceAtLeast(0)
+    }
 
     override fun getPreferredSize(): Dimension {
-        val summaryHeight = summary.heightForWidth(if (width > 0) summaryWidth() else 176)
+        val summaryHeight = summary.heightForWidth(if (width > 0) summaryWidth() else if (preview != null) 400 else 176)
+        if (preview != null) {
+            return Dimension(440, PAD_TOP + summaryHeight + ROW_GAP + button.preferredSize.height + PAD_BOTTOM)
+        }
         return Dimension(440, PAD_TOP + maxOf(summaryHeight, button.preferredSize.height) + PAD_BOTTOM)
     }
 
     override fun doLayout() {
-        val inner = height - PAD_TOP - PAD_BOTTOM
         val w = summaryWidth()
         val summaryHeight = summary.heightForWidth(w)
-        summary.setBounds(PAD_X, PAD_TOP + (inner - summaryHeight) / 2, w, summaryHeight)
         val buttonHeight = button.preferredSize.height
+        if (preview != null) {
+            summary.setBounds(PAD_X, PAD_TOP, w, summaryHeight)
+            val rowTop = PAD_TOP + summaryHeight + ROW_GAP
+            val buttonX = width - PAD_X - BUTTON_WIDTH
+            button.setBounds(buttonX, rowTop, BUTTON_WIDTH, buttonHeight)
+            preview.setBounds(PAD_X, rowTop, (buttonX - GAP - PAD_X).coerceAtLeast(0), buttonHeight)
+            return
+        }
+        val inner = height - PAD_TOP - PAD_BOTTOM
+        summary.setBounds(PAD_X, PAD_TOP + (inner - summaryHeight) / 2, w, summaryHeight)
         button.setBounds(width - PAD_X - BUTTON_WIDTH, PAD_TOP + (inner - buttonHeight) / 2, BUTTON_WIDTH, buttonHeight)
     }
 
@@ -1014,6 +1125,7 @@ private class ExportFooter(private val button: StartExportButton) : JPanel(null)
         const val PAD_BOTTOM = 14
         const val GAP = 14
         const val BUTTON_WIDTH = 210
+        const val ROW_GAP = 10
         val BACKGROUND get() = Palette.PANEL
     }
 }

@@ -35,6 +35,7 @@ internal class EndingButtons(onEnding: (EndingChoice) -> Unit) {
         val name = players.name(choice.player)
         return when (choice.ending) {
             Ending.ACE -> tr("points.ending.ace", "name" to name)
+            Ending.UNRETURNED_SERVE -> tr("points.ending.unreturnedServe", "name" to name)
             Ending.WINNER -> tr("points.ending.winner", "name" to name)
             Ending.FORCED_ERROR -> tr("points.ending.forcedError", "name" to name)
             else -> tr("points.ending.unforcedError", "name" to name)
@@ -44,6 +45,7 @@ internal class EndingButtons(onEnding: (EndingChoice) -> Unit) {
     /** The short label of a narrow point bar. The color strip shows the player who gets the point. */
     fun shortLabel(choice: EndingChoice): String = when (choice.ending) {
         Ending.ACE -> tr("points.ending.short.ace")
+        Ending.UNRETURNED_SERVE -> tr("points.ending.short.unreturnedServe")
         Ending.WINNER -> tr("points.ending.short.winner")
         Ending.FORCED_ERROR -> tr("points.ending.short.forcedError")
         else -> tr("points.ending.short.unforcedError")
@@ -53,6 +55,7 @@ internal class EndingButtons(onEnding: (EndingChoice) -> Unit) {
         val name = players.name(choice.player)
         val rule = when (choice.ending) {
             Ending.ACE -> tr("points.ending.ace.tooltip", "name" to name)
+            Ending.UNRETURNED_SERVE -> tr("points.ending.unreturnedServe.tooltip", "name" to name)
             Ending.WINNER -> tr("points.ending.winner.tooltip", "name" to name)
             Ending.FORCED_ERROR -> tr("points.ending.forcedError.tooltip", "name" to name)
             else -> tr("points.ending.unforcedError.tooltip", "name" to name)
@@ -64,13 +67,17 @@ internal class EndingButtons(onEnding: (EndingChoice) -> Unit) {
     }
 
     companion object {
-        /** The order of the buttons in the point bar. The right group mirrors the left group. */
+        /**
+         * The order of the buttons in the point bar. The right group mirrors the left group. The serve buttons (the ace
+         * and the unreturned serve) are next to the center.
+         */
         val ORDER = listOf(
             EndingChoice.P1_WINNER, EndingChoice.P2_FORCED_ERROR, EndingChoice.P2_UNFORCED_ERROR, EndingChoice.P1_ACE,
+            EndingChoice.P1_UNRETURNED_SERVE, EndingChoice.P2_UNRETURNED_SERVE,
             EndingChoice.P2_ACE, EndingChoice.P1_UNFORCED_ERROR, EndingChoice.P1_FORCED_ERROR, EndingChoice.P2_WINNER,
         )
 
-        /** The key of each ending button. */
+        /** The key of each ending button. The two unreturned serve buttons have the same key (Z). */
         fun keyOf(choice: EndingChoice): AppShortcut = when (choice) {
             EndingChoice.P1_WINNER -> AppShortcuts.ENDING_P1_WINNER
             EndingChoice.P2_FORCED_ERROR -> AppShortcuts.ENDING_P2_FORCED_ERROR
@@ -80,6 +87,7 @@ internal class EndingButtons(onEnding: (EndingChoice) -> Unit) {
             EndingChoice.P1_UNFORCED_ERROR -> AppShortcuts.ENDING_P1_UNFORCED_ERROR
             EndingChoice.P1_FORCED_ERROR -> AppShortcuts.ENDING_P1_FORCED_ERROR
             EndingChoice.P2_WINNER -> AppShortcuts.ENDING_P2_WINNER
+            EndingChoice.P1_UNRETURNED_SERVE, EndingChoice.P2_UNRETURNED_SERVE -> AppShortcuts.ENDING_UNRETURNED_SERVE
         }
     }
 }

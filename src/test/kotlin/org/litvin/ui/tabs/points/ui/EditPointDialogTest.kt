@@ -84,9 +84,9 @@ class EditPointDialogTest {
             val dialog = EditPointDialog.build(JPanel(), PointDto("p1", 1_000, 2_000, null), 1, RecordingActions(edits, form = form))
             val ending = dialog.find("points-edit-ending") as JComboBox<*>
             // The labels name the player who made the ending: an error of Ben gives the point to Ana.
-            assertEquals("Ben unforced error", ending.getItemAt(4).toString())
+            assertEquals("Ben unforced error", ending.getItemAt(5).toString())
             assertFalse(dialog.find("points-edit-error-kind").isEnabled)
-            ending.selectedIndex = 4
+            ending.selectedIndex = 5
             assertTrue(dialog.find("points-edit-error-kind").isEnabled)
             // An ace goes to the server: Ben.
             ending.selectedIndex = 1

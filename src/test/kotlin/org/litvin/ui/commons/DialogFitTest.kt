@@ -117,6 +117,7 @@ class DialogFitTest {
             "ScoreboardSettingsDialog.kt" to "fitToScreen gives a size in the screen area",
             "HelpDialog.kt" to "a fixed size of 900 x 650; the user can make it smaller",
             "MoreDialog.kt" to "a fixed size of 820 x 560; the user can make it smaller",
+            "ExportPreviewWindow.kt" to "80% of the usable screen area, in the center of the screen of the owner",
         ).keys
     }
 }

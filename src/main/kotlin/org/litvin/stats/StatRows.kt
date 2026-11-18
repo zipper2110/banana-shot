@@ -22,7 +22,6 @@ enum class StatGroup {
     ENDINGS,
     PRESSURE,
     POINT_LENGTH,
-    MOMENTUM,
     TIME,
     ;
 
@@ -33,7 +32,6 @@ enum class StatGroup {
             ENDINGS -> tr("stats.group.endings")
             PRESSURE -> tr("stats.group.pressure")
             POINT_LENGTH -> tr("stats.group.pointLength")
-            MOMENTUM -> tr("stats.group.momentum")
             TIME -> tr("stats.group.time")
         }
 }
@@ -87,9 +85,6 @@ enum class MatchStat(
     AVERAGE_POINT_WON("average_point_won", StatGroup.POINT_LENGTH),
     SHORT_POINTS_WON("short_points_won", StatGroup.POINT_LENGTH, inVideoByDefault = true),
     LONG_POINTS_WON("long_points_won", StatGroup.POINT_LENGTH, inVideoByDefault = true),
-    LONGEST_POINT_RUN("longest_point_run", StatGroup.MOMENTUM),
-    LONGEST_GAME_RUN("longest_game_run", StatGroup.MOMENTUM),
-    LARGEST_POINT_LEAD("largest_point_lead", StatGroup.MOMENTUM),
     DURATION("duration", StatGroup.TIME, inVideoByDefault = true),
     PLAYING_TIME("playing_time", StatGroup.TIME),
     AVERAGE_POINT("average_point", StatGroup.TIME),
@@ -127,9 +122,6 @@ enum class MatchStat(
             AVERAGE_POINT_WON -> tr("stats.row.averagePointWon")
             SHORT_POINTS_WON -> tr("stats.row.shortPointsWon")
             LONG_POINTS_WON -> tr("stats.row.longPointsWon")
-            LONGEST_POINT_RUN -> tr("stats.row.longestPointRun")
-            LONGEST_GAME_RUN -> tr("stats.row.longestGameRun")
-            LARGEST_POINT_LEAD -> tr("stats.row.largestPointLead")
             DURATION -> tr("stats.row.duration")
             PLAYING_TIME -> tr("stats.row.playingTime")
             AVERAGE_POINT -> tr("stats.row.averagePoint")
@@ -137,7 +129,10 @@ enum class MatchStat(
         }
 
     companion object {
-        /** The old keys in stats.json and the keys that replace them. */
+        /**
+     * The old keys in stats.json and the keys that replace them. The app ignores the keys of removed rows, for example
+     * "longest_point_run", "longest_game_run", and "largest_point_lead".
+     */
         val REPLACED_KEYS: Map<String, String> = mapOf("deuce_points_won" to "deuce_games_won")
 
         fun ofKey(key: String): MatchStat? = entries.firstOrNull { it.key == key }
@@ -179,8 +174,6 @@ data class StatRow(
     val unavailableReason: String? = null,
     val bar: PerPlayer<Double>? = null,
     val barMax: Double? = null,
-    /** The point that each value comes from, when the value comes from one point. */
-    val pointIds: PerPlayer<String?>? = null,
     /** The point that the shared value comes from. */
     val sharedPointId: String? = null,
     /** The text of the row. Some rows add their settings to [MatchStat.label]. */
@@ -336,9 +329,6 @@ object StatRows {
                 manual -> unavailable(MANUAL_SCORING)
                 else -> fractions(stats.decidingPointsWon)
             }
-            MatchStat.LONGEST_POINT_RUN -> counts(stats.longestPointRun).copy(pointIds = stats.keyPoints.longestPointRunStart)
-            MatchStat.LONGEST_GAME_RUN -> if (!hasGames) unavailable(NO_GAMES) else counts(stats.longestGameRun)
-            MatchStat.LARGEST_POINT_LEAD -> counts(stats.largestPointLead).copy(pointIds = stats.keyPoints.largestPointLeadAt)
             MatchStat.DURATION -> shared(time.durationMs.takeIf { stats.scoredPoints > 0 }?.let { StatValue(clock(it)) })
             MatchStat.PLAYING_TIME -> shared(time.playingMs.takeIf { stats.points > 0 }?.let { StatValue(clock(it)) })
             MatchStat.AVERAGE_POINT -> shared(time.averagePointMs?.let { StatValue(seconds(it)) })

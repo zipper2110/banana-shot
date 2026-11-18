@@ -64,8 +64,7 @@ starts. A text shows over it, by default "Coming up...".
   place of the text of the block, for example "Match point".
 - Suggested points: the app shows the points that are good teasers first.
   For example the match point, the longest point, the set points and break
-  points that the player won (`PointStakes`), and the start of the longest
-  point run (`KeyPoints`).
+  points that the player won (`PointStakes`).
 - Text: the user can change the text and its position. The text can have
   placeholders. Examples: "Coming up...", "Watch this", "{player1} saves a
   match point".

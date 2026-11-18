@@ -662,8 +662,8 @@ internal class StatRowView(val stat: MatchStat, onInVideo: (MatchStat, Boolean, 
             }
             values != null -> {
                 val lead = leader(row.bar)
-                p1.show(values.p1, if (lead == 1) Palette.FG_STRONG else Palette.FG_2, row.pointIds?.p1)
-                p2.show(values.p2, if (lead == 2) Palette.FG_STRONG else Palette.FG_2, row.pointIds?.p2)
+                p1.show(values.p1, if (lead == 1) Palette.FG_STRONG else Palette.FG_2, null)
+                p2.show(values.p2, if (lead == 2) Palette.FG_STRONG else Palette.FG_2, null)
                 bar.values = row.bar
                 bar.colors = colors
                 // A row of advanced mode tells which part of the points it counts, under the bar (B-68).

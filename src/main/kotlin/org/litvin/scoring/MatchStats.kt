@@ -100,18 +100,10 @@ data class DetailStats(
 /** The duration of a point that has a winner. [winner] is 1 or 2. */
 data class ScoredDuration(val durationMs: Long, val winner: Int)
 
-/** The points that some statistics come from. The Stats tab opens them in the Points tab. */
-data class KeyPoints(
-    /** The first point of the longest point run of each player. Null when the player won no point. */
-    val longestPointRunStart: PerPlayer<String?> = PerPlayer(null, null),
-    /** The point where the player first has the largest lead. Null when the player never leads. */
-    val largestPointLeadAt: PerPlayer<String?> = PerPlayer(null, null),
-)
-
 /**
  * Match statistics for a range of points: the full match or one set.
  *
- * Only the points that have a winner count. An unscored point or a point with no outcome does not stop a run of points.
+ * Only the points that have a winner count.
  */
 data class MatchStats(
     /** The points in the range. */
@@ -142,14 +134,7 @@ data class MatchStats(
      * of the deciding points in the range. Both players have the same total.
      */
     val decidingPointsWon: PerPlayer<Ratio> = PerPlayer(Ratio(0, 0), Ratio(0, 0)),
-    /** The most points in a row that the player won. */
-    val longestPointRun: PerPlayer<Int>,
-    /** The most games in a row that the player won. */
-    val longestGameRun: PerPlayer<Int>,
-    /** The largest lead in points won that the player had. */
-    val largestPointLead: PerPlayer<Int>,
     val time: TimeStats,
-    val keyPoints: KeyPoints = KeyPoints(),
     /** The statistics from the point details, or null for a project in basic mode (B-68). */
     val details: DetailStats? = null,
 ) {
@@ -192,19 +177,7 @@ data class MatchStats(
                         fun wonBy(player: Int) = Ratio(deciding.count { winners[it] == player }, deciding.size)
                         PerPlayer(wonBy(1), wonBy(2))
                     },
-                longestPointRun = longestRun(scored.map { winners[it]!! }),
-                longestGameRun = longestRun(gameWinners(indices, timeline)),
-                largestPointLead = largestLead(scored.map { winners[it]!! }),
                 time = timeStats(indices.map { points[it] }, indices.map { winners[it] }, indices.map { kinds[it] }),
-                keyPoints = scored.map { winners[it]!! }.let { players ->
-                    fun idOf(position: Int?) = position?.let { points[scored[it]].id }
-                    val runs = longestRunStarts(players)
-                    val leads = largestLeadPoints(players)
-                    KeyPoints(
-                        longestPointRunStart = PerPlayer(idOf(runs.p1), idOf(runs.p2)),
-                        largestPointLeadAt = PerPlayer(idOf(leads.p1), idOf(leads.p2)),
-                    )
-                },
                 details = if (advanced) detailStats(points, outcomes, details, packs, indices, timeline) else null,
             )
         }
@@ -279,13 +252,6 @@ data class MatchStats(
             val before = value(timeline.stateBefore(indices.first()), setsBefore(timeline, indices.first()))
             val after = value(timeline.statesAfterPoint[indices.last()], timeline.setsAfterPoint[indices.last()])
             return PerPlayer((after.p1 - before.p1).coerceAtLeast(0), (after.p2 - before.p2).coerceAtLeast(0))
-        }
-
-        /** The winner of each game in order. A score override that adds games adds them for the player that gets them. */
-        private fun gameWinners(indices: List<Int>, timeline: ScoringEngine.Timeline): List<Int> = indices.flatMap { i ->
-            val before = gamesInScore(timeline.stateBefore(i), setsBefore(timeline, i))
-            val after = gamesInScore(timeline.statesAfterPoint[i], timeline.setsAfterPoint[i])
-            List((after.p1 - before.p1).coerceAtLeast(0)) { 1 } + List((after.p2 - before.p2).coerceAtLeast(0)) { 2 }
         }
 
         private fun count(indices: List<Int>, playerOf: (Int) -> Int?): PerPlayer<Int> {
@@ -371,64 +337,6 @@ data class MatchStats(
                 reachedDeuce = false
             }
             return PerPlayer(Ratio(won[1], total), Ratio(won[2], total))
-        }
-
-        private fun longestRun(players: List<Int>): PerPlayer<Int> {
-            val best = IntArray(3)
-            var current = 0
-            players.forEachIndexed { index, player ->
-                current = if (index > 0 && players[index - 1] == player) current + 1 else 1
-                if (current > best[player]) best[player] = current
-            }
-            return PerPlayer(best[1], best[2])
-        }
-
-        /** The position of the first point of the first longest run of each player. */
-        private fun longestRunStarts(players: List<Int>): PerPlayer<Int?> {
-            val best = IntArray(3)
-            val bestStart = arrayOfNulls<Int>(3)
-            var current = 0
-            players.forEachIndexed { index, player ->
-                current = if (index > 0 && players[index - 1] == player) current + 1 else 1
-                if (current > best[player]) {
-                    best[player] = current
-                    bestStart[player] = index - current + 1
-                }
-            }
-            return PerPlayer(bestStart[1], bestStart[2])
-        }
-
-        /** The position of the point where each player first has the largest lead. */
-        private fun largestLeadPoints(players: List<Int>): PerPlayer<Int?> {
-            var difference = 0
-            var p1Lead = 0
-            var p2Lead = 0
-            var p1At: Int? = null
-            var p2At: Int? = null
-            players.forEachIndexed { index, player ->
-                difference += if (player == 1) 1 else -1
-                if (difference > p1Lead) {
-                    p1Lead = difference
-                    p1At = index
-                }
-                if (-difference > p2Lead) {
-                    p2Lead = -difference
-                    p2At = index
-                }
-            }
-            return PerPlayer(p1At, p2At)
-        }
-
-        private fun largestLead(players: List<Int>): PerPlayer<Int> {
-            var difference = 0
-            var p1Lead = 0
-            var p2Lead = 0
-            for (player in players) {
-                difference += if (player == 1) 1 else -1
-                p1Lead = maxOf(p1Lead, difference)
-                p2Lead = maxOf(p2Lead, -difference)
-            }
-            return PerPlayer(p1Lead, p2Lead)
         }
 
         /**

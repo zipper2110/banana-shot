@@ -583,3 +583,28 @@ The work for the paid version is in `backlog-paid.md`.
   `docs/export-preview/b-75-tasks.md`.
 - Done when: the preview of "Only points" and of "Only favorites" shows
   the same content, scoreboard, comments, replays, and cards as the export.
+
+### B-76 More serve and return statistics
+
+- Added on 2026-11-18. TV statistics (ATP, WTA, Grand Slams) show these
+  rows, and the Stats tab does not have them.
+- 1st serve return points won and 2nd serve return points won: the points
+  that the player won on the opponent's 1st serve and 2nd serve. Advanced
+  mode (B-68) already has the data (`ServePacks`). Put the rows in the Serve
+  group, after "Points won on return".
+- Tiebreaks won: the tiebreaks and the match tiebreaks that the player won,
+  of the tiebreaks played. The score already has the data. Basic mode also
+  shows it. Put the row in the Overview group, after "Sets won".
+- Unreturned serves: the serves in that the receiver touches but does not
+  return in play. Add a new ending "Unreturned serve" next to Ace
+  (`Ending`). The server wins. Show it in the point bar, the endings row,
+  and the help page (`HelpPage.ADVANCED_SCORING`). Update the B-68 concept
+  (`docs/point-details/b-68-point-details.md`).
+- Decided on 2026-11-18: the "Unreturned serves" row counts the aces and
+  the new ending. The "Aces" row stays.
+- Decided on 2026-11-18: Z is the key of the new ending for now
+  (`AppShortcuts`). The ending always gives the point to the server, so one
+  key is sufficient, as for X (serve fault).
+- Open question: what Z does when the point has no known server.
+- Done when: the Stats tab shows the four new rows for a match marked in
+  advanced mode, and "Tiebreaks won" also in basic mode.

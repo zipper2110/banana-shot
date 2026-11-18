@@ -116,31 +116,12 @@ class MatchStatsTest {
     }
 
     @Test
-    fun runsAndLargestLead() {
-        val stats = stats("11122111")
-
-        assertEquals(PerPlayer(3, 2), stats.longestPointRun)
-        assertEquals(PerPlayer(4, 0), stats.largestPointLead)
-    }
-
-    @Test
-    fun anUnscoredPointDoesNotStopARun() {
-        assertEquals(PerPlayer(3, 0), stats("11-1").longestPointRun)
-    }
-
-    @Test
-    fun longestGameRun() {
-        assertEquals(PerPlayer(2, 1), stats("1111" + "2222" + "1111" + "1111").longestGameRun)
-    }
-
-    @Test
     fun gamesFromAScoreOverrideCount() {
         // Player 1 wins a game. Then the user sets the games to 3–0 on a point without a winner.
         val stats = stats("1111" + ".", overrides = mapOf("p5" to ScoreOverrideV1(games = ScorePairV1(3, 0))))
 
         assertEquals(PerPlayer(4, 0), stats.pointsWon)
         assertEquals(PerPlayer(3, 0), stats.gamesWon)
-        assertEquals(PerPlayer(3, 0), stats.longestGameRun)
     }
 
     @Test
@@ -369,27 +350,7 @@ class MatchStatsTest {
         assertEquals(0L, stats.time.durationMs)
         assertNull(stats.time.averagePointMs)
         assertNull(stats.time.longestPoint)
-        assertEquals(PerPlayer(0, 0), stats.longestPointRun)
-    }
-
-    @Test
-    fun theKeyPointsAreTheStartOfTheLongestRunAndThePointOfTheLargestLead() {
-        // An unscored point (p6) does not stop the run of player 1: p5, p7 and p8.
-        val stats = stats("12221.11")
-
-        assertEquals(PerPlayer(3, 3), stats.longestPointRun)
-        assertEquals(PerPlayer<String?>("p5", "p2"), stats.keyPoints.longestPointRunStart)
-        assertEquals(PerPlayer(1, 2), stats.largestPointLead)
-        assertEquals(PerPlayer<String?>("p1", "p4"), stats.keyPoints.largestPointLeadAt)
-    }
-
-    @Test
-    fun aPlayerWithoutPointsHasNoKeyPoints() {
-        val stats = stats("111")
-
-        assertNull(stats.keyPoints.longestPointRunStart.p2)
-        assertNull(stats.keyPoints.largestPointLeadAt.p2)
-        assertEquals("p3", stats.keyPoints.largestPointLeadAt.p1)
+        assertEquals(PerPlayer(0, 0), stats.pointsWon)
     }
 
     private fun stats(

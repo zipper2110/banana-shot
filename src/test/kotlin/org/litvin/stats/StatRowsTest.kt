@@ -132,7 +132,7 @@ class StatRowsTest {
 
         assertEquals(StatRows.NO_GAMES, rows.of(MatchStat.GAMES_WON).unavailableReason)
         assertEquals(StatRows.NO_MATCH_END, rows.of(MatchStat.MATCH_POINTS_WON).unavailableReason)
-        assertTrue(rows.of(MatchStat.LONGEST_POINT_RUN).available)
+        assertTrue(rows.of(MatchStat.POINTS_WON).available)
     }
 
     @Test

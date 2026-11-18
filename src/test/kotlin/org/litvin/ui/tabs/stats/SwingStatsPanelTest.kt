@@ -120,7 +120,7 @@ class SwingStatsPanelTest {
             val panel = openPanel()
             val overview = panel.find<GroupHeaderRow>("stats-group-overview")!!
             assertEquals("1 of 3", overview.countText)
-            assertEquals("0 of 3", panel.find<GroupHeaderRow>("stats-group-momentum")!!.countText)
+            assertEquals("1 of 4", panel.find<GroupHeaderRow>("stats-group-time")!!.countText)
 
             panel.find<JCheckBox>("stats-in-video-${MatchStat.GAMES_WON.key}")!!.doClick()
 
@@ -240,14 +240,13 @@ class SwingStatsPanelTest {
         onEdt {
             val panel = openPanel(onOpenPoint = { opened += it })
 
-            // Player 2 wins the longest run, from point 2. All points are 5 s long, so the first point is the longest.
+            // All points are 5 s long, so the first point is the longest.
             // A release outside the value is not a click, so the values must have a size.
-            panel.find<JComponent>("stats-value-longest_point_run-p2")!!.apply { setSize(100, 40) }.click(5, 5)
             panel.find<JComponent>("stats-value-longest_point")!!.apply { setSize(100, 40) }.click(5, 5)
             assertTrue(panel.find<JComponent>("stats-value-points_won-p1")!!.mouseListeners.isEmpty())
         }
 
-        assertEquals(listOf("p2", "p1"), opened)
+        assertEquals(listOf("p1"), opened)
     }
 
     @Test

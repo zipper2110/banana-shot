@@ -25,8 +25,9 @@ import javax.swing.JComboBox
  * The Settings section of the More window.
  * [themeSettings] saves and applies the theme and the accent color that the user selects.
  * [onShowHintsAgain] makes all hints show again, and [onOpenFolder] opens a folder in the file manager.
- * [language] adds the Language card. It is the first card, so that a user who cannot read the current language
- * finds it (B-11, "Path back to English").
+ * The Theme card is the first card.
+ * [language] adds the Language card. It comes directly after the Theme card, so that a user who cannot read the
+ * current language finds it (B-11, "Path back to English").
  * [scoringMode] adds the Scoring card with the default scoring mode of new tennis projects (B-68).
  * [askErrorKind] adds the default of the option "Ask error kind" of advanced mode to the Scoring card (B-68).
  * [serveClips] adds the default of the export option "Include serve faults and lets" to the Scoring card (B-68).
@@ -45,10 +46,31 @@ internal class SettingsPage(
 ) : SectionPage(TITLE) {
     init {
         name = "more-settings"
+        themeCard()
         if (language != null) languageCard(language)
         if (scoringMode != null) scoringCard(scoringMode, serveClips, askErrorKind)
         if (preventSleep != null) exportCard(preventSleep)
 
+        subheading(tr("settings.hints"))
+        paragraph(tr("settings.hints.text"))
+        lateinit var hintsStatus: StatusLine
+        buttonRow(secondaryButton(tr("settings.hints.showAgain"), Material2MZ.RESTORE) {
+            onShowHintsAgain()
+            hintsStatus.text = tr("settings.hints.shown")
+        }.apply { name = "more-settings-show-hints" })
+        hintsStatus = statusLine(Palette.SAGE)
+
+        subheading(tr("settings.data"))
+        paragraph(tr("settings.data.text"))
+        valueRow(tr("settings.data.folder"), dataFolder.absolutePath)
+        lateinit var folderStatus: StatusLine
+        buttonRow(secondaryButton(tr("settings.data.openFolder"), Material2AL.FOLDER_OPEN) {
+            folderStatus.text = if (onOpenFolder(dataFolder)) "" else tr("settings.data.openFailed")
+        }.apply { name = "more-settings-open-data-folder" })
+        folderStatus = statusLine()
+    }
+
+    private fun themeCard() {
         subheading(tr("settings.theme"))
         paragraph(tr("settings.theme.text"))
         addItem(ThemeSwitch("more-settings-theme", themeSettings))
@@ -77,24 +99,6 @@ internal class SettingsPage(
         }
         themeSettings.onChange { defaultAccent.isEnabled = themeSettings.customAccent != null }
         buttonRow(accentSwatch, defaultAccent)
-
-        subheading(tr("settings.hints"))
-        paragraph(tr("settings.hints.text"))
-        lateinit var hintsStatus: StatusLine
-        buttonRow(secondaryButton(tr("settings.hints.showAgain"), Material2MZ.RESTORE) {
-            onShowHintsAgain()
-            hintsStatus.text = tr("settings.hints.shown")
-        }.apply { name = "more-settings-show-hints" })
-        hintsStatus = statusLine(Palette.SAGE)
-
-        subheading(tr("settings.data"))
-        paragraph(tr("settings.data.text"))
-        valueRow(tr("settings.data.folder"), dataFolder.absolutePath)
-        lateinit var folderStatus: StatusLine
-        buttonRow(secondaryButton(tr("settings.data.openFolder"), Material2AL.FOLDER_OPEN) {
-            folderStatus.text = if (onOpenFolder(dataFolder)) "" else tr("settings.data.openFailed")
-        }.apply { name = "more-settings-open-data-folder" })
-        folderStatus = statusLine()
     }
 
     private fun scoringCard(setting: ChoiceSetting, serveClips: FlagSetting?, askErrorKind: FlagSetting?) {

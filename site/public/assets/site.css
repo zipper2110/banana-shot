@@ -496,22 +496,53 @@ kbd {
 .features-hero { padding: 96px 0 0; text-align: center; }
 .features-hero h1 { font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: -0.035em; line-height: 1.04; }
 .features-hero .lead { max-width: 36em; margin: 0 auto; font-size: 1.2rem; color: var(--fg-2); }
-/* The links to the parts of the page. */
-.jump { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 900px; margin: 36px auto 0; padding: 0; list-style: none; }
-.jump a { display: inline-block; padding: 7px 14px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge); color: var(--fg); font-size: 0.92rem; text-decoration: none; }
-.jump a:hover { border-color: var(--lime-edge); color: var(--fg-strong); }
-.features-page .section-head { margin-bottom: 72px; }
-.features-page .feature-rows { gap: 112px; }
-.features-page .feature-row { scroll-margin-top: 96px; }
-.feature-row ul.feature-points { margin: 18px 0 0; padding: 0; list-style: none; color: var(--fg-2); }
+/* The feature map: a card for each group, with links to its features. */
+.fmap { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin: 48px 0 0; text-align: left; }
+.fmap-group { padding: 18px 18px 16px; border-radius: var(--radius); background: rgba(255, 255, 255, 0.045); border: 1px solid rgba(255, 255, 255, 0.07); border-top: 3px solid rgba(200, 236, 70, 0.7); box-shadow: var(--glass-light); }
+.fmap-head { display: block; margin-bottom: 10px; color: var(--fg-strong); font-weight: 650; font-size: 1.02rem; text-decoration: none; }
+.fmap-group ul { margin: 0; padding: 0; list-style: none; }
+.fmap-group li { margin: 0 0 6px; }
+.fmap-group li a { color: var(--fg-2); font-size: 0.93rem; text-decoration: none; }
+.fmap-head:hover, .fmap-group li a:hover { color: var(--lime); }
+@media (max-width: 1000px) { .fmap { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .fmap { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .fmap-group { padding: 14px; } }
+.features-page .section-head { margin-bottom: 56px; }
+.features-page .group { scroll-margin-top: 72px; }
+.feature-points { margin: 14px 0 0; padding: 0; list-style: none; color: var(--fg-2); }
 .feature-points li { position: relative; padding-left: 22px; margin-bottom: 8px; line-height: 1.5; }
 .feature-points li::before { content: ""; position: absolute; left: 2px; top: 0.6em; width: 8px; height: 8px; border-radius: 50%; background: var(--lime); opacity: 0.8; }
-.tag-new { display: inline-block; margin-left: 10px; padding: 3px 8px; border-radius: 6px; background: var(--lime); color: var(--on-lime); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; vertical-align: middle; }
-.features-page .features { margin-top: 0; }
+.tag-new { display: inline-block; margin-left: 10px; padding: 3px 8px; border-radius: 6px; background: var(--lime); color: var(--on-lime); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; vertical-align: 0.15em; }
 .features-page .feature { scroll-margin-top: 96px; }
+@media (max-width: 880px) { .features-hero { padding-top: 64px; } }
+
+/* A group of features (assets/showcase.js). Without the script, each item is a row: the text, then the media. */
+.showcase { display: grid; gap: 64px; }
+.sc-item { display: grid; grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); gap: 48px; align-items: center; }
+.sc-tab h3 { margin: 0 0 6px; font-size: 1.35rem; letter-spacing: -0.01em; }
+.sc-line { margin: 0; color: var(--fg-2); }
+.sc-tab { scroll-margin-top: 96px; }
+/* With the script: the tabs on the left, the media of the open item on the right. */
+.showcase.ready { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); gap: 10px 48px; align-items: start; }
+.showcase.ready .sc-item { display: contents; }
+.showcase.ready .sc-tab { grid-column: 1; position: relative; border-radius: var(--radius-sm); border: 1px solid transparent; transition: background 0.2s, border-color 0.2s; }
+.showcase.ready .sc-tab:hover { background: rgba(255, 255, 255, 0.03); }
+.showcase.ready .sc-item.on .sc-tab { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.08); }
+.showcase.ready .sc-item.on .sc-tab::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: var(--lime); }
+.showcase.ready .sc-tab h3 { margin: 0; font-size: 1.2rem; }
+.sc-btn { display: block; width: 100%; padding: 18px 20px 4px; border: 0; background: none; color: var(--fg-strong); font: inherit; font-weight: inherit; text-align: left; cursor: pointer; }
+.sc-btn:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; border-radius: var(--radius-sm); }
+.showcase.ready .sc-line { padding: 0 20px 18px; }
+.showcase.ready .sc-more { padding: 0 20px 16px; margin-top: -8px; }
+.showcase.ready .sc-item:not(.on) .sc-more { display: none; }
+.showcase.ready .sc-item:not(.on) .sc-tab h3 { color: var(--fg); }
+.showcase.ready .sc-media { grid-column: 2; grid-row: 1 / span var(--n, 3); }
+.showcase.ready .sc-item:not(.on) .sc-media { display: none; }
 @media (max-width: 880px) {
-  .features-hero { padding-top: 64px; }
-  .features-page .feature-rows { gap: 80px; }
+  .showcase { gap: 48px; }
+  .sc-item { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  /* An accordion: each media shows under its tab. */
+  .showcase.ready { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .showcase.ready .sc-media { grid-column: 1; grid-row: auto; margin: 6px 0 16px; }
 }
 
 /* An image gallery (assets/gallery.js). The track scrolls sideways, one image at a time. */

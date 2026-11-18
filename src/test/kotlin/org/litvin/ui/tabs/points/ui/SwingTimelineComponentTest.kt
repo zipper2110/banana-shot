@@ -251,6 +251,57 @@ class SwingTimelineComponentTest {
         }
     }
 
+    @Test
+    fun theVideoTrackShowsABlockForEachFileAndAReplayCutsTheBlock() {
+        SwingUtilities.invokeAndWait {
+            // The replay adds 2 s after the point end at 4 s: 12 s of play time on 600 px, 50 px for each second.
+            val point = PointV1("p1", 2_000, 4_000, replays = listOf(ReplayV1(3_000, 4_000, speed = 0.5)))
+            val files = listOf(TimelineFile(1, "GH01.MP4", 0, 5_000), TimelineFile(2, "GH02.MP4", 5_000, 10_000))
+            val timeline = filesTimeline(files, listOf(point), lanes = 600)
+
+            val blocks = timeline.fileBlocksForTest()
+            assertEquals(listOf(1, 1, 2), blocks.map { it.file.number })
+            assertEquals(listOf(GUTTER to 200, GUTTER + 300 to 48, GUTTER + 350 to 248), blocks.map { it.bounds.x to it.bounds.width })
+            // Only the widest part of a file has the name.
+            assertEquals(listOf("1 GH01.MP4", null, "2 GH02.MP4"), blocks.map { it.label })
+            assertEquals(listOf(5_000L to GUTTER + 350), timeline.fileBoundariesForTest())
+        }
+    }
+
+    @Test
+    fun aNarrowFileBlockShortensTheNameOrShowsNoName() {
+        SwingUtilities.invokeAndWait {
+            val files = listOf(
+                TimelineFile(1, "GH010042.MP4", 0, 9_000),
+                TimelineFile(2, "GH020042.MP4", 9_000, 9_600),
+                TimelineFile(3, "GH030042.MP4", 9_600, 10_000),
+            )
+            val labels = filesTimeline(files, emptyList(), lanes = 200).fileBlocksForTest().map { it.label }
+
+            assertEquals("1 GH010042.MP4", labels[0])
+            assertTrue(labels[1] == null || labels[1]!!.endsWith("…"), "label was ${labels[1]}")
+            assertEquals(null, labels[2])
+        }
+    }
+
+    @Test
+    fun aProjectOfOneFileShowsNoFileBlocksAndNoBoundaries() {
+        SwingUtilities.invokeAndWait {
+            val timeline = filesTimeline(listOf(TimelineFile(1, "a.mp4", 0, 10_000)), emptyList(), lanes = 600)
+
+            assertTrue(timeline.fileBlocksForTest().isEmpty())
+            assertTrue(timeline.fileBoundariesForTest().isEmpty())
+        }
+    }
+
+    private fun filesTimeline(files: List<TimelineFile>, points: List<PointV1>, lanes: Int) = SwingTimelineComponent(
+        timeProvider = { 0L },
+        durationProvider = { 10_000L },
+        pointsProvider = { points },
+        onSeekRequested = {},
+        filesProvider = { files },
+    ).apply { setSize(GUTTER + lanes, preferredSize.height) }
+
     private fun mouse(timeline: SwingTimelineComponent, id: Int, x: Int, y: Int): MouseEvent {
         val modifiers = if (id == MouseEvent.MOUSE_RELEASED) 0 else MouseEvent.BUTTON1_DOWN_MASK
         return MouseEvent(timeline, id, 0, modifiers, x, y, 1, false, MouseEvent.BUTTON1)

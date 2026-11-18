@@ -50,6 +50,7 @@ import org.litvin.ui.commons.VideoFrameLoader
 import org.litvin.ui.commons.VideoFrameRequest
 import org.litvin.ui.tabs.points.ui.SwingTimelineComponent
 import org.litvin.ui.tabs.points.ui.TimelineMarks
+import org.litvin.ui.tabs.points.ui.TimelineFile
 import org.litvin.ui.tabs.points.components.Keybindings
 import org.litvin.ui.tabs.points.replay.FramePick
 import org.litvin.ui.tabs.points.components.PointsKeyActions
@@ -113,6 +114,9 @@ class SwingPointsPanel(
 
     // Deferred media loading
     private var pendingMediaFile: File? = null
+
+    /** The video files of a project of several files (B-49), for the timeline. Empty for one file. */
+    private var timelineFiles: List<TimelineFile> = emptyList()
     private var isMediaLoaded: Boolean = false
     private var loadErrorShown: Boolean = false
 
@@ -394,6 +398,7 @@ class SwingPointsPanel(
         onReplaySelected = { id, index -> EventQueue.invokeLater { openReplayEditor(pointId = id, replayIndex = index) } },
         // The timeline shows only the trimmed part of the video (B-62).
         trimProvider = { total -> adjustments.get().takeIf(TrimRange::isSet)?.let { TrimRange.of(it, total) } },
+        filesProvider = { timelineFiles },
     ).apply { name = "points-seek" }
 
     // Autosave controller (debounced, off-EDT persistence). The snapshot is taken on the EDT,
@@ -741,7 +746,9 @@ class SwingPointsPanel(
             val manifest = ManifestIO.read(path)
             // A match of several files (B-49) plays its EDL file, and needs all its files.
             val src = ProjectSource.mediaPath(path, manifest)
-            if (src.isNullOrBlank() || !SourceVideo.of(src).filesExist()) {
+            val source = src?.takeIf { it.isNotBlank() }?.let(SourceVideo::of)
+            timelineFiles = source?.let(TimelineFile::of).orEmpty()
+            if (source == null || !source.filesExist()) {
                 dialogs.showError(
                     this,
                     tr("points.error.videoMissing", "name" to manifest.name),
@@ -753,7 +760,7 @@ class SwingPointsPanel(
             loadEdl(EdlIO.readForProjectDir(projectDir!!))
             scoring.load(projectDir, ProjectVideoLanguage.read(manifestPath))
             // Defer the media load until the component becomes displayable
-            pendingMediaFile = File(src)
+            pendingMediaFile = File(source.path)
             isMediaLoaded = false
             loadErrorShown = false
             ensurePlayerLoaded()

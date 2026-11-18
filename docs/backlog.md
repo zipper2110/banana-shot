@@ -184,6 +184,13 @@ The work for the paid version is in `backlog-paid.md`.
   list button in the projects table and on the current project card. The
   button opens a popup with all paths in play order. A missing file shows
   in red. The rename dialog also shows the read-only list of the videos.
+- Decided on 2026-11-18: the VIDEO track of the Points timeline shows one
+  block for each file of a project of several files, with the number and
+  the name of the file. A replay cuts a block into parts. The name goes in
+  the widest part, and the app shortens the name when the part is too
+  short. The ruler has a tick and the start time at each file boundary,
+  and a dashed line goes down through all tracks. There is no tooltip for
+  the files. A project of one file shows the video track as before.
 - Decided on 2026-11-17 (implementation): the project file keeps the list
   of files (`sourceVideos`, with the start and the length of each file).
   The preview plays an mpv EDL file (`source.edl` in the project folder)

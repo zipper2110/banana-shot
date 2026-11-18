@@ -49,6 +49,8 @@ internal data class CommentMarkerLayout(
  * A label column on the left names the tracks and shows the counts; the tracks start after it.
  * The MARKS track paints favorites yellow, draws an outline around the selected point, and shows
  * a pending point as a hatched range from its start to the playhead.
+ * For a project of several video files (B-49), the VIDEO track shows one block for each file with its number and
+ * name. The ruler shows the start time of each file, and a dashed line goes down through the tracks.
  */
 class SwingTimelineComponent(
     private val timeProvider: () -> Long,
@@ -71,6 +73,8 @@ class SwingTimelineComponent(
     private val onReplaySelected: (pointId: String, replayIndex: Int) -> Unit = { _, _ -> },
     /** The trim for a source of the given length (B-62), or null. The timeline shows only the trimmed part. */
     private val trimProvider: (sourceTotalMs: Long) -> TrimRange? = { null },
+    /** The video files of a project of several files (B-49). Empty for one file. */
+    private val filesProvider: () -> List<TimelineFile> = { emptyList() },
 ) : JComponent() {
 
     private val gutterBg get() = Palette.INSET
@@ -79,6 +83,7 @@ class SwingTimelineComponent(
     private val defaultCommentColor get() = Palette.YELLOW
     private val tagText get() = Palette.ON_LIGHT
     private val tickFont = UiKit.font(10.5f)
+    private val fileFont = UiKit.font(11f)
     private val tagFont = UiKit.font(10.5f, UiKit.Weight.BOLD)
     private val videoIcon: Icon = UiKit.icon(Material2MZ.MOVIE, ICON_SIZE, Palette.FG_3)
     private val marksIcon: Icon = UiKit.icon(Material2AL.FLAG, ICON_SIZE, Palette.FG_3)
@@ -264,6 +269,7 @@ class SwingTimelineComponent(
         // With a trim, the points outside it are out of the lanes. The clip keeps them out of the gutter.
         g.clipRect(GUTTER, 0, lanesWidth(), height)
         paintRuler(g, scale)
+        paintFileBoundaryLines(g, scale)
         paintVideoTrack(g, scale)
         paintMarksTrack(g, points, scale)
         paintCommentsTrack(g, comments, layouts, commentTrackHeight(laneCount))
@@ -312,6 +318,8 @@ class SwingTimelineComponent(
         g.fillRect(GUTTER, top, lanes, RULER_HEIGHT)
         g.color = Palette.LINE
         g.fillRect(GUTTER, top + RULER_HEIGHT - 1, lanes, 1)
+        // The start times of the files (B-49) have priority. A tick label that touches one of them is not drawn.
+        val boundaryLabels = fileBoundaries(scale).map { (ms, x) -> rulerLabel(Timecode.format(ms), x) }
         for (index in 0..TICKS) {
             val tickMs = first + index * (total / TICKS.toLong())
             val x = if (index == TICKS) GUTTER + lanes else xAt(tickMs, scale)
@@ -319,23 +327,118 @@ class SwingTimelineComponent(
             g.fillRect(min(x, width - 1), top, 1, RULER_HEIGHT - 1)
             // A narrow timeline labels every second tick only.
             if (lanes < ALL_TICK_LABELS_WIDTH && index % 2 == 1) continue
-            val text = Timecode.format(tickMs)
-            val textX = if (index == TICKS) x - 4 - UiKit.textWidth(text, tickFont) else x + 4f
-            UiKit.drawText(g, text, tickFont, Palette.FG_3, textX, top.toFloat(), RULER_HEIGHT - 1f)
+            val label = rulerLabel(Timecode.format(tickMs), x)
+            if (boundaryLabels.any { it.overlaps(label) }) continue
+            UiKit.drawText(g, label.text, tickFont, Palette.FG_3, label.x, top.toFloat(), RULER_HEIGHT - 1f)
+        }
+        boundaryLabels.forEach { label ->
+            g.color = Palette.FG_2
+            g.fillRect(label.tickX, top, 1, RULER_HEIGHT - 1)
+            UiKit.drawText(g, label.text, tickFont, Palette.FG_2, label.x, top.toFloat(), RULER_HEIGHT - 1f)
         }
     }
 
-    /** The source video in blue, with a gap for each replay block. Each replay is a lime block in the gap. */
+    /** A text on the ruler right of the tick at [tickX], or left of it when the text does not fit before the end. */
+    private data class RulerLabel(val text: String, val tickX: Int, val x: Float, val width: Float) {
+        fun overlaps(other: RulerLabel): Boolean =
+            x < other.x + other.width + LABEL_SPACE && other.x < x + width + LABEL_SPACE
+    }
+
+    private fun rulerLabel(text: String, tickX: Int): RulerLabel {
+        val textWidth = UiKit.textWidth(text, tickFont)
+        val right = tickX + 4f
+        val x = if (right + textWidth > GUTTER + lanesWidth()) tickX - 4 - textWidth else right
+        return RulerLabel(text, tickX, x, textWidth)
+    }
+
+    /** The start time and the x of each file boundary in the window (B-49). The start of the first file is not one. */
+    private fun fileBoundaries(scale: TimelineScale): List<Pair<Long, Int>> =
+        filesProvider().drop(1).map { it.startMs }
+            .filter { it > scale.sourceStartMs && it < scale.sourceEndMs }
+            .map { it to xAt(it, scale) }
+
+    /** A dashed line at each file boundary, from the ruler down through all tracks (B-49). */
+    private fun paintFileBoundaryLines(g: Graphics2D, scale: TimelineScale) {
+        val boundaries = fileBoundaries(scale)
+        if (boundaries.isEmpty()) return
+        val old = g.stroke
+        g.color = Palette.FG_3
+        g.stroke = BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, floatArrayOf(3f, 3f), 0f)
+        boundaries.forEach { (_, x) -> g.drawLine(x, videoTrackTop(), x, height) }
+        g.stroke = old
+    }
+
+    /**
+     * The source video in blue, with a gap for each replay block. Each replay is a lime block in the gap.
+     * A project of several files (B-49) shows a block for each file in place of the blue line.
+     */
     private fun paintVideoTrack(g: Graphics2D, scale: TimelineScale) {
         val top = videoTrackTop()
+        val fileBlocks = fileBlocks(scale)
+        if (fileBlocks.isEmpty()) {
+            videoRanges(scale).forEach { (x1, x2) -> paintVideoRange(g, x1, x2, top) }
+        } else {
+            fileBlocks.forEach { paintFileBlock(g, it) }
+        }
+        scale.blocks.forEach { block -> paintReplayBlock(g, blockBounds(block, scale)) }
+    }
+
+    /** The x ranges of the source video between the replay blocks. */
+    private fun videoRanges(scale: TimelineScale): List<Pair<Int, Int>> {
         val lanes = lanesWidth()
+        val ranges = mutableListOf<Pair<Int, Int>>()
         var from = scale.firstPlayMs
         for (insert in scale.inserts) {
-            paintVideoRange(g, scale.xAtPlay(from, GUTTER, lanes), scale.xAtPlay(insert.startMs, GUTTER, lanes), top)
+            ranges += scale.xAtPlay(from, GUTTER, lanes) to scale.xAtPlay(insert.startMs, GUTTER, lanes)
             from = insert.endMs
         }
-        paintVideoRange(g, scale.xAtPlay(from, GUTTER, lanes), GUTTER + lanes, top)
-        scale.blocks.forEach { block -> paintReplayBlock(g, blockBounds(block, scale)) }
+        ranges += scale.xAtPlay(from, GUTTER, lanes) to GUTTER + lanes
+        return ranges.filter { (x1, x2) -> x2 > x1 }
+    }
+
+    /**
+     * The blocks of the files (B-49). The replays cut the block of a file into parts. Only the widest part of a file
+     * has its name, shortened when the part is too narrow. Some pixels stay free at the end of each file.
+     */
+    private fun fileBlocks(scale: TimelineScale): List<TimelineFileBlock> {
+        val files = filesProvider()
+        if (files.size < 2) return emptyList()
+        val ranges = videoRanges(scale)
+        val top = videoTrackTop() + 2
+        val height = TRACK_HEIGHT - 4
+        return files.flatMap { file ->
+            if (file.endMs <= scale.sourceStartMs || file.startMs >= scale.sourceEndMs) return@flatMap emptyList()
+            val fileX1 = xAt(maxOf(file.startMs, scale.sourceStartMs), scale)
+            val fileX2 = xAt(minOf(file.endMs, scale.sourceEndMs), scale) - FILE_GAP
+            val parts = ranges.mapNotNull { (x1, x2) ->
+                val left = max(x1, fileX1)
+                val right = min(x2, fileX2)
+                if (right - left >= 1) Rectangle(left, top, right - left, height) else null
+            }
+            val widest = parts.maxByOrNull { it.width }
+            parts.map { part ->
+                val label = if (part === widest) fittedFileLabel(file.label, part.width - 2 * FILE_TEXT_PAD) else null
+                TimelineFileBlock(file, part, label)
+            }
+        }
+    }
+
+    /** [text] shortened with an ellipsis to [maxWidth], or null when less than [MIN_FILE_LABEL_CHARS] characters fit. */
+    private fun fittedFileLabel(text: String, maxWidth: Int): String? {
+        val shown = UiKit.ellipsize(text, fileFont, maxWidth.toFloat())
+        val kept = if (shown == text) text.length else shown.length - 1
+        return shown.takeIf { kept >= minOf(MIN_FILE_LABEL_CHARS, text.length) }
+    }
+
+    private fun paintFileBlock(g: Graphics2D, block: TimelineFileBlock) {
+        val box = block.bounds
+        val shape = RoundRectangle2D.Double(box.x + 0.5, box.y + 0.5, box.width - 1.0, box.height - 1.0, 4.0, 4.0)
+        g.color = Palette.BLUE_TINT
+        g.fill(shape)
+        g.color = Palette.VIDEO_RANGE
+        g.draw(shape)
+        val label = block.label ?: return
+        UiKit.drawText(g, label, fileFont, Palette.FG, (box.x + FILE_TEXT_PAD).toFloat(), box.y.toFloat(), box.height.toFloat())
     }
 
     private fun paintVideoRange(g: Graphics2D, x1: Int, x2: Int, top: Int) {
@@ -531,6 +634,8 @@ class SwingTimelineComponent(
     internal fun markAtForTest(x: Int, y: Int): PointV1? = markAt(Point(x, y))
     internal fun xAtForTest(ms: Long): Int = xAt(ms, scale())
     internal fun replayBlockBoundsForTest(): List<Rectangle> = scale().let { s -> s.blocks.map { blockBounds(it, s) } }
+    internal fun fileBlocksForTest(): List<TimelineFileBlock> = fileBlocks(scale())
+    internal fun fileBoundariesForTest(): List<Pair<Long, Int>> = fileBoundaries(scale())
 
     override fun getPreferredSize(): Dimension {
         val laneCount = if (width > 0) commentLaneCount() else 1
@@ -568,6 +673,16 @@ class SwingTimelineComponent(
         const val TICKS = 10
         const val ALL_TICK_LABELS_WIDTH = 1300
         const val DRAG_THRESHOLD_PX = 3.0
+
+        /** The free pixels at the end of the block of a file (B-49), so that two files do not touch. */
+        const val FILE_GAP = 2
+        const val FILE_TEXT_PAD = 6
+
+        /** A file name shows only when at least this many characters fit. */
+        const val MIN_FILE_LABEL_CHARS = 3
+
+        /** The free pixels between two texts on the ruler. */
+        const val LABEL_SPACE = 6f
 
         /** A replay block is at least this wide. A block of [SPIKY_BLOCK_PX] or more has spiky edges (decision 10). */
         const val MIN_BLOCK_PX = 3

@@ -173,6 +173,17 @@ The work for the paid version is in `backlog-paid.md`.
   by file name. Then the user can move a file up or down in the list.
 - Decided on 2026-11-17: the file list is fixed after the user makes the
   project. The user can only find a missing file again.
+- Decided on 2026-11-18: the "New project" dialog has an "Add videos"
+  button under the video. It adds the selected files at the bottom of the
+  list. The files can be in different folders. The dialog sorts each new
+  selection by file name, and does not add a file that is already in the
+  list. The file chooser opens in the folder of the last file. With one
+  file, the button next to the path is "Change video": it replaces the
+  file. This replaces the decision that the dialog sorts all files by name.
+- Decided on 2026-11-18: a project of several files shows "N videos" and a
+  list button in the projects table and on the current project card. The
+  button opens a popup with all paths in play order. A missing file shows
+  in red. The rename dialog also shows the read-only list of the videos.
 - Decided on 2026-11-17 (implementation): the project file keeps the list
   of files (`sourceVideos`, with the start and the length of each file).
   The preview plays an mpv EDL file (`source.edl` in the project folder)

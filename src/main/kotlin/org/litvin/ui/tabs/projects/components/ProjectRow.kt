@@ -34,6 +34,7 @@ import org.litvin.i18n.tr
  * The open project has a lime mark on the left. It has no Open button.
  * A click on the row of a different project opens that project. The row then shows the hand cursor.
  * [showStats] changes the figures in place, so the buttons stay the same while the presenter loads the figures.
+ * A project of several video files (B-49) shows "4 videos" and a button in the Video column. [onShowVideos] shows the files.
  */
 internal class ProjectRow(
     project: ProjectCardState,
@@ -41,6 +42,7 @@ internal class ProjectRow(
     onRename: () -> Unit,
     onDelete: () -> Unit,
     onOpen: () -> Unit,
+    private val onShowVideos: () -> Unit = {},
 ) : JPanel(ProjectsTableColumns.Layout(ROW_HEIGHT)) {
     private var project = project
 
@@ -125,7 +127,7 @@ internal class ProjectRow(
         val id = project.id
         val cells = listOf(
             ProjectsTableColumns.STATUS to statusCell(),
-            ProjectsTableColumns.VIDEO to PathCell(project.secondary, stats?.videoMissingMessage).apply { name = "projects-video-$id" },
+            ProjectsTableColumns.VIDEO to videoCell(stats?.videoMissingMessage),
             ProjectsTableColumns.SPORT to SportCell(stats?.sport).apply { name = "projects-sport-$id" },
             ProjectsTableColumns.DURATION to FigureCell(stats?.duration, skeletonWidth = 44).apply { name = "projects-duration-$id" },
             ProjectsTableColumns.SIZE to FigureCell(stats?.fileSize, skeletonWidth = 56).apply { name = "projects-size-$id" },
@@ -135,7 +137,24 @@ internal class ProjectRow(
         // The layout places the children by index, so each cell goes to the index of its column.
         cells.forEach { (column, cell) ->
             add(cell, column)
-            cell.addMouseListener(mouse)
+            listenDeep(cell, mouse)
+        }
+    }
+
+    /** The path of the video, or "4 videos" and a list button for a project of several files (B-49). */
+    private fun videoCell(missingMessage: String?): JComponent {
+        val id = project.id
+        if (!project.hasSeveralVideos) return PathCell(project.secondary, missingMessage).apply { name = "projects-video-$id" }
+        return VideoCountCell(
+            project.videoPaths,
+            missingMessage,
+            ProjectsUi.font(12f),
+            buttonName = "projects-videos-$id",
+            iconColor = { if (hovered) Palette.FG_2 else Palette.FG_3 },
+            onShow = onShowVideos,
+        ).apply {
+            name = "projects-video-cell-$id"
+            countLabel.name = "projects-video-$id"
         }
     }
 

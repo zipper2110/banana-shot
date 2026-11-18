@@ -15,6 +15,8 @@ import org.litvin.ui.tabs.projects.components.NewProjectEditor
 import org.litvin.ui.tabs.projects.components.NewProjectRequest
 import org.litvin.ui.tabs.projects.components.ProjectDeleteConfirmer
 import org.litvin.ui.tabs.projects.components.ProjectNameEditor
+import org.litvin.ui.tabs.projects.components.ProjectVideosDialog
+import org.litvin.ui.tabs.projects.components.ProjectVideosViewer
 import org.litvin.ui.tabs.projects.components.ProjectRow
 import org.litvin.ui.tabs.projects.components.ProjectsEmptyListCard
 import org.litvin.ui.tabs.projects.components.ProjectsPaginationBar
@@ -60,6 +62,7 @@ class SwingProjectsPanel(
     private val projectNameEditor: ProjectNameEditor = RenameProjectDialog,
     private val deleteConfirmer: ProjectDeleteConfirmer = DeleteProjectDialog,
     private val themeSettings: ThemeSettings? = null,
+    private val videosViewer: ProjectVideosViewer = ProjectVideosDialog,
 ) : JPanel(BorderLayout()), ProjectsView {
     private val startPanel = StartPanel(onImportNewMatch = { presenter.onIntent(ProjectsIntent.ImportNewMatch) })
     private val rows = RowsPanel()
@@ -92,7 +95,7 @@ class SwingProjectsPanel(
 
         add(startPanel, BorderLayout.WEST)
         add(buildListSection(), BorderLayout.CENTER)
-        startPanel.showCurrentProject(name = null, videoPath = null, onRename = null)
+        startPanel.showCurrentProject(name = null, videoPaths = emptyList(), onRename = null)
     }
 
     override fun addNotify() {
@@ -143,10 +146,12 @@ class SwingProjectsPanel(
                         sourceVideoPaths = effect.sourceVideoPaths,
                     ),
                     chooseVideo = { dialog, current ->
+                        // "Add videos" gives a folder: the picker opens in it and selects no file (B-49).
+                        val folder = File(current).takeIf { it.isDirectory }
                         chooseSourceVideos(
                             tr("projects.chooseVideo"),
-                            File(current).parent ?: File(effect.sourceVideoPath).parent,
-                            suggestedFile = File(current),
+                            folder?.path ?: File(current).parent ?: File(effect.sourceVideoPath).parent,
+                            suggestedFile = if (folder == null) File(current) else null,
                             parent = dialog,
                         )
                     },
@@ -241,8 +246,9 @@ class SwingProjectsPanel(
         shownCurrentProject = shown
         startPanel.showCurrentProject(
             name = project?.name,
-            videoPath = project?.secondary,
+            videoPaths = project?.shownVideoPaths.orEmpty(),
             onRename = project?.let { { renameProject(it) } },
+            onShowVideos = { project?.let(::showVideos) },
         )
     }
 
@@ -289,7 +295,13 @@ class SwingProjectsPanel(
             onRename = { renameProject(project) },
             onDelete = { deleteProject(project) },
             onOpen = { presenter.onIntent(ProjectsIntent.OpenProject(project.path)) },
+            onShowVideos = { showVideos(project) },
         )
+    }
+
+    /** Shows all video files of a project of several files (B-49). */
+    private fun showVideos(project: ProjectCardState) {
+        videosViewer.show(this, project.name, project.shownVideoPaths)
     }
 
     private fun isCurrent(project: ProjectCardState): Boolean = project.path == lastState.currentProject?.path
@@ -299,7 +311,7 @@ class SwingProjectsPanel(
     }
 
     private fun renameProject(project: ProjectCardState) {
-        val name = projectNameEditor.edit(this, project.name) ?: return
+        val name = projectNameEditor.edit(this, project.name, project.shownVideoPaths) ?: return
         if (name != project.name) presenter.onIntent(ProjectsIntent.RenameProject(project.path, name))
     }
 

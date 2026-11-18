@@ -324,7 +324,7 @@ class DefaultProjectsPresenter(
     }
 
     private fun ProjectSummary.toCardState(): ProjectCardState {
-        return ProjectCardState(path = path, name = name, secondary = secondary, id = id)
+        return ProjectCardState(path = path, name = name, secondary = secondary, id = id, videoPaths = videoPaths)
     }
 
     private fun ProjectStats.toState(): ProjectStatsState {

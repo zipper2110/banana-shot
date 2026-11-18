@@ -68,6 +68,42 @@ class ProjectRowTest {
     }
 
     @Test
+    fun aProjectOfSeveralVideosShowsTheCountAndAButtonThatShowsTheFiles() {
+        val paths = listOf("D:\\gopro\\GH01.MP4", "E:\\more\\GH02.MP4", "E:\\more\\GH03.MP4", "E:\\more\\GH04.MP4")
+        val calls = mutableListOf<String>()
+        SwingUtilities.invokeAndWait {
+            val row = ProjectRow(
+                project.copy(secondary = paths.first(), videoPaths = paths),
+                isCurrent = false,
+                onRename = {},
+                onDelete = {},
+                onOpen = { calls += "open" },
+                onShowVideos = { calls += "videos" },
+            )
+            layOut(row)
+
+            val count = find<JLabel>(row, "projects-video-p1")
+            assertEquals("4 videos", count.text)
+            assertEquals("<html>${paths.joinToString("<br>")}</html>", count.toolTipText)
+            val button = find<AbstractButton>(row, "projects-videos-p1")
+            assertEquals("Show all videos of the project", button.toolTipText)
+            // A press and a release on the button show the files, but do not open the project.
+            click(button, clickCount = 1)
+        }
+        assertEquals(listOf("videos"), calls)
+    }
+
+    @Test
+    fun aProjectOfOneVideoShowsThePath() {
+        SwingUtilities.invokeAndWait {
+            val row = row(project.copy(videoPaths = listOf(project.secondary)))
+
+            assertEquals(project.secondary, find<JLabel>(row, "projects-video-p1").toolTipText)
+            assertNull(findOrNull(row, "projects-videos-p1"))
+        }
+    }
+
+    @Test
     fun theFiguresAreEmptyWhileThePresenterLoadsThem() {
         SwingUtilities.invokeAndWait {
             val row = row(project.copy(stats = null))

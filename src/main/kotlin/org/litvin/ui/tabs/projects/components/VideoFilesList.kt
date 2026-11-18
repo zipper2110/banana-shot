@@ -20,7 +20,8 @@ import javax.swing.JPanel
 /**
  * The video files of a match of several files in the "New project" dialog (B-49), in play order.
  * Each row has the file name and the buttons that move the file up or down and remove it.
- * [onChange] gets the new list after a change by the user.
+ * When the files are in more than one folder, each row also shows the folder in gray, because two files can have
+ * the same name. [onChange] gets the new list after a change by the user.
  */
 internal class VideoFilesList(private val onChange: (List<String>) -> Unit) : JPanel(BorderLayout()) {
     private val rows = JPanel().apply {
@@ -61,23 +62,32 @@ internal class VideoFilesList(private val onChange: (List<String>) -> Unit) : JP
 
     private fun rebuild() {
         rows.removeAll()
-        paths.forEachIndexed { index, path -> rows.add(row(index, path)) }
+        val showFolders = paths.map { File(it).absoluteFile.parent?.lowercase() }.distinct().size > 1
+        paths.forEachIndexed { index, path -> rows.add(row(index, path, showFolders)) }
         rows.revalidate()
         revalidate()
         repaint()
     }
 
-    private fun row(index: Int, path: String): JComponent = JPanel(BorderLayout(8, 0)).apply {
+    private fun row(index: Int, path: String, showFolder: Boolean): JComponent = JPanel(BorderLayout(8, 0)).apply {
         name = "new-project-file-$index"
         isOpaque = false
         val size = Dimension(Int.MAX_VALUE, ROW_HEIGHT)
         maximumSize = size
-        add(JLabel("${index + 1}.  ${File(path).name}").apply {
+        val nameLabel = JLabel("${index + 1}.  ${File(path).name}").apply {
             name = "new-project-file-name-$index"
             toolTipText = path
             font = UiKit.font(12.5f)
             foreground = Palette.FG
-        }, BorderLayout.CENTER)
+        }
+        add(if (showFolder) JPanel(BorderLayout(8, 0)).apply {
+            isOpaque = false
+            add(nameLabel, BorderLayout.WEST)
+            add(FolderLabel(File(path).absoluteFile.parent.orEmpty()).apply {
+                name = "new-project-file-folder-$index"
+                toolTipText = path
+            }, BorderLayout.CENTER)
+        } else nameLabel, BorderLayout.CENTER)
         add(JPanel(FlowLayout(FlowLayout.RIGHT, 2, 0)).apply {
             isOpaque = false
             add(button(Material2AL.ARROW_UPWARD, tr("projects.new.files.up"), "up", index, enabled = index > 0) { moveFile(index, -1) })
@@ -114,6 +124,25 @@ internal class VideoFilesList(private val onChange: (List<String>) -> Unit) : JP
         val changed = paths.toMutableList().apply { removeAt(index) }
         paths = changed
         onChange(changed)
+    }
+
+    /** The folder of a file in gray. A long folder loses its start, so the end of the folder stays visible. */
+    private class FolderLabel(private val folder: String) : JLabel(folder) {
+        private val folderFont = ProjectsUi.font(11.5f)
+
+        /** The label takes the free width of the row. A long folder does not make the dialog wider. */
+        override fun getPreferredSize() = Dimension(0, super.getPreferredSize().height)
+        override fun getMinimumSize() = Dimension(0, 0)
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = ProjectsUi.smooth(g)
+            try {
+                val shown = ProjectsUi.ellipsizeStart(folder, folderFont, width - 1f)
+                ProjectsUi.drawText(g2, shown, folderFont, Palette.FG_3, 0f, 0f, height.toFloat())
+            } finally {
+                g2.dispose()
+            }
+        }
     }
 
     private companion object {

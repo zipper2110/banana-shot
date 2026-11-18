@@ -71,10 +71,10 @@ internal class StartPanel(onImportNewMatch: () -> Unit) : JPanel(BorderLayout())
         }, BorderLayout.CENTER)
     }
 
-    /** Shows the current project, or the "No open project" card for a null [name]. */
-    fun showCurrentProject(name: String?, videoPath: String?, onRename: (() -> Unit)?) {
+    /** Shows the current project, or the "No open project" card for a null [name]. [videoPaths] are in play order. */
+    fun showCurrentProject(name: String?, videoPaths: List<String>, onRename: (() -> Unit)?, onShowVideos: () -> Unit = {}) {
         currentSlot.removeAll()
-        currentSlot.add(CurrentProjectCard(name, videoPath, CONTENT_WIDTH, onRename), BorderLayout.CENTER)
+        currentSlot.add(CurrentProjectCard(name, videoPaths, CONTENT_WIDTH, onRename, onShowVideos), BorderLayout.CENTER)
         currentSlot.revalidate()
         currentSlot.repaint()
     }

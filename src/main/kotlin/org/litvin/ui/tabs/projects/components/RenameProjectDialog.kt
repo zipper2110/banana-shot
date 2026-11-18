@@ -15,22 +15,25 @@ import org.litvin.i18n.tr
 
 /** Opens the "Rename project" dialog and returns the new name, or null after Cancel. Tests replace the dialog with a fake. */
 fun interface ProjectNameEditor {
-    fun edit(parent: Component, currentName: String): String?
+    /** [videoPaths] are the video files of the project in play order. The dialog shows them, but cannot change them. */
+    fun edit(parent: Component, currentName: String, videoPaths: List<String>): String?
 }
 
 /**
  * Modal "Rename project" dialog with one field for the project name.
  *
  * "Rename" is disabled while the name is not correct. A message under the field tells the user what to correct.
+ * Under the name, the dialog shows the read-only list of the video files of the project (B-49).
  */
 class RenameProjectDialog private constructor(
     owner: Window?,
     currentName: String,
+    videoPaths: List<String>,
 ) : JDialog(owner, tr("projects.rename.tooltip"), Dialog.ModalityType.APPLICATION_MODAL) {
 
     companion object : ProjectNameEditor {
-        override fun edit(parent: Component, currentName: String): String? {
-            val dialog = RenameProjectDialog(SwingUtilities.getWindowAncestor(parent), currentName)
+        override fun edit(parent: Component, currentName: String, videoPaths: List<String>): String? {
+            val dialog = RenameProjectDialog(SwingUtilities.getWindowAncestor(parent), currentName, videoPaths)
             dialog.setLocationRelativeTo(parent)
             dialog.isVisible = true
             return dialog.result
@@ -55,14 +58,22 @@ class RenameProjectDialog private constructor(
             addActionListener { dispose() }
         }
 
+        val rows = mutableListOf(
+            DialogKit.field(tr("projects.name"), DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
+            nameError,
+        )
+        if (videoPaths.isNotEmpty()) {
+            rows += DialogKit.field(
+                tr("projects.videos.caption", "count" to videoPaths.size),
+                ProjectVideosList(videoPaths),
+                note = tr("projects.videos.fixed"),
+            )
+        }
         contentPane = DialogKit.content(
-            DialogKit.SMALL,
+            // The paths need more width than the name.
+            if (videoPaths.isEmpty()) DialogKit.SMALL else DialogKit.WIDE,
             DialogKit.head(tr("projects.rename.tooltip")),
-            DialogKit.form(
-                DialogKit.field(tr("projects.name"), DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
-                nameError,
-                gap = 6,
-            ),
+            DialogKit.form(*rows.toTypedArray(), gap = 6),
             DialogKit.footer(right = listOf(cancelButton, renameButton)),
         )
         rootPane.defaultButton = renameButton

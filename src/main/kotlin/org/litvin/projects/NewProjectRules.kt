@@ -43,8 +43,20 @@ object NewProjectRules {
      * as numbers. Thus "GH2.MP4" comes before "GH10.MP4". A file that is two times in the list stays only one time.
      */
     fun sortedVideoPaths(paths: List<String>): List<String> =
-        paths.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { File(it).absolutePath.lowercase() }
+        paths.map { it.trim() }.filter { it.isNotEmpty() }.distinctBy(::pathKey)
             .sortedWith { a, b -> compareNatural(File(a).name, File(b).name) }
+
+    /**
+     * The list after "Add videos" (B-49): [current] stays in its order, and the [selected] files come at the end,
+     * sorted by file name. A selected file that is already in the list is not added again.
+     */
+    fun appendVideoPaths(current: List<String>, selected: List<String>): List<String> {
+        val known = current.map(::pathKey).toMutableSet()
+        return current + sortedVideoPaths(selected).filter { known.add(pathKey(it)) }
+    }
+
+    /** Two paths of the same file give the same key. Windows file names do not use the letter case. */
+    private fun pathKey(path: String): String = File(path.trim()).absolutePath.lowercase()
 
     /** Compares [a] and [b] without the letter case. A sequence of digits compares as a number. */
     internal fun compareNatural(a: String, b: String): Int {

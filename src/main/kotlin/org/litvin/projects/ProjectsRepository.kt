@@ -21,6 +21,8 @@ data class ProjectSummary(
     val name: String,
     val secondary: String,
     val id: String = path,
+    /** All video files of the project in play order (B-49). Empty when the project has no video. */
+    val videoPaths: List<String> = emptyList(),
 )
 
 /** A new project of several files (B-49). [formatReport] lists the formats when the files have different formats. */
@@ -226,6 +228,7 @@ class FileProjectsRepository(
             name = manifest.name.ifBlank { File(path).nameWithoutExtension },
             secondary = manifest.sourceVideo?.takeIf { it.isNotBlank() } ?: path,
             id = manifest.id,
+            videoPaths = ProjectSource.files(manifest),
         )
     }
 }

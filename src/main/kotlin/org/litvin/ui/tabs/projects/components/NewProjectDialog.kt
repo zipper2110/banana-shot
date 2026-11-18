@@ -48,7 +48,8 @@ fun interface NewProjectEditor {
     /**
      * Shows [initial] for edit.
      * [chooseVideo] opens the video picker over the dialog at the current path and returns the selected paths,
-     * or null after Cancel. Several paths are the files of one match (B-49).
+     * or null after Cancel. Several paths are the files of one match (B-49). A folder path opens the picker in that
+     * folder with no selected file ("Add videos").
      */
     fun edit(
         parent: Component,
@@ -69,6 +70,8 @@ fun interface NewProjectEditor {
  *
  * A match of several files (B-49) shows a list of the files in place of the path field. The files play in the
  * order of the list. The user can move a file up or down and remove it.
+ * "Change video" replaces the video. "Add videos" adds files at the end of the list. The files can be in different
+ * folders.
  */
 class NewProjectDialog private constructor(
     owner: Window?,
@@ -106,10 +109,12 @@ class NewProjectDialog private constructor(
     /** The files of a match of several files (B-49). Empty for one file: then [videoField] has the path. */
     private var files: List<String> = initial.sourceVideoPaths.takeIf { it.size > 1 }.orEmpty()
     private val filesList = VideoFilesList(onChange = ::onFilesChanged).apply { paths = files }
-    private val filesBrowseButton = UiButton(tr("projects.new.browse"), buttonHeight = 34).apply {
-        name = "new-project-files-browse"
-        toolTipText = tr("projects.new.browse.tooltip")
-        addActionListener { browse() }
+
+    /** Adds files at the end of the list (B-49). */
+    private val addVideosButton = UiButton(tr("projects.new.add"), Material2AL.ADD, buttonHeight = 30).apply {
+        name = "new-project-add-videos"
+        toolTipText = tr("projects.new.add.tooltip")
+        addActionListener { addVideos() }
     }
     private val videoCards = CardLayout()
     private val videoArea = JPanel(videoCards).apply { isOpaque = false }
@@ -126,7 +131,8 @@ class NewProjectDialog private constructor(
 
     /** True while the video check runs. */
     private var checking = false
-    private val browseButton = UiButton(tr("projects.new.browse"), buttonHeight = 34).apply {
+    /** Replaces the video. */
+    private val browseButton = UiButton(tr("projects.new.change"), buttonHeight = 34).apply {
         name = "new-project-browse"
         toolTipText = tr("projects.new.browse.tooltip")
         addActionListener { browse() }
@@ -189,20 +195,20 @@ class NewProjectDialog private constructor(
             add(DialogKit.inputBox(videoField) { videoError.text.isNotBlank() }, BorderLayout.CENTER)
             add(browseButton, BorderLayout.EAST)
         }
-        val filesRow = JPanel(BorderLayout(8, 0)).apply {
+        videoArea.add(videoRow, CARD_ONE_FILE)
+        videoArea.add(filesList, CARD_FILES)
+        val videoInput = JPanel(BorderLayout(0, 6)).apply {
             isOpaque = false
-            add(filesList, BorderLayout.CENTER)
+            add(videoArea, BorderLayout.CENTER)
             add(JPanel(BorderLayout()).apply {
                 isOpaque = false
-                add(filesBrowseButton, BorderLayout.NORTH)
-            }, BorderLayout.EAST)
+                add(addVideosButton, BorderLayout.WEST)
+            }, BorderLayout.SOUTH)
         }
-        videoArea.add(videoRow, CARD_ONE_FILE)
-        videoArea.add(filesRow, CARD_FILES)
         return DialogKit.form(
             DialogKit.field(tr("projects.name"), DialogKit.inputBox(nameField) { nameError.text.isNotBlank() }),
             nameError,
-            DialogKit.field(tr("projects.new.video"), videoArea, note = tr("projects.new.video.note")),
+            DialogKit.field(tr("projects.new.video"), videoInput, note = tr("projects.new.video.note")),
             videoHint,
             videoError,
             videoExplanation,
@@ -241,14 +247,33 @@ class NewProjectDialog private constructor(
         return valid
     }
 
+    /** "Change video": the selected files replace the video. */
     private fun browse() {
         val current = files.firstOrNull() ?: videoField.text.trim()
         val selected = NewProjectRules.sortedVideoPaths(chooseVideo(this, current) ?: return)
         if (selected.isEmpty()) return
-        files = selected.takeIf { it.size > 1 }.orEmpty()
+        showPaths(selected)
+    }
+
+    /** "Add videos" (B-49): the selected files come at the end of the list. The picker opens in the folder of the last file. */
+    private fun addVideos() {
+        val current = currentPaths()
+        val folder = current.lastOrNull()?.let { File(it).absoluteFile.parent }
+        val selected = chooseVideo(this, folder ?: "") ?: return
+        val changed = NewProjectRules.appendVideoPaths(current, selected)
+        if (changed == current) return
+        showPaths(changed)
+    }
+
+    /** The files in play order: the list, or the path of the field. Empty when the field is empty. */
+    private fun currentPaths(): List<String> = files.ifEmpty { listOfNotNull(videoField.text.trim().takeIf { it.isNotEmpty() }) }
+
+    /** Shows [paths]: one file in the path field, or several files in the list. */
+    private fun showPaths(paths: List<String>) {
+        files = paths.takeIf { it.size > 1 }.orEmpty()
         filesList.paths = files
-        followName(selected.first())
-        videoField.text = selected.first()
+        followName(paths.first())
+        videoField.text = paths.first()
         showFilesMode()
     }
 
@@ -277,7 +302,7 @@ class NewProjectDialog private constructor(
     private fun showFilesMode() {
         val several = files.size > 1
         videoCards.show(videoArea, if (several) CARD_FILES else CARD_ONE_FILE)
-        videoHint.text = tr(if (several) "projects.new.files.order" else "projects.new.files.hint")
+        videoHint.text = tr(if (several) "projects.new.files.order" else "projects.new.files.add.hint")
         validateFields()
         if (isDisplayable) {
             minimumSize = null

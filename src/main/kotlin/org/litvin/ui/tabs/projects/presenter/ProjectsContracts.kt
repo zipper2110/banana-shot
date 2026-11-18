@@ -35,9 +35,17 @@ data class ProjectCardState(
     val id: String = path,
     /** Null until the presenter loads the figures of the project. */
     val stats: ProjectStatsState? = null,
+    /** All video files of the project in play order (B-49). A project of one file can have an empty list. */
+    val videoPaths: List<String> = emptyList(),
 ) {
     /** False when the project has no video yet. Then [secondary] is the path of the project file. */
     val hasVideo: Boolean get() = secondary != path
+
+    /** True when the project has several video files (B-49). */
+    val hasSeveralVideos: Boolean get() = videoPaths.size > 1
+
+    /** The video files to show. A project of one file without [videoPaths] shows [secondary]. */
+    val shownVideoPaths: List<String> get() = videoPaths.ifEmpty { listOfNotNull(secondary.takeIf { hasVideo }) }
 }
 
 /** Display text for the columns of the projects table. */

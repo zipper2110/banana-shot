@@ -54,6 +54,31 @@ class SwingProjectsPanelTest {
     }
 
     @Test
+    fun aProjectOfSeveralVideosShowsItsFilesInThePopupAndInTheRenameDialog() {
+        val paths = listOf("D:\\gopro\\GH01.MP4", "E:\\more\\GH02.MP4")
+        val joined = first.copy(secondary = paths.first(), videoPaths = paths)
+        val shown = mutableListOf<Pair<String, List<String>>>()
+        val renamed = mutableListOf<List<String>>()
+        SwingUtilities.invokeAndWait {
+            val panel = SwingProjectsPanel(
+                RecordingPresenter(),
+                projectNameEditor = { _, _, videoPaths -> renamed += videoPaths; null },
+                videosViewer = { _, name, videoPaths -> shown += name to videoPaths },
+            )
+            panel.render(ProjectsViewState(currentProject = joined, visibleProjects = listOf(joined, second)))
+
+            assertEquals("2 videos", find<JLabel>(panel, "projects-current-video").text)
+            assertEquals("2 videos", find<JLabel>(panel, "projects-video-a").text)
+            find<AbstractButton>(panel, "projects-current-videos").doClick()
+            find<AbstractButton>(panel, "projects-videos-a").doClick()
+            find<AbstractButton>(panel, "projects-rename-a").doClick()
+            find<AbstractButton>(panel, "projects-rename-b").doClick()
+        }
+        assertEquals(listOf("Club final" to paths, "Club final" to paths), shown)
+        assertEquals(listOf(paths, listOf(second.secondary)), renamed)
+    }
+
+    @Test
     fun theOpenProjectShowsInTheCardAndHasTheMarkInTheList() {
         SwingUtilities.invokeAndWait {
             val panel = SwingProjectsPanel(RecordingPresenter())

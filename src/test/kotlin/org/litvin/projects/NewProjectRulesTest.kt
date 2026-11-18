@@ -36,6 +36,23 @@ class NewProjectRulesTest {
     }
 
     @Test
+    fun addedFilesComeAtTheEndSortedByNameWithoutTheFilesThatAreInTheList() {
+        val root = java.io.File.listRoots().first()
+        fun path(folder: String, name: String) = java.io.File(java.io.File(root, folder), name).path
+        val current = listOf(path("a", "GH03.MP4"), path("a", "GH01.MP4"))
+
+        assertEquals(
+            current + listOf(path("b", "GH02.MP4"), path("b", "GH10.MP4")),
+            NewProjectRules.appendVideoPaths(
+                current,
+                listOf(path("b", "GH10.MP4"), path("A", "gh01.mp4"), path("b", "GH02.MP4"), path("b", "GH02.MP4")),
+            ),
+        )
+        assertEquals(current, NewProjectRules.appendVideoPaths(current, listOf(path("a", "GH03.MP4"))))
+        assertEquals(listOf(path("a", "x.mp4")), NewProjectRules.appendVideoPaths(emptyList(), listOf(path("a", "x.mp4"))))
+    }
+
+    @Test
     fun nameMustNotBeEmptyOrTooLong() {
         assertNull(NewProjectRules.nameError("Club final"))
         assertNull(NewProjectRules.nameError("  Club final (2)  "))

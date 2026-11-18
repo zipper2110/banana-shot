@@ -84,13 +84,15 @@ internal class OpenTag : JComponent() {
 /**
  * The card of the current project in the start panel.
  * With a project it shows the name, the "OPEN" tag, the absolute video path and the Rename button.
+ * A project of several video files (B-49) shows "4 videos" and a list button. [onShowVideos] shows the files.
  * Without a project it shows a dashed card with a short text.
  */
 internal class CurrentProjectCard(
     projectName: String?,
-    videoPath: String?,
+    videoPaths: List<String>,
     contentWidth: Int,
     onRename: (() -> Unit)?,
+    onShowVideos: () -> Unit = {},
 ) : JPanel() {
     private val isOpen = projectName != null
 
@@ -119,11 +121,18 @@ internal class CurrentProjectCard(
                     add(tag, BorderLayout.NORTH)
                 }, BorderLayout.EAST)
             }))
+            val videoPath = videoPaths.firstOrNull()
             if (videoPath != null) {
                 add(Gap(0, 10).leftAligned())
-                val pathLabel = WrapLabel(videoPath, ProjectsUi.font(12f), Palette.FG_2, innerWidth - 24, 1.4f).apply {
-                    name = "projects-current-video"
-                    toolTipText = videoPath
+                val pathLabel: JComponent = if (videoPaths.size > 1) {
+                    VideoCountCell(videoPaths, null, ProjectsUi.font(12f), "projects-current-videos", onShow = onShowVideos).apply {
+                        countLabel.name = "projects-current-video"
+                    }
+                } else {
+                    WrapLabel(videoPath, ProjectsUi.font(12f), Palette.FG_2, innerWidth - 24, 1.4f).apply {
+                        name = "projects-current-video"
+                        toolTipText = videoPath
+                    }
                 }
                 add(shifted(JPanel(BorderLayout(6, 0)).apply {
                     isOpaque = false

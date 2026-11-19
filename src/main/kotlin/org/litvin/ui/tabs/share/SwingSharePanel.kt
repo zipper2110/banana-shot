@@ -41,7 +41,6 @@ import org.litvin.share.ThumbnailVideoType
 import org.litvin.ui.commons.ColorPickerDialog
 import org.litvin.ui.commons.DefaultFillSliderUI
 import org.litvin.ui.commons.DialogKit
-import org.litvin.ui.commons.HeightForWidth
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.RowIconButton
 import org.litvin.ui.commons.SegmentedChoice
@@ -235,8 +234,8 @@ class SwingSharePanel(
 
     /** The group of style cards that shows. Null: the group of the selected style. The project does not store it. */
     private var shownGroup: StyleGroup? = null
-    private val groupChoice = SegmentedChoice("share-style-group", StyleGroup.entries.map { SegmentedChoice.Option(it, it.title) }, columns = 2)
-    private var styleColumn: JComponent? = null
+    private val groupChoice = SegmentedChoice("share-style-group", StyleGroup.entries.map { SegmentedChoice.Option(it, it.title) })
+    private var leftColumn: JComponent? = null
 
     /** The logo of the user (B-53), and the file that it comes from. The logo is the same for all projects. */
     private var logo: ThumbnailLogo? = null
@@ -315,7 +314,7 @@ class SwingSharePanel(
         groupChoice.onChange { group ->
             if (updating) return@onChange
             shownGroup = group
-            styleColumn?.revalidate()
+            leftColumn?.revalidate()
             render()
         }
         styleCards.forEach { (style, card) ->
@@ -740,7 +739,7 @@ class SwingSharePanel(
         placeHint.text = if (places.size > 1) tr("share.place") else tr("share.place.one")
         if (groupChoice.selected != group()) {
             groupChoice.selected = group()
-            styleColumn?.revalidate()
+            leftColumn?.revalidate()
         }
     }
 
@@ -1103,10 +1102,7 @@ class SwingSharePanel(
     // ---------- Layout ----------
 
     private fun shareView(): JComponent {
-        val styles = DialogKit.scrollBody(StyleColumn().also { styleColumn = it }, Palette.BG).apply {
-            border = BorderFactory.createMatteBorder(0, 0, 0, 1, Palette.LINE)
-            preferredSize = Dimension(STYLE_COLUMN_W + 1, 0)
-        }
+        val left = LeftColumn().also { leftColumn = it }
         val side = JPanel(BorderLayout()).apply {
             background = Palette.PANEL
             border = BorderFactory.createMatteBorder(0, 1, 0, 0, Palette.LINE)
@@ -1120,8 +1116,7 @@ class SwingSharePanel(
         }
         return JPanel(BorderLayout()).apply {
             background = Palette.BG
-            add(styles, BorderLayout.WEST)
-            add(PreviewColumn(), BorderLayout.CENTER)
+            add(left, BorderLayout.CENTER)
             add(side, BorderLayout.EAST)
         }
     }
@@ -1133,29 +1128,39 @@ class SwingSharePanel(
     }
 
     /**
-     * The center column: the preview and the controls of the frame. It does not scroll: the preview becomes smaller in a
-     * low window, so that the controls stay visible. A smaller preview is in the center, so the column has no empty strip
-     * at its right side.
+     * The left side. It does not scroll: the preview becomes smaller in a low window, so that the style cards stay visible.
+     * The controls and the style cards always use the full width. A smaller preview is in the center above them, so the
+     * column has no empty strip at its right side.
      */
-    private inner class PreviewColumn : JPanel(null) {
+    private inner class LeftColumn : JPanel(null) {
         private val title = ShareUi.sectionTitle(tr("tab.thumbnail"), Material2AL.IMAGE)
         private val pointLabel = ShareUi.label(tr("share.pointLabel"))
         private val momentLabel = ShareUi.label(tr("share.momentLabel"))
         private val zoomLabel = ShareUi.label(tr("adjust.zoom"))
+        private val styleTitle = ShareUi.sectionTitle(tr("scoreboard.style"))
         init {
             background = Palette.BG
             listOf(
                 title, sizeNote, previewHost, pointLabel, prevPoint, pointCombo, nextPoint, favoritesSwitch,
                 momentLabel, strip, framePrev, momentTime, frameNext, zoomLabel, zoom, zoomHint, zoomValue, pickNote,
+                styleTitle, placeHint, placeChoice, groupChoice,
             ).forEach { add(it) }
+            styleCards.values.forEach { add(it) }
         }
 
         private fun stripHeight(w: Int) = ((w - LABEL_W - CONTROL_GAP - STEP_W) / MomentStrip.CELLS.toDouble() * 9 / 16).roundToInt().coerceAtLeast(ROW_H - 6)
         private fun noteHeight(w: Int) = if (pickNote.isVisible) pickNote.heightForWidth(w - LABEL_W - CONTROL_GAP) + ROW_GAP else 0
 
+        /** The cards of one group are in one row. The row has room for the largest group, so the cards keep their size. */
+        private val cardsInRow = StyleGroup.entries.maxOf { it.styles.size }
+        private fun cardWidth(w: Int) = (w - CARD_GAP * (cardsInRow - 1)) / cardsInRow
+        private fun cardHeight(w: Int) = (cardWidth(w) * 9.0 / 16).roundToInt() + CARD_NAME_H
+
         /** The height of all parts other than the preview, for the width [w]. */
         private fun heightWithoutPreview(w: Int): Int =
-            TITLE_H + GAP + GAP + ROW_H + ROW_GAP + maxOf(ROW_H, stripHeight(w)) + ROW_GAP + ROW_H + noteHeight(w)
+            TITLE_H + GAP + GAP +
+                ROW_H + ROW_GAP + maxOf(ROW_H, stripHeight(w)) + ROW_GAP + ROW_H + noteHeight(w) + GAP +
+                STYLE_HEAD_H + GAP + groupChoice.preferredSize.height + ROW_GAP + cardHeight(w)
 
         override fun doLayout() {
             val w = width - PAD * 2
@@ -1202,70 +1207,39 @@ class SwingSharePanel(
             y += ROW_H
             if (pickNote.isVisible) {
                 y += ROW_GAP
-                pickNote.setBounds(cx, y, cw, pickNote.heightForWidth(cw))
-            }
-        }
-    }
-
-    /**
-     * The style column at the left side of the tab: the style groups, the text position, and the style cards of one group
-     * in one column. It is in a scroll pane, because the cards of a large group can be higher than a low window.
-     */
-    private inner class StyleColumn : JPanel(null), HeightForWidth {
-        private val styleTitle = ShareUi.sectionTitle(tr("scoreboard.style"))
-        init {
-            background = Palette.BG
-            listOf(styleTitle, groupChoice, placeHint, placeChoice).forEach { add(it) }
-            styleCards.values.forEach { add(it) }
-        }
-
-        override fun getPreferredSize() = Dimension(STYLE_COLUMN_W, heightForWidth(STYLE_COLUMN_W))
-        override fun heightForWidth(width: Int) = place(width, apply = false)
-        override fun doLayout() {
-            place(width, apply = true)
-        }
-
-        /** Calculates the bounds of the parts for the width [width], and sets them when [apply] is true. Returns the height. */
-        private fun place(width: Int, apply: Boolean): Int {
-            val x = STYLE_PAD_X
-            val w = (width - STYLE_PAD_X * 2).coerceAtLeast(1)
-            fun put(c: JComponent, cx: Int, cy: Int, cw: Int, ch: Int) {
-                if (apply) c.setBounds(cx, cy, cw, ch)
-            }
-            var y = PAD
-            put(styleTitle, x, y, w, TITLE_H)
-            y += TITLE_H + GAP
-            val groupH = groupChoice.preferredSize.height
-            put(groupChoice, x, y, w, groupH)
-            y += groupH + GAP
-            // The text position: the hint and the choice are in one row when they fit. Else the choice is under the hint.
-            val placeW = minOf(w, placeChoice.preferredSize.width)
-            val placeH = placeChoice.preferredSize.height
-            val hintW = UiKit.textWidth(placeHint.text.orEmpty(), placeHint.font).roundToInt() + 4
-            when {
-                !placeChoice.isVisible -> {
-                    put(placeHint, x, y, w, HINT_H)
-                    y += HINT_H
-                }
-                hintW + GAP + placeW <= w -> {
-                    put(placeHint, x, y, hintW, placeH)
-                    put(placeChoice, x + hintW + GAP, y, placeW, placeH)
-                    y += placeH
-                }
-                else -> {
-                    put(placeHint, x, y, w, HINT_H)
-                    y += HINT_H + ROW_GAP
-                    put(placeChoice, x, y, placeW, placeH)
-                    y += placeH
-                }
+                val h = pickNote.heightForWidth(cw)
+                pickNote.setBounds(cx, y, cw, h)
+                y += h
             }
             y += GAP
-            val cardH = (w * 9.0 / 16).roundToInt() + CARD_NAME_H
-            for (card in styleCards.filterKeys { it.group == group() }.values) {
-                put(card, x, y, w, cardH)
-                y += cardH + CARD_GAP
+            // Style
+            styleHeadY = y
+            y += 10
+            val placeW = if (placeChoice.isVisible) placeChoice.preferredSize.width else 0
+            val placeH = placeChoice.preferredSize.height
+            placeChoice.setBounds(x + w - placeW, y + (STYLE_HEAD_H - 10 - placeH) / 2, placeW, placeH)
+            val hintWidth = UiKit.textWidth(placeHint.text, placeHint.font).roundToInt() + 4
+            placeHint.setBounds(x + w - placeW - (if (placeW > 0) 10 else 0) - hintWidth, y, hintWidth, STYLE_HEAD_H - 10)
+            styleTitle.setBounds(x, y, w / 3, STYLE_HEAD_H - 10)
+            y += STYLE_HEAD_H - 10 + GAP
+            val groupH = groupChoice.preferredSize.height
+            groupChoice.setBounds(x, y, minOf(w, groupChoice.preferredSize.width), groupH)
+            y += groupH + ROW_GAP
+            val cardW = cardWidth(w)
+            val group = group()
+            styleCards.entries.filter { it.key.group == group }.forEachIndexed { index, (_, card) ->
+                card.setBounds(x + index * (cardW + CARD_GAP), y, cardW, cardHeight(w))
             }
-            return y - CARD_GAP + PAD
+            styleLineWidth = w
+        }
+
+        private var styleHeadY = 0
+        private var styleLineWidth = 0
+
+        override fun paintComponent(g: Graphics) {
+            super.paintComponent(g)
+            g.color = Palette.LINE
+            g.fillRect(PAD, styleHeadY, styleLineWidth, 1)
         }
     }
 
@@ -1405,9 +1379,7 @@ class SwingSharePanel(
         private const val LABEL_W = 60
         private const val CONTROL_GAP = 10
         private const val STEP_W = 6 + 26 + 92 + 26
-        private const val STYLE_COLUMN_W = 252
-        private const val STYLE_PAD_X = 14
-        private const val HINT_H = 18
+        private const val STYLE_HEAD_H = 48
         private const val CARD_GAP = 8
         private const val CARD_NAME_H = 24
         private const val MIN_W = 480

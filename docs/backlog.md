@@ -455,6 +455,21 @@ The work for the paid version is in `backlog-paid.md`.
 - Done when: after a native crash, the next start shows the popup, the report
   has the crash stack, and the cockpit shows the crash type.
 
+### B-78 OS crash reports
+
+- Added on 2026-11-21. Continues B-67.
+- On 2026-11-21, 2 crashes of 1.5.0 were `crash_unknown`: no JVM crash
+  file and no freeze. A native `abort()` (libmpv, FFmpeg) or a Windows
+  fail-fast stop gives no JVM crash file, but the OS writes a crash report.
+- At the next start, read the OS crash report of the old process (macOS
+  `.ips`, Windows event 1000). Keep the safe part, and send the library with
+  the keys of B-67. No new analytics keys.
+- The plan, the decisions, and the status are in
+  `docs/crashes/b-78-os-crash-reports.md`.
+- Done when: after a native `abort()` on a packaged build, the next start
+  shows the popup, the report has the stack, and the cockpit shows
+  `crash_native` with the library.
+
 ### B-68 Point details
 
 - Added on 2026-11-13. Tennis only. Other sports can get the same or an

@@ -35,7 +35,29 @@ data class PointV1(
     /** The instant replays after the point, sorted by start time (B-50). An empty list is not written. */
     @field:JsonInclude(JsonInclude.Include.NON_EMPTY)
     val replays: List<ReplayV1> = emptyList(),
+    /** The mark of a clip that the automatic detection made. Null for a clip that the user made. */
+    val auto: AutoMarkV1? = null,
 )
+
+/** What the automatic detection found for a clip (docs/auto-analysis/app-integration.md). */
+enum class AutoKind {
+    /** A rally from the rally model. */
+    @JsonEnumDefaultValue
+    RALLY,
+
+    /** A short point from a serve event of the ball (an ace, a double fault). About half of these are real points. */
+    SHORT,
+
+    /** A first-serve fault candidate. */
+    FAULT,
+}
+
+/**
+ * The mark of an automatic clip. It stays on the clip when the user changes the clip, so that the list shows which
+ * clips came from the detection. [winnerPercent] is the confidence of the detected winner (50 to 100), or null when
+ * the detection gave no winner.
+ */
+data class AutoMarkV1(val kind: AutoKind = AutoKind.RALLY, val winnerPercent: Int? = null)
 
 /** How the video goes into a replay and out of it (B-50, decision 3 of `docs/replay/b-50-tasks.md`). */
 enum class ReplayEffect {

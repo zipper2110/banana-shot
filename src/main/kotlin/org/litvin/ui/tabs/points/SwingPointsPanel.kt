@@ -69,6 +69,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import org.litvin.projects.ProjectVideoLanguage
 import org.litvin.i18n.tr
+import org.litvin.ui.tabs.points.detect.isWeak
 import org.litvin.shared.util.Timecode
 
 /**
@@ -97,6 +98,8 @@ class SwingPointsPanel(
     private val replayPlayers: () -> SwingMediaPlayer = { MpvSwingMediaPlayerAdapter() },
     // The default scoring mode of new projects (B-68).
     modeDefaults: ScoringModeDefaults = ScoringModeDefaults.NONE,
+    // The automatic point detection, or null on a PC with no lab (docs/auto-analysis/app-integration.md).
+    private val detect: org.litvin.autodetect.DetectRunner? = null,
 ) : JPanel(BorderLayout()), AutoCloseable {
 
     constructor() : this(
@@ -334,6 +337,8 @@ class SwingPointsPanel(
                 label = point.label,
                 flags = emptySet(),
                 favorite = point.favorite,
+                autoNote = point.auto?.takeIf { detect != null }?.let(org.litvin.ui.tabs.points.detect.DetectTexts::rowNote),
+                autoWeak = point.auto?.isWeak() == true,
                 replays = point.replays.mapIndexed { index, replay ->
                     ReplayRowDto(
                         index = index,
@@ -443,6 +448,9 @@ class SwingPointsPanel(
         override fun createPointAt(ms: Long) = dispatcher.onPointStart(ms)
         override fun editPoint(id: String, patch: PointPatch) = this@SwingPointsPanel.editPoint(id, patch)
         override fun outcomeForm(id: String) = scoring.outcomeForm(id)
+        override fun extraFields(id: String) = detect?.let {
+            org.litvin.ui.tabs.points.detect.ReasonField(scoring.reasonOf(id)) { reason -> scoring.setReason(id, reason) }
+        }
         override fun deletePoint(id: String) = this@SwingPointsPanel.deletePoint(id)
         override fun toggleFavorite(id: String) = this@SwingPointsPanel.toggleFavorite(id)
         override fun selectByVisualIndex(index: Int) = this@SwingPointsPanel.setSelectedVisualAndScroll(index)
@@ -694,6 +702,7 @@ class SwingPointsPanel(
                 isOpaque = false
                 add(scoring.matchEndNotice, BorderLayout.NORTH)
                 add(scoring.settingsButtons, BorderLayout.CENTER)
+                detect?.let { add(org.litvin.ui.tabs.points.detect.DetectBar(it, detectHost), BorderLayout.SOUTH) }
             }, BorderLayout.SOUTH)
         }
     }
@@ -730,6 +739,29 @@ class SwingPointsPanel(
         player.seek(target)
         updateTimeUI(target)
         timeline.repaint()
+    }
+
+    /** What the automatic detection needs from this tab. */
+    private val detectHost = object : org.litvin.ui.tabs.points.detect.DetectHost {
+        override val projectDir: File? get() = this@SwingPointsPanel.projectDir?.let(::File)
+
+        // A match of several files has no single video file (B-49).
+        override val video: File? get() = pendingMediaFile?.takeIf { timelineFiles.size <= 1 }
+
+        override fun importResult(resultFile: File, settings: org.litvin.autodetect.DetectSettings): org.litvin.autodetect.ImportPlan? {
+            val dir = this@SwingPointsPanel.projectDir ?: return null
+            // The import changes the project files, so the files must have all changes of the tab first.
+            autosave.flush()
+            return try {
+                val plan = org.litvin.autodetect.DetectImport.apply(File(dir), resultFile, settings)
+                loadEdl(EdlIO.readForProjectDir(dir))
+                scoring.load(dir, ProjectVideoLanguage.read(manifestPath))
+                plan
+            } catch (t: Throwable) {
+                dialogs.showError(this@SwingPointsPanel, ErrorTexts.of(t), tr("points.error.refresh"))
+                null
+            }
+        }
     }
 
     fun setProjectManifest(path: String) {

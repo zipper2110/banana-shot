@@ -49,6 +49,7 @@ object EditPointDialog {
         val error = DialogKit.errorLine()
         // Advanced mode: the full outcome of the clip (B-68, "Corrections").
         val outcome = actions.outcomeForm(point.id)?.let(::PointOutcomeFields)
+        val extra = actions.extraFields(point.id)
 
         val save = UiButton(tr("common.save"), kind = UiButton.Kind.LIME).apply { name = "points-edit-save" }
         val cancel = UiButton(tr("common.cancel"))
@@ -65,6 +66,7 @@ object EditPointDialog {
                     return@addActionListener
                 }
                 dialog.dispose()
+                extra?.save()
                 val patch = PointPatch(startMs = newStart, endMs = newEnd, label = label.text)
                 actions.editPoint(point.id, if (outcome?.changed() == true) patch.copy(outcome = newOutcome) else patch)
             } catch (t: IllegalArgumentException) {
@@ -89,6 +91,7 @@ object EditPointDialog {
                 ),
                 DialogKit.field(tr("pointEdit.label"), DialogKit.inputBox(label), note = tr("pointEdit.label.note")),
                 *outcome?.rows().orEmpty().toTypedArray(),
+                *extra?.rows.orEmpty().toTypedArray(),
                 error,
             ),
             DialogKit.footer(left = listOf(delete), right = listOf(cancel, save)),

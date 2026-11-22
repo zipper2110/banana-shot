@@ -1,5 +1,20 @@
 package org.litvin.scoring
 
+/**
+ * Why the players counted a point differently from what the video shows. The winner of a point is "by the video".
+ * A score override is "what the players counted". The reason says why they are different.
+ */
+enum class ScoreReason {
+    /** The players made a call that the video does not agree with. */
+    PLAYERS_CALL,
+
+    /** The players played the point again. The rally is real, but it does not count. */
+    REPLAYED,
+
+    /** The players lost the score and continued from a wrong score. */
+    SCORE_LOST,
+}
+
 /** Two numbers of a score: one for side 1 and one for side 2. */
 data class ScorePairV1(val p1: Int = 0, val p2: Int = 0)
 

@@ -64,7 +64,17 @@ data class ScoreV1(
     val details: Map<String, PointDetailV1> = emptyMap(),
     /** True when advanced mode asks the error kind after an error ending (B-68, the follow-up question). */
     val askErrorKind: Boolean = false,
+    /**
+     * Why the score of a point is not what the video shows (see [ScoreReason]). The key is the point id. The user sets
+     * it. The automatic detection uses it: a winner with a reason is not a detection error.
+     */
+    @get:JsonInclude(JsonInclude.Include.NON_EMPTY)
+    val reasons: Map<String, ScoreReason> = emptyMap(),
 ) {
+    /** A copy with [reason] for the point with [pointId]. A null reason removes the entry. */
+    fun withReason(pointId: String, reason: ScoreReason?): ScoreV1 =
+        copy(reasons = if (reason == null) reasons - pointId else reasons + (pointId to reason))
+
     fun manualMarks(): ManualScoreMarks = ManualScoreMarks(manualGameWins, manualSetWins, scoreOverrides)
 
     /**

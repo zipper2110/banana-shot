@@ -886,6 +886,11 @@ internal class PointsScoring(
      * Reads score.json, applies [update], and writes the file, so that the other fields stay as they are. The winners
      * of the aces and the double faults then come from the details (B-68).
      */
+    /** Why the players counted the point with [pointId] differently from the video, or null. */
+    fun reasonOf(pointId: String): org.litvin.scoring.ScoreReason? = score.reasons[pointId]
+
+    fun setReason(pointId: String, reason: org.litvin.scoring.ScoreReason?) = change { it.withReason(pointId, reason) }
+
     private fun change(update: (ScoreV1) -> ScoreV1) {
         val dir = projectDir ?: return
         val current = readScore() ?: return

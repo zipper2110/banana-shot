@@ -349,6 +349,10 @@ object SwingApplicationFactory {
                 PreferencesAppCreditRequest(scoreboardPreferences),
                 replayPlayers = { services.mediaPlayers.create(MediaScreen.REPLAY_EDITOR) },
                 modeDefaults = scoringModeDefaults,
+                // Only a PC with the lab has the detection: the file autodetect.json in the app data folder.
+                detect = org.litvin.autodetect.DetectLab.load(services.paths.root)?.let {
+                    org.litvin.autodetect.DetectRunner(it, services.paths.root)
+                }?.also { runner -> closeActions += runner::stop },
             )
             closeActions += pointsPanel::close
 

@@ -1,0 +1,170 @@
+package org.litvin.autodetect
+
+import org.litvin.JsonFileIO
+import org.litvin.points.AutoKind
+import org.litvin.points.AutoMarkV1
+import org.litvin.points.EdlIO
+import org.litvin.points.PointV1
+import org.litvin.scoring.Ending
+import org.litvin.scoring.Outcome
+import org.litvin.scoring.PointDetailV1
+import org.litvin.scoring.PointDetails
+import org.litvin.scoring.ScoreIO
+import org.litvin.shared.util.Timecode
+import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
+
+/** Why the import did not add a detected rally. */
+enum class SkipReason {
+    /** A clip of the project is already at this time. */
+    OVERLAP,
+
+    /** The clip is shorter than the minimum length of a clip. */
+    TOO_SHORT,
+}
+
+/**
+ * What the import did with the rally [rally] (an index into [DetectResult.rallies]): the id of its clip, the id of
+ * the fault clip before it, or why it was skipped. The lab compares these ids with the project at a later time to
+ * find the corrections of the user.
+ */
+data class ImportRow(
+    val rally: Int,
+    val pointId: String? = null,
+    val faultPointId: String? = null,
+    val skipped: SkipReason? = null,
+)
+
+/** The clips that an import adds, with their winners and details. */
+data class ImportPlan(
+    val points: List<PointV1>,
+    val outcomes: Map<String, Outcome>,
+    val details: Map<String, PointDetailV1>,
+    val rows: List<ImportRow>,
+) {
+    /** The count of the clips that give a point or a rally (not the fault clips). */
+    val rallyCount: Int get() = rows.count { it.pointId != null }
+    val faultCount: Int get() = rows.count { it.faultPointId != null }
+    val skippedCount: Int get() = rows.count { it.skipped != null }
+}
+
+/** The record of an import, in the `autodetect` folder of the project. */
+data class ImportRecord(
+    val created: String,
+    val resultFile: String,
+    val settings: DetectSettings,
+    val rows: List<ImportRow>,
+)
+
+/** Changes the result of a detection run into clips of the project. */
+object DetectImport {
+    /** The folder of the project that keeps the result files and the import records. */
+    const val FOLDER = "autodetect"
+
+    /** The shortest clip that the Points tab accepts. */
+    private const val MIN_CLIP_MS = 200
+
+    /** A fault clip starts this long before the serve and ends this long after it. */
+    private const val FAULT_BEFORE_MS = 1_000
+    private const val FAULT_AFTER_MS = 2_500
+
+    /**
+     * The clips for [result]. [existing] are the clips of the project: a rally at the time of one of them is skipped,
+     * so a second import adds nothing twice. Fault clips come only for [advanced] scoring mode. Two detected rallies
+     * never overlap: the padding of [settings] stops at the middle of the gap between them.
+     */
+    fun plan(
+        result: DetectResult,
+        existing: List<PointV1>,
+        advanced: Boolean,
+        settings: DetectSettings,
+        newId: () -> String = EdlIO::generateId,
+    ): ImportPlan {
+        val s = settings.normalized()
+        val videoEndMs = if (result.videoSeconds > 0) result.videoSeconds * 1000L else Long.MAX_VALUE
+        val order = result.rallies.withIndex().sortedBy { it.value.start }
+        val rawStart = order.map { (it.value.start * 1000).roundToLong() }
+        val rawEnd = order.map { (it.value.end * 1000).roundToLong() }
+        val points = ArrayList<PointV1>()
+        val outcomes = LinkedHashMap<String, Outcome>()
+        val details = LinkedHashMap<String, PointDetailV1>()
+        val rows = ArrayList<ImportRow>()
+        var lastEnd = 0
+
+        fun free(start: Int, end: Int) = existing.none { start < it.endMs && it.startMs < end }
+
+        order.forEachIndexed { k, (index, rally) ->
+            // The limits of this rally: the middle of the gap to its neighbors.
+            val lower = if (k == 0) 0L else maxOf(0L, (minOf(rawEnd[k - 1], rawStart[k]) + rawStart[k]) / 2)
+            val upper = if (k == order.lastIndex) videoEndMs else maxOf(rawEnd[k], (rawEnd[k] + maxOf(rawEnd[k], rawStart[k + 1])) / 2)
+            val start = Timecode.roundTo10ms((rawStart[k] - s.padBeforeMs).coerceIn(lower, maxOf(lower, rawEnd[k])))
+            val end = Timecode.roundTo10ms((rawEnd[k] + s.padAfterMs).coerceIn(rawStart[k], minOf(upper, videoEndMs)))
+            val from = maxOf(start, lastEnd)
+            when {
+                end - from < MIN_CLIP_MS -> rows += ImportRow(index, skipped = SkipReason.TOO_SHORT)
+                !free(from, end) -> rows += ImportRow(index, skipped = SkipReason.OVERLAP)
+                else -> {
+                    val faultId = rally.fault?.takeIf { s.addFaults && advanced }?.let { fault ->
+                        val t = (fault.t * 1000).roundToLong()
+                        val fs = maxOf(Timecode.roundTo10ms(maxOf(0L, t - FAULT_BEFORE_MS)), lastEnd)
+                        val fe = minOf(Timecode.roundTo10ms(t + FAULT_AFTER_MS), from)
+                        if (fe - fs < MIN_CLIP_MS || !free(fs, fe)) return@let null
+                        val id = newId()
+                        points += PointV1(id = id, startMs = fs, endMs = fe, auto = AutoMarkV1(AutoKind.FAULT))
+                        outcomes[id] = Outcome.NONE
+                        details[id] = PointDetailV1(ending = Ending.SERVE_FAULT)
+                        id
+                    }
+                    val percent = rally.confidence?.let { (it * 100).roundToInt().coerceIn(50, 100) }
+                    val winner = when (rally.winner.takeIf { s.addWinners && percent != null && percent >= s.minWinnerPercent }) {
+                        "P1" -> Outcome.P1
+                        "P2" -> Outcome.P2
+                        else -> Outcome.NONE
+                    }
+                    val id = newId()
+                    val kind = if (rally.kind == "short") AutoKind.SHORT else AutoKind.RALLY
+                    points += PointV1(
+                        id = id, startMs = from, endMs = end,
+                        auto = AutoMarkV1(kind, percent.takeIf { winner != Outcome.NONE }),
+                    )
+                    outcomes[id] = winner
+                    rows += ImportRow(index, pointId = id, faultPointId = faultId)
+                    lastEnd = end
+                }
+            }
+        }
+        return ImportPlan(points, outcomes, details, rows.sortedBy { it.rally })
+    }
+
+    /**
+     * Adds the clips of [resultFile] to the project in [projectDir], and writes the record of the import. The caller
+     * must write its pending changes of the project before this call, and read the project again after it.
+     */
+    fun apply(projectDir: File, resultFile: File, settings: DetectSettings): ImportPlan {
+        val result = DetectResult.read(resultFile)
+        val dir = projectDir.absolutePath
+        val edl = EdlIO.readForProjectDir(dir)
+        val score = ScoreIO.readForProjectDir(dir)
+        val plan = plan(result, edl.points, score.isAdvanced, settings)
+        if (plan.points.isEmpty()) return plan
+        val points = (edl.points + plan.points).sortedWith(compareBy({ it.startMs }, { it.endMs }))
+        EdlIO.writeForProjectDir(dir, edl.copy(points = points))
+        val updated = score.copy(outcomes = score.outcomes + plan.outcomes, details = score.details + plan.details)
+        ScoreIO.writeForProjectDir(dir, PointDetails.resolve(points, updated))
+        val stamp = LocalDateTime.now().format(STAMP)
+        val record = ImportRecord(stamp, resultFile.name, settings.normalized(), plan.rows)
+        val folder = File(projectDir, FOLDER).apply { mkdirs() }
+        JsonFileIO.writeAtomically(DetectJson.mapper, File(folder, "import-$stamp.json").absolutePath, record)
+        return plan
+    }
+
+    /** The newest result file of the project, or null when the project has none. */
+    fun latestResult(projectDir: File): File? =
+        File(projectDir, FOLDER).listFiles { f -> f.isFile && f.name.startsWith("result-") && f.name.endsWith(".json") }
+            ?.maxByOrNull { it.name }
+
+    internal val STAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", java.util.Locale.ROOT)
+}

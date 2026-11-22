@@ -329,6 +329,12 @@ internal class PointRow(
             UiKit.drawText(g2, Timecode.format(point.startMs), textFont, if (dim) Palette.FG_3 else Palette.FG, columns.start.toFloat(), top, h)
             val length = point.endMs?.let { formatSeconds(it - point.startMs) } ?: ""
             UiKit.drawText(g2, length, textFont, Palette.FG_3, columns.lengthRight - UiKit.textWidth(length, textFont), top, h)
+            // The mark of an automatic clip: a dot after the length. Yellow for a clip to check first.
+            if (point.autoNote != null) {
+                g2.color = if (point.autoWeak) Palette.YELLOW else Palette.BLUE
+                val cy = (top + h / 2).toInt()
+                g2.fillOval(columns.lengthRight + AUTO_DOT_GAP, cy - AUTO_DOT / 2, AUTO_DOT, AUTO_DOT)
+            }
             // On hover, the action buttons cover the marks, so the row does not paint the marks.
             val marksLeft = marks?.takeUnless { hovered }?.let { paintMarks(g2, it, columns.marksRight) } ?: columns.marksRight
             if (label != null) {
@@ -399,6 +405,8 @@ internal class PointRow(
     }
 
     override fun getToolTipText(event: MouseEvent): String? {
+        val dotLeft = TableColumns(width).lengthRight
+        if (point.autoNote != null && !hovered && event.x in dotLeft..(dotLeft + AUTO_DOT_GAP + AUTO_DOT + 4)) return point.autoNote
         val marks = marks() ?: return null
         // On hover, the action buttons cover the marks. The texts of the row (number, start, length) give all tips.
         if (hovered) return if (event.x < TableColumns(width).lengthRight + TableColumns.GAP) allTips(marks) else null
@@ -434,6 +442,8 @@ internal class PointRow(
 
     private companion object {
         const val BADGE_HEIGHT = 16
+        const val AUTO_DOT = 6
+        const val AUTO_DOT_GAP = 6
         const val MARK_GAP = 4
         const val RACKET = 15
         const val RACKET_BADGE = 21

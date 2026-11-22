@@ -25,6 +25,9 @@ interface PointsActions {
     /** The outcome of the point with [id] for the Edit dialog in advanced mode (B-68), or null in basic mode. */
     fun outcomeForm(id: String): PointOutcomeForm? = null
 
+    /** More rows for the Edit dialog of the point with [id], or null. The automatic detection adds the score reason. */
+    fun extraFields(id: String): PointExtraFields? = null
+
     fun addCommentAtPlayhead() {}
     fun createComment(startMs: Long, durationMs: Long, text: String, colorHex: String) {}
     fun editComment(id: Int, patch: CommentPatch) {}
@@ -90,6 +93,13 @@ data class CommentDto(
     override val stableKey: String get() = "comment:$id"
 }
 
+/** More rows of the Edit point dialog, from a feature outside of the dialog. Save calls [save]. */
+interface PointExtraFields {
+    val rows: List<javax.swing.JComponent>
+
+    fun save()
+}
+
 /** Lightweight DTO for a point shown in UI components. */
 data class PointDto(
     val id: String,
@@ -100,6 +110,10 @@ data class PointDto(
     val favorite: Boolean = false,
     /** The instant replays of the point (B-50). The list shows each one as a sub-row under the point. */
     val replays: List<ReplayRowDto> = emptyList(),
+    /** The tooltip of the mark of an automatic clip, or null for a clip that the user made. */
+    val autoNote: String? = null,
+    /** True for an automatic clip that the user should check first. */
+    val autoWeak: Boolean = false,
 )
 
 /** One instant replay of a point, for its sub-row in the list (B-50). */

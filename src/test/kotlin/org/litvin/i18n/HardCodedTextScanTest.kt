@@ -23,6 +23,8 @@ class HardCodedTextScanTest {
         val found = root.walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .filterNot { it.invariantPath(root).startsWith("ui/tabs/test/") }
+            // The lab-only UI of the automatic detection (docs/auto-analysis/app-integration.md, decision 11).
+            .filterNot { it.invariantPath(root).startsWith("ui/tabs/points/detect/") }
             .flatMap { file ->
                 val path = file.invariantPath(root)
                 findings(file.readText(Charsets.UTF_8), isUiCode = path.startsWith("ui/")).map { Entry(path, it.text) to it }

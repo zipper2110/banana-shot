@@ -15,6 +15,7 @@ import org.litvin.points.AutoMarkV1
 import org.litvin.scoring.ScoreReason
 import org.litvin.ui.commons.DialogGroup
 import org.litvin.ui.commons.DialogKit
+import org.litvin.ui.commons.Html
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.Stack
@@ -358,6 +359,12 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
                 ?: "No result for this project yet. The full detection takes about 0.7 × the length of the video."
         }
         if (state is DetectState.Failed && mine && state.logFile != null) status.toolTipText = state.logFile.absolutePath
+        // A warning of the result, for example a court model that is not usable. An import message has priority.
+        val warning = resultFile?.takeIf { !running }?.let { file -> runCatching { DetectResult.read(file).warnings.firstOrNull() }.getOrNull() }
+        if (warning != null && detail.text.isBlank()) {
+            detail.foreground = Palette.YELLOW
+            detail.text = Html.wrappedTooltip(warning, 380)
+        }
         start.isEnabled = !running
         stop.isVisible = running && mine
         add.isEnabled = !running && resultFile != null

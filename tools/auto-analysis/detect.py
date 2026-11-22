@@ -42,6 +42,28 @@ def stage(name, outputs, fn, force=False):
     say("@stage", name, "done", STAGE_S[name])
 
 
+def court_problem(track_file):
+    """A text if the court model of the video is missing or not plausible, else None. Plausible: the corners
+    of the doubles court are not far outside the frame, and the near baseline is below the far baseline. The
+    court detector was made for a camera high behind the court; from a low camera it can give a wrong model
+    with a good fit cost (seen on a video of 2026-09-13)."""
+    import numpy as np
+    import court_auto
+    if not os.path.exists(track_file):
+        return "No tennis court found in the video."
+    ok = [w for w in json.load(open(track_file)) if w["ok"]]
+    if not ok:
+        return "No tennis court found in the video."
+    good = 0
+    for w in ok:
+        q = court_auto.to_img(np.array(w["H"]), court_auto.QUAD)        # near left, near right, far right, far left
+        inside = (q[:, 0] > -1.5 * 1920).all() and (q[:, 0] < 2.5 * 1920).all() and (q[:, 1] > -0.2 * 1080).all() and (q[:, 1] < 2.0 * 1080).all()
+        good += bool(inside and min(q[0, 1], q[1, 1]) > max(q[2, 1], q[3, 1]) + 100 and q[1, 0] > q[0, 0] and q[2, 0] > q[3, 0])
+    if good < 0.7 * len(ok):
+        return "The court model is not plausible (the camera position is different from the lab matches)."
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", required=True)
@@ -93,20 +115,27 @@ def main():
     stage("image", [W("feat_dino.npy")], image, a.force)
     save_times()
 
-    model_name = "base"
-    if cfg["ballPass"]:
+    model_name, warnings = "base", []
+    ball_ok = bool(cfg["ballPass"])
+    if ball_ok:
         # ---- court
         def court():
             import court_track
             tr = court_track.run(MID)
             ok = [w for w in (tr or []) if w["ok"]]
-            if not ok:
-                raise RuntimeError("No tennis court found in the video.")
-            m = min(ok, key=lambda w: abs(w["t0"] - n / 2))
-            json.dump({"H": m["H"], "chamfer_px": max(1.0, m["cost"])}, open(W("court.json"), "w"))
-        stage("court", [W("court_track.json"), W("court.json")], court, a.force)
+            if ok:
+                m = min(ok, key=lambda w: abs(w["t0"] - n / 2))
+                json.dump({"H": m["H"], "chamfer_px": max(1.0, m["cost"])}, open(W("court.json"), "w"))
+        stage("court", [W("court_track.json")], court, a.force)
         save_times()
+        problem = court_problem(W("court_track.json"))
+        if problem:
+            # The ball stages need a correct court model. Without it, the result has only the rally boundaries.
+            warnings.append(problem + " The result has only the rally boundaries: no winners, no serve faults, no short points.")
+            say("@warning", warnings[-1])
+            ball_ok = False
 
+    if ball_ok:
         # ---- ball (the slow stage)
         import ball_wasb, ball_full, feat_wasb
         ball_full.WINDOWS[MID] = (0, n)
@@ -145,7 +174,7 @@ def main():
     np.save(W(f"rally_prob_{model_name}.npy"), prob.astype(np.float32))
     hi = float(cfg["threshold"])
     lo = max(0.05, hi - 0.15)
-    if cfg["ballPass"]:
+    if ball_ok:
         import pipeline as pl, match_decode as md
         from serve_ball import serve_events
         full = json.load(open(W("fullflights_s0.35.json")))
@@ -158,7 +187,7 @@ def main():
 
     # ---- winners
     out = []
-    if cfg["ballPass"] and seg:
+    if ball_ok and seg:
         say("@stage winners start")
         t = time.time()
         md.PARAMS[MID] = {"margin": -0.15, "net_fwd": 2.0, "net_back": 4.0, "min_speed": 8}     # the value of 3 of the 4 lab matches
@@ -196,7 +225,7 @@ def main():
     save_times()
     res = {"version": 1, "video": os.path.abspath(a.video), "videoSeconds": n, "settings": cfg, "rallyModel": model_name,
            "stageSeconds": STAGE_S, "thisRunSeconds": round(time.time() - t_all, 1),
-           "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "rallies": out}
+           "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "warnings": warnings, "rallies": out}
     json.dump(res, open(W("result.json"), "w"), indent=1, default=float)
     say("@result", W("result.json"))
 

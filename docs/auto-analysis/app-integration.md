@@ -63,7 +63,10 @@ normal tools. The app keeps the detection output and the corrections for the lab
 - Singles tennis only. The models learned from 4 singles matches of one camera position type.
 - A video with no keyframe each second gets one decoded frame each second (slower first stage, about 6x real time).
 - The winner uses "player 1 = near end in the first rally". The server and the score are not set.
-- The ball stage takes about 0.6 x the video length on the RTX 3060.
+- The ball stage takes about 0.6 x the video length on the RTX 3060 for a 60 fps video.
+- The court detector needs a camera high behind the court, as in the lab matches. For another camera position
+  (E23: a low camera) the script finds that the court model is not plausible. Then the result has only the rally
+  boundaries, and the dialog shows a warning.
 
 ## Tasks
 
@@ -75,4 +78,4 @@ normal tools. The app keeps the detection output and the corrections for the lab
 | 4 | App: the raw file and the run log in the project folder; the correction report (difference to the project) | done |
 | 5 | App: the "Detect points" action in the Points tab with the settings and the progress | done |
 | 6 | App: the mark "automatic" on a point, and the optional reason | done |
-| 7 | Tests for the domain parts; one run on a real match | tests done; real run: in work |
+| 7 | Tests for the domain parts; one run on a real match | done: tests, and one real run through the app runner (E23) |

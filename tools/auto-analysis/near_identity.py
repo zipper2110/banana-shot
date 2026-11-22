@@ -7,7 +7,9 @@ averaged over the point, and a majority vote in each game removes noise. K-means
 gives a player identity for each point.
 Rules: sides.json (score replay) says when the players change ends.
 The script compares the two and writes <match>/near_identity.json:
-for each point "nearCluster" (0/1), "nearPlayer" (P1/P2 from the best
+for each point "nearCluster" (0/1, after the vote in each game of the marks),
+"rawCluster" (0/1 or -1, no vote: fair input for the score decoder),
+"flip" (true = the near player changed since the last point with a color; local, see flips()), "nearPlayer" (P1/P2 from the best
 mapping), and "rulesAgree".
 Singles only. Usage: python near_identity.py [match id ...]
 """
@@ -32,6 +34,22 @@ def torso_color(img, row):
     if patch.size == 0:
         return None
     return cv2.cvtColor(patch, cv2.COLOR_BGR2LAB).reshape(-1, 3).mean(0)
+
+
+def flips(feats, alpha=0.5):
+    """Local end-change signal (E14e). A running reference follows the color difference "near minus
+    far"; the sign of each point against the reference gives a local cluster. flip[i] = the local
+    cluster differs from that of the last point with a color (None = no color). A shirt change
+    gives at most one wrong flip; a fixed 2-cluster model fails for the rest of the match."""
+    out, ref, last = [], None, None
+    for d in feats:
+        if d is None:
+            out.append(None); continue
+        sgn = 1 if ref is None or float(d @ ref) >= 0 else -1
+        ref = d.copy() if ref is None else (1 - alpha) * ref + alpha * sgn * d
+        out.append(None if last is None else bool(sgn != last))
+        last = sgn
+    return out
 
 
 def run(mid):
@@ -66,6 +84,7 @@ def run(mid):
             if c is not None and c2 is not None:
                 cols.append(c - c2)             # near minus far: the light of the scene cancels
         feats.append(np.median(cols, 0) if len(cols) >= 2 else None)
+    fl = flips(feats)
     ok = [i for i, f in enumerate(feats) if f is not None]
     X = np.array([feats[i] for i in ok])
     km = KMeans(2, n_init=10, random_state=0).fit(X)
@@ -87,7 +106,7 @@ def run(mid):
     res = []
     for i, s in enumerate(sides):
         rule_cluster = int(swapped[i]) ^ int(flip)
-        res.append({"id": s["id"], "nearCluster": int(cl[i]), "rulesCluster": rule_cluster,
+        res.append({"id": s["id"], "nearCluster": int(cl[i]), "rawCluster": int(raw[i]), "flip": fl[i], "rulesCluster": rule_cluster,
                     "rulesAgree": bool(cl[i] == rule_cluster) if cl[i] >= 0 else None})
     json.dump({"clusterSeparation": float(sep), "agreement": float(agree), "points": res},
               open(os.path.join(out, "near_identity.json"), "w"), indent=1)

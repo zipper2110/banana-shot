@@ -165,18 +165,24 @@ def run(mid):
     t_start = time.time()
     out = lab.mdir(mid)
     n = lab.n_seconds(mid)
-    gt = lab.gt_points(mid)
-    t_mid = int(gt[len(gt) // 2][0])
-    mid_w = t_mid // STEP
+    has_gt = os.path.exists(os.path.join(out, "gt.json"))
+    gt = lab.gt_points(mid) if has_gt else []
+    t_mid = int(gt[len(gt) // 2][0]) if gt else n // 2
     if os.path.exists(os.path.join(out, "court.json")):
         cj = json.load(open(os.path.join(out, "court.json")))
         H0, ref0 = np.array(cj["H"]), cj["chamfer_px"]
     else:
-        H0, _, info = court_auto.detect(court_auto.frame_at(mid, t_mid))
-        if H0 is None or not info["ok"]:
-            print(mid, "no court found at the middle of the match", info, flush=True)
-            return
+        # a video with no marks (the app): the middle can be a break, so try more times
+        for frac in ((None,) if gt else (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8)):
+            t_mid = t_mid if frac is None else int(n * frac)
+            H0, _, info = court_auto.detect(court_auto.frame_at(mid, t_mid))
+            if H0 is not None and info["ok"]:
+                break
+        else:
+            print(mid, "no court found", info, flush=True)
+            return None
         ref0 = 2.0
+    mid_w = t_mid // STEP
     c0 = court_auto.to_img(H0, COURT4)
     nwin = (n + STEP - 1) // STEP
     res = {}
@@ -197,7 +203,8 @@ def run(mid):
     jumps = [(track[i + 1]["t0"], round(court_auto.model_dist(Hs[i], Hs[i + 1]), 1)) for i in range(nwin - 1)
              if track[i]["ok"] and track[i + 1]["ok"]]
     jumps = [j for j in jumps if j[1] > 8]
-    montage(mid, track, n)
+    if has_gt:
+        montage(mid, track, n)
     hows = [res[w][3] for w in range(nwin)]
     print(mid, "windows", nwin, "not ok", sum(not t["ok"] for t in track),
           "| not ok at s", [t["t0"] for t in track if not t["ok"]][:20],
@@ -205,6 +212,7 @@ def run(mid):
           "| weak at s", [w * STEP for w in range(nwin) if hows[w] == "weak"][:20],
           "| cost median %.2f max %.2f" % (np.median([t["cost"] for t in track]), max(t["cost"] for t in track)),
           "| jumps (s, px)", jumps[:12], "| %.0f s" % (time.time() - t_start), flush=True)
+    return track
 
 
 if __name__ == "__main__":

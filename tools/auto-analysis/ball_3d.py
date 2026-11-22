@@ -155,6 +155,38 @@ def more_kinks(path, kk, P, sc, bad=5.0, rounds=2):
     return kk
 
 
+SERVE_Y = 11.7        # m from the net: contact point of a serve (a little inside the baseline)
+
+
+def serve_prior(P, seg, fl):
+    """E10d. A serve that flies along the view direction has a weak depth: the free fit can put the
+    start far behind the court. If the free fit is not plausible and the view ray of the first ball
+    position passes the serve contact zone of the far end (plane y = SERVE_Y, height 1.8 to 3.3 m, |x| < 5 m),
+    fit again with the start anchored there. Keeps the new fit only if it is a plausible serve."""
+    sp = 3.6 * float(np.linalg.norm(fl["v0"]))
+    p0 = fl["p0"]
+    if abs(p0[1]) <= 16 and sp <= 240 and -0.5 <= p0[2] <= 3.6 and fl["rms"] <= 5 and not np.isnan(sp):
+        return
+    M, C = P[:, :3], -np.linalg.inv(P[:, :3]) @ P[:, 3]
+    d = np.linalg.inv(M) @ np.array([seg[0, 1], seg[0, 2], 1.0])
+    ts = (seg[:, 0] - seg[0, 0]) / 60.0
+    best = None
+    for yp in (SERVE_Y,):          # far end only. By eye (E10d): 6 of 6 new far candidates are real serves, 1 of 6 at the near end
+        k = (yp - C[1]) / d[1]
+        X = C + k * d
+        if k <= 0 or not (1.8 <= X[2] <= 3.3) or abs(X[0]) > 5:
+            continue
+        try:
+            q0, v0, rms = fit_flight(P, ts, seg[:, 1:3].astype(np.float64), [(0.0, X[0], yp, X[2])])
+        except Exception:
+            continue
+        s2 = 3.6 * float(np.linalg.norm(v0))
+        if rms < 5 and 45 < s2 < 240 and v0[1] * yp < 0 and abs(q0[1] - yp) < 1.5 and (best is None or rms < best[2]):
+            best = (q0, v0, rms)
+    if best:
+        fl.update(p0=best[0], v0=best[1], rms=best[2], p1=simulate(best[0], best[1], [ts[-1]])[0], prior=1)
+
+
 def flights(path, kk, P, Hm=None, min_pts=8):
     """Splits the path at the kinks and fits each segment. Returns a list of dicts.
     With Hm (second pass): a kink that is a bounce gives an anchor on the ground for the
@@ -172,6 +204,8 @@ def flights(path, kk, P, Hm=None, min_pts=8):
         end = simulate(p0, v0, [ts[-1]])[0]
         out.append({"f0": float(seg[0, 0]), "f1": float(seg[-1, 0]), "n": len(seg), "p0": p0, "v0": v0, "p1": end, "rms": rms,
                     "cut0": a, "cut1": b, "anchored": 0})
+    for (a, b, seg), fl in zip(segs, out):               # E10d: serve flights with a degenerate free fit
+        serve_prior(P, seg, fl)
     if Hm is None:
         return out
     kpos = {float(k[0]): cv2.perspectiveTransform(np.array([[k[1:3]]], np.float64), Hm)[0, 0] for k in kk}
@@ -193,40 +227,64 @@ def flights(path, kk, P, Hm=None, min_pts=8):
     return out
 
 
+def fit_window(mid, rows, w0, w1, t_ref):
+    """Blobs of one window (rows: frame, x, y, score, peak; frame 0 = w0) -> dict with flights,
+    kinks, coverage. t_ref: time for the court model."""
+    Hm = court_H(mid, t_ref)
+    P, f, C = camera(Hm)
+    path = select(moving(link(rows)))
+    kk = more_kinks(path, kinks(path, Scale(Hm)), P, Scale(Hm))
+    fls = []
+    for fl in flights(path, kk, P, Hm):
+        lx, ly, lt, nz = landing(fl["p0"], fl["v0"])
+        fls.append({"t0": w0 + fl["f0"] / 60, "t1": w0 + fl["f1"] / 60, "n": fl["n"], "rms": fl["rms"],
+                    "p0": fl["p0"].tolist(), "v0": fl["v0"].tolist(), "p1": fl["p1"].tolist(),
+                    "land": [lx, ly], "landT": w0 + fl["f0"] / 60 + lt, "netZ": nz,
+                    "anchored": fl["anchored"], "bounce": fl.get("bounce"), "prior": fl.get("prior", 0)})
+    cov = len(np.unique(path[:, 0])) / max(1.0, (w1 - w0) * 60)
+    kc = cv2.perspectiveTransform(kk[:, 1:3].astype(np.float64).reshape(1, -1, 2), Hm)[0] if len(kk) else np.zeros((0, 2))
+    kinks_out = [[w0 + k[0] / 60, float(k[1]), float(k[2]), float(c[0]), float(c[1]), int(k[9])] for k, c in zip(kk, kc)]   # t, px x, px y, court x, court y (true only for a ball on the ground), gap
+    last = path[-1] if len(path) else None
+    return {"coverage": cov, "kinks": kinks_out, "flights": fls,
+            "lastSeen": None if last is None else [w0 + float(last[0]) / 60, float(last[1]), float(last[2])]}
+
+
 def run_points(mid, scale="0.35"):
     """All marked points. Reads ballpts_s<scale>.npy, writes flights_s<scale>.json:
-    for each point a list of flights. Times are in seconds of the video."""
+    for each point a list of flights. Times are in seconds of the video.
+    scale may carry a weights tag, for example "0.35_e15b_a"."""
     import json, time
-    from ball_wasb import PRE
+    from ball_wasb import PRE, POST
     d = np.load(os.path.join(lab.mdir(mid), f"ballpts_s{scale}.npy"))
     pts, out, t0 = lab.gt_points(mid), [], time.time()
     for i, (a, b, _) in enumerate(pts):
         w0 = max(0.0, a - PRE)
-        Hm = court_H(mid, a)
-        P, f, C = camera(Hm)
-        path = select(moving(link(d[d[:, 0] == i, 1:])))
-        kk = more_kinks(path, kinks(path, Scale(Hm)), P, Scale(Hm))
-        fls = []
-        for fl in flights(path, kk, P, Hm):
-            lx, ly, lt, nz = landing(fl["p0"], fl["v0"])
-            fls.append({"t0": w0 + fl["f0"] / 60, "t1": w0 + fl["f1"] / 60, "n": fl["n"], "rms": fl["rms"],
-                        "p0": fl["p0"].tolist(), "v0": fl["v0"].tolist(), "p1": fl["p1"].tolist(),
-                        "land": [lx, ly], "landT": w0 + fl["f0"] / 60 + lt, "netZ": nz,
-                        "anchored": fl["anchored"], "bounce": fl.get("bounce")})
-        cov = len(np.unique(path[:, 0])) / max(1.0, (b - a + PRE + 2.5) * 60)
-        kc = cv2.perspectiveTransform(kk[:, 1:3].astype(np.float64).reshape(1, -1, 2), Hm)[0] if len(kk) else np.zeros((0, 2))
-        kinks_out = [[w0 + k[0] / 60, float(k[1]), float(k[2]), float(c[0]), float(c[1]), int(k[9])] for k, c in zip(kk, kc)]   # t, px x, px y, court x, court y (true only for a ball on the ground), gap
-        last = path[-1] if len(path) else None
-        out.append({"start": a, "end": b, "coverage": cov, "kinks": kinks_out, "flights": fls,
-                    "lastSeen": None if last is None else [w0 + float(last[0]) / 60, float(last[1]), float(last[2])]})
+        r = fit_window(mid, d[d[:, 0] == i, 1:], w0, b + POST, a)
+        r.update(start=a, end=b)
+        out.append(r)
     json.dump(out, open(os.path.join(lab.mdir(mid), f"flights_s{scale}.json"), "w"), default=float)
     print(f"{mid}: {len(pts)} points, flights {sum(len(o['flights']) for o in out)}, mean coverage "
           f"{np.mean([o['coverage'] for o in out]):.2f}, {time.time() - t0:.0f} s", flush=True)
 
 
+def run_pre(mid, scale="0.35"):
+    """The windows before the marked points (ball_wasb.py pre). Writes preflights_s<scale>.json."""
+    import json, time
+    from ball_wasb import pre_windows
+    p = os.path.join(lab.mdir(mid), f"ballpre_s{scale}.npy")
+    d = np.load(p)
+    out, t0 = [], time.time()
+    for i, (w0, w1) in enumerate(pre_windows(mid)):
+        r = fit_window(mid, d[d[:, 0] == i, 1:], w0, w1, w1)
+        r.update(w0=w0, w1=w1)
+        out.append(r)
+    json.dump(out, open(os.path.join(lab.mdir(mid), f"preflights_s{scale}.json"), "w"), default=float)
+    print(f"{mid}: {len(out)} pre-windows, flights {sum(len(o['flights']) for o in out)}, {time.time() - t0:.0f} s", flush=True)
+
+
 if __name__ == "__main__":
-    if len(sys.argv) > 2 and sys.argv[2] == "points":
-        run_points(sys.argv[1], *(sys.argv[3:4]))
+    if len(sys.argv) > 2 and sys.argv[2] in ("points", "pre"):
+        (run_points if sys.argv[2] == "points" else run_pre)(sys.argv[1], *(sys.argv[3:4]))
         sys.exit()
     # test on one window file: python ball_3d.py <match> <start> <dur> <tag>
     mid, start, dur, tag = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), sys.argv[4]

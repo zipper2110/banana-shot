@@ -11,6 +11,7 @@ CFG = json.load(open(os.path.join(HERE, "matches.json"), encoding="utf-8"))
 ROOT = CFG["labRoot"]
 MATCHES = {m["id"]: m for m in CFG["matches"]}
 LABELED = [m["id"] for m in CFG["matches"] if m.get("project")]
+BALL_TAG = os.environ.get("BALL_TAG", "0.35")     # ball detector version of the flight files, e.g. "0.35_e15b_a"
 
 
 def mdir(mid):

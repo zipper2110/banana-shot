@@ -32,8 +32,15 @@ MEAN = np.array([0.485, 0.456, 0.406], np.float32)
 STD = np.array([0.229, 0.224, 0.225], np.float32)
 
 
+WEIGHTS = os.environ.get("BALL_WEIGHTS", "wasb_tennis.pth.tar")     # E15b: a fine-tuned file in the same folder
+TAG = "" if WEIGHTS == "wasb_tennis.pth.tar" else "_" + os.path.splitext(WEIGHTS)[0]
+
+
+PROGRESS = None      # optional function (frames done), called each 3600 frames (detect.py)
+
+
 def load_model():
-    return wasb_hrnet.load(EXT + "/weights/wasb_tennis.pth.tar").cuda().half()
+    return wasb_hrnet.load(EXT + "/weights/" + WEIGHTS).cuda().half()
 
 
 def crop_box(mid, scale):
@@ -109,6 +116,8 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
             flush(group, base)
             base += need
             group = []
+            if PROGRESS and base % 3600 == 0:
+                PROGRESS(base)
     arr = np.array(rows, np.float32).reshape(-1, 5)
     el = time.time() - t0
     if not quiet:
@@ -135,7 +144,7 @@ def run_points(mid, scale=0.35):
         total += b - a + PRE + POST
         if i % 25 == 0:
             print(f"{mid} point {i}/{len(pts)} video {total:.0f} s in {time.time() - t0:.0f} s", flush=True)
-    np.save(os.path.join(lab.mdir(mid), f"ballpts_s{scale}.npy"), np.concatenate(out))
+    np.save(os.path.join(lab.mdir(mid), f"ballpts_s{scale}{TAG}.npy"), np.concatenate(out))
     print(f"{mid} done: {len(pts)} points, video {total:.0f} s in {time.time() - t0:.0f} s", flush=True)
 
 
@@ -161,7 +170,7 @@ def run_pre(mid, scale=0.35):
         total += w1 - w0
         if i % 25 == 0:
             print(f"{mid} pre-window {i} video {total:.0f} s in {time.time() - t0:.0f} s", flush=True)
-    np.save(os.path.join(lab.mdir(mid), f"ballpre_s{scale}.npy"), np.concatenate(out))
+    np.save(os.path.join(lab.mdir(mid), f"ballpre_s{scale}{TAG}.npy"), np.concatenate(out))
     print(f"{mid} pre-windows done: video {total:.0f} s in {time.time() - t0:.0f} s", flush=True)
 
 

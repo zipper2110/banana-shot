@@ -22,13 +22,21 @@ from ball_tracks import link, moving
 KINK, HALF = 6.0, 5
 
 
+_TRACK = {}
+
+
 def court_H(mid, t=None):
-    """Homography of the 1920-wide frame to court meters. Uses court_track.json when it has a valid window."""
+    """Homography of the 1920-wide frame to court meters at time t. Uses court_track.json
+    (court_track.py, one model each 60 s): the window of t if it is ok, else the nearest ok
+    window in time. Falls back to court.json (one model at mid-match)."""
     p = os.path.join(lab.mdir(mid), "court_track.json")
     if t is not None and os.path.exists(p):
-        for w in json.load(open(p)):
-            if w["t0"] <= t < w["t1"] and w.get("ok", True):
-                return np.array(w["H"], np.float64)
+        if mid not in _TRACK:
+            _TRACK[mid] = [w for w in json.load(open(p)) if w.get("ok", True)]
+        ws = _TRACK[mid]
+        if ws:
+            w = min(ws, key=lambda w: 0 if w["t0"] <= t < w["t1"] else min(abs(t - w["t0"]), abs(t - w["t1"])))
+            return np.array(w["H"], np.float64)
     return np.array(json.load(open(os.path.join(lab.mdir(mid), "court.json")))["H"], np.float64)
 
 

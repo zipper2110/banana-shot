@@ -91,8 +91,21 @@ def valid_H(H, w=1920, h=1080):
     area = 0.5 * abs(np.dot(p[:, 0], np.roll(p[:, 1], -1)) - np.dot(p[:, 1], np.roll(p[:, 0], -1)))
     # the camera is behind the near baseline: the far baseline is (nearly) in the frame
     far_in = -0.15 * w < fl[0] and fr[0] < 1.15 * w
-    return (area > 0.12 * w * h and 0.08 * w < fw < 1.2 * w and depth > 0.2 * h and far_in
-            and -0.1 * h < min(fl[1], fr[1]) < 0.8 * h and max(nl[1], nr[1]) > 0.35 * h)
+    if not (area > 0.12 * w * h and 0.08 * w < fw < 1.2 * w and depth > 0.2 * h and far_in
+            and -0.1 * h < min(fl[1], fr[1]) < 0.8 * h and max(nl[1], nr[1]) > 0.35 * h):
+        return False
+    # the 4 service-line corners are inside the frame in all lab matches, and
+    # most of the model is visible: this rejects models that hide almost all
+    # of their lines outside the frame and fit only the net tape
+    s = np.c_[COURT4, np.ones(4)] @ Hi.T
+    s = s[:, :2] / s[:, 2:]
+    if not ((s[:, 0] >= 0) & (s[:, 0] < w) & (s[:, 1] >= 0) & (s[:, 1] < h)).all():
+        return False
+    # the service boxes have a real image height, and the near baseline does
+    # not run off to "infinity" (a nearly flat model)
+    if (s[0, 1] + s[1, 1]) / 2 - (s[2, 1] + s[3, 1]) / 2 < 0.08 * h or not (-3 * w < nl[0] and nr[0] < 4 * w):
+        return False
+    return visible(H, w, h) >= 0.6 * len(SAMPLES)
 
 
 # ---------------------------------------------------------------- lines

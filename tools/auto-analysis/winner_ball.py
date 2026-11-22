@@ -32,10 +32,13 @@ def good(f):
     return f["n"] >= 10 and f["rms"] < 5 and 8 < sp < 230 and abs(f["p0"][1]) < 25 and abs(f["p0"][0]) < 12
 
 
+T_CUT = -1.5      # use only flights that start before the marked end + T_CUT (s). E16c: later flights are ball handling after the point
+
+
 def analyse(pt):
     """Returns a dict of quantities of the last shot, or None if there is no usable flight."""
     T = pt["end"]
-    fl = [f for f in pt["flights"] if good(f) and f["t0"] < T + 1.0]
+    fl = [f for f in pt["flights"] if good(f) and f["t0"] < T + T_CUT]
     if not fl:
         return None
     run = [fl[-1]]
@@ -87,7 +90,7 @@ def rule(q):
 KEYS = ["to_far", "src", "n_run", "n_pts", "speed", "t_rel", "t_end_rel", "net_z", "crossed", "start_y", "start_z", "end_y", "end_z", "bx", "by", "margin", "n_flights", "coverage"]
 
 
-def main(scale="0.35"):
+def main(scale=lab.BALL_TAG):
     X, y, g, r = [], [], [], []
     for mid in SINGLES:
         p = os.path.join(lab.mdir(mid), f"flights_s{scale}.json")

@@ -425,7 +425,10 @@ def main():
                 "confidence": max(pp, 1 - pp),
                 "server": None if r["serverNear"] is None else ("P1" if r["serverNear"] == p1_near else "P2"),
                 "serverNear": r["serverNear"], "serveSpeedKmh": r["serveSpeed"], "fault": r["fault"],
-                "shots": r["shots"], "lastShot": r["lastShot"], "endChangeBefore": r["flip"]})
+                "shots": r["shots"], "lastShot": r["lastShot"], "endChangeBefore": r["flip"],
+                # E28: the shot chain of the rally (shot_chain.py), as facts for the review window. The score
+                # model does not use it (pipeline.CHAIN is off: no gain in the full chain).
+                "chain": r.get("chain")})
         STAGE_S["winners"] = round(time.time() - t, 1)
         say("@stage winners done", STAGE_S["winners"])
     else:

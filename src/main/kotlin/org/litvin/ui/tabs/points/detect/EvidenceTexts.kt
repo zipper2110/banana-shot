@@ -35,6 +35,7 @@ internal object EvidenceTexts {
         if (rally.endChangeBefore == true) lines += "The players changed ends before this point"
         lines += lastShot(rally.lastShot, nearName, farName)
         lines += netHit(rally, nearName, farName)
+        lines += chain(rally, nearName, farName, shots = true)
         lines += winner(rally, nearName, farName)
         return lines
     }
@@ -43,7 +44,49 @@ internal object EvidenceTexts {
     fun outcomeLines(rally: DetectedRally, near: Int?, players: ScorePlayers): List<String> {
         val nearName = near?.let { players.name(it) } ?: "the near player"
         val farName = near?.let { players.name(3 - it) } ?: "the far player"
-        return lastShot(rally.lastShot, nearName, farName) + netHit(rally, nearName, farName) + winner(rally, nearName, farName)
+        return lastShot(rally.lastShot, nearName, farName) + netHit(rally, nearName, farName) +
+            chain(rally, nearName, farName, shots = false) + winner(rally, nearName, farName)
+    }
+
+    /** The shot chain: one line for each shot (with [shots]), and the decision of the chain. */
+    private fun chain(rally: DetectedRally, nearName: String, farName: String, shots: Boolean): List<String> {
+        val chain = rally.chain ?: return emptyList()
+        val lines = ArrayList<String>()
+        if (shots) {
+            chain.shots.forEachIndexed { index, shot ->
+                val hitter = when (shot.near) {
+                    true -> nearName
+                    false -> farName
+                    null -> "not known"
+                }
+                val how = when (shot.how) {
+                    "hit" -> ", hit seen"
+                    "back" -> ", the ball came back"
+                    "gap" -> ", hit not seen"
+                    else -> ""
+                }
+                val place = shot.court?.takeIf { it.size >= 2 }?.let { " at ${meters(it[0])}, ${meters(it[1])}" }.orEmpty()
+                val end = when (shot.end) {
+                    "in" -> "in$place"
+                    "out" -> "out$place" + (shot.margin?.let { " (by ${meters(abs(it))})" } ?: "")
+                    "own" -> "bounce on the side of the hitter$place"
+                    "net" -> "net"
+                    else -> "end not seen"
+                }
+                lines += "Shot ${index + 1} at ${time(shot.t)}: $hitter$how" + (shot.kmh?.let { ", ${it.roundToInt()} km/h" } ?: "") + " → $end"
+            }
+        }
+        val nearWins = chain.nearWins
+        lines += if (nearWins == null) {
+            "Shot chain: no decision" + (chain.case?.let { " ($it)" } ?: "")
+        } else {
+            "Shot chain: ${if (nearWins) nearName else farName} wins" + (chain.p?.let { ", ${percent(it)}" } ?: "") + (chain.case?.let { " ($it)" } ?: "")
+        }
+        val model = rally.pNearWins
+        if (nearWins != null && model != null && abs(model - 0.5) >= 0.02 && (model > 0.5) != nearWins) {
+            lines += "Warning: the score model and the shot chain give different winners."
+        }
+        return lines
     }
 
     /** The ball into the net at the end of the rally. A warning when the winner is the player who hit it. */

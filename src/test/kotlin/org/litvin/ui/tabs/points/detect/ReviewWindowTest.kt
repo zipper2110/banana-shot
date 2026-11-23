@@ -95,8 +95,8 @@ class ReviewWindowTest {
         override fun applyPreviewAdjustments(adj: AdjustmentsV1) = Unit
         override fun applyPreviewRotation(rotationDeg: Float, reason: String) = Unit
         override fun setPreviewOverlay(overlay: VideoOverlay?) = Unit
-        override fun stepFrameForward(maximumTimeMs: Long) = 0L
-        override fun stepFrameBackward(minimumTimeMs: Long) = 0L
+        override fun stepFrameForward(maximumTimeMs: Long): Long { timeMs += 33; return timeMs }
+        override fun stepFrameBackward(minimumTimeMs: Long): Long { timeMs -= 33; return timeMs }
         override fun nextFrame() = Unit
         override fun setSubtitleFile(file: File) = true
         override fun activatePreview(reason: String) = Unit
@@ -229,6 +229,42 @@ class ReviewWindowTest {
         assertTrue(host.open().isEmpty())
         assertTrue(player.closed)
         assertEquals(1, closedCalls)
+    }
+
+    @Test
+    fun `the detection note field shows four rows`() = review(auto("a", 10_000), auto("b", 30_000)) {
+        window.setSize(1300, 780)
+        window.addNotify()
+        window.validate()
+        snapshot(window, "review-window-note")
+        val note = window.contentPane.find("review-note") as javax.swing.JTextArea
+        val rows = note.getFontMetrics(note.font).height * 4
+
+        assertTrue(note.visibleRect.height >= rows, "visible ${note.visibleRect.height} px, 4 rows are $rows px")
+        assertEquals(null, window.contentPane.find("review-last-shot"))
+    }
+
+    @Test
+    fun `with Frame step on, Left and Right step one frame while the video is paused`() = review(auto("a", 10_000), auto("b", 30_000)) {
+        val before = org.litvin.SessionSettings.frameStepWhenPaused
+        try {
+            org.litvin.SessionSettings.frameStepWhenPaused = false
+            key("F")
+            assertTrue(org.litvin.SessionSettings.frameStepWhenPaused)
+            player.pause()
+            val start = player.timeMs
+
+            key("RIGHT")
+            assertEquals(start + 33, player.timeMs)
+            key("LEFT")
+            assertEquals(start, player.timeMs)
+
+            key("F")
+            key("RIGHT")
+            assertEquals(start + 1_000, player.timeMs)
+        } finally {
+            org.litvin.SessionSettings.frameStepWhenPaused = before
+        }
     }
 
     @Test

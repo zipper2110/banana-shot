@@ -40,15 +40,34 @@ def is_fast_out(f):
     return f["n"] >= 8 and f["rms"] < 5 and 5.0 < abs(p0[1]) < 16 and 1.2 < p0[2] < 3.6 and 45 < sp < 240         and v0[1] * p0[1] < 0 and abs(p0[0]) < 6
 
 
-def serve_events(flights, t0, t1):
+RALLY_FILTER = os.environ.get("SERVE_FILTER", "0") == "1"      # E28e: a flight that returns a ball is not a serve event
+RETURN_S, RETURN_V = 3.0, 8.0     # s (time for two flights: one shot in a gap of the ball data is normal), m/s along the court (ball_bounce.HIT_V)
+
+
+def is_return(f, flights):
+    """True if the ball came from the other side less than RETURN_S s before the flight f: a reliable flight that
+    starts on the other half, flies in the opposite direction faster than RETURN_V along the court, and ends in
+    that time. Then f is a rally shot.
+    Before a serve the ball does not come from the other side (the toss has no speed along the court)."""
+    for g in flights:
+        if g is not f and f["t0"] - RETURN_S <= g["t1"] <= f["t0"] + 0.05 and g["v0"][1] * f["v0"][1] < 0                 and g["p0"][1] * f["p0"][1] < 0 and abs(g["v0"][1]) >= RETURN_V and g["n"] >= 6 and g["t1"] - g["t0"] >= 0.15 - 1e-6 and g["rms"] < 5:
+            return True
+    return False
+
+
+def serve_events(flights, t0, t1, rally_filter=None):
     """Serve events in [t0, t1]: list of (time, server near?, kind, flight). A toss and the fast
-    flight after it (same end, within 1.5 s) make one event."""
+    flight after it (same end, within 1.5 s) make one event.
+    rally_filter (default RALLY_FILTER): no event from a flight that returns a ball (is_return)."""
     ev = []
-    for f in flights:
+    rally_filter = RALLY_FILTER if rally_filter is None else rally_filter
+    for i, f in enumerate(flights):
         if not (t0 <= f["t0"] <= t1):
             continue
         kind = "serve" if is_serve(f) else "toss" if is_toss(f) else "fast" if is_fast_out(f) else None
         if kind is None:
+            continue
+        if rally_filter and kind != "toss" and is_return(f, flights[max(0, i - 12):i]):
             continue
         near = f["p0"][1] < 0
         if kind == "toss" and near and not (ev and ev[-1][1] == near and f["t0"] - ev[-1][0] < 1.5):

@@ -1,0 +1,416 @@
+"""E28: the shot chain of a rally, and the winner evidence from it.
+
+Input: the fitted flights of a rally (ball_full.py), the ball events that the flights refer to
+(ball_bounce.py: "bounce", "hit", "other", "end"), and the net events (net_events.py).
+Output of build(): the list of shots in time order. One shot = one hit and the path of the ball
+until the next hit:
+    hit (who, when, how the hitter is known) -> flight -> net touch or bounce (where) -> flight after the bounce.
+Rules of the chain (facts of the game, no tuned values):
+  - A flight that starts at a bounce event is the same shot after its bounce.
+  - A flight that starts at a hit event, or that flies in the opposite direction along the court,
+    is a new shot. The hitter is the player at the end that the ball leaves.
+  - The ball data has gaps. A flight in the same direction as the shot before it, after a long gap
+    or with a start far behind the place where the shot before ended, is a new shot of the same
+    player: the return of the other player between them was not seen ("gap").
+evidence(): the last shot before the end of the rally gives one case (CASES) and the end of the
+winner. The probability of each case is measured on the marked matches (fit_cases(), leave one
+match out).
+Usage: python shot_chain.py                    the measurement on the 554 marked points
+       python shot_chain.py <work folder> <t0> <t1> ...   the chain of the rallies of a work folder
+"""
+import json, os, sys
+import numpy as np
+
+SW, BL, SL = 4.115, 11.885, 6.40      # m: half width of the singles court, baseline, service line
+MIN_DUR = 0.15        # s: shortest flight that is used (10 samples at 60 fps, as winner_ball.good; 6 samples at 30 fps)
+MIN_N = 6             # samples
+SAME_GAP = 0.6        # s: a flight in the same direction after a shorter gap is the same shot (as winner_ball.analyse)
+NEW_GAP = 1.5         # s: after a longer gap it is a new shot (a tennis ball is in the air for less than this between two hits)
+BACK_M = 3.0          # m: or a new shot if the flight starts this far behind the last known place of the ball
+HIT_V = 8.0           # m/s along the court: a flight back that is faster than this is a hit (ball_bounce.HIT_V)
+OWN_BACK = 0.5        # m: a bounce on the side of the hitter counts up to this distance behind the baseline
+NET_AFTER = 0.7       # s: a net event belongs to a shot if it is not later than this after the last sample of the shot
+NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its direction (net_events.HINT_DIR)
+
+
+def kmh(f):
+    return 3.6 * float(np.linalg.norm(f["v0"]))
+
+
+def usable(f, min_speed=8.0):
+    """The fit of the flight is reliable for the direction along the court."""
+    return f["t1"] - f["t0"] >= MIN_DUR - 1e-6 and f["n"] >= MIN_N and f["rms"] < 5 and min_speed < kmh(f) < 230
+
+
+def pos_ok(f):
+    """The 3D start position is inside a large box around the court (winner_ball.good)."""
+    return abs(f["p0"][1]) < 25 and abs(f["p0"][0]) < 12
+
+
+def _ev(events, i, kind):
+    return events[i] if (events is not None and i is not None and events[i]["kind"] == kind) else None
+
+
+def build(flights, events, nets=(), min_speed=8.0, weak=True):
+    """The shot chain. flights: the flights of the rally window, in time order. events: the event list
+    that "ev0", "ev1" and "bounceEv" of the flights refer to (None = a flights file with no events).
+    nets: net events of the same time range. weak: also use flights with a start position outside the
+    court box (their direction is used, their positions are not).
+    Returns a list of shots: {"t", "near", "how", "fl", "bounces", "net", "weak", "serve"}."""
+    shots, cur = [], None
+    for f in flights:
+        if not usable(f, min_speed) or (not weak and not pos_ok(f)):
+            continue
+        to_far = f["v0"][1] > 0
+        s = 1.0 if to_far else -1.0
+        b0, h0 = _ev(events, f.get("ev0"), "bounce"), _ev(events, f.get("ev0"), "hit")
+        same = cur is not None and cur["near"] == to_far
+        new, how, turn = True, "first", None
+        if same:
+            gap = f["t0"] - cur["fl"][-1]["t1"]
+            if b0 is not None and gap < SAME_GAP:
+                new = False                                   # the same shot after its bounce
+            elif h0 is not None and gap < SAME_GAP:
+                new = False                                   # a hit event with no change of the direction: not a new shot
+            elif gap < SAME_GAP:
+                new = False
+            else:
+                back = pos_ok(f) and cur["reach"] is not None and f["p0"][1] * s < cur["reach"] - BACK_M
+                new, how = (gap >= NEW_GAP or back), "gap"
+            if not new and came_back(cur, [e for e in (b0, _ev(events, f.get("bounceEv"), "bounce")) if e is not None]):
+                # The ball bounced on the other side, and now it bounces on the side of the hitter: the other
+                # player returned it. The return was not seen (or its fit has the wrong direction).
+                new, how, to_far, s = True, "back", not to_far, -s
+        elif cur is not None:
+            how = "hit" if h0 is not None else "back"
+            if b0 is not None:
+                # The direction changes at an event that passed the bounce test. A fast flight back: the other player
+                # hit the ball there (on the rise after the bounce, or in the air: then the event is not on the ground).
+                # A slow flight back: the bounce is real, and the direction of the short fit after it is not reliable.
+                if abs(f["v0"][1]) >= HIT_V:
+                    how, turn = "hit", b0
+                    cur["bounces"] = [e for e in cur["bounces"] if e is not b0]
+                    cur["returned"] = True
+                    b0 = None
+                else:
+                    new, to_far, s = False, cur["near"], -s
+        if new:
+            if turn is not None:
+                h0 = turn
+            cur = {"t": float(h0["t"] if h0 is not None else f["t0"]), "near": bool(to_far), "how": how, "fl": [], "bounces": [],
+                   "net": None, "reach": None, "weak": not pos_ok(f), "serve": None}
+            shots.append(cur)
+        cur["fl"].append(f)
+        for e in (b0, _ev(events, f.get("bounceEv"), "bounce")):
+            if e is not None and e["court"] is not None and all(e is not x for x in cur["bounces"]):
+                cur["bounces"].append(e)
+        if pos_ok(f):
+            r = max(f["p0"][1] * s, f["p1"][1] * s)
+            cur["reach"] = r if cur["reach"] is None else max(cur["reach"], r)
+        for e in cur["bounces"]:
+            cur["reach"] = e["court"][1] * s if cur["reach"] is None else max(cur["reach"], e["court"][1] * s)
+    # net events: each one belongs to the shot that is in the air at its time
+    seen, alone = list(shots), []
+    for e in nets:
+        if e["kind"] != "net" or e["conf"] < NET_CONF:
+            continue
+        c = [i for i, sh in enumerate(seen) if sh["fl"][0]["t0"] - 0.05 <= e["t"] <= sh["fl"][-1]["t1"] + NET_AFTER
+             and (i + 1 == len(seen) or e["t"] < seen[i + 1]["fl"][0]["t0"])]
+        if c:
+            sh = seen[c[-1]]
+            if sh["near"] == bool(e["toFar"]):
+                if sh["net"] is None:
+                    sh["net"] = e
+            elif e["dirConf"] >= 0.7 and sh["weak"]:
+                sh["near"], sh["net"] = bool(e["toFar"]), e           # the net event knows the direction better than a weak flight
+            else:
+                sh.setdefault("netConflict", e)                       # the ball flies away from the net: not a touch by this shot
+        elif e["dirConf"] >= NET_DIR:
+            alone.append({"t": float(e["t"]), "near": bool(e["toFar"]), "how": "net", "fl": [], "bounces": [], "net": e,
+                          "reach": None, "weak": True, "serve": None})      # the flight of this shot was not tracked
+    return sorted(seen + alone, key=lambda sh: sh["t"])
+
+
+def came_back(sh, evs):
+    """True if one of the bounce events evs is more than BACK_M behind a bounce of the shot that is on the other side."""
+    s = 1.0 if sh["near"] else -1.0
+    far = [e["court"][1] * s for e in sh["bounces"] if e["court"][1] * s > 0]
+    return bool(far) and any(e["court"] is not None and all(e is not x for x in sh["bounces"]) and e["court"][1] * s < min(0.0, max(far) - BACK_M)
+                             for e in evs)
+
+
+def first_bounce(sh):
+    """(x, across; y, along the court in the direction of the shot (m after the net); time; sigma m) or None."""
+    if not sh["bounces"]:
+        return None
+    e = min(sh["bounces"], key=lambda e: e["t"])
+    s = 1.0 if sh["near"] else -1.0
+    return float(e["court"][0]), float(e["court"][1] * s), float(e["t"]), float(e["conf"] or 0.0)
+
+
+def shot_end(sh, tol=0.0):
+    """The end of a shot as a fact: (kind, margin m). kind: "net", "own" (the bounce is on the side of the
+    hitter), "in", "out", "none" (not seen). margin: distance to the nearest line (positive = inside)."""
+    if sh["net"] is not None:
+        return "net", None
+    b = first_bounce(sh)
+    if b is None:
+        return "none", None
+    x, y = b[0], b[1]
+    if y < -(BL + OWN_BACK):
+        return "none", None           # behind the baseline of the hitter: not a bounce of a shot that flies to the net
+    if y < 0:
+        return "own", y
+    m = min(SW - abs(x), BL - y)
+    return ("in" if m > -tol else "out"), m
+
+
+def after_bounce(sh):
+    """Seconds for which the ball was tracked after the first bounce of the shot."""
+    b = first_bounce(sh)
+    if b is None or not sh["fl"]:
+        return 0.0
+    return max(0.0, sh["fl"][-1]["t1"] - b[2])
+
+
+def last_shot(shots, t_end, t_cut):
+    """Index of the last shot that starts before t_end + t_cut (winner_ball.T_CUT: later shots are ball handling), or None."""
+    c = [i for i, sh in enumerate(shots) if (sh["fl"][0]["t0"] if sh["fl"] else sh["t"]) < t_end + t_cut]
+    return c[-1] if c else None
+
+
+# ---------------------------------------------------------------- winner evidence
+
+LINE_M = 0.3          # m: a bounce nearer to a line than this is a "line" case (the position error of a bounce event, E17d-2: 90 % below 0.28 m)
+FIRST_DT = 0.15       # s: a low kink of the old rule this much before the bounce event is the first ground contact
+EARLY = -4.0          # s: the last shot starts more than this before the end: a later shot was probably not tracked (match_decode.case_key)
+# The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5;
+# fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
+CASE_P = {"back_in": 0.56, "back_stop": 0.83, "in": 0.83, "in_early": 0.81, "in_line": 0.65, "in_line_early": 0.7, "net_hi": 0.97, "net_lo": 0.83,
+          "old_in": 0.66, "old_in_early": 0.63, "old_in_seen": 0.95, "old_net": 0.94, "old_net_early": 0.75, "old_out": 0.89, "old_out_early": 0.5,
+          "old_out_seen": 0.71, "out": 0.95, "out_early": 0.66, "own": 0.81, "own_early": 0.9}
+CASES_BY_MATCH = None
+TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", "own": "the ball came down on the side of the hitter",
+        "out": "the ball bounced out", "in": "the ball bounced in and no return was seen",
+        "back": "the end of this shot was not seen", "old": "no bounce or net event; the fitted flight decides", "none": "nothing is known"}
+
+
+def evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
+    """Winner evidence of a rally from its shot chain.
+    pt: {"end", "flights", "events"}; nets: the net events of the window; t_cut: winner_ball.T_CUT;
+    q, w_old, old_case: the quantities, the decision and the case of the old rule (winner_ball.analyse,
+    winner_sweep.decide, match_decode.case_key) for the same window.
+    Returns {"nearWins": bool or None, "case", "shots", "last": index of the last shot or None}.
+    Order of the facts of the last shot: net event; bounce event (on the side of the hitter, out, in);
+    else the old rule (kink or fit landing). "back_": the old rule decided from the shot before the last
+    shot of the chain (it did not use the last flight)."""
+    shots = build(pt["flights"], pt.get("events"), nets, min_speed)
+    li = last_shot(shots, pt["end"], t_cut)
+    old = (lambda pre: (w_old, pre + old_case) if w_old is not None else (None, "none"))
+    if li is None:
+        # No shot starts before the time cut (a short rally). Then the cut has no sense: the last shot before the
+        # end decides if it has a fact. Cases "late_...": too rare in the marked matches for a measured probability.
+        lj = last_shot(shots, pt["end"], 0.0)
+        kind = shot_end(shots[lj])[0] if lj is not None else "none"
+        if kind != "none" and w_old is None:
+            return {"nearWins": shots[lj]["near"] if kind == "in" else (not shots[lj]["near"]), "case": "late_" + kind, "shots": shots, "last": lj}
+        w, case = old("old_")
+        return {"nearWins": w, "case": case, "shots": shots, "last": None}
+    sh = shots[li]
+    kind, m = shot_end(sh)
+    e = "_early" if sh["t"] - pt["end"] < EARLY else ""
+    same = bool(q is not None and sh["fl"] and abs((pt["end"] + q["t_rel"]) - sh["fl"][0]["t0"]) < 1e-6)
+    if kind in ("own", "out", "in") and same and q["src"] == 2 and pt["end"] + q["b_rel"] < first_bounce(sh)[2] - FIRST_DT:
+        kind = "none"         # the old rule has an earlier ground contact (a low kink): the bounce event is not the first bounce
+    if kind == "net":
+        w, case = (not sh["near"]), "net_" + ("hi" if sh["net"]["dirConf"] >= 0.7 else "lo")
+    elif kind == "own":
+        w, case = (not sh["near"]), "own" + e
+    elif kind == "out":
+        w, case = (not sh["near"]), "out" + e
+    elif kind == "in":
+        w, case = sh["near"], "in" + ("_line" if m < LINE_M else "") + e
+    else:
+        w, case = old("old_")
+        if not same:
+            # The old rule did not use the last flight: its decision is about a shot before the last shot.
+            # The chain facts of that shot have priority: "in" = the last shot is its return, and the end of the
+            # return is not known. Net, out, own side = the ball after it is not a rally shot.
+            prev = [x for x in shots[:li] if q is not None and x["fl"] and abs((pt["end"] + q["t_rel"]) - x["fl"][0]["t0"]) < 1e-6]
+            pk = shot_end(prev[-1])[0] if prev else "none"
+            if pk == "in":
+                w, case = None, "none"
+            elif pk in ("net", "out", "own"):
+                w, case = (not prev[-1]["near"]), "back_stop"
+            elif w is not None:                       # 2 cases only: the old rule says "in" or it says "net or out"
+                case = "back_in" if old_case.startswith("in") else "back_stop"
+    return {"nearWins": w, "case": case, "shots": shots, "last": li}
+
+
+def _who(near):
+    return "Near player" if near else "Far player"
+
+
+def explain(r, t_end, t_cut):
+    """One sentence group for the user: the facts of the last shot and what they mean for the winner."""
+    shots, li, case, w = r["shots"], r["last"], r["case"], r["nearWins"]
+    if li is None:
+        return "No shot was tracked before the end of the rally." + ("" if w is None else " The fitted flight decides (old rule).")
+    sh = shots[li]
+    kind, m = shot_end(sh)
+    b = first_bounce(sh)
+    how = {"hit": "hit the ball", "back": "sent the ball back (the hit was not seen)", "gap": "hit the ball again (the return between was not seen)",
+           "first": "hit the first tracked ball", "net": "hit the ball (only the net touch was seen)"}[sh["how"]]
+    txt = f"{_who(sh['near'])} {how} at {sh['t']:.1f} s."
+    win = "" if w is None else f" {_who(w)} wins the point."
+    fact = kind if (case.startswith("late_") or case.split("_")[0] in ("net", "own", "out", "in")) else None
+    if fact == "net":
+        return txt + f" The ball touched the net at {sh['net']['t']:.1f} s and stayed on the side of the hitter." + win
+    if fact == "own":
+        return txt + f" The ball came down on the side of the hitter at {b[2]:.1f} s." + win
+    if fact == "out":
+        return txt + f" The ball bounced out at {b[2]:.1f} s ({-m:.1f} m outside)." + win
+    if fact == "in":
+        a = after_bounce(sh)
+        line = " This is near a line." if m < LINE_M else ""
+        seen = f" The ball was tracked for {a:.1f} s after the bounce, and no return was seen." if a >= 0.1 else " No return was seen."
+        return txt + f" The ball bounced in at {b[2]:.1f} s ({m:.1f} m inside).{line}{seen}" + win
+    if case == "back_stop":
+        return txt + " The end of this shot was not seen. The shot before it went into the net or out, so this ball is not a rally shot." + win
+    if case == "back_in":
+        return txt + " The end of this shot was not seen. The fitted flight of the shot before it landed in." + win
+    if kind in ("own", "out", "in") and case.startswith("old_"):
+        return txt + " A bounce event exists, but the ball touched the ground before it. The first ground contact decides (old rule)." + win
+    if case.startswith("old_"):
+        what = "stopped at the net" if "net" in case else "landed in" if "_in" in case else "landed out"
+        return txt + f" No bounce event and no net event. The fitted flight {what}." + win
+    prev = [x for x in shots[:li] if x["fl"]]
+    if prev and shot_end(prev[-1])[0] == "in" and prev[-1]["near"] != sh["near"]:
+        pb = first_bounce(prev[-1])
+        return txt + f" This is the return of the ball that bounced in at {pb[2]:.1f} s. The end of the return was not seen: no decision."
+    return txt + " The end of this shot was not seen: no decision."
+
+
+def export(r, t_end, t_cut, used, p=None):
+    """The chain of a rally for the review window (JSON). Times in s of the video, places in m of the court
+    (x across, y along: negative = near half). See docs/auto-analysis/app-integration.md."""
+    li = r["last"]
+    out = []
+    for i, sh in enumerate(r["shots"]):
+        kind, m = shot_end(sh)
+        b = first_bounce(sh)
+        s = 1.0 if sh["near"] else -1.0
+        d = {"t": round(sh["t"], 3), "near": sh["near"], "how": sh["how"], "end": kind}
+        if sh["fl"]:
+            d["kmh"] = round(kmh(sh["fl"][0]))
+            d["tLast"] = round(sh["fl"][-1]["t1"], 3)
+        if kind == "net":
+            d["tEnd"], d["netConf"] = round(sh["net"]["t"], 3), sh["net"]["conf"]
+        elif kind != "none":
+            d["tEnd"], d["court"], d["margin"], d["sigma"] = round(b[2], 3), [round(b[0], 2), round(b[1] * s, 2)], round(m, 2), round(b[3], 2)
+            d["after"] = round(after_bounce(sh), 2)
+        if sh["weak"]:
+            d["weak"] = True              # the 3D start of the flight is not plausible: only the direction is used
+        if (sh["fl"][0]["t0"] if sh["fl"] else sh["t"]) >= t_end + t_cut:
+            d["late"] = True              # after the time cut: ball handling after the point, not used
+        out.append(d)
+    return {"case": r["case"], "nearWins": r["nearWins"], "p": None if (p is None or r["nearWins"] is None) else round(p, 2), "used": bool(used),
+            "last": li, "text": explain(r, t_end, t_cut), "shots": out}
+
+
+def point_evidence(pt, nets, p, t_cut=None):
+    """evidence() for a marked point (flights file of ball_3d.py with events), with the old rule of winner_sweep."""
+    import winner_ball as wb, winner_sweep as ws, match_decode as md
+    orig, cut = wb.good, wb.T_CUT
+    wb.good = lambda f, orig=orig: orig(f) and kmh(f) >= p["min_speed"]
+    wb.T_CUT = cut if t_cut is None else t_cut
+    try:
+        q = wb.analyse(pt)
+        w = ws.decide(q, p)
+        return evidence(pt, nets, wb.T_CUT, q, w, md.case_key(q, p) if w is not None else None, p["min_speed"])
+    finally:
+        wb.good, wb.T_CUT = orig, cut
+
+
+EV_TAG = "0.35_ev"       # the flights files with events of the lab matches
+
+
+def marked(mid):
+    """The marked points of a lab match: list of (point, winnerNear, net events of its window)."""
+    import lab
+    pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{EV_TAG}.json")))
+    ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
+    ne = json.load(open(os.path.join(lab.mdir(mid), "net_events.json")))["events"]
+    return [(pt, e["winnerNear"], [x for x in ne if pt["start"] - 1.0 <= x["t"] <= pt["end"] + 2.5])
+            for pt, e in zip(pts, ends) if e["winnerNear"] is not None]
+
+
+_COUNTS = {}
+
+
+def counts(mid):
+    """{case: [decisions, right]} of the marked points of one lab match."""
+    import match_decode as md
+    if mid not in _COUNTS:
+        c = {}
+        for pt, y, nn in marked(mid):
+            r = point_evidence(pt, nn, md.PARAMS[mid])
+            if r["nearWins"] is not None:
+                v = c.setdefault(r["case"], [0, 0])
+                v[0] += 1; v[1] += int(r["nearWins"] == y)
+        _COUNTS[mid] = c
+    return _COUNTS[mid]
+
+
+def fit_cases(mids):
+    """Case table from the marked points of the given matches (2 pseudo counts at P_DEC for each case, as match_decode.fit_cases)."""
+    from score_decode import P_DEC
+    tot = {}
+    for mid in mids:
+        for k, (n, r) in counts(mid).items():
+            v = tot.setdefault(k, [0, 0]); v[0] += n; v[1] += r
+    return {k: float(np.clip((r + 2 * P_DEC) / (n + 2), 0.5, 0.97)) for k, (n, r) in tot.items()}
+
+
+def use_lomo_cases():
+    global CASES_BY_MATCH
+    import winner_ball as wb
+    CASES_BY_MATCH = {m: fit_cases([x for x in wb.SINGLES if x != m]) for m in wb.SINGLES}
+
+
+def case_prob(case, mid=None):
+    """Probability that the decision of the case is right. A case that the table does not have: P_DEC."""
+    from score_decode import P_DEC
+    t = CASES_BY_MATCH[mid] if (CASES_BY_MATCH and mid in CASES_BY_MATCH) else CASE_P
+    return t.get(case, P_DEC)
+
+
+def main():
+    import winner_ball as wb, match_decode as md
+    use_lomo_cases()
+    tot, allc = [0, 0, 0, 0.0], {}
+    for mid in wb.SINGLES:
+        h = d = n = 0
+        hp = 0.0
+        for pt, y, nn in marked(mid):
+            r = point_evidence(pt, nn, md.PARAMS[mid])
+            n += 1
+            w = r["nearWins"]
+            if w is not None and case_prob(r["case"], mid) <= 0.5:      # the other 3 matches say: this case is a coin
+                w = None
+            if w is not None:
+                d += 1; h += int(w == y)
+        for k, (cn, cr) in counts(mid).items():
+            v = allc.setdefault(k, [0, 0]); v[0] += cn; v[1] += cr
+        tot = [tot[0] + h, tot[1] + d, tot[2] + n]
+        print(f"{mid}: decided {100 * d / n:.0f}%, correct of decided {100 * h / max(1, d):.1f}%, with coin {100 * (h + 0.5 * (n - d)) / n:.1f}%")
+    h, d, n = tot[:3]
+    print(f"ALL (chain, case tables leave one match out): decided {100 * d / n:.0f}%, correct of decided {100 * h / d:.1f}%, with coin {100 * (h + 0.5 * (n - d)) / n:.1f}%")
+    t = fit_cases(wb.SINGLES)
+    for k in sorted(allc):
+        print(f"  {k:18s} decisions {allc[k][0]:4d}, right {allc[k][1]:4d} ({100 * allc[k][1] / allc[k][0]:5.1f}%), table {t[k]:.2f}")
+    print("CASE_P =", json.dumps({k: round(v, 2) for k, v in sorted(t.items())}))
+
+
+if __name__ == "__main__":
+    main()

@@ -20,6 +20,8 @@ import org.litvin.ui.commons.Stack
 import org.litvin.ui.commons.SwitchBox
 import org.litvin.ui.commons.UiButton
 import org.litvin.ui.commons.UiKit
+import org.litvin.SessionSettings
+import org.litvin.ui.tabs.points.ui.FrameStepToggle
 import org.litvin.ui.tabs.points.ui.ScorePlayers
 import java.awt.BorderLayout
 import java.awt.Color
@@ -339,6 +341,21 @@ internal class ReviewWindow(
         foreground = Palette.FG
     }
     private val playButton = button("Play point", Material2MZ.PLAY_ARROW, "review-play", "Space", UiButton.Kind.LIME) { togglePlay() }
+    /** The frame step toggle of the Points tab, with the same setting: Left and Right then step one frame while paused. */
+    private val frameStep = FrameStepToggle().apply {
+        name = "review-frame-step"
+        on = SessionSettings.frameStepWhenPaused
+        addActionListener { toggleFrameStep() }
+    }
+
+    /** Shows or hides all parts of the overlay. The switches of the parts keep their state. */
+    private val overlayMaster = SwitchBox("Overlay", 12f).apply {
+        name = "review-overlay-all"
+        toolTipText = "Shows or hides all parts of the detection overlay (V)"
+        isFocusable = false
+        isSelected = OVERLAY_OFF !in host.overlayLayers()
+    }
+
     /** One switch for each part of the detection overlay (debug view). The window keeps their state for the next time. */
     private val overlaySwitches = OverlayLayer.entries.associateWith { layer ->
         SwitchBox(layer.text, 12f).apply {
@@ -351,6 +368,7 @@ internal class ReviewWindow(
     private val overlayRow = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 14, 0)).apply {
         isOpaque = false
         isVisible = overlayFile != null
+        add(overlayMaster)
         overlaySwitches.values.forEach { add(it) }
     }
     private var overlay: DetectOverlay? = null
@@ -422,10 +440,9 @@ internal class ReviewWindow(
         foreground = Palette.FG_2
         border = BorderFactory.createEmptyBorder()
     }
-    private val lastShotButton = button("Show last shot", Material2MZ.PLAY_ARROW, "review-last-shot", "Plays from 1 s before the last shot") { playLastShot() }
 
     /** The note of the user about the detection of the selected point. [noteForId] is the point of the text. */
-    private val noteArea = javax.swing.JTextArea(4, 20).apply {
+    private val noteArea = javax.swing.JTextArea(NOTE_ROWS, 20).apply {
         name = "review-note"
         lineWrap = true
         wrapStyleWord = true
@@ -467,9 +484,10 @@ internal class ReviewWindow(
             if (!listSync && !event.valueIsAdjusting) list.selectedValue?.let { select(it.point.id, play = true) }
         }
         winner.onChange { outcome -> setWinner(outcome) }
-        overlaySwitches.values.forEach {
+        (overlaySwitches.values + overlayMaster).forEach {
             it.addActionListener {
-                host.setOverlayLayers(overlaySwitches.filterValues { switch -> switch.isSelected }.keys.map { layer -> layer.name }.toSet())
+                val names = overlaySwitches.filterValues { switch -> switch.isSelected }.keys.map { layer -> layer.name }.toSet()
+                host.setOverlayLayers(if (overlayMaster.isSelected) names else names + OVERLAY_OFF)
                 applyOverlay()
             }
         }
@@ -551,6 +569,8 @@ internal class ReviewWindow(
                 isOpaque = false
                 add(overlayRow, BorderLayout.NORTH)
                 add(hint, BorderLayout.CENTER)
+                // The frame step toggle is at the right of the hint line: the transport row has no space for it.
+                add(frameStep, BorderLayout.EAST)
             }, BorderLayout.NORTH)
             add(bar, BorderLayout.CENTER)
             add(JPanel(BorderLayout(16, 0)).apply {
@@ -599,14 +619,21 @@ internal class ReviewWindow(
             })
             add(winner)
             add(evidence)
-            add(lastShotButton)
             add(JLabel("Detection note").apply {
                 font = UiKit.font(11f)
                 foreground = Palette.FG_3
             })
-            add(JScrollPane(noteArea).apply {
-                border = BorderFactory.createLineBorder(Palette.LINE)
-                horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            // A Stack gives a scroll pane the height of its text. The panel around it keeps the height of the rows.
+            add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                name = "review-note-box"
+                val insets = noteArea.insets
+                val rowsHeight = NOTE_ROWS * noteArea.getFontMetrics(noteArea.font).height + insets.top + insets.bottom + 2
+                preferredSize = java.awt.Dimension(100, rowsHeight)
+                add(JScrollPane(noteArea).apply {
+                    border = BorderFactory.createLineBorder(Palette.LINE)
+                    horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+                }, BorderLayout.CENTER)
             })
             add(pair(acceptButton, deleteButton))
             add(addButton)
@@ -663,6 +690,8 @@ internal class ReviewWindow(
         bind("RIGHT") { nudge(STEP_MS) }
         bind("shift LEFT") { nudge(-LONG_STEP_MS) }
         bind("shift RIGHT") { nudge(LONG_STEP_MS) }
+        bind("F") { toggleFrameStep() }
+        bind("V") { if (overlayRow.isVisible) overlayMaster.doClick() }
         bind("I") { setStartHere() }
         bind("O") { setEndHere() }
         bind("Q") { setWinner(Outcome.P1) }
@@ -750,7 +779,6 @@ internal class ReviewWindow(
             else -> ""
         }
         evidence.isVisible = evidence.text.isNotEmpty()
-        lastShotButton.isVisible = rally?.lastShot?.t != null
         if (noteForId != point?.id) {
             saveNote()
             noteForId = point?.id
@@ -783,16 +811,6 @@ internal class ReviewWindow(
         val id = noteForId ?: return
         val text = noteArea.text.trim()
         if (text != host.noteOf(id)) host.setNote(id, text)
-    }
-
-    private fun playLastShot() {
-        val t = selectedPoint()?.let { host.detectionOf(it.id) }?.lastShot?.t ?: return
-        val from = ((t - 1.0) * 1000).toLong().coerceAtLeast(0)
-        stopAtMs = selectedPoint()?.endMs?.toLong()?.takeIf { it > from }
-        player.seek(from)
-        showTime(from)
-        player.play()
-        refreshPlayButton()
     }
 
     private fun say(text: String) {
@@ -859,8 +877,18 @@ internal class ReviewWindow(
         refreshPlayButton()
     }
 
+    private fun toggleFrameStep() {
+        SessionSettings.frameStepWhenPaused = !SessionSettings.frameStepWhenPaused
+        frameStep.on = SessionSettings.frameStepWhenPaused
+    }
+
     private fun nudge(deltaMs: Long) {
         stopAtMs = null
+        // With Frame step on, a step of 1 s is a step of one frame while the video is paused (as in the Points tab).
+        if (abs(deltaMs) == STEP_MS && SessionSettings.frameStepWhenPaused && player.status() != PlayerStatus.PLAYING) {
+            showTime(if (deltaMs > 0) player.stepFrameForward() else player.stepFrameBackward())
+            return
+        }
         val target = (player.currentTimeMs() + deltaMs).coerceAtLeast(0)
         player.seek(target)
         showTime(target)
@@ -994,7 +1022,8 @@ internal class ReviewWindow(
 
     private fun applyOverlay() {
         val file = overlayFile
-        val layers = overlaySwitches.filterValues { it.isSelected }.keys
+        val layers = if (overlayMaster.isSelected) overlaySwitches.filterValues { it.isSelected }.keys else emptySet()
+        overlaySwitches.values.forEach { it.isEnabled = overlayMaster.isSelected }
         if (layers.isEmpty() || file == null) {
             overlayTicker.stop()
             player.setPreviewOverlay(null)
@@ -1142,6 +1171,12 @@ internal class ReviewWindow(
         const val MIN_WIDTH = 1000
         const val MIN_HEIGHT = 620
         const val SIDE_WIDTH = 440
+
+        /** In the saved overlay switches: the master switch is off. */
+        const val OVERLAY_OFF = "OFF"
+
+        /** The height of the detection note field, in text rows. */
+        const val NOTE_ROWS = 4
         const val ROW_HEIGHT = 32
         const val CLOCK_WIDTH = 110
         const val STEP_MS = 1_000L

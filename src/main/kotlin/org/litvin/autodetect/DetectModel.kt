@@ -128,6 +128,35 @@ data class DetectedRally(
     val lastShot: LastShot? = null,
     /** The ball into the net that ends the rally, when the detection saw one. The score model does not use it. */
     val netHit: NetHit? = null,
+    /** The shots of the rally and the winner evidence from them (shot_chain.py). The score model does not use it. */
+    val chain: ShotChain? = null,
+)
+
+/**
+ * The shot chain of a rally. [case] names the rule that decides, [nearWins] is its decision (null: no decision),
+ * [p] is the measured share of right decisions of that rule.
+ */
+data class ShotChain(
+    val case: String? = null,
+    val nearWins: Boolean? = null,
+    val p: Double? = null,
+    val shots: List<ChainShot> = emptyList(),
+)
+
+/**
+ * One shot: [t] is the start in s, [near] is true when the player at the near end hit it. [how] says how the hitter
+ * is known: "first", "hit" (the hit was seen), "back" (the ball came back), "gap" (the return was not seen), "net".
+ * [end] is "in", "out", "own" (a bounce on the side of the hitter), "net" or "none" (not seen). [court] is the
+ * place of the bounce in m, [margin] its distance to the lines in m (negative: out).
+ */
+data class ChainShot(
+    val t: Double = 0.0,
+    val near: Boolean? = null,
+    val how: String? = null,
+    val end: String? = null,
+    val kmh: Double? = null,
+    val court: List<Double>? = null,
+    val margin: Double? = null,
 )
 
 /**

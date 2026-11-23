@@ -18,6 +18,7 @@ import lab
 import winner_ball as wb
 import winner_sweep as ws
 import match_decode as md
+import shot_chain as sc
 from ball_full import WINDOWS
 from serve_ball import serve_events
 from server_end import near_far, wrist_up
@@ -42,6 +43,8 @@ PROB = {}
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)
+CHAIN = os.environ.get("CHAIN", "0") == "1"      # E28: the winner evidence comes from the shot chain (shot_chain.py); the flights file needs "events"
+FPS_ADAPT = os.environ.get("FPS_ADAPT", "0") == "1"   # E28: the sample counts of the winner rule follow the frame rate of the ball track (winner_ball.set_fps)
 END_RULE = None       # optional function (start, end, flights) -> end time for the winner rule
 
 
@@ -79,6 +82,13 @@ def rallies(mid, serves, p=None, hi=0.5, lo=0.35, short=True):
     return sorted(out)
 
 
+def track_fps(flights):
+    """Samples in each second of the ball track (30 or 60 for the known videos). A flight with no missing
+    sample has exactly this rate; flights with missing samples have a lower rate. So: the 90 % point."""
+    r = [(f["n"] - 1) / (f["t1"] - f["t0"]) for f in flights if f["n"] >= 8 and f["t1"] > f["t0"]]
+    return float(round(np.percentile(r, 90))) if r else 60.0
+
+
 def a_end_t(q, t_end):
     """The video time of the start of the last shot (q["t_rel"] is relative to the end of the rally)."""
     return float(t_end + q["t_rel"])
@@ -97,6 +107,10 @@ def evidence(mid, seg, full, serves):
     cp = os.path.join(out, "color_cache.json")
     cache = json.load(open(cp)) if os.path.exists(cp) else {}
     dirty = False
+    if FPS_ADAPT:
+        wb.set_fps(track_fps(full["flights"]))
+    np_ = os.path.join(out, "net_events.json")
+    nets = json.load(open(np_))["events"] if os.path.exists(np_) else []
     for (a, b) in seg:
         fls = [full["flights"][i] for i in np.nonzero((fl_t0 >= a - 1.0) & (fl_t0 <= b + 2.5))[0]]
         kks = [full["kinks"][i] for i in np.nonzero((kk_t >= a - 1.0) & (kk_t <= b + 2.5))[0]]
@@ -111,6 +125,19 @@ def evidence(mid, seg, full, serves):
         wb.good, wb.T_CUT = orig, t_cut
         w = ws.decide(q, p)
         pw = 0.5 if w is None else (md.case_prob(q, p, mid) if w else 1 - md.case_prob(q, p, mid))
+        ch = None
+        if "events" in full:                         # E28: the shot chain of the rally (facts for the user; with CHAIN also the evidence)
+            try:
+                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= b + 2.5], T_CUT_E2E, q, w,
+                                 md.case_key(q, p) if w is not None else None, p["min_speed"])
+                pc = sc.case_prob(ch["case"], mid)
+                chain_row = sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
+            except Exception:                        # the chain is an addition: a fault in it must not stop the old rule
+                if CHAIN:
+                    raise
+                ch = None
+            if CHAIN:
+                pw = 0.5 if ch["nearWins"] is None else (pc if ch["nearWins"] else 1 - pc)
         # server end: pose vote, then the ball serve event
         nu, fu = [], []
         for s in range(max(0, int(a) - 1), min(n, int(a) + 3)):
@@ -160,6 +187,9 @@ def evidence(mid, seg, full, serves):
                     "bx": None if np.isnan(q["bx"]) else q["bx"], "by": None if np.isnan(q["by"]) else q["by"], "tRel": q["t_rel"]}
         rows.append({"start": a, "end": b, "prob": PROB[(mid, b)], "pBall": pw, "serverNear": srv, "serveSpeed": speed, "fault": fault, "lastShot": last,
                      "shots": int(sum(wb.good(f) and a <= f["t0"] <= b for f in fls))})
+        if ch is not None:
+            rows[-1]["chainCase"], rows[-1]["chainNearWins"] = ch["case"], ch["nearWins"]
+            rows[-1]["chain"] = chain_row
         prev_end = b
     if dirty:
         json.dump(cache, open(cp, "w"))
@@ -171,7 +201,8 @@ def evidence(mid, seg, full, serves):
 
 def run(mid, quiet=False):
     start, dur = WINDOWS[mid]
-    full = json.load(open(os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS", "fullflights_s0.35.json"))))   # E17d: another flights file for a comparison
+    # E17d: another flights file for a comparison. E28: the chain needs the file with events.
+    full = json.load(open(os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS") or ("fullflights_s0.35_ev.json" if CHAIN else "fullflights_s0.35.json"))))
     serves = serve_events(full["flights"], start, start + dur)
     seg = rallies(mid, serves)
     rows = evidence(mid, seg, full, serves)
@@ -228,6 +259,8 @@ def run(mid, quiet=False):
 
 if __name__ == "__main__":
     md.use_lomo_cases()                       # winner probabilities measured on the other 3 matches
+    if CHAIN:
+        sc.use_lomo_cases()
     ms = [run(m) for m in (sys.argv[1:] or list(WINDOWS))]
     if len(ms) > 1:
         n, ok, kn = (sum(m[k] for m in ms) for k in ("n", "ok", "known"))

@@ -28,6 +28,9 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
     /** The outcome texts for a video time, or null when no rally decides its winner near that time. */
     var outcome: (Double) -> OutcomeMark? = { null }
 
+    /** The shot panel for a video time, or null when the time is not in a point with a shot chain. */
+    var shotPanel: (Double) -> ShotPanel? = { null }
+
     private val ballTimes = DoubleArray(data.ball.size) { data.ball[it][0] }
     private val poseTimes = DoubleArray(data.poses.size) { data.poses[it][0] }
 
@@ -106,21 +109,26 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
             val text = "Serve ${serve.speedKmh.roundToInt()} km/h · ${if (serve.near) "near end" else "far end"}"
             label(area.x + 16.0 * unit, area.y + area.height - 44.0 * unit, text, 26.0 * unit, Palette.FG)
         }
-        // The shot (a fitted flight) of this time: its data as a text, and the landing point of the fit before the bounce.
+        // The shot panel: a box of a constant size at the top right, with the number of the shot, the hitter, the
+        // times, and the outcome.
+        if (OverlayLayer.SHOTS in layers) shotPanel(t)?.let { panel ->
+            val width = PANEL_WIDTH * unit
+            val left = area.x + area.width - 16.0 * unit - width
+            val top = area.y + 14.0 * unit
+            shapes += OverlayShape.Rect(left, top, width, PANEL_HEIGHT * unit, fill = Palette.withAlpha(Palette.SCRIM, LABEL_BOX_ALPHA), radius = 8.0 * unit)
+            val x0 = left + 16.0 * unit
+            shapes += OverlayShape.Text(x0, top + 8.0 * unit, panel.number, 56.0 * unit, Palette.FG, FONT, bold = true)
+            if (panel.who.isNotEmpty()) shapes += OverlayShape.Text(x0, top + 74.0 * unit, panel.who.take(PANEL_NAME_CHARS), 22.0 * unit, panel.whoColor, FONT, bold = true)
+            if (panel.time.isNotEmpty()) shapes += OverlayShape.Text(x0, top + 104.0 * unit, panel.time, 16.0 * unit, Palette.FG_2, FONT)
+            if (panel.outcome.isNotEmpty()) shapes += OverlayShape.Text(x0, top + 128.0 * unit, panel.outcome, 19.0 * unit, panel.outcomeColor, FONT, bold = true)
+        }
+        // The flight of this time: the path of its fit, and the landing point of the fit before the bounce.
         var line = 0
         fun note(text: String, color: java.awt.Color = Palette.FG) {
             label(area.x + 16.0 * unit, area.y + (14.0 + 24.0 * line++) * unit, text, 17.0 * unit, color)
         }
         if (OverlayLayer.SHOTS in layers) {
             data.flights.lastOrNull { it.good && t >= it.t0 && t <= it.t1 + SHOT_SHOWN_S }?.let { flight ->
-                val parts = ArrayList<String>()
-                parts += "Shot ${time(flight.t0)} to ${time(flight.t1)}"
-                flight.toFar?.let { parts += if (it) "to the far end" else "to the near end" }
-                parts += "${flight.speedKmh.roundToInt()} km/h"
-                flight.start?.takeIf { it.size >= 3 }?.let { parts += "from ${meters(it[0])}, ${meters(it[1])}, height ${meters(it[2])}" }
-                flight.netZ?.let { parts += "net ${meters(it)}" }
-                flight.landM?.takeIf { it.size >= 2 }?.let { parts += "lands ${meters(it[0])}, ${meters(it[1])}" }
-                note(parts.joinToString(" · "))
                 // The path of the fit: white for the measured part, yellow and thin for the predicted part.
                 flight.curve?.let { curve ->
                     val obsEnd = flight.curveObsEnd ?: flight.t1
@@ -177,8 +185,6 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
         return shapes
     }
 
-    private fun time(seconds: Double) = String.format(java.util.Locale.ROOT, "%.2f", seconds % 60)
-
     private fun meters(value: Double) = String.format(java.util.Locale.ROOT, "%.1f", value)
 
     private fun courtAt(t: Double): OverlayCourt? =
@@ -211,6 +217,11 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
 
         /** The text of a shot stays this long after the end of its flight. */
         const val SHOT_SHOWN_S = 0.4
+
+        /** The size of the shot panel, and the longest player name in it. */
+        const val PANEL_WIDTH = 230.0
+        const val PANEL_HEIGHT = 160.0
+        const val PANEL_NAME_CHARS = 16
 
         /** The mark of an event stays this long. */
         const val EVENT_SHOWN_S = 1.0

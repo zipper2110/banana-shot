@@ -134,6 +134,7 @@ internal class ReviewBoundsBar(
     private var others: List<LongRange> = emptyList()
     private var playheadMs = 0L
     private var hasPoint = false
+    private var shots: List<ShotView> = emptyList()
 
     private enum class Drag { NONE, START, END, SEEK }
 
@@ -167,7 +168,29 @@ internal class ReviewBoundsBar(
         }
         addMouseListener(mouse)
         addMouseMotionListener(mouse)
+        javax.swing.ToolTipManager.sharedInstance().registerComponent(this)
     }
+
+    /**
+     * Shows the shots of the clip below the bar, on two tracks. The upper track has the color of the hitter from the
+     * start of the shot to the next shot. The lower track shows the time with a ball track, and its color says how
+     * the hitter is known (white: the hit was seen, blue: the ball came back, gray: the hit was not seen). A line at
+     * the end of the shot is green for in, red for out, and yellow for net.
+     */
+    fun setShots(shots: List<ShotView>) {
+        if (shots == this.shots) return
+        this.shots = shots
+        repaint()
+    }
+
+    /** The shot under the pointer on the shot tracks. */
+    override fun getToolTipText(event: MouseEvent): String? {
+        if (event.y < shotsTop) return null
+        val ms = msAt(event.x)
+        return shots.lastOrNull { ms >= it.startMs && ms <= it.untilMs }?.let(ShotViews::tip)
+    }
+
+    private val shotsTop get() = LABEL_HEIGHT + TRACK_HEIGHT + SHOTS_GAP
 
     /**
      * Shows the clip from [pointStart] to [pointEnd] in the window from [windowStart] to [windowEnd]. The edges stay
@@ -234,7 +257,7 @@ internal class ReviewBoundsBar(
         val g2 = UiKit.smooth(g)
         try {
             val top = LABEL_HEIGHT
-            val h = height - top - 2
+            val h = TRACK_HEIGHT
             g2.color = Palette.BG
             g2.fillRoundRect(trackX, top, trackWidth, h, 8, 8)
             g2.color = Palette.LINE_2
@@ -284,10 +307,29 @@ internal class ReviewBoundsBar(
                     g2.drawString(length, middle, top + (h + metrics.ascent) / 2 - 1)
                 }
             }
+            g2.clipRect(trackX, 0, trackWidth + 1, height)
+            val upper = shotsTop
+            val lower = upper + SHOT_TRACK + 2
+            shots.forEach { shot ->
+                val x1 = xOf(shot.startMs)
+                g2.color = shot.color
+                g2.fillRoundRect(x1, upper, (xOf(shot.untilMs) - x1 - 1).coerceAtLeast(2), SHOT_TRACK, 3, 3)
+                g2.color = shot.howColor
+                g2.fillRoundRect(x1, lower, (xOf(shot.trackedMs) - x1).coerceAtLeast(2), SHOT_TRACK, 3, 3)
+            }
+            shots.forEach { shot ->
+                val color = shot.endColor ?: return@forEach
+                val x = xOf(shot.endMs ?: shot.trackedMs)
+                g2.color = Palette.BG
+                g2.fillRect(x - 2, upper - 2, 5, 2 * SHOT_TRACK + 6)
+                g2.color = color
+                g2.fillRect(x - 1, upper - 2, 3, 2 * SHOT_TRACK + 6)
+            }
+            g2.clip = null
             if (playheadMs in windowStart..windowEnd) {
                 val x = xOf(playheadMs)
                 g2.color = Palette.FG
-                g2.fillRect(x - 1, top - 3, 2, h + 6)
+                g2.fillRect(x - 1, top - 3, 2, height - top + 2)
             }
         } finally {
             g2.dispose()
@@ -296,8 +338,13 @@ internal class ReviewBoundsBar(
 
     private companion object {
         const val PAD = 10
-        const val BAR_HEIGHT = 62
         const val LABEL_HEIGHT = 18
+        const val TRACK_HEIGHT = 42
+
+        /** Below the bar: two shot tracks of this height. */
+        const val SHOTS_GAP = 6
+        const val SHOT_TRACK = 7
+        const val BAR_HEIGHT = LABEL_HEIGHT + TRACK_HEIGHT + SHOTS_GAP + 2 * SHOT_TRACK + 6
         const val EDGE = 6
         const val GRAB = 9
         const val MIN_LENGTH_MS = 300L
@@ -372,6 +419,9 @@ internal class ReviewWindow(
         overlaySwitches.values.forEach { add(it) }
     }
     private var overlay: DetectOverlay? = null
+
+    /** The shots of the selected point, from the shot chain of its rally. */
+    private var shotViews: List<ShotView> = emptyList()
     private var overlayShownMs = -1L
     private val overlayTicker = Timer(OVERLAY_TICK_MS) {
         val now = player.currentTimeMs()
@@ -773,6 +823,8 @@ internal class ReviewWindow(
         }
         val near = point?.let { host.nearPlayerOf(it.id) }
         val rally = point?.let { host.detectionOf(it.id) }
+        shotViews = rally?.let { ShotViews.of(it, near, host.players) }.orEmpty()
+        refreshShots()
         evidence.text = when {
             rally != null -> EvidenceTexts.lines(rally, near, host.players).joinToString("\n")
             point?.auto != null -> "No detection data for this point."
@@ -1020,10 +1072,17 @@ internal class ReviewWindow(
 
     // ---- Overlay -------------------------------------------------------------------------------------
 
+    /** The shots are on the timeline when the "Shots" switch is on. */
+    private fun refreshShots() {
+        val on = overlayFile != null && overlayMaster.isSelected && overlaySwitches[OverlayLayer.SHOTS]?.isSelected == true
+        bar.setShots(if (on) shotViews else emptyList())
+    }
+
     private fun applyOverlay() {
         val file = overlayFile
         val layers = if (overlayMaster.isSelected) overlaySwitches.filterValues { it.isSelected }.keys else emptySet()
         overlaySwitches.values.forEach { it.isEnabled = overlayMaster.isSelected }
+        refreshShots()
         if (layers.isEmpty() || file == null) {
             overlayTicker.stop()
             player.setPreviewOverlay(null)
@@ -1043,6 +1102,12 @@ internal class ReviewWindow(
             .getOrNull() ?: return
         overlay = current
         current.layers = layers
+        // The shot panel shows during the selected point, with the same size for each shot.
+        current.shotPanel = { t ->
+            val ms = (t * 1000).toLong()
+            selectedPoint()?.takeIf { shotViews.isNotEmpty() && ms >= it.startMs && ms <= it.endMs + SHOT_PANEL_AFTER_MS }
+                ?.let { ShotViews.panelAt(shotViews, ms) }
+        }
         // The outcome texts are for the selected point: from 1 s before its last shot to 3 s after the rally.
         current.outcome = { t ->
             selectedPoint()?.let { point ->
@@ -1171,6 +1236,9 @@ internal class ReviewWindow(
         const val MIN_WIDTH = 1000
         const val MIN_HEIGHT = 620
         const val SIDE_WIDTH = 440
+
+        /** The shot panel stays this long after the end of the point. */
+        const val SHOT_PANEL_AFTER_MS = 1_000L
 
         /** In the saved overlay switches: the master switch is off. */
         const val OVERLAY_OFF = "OFF"

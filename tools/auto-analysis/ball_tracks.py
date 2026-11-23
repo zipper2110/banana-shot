@@ -13,6 +13,14 @@ import numpy as np
 import lab
 
 MAX_GAP, MIN_LEN, MIN_PATH, MIN_SPEED = 4, 8, 60.0, 2.5
+# E30: a bounce or a hit turns the ball. With a sample each second frame (a 30 fps video) the next sample is then
+# outside the gate around the predicted place, the track breaks at the bounce, and the short track after the bounce
+# is below MIN_LEN. TURN: if no blob is in the gate, take a blob that is not farther from the last place than the
+# ball moves in that time (a turn does not make the ball faster). LEN_TIME: MIN_LEN is a time (MIN_LEN frames of
+# 1/60 s), with MIN_SAMPLES samples at least. TURN=0 and LEN_TIME=0 in the environment give the rules before E30.
+TURN = os.environ.get("TURN", "1") == "1"
+LEN_TIME = os.environ.get("LEN_TIME", "1") == "1"
+TURN_K, MIN_SAMPLES = 1.2, 5
 
 
 def link(d, max_disp=90.0):
@@ -39,6 +47,12 @@ def link(d, max_disp=90.0):
             lim = (12.0 + 0.5 * np.hypot(vx, vy) * gap) if len(tr) >= 2 else max_disp
             e[list(used)] = 1e9
             k = int(e.argmin())
+            if TURN and e[k] >= lim and len(tr) >= 3:
+                e2 = np.hypot(cur[:, 1] - lx, cur[:, 2] - ly)
+                e2[list(used)] = 1e9
+                k2 = int(e2.argmin())
+                if e2[k2] < 12.0 + TURN_K * np.hypot(vx, vy) * gap:
+                    k, lim = k2, 1e9
             if e[k] < lim:
                 used.add(k); tr.append((f, cur[k, 1], cur[k, 2], cur[k, 4]))
             keep.append(tr)
@@ -52,7 +66,10 @@ def link(d, max_disp=90.0):
 def moving(tracks):
     out = []
     for t in tracks:
-        if len(t) < MIN_LEN:
+        if LEN_TIME:
+            if len(t) < MIN_SAMPLES or t[-1, 0] - t[0, 0] < MIN_LEN - 1:
+                continue
+        elif len(t) < MIN_LEN:
             continue
         path = np.hypot(np.diff(t[:, 1]), np.diff(t[:, 2])).sum()
         if path >= MIN_PATH and path / (t[-1, 0] - t[0, 0]) >= MIN_SPEED:

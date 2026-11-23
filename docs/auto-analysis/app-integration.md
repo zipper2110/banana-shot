@@ -92,7 +92,12 @@ These decisions replace the review row and the overlay switch of the Points tab 
     (`chain` in `result.json`, from `shot_chain.py`): one line for each shot (hitter, how the hitter is known,
     in, out, or net, and the place of the bounce), the decision of the chain, and a warning when the score model
     gives the other winner. The chain is the winner evidence of the score model (E29; `CHAIN=0` in the
-    environment gives the old rule). The window has the "Frame step" toggle of the
+    environment gives the old rule). With the "Shots" switch on, the video has a shot panel at the top right
+    (one box of a constant size: the number of the shot, the hitter, the start and end time, the outcome), and
+    the timeline has two shot tracks below the bar. The upper track has the color of the hitter. The lower
+    track shows the time with a ball track; its color says how the hitter is known (white: hit seen, blue: the
+    ball came back, gray: hit not seen). A line at the end of a shot is green for in, red for out, and yellow
+    for net. The window has the "Frame step" toggle of the
     Points tab (key F, the same setting): Left and Right then step one frame while the video is paused. The
     "Overlay" switch (key V) hides and shows all parts of the overlay; the switches of the parts keep their
     state. The notes go to `autodetect/review-notes.json` of the project, with the times of the detected rally.

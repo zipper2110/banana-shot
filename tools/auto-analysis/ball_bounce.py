@@ -110,9 +110,12 @@ def fit_anchored(P, ts, xy, Xa):
             rhs.append(-m[3] - m[:3] @ Xa + m[2] * 0.5 * b3.G * t * t)
     v0 = np.linalg.lstsq(np.array(rows), np.array(rhs), rcond=None)[0]
     res = lambda v: (b3.project(P, sim(Xa, v, ts)[0]) - xy).ravel()
+    if not np.isfinite(res(v0)).all():                # the samples do not fit a flight through the anchor: no fit
+        return v0, float("inf")
     r = least_squares(res, v0, loss="soft_l1", f_scale=3.0, max_nfev=20)
     e = res(r.x).reshape(-1, 2)
-    return r.x, float(np.sqrt((e ** 2).sum(1).mean()))
+    rms = float(np.sqrt((e ** 2).sum(1).mean()))
+    return r.x, rms if np.isfinite(rms) else float("inf")
 
 
 def v_after(v_in, k, e, phi):

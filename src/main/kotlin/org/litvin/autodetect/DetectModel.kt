@@ -157,6 +157,10 @@ data class ChainShot(
     val kmh: Double? = null,
     val court: List<Double>? = null,
     val margin: Double? = null,
+    /** The time of the last ball sample of the shot, in s. */
+    val tLast: Double? = null,
+    /** The time of the end of the shot (the bounce or the net touch), in s. Null: the end was not seen. */
+    val tEnd: Double? = null,
 )
 
 /**

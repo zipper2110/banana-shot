@@ -153,7 +153,9 @@ data class OverlayServe(val t: Double = 0.0, val near: Boolean = false, val kind
 /**
  * The data that the app draws on the preview (`overlay.json` of the lab script). The image points are px of a
  * [width] x [height] frame, the source frame of the video with no rotation and no crop. [ball] has one row for each
- * frame with a detection: time in seconds, x, y. The rows are in time order.
+ * frame with a detection: time in seconds, x, y. The rows are in time order. [poses] has one row for each person on
+ * each picture of the pose stage (one picture each second): time in seconds, then x, y of the 17 COCO body points.
+ * A point that the pose model did not see is -1, -1. The rows are in time order.
  */
 data class DetectOverlayData(
     val version: Int = 1,
@@ -163,6 +165,7 @@ data class DetectOverlayData(
     val ball: List<List<Double>> = emptyList(),
     val flights: List<OverlayFlight> = emptyList(),
     val serves: List<OverlayServe> = emptyList(),
+    val poses: List<List<Double>> = emptyList(),
 ) {
     companion object {
         fun read(file: File): DetectOverlayData = DetectJson.mapper.readValue(file, DetectOverlayData::class.java)

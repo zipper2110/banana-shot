@@ -173,6 +173,25 @@ class DetectDialogTest {
     }
 
     @Test
+    fun `the overlay draws a skeleton only near the time of its picture`() {
+        // The left arm: shoulder (5), elbow (7), wrist (9). The other body points are not seen.
+        val row = MutableList(35) { -1.0 }
+        row[0] = 10.0
+        listOf(5 to (900.0 to 500.0), 7 to (920.0 to 540.0), 9 to (940.0 to 580.0)).forEach { (point, at) ->
+            row[1 + 2 * point] = at.first
+            row[2 + 2 * point] = at.second
+        }
+        val overlay = DetectOverlay(DetectOverlayData(poses = listOf(row))) { null }
+        val area = Rectangle2D.Double(0.0, 0.0, 1920.0, 1080.0)
+
+        val shapes = overlay.shapes(10.1, area)
+        assertEquals(2, shapes.filterIsInstance<OverlayShape.Line>().size)
+        assertEquals(3, shapes.filterIsInstance<OverlayShape.Circle>().size)
+        assertTrue(overlay.shapes(10.5, area).isEmpty())
+        assertTrue(overlay.shapes(9.5, area).isEmpty())
+    }
+
+    @Test
     fun `a time that is not a number keeps the import off`() = withProject { project, runner ->
         result(project)
         val host = Host(project)

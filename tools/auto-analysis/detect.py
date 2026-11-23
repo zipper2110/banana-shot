@@ -64,13 +64,36 @@ def court_problem(track_file):
     return None
 
 
+def overlay_poses(work, min_box=0.3, min_point=0.3):
+    """The body poses for overlay.json: one row for each person on each 1 fps keyframe,
+    [t, x0, y0, ... x16, y16] with the 17 COCO keypoints in px. A keypoint with a low confidence is -1, -1."""
+    import numpy as np
+    f = os.path.join(work, "pose.npy")
+    if not os.path.exists(f):
+        return []
+    kt = np.loadtxt(os.path.join(work, "kf_times.csv"), ndmin=1)
+    rows = []
+    for r in np.load(f):
+        k = int(r[0])
+        if r[5] < min_box or k >= len(kt):
+            continue
+        pts = r[6:].reshape(17, 3)
+        row = [round(float(kt[k]), 3)]
+        for x, y, c in pts:
+            row += [int(round(float(x))), int(round(float(y)))] if c >= min_point else [-1, -1]
+        rows.append(row)
+    rows.sort(key=lambda row: row[0])
+    return rows
+
+
 def write_overlay(work, n, full, serves):
     """Writes <work>/overlay.json: the data that the app draws on the preview (decision 19 of
     app-integration.md). Image points are px of a 1920 x 1080 frame. Times are seconds of the video.
       court    for each 60 s window with a trusted model: the court lines and the net line
       ball     the best detection of each frame: [t, x, y]
       flights  the fitted flights: time range, landing point in the image, speed at the start
-      serves   the serve events: time, end of the server, kind, speed"""
+      serves   the serve events: time, end of the server, kind, speed
+      poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
     import court_auto, frame_times
     W = lambda *p: os.path.join(work, *p)
@@ -103,7 +126,8 @@ def write_overlay(work, n, full, serves):
                         "speedKmh": round(3.6 * float(np.linalg.norm(f["v0"])), 1), "good": bool(f["n"] >= 8 and f["rms"] < 5)})
     sv = [{"t": round(float(e[0]), 3), "near": bool(e[1]), "kind": e[2], "speedKmh": round(3.6 * float(np.linalg.norm(e[3]["v0"])), 1)}
           for e in serves]
-    json.dump({"version": 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights, "serves": sv},
+    json.dump({"version": 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights, "serves": sv,
+               "poses": overlay_poses(work)},
               open(W("overlay.json"), "w"), default=float)
     say("@overlay", W("overlay.json"))
 

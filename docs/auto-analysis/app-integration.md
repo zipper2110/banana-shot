@@ -125,7 +125,8 @@ These decisions replace the review row and the overlay switch of the Points tab 
   Q, W, E winner, T accept, N add, Delete delete, Escape close.
 - **Detection overlay.** The switch "Detection overlay" in the review window shows when the project has overlay
   data. It draws the court lines (blue), the net line (yellow), the ball with a trail (green), the landing points
-  (red rings), and the serve speed over the video. The app draws it with libass, at about 30 updates each second.
+  (red rings), the serve speed, and the body poses (white skeletons) over the video. The pose stage reads one
+  picture each second, so a skeleton shows only for 0.2 s before and after its picture. The app draws it with libass, at about 30 updates each second.
   The marks follow a crop of the video. They do not follow a rotation.
 - **Reason.** Edit point dialog: "Score differs from the video" (none, players' call, replayed, score lost), in
   `score.json` `reasons`.

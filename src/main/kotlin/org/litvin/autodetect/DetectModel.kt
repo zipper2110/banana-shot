@@ -101,6 +101,8 @@ data class DetectedFault(val t: Double = 0.0, val kind: String? = null, val spee
  * - [winner], [server]: "P1", "P2", or null. Player 1 is the player at the near end in the first rally.
  * - [confidence]: the probability of [winner], 0.5 to 1.
  * - [p1Near]: true when player 1 of the detection is at the near end in this rally. Null when the run had no ball stage.
+ * - [view]: a picture of the rally that shows the two players, for the player question. Null when the pose stage
+ *   found no such picture.
  */
 data class DetectedRally(
     val start: Double = 0.0,
@@ -115,7 +117,15 @@ data class DetectedRally(
     val fault: DetectedFault? = null,
     val shots: Int? = null,
     val p1Near: Boolean? = null,
+    val view: RallyView? = null,
 )
+
+/**
+ * A picture of a rally with the two players. [second] is the second of the video (the work files have one picture for
+ * each second). [near] and [far] are the boxes of the player at the near end and at the far end: x1, y1, x2, y2 in px
+ * of that picture.
+ */
+data class RallyView(val second: Int = 0, val near: List<Double> = emptyList(), val far: List<Double> = emptyList())
 
 /** The result file of a run. [stageSeconds] has the run time of each stage. */
 data class DetectResult(

@@ -143,6 +143,14 @@ class DetectImportTest {
     }
 
     @Test
+    fun `the player question prefers a rally with a picture of the two players`() {
+        val view = RallyView(45, near = listOf(800.0, 500.0, 1000.0, 1000.0), far = listOf(900.0, 300.0, 950.0, 400.0))
+        val detected = result(rally(10.0, 20.0).copy(p1Near = true), rally(40.0, 50.0).copy(p1Near = false, view = view))
+
+        assertEquals(40.0, DetectImport.questionRally(detected, null)?.start)
+    }
+
+    @Test
     fun `the players are swapped when player 1 of the detection is not player 1 of the project`() {
         val near = rally(10.0, 20.0).copy(p1Near = true)
         val far = rally(10.0, 20.0).copy(p1Near = false)

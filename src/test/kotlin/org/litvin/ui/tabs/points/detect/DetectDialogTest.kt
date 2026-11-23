@@ -6,6 +6,8 @@ import org.litvin.adjustments.GeometryPlan
 import org.litvin.autodetect.DetectImport
 import org.litvin.autodetect.DetectOverlayData
 import org.litvin.autodetect.DetectedRally
+import org.litvin.autodetect.RallyView
+import org.litvin.ui.commons.Palette
 import org.litvin.media.OverlayShape
 import org.litvin.points.PointV1
 import org.litvin.ui.commons.SwitchBox
@@ -82,6 +84,41 @@ class DetectDialogTest {
             } finally {
                 dialog.dispose()
             }
+        }
+    }
+
+    @Test
+    fun `the player question highlights the player when the result has a picture with the two players`() {
+        val folder = Files.createTempDirectory("detect-question").toFile()
+        try {
+            val picture = File(folder, "00046.jpg")
+            val light = BufferedImage(1920, 1080, BufferedImage.TYPE_INT_RGB)
+            light.createGraphics().apply { color = Palette.FG; fillRect(0, 0, 1920, 1080); dispose() }
+            ImageIO.write(light, "jpg", picture)
+            val view = RallyView(45, near = listOf(800.0, 500.0, 1000.0, 1000.0), far = listOf(900.0, 300.0, 950.0, 400.0))
+            SwingUtilities.invokeAndWait {
+                val marked = PlayerQuestion.build(JPanel(), picture, DetectedRally(start = 40.0, end = 50.0, p1Near = true, view = view), ScorePlayers("Anna", "Bea")) {}
+                val plain = PlayerQuestion.build(JPanel(), picture, DetectedRally(start = 40.0, end = 50.0, p1Near = true), ScorePlayers("Anna", "Bea")) {}
+                try {
+                    assertEquals("Who is this player?", marked.title)
+                    // The picture is bright at the player (x 800 to 1000, y 500 to 1000 of 1920 × 1080) and darker around.
+                    val shown = marked.contentPane.find("detect-player-picture")!!
+                    val painted = BufferedImage(shown.preferredSize.width, shown.preferredSize.height, BufferedImage.TYPE_INT_RGB)
+                    painted.createGraphics().apply { shown.size = shown.preferredSize; shown.paint(this); dispose() }
+                    val atPlayer = painted.getRGB(300, 250) and 0xFF
+                    val around = painted.getRGB(40, 40) and 0xFF
+                    assertTrue(atPlayer > 200, "at the player: $atPlayer")
+                    assertTrue(around < atPlayer / 2, "around the player: $around")
+                    assertTrue((marked.contentPane.find("detect-player-question-text") as JLabel).text.contains("00:00:45.0"))
+                    assertEquals("Who is at the near end?", plain.title)
+                    snapshot(marked.contentPane, "player-question")
+                } finally {
+                    marked.dispose()
+                    plain.dispose()
+                }
+            }
+        } finally {
+            folder.deleteRecursively()
         }
     }
 

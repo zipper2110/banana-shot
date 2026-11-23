@@ -571,7 +571,15 @@ internal class ReviewWindow(
             val id = "review.$key"
             root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(key), id)
             root.actionMap.put(id, object : AbstractAction() {
-                override fun actionPerformed(e: ActionEvent?) = action()
+                override fun actionPerformed(e: ActionEvent?) {
+                    // An open menu gets the keys. Escape closes the menu, and not the window.
+                    val menus = javax.swing.MenuSelectionManager.defaultManager()
+                    if (menus.selectedPath.isNotEmpty()) {
+                        if (key == "ESCAPE") menus.clearSelectedPath()
+                        return
+                    }
+                    action()
+                }
             })
         }
         bind("SPACE") { togglePlay() }

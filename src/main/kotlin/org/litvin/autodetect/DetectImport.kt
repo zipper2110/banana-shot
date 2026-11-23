@@ -182,16 +182,19 @@ object DetectImport {
     }
 
     /**
-     * The rally for the question "Who is at the near end?": the first rally inside [rangeMs] for which the detection
-     * knows the end of its player 1. Null when the result has no winners, so the import needs no question.
+     * The rally for the player question: the first rally inside [rangeMs] for which the detection knows the end of
+     * its player 1 and has a picture with the two players. With no such picture in the result, it is the first rally
+     * for which the detection knows the end. Null when the result has no winners, so the import needs no question.
      */
-    fun questionRally(result: DetectResult, rangeMs: LongRange?): DetectedRally? =
-        result.rallies.sortedBy { it.start }.firstOrNull { rally ->
+    fun questionRally(result: DetectResult, rangeMs: LongRange?): DetectedRally? {
+        val known = result.rallies.sortedBy { it.start }.filter { rally ->
             rally.p1Near != null && rally.kind == "rally" && (
                 rangeMs == null ||
                     ((rally.start * 1000).roundToLong() >= rangeMs.first && (rally.end * 1000).roundToLong() <= rangeMs.last)
                 )
         }
+        return known.firstOrNull { it.view?.near?.size == 4 } ?: known.firstOrNull()
+    }
 
     /**
      * True when player 1 of the detection is player 2 of the project. [nearPlayer] (1 or 2) is the player of the

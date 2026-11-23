@@ -505,7 +505,7 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
             val swapped = if (rally == null) {
                 false
             } else {
-                val picture = runner.frameFile(dir.name, rally.start.toInt() + 1)
+                val picture = runner.frameFile(dir.name, rally.view?.second ?: (rally.start.toInt() + 1))
                 val near = PlayerQuestion.ask(dialog, picture, rally, host.players)
                 if (near == null) {
                     say("No points added. \"Add points\" asks again.")
@@ -624,12 +624,25 @@ internal class ProgressLine(componentName: String) : JComponent() {
 }
 
 /**
- * The question after a run: "Who is at the near end?" The detection calls the player at the near end of the first
- * rally "player 1", and it follows that player through the end changes. The answer gives its players the names of
- * the project (decision 15).
+ * The question after a run: which player of the project is the player at the near end in one rally? The detection
+ * calls the player at the near end of the first rally "player 1", and it follows that player through the end changes.
+ * The answer gives its players the names of the project (decision 15).
+ *
+ * The picture is one where the pose stage found the two players. The player at the near end is bright, and the
+ * picture is darker around that player (decision 28). A result with no such picture shows the start of the rally
+ * and asks "Who is at the near end?".
  */
 internal object PlayerQuestion {
-    private const val PICTURE_WIDTH = 500
+    private const val PICTURE_WIDTH = 640
+
+    /** The bright area is the box of the player and this space around it, in px of the shown picture. */
+    private const val SPOT_PAD = 10.0
+    private const val SPOT_ROUND = 28.0
+
+    /** The dark layers around the bright area: together they take about 65 % of the light. */
+    private const val SPOT_LAYERS = 10
+    private const val SPOT_LAYER_STEP = 2.0
+    private const val SPOT_LAYER_ALPHA = 26
 
     /** Shows the question. Returns the player of the project (1 or 2) at the near end in [rally], or null for no answer. */
     fun ask(parent: Component, picture: File?, rally: DetectedRally, players: ScorePlayers): Int? {
@@ -642,16 +655,22 @@ internal object PlayerQuestion {
 
     /** Builds the packed dialog without showing it. [onAnswer] gets the clicked player. */
     internal fun build(parent: Component, picture: File?, rally: DetectedRally, players: ScorePlayers, onAnswer: (Int) -> Unit): javax.swing.JDialog {
-        val dialog = DialogKit.modal(parent, "Who is at the near end?")
-        dialog.name = "detect-player-question"
         val image = picture?.let { file -> runCatching { ImageIO.read(file) }.getOrNull() }
-        val time = Timecode.format((rally.start * 1000).toLong())
+        // The highlight of the player shows only with a picture and a box of the detection.
+        val box = rally.view?.near?.takeIf { it.size == 4 && image != null }
+        val title = if (box != null) "Who is this player?" else "Who is at the near end?"
+        val dialog = DialogKit.modal(parent, title)
+        dialog.name = "detect-player-question"
+        val time = Timecode.format(((rally.view?.second?.toDouble() ?: rally.start) * 1000).toLong())
+        val question = if (box != null) {
+            "The picture is from a detected rally (at $time). Who is the highlighted player?"
+        } else {
+            "This is the first detected rally (at $time). Which player is at the near end, the one closer to the camera?"
+        }
         val body = Stack(pad = Insets(8, DialogKit.PAD_X, 14, DialogKit.PAD_X), gap = 10).apply {
-            if (image != null) add(Picture(image, PICTURE_WIDTH))
-            add(JLabel(Html.wrappedTooltip(
-                "This is the first detected rally (at $time). Which player is at the near end, the one closer to the camera?",
-                PICTURE_WIDTH,
-            )).apply {
+            if (image != null) add(Picture(image, PICTURE_WIDTH, box).apply { name = "detect-player-picture" })
+            add(JLabel(Html.wrappedTooltip(question, PICTURE_WIDTH)).apply {
+                name = "detect-player-question-text"
                 font = UiKit.font(13f)
                 foreground = Palette.FG
             })
@@ -669,7 +688,7 @@ internal object PlayerQuestion {
         val cancel = UiButton("Cancel").apply { addActionListener { dialog.dispose() } }
         dialog.contentPane = DialogKit.content(
             DialogKit.WIDE,
-            DialogKit.head("Who is at the near end?"),
+            DialogKit.head(title),
             body,
             DialogKit.footer(left = listOf(cancel), right = buttons),
         )
@@ -677,8 +696,11 @@ internal object PlayerQuestion {
         return dialog
     }
 
-    /** A picture of the video, scaled to [shownWidth]. */
-    private class Picture(private val image: Image, private val shownWidth: Int) : JComponent() {
+    /**
+     * A picture of the video, scaled to [shownWidth]. With a [box] (x1, y1, x2, y2 in px of the picture), the picture
+     * is darker around the box. The edge of the bright area is soft.
+     */
+    private class Picture(private val image: Image, private val shownWidth: Int, private val box: List<Double>? = null) : JComponent() {
         private val shownHeight = (shownWidth.toDouble() * image.getHeight(null) / image.getWidth(null).coerceAtLeast(1)).toInt()
 
         override fun getPreferredSize() = Dimension(shownWidth, shownHeight)
@@ -688,6 +710,24 @@ internal object PlayerQuestion {
             try {
                 g2.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR)
                 g2.drawImage(image, 0, 0, shownWidth, shownHeight, null)
+                if (box != null) {
+                    val scale = shownWidth.toDouble() / image.getWidth(null).coerceAtLeast(1)
+                    val x = box[0] * scale - SPOT_PAD
+                    val y = box[1] * scale - SPOT_PAD
+                    val w = (box[2] - box[0]) * scale + 2 * SPOT_PAD
+                    val h = (box[3] - box[1]) * scale + 2 * SPOT_PAD
+                    // Thin dark layers, each one a little farther from the player: together they make a soft edge.
+                    g2.color = Palette.withAlpha(Palette.SCRIM, SPOT_LAYER_ALPHA)
+                    for (layer in 0 until SPOT_LAYERS) {
+                        val grow = layer * SPOT_LAYER_STEP
+                        val round = SPOT_ROUND + 2 * grow
+                        val around = java.awt.geom.Area(java.awt.Rectangle(0, 0, shownWidth, shownHeight))
+                        around.subtract(java.awt.geom.Area(
+                            java.awt.geom.RoundRectangle2D.Double(x - grow, y - grow, w + 2 * grow, h + 2 * grow, round, round),
+                        ))
+                        g2.fill(around)
+                    }
+                }
             } finally {
                 g2.dispose()
             }

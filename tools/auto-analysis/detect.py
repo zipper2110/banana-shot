@@ -64,6 +64,33 @@ def court_problem(track_file):
     return None
 
 
+def add_views(work, rallies, n):
+    """Gives each rally a "view": the second of a 1 fps keyframe that shows the two players, with their boxes in
+    px of the keyframe ("near", "far": x1, y1, x2, y2). The app shows this picture for the question "who is this
+    player?". The second is the one where the pose detector is most sure of the two persons. A rally with no such
+    picture gets no view."""
+    import numpy as np
+    from server_end import near_far
+    f = os.path.join(work, "pose.npy")
+    if not os.path.exists(f):
+        return
+    pose = np.load(f)
+    pose = pose[np.argsort(pose[:, 0], kind="stable")]
+    st = np.searchsorted(pose[:, 0], np.arange(n + 1))
+    for r in rallies:
+        best = None
+        for s in range(max(0, int(r["start"])), min(n, int(r["end"]) + 1)):
+            near, far = near_far(pose[st[s]:st[s + 1]])
+            if near is None or far is None:
+                continue
+            score = float(min(near[5], far[5]))
+            if best is None or score > best[0]:
+                best = (score, s, near, far)
+        if best:
+            box = lambda row: [round(float(v), 1) for v in row[1:5]]
+            r["view"] = {"second": int(best[1]), "near": box(best[2]), "far": box(best[3])}
+
+
 def overlay_poses(work, min_box=0.3, min_point=0.3):
     """The body poses for overlay.json: one row for each person on each 1 fps keyframe,
     [t, x0, y0, ... x16, y16] with the 17 COCO keypoints in px. A keypoint with a low confidence is -1, -1."""
@@ -305,6 +332,11 @@ def main():
             out.append({"start": x, "end": y, "kind": "rally", "prob": float(prob[int(x):int(y) + 1].mean())})
 
     if ball_ok:
+        try:
+            add_views(work, out, n)
+        except Exception as e:        # with no view, the app shows the picture of the rally start
+            traceback.print_exc()
+            say("@warning", f"No player pictures: {type(e).__name__}: {e}")
         try:
             write_overlay(work, n, full, serves)
         except Exception as e:        # the overlay is a debug view: the result is more important

@@ -84,6 +84,11 @@ These decisions replace the review row and the overlay switch of the Points tab 
     button. The project is a normal project.
 25. **Continue later.** A close with the X, with Escape, or with "Continue later" keeps the review open. The bar of
     the Points tab then shows "Continue review (N)".
+28. **Picture of the player question.** The question shows a picture of a rally where the pose stage found the
+    two players. The player at the near end is bright, and the picture is darker around that player. The picture
+    has no frame around the player: a frame looks like a prototype. The question is "Who is this player?". The
+    picture at the start of the first rally is not usable for a low camera: the near player can be out of the
+    picture. `detect.py` gives each rally its best picture (`view`).
 27. **Near end.** For the selected point, the review window shows "Near end: <player>": the player that the
     detection saw at the near end in that point (`auto.nearPlayer`). A wrong name tells the user that the detection
     has the players wrong, and not only the winner of one point. "Swap players" is next to it. It changes the

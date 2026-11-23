@@ -176,6 +176,32 @@ class SwingPointsPanel(
     private var manifestPath: String? = null
     private var projectDir: String? = null
 
+    /**
+     * What the automatic detection needs from this tab. This declaration must be before the side column,
+     * because the side column uses it when the panel is made.
+     */
+    private val detectHost = object : org.litvin.ui.tabs.points.detect.DetectHost {
+        override val projectDir: File? get() = this@SwingPointsPanel.projectDir?.let(::File)
+
+        // A match of several files has no single video file (B-49).
+        override val video: File? get() = pendingMediaFile?.takeIf { timelineFiles.size <= 1 }
+
+        override fun importResult(resultFile: File, settings: org.litvin.autodetect.DetectSettings): org.litvin.autodetect.ImportPlan? {
+            val dir = this@SwingPointsPanel.projectDir ?: return null
+            // The import changes the project files, so the files must have all changes of the tab first.
+            autosave.flush()
+            return try {
+                val plan = org.litvin.autodetect.DetectImport.apply(File(dir), resultFile, settings)
+                loadEdl(EdlIO.readForProjectDir(dir))
+                scoring.load(dir, ProjectVideoLanguage.read(manifestPath))
+                plan
+            } catch (t: Throwable) {
+                dialogs.showError(this@SwingPointsPanel, ErrorTexts.of(t), tr("points.error.refresh"))
+                null
+            }
+        }
+    }
+
     // UI controls
     private var playbackBar: PlaybackBar
     private var markPanel: PointStartButton
@@ -739,29 +765,6 @@ class SwingPointsPanel(
         player.seek(target)
         updateTimeUI(target)
         timeline.repaint()
-    }
-
-    /** What the automatic detection needs from this tab. */
-    private val detectHost = object : org.litvin.ui.tabs.points.detect.DetectHost {
-        override val projectDir: File? get() = this@SwingPointsPanel.projectDir?.let(::File)
-
-        // A match of several files has no single video file (B-49).
-        override val video: File? get() = pendingMediaFile?.takeIf { timelineFiles.size <= 1 }
-
-        override fun importResult(resultFile: File, settings: org.litvin.autodetect.DetectSettings): org.litvin.autodetect.ImportPlan? {
-            val dir = this@SwingPointsPanel.projectDir ?: return null
-            // The import changes the project files, so the files must have all changes of the tab first.
-            autosave.flush()
-            return try {
-                val plan = org.litvin.autodetect.DetectImport.apply(File(dir), resultFile, settings)
-                loadEdl(EdlIO.readForProjectDir(dir))
-                scoring.load(dir, ProjectVideoLanguage.read(manifestPath))
-                plan
-            } catch (t: Throwable) {
-                dialogs.showError(this@SwingPointsPanel, ErrorTexts.of(t), tr("points.error.refresh"))
-                null
-            }
-        }
     }
 
     fun setProjectManifest(path: String) {

@@ -126,6 +126,8 @@ data class DetectedRally(
     /** True when the detection saw other shirt colors at the near end than in the rally before. */
     val endChangeBefore: Boolean? = null,
     val lastShot: LastShot? = null,
+    /** The ball into the net that ends the rally, when the detection saw one. The score model does not use it. */
+    val netHit: NetHit? = null,
 )
 
 /**
@@ -139,6 +141,19 @@ data class DetectedRally(
  * - [margin]: the distance of the bounce to the lines in m. More than 0 is inside the court.
  * - [netZ]: the height of the ball over the net line, in m.
  */
+/**
+ * A ball into the net that ends the rally: [t] is the time of the touch in s, [hitterNear] is true when the player
+ * at the near end hit the ball, [conf] is the confidence of the touch and [dirConf] that of the hitter (0 to 1).
+ * [serve] is true when the ball was a serve.
+ */
+data class NetHit(
+    val t: Double = 0.0,
+    val hitterNear: Boolean = false,
+    val conf: Double? = null,
+    val dirConf: Double? = null,
+    val serve: Boolean = false,
+)
+
 data class LastShot(
     val nearWins: Boolean? = null,
     val case: String? = null,

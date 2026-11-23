@@ -34,6 +34,7 @@ internal object EvidenceTexts {
         }
         if (rally.endChangeBefore == true) lines += "The players changed ends before this point"
         lines += lastShot(rally.lastShot, nearName, farName)
+        lines += netHit(rally, nearName, farName)
         lines += winner(rally, nearName, farName)
         return lines
     }
@@ -42,7 +43,21 @@ internal object EvidenceTexts {
     fun outcomeLines(rally: DetectedRally, near: Int?, players: ScorePlayers): List<String> {
         val nearName = near?.let { players.name(it) } ?: "the near player"
         val farName = near?.let { players.name(3 - it) } ?: "the far player"
-        return lastShot(rally.lastShot, nearName, farName) + winner(rally, nearName, farName)
+        return lastShot(rally.lastShot, nearName, farName) + netHit(rally, nearName, farName) + winner(rally, nearName, farName)
+    }
+
+    /** The ball into the net at the end of the rally. A warning when the winner is the player who hit it. */
+    private fun netHit(rally: DetectedRally, nearName: String, farName: String): List<String> {
+        val hit = rally.netHit ?: return emptyList()
+        val hitter = if (hit.hitterNear) nearName else farName
+        val lines = ArrayList<String>()
+        lines += "Net: $hitter hit the ball into the net at ${time(hit.t)}" + (if (hit.serve) " (serve)" else "") +
+            (hit.conf?.let { ", touch ${percent(it)}" } ?: "") + (hit.dirConf?.let { ", hitter ${percent(it)}" } ?: "")
+        val model = rally.pNearWins
+        if (model != null && abs(model - 0.5) >= 0.02 && (model > 0.5) == hit.hitterNear) {
+            lines += "Warning: the score model gives the point to the player who hit the net."
+        }
+        return lines
     }
 
     private fun lastShot(shot: LastShot?, nearName: String, farName: String): List<String> {

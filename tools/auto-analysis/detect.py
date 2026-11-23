@@ -120,7 +120,29 @@ def overlay_poses(work, min_box=0.3, min_point=0.3):
     return rows
 
 
-def write_overlay(work, n, full, serves):
+def load_net_events(work):
+    """The net events of the video (net_events.py, E16f): the moments at which the ball touches the net."""
+    import net_events
+    path = os.path.join(work, "net_events.json")
+    if not os.path.exists(path):
+        net_events.run_folder(work)
+    return json.load(open(path))["events"]
+
+
+def add_net_hits(out, net):
+    """Adds "netHit" to each rally that ends with a ball into the net: time, end of the hitter, confidence of
+    the touch and of the hitter, and "serve" (the net ball came less than 3 s after the rally start).
+    The score model does not use it (E16g: the full chain became worse). It is a fact for the user."""
+    import net_events
+    for r in out:
+        h = net_events.winner_hint(net, r["end"], t_start=r["start"])
+        if h:
+            e = h["event"]
+            r["netHit"] = {"t": e["t"], "hitterNear": bool(e["toFar"]), "conf": e["conf"], "dirConf": e["dirConf"],
+                           "serve": bool(h["sinceStart"] is not None and h["sinceStart"] < 3.0)}
+
+
+def write_overlay(work, n, full, serves, net_ev=()):
     """Writes <work>/overlay.json: the data that the app draws on the preview (decision 19 of
     app-integration.md). Image points are px of a 1920 x 1080 frame. Times are seconds of the video.
       court    for each 60 s window with a trusted model: the court lines and the net line
@@ -135,7 +157,10 @@ def write_overlay(work, n, full, serves):
                of the last detection of the flight: the curve after it is an extrapolation)
       events   E17d (ball_bounce.py), sorted by time: t, kind ("bounce", "hit", "other", "end"), px (ball center),
                court (m, or null), src ("vertex", "kink", "fit"), conf (1-sigma error of court in m, or null),
-               and for "end" (an extrapolated landing): tLast
+               and for "end" (an extrapolated landing): tLast. After these events come the net events (E16f,
+               net_events.py): kind "net" (the ball stays at the net) or "cord" (the ball goes over), px, toFar
+               (true = the hitter is at the near end), conf (0 to 1, 0.7 or more = the ball was seen to drop at
+               the net), src. The event indices of the flights do not point to them.
       serves   the serve events: time, end of the server, kind, speed
       poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
@@ -203,6 +228,8 @@ def write_overlay(work, n, full, serves):
         if "tLast" in e:
             o["tLast"] = round(float(e["tLast"]), 3)
         ev.append(o)
+    for e in net_ev:
+        ev.append({"t": e["t"], "kind": e["kind"], "px": e["px"], "court": None, "src": e["src"], "conf": e["conf"], "toFar": e["toFar"]})
     sv = [{"t": round(float(e[0]), 3), "near": bool(e[1]), "kind": e[2], "speedKmh": round(3.6 * float(np.linalg.norm(e[3]["v0"])), 1)}
           for e in serves]
     json.dump({"version": 2 if "events" in full else 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights,
@@ -313,6 +340,8 @@ def main():
 
         def flights():
             ball_full.run(MID)
+            import net_events
+            net_events.run_folder(work)
             feat_wasb.run(MID)
             np.save(W("feat_wasbf.npy"), np.load(W("feat_wasb.npy"))[:, [4, 5, 6]])
         stage("flights", [W("fullflights_s0.35.json"), W("feat_wasbf.npy")], flights, a.force)
@@ -393,7 +422,9 @@ def main():
             traceback.print_exc()
             say("@warning", f"No player pictures: {type(e).__name__}: {e}")
         try:
-            write_overlay(work, n, full, serves)
+            net = load_net_events(work)
+            add_net_hits(out, net)
+            write_overlay(work, n, full, serves, net)
         except Exception as e:        # the overlay is a debug view: the result is more important
             traceback.print_exc()
             say("@warning", f"No overlay data: {type(e).__name__}: {e}")

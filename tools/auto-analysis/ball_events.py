@@ -29,7 +29,8 @@ def court_H(mid, t=None):
     """Homography of the 1920-wide frame to court meters at time t. Uses court_track.json
     (court_track.py, one model each 60 s): the window of t if it is ok, else the nearest ok
     window in time. Falls back to court.json (one model at mid-match)."""
-    p = os.path.join(lab.mdir(mid), "court_track.json")
+    # E26f: the environment variable COURT_TRACK selects another model file (court_track_refined.json) for a comparison.
+    p = os.path.join(lab.mdir(mid), os.environ.get("COURT_TRACK", "court_track.json"))
     if t is not None and os.path.exists(p):
         if mid not in _TRACK:
             _TRACK[mid] = [w for w in json.load(open(p)) if w.get("ok", True)]

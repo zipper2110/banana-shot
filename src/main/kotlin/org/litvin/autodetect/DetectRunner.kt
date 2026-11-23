@@ -58,6 +58,8 @@ sealed interface DetectState {
  * Runs the lab script for one project at a time. The run continues when the user leaves the Points tab. The listeners
  * get each new state on the thread of the run, not on the EDT.
  */
+private const val OVERLAY_LAYERS_FILE = "autodetect-overlay-layers.txt"
+
 class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
     private val logger = KotlinLogging.logger {}
     private val listeners = CopyOnWriteArrayList<(DetectState) -> Unit>()
@@ -82,6 +84,16 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
 
     /** The settings that the user used last. */
     fun loadSettings(): DetectSettings = DetectSettings.load(appDataRoot)
+
+    /** The names of the overlay parts that the user had on in the review window. */
+    fun loadOverlayLayers(): Set<String> = runCatching {
+        File(appDataRoot, OVERLAY_LAYERS_FILE).takeIf { it.isFile }?.readLines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()
+    }.getOrNull() ?: emptySet()
+
+    fun saveOverlayLayers(layers: Set<String>) {
+        runCatching { File(appDataRoot, OVERLAY_LAYERS_FILE).writeText(layers.joinToString(System.lineSeparator())) }
+            .onFailure { logger.warn(it) { "Overlay switches not saved" } }
+    }
 
     fun saveSettings(settings: DetectSettings) {
         runCatching { DetectSettings.save(appDataRoot, settings) }.onFailure { logger.warn(it) { "Detection settings not saved" } }

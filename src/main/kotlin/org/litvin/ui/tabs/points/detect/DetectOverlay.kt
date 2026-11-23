@@ -46,6 +46,16 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
         fun y(px: Double) = area.y + ((px / data.height - crop.y) / crop.height) * area.height
 
         val shapes = ArrayList<OverlayShape>()
+
+        // A text on a dark box, so the text is readable on a bright video.
+        fun label(left: Double, top: Double, text: String, size: Double, color: java.awt.Color) {
+            val width = org.litvin.ui.commons.UiKit.textWidth(text, java.awt.Font(FONT, java.awt.Font.BOLD, 100)) / 100.0 * size
+            shapes += OverlayShape.Rect(
+                left - 0.45 * size, top - 0.2 * size, width + 0.9 * size, 1.4 * size,
+                fill = Palette.withAlpha(Palette.SCRIM, LABEL_BOX_ALPHA), radius = 0.25 * size,
+            )
+            shapes += OverlayShape.Text(left, top, text, size, color, FONT, bold = true)
+        }
         if (OverlayLayer.COURT in layers) courtAt(t)?.let { court ->
             (court.lines + listOf(court.net)).filter { it.size == 4 }.forEachIndexed { index, line ->
                 val color = if (index == court.lines.size) Palette.YELLOW else Palette.BLUE
@@ -94,12 +104,12 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
         // The speed of a serve, for a short time after the serve.
         if (OverlayLayer.SERVES in layers) data.serves.lastOrNull { it.t <= t && t - it.t <= SERVE_SHOWN_S && it.kind != "nearToss" }?.let { serve ->
             val text = "Serve ${serve.speedKmh.roundToInt()} km/h · ${if (serve.near) "near end" else "far end"}"
-            shapes += OverlayShape.Text(area.x + 16.0 * unit, area.y + area.height - 44.0 * unit, text, 26.0 * unit, Palette.FG, FONT, bold = true)
+            label(area.x + 16.0 * unit, area.y + area.height - 44.0 * unit, text, 26.0 * unit, Palette.FG)
         }
         // The shot (a fitted flight) of this time: its data as a text, and the landing point of the fit before the bounce.
         var line = 0
         fun note(text: String, color: java.awt.Color = Palette.FG) {
-            shapes += OverlayShape.Text(area.x + 16.0 * unit, area.y + (14.0 + 24.0 * line++) * unit, text, 17.0 * unit, color, FONT, bold = true)
+            label(area.x + 16.0 * unit, area.y + (14.0 + 24.0 * line++) * unit, text, 17.0 * unit, color)
         }
         if (OverlayLayer.SHOTS in layers) {
             data.flights.lastOrNull { it.good && t >= it.t0 && t <= it.t1 + SHOT_SHOWN_S }?.let { flight ->
@@ -164,6 +174,9 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
 
         /** The text of a shot stays this long after the end of its flight. */
         const val SHOT_SHOWN_S = 0.4
+
+        /** The box behind a text is black with this opacity (0 to 255): 90 %. */
+        const val LABEL_BOX_ALPHA = 230
         const val FONT = "Arial"
 
         const val BODY_POINTS = 17

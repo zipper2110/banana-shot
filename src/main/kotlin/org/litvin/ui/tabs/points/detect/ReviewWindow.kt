@@ -96,6 +96,11 @@ internal interface ReviewHost {
     fun noteOf(pointId: String): String = ""
 
     fun setNote(pointId: String, text: String) {}
+
+    /** The names of the overlay parts ([OverlayLayer]) that the user had on the last time. */
+    fun overlayLayers(): Set<String> = emptySet()
+
+    fun setOverlayLayers(layers: Set<String>) {}
 }
 
 /** Which automatic points "Swap players" changes. */
@@ -334,12 +339,13 @@ internal class ReviewWindow(
         foreground = Palette.FG
     }
     private val playButton = button("Play point", Material2MZ.PLAY_ARROW, "review-play", "Space", UiButton.Kind.LIME) { togglePlay() }
-    /** One switch for each part of the detection overlay (debug view). All are off when the window opens. */
+    /** One switch for each part of the detection overlay (debug view). The window keeps their state for the next time. */
     private val overlaySwitches = OverlayLayer.entries.associateWith { layer ->
         SwitchBox(layer.text, 12f).apply {
             name = "review-overlay-${layer.name.lowercase(Locale.ROOT)}"
             toolTipText = "Draws this part of the detection data on the video (debug view)"
             isFocusable = false
+            isSelected = overlayFile != null && layer.name in host.overlayLayers()
         }
     }
     private val overlayRow = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 14, 0)).apply {
@@ -419,7 +425,7 @@ internal class ReviewWindow(
     private val lastShotButton = button("Show last shot", Material2MZ.PLAY_ARROW, "review-last-shot", "Plays from 1 s before the last shot") { playLastShot() }
 
     /** The note of the user about the detection of the selected point. [noteForId] is the point of the text. */
-    private val noteArea = javax.swing.JTextArea(3, 20).apply {
+    private val noteArea = javax.swing.JTextArea(4, 20).apply {
         name = "review-note"
         lineWrap = true
         wrapStyleWord = true
@@ -461,7 +467,13 @@ internal class ReviewWindow(
             if (!listSync && !event.valueIsAdjusting) list.selectedValue?.let { select(it.point.id, play = true) }
         }
         winner.onChange { outcome -> setWinner(outcome) }
-        overlaySwitches.values.forEach { it.addActionListener { applyOverlay() } }
+        overlaySwitches.values.forEach {
+            it.addActionListener {
+                host.setOverlayLayers(overlaySwitches.filterValues { switch -> switch.isSelected }.keys.map { layer -> layer.name }.toSet())
+                applyOverlay()
+            }
+        }
+        applyOverlay()
 
         player.onTimeChanged = { t -> EventQueue.invokeLater { onTime(t) } }
         player.onStatusChanged = { _ -> EventQueue.invokeLater { refreshPlayButton() } }

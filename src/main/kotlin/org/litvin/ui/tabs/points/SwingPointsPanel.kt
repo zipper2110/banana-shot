@@ -272,6 +272,12 @@ class SwingPointsPanel(
 
         override fun detectionOf(pointId: String) = recordDetections[pointId]?.rally
 
+        override fun overlayLayers() = detect?.loadOverlayLayers() ?: emptySet()
+
+        override fun setOverlayLayers(layers: Set<String>) {
+            detect?.saveOverlayLayers(layers)
+        }
+
         override fun noteOf(pointId: String) = detectNotes[pointId]?.text.orEmpty()
 
         override fun setNote(pointId: String, text: String) {

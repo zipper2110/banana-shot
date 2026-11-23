@@ -118,6 +118,37 @@ data class DetectedRally(
     val shots: Int? = null,
     val p1Near: Boolean? = null,
     val view: RallyView? = null,
+    /** The probability that the player at the near end wins: from the ball only, and after the score model. */
+    val pBall: Double? = null,
+    val pNearWins: Double? = null,
+    /** True when the server is at the near end. Null when the detection does not know the server. */
+    val serverNear: Boolean? = null,
+    /** True when the detection saw other shirt colors at the near end than in the rally before. */
+    val endChangeBefore: Boolean? = null,
+    val lastShot: LastShot? = null,
+)
+
+/**
+ * The last shot of a rally, the input of the ball rule for the winner.
+ * - [nearWins]: what the ball rule says. Null: no decision.
+ * - [case]: the case of the rule: "net", "in", "out", with "_early" (the shot is more than 4 s before the end of the
+ *   rally) or "_seen" (the bounce was seen).
+ * - [t]: the video time of the start of the shot, in seconds. [tRel] is that time minus the end of the rally.
+ * - [toFar]: true when the ball goes to the far end, so the player at the near end hit it.
+ * - [speed]: km/h. [src]: 0 no bounce, 1 the bounce comes from the flight, 2 the bounce was seen.
+ * - [margin]: the distance of the bounce to the lines in m. More than 0 is inside the court.
+ * - [netZ]: the height of the ball over the net line, in m.
+ */
+data class LastShot(
+    val nearWins: Boolean? = null,
+    val case: String? = null,
+    val t: Double? = null,
+    val tRel: Double? = null,
+    val toFar: Boolean = false,
+    val speed: Double? = null,
+    val src: Int = 0,
+    val margin: Double? = null,
+    val netZ: Double? = null,
 )
 
 /**
@@ -156,6 +187,14 @@ data class OverlayFlight(
     val land: List<Double>? = null,
     val speedKmh: Double = 0.0,
     val good: Boolean = false,
+    /** True when the ball goes to the far end. */
+    val toFar: Boolean? = null,
+    /** The start point of the flight on the court: x across, y along (0 at the net), z up, in m. */
+    val start: List<Double>? = null,
+    /** The landing point on the court: x, y in m. */
+    val landM: List<Double>? = null,
+    /** The height of the ball over the net line, in m. */
+    val netZ: Double? = null,
 )
 
 data class OverlayServe(val t: Double = 0.0, val near: Boolean = false, val kind: String? = null, val speedKmh: Double = 0.0)

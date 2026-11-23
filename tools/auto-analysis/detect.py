@@ -99,6 +99,13 @@ def overlay_poses(work, min_box=0.3, min_point=0.3):
     if not os.path.exists(f):
         return []
     kt = np.loadtxt(os.path.join(work, "kf_times.csv"), ndmin=1)
+    # A 1 fps picture (ffmpeg "fps=1:round=down") is the LAST video frame of its second, and not the first one:
+    # picture k shows the video at about k + 1 s minus one frame. The overlay needs the true time.
+    pts_file = os.path.join(work, "pts.npy")
+    if os.path.exists(os.path.join(work, "kf.fps1")) and os.path.exists(pts_file):
+        pts = np.load(pts_file)
+        last = np.clip(np.searchsorted(pts, kt + 1 - 1e-4) - 1, 0, len(pts) - 1)
+        kt = np.maximum(kt, pts[last])
     rows = []
     for r in np.load(f):
         k = int(r[0])
@@ -118,7 +125,8 @@ def write_overlay(work, n, full, serves):
     app-integration.md). Image points are px of a 1920 x 1080 frame. Times are seconds of the video.
       court    for each 60 s window with a trusted model: the court lines and the net line
       ball     the best detection of each frame: [t, x, y]
-      flights  the fitted flights: time range, landing point in the image, speed at the start
+      flights  the fitted flights: time range, landing point in the image, speed at the start, direction, start
+               point and landing point on the court in m (x across, y along, 0 at the net, + = far end), net height
       serves   the serve events: time, end of the server, kind, speed
       poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
@@ -150,7 +158,10 @@ def write_overlay(work, n, full, serves):
         land = court_auto.to_img(H_at(f["t0"]), [f["land"]])[0] if f.get("land") and land_t is not None else None
         flights.append({"t0": round(f["t0"], 3), "t1": round(f["t1"], 3), "landT": land_t,
                         "land": None if land is None else [round(float(land[0]), 1), round(float(land[1]), 1)],
-                        "speedKmh": round(3.6 * float(np.linalg.norm(f["v0"])), 1), "good": bool(f["n"] >= 8 and f["rms"] < 5)})
+                        "speedKmh": round(3.6 * float(np.linalg.norm(f["v0"])), 1), "good": bool(f["n"] >= 8 and f["rms"] < 5),
+                        "toFar": bool(f["v0"][1] > 0), "start": [round(float(v), 2) for v in f["p0"]],
+                        "landM": None if land is None else [round(float(v), 2) for v in f["land"]],
+                        "netZ": round(float(f["netZ"]), 2) if f.get("netZ") is not None and np.isfinite(f["netZ"]) else None})
     sv = [{"t": round(float(e[0]), 3), "near": bool(e[1]), "kind": e[2], "speedKmh": round(3.6 * float(np.linalg.norm(e[3]["v0"])), 1)}
           for e in serves]
     json.dump({"version": 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights, "serves": sv,

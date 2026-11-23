@@ -84,6 +84,14 @@ These decisions replace the review row and the overlay switch of the Points tab 
     button. The project is a normal project.
 25. **Continue later.** A close with the X, with Escape, or with "Continue later" keeps the review open. The bar of
     the Points tab then shows "Continue review (N)".
+29. **The review window is a tool for the developer of the detection, for now.** Its goals: show what the
+    detection found in the rally, show the winner and its reasons, let the user correct the winner, and let the
+    user write a note about what the detection did wrong. For the selected point, the window shows the facts of
+    the rally (rally model, shots, server, fault, end change), the last shot with the decision of the ball rule,
+    and the probability from the ball and after the score model. "Show last shot" plays from 1 s before that
+    shot. The notes go to `autodetect/review-notes.json` of the project, with the times of the detected rally.
+    The lab reads them to improve the detection. `result.json` has the new fields `lastShot.nearWins`,
+    `lastShot.case`, and `lastShot.t` for this.
 28. **Picture of the player question.** The question shows a picture of a rally where the pose stage found the
     two players. The player at the near end is bright, and the picture is darker around that player. The picture
     has no frame around the player: a frame looks like a prototype. The question stays "Who is at the near end?", and
@@ -132,7 +140,13 @@ These decisions replace the review row and the overlay switch of the Points tab 
 - **Detection overlay.** The switch "Detection overlay" in the review window shows when the project has overlay
   data. It draws the court lines (blue), the net line (yellow), the ball with a trail (green), the landing points
   (red rings), the serve speed, and the body poses (white skeletons) over the video. The pose stage reads one
-  picture each second, so a skeleton shows only for 0.2 s before and after its picture. The app draws it with libass, at about 30 updates each second.
+  picture each second. A skeleton stays on the video until the next picture has poses.
+  The picture of second k is the last video frame of that second (ffmpeg `fps=1:round=down`), so `overlay.json`
+  gives a pose the time of that frame, about k + 1 s. Each part of the overlay
+  (court, ball, landing points, serve speed, players, shots, outcome) has its own switch. "Shots" writes the data
+  of the flight of the moment: its time range, direction, speed, start point, net height, and landing point in m
+  on the court, and it draws the landing point of the fit before the bounce. "Outcome" writes the decision of the
+  winner of the selected point near its last shot, and marks the landing point of that shot. The app draws it with libass, at about 30 updates each second.
   The marks follow a crop of the video. They do not follow a rotation.
 - **Reason.** Edit point dialog: "Score differs from the video" (none, players' call, replayed, score lost), in
   `score.json` `reasons`.

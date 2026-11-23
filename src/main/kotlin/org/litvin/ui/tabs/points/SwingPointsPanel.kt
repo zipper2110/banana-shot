@@ -270,6 +270,23 @@ class SwingPointsPanel(
             dispatcher.markChecked(pointIds)
         }
 
+        override fun detectionOf(pointId: String) = recordDetections[pointId]?.rally
+
+        override fun noteOf(pointId: String) = detectNotes[pointId]?.text.orEmpty()
+
+        override fun setNote(pointId: String, text: String) {
+            val dir = projectDir?.let(::File) ?: return
+            val point = dispatcher.getCompletedPoints().firstOrNull { it.id == pointId } ?: return
+            val rally = recordDetections[pointId]?.rally
+            runCatching {
+                org.litvin.autodetect.DetectNotes.save(
+                    dir,
+                    org.litvin.autodetect.DetectNote(pointId, text, point.startMs, point.endMs, rally?.start, rally?.end),
+                )
+                detectNotes = org.litvin.autodetect.DetectNotes.read(dir)
+            }.onFailure { io.github.oshai.kotlinlogging.KotlinLogging.logger {}.warn(it) { "Detection note not saved" } }
+        }
+
         override fun swapWinners(pointIds: Set<String>) {
             scoring.swapWinners(pointIds)
             dispatcher.swapNearPlayers(pointIds, recordNearPlayers)
@@ -278,6 +295,8 @@ class SwingPointsPanel(
 
     /** The player at the near end for the clips of an import before the mark of a clip had this value. */
     private var recordNearPlayers: Map<String, Int> = emptyMap()
+    private var recordDetections: Map<String, org.litvin.autodetect.PointDetection> = emptyMap()
+    private var detectNotes: Map<String, org.litvin.autodetect.DetectNote> = emptyMap()
 
     // UI controls
     private var playbackBar: PlaybackBar
@@ -1414,6 +1433,8 @@ class SwingPointsPanel(
         player.deactivatePreview("detection review")
         // The text is English only, as all texts of the detection are.
         recordNearPlayers = runCatching { org.litvin.autodetect.DetectImport.nearPlayersOfRecords(File(dir)) }.getOrDefault(emptyMap())
+        recordDetections = runCatching { org.litvin.autodetect.DetectImport.detectionsOfRecords(File(dir)) }.getOrDefault(emptyMap())
+        detectNotes = runCatching { org.litvin.autodetect.DetectNotes.read(File(dir)) }.getOrDefault(emptyMap())
         busyNote.text = org.litvin.ui.tabs.points.detect.DetectTexts.REVIEW_BUSY
         videoCards.show(videoArea, BUSY_CARD)
         detectReview = org.litvin.ui.tabs.points.detect.ReviewWindow(

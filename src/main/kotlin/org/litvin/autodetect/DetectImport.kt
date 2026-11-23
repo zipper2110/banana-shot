@@ -67,6 +67,9 @@ data class ImportRecord(
     val rangeEndMs: Long? = null,
 )
 
+/** The detected rally of a clip of the project. [swapped] is true when player 1 of the detection is player 2 of the project. */
+data class PointDetection(val rally: DetectedRally, val swapped: Boolean)
+
 /** Changes the result of a detection run into clips of the project. */
 object DetectImport {
     /** The folder of the project that keeps the result files and the import records. */
@@ -225,6 +228,24 @@ object DetectImport {
             }
         }
         return near
+    }
+
+    /** The detected rally for each clip of the imports of the project, from the import records and their result files. */
+    fun detectionsOfRecords(projectDir: File): Map<String, PointDetection> {
+        val folder = File(projectDir, FOLDER)
+        val records = folder.listFiles { f -> f.isFile && f.name.startsWith("import-") && f.name.endsWith(".json") } ?: return emptyMap()
+        val found = HashMap<String, PointDetection>()
+        records.sortedBy { it.name }.forEach { file ->
+            runCatching {
+                val record = DetectJson.mapper.readValue(file, ImportRecord::class.java)
+                val rallies = DetectResult.read(File(folder, record.resultFile)).rallies
+                record.rows.forEach { row ->
+                    val id = row.pointId ?: return@forEach
+                    rallies.getOrNull(row.rally)?.let { found[id] = PointDetection(it, record.swapped) }
+                }
+            }
+        }
+        return found
     }
 
     /** The newest overlay data file of the project, or null. */

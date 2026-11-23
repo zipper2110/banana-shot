@@ -79,6 +79,11 @@ def rallies(mid, serves, p=None, hi=0.5, lo=0.35, short=True):
     return sorted(out)
 
 
+def a_end_t(q, t_end):
+    """The video time of the start of the last shot (q["t_rel"] is relative to the end of the rally)."""
+    return float(t_end + q["t_rel"])
+
+
 def evidence(mid, seg, full, serves):
     out = lab.mdir(mid)
     pose = np.load(os.path.join(out, "pose.npy"))
@@ -145,7 +150,10 @@ def evidence(mid, seg, full, serves):
         feats.append(np.median(cols, 0) if len(cols) >= 2 else None)
         last = None
         if q is not None:
-            last = {"toFar": bool(q["to_far"]), "speed": q["speed"], "src": int(q["src"]),
+            # "nearWins": what the ball rule says (None = no decision); "case": the case of the rule (match_decode.case_key)
+            last = {"nearWins": w, "case": md.case_key(q, p) if w is not None else None, "t": a_end_t(q, t_end),
+                    "endY": q["end_y"], "endZ": q["end_z"], "netZ": None if np.isnan(q["net_z"]) else q["net_z"],
+                    "toFar": bool(q["to_far"]), "speed": q["speed"], "src": int(q["src"]),
                     "margin": None if np.isnan(q["margin"]) else q["margin"],
                     "bx": None if np.isnan(q["bx"]) else q["bx"], "by": None if np.isnan(q["by"]) else q["by"], "tRel": q["t_rel"]}
         rows.append({"start": a, "end": b, "prob": PROB[(mid, b)], "pBall": pw, "serverNear": srv, "serveSpeed": speed, "fault": fault, "lastShot": last,

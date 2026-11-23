@@ -5,6 +5,7 @@ import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.adjustments.AdjustmentsV1
 import org.litvin.adjustments.GeometryTimeline
 import org.litvin.autodetect.DetectOverlayData
+import org.litvin.autodetect.DetectedRally
 import org.litvin.media.PlayerStatus
 import org.litvin.media.SwingMediaPlayer
 import org.litvin.media.VideoOverlay
@@ -87,6 +88,14 @@ internal interface ReviewHost {
 
     /** Gives each of the clips the other winner. */
     fun swapWinners(pointIds: Set<String>)
+
+    /** The detected rally of the clip, or null when the project has no detection data for it. */
+    fun detectionOf(pointId: String): DetectedRally? = null
+
+    /** The note of the user about the detection of the clip. */
+    fun noteOf(pointId: String): String = ""
+
+    fun setNote(pointId: String, text: String) {}
 }
 
 /** Which automatic points "Swap players" changes. */
@@ -325,11 +334,18 @@ internal class ReviewWindow(
         foreground = Palette.FG
     }
     private val playButton = button("Play point", Material2MZ.PLAY_ARROW, "review-play", "Space", UiButton.Kind.LIME) { togglePlay() }
-    private val overlaySwitch = SwitchBox("Detection overlay", 12f).apply {
-        name = "review-overlay"
-        toolTipText = "Draws the court model, the ball, the landing points, and the serve speed on the video (debug view)"
-        isFocusable = false
+    /** One switch for each part of the detection overlay (debug view). All are off when the window opens. */
+    private val overlaySwitches = OverlayLayer.entries.associateWith { layer ->
+        SwitchBox(layer.text, 12f).apply {
+            name = "review-overlay-${layer.name.lowercase(Locale.ROOT)}"
+            toolTipText = "Draws this part of the detection data on the video (debug view)"
+            isFocusable = false
+        }
+    }
+    private val overlayRow = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 14, 0)).apply {
+        isOpaque = false
         isVisible = overlayFile != null
+        overlaySwitches.values.forEach { add(it) }
     }
     private var overlay: DetectOverlay? = null
     private var overlayShownMs = -1L
@@ -388,6 +404,36 @@ internal class ReviewWindow(
         "review-swap",
         "For a wrong name at \"Near end\": gives the other player and the other winner to one point, to the next points, or to all",
     ) { showSwapMenu() }
+    /** What the detection found in the selected point, and why it gave the winner (decision 29). */
+    private val evidence = javax.swing.JTextArea().apply {
+        name = "review-evidence"
+        isEditable = false
+        isFocusable = false
+        isOpaque = false
+        lineWrap = true
+        wrapStyleWord = true
+        font = UiKit.font(11.5f)
+        foreground = Palette.FG_2
+        border = BorderFactory.createEmptyBorder()
+    }
+    private val lastShotButton = button("Show last shot", Material2MZ.PLAY_ARROW, "review-last-shot", "Plays from 1 s before the last shot") { playLastShot() }
+
+    /** The note of the user about the detection of the selected point. [noteForId] is the point of the text. */
+    private val noteArea = javax.swing.JTextArea(3, 20).apply {
+        name = "review-note"
+        lineWrap = true
+        wrapStyleWord = true
+        font = UiKit.font(12f)
+        foreground = Palette.FG
+        caretColor = Palette.FG
+        background = Palette.PANEL_DIM
+        border = BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        toolTipText = "What the detection did not do correctly in this point. The lab reads these notes. Escape goes back to the keys."
+        addFocusListener(object : java.awt.event.FocusAdapter() {
+            override fun focusLost(e: java.awt.event.FocusEvent?) = saveNote()
+        })
+    }
+    private var noteForId: String? = null
     private val message = JLabel(" ").apply {
         name = "review-message"
         font = UiKit.font(12f)
@@ -415,7 +461,7 @@ internal class ReviewWindow(
             if (!listSync && !event.valueIsAdjusting) list.selectedValue?.let { select(it.point.id, play = true) }
         }
         winner.onChange { outcome -> setWinner(outcome) }
-        overlaySwitch.addActionListener { applyOverlay() }
+        overlaySwitches.values.forEach { it.addActionListener { applyOverlay() } }
 
         player.onTimeChanged = { t -> EventQueue.invokeLater { onTime(t) } }
         player.onStatusChanged = { _ -> EventQueue.invokeLater { refreshPlayButton() } }
@@ -491,7 +537,7 @@ internal class ReviewWindow(
             add(JPanel(BorderLayout(16, 0)).apply {
                 isOpaque = false
                 add(hint, BorderLayout.CENTER)
-                add(overlaySwitch, BorderLayout.EAST)
+                add(overlayRow, BorderLayout.EAST)
             }, BorderLayout.NORTH)
             add(bar, BorderLayout.CENTER)
             add(JPanel(BorderLayout(16, 0)).apply {
@@ -539,6 +585,16 @@ internal class ReviewWindow(
                 add(swapButton, BorderLayout.EAST)
             })
             add(winner)
+            add(evidence)
+            add(lastShotButton)
+            add(JLabel("Detection note").apply {
+                font = UiKit.font(11f)
+                foreground = Palette.FG_3
+            })
+            add(JScrollPane(noteArea).apply {
+                border = BorderFactory.createLineBorder(Palette.LINE)
+                horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            })
             add(pair(acceptButton, deleteButton))
             add(addButton)
             add(message)
@@ -572,6 +628,11 @@ internal class ReviewWindow(
             root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(key), id)
             root.actionMap.put(id, object : AbstractAction() {
                 override fun actionPerformed(e: ActionEvent?) {
+                    // The note field gets the keys. Escape goes back to the keys of the window.
+                    if (java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner === noteArea) {
+                        if (key == "ESCAPE") focusVideo()
+                        return
+                    }
                     // An open menu gets the keys. Escape closes the menu, and not the window.
                     val menus = javax.swing.MenuSelectionManager.defaultManager()
                     if (menus.selectedPath.isNotEmpty()) {
@@ -669,6 +730,21 @@ internal class ReviewWindow(
             else -> DetectTexts.rowNote(point.auto)
         }
         val near = point?.let { host.nearPlayerOf(it.id) }
+        val rally = point?.let { host.detectionOf(it.id) }
+        evidence.text = when {
+            rally != null -> EvidenceTexts.lines(rally, near, host.players).joinToString("\n")
+            point?.auto != null -> "No detection data for this point."
+            else -> ""
+        }
+        evidence.isVisible = evidence.text.isNotEmpty()
+        lastShotButton.isVisible = rally?.lastShot?.t != null
+        if (noteForId != point?.id) {
+            saveNote()
+            noteForId = point?.id
+            noteArea.text = point?.let { host.noteOf(it.id) }.orEmpty()
+            noteArea.caretPosition = 0
+        }
+        noteArea.isEnabled = point != null
         nearLabel.text = when {
             near != null -> "Near end: ${host.players.name(near)}"
             point?.auto != null -> "Near end: not known"
@@ -687,6 +763,23 @@ internal class ReviewWindow(
 
     private fun refreshPlayButton() {
         playButton.text = if (player.status() == PlayerStatus.PLAYING) "Pause" else "Play point"
+    }
+
+    /** Saves the text of the note field for its point, when the text is new. */
+    private fun saveNote() {
+        val id = noteForId ?: return
+        val text = noteArea.text.trim()
+        if (text != host.noteOf(id)) host.setNote(id, text)
+    }
+
+    private fun playLastShot() {
+        val t = selectedPoint()?.let { host.detectionOf(it.id) }?.lastShot?.t ?: return
+        val from = ((t - 1.0) * 1000).toLong().coerceAtLeast(0)
+        stopAtMs = selectedPoint()?.endMs?.toLong()?.takeIf { it > from }
+        player.seek(from)
+        showTime(from)
+        player.play()
+        refreshPlayButton()
     }
 
     private fun say(text: String) {
@@ -888,24 +981,41 @@ internal class ReviewWindow(
 
     private fun applyOverlay() {
         val file = overlayFile
-        if (!overlaySwitch.isSelected || file == null) {
-            overlay = null
+        val layers = overlaySwitches.filterValues { it.isSelected }.keys
+        if (layers.isEmpty() || file == null) {
             overlayTicker.stop()
             player.setPreviewOverlay(null)
             return
         }
-        runCatching { DetectOverlayData.read(file) }
-            .onSuccess { data ->
-                overlay = DetectOverlay(data) {
+        // The window reads the data one time, at the first switch.
+        val current = overlay ?: runCatching { DetectOverlayData.read(file) }
+            .map { data ->
+                DetectOverlay(data) {
                     player.videoSize()?.let { size -> GeometryTimeline.planAt(adjustments, player.currentTimeMs(), size.width, size.height) }
                 }
-                overlayTicker.start()
-                drawOverlay(player.currentTimeMs())
             }
             .onFailure {
-                overlaySwitch.isSelected = false
+                overlaySwitches.values.forEach { switch -> switch.isSelected = false }
                 say("The overlay data does not open: ${it.message}")
             }
+            .getOrNull() ?: return
+        overlay = current
+        current.layers = layers
+        // The outcome texts are for the selected point: from 1 s before its last shot to 3 s after the rally.
+        current.outcome = { t ->
+            selectedPoint()?.let { point ->
+                host.detectionOf(point.id)?.let { rally ->
+                    val from = (rally.lastShot?.t ?: rally.end) - 1.0
+                    if (t >= from && t <= rally.end + 3.0) {
+                        OutcomeMark(EvidenceTexts.outcomeLines(rally, host.nearPlayerOf(point.id), host.players), rally.lastShot?.t)
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
+        overlayTicker.start()
+        drawOverlay(player.currentTimeMs())
     }
 
     private fun drawOverlay(nowMs: Long) {
@@ -920,6 +1030,7 @@ internal class ReviewWindow(
     fun close() {
         if (closed) return
         closed = true
+        saveNote()
         overlayTicker.stop()
         player.onTimeChanged = null
         player.onStatusChanged = null
@@ -1017,7 +1128,7 @@ internal class ReviewWindow(
         const val SCREEN_SHARE = 0.86
         const val MIN_WIDTH = 1000
         const val MIN_HEIGHT = 620
-        const val SIDE_WIDTH = 380
+        const val SIDE_WIDTH = 440
         const val ROW_HEIGHT = 32
         const val CLOCK_WIDTH = 110
         const val STEP_MS = 1_000L

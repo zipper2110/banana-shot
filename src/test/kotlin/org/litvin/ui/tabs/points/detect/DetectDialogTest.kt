@@ -211,7 +211,7 @@ class DetectDialogTest {
     }
 
     @Test
-    fun `the overlay draws a skeleton only near the time of its picture`() {
+    fun `the overlay keeps a skeleton from the time of its picture, and the Players switch hides it`() {
         // The left arm: shoulder (5), elbow (7), wrist (9). The other body points are not seen.
         val row = MutableList(35) { -1.0 }
         row[0] = 10.0
@@ -225,8 +225,10 @@ class DetectDialogTest {
         val shapes = overlay.shapes(10.1, area)
         assertEquals(2, shapes.filterIsInstance<OverlayShape.Line>().size)
         assertEquals(3, shapes.filterIsInstance<OverlayShape.Circle>().size)
-        assertTrue(overlay.shapes(10.5, area).isEmpty())
+        assertEquals(5, overlay.shapes(14.0, area).size)
         assertTrue(overlay.shapes(9.5, area).isEmpty())
+        overlay.layers = OverlayLayer.entries.toSet() - OverlayLayer.POSES
+        assertTrue(overlay.shapes(10.1, area).isEmpty())
     }
 
     @Test

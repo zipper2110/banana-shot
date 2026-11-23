@@ -86,7 +86,8 @@ These decisions replace the review row and the overlay switch of the Points tab 
     the Points tab then shows "Continue review (N)".
 28. **Picture of the player question.** The question shows a picture of a rally where the pose stage found the
     two players. The player at the near end is bright, and the picture is darker around that player. The picture
-    has no frame around the player: a frame looks like a prototype. The question is "Who is this player?". The
+    has no frame around the player: a frame looks like a prototype. The question stays "Who is at the near end?", and
+    the text says that this player is highlighted: the far player is also in the picture. The
     picture at the start of the first rally is not usable for a low camera: the near player can be out of the
     picture. `detect.py` gives each rally its best picture (`view`).
 27. **Near end.** For the selected point, the review window shows "Near end: <player>": the player that the

@@ -100,7 +100,8 @@ class DetectDialogTest {
                 val marked = PlayerQuestion.build(JPanel(), picture, DetectedRally(start = 40.0, end = 50.0, p1Near = true, view = view), ScorePlayers("Anna", "Bea")) {}
                 val plain = PlayerQuestion.build(JPanel(), picture, DetectedRally(start = 40.0, end = 50.0, p1Near = true), ScorePlayers("Anna", "Bea")) {}
                 try {
-                    assertEquals("Who is this player?", marked.title)
+                    assertEquals("Who is at the near end?", marked.title)
+                    assertTrue((marked.contentPane.find("detect-player-question-text") as JLabel).text.contains("highlighted"))
                     // The picture is bright at the player (x 800 to 1000, y 500 to 1000 of 1920 × 1080) and darker around.
                     val shown = marked.contentPane.find("detect-player-picture")!!
                     val painted = BufferedImage(shown.preferredSize.width, shown.preferredSize.height, BufferedImage.TYPE_INT_RGB)

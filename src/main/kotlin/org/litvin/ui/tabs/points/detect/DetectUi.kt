@@ -658,12 +658,13 @@ internal object PlayerQuestion {
         val image = picture?.let { file -> runCatching { ImageIO.read(file) }.getOrNull() }
         // The highlight of the player shows only with a picture and a box of the detection.
         val box = rally.view?.near?.takeIf { it.size == 4 && image != null }
-        val title = if (box != null) "Who is this player?" else "Who is at the near end?"
+        val title = "Who is at the near end?"
         val dialog = DialogKit.modal(parent, title)
         dialog.name = "detect-player-question"
         val time = Timecode.format(((rally.view?.second?.toDouble() ?: rally.start) * 1000).toLong())
         val question = if (box != null) {
-            "The picture is from a detected rally (at $time). Who is the highlighted player?"
+            "The picture is from a detected rally (at $time). Which player is at the near end, the one closer to the camera? " +
+                "That player is highlighted."
         } else {
             "This is the first detected rally (at $time). Which player is at the near end, the one closer to the camera?"
         }

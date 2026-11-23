@@ -44,7 +44,7 @@ SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)
 CHAIN = os.environ.get("CHAIN", "1") == "1"      # E28, E29: the winner evidence comes from the shot chain (shot_chain.py) when the flights file has "events"; CHAIN=0 gives the old rule
-FPS_ADAPT = os.environ.get("FPS_ADAPT", "0") == "1"   # E28: the sample counts of the winner rule follow the frame rate of the ball track (winner_ball.set_fps)
+FPS_ADAPT = os.environ.get("FPS_ADAPT", "1") == "1"   # E28: the sample counts of the winner rule follow the frame rate of the ball track (winner_ball.set_fps)
 END_RULE = None       # optional function (start, end, flights) -> end time for the winner rule
 
 

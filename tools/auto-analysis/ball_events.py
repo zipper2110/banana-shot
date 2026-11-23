@@ -25,15 +25,15 @@ KINK, HALF = 6.0, 5
 _TRACK = {}
 
 
-# E26f: the refined court model (court_refine.py) corrects the ground positions of a video only if the first model
-# has a clear fault at the far end: the far court points move more than FAR_FAULT_M (median of the windows that have
-# 2 refined far lines). On the 4 marked matches the two models agree within 0.15 m, and the refined model gave no
-# better winner (marked points 76.8 -> 76.9 %, full chain 80.5 -> 78.7 %), so they keep the first model. On the
-# low-camera video the first model has no fit of the far half, and the far points move 1.8 m.
+# E26f, E29: the refined court model (court_refine.py) corrects the ground positions of a video if the far court
+# points move more than FAR_FAULT_M (median of the windows that have 2 refined far lines). E29: the limit is 0, so
+# each video with a refined model uses it (line error 13 cm -> 4 cm; full chain with the shot chain 80.1 -> 80.3 %).
+# On the 4 marked matches the two models agree within 0.15 m. On the low-camera video the first model has no fit of
+# the far half, and the far points move 1.8 m.
 # The 3D camera of the flights always comes from the first model (H): with the camera of the refined model, only
 # 145 of 351 bounce events of the low-camera video passed the bounce test of ball_bounce.py. The refined model then
 # gives the place on the court of each ground point (window key "ground", function ground_fix).
-FAR_FAULT_M = 0.5
+FAR_FAULT_M = float(os.environ.get("FAR_FAULT_M", "0"))      # E29: 0 = each video with a refined model uses it for the ground points (before: 0.5)
 _FAR_PTS = np.array([[-4.115, 11.885], [4.115, 11.885], [-4.115, 6.4], [4.115, 6.4]])
 
 

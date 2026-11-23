@@ -40,7 +40,7 @@ def is_fast_out(f):
     return f["n"] >= 8 and f["rms"] < 5 and 5.0 < abs(p0[1]) < 16 and 1.2 < p0[2] < 3.6 and 45 < sp < 240         and v0[1] * p0[1] < 0 and abs(p0[0]) < 6
 
 
-RALLY_FILTER = os.environ.get("SERVE_FILTER", "0") == "1"      # E28e: a flight that returns a ball is not a serve event
+RALLY_FILTER = os.environ.get("SERVE_FILTER", "1") == "1"      # E28e: a flight that returns a ball is not a serve event
 RETURN_S, RETURN_V = 3.0, 8.0     # s (time for two flights: one shot in a gap of the ball data is normal), m/s along the court (ball_bounce.HIT_V)
 
 

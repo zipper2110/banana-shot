@@ -24,7 +24,7 @@ from scipy.optimize import least_squares
 import ball_3d as b3
 
 R_BALL = 0.033          # m: the ball center is above the contact point
-MAX_GAP_S = 0.25        # a gap between two tracks longer than this is not one vertex: the track ends and a new one starts
+MAX_GAP_S = 0.6         # a gap between two tracks longer than this is not one vertex: the track ends and a new one starts (E32: before 0.25)
 # Physical limits of a bounce (tennis ball on a court; wide, for all surfaces and spins):
 E_MIN, E_MAX = 0.35, 1.05       # vertical restitution: speed up after / speed down before
 K_MIN, K_MAX = 0.25, 1.2        # horizontal speed after / before
@@ -32,15 +32,29 @@ PHI_MAX = 0.6                   # rad: a bounce does not turn the horizontal dir
 VZ_MIN = 0.3                    # m/s: the ball must come down before the bounce
 HIT_N, HIT_V = 20, 8.0          # samples and m/s along the court of the flight after a vertex: such a flight in the opposite direction is a hit
 LOCAL_S = 0.35                  # s: the bounce test uses the samples of this time before and after the vertex (the ball model has no spin: a long path does not fit)
+X_MAX, Y_MAX = 12.0, 22.0         # m: a bounce event is inside this area around the court center (E32: 16 x 24 m gave false "out" decisions from balls of the next court)
+NEIGHBOR_GAP = True
+END_BEFORE = 4.0      # frames of 1/60 s. E32 (before: 1): a track often ends at the bounce, and the time of a fit landing has an error of some frames
+WIDE_GAP_S, WIDE_N = 0.25, 8      # E32: a vertex in a gap longer than WIDE_GAP_S needs WIDE_N samples on each side
+# E32: the path of a ball with side spin curves sideways, and a lens bends a straight path near the picture edge.
+# A fit with no side curve then fails by a small margin, with a perfect height part. So a seen vertex whose fit is
+# worse than the limit, but not worse than SIDE_TRY times the limit, gets a second fit with a side acceleration
+# within +-SIDE_ACC m/s^2 for each of the two paths. Each path needs SIDE_N samples.
+SIDE_ACC, SIDE_TRY, SIDE_N = 8.0, 2.0, 6
+RMS_SEEN, SEEN_F = 3.0, 3.0       # E32: the base limit for a vertex with samples not more than SEEN_F sample steps apart around it
 RMS_BASE, RMS_BALL = 2.0, 0.6   # the bounce fit is accepted if rms < RMS_BASE px + RMS_BALL * radius of the ball image (px)
 
 
-def sim(p, v, ts, drag=b3.DRAG, h=1 / 60):
+def sim(p, v, ts, drag=b3.DRAG, h=1 / 60, side=0.0):
     """Positions and velocities at the times ts (any order, also negative) of a ball with the state
-    (p, v) at t = 0. Midpoint steps with gravity and drag, forward and backward in time."""
+    (p, v) at t = 0. Midpoint steps with gravity and drag, forward and backward in time.
+    side (m/s^2): a constant horizontal acceleration at a right angle to the horizontal velocity at t = 0 (E32)."""
     ts = np.asarray(ts, float)
     P, V = np.zeros((len(ts), 3)), np.zeros((len(ts), 3))
     gz = np.array([0, 0, b3.G])
+    if side:
+        hv = max(1e-6, float(np.hypot(v[0], v[1])))
+        gz = gz - side * np.array([-v[1], v[0], 0.0]) / hv
     for sign in (1.0, -1.0):
         idx = [i for i in np.argsort(sign * ts) if sign * ts[i] >= 0 and (sign > 0 or ts[i] < 0)]
         q, w, t = np.array(p, float), np.array(v, float), 0.0
@@ -124,11 +138,12 @@ def v_after(v_in, k, e, phi):
     return np.array([k * (c * v_in[0] - s * v_in[1]), k * (s * v_in[0] + c * v_in[1]), -e * v_in[2]])
 
 
-def fit_bounce(P, ta, xa, tb, xb, Xa):
+def fit_bounce(P, ta, xa, tb, xb, Xa, side=0.0):
     """Is there a physical bounce at the point Xa that agrees with the samples? One fit of the path before
     (ta < 0, xa) and the path after (tb > 0, xb) with the ball on the ground at t = 0.
     Unknowns: the velocity before (3), the horizontal speed ratio k, the restitution e, the turn phi. The
-    unknowns stay inside the physical limits. So the result is the best physical bounce, and its rms tells
+    unknowns stay inside the physical limits. With side > 0 (E32): 2 more unknowns, the side acceleration of the
+    path before and of the path after, each within +-side (spin, and the lens distortion at the picture edge). So the result is the best physical bounce, and its rms tells
     if the samples agree with it. Returns (v_in, v_out, k, e, phi, rms px) or None."""
     try:
         vi, _ = fit_anchored(P, ta, xa, Xa)
@@ -144,14 +159,16 @@ def fit_bounce(P, ta, xa, tb, xb, Xa):
     up = [80, 80, -VZ_MIN, K_MAX, E_MAX, PHI_MAX]
     q0[:2] = np.clip(q0[:2], -79, 79); q0[2] = max(q0[2], -39)
     xy = np.concatenate([xa, xb])
+    if side:
+        q0, lo, up = np.concatenate([q0, [0.0, 0.0]]), lo + [-side, -side], up + [side, side]
 
     def res(q):
-        pa = b3.project(P, sim(Xa, q[:3], ta)[0])
-        pb = b3.project(P, sim(Xa, v_after(q[:3], q[3], q[4], q[5]), tb)[0])
+        pa = b3.project(P, sim(Xa, q[:3], ta, side=q[6] if side else 0.0)[0])
+        pb = b3.project(P, sim(Xa, v_after(q[:3], q[3], q[4], q[5]), tb, side=q[7] if side else 0.0)[0])
         r = (np.concatenate([pa, pb]) - xy).ravel()
         return np.where(np.isfinite(r), r, 1e3)
     try:
-        r = least_squares(res, q0, bounds=(lo, up), loss="soft_l1", f_scale=3.0, max_nfev=30)
+        r = least_squares(res, q0, bounds=(lo, up), loss="soft_l1", f_scale=3.0, max_nfev=40 if side else 30)
     except ValueError:
         return None
     e = res(r.x).reshape(-1, 2)
@@ -230,20 +247,36 @@ def events(path, kk, fls, P, Hm, debug=None):
         fe = e["f"]
         lo_f = evs[j - 1]["f"] if j else -1e9
         hi_f = evs[j + 1]["f"] if j + 1 < len(evs) else 1e9
-        sa = np.nonzero((f > max(lo_f + 0.5, fe - LOCAL_S * 60)) & (f < fe - 0.5))[0]
-        sb = np.nonzero((f > fe + 0.5) & (f < min(hi_f - 0.5, fe + LOCAL_S * 60)))[0]
+        if NEIGHBOR_GAP:           # E32: the samples before a gap belong to the path before it, also if the vertex of the gap kink is earlier
+            lo_f = min(lo_f, kf[j - 1]) if j and evs[j - 1]["gap"] else lo_f
+            hi_f = max(hi_f, kf[j + 1]) if j + 1 < len(evs) and evs[j + 1]["gap"] else hi_f
+        # E32: a vertex in a wide gap. The sample time counts from the last sample before the gap and from the first
+        # sample after it (else the test has only the samples of the time that the gap leaves), and the test needs
+        # more samples on each side.
+        ea, eb = f[f < fe - 0.5], f[f > fe + 0.5]
+        ea, eb = (ea[-1] if len(ea) else fe), (eb[0] if len(eb) else fe)
+        wide = eb - ea > WIDE_GAP_S * 60
+        if not wide:
+            ea = eb = fe
+        sa = np.nonzero((f > max(lo_f + 0.5, ea - LOCAL_S * 60)) & (f < fe - 0.5))[0]
+        sb = np.nonzero((f > fe + 0.5) & (f < min(hi_f - 0.5, eb + LOCAL_S * 60)))[0]
         g = ground(Hm, P, e["px"])
         fa, fb = by_cut1.get(kf[j]), by_cut0.get(kf[j])
         e["nA"], e["nB"] = len(sa), len(sb)
         # A long and fast flight in the opposite direction along the court can only come from a racket.
         sure_hit = bool(fa and fb and fa["v0"][1] * fb["v0"][1] < 0 and fb["n"] >= HIT_N and abs(fb["v0"][1]) > HIT_V and fb["rms"] < 5)
-        if not sure_hit and np.isfinite(g).all() and abs(g[0]) < 12 and abs(g[1]) < 22 and len(sa) >= 2 and len(sb) >= 2 and len(sa) + len(sb) >= 6:
+        if not sure_hit and np.isfinite(g).all() and abs(g[0]) < X_MAX and abs(g[1]) < Y_MAX and len(sa) >= 2 and len(sb) >= 2 and len(sa) + len(sb) >= 6                 and not (wide and min(len(sa), len(sb)) < WIDE_N):
             Xa = np.array([g[0], g[1], R_BALL])
             r_px = float(np.linalg.norm(b3.project(P, np.array([[g[0], g[1], 2 * R_BALL]]))[0] - b3.project(P, np.array([[g[0], g[1], R_BALL]]))[0]))
             fit = fit_bounce(P, (f[sa] - fe) / 60.0, xy[sa], (f[sb] - fe) / 60.0, xy[sb], Xa)
             if fit is not None:
+                seen = f[sb[0]] - f[sa[-1]] <= SEEN_F * step + 1e-6        # the turn itself has samples: no gap at the vertex
+                lim = (RMS_SEEN if seen else RMS_BASE) + RMS_BALL * r_px
+                if SIDE_ACC and seen and lim <= fit[5] < SIDE_TRY * lim and len(sa) >= SIDE_N and len(sb) >= SIDE_N:
+                    fit2 = fit_bounce(P, (f[sa] - fe) / 60.0, xy[sa], (f[sb] - fe) / 60.0, xy[sb], Xa, SIDE_ACC)
+                    if fit2 is not None and fit2[5] < fit[5]:
+                        fit, e["side"] = fit2, True
                 v_in, v_out, kr, er, phi, rms = fit
-                lim = RMS_BASE + RMS_BALL * r_px
                 e.update(v_in=v_in, v_out=v_out, k=kr, e=er, phi=phi, rms=rms, lim=lim)
                 if rms < lim:
                     e["kind"] = "bounce"
@@ -285,7 +318,7 @@ def events(path, kk, fls, P, Hm, debug=None):
             sg, sg_t = landing_sigma(P, ts, sxy, fl["p0"], fl["v0"], fl["rms"]) if fl["anchored"] == 0 else (float("nan"), float("nan"))
             if fl["anchored"] == 2 and not np.isnan(lx):                # the start is exact: the error grows with the path
                 sg = 0.15 * float(np.hypot(lx - fl["p0"][0], ly - fl["p0"][1]))
-            bad = np.isnan(lx) or fl["f0"] + lt * 60.0 < fl["f1"] - 1.0   # the fit comes down before the last detection
+            bad = np.isnan(lx) or fl["f0"] + lt * 60.0 < fl["f1"] - END_BEFORE   # the fit comes down before the last detection
             fe = fl["f0"] + lt * 60.0 if not np.isnan(lt) else fl["f1"]
             px = b3.project(P, np.array([[lx, ly, R_BALL]]))[0] if not np.isnan(lx) else sxy[-1]
             out.append({"f": float(fe), "kind": "end", "px": [float(px[0]), float(px[1])], "src": "fit",

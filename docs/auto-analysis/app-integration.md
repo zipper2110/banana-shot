@@ -97,7 +97,12 @@ These decisions replace the review row and the overlay switch of the Points tab 
     the timeline has two shot tracks below the bar. The upper track has the color of the hitter. The lower
     track shows the time with a ball track; its color says how the hitter is known (white: hit seen, blue: the
     ball came back, gray: hit not seen). A line at the end of a shot is green for in, red for out, and yellow
-    for net. The window has the "Frame step" toggle of the
+    for net. A shot with no seen end can have a predicted end (E32; `predicted` of the shot in `chain`: `t`,
+    `end`, `court`, `margin`, `sigma`): the landing of the fit of its last flight, if the 1-sigma error is not
+    more than 1 m. A predicted landing nearer to a line than 1.2 m has the end "line" (no decision; gray). The panel then says
+    "Predicted: ...", and the line on the timeline is a broken line. A shot that starts more than 1 s after the end of the rally is gray on the two tracks, and the
+    panel says "After the point" (the players handle the ball). The
+    predicted end is for the display only. The winner evidence does not use it. The window has the "Frame step" toggle of the
     Points tab (key F, the same setting): Left and Right then step one frame while the video is paused. The
     "Overlay" switch (key V) hides and shows all parts of the overlay; the switches of the parts keep their
     state. The notes go to `autodetect/review-notes.json` of the project, with the times of the detected rally.

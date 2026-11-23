@@ -161,6 +161,21 @@ data class ChainShot(
     val tLast: Double? = null,
     /** The time of the end of the shot (the bounce or the net touch), in s. Null: the end was not seen. */
     val tEnd: Double? = null,
+    /** Only when the end was not seen ([end] is "none"): the end that the fit of the last flight gives. */
+    val predicted: PredictedEnd? = null,
+)
+
+/**
+ * The end of a shot that was not seen: the landing of the fit of its flight. [t] is the landing time in s, [end] is
+ * "in", "out", "line" (too near to a line for a decision) or "own", [court] the place in m, [margin] the distance to the lines in m (negative: out), and [sigma]
+ * the 1-sigma error of the place in m.
+ */
+data class PredictedEnd(
+    val t: Double = 0.0,
+    val end: String? = null,
+    val court: List<Double>? = null,
+    val margin: Double? = null,
+    val sigma: Double? = null,
 )
 
 /**

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.litvin.autodetect.ChainShot
 import org.litvin.autodetect.DetectOverlayData
 import org.litvin.autodetect.DetectedRally
+import org.litvin.autodetect.PredictedEnd
 import org.litvin.autodetect.ShotChain
 import org.litvin.media.OverlayShape
 import org.litvin.ui.commons.Palette
@@ -54,6 +55,34 @@ class ShotViewsTest {
         assertEquals("End not seen", shots[3].outcome)
         assertEquals(listOf(Palette.GREEN, Palette.RED, Palette.YELLOW, null), shots.map { it.endColor })
         assertNull(shots[3].endMs)
+    }
+
+    @Test
+    fun `a shot with no seen end shows the predicted end of its flight`() {
+        val shot = ChainShot(
+            t = 13.71, near = true, how = "hit", end = "none", tLast = 14.595,
+            predicted = PredictedEnd(t = 14.562, end = "out", court = listOf(-4.53, 9.59), margin = -0.42, sigma = 0.35),
+        )
+        val view = ShotViews.of(DetectedRally(start = 10.0, end = 19.0, chain = ShotChain(shots = listOf(shot))), near = 1, players).single()
+
+        assertTrue(view.predicted)
+        assertEquals("Predicted: out by 0.4 m", view.outcome)
+        assertEquals(Palette.RED, view.endColor)
+        assertEquals(14_562L, view.endMs)
+    }
+
+    @Test
+    fun `a shot that starts after the end of the rally is not a shot of the point`() {
+        val shots = listOf(
+            ChainShot(t = 106.36, near = true, how = "hit", end = "net", tEnd = 106.88, tLast = 106.88),
+            ChainShot(t = 110.88, near = true, how = "gap", end = "out", tEnd = 111.54, tLast = 111.53, margin = -10.5),
+        )
+        val views = ShotViews.of(DetectedRally(start = 88.0, end = 109.0, chain = ShotChain(shots = shots)), near = 1, players)
+
+        assertEquals(listOf(false, true), views.map { it.afterPoint })
+        assertEquals("After the point", views[1].outcome)
+        assertNull(views[1].endColor)
+        assertEquals(Palette.FG_3, views[1].color)
     }
 
     @Test

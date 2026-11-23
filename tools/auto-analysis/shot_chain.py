@@ -30,6 +30,15 @@ BACK_M = 3.0          # m: or a new shot if the flight starts this far behind th
 HIT_V = 8.0           # m/s along the court: a flight back that is faster than this is a hit (ball_bounce.HIT_V)
 OWN_BACK = 0.5        # m: a bounce on the side of the hitter counts up to this distance behind the baseline
 NET_AFTER = 0.7       # s: a net event belongs to a shot if it is not later than this after the last sample of the shot
+# E32:
+OUT_LINE = os.environ.get("OUT_LINE", "1") == "1"
+NET_NEAR = float(os.environ.get("NET_NEAR", "0.5"))     # m behind the net: a bounce nearer to the net than this is not a good shot (the place of a bounce has an error of 0.1 to 0.3 m)
+SLOW = os.environ.get("CHAIN_SLOW", "1") == "1"
+SLOW_V = 4.0          # m/s over the ground: a slower flight does not start a shot (a ball toss, a ball that drops at the net, a ball in the hand)
+FIRST_WEAK = os.environ.get("CHAIN_FIRST_WEAK", "1") == "1"
+FIRST_DUR, FIRST_GAP = 0.4, 0.6     # s: a weak first shot shorter than FIRST_DUR with no bounce and no net event, and FIRST_GAP before the next shot, is not a shot
+PRED_SIGMA, PRED_AFTER = 1.0, 1.0   # m, s: the fit landing is a "predicted" end of a shot if its 1-sigma error and its time after the last sample are below these
+PRED_ERR = 1.2        # m: the measured error of a fit landing (E33: median 1.1 to 1.6 m against the seen bounces). A predicted landing nearer to a line is "line", not in or out
 NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its direction (net_events.HINT_DIR)
 
 
@@ -66,6 +75,9 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
         b0, h0 = _ev(events, f.get("ev0"), "bounce"), _ev(events, f.get("ev0"), "hit")
         same = cur is not None and cur["near"] == to_far
         new, how, turn = True, "first", None
+        slow = SLOW and float(np.hypot(f["v0"][0], f["v0"][1])) < SLOW_V
+        if slow and (cur is None or (same and f["t0"] - cur["fl"][-1]["t1"] >= SAME_GAP) or (not same and b0 is None)):
+            continue                                          # E32: a slow flight that is not a part of the shot before it starts no shot
         if same:
             gap = f["t0"] - cur["fl"][-1]["t1"]
             if b0 is not None and gap < SAME_GAP:
@@ -109,6 +121,11 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
             cur["reach"] = r if cur["reach"] is None else max(cur["reach"], r)
         for e in cur["bounces"]:
             cur["reach"] = e["court"][1] * s if cur["reach"] is None else max(cur["reach"], e["court"][1] * s)
+    if FIRST_WEAK and len(shots) >= 2:
+        a, b = shots[0], shots[1]
+        if a["weak"] and not a["bounces"] and a["fl"][-1]["t1"] - a["fl"][0]["t0"] < FIRST_DUR and b["fl"][0]["t0"] - a["fl"][-1]["t1"] > FIRST_GAP:
+            shots.pop(0)                                      # E32: the hitter of the next shot came from this flight: now it is the first shot
+            b["how"] = "first"
     # net events: each one belongs to the shot that is in the air at its time
     seen, alone = list(shots), []
     for e in nets:
@@ -159,8 +176,8 @@ def shot_end(sh, tol=0.0):
     x, y = b[0], b[1]
     if y < -(BL + OWN_BACK):
         return "none", None           # behind the baseline of the hitter: not a bounce of a shot that flies to the net
-    if y < 0:
-        return "own", y
+    if y < NET_NEAR:
+        return "own", min(y, 0.0)     # E32: also a bounce right behind the net: the ball touched the net and dropped
     m = min(SW - abs(x), BL - y)
     return ("in" if m > -tol else "out"), m
 
@@ -184,11 +201,9 @@ def last_shot(shots, t_end, t_cut):
 LINE_M = 0.3          # m: a bounce nearer to a line than this is a "line" case (the position error of a bounce event, E17d-2: 90 % below 0.28 m)
 FIRST_DT = 0.15       # s: a low kink of the old rule this much before the bounce event is the first ground contact
 EARLY = -4.0          # s: the last shot starts more than this before the end: a later shot was probably not tracked (match_decode.case_key)
-# The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5;
+# The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
-CASE_P = {"back_in": 0.56, "back_stop": 0.83, "in": 0.83, "in_early": 0.81, "in_line": 0.65, "in_line_early": 0.7, "net_hi": 0.97, "net_lo": 0.83,
-          "old_in": 0.66, "old_in_early": 0.63, "old_in_seen": 0.95, "old_net": 0.94, "old_net_early": 0.75, "old_out": 0.89, "old_out_early": 0.5,
-          "old_out_seen": 0.71, "out": 0.95, "out_early": 0.66, "own": 0.81, "own_early": 0.9}
+CASE_P = {"back_in": 0.61, "back_stop": 0.72, "in": 0.91, "in_early": 0.8, "in_line": 0.56, "in_line_early": 0.81, "net_hi": 0.97, "net_lo": 0.84, "old_in": 0.63, "old_in_early": 0.58, "old_in_seen": 0.75, "old_net": 0.94, "old_net_early": 0.72, "old_out": 0.89, "old_out_early": 0.5, "old_out_seen": 0.88, "out": 0.93, "out_early": 0.77, "out_line": 0.81, "out_line_early": 0.5, "own": 0.84, "own_early": 0.78}
 CASES_BY_MATCH = None
 TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", "own": "the ball came down on the side of the hitter",
         "out": "the ball bounced out", "in": "the ball bounced in and no return was seen",
@@ -196,6 +211,32 @@ TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", 
 
 
 def evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
+    r = _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed)
+    r["events"] = pt.get("events")
+    return r
+
+
+def predicted_end(sh, events):
+    """E32. A shot with no seen end: the landing of the fit of its last flight ("end" event of ball_bounce.py), if the
+    fit is good. Returns {"t", "end" ("in", "out", "line" = too near to a line for a decision, "own"), "court", "margin", "sigma"} or None. This is for the display.
+    The winner evidence does not use it: the old rule uses the same landing with its measured probability."""
+    if not sh["fl"] or events is None:
+        return None
+    i = sh["fl"][-1].get("ev1")
+    e = events[i] if i is not None else None
+    if e is None or e["kind"] != "end" or e.get("court") is None or e.get("conf") is None or e["conf"] > PRED_SIGMA:
+        return None
+    if not -0.05 <= e["t"] - sh["fl"][-1]["t1"] <= PRED_AFTER:
+        return None
+    s = 1.0 if sh["near"] else -1.0
+    x, y = float(e["court"][0]), float(e["court"][1]) * s
+    if y < -(BL + OWN_BACK):
+        return None
+    kind, m = ("own", min(y, 0.0)) if y < NET_NEAR else (lambda m: ("line" if abs(m) < PRED_ERR else "in" if m > 0 else "out", m))(min(SW - abs(x), BL - y))
+    return {"t": round(float(e["t"]), 3), "end": kind, "court": [round(x, 2), round(y * s, 2)], "margin": round(m, 2), "sigma": round(float(e["conf"]), 2)}
+
+
+def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     """Winner evidence of a rally from its shot chain.
     pt: {"end", "flights", "events"}; nets: the net events of the window; t_cut: winner_ball.T_CUT;
     q, w_old, old_case: the quantities, the decision and the case of the old rule (winner_ball.analyse,
@@ -227,7 +268,7 @@ def evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     elif kind == "own":
         w, case = (not sh["near"]), "own" + e
     elif kind == "out":
-        w, case = (not sh["near"]), "out" + e
+        w, case = (not sh["near"]), "out" + ("_line" if OUT_LINE and m > -LINE_M else "") + e      # E32: "out" near a line is its own case, as "in"
     elif kind == "in":
         w, case = sh["near"], "in" + ("_line" if m < LINE_M else "") + e
     else:
@@ -309,6 +350,10 @@ def export(r, t_end, t_cut, used, p=None):
         elif kind != "none":
             d["tEnd"], d["court"], d["margin"], d["sigma"] = round(b[2], 3), [round(b[0], 2), round(b[1] * s, 2)], round(m, 2), round(b[3], 2)
             d["after"] = round(after_bounce(sh), 2)
+        else:
+            pe = predicted_end(sh, r.get("events"))
+            if pe is not None:
+                d["predicted"] = pe
         if sh["weak"]:
             d["weak"] = True              # the 3D start of the flight is not plausible: only the direction is used
         if (sh["fl"][0]["t0"] if sh["fl"] else sh["t"]) >= t_end + t_cut:
@@ -332,7 +377,7 @@ def point_evidence(pt, nets, p, t_cut=None):
         wb.good, wb.T_CUT = orig, cut
 
 
-EV_TAG = "0.35_ev"       # the flights files with events of the lab matches
+EV_TAG = os.environ.get("EV_TAG", "0.35_ev")       # the flights files with events of the lab matches
 
 
 def marked(mid):

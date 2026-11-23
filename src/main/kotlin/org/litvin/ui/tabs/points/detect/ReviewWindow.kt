@@ -323,7 +323,13 @@ internal class ReviewBoundsBar(
                 g2.color = Palette.BG
                 g2.fillRect(x - 2, upper - 2, 5, 2 * SHOT_TRACK + 6)
                 g2.color = color
-                g2.fillRect(x - 1, upper - 2, 3, 2 * SHOT_TRACK + 6)
+                if (shot.predicted) {
+                    // A predicted end: a broken line.
+                    val part = (2 * SHOT_TRACK + 6) / 5
+                    (0..2).forEach { g2.fillRect(x - 1, upper - 2 + 2 * it * part, 3, part) }
+                } else {
+                    g2.fillRect(x - 1, upper - 2, 3, 2 * SHOT_TRACK + 6)
+                }
             }
             g2.clip = null
             if (playheadMs in windowStart..windowEnd) {
@@ -1095,12 +1101,13 @@ internal class ReviewWindow(
         null to "Lower shot track: the time with a ball track",
         Palette.FG to "The hit was seen (also the first shot)",
         Palette.BLUE to "The ball came back, the hit was not seen",
-        Palette.FG_3 to "The hit was not seen, and the ball did not come back",
+        Palette.FG_3 to "The hit was not seen, and the ball did not come back. Also: a shot after the point (the two tracks are gray)",
         null to "Line at the end of a shot",
         Palette.GREEN to "In",
         Palette.RED to "Out, or a bounce on the side of the hitter",
         Palette.YELLOW to "Net",
-        null to "No line: the end of the shot was not seen. The shot tracks need the \"Shots\" switch.",
+        null to "Broken line: the end was not seen. The flight of the ball predicts it (gray: too near to a line).",
+        null to "No line: the end of the shot is not known. The shot tracks need the \"Shots\" switch.",
     )
 
     private fun showColorsHelp() {

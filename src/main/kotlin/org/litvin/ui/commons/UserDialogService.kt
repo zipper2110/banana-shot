@@ -31,6 +31,7 @@ interface UserDialogService {
     /**
      * Asks the user to confirm an action with a button that names the action, for example "Overwrite".
      * For a [destructive] action, the button is red, and the safe button has the focus.
+     * With [confirmKeys], Enter and the Delete key do the action (see MessageDialog.confirm).
      */
     fun confirm(
         parent: Component?,
@@ -39,6 +40,7 @@ interface UserDialogService {
         confirmLabel: String,
         cancelLabel: String = tr("common.cancel"),
         destructive: Boolean = false,
+        confirmKeys: Boolean = false,
     ): Boolean = confirm(parent, message, title)
 }
 
@@ -72,7 +74,10 @@ class SwingUserDialogService : UserDialogService {
         confirmLabel: String,
         cancelLabel: String,
         destructive: Boolean,
-    ): Boolean = MessageDialog.confirm(parent, title, message, confirmLabel, cancelLabel, destructive, glyph = glyphFor(confirmLabel, destructive))
+        confirmKeys: Boolean,
+    ): Boolean = MessageDialog.confirm(
+        parent, title, message, confirmLabel, cancelLabel, destructive, glyph = glyphFor(confirmLabel, destructive), confirmKeys = confirmKeys,
+    )
 
     /** A cancel action shows a cancel icon, and an overwrite shows a warning icon. A delete keeps the delete icon. */
     private fun glyphFor(confirmLabel: String, destructive: Boolean): Ikon? = when {

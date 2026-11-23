@@ -1102,6 +1102,8 @@ class SwingPointsPanel(
             tr("pointEdit.delete.title"),
             confirmLabel = tr("common.delete"),
             destructive = true,
+            // The user deletes many points in sequence, for example wrong automatic points: Enter and Delete confirm.
+            confirmKeys = true,
         )
         if (!confirmed) return
         hints.dismiss(HintId.POINT_ROW)

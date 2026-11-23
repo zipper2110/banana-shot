@@ -200,6 +200,7 @@ class SwingProjectsPanelTest {
                 confirmLabel: String,
                 cancelLabel: String,
                 destructive: Boolean,
+                confirmKeys: Boolean,
             ): Boolean {
                 assertTrue("D:\\video\\a.mp4" in message)
                 assertEquals("Locate video...", confirmLabel)

@@ -10,7 +10,11 @@ import java.awt.Graphics
 import java.awt.Image
 import java.awt.Insets
 import java.awt.RenderingHints
+import java.awt.event.ActionEvent
+import java.awt.event.KeyEvent
 import java.awt.geom.Ellipse2D
+import javax.swing.AbstractAction
+import javax.swing.KeyStroke
 import javax.swing.BorderFactory
 import javax.swing.JComponent
 import javax.swing.JDialog
@@ -45,6 +49,8 @@ internal object MessageDialog {
      * Asks the user to confirm an action. Returns true after [confirmLabel].
      * For a [destructive] action, the button is red, and the safe button has the focus, so Enter does not do the action.
      * A [portrait] shows in a large circle in place of the icon.
+     * With [confirmKeys], Enter and the Delete key do the action. Use it only for an action that the user can make
+     * again with little work, for example the deletion of one point.
      */
     fun confirm(
         parent: Component?,
@@ -55,13 +61,58 @@ internal object MessageDialog {
         destructive: Boolean = false,
         glyph: Ikon? = null,
         portrait: Image? = null,
+        confirmKeys: Boolean = false,
     ): Boolean {
         val buttons = listOf(
             MessageButton(cancelLabel),
             MessageButton(confirmLabel, if (destructive) UiButton.Kind.DANGER else UiButton.Kind.LIME),
         )
         val kind = if (destructive) MessageKind.DANGER else MessageKind.QUESTION
-        return show(parent, kind, title, message, buttons, defaultIndex = if (destructive) 0 else 1, cancelIndex = 0, glyph = glyph, portrait = portrait) == 1
+        val defaultIndex = if (destructive && !confirmKeys) 0 else 1
+        var result = 0
+        val dialog = build(parent, kind, title, message, buttons, defaultIndex, glyph, portrait = portrait) { result = it }
+        if (confirmKeys) bindDeleteKey(dialog, defaultIndex)
+        dialog.setLocationRelativeTo(parent?.let { SwingUtilities.getWindowAncestor(it) ?: it })
+        dialog.isVisible = true
+        return result == 1
+    }
+
+    /**
+     * The Delete key clicks the button at [index] of [dialog].
+     * The Delete key can also be the key that opened the dialog, and the user can hold it. A held key sends more
+     * key presses, and these must not do the action. So a key press counts only after a release of the key in the
+     * dialog, or when the dialog has been open for [KEY_GUARD_MS] with no ignored key press.
+     */
+    internal fun bindDeleteKey(dialog: JDialog, index: Int, now: () -> Long = System::currentTimeMillis) {
+        val opened = now()
+        var released = false
+        var held = false
+        val root = dialog.rootPane
+        val inputs = root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        inputs.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0, false), "message.delete.pressed")
+        inputs.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0, true), "message.delete.released")
+        root.actionMap.put("message.delete.released", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) {
+                released = true
+            }
+        })
+        root.actionMap.put("message.delete.pressed", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) {
+                if (released || (!held && now() - opened >= KEY_GUARD_MS)) {
+                    buttonOf(dialog, index)?.doClick(0)
+                } else {
+                    held = true
+                }
+            }
+        })
+    }
+
+    private fun buttonOf(root: java.awt.Container, index: Int): javax.swing.AbstractButton? {
+        for (child in root.components) {
+            if (child is javax.swing.AbstractButton && child.name == "message-button-$index") return child
+            if (child is java.awt.Container) buttonOf(child, index)?.let { return it }
+        }
+        return null
     }
 
     /**
@@ -245,6 +296,8 @@ internal object MessageDialog {
         MessageKind.QUESTION -> Palette.FG to Palette.HIGHLIGHT
     }
 
+    /** Longer than the longest key repeat delay of Windows (1 s). */
+    internal const val KEY_GUARD_MS = 1_100L
     private const val ICON = 30
     private const val PORTRAIT = 56
     private const val PAD_TOP = 20

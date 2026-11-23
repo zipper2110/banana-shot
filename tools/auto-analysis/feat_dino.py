@@ -10,7 +10,8 @@ Writes into <match>/:
 Usage: python feat_dino.py [match id ...]
 """
 import glob, os, sys, time
-os.environ.setdefault("HF_HOME", "D:/bananashot-lab/hf")
+import platform_cfg
+os.environ.setdefault("HF_HOME", platform_cfg.hf_home())
 import numpy as np
 import torch
 import timm
@@ -43,9 +44,9 @@ def run(mid, model):
     dl = torch.utils.data.DataLoader(Frames(files), batch_size=32, num_workers=6)
     cls_mean, grid = [], []
     t = time.time()
-    with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16):
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16, enabled=platform_cfg.half()):   # 16-bit floats only on CUDA
         for x in dl:
-            tok = model.forward_features(x.cuda())           # [B, 1 + 18*32, 384]
+            tok = model.forward_features(platform_cfg.to_device(x))           # [B, 1 + 18*32, 384]
             cls, patch = tok[:, 0], tok[:, 1:].reshape(-1, 18, 32, 384)
             g = torch.nn.functional.adaptive_avg_pool2d(patch.permute(0, 3, 1, 2), (2, 3))
             cls_mean.append(torch.cat([cls, patch.mean((1, 2))], 1).float().cpu())
@@ -66,7 +67,7 @@ def run(mid, model):
 
 
 if __name__ == "__main__":
-    model = timm.create_model("vit_small_patch14_dinov2.lvd142m", pretrained=True, img_size=(H, W)).cuda().eval()
+    model = platform_cfg.to_device(timm.create_model("vit_small_patch14_dinov2.lvd142m", pretrained=True, img_size=(H, W))).eval()
     for mid in (sys.argv[1:] or lab.LABELED):
         if os.path.exists(os.path.join(lab.mdir(mid), "kf.done")) and not os.path.exists(
                 os.path.join(lab.mdir(mid), "feat_dinodelta.npy")):

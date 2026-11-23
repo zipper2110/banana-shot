@@ -110,6 +110,8 @@ These decisions replace the review row and the overlay switch of the Points tab 
 
 - **Switch on.** The file `%APPDATA%/BananaShot/autodetect.json` names the Python of the lab venv, `detect.py`, the
   work folder, and more environment variables (`HF_HOME`). Without the file, the app shows no detection.
+  On a Mac the file is `~/Library/Application Support/BananaShot/autodetect.json`; the setup is in
+  `mac-setup.md`.
 - **Run.** Points tab, under the points list: "Detect points". The dialog has the settings (decision 20) and one
   action, "Detect points". During a run, the dialog shows only two progress bars (the step and the total), the
   estimate of the time left, and "Stop". The estimate uses the reference time of each stage (a part of the video

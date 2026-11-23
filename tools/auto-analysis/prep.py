@@ -10,10 +10,12 @@ Run one match at a time: the GPU decodes only one video well.
 Usage: python prep.py [match id ...]
 """
 import json, os, subprocess, sys, glob, time
+import platform_cfg
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CFG = json.load(open(os.path.join(HERE, "matches.json"), encoding="utf-8"))
-ROOT = CFG["labRoot"]
+ROOT = platform_cfg.data_root(CFG["labRoot"])
+FFMPEG, FFPROBE = platform_cfg.tool("ffmpeg"), platform_cfg.tool("ffprobe")
 PROJECTS = os.path.expandvars(CFG["projectsRoot"].replace("%APPDATA%", os.environ.get("APPDATA", "")))
 
 
@@ -38,10 +40,10 @@ def prep(m, out=None):
         score.pop("outcomes", None)
         json.dump({"points": pts, "score": score}, open(os.path.join(out, "gt.json"), "w", encoding="utf-8"), indent=1)
     if not os.path.exists(os.path.join(out, "audio.flac")):
-        log["audio_s"] = run(["ffmpeg", "-v", "error", "-y", "-i", v, "-map", "0:a:0", "-ac", "2", "-ar", "24000",
+        log["audio_s"] = run([FFMPEG, "-v", "error", "-y", "-i", v, "-map", "0:a:0", "-ac", "2", "-ar", "24000",
                               os.path.join(out, "audio.flac")])
     if not os.path.exists(os.path.join(out, "kf_times.csv")):
-        r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+        r = subprocess.run([FFPROBE, "-v", "error", "-select_streams", "v:0", "-show_entries",
                             "packet=pts_time,flags", "-of", "csv=p=0", v], capture_output=True, text=True, check=True)
         times = [ln.split(",")[0] for ln in r.stdout.splitlines() if ",K" in ln]
         ts = sorted(float(t) for t in times)
@@ -55,17 +57,26 @@ def prep(m, out=None):
         log["keyframes"] = len(times)
     if not os.path.exists(os.path.join(out, "kf.done")) and os.path.exists(os.path.join(out, "kf.fps1")):
         n = sum(1 for ln in open(os.path.join(out, "kf_times.csv")) if ln.strip())
-        # The frames stay on the GPU until the 1 fps selection and the scale (6x real time; with a CPU scale: 0.5x).
-        log["kf_s"] = run(["ffmpeg", "-v", "error", "-y", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda", "-i", v,
-                           "-vf", "fps=1:round=down,scale_cuda=1920:-2,hwdownload,format=nv12",
-                           "-frames:v", str(n), "-q:v", "3", os.path.join(out, "kf", "%05d.jpg")])
+        if platform_cfg.decode() == "cuda":
+            # The frames stay on the GPU until the 1 fps selection and the scale (6x real time; with a CPU scale: 0.5x).
+            log["kf_s"] = run([FFMPEG, "-v", "error", "-y", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda", "-i", v,
+                               "-vf", "fps=1:round=down,scale_cuda=1920:-2,hwdownload,format=nv12",
+                               "-frames:v", str(n), "-q:v", "3", os.path.join(out, "kf", "%05d.jpg")])
+        else:
+            # No NVIDIA GPU: the same pictures, with the scale_cuda kernel on the CPU (cuda_scale.py).
+            import cuda_scale
+            t = time.time()
+            cuda_scale.keyframes_1fps(v, n, os.path.join(out, "kf", "%05d.jpg"))
+            log["kf_s"] = time.time() - t
         have = len(glob.glob(os.path.join(out, "kf", "*.jpg")))
         if have < n:                                   # keep the count of the files and of the times equal
             open(os.path.join(out, "kf_times.csv"), "w").write("\n".join(str(k) for k in range(have)) + "\n")
         open(os.path.join(out, "kf.done"), "w").write("ok")
     if not os.path.exists(os.path.join(out, "kf.done")):
-        log["kf_s"] = run(["ffmpeg", "-v", "error", "-y", "-skip_frame", "nokey", "-hwaccel", "cuda", "-i", v,
-                           "-vf", "scale=1920:-2", "-fps_mode", "passthrough", "-q:v", "3",
+        # The GPU decoder gives NV12 frames to the software scaler. The software decoder gives yuv420p: the
+        # filter format=nv12 keeps the input of the scaler the same.
+        log["kf_s"] = run([FFMPEG, "-v", "error", "-y", "-skip_frame", "nokey"] + platform_cfg.hwaccel() + ["-i", v,
+                           "-vf", "scale=1920:-2" if platform_cfg.decode() == "cuda" else "format=nv12,scale=1920:-2", "-fps_mode", "passthrough", "-q:v", "3",
                            os.path.join(out, "kf", "%05d.jpg")])
         log["kf_files"] = len(glob.glob(os.path.join(out, "kf", "*.jpg")))
         open(os.path.join(out, "kf.done"), "w").write("ok")

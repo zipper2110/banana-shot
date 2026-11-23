@@ -24,10 +24,11 @@ import numpy as np
 import cv2
 import torch
 import lab
+import platform_cfg
 import wasb_hrnet
 from burst_ball import roi_mask
 
-EXT = "D:/bananashot-lab/ext"
+EXT = os.path.dirname(platform_cfg.weights_dir())
 MEAN = np.array([0.485, 0.456, 0.406], np.float32)
 STD = np.array([0.229, 0.224, 0.225], np.float32)
 
@@ -41,7 +42,7 @@ PROGRESS = None      # optional function (frames done), called each 3600 frames 
 
 
 def load_model():
-    return wasb_hrnet.load(EXT + "/weights/" + WEIGHTS).cuda().half()
+    return platform_cfg.fp(platform_cfg.to_device(wasb_hrnet.load(EXT + "/weights/" + WEIGHTS)))
 
 
 def crop_box(mid, scale):
@@ -59,7 +60,12 @@ def crop_box(mid, scale):
 def frames(mid, start, dur, scale):
     """Yields RGB crops of all frames of the window."""
     x0, y0, cw, ch, fw, fh = crop_box(mid, scale)
-    cmd = ["ffmpeg", "-v", "error", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
+    if platform_cfg.decode() != "cuda":
+        # No NVIDIA GPU: the same pictures, with the scale_cuda kernel on the CPU (cuda_scale.py).
+        import cuda_scale
+        yield from cuda_scale.rgb_frames(lab.MATCHES[mid]["video"], start, dur, FPS, fw, fh, x0, y0, cw, ch)
+        return
+    cmd = [platform_cfg.tool("ffmpeg"), "-v", "error", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
            "-ss", str(start), "-t", str(dur), "-i", lab.MATCHES[mid]["video"],
            "-vf", (f"fps={FPS}," if FPS else "") + f"scale_cuda={fw}:{fh},hwdownload,format=nv12,crop={cw}:{ch}:{x0}:{y0},format=rgb24",
            "-fps_mode", "passthrough", "-f", "rawvideo", "-"]
@@ -91,13 +97,13 @@ def blobs(hm, thr=0.5, top=4):
 def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False):
     net = net or load_model()
     x0, y0, cw, ch, _, _ = crop_box(mid, scale)
-    mean = torch.tensor(MEAN).view(1, 3, 1, 1).cuda().half()
-    std = torch.tensor(STD).view(1, 3, 1, 1).cuda().half()
+    mean = platform_cfg.fp(platform_cfg.to_device(torch.tensor(MEAN).view(1, 3, 1, 1)))
+    std = platform_cfg.fp(platform_cfg.to_device(torch.tensor(STD).view(1, 3, 1, 1)))
     rows, t0, group, base = [], time.time(), [], 0
     need = 3 * stride
 
     def flush(fr, base):
-        x = torch.from_numpy(np.stack(fr)).cuda().permute(0, 3, 1, 2).half().div_(255)
+        x = platform_cfg.fp(platform_cfg.to_device(torch.from_numpy(np.stack(fr))).permute(0, 3, 1, 2)).div_(255)
         x = ((x - mean) / std)                                   # n, 3, h, w
         trip = [list(range(ph, len(fr), stride))[:3] for ph in range(stride)]
         trip = [t for t in trip if len(t) == 3]

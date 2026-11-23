@@ -229,8 +229,10 @@ def main():
     t_all = time.time()
 
     import numpy as np
+    import platform_cfg
     import torch                                    # before ONNX Runtime (CUDA libraries)
     import lab
+    say(platform_cfg.summary())
     lab.MATCHES[MID] = {"id": MID, "video": os.path.abspath(a.video)}
     lab.mdir = lambda m, _o=lab.mdir: work if m == MID else _o(m)
     W = lambda *p: os.path.join(work, *p)
@@ -255,10 +257,10 @@ def main():
 
     def image():
         import timm, feat_dino
-        model = timm.create_model("vit_small_patch14_dinov2.lvd142m", pretrained=True, img_size=(feat_dino.H, feat_dino.W)).cuda().eval()
+        model = platform_cfg.to_device(timm.create_model("vit_small_patch14_dinov2.lvd142m", pretrained=True, img_size=(feat_dino.H, feat_dino.W))).eval()
         feat_dino.run(MID, model)
         del model
-        torch.cuda.empty_cache()
+        platform_cfg.empty_cache()
     stage("image", [W("feat_dino.npy")], image, a.force)
     save_times()
 
@@ -305,7 +307,7 @@ def main():
                 np.save(W("pts_video.npy"), pts)
                 np.save(W("pts.npy"), np.arange(n * 60) / 60.0)
                 np.save(blob, d)
-            torch.cuda.empty_cache()
+            platform_cfg.empty_cache()
         stage("ball", [blob], ball, a.force)
         save_times()
 
@@ -320,8 +322,9 @@ def main():
         def pose():
             import pose_extract
             from rtmlib import YOLOX, RTMPose
-            det = YOLOX(pose_extract.DET, model_input_size=(640, 640), backend="onnxruntime", device="cuda")
-            ps = RTMPose(pose_extract.POSE, model_input_size=(192, 256), backend="onnxruntime", device="cuda")
+            dev = platform_cfg.ort_device()
+            det = YOLOX(platform_cfg.pose_model(pose_extract.DET), model_input_size=(640, 640), backend="onnxruntime", device=dev)
+            ps = RTMPose(platform_cfg.pose_model(pose_extract.POSE), model_input_size=(192, 256), backend="onnxruntime", device=dev)
             pose_extract.run(MID, det, ps)
         stage("pose", [W("pose.npy")], pose, a.force)
         save_times()

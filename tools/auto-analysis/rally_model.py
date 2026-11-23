@@ -14,6 +14,7 @@ import numpy as np
 import torch, torch.nn as nn
 from sklearn.decomposition import PCA
 import lab
+import platform_cfg
 from seq_eval import Net
 from train_eval import load
 
@@ -82,13 +83,14 @@ def train(name):
 
 def predict(mid, name):
     """Per-second rally probability of match mid (its feat_<name>.npy files must exist)."""
-    ck = torch.load(path(name), weights_only=False)     # our own file
+    ck = torch.load(path(name), map_location="cpu", weights_only=False)     # our own file
     X = stack(load(mid, ck["feats"], PCA_DIMS), ck["prep"])
-    net = Net(ck["dim"]).cuda()
+    dev = platform_cfg.small_device()
+    net = Net(ck["dim"]).to(dev)
     net.load_state_dict(ck["net"])
     net.eval()
     with torch.no_grad():
-        return torch.sigmoid(net(torch.tensor(X[None]).cuda()))[0].cpu().numpy()
+        return torch.sigmoid(net(torch.tensor(X[None]).to(dev)))[0].cpu().numpy()
 
 
 if __name__ == "__main__":

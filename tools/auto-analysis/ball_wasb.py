@@ -18,6 +18,14 @@ for each frame. Frame 0 = the first decoded frame of the window.
 Usage: python ball_wasb.py <match id> <start_s> <dur_s> [scale] [stride]
        python ball_wasb.py <match id> points [scale]     (all marked points)
        python ball_wasb.py <match id> pre [scale]        (the window before each marked point)
+
+E27, optional passes (environment variable BALL_PASSES; the default is empty = the detector as before, with the
+same bytes in the output):
+  dim   a second pass of the model with a dimmed picture (dim()). The model does not find a ball that is darker
+        than its background (a yellow ball in front of a white wall). The blobs of the passes are merged.
+  low   one more pass at half of the scale for each picture (a near ball is too large for the model at scale 0.35).
+  Example: BALL_PASSES=dim,low. With a pass, the picture is the full court region (padded to a multiple of 32),
+  and the output files of a lab match get the tag "_e27" (the validated files stay).
 """
 import os, subprocess, sys, time
 import numpy as np
@@ -37,6 +45,45 @@ WEIGHTS = os.environ.get("BALL_WEIGHTS", "wasb_tennis.pth.tar")     # E15b: a fi
 TAG = "" if WEIGHTS == "wasb_tennis.pth.tar" else "_" + os.path.splitext(WEIGHTS)[0]
 
 
+# E27: more passes of the model. See the module text.
+PASSES = [p for p in os.environ.get("BALL_PASSES", "").replace("+", ",").split(",") if p]
+if set(PASSES) - {"dim", "low"}:
+    raise RuntimeError("BALL_PASSES: use dim, low, or dim,low.")
+DIM_LO, DIM_S0 = 0.3, 0.45       # dim(): factor for a pixel with no color; saturation from which a pixel stays as it is
+MERGE_R = 6.0                    # px of the 1920 frame: two blobs of different passes are one ball
+if PASSES:
+    TAG += "_e27"
+
+
+def lab_tag(mid):
+    """File name tag for the blob file of run(): "_e27" for a lab match when passes are on, so that the validated
+    file of the lab match stays. A work folder of detect.py keeps the name that detect.py expects."""
+    return "_e27" if PASSES and mid in {m["id"] for m in lab.CFG["matches"]} else ""
+
+
+def dim(x):
+    """E27. x: pictures n, 3, h, w with values 0..1. Each pixel is multiplied by
+    DIM_LO + (1 - DIM_LO) * min(1, saturation / DIM_S0), saturation = (max - min) / max of R, G, B.
+    A white or gray background becomes dark; a pixel with a clear color (the ball) stays. Then the ball is
+    brighter than a white wall, as the model needs it."""
+    xf = x.float()
+    mx, mn = xf.amax(1, keepdim=True), xf.amin(1, keepdim=True)
+    a = DIM_LO + (1 - DIM_LO) * ((mx - mn) / mx.clamp(min=1 / 255) / DIM_S0).clamp(0, 1)
+    return platform_cfg.fp(xf * a)
+
+
+def merge_passes(lists):
+    """lists: for each pass, the blobs of one frame (x, y, score, peak, scale factor; px of the 1920 frame).
+    A blob within MERGE_R px (2 * MERGE_R if one of the two is from a half-scale pass) of a blob with a higher
+    peak is the same ball: drop it. Returns the blobs (x, y, score, peak), highest score first."""
+    al = sorted((b for bl in lists for b in bl), key=lambda b: -b[3])
+    keep = []
+    for b in al:
+        if not any(abs(b[0] - k[0]) < MERGE_R * max(b[4], k[4]) and abs(b[1] - k[1]) < MERGE_R * max(b[4], k[4]) for k in keep):
+            keep.append(b)
+    return sorted((b[:4] for b in keep), key=lambda b: -b[2])
+
+
 FPS = None           # a number: decode at this constant frame rate (detect.py: 30 for a video that is not 60 fps)
 PROGRESS = None      # optional function (frames done), called each 3600 frames (detect.py)
 
@@ -45,12 +92,16 @@ def load_model():
     return platform_cfg.fp(platform_cfg.to_device(wasb_hrnet.load(EXT + "/weights/" + WEIGHTS)))
 
 
-def crop_box(mid, scale):
+def crop_box(mid, scale, full=False):
     """Bounding box of the court region (see burst_ball.roi_mask) at the given scale.
-    The size is a multiple of 32."""
+    The size is a multiple of 32. full (E27): the full court region and all of the frame above it; the size is then not a multiple of 32
+    (run() pads the pictures)."""
     ys, xs = np.nonzero(roi_mask(mid))
     x0, y0, x1, y1 = (int(v * scale) for v in (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
     fw, fh = int(1920 * scale), int(1080 * scale)
+    if full:
+        x0, y0 = max(0, x0) // 2 * 2, 0              # x0 even (the ffmpeg crop of an nv12 picture starts at an even px); up to the top of the frame (a lob)
+        return x0, y0, (min(fw, x1) - x0) // 2 * 2, (min(fh, y1) - y0) // 2 * 2, fw, fh
     cw, ch = -(-(x1 - x0) // 32) * 32, -(-(y1 - y0) // 32) * 32
     cw, ch = min(cw, fw // 32 * 32), min(ch, fh // 32 * 32)
     x0, y0 = max(0, min(x0, fw - cw)), max(0, min(y0, fh - ch))
@@ -59,7 +110,7 @@ def crop_box(mid, scale):
 
 def frames(mid, start, dur, scale):
     """Yields RGB crops of all frames of the window."""
-    x0, y0, cw, ch, fw, fh = crop_box(mid, scale)
+    x0, y0, cw, ch, fw, fh = crop_box(mid, scale, bool(PASSES))
     if platform_cfg.decode() != "cuda":
         # No NVIDIA GPU: the same pictures, with the scale_cuda kernel on the CPU (cuda_scale.py).
         import cuda_scale
@@ -96,7 +147,7 @@ def blobs(hm, thr=0.5, top=4):
 
 def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False):
     net = net or load_model()
-    x0, y0, cw, ch, _, _ = crop_box(mid, scale)
+    x0, y0, cw, ch, _, _ = crop_box(mid, scale, bool(PASSES))
     mean = platform_cfg.fp(platform_cfg.to_device(torch.tensor(MEAN).view(1, 3, 1, 1)))
     std = platform_cfg.fp(platform_cfg.to_device(torch.tensor(STD).view(1, 3, 1, 1)))
     rows, t0, group, base = [], time.time(), [], 0
@@ -104,6 +155,9 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
 
     def flush(fr, base):
         x = platform_cfg.fp(platform_cfg.to_device(torch.from_numpy(np.stack(fr))).permute(0, 3, 1, 2)).div_(255)
+        if PASSES:
+            flush_passes(x, base)
+            return
         x = ((x - mean) / std)                                   # n, 3, h, w
         trip = [list(range(ph, len(fr), stride))[:3] for ph in range(stride)]
         trip = [t for t in trip if len(t) == 3]
@@ -116,6 +170,31 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
             for k, h in zip(t, h3):
                 for (bx, by, s, pk) in blobs(h):
                     rows.append((base + k, (bx + x0) / scale, (by + y0) / scale, s, pk))
+
+    def flush_passes(x, base):
+        """E27: the passes of BALL_PASSES. x: the pictures of a group, n, 3, h, w with values 0..1."""
+        trip = [t for t in (list(range(ph, len(x), stride))[:3] for ph in range(stride)) if len(t) == 3]
+        if not trip:
+            return
+        pics = [x] + ([dim(x)] if "dim" in PASSES else [])
+        found = {}                                               # frame of the group -> one blob list for each pass
+        for k in ([1.0, 2.0] if "low" in PASSES else [1.0]):     # k = 2: half of the scale
+            for p in pics:
+                if k > 1:
+                    p = platform_cfg.fp(torch.nn.functional.avg_pool2d(p.float(), 2))
+                p = (p - mean) / std
+                h, w = p.shape[2:]
+                p = torch.nn.functional.pad(p, (0, -w % 32, 0, -h % 32), mode="replicate")
+                inp = torch.stack([p[t].reshape(9, *p.shape[2:]) for t in trip])
+                with torch.no_grad():
+                    hm = torch.sigmoid(net(inp)).float()[:, :, :h, :w].cpu().numpy()
+                for t, h3 in zip(trip, hm):
+                    for i, hi in zip(t, h3):
+                        found.setdefault(i, []).append([((bx * k + x0) / scale, (by * k + y0) / scale, s * k * k, pk, k)
+                                                        for (bx, by, s, pk) in blobs(hi)])
+        for i in sorted(found):
+            for (bx, by, s, pk) in merge_passes(found[i])[:6]:
+                rows.append((base + i, bx, by, s, pk))
 
     for f in frames(mid, start, dur, scale):
         group.append(f)
@@ -132,7 +211,7 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
             f"{base / max(el, 1e-6):.0f} fps ({base / 60 / max(el, 1e-6):.2f}x real time), blobs {len(arr)}, "
             f"frames with a blob {len(np.unique(arr[:, 0])) / max(base, 1):.2f}", flush=True)
     if save:
-        np.save(os.path.join(lab.mdir(mid), f"wasb_{int(start)}_{int(dur)}_s{scale}_k{stride}.npy"), arr)
+        np.save(os.path.join(lab.mdir(mid), f"wasb_{int(start)}_{int(dur)}_s{scale}{lab_tag(mid)}_k{stride}.npy"), arr)
     return arr
 
 

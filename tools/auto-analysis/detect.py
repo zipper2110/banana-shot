@@ -251,9 +251,12 @@ def main():
     a = ap.parse_args()
     work = os.path.abspath(a.work)
     os.makedirs(work, exist_ok=True)
-    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": True}
+    # ballPasses (E27): "dim" = a second pass of the ball detector on a dimmed picture, for a ball in front of a
+    # bright background (about 2 times the ball stage). "" = one pass.
+    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": True, "ballPasses": "dim"}
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
+    os.environ.setdefault("BALL_PASSES", cfg["ballPasses"] or "")      # ball_wasb reads it at import
     times_file = os.path.join(work, "stage_times.json")
     if os.path.exists(times_file) and not a.force:
         STAGE_S.update(json.load(open(times_file)))

@@ -187,10 +187,11 @@ def serve_prior(P, seg, fl):
         fl.update(p0=best[0], v0=best[1], rms=best[2], p1=simulate(best[0], best[1], [ts[-1]])[0], prior=1)
 
 
-def flights(path, kk, P, Hm=None, min_pts=8):
+def flights(path, kk, P, Hm=None, min_pts=8, free=None):
     """Splits the path at the kinks and fits each segment. Returns a list of dicts.
     With Hm (second pass): a kink that is a bounce gives an anchor on the ground for the
-    segment after it (start) and a target for the segment before it (end)."""
+    segment after it (start) and a target for the segment before it (end).
+    free: a list. The function adds a copy of the free fits (before the second pass) to it (E17d)."""
     cuts = [-1e9] + [k[0] for k in kk] + [1e9]
     segs = []
     for a, b in zip(cuts[:-1], cuts[1:]):
@@ -206,6 +207,9 @@ def flights(path, kk, P, Hm=None, min_pts=8):
                     "cut0": a, "cut1": b, "anchored": 0})
     for (a, b, seg), fl in zip(segs, out):               # E10d: serve flights with a degenerate free fit
         serve_prior(P, seg, fl)
+    if free is not None:
+        import copy
+        free.extend(copy.deepcopy(out))
     if Hm is None:
         return out
     kpos = {float(k[0]): cv2.perspectiveTransform(np.array([[k[1:3]]], np.float64), Hm)[0, 0] for k in kk}
@@ -227,44 +231,92 @@ def flights(path, kk, P, Hm=None, min_pts=8):
     return out
 
 
-def fit_window(mid, rows, w0, w1, t_ref):
+EVENTS = True         # E17d: also the events (ball_bounce.py) and, for each flight, the fit that ends at its bounce event (evFit). The old fields do not change
+
+
+def fit_window(mid, rows, w0, w1, t_ref, debug=None):
     """Blobs of one window (rows: frame, x, y, score, peak; frame 0 = w0) -> dict with flights,
-    kinks, coverage. t_ref: time for the court model."""
+    kinks, events, coverage. t_ref: time for the court model.
+    Flight fields: t0, t1 (first and last detection), n, rms, p0, v0 (state at t0), p1 (position at t1),
+    land, landT (the landing of the fit), netZ, anchored (1 = the fit has a soft anchor at a kink on the
+    ground), bounce, prior. These fields are the same with and without EVENTS.
+    With EVENTS (E17d): ev0, ev1 (index of the event at the start and at the end, or None), bounceEv (= ev1
+    if that event is a bounce, else None), landSigma (m, 1-sigma error of the bounce event or of the
+    extrapolated landing of evFit, or None), evFit (the fit of ball_bounce.py: p0, v0 at t0, rms, anchored:
+    1 = the fit ends on the ground at the bounce event, 2 = the fit starts on the ground at a bounce event,
+    0 = free; land, landT: the bounce event, or the landing of this fit).
+    Event fields: t, kind ("bounce", "hit", "other", "end"), px (x, y of the ball center), court (x, y in m
+    for a bounce and for a usable extrapolated landing, else None), src ("vertex" = the two paths meet,
+    "kink" = the pixel of the kink sample, "fit" = extrapolation), conf (1-sigma error of court in m, or
+    None), and for "end": tLast (the last detection of the flight)."""
     Hm = court_H(mid, t_ref)
     P, f, C = camera(Hm)
     path = select(moving(link(rows)))
     kk = more_kinks(path, kinks(path, Scale(Hm)), P, Scale(Hm))
+    free = [] if EVENTS else None
+    raw = flights(path, kk, P, Hm, free=free)
+    evs = []
+    if EVENTS:
+        import ball_bounce
+        evs = ball_bounce.events(path, kk, free, P, Hm, debug)
     fls = []
-    for fl in flights(path, kk, P, Hm):
+    for i, fl in enumerate(raw):
         lx, ly, lt, nz = landing(fl["p0"], fl["v0"])
-        fls.append({"t0": w0 + fl["f0"] / 60, "t1": w0 + fl["f1"] / 60, "n": fl["n"], "rms": fl["rms"],
-                    "p0": fl["p0"].tolist(), "v0": fl["v0"].tolist(), "p1": fl["p1"].tolist(),
-                    "land": [lx, ly], "landT": w0 + fl["f0"] / 60 + lt, "netZ": nz,
-                    "anchored": fl["anchored"], "bounce": fl.get("bounce"), "prior": fl.get("prior", 0)})
+        land_t = w0 + fl["f0"] / 60 + lt
+        o = {"t0": w0 + fl["f0"] / 60, "t1": w0 + fl["f1"] / 60, "n": fl["n"], "rms": fl["rms"],
+             "p0": np.asarray(fl["p0"]).tolist(), "v0": np.asarray(fl["v0"]).tolist(), "p1": np.asarray(fl["p1"]).tolist(),
+             "land": [lx, ly], "landT": land_t, "netZ": nz,
+             "anchored": fl["anchored"], "bounce": fl.get("bounce"), "prior": fl.get("prior", 0)}
+        if EVENTS:
+            fe = free[i]
+            e1 = evs[fe["e1"]] if fe["e1"] is not None else None
+            ex, ey, et, _ = landing(fe["p0"], fe["v0"])
+            fit = {"p0": np.asarray(fe["p0"]).tolist(), "v0": np.asarray(fe["v0"]).tolist(), "rms": fe["rms"], "anchored": fe["anchored"],
+                   "land": [ex, ey], "landT": w0 + fe["f0"] / 60 + et}
+            if fe.get("bounce_f") is not None:
+                fit.update(land=fe["bounce"], landT=w0 + fe["bounce_f"] / 60)
+            o.update(ev0=fe["e0"], ev1=fe["e1"], bounceEv=fe["e1"] if e1 and e1["kind"] == "bounce" else None,
+                     landSigma=e1["conf"] if e1 and e1["kind"] in ("end", "bounce") else None, evFit=fit)
+        fls.append(o)
     cov = len(np.unique(path[:, 0])) / max(1.0, (w1 - w0) * 60)
     kc = cv2.perspectiveTransform(kk[:, 1:3].astype(np.float64).reshape(1, -1, 2), Hm)[0] if len(kk) else np.zeros((0, 2))
     kinks_out = [[w0 + k[0] / 60, float(k[1]), float(k[2]), float(c[0]), float(c[1]), int(k[9])] for k, c in zip(kk, kc)]   # t, px x, px y, court x, court y (true only for a ball on the ground), gap
+    ev_out, ev_map = [], {}
+    for i, e in enumerate(evs):
+        if e["kind"] == "gap":                              # a long gap between two tracks is not an event
+            continue
+        ev_map[i] = len(ev_out)
+        o = {"t": w0 + e["f"] / 60, "kind": e["kind"], "px": [round(e["px"][0], 1), round(e["px"][1], 1)], "court": e["court"],
+             "src": e["src"], "conf": e["conf"]}
+        if e["kind"] == "end":
+            o["tLast"] = w0 + e["f_last"] / 60
+        ev_out.append(o)
+    for o in fls:
+        for key in ("ev0", "ev1", "bounceEv"):
+            if o.get(key) is not None:
+                o[key] = ev_map.get(o[key])
     last = path[-1] if len(path) else None
-    return {"coverage": cov, "kinks": kinks_out, "flights": fls,
+    return {"coverage": cov, "kinks": kinks_out, "flights": fls, "events": ev_out,
             "lastSeen": None if last is None else [w0 + float(last[0]) / 60, float(last[1]), float(last[2])]}
 
 
-def run_points(mid, scale="0.35"):
+def run_points(mid, scale="0.35", out=None):
     """All marked points. Reads ballpts_s<scale>.npy, writes flights_s<scale>.json:
     for each point a list of flights. Times are in seconds of the video.
-    scale may carry a weights tag, for example "0.35_e15b_a"."""
+    scale may carry a weights tag, for example "0.35_e15b_a". out: another tag for the output file
+    (flights_s<out>.json; BALL_TAG=<out> makes the other scripts read it)."""
     import json, time
     from ball_wasb import PRE, POST
     d = np.load(os.path.join(lab.mdir(mid), f"ballpts_s{scale}.npy"))
-    pts, out, t0 = lab.gt_points(mid), [], time.time()
+    pts, res, t0 = lab.gt_points(mid), [], time.time()
     for i, (a, b, _) in enumerate(pts):
         w0 = max(0.0, a - PRE)
         r = fit_window(mid, d[d[:, 0] == i, 1:], w0, b + POST, a)
         r.update(start=a, end=b)
-        out.append(r)
-    json.dump(out, open(os.path.join(lab.mdir(mid), f"flights_s{scale}.json"), "w"), default=float)
-    print(f"{mid}: {len(pts)} points, flights {sum(len(o['flights']) for o in out)}, mean coverage "
-          f"{np.mean([o['coverage'] for o in out]):.2f}, {time.time() - t0:.0f} s", flush=True)
+        res.append(r)
+    json.dump(res, open(os.path.join(lab.mdir(mid), f"flights_s{out or scale}.json"), "w"), default=float)
+    print(f"{mid}: {len(pts)} points, flights {sum(len(o['flights']) for o in res)}, mean coverage "
+          f"{np.mean([o['coverage'] for o in res]):.2f}, {time.time() - t0:.0f} s", flush=True)
 
 
 def run_pre(mid, scale="0.35"):
@@ -284,7 +336,7 @@ def run_pre(mid, scale="0.35"):
 
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[2] in ("points", "pre"):
-        (run_points if sys.argv[2] == "points" else run_pre)(sys.argv[1], *(sys.argv[3:4]))
+        (run_points if sys.argv[2] == "points" else run_pre)(sys.argv[1], *(sys.argv[3:5] if sys.argv[2] == "points" else sys.argv[3:4]))
         sys.exit()
     # test on one window file: python ball_3d.py <match> <start> <dur> <tag>
     mid, start, dur, tag = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), sys.argv[4]

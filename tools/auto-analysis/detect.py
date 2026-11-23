@@ -126,11 +126,20 @@ def write_overlay(work, n, full, serves):
       court    for each 60 s window with a trusted model: the court lines and the net line
       ball     the best detection of each frame: [t, x, y]
       flights  the fitted flights: time range, landing point in the image, speed at the start, direction, start
-               point and landing point on the court in m (x across, y along, 0 at the net, + = far end), net height
+               point and landing point on the court in m (x across, y along, 0 at the net, + = far end), net height.
+               E17d: landT, land, landM are the bounce event of the flight if it has one. If not, they are the
+               landing of the fit, or null if that landing is before the last detection of the flight. Also: ev0, ev1 (index in events of the event at the start and at the end, or null), bounceEv (= ev1
+               if that event is a bounce, else null), landSigma (m, 1-sigma error of an extrapolated landing),
+               curve (the fitted path in the image: [t, x, y], one sample each 1/30 s from t0 to the bounce or,
+               with no bounce, to the landing of the fit; the last sample is at that end), curveObsEnd (the time
+               of the last detection of the flight: the curve after it is an extrapolation)
+      events   E17d (ball_bounce.py), sorted by time: t, kind ("bounce", "hit", "other", "end"), px (ball center),
+               court (m, or null), src ("vertex", "kink", "fit"), conf (1-sigma error of court in m, or null),
+               and for "end" (an extrapolated landing): tLast
       serves   the serve events: time, end of the server, kind, speed
       poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
-    import court_auto, frame_times
+    import court_auto, ball_full, ball_3d
     W = lambda *p: os.path.join(work, *p)
     track = [w for w in json.load(open(W("court_track.json"))) if w["ok"]]
     court = []
@@ -146,26 +155,58 @@ def write_overlay(work, n, full, serves):
     d = d[np.argsort(d[:, 0], kind="stable")]
     top = np.ones(len(d), bool); top[1:] = d[1:, 0] != d[:-1, 0]          # the first blob of a frame has the best score
     d = d[top]
-    tt = frame_times.times(MID, 0)
+    tt = ball_full.clock(MID, 0)                                         # the true time of each frame (E17d)
     t = tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)]
     ball = [[round(float(a), 3), round(float(x), 1), round(float(y), 1)] for a, x, y in zip(t, d[:, 1], d[:, 2])]
+    events = full.get("events", [])
+
+    def curve(f, land_t):
+        """The fitted path of a flight in the image, from t0 to its bounce or its landing."""
+        be = f.get("bounceEv")
+        end = events[be]["t"] if be is not None else (land_t if land_t is not None else f["t1"])
+        end = min(max(end, f["t0"]), f["t0"] + 4.0)
+        ts = np.append(np.arange(0.0, end - f["t0"] - 1e-6, 1 / 30.0), end - f["t0"])
+        P = ball_3d.camera(H_at(f["t0"]))[0]
+        fit = f.get("evFit", f)
+        xy = ball_3d.project(P, ball_3d.simulate(np.array(fit["p0"], float), np.array(fit["v0"], float), ts))
+        return [[round(float(f["t0"] + a), 3), round(float(x), 1), round(float(y), 1)] for a, (x, y) in zip(ts, xy)
+                if np.isfinite(x) and np.isfinite(y)]
     flights = []
     for f in full["flights"]:
         # A flight that does not come down has no landing: its landing time is NaN, and JSON has no NaN.
         land_t = f.get("landT")
         if land_t is not None and not np.isfinite(land_t):
             land_t = None
-        land = court_auto.to_img(H_at(f["t0"]), [f["land"]])[0] if f.get("land") and land_t is not None else None
-        flights.append({"t0": round(f["t0"], 3), "t1": round(f["t1"], 3), "landT": land_t,
+        land_m = f.get("land")
+        e1 = events[f["ev1"]] if f.get("ev1") is not None else None
+        if e1 is not None and e1["kind"] == "bounce":                    # E17d: the flight ends at a bounce event: that is its landing
+            land_t, land_m = e1["t"], e1["court"]
+        elif e1 is not None and e1["kind"] == "end":                     # E17d: the landing of the event fit, or none (the fit comes down before the last detection)
+            land_t, land_m = (e1["t"], e1["court"]) if e1["court"] is not None else (None, None)
+        land = court_auto.to_img(H_at(f["t0"]), [land_m])[0] if land_m and land_t is not None else None
+        flights.append({"t0": round(f["t0"], 3), "t1": round(f["t1"], 3), "landT": None if land_t is None else round(float(land_t), 3),
                         "land": None if land is None else [round(float(land[0]), 1), round(float(land[1]), 1)],
                         "speedKmh": round(3.6 * float(np.linalg.norm(f["v0"])), 1), "good": bool(f["n"] >= 8 and f["rms"] < 5),
                         "toFar": bool(f["v0"][1] > 0), "start": [round(float(v), 2) for v in f["p0"]],
-                        "landM": None if land is None else [round(float(v), 2) for v in f["land"]],
+                        "landM": None if land is None else [round(float(v), 2) for v in land_m],
                         "netZ": round(float(f["netZ"]), 2) if f.get("netZ") is not None and np.isfinite(f["netZ"]) else None})
+        if "events" in full:
+            sg = f.get("landSigma")
+            flights[-1].update(ev0=f.get("ev0"), ev1=f.get("ev1"), bounceEv=f.get("bounceEv"),
+                               landSigma=round(float(sg), 2) if sg is not None and np.isfinite(sg) else None,
+                               curve=curve(f, land_t), curveObsEnd=round(f["t1"], 3))
+    ev = []
+    for e in events:
+        o = {"t": round(float(e["t"]), 3), "kind": e["kind"], "px": [round(float(v), 1) for v in e["px"]],
+             "court": None if e["court"] is None else [round(float(v), 2) for v in e["court"]], "src": e["src"],
+             "conf": None if e["conf"] is None or not np.isfinite(e["conf"]) else round(float(e["conf"]), 2)}
+        if "tLast" in e:
+            o["tLast"] = round(float(e["tLast"]), 3)
+        ev.append(o)
     sv = [{"t": round(float(e[0]), 3), "near": bool(e[1]), "kind": e[2], "speedKmh": round(3.6 * float(np.linalg.norm(e[3]["v0"])), 1)}
           for e in serves]
-    json.dump({"version": 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights, "serves": sv,
-               "poses": overlay_poses(work)},
+    json.dump({"version": 2 if "events" in full else 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights,
+               "events": ev, "serves": sv, "poses": overlay_poses(work)},
               open(W("overlay.json"), "w"), default=float)
     say("@overlay", W("overlay.json"))
 

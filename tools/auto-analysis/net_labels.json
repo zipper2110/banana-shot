@@ -1,0 +1,1721 @@
+{
+"about": "E16f: hand labels of net events, by eye on video frames (net_lab.py sheet). label: net = the ball touches the net and stays on the side of the hitter; cord = it touches the net and goes over; no = no net touch at this time (near miss); unclear = not used; dup = same event as another label. t = s of the video (the time of the candidate, the touch is within about 0.4 s). toFar = the hitter is at the near end (null = not clear). video m0913 = D:/PXL_20260913_070045619.mp4. batch A = candidates of the loose search, B = candidates from the old net rule and from random marked points.",
+"labels": [
+{
+"video": "m1015",
+"t": 932.172,
+"px": [
+954.3,
+554.3
+],
+"label": "cord",
+"toFar": false,
+"note": "far ball touches the cord, goes over, bounces on the near side",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1123.361,
+"px": [
+1040.0,
+588.6
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1424.681,
+"px": [
+836.8,
+547.6
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1444.793,
+"px": [
+974.3,
+616.0
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1563.691,
+"px": [
+1443.7,
+523.3
+],
+"label": "no",
+"toFar": null,
+"note": "far player bounces a ball",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1673.455,
+"px": [
+1082.9,
+544.7
+],
+"label": "net",
+"toFar": false,
+"note": "serve",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1739.513,
+"px": [
+880.0,
+574.3
+],
+"label": "net",
+"toFar": true,
+"note": "cross shot along the cord",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1845.015,
+"px": [
+871.0,
+568.7
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 1886.222,
+"px": [
+982.8,
+544.6
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2202.491,
+"px": [
+650.7,
+540.8
+],
+"label": "no",
+"toFar": null,
+"note": "hit of the near player",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2569.417,
+"px": [
+975.6,
+563.9
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2578.346,
+"px": [
+1087.3,
+543.2
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2668.732,
+"px": [
+1000.8,
+545.3
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2709.96,
+"px": [
+871.5,
+627.9
+],
+"label": "net",
+"toFar": true,
+"note": "touch about 0.1 s after the candidate",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2785.646,
+"px": [
+1257.5,
+602.2
+],
+"label": "dup",
+"toFar": null,
+"note": "same ball as 2786.03, 0.4 s before the touch",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2786.029,
+"px": [
+861.6,
+567.6
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2945.821,
+"px": [
+880.0,
+597.1
+],
+"label": "unclear",
+"toFar": null,
+"note": "ball handling, slow ball to the net base",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 2993.729,
+"px": [
+774.3,
+594.3
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3077.135,
+"px": [
+737.3,
+512.5
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling, far",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3086.514,
+"px": [
+903.2,
+545.6
+],
+"label": "net",
+"toFar": false,
+"note": "ball after the point",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3488.233,
+"px": [
+1437.2,
+552.8
+],
+"label": "no",
+"toFar": null,
+"note": "hit of the near player",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3525.078,
+"px": [
+1165.0,
+543.5
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3581.668,
+"px": [
+842.6,
+582.3
+],
+"label": "no",
+"toFar": null,
+"note": "ball rolls in front of the net",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3643.642,
+"px": [
+1174.3,
+601.4
+],
+"label": "no",
+"toFar": null,
+"note": "pass",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3686.448,
+"px": [
+1444.3,
+597.1
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3716.376,
+"px": [
+983.3,
+553.1
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3727.06,
+"px": [
+1048.6,
+550.1
+],
+"label": "no",
+"toFar": null,
+"note": "pass, the track stops in the band",
+"batch": "A"
+},
+{
+"video": "m1015",
+"t": 3729.643,
+"px": [
+752.4,
+498.5
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 306.204,
+"px": [
+942.6,
+548.0
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 633.419,
+"px": [
+971.4,
+558.6
+],
+"label": "net",
+"toFar": false,
+"note": "touch at the cord, the ball drops",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 918.161,
+"px": [
+984.4,
+577.0
+],
+"label": "net",
+"toFar": false,
+"note": "serve, net moves",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 1021.742,
+"px": [
+1142.6,
+550.1
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 1328.895,
+"px": [
+721.8,
+638.0
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 1356.774,
+"px": [
+1252.6,
+590.7
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 1786.325,
+"px": [
+919.6,
+574.6
+],
+"label": "no",
+"toFar": null,
+"note": "far player sends a ball to the net, bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 1808.02,
+"px": [
+892.4,
+561.5
+],
+"label": "no",
+"toFar": null,
+"note": "serve passes, the track stops at the cord",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 1855.294,
+"px": [
+1103.1,
+567.4
+],
+"label": "no",
+"toFar": null,
+"note": "far ball handling, bounce toward the net",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 2137.635,
+"px": [
+1098.1,
+600.9
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 2270.85,
+"px": [
+808.6,
+551.5
+],
+"label": "no",
+"toFar": null,
+"note": "serve passes, the track stops at the cord",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 2535.807,
+"px": [
+1261.1,
+556.9
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 2824.661,
+"px": [
+1280.4,
+572.3
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 2973.837,
+"px": [
+582.4,
+565.4
+],
+"label": "unclear",
+"toFar": null,
+"note": "ball falls on the net post",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 2988.587,
+"px": [
+937.1,
+616.4
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 3094.268,
+"px": [
+501.9,
+602.6
+],
+"label": "no",
+"toFar": null,
+"note": "ball wide of the post",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 3176.288,
+"px": [
+1087.2,
+567.8
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the near court near the net",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 3176.738,
+"px": [
+1102.5,
+631.4
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the near court near the net",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 3271.34,
+"px": [
+985.4,
+570.0
+],
+"label": "net",
+"toFar": true,
+"note": "net moves; hitter from the marked winner",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 3331.964,
+"px": [
+1382.8,
+634.3
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 3367.51,
+"px": [
+1398.5,
+614.9
+],
+"label": "net",
+"toFar": true,
+"note": "ball after the point",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 3482.024,
+"px": [
+851.4,
+562.9
+],
+"label": "no",
+"toFar": null,
+"note": "serve passes, the track stops at the cord",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 4172.983,
+"px": [
+1081.3,
+570.5
+],
+"label": "no",
+"toFar": null,
+"note": "volley of the near player at the net",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 4473.736,
+"px": [
+874.3,
+562.8
+],
+"label": "no",
+"toFar": null,
+"note": "near player at the net stops the ball",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 4496.965,
+"px": [
+1097.6,
+544.6
+],
+"label": "net",
+"toFar": false,
+"note": "serve, net moves",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 4555.839,
+"px": [
+1450.2,
+633.4
+],
+"label": "no",
+"toFar": null,
+"note": "pass",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 4562.139,
+"px": [
+629.0,
+560.2
+],
+"label": "no",
+"toFar": null,
+"note": "pass, the track stops at the cord",
+"batch": "A"
+},
+{
+"video": "m1020",
+"t": 4618.929,
+"px": [
+1050.6,
+543.5
+],
+"label": "net",
+"toFar": false,
+"note": "serve, net moves",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 1023.212,
+"px": [
+1011.4,
+534.0
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 1255.408,
+"px": [
+936.1,
+534.9
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 1292.97,
+"px": [
+914.2,
+491.4
+],
+"label": "no",
+"toFar": null,
+"note": "pass",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 1328.427,
+"px": [
+1025.1,
+432.3
+],
+"label": "net",
+"toFar": false,
+"note": "serve, net moves",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 1606.701,
+"px": [
+1144.2,
+421.9
+],
+"label": "no",
+"toFar": null,
+"note": "far ball handling",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2177.562,
+"px": [
+1036.0,
+473.8
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2177.712,
+"px": [
+1040.0,
+497.1
+],
+"label": "dup",
+"toFar": false,
+"note": "same event as 2177.56",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2202.191,
+"px": [
+873.9,
+519.8
+],
+"label": "no",
+"toFar": null,
+"note": "short ball of the far player, bounce on the near court near the net (not sure)",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2237.536,
+"px": [
+663.8,
+507.2
+],
+"label": "no",
+"toFar": null,
+"note": "ball bounces near the net",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2337.989,
+"px": [
+924.9,
+501.8
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2362.234,
+"px": [
+1087.9,
+472.8
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2511.877,
+"px": [
+1279.6,
+529.8
+],
+"label": "no",
+"toFar": null,
+"note": "hit of the near player",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2552.673,
+"px": [
+881.5,
+505.8
+],
+"label": "net",
+"toFar": null,
+"note": "touch at the top, the ball drops and bounces; the hitter is not clear (the marked winner is the far player)",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2581.885,
+"px": [
+1006.0,
+472.0
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2661.221,
+"px": [
+1126.0,
+436.0
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2701.199,
+"px": [
+986.4,
+469.9
+],
+"label": "net",
+"toFar": true,
+"note": "net moves",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 2936.278,
+"px": [
+439.4,
+521.8
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 3055.76,
+"px": [
+1074.9,
+446.5
+],
+"label": "net",
+"toFar": false,
+"note": "serve",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 3148.029,
+"px": [
+918.9,
+479.0
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 3550.963,
+"px": [
+1012.9,
+440.0
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 3698.473,
+"px": [
+1187.5,
+500.0
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 3819.538,
+"px": [
+833.9,
+554.0
+],
+"label": "net",
+"toFar": true,
+"note": "net moves",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 4571.153,
+"px": [
+1047.1,
+528.6
+],
+"label": "unclear",
+"toFar": null,
+"note": "slow ball bounces at the net",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 4759.392,
+"px": [
+1058.1,
+518.1
+],
+"label": "unclear",
+"toFar": null,
+"note": "ball hidden by the near player",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 4842.395,
+"px": [
+1182.6,
+503.2
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 5842.19,
+"px": [
+825.7,
+494.3
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 6022.878,
+"px": [
+1045.2,
+561.9
+],
+"label": "cord",
+"toFar": false,
+"note": "far ball touches the cord, drops on the near side (touch about 0.35 s before the candidate)",
+"batch": "A"
+},
+{
+"video": "m1021",
+"t": 6822.336,
+"px": [
+1185.1,
+406.9
+],
+"label": "no",
+"toFar": null,
+"note": "volley of the near player",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 800.857,
+"px": [
+656.7,
+455.6
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 1231.508,
+"px": [
+1019.0,
+393.8
+],
+"label": "net",
+"toFar": true,
+"note": "net moves; hitter from the marked winner",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 1253.302,
+"px": [
+1391.3,
+458.4
+],
+"label": "no",
+"toFar": null,
+"note": "pass, side view",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 1483.365,
+"px": [
+844.6,
+400.8
+],
+"label": "net",
+"toFar": false,
+"note": "serve",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 1685.017,
+"px": [
+1005.8,
+414.6
+],
+"label": "net",
+"toFar": false,
+"note": "net moves",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 1746.724,
+"px": [
+1342.5,
+490.8
+],
+"label": "unclear",
+"toFar": null,
+"note": "slow ball after a bounce",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 1790.531,
+"px": [
+1172.2,
+492.8
+],
+"label": "no",
+"toFar": null,
+"note": "ball bounces near the net",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 1993.582,
+"px": [
+638.7,
+478.6
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 2102.114,
+"px": [
+1000.8,
+401.5
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 2232.122,
+"px": [
+978.0,
+403.4
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 2272.1,
+"px": [
+1337.0,
+439.1
+],
+"label": "no",
+"toFar": null,
+"note": "pass",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 2888.1,
+"px": [
+1019.5,
+428.2
+],
+"label": "net",
+"toFar": true,
+"note": "net moves; hitter from the marked winner",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 2915.648,
+"px": [
+1171.3,
+499.5
+],
+"label": "no",
+"toFar": null,
+"note": "hit of the near player",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3207.301,
+"px": [
+1119.7,
+412.2
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3280.458,
+"px": [
+1062.6,
+418.3
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3314.825,
+"px": [
+1037.8,
+423.7
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3408.498,
+"px": [
+1100.5,
+419.2
+],
+"label": "net",
+"toFar": false,
+"note": "serve, net moves",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3632.926,
+"px": [
+1108.8,
+411.9
+],
+"label": "net",
+"toFar": false,
+"note": "net moves",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3899.072,
+"px": [
+879.5,
+381.0
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3952.562,
+"px": [
+736.8,
+444.5
+],
+"label": "net",
+"toFar": true,
+"note": "net moves",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 3990.658,
+"px": [
+1253.0,
+465.4
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 4016.103,
+"px": [
+1135.0,
+383.8
+],
+"label": "no",
+"toFar": null,
+"note": "serve passes, the track stops at the cord",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 4032.831,
+"px": [
+935.7,
+407.1
+],
+"label": "no",
+"toFar": null,
+"note": "serve of the near player",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 4207.725,
+"px": [
+1451.2,
+468.5
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 4587.464,
+"px": [
+1440.0,
+536.9
+],
+"label": "no",
+"toFar": null,
+"note": "hit of the near player",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 4629.042,
+"px": [
+836.7,
+446.9
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 4644.038,
+"px": [
+1021.4,
+437.1
+],
+"label": "no",
+"toFar": null,
+"note": "slow ball bounces in front of the net",
+"batch": "A"
+},
+{
+"video": "m1030",
+"t": 4650.604,
+"px": [
+997.1,
+431.4
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 186.567,
+"px": [
+937.7,
+511.6
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 264.333,
+"px": [
+903.9,
+488.4
+],
+"label": "no",
+"toFar": null,
+"note": "volley",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 302.867,
+"px": [
+1079.1,
+481.1
+],
+"label": "unclear",
+"toFar": null,
+"note": "far player at the net hits the ball down",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 331.733,
+"px": [
+1045.7,
+477.1
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 405.467,
+"px": [
+886.1,
+540.2
+],
+"label": "net",
+"toFar": false,
+"note": "net moves",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 457.4,
+"px": [
+1448.6,
+532.9
+],
+"label": "no",
+"toFar": null,
+"note": "hit of the near player",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 458.267,
+"px": [
+1088.4,
+459.6
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 796.167,
+"px": [
+1134.3,
+474.3
+],
+"label": "net",
+"toFar": true,
+"note": "serve of the near player, net moves",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 814.2,
+"px": [
+1090.2,
+542.5
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1042.367,
+"px": [
+1034.1,
+445.5
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1053.067,
+"px": [
+1091.3,
+462.3
+],
+"label": "net",
+"toFar": false,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1107.233,
+"px": [
+1012.8,
+489.5
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling of the far player at the net (case 3 of the user)",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1130.067,
+"px": [
+841.1,
+475.2
+],
+"label": "net",
+"toFar": false,
+"note": "serve (case 1 of the user)",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1166.767,
+"px": [
+1049.2,
+464.7
+],
+"label": "net",
+"toFar": false,
+"note": "case 2 of the user",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1460.633,
+"px": [
+911.4,
+562.9
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1857.567,
+"px": [
+1284.2,
+498.6
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 1861.367,
+"px": [
+1069.4,
+506.0
+],
+"label": "no",
+"toFar": null,
+"note": "pass, the track stops in the band",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 2078.667,
+"px": [
+1377.1,
+531.5
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the near court near the net",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 2362.567,
+"px": [
+1239.3,
+486.2
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 2781.033,
+"px": [
+954.1,
+486.6
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 2789.267,
+"px": [
+1217.8,
+508.1
+],
+"label": "net",
+"toFar": false,
+"note": "after a bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 3386.5,
+"px": [
+883.4,
+481.6
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 3410.233,
+"px": [
+1567.6,
+559.1
+],
+"label": "no",
+"toFar": null,
+"note": "hit of the near player",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 3589.567,
+"px": [
+990.3,
+499.5
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 3600.667,
+"px": [
+1202.0,
+483.6
+],
+"label": "no",
+"toFar": null,
+"note": "ball handling",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 3801.367,
+"px": [
+968.6,
+481.5
+],
+"label": "net",
+"toFar": true,
+"note": "",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 4309.6,
+"px": [
+622.8,
+542.8
+],
+"label": "no",
+"toFar": null,
+"note": "pass, side view",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 4415.767,
+"px": [
+670.1,
+570.4
+],
+"label": "no",
+"toFar": null,
+"note": "pass, side view",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 4958.333,
+"px": [
+1012.8,
+505.0
+],
+"label": "no",
+"toFar": null,
+"note": "bounce on the far court",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 5156.367,
+"px": [
+1125.8,
+485.1
+],
+"label": "net",
+"toFar": true,
+"note": "serve of the near player, net moves",
+"batch": "A"
+},
+{
+"video": "m0913",
+"t": 5647.367,
+"px": [
+1120.1,
+457.0
+],
+"label": "net",
+"toFar": false,
+"note": "ball hidden at the touch, then at the net base",
+"batch": "A"
+}
+]
+}

@@ -348,7 +348,7 @@ internal class ReviewWindow(
             isSelected = overlayFile != null && layer.name in host.overlayLayers()
         }
     }
-    private val overlayRow = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 14, 0)).apply {
+    private val overlayRow = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 14, 0)).apply {
         isOpaque = false
         isVisible = overlayFile != null
         overlaySwitches.values.forEach { add(it) }
@@ -546,10 +546,11 @@ internal class ReviewWindow(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE),
                 BorderFactory.createEmptyBorder(10, 16, 12, 16),
             )
-            add(JPanel(BorderLayout(16, 0)).apply {
+            // The overlay switches have their own line: there are many of them.
+            add(JPanel(BorderLayout(0, 6)).apply {
                 isOpaque = false
+                add(overlayRow, BorderLayout.NORTH)
                 add(hint, BorderLayout.CENTER)
-                add(overlayRow, BorderLayout.EAST)
             }, BorderLayout.NORTH)
             add(bar, BorderLayout.CENTER)
             add(JPanel(BorderLayout(16, 0)).apply {

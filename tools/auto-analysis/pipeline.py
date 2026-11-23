@@ -102,6 +102,8 @@ def evidence(mid, seg, full, serves):
         kks = [full["kinks"][i] for i in np.nonzero((kk_t >= a - 1.0) & (kk_t <= b + 2.5))[0]]
         t_end = END_RULE(a, b, fls) if END_RULE else b
         pt = {"start": a, "end": t_end, "flights": fls, "kinks": kks, "coverage": 0.0}
+        if "events" in full:                         # E17d: the flights refer to the events by index (winner_ball.USE_EVENTS)
+            pt["events"] = full["events"]
         orig = wb.good
         wb.good = lambda f, orig=orig: orig(f) and 3.6 * float(np.linalg.norm(f["v0"])) >= p["min_speed"]
         t_cut, wb.T_CUT = wb.T_CUT, T_CUT_E2E
@@ -169,7 +171,7 @@ def evidence(mid, seg, full, serves):
 
 def run(mid, quiet=False):
     start, dur = WINDOWS[mid]
-    full = json.load(open(os.path.join(lab.mdir(mid), "fullflights_s0.35.json")))
+    full = json.load(open(os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS", "fullflights_s0.35.json"))))   # E17d: another flights file for a comparison
     serves = serve_events(full["flights"], start, start + dur)
     seg = rallies(mid, serves)
     rows = evidence(mid, seg, full, serves)

@@ -195,6 +195,27 @@ data class OverlayFlight(
     val landM: List<Double>? = null,
     /** The height of the ball over the net line, in m. */
     val netZ: Double? = null,
+    /**
+     * The path of the fit in the image: rows of time (s), x, y (px). It goes from the start of the flight to its
+     * bounce or its landing. The part after [curveObsEnd] (the time of the last detection) is a prediction.
+     */
+    val curve: List<List<Double>>? = null,
+    val curveObsEnd: Double? = null,
+)
+
+/**
+ * An event of the ball: "bounce" (the ball touches the court), "hit" (a player hits it), "net" (the ball stops at the
+ * net), "cord" (the ball touches the net and goes over), "end" (the track ends). [px] is the place in the image,
+ * [court] the place on the court in m (x across, y along, 0 at the net). [conf] is 0 to 1. [src] names the evidence.
+ */
+data class OverlayEvent(
+    val t: Double = 0.0,
+    val kind: String = "",
+    val px: List<Double>? = null,
+    val court: List<Double>? = null,
+    val conf: Double? = null,
+    val src: String? = null,
+    val toFar: Boolean? = null,
 )
 
 data class OverlayServe(val t: Double = 0.0, val near: Boolean = false, val kind: String? = null, val speedKmh: Double = 0.0)
@@ -215,6 +236,7 @@ data class DetectOverlayData(
     val flights: List<OverlayFlight> = emptyList(),
     val serves: List<OverlayServe> = emptyList(),
     val poses: List<List<Double>> = emptyList(),
+    val events: List<OverlayEvent> = emptyList(),
 ) {
     companion object {
         fun read(file: File): DetectOverlayData = DetectJson.mapper.readValue(file, DetectOverlayData::class.java)

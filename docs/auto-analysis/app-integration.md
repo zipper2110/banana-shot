@@ -146,7 +146,11 @@ These decisions replace the review row and the overlay switch of the Points tab 
   (court, ball, landing points, serve speed, players, shots, outcome) has its own switch. "Shots" writes the data
   of the flight of the moment: its time range, direction, speed, start point, net height, and landing point in m
   on the court, and it draws the landing point of the fit before the bounce. "Outcome" writes the decision of the
-  winner of the selected point near its last shot, and marks the landing point of that shot. The app draws it with libass, at about 30 updates each second.
+  winner of the selected point near its last shot, and marks the landing point of that shot. "Shots" also draws
+  the path of the 3D fit of the flight (`curve` in `overlay.json`): white for the part with detections, yellow
+  for the predicted part to the bounce. "Bounces, net" marks the ball events of `overlay.json` (`events`): a
+  yellow square at a bounce with its place on the court in m, a red diamond at a net hit, and a white ring at a
+  hit. "Fit landing" is the old red ring: the place where the 3D fit comes down. The app draws it with libass, at about 30 updates each second.
   The marks follow a crop of the video. They do not follow a rotation.
 - **Reason.** Edit point dialog: "Score differs from the video" (none, players' call, replayed, score lost), in
   `score.json` `reasons`.

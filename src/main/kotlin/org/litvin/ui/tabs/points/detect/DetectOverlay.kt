@@ -121,11 +121,48 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
                 flight.netZ?.let { parts += "net ${meters(it)}" }
                 flight.landM?.takeIf { it.size >= 2 }?.let { parts += "lands ${meters(it[0])}, ${meters(it[1])}" }
                 note(parts.joinToString(" · "))
+                // The path of the fit: white for the measured part, yellow and thin for the predicted part.
+                flight.curve?.let { curve ->
+                    val obsEnd = flight.curveObsEnd ?: flight.t1
+                    curve.zipWithNext().forEach { (a, b) ->
+                        if (a.size < 3 || b.size < 3) return@forEach
+                        val measured = b[0] <= obsEnd + 1e-6
+                        shapes += OverlayShape.Line(
+                            x(a[1]), y(a[2]), x(b[1]), y(b[2]),
+                            if (measured) Palette.FG else Palette.YELLOW, (if (measured) 1.5 else 1.0) * unit,
+                        )
+                    }
+                }
                 val land = flight.land
                 val landT = flight.landT?.takeUnless(Double::isNaN)
                 if (land != null && landT != null && t < landT) {
                     shapes += OverlayShape.Circle(x(land[0]), y(land[1]), 7.0 * unit, stroke = Palette.FG, strokeWidth = 1.0 * unit)
                 }
+            }
+        }
+        // The events of the ball of the last second: bounce, net, hit.
+        if (OverlayLayer.EVENTS in layers) {
+            data.events.forEach { event ->
+                val px = event.px?.takeIf { it.size >= 2 } ?: return@forEach
+                if (t < event.t || t - event.t > EVENT_SHOWN_S) return@forEach
+                val cx = x(px[0])
+                val cy = y(px[1])
+                val size = 9.0 * unit
+                when (event.kind) {
+                    "bounce" -> shapes += OverlayShape.Rect(cx - size, cy - size, 2 * size, 2 * size, stroke = Palette.YELLOW, strokeWidth = 2.0 * unit)
+                    "net", "cord" -> shapes += OverlayShape.Rect(
+                        cx - size, cy - size, 2 * size, 2 * size, stroke = Palette.RED, strokeWidth = 2.5 * unit, rotationDeg = 45.0,
+                    )
+                    "hit" -> shapes += OverlayShape.Circle(cx, cy, 6.0 * unit, stroke = Palette.FG, strokeWidth = 1.5 * unit)
+                    else -> return@forEach
+                }
+                val text = when (event.kind) {
+                    "bounce" -> "bounce" + (event.court?.takeIf { it.size >= 2 }?.let { " ${meters(it[0])}, ${meters(it[1])}" } ?: "")
+                    "net" -> "net"
+                    "cord" -> "net cord"
+                    else -> null
+                }
+                if (text != null) label(cx + 14.0 * unit, cy - 22.0 * unit, text, 13.0 * unit, Palette.FG)
             }
         }
         // The decision of the winner: its texts, and a ring at the landing point of the last shot.
@@ -175,6 +212,9 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
         /** The text of a shot stays this long after the end of its flight. */
         const val SHOT_SHOWN_S = 0.4
 
+        /** The mark of an event stays this long. */
+        const val EVENT_SHOWN_S = 1.0
+
         /** The box behind a text is black with this opacity (0 to 255): 90 %. */
         const val LABEL_BOX_ALPHA = 230
         const val FONT = "Arial"
@@ -196,7 +236,8 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
 internal enum class OverlayLayer(val text: String) {
     COURT("Court"),
     BALL("Ball"),
-    LANDINGS("Landing points"),
+    LANDINGS("Fit landing"),
+    EVENTS("Bounces, net"),
     SERVES("Serve speed"),
     POSES("Players"),
     SHOTS("Shots"),

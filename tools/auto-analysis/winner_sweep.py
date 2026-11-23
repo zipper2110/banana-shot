@@ -34,6 +34,9 @@ def decide(q, p):
         return not q["to_far"]                         # in the net: the hitter loses
     if q["src"] == 0:
         return None
+    # E17d: an extrapolated landing has a 1-sigma error. Nearer to the line than z * sigma: no decision.
+    if q["src"] == 1 and p.get("z", 0) > 0 and not np.isnan(q.get("sigma", np.nan)) and abs(q["margin"] + p["margin"]) < p["z"] * q["sigma"]:
+        return None
     is_in = q["margin"] > -p["margin"] and (np.isnan(q["net_z"]) or q["net_z"] > 0.85)
     return q["to_far"] if is_in else not q["to_far"]
 
@@ -48,6 +51,9 @@ def score(items, p):
 
 
 def main():
+    import sys
+    if "--z" in sys.argv:                              # E17d: also search the factor z of the landing error
+        GRID["z"] = [0.0, 0.5, 1.0]
     data = load()
     keys = list(GRID)
     combos = [dict(zip(keys, v)) for v in itertools.product(*GRID.values())]

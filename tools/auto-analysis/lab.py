@@ -5,10 +5,11 @@ Time base: all per-second arrays use index s for the interval [s, s+1) s.
 """
 import json, os
 import numpy as np
+import platform_cfg
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CFG = json.load(open(os.path.join(HERE, "matches.json"), encoding="utf-8"))
-ROOT = CFG["labRoot"]
+ROOT = platform_cfg.data_root(CFG["labRoot"])
 MATCHES = {m["id"]: m for m in CFG["matches"]}
 LABELED = [m["id"] for m in CFG["matches"] if m.get("project")]
 BALL_TAG = os.environ.get("BALL_TAG", "0.35")     # ball detector version of the flight files, e.g. "0.35_e15b_a"

@@ -16,6 +16,7 @@ import torch  # noqa: F401  (loads the CUDA 12 DLLs; ONNX Runtime 1.22 needs the
 import cv2
 from rtmlib import YOLOX, RTMPose
 import lab
+import platform_cfg
 
 DET = "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/onnx_sdk/yolox_m_8xb8-300e_humanart-c2c7a14a.zip"
 POSE = "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/onnx_sdk/rtmpose-m_simcc-body7_pt-body7_420e-256x192-e48f03d0_20230504.zip"
@@ -96,8 +97,8 @@ if __name__ == "__main__":
     viz = "--viz" in args
     limit = int(args[args.index("--limit") + 1]) if "--limit" in args else 0
     ids = [a for a in args if a.startswith("m")]
-    det = YOLOX(DET, model_input_size=(640, 640), backend="onnxruntime", device="cuda")
-    pose = RTMPose(POSE, model_input_size=(192, 256), backend="onnxruntime", device="cuda")
+    det = YOLOX(platform_cfg.pose_model(DET), model_input_size=(640, 640), backend="onnxruntime", device=platform_cfg.ort_device())
+    pose = RTMPose(platform_cfg.pose_model(POSE), model_input_size=(192, 256), backend="onnxruntime", device=platform_cfg.ort_device())
     for mid in (ids or lab.LABELED):
         if os.path.exists(os.path.join(lab.mdir(mid), "kf.done")) and (limit or not os.path.exists(
                 os.path.join(lab.mdir(mid), "pose.npy"))):

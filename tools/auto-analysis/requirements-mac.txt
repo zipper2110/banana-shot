@@ -1,0 +1,23 @@
+# The packages of the detection chain for a Mac with Apple Silicon (arm64), Python 3.13.
+# The versions are those of the lab venv on the Windows PC. The differences:
+#   torch, torchvision   the standard arm64 builds from PyPI (with MPS), not the cu126 builds
+#   onnxruntime          the standard build (CPU and CoreML providers), not onnxruntime-gpu
+# NOT VERIFIED: that PyPI has an arm64 macOS wheel for each exact version. If pip finds no wheel
+# for a package, use the nearest version and run selfcheck.py.
+# Install: pip install -r requirements-mac.txt
+torch==2.14.1
+torchvision==0.29.1
+onnxruntime==1.22.0
+numpy==2.5.5
+scipy==1.18.1
+scikit-learn==1.9.1
+pillow==13.0.0
+opencv-python==5.0.0.93
+opencv-contrib-python==5.0.0.93
+opencv-python-headless==5.0.0.93
+soundfile==0.14.0
+timm==1.0.31
+huggingface_hub==2.4.0
+safetensors==0.8.0
+rtmlib==0.0.16
+tqdm==4.70.1

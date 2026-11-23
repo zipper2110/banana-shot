@@ -8,12 +8,13 @@ Writes <match>/pts.npy (sorted times, s). Usage: python frame_times.py [match id
 import os, subprocess, sys
 import numpy as np
 import lab
+import platform_cfg
 
 
 def load(mid):
     p = os.path.join(lab.mdir(mid), "pts.npy")
     if not os.path.exists(p):
-        out = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
+        out = subprocess.run([platform_cfg.tool("ffprobe"), "-v", "error", "-select_streams", "v:0", "-show_entries", "packet=pts_time",
                               "-of", "csv=p=0", lab.MATCHES[mid]["video"]], stdout=subprocess.PIPE).stdout.decode()
         t = np.sort(np.array([float(x.strip(",")) for x in out.split() if x.strip(",")], np.float64))
         np.save(p, t)

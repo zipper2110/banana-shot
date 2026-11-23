@@ -118,7 +118,24 @@ def run(mid, name="fullflights_s0.35.json"):
         for key in ("ev0", "ev1", "bounceEv"):
             if f.get(key) is not None:
                 f[key] = new[f[key]]
-    json.dump({"start": start, "dur": dur, "flights": fls, "kinks": kks, "events": [evs[i] for i in order]},
+    # E26f: the ground positions with the refined court model, if the video uses it (ball_events.court_windows).
+    # The 3D values of the flights (p0, v0, p1, netZ) stay in the frame of the first model.
+    import ball_events
+    ws = ball_events.court_windows(lab.mdir(mid)) if os.path.exists(os.path.join(lab.mdir(mid), "court_track.json")) else []
+    fixed = any("ground" in w for w in ws)
+    if fixed:
+        gf = lambda t, xy: None if xy is None else ball_events.ground_fix(ws, t, list(xy))
+        for f in fls:
+            for o in (f, f.get("evFit")):
+                if o:
+                    for key in ("land", "bounce"):
+                        if o.get(key) is not None:
+                            o[key] = gf(f["t1"], o[key])
+        for k in kks:
+            k[3], k[4] = gf(k[0], [k[3], k[4]])
+        for e in evs:
+            e["court"] = gf(e["t"], e.get("court"))
+    json.dump({"start": start, "dur": dur, "groundFix": fixed, "flights": fls, "kinks": kks, "events": [evs[i] for i in order]},
               open(os.path.join(lab.mdir(mid), name), "w"), default=float)
     print(f"{mid}: flights {len(fls)}, kinks {len(kks)}, events {len(evs)} (bounces {sum(e['kind'] == 'bounce' for e in evs)}), {time.time() - t0:.0f} s -> {name}", flush=True)
 

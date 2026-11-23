@@ -39,7 +39,8 @@ class Source:
         self.t = tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)]
         self.d = d                                           # frame, x, y, score, peak
         self.full = json.load(open(os.path.join(self.dir, "fullflights_s0.35.json")))
-        self.track = [w for w in json.load(open(os.path.join(self.dir, "court_track.json"))) if w.get("ok", True)]
+        import ball_events
+        self.track = ball_events.court_windows(self.dir)
 
     def H(self, t):
         w = min(self.track, key=lambda w: 0 if w["t0"] <= t < w["t1"] else min(abs(t - w["t0"]), abs(t - w["t1"])))

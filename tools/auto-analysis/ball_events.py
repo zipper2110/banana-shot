@@ -25,19 +25,69 @@ KINK, HALF = 6.0, 5
 _TRACK = {}
 
 
+# E26f: the refined court model (court_refine.py) corrects the ground positions of a video only if the first model
+# has a clear fault at the far end: the far court points move more than FAR_FAULT_M (median of the windows that have
+# 2 refined far lines). On the 4 marked matches the two models agree within 0.15 m, and the refined model gave no
+# better winner (marked points 76.8 -> 76.9 %, full chain 80.5 -> 78.7 %), so they keep the first model. On the
+# low-camera video the first model has no fit of the far half, and the far points move 1.8 m.
+# The 3D camera of the flights always comes from the first model (H): with the camera of the refined model, only
+# 145 of 351 bounce events of the low-camera video passed the bounce test of ball_bounce.py. The refined model then
+# gives the place on the court of each ground point (window key "ground", function ground_fix).
+FAR_FAULT_M = 0.5
+_FAR_PTS = np.array([[-4.115, 11.885], [4.115, 11.885], [-4.115, 6.4], [4.115, 6.4]])
+
+
+def court_windows(folder, log=None):
+    """The ok windows of the court model of a folder: court_track.json, with the H of court_track_refined.json
+    where the rule above selects it. The environment variable COURT_TRACK selects one file for a comparison."""
+    name = os.environ.get("COURT_TRACK")
+    ws = [w for w in json.load(open(os.path.join(folder, name or "court_track.json"))) if w.get("ok", True)]
+    rp = os.path.join(folder, "court_track_refined.json")
+    if name or not os.path.exists(rp):
+        return ws
+    ref = {w["t0"]: w for w in json.load(open(rp)) if w.get("refine", {}).get("done") and w["refine"].get("far_lines", 0) >= 2}
+    shift = {}
+    for w in ws:
+        r = ref.get(w["t0"])
+        if r is not None:
+            px = cv2.perspectiveTransform(_FAR_PTS.reshape(1, -1, 2), np.linalg.inv(np.array(w["H"], np.float64)))
+            shift[w["t0"]] = float(np.abs(cv2.perspectiveTransform(px, np.array(r["H"], np.float64))[0] - _FAR_PTS).max())
+    use = len(shift) >= len(ws) / 2 and float(np.median(list(shift.values()))) > FAR_FAULT_M
+    if log:
+        log(f"court model: {'refined' if use else 'first'} (far points move {np.median(list(shift.values())) if shift else float('nan'):.2f} m, "
+            f"{len(shift)} of {len(ws)} windows)")
+    if use:
+        ws = [dict(w, ground=ref[w["t0"]]) if w["t0"] in shift else w for w in ws]
+    return ws
+
+
+def window_at(ws, t):
+    return min(ws, key=lambda w: 0 if w["t0"] <= t < w["t1"] else min(abs(t - w["t0"]), abs(t - w["t1"])))
+
+
+def ground_fix(ws, t, xy):
+    """A ground point (court m of the first model, at time t) -> court m of the refined model, through its place
+    in the picture. No change for a window with no refined model."""
+    w = window_at(ws, t)
+    if "ground" not in w or xy is None or not np.all(np.isfinite(np.asarray(xy[:2], np.float64))):
+        return xy
+    import court_refine
+    px = cv2.perspectiveTransform(np.asarray(xy[:2], np.float64).reshape(1, 1, 2), np.linalg.inv(np.array(w["H"], np.float64)))[0]
+    q = court_refine.to_court(w["ground"], px)[0]
+    return [float(q[0]), float(q[1])] + [float(v) for v in xy[2:]]
+
+
 def court_H(mid, t=None):
-    """Homography of the 1920-wide frame to court meters at time t. Uses court_track.json
-    (court_track.py, one model each 60 s): the window of t if it is ok, else the nearest ok
-    window in time. Falls back to court.json (one model at mid-match)."""
-    # E26f: the environment variable COURT_TRACK selects another model file (court_track_refined.json) for a comparison.
+    """Homography of the 1920-wide frame to court meters at time t. Uses the court model of each 60 s window
+    (court_windows): the window of t if it is ok, else the nearest ok window in time. Falls back to court.json
+    (one model at mid-match)."""
     p = os.path.join(lab.mdir(mid), os.environ.get("COURT_TRACK", "court_track.json"))
     if t is not None and os.path.exists(p):
         if mid not in _TRACK:
-            _TRACK[mid] = [w for w in json.load(open(p)) if w.get("ok", True)]
+            _TRACK[mid] = court_windows(lab.mdir(mid))
         ws = _TRACK[mid]
         if ws:
-            w = min(ws, key=lambda w: 0 if w["t0"] <= t < w["t1"] else min(abs(t - w["t0"]), abs(t - w["t1"])))
-            return np.array(w["H"], np.float64)
+            return np.array(window_at(ws, t)["H"], np.float64)
     return np.array(json.load(open(os.path.join(lab.mdir(mid), "court.json")))["H"], np.float64)
 
 

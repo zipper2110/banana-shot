@@ -164,18 +164,22 @@ def write_overlay(work, n, full, serves, net_ev=()):
       serves   the serve events: time, end of the server, kind, speed
       poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
-    import court_auto, ball_full, ball_3d
+    import court_auto, ball_full, ball_3d, ball_events
     W = lambda *p: os.path.join(work, *p)
-    track = [w for w in json.load(open(W("court_track.json"))) if w["ok"]]
+    track = ball_events.court_windows(work)
     court = []
     for w in track:
-        H = np.array(w["H"])
+        H = np.array(w.get("ground", w)["H"])                             # the refined model, if the video uses it (E26f)
         lines = [court_auto.to_img(H, [a, b]).round(1).ravel().tolist() for a, b in court_auto.SEGS]
         net = court_auto.to_img(H, [(-court_auto.DW, 0), (court_auto.DW, 0)]).round(1).ravel().tolist()
         court.append({"t0": w["t0"], "t1": w["t1"], "lines": lines, "net": net})
 
-    def H_at(t):
+    def H_at(t):                                                         # the first model: the 3D camera of the flights
         return np.array(min(track, key=lambda w: abs((w["t0"] + w["t1"]) / 2 - t))["H"])
+
+    def G_at(t):                                                         # the model of the ground positions
+        w = min(track, key=lambda w: abs((w["t0"] + w["t1"]) / 2 - t))
+        return np.array((w.get("ground", w) if full.get("groundFix") else w)["H"])
     d = np.load(W(f"wasb_0_{n}_s0.35_k2.npy"))
     d = d[np.argsort(d[:, 0], kind="stable")]
     top = np.ones(len(d), bool); top[1:] = d[1:, 0] != d[:-1, 0]          # the first blob of a frame has the best score
@@ -208,7 +212,7 @@ def write_overlay(work, n, full, serves, net_ev=()):
             land_t, land_m = e1["t"], e1["court"]
         elif e1 is not None and e1["kind"] == "end":                     # E17d: the landing of the event fit, or none (the fit comes down before the last detection)
             land_t, land_m = (e1["t"], e1["court"]) if e1["court"] is not None else (None, None)
-        land = court_auto.to_img(H_at(f["t0"]), [land_m])[0] if land_m and land_t is not None else None
+        land = court_auto.to_img(G_at(f["t0"]), [land_m])[0] if land_m and land_t is not None else None
         flights.append({"t0": round(f["t0"], 3), "t1": round(f["t1"], 3), "landT": None if land_t is None else round(float(land_t), 3),
                         "land": None if land is None else [round(float(land[0]), 1), round(float(land[1]), 1)],
                         "speedKmh": round(3.6 * float(np.linalg.norm(f["v0"])), 1), "good": bool(f["n"] >= 8 and f["rms"] < 5),
@@ -303,6 +307,19 @@ def main():
                 m = min(ok, key=lambda w: abs(w["t0"] - n / 2))
                 json.dump({"H": m["H"], "chamfer_px": max(1.0, m["cost"])}, open(W("court.json"), "w"))
         stage("court", [W("court_track.json")], court, a.force)
+
+        def refine():
+            # E26: the paint centre of each line at sub-pixel accuracy. ball_events.court_windows uses the result
+            # only when the first model has a clear fault at the far end (E26f).
+            import court_refine
+            court_refine.run(work, log=False)
+        try:
+            stage("court2", [W("court_track_refined.json")], refine, a.force)
+        except Exception as e:        # the first model stays
+            traceback.print_exc()
+            say("@warning", f"No refined court model: {type(e).__name__}: {e}")
+        import ball_events
+        ball_events.court_windows(work, say)
         save_times()
         problem = court_problem(W("court_track.json"))
         if problem:

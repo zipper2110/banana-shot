@@ -31,6 +31,8 @@ HIT_V = 8.0           # m/s along the court: a flight back that is faster than t
 OWN_BACK = 0.5        # m: a bounce on the side of the hitter counts up to this distance behind the baseline
 NET_AFTER = 0.7       # s: a net event belongs to a shot if it is not later than this after the last sample of the shot
 # E32:
+FIRST_STEEP = os.environ.get("CHAIN_FIRST_STEEP", "1") == "1"
+STEEP, STEEP_Z, FIRST_DEEP = 0.7, 1.0, 3.0      # vertical / ground speed (35 degrees up); m, start height (a ball after its bounce starts lower); m before the baseline
 OUT_LINE = os.environ.get("OUT_LINE", "1") == "1"
 NET_NEAR = float(os.environ.get("NET_NEAR", "0.5"))     # m behind the net: a bounce nearer to the net than this is not a good shot (the place of a bounce has an error of 0.1 to 0.3 m)
 SLOW = os.environ.get("CHAIN_SLOW", "1") == "1"
@@ -75,9 +77,12 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
         b0, h0 = _ev(events, f.get("ev0"), "bounce"), _ev(events, f.get("ev0"), "hit")
         same = cur is not None and cur["near"] == to_far
         new, how, turn = True, "first", None
-        slow = SLOW and float(np.hypot(f["v0"][0], f["v0"][1])) < SLOW_V
+        hs = float(np.hypot(f["v0"][0], f["v0"][1]))
+        slow = SLOW and hs < SLOW_V
         if slow and (cur is None or (same and f["t0"] - cur["fl"][-1]["t1"] >= SAME_GAP) or (not same and b0 is None)):
             continue                                          # E32: a slow flight that is not a part of the shot before it starts no shot
+        if FIRST_STEEP and cur is None and b0 is None and f["p0"][2] > STEEP_Z and f["v0"][2] > STEEP * hs:
+            continue                                          # E32b: the first shot of a rally does not go up this steeply from this height: a ball toss
         if same:
             gap = f["t0"] - cur["fl"][-1]["t1"]
             if b0 is not None and gap < SAME_GAP:
@@ -123,7 +128,10 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
             cur["reach"] = e["court"][1] * s if cur["reach"] is None else max(cur["reach"], e["court"][1] * s)
     if FIRST_WEAK and len(shots) >= 2:
         a, b = shots[0], shots[1]
-        if a["weak"] and not a["bounces"] and a["fl"][-1]["t1"] - a["fl"][0]["t0"] < FIRST_DUR and b["fl"][0]["t0"] - a["fl"][-1]["t1"] > FIRST_GAP:
+        s0 = 1.0 if a["near"] else -1.0
+        # E32b: also a flight that starts near the baseline of the end it flies to (it did not come over the net in view)
+        deep = FIRST_STEEP and not a["weak"] and a["fl"][0]["p0"][1] * s0 > BL - FIRST_DEEP
+        if (a["weak"] or deep) and not a["bounces"] and a["fl"][-1]["t1"] - a["fl"][0]["t0"] < FIRST_DUR and b["fl"][0]["t0"] - a["fl"][-1]["t1"] > FIRST_GAP:
             shots.pop(0)                                      # E32: the hitter of the next shot came from this flight: now it is the first shot
             b["how"] = "first"
     # net events: each one belongs to the shot that is in the air at its time
@@ -203,7 +211,7 @@ FIRST_DT = 0.15       # s: a low kink of the old rule this much before the bounc
 EARLY = -4.0          # s: the last shot starts more than this before the end: a later shot was probably not tracked (match_decode.case_key)
 # The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
-CASE_P = {"back_in": 0.61, "back_stop": 0.72, "in": 0.91, "in_early": 0.8, "in_line": 0.56, "in_line_early": 0.81, "net_hi": 0.97, "net_lo": 0.84, "old_in": 0.63, "old_in_early": 0.58, "old_in_seen": 0.75, "old_net": 0.94, "old_net_early": 0.72, "old_out": 0.89, "old_out_early": 0.5, "old_out_seen": 0.88, "out": 0.93, "out_early": 0.77, "out_line": 0.81, "out_line_early": 0.5, "own": 0.84, "own_early": 0.78}
+CASE_P = {"back_in": 0.61, "back_stop": 0.73, "in": 0.91, "in_early": 0.8, "in_line": 0.56, "in_line_early": 0.81, "net_hi": 0.97, "net_lo": 0.84, "old_in": 0.63, "old_in_early": 0.58, "old_in_seen": 0.75, "old_net": 0.94, "old_net_early": 0.69, "old_out": 0.89, "old_out_early": 0.5, "old_out_seen": 0.88, "out": 0.93, "out_early": 0.77, "out_line": 0.81, "out_line_early": 0.5, "own": 0.84, "own_early": 0.78}
 CASES_BY_MATCH = None
 TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", "own": "the ball came down on the side of the hitter",
         "out": "the ball bounced out", "in": "the ball bounced in and no return was seen",

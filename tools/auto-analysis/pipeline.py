@@ -43,7 +43,7 @@ PROB = {}
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)
-CHAIN = os.environ.get("CHAIN", "0") == "1"      # E28: the winner evidence comes from the shot chain (shot_chain.py); the flights file needs "events"
+CHAIN = os.environ.get("CHAIN", "1") == "1"      # E28, E29: the winner evidence comes from the shot chain (shot_chain.py) when the flights file has "events"; CHAIN=0 gives the old rule
 FPS_ADAPT = os.environ.get("FPS_ADAPT", "0") == "1"   # E28: the sample counts of the winner rule follow the frame rate of the ball track (winner_ball.set_fps)
 END_RULE = None       # optional function (start, end, flights) -> end time for the winner rule
 
@@ -132,11 +132,9 @@ def evidence(mid, seg, full, serves):
                                  md.case_key(q, p) if w is not None else None, p["min_speed"])
                 pc = sc.case_prob(ch["case"], mid)
                 chain_row = sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
-            except Exception:                        # the chain is an addition: a fault in it must not stop the old rule
-                if CHAIN:
-                    raise
+            except Exception:                        # a fault in the chain must not stop the detection: the old rule decides
                 ch = None
-            if CHAIN:
+            if CHAIN and ch is not None:
                 pw = 0.5 if ch["nearWins"] is None else (pc if ch["nearWins"] else 1 - pc)
         # server end: pose vote, then the ball serve event
         nu, fu = [], []

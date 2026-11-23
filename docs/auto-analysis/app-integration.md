@@ -91,7 +91,8 @@ These decisions replace the review row and the overlay switch of the Points tab 
     and the probability from the ball and after the score model. It also shows the shot chain of the rally
     (`chain` in `result.json`, from `shot_chain.py`): one line for each shot (hitter, how the hitter is known,
     in, out, or net, and the place of the bounce), the decision of the chain, and a warning when the score model
-    gives the other winner. The score model does not use the chain. The window has the "Frame step" toggle of the
+    gives the other winner. The chain is the winner evidence of the score model (E29; `CHAIN=0` in the
+    environment gives the old rule). The window has the "Frame step" toggle of the
     Points tab (key F, the same setting): Left and Right then step one frame while the video is paused. The
     "Overlay" switch (key V) hides and shows all parts of the overlay; the switches of the parts keep their
     state. The notes go to `autodetect/review-notes.json` of the project, with the times of the detected rally.

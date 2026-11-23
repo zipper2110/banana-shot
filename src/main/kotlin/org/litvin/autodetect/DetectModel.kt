@@ -126,9 +126,9 @@ data class DetectedRally(
     /** True when the detection saw other shirt colors at the near end than in the rally before. */
     val endChangeBefore: Boolean? = null,
     val lastShot: LastShot? = null,
-    /** The ball into the net that ends the rally, when the detection saw one. The score model does not use it. */
+    /** The ball into the net that ends the rally, when the detection saw one. The shot chain uses the net events. */
     val netHit: NetHit? = null,
-    /** The shots of the rally and the winner evidence from them (shot_chain.py). The score model does not use it. */
+    /** The shots of the rally and the winner evidence from them (shot_chain.py). The score model starts from this evidence. */
     val chain: ShotChain? = null,
 )
 

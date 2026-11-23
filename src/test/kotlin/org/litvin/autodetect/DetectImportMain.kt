@@ -8,7 +8,9 @@ import kotlin.system.exitProcess
  * does. Use it on a COPY of a project, to look at an import without the app.
  *
  * Arguments: the project folder, the result file, and optionally "advanced" to make a new score file with advanced
- * scoring mode (so that the import adds the fault clips).
+ * scoring mode (so that the import adds the fault clips). More optional arguments, in any order after the result file:
+ * "settings=<app data folder>" (the saved detection settings of that folder), "range=<start ms>-<end ms>" (the trim
+ * of the video), and "swapped" (player 1 of the detection is player 2 of the project).
  */
 fun main(args: Array<String>) {
     if (args.size < 2) {
@@ -17,7 +19,7 @@ fun main(args: Array<String>) {
     }
     val project = File(args[0]).apply { mkdirs() }
     val result = File(args[1])
-    if (args.getOrNull(2) == "advanced" && !org.litvin.scoring.ScoreIO.existsForProjectDir(project.absolutePath)) {
+    if ("advanced" in args && !org.litvin.scoring.ScoreIO.existsForProjectDir(project.absolutePath)) {
         System.setProperty(org.litvin.shared.util.Edition.PROPERTY, "true")
         org.litvin.scoring.ScoreIO.writeForProjectDir(
             project.absolutePath,
@@ -27,6 +29,8 @@ fun main(args: Array<String>) {
     // The result file must be in the autodetect folder of the project, as after a run in the app.
     val folder = File(project, DetectImport.FOLDER).apply { mkdirs() }
     val copy = if (result.parentFile.absoluteFile == folder.absoluteFile) result else result.copyTo(File(folder, "result-manual.json"), overwrite = true)
-    val plan = DetectImport.apply(project, copy, DetectSettings())
+    val settings = args.firstOrNull { it.startsWith("settings=") }?.let { DetectSettings.load(File(it.substringAfter('='))) } ?: DetectSettings()
+    val range = args.firstOrNull { it.startsWith("range=") }?.substringAfter('=')?.split('-')?.let { it[0].toLong()..it[1].toLong() }
+    val plan = DetectImport.apply(project, copy, settings, swapped = "swapped" in args, rangeMs = range)
     println("added ${plan.rallyCount} points, ${plan.faultCount} fault clips; skipped ${plan.skippedCount}")
 }

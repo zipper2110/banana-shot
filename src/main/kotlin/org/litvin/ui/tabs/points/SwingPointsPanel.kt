@@ -236,6 +236,9 @@ class SwingPointsPanel(
 
         override fun winnerOf(pointId: String) = scoring.winnerOf(pointId)
 
+        override fun nearPlayerOf(pointId: String): Int? =
+            dispatcher.getCompletedPoints().firstOrNull { it.id == pointId }?.auto?.nearPlayer ?: recordNearPlayers[pointId]
+
         override fun setWinner(pointId: String, winner: org.litvin.scoring.Outcome) {
             // The scoring must know the clips of the project as they are now.
             scoring.setPoints(dispatcher.getCompletedPoints())
@@ -267,8 +270,14 @@ class SwingPointsPanel(
             dispatcher.markChecked(pointIds)
         }
 
-        override fun swapWinners(pointIds: Set<String>) = scoring.swapWinners(pointIds)
+        override fun swapWinners(pointIds: Set<String>) {
+            scoring.swapWinners(pointIds)
+            dispatcher.swapNearPlayers(pointIds, recordNearPlayers)
+        }
     }
+
+    /** The player at the near end for the clips of an import before the mark of a clip had this value. */
+    private var recordNearPlayers: Map<String, Int> = emptyMap()
 
     // UI controls
     private var playbackBar: PlaybackBar
@@ -1404,6 +1413,7 @@ class SwingPointsPanel(
         applyReplay(replays.stop())
         player.deactivatePreview("detection review")
         // The text is English only, as all texts of the detection are.
+        recordNearPlayers = runCatching { org.litvin.autodetect.DetectImport.nearPlayersOfRecords(File(dir)) }.getOrDefault(emptyMap())
         busyNote.text = org.litvin.ui.tabs.points.detect.DetectTexts.REVIEW_BUSY
         videoCards.show(videoArea, BUSY_CARD)
         detectReview = org.litvin.ui.tabs.points.detect.ReviewWindow(

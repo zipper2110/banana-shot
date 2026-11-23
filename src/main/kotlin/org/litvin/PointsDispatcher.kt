@@ -199,6 +199,22 @@ class PointsDispatcher {
         return changed
     }
 
+    /**
+     * Gives the automatic clips with [ids] the other player at the near end (the review of a detection, "Swap
+     * players"). [fallback] gives the player at the near end for a clip that does not have it in its mark.
+     */
+    fun swapNearPlayers(ids: Collection<String>, fallback: Map<String, Int> = emptyMap()) {
+        var changed = false
+        points.forEachIndexed { index, point ->
+            val mark = point.auto ?: return@forEachIndexed
+            if (point.id !in ids) return@forEachIndexed
+            val near = mark.nearPlayer ?: fallback[point.id] ?: return@forEachIndexed
+            points[index] = point.copy(auto = mark.copy(nearPlayer = if (near == 1) 2 else 1))
+            changed = true
+        }
+        if (changed) onPointsChanged?.invoke()
+    }
+
     /** Toggle favorite status for a completed point by id. Returns true if updated. */
     fun toggleFavorite(id: String): Boolean {
         val idx = points.indexOfFirst { it.id == id }

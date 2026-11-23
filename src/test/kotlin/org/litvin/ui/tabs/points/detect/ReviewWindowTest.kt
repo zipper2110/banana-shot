@@ -30,6 +30,7 @@ class ReviewWindowTest {
         override val players = ScorePlayers("Anna", "Bea")
         override fun points() = list.sortedBy { it.startMs }
         override fun winnerOf(pointId: String) = winners[pointId] ?: Outcome.NONE
+        override fun nearPlayerOf(pointId: String) = list.firstOrNull { it.id == pointId }?.auto?.nearPlayer
 
         override fun setWinner(pointId: String, winner: Outcome) {
             winners[pointId] = winner
@@ -62,6 +63,10 @@ class ReviewWindowTest {
                     Outcome.P2 -> Outcome.P1
                     else -> Outcome.NONE
                 }
+            }
+            list = list.map { point ->
+                val near = point.auto?.nearPlayer
+                if (point.id in pointIds && near != null) point.copy(auto = point.auto?.copy(nearPlayer = 3 - near)) else point
             }
         }
 
@@ -99,8 +104,8 @@ class ReviewWindowTest {
         override fun close() { closed = true }
     }
 
-    private fun auto(id: String, startMs: Int, checked: Boolean = false, percent: Int? = 80) =
-        PointV1(id = id, startMs = startMs, endMs = startMs + 10_000, auto = AutoMarkV1(AutoKind.RALLY, percent, checked))
+    private fun auto(id: String, startMs: Int, checked: Boolean = false, percent: Int? = 80, near: Int? = 1) =
+        PointV1(id = id, startMs = startMs, endMs = startMs + 10_000, auto = AutoMarkV1(AutoKind.RALLY, percent, checked, near))
 
     private class Opened(val window: ReviewWindow, val host: Host, val player: Player) {
         var closedCalls = 0
@@ -153,6 +158,36 @@ class ReviewWindowTest {
         assertEquals(Outcome.P2, host.winners["a"])
         assertEquals(listOf("b"), host.open())
     }
+
+    @Test
+    fun `the window names the player at the near end, and Swap players changes all automatic points`() =
+        review(auto("a", 10_000, near = 1), auto("b", 30_000, near = 2), auto("c", 50_000, near = null)) {
+            host.winners["a"] = Outcome.P1
+            assertEquals("Near end: Anna", text("review-near"))
+
+            window.swapPlayers(SwapScope.ALL)
+            assertEquals("Near end: Bea", text("review-near"))
+            assertEquals(Outcome.P2, host.winners["a"])
+            assertEquals(listOf(2, 1, null), host.list.map { it.auto?.nearPlayer })
+            // A swap is not a review of the points.
+            assertEquals(3, host.open().size)
+
+            key("DOWN")
+            key("DOWN")
+            assertEquals("Near end: not known", text("review-near"))
+        }
+
+    @Test
+    fun `Swap players can change one point, or the point and the next points`() =
+        review(auto("a", 10_000, near = 1), auto("b", 30_000, near = 1), auto("c", 50_000, near = 1)) {
+            key("DOWN")
+            window.swapPlayers(SwapScope.POINT)
+            assertEquals(listOf(1, 2, 1), host.list.map { it.auto?.nearPlayer })
+
+            window.swapPlayers(SwapScope.FROM_POINT)
+            assertEquals(listOf(1, 1, 2), host.list.map { it.auto?.nearPlayer })
+            assertEquals("Swapped the players of 2 points.", text("review-message"))
+        }
 
     @Test
     fun `I and O put the start and the end of the point at the playhead`() = review(auto("a", 10_000), auto("b", 30_000)) {

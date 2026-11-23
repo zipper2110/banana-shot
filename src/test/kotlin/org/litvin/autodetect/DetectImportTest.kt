@@ -154,6 +154,31 @@ class DetectImportTest {
     }
 
     @Test
+    fun `a clip gets the player of the project at the near end`() {
+        val detected = result(rally(10.0, 20.0).copy(p1Near = true), rally(30.0, 40.0).copy(p1Near = false), rally(50.0, 60.0))
+
+        val plain = DetectImport.plan(detected, emptyList(), advanced = false, DetectSettings(), ids)
+        assertEquals(listOf(1, 2, null), plain.points.map { it.auto?.nearPlayer })
+        val swapped = DetectImport.plan(detected, emptyList(), advanced = false, DetectSettings(), ids, swapped = true)
+        assertEquals(listOf(2, 1, null), swapped.points.map { it.auto?.nearPlayer })
+    }
+
+    @Test
+    fun `the import records give the player at the near end for the clips of an older import`() {
+        val dir = Files.createTempDirectory("detect-near").toFile()
+        try {
+            val folder = File(dir, DetectImport.FOLDER).apply { mkdirs() }
+            DetectJson.mapper.writeValue(File(folder, "result-1.json"), result(rally(10.0, 20.0).copy(p1Near = true), rally(30.0, 40.0).copy(p1Near = false)))
+            val rows = listOf(ImportRow(0, pointId = "a"), ImportRow(1, pointId = "b"))
+            DetectJson.mapper.writeValue(File(folder, "import-1.json"), ImportRecord("1", "result-1.json", DetectSettings(), rows, swapped = true))
+
+            assertEquals(mapOf("a" to 2, "b" to 1), DetectImport.nearPlayersOfRecords(dir))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `apply writes the clips, the winners, and the record, and a second apply adds nothing`() {
         val dir = Files.createTempDirectory("detect-import").toFile()
         try {

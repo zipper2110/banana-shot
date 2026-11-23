@@ -142,7 +142,7 @@ object DetectImport {
                     val kind = if (rally.kind == "short") AutoKind.SHORT else AutoKind.RALLY
                     points += PointV1(
                         id = id, startMs = from, endMs = end,
-                        auto = AutoMarkV1(kind, percent.takeIf { winner != Outcome.NONE }),
+                        auto = AutoMarkV1(kind, percent.takeIf { winner != Outcome.NONE }, nearPlayer = nearPlayer(rally, swapped)),
                     )
                     outcomes[id] = winner
                     rows += ImportRow(index, pointId = id, faultPointId = faultId)
@@ -198,6 +198,31 @@ object DetectImport {
      * project at the near end in [rally].
      */
     fun isSwapped(rally: DetectedRally, nearPlayer: Int): Boolean = (rally.p1Near == true) != (nearPlayer == 1)
+
+    /** The player of the project (1 or 2) at the near end in [rally], or null when the detection does not know it. */
+    fun nearPlayer(rally: DetectedRally, swapped: Boolean): Int? = rally.p1Near?.let { p1Near -> if (p1Near != swapped) 1 else 2 }
+
+    /**
+     * The player at the near end for each clip of the imports of the project, from the import records and their
+     * result files. It is for the clips of an import before the mark had this value. It does not know a later
+     * "Swap players".
+     */
+    fun nearPlayersOfRecords(projectDir: File): Map<String, Int> {
+        val folder = File(projectDir, FOLDER)
+        val records = folder.listFiles { f -> f.isFile && f.name.startsWith("import-") && f.name.endsWith(".json") } ?: return emptyMap()
+        val near = HashMap<String, Int>()
+        records.sortedBy { it.name }.forEach { file ->
+            runCatching {
+                val record = DetectJson.mapper.readValue(file, ImportRecord::class.java)
+                val rallies = DetectResult.read(File(folder, record.resultFile)).rallies
+                record.rows.forEach { row ->
+                    val id = row.pointId ?: return@forEach
+                    rallies.getOrNull(row.rally)?.let { nearPlayer(it, record.swapped) }?.let { near[id] = it }
+                }
+            }
+        }
+        return near
+    }
 
     /** The newest overlay data file of the project, or null. */
     fun latestOverlay(projectDir: File): File? =

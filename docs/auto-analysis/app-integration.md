@@ -84,6 +84,11 @@ These decisions replace the review row and the overlay switch of the Points tab 
     button. The project is a normal project.
 25. **Continue later.** A close with the X, with Escape, or with "Continue later" keeps the review open. The bar of
     the Points tab then shows "Continue review (N)".
+27. **Near end.** For the selected point, the review window shows "Near end: <player>": the player that the
+    detection saw at the near end in that point (`auto.nearPlayer`). A wrong name tells the user that the detection
+    has the players wrong, and not only the winner of one point. "Swap players" is next to it. It changes the
+    winner and the player at the near end of: this point, this point and the next points (the detection lost the
+    players after a change of ends), or all automatic points.
 26. **Overlay.** The detection overlay switch is in the review window only. "Review points" in the "Detect points"
     dialog opens the window again at a later time, also after the review is complete.
 

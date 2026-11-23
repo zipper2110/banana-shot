@@ -56,9 +56,16 @@ enum class AutoKind {
  * The mark of an automatic clip. It stays on the clip when the user changes the clip, so that the list shows which
  * clips came from the detection. [winnerPercent] is the confidence of the detected winner (50 to 100), or null when
  * the detection gave no winner. [checked] is true after the user changed or accepted the clip in the review: the list
- * then shows no dot for it.
+ * then shows no dot for it. [nearPlayer] is the player of the project (1 or 2) that the detection saw at the near end
+ * in this clip, or null when the detection does not know it. The review window shows it, so the user sees if the
+ * detection has the players right.
  */
-data class AutoMarkV1(val kind: AutoKind = AutoKind.RALLY, val winnerPercent: Int? = null, val checked: Boolean = false)
+data class AutoMarkV1(
+    val kind: AutoKind = AutoKind.RALLY,
+    val winnerPercent: Int? = null,
+    val checked: Boolean = false,
+    val nearPlayer: Int? = null,
+)
 
 /** How the video goes into a replay and out of it (B-50, decision 3 of `docs/replay/b-50-tasks.md`). */
 enum class ReplayEffect {

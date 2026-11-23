@@ -68,6 +68,9 @@ internal interface ReviewHost {
 
     fun winnerOf(pointId: String): Outcome
 
+    /** The player (1 or 2) that the detection saw at the near end in the clip, or null when it is not known. */
+    fun nearPlayerOf(pointId: String): Int?
+
     /** Gives the clip the winner, with no ending kind. */
     fun setWinner(pointId: String, winner: Outcome)
 
@@ -84,6 +87,13 @@ internal interface ReviewHost {
 
     /** Gives each of the clips the other winner. */
     fun swapWinners(pointIds: Set<String>)
+}
+
+/** Which automatic points "Swap players" changes. */
+internal enum class SwapScope(val text: String) {
+    POINT("This point"),
+    FROM_POINT("This point and the next points"),
+    ALL("All automatic points"),
 }
 
 /**
@@ -354,6 +364,13 @@ internal class ReviewWindow(
         font = UiKit.font(12f)
         foreground = Palette.FG_3
     }
+    private val nearLabel = JLabel(" ").apply {
+        name = "review-near"
+        font = UiKit.font(12.5f)
+        foreground = Palette.FG
+        toolTipText = "The player that the detection saw at the near end in this point. " +
+            "If the name is wrong, the detection has the players wrong: click \"Swap players\"."
+    }
     private val winner = SegmentedChoice(
         "review-winner",
         listOf(
@@ -365,10 +382,12 @@ internal class ReviewWindow(
     private val acceptButton = button("Accept, next", Material2AL.CHECK, "review-accept", "T", UiButton.Kind.LIME_OUTLINE) { acceptAndNext() }
     private val deleteButton = button("Delete", Material2AL.DELETE_OUTLINE, "review-delete", "Delete", UiButton.Kind.DANGER) { deleteSelected() }
     private val addButton = button("Add point", Material2AL.ADD, "review-add", "Adds a point of 5 s at the playhead (N)") { addAtPlayhead() }
-    private val swapButton = button("Swap players", null, "review-swap", "Gives each automatic point the other winner") {
-        host.swapWinners(points.filter { it.auto != null }.map { it.id }.toSet())
-        reload()
-    }
+    private val swapButton = button(
+        "Swap players",
+        Material2MZ.SWAP_HORIZ,
+        "review-swap",
+        "For a wrong name at \"Near end\": gives the other player and the other winner to one point, to the next points, or to all",
+    ) { showSwapMenu() }
     private val message = JLabel(" ").apply {
         name = "review-message"
         font = UiKit.font(12f)
@@ -514,9 +533,14 @@ internal class ReviewWindow(
             isOpaque = false
             add(pointTitle)
             add(pointNote)
+            add(JPanel(BorderLayout(8, 0)).apply {
+                isOpaque = false
+                add(nearLabel, BorderLayout.CENTER)
+                add(swapButton, BorderLayout.EAST)
+            })
             add(winner)
             add(pair(acceptButton, deleteButton))
-            add(pair(addButton, swapButton))
+            add(addButton)
             add(message)
         }
         val footer = Stack(pad = Insets(12, 16, 14, 16), gap = 8).apply {
@@ -636,6 +660,13 @@ internal class ReviewWindow(
             point.auto.checked -> DetectTexts.rowNote(point.auto) + " · reviewed"
             else -> DetectTexts.rowNote(point.auto)
         }
+        val near = point?.let { host.nearPlayerOf(it.id) }
+        nearLabel.text = when {
+            near != null -> "Near end: ${host.players.name(near)}"
+            point?.auto != null -> "Near end: not known"
+            else -> " "
+        }
+        nearLabel.icon = near?.let { PlayerDot(host.players.color(it)) }
         val canScore = point != null && point.auto?.kind != AutoKind.FAULT && point.endMs > point.startMs
         winner.isEnabled = canScore
         winner.selected = point?.takeIf { canScore }?.let { host.winnerOf(it.id) }
@@ -755,6 +786,36 @@ internal class ReviewWindow(
         reload()
     }
 
+    private fun showSwapMenu() {
+        val menu = javax.swing.JPopupMenu().apply { name = "review-swap-menu" }
+        SwapScope.entries.forEach { scope ->
+            menu.add(javax.swing.JMenuItem(scope.text).apply {
+                name = "review-swap-${scope.name.lowercase(Locale.ROOT)}"
+                isEnabled = scope == SwapScope.ALL || selectedPoint()?.auto != null
+                addActionListener { swapPlayers(scope); focusVideo() }
+            })
+        }
+        menu.show(swapButton, 0, swapButton.height)
+    }
+
+    /**
+     * Gives the automatic points of [scope] the other player at the near end and the other winner (decision 27). It
+     * is not a review of the points: their dots stay.
+     */
+    internal fun swapPlayers(scope: SwapScope) {
+        val current = selectedPoint()
+        val auto = points.filter { it.auto != null }
+        val ids = when (scope) {
+            SwapScope.POINT -> listOfNotNull(current?.takeIf { it.auto != null })
+            SwapScope.FROM_POINT -> if (current == null) emptyList() else auto.filter { it.startMs >= current.startMs }
+            SwapScope.ALL -> auto
+        }.map { it.id }.toSet()
+        if (ids.isEmpty()) return
+        host.swapWinners(ids)
+        reload()
+        say(if (ids.size == 1) "Swapped the players of 1 point." else "Swapped the players of ${ids.size} points.")
+    }
+
     private fun setWinner(outcome: Outcome) {
         val point = selectedPoint() ?: return
         if (!winner.isEnabled) return
@@ -864,6 +925,21 @@ internal class ReviewWindow(
     // ---- List ----------------------------------------------------------------------------------------
 
     private data class Row(val number: Int, val point: PointV1, val winner: Outcome)
+
+    /** The color of a player as a round icon. */
+    private class PlayerDot(private val color: Color) : javax.swing.Icon {
+        override fun getIconWidth() = 12
+        override fun getIconHeight() = 12
+        override fun paintIcon(component: Component?, g: Graphics, x: Int, y: Int) {
+            val g2 = UiKit.smooth(g)
+            try {
+                g2.color = color
+                g2.fillOval(x + 1, y + 1, 10, 10)
+            } finally {
+                g2.dispose()
+            }
+        }
+    }
 
     private inner class RowRenderer : JComponent(), ListCellRenderer<Row> {
         private var row: Row? = null

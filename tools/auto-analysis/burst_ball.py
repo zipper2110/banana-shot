@@ -31,7 +31,11 @@ def roi_mask(mid):
     import json
     Hm = np.array(json.load(open(os.path.join(lab.mdir(mid), "court.json")))["H"])
     g = np.array([[(-8.5, -17), (8.5, -17), (8.5, 17), (-8.5, 17)]], np.float32)
-    p = cv2.perspectiveTransform(g, np.linalg.inv(Hm))[0]
+    q = np.c_[g[0], np.ones(4)] @ np.linalg.inv(Hm).T
+    front = np.sign(q[:, 2]) == np.sign(np.linalg.inv(Hm)[2, 2])       # the same side of the camera as the court center
+    p = q[:, :2] / q[:, 2:]
+    # A corner behind a camera that is close to the baseline (E23b) has no image: use the lower frame corner.
+    p = np.where(front[:, None], p, np.array([(-4000, H - 1), (6000, H - 1), (6000, H - 1), (-4000, H - 1)], float))
     p = np.clip(p, [-4000, -4000], [6000, 6000])
     pts = np.concatenate([p, p - [0, 0.3 * H]]).astype(np.int32)
     m = np.zeros((H, W), np.uint8)

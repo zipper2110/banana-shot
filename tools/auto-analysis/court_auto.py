@@ -31,6 +31,9 @@ CAP = 14.0
 CLUTTER_W = 3.0                           # score px for each unit of clutter()
 UNEXPL_W = 4.0                            # score px if no near-half horizontal line is explained
 OUT_W = 0.25 * CAP                        # score px if all model points are outside the frame
+HID_CAP = 1.0                             # largest cost px of a model point that the camera sees through the net (E23b)
+LOW_RULE = True                           # False: the rule is off (the second pass of detect())
+NET_H = 0.95                              # net height m for that rule (0.914 at the center, 1.07 at the posts)
 # limits of a trusted detection: (cost, margin) pairs, and the clutter limit.
 # A clear court: cost under 1 px. A dusk or faint court: cost up to 2 px, but
 # then the next different model must be clearly worse.
@@ -210,6 +213,43 @@ def intersect(l1, l2):
     return p + t[0] * d
 
 
+# ---------------------------------------------------------------- camera
+
+def camera(Hs, w=1920, h=1080):
+    """Focal length (px) and camera center (court meters, the third value is the height with any sign) of
+    homographies image -> court. Batch: Hs is (N, 3, 3) or (3, 3). Assumptions: square pixels, the
+    principal point at the image center. The two constraints on the focal length (the court axes are
+    orthogonal and have the same scale) get a least-squares solution."""
+    G = np.linalg.inv(np.asarray(Hs, float).reshape(-1, 3, 3))
+    G = np.array([[1, 0, -w / 2], [0, 1, -h / 2], [0, 0, 1.0]]) @ G
+    g1, g2, g3 = G[:, :, 0], G[:, :, 1], G[:, :, 2]
+    a1, b1 = g1[:, 0] * g2[:, 0] + g1[:, 1] * g2[:, 1], g1[:, 2] * g2[:, 2]
+    a2, b2 = g1[:, 0] ** 2 + g1[:, 1] ** 2 - g2[:, 0] ** 2 - g2[:, 1] ** 2, g1[:, 2] ** 2 - g2[:, 2] ** 2
+    wv = -(a1 * b1 + a2 * b2) / (a1 ** 2 + a2 ** 2 + 1e-12)
+    f = np.clip(np.where(wv > 0, 1 / np.sqrt(np.maximum(wv, 1e-12)), 1.2 * w), 0.4 * w, 4 * w)
+    k = np.stack([1 / f, 1 / f, np.ones_like(f)], 1)
+    r1, r2, t = g1 * k, g2 * k, g3 * k
+    lam = (np.linalg.norm(r1, axis=1) + np.linalg.norm(r2, axis=1)) / 2 * np.where(t[:, 2] < 0, -1.0, 1.0) + 1e-12
+    r1, r2, t = r1 / lam[:, None], r2 / lam[:, None], t / lam[:, None]
+    return f, -np.stack([(r1 * t).sum(1), (r2 * t).sum(1), (np.cross(r1, r2) * t).sum(1)], 1)
+
+
+def hidden(Hs, samples=SAMPLES, w=1920, h=1080):
+    """For each model point: True if the camera sees it through the net. Batch: (N, P) for Hs (N, 3, 3).
+    Such a point is on the far half, and the ray from the camera to it goes through the net plane below
+    the net tape. The detection mask removes the net mesh, so a court line there is mostly not in the mask.
+    From a low camera (2 m) the full far half is behind the net. The rule is only for that case."""
+    _, C = camera(Hs, w, h)
+    cy, hc = C[:, 1:2], np.abs(C[:, 2:3])
+    y = np.asarray(samples)[None, :, 1]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        z = hc * y / (y - cy)
+    # Only for a low camera, where the net hides the far half up to the far baseline. With the rule for
+    # each camera height, 3 of the 6 lab matches (camera 3.1 to 3.7 m high) got wrong models.
+    low = (cy < 0) & (hc * BL / (BL - cy) < NET_H) & LOW_RULE
+    return (y > 0.05) & low & (z < NET_H)
+
+
 # ---------------------------------------------------------------- scoring
 
 def visible(H, w, h, samples=SAMPLES):
@@ -223,7 +263,9 @@ def make_cost(dt, anchor, cap=CAP, limit=60, samples=SAMPLES):
     px of "anchor", the full court stays valid, and the visible part of the
     model must not shrink much."""
     hh, ww = dt.shape
-    a_vis = visible(cv2.getPerspectiveTransform(anchor.astype(np.float32), COURT4), ww, hh, samples)
+    Ha = cv2.getPerspectiveTransform(anchor.astype(np.float32), COURT4)
+    a_vis = visible(Ha, ww, hh, samples)
+    lim = np.where(hidden(Ha, samples, ww, hh)[0], min(HID_CAP, cap), cap)       # the points do not change during the refinement
 
     def cost(c):
         if np.abs(c.reshape(4, 2) - anchor).max() > limit:
@@ -236,7 +278,7 @@ def make_cost(dt, anchor, cap=CAP, limit=60, samples=SAMPLES):
         if ok.sum() < max(0.4 * len(samples), 0.8 * a_vis):
             return cap
         d = cv2.remap(dt, pts[ok, 0].reshape(-1, 1), pts[ok, 1].reshape(-1, 1), cv2.INTER_LINEAR).ravel()
-        return float(np.minimum(d, cap).mean())
+        return float(np.minimum(d, lim[ok]).mean())
     return cost
 
 
@@ -252,7 +294,8 @@ def stats(H, dt):
     pts = to_img(H, SAMPLES)
     ok = (pts[:, 0] >= 0) & (pts[:, 0] < ww - 1) & (pts[:, 1] >= 0) & (pts[:, 1] < hh - 1)
     d = cv2.remap(dt, pts[ok, 0].reshape(-1, 1), pts[ok, 1].reshape(-1, 1), cv2.INTER_LINEAR).ravel()
-    return float(np.minimum(d, CAP).mean()), float((d < 3).mean()), int(ok.sum())
+    lim = np.where(hidden(H, SAMPLES, ww, hh)[0], HID_CAP, CAP)[ok]
+    return float(np.minimum(d, lim).mean()), float((d < 3).mean()), int(ok.sum())
 
 
 def clutter(H, mask):
@@ -334,6 +377,24 @@ def model_dist(H1, H2, w=1920, h=1080):
 
 
 def detect(img, n_h=10, n_s=14, n_refine=8, prior=None):
+    """Find the court in one BGR frame. Two passes (E23b):
+    1. with the rule for a low camera (hidden()). The result counts only if it is a low-camera model and
+       it passes the confidence limits. In the lab matches (camera 3.1 to 3.7 m high) this pass gave
+       wrong low-camera models in 11 of 24 frames, but none of them passed the limits;
+    2. the search with the rule off, as before E23b.
+    Returns as detect_pass()."""
+    global LOW_RULE
+    H, score, info = detect_pass(img, n_h, n_s, n_refine, prior)
+    if H is not None and info["ok"] and hidden(H, SAMPLES, img.shape[1], img.shape[0]).any():
+        return H, score, dict(info, low=True)
+    LOW_RULE = False
+    try:
+        return detect_pass(img, n_h, n_s, n_refine, prior)
+    finally:
+        LOW_RULE = True
+
+
+def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None):
     """Find the court in one BGR frame. Returns (H, score, info).
     H: 3x3 image px -> court meters, or None.
     score: chamfer cost in px of the polished model (see polish(); lower is
@@ -406,7 +467,7 @@ def detect(img, n_h=10, n_s=14, n_refine=8, prior=None):
         front = (z > 0).all(1) | (z < 0).all(1)
         vis = (x >= 0) & (x < ww - 1) & (y >= 0) & (y < hh - 1) & np.isfinite(x)
         d = dt[np.clip(np.nan_to_num(y), 0, hh - 1).astype(int), np.clip(np.nan_to_num(x), 0, ww - 1).astype(int)]
-        d = np.where(vis, np.minimum(d, CAP), 0)
+        d = np.where(vis, np.minimum(d, np.where(hidden(Hs[k:k + 20000], COARSE, ww, hh), HID_CAP, CAP)), 0)
         nv = vis.sum(1)
         s = d.sum(1) / np.maximum(nv, 1) + OUT_W * (1 - nv / len(COARSE))
         s[(nv < 0.4 * len(COARSE)) | ~front | ~okh[k:k + 20000]] = np.inf

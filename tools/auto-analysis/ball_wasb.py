@@ -36,6 +36,7 @@ WEIGHTS = os.environ.get("BALL_WEIGHTS", "wasb_tennis.pth.tar")     # E15b: a fi
 TAG = "" if WEIGHTS == "wasb_tennis.pth.tar" else "_" + os.path.splitext(WEIGHTS)[0]
 
 
+FPS = None           # a number: decode at this constant frame rate (detect.py: 30 for a video that is not 60 fps)
 PROGRESS = None      # optional function (frames done), called each 3600 frames (detect.py)
 
 
@@ -60,7 +61,7 @@ def frames(mid, start, dur, scale):
     x0, y0, cw, ch, fw, fh = crop_box(mid, scale)
     cmd = ["ffmpeg", "-v", "error", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
            "-ss", str(start), "-t", str(dur), "-i", lab.MATCHES[mid]["video"],
-           "-vf", f"scale_cuda={fw}:{fh},hwdownload,format=nv12,crop={cw}:{ch}:{x0}:{y0},format=rgb24",
+           "-vf", (f"fps={FPS}," if FPS else "") + f"scale_cuda={fw}:{fh},hwdownload,format=nv12,crop={cw}:{ch}:{x0}:{y0},format=rgb24",
            "-fps_mode", "passthrough", "-f", "rawvideo", "-"]
     size = cw * ch * 3
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=size * 4)

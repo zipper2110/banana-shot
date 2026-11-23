@@ -142,8 +142,22 @@ def main():
         blob = W(f"wasb_0_{n}_s0.35_k2.npy")
 
         def ball():
-            ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 60.0)))
-            ball_wasb.run(MID, 0, n)
+            pts = np.load(W("pts.npy"))
+            if np.percentile(np.diff(pts), 90) < 0.02:               # a 60 fps video, as the lab matches
+                ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 60.0)))
+                ball_wasb.run(MID, 0, n)
+            else:
+                # Another frame rate, or a mix of 30 and 60 fps (E23b). The ball detector learned frames that
+                # are 1/30 s apart, and the flight code counts in frames of 1/60 s. So: decode at a constant
+                # 30 fps, use each frame (stride 1), and put the detections on each second frame of a
+                # 60 fps time line. pts.npy becomes that time line (the times of the video: pts_video.npy).
+                ball_wasb.FPS = 30
+                ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 30.0)))
+                d = ball_wasb.run(MID, 0, n, stride=1, save=False)
+                d[:, 0] *= 2
+                np.save(W("pts_video.npy"), pts)
+                np.save(W("pts.npy"), np.arange(n * 60) / 60.0)
+                np.save(blob, d)
             torch.cuda.empty_cache()
         stage("ball", [blob], ball, a.force)
         save_times()

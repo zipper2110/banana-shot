@@ -64,9 +64,11 @@ normal tools. The app keeps the detection output and the corrections for the lab
 - A video with no keyframe each second gets one decoded frame each second (slower first stage, about 6x real time).
 - The winner uses "player 1 = near end in the first rally". The server and the score are not set.
 - The ball stage takes about 0.6 x the video length on the RTX 3060 for a 60 fps video.
-- The court detector needs a camera high behind the court, as in the lab matches. For another camera position
-  (E23: a low camera) the script finds that the court model is not plausible. Then the result has only the rally
-  boundaries, and the dialog shows a warning.
+- The court detector works for a camera behind the court: high (3 to 4 m, the lab matches) or low (2 m, E23b).
+  If the script finds that the court model is not plausible, the result has only the rally boundaries, and the
+  dialog shows a warning.
+- The winner accuracy is measured only for a high camera and 60 fps. For a low camera, or for another frame rate,
+  the chain runs (E23b), but there is no number.
 
 ## Tasks
 

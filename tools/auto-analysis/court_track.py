@@ -71,8 +71,10 @@ def make_cost(mask, anchor, cap=CAP, limit=120):
     visible part of the model must not shrink much."""
     dt = cv2.distanceTransform((~mask).astype(np.uint8), cv2.DIST_L2, 3)
     hh, ww = mask.shape
-    a_pts = cv2.perspectiveTransform(SAMPLES[None], np.linalg.inv(
-        cv2.getPerspectiveTransform(anchor.astype(np.float32), COURT4)))[0]
+    Ha = cv2.getPerspectiveTransform(anchor.astype(np.float32), COURT4)
+    a_pts = cv2.perspectiveTransform(SAMPLES[None], np.linalg.inv(Ha))[0]
+    # a low camera sees the far half only through the net: these points must not pull the model (E23b)
+    lim = np.where(court_auto.hidden(Ha, SAMPLES, ww, hh)[0], min(court_auto.HID_CAP, cap), cap)
     a_vis = int(((a_pts[:, 0] >= 0) & (a_pts[:, 0] < ww - 1) & (a_pts[:, 1] >= 0) & (a_pts[:, 1] < hh - 1)).sum())
 
     def cost(c):
@@ -87,7 +89,7 @@ def make_cost(mask, anchor, cap=CAP, limit=120):
         if ok.sum() < 0.8 * a_vis:
             return cap
         d = cv2.remap(dt, pts[ok, 0].reshape(-1, 1), pts[ok, 1].reshape(-1, 1), cv2.INTER_LINEAR).ravel()
-        return float(np.minimum(d, cap).mean())
+        return float(np.minimum(d, lim[ok]).mean())
     return cost
 
 
@@ -112,7 +114,11 @@ def fit_window(mid, t0, n, start, ref_cost):
     trusted fit. how: "track", "detect", "weak" (a faint court: only the
     tracker found a model and no better model exists) or "lost"."""
     img = window_frame(mid, t0, n)
-    mask = track_mask(img)
+    # A low camera (E23b) sees much of the hall above the court. There the threshold of track_mask is
+    # too high for the court lines (120 on the test video; 35 to 96 in the lab matches), so use the
+    # mask of the detector.
+    low = court_auto.hidden(to_H(start), SAMPLES, img.shape[1], img.shape[0]).any()
+    mask = court_auto.line_mask(img) if low else track_mask(img)
     fine = make_cost(mask, start)
     best = None
     if fine(start.ravel()) < ref_cost * 1.15 + 0.2:           # no change: only a small refinement

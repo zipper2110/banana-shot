@@ -3,7 +3,7 @@ package org.litvin.ui.tabs.points.detect
 import org.kordamp.ikonli.material2.Material2AL
 import org.kordamp.ikonli.material2.Material2MZ
 import org.litvin.autodetect.DetectImport
-import org.litvin.autodetect.DetectOverlayData
+import org.litvin.autodetect.DetectProgress
 import org.litvin.autodetect.DetectResult
 import org.litvin.autodetect.DetectRunner
 import org.litvin.autodetect.DetectSettings
@@ -68,6 +68,9 @@ internal interface DetectHost {
     /** The video of the project when it is one file, or null. The detection does not read a match of several files. */
     val video: File?
 
+    /** The length of the video in seconds, or null when the tab does not know it. */
+    val videoSeconds: Double?
+
     /** The trim of the video in ms, or null when the video has no trim. */
     val trimRangeMs: LongRange?
 
@@ -77,20 +80,8 @@ internal interface DetectHost {
     /** The clips of the project that came from the detection, in time order. */
     fun autoPoints(): List<PointV1>
 
-    /** The id of the selected clip, or null. */
-    val selectedPointId: String?
-
-    /** Selects the clip and plays it from its start. */
-    fun selectAndPlay(pointId: String)
-
-    /** Marks the automatic clips as checked by the user. */
-    fun markChecked(pointIds: Collection<String>)
-
-    /** Gives each of the clips the other winner. */
-    fun swapWinners(pointIds: Set<String>)
-
-    /** Draws [data] on the preview during playback. Null removes it. */
-    fun showOverlay(data: DetectOverlayData?)
+    /** Opens the review window of the automatic clips (decision 21). */
+    fun openReview()
 
     /**
      * Writes the pending changes of the tab, adds the clips of [resultFile] to the project, and reads the project
@@ -101,6 +92,9 @@ internal interface DetectHost {
 
 /** The English texts of the detection UI. */
 internal object DetectTexts {
+    /** The note in place of the video of the Points tab while the review window is open. */
+    const val REVIEW_BUSY = "The review window uses the video."
+
     fun stage(stage: DetectStage?): String = when (stage) {
         null -> "Starting"
         DetectStage.MEDIA -> "Reading the video"
@@ -121,10 +115,23 @@ internal object DetectTexts {
         else -> "$seconds s"
     }
 
+    /** The state of a run in one line, for the bar under the points list. */
     fun running(state: DetectState.Running, nowMs: Long = System.currentTimeMillis()): String {
-        val step = state.stage?.let { "Step ${it.ordinal + 1} of ${DetectStage.entries.size}: " }.orEmpty()
-        val percent = state.progress?.let { " ${(it * 100).toInt()} %" }.orEmpty()
-        return step + stage(state.stage) + percent + " · " + duration((nowMs - state.startedAtMs) / 1000)
+        val progress = DetectProgress.of(state, nowMs)
+        return "${percent(progress.totalPart)} · ${stage(state.stage)} · ${left(progress.leftSeconds)}"
+    }
+
+    fun step(state: DetectState.Running, progress: DetectProgress): String =
+        "Step ${progress.step} of ${progress.steps}: ${stage(state.stage)}"
+
+    fun percent(part: Double?): String = if (part == null) "" else "${(part * 100).toInt()} %"
+
+    /** The time estimate, in round numbers: an estimate is not exact. */
+    fun left(seconds: Long?): String = when {
+        seconds == null -> "estimating the time"
+        seconds < 45 -> "less than 1 min left"
+        seconds < 3600 -> "about ${(seconds + 30) / 60} min left"
+        else -> "about ${seconds / 3600} h ${((seconds % 3600 + 30) / 60).coerceAtMost(59).toString().padStart(2, '0')} min left"
     }
 
     /** The tooltip of the mark of an automatic clip in the points list. */
@@ -198,10 +205,8 @@ internal class ReasonField(current: ScoreReason?, private val onSave: (ScoreReas
 }
 
 /**
- * The rows under the points list:
- * - the "Detect points" button and the state of a run (the run continues when the user leaves the tab);
- * - the review of the automatic clips: the count of the clips to review, "Accept, next", and "Finish review";
- * - the switch of the detection overlay.
+ * The row under the points list: the "Detect points" button, the state of a run (the run continues when the user
+ * leaves the tab), and "Continue review (N)" while automatic clips are not reviewed (decision 25).
  * The Points tab calls [refresh] when the clips or the project change.
  */
 internal class DetectBar(private val runner: DetectRunner, private val host: DetectHost) : Stack(gap = 6) {
@@ -210,35 +215,12 @@ internal class DetectBar(private val runner: DetectRunner, private val host: Det
         font = UiKit.font(11.5f)
         foreground = Palette.FG_3
     }
-    private val toReview = JLabel().apply {
-        name = "points-detect-to-review"
-        font = UiKit.font(12f, UiKit.Weight.SEMIBOLD)
-        foreground = Palette.FG
-    }
-    private val accept = UiButton("Accept, next", buttonHeight = SMALL_BUTTON, fontSize = 11.5f).apply {
-        name = "points-detect-accept"
-        toolTipText = "Marks the selected automatic point as checked and plays the next point to review ($ACCEPT_KEY)"
-    }
-    private val finish = UiButton("Finish review", buttonHeight = SMALL_BUTTON, fontSize = 11.5f).apply {
-        name = "points-detect-finish"
-        toolTipText = "Marks all automatic points as checked. The dots go off."
-    }
-    private val reviewRow = Stack(gap = 6).apply {
-        isOpaque = false
-        add(toReview)
-        add(JPanel(java.awt.GridLayout(1, 2, 6, 0)).apply {
-            isOpaque = false
-            add(accept)
-            add(finish)
-        })
-    }
-    private val overlay = SwitchBox("Detection overlay", 12f).apply {
-        name = "points-detect-overlay"
-        toolTipText = "Draws the court model, the ball, the landing points, and the serve speed on the video (debug view)"
+    private val review = UiButton("Continue review", Material2AL.FACT_CHECK, UiButton.Kind.LIME_OUTLINE).apply {
+        name = "points-detect-review"
+        toolTipText = "Opens the review window of the automatic points"
     }
     private val ticker = Timer(1000) { render() }
     private var unlisten: (() -> Unit)? = null
-    private var overlayFile: File? = null
 
     init {
         name = "points-detect-bar"
@@ -253,20 +235,9 @@ internal class DetectBar(private val runner: DetectRunner, private val host: Det
             add(button, BorderLayout.WEST)
             add(status, BorderLayout.CENTER)
         })
-        add(reviewRow)
-        add(overlay)
+        add(review)
         button.addActionListener { DetectDialog(this, runner, host).open() }
-        accept.addActionListener { acceptAndNext() }
-        finish.addActionListener { host.markChecked(host.autoPoints().map { it.id }) }
-        overlay.addActionListener { applyOverlay() }
-        // The key of "Accept, next". It does nothing while the user types a text.
-        getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(ACCEPT_KEY), "points.detect.accept")
-        actionMap.put("points.detect.accept", object : AbstractAction() {
-            override fun actionPerformed(event: ActionEvent?) {
-                val typing = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner is JTextComponent
-                if (!typing && reviewRow.isVisible) acceptAndNext()
-            }
-        })
+        review.addActionListener { host.openReview() }
     }
 
     override fun addNotify() {
@@ -282,24 +253,12 @@ internal class DetectBar(private val runner: DetectRunner, private val host: Det
         super.removeNotify()
     }
 
-    /** Shows the state of the run, the count of the clips to review, and the overlay switch of the open project. */
+    /** Shows the state of the run and the count of the clips to review of the open project. */
     fun refresh() {
         val open = host.autoPoints().count { it.auto?.checked == false }
-        val showReview = open > 0
-        toReview.text = "To review: $open"
-        val file = host.projectDir?.let(DetectImport::latestOverlay)
-        val showOverlay = file != null
-        if (file != overlayFile) {
-            // Another project, or a new run: the switch goes off, because the data is different.
-            overlayFile = file
-            if (overlay.isSelected) {
-                overlay.isSelected = false
-                host.showOverlay(null)
-            }
-        }
-        if (reviewRow.isVisible != showReview || overlay.isVisible != showOverlay) {
-            reviewRow.isVisible = showReview
-            overlay.isVisible = showOverlay
+        review.text = "Continue review ($open)"
+        if (review.isVisible != (open > 0)) {
+            review.isVisible = open > 0
             revalidate()
         }
         render()
@@ -316,45 +275,12 @@ internal class DetectBar(private val runner: DetectRunner, private val host: Det
         status.toolTipText = status.text.takeIf { it.isNotEmpty() }
         if (state is DetectState.Running) ticker.start() else ticker.stop()
     }
-
-    private fun applyOverlay() {
-        val file = overlayFile
-        if (!overlay.isSelected || file == null) {
-            host.showOverlay(null)
-            return
-        }
-        runCatching { DetectOverlayData.read(file) }
-            .onSuccess(host::showOverlay)
-            .onFailure {
-                logger.warn(it) { "Overlay data not read: $file" }
-                overlay.isSelected = false
-                overlay.toolTipText = "The overlay data does not open: ${it.message}"
-                host.showOverlay(null)
-            }
-    }
-
-    /**
-     * Marks the selected automatic clip as checked, and plays the next clip to review after it. After the last clip,
-     * it goes to the first clip to review.
-     */
-    private fun acceptAndNext() {
-        val points = host.autoPoints()
-        val current = points.firstOrNull { it.id == host.selectedPointId }
-        if (current?.auto?.checked == false) host.markChecked(listOf(current.id))
-        val open = points.filter { it.auto?.checked == false && it.id != current?.id }
-        val next = open.firstOrNull { it.startMs > (current?.startMs ?: -1) } ?: open.firstOrNull()
-        next?.let { host.selectAndPlay(it.id) }
-    }
-
-    private companion object {
-        const val SMALL_BUTTON = 26
-        const val ACCEPT_KEY = "T"
-    }
 }
 
 /**
  * The dialog of the detection: the settings, the state of the run, and one action, "Detect points". The action runs
- * the detection, asks which player is at the near end, and adds the points (decisions 14 and 15).
+ * the detection, asks which player is at the near end, adds the points (decisions 14 and 15), and opens the review
+ * window (decision 21).
  */
 internal class DetectDialog(parent: Component, private val runner: DetectRunner, private val host: DetectHost) {
     private val dialog = DialogKit.modal(parent, "Detect points")
@@ -392,6 +318,22 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
         font = UiKit.font(12.5f)
         foreground = Palette.FG
     }
+
+    // The view of a run: the two progress bars. It replaces the settings while the run is active.
+    private val stepText = progressLabel("detect-step")
+    private val stepPercent = progressLabel("detect-step-percent")
+    private val stepBar = ProgressLine("detect-step-bar")
+    private val totalText = progressLabel("detect-total")
+    private val totalPercent = progressLabel("detect-total-percent")
+    private val totalBar = ProgressLine("detect-total-bar")
+    private val runNote = JLabel(" ").apply {
+        name = "detect-run-note"
+        font = UiKit.font(12f)
+        foreground = Palette.FG_3
+    }
+    private val settingsPanel = Stack(gap = 12).apply { name = "detect-settings" }
+    private val runPanel = Stack(pad = Insets(10, 0, 6, 0), gap = 8).apply { name = "detect-run" }
+    private var runView = false
     private val detail = DialogKit.errorLine("detect-detail")
     private val start = UiButton("Detect points", Material2MZ.PLAY_ARROW, UiButton.Kind.LIME).apply { name = "detect-start" }
     private val stop = UiButton("Stop", kind = UiButton.Kind.DANGER).apply { name = "detect-stop" }
@@ -399,9 +341,9 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
         name = "detect-add"
         toolTipText = "Adds the points of the last result again, for example with other settings"
     }
-    private val swap = UiButton("Swap players").apply {
-        name = "detect-swap"
-        toolTipText = "Gives each automatic point the other winner (for a wrong answer to \"Who is at the near end?\")"
+    private val review = UiButton("Review points").apply {
+        name = "detect-review-open"
+        toolTipText = "Opens the review window of the automatic points"
     }
     private val close = UiButton("Close")
     private val ticker = Timer(1000) { render() }
@@ -439,22 +381,36 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
             add(status)
             add(detail)
         }
+        settingsPanel.add(detect)
+        settingsPanel.add(clips)
+        fun line(left: JComponent, right: JComponent) = JPanel(BorderLayout(8, 0)).apply {
+            isOpaque = false
+            add(left, BorderLayout.CENTER)
+            add(right, BorderLayout.EAST)
+        }
+        runPanel.add(line(stepText, stepPercent))
+        runPanel.add(stepBar)
+        runPanel.add(JPanel().apply { isOpaque = false; preferredSize = Dimension(1, 4) })
+        runPanel.add(line(totalText, totalPercent))
+        runPanel.add(totalBar)
+        runPanel.add(runNote)
+        runPanel.isVisible = false
         val body = Stack(pad = Insets(8, DialogKit.PAD_X, 14, DialogKit.PAD_X), gap = 12).apply {
-            add(detect)
-            add(clips)
+            add(settingsPanel)
+            add(runPanel)
             add(state)
         }
         dialog.contentPane = DialogKit.content(
             DialogKit.WIDE,
             DialogKit.head("Detect points", "lab feature · singles, one video file"),
             DialogKit.scrollBody(body),
-            DialogKit.footer(left = listOf(stop, swap), right = listOf(close, add, start)),
+            DialogKit.footer(left = listOf(stop, review), right = listOf(close, add, start)),
         )
         scope.onChange { syncScope() }
         start.addActionListener { startRun() }
         stop.addActionListener { runner.stop() }
         add.addActionListener { addPoints() }
-        swap.addActionListener { swapPlayers() }
+        review.addActionListener { toReview() }
         close.addActionListener { dialog.dispose() }
         dialog.addWindowListener(object : WindowAdapter() {
             override fun windowClosed(event: WindowEvent?) {
@@ -521,7 +477,7 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
         }
         runner.saveSettings(settings)
         say(" ")
-        if (!runner.start(dir, dir.name, video, settings)) say("A detection is already running.", Palette.RED)
+        if (!runner.start(dir, dir.name, video, settings, host.videoSeconds)) say("A detection is already running.", Palette.RED)
     }
 
     /** After a run for this project ended with a result: asks the player question and adds the points. */
@@ -560,16 +516,18 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
             val plan = host.importResult(file, settings, swapped, range) ?: return
             say(DetectTexts.imported(plan))
             runner.reset()
+            // The review of the new points is the next step of the flow.
+            if (plan.points.isNotEmpty()) toReview()
         } finally {
             adding = false
             render()
         }
     }
 
-    private fun swapPlayers() {
-        val ids = host.autoPoints().map { it.id }.toSet()
-        host.swapWinners(ids)
-        say("The winners of the automatic points are swapped.")
+    /** Closes the dialog and opens the review window. */
+    private fun toReview() {
+        dialog.dispose()
+        EventQueue.invokeLater { host.openReview() }
     }
 
     private fun render() {
@@ -595,11 +553,73 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
         // A warning of the result, for example a court model that is not usable. Another message has priority.
         val warning = resultFile?.takeIf { !running }?.let { file -> runCatching { DetectResult.read(file).warnings.firstOrNull() }.getOrNull() }
         if (warning != null && detail.text.isBlank()) say(Html.wrappedTooltip(warning, 380), Palette.YELLOW)
+        // During a run of this project, the dialog shows only the progress and "Stop": the settings have no use then.
+        val showRun = state is DetectState.Running && mine
+        if (state is DetectState.Running && mine) {
+            val progress = DetectProgress.of(state)
+            stepText.text = DetectTexts.step(state, progress)
+            stepPercent.text = DetectTexts.percent(progress.stepPart)
+            stepBar.part = progress.stepPart
+            totalText.text = "Total"
+            totalPercent.text = "${DetectTexts.percent(progress.totalPart)} · ${DetectTexts.left(progress.leftSeconds)}"
+            totalBar.part = progress.totalPart
+            val time = DetectTexts.duration((System.currentTimeMillis() - state.startedAtMs) / 1000)
+            runNote.text = "Run time $time. The run continues when you close this window."
+        }
+        status.isVisible = !showRun
         start.isEnabled = !running
-        stop.isVisible = running && mine
+        start.isVisible = !showRun
+        close.isVisible = !showRun
+        stop.isVisible = showRun
         add.isVisible = !running && resultFile != null
-        swap.isVisible = !running && host.autoPoints().isNotEmpty()
+        review.isVisible = !running && host.autoPoints().isNotEmpty()
+        if (showRun != runView) {
+            runView = showRun
+            settingsPanel.isVisible = !showRun
+            runPanel.isVisible = showRun
+            if (showRun) say(" ")
+            if (dialog.isDisplayable) {
+                DialogKit.packToScreen(dialog)
+                dialog.setLocationRelativeTo(dialog.owner)
+            }
+        }
         if (running) ticker.start() else ticker.stop()
+    }
+}
+
+private fun progressLabel(componentName: String) = JLabel(" ").apply {
+    name = componentName
+    font = UiKit.font(12.5f)
+    foreground = Palette.FG
+}
+
+/** A progress bar. A null [part] shows an empty bar. */
+internal class ProgressLine(componentName: String) : JComponent() {
+    var part: Double? = null
+        set(value) {
+            field = value
+            repaint()
+        }
+
+    init {
+        name = componentName
+    }
+
+    override fun getPreferredSize() = Dimension(200, 8)
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = UiKit.smooth(g)
+        try {
+            g2.color = Palette.LINE_2
+            g2.fillRoundRect(0, 0, width, height, height, height)
+            val filled = ((part ?: 0.0).coerceIn(0.0, 1.0) * width).toInt()
+            if (filled > 0) {
+                g2.color = Palette.LIME
+                g2.fillRoundRect(0, 0, filled.coerceAtLeast(height), height, height, height)
+            }
+        } finally {
+            g2.dispose()
+        }
     }
 }
 

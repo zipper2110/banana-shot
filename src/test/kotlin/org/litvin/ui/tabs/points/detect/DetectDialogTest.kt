@@ -37,29 +37,15 @@ class DetectDialogTest {
         val imports = mutableListOf<Pair<File, DetectSettings>>()
         val ranges = mutableListOf<LongRange?>()
         var points = listOf<PointV1>()
-        val checked = mutableListOf<String>()
-        val played = mutableListOf<String>()
-        var overlay: DetectOverlayData? = null
+        var reviews = 0
 
+        override val videoSeconds: Double? = 600.0
         override var trimRangeMs: LongRange? = null
         override val players = ScorePlayers("Anna", "Bea")
         override fun autoPoints() = points
-        override var selectedPointId: String? = null
 
-        override fun selectAndPlay(pointId: String) {
-            selectedPointId = pointId
-            played += pointId
-        }
-
-        override fun markChecked(pointIds: Collection<String>) {
-            checked += pointIds
-            points = points.map { if (it.id in pointIds) it.copy(auto = it.auto?.copy(checked = true)) else it }
-        }
-
-        override fun swapWinners(pointIds: Set<String>) = Unit
-
-        override fun showOverlay(data: DetectOverlayData?) {
-            overlay = data
+        override fun openReview() {
+            reviews++
         }
 
         override fun importResult(resultFile: File, settings: DetectSettings, swapped: Boolean, rangeMs: LongRange?): ImportPlan? {
@@ -156,43 +142,21 @@ class DetectDialogTest {
     }
 
     @Test
-    fun `Accept, next marks the selected clip and plays the next clip to review`() = withProject { project, runner ->
-        val host = Host(project).apply {
-            points = listOf(auto("a", 1_000), auto("b", 20_000, checked = true), auto("c", 40_000))
-            selectedPointId = "a"
-        }
+    fun `the bar shows Continue review while a clip is not reviewed, and opens the review window`() = withProject { project, runner ->
+        val host = Host(project).apply { points = listOf(auto("a", 1_000), auto("b", 20_000, checked = true), auto("c", 40_000)) }
         SwingUtilities.invokeAndWait {
             val bar = DetectBar(runner, host)
             bar.refresh()
-            assertEquals("To review: 2", (bar.find("points-detect-to-review") as JLabel).text)
+            val review = bar.find("points-detect-review") as JButton
+            assertTrue(review.isVisible)
+            assertEquals("Continue review (2)", review.text)
 
-            (bar.find("points-detect-accept") as JButton).doClick()
-            assertEquals(listOf("a"), host.checked)
-            assertEquals(listOf("c"), host.played)
+            review.doClick()
+            assertEquals(1, host.reviews)
 
-            (bar.find("points-detect-finish") as JButton).doClick()
+            host.points = host.points.map { it.copy(auto = it.auto?.copy(checked = true)) }
             bar.refresh()
-            assertTrue(host.points.all { it.auto?.checked == true })
-            assertEquals("To review: 0", (bar.find("points-detect-to-review") as JLabel).text)
-        }
-    }
-
-    @Test
-    fun `the overlay switch shows only with overlay data, and gives the data to the tab`() = withProject { project, runner ->
-        val host = Host(project)
-        SwingUtilities.invokeAndWait {
-            val bar = DetectBar(runner, host)
-            bar.refresh()
-            val switch = bar.find("points-detect-overlay") as SwitchBox
-            assertFalse(switch.isVisible)
-
-            File(project, DetectImport.FOLDER).apply { mkdirs() }.resolve("overlay-20261123-010203.json")
-                .writeText("""{"width": 1920, "height": 1080, "ball": [[1.0, 960.0, 540.0]]}""")
-            bar.refresh()
-            assertTrue(switch.isVisible)
-            switch.doClick()
-
-            assertEquals(1, host.overlay?.ball?.size)
+            assertFalse(review.isVisible)
         }
     }
 

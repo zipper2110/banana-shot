@@ -33,13 +33,18 @@ sealed interface DetectState {
     /**
      * A run for the project in [projectDir]. [stage] is null before the first stage. [progress] is the part of the
      * stage that is done (0 to 1), or null when the stage does not tell it. [startedAtMs] is the wall clock time of
-     * the start.
+     * the start, and [stageStartedAtMs] is that of the start of [stage]. [videoSeconds] is the length of the video
+     * when the caller knows it, and [ballPass] is the setting of the run: [DetectProgress] uses them for the time
+     * estimate.
      */
     data class Running(
         val projectDir: File,
         val stage: DetectStage? = null,
         val progress: Double? = null,
         val startedAtMs: Long = System.currentTimeMillis(),
+        val stageStartedAtMs: Long = startedAtMs,
+        val videoSeconds: Double? = null,
+        val ballPass: Boolean = true,
     ) : DetectState
 
     /** The run ended. [resultFile] is the copy of the result in the project folder. */
@@ -85,10 +90,10 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
     /**
      * Starts a run for the video [video] of the project in [projectDir]. [workName] names the work folder of the
      * project in the work root of the lab: a second run for the same project continues from the files of the first.
-     * Returns false when a run is active.
+     * Returns false when a run is active. [videoSeconds] is the length of the video, for the time estimate.
      */
     @Synchronized
-    fun start(projectDir: File, workName: String, video: File, settings: DetectSettings): Boolean {
+    fun start(projectDir: File, workName: String, video: File, settings: DetectSettings, videoSeconds: Double? = null): Boolean {
         if (isRunning) return false
         stopped = false
         val work = File(lab.workRoot, workName).apply { mkdirs() }
@@ -105,7 +110,7 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
         )
         val builder = ProcessBuilder(command).directory(File(lab.script).parentFile).redirectErrorStream(true)
         builder.environment().putAll(lab.environment)
-        publish(DetectState.Running(projectDir))
+        publish(DetectState.Running(projectDir, videoSeconds = videoSeconds, ballPass = settings.ballPass))
         thread(name = "autodetect-run", isDaemon = true) { run(builder, projectDir, work, logFile) }
         return true
     }
@@ -186,7 +191,14 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
 
     private fun advance(stage: DetectStage?, progress: Double?) {
         val running = state as? DetectState.Running ?: return
-        publish(running.copy(stage = stage ?: running.stage, progress = progress?.coerceIn(0.0, 1.0)))
+        val next = stage ?: running.stage
+        publish(
+            running.copy(
+                stage = next,
+                progress = progress?.coerceIn(0.0, 1.0),
+                stageStartedAtMs = if (next != running.stage) System.currentTimeMillis() else running.stageStartedAtMs,
+            ),
+        )
     }
 
     private fun publish(next: DetectState) {

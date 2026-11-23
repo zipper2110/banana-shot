@@ -898,6 +898,18 @@ internal class PointsScoring(
 
     val isAdvanced: Boolean get() = score.isAdvanced
 
+    /** The winner of the clip with [pointId] in the score file. */
+    fun winnerOf(pointId: String): Outcome = score.outcomeOf(pointId)
+
+    /** Gives the clip with [pointId] the winner [outcome] with no ending kind, as Q, W, and E do (the review window). */
+    fun setWinner(pointId: String, outcome: Outcome) {
+        val point = points.firstOrNull { it.id == pointId } ?: return
+        if (point.endMs <= point.startMs || projectDir == null) return
+        if (score.outcomeOf(pointId) != outcome) analytics.record(AnalyticsEvent.ScoreRecorded)
+        change { PointEndings.withWinnerOnly(it, pointId, outcome) }
+        onPointJudged?.invoke(pointId)
+    }
+
     /**
      * Gives each clip of [pointIds] that has a winner and no ending kind the other winner. This corrects a wrong
      * answer to "Who is at the near end?" of the automatic detection.

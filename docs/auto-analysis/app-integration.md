@@ -67,13 +67,36 @@ normal tools. The app keeps the detection output and the corrections for the lab
     confidence limit. "Inside the trim only": the import skips the rallies outside the trim (the run still reads
     the full video; a shorter run is a later step).
 
+## Decisions for the review window (2026-11-23, with the user; iteration 3)
+
+These decisions replace the review row and the overlay switch of the Points tab (decisions 18 and 19).
+
+21. **Review window.** The review of the automatic points is in a separate window with its own player, as the
+    replay editor is. It opens after the import. While it is open, the Points tab shows a note in place of the
+    video. The changes go into the project at once.
+22. **Bounds bar.** A bar under the video of the window shows the selected point with the time around it. The user
+    drags the start edge and the end edge of the point. The keys I and O put the start and the end at the playhead.
+    The window has no time inputs.
+23. **Two ways to accept.** "Accept, next" (key T) accepts the selected point and goes to the next point to review.
+    "Accept all points and close" accepts all points with one click and closes the window. A correction of a point
+    (winner or bounds) also accepts that point.
+24. **End of the flow.** After "Accept all points and close", the detection flow is complete: no dots, no review
+    button. The project is a normal project.
+25. **Continue later.** A close with the X, with Escape, or with "Continue later" keeps the review open. The bar of
+    the Points tab then shows "Continue review (N)".
+26. **Overlay.** The detection overlay switch is in the review window only. "Review points" in the "Detect points"
+    dialog opens the window again at a later time, also after the review is complete.
+
 ## How it works
 
 - **Switch on.** The file `%APPDATA%/BananaShot/autodetect.json` names the Python of the lab venv, `detect.py`, the
   work folder, and more environment variables (`HF_HOME`). Without the file, the app shows no detection.
 - **Run.** Points tab, under the points list: "Detect points". The dialog has the settings (decision 20) and one
-  action, "Detect points". The run continues when the dialog closes or the tab changes. A stopped run continues
-  after its last complete stage. The work files are in `<workRoot>/<project folder name>` (large: keyframes, ball
+  action, "Detect points". During a run, the dialog shows only two progress bars (the step and the total), the
+  estimate of the time left, and "Stop". The estimate uses the reference time of each stage (a part of the video
+  length, from E23b) and the measured speed of the stage that runs. Only the ball stage reports its progress: the
+  bar of each other stage moves with the time. The run continues when the dialog closes or the tab changes. A
+  stopped run continues after its last complete stage. The work files are in `<workRoot>/<project folder name>` (large: keyframes, ball
   data).
 - **Result.** `<project>/autodetect/result-<time>.json`: the detected rallies and the run time of each stage.
   `<project>/autodetect/overlay-<time>.json`: the data of the detection overlay.
@@ -90,12 +113,15 @@ normal tools. The app keeps the detection output and the corrections for the lab
 - **Mark in the list.** A dot after the length of an automatic clip that is not reviewed: blue, or yellow for a
   clip to check first (a short point, no winner, or a winner confidence under 70 %). The tooltip gives the
   confidence.
-- **Review.** The bar shows "To review: N", "Accept, next" (key T), and "Finish review" while a clip is not
-  reviewed (`auto.checked` is false).
-- **Detection overlay.** The switch "Detection overlay" in the bar shows when the project has overlay data. It
-  draws the court lines (blue), the net line (yellow), the ball with a trail (green), the landing points (red
-  rings), and the serve speed over the preview. The app draws it with libass, as it draws the scoreboard, at about
-  30 updates each second. The marks follow a crop of the video. They do not follow a rotation.
+- **Review window.** It opens after the import, and from "Continue review (N)" in the bar. Left: the video, the
+  bounds bar, and the transport. Right: the list of all points, the winner of the selected point, "Accept, next",
+  "Delete", "Add point", "Swap players", and "Accept all points and close". A point is not reviewed while
+  `auto.checked` is false. Keys: Space play, Up and Down select, Left and Right 1 s (Shift: 5 s), I and O bounds,
+  Q, W, E winner, T accept, N add, Delete delete, Escape close.
+- **Detection overlay.** The switch "Detection overlay" in the review window shows when the project has overlay
+  data. It draws the court lines (blue), the net line (yellow), the ball with a trail (green), the landing points
+  (red rings), and the serve speed over the video. The app draws it with libass, at about 30 updates each second.
+  The marks follow a crop of the video. They do not follow a rotation.
 - **Reason.** Edit point dialog: "Score differs from the video" (none, players' call, replayed, score lost), in
   `score.json` `reasons`.
 - **Corrections.** `python tools/auto-analysis/corrections.py <project folder>` compares the import record with the
@@ -127,3 +153,4 @@ normal tools. The app keeps the detection output and the corrections for the lab
 | 6 | App: the mark "automatic" on a point, and the optional reason | done |
 | 7 | Tests for the domain parts; one run on a real match | done: tests, and one real run through the app runner (E23) |
 | 8 | App: the user flow of iteration 2 (decisions 13 to 20): one action, the player question, the review, the detection overlay, the new settings | done |
+| 9 | App: the review window (decisions 21 to 26), and the run view with the progress bars | done |

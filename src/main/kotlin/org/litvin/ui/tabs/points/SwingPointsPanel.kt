@@ -153,6 +153,12 @@ class SwingPointsPanel(
     // The open replay editor, or null. While it is open, it uses the video, and this player shows a note.
     private var replayEditor: org.litvin.ui.tabs.points.replay.ReplayEditorWindow? = null
     private val videoCards = java.awt.CardLayout()
+
+    /** The note in place of the video while another window uses the video. */
+    private val busyNote = javax.swing.JLabel().apply {
+        font = org.litvin.ui.commons.UiKit.font(14f)
+        foreground = Palette.FG_2
+    }
     private val videoArea = JPanel(videoCards)
 
     // The comment that the comment dialog shows on the video before Save, or null when no dialog is open.
@@ -186,37 +192,15 @@ class SwingPointsPanel(
         // A match of several files has no single video file (B-49).
         override val video: File? get() = pendingMediaFile?.takeIf { timelineFiles.size <= 1 }
 
+        override val videoSeconds: Double? get() = player.totalDurationMs().takeIf { it > 0 }?.let { it / 1000.0 }
+
         override val trimRangeMs: LongRange? get() = trimRange()?.let { it.startMs..it.endMs }
 
         override val players get() = scoring.scorePlayers
 
         override fun autoPoints(): List<PointV1> = dispatcher.getCompletedPoints().filter { it.auto != null }.sortedBy { it.startMs }
 
-        override val selectedPointId: String? get() = (selectedEvent() as? PointEventDto)?.point?.id
-
-        override fun selectAndPlay(pointId: String) {
-            selectPoint(pointId)
-            player.play()
-            updatePlayPauseButton()
-        }
-
-        override fun markChecked(pointIds: Collection<String>) {
-            dispatcher.markChecked(pointIds)
-        }
-
-        override fun swapWinners(pointIds: Set<String>) = scoring.swapWinners(pointIds)
-
-        override fun showOverlay(data: org.litvin.autodetect.DetectOverlayData?) {
-            detectOverlay = data?.let {
-                org.litvin.ui.tabs.points.detect.DetectOverlay(it) {
-                    player.videoSize()?.let { size ->
-                        org.litvin.adjustments.GeometryTimeline.planAt(adjustments.get(), player.currentTimeMs(), size.width, size.height)
-                    }
-                }
-            }
-            if (detectOverlay != null) detectOverlayTicker.start() else detectOverlayTicker.stop()
-            refreshOverlay()
-        }
+        override fun openReview() = openDetectReview()
 
         override fun importResult(
             resultFile: File,
@@ -239,13 +223,52 @@ class SwingPointsPanel(
         }
     }
 
-    // The debug view of the automatic detection over the video. The ticker draws it again when the video time changes.
-    private var detectOverlay: org.litvin.ui.tabs.points.detect.DetectOverlay? = null
-    private var detectOverlayShownMs = -1L
-    private val detectOverlayTicker = javax.swing.Timer(DETECT_OVERLAY_TICK_MS) {
-        if (active && player.currentTimeMs() != detectOverlayShownMs) refreshOverlay()
-    }
     private var detectBar: org.litvin.ui.tabs.points.detect.DetectBar? = null
+
+    // The review window of the automatic points. While it is open, it uses the video, as the replay editor does.
+    private var detectReview: org.litvin.ui.tabs.points.detect.ReviewWindow? = null
+
+    /** What the review window changes in the project. */
+    private val reviewHost = object : org.litvin.ui.tabs.points.detect.ReviewHost {
+        override val players get() = scoring.scorePlayers
+
+        override fun points(): List<PointV1> = dispatcher.getCompletedPoints().sortedWith(compareBy({ it.startMs }, { it.endMs }))
+
+        override fun winnerOf(pointId: String) = scoring.winnerOf(pointId)
+
+        override fun setWinner(pointId: String, winner: org.litvin.scoring.Outcome) {
+            // The scoring must know the clips of the project as they are now.
+            scoring.setPoints(dispatcher.getCompletedPoints())
+            scoring.setWinner(pointId, winner)
+        }
+
+        override fun setBounds(pointId: String, startMs: Long, endMs: Long): Boolean {
+            val label = dispatcher.getCompletedPoints().firstOrNull { it.id == pointId }?.label
+            val done = dispatcher.updatePoint(pointId, startMs, endMs, label)
+            dispatcher.consumeUserMessage()
+            return done
+        }
+
+        override fun deletePoint(pointId: String) {
+            if (dispatcher.deletePoint(pointId)) analytics.record(AnalyticsEvent.PointDeleted)
+        }
+
+        override fun addPoint(startMs: Long, endMs: Long): String? {
+            val before = dispatcher.getCompletedPoints().map { it.id }.toSet()
+            dispatcher.clearPending()
+            dispatcher.onPointStart(startMs)
+            val added = dispatcher.onPointEnd(endMs)
+            dispatcher.clearPending()
+            dispatcher.consumeUserMessage()
+            return if (added) dispatcher.getCompletedPoints().firstOrNull { it.id !in before }?.id else null
+        }
+
+        override fun markChecked(pointIds: Collection<String>) {
+            dispatcher.markChecked(pointIds)
+        }
+
+        override fun swapWinners(pointIds: Set<String>) = scoring.swapWinners(pointIds)
+    }
 
     // UI controls
     private var playbackBar: PlaybackBar
@@ -581,10 +604,7 @@ class SwingPointsPanel(
         videoArea.add(JPanel(java.awt.GridBagLayout()).apply {
             name = "points-replay-busy"
             background = Palette.VIDEO_BG
-            add(javax.swing.JLabel(tr("replay.editor.busy")).apply {
-                font = org.litvin.ui.commons.UiKit.font(14f)
-                foreground = Palette.FG_2
-            })
+            add(busyNote)
         }, BUSY_CARD)
         leftColumn.add(videoArea, BorderLayout.CENTER)
         leftColumn.add(JPanel(BorderLayout()).apply {
@@ -965,6 +985,7 @@ class SwingPointsPanel(
             updateCountBadge(dispatcher.getCompletedPoints())
             pushCardsState()
             detectBar?.refresh()
+            detectReview?.pointsChanged()
             timeline.revalidate()
             timeline.repaint()
             if (!skipAutosave) scheduleAutosave()
@@ -1303,11 +1324,8 @@ class SwingPointsPanel(
         val showBoard = !replays.isActive
         val badgeText = activeBadgeText()
         badgeShown = badgeText
-        val debug = detectOverlay
-        val nowMs = player.currentTimeMs()
-        detectOverlayShownMs = nowMs
         player.setPreviewOverlay(VideoOverlay { area ->
-            (debug?.events(nowMs, area) ?: emptyList()) + (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area, clocks) +
+            (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area, clocks) +
                 (badgeText?.let { org.litvin.export.ReplayBadgeAss.events(it, area.width, area.height, area.x, area.y) } ?: emptyList())
         })
         commentDrag.refresh()
@@ -1372,12 +1390,50 @@ class SwingPointsPanel(
     }
 
     /**
+     * Opens the review window of the automatic points (docs/auto-analysis/app-integration.md, decision 21). While
+     * the window is open, it uses the video, and this player shows a note.
+     */
+    private fun openDetectReview() {
+        detectReview?.let { it.toFront(); return }
+        if (replayEditor != null) return
+        val file = pendingMediaFile ?: return
+        val dir = projectDir ?: return
+        val playhead = player.currentTimeMs()
+        val selected = (selectedEvent() as? PointEventDto)?.point?.id
+        player.pause()
+        applyReplay(replays.stop())
+        player.deactivatePreview("detection review")
+        // The text is English only, as all texts of the detection are.
+        busyNote.text = org.litvin.ui.tabs.points.detect.DetectTexts.REVIEW_BUSY
+        videoCards.show(videoArea, BUSY_CARD)
+        detectReview = org.litvin.ui.tabs.points.detect.ReviewWindow(
+            owner = SwingUtilities.getWindowAncestor(this),
+            player = replayPlayers(),
+            videoFile = file,
+            adjustments = adjustments.get(),
+            host = reviewHost,
+            overlayFile = org.litvin.autodetect.DetectImport.latestOverlay(File(dir)),
+            selectId = selected?.takeIf { id -> dispatcher.getCompletedPoints().any { it.id == id && it.auto?.checked == false } },
+            onClosed = {
+                detectReview = null
+                videoCards.show(videoArea, VIDEO_CARD)
+                if (active) {
+                    player.activatePreview("detection review closed")
+                    player.seek(playhead)
+                    EventQueue.invokeLater { player.component.requestFocusInWindow() }
+                }
+            },
+        ).also { it.isVisible = true }
+    }
+
+    /**
      * Opens the replay editor for the point with [pointId], or for the point at the playhead (B-50 T4). With
      * [addNew], the editor adds a replay at the playhead. Else it selects the replay [replayIndex], or adds one when
      * the point has no replay. While the editor is open, it uses the video, and this player shows a note.
      */
     fun openReplayEditor(pointId: String? = null, replayIndex: Int? = null, addNew: Boolean = false) {
         replayEditor?.let { it.toFront(); return }
+        detectReview?.let { it.toFront(); return }
         val playhead = player.currentTimeMs()
         val points = dispatcher.getCompletedPoints()
         // A fault clip of zero length has no video, so it has no replay (B-68).
@@ -1390,6 +1446,7 @@ class SwingPointsPanel(
         player.pause()
         applyReplay(replays.stop())
         player.deactivatePreview("replay editor")
+        busyNote.text = tr("replay.editor.busy")
         videoCards.show(videoArea, BUSY_CARD)
         val number = points.sortedBy { it.startMs }.indexOfFirst { it.id == point.id } + 1
         val select = when {
@@ -1605,7 +1662,7 @@ class SwingPointsPanel(
         if (!closed.compareAndSet(false, true)) return
         replayEditor?.cancel()
         idleUiTimer.stop()
-        detectOverlayTicker.stop()
+        detectReview?.close()
         keybindings?.uninstall()
         keybindings = null
         dispatcher.onPointsChanged = null
@@ -1639,9 +1696,6 @@ class SwingPointsPanel(
 
         /** How often the video shows the changes of the replay comments during a still frame. */
         const val REPLAY_COMMENT_TICK_MS = 40
-
-        /** The debug view of the detection follows the video at this interval. */
-        const val DETECT_OVERLAY_TICK_MS = 33
 
         val POINT_ROW_HINT: String get() = tr("points.hint.pointRow")
     }

@@ -31,6 +31,9 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
     /** The shot panel for a video time, or null when the time is not in a point with a shot chain. */
     var shotPanel: (Double) -> ShotPanel? = { null }
 
+    /** The shots of the selected point. The overlay marks the start of each shot at the ball. */
+    var shotStarts: () -> List<ShotView> = { emptyList() }
+
     private val ballTimes = DoubleArray(data.ball.size) { data.ball[it][0] }
     private val poseTimes = DoubleArray(data.poses.size) { data.poses[it][0] }
 
@@ -121,6 +124,19 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
             if (panel.who.isNotEmpty()) shapes += OverlayShape.Text(x0, top + 74.0 * unit, panel.who.take(PANEL_NAME_CHARS), 22.0 * unit, panel.whoColor, FONT, bold = true)
             if (panel.time.isNotEmpty()) shapes += OverlayShape.Text(x0, top + 104.0 * unit, panel.time, 16.0 * unit, Palette.FG_2, FONT)
             if (panel.outcome.isNotEmpty()) shapes += OverlayShape.Text(x0, top + 128.0 * unit, panel.outcome, 19.0 * unit, panel.outcomeColor, FONT, bold = true)
+        }
+        // The start of a shot: a ring in the color of the hitter at the first ball position of the shot, with its number.
+        if (OverlayLayer.SHOTS in layers) shotStarts().forEach { shot ->
+            val start = shot.startMs / 1000.0
+            if (t < start || t - start > SHOT_START_SHOWN_S) return@forEach
+            // The first ball position from the start of the shot. With none near that time: the last one before it.
+            val index = firstIndexFrom(ballTimes, start)
+            val row = listOfNotNull(data.ball.getOrNull(index), data.ball.getOrNull(index - 1))
+                .firstOrNull { it.size >= 3 && kotlin.math.abs(it[0] - start) <= SHOT_START_NEAR_S } ?: return@forEach
+            val cx = x(row[1])
+            val cy = y(row[2])
+            shapes += OverlayShape.Circle(cx, cy, 15.0 * unit, stroke = shot.color, strokeWidth = 3.0 * unit)
+            label(cx + 22.0 * unit, cy - 10.0 * unit, "Shot ${shot.number}", 15.0 * unit, shot.color)
         }
         // The flight of this time: the path of its fit, and the landing point of the fit before the bounce.
         var line = 0
@@ -217,6 +233,10 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
 
         /** The text of a shot stays this long after the end of its flight. */
         const val SHOT_SHOWN_S = 0.4
+
+        /** The mark of a shot start stays this long. It is at a ball position not farther in time than SHOT_START_NEAR_S. */
+        const val SHOT_START_SHOWN_S = 0.8
+        const val SHOT_START_NEAR_S = 0.2
 
         /** The size of the shot panel, and the longest player name in it. */
         const val PANEL_WIDTH = 230.0

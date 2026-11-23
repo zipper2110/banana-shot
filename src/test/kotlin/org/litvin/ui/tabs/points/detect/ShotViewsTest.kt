@@ -93,6 +93,23 @@ class ShotViewsTest {
     }
 
     @Test
+    fun `the overlay marks the start of a shot at the ball`() {
+        val shots = ShotViews.of(rally, near = 1, players)
+        val ball = listOf(listOf(1069.90, 400.0, 300.0), listOf(1069.95, 410.0, 310.0), listOf(1070.00, 420.0, 320.0))
+        val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080, ball = ball)) { null }
+        overlay.layers = setOf(OverlayLayer.SHOTS)
+        overlay.shotStarts = { shots }
+        val area = Rectangle2D.Double(0.0, 0.0, 1920.0, 1080.0)
+
+        // Shot 2 starts at 1069.934 s: the mark is at the first ball position from that time.
+        val ring = overlay.shapes(1070.2, area).filterIsInstance<OverlayShape.Circle>().single()
+        assertEquals(410.0, ring.centerX, 0.01)
+        assertEquals(players.p1Color, ring.stroke)
+        assertTrue(overlay.shapes(1070.2, area).filterIsInstance<OverlayShape.Text>().any { it.text == "Shot 2" })
+        assertTrue(overlay.shapes(1071.0, area).isEmpty())
+    }
+
+    @Test
     fun `the bar draws the shot tracks`() {
         val folder = System.getProperty("detect.snapshot") ?: return
         val bar = ReviewBoundsBar({}, { _, _ -> }, {})

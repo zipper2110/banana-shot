@@ -395,6 +395,14 @@ internal class ReviewWindow(
         addActionListener { toggleFrameStep() }
     }
 
+    /** Shows what the colors of the timeline mean. */
+    private val colorsHelp = UiButton("Colors", Material2AL.HELP_OUTLINE, UiButton.Kind.SECONDARY).apply {
+        name = "review-colors-help"
+        toolTipText = "Shows what the colors of the timeline mean"
+        isFocusable = false
+        addActionListener { showColorsHelp() }
+    }
+
     /** Shows or hides all parts of the overlay. The switches of the parts keep their state. */
     private val overlayMaster = SwitchBox("Overlay", 12f).apply {
         name = "review-overlay-all"
@@ -620,7 +628,11 @@ internal class ReviewWindow(
                 add(overlayRow, BorderLayout.NORTH)
                 add(hint, BorderLayout.CENTER)
                 // The frame step toggle is at the right of the hint line: the transport row has no space for it.
-                add(frameStep, BorderLayout.EAST)
+                add(JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
+                    isOpaque = false
+                    add(colorsHelp)
+                    add(frameStep)
+                }, BorderLayout.EAST)
             }, BorderLayout.NORTH)
             add(bar, BorderLayout.CENTER)
             add(JPanel(BorderLayout(16, 0)).apply {
@@ -1072,6 +1084,48 @@ internal class ReviewWindow(
 
     // ---- Overlay -------------------------------------------------------------------------------------
 
+    /** The rows of the color help: a color (null for a title row) and its meaning. */
+    internal fun colorRows(): List<Pair<Color?, String>> = listOf(
+        null to "Bar",
+        Palette.LIME to "The selected point. Drag an edge to move its start or its end.",
+        Palette.LINE_3 to "Other points",
+        null to "Upper shot track: the hitter",
+        host.players.p1Color to host.players.p1Name,
+        host.players.p2Color to host.players.p2Name,
+        null to "Lower shot track: the time with a ball track",
+        Palette.FG to "The hit was seen (also the first shot)",
+        Palette.BLUE to "The ball came back, the hit was not seen",
+        Palette.FG_3 to "The hit was not seen, and the ball did not come back",
+        null to "Line at the end of a shot",
+        Palette.GREEN to "In",
+        Palette.RED to "Out, or a bounce on the side of the hitter",
+        Palette.YELLOW to "Net",
+        null to "No line: the end of the shot was not seen. The shot tracks need the \"Shots\" switch.",
+    )
+
+    private fun showColorsHelp() {
+        val panel = JPanel(GridLayout(0, 1, 0, 4)).apply {
+            name = "review-colors-panel"
+            background = Palette.OVERLAY
+            border = BorderFactory.createEmptyBorder(10, 14, 10, 14)
+            colorRows().forEach { (color, text) ->
+                add(JLabel(text).apply {
+                    font = UiKit.font(12f)
+                    foreground = if (color == null) Palette.FG_2 else Palette.FG
+                    if (color != null) {
+                        icon = PlayerDot(color)
+                        iconTextGap = 8
+                    }
+                })
+            }
+        }
+        javax.swing.JPopupMenu().apply {
+            border = BorderFactory.createLineBorder(Palette.LINE)
+            add(panel)
+            show(colorsHelp, 0, -preferredSize.height - 4)
+        }
+    }
+
     /** The shots are on the timeline when the "Shots" switch is on. */
     private fun refreshShots() {
         val on = overlayFile != null && overlayMaster.isSelected && overlaySwitches[OverlayLayer.SHOTS]?.isSelected == true
@@ -1103,6 +1157,7 @@ internal class ReviewWindow(
         overlay = current
         current.layers = layers
         // The shot panel shows during the selected point, with the same size for each shot.
+        current.shotStarts = { shotViews }
         current.shotPanel = { t ->
             val ms = (t * 1000).toLong()
             selectedPoint()?.takeIf { shotViews.isNotEmpty() && ms >= it.startMs && ms <= it.endMs + SHOT_PANEL_AFTER_MS }

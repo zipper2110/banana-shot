@@ -1,7 +1,17 @@
 package org.litvin.ui.tabs.points.detect
 
 import org.junit.jupiter.api.Test
+import org.litvin.adjustments.CropRect
+import org.litvin.adjustments.GeometryPlan
 import org.litvin.autodetect.DetectImport
+import org.litvin.autodetect.DetectOverlayData
+import org.litvin.autodetect.DetectedRally
+import org.litvin.media.OverlayShape
+import org.litvin.points.PointV1
+import org.litvin.ui.commons.SwitchBox
+import org.litvin.ui.tabs.points.ui.ScorePlayers
+import java.awt.geom.Rectangle2D
+import javax.swing.JLabel
 import org.litvin.autodetect.DetectLab
 import org.litvin.autodetect.DetectRunner
 import org.litvin.autodetect.DetectSettings
@@ -25,12 +35,42 @@ import kotlin.test.assertTrue
 class DetectDialogTest {
     private class Host(override val projectDir: File?, override val video: File? = null) : DetectHost {
         val imports = mutableListOf<Pair<File, DetectSettings>>()
+        val ranges = mutableListOf<LongRange?>()
+        var points = listOf<PointV1>()
+        val checked = mutableListOf<String>()
+        val played = mutableListOf<String>()
+        var overlay: DetectOverlayData? = null
 
-        override fun importResult(resultFile: File, settings: DetectSettings): ImportPlan? {
+        override var trimRangeMs: LongRange? = null
+        override val players = ScorePlayers("Anna", "Bea")
+        override fun autoPoints() = points
+        override var selectedPointId: String? = null
+
+        override fun selectAndPlay(pointId: String) {
+            selectedPointId = pointId
+            played += pointId
+        }
+
+        override fun markChecked(pointIds: Collection<String>) {
+            checked += pointIds
+            points = points.map { if (it.id in pointIds) it.copy(auto = it.auto?.copy(checked = true)) else it }
+        }
+
+        override fun swapWinners(pointIds: Set<String>) = Unit
+
+        override fun showOverlay(data: DetectOverlayData?) {
+            overlay = data
+        }
+
+        override fun importResult(resultFile: File, settings: DetectSettings, swapped: Boolean, rangeMs: LongRange?): ImportPlan? {
             imports += resultFile to settings
+            ranges += rangeMs
             return ImportPlan(emptyList(), emptyMap(), emptyMap(), emptyList())
         }
     }
+
+    private fun auto(id: String, startMs: Int, checked: Boolean = false) =
+        PointV1(id = id, startMs = startMs, endMs = startMs + 5_000, auto = AutoMarkV1(AutoKind.RALLY, 80, checked))
 
     private fun withProject(block: (File, DetectRunner) -> Unit) {
         val root = Files.createTempDirectory("detect-dialog").toFile()
@@ -47,11 +87,11 @@ class DetectDialogTest {
     }
 
     @Test
-    fun `Add points is off for a project with no result`() = withProject { project, runner ->
+    fun `Add points does not show for a project with no result`() = withProject { project, runner ->
         SwingUtilities.invokeAndWait {
             val dialog = DetectDialog(JPanel(), runner, Host(project)).build()
             try {
-                assertFalse((dialog.find("detect-add") as JButton).isEnabled)
+                assertFalse((dialog.find("detect-add") as JButton).isVisible)
                 assertTrue((dialog.find("detect-start") as JButton).isEnabled)
             } finally {
                 dialog.dispose()
@@ -77,6 +117,95 @@ class DetectDialogTest {
             }
         }
         assertEquals(1_500, runner.loadSettings().padAfterMs)
+    }
+
+    @Test
+    fun `the import gets the trim only when the setting is on`() = withProject { project, runner ->
+        result(project)
+        val host = Host(project).apply { trimRangeMs = 5_000L..90_000L }
+        SwingUtilities.invokeAndWait {
+            val dialog = DetectDialog(JPanel(), runner, host).build()
+            try {
+                (dialog.find("detect-add") as JButton).doClick()
+                (dialog.find("detect-trim-only") as SwitchBox).doClick()
+                (dialog.find("detect-add") as JButton).doClick()
+
+                assertEquals(listOf<LongRange?>(5_000L..90_000L, null), host.ranges)
+            } finally {
+                dialog.dispose()
+            }
+        }
+    }
+
+    @Test
+    fun `the player question gives the clicked player`() {
+        SwingUtilities.invokeAndWait {
+            var answer: Int? = null
+            val rally = DetectedRally(start = 75.0, end = 82.0, p1Near = true)
+            val dialog = PlayerQuestion.build(JPanel(), null, rally, ScorePlayers("Anna", "Bea")) { answer = it }
+            try {
+                val second = dialog.find("detect-near-player-2") as JButton
+                assertEquals("Bea", second.text)
+                second.doClick()
+
+                assertEquals(2, answer)
+            } finally {
+                dialog.dispose()
+            }
+        }
+    }
+
+    @Test
+    fun `Accept, next marks the selected clip and plays the next clip to review`() = withProject { project, runner ->
+        val host = Host(project).apply {
+            points = listOf(auto("a", 1_000), auto("b", 20_000, checked = true), auto("c", 40_000))
+            selectedPointId = "a"
+        }
+        SwingUtilities.invokeAndWait {
+            val bar = DetectBar(runner, host)
+            bar.refresh()
+            assertEquals("To review: 2", (bar.find("points-detect-to-review") as JLabel).text)
+
+            (bar.find("points-detect-accept") as JButton).doClick()
+            assertEquals(listOf("a"), host.checked)
+            assertEquals(listOf("c"), host.played)
+
+            (bar.find("points-detect-finish") as JButton).doClick()
+            bar.refresh()
+            assertTrue(host.points.all { it.auto?.checked == true })
+            assertEquals("To review: 0", (bar.find("points-detect-to-review") as JLabel).text)
+        }
+    }
+
+    @Test
+    fun `the overlay switch shows only with overlay data, and gives the data to the tab`() = withProject { project, runner ->
+        val host = Host(project)
+        SwingUtilities.invokeAndWait {
+            val bar = DetectBar(runner, host)
+            bar.refresh()
+            val switch = bar.find("points-detect-overlay") as SwitchBox
+            assertFalse(switch.isVisible)
+
+            File(project, DetectImport.FOLDER).apply { mkdirs() }.resolve("overlay-20261123-010203.json")
+                .writeText("""{"width": 1920, "height": 1080, "ball": [[1.0, 960.0, 540.0]]}""")
+            bar.refresh()
+            assertTrue(switch.isVisible)
+            switch.doClick()
+
+            assertEquals(1, host.overlay?.ball?.size)
+        }
+    }
+
+    @Test
+    fun `the overlay puts the ball at its place in a cropped video`() {
+        val data = DetectOverlayData(ball = listOf(listOf(1.0, 960.0, 540.0)))
+        val plan = GeometryPlan(0.0, CropRect(0.25, 0.25, 0.5, 0.5))
+        val shapes = DetectOverlay(data) { plan }.shapes(1.02, Rectangle2D.Double(100.0, 50.0, 1280.0, 720.0))
+
+        val ring = shapes.filterIsInstance<OverlayShape.Circle>().last()
+        assertEquals(100.0 + 640.0, ring.centerX, 0.01)
+        assertEquals(50.0 + 360.0, ring.centerY, 0.01)
+        assertTrue(DetectOverlay(data) { plan }.shapes(5.0, Rectangle2D.Double(0.0, 0.0, 1280.0, 720.0)).isEmpty())
     }
 
     @Test

@@ -564,6 +564,7 @@ internal class PointsScoring(
         if (!score.isAdvanced || !ClipOutcomes.allows(point, outcome)) return
         if (ClipOutcomes.current(score, pointId) == ClipOutcomes.normalized(outcome)) return
         change { ClipOutcomes.apply(it, pointId, outcome) }
+        onPointJudged?.invoke(pointId)
     }
 
     /**
@@ -862,6 +863,7 @@ internal class PointsScoring(
         if (point.endMs <= point.startMs) return
         if (score.outcomes[point.id] != outcome) analytics.record(AnalyticsEvent.ScoreRecorded)
         change { PointEndings.withWinnerOnly(it, point.id, outcome) }
+        onPointJudged?.invoke(point.id)
     }
 
     /** An ending key of advanced mode: the new winner and the new ending of the selected point (B-68). */
@@ -870,6 +872,7 @@ internal class PointsScoring(
         if (point.endMs <= point.startMs) return
         if (score.outcomes[point.id] != choice.outcome) analytics.record(AnalyticsEvent.ScoreRecorded)
         change { PointEndings.withEnding(it, point.id, choice) }
+        onPointJudged?.invoke(point.id)
     }
 
     /**
@@ -880,12 +883,36 @@ internal class PointsScoring(
         val point = points.getOrNull(selectedIndex()) ?: return
         if (PointEndings.isZeroLength(point) && !PointEndings.allowsZeroLength(ending)) return
         change { PointEndings.withServeEnding(it, point.id, ending) }
+        onPointJudged?.invoke(point.id)
     }
 
     /**
      * Reads score.json, applies [update], and writes the file, so that the other fields stay as they are. The winners
      * of the aces and the double faults then come from the details (B-68).
      */
+    /** Called after the user gave the clip with this id a winner or an ending (the review of a detection). */
+    var onPointJudged: ((String) -> Unit)? = null
+
+    /** The names and the colors of the players now. */
+    val scorePlayers: ScorePlayers get() = players()
+
+    val isAdvanced: Boolean get() = score.isAdvanced
+
+    /**
+     * Gives each clip of [pointIds] that has a winner and no ending kind the other winner. This corrects a wrong
+     * answer to "Who is at the near end?" of the automatic detection.
+     */
+    fun swapWinners(pointIds: Set<String>) = change { current ->
+        current.copy(outcomes = current.outcomes.mapValues { (id, outcome) ->
+            if (id !in pointIds || current.details[id]?.ending != null) outcome
+            else when (outcome) {
+                Outcome.P1 -> Outcome.P2
+                Outcome.P2 -> Outcome.P1
+                else -> outcome
+            }
+        })
+    }
+
     /** Why the players counted the point with [pointId] differently from the video, or null. */
     fun reasonOf(pointId: String): org.litvin.scoring.ScoreReason? = score.reasons[pointId]
 

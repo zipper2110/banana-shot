@@ -186,12 +186,49 @@ class SwingPointsPanel(
         // A match of several files has no single video file (B-49).
         override val video: File? get() = pendingMediaFile?.takeIf { timelineFiles.size <= 1 }
 
-        override fun importResult(resultFile: File, settings: org.litvin.autodetect.DetectSettings): org.litvin.autodetect.ImportPlan? {
+        override val trimRangeMs: LongRange? get() = trimRange()?.let { it.startMs..it.endMs }
+
+        override val players get() = scoring.scorePlayers
+
+        override fun autoPoints(): List<PointV1> = dispatcher.getCompletedPoints().filter { it.auto != null }.sortedBy { it.startMs }
+
+        override val selectedPointId: String? get() = (selectedEvent() as? PointEventDto)?.point?.id
+
+        override fun selectAndPlay(pointId: String) {
+            selectPoint(pointId)
+            player.play()
+            updatePlayPauseButton()
+        }
+
+        override fun markChecked(pointIds: Collection<String>) {
+            dispatcher.markChecked(pointIds)
+        }
+
+        override fun swapWinners(pointIds: Set<String>) = scoring.swapWinners(pointIds)
+
+        override fun showOverlay(data: org.litvin.autodetect.DetectOverlayData?) {
+            detectOverlay = data?.let {
+                org.litvin.ui.tabs.points.detect.DetectOverlay(it) {
+                    player.videoSize()?.let { size ->
+                        org.litvin.adjustments.GeometryTimeline.planAt(adjustments.get(), player.currentTimeMs(), size.width, size.height)
+                    }
+                }
+            }
+            if (detectOverlay != null) detectOverlayTicker.start() else detectOverlayTicker.stop()
+            refreshOverlay()
+        }
+
+        override fun importResult(
+            resultFile: File,
+            settings: org.litvin.autodetect.DetectSettings,
+            swapped: Boolean,
+            rangeMs: LongRange?,
+        ): org.litvin.autodetect.ImportPlan? {
             val dir = this@SwingPointsPanel.projectDir ?: return null
             // The import changes the project files, so the files must have all changes of the tab first.
             autosave.flush()
             return try {
-                val plan = org.litvin.autodetect.DetectImport.apply(File(dir), resultFile, settings)
+                val plan = org.litvin.autodetect.DetectImport.apply(File(dir), resultFile, settings, swapped, rangeMs)
                 loadEdl(EdlIO.readForProjectDir(dir))
                 scoring.load(dir, ProjectVideoLanguage.read(manifestPath))
                 plan
@@ -201,6 +238,14 @@ class SwingPointsPanel(
             }
         }
     }
+
+    // The debug view of the automatic detection over the video. The ticker draws it again when the video time changes.
+    private var detectOverlay: org.litvin.ui.tabs.points.detect.DetectOverlay? = null
+    private var detectOverlayShownMs = -1L
+    private val detectOverlayTicker = javax.swing.Timer(DETECT_OVERLAY_TICK_MS) {
+        if (active && player.currentTimeMs() != detectOverlayShownMs) refreshOverlay()
+    }
+    private var detectBar: org.litvin.ui.tabs.points.detect.DetectBar? = null
 
     // UI controls
     private var playbackBar: PlaybackBar
@@ -363,7 +408,7 @@ class SwingPointsPanel(
                 label = point.label,
                 flags = emptySet(),
                 favorite = point.favorite,
-                autoNote = point.auto?.takeIf { detect != null }?.let(org.litvin.ui.tabs.points.detect.DetectTexts::rowNote),
+                autoNote = point.auto?.takeIf { detect != null && !it.checked }?.let(org.litvin.ui.tabs.points.detect.DetectTexts::rowNote),
                 autoWeak = point.auto?.isWeak() == true,
                 replays = point.replays.mapIndexed { index, replay ->
                     ReplayRowDto(
@@ -603,6 +648,8 @@ class SwingPointsPanel(
         // Dispatcher callback to refresh UI for all leaf components
         dispatcher.onPointsChanged = ::onPointsChanged
         commentDispatcher.onCommentsChanged = ::onPointsChanged
+        // A winner or an ending from the user ends the review of an automatic clip.
+        scoring.onPointJudged = { id -> dispatcher.markChecked(listOf(id)) }
 
         // Consolidated keybindings helper
         keybindings = Keybindings(this, { isTextEditingFocus() }, object : PointsKeyActions {
@@ -728,7 +775,9 @@ class SwingPointsPanel(
                 isOpaque = false
                 add(scoring.matchEndNotice, BorderLayout.NORTH)
                 add(scoring.settingsButtons, BorderLayout.CENTER)
-                detect?.let { add(org.litvin.ui.tabs.points.detect.DetectBar(it, detectHost), BorderLayout.SOUTH) }
+                detect?.let {
+                    add(org.litvin.ui.tabs.points.detect.DetectBar(it, detectHost).also { bar -> detectBar = bar }, BorderLayout.SOUTH)
+                }
             }, BorderLayout.SOUTH)
         }
     }
@@ -915,6 +964,7 @@ class SwingPointsPanel(
             showComments(commentPreview.setComments(commentDispatcher.state().comments))
             updateCountBadge(dispatcher.getCompletedPoints())
             pushCardsState()
+            detectBar?.refresh()
             timeline.revalidate()
             timeline.repaint()
             if (!skipAutosave) scheduleAutosave()
@@ -1080,6 +1130,8 @@ class SwingPointsPanel(
         maybeShowDispatcherHint()
         hints.dismiss(HintId.POINT_ROW)
         if (!updated) return
+        // An edit of an automatic clip ends its review.
+        dispatcher.markChecked(listOf(id))
         // The Edit dialog of advanced mode can also change the outcome (B-68). The scoring needs the new times first.
         patch.outcome?.let { outcome ->
             scoring.setPoints(dispatcher.getCompletedPoints())
@@ -1251,8 +1303,11 @@ class SwingPointsPanel(
         val showBoard = !replays.isActive
         val badgeText = activeBadgeText()
         badgeShown = badgeText
+        val debug = detectOverlay
+        val nowMs = player.currentTimeMs()
+        detectOverlayShownMs = nowMs
         player.setPreviewOverlay(VideoOverlay { area ->
-            (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area, clocks) +
+            (debug?.events(nowMs, area) ?: emptyList()) + (if (showBoard) scoring.scoreboardEvents(area) else emptyList()) + CommentAss.previewEvents(shown, area, clocks) +
                 (badgeText?.let { org.litvin.export.ReplayBadgeAss.events(it, area.width, area.height, area.x, area.y) } ?: emptyList())
         })
         commentDrag.refresh()
@@ -1550,6 +1605,7 @@ class SwingPointsPanel(
         if (!closed.compareAndSet(false, true)) return
         replayEditor?.cancel()
         idleUiTimer.stop()
+        detectOverlayTicker.stop()
         keybindings?.uninstall()
         keybindings = null
         dispatcher.onPointsChanged = null
@@ -1583,6 +1639,9 @@ class SwingPointsPanel(
 
         /** How often the video shows the changes of the replay comments during a still frame. */
         const val REPLAY_COMMENT_TICK_MS = 40
+
+        /** The debug view of the detection follows the video at this interval. */
+        const val DETECT_OVERLAY_TICK_MS = 33
 
         val POINT_ROW_HINT: String get() = tr("points.hint.pointRow")
     }

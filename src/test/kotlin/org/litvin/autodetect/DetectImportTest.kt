@@ -113,6 +113,47 @@ class DetectImportTest {
     }
 
     @Test
+    fun `swapped players give each point the other winner`() {
+        val detected = result(rally(10.0, 20.0, "P1"), rally(30.0, 40.0, "P2"), rally(50.0, 60.0, winner = null, confidence = null))
+        val plan = DetectImport.plan(detected, emptyList(), advanced = false, DetectSettings(), ids, swapped = true)
+
+        assertEquals(listOf(Outcome.P2, Outcome.P1, Outcome.NONE), plan.points.map { plan.outcomes[it.id] })
+    }
+
+    @Test
+    fun `a rally that is not fully inside the trim is skipped`() {
+        val detected = result(rally(10.0, 20.0), rally(30.0, 40.0), rally(55.0, 65.0))
+        val plan = DetectImport.plan(detected, emptyList(), advanced = false, DetectSettings(), ids, rangeMs = 25_000L..60_000L)
+
+        assertEquals(listOf(30_000), plan.points.map { it.startMs })
+        assertEquals(listOf(SkipReason.OUTSIDE_TRIM, null, SkipReason.OUTSIDE_TRIM), plan.rows.map { it.skipped })
+    }
+
+    @Test
+    fun `the player question uses the first rally inside the trim that knows the ends`() {
+        val detected = result(
+            rally(10.0, 20.0).copy(p1Near = true),
+            rally(30.0, 31.0, kind = "short").copy(p1Near = false),
+            rally(40.0, 50.0).copy(p1Near = false),
+        )
+
+        assertEquals(10.0, DetectImport.questionRally(detected, null)?.start)
+        assertEquals(40.0, DetectImport.questionRally(detected, 25_000L..60_000L)?.start)
+        assertNull(DetectImport.questionRally(result(rally(10.0, 20.0)), null))
+    }
+
+    @Test
+    fun `the players are swapped when player 1 of the detection is not player 1 of the project`() {
+        val near = rally(10.0, 20.0).copy(p1Near = true)
+        val far = rally(10.0, 20.0).copy(p1Near = false)
+
+        assertEquals(false, DetectImport.isSwapped(near, nearPlayer = 1))
+        assertEquals(true, DetectImport.isSwapped(near, nearPlayer = 2))
+        assertEquals(true, DetectImport.isSwapped(far, nearPlayer = 1))
+        assertEquals(false, DetectImport.isSwapped(far, nearPlayer = 2))
+    }
+
+    @Test
     fun `apply writes the clips, the winners, and the record, and a second apply adds nothing`() {
         val dir = Files.createTempDirectory("detect-import").toFile()
         try {

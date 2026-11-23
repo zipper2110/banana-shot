@@ -24,6 +24,9 @@ enum class SkipReason {
 
     /** The clip is shorter than the minimum length of a clip. */
     TOO_SHORT,
+
+    /** The rally is outside the trim of the video. */
+    OUTSIDE_TRIM,
 }
 
 /**
@@ -57,6 +60,11 @@ data class ImportRecord(
     val resultFile: String,
     val settings: DetectSettings,
     val rows: List<ImportRow>,
+    /** True when player 1 of the detection is player 2 of the project. */
+    val swapped: Boolean = false,
+    /** The trim that limited the import, in ms, or null. */
+    val rangeStartMs: Long? = null,
+    val rangeEndMs: Long? = null,
 )
 
 /** Changes the result of a detection run into clips of the project. */
@@ -75,6 +83,8 @@ object DetectImport {
      * The clips for [result]. [existing] are the clips of the project: a rally at the time of one of them is skipped,
      * so a second import adds nothing twice. Fault clips come only for [advanced] scoring mode. Two detected rallies
      * never overlap: the padding of [settings] stops at the middle of the gap between them.
+     * With [swapped], player 1 of the detection is player 2 of the project. A rally that is not fully inside
+     * [rangeMs] (the trim of the video) is skipped.
      */
     fun plan(
         result: DetectResult,
@@ -82,6 +92,8 @@ object DetectImport {
         advanced: Boolean,
         settings: DetectSettings,
         newId: () -> String = EdlIO::generateId,
+        swapped: Boolean = false,
+        rangeMs: LongRange? = null,
     ): ImportPlan {
         val s = settings.normalized()
         val videoEndMs = if (result.videoSeconds > 0) result.videoSeconds * 1000L else Long.MAX_VALUE
@@ -104,6 +116,8 @@ object DetectImport {
             val end = Timecode.roundTo10ms((rawEnd[k] + s.padAfterMs).coerceIn(rawStart[k], minOf(upper, videoEndMs)))
             val from = maxOf(start, lastEnd)
             when {
+                rangeMs != null && (rawStart[k] < rangeMs.first || rawEnd[k] > rangeMs.last) ->
+                    rows += ImportRow(index, skipped = SkipReason.OUTSIDE_TRIM)
                 end - from < MIN_CLIP_MS -> rows += ImportRow(index, skipped = SkipReason.TOO_SHORT)
                 !free(from, end) -> rows += ImportRow(index, skipped = SkipReason.OVERLAP)
                 else -> {
@@ -120,8 +134,8 @@ object DetectImport {
                     }
                     val percent = rally.confidence?.let { (it * 100).roundToInt().coerceIn(50, 100) }
                     val winner = when (rally.winner.takeIf { s.addWinners && percent != null && percent >= s.minWinnerPercent }) {
-                        "P1" -> Outcome.P1
-                        "P2" -> Outcome.P2
+                        "P1" -> if (swapped) Outcome.P2 else Outcome.P1
+                        "P2" -> if (swapped) Outcome.P1 else Outcome.P2
                         else -> Outcome.NONE
                     }
                     val id = newId()
@@ -143,23 +157,52 @@ object DetectImport {
      * Adds the clips of [resultFile] to the project in [projectDir], and writes the record of the import. The caller
      * must write its pending changes of the project before this call, and read the project again after it.
      */
-    fun apply(projectDir: File, resultFile: File, settings: DetectSettings): ImportPlan {
+    fun apply(
+        projectDir: File,
+        resultFile: File,
+        settings: DetectSettings,
+        swapped: Boolean = false,
+        rangeMs: LongRange? = null,
+    ): ImportPlan {
         val result = DetectResult.read(resultFile)
         val dir = projectDir.absolutePath
         val edl = EdlIO.readForProjectDir(dir)
         val score = ScoreIO.readForProjectDir(dir)
-        val plan = plan(result, edl.points, score.isAdvanced, settings)
+        val plan = plan(result, edl.points, score.isAdvanced, settings, swapped = swapped, rangeMs = rangeMs)
         if (plan.points.isEmpty()) return plan
         val points = (edl.points + plan.points).sortedWith(compareBy({ it.startMs }, { it.endMs }))
         EdlIO.writeForProjectDir(dir, edl.copy(points = points))
         val updated = score.copy(outcomes = score.outcomes + plan.outcomes, details = score.details + plan.details)
         ScoreIO.writeForProjectDir(dir, PointDetails.resolve(points, updated))
         val stamp = LocalDateTime.now().format(STAMP)
-        val record = ImportRecord(stamp, resultFile.name, settings.normalized(), plan.rows)
+        val record = ImportRecord(stamp, resultFile.name, settings.normalized(), plan.rows, swapped, rangeMs?.first, rangeMs?.last)
         val folder = File(projectDir, FOLDER).apply { mkdirs() }
         JsonFileIO.writeAtomically(DetectJson.mapper, File(folder, "import-$stamp.json").absolutePath, record)
         return plan
     }
+
+    /**
+     * The rally for the question "Who is at the near end?": the first rally inside [rangeMs] for which the detection
+     * knows the end of its player 1. Null when the result has no winners, so the import needs no question.
+     */
+    fun questionRally(result: DetectResult, rangeMs: LongRange?): DetectedRally? =
+        result.rallies.sortedBy { it.start }.firstOrNull { rally ->
+            rally.p1Near != null && rally.kind == "rally" && (
+                rangeMs == null ||
+                    ((rally.start * 1000).roundToLong() >= rangeMs.first && (rally.end * 1000).roundToLong() <= rangeMs.last)
+                )
+        }
+
+    /**
+     * True when player 1 of the detection is player 2 of the project. [nearPlayer] (1 or 2) is the player of the
+     * project at the near end in [rally].
+     */
+    fun isSwapped(rally: DetectedRally, nearPlayer: Int): Boolean = (rally.p1Near == true) != (nearPlayer == 1)
+
+    /** The newest overlay data file of the project, or null. */
+    fun latestOverlay(projectDir: File): File? =
+        File(projectDir, FOLDER).listFiles { f -> f.isFile && f.name.startsWith("overlay-") && f.name.endsWith(".json") }
+            ?.maxByOrNull { it.name }
 
     /** The newest result file of the project, or null when the project has none. */
     fun latestResult(projectDir: File): File? =

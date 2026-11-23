@@ -1,6 +1,7 @@
 package org.litvin.autodetect
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
@@ -50,6 +51,7 @@ data class DetectLab(
  * - [addWinners]: the import gives a point the detected winner.
  * - [minWinnerPercent]: a winner with a lower confidence is not used. The point then has no winner.
  * - [addFaults]: the import adds a fault clip for a first-serve fault candidate (only in advanced scoring mode).
+ * - [trimOnly]: the import skips the rallies outside the trim of the video.
  */
 data class DetectSettings(
     val ballPass: Boolean = true,
@@ -60,6 +62,7 @@ data class DetectSettings(
     val addWinners: Boolean = true,
     val minWinnerPercent: Int = 50,
     val addFaults: Boolean = true,
+    val trimOnly: Boolean = true,
 ) {
     /** The values inside their limits. */
     fun normalized(): DetectSettings = copy(
@@ -97,6 +100,7 @@ data class DetectedFault(val t: Double = 0.0, val kind: String? = null, val spee
  * - [kind]: "rally" from the rally model, or "short" for a short point from a serve event.
  * - [winner], [server]: "P1", "P2", or null. Player 1 is the player at the near end in the first rally.
  * - [confidence]: the probability of [winner], 0.5 to 1.
+ * - [p1Near]: true when player 1 of the detection is at the near end in this rally. Null when the run had no ball stage.
  */
 data class DetectedRally(
     val start: Double = 0.0,
@@ -110,6 +114,7 @@ data class DetectedRally(
     val serveSpeedKmh: Double? = null,
     val fault: DetectedFault? = null,
     val shots: Int? = null,
+    val p1Near: Boolean? = null,
 )
 
 /** The result file of a run. [stageSeconds] has the run time of each stage. */
@@ -130,10 +135,46 @@ data class DetectResult(
     }
 }
 
+/** The court lines of a part of the video. Each line is x1, y1, x2, y2 in px of the overlay frame. */
+data class OverlayCourt(val t0: Double = 0.0, val t1: Double = 0.0, val lines: List<List<Double>> = emptyList(), val net: List<Double> = emptyList())
+
+/** A fitted ball flight: its time range, its landing point in the image, and the speed at its start. */
+data class OverlayFlight(
+    val t0: Double = 0.0,
+    val t1: Double = 0.0,
+    val landT: Double? = null,
+    val land: List<Double>? = null,
+    val speedKmh: Double = 0.0,
+    val good: Boolean = false,
+)
+
+data class OverlayServe(val t: Double = 0.0, val near: Boolean = false, val kind: String? = null, val speedKmh: Double = 0.0)
+
+/**
+ * The data that the app draws on the preview (`overlay.json` of the lab script). The image points are px of a
+ * [width] x [height] frame, the source frame of the video with no rotation and no crop. [ball] has one row for each
+ * frame with a detection: time in seconds, x, y. The rows are in time order.
+ */
+data class DetectOverlayData(
+    val version: Int = 1,
+    val width: Int = 1920,
+    val height: Int = 1080,
+    val court: List<OverlayCourt> = emptyList(),
+    val ball: List<List<Double>> = emptyList(),
+    val flights: List<OverlayFlight> = emptyList(),
+    val serves: List<OverlayServe> = emptyList(),
+) {
+    companion object {
+        fun read(file: File): DetectOverlayData = DetectJson.mapper.readValue(file, DetectOverlayData::class.java)
+    }
+}
+
 internal object DetectJson {
     val mapper: ObjectMapper = ObjectMapper()
         .registerModule(KotlinModule.Builder().build())
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        // Python writes NaN for a value that it does not have. The readers ignore such a value.
+        .configure(JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS.mappedFeature(), true)
         .setSerializationInclusion(JsonInclude.Include.NON_NULL)
         .enable(SerializationFeature.INDENT_OUTPUT)
 }

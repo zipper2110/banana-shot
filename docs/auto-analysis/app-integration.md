@@ -37,20 +37,65 @@ normal tools. The app keeps the detection output and the corrections for the lab
     detected clip is already like a manual clip (with the time after the rally that the user keeps). The default
     padding is 0 s before and 0 s after. A negative value makes the clips shorter.
 
+## Decisions for the user flow (2026-11-23, with the user; iteration 2)
+
+13. **The flow.** The user makes the project, sets the players and the scoring mode, corrects the video (zoom,
+    crop, colors, trim), and then clicks "Detect points". The detection runs, asks which player is which, and adds
+    the points. The user reviews the points with the normal tools. After the review, the project is a normal
+    project.
+14. **One action.** "Detect points" runs the detection and adds the points. There is no separate "Add points"
+    step that the user must start. If the user closed the dialog during the run, the bar under the points list
+    shows the result and continues from the player question.
+15. **Which player is which.** After the run, the dialog shows a frame of the first rally and asks: "Who is at the
+    near end?" The two answers are the players of the project, with their names and colors. The detection follows
+    that player through the end changes (decision 9). A "Swap players" action for all automatic points corrects a
+    wrong answer. The first server is not the anchor: the server is unknown in many rallies (71 of 178, E23b).
+16. **Basic scoring mode.** A point gets only its winner. A first-serve fault is not a clip, and the clip of the
+    point starts at the second serve. A double fault is a point for the receiver.
+17. **Advanced scoring mode.** A point gets its winner with no ending kind ("winner only"), and a first-serve fault
+    becomes a "Serve fault" clip. The detection of the ending kind is a later step.
+18. **Review.** An automatic clip has a dot until the user changes it or accepts it. The list shows the count of
+    the clips to review, and has "Accept, next" (key T) and "Finish review". "Accept, next" accepts the selected
+    clip and plays the next clip to review. "Finish review" removes all dots. The mark `auto` stays in the project
+    file for the corrections report.
+    An edit of the clip, or a winner or an ending from the user, also ends the review of that clip.
+19. **Detection overlay.** A switch in the Points tab draws the detection data on the preview during playback: the
+    court lines, the ball with a trail, the landing points, the serve speed. No video is rendered. It is for the
+    full video, and it is a debug view for now.
+20. **Settings.** What to detect: "Rallies only" (fast) or "Rallies and winners". With winners: serve faults on or
+    off, short points on or off. Rally sensitivity: fewer, normal, more. Time before and after each clip. Winner
+    confidence limit. "Inside the trim only": the import skips the rallies outside the trim (the run still reads
+    the full video; a shorter run is a later step).
+
 ## How it works
 
 - **Switch on.** The file `%APPDATA%/BananaShot/autodetect.json` names the Python of the lab venv, `detect.py`, the
   work folder, and more environment variables (`HF_HOME`). Without the file, the app shows no detection.
-- **Run.** Points tab, under the points list: "Detect points". The dialog has the settings, Start, Stop, and
-  "Add points". The run continues when the dialog closes or the tab changes. A stopped run continues after its
-  last complete stage. The work files are in `<workRoot>/<project folder name>` (large: keyframes, ball data).
+- **Run.** Points tab, under the points list: "Detect points". The dialog has the settings (decision 20) and one
+  action, "Detect points". The run continues when the dialog closes or the tab changes. A stopped run continues
+  after its last complete stage. The work files are in `<workRoot>/<project folder name>` (large: keyframes, ball
+  data).
 - **Result.** `<project>/autodetect/result-<time>.json`: the detected rallies and the run time of each stage.
-- **Import.** "Add points" adds the rallies as normal clips with the mark `auto` (`PointV1.auto`), the winners
-  (`score.json` outcomes), and in advanced scoring mode a fault clip for each first-serve fault candidate. A rally
-  at the time of a clip of the project is skipped, so a second import adds nothing twice.
-  `<project>/autodetect/import-<time>.json` records which clip each rally became.
-- **Mark in the list.** A dot after the length of an automatic clip: blue, or yellow for a clip to check first
-  (a short point, no winner, or a winner confidence under 70 %). The tooltip gives the confidence.
+  `<project>/autodetect/overlay-<time>.json`: the data of the detection overlay.
+- **Player question.** When the run ends, the dialog asks "Who is at the near end?" with the picture of the first
+  rally from the work files. If the dialog is closed at that time, the bar shows "Result ready", and the dialog
+  asks when the user opens it. A result with no winners gets no question.
+- **Import.** After the answer, the app adds the rallies as normal clips with the mark `auto` (`PointV1.auto`), the
+  winners (`score.json` outcomes), and in advanced scoring mode a fault clip for each first-serve fault candidate.
+  A rally at the time of a clip of the project is skipped, so a second import adds nothing twice. With "Only inside
+  the trim of the video", a rally that is not fully inside the trim is skipped.
+  `<project>/autodetect/import-<time>.json` records which clip each rally became, and if the players were swapped.
+  "Add points" in the dialog does the import of the newest result again, for example with other settings.
+  "Swap players" gives each automatic point with no ending kind the other winner.
+- **Mark in the list.** A dot after the length of an automatic clip that is not reviewed: blue, or yellow for a
+  clip to check first (a short point, no winner, or a winner confidence under 70 %). The tooltip gives the
+  confidence.
+- **Review.** The bar shows "To review: N", "Accept, next" (key T), and "Finish review" while a clip is not
+  reviewed (`auto.checked` is false).
+- **Detection overlay.** The switch "Detection overlay" in the bar shows when the project has overlay data. It
+  draws the court lines (blue), the net line (yellow), the ball with a trail (green), the landing points (red
+  rings), and the serve speed over the preview. The app draws it with libass, as it draws the scoreboard, at about
+  30 updates each second. The marks follow a crop of the video. They do not follow a rotation.
 - **Reason.** Edit point dialog: "Score differs from the video" (none, players' call, replayed, score lost), in
   `score.json` `reasons`.
 - **Corrections.** `python tools/auto-analysis/corrections.py <project folder>` compares the import record with the
@@ -81,3 +126,4 @@ normal tools. The app keeps the detection output and the corrections for the lab
 | 5 | App: the "Detect points" action in the Points tab with the settings and the progress | done |
 | 6 | App: the mark "automatic" on a point, and the optional reason | done |
 | 7 | Tests for the domain parts; one run on a real match | done: tests, and one real run through the app runner (E23) |
+| 8 | App: the user flow of iteration 2 (decisions 13 to 20): one action, the player question, the review, the detection overlay, the new settings | done |

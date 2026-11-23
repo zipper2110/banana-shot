@@ -182,6 +182,23 @@ class PointsDispatcher {
         return true
     }
 
+    /**
+     * Marks the automatic clips with [ids] as checked by the user (the review of a detection). Returns the count of
+     * the changed clips.
+     */
+    fun markChecked(ids: Collection<String>): Int {
+        var changed = 0
+        points.forEachIndexed { index, point ->
+            val mark = point.auto ?: return@forEachIndexed
+            if (!mark.checked && point.id in ids) {
+                points[index] = point.copy(auto = mark.copy(checked = true))
+                changed++
+            }
+        }
+        if (changed > 0) onPointsChanged?.invoke()
+        return changed
+    }
+
     /** Toggle favorite status for a completed point by id. Returns true if updated. */
     fun toggleFavorite(id: String): Boolean {
         val idx = points.indexOfFirst { it.id == id }

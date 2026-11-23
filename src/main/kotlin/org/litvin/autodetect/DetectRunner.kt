@@ -110,6 +110,13 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
         return true
     }
 
+    /**
+     * The picture of the video at [second] from the work files with the work name [workName] (one picture for each
+     * second), or null when it is not there.
+     */
+    fun frameFile(workName: String, second: Int): File? =
+        File(File(lab.workRoot, workName), "kf/%05d.jpg".format(java.util.Locale.ROOT, second + 1)).takeIf { it.isFile }
+
     /** Stops the active run. The work files stay, so the next run continues after the last complete stage. */
     fun stop() {
         stopped = true
@@ -128,6 +135,7 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
     private fun run(builder: ProcessBuilder, projectDir: File, work: File, logFile: File) {
         var error: String? = null
         var result: File? = null
+        var overlay: File? = null
         try {
             val p = builder.start()
             process = p
@@ -142,6 +150,7 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
                         "@stage" -> if (parts.getOrNull(2) == "start") advance(DetectStage.of(parts[1]), null)
                         "@progress" -> advance(DetectStage.of(parts[1]), parts.getOrNull(2)?.toDoubleOrNull())
                         "@result" -> result = File(line.removePrefix("@result").trim())
+                        "@overlay" -> overlay = File(line.removePrefix("@overlay").trim())
                         "@error" -> error = line.removePrefix("@error").trim()
                     }
                 }
@@ -161,7 +170,13 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
         }
         val copy = runCatching {
             val folder = File(projectDir, DetectImport.FOLDER).apply { mkdirs() }
-            file.copyTo(File(folder, "result-${LocalDateTime.now().format(DetectImport.STAMP)}.json"), overwrite = true)
+            val stamp = LocalDateTime.now().format(DetectImport.STAMP)
+            // The overlay data is a debug view: a failed copy must not fail the run.
+            overlay?.takeIf { it.isFile }?.let { source ->
+                runCatching { source.copyTo(File(folder, "overlay-$stamp.json"), overwrite = true) }
+                    .onFailure { logger.warn(it) { "Overlay data not copied" } }
+            }
+            file.copyTo(File(folder, "result-$stamp.json"), overwrite = true)
         }
         copy.fold(
             onSuccess = { publish(DetectState.Finished(projectDir, it)) },

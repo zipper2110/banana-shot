@@ -17,7 +17,7 @@ Settings (JSON file, all optional):
   shortPoints  true: add short points (ace, double fault) from serve events
 Output: <work>/result.json. Lines on stdout that start with "@" are for the app:
   @stage <name> start | @stage <name> done <seconds> | @stage <name> skip
-  @progress <name> <0..1> | @result <file> | @error <text>
+  @progress <name> <0..1> | @result <file> | @overlay <file> | @warning <text> | @error <text>
 Usage: python detect.py --video <file> --work <folder> [--settings <json file>] [--force]
 """
 import argparse, json, os, sys, time, traceback
@@ -62,6 +62,50 @@ def court_problem(track_file):
     if good < 0.7 * len(ok):
         return "The court model is not plausible (the camera position is different from the lab matches)."
     return None
+
+
+def write_overlay(work, n, full, serves):
+    """Writes <work>/overlay.json: the data that the app draws on the preview (decision 19 of
+    app-integration.md). Image points are px of a 1920 x 1080 frame. Times are seconds of the video.
+      court    for each 60 s window with a trusted model: the court lines and the net line
+      ball     the best detection of each frame: [t, x, y]
+      flights  the fitted flights: time range, landing point in the image, speed at the start
+      serves   the serve events: time, end of the server, kind, speed"""
+    import numpy as np
+    import court_auto, frame_times
+    W = lambda *p: os.path.join(work, *p)
+    track = [w for w in json.load(open(W("court_track.json"))) if w["ok"]]
+    court = []
+    for w in track:
+        H = np.array(w["H"])
+        lines = [court_auto.to_img(H, [a, b]).round(1).ravel().tolist() for a, b in court_auto.SEGS]
+        net = court_auto.to_img(H, [(-court_auto.DW, 0), (court_auto.DW, 0)]).round(1).ravel().tolist()
+        court.append({"t0": w["t0"], "t1": w["t1"], "lines": lines, "net": net})
+
+    def H_at(t):
+        return np.array(min(track, key=lambda w: abs((w["t0"] + w["t1"]) / 2 - t))["H"])
+    d = np.load(W(f"wasb_0_{n}_s0.35_k2.npy"))
+    d = d[np.argsort(d[:, 0], kind="stable")]
+    top = np.ones(len(d), bool); top[1:] = d[1:, 0] != d[:-1, 0]          # the first blob of a frame has the best score
+    d = d[top]
+    tt = frame_times.times(MID, 0)
+    t = tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)]
+    ball = [[round(float(a), 3), round(float(x), 1), round(float(y), 1)] for a, x, y in zip(t, d[:, 1], d[:, 2])]
+    flights = []
+    for f in full["flights"]:
+        # A flight that does not come down has no landing: its landing time is NaN, and JSON has no NaN.
+        land_t = f.get("landT")
+        if land_t is not None and not np.isfinite(land_t):
+            land_t = None
+        land = court_auto.to_img(H_at(f["t0"]), [f["land"]])[0] if f.get("land") and land_t is not None else None
+        flights.append({"t0": round(f["t0"], 3), "t1": round(f["t1"], 3), "landT": land_t,
+                        "land": None if land is None else [round(float(land[0]), 1), round(float(land[1]), 1)],
+                        "speedKmh": round(3.6 * float(np.linalg.norm(f["v0"])), 1), "good": bool(f["n"] >= 8 and f["rms"] < 5)})
+    sv = [{"t": round(float(e[0]), 3), "near": bool(e[1]), "kind": e[2], "speedKmh": round(3.6 * float(np.linalg.norm(e[3]["v0"])), 1)}
+          for e in serves]
+    json.dump({"version": 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights, "serves": sv},
+              open(W("overlay.json"), "w"), default=float)
+    say("@overlay", W("overlay.json"))
 
 
 def main():
@@ -236,6 +280,12 @@ def main():
         for x, y in seg:
             out.append({"start": x, "end": y, "kind": "rally", "prob": float(prob[int(x):int(y) + 1].mean())})
 
+    if ball_ok:
+        try:
+            write_overlay(work, n, full, serves)
+        except Exception as e:        # the overlay is a debug view: the result is more important
+            traceback.print_exc()
+            say("@warning", f"No overlay data: {type(e).__name__}: {e}")
     save_times()
     res = {"version": 1, "video": os.path.abspath(a.video), "videoSeconds": n, "settings": cfg, "rallyModel": model_name,
            "stageSeconds": STAGE_S, "thisRunSeconds": round(time.time() - t_all, 1),

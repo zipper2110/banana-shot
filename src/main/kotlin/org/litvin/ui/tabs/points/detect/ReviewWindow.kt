@@ -505,6 +505,25 @@ internal class ReviewWindow(
         border = BorderFactory.createEmptyBorder()
     }
 
+    /** The evidence text can have a line for each shot. The box has a height limit, so the list of points stays in view. */
+    private val evidenceBox = object : JPanel(BorderLayout()) {
+        override fun getPreferredSize(): Dimension {
+            val size = super.getPreferredSize()
+            val limit = EVIDENCE_ROWS * evidence.getFontMetrics(evidence.font).height
+            return Dimension(size.width, minOf(size.height, limit))
+        }
+    }.apply {
+        name = "review-evidence-box"
+        isOpaque = false
+        add(JScrollPane(evidence).apply {
+            border = BorderFactory.createEmptyBorder()
+            isOpaque = false
+            viewport.isOpaque = false
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            verticalScrollBar.unitIncrement = 16
+        }, BorderLayout.CENTER)
+    }
+
     /** The note of the user about the detection of the selected point. [noteForId] is the point of the text. */
     private val noteArea = javax.swing.JTextArea(NOTE_ROWS, 20).apply {
         name = "review-note"
@@ -686,7 +705,7 @@ internal class ReviewWindow(
                 add(swapButton, BorderLayout.EAST)
             })
             add(winner)
-            add(evidence)
+            add(evidenceBox)
             add(JLabel("Detection note").apply {
                 font = UiKit.font(11f)
                 foreground = Palette.FG_3
@@ -848,7 +867,8 @@ internal class ReviewWindow(
             point?.auto != null -> "No detection data for this point."
             else -> ""
         }
-        evidence.isVisible = evidence.text.isNotEmpty()
+        evidence.caretPosition = 0
+        evidenceBox.isVisible = evidence.text.isNotEmpty()
         if (noteForId != point?.id) {
             saveNote()
             noteForId = point?.id
@@ -1307,6 +1327,9 @@ internal class ReviewWindow(
 
         /** The height of the detection note field, in text rows. */
         const val NOTE_ROWS = 4
+
+        /** The evidence text shows this many rows. The other rows need a scroll. */
+        const val EVIDENCE_ROWS = 8
         const val ROW_HEIGHT = 32
         const val CLOCK_WIDTH = 110
         const val STEP_MS = 1_000L

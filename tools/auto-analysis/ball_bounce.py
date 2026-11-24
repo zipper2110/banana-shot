@@ -42,6 +42,7 @@ WIDE_GAP_S, WIDE_N = 0.25, 8      # E32: a vertex in a gap longer than WIDE_GAP_
 # within +-SIDE_ACC m/s^2 for each of the two paths. Each path needs SIDE_N samples.
 SIDE_ACC, SIDE_TRY, SIDE_N = 8.0, 2.0, 6
 RMS_SEEN, SEEN_F = 3.0, 3.0       # E32: the base limit for a vertex with samples not more than SEEN_F sample steps apart around it
+V_MAX = 60.0                    # m/s (216 km/h). E35: a bounce fit with a higher speed before or after the bounce is not a bounce: the ball is not on the ground there
 RMS_BASE, RMS_BALL = 2.0, 0.6   # the bounce fit is accepted if rms < RMS_BASE px + RMS_BALL * radius of the ball image (px)
 
 
@@ -278,7 +279,7 @@ def events(path, kk, fls, P, Hm, debug=None):
                         fit, e["side"] = fit2, True
                 v_in, v_out, kr, er, phi, rms = fit
                 e.update(v_in=v_in, v_out=v_out, k=kr, e=er, phi=phi, rms=rms, lim=lim)
-                if rms < lim:
+                if rms < lim and max(float(np.linalg.norm(v_in)), float(np.linalg.norm(v_out))) < V_MAX:
                     e["kind"] = "bounce"
                     e["court"] = [float(g[0]), float(g[1])]
                     e["conf"] = float(max(0.03, e["sig_px"] * ground_jac(Hm, e["px"])))

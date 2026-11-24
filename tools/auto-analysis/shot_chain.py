@@ -351,7 +351,10 @@ def export(r, t_end, t_cut, used, p=None):
         s = 1.0 if sh["near"] else -1.0
         d = {"t": round(sh["t"], 3), "near": sh["near"], "how": sh["how"], "end": kind}
         if sh["fl"]:
-            d["kmh"] = round(kmh(sh["fl"][0]))
+            # The speed of the shot: the flight with the most samples before the first bounce. (Before: the first flight.
+            # A shot can start with a short piece that has a bad fit, for example right after the contact of a serve.)
+            pre = [f for f in sh["fl"] if b is None or f["t0"] < b[2]] or sh["fl"]
+            d["kmh"] = round(kmh(max(pre, key=lambda f: f["n"])))
             d["tLast"] = round(sh["fl"][-1]["t1"], 3)
         if kind == "net":
             d["tEnd"], d["netConf"] = round(sh["net"]["t"], 3), sh["net"]["conf"]

@@ -139,6 +139,29 @@ class ShotViewsTest {
     }
 
     @Test
+    fun `the court diagram shows the end of each shot up to the video time`() {
+        val shots = ShotViews.of(rally, near = 1, players)
+        val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080)) { null }
+        overlay.layers = setOf(OverlayLayer.DIAGRAM)
+        overlay.shotStarts = { shots }
+        val area = Rectangle2D.Double(0.0, 0.0, 1280.0, 720.0)
+        fun dots(t: Double) = overlay.shapes(t, area).filterIsInstance<OverlayShape.Circle>().mapNotNull { it.fill }
+
+        // The court is there before the first bounce. The bounces come one after the other: in, out, net.
+        assertTrue(dots(1067.0).isEmpty())
+        assertEquals(10, overlay.shapes(1067.0, area).filterIsInstance<OverlayShape.Line>().size)
+        assertEquals(listOf(Palette.GREEN), dots(1069.0))
+        assertEquals(listOf(Palette.GREEN, Palette.RED), dots(1071.0))
+        assertEquals(listOf(Palette.GREEN, Palette.RED, Palette.YELLOW), dots(1076.0))
+        // The first shot is from the far player and ends at x = -2.22 m, y = -4.23 m: its dot is at the lower left.
+        val box = overlay.shapes(1069.0, area).filterIsInstance<OverlayShape.Rect>().single()
+        val dot = overlay.shapes(1069.0, area).filterIsInstance<OverlayShape.Circle>().first { it.fill == Palette.GREEN }
+        assertTrue(dot.centerY > box.y + box.height / 2)
+        assertTrue(dot.centerX < box.x + box.width / 2)
+        snapshot(overlay.shapes(1076.0, area), area, "court-diagram.png")
+    }
+
+    @Test
     fun `the bar draws the shot tracks`() {
         val folder = System.getProperty("detect.snapshot") ?: return
         val bar = ReviewBoundsBar({}, { _, _ -> }, {})
@@ -156,7 +179,7 @@ class ShotViewsTest {
     }
 
     /** Writes a picture of the panel when the property `detect.snapshot` names a folder. For a check by eye. */
-    private fun snapshot(shapes: List<OverlayShape>, area: Rectangle2D.Double) {
+    private fun snapshot(shapes: List<OverlayShape>, area: Rectangle2D.Double, file: String = "shot-panel.png") {
         val folder = System.getProperty("detect.snapshot") ?: return
         val image = BufferedImage(area.width.toInt(), area.height.toInt(), BufferedImage.TYPE_INT_RGB)
         val g = image.createGraphics()
@@ -175,10 +198,20 @@ class ShotViewsTest {
                     g.font = Font(shape.font, if (shape.bold) Font.BOLD else Font.PLAIN, shape.size.toInt())
                     g.drawString(shape.text, shape.x.toInt(), (shape.y + g.fontMetrics.ascent).toInt())
                 }
+                is OverlayShape.Line -> {
+                    g.color = shape.color
+                    g.stroke = java.awt.BasicStroke(shape.width.toFloat())
+                    g.draw(java.awt.geom.Line2D.Double(shape.x1, shape.y1, shape.x2, shape.y2))
+                }
+                is OverlayShape.Circle -> {
+                    val circle = java.awt.geom.Ellipse2D.Double(shape.centerX - shape.radius, shape.centerY - shape.radius, 2 * shape.radius, 2 * shape.radius)
+                    shape.fill?.let { g.color = it; g.fill(circle) }
+                    shape.stroke?.let { g.color = it; g.stroke = java.awt.BasicStroke(shape.strokeWidth.toFloat()); g.draw(circle) }
+                }
                 else -> Unit
             }
         }
         g.dispose()
-        ImageIO.write(image, "png", File(folder, "shot-panel.png"))
+        ImageIO.write(image, "png", File(folder, file))
     }
 }

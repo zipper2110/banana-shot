@@ -138,6 +138,8 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
             shapes += OverlayShape.Circle(cx, cy, 15.0 * unit, stroke = shot.color, strokeWidth = 3.0 * unit)
             label(cx + 22.0 * unit, cy - 10.0 * unit, "Shot ${shot.number}", 15.0 * unit, shot.color)
         }
+        // The court diagram: a top view of the court with the end of each shot of the selected point up to this time.
+        if (OverlayLayer.DIAGRAM in layers) diagram(t, area, unit, shapes)
         // The flight of this time: the path of its fit, and the landing point of the fit before the bounce.
         var line = 0
         fun note(text: String, color: java.awt.Color = Palette.FG) {
@@ -201,6 +203,46 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
         return shapes
     }
 
+    /**
+     * The court diagram, below the shot panel. The near end is at the bottom, as on the video. A dot is the end of a
+     * shot: green for in, red for out or a bounce on the side of the hitter, yellow for net (on the net line, on the
+     * side of the hitter). A ring with no fill is a predicted end. The newest end has a white ring and its shot number.
+     */
+    private fun diagram(t: Double, area: Rectangle2D.Double, unit: Double, shapes: MutableList<OverlayShape>) {
+        val scale = DIAGRAM_WIDTH / (2 * DIAGRAM_HALF_X) * unit
+        val width = DIAGRAM_WIDTH * unit
+        val height = 2 * DIAGRAM_HALF_Y * scale
+        val left = area.x + area.width - 16.0 * unit - width
+        val top = area.y + (14.0 + PANEL_HEIGHT + 10.0) * unit
+
+        fun dx(m: Double) = left + (m.coerceIn(-DIAGRAM_HALF_X + 0.4, DIAGRAM_HALF_X - 0.4) + DIAGRAM_HALF_X) * scale
+        fun dy(m: Double) = top + (DIAGRAM_HALF_Y - m.coerceIn(-DIAGRAM_HALF_Y + 0.4, DIAGRAM_HALF_Y - 0.4)) * scale
+        shapes += OverlayShape.Rect(left, top, width, height, fill = Palette.withAlpha(Palette.SCRIM, LABEL_BOX_ALPHA), radius = 8.0 * unit)
+        COURT_LINES.forEach { (x1, y1, x2, y2) ->
+            shapes += OverlayShape.Line(dx(x1), dy(y1), dx(x2), dy(y2), Palette.FG_2, 1.0 * unit)
+        }
+        shapes += OverlayShape.Line(dx(-COURT_DOUBLES - 0.9), dy(0.0), dx(COURT_DOUBLES + 0.9), dy(0.0), Palette.FG, 2.0 * unit)
+        val ended = shotStarts().filter { shot -> !shot.afterPoint && shot.endColor != null && shot.endMs != null && shot.endMs / 1000.0 <= t }
+        ended.forEachIndexed { index, shot ->
+            val color = shot.endColor ?: return@forEachIndexed
+            // A net touch has no place on the court: the dot is on the net line, a little on the side of the hitter.
+            val place = shot.court ?: if (shot.end == "net") listOf(0.0, if (shot.near == false) 0.5 else -0.5) else return@forEachIndexed
+            val cx = dx(place[0])
+            val cy = dy(place[1])
+            val newest = index == ended.lastIndex
+            val radius = (if (newest) 6.0 else 4.5) * unit
+            shapes += if (shot.predicted) {
+                OverlayShape.Circle(cx, cy, radius, stroke = color, strokeWidth = 1.5 * unit)
+            } else {
+                OverlayShape.Circle(cx, cy, radius, fill = color)
+            }
+            if (newest) {
+                shapes += OverlayShape.Circle(cx, cy, radius + 3.0 * unit, stroke = Palette.FG, strokeWidth = 1.5 * unit)
+                shapes += OverlayShape.Text(cx + 10.0 * unit, cy - 8.0 * unit, shot.number.toString(), 13.0 * unit, Palette.FG, FONT, bold = true)
+            }
+        }
+    }
+
     private fun meters(value: Double) = String.format(java.util.Locale.ROOT, "%.1f", value)
 
     private fun courtAt(t: Double): OverlayCourt? =
@@ -243,6 +285,24 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
         const val PANEL_HEIGHT = 160.0
         const val PANEL_NAME_CHARS = 16
 
+        /** The court diagram: its width, and the half sizes of its view in m (the court is 10.97 x 23.77 m). */
+        const val DIAGRAM_WIDTH = 150.0
+        const val DIAGRAM_HALF_X = 8.0
+        const val DIAGRAM_HALF_Y = 15.5
+        const val COURT_DOUBLES = 5.485
+        private const val COURT_SINGLES = 4.115
+        private const val COURT_BASE = 11.885
+        private const val COURT_SERVICE = 6.40
+
+        /** The lines of a tennis court in m: x1, y1, x2, y2. */
+        val COURT_LINES = listOf(
+            listOf(-COURT_DOUBLES, -COURT_BASE, COURT_DOUBLES, -COURT_BASE), listOf(-COURT_DOUBLES, COURT_BASE, COURT_DOUBLES, COURT_BASE),
+            listOf(-COURT_DOUBLES, -COURT_BASE, -COURT_DOUBLES, COURT_BASE), listOf(COURT_DOUBLES, -COURT_BASE, COURT_DOUBLES, COURT_BASE),
+            listOf(-COURT_SINGLES, -COURT_BASE, -COURT_SINGLES, COURT_BASE), listOf(COURT_SINGLES, -COURT_BASE, COURT_SINGLES, COURT_BASE),
+            listOf(-COURT_SINGLES, -COURT_SERVICE, COURT_SINGLES, -COURT_SERVICE), listOf(-COURT_SINGLES, COURT_SERVICE, COURT_SINGLES, COURT_SERVICE),
+            listOf(0.0, -COURT_SERVICE, 0.0, COURT_SERVICE),
+        )
+
         /** The mark of an event stays this long. */
         const val EVENT_SHOWN_S = 1.0
 
@@ -273,6 +333,7 @@ internal enum class OverlayLayer(val text: String) {
     POSES("Players"),
     SHOTS("Shots"),
     OUTCOME("Outcome"),
+    DIAGRAM("Court diagram"),
 }
 
 /** The outcome texts of a rally for the overlay. [shotT] is the start time of its last shot in seconds, or null. */

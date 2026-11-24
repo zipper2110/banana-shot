@@ -31,6 +31,10 @@ internal data class ShotView(
     val predicted: Boolean = false,
     /** The shot starts after the end of the rally: the players handle the ball. It is not a shot of the point. */
     val afterPoint: Boolean = false,
+    /** The place of the end on the court in m: x across, y along (0 at the net, more than 0 is the far end). Null: not known. */
+    val court: List<Double>? = null,
+    /** True: the hitter is at the near end. Null: not known. */
+    val near: Boolean? = null,
 ) {
     /** The color of the end of the shot: green for in, red for out, yellow for net. Null: the end was not seen. */
     val endColor: Color?
@@ -114,6 +118,8 @@ internal object ShotViews {
                     .let { if (after) "After the point" else it },
                 predicted = predicted != null,
                 afterPoint = after,
+                court = court?.takeIf { it.size >= 2 },
+                near = shot.near,
             )
         }
     }

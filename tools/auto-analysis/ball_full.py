@@ -62,7 +62,7 @@ def to_true(t, w0, k0, tt):
 
 def run(mid, name="fullflights_s0.35.json"):
     start, dur = WINDOWS[mid]
-    d = np.load(os.path.join(lab.mdir(mid), f"wasb_{start}_{dur}_s0.35_k2.npy"))
+    d = np.load(os.path.join(lab.mdir(mid), f"wasb_{start}_{dur}_s0.35{os.environ.get('BLOB_TAG', '')}_k2.npy"))
     d = d[np.argsort(d[:, 0], kind="stable")]
     tt = clock(mid, start)                               # true time of each frame (the video is not exactly 60 fps)
     ft = tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)]

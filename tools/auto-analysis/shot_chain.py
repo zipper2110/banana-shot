@@ -41,6 +41,8 @@ FIRST_WEAK = os.environ.get("CHAIN_FIRST_WEAK", "1") == "1"
 FIRST_DUR, FIRST_GAP = 0.4, 0.6     # s: a weak first shot shorter than FIRST_DUR with no bounce and no net event, and FIRST_GAP before the next shot, is not a shot
 PRED_SIGMA, PRED_AFTER = 1.0, 1.0   # m, s: the fit landing is a "predicted" end of a shot if its 1-sigma error and its time after the last sample are below these
 PRED_ERR = 1.2        # m: the measured error of a fit landing (E33: median 1.1 to 1.6 m against the seen bounces). A predicted landing nearer to a line is "line", not in or out
+LATE_BOUNCE = os.environ.get("CHAIN_LATE_BOUNCE", "1") == "1"
+LATE_S, LATE_V = 1.5, (0.5, 2.0)    # s after the last sample of the shot; lowest and highest mean ground speed to the bounce, as a factor of the fit speed
 NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its direction (net_events.HINT_DIR)
 
 
@@ -134,6 +136,8 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
         if (a["weak"] or deep) and not a["bounces"] and a["fl"][-1]["t1"] - a["fl"][0]["t0"] < FIRST_DUR and b["fl"][0]["t0"] - a["fl"][-1]["t1"] > FIRST_GAP:
             shots.pop(0)                                      # E32: the hitter of the next shot came from this flight: now it is the first shot
             b["how"] = "first"
+    if LATE_BOUNCE and events:
+        late_bounces(shots, events)
     # net events: each one belongs to the shot that is in the air at its time
     seen, alone = list(shots), []
     for e in nets:
@@ -154,6 +158,31 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
             alone.append({"t": float(e["t"]), "near": bool(e["toFar"]), "how": "net", "fl": [], "bounces": [], "net": e,
                           "reach": None, "weak": True, "serve": None})      # the flight of this shot was not tracked
     return sorted(seen + alone, key=lambda sh: sh["t"])
+
+
+def late_bounces(shots, events):
+    """E36: a bounce event that no shot has, after the last sample of a shot and before the next shot. The track of
+    the ball stopped in the air, and the flight after the bounce is too short to use, so no flight of the shot refers
+    to the event. The shot gets the bounce if it is on the other side of the net, not later than LATE_S after the last
+    sample, and at a distance that agrees with the speed of the last flight."""
+    owned = {id(e) for sh in shots for e in sh["bounces"]}
+    for i, sh in enumerate(shots):
+        if sh["bounces"] or not sh["fl"] or sh.get("returned"):
+            continue
+        f = sh["fl"][-1]
+        if not pos_ok(f):
+            continue
+        s = 1.0 if sh["near"] else -1.0
+        t_next = shots[i + 1]["t"] if i + 1 < len(shots) else f["t1"] + LATE_S
+        hs = float(np.hypot(f["v0"][0], f["v0"][1]))
+        for e in events:
+            if e["kind"] != "bounce" or e["court"] is None or id(e) in owned or not f["t1"] < e["t"] <= min(t_next, f["t1"] + LATE_S):
+                continue
+            v = float(np.hypot(e["court"][0] - f["p0"][0], e["court"][1] - f["p0"][1])) / (e["t"] - f["t0"])
+            if e["court"][1] * s > 0 and LATE_V[0] * hs <= v <= LATE_V[1] * hs:
+                sh["bounces"].append(e)
+                owned.add(id(e))
+                break
 
 
 def came_back(sh, evs):

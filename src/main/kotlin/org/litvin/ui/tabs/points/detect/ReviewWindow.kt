@@ -16,6 +16,7 @@ import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.MessageDialog
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SegmentedChoice
+import org.litvin.ui.commons.SpeedControl
 import org.litvin.ui.commons.Stack
 import org.litvin.ui.commons.SwitchBox
 import org.litvin.ui.commons.UiButton
@@ -401,6 +402,19 @@ internal class ReviewWindow(
         addActionListener { toggleFrameStep() }
     }
 
+    /**
+     * The speed list of the Points tab. It is compact: Up and Down select the points in this window, and do not
+     * change the speed. The speed stays for the session.
+     */
+    private val speed = SpeedControl("review-speed") { index -> setSpeedIndex(index); focusVideo() }.apply {
+        compact = true
+        setSpeedIndex(SessionSettings.clampIndex(SessionSettings.playbackSpeedIndex))
+    }
+    private val speedCaption = JLabel(SpeedControl.CAPTION).apply {
+        font = UiKit.font(12f)
+        foreground = Palette.FG_2
+    }
+
     /** Shows what the colors of the timeline mean. */
     private val colorsHelp = UiButton("Colors", Material2AL.HELP_OUTLINE, UiButton.Kind.SECONDARY).apply {
         name = "review-colors-help"
@@ -585,6 +599,7 @@ internal class ReviewWindow(
         player.load(videoFile)
         player.pause()
         player.applyPreviewAdjustments(adjustments)
+        player.setRate(SessionSettings.toRate(SessionSettings.clampIndex(SessionSettings.playbackSpeedIndex)))
         reload()
         val first = points.firstOrNull { it.id == selectId }
             ?: points.firstOrNull { it.auto?.checked == false }
@@ -655,6 +670,8 @@ internal class ReviewWindow(
                 // The frame step toggle is at the right of the hint line: the transport row has no space for it.
                 add(JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
                     isOpaque = false
+                    add(speedCaption)
+                    add(speed)
                     add(colorsHelp)
                     add(frameStep)
                 }, BorderLayout.EAST)
@@ -965,6 +982,14 @@ internal class ReviewWindow(
             player.play()
         }
         refreshPlayButton()
+    }
+
+    /** Gives the speed preset [index] to the player and keeps it for the session. */
+    private fun setSpeedIndex(index: Int) {
+        val clamped = SessionSettings.clampIndex(index)
+        SessionSettings.playbackSpeedIndex = clamped
+        player.setRate(SessionSettings.toRate(clamped))
+        speed.setSpeedIndex(clamped)
     }
 
     private fun toggleFrameStep() {

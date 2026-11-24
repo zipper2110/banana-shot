@@ -161,7 +161,9 @@ These decisions replace the review row and the overlay switch of the Points tab 
   picture each second. A skeleton stays on the video until the next picture has poses.
   The picture of second k is the last video frame of that second (ffmpeg `fps=1:round=down`), so `overlay.json`
   gives a pose the time of that frame, about k + 1 s. Each part of the overlay
-  (court, ball, landing points, serve speed, players, shots, outcome) has its own switch. "Shots" writes the data
+  (court, ball, landing points, serve speed, players, shots, outcome) has its own switch. "Ball" draws only the
+  ball detections that a flight uses (`ball` in `overlay.json`: the detection nearest to the fitted path, not farther
+  than 25 px). Before, it drew the best detection of each frame, and about half of those were false. "Shots" writes the data
   of the flight of the moment: its time range, direction, speed, start point, net height, and landing point in m
   on the court, and it draws the landing point of the fit before the bounce. "Outcome" writes the decision of the
   winner of the selected point near its last shot, and marks the landing point of that shot. "Shots" also draws

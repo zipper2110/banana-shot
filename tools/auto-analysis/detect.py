@@ -142,11 +142,16 @@ def add_net_hits(out, net):
                            "serve": bool(h["sinceStart"] is not None and h["sinceStart"] < 3.0)}
 
 
+BALL_NEAR_PX = 25.0        # a detection is the ball of a flight if it is this near to the fitted path
+
+
 def write_overlay(work, n, full, serves, net_ev=()):
     """Writes <work>/overlay.json: the data that the app draws on the preview (decision 19 of
     app-integration.md). Image points are px of a 1920 x 1080 frame. Times are seconds of the video.
       court    for each 60 s window with a trusted model: the court lines and the net line
-      ball     the best detection of each frame: [t, x, y]
+      ball     the ball of the flights: [t, x, y]. For each frame in the time range of a flight, the detection
+               nearest to the fitted path, if it is not farther than BALL_NEAR_PX. The detections that no flight
+               uses are not here: most of them are false (lamps, shoes, a ball on the next court).
       flights  the fitted flights: time range, landing point in the image, speed at the start, direction, start
                point and landing point on the court in m (x across, y along, 0 at the net, + = far end), net height.
                E17d: landT, land, landM are the bounce event of the flight if it has one. If not, they are the
@@ -182,11 +187,8 @@ def write_overlay(work, n, full, serves, net_ev=()):
         return np.array((w.get("ground", w) if full.get("groundFix") else w)["H"])
     d = np.load(W(f"wasb_0_{n}_s0.35_k2.npy"))
     d = d[np.argsort(d[:, 0], kind="stable")]
-    top = np.ones(len(d), bool); top[1:] = d[1:, 0] != d[:-1, 0]          # the first blob of a frame has the best score
-    d = d[top]
     tt = ball_full.clock(MID, 0)                                         # the true time of each frame (E17d)
-    t = tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)]
-    ball = [[round(float(a), 3), round(float(x), 1), round(float(y), 1)] for a, x, y in zip(t, d[:, 1], d[:, 2])]
+    bt = tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)]
     events = full.get("events", [])
 
     def curve(f, land_t):
@@ -224,6 +226,20 @@ def write_overlay(work, n, full, serves, net_ev=()):
             flights[-1].update(ev0=f.get("ev0"), ev1=f.get("ev1"), bounceEv=f.get("bounceEv"),
                                landSigma=round(float(sg), 2) if sg is not None and np.isfinite(sg) else None,
                                curve=curve(f, land_t), curveObsEnd=round(f["t1"], 3))
+    # The ball: for each frame, the detection nearest to the path of a flight of that time.
+    best = {}
+    for f in flights:
+        c = np.array(f.get("curve") or np.zeros((0, 3)))
+        if len(c) < 2:
+            continue
+        i0, i1 = np.searchsorted(bt, f["t0"] - 0.02), np.searchsorted(bt, f["t1"] + 0.02)
+        px = np.interp(bt[i0:i1], c[:, 0], c[:, 1]); py = np.interp(bt[i0:i1], c[:, 0], c[:, 2])
+        dist = np.hypot(d[i0:i1, 1] - px, d[i0:i1, 2] - py)
+        for k in np.nonzero(dist <= BALL_NEAR_PX)[0]:
+            fr = int(d[i0 + k, 0])
+            if fr not in best or dist[k] < best[fr][0]:
+                best[fr] = (float(dist[k]), i0 + k)
+    ball = [[round(float(bt[i]), 3), round(float(d[i, 1]), 1), round(float(d[i, 2]), 1)] for _, i in (best[fr] for fr in sorted(best))]
     ev = []
     for e in events:
         o = {"t": round(float(e["t"]), 3), "kind": e["kind"], "px": [round(float(v), 1) for v in e["px"]],

@@ -230,15 +230,15 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
             val cx = dx(place[0])
             val cy = dy(place[1])
             val newest = index == ended.lastIndex
-            val radius = (if (newest) 6.0 else 4.5) * unit
+            val radius = (if (newest) 4.5 else 3.5) * unit
             shapes += if (shot.predicted) {
                 OverlayShape.Circle(cx, cy, radius, stroke = color, strokeWidth = 1.5 * unit)
             } else {
                 OverlayShape.Circle(cx, cy, radius, fill = color)
             }
             if (newest) {
-                shapes += OverlayShape.Circle(cx, cy, radius + 3.0 * unit, stroke = Palette.FG, strokeWidth = 1.5 * unit)
-                shapes += OverlayShape.Text(cx + 10.0 * unit, cy - 8.0 * unit, shot.number.toString(), 13.0 * unit, Palette.FG, FONT, bold = true)
+                shapes += OverlayShape.Circle(cx, cy, radius + 0.75 * unit, stroke = Palette.FG, strokeWidth = 1.5 * unit)
+                shapes += OverlayShape.Text(cx + 8.0 * unit, cy - 8.0 * unit, shot.number.toString(), 13.0 * unit, Palette.FG, FONT, bold = true)
             }
         }
     }

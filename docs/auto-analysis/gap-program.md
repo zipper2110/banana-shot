@@ -99,7 +99,8 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
 8. G11 corrections loop: `corrections.py` reads `swapped`, `minWinnerPercent` and `auto.checked`; it tells "Swap
    players" from a winner fix; the bounds compare with the gap clamp and the rounding; "added" counts only clips
    after the import; the review notes name the result file and the run. Done (E53).
-9. P4: the 1 fps pictures from the ball decode, for a video with no keyframe each second. Measure first.
+9. P4: the 1 fps pictures from the ball decode, for a video with no keyframe each second. Measured (E54) and
+   closed: see the decisions.
 
 ### S3 rally (G4, G5, G8 short points)
 
@@ -188,4 +189,5 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
 | 2026-11-26 | S2 phase 2: reuse of old ball files, the G14 fixture, then G11. |
 | 2026-11-26 | Score (the user, on the S3 options of E63): the score is not the goal; it is only the result of the points. Priority 1: detect the correct rallies. Priority 2: detect the correct outcome of each rally. No change of the app score now (G8 score part closed, option A stays). The benchmarks do not use score measures (score right before a point, games right): a score error drags along and tells little about a single point. Report the rally measures and the winner of each rally. The decoder stays as a tool that chooses the winner of each rally. The start score is not asked: it does not change a winner (E63). Later item (out of the current scope): consistency hints from the score (the serve side does not match the score; the server changes inside a game) that show the user where a point is probably missing or false, on review or later, or that correct the detection. |
 | 2026-11-26 | Event measures (the user): priority 2 is measured by the events (shots, hitter, bounces, in/out, net touches) against labels, not by the outcome. A right outcome for a wrong reason does not count as a gain. Section 1 has the rules. |
+| 2026-11-26 | P4 closed (manager, E54): the gain is 6 to 7.5 % of a run, and only for a video with no keyframe each second; the user's own videos have one each second. The design changes the stage order of `detect.py`. Open it again only if such videos become common. |
 | 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |

@@ -24,6 +24,10 @@ question, with a journal row. A gap is not covered by a plan or a note only.
   `python tools/auto-analysis/gpu_lock.py run --who <stream> --what "<text>" -- <command>`.
   `gpu_lock.py status` shows the holder. The log is `D:\bananashot-lab\locks\heavy.log`.
 - Run a heavy job in the background. Do not wait in a loop for it.
+- **Run each heavy job and each benchmark from a code snapshot of one commit**, not from a checkout that can
+  change: `git archive <commit> tools/auto-analysis | tar -x -C D:\bananashot-lab\ws\<stream>\code\<commit>`.
+  A running `detect.py` loads the chain modules only when each stage starts, so a merge or an edit during the
+  run mixes code versions. Record the commit in the result.
 - Light jobs (scoring, small model training on existing features, plots) do not need the lock.
 - Disk C is almost full. Put all data on D.
 
@@ -144,4 +148,5 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
 | 2026-11-25 | Program set up by the manager: 5 streams, the rules of section 4, one heavy job at a time through `gpu_lock.py`. |
 | 2026-11-25 | Branches (the user): each new stream works in its own worktree, on a branch from `auto-detect`. The manager merges into `auto-detect`, commits and pushes to `origin/auto-detect`. |
 | 2026-11-25 | Labels (the user): the user marks the new labels (hit, hitter, shot count, fault). An agent makes the tool and the work list, and does not label by eye. |
+| 2026-11-26 | Code snapshots (S1 proposal, manager): heavy jobs and benchmarks run from a snapshot of one commit (section 2). Cause: a merge into the main checkout during the Igor run would have mixed code versions. |
 | 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |

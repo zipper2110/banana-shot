@@ -179,7 +179,12 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
                 val cy = y(px[1])
                 val size = 9.0 * unit
                 when (event.kind) {
-                    "bounce" -> shapes += OverlayShape.Rect(cx - size, cy - size, 2 * size, 2 * size, stroke = Palette.YELLOW, strokeWidth = 2.0 * unit)
+                    "bounce" -> {
+                        // A crosshair with the color of the court diagram: green for in, red for out.
+                        val color = bounceColor(event)
+                        shapes += OverlayShape.Line(cx - size, cy, cx + size, cy, color, 2.0 * unit)
+                        shapes += OverlayShape.Line(cx, cy - size, cx, cy + size, color, 2.0 * unit)
+                    }
                     "net", "cord" -> shapes += OverlayShape.Rect(
                         cx - size, cy - size, 2 * size, 2 * size, stroke = Palette.RED, strokeWidth = 2.5 * unit, rotationDeg = 45.0,
                     )
@@ -247,6 +252,18 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
         }
     }
 
+    /**
+     * The color of a bounce, as on the court diagram. The bounce that ends a shot of the selected point has the color
+     * of that end (red also for a bounce on the side of the hitter). Another bounce is green in the singles court and
+     * red out of it. Yellow: the place on the court is not known.
+     */
+    private fun bounceColor(event: org.litvin.autodetect.OverlayEvent): java.awt.Color {
+        val ms = event.t * 1000.0
+        shotStarts().firstOrNull { !it.predicted && it.endMs != null && kotlin.math.abs(it.endMs - ms) <= BOUNCE_MATCH_MS }?.endColor?.let { return it }
+        val court = event.court?.takeIf { it.size >= 2 } ?: return Palette.YELLOW
+        return if (kotlin.math.abs(court[0]) <= COURT_SINGLES && kotlin.math.abs(court[1]) <= COURT_BASE) Palette.GREEN else Palette.RED
+    }
+
     private fun meters(value: Double) = String.format(java.util.Locale.ROOT, "%.1f", value)
 
     private fun courtAt(t: Double): OverlayCourt? =
@@ -306,6 +323,9 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
             listOf(-COURT_SINGLES, -COURT_SERVICE, COURT_SINGLES, -COURT_SERVICE), listOf(-COURT_SINGLES, COURT_SERVICE, COURT_SINGLES, COURT_SERVICE),
             listOf(0.0, -COURT_SERVICE, 0.0, COURT_SERVICE),
         )
+
+        /** A bounce event is the end of a shot if their times are not farther apart than this. */
+        const val BOUNCE_MATCH_MS = 60.0
 
         /** The mark of an event stays this long. */
         const val EVENT_SHOWN_S = 1.0

@@ -156,6 +156,33 @@ class ShotViewsTest {
     }
 
     @Test
+    fun `a bounce is a crosshair with the color of the court diagram`() {
+        fun bounce(t: Double, court: List<Double>?) = org.litvin.autodetect.OverlayEvent(t = t, kind = "bounce", px = listOf(960.0, 540.0), court = court)
+        val events = listOf(bounce(10.0, listOf(1.0, 5.0)), bounce(20.0, listOf(4.5, 5.0)), bounce(30.0, null))
+        val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080, events = events)) { null }
+        overlay.layers = setOf(OverlayLayer.EVENTS)
+        val area = Rectangle2D.Double(0.0, 0.0, 1280.0, 720.0)
+        fun cross(t: Double) = overlay.shapes(t, area).filterIsInstance<OverlayShape.Line>()
+
+        // In the singles court: green. Out of it: red. No place on the court: yellow.
+        assertEquals(listOf(Palette.GREEN, Palette.GREEN), cross(10.1).map { it.color })
+        assertEquals(listOf(Palette.RED, Palette.RED), cross(20.1).map { it.color })
+        assertEquals(listOf(Palette.YELLOW, Palette.YELLOW), cross(30.1).map { it.color })
+        // Two lines of the same length through the bounce, 2 px wide at the reference size.
+        val (across, down) = cross(10.1)
+        assertEquals(640.0, (across.x1 + across.x2) / 2, 0.01)
+        assertEquals(across.x2 - across.x1, down.y2 - down.y1, 0.01)
+        assertEquals(across.width, down.width, 0.0)
+        // The bounce that ends a shot of the selected point has the color of that end.
+        val shots = ShotViews.of(rally, near = 1, players)
+        val out = shots.first { it.endColor == Palette.RED && !it.predicted && it.endMs != null }
+        val atShot = DetectOverlay(DetectOverlayData(width = 1920, height = 1080, events = listOf(bounce(out.endMs!! / 1000.0, listOf(1.0, 5.0))))) { null }
+        atShot.layers = setOf(OverlayLayer.EVENTS)
+        atShot.shotStarts = { shots }
+        assertEquals(Palette.RED, atShot.shapes(out.endMs / 1000.0 + 0.1, area).filterIsInstance<OverlayShape.Line>().first().color)
+    }
+
+    @Test
     fun `the court diagram shows the end of each shot up to the video time`() {
         val shots = ShotViews.of(rally, near = 1, players)
         val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080)) { null }

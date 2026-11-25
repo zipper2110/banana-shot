@@ -138,6 +138,42 @@ Yes. Three of them:
 
 Order: largest expected effect on the reliability first. Each finding has an id for the part reviews.
 
+### 5.0 Impact ratings
+
+Impact = the effect on the reliability of the shipped result, or on the ability to measure and improve it.
+Ratings added 2026-11-25.
+
+- **Critical**: blocks the measurement of all other fixes.
+- **High**: a measured or large probable loss of points, winners or score, or a silent wrong result.
+- **Medium**: a loss only on some videos or conditions, or a risk that is not measured yet.
+- **Low**: maintenance cost, or no direct effect on the result.
+
+The app path is a lab integration now: the app shows the detection only when `autodetect.json` names a lab
+venv (`DetectModel.kt:35`). Thus the app-side findings (G11 to G14) affect the lab users only. Before a
+release to other users, rate G12 and G13 one step higher.
+
+| Id | Impact | Reason |
+|---|---|---|
+| G1 | **Critical** | The reliability of the shipped path is not known. No part fix can show an effect on it. R0 comes first |
+| G2 | **High** | 11 s offset of DINO and pose at the end of m1030. Phone videos often have a variable frame rate. The fix is small |
+| G4 | **High** | The largest measured loss: +2.4 to +5.3 winner points with the marked end. The 2.5 s cut drops about 17 % of the last shots |
+| G8 | **High** | Short points are on by default and count in the app score, but only about 43 % of them are real. The decoder starts at 0-0 with no server. 5 to 8 winners move with equal evidence |
+| G10 | **High** | No labels for the parts that decide the winner (hitter, shot count, faults). R5 and R6 cannot measure their fixes |
+| G12 | **High** | A result can come from old files with no warning (a reused folder name, new weights with an old ball file). Silent wrong results |
+| G15 | **High** | All numbers are for one camera setup. A typical user video (low camera, 30 fps, doubles) has no measured result |
+| G3 | Medium | The confidence and the review dots are not calibrated for the app path. The rally bounds moved 1 to 6 s with new candidates (E41) |
+| G6 | Medium | Good on the lab videos (0.67 px), but no held-out test. A wrong court breaks short points, server end and in/out. High on new camera positions |
+| G9 | Medium | 99.4 to 100 % in-sample. A wrong anchor flips the winners of long parts of a match. Not measured held out |
+| G5 | Medium | A ball failure also moves the rally bounds. `rally_base.pt` has no measured result. The main cost is speed (P1) |
+| G11 | Medium | No effect on the detection now. It makes the planned test data wrong. Fix it before the corrections are used as data |
+| G13 | Medium | No direct loss of points. It hides faults of the chain and loses the full run on a late exception |
+| G7 | Low | Maintenance cost. A fix in one copy does not reach the others. No measured loss |
+| G14 | Low | No guard on the contract. The rally time item is part of G2 |
+| P1 | **High** | About 35 to 45 % of the run time. Needs a two-pass design |
+| P2 | **High** | Up to 33 % of the run time. One measurement (E38 weights without `dim`) can decide it |
+| P4 | Medium | 10 to 18 % on videos with no keyframe each second; none on the others |
+| P3 | Low | About 7 % of the run time |
+
 ### G1. No measurement of the shipped path; no frozen benchmark — major
 
 - All full-chain numbers (E21 to E41) come from `pipeline.run` (`pipeline.py:219`). [F]

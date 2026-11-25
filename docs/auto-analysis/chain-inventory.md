@@ -264,6 +264,9 @@ release to other users, rate G12 and G13 one step higher.
 - The court constants were chosen with all 7 videos in view (E26c). No held-out test exists. [F]
 - Effect: a wrong camera gives wrong speeds and heights. Then the serve thresholds (in m) fail: no short
   points, no server end, wrong in/out. The low-camera far half was 1.4 to 1.8 m off (E26a).
+- Update (E82): leave one video out on the 165 reference marks. Held out 0.70 px / 4.3 cm against 0.67 px /
+  4.0 cm in sample; each fold chose the two half models. The refinement generalizes. Open: the first
+  detection (`court_auto`) finds no court on a lower, wider camera (two clips of another phone).
 
 ### G7. Duplicated rules with different thresholds
 

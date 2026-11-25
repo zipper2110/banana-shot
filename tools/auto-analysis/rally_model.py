@@ -47,7 +47,7 @@ def stack(parts, prep):
 def train(name, fold=None):
     """Trains on TRAIN, or on TRAIN without the match fold."""
     feats = MODELS[name]
-    TRAIN = [m for m in globals()["TRAIN"] if m != fold]
+    TRAIN = lab.check_train([m for m in globals()["TRAIN"] if m != fold])
     raw = {m: load(m, feats, PCA_DIMS) for m in TRAIN}
     y = {m: lab.labels(m) for m in TRAIN}
     mask = {m: lab.span_mask(m) for m in TRAIN}

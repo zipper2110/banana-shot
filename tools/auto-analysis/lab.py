@@ -11,7 +11,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CFG = json.load(open(os.path.join(HERE, "matches.json"), encoding="utf-8"))
 ROOT = platform_cfg.data_root(CFG["labRoot"])
 MATCHES = {m["id"]: m for m in CFG["matches"]}
-LABELED = [m["id"] for m in CFG["matches"] if m.get("project")]
+# testOnly (matches.json): a marked video for the held-out benchmark (pipeline.py, E43). No training and no
+# fit may use it. LABELED is the marked videos for training and development only.
+TEST_ONLY = [m["id"] for m in CFG["matches"] if m.get("testOnly")]
+LABELED = [m["id"] for m in CFG["matches"] if m.get("project") and not m.get("testOnly")]
+TEST = [m["id"] for m in CFG["matches"] if m.get("project") and m.get("testOnly")]
+
+
+def check_train(mids):
+    """Stops a training or a fit that would use a test-only video."""
+    bad = sorted(set(mids) & set(TEST_ONLY))
+    if bad:
+        raise ValueError(f"test-only videos must not be in a training or a fit: {bad}")
+    return list(mids)
 BALL_TAG = os.environ.get("BALL_TAG", "0.35")     # ball detector version of the flight files, e.g. "0.35_e15b_a"
 
 

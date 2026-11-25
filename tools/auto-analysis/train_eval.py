@@ -53,6 +53,7 @@ def main():
     feats = a.feats.split(",")
     mids = a.matches.split(",") if a.matches else [m for m in lab.LABELED if all(
         os.path.exists(os.path.join(lab.mdir(m), f"feat_{n}.npy")) for n in feats)]
+    lab.check_train(mids)
     raw = {m: load(m, feats, a.pca) for m in mids}
     y = {m: lab.labels(m) for m in mids}
     mask = {m: lab.span_mask(m) for m in mids}

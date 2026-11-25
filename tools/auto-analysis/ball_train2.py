@@ -110,6 +110,8 @@ def loss_fn(logit, y, weight):
 
 
 def main(name, mids, epochs=3):
+    import lab
+    lab.check_train(mids)
     ds = Data(mids)
     dl = torch.utils.data.DataLoader(ds, batch_size=8, shuffle=True, num_workers=4, drop_last=True, persistent_workers=True)
     net = wasb_hrnet.load(START).cuda().train()

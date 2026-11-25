@@ -54,7 +54,7 @@ def case_prob(q, p, mid=None):
 def fit_cases(mids):
     """Case table from the marked points of the given matches (2 pseudo counts at P_DEC for each case)."""
     cnt = {k: [0.0, 0.0] for k in CASE_P}
-    for mid in mids:
+    for mid in lab.check_train(mids):
         p = PARAMS[mid]
         orig = wb.good
         wb.good = lambda f, orig=orig: orig(f) and 3.6 * float(np.linalg.norm(f["v0"])) >= p["min_speed"]

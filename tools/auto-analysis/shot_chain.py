@@ -495,6 +495,8 @@ def counts(mid):
 def fit_cases(mids):
     """Case table from the marked points of the given matches (2 pseudo counts at P_DEC for each case, as match_decode.fit_cases)."""
     from score_decode import P_DEC
+    import lab
+    lab.check_train(mids)
     tot = {}
     for mid in mids:
         for k, (n, r) in counts(mid).items():

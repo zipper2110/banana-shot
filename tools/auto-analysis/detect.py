@@ -21,7 +21,9 @@ The run reads no lab environment variable (LAB_ENV): a setting replaces each one
 Cache (G12): video.json holds the identity of the video of the work folder; a work folder of another video stops
 the run. The ball file name has the weights, the passes and a key of the code; stage_keys.json holds the key of
 the inputs of each keyed stage, and a stage runs again when its key changes.
-Output: <work>/result.json. Lines on stdout that start with "@" are for the app:
+Output: <work>/result.json. "warnings" lists each fallback of the run (G13). An exception after the rally stage
+gives a partial result ("partial": true, the rallies that are ready, a warning) and no error. Lines on stdout that
+start with "@" are for the app:
   @stage <name> start | @stage <name> done <seconds> | @stage <name> skip
   @progress <name> <0..1> | @result <file> | @overlay <file> | @warning <text> | @error <text>
 Usage: python detect.py --video <file> --work <folder> [--settings <json file>] [--force]
@@ -348,12 +350,16 @@ def main():
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
     warnings = []
+
+    def warn(text):
+        """G13: each fallback of the run goes to result.json, not only to run.log."""
+        warnings.append(text)
+        say("@warning", text)
     gone = sorted(k for k in list(os.environ) if k.upper() in LAB_ENV or k.upper().startswith("CHAIN_"))
     for k in gone:
         del os.environ[k]
     if gone:
-        warnings.append(f"The run does not use the lab environment variables {', '.join(gone)}. Use the settings file.")
-        say("@warning", warnings[-1])
+        warn(f"The run does not use the lab environment variables {', '.join(gone)}. Use the settings file.")
     os.environ["BALL_PASSES"] = cfg["ballPasses"] or ""              # ball_wasb reads it at import
     weights = "wasb_tennis.pth.tar"
     if cfg["ballWeights"]:
@@ -361,8 +367,7 @@ def main():
         if os.path.exists(os.path.join(platform_cfg.weights_dir(), cfg["ballWeights"])):
             weights = os.environ["BALL_WEIGHTS"] = cfg["ballWeights"]
         else:
-            warnings.append(f"The ball weights {cfg['ballWeights']} are not there. The run uses the WASB tennis weights.")
-            say("@warning", warnings[-1])
+            warn(f"The ball weights {cfg['ballWeights']} are not there. The run uses the WASB tennis weights.")
     global KEYS_FILE
     KEYS_FILE = os.path.join(work, "stage_keys.json")
     if os.path.exists(KEYS_FILE) and not a.force:
@@ -435,13 +440,12 @@ def main():
                 stage("court2", [W("court_track_refined.json")], refine, a.force)
             except Exception as e:        # the first model stays
                 traceback.print_exc()
-                say("@warning", f"No refined court model: {type(e).__name__}: {e}")
+                warn(f"No refined court model ({type(e).__name__}: {e}). The ground points use the first court model.")
             ball_events.court_windows(work, say)
         save_times()
         if problem:
             # The ball stages need a correct court model. Without it, the result has only the rally boundaries.
-            warnings.append(problem + " The result has only the rally boundaries: no winners, no serve faults, no short points.")
-            say("@warning", warnings[-1])
+            warn(problem + " The result has only the rally boundaries: no winners, no serve faults, no short points.")
             ball_ok = False
 
     if ball_ok:
@@ -517,36 +521,43 @@ def main():
     STAGE_S["rallies"] = round(time.time() - t, 1)
     say("@stage rallies done", STAGE_S["rallies"])
 
-    # ---- winners
-    out = []
-    if ball_ok and seg:
-        say("@stage winners start")
-        t = time.time()
-        out = chain.winners(MID, seg, full, serves, prob=prob)
-        STAGE_S["winners"] = round(time.time() - t, 1)
-        say("@stage winners done", STAGE_S["winners"])
-    elif not ball_ok:
-        out = chain.rally_rows(seg)
-
-    if ball_ok:
-        try:
-            add_views(work, out, n)
-        except Exception as e:        # with no view, the app shows the picture of the rally start
-            traceback.print_exc()
-            say("@warning", f"No player pictures: {type(e).__name__}: {e}")
-        try:
-            net = load_net_events(work)
-            add_net_hits(out, net)
-            write_overlay(work, n, full, serves, net)
-        except Exception as e:        # the overlay is a debug view: the result is more important
-            traceback.print_exc()
-            say("@warning", f"No overlay data: {type(e).__name__}: {e}")
+    # ---- winners. G13: from here an exception gives a partial result with the rallies that are ready.
+    out, partial = chain.rally_rows(seg), False
+    try:
+        if ball_ok and seg:
+            say("@stage winners start")
+            t = time.time()
+            chain.FAULTS.clear()
+            out = chain.winners(MID, seg, full, serves, prob=prob)
+            for text in chain.fault_texts():
+                warn(text)
+            STAGE_S["winners"] = round(time.time() - t, 1)
+            say("@stage winners done", STAGE_S["winners"])
+        if ball_ok:
+            try:
+                add_views(work, out, n)
+            except Exception as e:        # with no view, the app shows the picture of the rally start
+                traceback.print_exc()
+                warn(f"No player pictures ({type(e).__name__}: {e}). The player question shows the picture of the rally start.")
+            try:
+                net = load_net_events(work)
+                add_net_hits(out, net)
+                write_overlay(work, n, full, serves, net)
+            except Exception as e:        # the overlay is a debug view: the result is more important
+                traceback.print_exc()
+                warn(f"No overlay data ({type(e).__name__}: {e}).")
+    except Exception as e:
+        traceback.print_exc()
+        partial = True
+        has_winners = any("winner" in r for r in out)
+        warn(f"The run failed after the rally stage ({type(e).__name__}: {e})." +
+             ("" if has_winners else " The result has only the rally boundaries: no winners, no serve faults."))
     save_times()
     res = {"version": 1, "video": os.path.abspath(a.video), "videoId": vid, "work": work, "videoSeconds": n, "settings": cfg,
            "rallyModel": model_name, "cache": {"ballFile": os.path.basename(lab.blob_file(work, 0, n)) if ball_ok else None,
                                                "stageKeys": dict(STAGE_KEYS)},
            "stageSeconds": STAGE_S, "thisRunSeconds": round(time.time() - t_all, 1),
-           "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "warnings": warnings, "rallies": out}
+           "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "partial": partial, "warnings": warnings, "rallies": out}
     json.dump(res, open(W("result.json"), "w"), indent=1, default=float)
     say("@result", W("result.json"))
 

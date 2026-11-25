@@ -49,6 +49,23 @@ END_MODEL = os.environ.get("END_MODEL", "1") == "1"   # E60: the end for the win
 # The shirt colors of each rally (the image reads are the slow part). "_t2": the pictures of the true seconds (G2);
 # the colors of color_cache.json came from the picture row of the second number. An absolute path is also valid.
 COLOR_CACHE = "color_cache_t2.json"
+# G13: the faults that the chain survives with a fallback. detect.py puts them in the warnings of result.json.
+# Key: the kind of fault; value: [count, the first case as a text].
+FAULTS = {}
+
+
+def note_fault(kind, t, e):
+    """Records a fault of the chain at video time t (s) with the exception e."""
+    f = FAULTS.setdefault(kind, [0, f"{t:.1f} s: {type(e).__name__}: {e}"])
+    f[0] += 1
+
+
+def fault_texts():
+    """The warning texts of the recorded faults."""
+    what = {"shot chain": "the old ball rule gave the winner evidence",
+            "fault chain": "the fault candidate has no shots"}
+    return [f"The {k} failed on {c} {'rally' if c == 1 else 'rallies'} (first at {first}); {what.get(k, 'a fallback was used')}."
+            for k, (c, first) in FAULTS.items()]
 
 
 def rallies(prob, serves, hi=0.5, lo=0.35, short=True, t0=0.0, t1=None):
@@ -134,7 +151,8 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                                  md.case_key(q, p) if w is not None else None, p["min_speed"])
                 pc = sc.case_prob(ch["case"], mid)
                 chain_row = sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
-            except Exception:                        # a fault in the chain must not stop the detection: the old rule decides
+            except Exception as e:                   # a fault in the chain must not stop the detection: the old rule decides
+                note_fault("shot chain", a, e)
                 ch = None
             if CHAIN and ch is not None:
                 pw = 0.5 if ch["nearWins"] is None else (pc if ch["nearWins"] else 1 - pc)
@@ -176,8 +194,8 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                         if s0 is not None and s0["end"] in ("in", "out") and s0.get("court"):
                             s0["margin"] = round(min(sc.SW - abs(s0["court"][0]), SERVICE_LINE - abs(s0["court"][1])), 2)
                             s0["end"] = "in" if s0["margin"] > 0 else "out"
-                    except Exception:
-                        pass
+                    except Exception as e:           # the fault candidate stays, with no shots
+                        note_fault("fault chain", fault["t"], e)
         # shirt color: near minus far (cached: the image reads are the slow part)
         key = f"{int(a)}_{int(b)}"
         if key not in cache:
@@ -271,5 +289,5 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
 
 
 def rally_rows(seg):
-    """The result rows of rallies with no ball stages: only the boundaries."""
-    return [{"start": a, "end": b, "kind": "rally", "prob": prob} for a, b, prob in seg]
+    """The result rows with only the boundaries: no ball stages, or a partial result (G13). prob -1 = a short point."""
+    return [{"start": a, "end": b, "kind": "short" if prob < 0 else "rally", "prob": None if prob < 0 else prob} for a, b, prob in seg]

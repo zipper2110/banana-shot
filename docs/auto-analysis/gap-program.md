@@ -144,3 +144,4 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
 | 2026-11-25 | Program set up by the manager: 5 streams, the rules of section 4, one heavy job at a time through `gpu_lock.py`. |
 | 2026-11-25 | Branches (the user): each new stream works in its own worktree, on a branch from `auto-detect`. The manager merges into `auto-detect`, commits and pushes to `origin/auto-detect`. |
 | 2026-11-25 | Labels (the user): the user marks the new labels (hit, hitter, shot count, fault). An agent makes the tool and the work list, and does not label by eye. |
+| 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |

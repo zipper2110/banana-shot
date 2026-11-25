@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<!--
+Hit labels of the user (gap program S4, G10; journal E70). A local page: open it with file:// in Chrome or Edge.
+The page reads worklist.js (made by label_clips.py) from its own folder and plays the rally clips of clips/.
+For each rally the user marks each hit (time, near or far player), and for a lab match the first-serve fault.
+The shot count is the count of hits. Output: one JSON file for each match, hit_labels_<match>.json, in a folder
+that the user chooses once (File System Access API). A copy of all labels stays in the local storage of the browser.
+Time base of the output: t = source video time in s (frame pts) = t0 of the clip + clip time of the frame on
+the screen. label_clips.py checked that clip frame 0 is the source frame at t0.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BananaShot hit labels</title>
+<script src="worklist.js"></script>
+<style>
+  :root { --bg:#16181c; --panel:#1f2228; --line:#2e323a; --text:#e6e6e6; --dim:#9aa0a8; --near:#4da3ff; --far:#ffa94d;
+          --fault:#ff5c5c; --ok:#5fd38d; --warn:#ffd166; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.35 system-ui, sans-serif; height:100vh;
+         display:grid; grid-template-rows:auto 1fr; overflow:hidden; }
+  header { display:flex; gap:16px; align-items:center; padding:6px 12px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header b { font-size:15px; }
+  header .sp { flex:1; }
+  button { background:#2b3038; color:var(--text); border:1px solid var(--line); border-radius:4px; padding:4px 10px; cursor:pointer; font:inherit; }
+  button:hover { background:#353b45; }
+  main { display:grid; grid-template-columns:1fr 330px; min-height:0; }
+  #left { display:flex; flex-direction:column; min-height:0; padding:8px; gap:6px; }
+  #stage { position:relative; flex:1; min-height:0; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
+  video { max-width:100%; max-height:100%; transform-origin:50% 35%; transition:transform .12s; }
+  #msg { position:absolute; inset:auto 0 45% 0; text-align:center; font-size:20px; color:var(--warn); pointer-events:none; }
+  #flash { position:absolute; top:10px; left:50%; transform:translateX(-50%); padding:4px 14px; border-radius:4px; font-size:18px;
+           font-weight:600; opacity:0; transition:opacity .4s; pointer-events:none; }
+  #timeline { position:relative; height:34px; background:var(--panel); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  #timeline .pt { position:absolute; top:0; bottom:0; background:rgba(255,255,255,.07); border-left:1px solid #666; border-right:1px solid #666; }
+  #timeline .mk { position:absolute; top:3px; width:3px; height:26px; margin-left:-1px; border-radius:1px; }
+  #timeline .mk span { position:absolute; top:-1px; left:5px; font-size:11px; }
+  #timeline .head { position:absolute; top:0; bottom:0; width:2px; background:#fff; margin-left:-1px; }
+  #bar { display:flex; gap:14px; align-items:center; color:var(--dim); font-variant-numeric:tabular-nums; }
+  #bar .big { color:var(--text); font-size:16px; }
+  aside { background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  aside section { padding:8px 10px; border-bottom:1px solid var(--line); }
+  aside h3 { margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--dim); font-weight:600; }
+  #events div { display:flex; gap:8px; align-items:center; padding:1px 0; cursor:pointer; font-variant-numeric:tabular-nums; }
+  #events div:hover { background:#2a2e35; }
+  #events .x { margin-left:auto; color:var(--dim); padding:0 6px; }
+  #events .x:hover { color:var(--fault); }
+  .near { color:var(--near); } .far { color:var(--far); } .fault { color:var(--fault); } .ok { color:var(--ok); } .warn { color:var(--warn); }
+  #keys { font-size:12px; color:var(--dim); display:grid; grid-template-columns:auto 1fr; gap:1px 10px; }
+  #keys kbd { color:var(--text); font:12px ui-monospace, monospace; background:#2b3038; border:1px solid var(--line); border-radius:3px; padding:0 4px; justify-self:start; }
+  #list { flex:1; overflow:auto; font-size:12px; font-variant-numeric:tabular-nums; }
+  #list div { display:grid; grid-template-columns:34px 52px 52px 1fr; padding:1px 10px; cursor:pointer; color:var(--dim); }
+  #list div.done { color:var(--ok); } #list div.cur { background:#33404f; color:var(--text); } #list div.nocl { opacity:.4; }
+  #list div:hover { background:#2a2e35; }
+</style>
+</head>
+<body>
+<header>
+  <b>Hit labels</b>
+  <span id="where"></span>
+  <span class="sp"></span>
+  <span id="progress"></span>
+  <span id="savestate"></span>
+  <button id="btnFolder" title="Choose the folder for the label files (key O)">Label folder…</button>
+  <button id="btnExport" title="Download the label files (a copy, if the folder does not work)">Download</button>
+</header>
+<main>
+  <div id="left">
+    <div id="stage"><video id="v" preload="auto"></video><div id="msg"></div><div id="flash"></div></div>
+    <div id="timeline"></div>
+    <div id="bar">
+      <span>speed <span class="big" id="speed">1×</span></span>
+      <span>clip <span id="tclip">0.000</span> s</span>
+      <span>video <span id="tvid">0:00.000</span></span>
+      <span>from marked start <span class="big" id="tpt">0.00</span> s</span>
+      <span class="sp"></span>
+    </div>
+  </div>
+  <aside>
+    <section>
+      <h3>This rally</h3>
+      <div id="info"></div>
+      <div style="margin-top:4px">shots: <b id="shots">0</b> &nbsp; fault: <b id="fault">–</b> &nbsp; <span id="flags"></span></div>
+    </section>
+    <section style="max-height:30vh; overflow:auto"><h3>Marks</h3><div id="events"></div></section>
+    <section>
+      <h3>Keys</h3>
+      <div id="keys">
+        <kbd>N</kbd><span>hit of the <span class="near">near</span> player (frame on screen)</span>
+        <kbd>F</kbd><span>hit of the <span class="far">far</span> player</span>
+        <kbd>Z</kbd><span>undo the last mark</span>
+        <kbd>Enter</kbd><span>save, go to the next rally</span>
+        <kbd>Space</kbd><span>play / pause</span>
+        <kbd>← →</kbd><span>one frame back / forward (Shift: 10)</span>
+        <kbd>1 2 3 4</kbd><span>speed 1× ½× ¼× ⅒×</span>
+        <kbd>R</kbd><span>replay from the rally start</span>
+        <kbd>P</kbd><span>play the pre-roll at 2× (fault check)</span>
+        <kbd>X</kbd><span>first-serve <span class="fault">fault</span> before this point (at the frame)</span>
+        <kbd>C</kbd><span>checked: no first-serve fault</span>
+        <kbd>Q</kbd><span>not sure (toggle)</span>
+        <kbd>S</kbd><span>skip: not a usable rally (toggle)</span>
+        <kbd>M</kbd><span>note</span>
+        <kbd>V</kbd><span>zoom 2× at the mouse (toggle)</span>
+        <kbd>[ ]</kbd><span>previous / next rally, no save</span>
+        <kbd>O</kbd><span>choose the label folder</span>
+      </div>
+    </section>
+    <section style="padding-bottom:2px"><h3>Work list</h3></section>
+    <div id="list"></div>
+  </aside>
+</main>
+<script>
+"use strict";
+const TOOL_VERSION = 1, FILE_VERSION = 1, FRAME = 1 / 60, SPEEDS = [1, 0.5, 0.25, 0.1], STORE = "bananashot-hit-labels-v1";
+const WL = window.WORKLIST;
+const $ = id => document.getElementById(id);
+const v = $("v");
+let cur = -1, rate = 0.5, lastFrame = 0, preFast = false, zoom = false, dir = null, dirOk = false, lastWrite = "";
+const drafts = {};                       // item index -> unsaved draft
+let store = JSON.parse(localStorage.getItem(STORE) || "{}");    // match -> {point -> rally}
+
+if (!WL) { document.body.innerHTML = "<p style='padding:20px'>worklist.js is missing. Run: python label_clips.py page</p>"; throw 0; }
+const items = WL.items;
+
+// ---- time helpers
+const fmt = t => { const m = Math.floor(t / 60), s = t - 60 * m; return m + ":" + s.toFixed(3).padStart(6, "0"); };
+const item = () => items[cur];
+const vt = clipT => item().t0 + clipT;                         // source video time of a clip time
+const ptStart = it => it.startMs / 1000 - it.t0;               // marked start in clip time
+const ptEnd = it => it.endMs / 1000 - it.t0;
+const rallyFrom = it => Math.max(0, ptStart(it) - WL.window.pre);
+const saved = it => (store[it.match] || {})[it.point];
+
+function flash(text, color) {
+  const f = $("flash"); f.textContent = text; f.style.background = color || "#333"; f.style.opacity = 1;
+  clearTimeout(flash.t); flash.t = setTimeout(() => f.style.opacity = 0, 600);
+}
+
+// ---- drafts
+function draftOf(i) {
+  if (!drafts[i]) {
+    const s = saved(items[i]);
+    drafts[i] = s ? JSON.parse(JSON.stringify({hits: s.hits, fault: s.fault, unsure: s.unsure, skip: s.skip, note: s.note,
+                                                activeMs: (s.labelSeconds || 0) * 1000, dirty: false}))
+                  : {hits: [], fault: null, unsure: false, skip: false, note: "", activeMs: 0, dirty: false};
+    drafts[i].dirty = false;
+  }
+  return drafts[i];
+}
+const d = () => draftOf(cur);
+function touch() { d().dirty = true; render(); }
+
+// ---- active time (only while the page is visible)
+let activeSince = performance.now();
+function addActive() { const now = performance.now(); if (cur >= 0 && !document.hidden) d().activeMs += now - activeSince; activeSince = now; }
+document.addEventListener("visibilitychange", () => { addActive(); });
+
+// ---- item loading
+function open(i) {
+  if (i < 0 || i >= items.length) return;
+  addActive();
+  cur = i;
+  const it = item();
+  $("msg").textContent = "";
+  v.pause(); zoom = false; v.style.transform = "";
+  if (it.t0 === undefined) { v.removeAttribute("src"); v.load(); $("msg").textContent = "This clip is not cut yet."; render(); return; }
+  v.src = it.clip;
+  v.playbackRate = rate;
+  v.addEventListener("loadedmetadata", () => { v.currentTime = rallyFrom(it); v.playbackRate = rate; v.play().catch(() => {}); }, {once: true});
+  render();
+  const row = $("list").children[i]; if (row) row.scrollIntoView({block: "nearest"});
+}
+v.addEventListener("error", () => { if (cur >= 0 && item().t0 !== undefined) $("msg").textContent = "Cannot play " + item().clip; });
+
+// ---- frame clock
+function onFrame(now, md) { lastFrame = md.mediaTime; tick(); v.requestVideoFrameCallback(onFrame); }
+if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(onFrame);
+function frameT() { return v.requestVideoFrameCallback ? lastFrame : v.currentTime; }
+function tick() {
+  if (cur < 0 || item().t0 === undefined) return;
+  const it = item(), t = frameT();
+  if (preFast && t >= rallyFrom(it)) { preFast = false; v.playbackRate = rate; }
+  $("tclip").textContent = t.toFixed(3);
+  $("tvid").textContent = fmt(vt(t));
+  $("tpt").textContent = (t - ptStart(it)).toFixed(2);
+  const dur = v.duration || (it.clipEnd - it.clipBegin);
+  $("timeline").querySelector(".head").style.left = (100 * t / dur) + "%";
+}
+(function loop() { if (!v.paused) tick(); requestAnimationFrame(loop); })();
+
+function step(n) { v.pause(); v.currentTime = Math.max(0, Math.min(v.duration || 1e9, frameT() + n * FRAME + 0.0005)); }
+function seek(t) { v.currentTime = Math.max(0, t); }
+
+// ---- marks
+function mark(player) {
+  if (cur < 0 || item().t0 === undefined) return;
+  const t = +vt(frameT()).toFixed(4);
+  const h = {t, player, rate: v.paused ? 0 : v.playbackRate, paused: v.paused};
+  d().hits.push(h);
+  d().hits.sort((a, b) => a.t - b.t);
+  d().lastAdded = h;
+  flash(player === "near" ? "NEAR" : "FAR", player === "near" ? "#1f5fa8" : "#a8601f");
+  touch();
+}
+function undo() {
+  const h = d().hits;
+  if (!h.length) return;
+  let k = h.indexOf(d().lastAdded);
+  if (k < 0) k = h.length - 1;
+  h.splice(k, 1); d().lastAdded = null;
+  flash("undo", "#555"); touch();
+}
+function fault(kind) {
+  const it = item();
+  if (!it.faultCheck) { flash("fault labels of this match come from the project", "#555"); return; }
+  if (kind === "x") d().fault = (d().fault && d().fault.t !== undefined) ? null : {t: +vt(frameT()).toFixed(4)};
+  else d().fault = d().fault === false ? null : false;
+  flash(d().fault ? "FAULT" : d().fault === false ? "no fault" : "fault: not checked", d().fault ? "#a82f2f" : "#555");
+  touch();
+}
+
+// ---- save
+function rallyDoc(it, dr) {
+  addActive();
+  return {point: it.point, n: it.n, startMs: it.startMs, endMs: it.endMs, stratum: it.stratum,
+          hits: dr.hits.map(h => ({t: h.t, player: h.player, rate: h.rate, paused: h.paused})),
+          shots: dr.hits.length, fault: it.faultCheck ? dr.fault : "project", unsure: dr.unsure, skip: dr.skip,
+          note: dr.note || "", labelSeconds: Math.round(dr.activeMs / 100) / 10, savedAt: new Date().toISOString()};
+}
+function matchDoc(mid) {
+  const rallies = Object.values(store[mid] || {}).sort((a, b) => a.startMs - b.startMs);
+  return {version: FILE_VERSION, kind: "bananashot-hit-labels", match: mid, video: WL.videos[mid],
+          testOnly: (WL.testOnly || []).includes(mid),
+          source: {tool: "label_hits.html", toolVersion: TOOL_VERSION, labeler: "user", worklist: "hit_worklist.json",
+                   worklistSeed: WL.seed, method: "by eye and ear on the rally clip (1920x1080, source frame times, sound)"},
+          timeBase: "t = source video time in s (frame pts); a hit time is the frame on the screen at the key press",
+          fields: {player: "near or far end of the court", rate: "playback speed at the key press (0 = paused)",
+                   shots: "count of hits, the serve is shot 1", fault: "first-serve fault before the point: {t}, false (checked, none), null (not checked), 'project' (from the fault clips of the project)",
+                   skip: "not a usable rally", unsure: "the user is not sure of some marks"},
+          updated: new Date().toISOString(), rallies};
+}
+async function save(next) {
+  if (cur < 0 || item().t0 === undefined) return;
+  const it = item(), dr = d();
+  (store[it.match] = store[it.match] || {})[it.point] = rallyDoc(it, dr);
+  dr.dirty = false; dr.activeMs = store[it.match][it.point].labelSeconds * 1000;
+  localStorage.setItem(STORE, JSON.stringify(store));
+  await writeFile(it.match);
+  flash("saved " + dr.hits.length + " shots", "#2f7a4c");
+  if (next) {
+    let j = items.findIndex((x, k) => k > cur && !saved(x));
+    if (j < 0) j = items.findIndex(x => !saved(x));
+    if (j >= 0) open(j); else { render(); flash("all rallies are done", "#2f7a4c"); }
+  } else render();
+}
+
+// ---- files (File System Access API); the folder handle stays in IndexedDB
+function idb(op, val) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("bananashot-hit-labels", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => {
+      const tx = r.result.transaction("kv", op === "get" ? "readonly" : "readwrite"), s = tx.objectStore("kv");
+      const q = op === "get" ? s.get("dir") : s.put(val, "dir");
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function ensureDir(ask) {
+  if (!dir) return false;
+  let p = await dir.queryPermission({mode: "readwrite"});
+  if (p !== "granted" && ask) p = await dir.requestPermission({mode: "readwrite"});
+  dirOk = p === "granted";
+  return dirOk;
+}
+async function chooseDir() {
+  if (!window.showDirectoryPicker) { alert("This browser cannot write files. Use Chrome or Edge, or the Download button."); return; }
+  try { dir = await window.showDirectoryPicker({id: "bananashot-hit-labels", mode: "readwrite"}); } catch (e) { return; }
+  await idb("put", dir);
+  await ensureDir(true);
+  await readFiles();
+  for (const mid of Object.keys(store)) await writeFile(mid);
+  render();
+}
+async function readFiles() {
+  if (!dirOk) return;
+  for (const mid of Object.keys(WL.videos)) {
+    try {
+      const fh = await dir.getFileHandle("hit_labels_" + mid + ".json");
+      const doc = JSON.parse(await (await fh.getFile()).text());
+      const m = store[mid] = store[mid] || {};
+      for (const r of doc.rallies || []) if (!m[r.point] || (r.savedAt || "") > (m[r.point].savedAt || "")) m[r.point] = r;
+    } catch (e) { /* no file yet */ }
+  }
+  localStorage.setItem(STORE, JSON.stringify(store));
+}
+async function writeFile(mid) {
+  if (!dir) { lastWrite = "no folder"; return; }
+  try {
+    if (!dirOk && !(await ensureDir(true))) { lastWrite = "no permission"; return; }
+    const fh = await dir.getFileHandle("hit_labels_" + mid + ".json", {create: true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(matchDoc(mid), null, 1));
+    await w.close();
+    lastWrite = "ok " + new Date().toLocaleTimeString();
+  } catch (e) { lastWrite = "write failed: " + e.message; }
+}
+function download() {
+  for (const mid of Object.keys(store)) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(matchDoc(mid), null, 1)], {type: "application/json"}));
+    a.download = "hit_labels_" + mid + ".json"; a.click();
+  }
+}
+
+// ---- render
+function render() {
+  const list = $("list");
+  if (!list.children.length) items.forEach((it, i) => {
+    const r = document.createElement("div");
+    r.onclick = () => open(i);
+    list.appendChild(r);
+  });
+  items.forEach((it, i) => {
+    const r = list.children[i], s = saved(it);
+    r.className = (i === cur ? "cur " : "") + (s ? "done " : "") + (it.t0 === undefined ? "nocl" : "");
+    r.innerHTML = `<span>${it.n}${it.timing ? "*" : ""}</span><span>${it.match}</span><span>${it.stratum}</span><span>${s ? (s.skip ? "skip" : s.shots + " shots") + (s.unsure ? " ?" : "") : (drafts[i] && drafts[i].dirty ? "unsaved" : "")}</span>`;
+  });
+  const done = items.filter(saved), secs = done.map(it => saved(it).labelSeconds || 0).filter(x => x > 0).sort((a, b) => a - b);
+  const med = secs.length ? secs[Math.floor(secs.length / 2)] : 0, left = items.length - done.length;
+  $("progress").textContent = `${done.length} / ${items.length} done` + (med ? ` · median ${Math.round(med)} s per rally · about ${Math.round(left * med / 60)} min left` : "");
+  $("savestate").innerHTML = dir ? (dirOk ? `<span class="ok">folder: ${dir.name}</span> <span class="${lastWrite.startsWith("ok") ? "" : "warn"}">${lastWrite}</span>` : `<span class="warn">folder: ${dir.name} (press O or Enter to allow)</span>`) : `<span class="warn">no label folder (press O)</span>`;
+  $("speed").textContent = (rate === 0.1 ? "⅒" : rate === 0.25 ? "¼" : rate === 0.5 ? "½" : "1") + "×";
+  if (cur < 0) return;
+  const it = item(), dr = d();
+  $("where").textContent = `#${it.n} of ${items.length} · ${it.match}${(WL.testOnly || []).includes(it.match) ? " (test only)" : ""} · ${it.stratum}`;
+  $("info").innerHTML = `point ${it.point.slice(0, 8)} · marked ${fmt(it.startMs / 1000)} to ${fmt(it.endMs / 1000)} (${((it.endMs - it.startMs) / 1000).toFixed(1)} s)` +
+    (it.faultCheck ? `<br>pre-roll ${Math.max(0, ptStart(it) - WL.window.pre).toFixed(1)} s for the fault check (P)` : `<br>first-serve faults: from the project`) +
+    (dr.dirty ? ` · <span class="warn">unsaved</span>` : saved(it) ? ` · <span class="ok">saved</span>` : "");
+  $("shots").textContent = dr.hits.length;
+  $("fault").innerHTML = !it.faultCheck ? "project" : dr.fault === null ? "not checked" : dr.fault === false ? `<span class="ok">none</span>` : `<span class="fault">yes ${fmt(dr.fault.t)}</span>`;
+  $("flags").innerHTML = (dr.unsure ? `<span class="warn">not sure</span> ` : "") + (dr.skip ? `<span class="fault">skip</span> ` : "") + (dr.note ? `note: ${dr.note.replace(/</g, "&lt;")}` : "");
+  const ev = $("events"); ev.innerHTML = "";
+  dr.hits.forEach((h, k) => {
+    const r = document.createElement("div");
+    r.innerHTML = `<span>${k + 1}</span><span class="${h.player}">${h.player}</span><span>${fmt(h.t)}</span><span style="color:var(--dim)">${h.paused ? "paused" : h.rate + "×"}${k === 0 ? " · serve" : ""}</span><span class="x" title="delete">×</span>`;
+    r.onclick = e => { if (e.target.classList.contains("x")) { dr.hits.splice(k, 1); touch(); } else { v.pause(); seek(h.t - it.t0 + 0.0005); } };
+    ev.appendChild(r);
+  });
+  const tl = $("timeline"), dur = (v.duration && isFinite(v.duration)) ? v.duration : (it.clipEnd - it.clipBegin);
+  if (it.t0 === undefined) { tl.innerHTML = '<div class="head"></div>'; return; }
+  const pct = t => (100 * t / dur) + "%";
+  tl.innerHTML = `<div class="pt" style="left:${pct(ptStart(it))};width:${pct(ptEnd(it) - ptStart(it))}"></div>` +
+    dr.hits.map((h, k) => `<div class="mk" style="left:${pct(h.t - it.t0)};background:var(--${h.player})"><span class="${h.player}">${k + 1}</span></div>`).join("") +
+    (dr.fault && dr.fault.t !== undefined ? `<div class="mk" style="left:${pct(dr.fault.t - it.t0)};background:var(--fault)"><span class="fault">X</span></div>` : "") +
+    `<div class="head"></div>`;
+  tick();
+}
+v.addEventListener("durationchange", render);
+$("timeline").addEventListener("click", e => {
+  if (cur < 0 || !v.duration) return;
+  const r = $("timeline").getBoundingClientRect();
+  seek((e.clientX - r.left) / r.width * v.duration);
+});
+let mouse = [50, 35];
+$("stage").addEventListener("mousemove", e => {
+  const r = v.getBoundingClientRect();
+  if (!zoom) mouse = [Math.max(0, Math.min(100, 100 * (e.clientX - r.left) / r.width)), Math.max(0, Math.min(100, 100 * (e.clientY - r.top) / r.height))];
+});
+$("btnFolder").onclick = chooseDir;
+$("btnExport").onclick = download;
+
+// ---- keys
+document.addEventListener("keydown", async e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  const map = {
+    " ": () => { if (v.paused) { v.playbackRate = preFast ? 2 : rate; v.play(); } else v.pause(); },
+    "n": () => mark("near"), "f": () => mark("far"), "z": undo, "backspace": undo,
+    "enter": () => save(true),
+    "arrowleft": () => step(e.shiftKey ? -10 : -1), "arrowright": () => step(e.shiftKey ? 10 : 1),
+    ",": () => step(-1), ".": () => step(1),
+    "1": () => setRate(0), "2": () => setRate(1), "3": () => setRate(2), "4": () => setRate(3),
+    "r": () => { preFast = false; seek(rallyFrom(item())); v.playbackRate = rate; v.play(); },
+    "p": () => { if (!item().faultCheck) { flash("no pre-roll: the project has the fault clips", "#555"); return; } preFast = true; seek(0); v.playbackRate = 2; v.play(); },
+    "x": () => fault("x"), "c": () => fault("c"),
+    "q": () => { d().unsure = !d().unsure; touch(); }, "s": () => { d().skip = !d().skip; flash(d().skip ? "skip" : "no skip", "#555"); touch(); },
+    "m": () => { const t = prompt("Note for this rally", d().note || ""); if (t !== null) { d().note = t.trim(); touch(); } },
+    "v": () => { zoom = !zoom; v.style.transformOrigin = `${mouse[0]}% ${mouse[1]}%`; v.style.transform = zoom ? "scale(2)" : ""; },
+    "[": () => open(cur - 1), "]": () => open(cur + 1), "pageup": () => open(cur - 1), "pagedown": () => open(cur + 1),
+    "o": chooseDir,
+  };
+  if (map[k]) { e.preventDefault(); if (cur >= 0 || k === "o") await map[k](); }
+});
+function setRate(i) { rate = SPEEDS[i]; if (!preFast) v.playbackRate = rate; render(); }
+
+// ---- start
+(async () => {
+  try { dir = await idb("get"); if (dir) { await ensureDir(false); await readFiles(); } } catch (e) { dir = null; }
+  let first = items.findIndex(x => !saved(x) && x.t0 !== undefined);
+  open(first < 0 ? 0 : first);
+})();
+</script>
+</body>
+</html>

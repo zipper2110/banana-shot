@@ -95,13 +95,28 @@ def to_court(xy, Hm):
     return cv2.perspectiveTransform(np.asarray(xy, np.float64).reshape(1, -1, 2), Hm)[0]
 
 
+SELECT_TRIM = os.environ.get("SELECT_TRIM", "1") == "1"
+
+
 def select(tracks):
-    """Returns one path: array of (frame, x, y, peak, track id), sorted by frame."""
+    """Returns one path: array of (frame, x, y, peak, track id), sorted by frame.
+    The longest track is first. A track that is at the same time as a chosen track loses only the samples of that
+    time (E41). Before E41 the full track was rejected: a ball track of 3.8 s was lost because its first 0.2 s were
+    at the same time as the end of the track before it. SELECT_TRIM=0 in the environment gives the old rule."""
     chosen, busy = [], []
     for t in sorted(tracks, key=lambda t: -len(t)):
         a, b = t[0, 0], t[-1, 0]
         if all(b < c + 3 or a > d - 3 for c, d in busy):
             busy.append((a, b)); chosen.append(t)
+        elif SELECT_TRIM:
+            free = np.ones(len(t), bool)
+            for c, d in busy:
+                free &= (t[:, 0] <= c - 3) | (t[:, 0] >= d + 3)
+            # the parts of the track in the free time: each part must be a moving track of its own
+            edges = np.flatnonzero(np.diff(np.concatenate([[0], free.astype(np.int8), [0]])))
+            for i0, i1 in zip(edges[::2], edges[1::2]):
+                for part in moving([t[i0:i1]]):
+                    busy.append((part[0, 0], part[-1, 0])); chosen.append(part)
     chosen.sort(key=lambda t: t[0, 0])
     out = [np.concatenate([t, np.full((len(t), 1), i, np.float32)], 1) for i, t in enumerate(chosen)]
     return np.concatenate(out) if out else np.zeros((0, 5), np.float32)

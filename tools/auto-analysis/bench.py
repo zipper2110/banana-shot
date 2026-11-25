@@ -165,6 +165,38 @@ def run_lab():
     return res
 
 
+HEAVY_STAGES = ("media", "audio", "image", "court", "court2", "ball", "flights", "pose")
+
+
+def detect_light(code_dir, mid, d):
+    """detect.py of this code on the folder d, through the GPU lock (gpu_lock.py), with a guard: when a heavy stage
+    starts (its cache is missing, for example after a change of the cache file names), the process tree stops at once.
+    The benchmark only reads a cache; a full run is a separate job. Returns (rc, heavy stage or None, log file)."""
+    import lab, gpu_lock
+    log = os.path.join(d, "bench-detect.log")
+    cmd = [sys.executable, os.path.join(code_dir, "detect.py"), "--video", lab.MATCHES[mid]["video"], "--work", d]
+    who, what = "s1", f"bench.py: rally and winner stages of {mid} (heavy stages refused)"
+    heavy, rc, t0 = None, -1, time.time()
+    gpu_lock.acquire(who, what)                      # in this process, so that a stop of detect.py still frees the lock
+    try:
+        with open(log, "w") as f:
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            for line in p.stdout:
+                f.write(line)
+                m = re.match(r"@stage (\S+) start", line)
+                if m and m.group(1) in HEAVY_STAGES:
+                    heavy = m.group(1)
+                    if os.name == "nt":            # the venv python starts a child: stop the tree
+                        subprocess.call(["taskkill", "/T", "/F", "/PID", str(p.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    else:
+                        p.kill()
+                    break
+            rc = p.wait()
+    finally:
+        gpu_lock.release(who, what, rc, t0)
+    return rc, heavy, log
+
+
 def run_heldout(code_dir):
     """detect.py from this code on each marked test-only video with a full run in its folder: the rally and winner
     stages run again, the heavy stages come from the cache."""
@@ -176,14 +208,10 @@ def run_heldout(code_dir):
         if miss or not glob.glob(os.path.join(d, "wasb_0_*_k2.npy")):
             skipped[mid] = "missing: " + ", ".join(miss or ["ball candidates"])
             continue
-        log = os.path.join(d, "bench-detect.log")
-        with open(log, "w") as f:
-            rc = subprocess.call([sys.executable, os.path.join(code_dir, "detect.py"), "--video", lab.MATCHES[mid]["video"],
-                                  "--work", d], stdout=f, stderr=subprocess.STDOUT)
-        txt = open(log).read()
-        heavy = [s for s in ("media", "image", "court", "ball", "flights", "pose") if f"@stage {s} start" in txt]
+        rc, heavy, log = detect_light(code_dir, mid, d)
         if rc != 0 or heavy:
-            skipped[mid] = f"detect.py rc={rc}, heavy stages ran: {heavy} (see {log})"
+            skipped[mid] = (f"detect.py wanted the heavy stage '{heavy}': the cache of this code is not in the folder "
+                            f"(stopped at once; see {log})" if heavy else f"detect.py rc={rc} (see {log})")
             continue
         rows = json.load(open(os.path.join(d, "result.json")))["rallies"]
         res[mid] = (score.score(mid, rows), rows)

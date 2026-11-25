@@ -2,6 +2,7 @@
 chain.py, the chain that the app runs (detect.py), with models that did not see the match:
   rally model   models/rally_ball_x<match>.pt   (python rally_model.py train ball)
   case tables   the shot chain and old rule tables fitted on the other 3 matches (use_lomo_cases)
+  end model     the rally end detector fitted on the other 3 matches (rally_end.py fit, use_lomo)
   ball weights  the flights files of the lab were made with the held-out weights e38_f1 to e38_f4 (E38)
 Then score.py compares the rows with the marks.
 
@@ -17,6 +18,7 @@ import chain
 import match_decode as md
 import shot_chain as sc
 import rally_model
+import rally_end
 import score
 from ball_full import WINDOWS
 
@@ -29,7 +31,7 @@ def run(mid, quiet=False):
     full = json.load(open(os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS") or ("fullflights_s0.35_ev.json" if chain.CHAIN else "fullflights_s0.35.json"))))
     prob = rally_model.predict(mid, "ball", fold=mid)
     seg, serves = chain.segments(prob, full, CFG, start, start + dur)
-    rows = chain.winners(mid, seg, full, serves)
+    rows = chain.winners(mid, seg, full, serves, prob=prob)
     m = score.score(mid, rows)
     json.dump({"metrics": m, "rallies": rows}, open(os.path.join(lab.mdir(mid), "pipeline.json"), "w"), indent=1, default=float)
     if not quiet:
@@ -39,6 +41,7 @@ def run(mid, quiet=False):
 
 if __name__ == "__main__":
     md.use_lomo_cases()                       # winner probabilities measured on the other 3 matches
+    rally_end.use_lomo()
     if chain.CHAIN:
         sc.use_lomo_cases()
     ms = [run(m) for m in (sys.argv[1:] or list(WINDOWS))]

@@ -441,7 +441,7 @@ def main():
     if ball_ok and seg:
         say("@stage winners start")
         t = time.time()
-        out = chain.winners(MID, seg, full, serves)
+        out = chain.winners(MID, seg, full, serves, prob=prob)
         STAGE_S["winners"] = round(time.time() - t, 1)
         say("@stage winners done", STAGE_S["winners"])
     elif not ball_ok:

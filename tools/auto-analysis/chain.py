@@ -17,6 +17,7 @@ import winner_ball as wb
 import winner_sweep as ws
 import match_decode as md
 import shot_chain as sc
+import rally_end
 from serve_ball import serve_events
 from server_end import near_far, wrist_up
 from near_identity import torso_color, flips
@@ -44,7 +45,7 @@ T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): t
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)
 CHAIN = os.environ.get("CHAIN", "1") == "1"      # E28, E29: the winner evidence comes from the shot chain (shot_chain.py) when the flights file has "events"; CHAIN=0 gives the old rule
 FPS_ADAPT = os.environ.get("FPS_ADAPT", "1") == "1"   # E28: the sample counts of the winner rule follow the frame rate of the ball track (winner_ball.set_fps)
-END_RULE = None       # optional function (start, end, flights) -> end time for the winner rule
+END_MODEL = os.environ.get("END_MODEL", "1") == "1"   # E60: the end for the winner evidence comes from the rally end detector (rally_end.py); END_MODEL=0 gives the GRU end
 
 
 def rallies(prob, serves, hi=0.5, lo=0.35, short=True, t0=0.0, t1=None):
@@ -89,8 +90,9 @@ def a_end_t(q, t_end):
     return float(t_end + q["t_rel"])
 
 
-def evidence(mid, seg, full, serves, p=PARAMS):
-    """The evidence of each rally of seg (start, end, prob). p: the parameters of the old ball rule."""
+def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
+    """The evidence of each rally of seg (start, end, prob). p: the parameters of the old ball rule. prob: the GRU
+    probability of each second, for the rally end detector (None: the evidence uses the GRU end)."""
     out = lab.mdir(mid)
     pose = np.load(os.path.join(out, "pose.npy"))
     pose = pose[np.argsort(pose[:, 0], kind="stable")]
@@ -106,10 +108,13 @@ def evidence(mid, seg, full, serves, p=PARAMS):
         wb.set_fps(track_fps(full["flights"]))
     np_ = os.path.join(out, "net_events.json")
     nets = json.load(open(np_))["events"] if os.path.exists(np_) else []
+    hits = rally_end.load_hits(out)
+    gru = prob
     for (a, b, prob) in seg:
-        fls = [full["flights"][i] for i in np.nonzero((fl_t0 >= a - 1.0) & (fl_t0 <= b + 2.5))[0]]
-        kks = [full["kinks"][i] for i in np.nonzero((kk_t >= a - 1.0) & (kk_t <= b + 2.5))[0]]
-        t_end = END_RULE(a, b, fls) if END_RULE else b
+        # E60: the end of the winner evidence (the window of the flights and the time cut). The row keeps the GRU end b.
+        t_end = rally_end.end(mid, a, b, full, nets, gru, hits, T_CUT_E2E) if END_MODEL else b
+        fls = [full["flights"][i] for i in np.nonzero((fl_t0 >= a - 1.0) & (fl_t0 <= t_end + 2.5))[0]]
+        kks = [full["kinks"][i] for i in np.nonzero((kk_t >= a - 1.0) & (kk_t <= t_end + 2.5))[0]]
         pt = {"start": a, "end": t_end, "flights": fls, "kinks": kks, "coverage": 0.0}
         if "events" in full:                         # E17d: the flights refer to the events by index (winner_ball.USE_EVENTS)
             pt["events"] = full["events"]
@@ -123,7 +128,7 @@ def evidence(mid, seg, full, serves, p=PARAMS):
         ch = None
         if "events" in full:                         # E28: the shot chain of the rally (facts for the user; with CHAIN also the evidence)
             try:
-                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= b + 2.5], T_CUT_E2E, q, w,
+                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= t_end + 2.5], T_CUT_E2E, q, w,
                                  md.case_key(q, p) if w is not None else None, p["min_speed"])
                 pc = sc.case_prob(ch["case"], mid)
                 chain_row = sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
@@ -223,13 +228,14 @@ def segments(prob, full, cfg, t0=0.0, t1=None):
     return rallies(prob, serves, hi, lo, bool(cfg.get("shortPoints", True)), t0, t1), serves
 
 
-def winners(mid, seg, full, serves, p=PARAMS):
+def winners(mid, seg, full, serves, p=PARAMS, prob=None):
     """Step 2. The result rows of the rallies in seg: evidence, then the score decoder from 0-0 with the server
     not known. Player 1 is the player at the near end in the first rally. The player at the near end comes from
     the shirt colors (identity.py, E22): the decoder gets it as evidence for each rally (E22b). The decoder's own
-    state is not usable for the names: right for 30 to 66 %."""
+    state is not usable for the names: right for 30 to 66 %. prob: the GRU probabilities for the rally end
+    detector (E60)."""
     import identity
-    rows = evidence(mid, seg, full, serves, p)
+    rows = evidence(mid, seg, full, serves, p, prob)
     st0 = {(0, 0, 0, 0, -1, srv, True, 0): 0.5 for srv in (1, 2)}
     near1 = identity.p1_near([r["color"] for r in rows])
     if ID_ABS:

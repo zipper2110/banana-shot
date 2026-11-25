@@ -7,11 +7,29 @@ Gap program, stream S4 (G10). Journal: E70. Time: about 1 minute for each rally 
 For each rally clip:
 
 - **Each hit** (racket touches the ball): the time and the player, **near** or **far** end of the court.
-  The serve is hit 1. A ball toss with no hit is not a hit. A hit into the net is a hit.
+  A ball toss with no hit is not a hit. A hit into the net is a hit.
 - The shot count is the count of hits. The page counts them.
-- **Lab matches only**: a first-serve fault before the point. The marks of these matches start at the
-  second serve, so the clip has a pre-roll of up to 12 s. Igor has its faults as clips in the project, so
-  for Igor you do not mark faults.
+- The page shows the rules for the current clip in the panel "What to mark in this clip".
+
+**Igor (rallies 1 to 60).** The project has the first-serve faults as clips of their own. So:
+
+1. Do not mark faults. X and C are off.
+2. Mark each hit of the point with N or F. The first serve in the marked point is hit 1, also when it is
+   a second serve.
+
+**Lab matches (rallies 61 to 180).** The marks start at the second serve, so a first-serve fault is
+before the marked start. The clip has a pre-roll of up to 12 s before the point. So:
+
+1. Press P. The pre-roll plays at 2×.
+2. If the first serve before the point is a fault: step to the racket contact of that serve and press X.
+   If there is no fault: press C. Do **not** press N or F for the fault serve.
+3. Mark each hit of the point with N or F. The serve of the point (the second serve after a fault) is hit 1.
+
+**Double fault.** Press N or F for each serve contact inside the marked point. Often the marked point has
+only the second serve: then the shot count is 1. In a lab match, the first serve before the point is X, as
+above.
+
+**Let serve** (the serve touches the net and is played again): do not mark it. Press M and write "let".
 
 Mark only what you see or hear. If you are not sure of a mark, press Q. If the clip is not a rally
 (no play, camera problem), press S.
@@ -38,8 +56,8 @@ Mark only what you see or hear. If you are not sure of a mark, press Q. If the c
 | 1 2 3 4 | speed 1×, ½×, ¼×, ⅒× |
 | R | play again from the rally start |
 | P | play the pre-roll at 2× (fault check, lab matches) |
-| X | first-serve fault before this point (at the frame of the fault serve); X again removes it |
-| C | checked: no first-serve fault |
+| X | lab matches: first-serve fault before the point (at the racket contact of the fault serve); X again removes it |
+| C | lab matches: checked, no first-serve fault |
 | Q | not sure (toggle) |
 | S | skip: not a usable rally (toggle) |
 | M | note |

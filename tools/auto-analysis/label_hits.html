@@ -38,7 +38,8 @@ the screen. label_clips.py checked that clip frame 0 is the source frame at t0.
   #timeline .head { position:absolute; top:0; bottom:0; width:2px; background:#fff; margin-left:-1px; }
   #bar { display:flex; gap:14px; align-items:center; color:var(--dim); font-variant-numeric:tabular-nums; }
   #bar .big { color:var(--text); font-size:16px; }
-  aside { background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  aside { background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
+  aside summary { cursor:pointer; }
   aside section { padding:8px 10px; border-bottom:1px solid var(--line); }
   aside h3 { margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--dim); font-weight:600; }
   #events div { display:flex; gap:8px; align-items:center; padding:1px 0; cursor:pointer; font-variant-numeric:tabular-nums; }
@@ -48,7 +49,7 @@ the screen. label_clips.py checked that clip frame 0 is the source frame at t0.
   .near { color:var(--near); } .far { color:var(--far); } .fault { color:var(--fault); } .ok { color:var(--ok); } .warn { color:var(--warn); }
   #keys { font-size:12px; color:var(--dim); display:grid; grid-template-columns:auto 1fr; gap:1px 10px; }
   #keys kbd { color:var(--text); font:12px ui-monospace, monospace; background:#2b3038; border:1px solid var(--line); border-radius:3px; padding:0 4px; justify-self:start; }
-  #list { flex:1; overflow:auto; font-size:12px; font-variant-numeric:tabular-nums; }
+  #list { flex:1 0 170px; overflow:auto; font-size:12px; font-variant-numeric:tabular-nums; }
   #list div { display:grid; grid-template-columns:34px 52px 52px 1fr; padding:1px 10px; cursor:pointer; color:var(--dim); }
   #list div.done { color:var(--ok); } #list div.cur { background:#33404f; color:var(--text); } #list div.nocl { opacity:.4; }
   #list div:hover { background:#2a2e35; }
@@ -82,9 +83,10 @@ the screen. label_clips.py checked that clip frame 0 is the source frame at t0.
       <div id="info"></div>
       <div style="margin-top:4px">shots: <b id="shots">0</b> &nbsp; fault: <b id="fault">–</b> &nbsp; <span id="flags"></span></div>
     </section>
+    <section><h3>What to mark in this clip</h3><div id="rules" style="font-size:12.5px"></div></section>
     <section style="max-height:30vh; overflow:auto"><h3>Marks</h3><div id="events"></div></section>
     <section>
-      <h3>Keys</h3>
+      <details id="keybox" open><summary><h3 style="display:inline">Keys (H: show or hide)</h3></summary>
       <div id="keys">
         <kbd>N</kbd><span>hit of the <span class="near">near</span> player (frame on screen)</span>
         <kbd>F</kbd><span>hit of the <span class="far">far</span> player</span>
@@ -95,15 +97,15 @@ the screen. label_clips.py checked that clip frame 0 is the source frame at t0.
         <kbd>1 2 3 4</kbd><span>speed 1× ½× ¼× ⅒×</span>
         <kbd>R</kbd><span>replay from the rally start</span>
         <kbd>P</kbd><span>play the pre-roll at 2× (fault check)</span>
-        <kbd>X</kbd><span>first-serve <span class="fault">fault</span> before this point (at the frame)</span>
-        <kbd>C</kbd><span>checked: no first-serve fault</span>
+        <kbd>X</kbd><span>lab matches: first-serve <span class="fault">fault</span> before the point (at its racket contact)</span>
+        <kbd>C</kbd><span>lab matches: checked, no first-serve fault</span>
         <kbd>Q</kbd><span>not sure (toggle)</span>
         <kbd>S</kbd><span>skip: not a usable rally (toggle)</span>
         <kbd>M</kbd><span>note</span>
         <kbd>V</kbd><span>zoom 2× at the mouse (toggle)</span>
         <kbd>[ ]</kbd><span>previous / next rally, no save</span>
         <kbd>O</kbd><span>choose the label folder</span>
-      </div>
+      </div></details>
     </section>
     <section style="padding-bottom:2px"><h3>Work list</h3></section>
     <div id="list"></div>
@@ -336,9 +338,19 @@ function render() {
   const it = item(), dr = d();
   $("where").textContent = `#${it.n} of ${items.length} · ${it.match}${(WL.testOnly || []).includes(it.match) ? " (test only)" : ""} · ${it.stratum}`;
   $("info").innerHTML = `point ${it.point.slice(0, 8)} · marked ${fmt(it.startMs / 1000)} to ${fmt(it.endMs / 1000)} (${((it.endMs - it.startMs) / 1000).toFixed(1)} s)` +
-    (it.faultCheck ? `<br>pre-roll ${Math.max(0, ptStart(it) - WL.window.pre).toFixed(1)} s for the fault check (P)` : `<br>first-serve faults: from the project`) +
+    (it.ending === "SERVE_FAULT" ? ` · <span class="fault">double fault</span>` : "") +
+    (it.faultCheck ? `<br>pre-roll ${Math.max(0, it.startMs / 1000 - WL.window.pre - it.clipBegin).toFixed(1)} s for the fault check (P)` : `<br>first-serve faults: from the project`) +
     (dr.dirty ? ` · <span class="warn">unsaved</span>` : saved(it) ? ` · <span class="ok">saved</span>` : "");
   $("shots").textContent = dr.hits.length;
+  $("rules").innerHTML = (it.faultCheck
+    ? `<ol style="margin:0;padding-left:18px">
+         <li>Press <b>P</b>: the pre-roll before the point plays at 2×.</li>
+         <li>First serve before the point is a <span class="fault">fault</span>: step to the racket contact of that serve and press <b>X</b>. No fault: press <b>C</b>. Do <b>not</b> press N or F for the fault serve.</li>
+         <li>Mark each hit of the point with <b>N</b> or <b>F</b>. The serve of the point (the second serve after a fault) is hit 1.</li></ol>`
+    : `<ol style="margin:0;padding-left:18px">
+         <li>Do not mark faults: the project has the fault clips. X and C are off.</li>
+         <li>Mark each hit of the point with <b>N</b> or <b>F</b>. The first serve in the marked point is hit 1, also when it is a second serve.</li></ol>`) +
+    `<div style="margin-top:3px;color:var(--dim)">Double fault: N or F for each serve contact inside the marked point (often only the second serve: 1 shot)${it.faultCheck ? "; the first serve before the point is X" : ""}. Let serve: do not mark it; press M and write "let".</div>`;
   $("fault").innerHTML = !it.faultCheck ? "project" : dr.fault === null ? "not checked" : dr.fault === false ? `<span class="ok">none</span>` : `<span class="fault">yes ${fmt(dr.fault.t)}</span>`;
   $("flags").innerHTML = (dr.unsure ? `<span class="warn">not sure</span> ` : "") + (dr.skip ? `<span class="fault">skip</span> ` : "") + (dr.note ? `note: ${dr.note.replace(/</g, "&lt;")}` : "");
   const ev = $("events"); ev.innerHTML = "";
@@ -389,9 +401,9 @@ document.addEventListener("keydown", async e => {
     "m": () => { const t = prompt("Note for this rally", d().note || ""); if (t !== null) { d().note = t.trim(); touch(); } },
     "v": () => { zoom = !zoom; v.style.transformOrigin = `${mouse[0]}% ${mouse[1]}%`; v.style.transform = zoom ? "scale(2)" : ""; },
     "[": () => open(cur - 1), "]": () => open(cur + 1), "pageup": () => open(cur - 1), "pagedown": () => open(cur + 1),
-    "o": chooseDir,
+    "o": chooseDir, "h": () => { $("keybox").open = !$("keybox").open; },
   };
-  if (map[k]) { e.preventDefault(); if (cur >= 0 || k === "o") await map[k](); }
+  if (map[k]) { e.preventDefault(); if (cur >= 0 || k === "o" || k === "h") await map[k](); }
 });
 function setRate(i) { rate = SPEEDS[i]; if (!preFast) v.playbackRate = rate; render(); }
 

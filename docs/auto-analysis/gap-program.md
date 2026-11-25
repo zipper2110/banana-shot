@@ -17,6 +17,19 @@ Phase 2 (when a stream is free): G8 score design, G9, G11, G7.
 Priorities of the detection (the user, 2026-11-26): 1. the correct rallies; 2. the correct outcome of each
 rally. The score is only the result of the points, and no benchmark uses a score measure.
 
+How priority 2 is measured (the user, 2026-11-26): by the events, not by the outcome. The outcome is right
+for the right reason only when the events are right: each shot (hit time, hitter), each bounce (time, place,
+in or out), each net touch. A right outcome from wrong events is luck and does not carry over to the next
+match. Thus:
+
+- The main measures of priority 2 are event measures against event labels: recall, precision and time error
+  of hits, bounces and net touches; hitter right; shot count right; in/out right.
+- The outcome measure (winner right) stays as a check, not as the target.
+- Do not tune or fit a parameter on the outcome when an event measure for it is possible. A fix of a wrong
+  outcome must name the event that was wrong and show that this event is now right.
+- An analysis of wrong winners gives the wrong event of each one (wrong hitter, missed shot, missed or false
+  bounce, wrong in/out, missed net touch).
+
 "Covered" means: the gap has a fix that is merged and on by default, or a measurement that decides the
 question, with a journal row. A gap is not covered by a plan or a note only.
 
@@ -174,4 +187,5 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
 | 2026-11-26 | G2 to G14 merged (S2, E50, E51) by the rule of 2026-11-23: rally recall 90.3 to 93.8 %, precision 87.8 to 90.0 %, end to end 78.3 to 78.9 % (inside the noise). Open: on m1030 the winner on matched points goes 88.0 to 80.7 % (13 of 18 changed winners become wrong) because the GRU ends move; S3 investigates. |
 | 2026-11-26 | S2 phase 2: reuse of old ball files, the G14 fixture, then G11. |
 | 2026-11-26 | Score (the user, on the S3 options of E63): the score is not the goal; it is only the result of the points. Priority 1: detect the correct rallies. Priority 2: detect the correct outcome of each rally. No change of the app score now (G8 score part closed, option A stays). The benchmarks do not use score measures (score right before a point, games right): a score error drags along and tells little about a single point. Report the rally measures and the winner of each rally. The decoder stays as a tool that chooses the winner of each rally. The start score is not asked: it does not change a winner (E63). Later item (out of the current scope): consistency hints from the score (the serve side does not match the score; the server changes inside a game) that show the user where a point is probably missing or false, on review or later, or that correct the detection. |
+| 2026-11-26 | Event measures (the user): priority 2 is measured by the events (shots, hitter, bounces, in/out, net touches) against labels, not by the outcome. A right outcome for a wrong reason does not count as a gain. Section 1 has the rules. |
 | 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |

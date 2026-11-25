@@ -263,6 +263,23 @@ def shot_end(sh, tol=0.0):
     return ("in" if m > -tol else "out"), m
 
 
+# E74 (G7): the net test of the old rule (winner_sweep.decide, match_decode.PARAMS net_back and net_fwd) in the chain.
+NET_STOP = os.environ.get("CHAIN_NET_STOP", "1") == "1"
+STOP_BACK, STOP_FWD, STOP_Z = 4.0, 2.0, 1.8     # m before and after the net plane along the shot; highest end of the flight
+
+
+def net_stop(sh, t_last):
+    """True if the ball of a shot with no net event and no bounce event stopped at the net: the last flight of the shot
+    that starts before t_last ends 4 m before to 2 m after the net plane, lower than 1.8 m (the old rule: "in the net")."""
+    if sh["net"] is not None or sh["bounces"]:
+        return False
+    fl = [f for f in sh["fl"] if f["t0"] < t_last and pos_ok(f)]
+    if not fl:
+        return False
+    s = 1.0 if sh["near"] else -1.0
+    return -STOP_BACK < fl[-1]["p1"][1] * s < STOP_FWD and fl[-1]["p1"][2] < STOP_Z
+
+
 def after_bounce(sh):
     """Seconds for which the ball was tracked after the first bounce of the shot."""
     b = first_bounce(sh)
@@ -285,11 +302,12 @@ EARLY = -4.0          # s: the last shot starts more than this before the end: a
 # The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
 # E38d: fitted with the detections of the fine-tuned ball weights (each match with weights that did not see it).
-CASE_P = {"back_in": 0.58, "back_stop": 0.87, "in": 0.88, "in_early": 0.83, "in_line": 0.79, "in_line_early": 0.83, "net_hi": 0.97, "net_lo": 0.8, "old_in": 0.7, "old_in_early": 0.75, "old_in_seen": 0.75, "old_net": 0.87, "old_net_early": 0.75, "old_out": 0.72, "old_out_early": 0.59, "old_out_seen": 0.94, "out": 0.96, "out_early": 0.9, "out_line": 0.83, "out_line_early": 0.75, "own": 0.8, "own_early": 0.61}
+# E74: fitted again with the cases "stop" and "stop_early" (the net test of the old rule in the chain).
+CASE_P = {"back_in": 0.58, "back_stop": 0.85, "in": 0.88, "in_early": 0.83, "in_line": 0.79, "in_line_early": 0.83, "net_hi": 0.97, "net_lo": 0.8, "old_in": 0.7, "old_in_early": 0.75, "old_in_seen": 0.75, "old_net": 0.5, "old_out": 0.72, "old_out_early": 0.55, "old_out_seen": 0.94, "out": 0.96, "out_early": 0.9, "out_line": 0.83, "out_line_early": 0.75, "own": 0.8, "own_early": 0.61, "stop": 0.87, "stop_early": 0.83}
 CASES_BY_MATCH = None
 TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", "own": "the ball came down on the side of the hitter",
         "out": "the ball bounced out", "in": "the ball bounced in and no return was seen",
-        "back": "the end of this shot was not seen", "old": "no bounce or net event; the fitted flight decides", "none": "nothing is known"}
+        "back": "the end of this shot was not seen", "stop": "the flight of the ball ends low near the net", "old": "no bounce or net event; the fitted flight decides", "none": "nothing is known"}
 
 
 def evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
@@ -353,6 +371,8 @@ def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
         w, case = (not sh["near"]), "out" + ("_line" if OUT_LINE and m > -LINE_M else "") + e      # E32: "out" near a line is its own case, as "in"
     elif kind == "in":
         w, case = sh["near"], "in" + ("_line" if m < LINE_M else "") + e
+    elif NET_STOP and net_stop(sh, pt["end"] + t_cut):
+        w, case = (not sh["near"]), "stop" + e
     else:
         w, case = old("old_")
         if not same:
@@ -398,6 +418,8 @@ def explain(r, t_end, t_cut):
         line = " This is near a line." if m < LINE_M else ""
         seen = f" The ball was tracked for {a:.1f} s after the bounce, and no return was seen." if a >= 0.1 else " No return was seen."
         return txt + f" The ball bounced in at {b[2]:.1f} s ({m:.1f} m inside).{line}{seen}" + win
+    if case.startswith("stop"):
+        return txt + " No bounce event and no net event. The flight of the ball ends low near the net: the ball stopped at the net." + win
     if case == "back_stop":
         return txt + " The end of this shot was not seen. The shot before it went into the net or out, so this ball is not a rally shot." + win
     if case == "back_in":

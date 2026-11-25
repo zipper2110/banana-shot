@@ -440,7 +440,26 @@ internal class ReviewWindow(
             isSelected = overlayFile != null && layer.name in host.overlayLayers()
         }
     }
-    private val overlayRow = JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 14, 0)).apply {
+    /** The switches go to a second line when the window is too narrow for one line: the row then has the height of its lines. */
+    private val overlayRow = object : JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, OVERLAY_ROW_GAP, OVERLAY_ROW_GAP / 2)) {
+        override fun getPreferredSize(): Dimension {
+            val one = super.getPreferredSize()
+            val width = parent?.width?.takeIf { it > 0 } ?: return one
+            var lines = 1
+            var x = OVERLAY_ROW_GAP
+            var lineHeight = 0
+            components.filter { it.isVisible }.forEach { part ->
+                val size = part.preferredSize
+                if (x > OVERLAY_ROW_GAP && x + size.width + OVERLAY_ROW_GAP > width) {
+                    lines++
+                    x = OVERLAY_ROW_GAP
+                }
+                x += size.width + OVERLAY_ROW_GAP
+                lineHeight = maxOf(lineHeight, size.height)
+            }
+            return Dimension(width, lines * lineHeight + (lines + 1) * OVERLAY_ROW_GAP / 2)
+        }
+    }.apply {
         isOpaque = false
         isVisible = overlayFile != null
         add(overlayMaster)
@@ -1352,6 +1371,9 @@ internal class ReviewWindow(
 
         /** The height of the detection note field, in text rows. */
         const val NOTE_ROWS = 4
+
+        /** The gap between two overlay switches. */
+        const val OVERLAY_ROW_GAP = 14
 
         /** The evidence text shows this many rows. The other rows need a scroll. */
         const val EVIDENCE_ROWS = 8

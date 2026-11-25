@@ -251,7 +251,7 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
         r["pMiss"] = p_miss(r["start"] - rows[i - 1]["end"]) if i else 0.02
     post = md.decode([r["pBall"] for r in rows], ps, st0, [], [r["pMiss"] for r in rows], [r["pNull"] for r in rows])
     out = []
-    for r, pp, p1_near in zip(rows, post, near1):
+    for i, (r, pp, p1_near) in enumerate(zip(rows, post, near1)):
         near_wins = None if abs(pp - 0.5) < 0.02 else bool(pp > 0.5)
         out.append({
             "start": r["start"], "end": r["end"], "kind": "short" if r["prob"] < 0 else "rally",
@@ -261,7 +261,7 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
             "confidence": max(pp, 1 - pp),
             "server": None if r["serverNear"] is None else ("P1" if r["serverNear"] == p1_near else "P2"),
             "serverNear": r["serverNear"], "serveSpeedKmh": r["serveSpeed"], "fault": r["fault"],
-            "shots": r["shots"], "lastShot": r["lastShot"], "endChangeBefore": r["flip"],
+            "shots": r["shots"], "lastShot": r["lastShot"], "endChangeBefore": bool(p1_near != near1[i - 1]) if i else None,     # E64: from the identity, as p1Near (the color flips had 7 false changes, the identity 1)
             # E28: the shot chain of the rally (shot_chain.py). E29: it is also the winner evidence of the
             # score model (CHAIN is on).
             "chain": r.get("chain")})

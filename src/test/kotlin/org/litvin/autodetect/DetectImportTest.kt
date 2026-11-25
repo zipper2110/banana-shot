@@ -237,7 +237,7 @@ class DetectImportTest {
         val dir = Files.createTempDirectory("detect-import").toFile()
         try {
             EdlIO.writeForProjectDir(dir.absolutePath, EdlV1(points = listOf(PointV1(id = "mine", startMs = 100_000, endMs = 110_000))))
-            val file = File(dir, "result.json")
+            val file = File(File(dir, DetectImport.FOLDER).apply { mkdirs() }, "result-1.json")    // as the app keeps it
             DetectJson.mapper.writeValue(file, result(rally(10.0, 20.0, "P1"), rally(30.0, 40.0, "P2"), rally(101.0, 108.0)))
 
             val plan = DetectImport.apply(dir, file, DetectSettings())
@@ -248,7 +248,12 @@ class DetectImportTest {
             assertEquals(listOf(10_000, 30_000, 100_000), points.map { it.startMs })
             val score = ScoreIO.readForProjectDir(dir.absolutePath)
             assertEquals(listOf(Outcome.P1, Outcome.P2), points.take(2).map { score.outcomeOf(it.id) })
-            assertEquals(1, File(dir, DetectImport.FOLDER).listFiles { f -> f.name.startsWith("import-") }!!.size)
+            val records = File(dir, DetectImport.FOLDER).listFiles { f -> f.name.startsWith("import-") }!!
+            assertEquals(1, records.size)
+            // G11: the record names the clips that were there before the import, and each clip names its result.
+            assertEquals(listOf("mine"), DetectJson.mapper.readValue(records[0], ImportRecord::class.java).existingPointIds)
+            val detection = DetectImport.detectionsOfRecords(dir).getValue(points[0].id)
+            assertEquals("result-1.json" to records[0].name, detection.resultFile to detection.importFile)
 
             assertEquals(0, DetectImport.apply(dir, file, DetectSettings()).points.size)
             assertEquals(3, EdlIO.readForProjectDir(dir.absolutePath).points.size)

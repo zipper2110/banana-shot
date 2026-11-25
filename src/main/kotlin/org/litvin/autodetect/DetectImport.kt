@@ -65,10 +65,23 @@ data class ImportRecord(
     /** The trim that limited the import, in ms, or null. */
     val rangeStartMs: Long? = null,
     val rangeEndMs: Long? = null,
+    /**
+     * The ids of the clips that were in the project before the import (G11), or null in an old record. The lab
+     * (corrections.py) does not count them as clips that the user added for a missed point.
+     */
+    val existingPointIds: List<String>? = null,
 )
 
-/** The detected rally of a clip of the project. [swapped] is true when player 1 of the detection is player 2 of the project. */
-data class PointDetection(val rally: DetectedRally, val swapped: Boolean)
+/**
+ * The detected rally of a clip of the project. [swapped] is true when player 1 of the detection is player 2 of the
+ * project. [resultFile] and [importFile] are the names of the result and of the import record of the clip (G11).
+ */
+data class PointDetection(
+    val rally: DetectedRally,
+    val swapped: Boolean,
+    val resultFile: String? = null,
+    val importFile: String? = null,
+)
 
 /** Changes the result of a detection run into clips of the project. */
 object DetectImport {
@@ -198,7 +211,10 @@ object DetectImport {
         val updated = score.copy(outcomes = score.outcomes + plan.outcomes, details = score.details + plan.details)
         ScoreIO.writeForProjectDir(dir, PointDetails.resolve(points, updated))
         val stamp = LocalDateTime.now().format(STAMP)
-        val record = ImportRecord(stamp, resultFile.name, settings.normalized(), plan.rows, swapped, rangeMs?.first, rangeMs?.last)
+        val record = ImportRecord(
+            stamp, resultFile.name, settings.normalized(), plan.rows, swapped, rangeMs?.first, rangeMs?.last,
+            existingPointIds = edl.points.map { it.id },
+        )
         val folder = File(projectDir, FOLDER).apply { mkdirs() }
         JsonFileIO.writeAtomically(DetectJson.mapper, File(folder, "import-$stamp.json").absolutePath, record)
         return plan
@@ -277,9 +293,9 @@ object DetectImport {
                 record.rows.forEach { row ->
                     val id = row.pointId ?: return@forEach
                     val rally = rallies.getOrNull(row.rally) ?: return@forEach
-                    found[id] = PointDetection(rally, record.swapped)
+                    found[id] = PointDetection(rally, record.swapped, record.resultFile, file.name)
                     row.faultPointId?.let { faultId ->
-                        faultDetection(rally)?.let { found[faultId] = PointDetection(it, record.swapped) }
+                        faultDetection(rally)?.let { found[faultId] = PointDetection(it, record.swapped, record.resultFile, file.name) }
                     }
                 }
             }

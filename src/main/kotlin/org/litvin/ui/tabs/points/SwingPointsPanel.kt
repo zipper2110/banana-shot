@@ -280,6 +280,8 @@ class SwingPointsPanel(
 
         override fun noteOf(pointId: String) = detectNotes[pointId]?.text.orEmpty()
 
+        override fun warnings() = detectWarnings
+
         override fun setNote(pointId: String, text: String) {
             val dir = projectDir?.let(::File) ?: return
             val point = dispatcher.getCompletedPoints().firstOrNull { it.id == pointId } ?: return
@@ -303,6 +305,7 @@ class SwingPointsPanel(
     private var recordNearPlayers: Map<String, Int> = emptyMap()
     private var recordDetections: Map<String, org.litvin.autodetect.PointDetection> = emptyMap()
     private var detectNotes: Map<String, org.litvin.autodetect.DetectNote> = emptyMap()
+    private var detectWarnings: List<String> = emptyList()
 
     // UI controls
     private var playbackBar: PlaybackBar
@@ -1441,6 +1444,7 @@ class SwingPointsPanel(
         recordNearPlayers = runCatching { org.litvin.autodetect.DetectImport.nearPlayersOfRecords(File(dir)) }.getOrDefault(emptyMap())
         recordDetections = runCatching { org.litvin.autodetect.DetectImport.detectionsOfRecords(File(dir)) }.getOrDefault(emptyMap())
         detectNotes = runCatching { org.litvin.autodetect.DetectNotes.read(File(dir)) }.getOrDefault(emptyMap())
+        detectWarnings = org.litvin.autodetect.DetectImport.latestImportWarnings(File(dir))
         busyNote.text = org.litvin.ui.tabs.points.detect.DetectTexts.REVIEW_BUSY
         videoCards.show(videoArea, BUSY_CARD)
         detectReview = org.litvin.ui.tabs.points.detect.ReviewWindow(

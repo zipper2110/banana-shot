@@ -270,6 +270,20 @@ object DetectImport {
         return found
     }
 
+    /**
+     * The warnings of the result of the newest import of the project, for example "no court found". Empty when the
+     * project has no import or the files do not open.
+     */
+    fun latestImportWarnings(projectDir: File): List<String> {
+        val folder = File(projectDir, FOLDER)
+        val newest = folder.listFiles { f -> f.isFile && f.name.startsWith("import-") && f.name.endsWith(".json") }
+            ?.maxByOrNull { it.name } ?: return emptyList()
+        return runCatching {
+            val record = DetectJson.mapper.readValue(newest, ImportRecord::class.java)
+            DetectResult.read(File(folder, record.resultFile)).warnings
+        }.getOrDefault(emptyList())
+    }
+
     /** The newest overlay data file of the project, or null. */
     fun latestOverlay(projectDir: File): File? =
         File(projectDir, FOLDER).listFiles { f -> f.isFile && f.name.startsWith("overlay-") && f.name.endsWith(".json") }

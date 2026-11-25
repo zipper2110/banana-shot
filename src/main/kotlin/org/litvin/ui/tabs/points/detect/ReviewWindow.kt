@@ -14,6 +14,7 @@ import org.litvin.points.PointV1
 import org.litvin.scoring.Outcome
 import org.litvin.shared.util.Timecode
 import org.litvin.ui.commons.MessageDialog
+import org.litvin.ui.commons.Html
 import org.litvin.ui.commons.Palette
 import org.litvin.ui.commons.SegmentedChoice
 import org.litvin.ui.commons.SpeedControl
@@ -99,6 +100,9 @@ internal interface ReviewHost {
     fun noteOf(pointId: String): String = ""
 
     fun setNote(pointId: String, text: String) {}
+
+    /** The warnings of the newest detection result, for example "no court found". The window shows them at the top. */
+    fun warnings(): List<String> = emptyList()
 
     /** The names of the overlay parts ([OverlayLayer]) that the user had on the last time. */
     fun overlayLayers(): Set<String> = emptySet()
@@ -730,6 +734,15 @@ internal class ReviewWindow(
                 foreground = Palette.FG
             })
             add(sub)
+            // A warning of the detection, for example "no court found": it tells why the points have no winners.
+            host.warnings().firstOrNull()?.let { text ->
+                add(JLabel(Html.wrappedTooltip(text, SIDE_WIDTH - 32)).apply {
+                    name = "review-warning"
+                    font = UiKit.font(12f)
+                    foreground = Palette.YELLOW
+                    border = BorderFactory.createEmptyBorder(6, 0, 0, 0)
+                })
+            }
         }
         val scroll = JScrollPane(list).apply {
             border = BorderFactory.createMatteBorder(1, 0, 1, 0, Palette.LINE)

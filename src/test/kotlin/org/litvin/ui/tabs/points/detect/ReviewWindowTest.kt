@@ -29,7 +29,9 @@ import kotlin.test.assertTrue
 class ReviewWindowTest {
     private class Host(var list: List<PointV1>) : ReviewHost {
         val winners = mutableMapOf<String, Outcome>()
+        var warningList = emptyList<String>()
         override val players = ScorePlayers("Anna", "Bea")
+        override fun warnings() = warningList
         override fun points() = list.sortedBy { it.startMs }
         override fun winnerOf(pointId: String) = winners[pointId] ?: Outcome.NONE
         override fun nearPlayerOf(pointId: String) = list.firstOrNull { it.id == pointId }?.auto?.nearPlayer
@@ -116,9 +118,9 @@ class ReviewWindowTest {
         fun text(name: String) = (window.contentPane.find(name) as JLabel).text
     }
 
-    private fun review(vararg points: PointV1, block: Opened.() -> Unit) {
+    private fun review(vararg points: PointV1, warnings: List<String> = emptyList(), block: Opened.() -> Unit) {
         SwingUtilities.invokeAndWait {
-            val host = Host(points.toList())
+            val host = Host(points.toList()).apply { warningList = warnings }
             val player = Player()
             lateinit var opened: Opened
             val window = ReviewWindow(null, player, File("video.mp4"), AdjustmentsV1(), host, null, null) { opened.closedCalls++ }
@@ -129,6 +131,17 @@ class ReviewWindowTest {
                 window.close()
             }
         }
+    }
+
+    @Test
+    fun `the window shows the warning of the detection result`() =
+        review(auto("a", 10_000, near = null), warnings = listOf("No tennis court found in the video.")) {
+            assertTrue(text("review-warning").contains("No tennis court found in the video."))
+        }
+
+    @Test
+    fun `the window has no warning line when the result has no warning`() = review(auto("a", 10_000)) {
+        assertNull(window.contentPane.find("review-warning"))
     }
 
     @Test

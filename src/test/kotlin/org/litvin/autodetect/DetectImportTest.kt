@@ -187,6 +187,23 @@ class DetectImportTest {
     }
 
     @Test
+    fun `the warnings come from the result of the newest import`() {
+        val dir = Files.createTempDirectory("detect-warn").toFile()
+        try {
+            assertEquals(emptyList(), DetectImport.latestImportWarnings(dir))
+            val folder = File(dir, DetectImport.FOLDER).apply { mkdirs() }
+            DetectJson.mapper.writeValue(File(folder, "result-1.json"), result(rally(10.0, 20.0)).copy(warnings = listOf("old")))
+            DetectJson.mapper.writeValue(File(folder, "result-2.json"), result(rally(10.0, 20.0)).copy(warnings = listOf("No court")))
+            DetectJson.mapper.writeValue(File(folder, "import-1.json"), ImportRecord("1", "result-1.json", DetectSettings(), emptyList()))
+            DetectJson.mapper.writeValue(File(folder, "import-2.json"), ImportRecord("2", "result-2.json", DetectSettings(), emptyList()))
+
+            assertEquals(listOf("No court"), DetectImport.latestImportWarnings(dir))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `a fault clip has the near player of its point and the shots of the fault candidate`() {
         val dir = Files.createTempDirectory("detect-fault").toFile()
         try {

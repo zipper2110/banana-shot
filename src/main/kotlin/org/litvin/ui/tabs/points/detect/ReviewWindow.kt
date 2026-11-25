@@ -440,6 +440,14 @@ internal class ReviewWindow(
             isSelected = overlayFile != null && layer.name in host.overlayLayers()
         }
     }
+    /** Opens the window with the switches of the overlay parts. */
+    private val overlaySettings = UiButton("Overlay settings", Material2MZ.TUNE, UiButton.Kind.SECONDARY).apply {
+        name = "review-overlay-settings"
+        toolTipText = "Opens the switches of the parts of the detection overlay"
+        isFocusable = false
+        addActionListener { showOverlaySettings() }
+    }
+
     /** The switches go to a second line when the window is too narrow for one line: the row then has the height of its lines. */
     private val overlayRow = object : JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, OVERLAY_ROW_GAP, OVERLAY_ROW_GAP / 2)) {
         override fun getPreferredSize(): Dimension {
@@ -463,8 +471,11 @@ internal class ReviewWindow(
         isOpaque = false
         isVisible = overlayFile != null
         add(overlayMaster)
-        overlaySwitches.values.forEach { add(it) }
+        add(overlaySettings)
     }
+
+    /** The window with the switches of the overlay parts. It is not modal: the user changes a switch and sees the video. */
+    private var overlayDialog: javax.swing.JDialog? = null
     private var overlay: DetectOverlay? = null
 
     /** The shots of the selected point, from the shot chain of its rally. */
@@ -1197,6 +1208,26 @@ internal class ReviewWindow(
         }
     }
 
+    private fun showOverlaySettings() {
+        val dialog = overlayDialog ?: javax.swing.JDialog(this, "Overlay settings", false).apply {
+            name = "review-overlay-dialog"
+            // The keys of the review window (play, step, V) continue to operate while this window is open.
+            focusableWindowState = false
+            isResizable = false
+            contentPane = JPanel(GridLayout(0, 1, 0, 8)).apply {
+                background = Palette.BG
+                border = BorderFactory.createEmptyBorder(14, 18, 14, 24)
+                overlaySwitches.values.forEach { add(it) }
+            }
+            pack()
+            // Above the button, so the video stays in view.
+            val at = runCatching { overlaySettings.locationOnScreen }.getOrNull()
+            if (at != null) setLocation(at.x, maxOf(0, at.y - height - 8)) else setLocationRelativeTo(this@ReviewWindow)
+        }.also { overlayDialog = it }
+        dialog.isVisible = true
+        dialog.toFront()
+    }
+
     /** The shots are on the timeline when the "Shots" switch is on. */
     private fun refreshShots() {
         val on = overlayFile != null && overlayMaster.isSelected && overlaySwitches[OverlayLayer.SHOTS]?.isSelected == true
@@ -1265,6 +1296,7 @@ internal class ReviewWindow(
         closed = true
         saveNote()
         overlayTicker.stop()
+        overlayDialog?.dispose()
         player.onTimeChanged = null
         player.onStatusChanged = null
         player.setPreviewOverlay(null)

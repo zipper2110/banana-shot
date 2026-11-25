@@ -250,6 +250,28 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
                 shapes += OverlayShape.Text(cx + 8.0 * unit, cy - 8.0 * unit, shot.number.toString(), 13.0 * unit, Palette.FG, FONT, bold = true)
             }
         }
+        // The ball of this time: a small white dot at the place of the fitted flight over the court.
+        if (OverlayLayer.DIAGRAM_BALL in layers) {
+            ballOnCourt(t)?.takeIf { (bx, by) -> kotlin.math.abs(bx) <= DIAGRAM_HALF_X && kotlin.math.abs(by) <= DIAGRAM_HALF_Y }?.let { (bx, by) ->
+                shapes += OverlayShape.Circle(dx(bx), dy(by), 2.5 * unit, fill = Palette.FG)
+            }
+        }
+    }
+
+    /**
+     * The place of the ball over the court at [t] in m (x across, y along), from the path of the fitted flight of that
+     * time. Null: no flight at that time, or an overlay file of an older detection (its paths have no court places).
+     */
+    private fun ballOnCourt(t: Double): Pair<Double, Double>? {
+        val rows = data.flights.lastOrNull { flight ->
+            flight.good && flight.curve?.let { it.isNotEmpty() && t >= it.first()[0] && t <= it.last()[0] } == true
+        }?.curve ?: return null
+        val next = rows.indexOfFirst { it[0] >= t }.takeIf { it >= 0 } ?: return null
+        val b = rows[next]
+        val a = rows[maxOf(0, next - 1)]
+        if (a.size < 5 || b.size < 5) return null
+        val part = if (b[0] > a[0]) (t - a[0]) / (b[0] - a[0]) else 0.0
+        return (a[3] + part * (b[3] - a[3])) to (a[4] + part * (b[4] - a[4]))
     }
 
     /**
@@ -358,6 +380,7 @@ internal enum class OverlayLayer(val text: String) {
     SHOTS("Shots"),
     OUTCOME("Outcome"),
     DIAGRAM("Court diagram"),
+    DIAGRAM_BALL("Ball on the court diagram"),
 }
 
 /** The outcome texts of a rally for the overlay. [shotT] is the start time of its last shot in seconds, or null. */

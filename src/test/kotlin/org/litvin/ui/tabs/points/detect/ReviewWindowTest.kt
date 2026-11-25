@@ -22,6 +22,8 @@ import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ReviewWindowTest {
@@ -127,6 +129,22 @@ class ReviewWindowTest {
                 window.close()
             }
         }
+    }
+
+    @Test
+    fun `the overlay settings window is not modal and has a switch for each overlay part`() = review(auto("a", 10_000)) {
+        click("review-overlay-settings")
+        val dialog = window.ownedWindows.filterIsInstance<javax.swing.JDialog>().single { it.name == "review-overlay-dialog" }
+        assertTrue(dialog.isVisible)
+        assertFalse(dialog.isModal)
+        OverlayLayer.entries.forEach { layer ->
+            assertNotNull(dialog.contentPane.find("review-overlay-${layer.name.lowercase()}"), layer.name)
+        }
+        // The switch of all parts stays in the review window.
+        assertNotNull(window.contentPane.find("review-overlay-all"))
+        assertNull(window.contentPane.find("review-overlay-ball"))
+        window.close()
+        assertFalse(dialog.isDisplayable)
     }
 
     @Test

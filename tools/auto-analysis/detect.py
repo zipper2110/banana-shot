@@ -160,7 +160,7 @@ def write_overlay(work, n, full, serves, net_ev=()):
                E17d: landT, land, landM are the bounce event of the flight if it has one. If not, they are the
                landing of the fit, or null if that landing is before the last detection of the flight. Also: ev0, ev1 (index in events of the event at the start and at the end, or null), bounceEv (= ev1
                if that event is a bounce, else null), landSigma (m, 1-sigma error of an extrapolated landing),
-               curve (the fitted path in the image: [t, x, y], one sample each 1/30 s from t0 to the bounce or,
+               curve (the fitted path in the image: [t, x, y, court x, court y], one sample each 1/30 s from t0 to the bounce or,
                with no bounce, to the landing of the fit; the last sample is at that end), curveObsEnd (the time
                of the last detection of the flight: the curve after it is an extrapolation)
       events   E17d (ball_bounce.py), sorted by time: t, kind ("bounce", "hit", "other", "end"), px (ball center),
@@ -205,13 +205,14 @@ def write_overlay(work, n, full, serves, net_ev=()):
         X = ball_3d.simulate(np.array(fit["p0"], float), np.array(fit["v0"], float), ts)
         h = (P @ np.concatenate([X, np.ones((len(X), 1))], 1).T).T
         out = []
-        for a, (u, v, w) in zip(ts, h):
+        for a, (u, v, w), q in zip(ts, h, X):
             # The path stops where the fit goes behind the camera or far out of the picture. A bad fit of a short
             # flight can pass the plane of the camera: there the projection goes to infinity and comes back from the
             # other side, and the overlay shows lines across the full picture.
             if w * h[0][2] <= 0 or not (-1920 < u / w < 2 * 1920 and -1080 < v / w < 2 * 1080):
                 break
-            out.append([round(float(f["t0"] + a), 3), round(float(u / w), 1), round(float(v / w), 1)])
+            # The place of the ball over the court in m (x across, y along) is for the ball on the court diagram.
+            out.append([round(float(f["t0"] + a), 3), round(float(u / w), 1), round(float(v / w), 1), round(float(q[0]), 2), round(float(q[1]), 2)])
         return out
     flights = []
     for f in full["flights"]:

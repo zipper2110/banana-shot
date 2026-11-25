@@ -183,6 +183,32 @@ class ShotViewsTest {
     }
 
     @Test
+    fun `the court diagram shows the ball of this time when its switch is on`() {
+        // A flight from the near end (y = -10 m) to the far end (y = 10 m) in 1 s. The rows: time, pixel, place on the court.
+        val curve = listOf(listOf(10.0, 900.0, 800.0, 0.0, -10.0), listOf(11.0, 900.0, 300.0, 2.0, 10.0))
+        val flight = org.litvin.autodetect.OverlayFlight(t0 = 10.0, t1 = 11.0, good = true, curve = curve, curveObsEnd = 11.0)
+        val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080, flights = listOf(flight))) { null }
+        val area = Rectangle2D.Double(0.0, 0.0, 1280.0, 720.0)
+        fun ball(t: Double) = overlay.shapes(t, area).filterIsInstance<OverlayShape.Circle>().singleOrNull { it.fill == Palette.FG }
+
+        overlay.layers = setOf(OverlayLayer.DIAGRAM)
+        assertNull(ball(10.5))
+        overlay.layers = setOf(OverlayLayer.DIAGRAM, OverlayLayer.DIAGRAM_BALL)
+        val box = overlay.shapes(10.5, area).filterIsInstance<OverlayShape.Rect>().single()
+        // At the middle of the flight the ball is over the net, 1 m to the right of the center.
+        val middle = ball(10.5)!!
+        assertEquals(box.y + box.height / 2, middle.centerY, 0.01)
+        assertTrue(middle.centerX > box.x + box.width / 2)
+        // The near end is at the bottom of the diagram.
+        assertTrue(ball(10.1)!!.centerY > middle.centerY)
+        assertTrue(ball(10.9)!!.centerY < middle.centerY)
+        assertNull(ball(11.5))
+        // The ball has no dot without the diagram.
+        overlay.layers = setOf(OverlayLayer.DIAGRAM_BALL)
+        assertNull(ball(10.5))
+    }
+
+    @Test
     fun `the court diagram shows the end of each shot up to the video time`() {
         val shots = ShotViews.of(rally, near = 1, players)
         val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080)) { null }

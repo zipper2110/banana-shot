@@ -165,7 +165,11 @@ These decisions replace the review row and the overlay switch of the Points tab 
   picture each second. A skeleton stays on the video until the next picture has poses.
   The picture of second k is the last video frame of that second (ffmpeg `fps=1:round=down`), so `overlay.json`
   gives a pose the time of that frame, about k + 1 s. Each part of the overlay
-  (court, ball, landing points, serve speed, players, shots, outcome, court diagram) has its own switch. "Court diagram"
+  (court, ball, landing points, serve speed, players, shots, outcome, court diagram, ball on the court diagram) has
+  its own switch. The switches are in the "Overlay settings" window (a button next to the "Overlay" switch). The window
+  is not modal and takes no keyboard focus: the keys of the review window continue to operate. "Ball on the court
+  diagram" draws a small white dot at the place of the fitted flight of this time (`curve` in `overlay.json` has the
+  place over the court for each sample). "Court diagram"
   draws a top view of the court below the shot panel, with the near end at the bottom. It has a dot for the end of each
   shot of the selected point up to the video time: green for in, red for out or a bounce on the side of the hitter,
   yellow for net (on the net line). A ring with no fill is a predicted end. The newest end has a white ring and its

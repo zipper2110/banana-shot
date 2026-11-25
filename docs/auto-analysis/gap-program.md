@@ -46,6 +46,9 @@ question, with a journal row. A gap is not covered by a plan or a note only.
   A running `detect.py` loads the chain modules only when each stage starts, so a merge or an edit during the
   run mixes code versions. Record the commit in the result.
 - Light jobs (scoring, small model training on existing features, plots) do not need the lock.
+- A script that imports torch must take the lock or force the CPU (`CUDA_VISIBLE_DEVICES=""`). Any CUDA context
+  takes GPU memory: a small model on the GPU next to the ball stage stopped the Igor run with "out of memory"
+  (2026-11-26).
 - Disk C is almost full. Put all data on D.
 
 ## 3. Streams

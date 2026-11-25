@@ -66,22 +66,21 @@ def court_problem(track_file):
 
 
 def add_views(work, rallies, n):
-    """Gives each rally a "view": the second of a 1 fps keyframe that shows the two players, with their boxes in
-    px of the keyframe ("near", "far": x1, y1, x2, y2). The app shows this picture for the question "who is this
-    player?". The second is the one where the pose detector is most sure of the two persons. A rally with no such
-    picture gets no view."""
-    import numpy as np
+    """Gives each rally a "view": a 1 fps picture that shows the two players, with their boxes in px of the picture
+    ("near", "far": x1, y1, x2, y2). "second" is the second of the video, "picture" is the number k of the picture
+    file kf/<k+1>.jpg (G2: k is not the second). The app shows this picture for the question "who is this player?".
+    The second is the one where the pose detector is most sure of the two persons. A rally with no such picture
+    gets no view."""
+    import lab
     from server_end import near_far
-    f = os.path.join(work, "pose.npy")
-    if not os.path.exists(f):
+    if not os.path.exists(os.path.join(work, "pose.npy")):
         return
-    pose = np.load(f)
-    pose = pose[np.argsort(pose[:, 0], kind="stable")]
-    st = np.searchsorted(pose[:, 0], np.arange(n + 1))
+    pose = lab.pose_by_second(work, n)
+    kf = lab.kf_of_second(work, n)
     for r in rallies:
         best = None
         for s in range(max(0, int(r["start"])), min(n, int(r["end"]) + 1)):
-            near, far = near_far(pose[st[s]:st[s + 1]])
+            near, far = near_far(pose[s])
             if near is None or far is None:
                 continue
             score = float(min(near[5], far[5]))
@@ -89,24 +88,18 @@ def add_views(work, rallies, n):
                 best = (score, s, near, far)
         if best:
             box = lambda row: [round(float(v), 1) for v in row[1:5]]
-            r["view"] = {"second": int(best[1]), "near": box(best[2]), "far": box(best[3])}
+            r["view"] = {"second": int(best[1]), "picture": int(kf[best[1]]), "near": box(best[2]), "far": box(best[3])}
 
 
 def overlay_poses(work, min_box=0.3, min_point=0.3):
     """The body poses for overlay.json: one row for each person on each 1 fps keyframe,
     [t, x0, y0, ... x16, y16] with the 17 COCO keypoints in px. A keypoint with a low confidence is -1, -1."""
     import numpy as np
+    import lab
     f = os.path.join(work, "pose.npy")
     if not os.path.exists(f):
         return []
-    kt = np.loadtxt(os.path.join(work, "kf_times.csv"), ndmin=1)
-    # A 1 fps picture (ffmpeg "fps=1:round=down") is the LAST video frame of its second, and not the first one:
-    # picture k shows the video at about k + 1 s minus one frame. The overlay needs the true time.
-    pts_file = os.path.join(work, "pts.npy")
-    if os.path.exists(os.path.join(work, "kf.fps1")) and os.path.exists(pts_file):
-        pts = np.load(pts_file)
-        last = np.clip(np.searchsorted(pts, kt + 1 - 1e-4) - 1, 0, len(pts) - 1)
-        kt = np.maximum(kt, pts[last])
+    kt = lab.kf_times(work)                # the true time of each picture (also for a video with kf.fps1)
     rows = []
     for r in np.load(f):
         k = int(r[0])
@@ -322,8 +315,8 @@ def main():
     stage("media", [W("audio.flac"), W("kf_times.csv"), W("kf.done"), W("pts.npy")],
           lambda: (prep.prep(lab.MATCHES[MID], work), frame_times.load(MID)), a.force)
     save_times()
-    kt = np.loadtxt(W("kf_times.csv"), ndmin=1)
-    n = len(kt)
+    kt = lab.kf_times(work)
+    n = lab.video_seconds(work)            # G2: the seconds of the video, not the count of pictures
     step = float(np.median(np.diff(kt))) if n > 2 else 0.0
     if not 0.9 < step < 1.1:
         raise RuntimeError(f"The video has a keyframe each {step:.2f} s. The lab models need a keyframe each second.")

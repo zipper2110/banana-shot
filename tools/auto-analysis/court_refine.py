@@ -44,6 +44,7 @@ import numpy as np
 import cv2
 from scipy.optimize import least_squares
 import court_auto
+import lab
 from court_fit import SW, DW, BL, SL
 
 PAINT = 0.05                              # m: width of the paint of a line
@@ -456,7 +457,8 @@ def to_court(w, xy):
 
 def median_frame(folder, t0, t1, n=9):
     ts = np.unique(np.linspace(t0 + 1, max(t0 + 1, t1 - 2), n).astype(int))
-    imgs = [cv2.imread(os.path.join(folder, "kf", f"{t + 1:05d}.jpg")) for t in ts]
+    kf = lab.kf_of_second(folder)                  # the picture of second t (G2)
+    imgs = [cv2.imread(lab.kf_file(folder, t, kf)) for t in ts]
     imgs = [i for i in imgs if i is not None]
     return np.median(np.stack(imgs), 0).astype(np.uint8) if imgs else None
 

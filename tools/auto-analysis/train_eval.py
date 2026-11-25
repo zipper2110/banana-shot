@@ -18,6 +18,7 @@ import lab
 
 
 RAW = {"players", "ball"}      # feature sets in physical units: no standardization
+PICTURE = {"dino", "dinogrid", "dinodelta"}   # one row for each 1 fps picture, not for each second (G2)
 
 
 def load(mid, feats, pca_dims):
@@ -25,6 +26,8 @@ def load(mid, feats, pca_dims):
     for name in feats:
         f = np.load(os.path.join(lab.mdir(mid), f"feat_{name}.npy")).astype(np.float32)
         n = lab.n_seconds(mid)
+        if name in PICTURE:
+            f = lab.by_second(f, lab.mdir(mid), n)
         f = f[:n] if len(f) >= n else np.pad(f, ((0, n - len(f)), (0, 0)))
         if name not in RAW:
             f = (f - np.nanmean(f, 0)) / (np.nanstd(f, 0) + 1e-6)   # per-match standardization

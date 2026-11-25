@@ -520,10 +520,10 @@ def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None):
 def frame_at(mid, t, n_frames=9, spread=8):
     """Median of keyframes around time t (s): removes the players."""
     n = lab.n_seconds(mid)
-    ims = []
+    ims, kf = [], lab.kf_of_second(lab.mdir(mid), n)
     for k in range(-(n_frames // 2), n_frames // 2 + 1):
         s = int(np.clip(t + k * spread, 0, n - 1))
-        im = cv2.imread(os.path.join(lab.mdir(mid), "kf", f"{s + 1:05d}.jpg"))
+        im = cv2.imread(lab.kf_file(lab.mdir(mid), s, kf))
         if im is not None:
             ims.append(im)
     return np.median(np.stack(ims), 0).astype(np.uint8)

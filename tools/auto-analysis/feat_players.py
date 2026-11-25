@@ -62,17 +62,18 @@ def run(mid):
     sel = np.full((n, 4, 6), np.nan, dtype=np.float32)       # x, y, wrist_up, arm_out, crouch, pose row index
     order = np.argsort(pose[:, 0], kind="stable")
     pose = pose[order]
-    starts = np.searchsorted(pose[:, 0], np.arange(n + 1))
+    kf = lab.kf_of_second(out, n)                    # the picture of each second (G2)
+    starts = np.searchsorted(pose[:, 0], np.arange(int(kf.max(initial=0)) + 2))
     prev = {}
     for s in range(n):
-        rows = pose[starts[s]:starts[s + 1]]
+        rows = pose[starts[kf[s]]:starts[kf[s] + 1]]
         halves = {0: [], 1: []}
         for i, r in enumerate(rows):
             if r[5] < 0.3:
                 continue
             cx, cy, wu, ao, cr = person_feats(r, H)
             if abs(cx) <= 8 and abs(cy) <= 17:
-                halves[0 if cy < 0 else 1].append((abs(cy), cx, cy, wu, ao, cr, starts[s] + i))
+                halves[0 if cy < 0 else 1].append((abs(cy), cx, cy, wu, ao, cr, starts[kf[s]] + i))
         cur = {}
         for h in (0, 1):
             ps = sorted(halves[h])[:2]

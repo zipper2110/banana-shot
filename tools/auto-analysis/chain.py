@@ -46,6 +46,9 @@ ID_ABS = 0.97         # E22b: probability that the color identity of a rally is 
 CHAIN = os.environ.get("CHAIN", "1") == "1"      # E28, E29: the winner evidence comes from the shot chain (shot_chain.py) when the flights file has "events"; CHAIN=0 gives the old rule
 FPS_ADAPT = os.environ.get("FPS_ADAPT", "1") == "1"   # E28: the sample counts of the winner rule follow the frame rate of the ball track (winner_ball.set_fps)
 END_MODEL = os.environ.get("END_MODEL", "1") == "1"   # E60: the end for the winner evidence comes from the rally end detector (rally_end.py); END_MODEL=0 gives the GRU end
+# The shirt colors of each rally (the image reads are the slow part). "_t2": the pictures of the true seconds (G2);
+# the colors of color_cache.json came from the picture row of the second number. An absolute path is also valid.
+COLOR_CACHE = "color_cache_t2.json"
 
 
 def rallies(prob, serves, hi=0.5, lo=0.35, short=True, t0=0.0, t1=None):
@@ -94,14 +97,13 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
     """The evidence of each rally of seg (start, end, prob). p: the parameters of the old ball rule. prob: the GRU
     probability of each second, for the rally end detector (None: the evidence uses the GRU end)."""
     out = lab.mdir(mid)
-    pose = np.load(os.path.join(out, "pose.npy"))
-    pose = pose[np.argsort(pose[:, 0], kind="stable")]
     n = lab.n_seconds(mid)
-    st = np.searchsorted(pose[:, 0], np.arange(n + 1))
+    pose = lab.pose_by_second(out, n)                # the poses of the picture of each second (G2)
+    kf = lab.kf_of_second(out, n)
     fl_t0 = np.array([f["t0"] for f in full["flights"]])
     kk_t = np.array([k[0] for k in full["kinks"]])
     rows, feats, prev_end = [], [], -1e9
-    cp = os.path.join(out, "color_cache.json")
+    cp = os.path.join(out, COLOR_CACHE)
     cache = json.load(open(cp)) if os.path.exists(cp) else {}
     dirty = False
     if FPS_ADAPT:
@@ -139,7 +141,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         # server end: pose vote, then the ball serve event
         nu, fu = [], []
         for s in range(max(0, int(a) - 1), min(n, int(a) + 3)):
-            r, fr = near_far(pose[st[s]:st[s + 1]])
+            r, fr = near_far(pose[s])
             if r is not None:
                 nu.append(wrist_up(r))
             if fr is not None:
@@ -181,10 +183,10 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         if key not in cache:
             cols = []
             for s in range(int(a) + 1, min(n, int(b))):
-                r, fr = near_far(pose[st[s]:st[s + 1]])
+                r, fr = near_far(pose[s])
                 if r is None or fr is None:
                     continue
-                img = cv2.imread(os.path.join(out, "kf", f"{s + 1:05d}.jpg"))
+                img = cv2.imread(lab.kf_file(out, s, kf))
                 c1, c2 = torso_color(img, r), torso_color(img, fr)
                 if c1 is not None and c2 is not None:
                     cols.append((c1 - c2).tolist())

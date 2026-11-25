@@ -76,7 +76,8 @@ def main():
     import lab
     for mid in ["m1015", "m1020", "m1021", "m1030"]:
         pj = json.load(open(os.path.join(lab.mdir(mid), "pipeline.json")))["rallies"]
-        cache = json.load(open(os.path.join(lab.mdir(mid), "color_cache.json")))
+        import chain
+        cache = json.load(open(os.path.join(lab.mdir(mid), chain.COLOR_CACHE)))
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         gt = lab.gt_points(mid)
         feats = []

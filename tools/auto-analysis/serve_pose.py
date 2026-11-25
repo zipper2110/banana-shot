@@ -23,10 +23,8 @@ def main():
     T = {"n": 0, "ball": 0, "pose": 0, "both": 0}
     for mid in ("m1015", "m1020", "m1021", "m1030"):
         out = lab.mdir(mid)
-        pose = np.load(os.path.join(out, "pose.npy"))
-        pose = pose[np.argsort(pose[:, 0], kind="stable")]
         n = lab.n_seconds(mid)
-        st = np.searchsorted(pose[:, 0], np.arange(n + 1))
+        pose = lab.pose_by_second(out, n)            # the poses of the picture of each second (G2)
         faults = json.load(open(os.path.join(out, "faults.json")))
         res, c = [], {"n": 0, "ball": 0, "pose": 0, "both": 0}
         for f, (w0, w1) in zip(faults, pre_windows(mid)):
@@ -34,7 +32,7 @@ def main():
             for s in range(int(np.ceil(w0)), int(f["start"] - MIN_GAP) + 1):
                 if s >= n:
                     break
-                r, fr = near_far(pose[st[s]:st[s + 1]])
+                r, fr = near_far(pose[s])
                 pl = r if f["serverNear"] else fr
                 if pl is None:
                     continue

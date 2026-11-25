@@ -18,6 +18,8 @@ PRE, POST = 4, 8
 
 def load(mid, name):
     f = np.load(os.path.join(lab.mdir(mid), f"feat_{name}.npy")).astype(np.float32)
+    if name.startswith("dino"):                      # one row for each picture: to one row for each second (G2)
+        f = lab.by_second(f, lab.mdir(mid))
     return (f - f.mean(0)) / (f.std(0) + 1e-6)
 
 

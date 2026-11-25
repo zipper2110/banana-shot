@@ -35,10 +35,10 @@ SAMPLES = np.concatenate([np.linspace(a, b, 80) for a, b in SEGS]).astype(np.flo
 
 def window_frame(mid, t0, n):
     """Median of 7 keyframes of the window: removes the players."""
-    ims = []
+    ims, kf = [], lab.kf_of_second(lab.mdir(mid))
     for k in range(7):
         s = min(n - 1, t0 + 4 + k * 8)
-        im = cv2.imread(os.path.join(lab.mdir(mid), "kf", f"{s + 1:05d}.jpg"))
+        im = cv2.imread(lab.kf_file(lab.mdir(mid), s, kf))
         if im is not None:
             ims.append(im)
     return np.median(np.stack(ims), 0).astype(np.uint8)

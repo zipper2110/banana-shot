@@ -219,11 +219,20 @@ data class LastShot(
 )
 
 /**
- * A picture of a rally with the two players. [second] is the second of the video (the work files have one picture for
- * each second). [near] and [far] are the boxes of the player at the near end and at the far end: x1, y1, x2, y2 in px
- * of that picture.
+ * A picture of a rally with the two players. [second] is the second of the video. [picture] is the number k of the
+ * picture file `kf/<k+1>.jpg` of the work files (about one picture for each second, but k is not the second: some
+ * videos drift by many seconds). Old result files have no [picture]; their [second] is the picture number.
+ * [near] and [far] are the boxes of the player at the near end and at the far end: x1, y1, x2, y2 in px of that picture.
  */
-data class RallyView(val second: Int = 0, val near: List<Double> = emptyList(), val far: List<Double> = emptyList())
+data class RallyView(
+    val second: Int = 0,
+    val picture: Int? = null,
+    val near: List<Double> = emptyList(),
+    val far: List<Double> = emptyList(),
+) {
+    /** The number of the picture file that the boxes belong to. */
+    fun pictureIndex(): Int = picture ?: second
+}
 
 /** The result file of a run. [stageSeconds] has the run time of each stage. */
 data class DetectResult(

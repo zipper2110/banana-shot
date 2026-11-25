@@ -40,10 +40,8 @@ def near_far(rows):
 
 def run(mid):
     out = lab.mdir(mid)
-    pose = np.load(os.path.join(out, "pose.npy"))
-    pose = pose[np.argsort(pose[:, 0], kind="stable")]
     n = lab.n_seconds(mid)
-    starts = np.searchsorted(pose[:, 0], np.arange(n + 1))
+    pose = lab.pose_by_second(out, n)                # the poses of the picture of each second (G2)
     sides = json.load(open(os.path.join(out, "sides.json")))
     ni = json.load(open(os.path.join(out, "near_identity.json")))["points"]
     gt = lab.gt_points(mid)
@@ -51,7 +49,7 @@ def run(mid):
     for (a, b, _) in gt:
         nu, fu = [], []
         for s in range(max(0, int(a) - 1), min(n, int(a) + 3)):
-            r, fr = near_far(pose[starts[s]:starts[s + 1]])
+            r, fr = near_far(pose[s])
             if r is not None:
                 nu.append(wrist_up(r))
             if fr is not None:

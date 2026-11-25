@@ -1,10 +1,12 @@
 """Final rally model for a new video (app integration, see docs/auto-analysis/app-integration.md).
 
 This script trains one model on ALL marked singles matches, and keeps it in a file:
-  <labRoot>/models/rally_<name>.pt   (network weights, and for each feature set the PCA and scales)
+  <labRoot>/models/rally_<name>_t2.pt   (network weights, and for each feature set the PCA and scales)
+"_t2" = time base 2 (chain-inventory G2): the picture features (DINO) of second s come from the picture of the
+true time s + 0.5, not from picture row s. A model of the other time base gets shifted inputs, so the name changes.
 predict() gives the per-second rally probability of a match that was not in the training.
 It also trains the fold models of the lab benchmark (pipeline.py): the same method, with one match left out:
-  <labRoot>/models/rally_<name>_x<match>.pt
+  <labRoot>/models/rally_<name>_t2_x<match>.pt
 Train the full model and the fold models together, so that the benchmark measures the shipped method.
 
 Models:  ball  = audio, mel, dino, wasbf   (E20, needs the ball pass)
@@ -23,11 +25,13 @@ from train_eval import load
 MODELS = {"ball": ["audio", "mel", "dino", "wasbf"], "base": ["audio", "mel", "dino"]}
 TRAIN = ["m1015", "m1020", "m1021", "m1030"]
 PCA_DIMS, EPOCHS, WIN = 32, 40, 240
+TIME_BASE = "_t2"
 
 
 def path(name, fold=None):
     """The model file. fold = the match that the model did not see (a fold model of the benchmark), or None."""
-    return os.path.join(lab.ROOT, "models", f"rally_{name}.pt" if fold is None else f"rally_{name}_x{fold}.pt")
+    base = f"rally_{name}{TIME_BASE}"
+    return os.path.join(lab.ROOT, "models", f"{base}.pt" if fold is None else f"{base}_x{fold}.pt")
 
 
 def stack(parts, prep):

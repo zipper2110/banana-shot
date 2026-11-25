@@ -54,17 +54,16 @@ def flips(feats, alpha=0.5):
 
 def run(mid):
     out = lab.mdir(mid)
-    pose = np.load(os.path.join(out, "pose.npy"))
-    pose = pose[np.argsort(pose[:, 0], kind="stable")]
     n = lab.n_seconds(mid)
-    starts = np.searchsorted(pose[:, 0], np.arange(n + 1))
+    pose = lab.pose_by_second(out, n)                # the poses of the picture of each second (G2)
+    kf = lab.kf_of_second(out, n)
     sides = json.load(open(os.path.join(out, "sides.json")))
     gt = lab.gt_points(mid)
     feats = []
     for (a, b, _) in gt:
         cols = []
         for s in range(int(a) + 1, min(n, int(b))):
-            allr = pose[starts[s]:starts[s + 1]]
+            allr = pose[s]
             rows = allr[(allr[:, 5] > 0.5) & (allr[:, 4] > 0.45 * 1080)]      # box bottom in the lower part
             if not len(rows):
                 continue
@@ -79,7 +78,7 @@ def run(mid):
             if not len(far):
                 continue
             fr = far[np.argmin(np.abs((far[:, 1] + far[:, 3]) / 2 - 960))]
-            img = cv2.imread(os.path.join(out, "kf", f"{s + 1:05d}.jpg"))
+            img = cv2.imread(lab.kf_file(out, s, kf))
             c, c2 = torso_color(img, r), torso_color(img, fr)
             if c is not None and c2 is not None:
                 cols.append(c - c2)             # near minus far: the light of the scene cancels

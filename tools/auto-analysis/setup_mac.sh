@@ -28,7 +28,7 @@ if [ -z "$PY" ]; then
 fi
 
 # the weights and models from the lab PC
-for f in ext/weights/wasb_tennis.pth.tar data/models/rally_ball.pt data/models/rally_base.pt hf/hub; do
+for f in ext/weights/wasb_tennis.pth.tar data/models/rally_ball_t2.pt data/models/rally_base_t2.pt hf/hub; do
   if [ ! -e "$LAB/$f" ]; then
     echo "Missing: $LAB/$f"
     echo "Copy the folder bananashot-lab from the lab PC (pack_for_mac.py) to $LAB first."

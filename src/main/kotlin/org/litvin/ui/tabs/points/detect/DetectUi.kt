@@ -508,7 +508,7 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
             val swapped = if (rally == null) {
                 false
             } else {
-                val picture = runner.frameFile(dir.name, rally.view?.second ?: (rally.start.toInt() + 1))
+                val picture = runner.frameFile(dir.name, rally.view?.pictureIndex() ?: (rally.start.toInt() + 1))
                 val near = PlayerQuestion.ask(dialog, picture, rally, host.players)
                 if (near == null) {
                     say("No points added. \"Add points\" asks again.")

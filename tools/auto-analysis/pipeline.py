@@ -1,6 +1,6 @@
 """The lab benchmark of the detection chain (chain-inventory.md, G1). For each marked singles lab match it runs
 chain.py, the chain that the app runs (detect.py), with models that did not see the match:
-  rally model   models/rally_ball_x<match>.pt   (python rally_model.py train ball)
+  rally model   models/rally_ball_t2_x<match>.pt   (python rally_model.py train ball)
   case tables   the shot chain and old rule tables fitted on the other 3 matches (use_lomo_cases)
   end model     the rally end detector fitted on the other 3 matches (rally_end.py fit, use_lomo)
   ball weights  the flights files of the lab were made with the held-out weights e38_f1 to e38_f4 (E38)

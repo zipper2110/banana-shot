@@ -25,6 +25,13 @@ def run(cmd):
     return time.time() - t
 
 
+def fps1_time(frames, k):
+    """The time of picture k of "fps=1:round=down": the last frame before k + 1 s (frames: sorted frame times)."""
+    import bisect
+    i = bisect.bisect_left(frames, k + 1 - 1e-4) - 1
+    return max(float(k), frames[i]) if i >= 0 else float(k)
+
+
 def prep(m, out=None):
     out = out or os.path.join(ROOT, m["id"])
     os.makedirs(os.path.join(out, "kf"), exist_ok=True)
@@ -90,8 +97,9 @@ def media(m, out, v, log):
         gaps = sorted(b - a for a, b in zip(ts, ts[1:]))
         if gaps and not 0.9 < gaps[len(gaps) // 2] < 1.1:
             # No keyframe each second (other camera settings): take one frame each second with a full decode.
-            end = max(float(ln.split(",")[0]) for ln in r.stdout.splitlines() if ln[:1].isdigit())
-            times = [str(k) for k in range(int(end))]
+            # "fps=1:round=down" gives the LAST frame before k + 1 s as picture k: write its true time (G2).
+            frames = sorted(float(ln.split(",")[0]) for ln in r.stdout.splitlines() if ln[:1].isdigit())
+            times = [f"{fps1_time(frames, k):.6f}" for k in range(int(frames[-1]))]
             open(os.path.join(out, "kf.fps1"), "w").write("ok")
         open(os.path.join(out, "kf_times.csv"), "w").write("\n".join(times) + "\n")
         log["keyframes"] = len(times)
@@ -110,7 +118,8 @@ def media(m, out, v, log):
             log["kf_s"] = time.time() - t
         have = len(glob.glob(os.path.join(out, "kf", "*.jpg")))
         if have < n:                                   # keep the count of the files and of the times equal
-            open(os.path.join(out, "kf_times.csv"), "w").write("\n".join(str(k) for k in range(have)) + "\n")
+            times = [ln for ln in open(os.path.join(out, "kf_times.csv")) if ln.strip()][:have]
+            open(os.path.join(out, "kf_times.csv"), "w").write("".join(times))
         open(os.path.join(out, "kf.done"), "w").write("ok")
     if not os.path.exists(os.path.join(out, "kf.done")):
         # The GPU decoder gives NV12 frames to the software scaler. The software decoder gives yuv420p: the

@@ -128,11 +128,11 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
     }
 
     /**
-     * The picture of the video at [second] from the work files with the work name [workName] (one picture for each
-     * second), or null when it is not there.
+     * The picture number [picture] (file `kf/<picture+1>.jpg`) of the work files with the work name [workName], or
+     * null when it is not there. A picture number is not a second of the video (see [RallyView]).
      */
-    fun frameFile(workName: String, second: Int): File? =
-        File(File(lab.workRoot, workName), "kf/%05d.jpg".format(java.util.Locale.ROOT, second + 1)).takeIf { it.isFile }
+    fun frameFile(workName: String, picture: Int): File? =
+        File(File(lab.workRoot, workName), "kf/%05d.jpg".format(java.util.Locale.ROOT, picture + 1)).takeIf { it.isFile }
 
     /** Stops the active run. The work files stay, so the next run continues after the last complete stage. */
     fun stop() {

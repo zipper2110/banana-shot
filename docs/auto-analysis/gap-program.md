@@ -85,7 +85,8 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
 7. The G14 fixture test (a real `result.json` of the m1020 sample).
 8. G11 corrections loop: `corrections.py` reads `swapped`, `minWinnerPercent` and `auto.checked`; it tells "Swap
    players" from a winner fix; the bounds compare with the gap clamp and the rounding; "added" counts only clips
-   after the import; the review notes name the result file and the run.
+   after the import; the review notes name the result file and the run. Done (E53).
+9. P4: the 1 fps pictures from the ball decode, for a video with no keyframe each second. Measure first.
 
 ### S3 rally (G4, G5, G8 short points)
 

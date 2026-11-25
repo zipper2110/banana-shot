@@ -45,7 +45,8 @@ data class DetectLab(
  * The settings of a detection run and of the import of its result.
  * - [ballPass]: false skips the ball stage, the slow one. Then the result has only the boundaries of the rallies.
  * - [threshold]: the rally probability that starts a rally. A lower value gives more rallies.
- * - [shortPoints]: adds short points (an ace, a double fault) from the serve events of the ball.
+ * - [shortPoints]: adds short points (an ace, a double fault) from the serve events of the ball. Off by default: only
+ *   about 30 % of them are real points (auto-analysis journal E61).
  * - [padBeforeMs], [padAfterMs]: the time that the import adds before the start and after the end of a detected
  *   rally. The rally model learned the boundaries from marked projects, so 0 gives clips like those marks.
  * - [addWinners]: the import gives a point the detected winner.
@@ -56,7 +57,7 @@ data class DetectLab(
 data class DetectSettings(
     val ballPass: Boolean = true,
     val threshold: Double = 0.5,
-    val shortPoints: Boolean = true,
+    val shortPoints: Boolean = false,
     val padBeforeMs: Int = 0,
     val padAfterMs: Int = 0,
     val addWinners: Boolean = true,

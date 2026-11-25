@@ -14,7 +14,8 @@ Stages (each one is skipped when its output is in the work folder, so a stopped 
 Settings (JSON file, all optional):
   ballPass     true: all stages. false: no ball, no pose: only the rally boundaries (fast)
   threshold    rally probability threshold, default 0.5 (lower = more rallies)
-  shortPoints  true: add short points (ace, double fault) from serve events
+  shortPoints  true: add short points (ace, double fault) from serve events. Default false: only about 30 % of them
+               are real points (E61)
 Output: <work>/result.json. Lines on stdout that start with "@" are for the app:
   @stage <name> start | @stage <name> done <seconds> | @stage <name> skip
   @progress <name> <0..1> | @result <file> | @overlay <file> | @warning <text> | @error <text>
@@ -289,7 +290,7 @@ def main():
     # ballWeights (E38): the weights file of the ball detector in the weights folder. The default is our fine-tune of
     # the WASB tennis weights (ball_train2.py): it also finds a ball that is not brighter than its background.
     # "" = the WASB tennis weights. If the file is not there, the run uses the WASB tennis weights and gives a warning.
-    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": True, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS}
+    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": False, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS}
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
     os.environ.setdefault("BALL_PASSES", cfg["ballPasses"] or "")      # ball_wasb reads it at import

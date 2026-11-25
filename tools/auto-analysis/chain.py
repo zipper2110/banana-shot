@@ -225,7 +225,9 @@ def segments(prob, full, cfg, t0=0.0, t1=None):
         return [(float(a), float(b), float(prob[int(a):int(b) + 1].mean()))
                 for a, b in lab.segment(prob, smooth=1, hi=hi, lo=lo, min_len=2.0) if a >= t0 and b <= t1], []
     serves = serve_events(full["flights"], t0, len(prob) if t1 is None else t1)
-    return rallies(prob, serves, hi, lo, bool(cfg.get("shortPoints", True)), t0, t1), serves
+    # E61: short points are off by default. Only 18 of 62 added short points were real on the 4 lab matches, and no
+    # rule on the serve facts reached 70 % with a small loss of the real ones.
+    return rallies(prob, serves, hi, lo, bool(cfg.get("shortPoints", False)), t0, t1), serves
 
 
 def winners(mid, seg, full, serves, p=PARAMS, prob=None):

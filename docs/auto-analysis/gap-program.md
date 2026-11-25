@@ -74,6 +74,16 @@ calibration table exists.
 
 Done when: items 1 to 4 are merged with tests, and the m1030 measure is in the journal.
 
+Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
+
+6. Reuse of existing ball files under the new cache keys (G12): an explicit command that records the key of an
+   old ball file when the operator states its weights and passes. No automatic reuse. Goal: no 3.5 h ball pass
+   again for Igor, the G15 videos and the lab folders.
+7. The G14 fixture test (a real `result.json` of the m1020 sample).
+8. G11 corrections loop: `corrections.py` reads `swapped`, `minWinnerPercent` and `auto.checked`; it tells "Swap
+   players" from a winner fix; the bounds compare with the gap clamp and the rounding; "added" counts only clips
+   after the import; the review notes name the result file and the run.
+
 ### S3 rally (G4, G5, G8 short points)
 
 1. G4: a rally end detector (E21c) in the seconds around the GRU end. Use the ball flights, the audio hits
@@ -159,4 +169,6 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
 | 2026-11-26 | Code snapshots (S1 proposal, manager): heavy jobs and benchmarks run from a snapshot of one commit (section 2). Cause: a merge into the main checkout during the Igor run would have mixed code versions. |
 | 2026-11-26 | Short points off by default (S3, E61): only 18 of 62 added short points were real; no rule reached the 70 % target. Precision of the rallies 82.1 to 87.8 %; the real aces and double faults are lost until a better rule exists. |
 | 2026-11-26 | S3 phase 2: G8 score layer (moved from S4) and G9. S4 keeps the labels, the fault measure and the hitter measure. |
+| 2026-11-26 | G2 to G14 merged (S2, E50, E51) by the rule of 2026-11-23: rally recall 90.3 to 93.8 %, precision 87.8 to 90.0 %, end to end 78.3 to 78.9 % (inside the noise). Open: on m1030 the winner on matched points goes 88.0 to 80.7 % (13 of 18 changed winners become wrong) because the GRU ends move; S3 investigates. |
+| 2026-11-26 | S2 phase 2: reuse of old ball files, the G14 fixture, then G11. |
 | 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |

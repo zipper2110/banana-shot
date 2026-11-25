@@ -81,6 +81,9 @@ HEAVY = ["fullflights_s0.35.json", "feat_wasbf.npy", "pose.npy", "feat_dino.npy"
 
 def file_hashes(folder, names):
     out = {n: sha(os.path.join(folder, n)) for n in names if os.path.exists(os.path.join(folder, n))}
+    mid = os.path.basename(os.path.normpath(folder))
+    for f in sorted(glob.glob(os.path.join(folder, "*labels*.json")) + glob.glob(os.path.join(HERE, f"*labels*{mid}*.json"))):
+        out["labels/" + os.path.basename(f)] = sha(f)            # event labels (S4): a change gives a new manifest
     for b in sorted(glob.glob(os.path.join(folder, "wasb_0_*_k2.npy"))):        # the ball candidates of a full run
         out[os.path.basename(b)] = sha(b)
     return out
@@ -153,6 +156,32 @@ def extras(mid, rows):
                    faultCandidatesRight=sum(any(a <= t <= b for a, b in fl) for t in cand),
                    faultsFound=sum(any(a <= t <= b for t in cand) for a, b in fl))
     return out
+
+
+def events(mid, rows):
+    """The event measures of a match (priority 2 of the user: hits, hitter, shot count, bounces, in/out, net touches
+    against labels). The scorer is score_events.py (S4). Contract: score_events.score(mid, rows) returns None when the
+    match has no event labels, else a list of measures {"name": str, "k": int, "n": int} (a rate k of n, pooled over
+    the matches of a set) or {"name": str, "value": float, "unit": str} (shown for each match, not pooled)."""
+    try:
+        import score_events
+    except ImportError:
+        return None
+    return score_events.score(mid, rows)
+
+
+def pool_events(per_match):
+    """Rates pooled over the matches (sum of k and n); other values listed per match."""
+    rates, values = {}, {}
+    for mid, ms in per_match.items():
+        for m in ms or []:
+            if "n" in m:
+                r = rates.setdefault(m["name"], [0, 0])
+                r[0] += m["k"]; r[1] += m["n"]
+            else:
+                values.setdefault(m["name"], []).append((mid, m.get("value"), m.get("unit", "")))
+    return {"rates": {k: {"k": v[0], "n": v[1], "rate": v[0] / v[1] if v[1] else None, "se": se(v[0] / v[1], v[1]) if v[1] else None}
+                      for k, v in rates.items()}, "values": values, "matches": [m for m, x in per_match.items() if x]}
 
 
 def run_lab():
@@ -236,8 +265,9 @@ def summary(res):
         v = [e[k] for e in ex.values() if k in e]
         if v:
             tot[k] = sum(v)
-    return {"total": tot, "perMatch": {mid: dict(m, **ex[mid]) for mid, (m, _) in res.items()}, "calibration": calibration(wr),
-            "lines": [score.line(m) for m, _ in res.values()]}
+    ev = pool_events({mid: events(mid, rows) for mid, (_, rows) in res.items()})
+    return {"total": tot, "events": ev, "perMatch": {mid: dict(m, **ex[mid]) for mid, (m, _) in res.items()},
+            "calibration": calibration(wr), "lines": [score.line(m) for m, _ in res.values()]}
 
 
 def pct(x):
@@ -256,9 +286,18 @@ def report(man, sets, skipped, same):
         L += [f"## {name}: {', '.join(t['matches'])}", "",
               "| Measure | Value |", "|---|---|",
               f"| Rallies: recall / precision | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, {t['marked']} marked) |",
-              f"| Start / end error, median of matches | {t['startAbsMed']:.2f} s / {t['endAbsMed']:.2f} s |",
-              f"| Winner right on matched points | {pct(t['winnerMatched'])} ± {pct(t['winnerMatchedSE'])} (n {t['n']}) |",
-              f"| Winner right, end to end | **{pct(t['endToEnd'])}** ± {pct(t['endToEndSE'])} (of {t['known']} marked winners) |",
+              f"| Start / end error, median of matches | {t['startAbsMed']:.2f} s / {t['endAbsMed']:.2f} s |"]
+        # Priority 2 of the user: the events of each rally against labels come before the winner (a check only).
+        ev = s.get("events") or {}
+        if ev.get("matches"):
+            L.append(f"| **Events** (labels of {', '.join(ev['matches'])}) | |")
+            L += [f"| {k} | {pct(v['rate'])} ± {pct(v['se'])} ({v['k']} of {v['n']}) |" for k, v in ev["rates"].items()]
+            L += [f"| {k} | " + ", ".join(f"{mid} {val:.2f} {u}".rstrip() for mid, val, u in vs if val is not None) + " |"
+                  for k, vs in ev["values"].items()]
+        else:
+            L.append("| Events | no event labels for these matches |")
+        L += [f"| Winner right on matched points (check) | {pct(t['winnerMatched'])} ± {pct(t['winnerMatchedSE'])} (n {t['n']}) |",
+              f"| Winner right, end to end (check) | {pct(t['endToEnd'])} ± {pct(t['endToEndSE'])} (of {t['known']} marked winners) |",
               f"| Short points added: real | {t.get('shortReal', 0)} of {t.get('shortAdded', 0)} |"]
         if "shortMarked" in t:
             L.append(f"| Marked aces and double faults found | {t['shortMarkedFound']} of {t['shortMarked']} |")

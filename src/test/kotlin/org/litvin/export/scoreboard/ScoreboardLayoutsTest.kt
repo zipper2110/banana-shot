@@ -225,6 +225,26 @@ class ScoreboardLayoutsTest {
     }
 
     @Test
+    fun everyStyleShowsEveryFinishedSetInsideTheBoard() {
+        // Guard: no style hides a finished set, also for a long match. The values do not occur elsewhere on the board.
+        val sets = listOf(11 to 9, 12 to 10, 13 to 24, 16 to 14, 17 to 19, 20 to 18, 21 to 23)
+        val many = display.copy(completedSets = sets, completedSetTiebreaks = emptyList())
+        ScoreboardStyleId.entries.forEach { style ->
+            val scene = ScoreboardLayouts.scene(many, ScoreboardSettingsV1(style = style))
+            val texts = scene.texts()
+
+            sets.flatMap { listOf(it.first, it.second) }.forEach { games ->
+                assertEquals(1, texts.count { it == games.toString() }, "$style: $games in $texts")
+                val label = scene.label(games.toString())
+                assertTrue(label.x >= -1 && label.x <= scene.width + 1, "$style: $label")
+            }
+            scene.items.filterIsInstance<SceneItem.Box>().forEach { box ->
+                assertTrue(box.x >= -1 && box.x + box.width <= scene.width + 1, "$style: $box")
+            }
+        }
+    }
+
+    @Test
     fun moreSetsMakeTheBoardWider() {
         val oneSet = ScoreboardLayouts.scene(display, ScoreboardSettingsV1())
         val twoSets = ScoreboardLayouts.scene(display.copy(completedSets = listOf(6 to 3, 4 to 6)), ScoreboardSettingsV1())

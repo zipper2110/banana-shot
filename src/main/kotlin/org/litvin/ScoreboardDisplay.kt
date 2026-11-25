@@ -16,6 +16,10 @@ data class ScoreboardDisplay(
     val player2PointText: String,
     val player1Games: Int,
     val player2Games: Int,
+    /**
+     * All the finished sets of the match, in order. A scoreboard always shows every finished set:
+     * the model and the styles never select or drop sets.
+     */
     val completedSets: List<Pair<Int, Int>>,
     /** 1 or 2 when that player leads the current game, 0 when the points are equal. */
     val pointLeader: Int,
@@ -44,9 +48,6 @@ object ScoreboardComponent {
     val DEFAULT_PLAYER2_HEX = MachineFormats.format("#%06X", DEFAULT_PLAYER2_RGB)
     /** The scoring settings accept names of this length. The scoreboard shortens longer names, for example from an old file. */
     const val PLAYER_NAME_MAX_CHARS = 24
-
-    /** The number of completed sets that a scoreboard shows during a match. Older sets are not shown. */
-    const val VISIBLE_COMPLETED_SETS = 2
 
     fun display(span: OverlaySpan): ScoreboardDisplay =
         if (span.matchEnded && span.completedSets.isNotEmpty()) finalDisplay(span) else liveDisplay(span)
@@ -94,9 +95,9 @@ object ScoreboardComponent {
             // A set tiebreak keeps the games (for example 6–6). A match tiebreak starts at 0–0.
             player1Games = span.gamesP1,
             player2Games = span.gamesP2,
-            completedSets = span.completedSets.takeLast(VISIBLE_COMPLETED_SETS),
-            completedSetTiebreaks = span.completedSets.indices.map { span.completedSetTiebreaks.getOrNull(it) }
-                .takeLast(VISIBLE_COMPLETED_SETS),
+            // All the finished sets. The board never hides a set (user reports: a 3-set match with no match end).
+            completedSets = span.completedSets,
+            completedSetTiebreaks = span.completedSets.indices.map { span.completedSetTiebreaks.getOrNull(it) },
             pointLeader = when {
                 leader > 0 -> 1
                 leader < 0 -> 2

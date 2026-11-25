@@ -17,6 +17,7 @@ decision to keep the current behavior.
 | 2 | Q7, decided on 2026-10-24: a comment that starts outside the kept points starts at the start of the first kept point that it overlaps. It loses only its part before that point. From its start, a comment keeps its remaining time and can continue over the next points. No warning, and no cut at the end of a point. |
 | 3 | T12, decided on 2026-11-03: drop T12. The app has no "not scored" point now. The joined Points tab ends each point with its outcome (Q, W, or E), and the V key is removed. A point without a saved outcome counts as "No winner". The Projects tab and the Export tab do not show a "Scored x/y" figure now. |
 | 4 | Q1, decided on 2026-11-03: a delete of a point asks for a confirmation. No undo. The Delete key, the Delete button of a row, and Delete in the Edit dialog ask the same question. |
+| 5 | Q4, decided on 2026-11-25: the scoreboard always shows all finished sets. The scoreboard does not select sets, and the user cannot select a number of sets. A board that is too wide for the frame becomes smaller. |
 
 ## Open questions
 
@@ -27,7 +28,6 @@ decision in "Decisions" at once.
 |---|---|---|
 | Q2 | T3 | Scoreboard checkbox: keep the choice of the user for each project, as the other checkboxes do? Or set it from the score data only for a project that has no saved choice? |
 | Q3 | T4 | Points tab precision: the Points tab now has a frame step (F). Is this enough, or add a timeline zoom too? |
-| Q4 | T7 | Scoreboard sets: show all completed sets, or let the user select the number in the scoreboard style? |
 | Q5 | T8 | Final result: show the final score after the match point until the end of the last point, or for a fixed time (for example 5 s)? |
 | Q6 | T9 | Deciding set: add a rule "10-point tiebreak at 6–6 in the deciding set" and use it in the "Best of 5 sets" preset? Or only change the preset text? |
 
@@ -41,7 +41,7 @@ decision in "Decisions" at once.
 | T4 | F-07 | Minor | Precise marking in the Points tab | Q3 | open |
 | T5 | F-08 | Minor | Refuse an export to the source video path | — | done |
 | T6 | F-09 | Minor | Show a failed save of the adjustments | — | done |
-| T7 | F-10 | Super-minor | Show more sets on the scoreboard | Q4 | open |
+| T7 | F-10 | Super-minor | Show more sets on the scoreboard | Q4 | done |
 | T8 | F-11 | Super-minor | Show the final result on the scoreboard | Q5 | open |
 | T9 | F-12 | Super-minor | Grand Slam deciding-set tiebreak | Q6 | open |
 | T10 | F-13 | Super-minor | Clear the pending Start | — | done |
@@ -151,11 +151,15 @@ write the reason in "Decisions". Do not remove the task.
 
 ## T7 Show more sets on the scoreboard (F-10)
 
-- The scoreboard shows only the last 2 completed sets. The scope depends on
-  Q4. Check that the wider scoreboard fits in each style and at each export
-  resolution.
-- Code: `ScoreboardDisplay.kt:33`.
-- Tests:
+- Decision 5: the scoreboard shows all finished sets, during the match and
+  after the match end. A user report showed the problem: a 3-set match with
+  no match end hid the first set in the fourth set.
+- `ScoreboardComponent.display` gives all the sets to the styles. All styles
+  make a column for each set. `ScoreboardAss.place` makes a board that is too
+  wide for the frame smaller, in the export and in the app.
+- Code: `ScoreboardDisplay.kt`.
+- Tests: `ScoreboardComponentTest` (all sets for 0 to 9 sets),
+  `ScoreboardLayoutsTest.everyStyleShowsEveryFinishedSetInsideTheBoard`
 
 ## T8 Show the final result on the scoreboard (F-11)
 

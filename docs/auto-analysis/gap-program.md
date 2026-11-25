@@ -14,6 +14,9 @@ Cover the Critical and High gaps: G1, G2, G4, G8, G10, G12, G15, P1, P2.
 Cover the Medium gaps G3, G5, G6, G13, G14 where they share the work of a High gap.
 Phase 2 (when a stream is free): G8 score design, G9, G11, G7.
 
+Priorities of the detection (the user, 2026-11-26): 1. the correct rallies; 2. the correct outcome of each
+rally. The score is only the result of the points, and no benchmark uses a score measure.
+
 "Covered" means: the gap has a fix that is merged and on by default, or a measurement that decides the
 question, with a journal row. A gap is not covered by a plan or a note only.
 
@@ -100,9 +103,7 @@ Done when: the end detector and the short-point rule are merged and measured on 
 
 Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
 
-4. G8 score layer: the decoder score against the app score, the decoder start, `endChangeBefore` against
-   `identity`, the double fault (app decision 16), the decoder stability (5 to 8 winners move with equal
-   evidence). The score design is a decision of the user: prepare the options with numbers first.
+4. G8 score layer: done (E63, E64). The user decided: no change of the app score (decision 2026-11-26).
 5. G9 identity held out: `identity.p1_near` on Igor (m1116) when the S1 result exists; the effect of a wrong
    color run on the winners.
 
@@ -171,4 +172,5 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
 | 2026-11-26 | S3 phase 2: G8 score layer (moved from S4) and G9. S4 keeps the labels, the fault measure and the hitter measure. |
 | 2026-11-26 | G2 to G14 merged (S2, E50, E51) by the rule of 2026-11-23: rally recall 90.3 to 93.8 %, precision 87.8 to 90.0 %, end to end 78.3 to 78.9 % (inside the noise). Open: on m1030 the winner on matched points goes 88.0 to 80.7 % (13 of 18 changed winners become wrong) because the GRU ends move; S3 investigates. |
 | 2026-11-26 | S2 phase 2: reuse of old ball files, the G14 fixture, then G11. |
+| 2026-11-26 | Score (the user, on the S3 options of E63): the score is not the goal; it is only the result of the points. Priority 1: detect the correct rallies. Priority 2: detect the correct outcome of each rally. No change of the app score now (G8 score part closed, option A stays). The benchmarks do not use score measures (score right before a point, games right): a score error drags along and tells little about a single point. Report the rally measures and the winner of each rally. The decoder stays as a tool that chooses the winner of each rally. Later item (out of the current scope): consistency hints from the score (the serve side does not match the score; the server changes inside a game) that show the user where a point is probably missing or false, on review or later, or that correct the detection. |
 | 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |

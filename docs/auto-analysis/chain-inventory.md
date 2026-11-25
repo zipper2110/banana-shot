@@ -1,6 +1,7 @@
 # Detection chain: high-level inventory and gaps
 
 Date: 2026-11-25. Code state: branch `auto-detect`, commit `19c39e71` (journal state E41).
+E42 moved the chain from `pipeline.py` to `chain.py`. The line references in this file are of commit `19c39e71`.
 
 This file is the high-level inventory of the automatic detection of points, shots and winners. It shows
 how the chain is organized, which parts it has, how the parts connect, and what holds the reliability
@@ -196,6 +197,11 @@ release to other users, rate G12 and G13 one step higher.
   helps the shipped path.
 - Next: a benchmark that runs the `detect.py` path per held-out match (LOMO models of each stage),
   with frozen inputs and a fixed report. This is review R0 (section 7).
+- Update (E42): the lab and the app run one chain (`chain.py`). `pipeline.py` runs it with fold rally
+  models and LOMO case tables. The start state and the m1030 margin had no effect: all lab matches start
+  at 0-0. The fold rally models cost 0.4 points. The lab baseline is now 77.6 % end to end. Open: the
+  inputs (lab time range; ball features and net events of the older candidates), frozen inputs, and a
+  held-out marked video.
 
 ### G2. Time base: keyframe number against real seconds — major on some videos
 
@@ -212,6 +218,9 @@ release to other users, rate G12 and G13 one step higher.
   can explain a part of the weak m1030 result (rally recall 75.8 to 83 %, E20). A phone video with a
   variable frame rate is common, so this is a risk for new videos.
 - The start check (`detect.py:327`) tests only the median keyframe step.
+- 2026-11-26, two clips of another phone (`D:\20251019_121417.mp4`, `D:\20251019_121702.mp4`): a keyframe each
+  0.95 s. The check passes (0.9 to 1.1), so the rows of keyframe k are read as second k: +5 % on each time
+  (81 rows for 76.4 s, 144 rows for 136.0 s). On a 90 min video this is about 4.5 min at the end. [V]
 
 ### G3. Models and calibration fitted on other inputs than the shipped inputs
 
@@ -346,6 +355,8 @@ The app plan says: the user's corrections are the test data and later the traini
 - Not measured: low camera, 30 fps, doubles, indoor hall (m0913 has no marks), side or corner cameras,
   other lenses, clay, grass. [F]
 - Default flags that were never measured at 30 fps: `SERVE_FILTER`, `FPS_ADAPT` (E29b). [F]
+- 2026-11-26, two clips of another phone on another court (camera behind the court, lower and wider than in
+  the lab videos): `court_auto.detect` finds no court in 7 tries, so the result has the rally boundaries only. [V]
 
 ## 6. Performance gaps (10 % or more)
 

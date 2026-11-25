@@ -9,8 +9,8 @@ Stages (each one is skipped when its output is in the work folder, so a stopped 
   ball      ball detection on all frames, the slow stage                (ball_wasb.py)
   flights   3D flights and the ball features                            (ball_full.py, feat_wasb.py)
   pose      player poses on the keyframes                               (pose_extract.py)
-  rallies   rally model, short points from serve events                 (rally_model.py, pipeline.py)
-  winners   winner, server end, fault candidate, end changes, decoder   (pipeline.py, match_decode.py)
+  rallies   rally model, short points from serve events                 (rally_model.py, chain.py)
+  winners   winner, server end, fault candidate, end changes, decoder   (chain.py, match_decode.py)
 Settings (JSON file, all optional):
   ballPass     true: all stages. false: no ball, no pose: only the rally boundaries (fast)
   threshold    rally probability threshold, default 0.5 (lower = more rallies)
@@ -352,21 +352,22 @@ def main():
                 m = min(ok, key=lambda w: abs(w["t0"] - n / 2))
                 json.dump({"H": m["H"], "chamfer_px": max(1.0, m["cost"])}, open(W("court.json"), "w"))
         stage("court", [W("court_track.json")], court, a.force)
-
-        def refine():
-            # E26: the paint centre of each line at sub-pixel accuracy. ball_events.court_windows uses the result
-            # only when the first model has a clear fault at the far end (E26f).
-            import court_refine
-            court_refine.run(work, log=False)
-        try:
-            stage("court2", [W("court_track_refined.json")], refine, a.force)
-        except Exception as e:        # the first model stays
-            traceback.print_exc()
-            say("@warning", f"No refined court model: {type(e).__name__}: {e}")
-        import ball_events
-        ball_events.court_windows(work, say)
-        save_times()
+        # The check comes first: with no court model (court_track.json is not written), the steps below fail.
         problem = court_problem(W("court_track.json"))
+        if not problem:
+            def refine():
+                # E26: the paint centre of each line at sub-pixel accuracy. ball_events.court_windows uses the result
+                # only when the first model has a clear fault at the far end (E26f).
+                import court_refine
+                court_refine.run(work, log=False)
+            try:
+                stage("court2", [W("court_track_refined.json")], refine, a.force)
+            except Exception as e:        # the first model stays
+                traceback.print_exc()
+                say("@warning", f"No refined court model: {type(e).__name__}: {e}")
+            import ball_events
+            ball_events.court_windows(work, say)
+        save_times()
         if problem:
             # The ball stages need a correct court model. Without it, the result has only the rally boundaries.
             warnings.append(problem + " The result has only the rally boundaries: no winners, no serve faults, no short points.")
@@ -424,22 +425,14 @@ def main():
         save_times()
         model_name = "ball"
 
-    # ---- rallies
-    import rally_model
+    # ---- rallies (chain.py: the same chain as the lab benchmark, pipeline.py)
+    import rally_model, chain
     say("@stage rallies start")
     t = time.time()
     prob = rally_model.predict(MID, model_name)
     np.save(W(f"rally_prob_{model_name}.npy"), prob.astype(np.float32))
-    hi = float(cfg["threshold"])
-    lo = max(0.05, hi - 0.15)
-    if ball_ok:
-        import pipeline as pl, match_decode as md
-        from serve_ball import serve_events
-        full = json.load(open(W("fullflights_s0.35.json")))
-        serves = serve_events(full["flights"], 0, n)
-        seg = pl.rallies(MID, serves, prob, hi, lo, bool(cfg["shortPoints"]))
-    else:
-        seg = [(float(x), float(y)) for x, y in lab.segment(prob, smooth=1, hi=hi, lo=lo, min_len=2.0)]
+    full = json.load(open(W("fullflights_s0.35.json"))) if ball_ok else None
+    seg, serves = chain.segments(prob, full, cfg)
     STAGE_S["rallies"] = round(time.time() - t, 1)
     say("@stage rallies done", STAGE_S["rallies"])
 
@@ -448,40 +441,11 @@ def main():
     if ball_ok and seg:
         say("@stage winners start")
         t = time.time()
-        md.PARAMS[MID] = {"margin": -0.15, "net_fwd": 2.0, "net_back": 4.0, "min_speed": 8}     # the value of 3 of the 4 lab matches
-        rows = pl.evidence(MID, seg, full, serves)
-        # start state: 0-0; player 1 = the player at the near end in the first rally; the server is not known
-        st0 = {(0, 0, 0, 0, -1, srv, True, 0): 0.5 for srv in (1, 2)}
-        # The player at the near end comes from the shirt colors (identity.py, E22). The decoder gets it as
-        # evidence for each rally (E22b). Its own state is not usable for the names: right for 30 to 66 %.
-        import identity
-        near1 = identity.p1_near([r["color"] for r in rows])
-        md.FLIP, md.P_ID = None, pl.ID_ABS
-        states = []
-        for i, r in enumerate(rows):
-            r["pNull"] = pl.P_NULL_SHORT if r["prob"] < 0 else pl.p_null(r["prob"], r["shots"])
-            r["pMiss"] = pl.p_miss(r["start"] - rows[i - 1]["end"]) if i else 0.02
-        post = md.decode([r["pBall"] for r in rows], [(r["serverNear"], 0 if n1 else 1) for r, n1 in zip(rows, near1)], st0, states,
-                         [r["pMiss"] for r in rows], [r["pNull"] for r in rows])
-        for r, pp, p1_near in zip(rows, post, near1):
-            near_wins = None if abs(pp - 0.5) < 0.02 else bool(pp > 0.5)
-            out.append({
-                "start": r["start"], "end": r["end"], "kind": "short" if r["prob"] < 0 else "rally",
-                "prob": None if r["prob"] < 0 else r["prob"], "pNotPoint": r["pNull"],
-                "p1Near": p1_near, "pNearWins": pp, "pBall": r["pBall"],
-                "winner": None if near_wins is None else ("P1" if near_wins == p1_near else "P2"),
-                "confidence": max(pp, 1 - pp),
-                "server": None if r["serverNear"] is None else ("P1" if r["serverNear"] == p1_near else "P2"),
-                "serverNear": r["serverNear"], "serveSpeedKmh": r["serveSpeed"], "fault": r["fault"],
-                "shots": r["shots"], "lastShot": r["lastShot"], "endChangeBefore": r["flip"],
-                # E28: the shot chain of the rally (shot_chain.py). E29: it is also the winner evidence of the
-                # score model (pipeline.CHAIN is on).
-                "chain": r.get("chain")})
+        out = chain.winners(MID, seg, full, serves)
         STAGE_S["winners"] = round(time.time() - t, 1)
         say("@stage winners done", STAGE_S["winners"])
-    else:
-        for x, y in seg:
-            out.append({"start": x, "end": y, "kind": "rally", "prob": float(prob[int(x):int(y) + 1].mean())})
+    elif not ball_ok:
+        out = chain.rally_rows(seg)
 
     if ball_ok:
         try:

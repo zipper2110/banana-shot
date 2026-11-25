@@ -1,13 +1,15 @@
 """Final rally model for a new video (app integration, see docs/auto-analysis/app-integration.md).
 
-seq_eval.py trains one model for each held-out match: that is the test. This script trains
-one model on ALL marked singles matches with the same method, and keeps it in a file:
+This script trains one model on ALL marked singles matches, and keeps it in a file:
   <labRoot>/models/rally_<name>.pt   (network weights, and for each feature set the PCA and scales)
 predict() gives the per-second rally probability of a match that was not in the training.
+It also trains the fold models of the lab benchmark (pipeline.py): the same method, with one match left out:
+  <labRoot>/models/rally_<name>_x<match>.pt
+Train the full model and the fold models together, so that the benchmark measures the shipped method.
 
 Models:  ball  = audio, mel, dino, wasbf   (E20, needs the ball pass)
          base  = audio, mel, dino          (E6b, no ball pass)
-Usage: python rally_model.py train [ball|base ...]
+Usage: python rally_model.py train [--folds-only] [ball|base ...]
 """
 import os, sys
 import numpy as np
@@ -23,8 +25,9 @@ TRAIN = ["m1015", "m1020", "m1021", "m1030"]
 PCA_DIMS, EPOCHS, WIN = 32, 40, 240
 
 
-def path(name):
-    return os.path.join(lab.ROOT, "models", f"rally_{name}.pt")
+def path(name, fold=None):
+    """The model file. fold = the match that the model did not see (a fold model of the benchmark), or None."""
+    return os.path.join(lab.ROOT, "models", f"rally_{name}.pt" if fold is None else f"rally_{name}_x{fold}.pt")
 
 
 def stack(parts, prep):
@@ -41,8 +44,10 @@ def stack(parts, prep):
     return np.concatenate(cols, 1)
 
 
-def train(name):
+def train(name, fold=None):
+    """Trains on TRAIN, or on TRAIN without the match fold."""
     feats = MODELS[name]
+    TRAIN = [m for m in globals()["TRAIN"] if m != fold]
     raw = {m: load(m, feats, PCA_DIMS) for m in TRAIN}
     y = {m: lab.labels(m) for m in TRAIN}
     mask = {m: lab.span_mask(m) for m in TRAIN}
@@ -73,17 +78,21 @@ def train(name):
         loss = (nn.functional.binary_cross_entropy_with_logits(net(xb), yb, reduction="none") * mb).sum() / mb.sum().clamp(min=1)
         opt.zero_grad(); loss.backward(); opt.step(); sched.step()
     os.makedirs(os.path.dirname(path(name)), exist_ok=True)
-    torch.save({"feats": feats, "prep": prep, "dim": X[TRAIN[0]].shape[1], "net": net.state_dict(), "train": TRAIN}, path(name))
+    torch.save({"feats": feats, "prep": prep, "dim": X[TRAIN[0]].shape[1], "net": net.state_dict(), "train": TRAIN}, path(name, fold))
     net.eval()
     for m in TRAIN:                                    # a check on the training matches (not a test)
         with torch.no_grad():
             p = torch.sigmoid(net(torch.tensor(X[m][None]).cuda()))[0].cpu().numpy()
         print(name, m, "(training match)", lab.fmt(lab.point_metrics(lab.segment(p, smooth=1, hi=0.5, lo=0.35, min_len=2.0), m)), flush=True)
+    if fold is not None:                               # the held-out match: a test
+        p = predict(fold, name, fold)
+        print(name, fold, "(held out)", lab.fmt(lab.point_metrics(lab.segment(p, smooth=1, hi=0.5, lo=0.35, min_len=2.0), fold)), flush=True)
 
 
-def predict(mid, name):
-    """Per-second rally probability of match mid (its feat_<name>.npy files must exist)."""
-    ck = torch.load(path(name), map_location="cpu", weights_only=False)     # our own file
+def predict(mid, name, fold=None):
+    """Per-second rally probability of match mid (its feat_<name>.npy files must exist). fold: use the fold
+    model that did not see that match."""
+    ck = torch.load(path(name, fold), map_location="cpu", weights_only=False)     # our own file
     X = stack(load(mid, ck["feats"], PCA_DIMS), ck["prep"])
     dev = platform_cfg.small_device()
     net = Net(ck["dim"]).to(dev)
@@ -95,5 +104,9 @@ def predict(mid, name):
 
 if __name__ == "__main__":
     if sys.argv[1] == "train":
-        for n in (sys.argv[2:] or list(MODELS)):
-            train(n)
+        folds_only = "--folds-only" in sys.argv
+        for n in ([a for a in sys.argv[2:] if not a.startswith("--")] or list(MODELS)):
+            if not folds_only:
+                train(n)
+            for m in TRAIN:
+                train(n, m)

@@ -1,0 +1,749 @@
+{
+ "version": 1,
+ "kind": "bananashot-hit-labels",
+ "match": "m1116",
+ "video": "D:/PXL_20261116_1_Igor.mp4",
+ "testOnly": true,
+ "source": {
+  "tool": "label_hits.html",
+  "toolVersion": 1,
+  "labeler": "user",
+  "worklist": "hit_worklist.json",
+  "worklistSeed": 70,
+  "method": "by eye and ear on the rally clip (1920x1080, source frame times, sound)"
+ },
+ "timeBase": "t = source video time in s (frame pts); a hit time is the frame on the screen at the key press",
+ "fields": {
+  "player": "near or far end of the court",
+  "rate": "playback speed at the key press (0 = paused)",
+  "shots": "count of hits, the serve is shot 1",
+  "fault": "first-serve fault before the point: {t}, false (checked, none), null (not checked), 'project' (from the fault clips of the project)",
+  "skip": "not a usable rally",
+  "unsure": "the user is not sure of some marks"
+ },
+ "updated": "2026-11-25T20:40:46.979Z",
+ "rallies": [
+  {
+   "point": "4bb93322-50a6-46aa-9e84-19964bba13fb",
+   "n": 11,
+   "startMs": 178760,
+   "endMs": 191840,
+   "stratum": "middle",
+   "hits": [
+    {
+     "t": 180.3723,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 182.0723,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 184.1556,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 185.7723,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 187.939,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 5,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 26.9,
+   "savedAt": "2026-11-25T20:40:46.959Z"
+  },
+  {
+   "point": "bcee34f8-316e-4277-b755-0ece1a3063b6",
+   "n": 2,
+   "startMs": 240780,
+   "endMs": 256480,
+   "stratum": "middle",
+   "hits": [
+    {
+     "t": 242.0793,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 243.9126,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 245.4293,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 247.0459,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 248.5793,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 251.2126,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 252.9293,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 7,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 57.7,
+   "savedAt": "2026-11-25T20:34:02.934Z"
+  },
+  {
+   "point": "fe743e4c-5a77-4d9f-b4d1-eccc43d93a53",
+   "n": 4,
+   "startMs": 2085490,
+   "endMs": 2096490,
+   "stratum": "middle",
+   "hits": [
+    {
+     "t": 2086.9411,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 2088.1911,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 2089.6911,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 2091.6411,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 2093.3744,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 5,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 21.8,
+   "savedAt": "2026-11-25T20:36:05.727Z"
+  },
+  {
+   "point": "eac90229-c95f-43a9-9295-8d412ea96c86",
+   "n": 7,
+   "startMs": 3633270,
+   "endMs": 3650780,
+   "stratum": "middle",
+   "hits": [
+    {
+     "t": 3634.7492,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3636.2992,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3638.8159,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3640.3825,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3642.4825,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3644.5825,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3646.1492,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3647.5159,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 8,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 33.9,
+   "savedAt": "2026-11-25T20:38:06.082Z"
+  },
+  {
+   "point": "abc32193-ac0d-48b2-b57d-8ff2117e50f8",
+   "n": 6,
+   "startMs": 3740320,
+   "endMs": 3753580,
+   "stratum": "middle",
+   "hits": [
+    {
+     "t": 3741.4158,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3743.0491,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3745.2825,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3746.6658,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3748.0158,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 3749.8825,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 6,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 26.7,
+   "savedAt": "2026-11-25T20:37:31.648Z"
+  },
+  {
+   "point": "f8c97c5e-dee3-4dc3-a8bb-a29048ebc521",
+   "n": 10,
+   "startMs": 4755170,
+   "endMs": 4770240,
+   "stratum": "middle",
+   "hits": [
+    {
+     "t": 4756.3238,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 4757.8905,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 4759.9238,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 4761.6238,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 4763.5238,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 4764.9405,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 6,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 28.6,
+   "savedAt": "2026-11-25T20:40:19.790Z"
+  },
+  {
+   "point": "0c4940cb-2104-4a11-94a5-32f1fbda6fe8",
+   "n": 3,
+   "startMs": 5511560,
+   "endMs": 5562570,
+   "stratum": "long",
+   "hits": [
+    {
+     "t": 5512.4561,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5513.8727,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5515.3394,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5518.0394,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5519.7394,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5522.0561,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5523.8894,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5525.5894,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5527.2894,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5529.5561,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5531.2894,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5533.1061,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5535.1394,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5537.1061,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5539.3061,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5541.0894,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5543.4061,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5545.0061,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5546.5394,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5548.9394,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5550.3894,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5554.2227,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5555.8894,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5557.2227,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 24,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 99.1,
+   "savedAt": "2026-11-25T20:35:42.596Z"
+  },
+  {
+   "point": "7a22caf5-ebe0-46f1-9b12-e5e067f2d521",
+   "n": 8,
+   "startMs": 5842050,
+   "endMs": 5871380,
+   "stratum": "long",
+   "hits": [
+    {
+     "t": 5843.2544,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5844.9877,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5847.4211,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5849.0877,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5851.8877,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5853.6544,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5855.0711,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5856.9211,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5858.4377,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5859.9544,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5861.0877,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5863.2377,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 5865.2211,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 13,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 67.5,
+   "savedAt": "2026-11-25T20:39:14.779Z"
+  },
+  {
+   "point": "c52218ef-d009-43a7-b5be-772786c1cd97",
+   "n": 5,
+   "startMs": 7618290,
+   "endMs": 7637990,
+   "stratum": "long",
+   "hits": [
+    {
+     "t": 7619.5099,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7620.9932,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7622.4099,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7624.2932,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7626.2266,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7628.1766,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7630.0599,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7632.5599,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 7633.8766,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 9,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 57.9,
+   "savedAt": "2026-11-25T20:37:04.059Z"
+  },
+  {
+   "point": "d4d1a82a-5995-4682-8096-90453c382ab8",
+   "n": 1,
+   "startMs": 7951990,
+   "endMs": 7956140,
+   "stratum": "short",
+   "hits": [
+    {
+     "t": 7953.3744,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 1,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 247.1,
+   "savedAt": "2026-11-25T20:33:04.624Z"
+  },
+  {
+   "point": "0f7c1954-7ec6-4eb9-935c-328f3ddb54ca",
+   "n": 9,
+   "startMs": 8089140,
+   "endMs": 8102770,
+   "stratum": "middle",
+   "hits": [
+    {
+     "t": 8090.3696,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 8092.0863,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 8093.4363,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 8095.8696,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 8097.253,
+     "player": "near",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 8098.203,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    },
+    {
+     "t": 8098.653,
+     "player": "far",
+     "rate": 0.5,
+     "paused": false
+    }
+   ],
+   "shots": 7,
+   "fault": "project",
+   "unsure": false,
+   "skip": false,
+   "note": "",
+   "labelSeconds": 35.9,
+   "savedAt": "2026-11-25T20:39:50.926Z"
+  }
+ ]
+}

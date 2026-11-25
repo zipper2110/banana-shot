@@ -145,6 +145,9 @@ def add_net_hits(out, net):
 BALL_NEAR_PX = 25.0        # a detection is the ball of a flight if it is this near to the fitted path
 
 
+BALL_WEIGHTS = "ball_e38.pth"   # the default weights of the ball detector (E38)
+
+
 def write_overlay(work, n, full, serves, net_ev=()):
     """Writes <work>/overlay.json: the data that the app draws on the preview (decision 19 of
     app-integration.md). Image points are px of a 1920 x 1080 frame. Times are seconds of the video.
@@ -269,10 +272,19 @@ def main():
     os.makedirs(work, exist_ok=True)
     # ballPasses (E27): "dim" = a second pass of the ball detector on a dimmed picture, for a ball in front of a
     # bright background (about 2 times the ball stage). "" = one pass.
-    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": True, "ballPasses": "dim"}
+    # ballWeights (E38): the weights file of the ball detector in the weights folder. The default is our fine-tune of
+    # the WASB tennis weights (ball_train2.py): it also finds a ball that is not brighter than its background.
+    # "" = the WASB tennis weights. If the file is not there, the run uses the WASB tennis weights and gives a warning.
+    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": True, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS}
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
     os.environ.setdefault("BALL_PASSES", cfg["ballPasses"] or "")      # ball_wasb reads it at import
+    if cfg["ballWeights"] and "BALL_WEIGHTS" not in os.environ:
+        import platform_cfg
+        if os.path.exists(os.path.join(platform_cfg.weights_dir(), cfg["ballWeights"])):
+            os.environ["BALL_WEIGHTS"] = cfg["ballWeights"]
+        else:
+            say("@warning", f"The ball weights {cfg['ballWeights']} are not there. The run uses the WASB tennis weights.")
     times_file = os.path.join(work, "stage_times.json")
     if os.path.exists(times_file) and not a.force:
         STAGE_S.update(json.load(open(times_file)))

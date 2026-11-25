@@ -18,6 +18,8 @@ RTMLIB = os.path.join(os.path.expanduser("~"), ".cache", "rtmlib", "hub", "check
 FILES = [
     ("ext/weights/wasb_tennis.pth.tar", "{lab}/ext/weights/wasb_tennis.pth.tar",
      "WASB-SBDT tennis weights, https://github.com/nttcom/WASB-SBDT, MIT"),
+    ("ext/weights/ball_e38.pth", "{lab}/ext/weights/ball_e38.pth",
+     "Our fine-tune of the WASB-SBDT tennis weights on our own videos (ball_train2.py, E38)"),
     ("ext/weights/yolox_m_8xb8-300e_humanart-c2c7a14a.onnx", "{rtmlib}/yolox_m_8xb8-300e_humanart-c2c7a14a.onnx",
      "YOLOX-m person detector (ONNX) from the OpenMMLab download server, through rtmlib, Apache-2.0"),
     ("ext/weights/rtmpose-m_simcc-body7_pt-body7_420e-256x192-e48f03d0_20230504.onnx",

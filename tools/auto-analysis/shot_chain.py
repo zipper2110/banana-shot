@@ -43,6 +43,8 @@ PRED_SIGMA, PRED_AFTER = 1.0, 1.0   # m, s: the fit landing is a "predicted" end
 PRED_ERR = 1.2        # m: the measured error of a fit landing (E33: median 1.1 to 1.6 m against the seen bounces). A predicted landing nearer to a line is "line", not in or out
 LATE_BOUNCE = os.environ.get("CHAIN_LATE_BOUNCE", "1") == "1"
 LATE_S, LATE_V = 1.5, (0.5, 2.0)    # s after the last sample of the shot; lowest and highest mean ground speed to the bounce, as a factor of the fit speed
+CONT = os.environ.get("CHAIN_CONT", "1") == "1"
+CONT_GAP, CONT_M = float(os.environ.get("CONT_GAP", "0.35")), float(os.environ.get("CONT_M", "4.0"))   # s, m: see continuous()
 NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its direction (net_events.HINT_DIR)
 
 
@@ -62,6 +64,28 @@ def pos_ok(f):
 
 def _ev(events, i, kind):
     return events[i] if (events is not None and i is not None and events[i]["kind"] == kind) else None
+
+
+def continuous(cur, f, b0):
+    """E39. A flight that changes the direction of the ball starts where the ball was: at the bounce event at its start,
+    or at the end of the last flight of the shot with a plausible position. False: the start of the fit is too far from
+    that place for the time between them. Then the fit is wrong (a short piece after a bounce on the far side often
+    gets a fit that flies back fast from a far place), and its direction is not a fact."""
+    if cur["fl"][-1]["n"] < f["n"]:
+        return True                        # the fit with more samples is the better one: a short piece does not reject a long flight
+    if b0 is not None and b0.get("court") is not None:
+        # The place of the event is exact only if the ball was on the ground there. The flight before it gives that.
+        ref, t, v = b0["court"], b0["t"], 0.0
+    else:
+        g = next((x for x in reversed(cur["fl"]) if pos_ok(x)), None)
+        if g is None or g["n"] < f["n"]:
+            return True
+        ref, t, v = g["p1"], g["t1"], float(np.linalg.norm(g["v0"]))
+    gap = f["t0"] - t
+    if gap > CONT_GAP:
+        return True
+    reach = CONT_M + max(gap, 0.0) * max(v, min(float(np.linalg.norm(f["v0"])), 70.0))
+    return float(np.hypot(f["p0"][0] - ref[0], f["p0"][1] - ref[1])) <= reach
 
 
 def build(flights, events, nets=(), min_speed=8.0, weak=True):
@@ -101,6 +125,19 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
                 # player returned it. The return was not seen (or its fit has the wrong direction).
                 new, how, to_far, s = True, "back", not to_far, -s
         elif cur is not None:
+            if CONT and not continuous(cur, f, b0):
+                # E39: the fit does not start where the ball was. It is not a new shot. Its bounce event is the bounce of the shot.
+                if b0 is not None and b0["court"] is not None and came_back(cur, [b0]) and to_far != cur["near"]:
+                    # The ball bounced on the other side before, and now it bounces on the side of the hitter: the other
+                    # player returned it (the return was not seen). The fit agrees with the direction of the return.
+                    cur = {"t": float(f["t0"]), "near": bool(to_far), "how": "back", "fl": [f], "bounces": [b0], "net": None,
+                           "reach": b0["court"][1] * s, "weak": True, "serve": None}
+                    shots.append(cur)
+                    continue
+                if b0 is not None and b0["court"] is not None and all(b0 is not x for x in cur["bounces"]):
+                    cur["bounces"].append(b0)
+                    cur["reach"] = max(cur["reach"] if cur["reach"] is not None else -99.0, b0["court"][1] * (1.0 if cur["near"] else -1.0))
+                continue
             how = "hit" if h0 is not None else "back"
             if b0 is not None:
                 # The direction changes at an event that passed the bounce test. A fast flight back: the other player
@@ -241,7 +278,7 @@ EARLY = -4.0          # s: the last shot starts more than this before the end: a
 # The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
 # E38d: fitted with the detections of the fine-tuned ball weights (each match with weights that did not see it).
-CASE_P = {"back_in": 0.62, "back_stop": 0.83, "in": 0.86, "in_early": 0.75, "in_line": 0.77, "in_line_early": 0.94, "net_hi": 0.97, "net_lo": 0.81, "old_in": 0.56, "old_in_early": 0.7, "old_in_seen": 0.69, "old_net": 0.89, "old_net_early": 0.9, "old_out": 0.64, "old_out_early": 0.75, "old_out_seen": 0.92, "out": 0.96, "out_early": 0.87, "out_line": 0.79, "out_line_early": 0.81, "own": 0.76, "own_early": 0.75}
+CASE_P = {"back_in": 0.58, "back_stop": 0.84, "in": 0.87, "in_early": 0.77, "in_line": 0.79, "in_line_early": 0.83, "net_hi": 0.97, "net_lo": 0.81, "old_in": 0.58, "old_in_early": 0.7, "old_in_seen": 0.56, "old_net": 0.88, "old_net_early": 0.9, "old_out": 0.69, "old_out_early": 0.68, "old_out_seen": 0.97, "out": 0.95, "out_early": 0.89, "out_line": 0.81, "out_line_early": 0.81, "own": 0.79, "own_early": 0.75}
 CASES_BY_MATCH = None
 TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", "own": "the ball came down on the side of the hitter",
         "out": "the ball bounced out", "in": "the ball bounced in and no return was seen",

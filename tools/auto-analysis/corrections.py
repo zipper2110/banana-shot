@@ -20,6 +20,8 @@ G11: the counts of right and wrong use only the clips that the user reviewed (au
 did not review is not evidence. The import record gives "swapped" (player 1 of the detection is player 2 of the
 project) and the settings; the bounds of each clip come from the same rule as the import (DetectImport.plan: the
 padding stops at the middle of the gap to the next rally, then a rounding to 10 ms).
+The report measures the rallies first and the outcome of each rally second (the priorities of the user,
+2026-11-26). It has no score measure: a score reason only takes a winner change out of the counts.
 It writes <project>/autodetect/corrections-<import time>.json for later training.
 Usage: python corrections.py <project folder> [import file name]
 """

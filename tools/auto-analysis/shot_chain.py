@@ -285,7 +285,7 @@ EARLY = -4.0          # s: the last shot starts more than this before the end: a
 # The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
 # E38d: fitted with the detections of the fine-tuned ball weights (each match with weights that did not see it).
-CASE_P = {"back_in": 0.58, "back_stop": 0.86, "in": 0.86, "in_early": 0.78, "in_line": 0.79, "in_line_early": 0.83, "net_hi": 0.97, "net_lo": 0.81, "old_in": 0.7, "old_in_early": 0.62, "old_in_seen": 0.7, "old_net": 0.87, "old_net_early": 0.9, "old_out": 0.67, "old_out_early": 0.65, "old_out_seen": 0.94, "out": 0.96, "out_early": 0.87, "out_line": 0.83, "out_line_early": 0.81, "own": 0.79, "own_early": 0.75}
+CASE_P = {"back_in": 0.58, "back_stop": 0.87, "in": 0.88, "in_early": 0.83, "in_line": 0.79, "in_line_early": 0.83, "net_hi": 0.97, "net_lo": 0.8, "old_in": 0.7, "old_in_early": 0.75, "old_in_seen": 0.75, "old_net": 0.87, "old_net_early": 0.75, "old_out": 0.72, "old_out_early": 0.59, "old_out_seen": 0.94, "out": 0.96, "out_early": 0.9, "out_line": 0.83, "out_line_early": 0.75, "own": 0.8, "own_early": 0.61}
 CASES_BY_MATCH = None
 TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", "own": "the ball came down on the side of the hitter",
         "out": "the ball bounced out", "in": "the ball bounced in and no return was seen",

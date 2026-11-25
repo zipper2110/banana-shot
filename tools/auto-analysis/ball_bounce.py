@@ -43,6 +43,13 @@ WIDE_GAP_S, WIDE_N = 0.25, 8      # E32: a vertex in a gap longer than WIDE_GAP_
 SIDE_ACC, SIDE_TRY, SIDE_N = 8.0, 2.0, 6
 RMS_SEEN, SEEN_F = 3.0, 3.0       # E32: the base limit for a vertex with samples not more than SEEN_F sample steps apart around it
 V_MAX = 60.0                    # m/s (216 km/h). E35: a bounce fit with a higher speed before or after the bounce is not a bounce: the ball is not on the ground there
+# E40: a vertex at the landing of the flight before it is a bounce. The fit of a long flight gives the time and the
+# place where the ball comes to the ground. If the path turns at that time and at that place, the ball is on the
+# ground there. (A hit in the air is earlier than the landing, and its pixel is not the landing place on the ground.)
+# This finds a bounce that the bounce test cannot find: the hit after the bounce made no vertex, and the long flight
+# after the vertex goes back (the "sure hit" rule), or the samples after the vertex do not fit one bounce.
+LAND_AGREE = __import__("os").environ.get("LAND_AGREE", "1") == "1"
+LAND_F, LAND_M, LAND_BACK_S = 4.0, 1.5, 0.5     # frames of 1/60 s, m on the court, and the longest time from the end of the flight to the vertex
 RMS_BASE, RMS_BALL = 2.0, 0.6   # the bounce fit is accepted if rms < RMS_BASE px + RMS_BALL * radius of the ball image (px)
 
 
@@ -283,6 +290,14 @@ def events(path, kk, fls, P, Hm, debug=None):
                     e["kind"] = "bounce"
                     e["court"] = [float(g[0]), float(g[1])]
                     e["conf"] = float(max(0.03, e["sig_px"] * ground_jac(Hm, e["px"])))
+        if LAND_AGREE and e["kind"] == "other" and e["src"] == "vertex" and np.isfinite(g).all() and abs(g[0]) < X_MAX and abs(g[1]) < Y_MAX:
+            for fl in fls:
+                if fl["f1"] < fe + 1 and fe - fl["f1"] <= LAND_BACK_S * 60 and fl["n"] >= HIT_N and fl["rms"] < 5:
+                    lx, ly, lt, _ = b3.landing(fl["p0"], fl["v0"])
+                    if np.isfinite(lt) and abs(fl["f0"] + lt * 60.0 - fe) <= LAND_F and np.hypot(lx - g[0], ly - g[1]) <= LAND_M:
+                        e["kind"], e["court"], e["by_landing"] = "bounce", [float(g[0]), float(g[1])], True
+                        e["conf"] = float(max(0.03, e["sig_px"] * ground_jac(Hm, e["px"])))
+                        break
         if e["kind"] == "other" and fa and fb and fa["v0"][1] * fb["v0"][1] < 0:
             e["kind"] = "hit"                                           # the ball changes its direction along the court
     # 3. flights: anchored at the bounce; an end event for a flight with no event at its end

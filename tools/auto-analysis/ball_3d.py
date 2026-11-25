@@ -290,6 +290,8 @@ def fit_window(mid, rows, w0, w1, t_ref, debug=None):
              "src": e["src"], "conf": e["conf"]}
         if e["kind"] == "end":
             o["tLast"] = w0 + e["f_last"] / 60
+        if e.get("by_landing"):
+            o["byLanding"] = True                           # E40: a bounce from the landing of the flight before it
         ev_out.append(o)
     for o in fls:
         for key in ("ev0", "ev1", "bounceEv"):

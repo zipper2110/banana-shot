@@ -143,7 +143,14 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
                 # The direction changes at an event that passed the bounce test. A fast flight back: the other player
                 # hit the ball there (on the rise after the bounce, or in the air: then the event is not on the ground).
                 # A slow flight back: the bounce is real, and the direction of the short fit after it is not reliable.
-                if abs(f["v0"][1]) >= HIT_V:
+                if abs(f["v0"][1]) >= HIT_V and b0.get("byLanding"):
+                    # E40: the flight before this event came to the ground there: the bounce is real. The hit after it
+                    # made no event. The new shot starts after the bounce, and the bounce stays with the shot before.
+                    how = "back"
+                    if b0["court"] is not None and all(b0 is not x for x in cur["bounces"]):
+                        cur["bounces"].append(b0)
+                    b0 = None
+                elif abs(f["v0"][1]) >= HIT_V:
                     how, turn = "hit", b0
                     cur["bounces"] = [e for e in cur["bounces"] if e is not b0]
                     cur["returned"] = True
@@ -278,7 +285,7 @@ EARLY = -4.0          # s: the last shot starts more than this before the end: a
 # The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
 # E38d: fitted with the detections of the fine-tuned ball weights (each match with weights that did not see it).
-CASE_P = {"back_in": 0.58, "back_stop": 0.84, "in": 0.87, "in_early": 0.77, "in_line": 0.79, "in_line_early": 0.83, "net_hi": 0.97, "net_lo": 0.81, "old_in": 0.58, "old_in_early": 0.7, "old_in_seen": 0.56, "old_net": 0.88, "old_net_early": 0.9, "old_out": 0.69, "old_out_early": 0.68, "old_out_seen": 0.97, "out": 0.95, "out_early": 0.89, "out_line": 0.81, "out_line_early": 0.81, "own": 0.79, "own_early": 0.75}
+CASE_P = {"back_in": 0.58, "back_stop": 0.86, "in": 0.86, "in_early": 0.78, "in_line": 0.79, "in_line_early": 0.83, "net_hi": 0.97, "net_lo": 0.81, "old_in": 0.7, "old_in_early": 0.62, "old_in_seen": 0.7, "old_net": 0.87, "old_net_early": 0.9, "old_out": 0.67, "old_out_early": 0.65, "old_out_seen": 0.94, "out": 0.96, "out_early": 0.87, "out_line": 0.83, "out_line_early": 0.81, "own": 0.79, "own_early": 0.75}
 CASES_BY_MATCH = None
 TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", "own": "the ball came down on the side of the hitter",
         "out": "the ball bounced out", "in": "the ball bounced in and no return was seen",

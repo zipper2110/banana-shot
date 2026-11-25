@@ -241,9 +241,28 @@ function matchDoc(mid) {
                    skip: "not a usable rally", unsure: "the user is not sure of some marks"},
           updated: new Date().toISOString(), rallies};
 }
+// Two hits of the same player one after the other: the other player must hit between them. Exception: the two
+// serves of a double fault (hits 1 and 2, both serves) in a point with only these two hits.
+function sameTwice(it, hits) {
+  const out = [];
+  for (let k = 1; k < hits.length; k++) {
+    if (hits[k].player !== hits[k - 1].player) continue;
+    if (k === 1 && hits.length === 2) continue;
+    out.push(k);                                  // hits k and k + 1 (1-based numbers)
+  }
+  return out;
+}
+
 async function save(next) {
   if (cur < 0 || item().t0 === undefined) return;
   const it = item(), dr = d();
+  const same = dr.skip ? [] : sameTwice(it, dr.hits), sig = JSON.stringify(dr.hits.map(h => h.player + h.t));
+  if (same.length && dr.warned !== sig) {
+    dr.warned = sig;
+    flash("same player twice: check (Enter again saves)", "#a8801f");
+    render();
+    return;
+  }
   (store[it.match] = store[it.match] || {})[it.point] = rallyDoc(it, dr);
   dr.dirty = false; dr.activeMs = store[it.match][it.point].labelSeconds * 1000;
   localStorage.setItem(STORE, JSON.stringify(store));
@@ -352,11 +371,12 @@ function render() {
          <li>Mark each hit of the point with <b>N</b> or <b>F</b>. The first serve in the marked point is hit 1, also when it is a second serve.</li></ol>`) +
     `<div style="margin-top:3px;color:var(--dim)">Double fault: N or F for each serve contact inside the marked point (often only the second serve: 1 shot)${it.faultCheck ? "; the first serve before the point is X" : ""}. Let serve: do not mark it; press M and write "let".</div>`;
   $("fault").innerHTML = !it.faultCheck ? "project" : dr.fault === null ? "not checked" : dr.fault === false ? `<span class="ok">none</span>` : `<span class="fault">yes ${fmt(dr.fault.t)}</span>`;
-  $("flags").innerHTML = (dr.unsure ? `<span class="warn">not sure</span> ` : "") + (dr.skip ? `<span class="fault">skip</span> ` : "") + (dr.note ? `note: ${dr.note.replace(/</g, "&lt;")}` : "");
+  const same = sameTwice(it, dr.hits);
+  $("flags").innerHTML = (same.length ? `<span class="warn">same player twice: hits ${same.map(k => k + "–" + (k + 1)).join(", ")}: check</span><br>` : "") + (dr.unsure ? `<span class="warn">not sure</span> ` : "") + (dr.skip ? `<span class="fault">skip</span> ` : "") + (dr.note ? `note: ${dr.note.replace(/</g, "&lt;")}` : "");
   const ev = $("events"); ev.innerHTML = "";
   dr.hits.forEach((h, k) => {
     const r = document.createElement("div");
-    r.innerHTML = `<span>${k + 1}</span><span class="${h.player}">${h.player}</span><span>${fmt(h.t)}</span><span style="color:var(--dim)">${h.paused ? "paused" : h.rate + "×"}${k === 0 ? " · serve" : ""}</span><span class="x" title="delete">×</span>`;
+    r.innerHTML = `<span>${k + 1}</span><span class="${h.player}">${h.player}${same.includes(k) ? ' <span class="warn">⚠</span>' : ""}</span><span>${fmt(h.t)}</span><span style="color:var(--dim)">${h.paused ? "paused" : h.rate + "×"}${k === 0 ? " · serve" : ""}</span><span class="x" title="delete">×</span>`;
     r.onclick = e => { if (e.target.classList.contains("x")) { dr.hits.splice(k, 1); touch(); } else { v.pause(); seek(h.t - it.t0 + 0.0005); } };
     ev.appendChild(r);
   });

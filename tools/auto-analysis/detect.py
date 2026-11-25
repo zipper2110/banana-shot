@@ -26,6 +26,12 @@ gives a partial result ("partial": true, the rallies that are ready, a warning) 
 start with "@" are for the app:
   @stage <name> start | @stage <name> done <seconds> | @stage <name> skip
   @progress <name> <0..1> | @result <file> | @overlay <file> | @warning <text> | @error <text>
+Adoption of an old ball file (G12, E52): the ball stage takes hours. A ball file of a run before G12 has an old name,
+so a new run makes it again. The operator can state the weights and passes of that file:
+  python detect.py --adopt-ball <old file> --weights <file in the weights folder> --passes <dim or ""> --video <file> --work <folder>
+The command checks the video identity, the time line and the frame range of the file, copies it to the
+new name, and writes the adoption to stage_keys.json ("ballAdopted"). The old file stays. A later run gives a warning
+that the ball candidates come from the adopted file. There is no automatic reuse.
 Usage: python detect.py --video <file> --work <folder> [--settings <json file>] [--force]
 """
 import argparse, json, os, sys, time, traceback
@@ -100,6 +106,79 @@ def check_video(work, video):
     else:
         json.dump({"id": vid, "video": os.path.abspath(video), "size": os.path.getsize(video)}, open(f, "w"), indent=1)
     return vid
+
+
+def ball_tag(weights, passes, n, work):
+    """The tag of the ball file name (lab.BLOB_TAG): the weights, the passes, and a key of the inputs: the detector
+    code, the weights bytes, the court model (the crop), the decode path and n. New weights or new code give a new
+    file (G12)."""
+    import platform_cfg
+    return "_" + weights.split(".")[0] + ("_" + passes if passes else "") + "_" + content_key(
+        weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, "ball_wasb.py"), os.path.join(HERE, "wasb_hrnet.py"),
+                                                       os.path.join(platform_cfg.weights_dir(), weights), os.path.join(work, "court.json")])
+
+
+def adopt_ball(work, video, old, weights, passes):
+    """E52: gives an old ball file (a run before G12) the name of the new cache key. The operator states the weights
+    and the passes of the old file; the command checks what it can check. Returns the record of the adoption.
+    Raises RuntimeError when a check fails. The new name is a copy; the old file stays."""
+    import re, shutil
+    import numpy as np
+    import platform_cfg, lab
+    passes = (passes or "").replace(",", "-").replace("+", "-")
+    old = old if os.path.isabs(old) else os.path.join(work, old)
+    if not os.path.isfile(old):
+        raise RuntimeError(f"No ball file {old}.")
+    for f in ("pts.npy", "kf_times.csv", "court.json"):
+        if not os.path.exists(os.path.join(work, f)):
+            raise RuntimeError(f"The work folder has no {f}: the media and court stages of the old run are not there.")
+    if not os.path.exists(os.path.join(platform_cfg.weights_dir(), weights)):
+        raise RuntimeError(f"The weights {weights} are not in {platform_cfg.weights_dir()}.")
+    m = re.fullmatch(r"wasb_0_(\d+)_s0\.35.*_k2\.npy", os.path.basename(old))
+    if not m:
+        raise RuntimeError(f"{os.path.basename(old)} is not a ball file of a full run (wasb_0_<seconds>_s0.35..._k2.npy).")
+    n_old, n = int(m.group(1)), lab.video_seconds(work)
+    pts = np.load(os.path.join(work, "pts.npy"))
+    if np.percentile(np.diff(pts), 90) >= 0.02 and not os.path.exists(os.path.join(work, "pts_video.npy")):
+        # A video that is not 60 fps: the ball stage writes the 60 fps time line (pts.npy) and keeps the video times
+        # in pts_video.npy. Without pts_video.npy the old ball stage did not end.
+        raise RuntimeError("The video is not 60 fps and the work folder has no pts_video.npy: the old ball stage did not end.")
+    d = np.load(old, mmap_mode="r")
+    if d.ndim != 2 or d.shape[1] != 5 or len(d) == 0:
+        raise RuntimeError(f"{os.path.basename(old)} has the shape {d.shape}, not (rows, 5).")
+    fr = np.asarray(d[:, 0])
+    if (np.diff(fr) < 0).any():
+        raise RuntimeError(f"The frames of {os.path.basename(old)} are not in order.")
+    last = float(fr[-1]) / 60.0                    # the detections are on the 60 fps time line
+    if last > n + 1.0:
+        raise RuntimeError(f"The last detection is at {last:.0f} s, after the end of the video ({n} s): another video.")
+    if last < 0.8 * n:
+        raise RuntimeError(f"The last detection is at {last:.0f} s of {n} s: the old ball stage did not end.")
+    # The video must be the video of the work folder: its length against the frame times of the folder, then its
+    # identity (video.json; a folder of a run before G12 has none and gets this video).
+    import subprocess
+    r = subprocess.run([platform_cfg.tool("ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                        video], capture_output=True, text=True)
+    dur = float(r.stdout.strip() or "nan")
+    vt = np.load(os.path.join(work, "pts_video.npy")) if os.path.exists(os.path.join(work, "pts_video.npy")) else pts
+    if not abs(dur - float(vt[-1])) < 2.0:
+        raise RuntimeError(f"The video is {dur:.1f} s long, but the frames of the work folder end at {float(vt[-1]):.1f} s: another video.")
+    vid = check_video(work, video)
+    lab.BLOB_TAG = ball_tag(weights, passes, n, work)
+    new = lab.blob_file(work, 0, n)
+    if os.path.exists(new):
+        raise RuntimeError(f"{os.path.basename(new)} is already there: nothing to adopt.")
+    # A copy, not a hard link: np.save truncates an existing path in place, so a later ball run that writes the new
+    # name would also change the old file through a link (the lab scripts read the old file).
+    shutil.copy2(old, new)
+    rec = {"file": os.path.basename(new), "from": os.path.basename(old), "weights": weights, "passes": passes,
+           "statedBy": "operator", "videoId": vid, "seconds": n, "oldSeconds": n_old,
+           "lastDetectionS": round(last, 1), "time": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    keys_file = os.path.join(work, "stage_keys.json")
+    keys = json.load(open(keys_file)) if os.path.exists(keys_file) else {}
+    keys["ballAdopted"] = rec
+    json.dump(keys, open(keys_file, "w"), indent=1)
+    return rec
 
 
 def court_problem(track_file):
@@ -334,8 +413,17 @@ def main():
     ap.add_argument("--work", required=True)
     ap.add_argument("--settings", default="")
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--adopt-ball", default="", help="an old ball file to adopt (E52); needs --weights and --passes")
+    ap.add_argument("--weights", default=None, help="with --adopt-ball: the weights of the old file")
+    ap.add_argument("--passes", default=None, help='with --adopt-ball: the passes of the old file ("dim" or "")')
     a = ap.parse_args()
     work = os.path.abspath(a.work)
+    if a.adopt_ball:
+        if a.weights is None or a.passes is None:
+            raise RuntimeError("--adopt-ball needs --weights and --passes: state the weights and passes of the old file.")
+        rec = adopt_ball(work, a.video, a.adopt_ball, a.weights, a.passes)
+        say("@adopted", json.dumps(rec))
+        return
     os.makedirs(work, exist_ok=True)
     # ballPasses (E27): "dim" = a second pass of the ball detector on a dimmed picture, for a ball in front of a
     # bright background (about 2 times the ball stage). "" = one pass.
@@ -452,15 +540,18 @@ def main():
         # ---- ball (the slow stage)
         import ball_wasb, ball_full, feat_wasb
         ball_full.WINDOWS[MID] = (0, n)
-        # G12: the ball file name has the weights, the passes, and a key of the inputs: the detector code, the weights
-        # bytes, the court model (the crop), the decode path and n. New weights or new code give a new file.
+        # G12: the ball file name has the weights, the passes, and a key of the inputs (ball_tag).
         passes = (cfg["ballPasses"] or "").replace(",", "-").replace("+", "-")
-        lab.BLOB_TAG = "_" + weights.split(".")[0] + ("_" + passes if passes else "") + "_" + content_key(
-            weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, "ball_wasb.py"), os.path.join(HERE, "wasb_hrnet.py"),
-                                                           os.path.join(platform_cfg.weights_dir(), weights), W("court.json")])
+        lab.BLOB_TAG = ball_tag(weights, passes, n, work)
         blob = lab.blob_file(work, 0, n)
+        adopted = STAGE_KEYS.get("ballAdopted")
+        if adopted and adopted.get("file") == os.path.basename(blob) and os.path.exists(blob) and not a.force:
+            warn(f"The ball candidates come from the older file {adopted['from']}: the operator stated the weights "
+                 f"{adopted['weights']} and the passes \"{adopted['passes']}\" ({adopted['time']}). This run did not make them.")
 
         def ball():
+            if STAGE_KEYS.pop("ballAdopted", None):    # the stage makes the file itself: the adoption is no longer true
+                json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
             # The frame times of the video. A run before this one on a video that is not 60 fps put them in
             # pts_video.npy, and pts.npy is then the 60 fps time line of the detections (see below). Without this,
             # a second run of the ball stage reads the time line, decides "60 fps", and each detection gets half of its time.

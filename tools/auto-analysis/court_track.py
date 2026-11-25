@@ -7,6 +7,11 @@ the middle. The fit goes forward and backward in time. Each window starts
 from the fit of its neighbor window. If the chamfer cost stays high, the
 script also tries shifted starts. If that also fails (a large camera move),
 court_auto.detect finds the court again in that window.
+E55 (G15): a camera that moves all the time (a hand or a loose mount) moves
+the court lines by 20 to 100 px between the pictures of a median, and the
+median blurs the thin lines: no start model. Then the start comes from one
+picture, and each window uses one picture too ("onePicture" in each window).
+A video whose median gives a start model does not change.
 A model must always be valid (court_auto.valid_H: the full court quad is
 convex and not folded). A window with no trusted model gets ok = False and
 keeps the model of its neighbor.
@@ -33,9 +38,13 @@ SEGS = [((-DW, -BL), (DW, -BL)), ((-DW, BL), (DW, BL)), ((-DW, -BL), (-DW, BL)),
 SAMPLES = np.concatenate([np.linspace(a, b, 80) for a, b in SEGS]).astype(np.float32)
 
 
-def window_frame(mid, t0, n):
-    """Median of 7 keyframes of the window: removes the players."""
-    ims, kf = [], lab.kf_of_second(lab.mdir(mid))
+def window_frame(mid, t0, n, one=False):
+    """Median of 7 keyframes of the window: removes the players. one (E55): only the middle picture of the 7, for a
+    camera that moves."""
+    kf = lab.kf_of_second(lab.mdir(mid))
+    if one:
+        return cv2.imread(lab.kf_file(lab.mdir(mid), min(n - 1, t0 + 4 + 3 * 8), kf))
+    ims = []
     for k in range(7):
         s = min(n - 1, t0 + 4 + k * 8)
         im = cv2.imread(lab.kf_file(lab.mdir(mid), s, kf))
@@ -109,11 +118,11 @@ def check(img, c):
     return (c2, v) if valid(c2) else (c, v)
 
 
-def fit_window(mid, t0, n, start, ref_cost):
+def fit_window(mid, t0, n, start, ref_cost, one=False):
     """Returns (points, track cost, check cost, ok, how). ok = False: no
     trusted fit. how: "track", "detect", "weak" (a faint court: only the
     tracker found a model and no better model exists) or "lost"."""
-    img = window_frame(mid, t0, n)
+    img = window_frame(mid, t0, n, one)
     # A low camera (E23b) sees much of the hall above the court. There the threshold of track_mask is
     # too high for the court lines (120 on the test video; 35 to 96 in the lab matches), so use the
     # mask of the detector.
@@ -153,13 +162,13 @@ def fit_window(mid, t0, n, start, ref_cost):
     return (c if best is not None else start), (best[1] if best is not None else CAP), (chk if best is not None else CAP), False, "lost"
 
 
-def montage(mid, track, n, k=8):
+def montage(mid, track, n, k=8, one=False):
     """k frames spread over the match, each 480x270, with the model in red
     (yellow if the window is not ok)."""
     tiles = []
     for t in np.linspace(30, n - 30, k).astype(int):
         w = track[min(len(track) - 1, t // STEP)]
-        im = window_frame(mid, w["t0"], n)
+        im = window_frame(mid, w["t0"], n, one)
         v = court_auto.draw(im, np.array(w["H"]), (0, 0, 255) if w["ok"] else (0, 255, 255), 3)
         cv2.putText(v, f"{w['t0']}s c{w['cost']:.1f}", (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 2.2, (0, 255, 0), 5)
         tiles.append(v)
@@ -174,17 +183,24 @@ def run(mid):
     has_gt = os.path.exists(os.path.join(out, "gt.json"))
     gt = lab.gt_points(mid) if has_gt else []
     t_mid = int(gt[len(gt) // 2][0]) if gt else n // 2
+    one = False                       # E55: True = one picture for each window (a camera that moves)
     if os.path.exists(os.path.join(out, "court.json")):
         cj = json.load(open(os.path.join(out, "court.json")))
         H0, ref0 = np.array(cj["H"]), cj["chamfer_px"]
     else:
-        # a video with no marks (the app): the middle can be a break, so try more times
-        for frac in ((None,) if gt else (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8)):
-            t_mid = t_mid if frac is None else int(n * frac)
-            H0, _, info = court_auto.detect(court_auto.frame_at(mid, t_mid))
-            if H0 is not None and info["ok"]:
+        # a video with no marks (the app): the middle can be a break, so try more times. First the median of
+        # 9 pictures; if no median gives a court, one picture (E55: the camera moves, the median blurs the lines).
+        t_gt, found = t_mid, False
+        for one, n_frames in ((False, 9), (True, 1)):
+            for frac in ((None,) if gt else (0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8)):
+                t_mid = t_gt if frac is None else int(n * frac)
+                H0, _, info = court_auto.detect(court_auto.frame_at(mid, t_mid, n_frames=n_frames))
+                if H0 is not None and info["ok"]:
+                    found = True
+                    break
+            if found:
                 break
-        else:
+        if not found:
             print(mid, "no court found", info, flush=True)
             return None
         ref0 = 2.0
@@ -195,7 +211,7 @@ def run(mid):
     for order in (range(mid_w, nwin), range(mid_w - 1, -1, -1)):
         c, ref = c0.copy(), ref0
         for w in order:
-            c2, v, chk, ok, how = fit_window(mid, w * STEP, n, c, ref)
+            c2, v, chk, ok, how = fit_window(mid, w * STEP, n, c, ref, one)
             if ok:
                 c, ref = c2, min(max(v, 1.0), 5.0)
             res[w] = (c2.copy(), chk, ok, how)
@@ -203,6 +219,8 @@ def run(mid):
     for w in range(nwin):
         c, v, ok, how = res[w]
         track.append({"t0": w * STEP, "t1": min(n, (w + 1) * STEP), "H": to_H(c).tolist(), "cost": float(v), "ok": bool(ok), "corners": c.tolist()})
+        if one:
+            track[-1]["onePicture"] = True
     json.dump(track, open(os.path.join(out, "court_track.json"), "w"))
     # camera moves: the model moves more than 8 px (mean over the model points in the frame)
     Hs = [np.array(t["H"]) for t in track]
@@ -210,7 +228,7 @@ def run(mid):
              if track[i]["ok"] and track[i + 1]["ok"]]
     jumps = [j for j in jumps if j[1] > 8]
     if has_gt:
-        montage(mid, track, n)
+        montage(mid, track, n, one=one)
     hows = [res[w][3] for w in range(nwin)]
     print(mid, "windows", nwin, "not ok", sum(not t["ok"] for t in track),
           "| not ok at s", [t["t0"] for t in track if not t["ok"]][:20],

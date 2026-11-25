@@ -471,7 +471,12 @@ def run(folder, src="court_track.json", dst="court_track_refined.json", frames=9
         if not w.get("ok", True):
             w["refine"] = {"done": False, "why": "window not ok"}
             continue
-        img = median_frame(folder, w["t0"], w["t1"], frames)
+        if w.get("onePicture"):
+            # E55: a camera that moves; the median blurs the lines. The same picture as court_track.window_frame.
+            s = min(lab.video_seconds(folder) - 1, w["t0"] + 4 + 3 * 8)
+            img = cv2.imread(lab.kf_file(folder, s, lab.kf_of_second(folder)))
+        else:
+            img = median_frame(folder, w["t0"], w["t1"], frames)
         if img is None:
             w["refine"] = {"done": False, "why": "no picture"}
             continue

@@ -25,7 +25,16 @@ from ball_full import WINDOWS
 CFG = {"threshold": 0.5, "shortPoints": True}        # the defaults of detect.py
 
 
-def run(mid, quiet=False):
+def setup_lomo():
+    """The models that did not see the match: case tables and end model fitted on the other 3 matches."""
+    md.use_lomo_cases()                       # winner probabilities measured on the other 3 matches
+    rally_end.use_lomo()
+    if chain.CHAIN:
+        sc.use_lomo_cases()
+
+
+def run(mid, quiet=False, write=True):
+    """Runs the chain on lab match mid and scores it. Returns (metrics, rows). write: also <match>/pipeline.json."""
     start, dur = WINDOWS[mid]
     # E17d: another flights file for a comparison. E28: the chain needs the file with events.
     full = json.load(open(os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS") or ("fullflights_s0.35_ev.json" if chain.CHAIN else "fullflights_s0.35.json"))))
@@ -33,17 +42,15 @@ def run(mid, quiet=False):
     seg, serves = chain.segments(prob, full, CFG, start, start + dur)
     rows = chain.winners(mid, seg, full, serves, prob=prob)
     m = score.score(mid, rows)
-    json.dump({"metrics": m, "rallies": rows}, open(os.path.join(lab.mdir(mid), "pipeline.json"), "w"), indent=1, default=float)
+    if write:
+        json.dump({"metrics": m, "rallies": rows}, open(os.path.join(lab.mdir(mid), "pipeline.json"), "w"), indent=1, default=float)
     if not quiet:
         print(score.line(m), flush=True)
-    return m
+    return m, rows
 
 
 if __name__ == "__main__":
-    md.use_lomo_cases()                       # winner probabilities measured on the other 3 matches
-    rally_end.use_lomo()
-    if chain.CHAIN:
-        sc.use_lomo_cases()
-    ms = [run(m) for m in (sys.argv[1:] or list(WINDOWS))]
+    setup_lomo()
+    ms = [run(m)[0] for m in (sys.argv[1:] or list(WINDOWS))]
     if len(ms) > 1:
         print(score.total(ms))

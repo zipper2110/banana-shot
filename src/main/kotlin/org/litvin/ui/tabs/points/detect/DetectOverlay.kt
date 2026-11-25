@@ -150,8 +150,12 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
                 // The path of the fit: white for the measured part, yellow and thin for the predicted part.
                 flight.curve?.let { curve ->
                     val obsEnd = flight.curveObsEnd ?: flight.t1
-                    curve.zipWithNext().forEach { (a, b) ->
-                        if (a.size < 3 || b.size < 3) return@forEach
+                    // The path stops at the first sample far out of the picture: a bad fit can pass the plane of the
+                    // camera, and then its path goes to infinity and comes back from the other side.
+                    fun far(p: List<Double>) = p.size < 3 || p[1] !in -data.width.toDouble()..2.0 * data.width ||
+                        p[2] !in -data.height.toDouble()..2.0 * data.height
+                    val end = curve.indexOfFirst(::far).let { if (it < 0) curve.size else it }
+                    curve.subList(0, end).zipWithNext().forEach { (a, b) ->
                         val measured = b[0] <= obsEnd + 1e-6
                         shapes += OverlayShape.Line(
                             x(a[1]), y(a[2]), x(b[1]), y(b[2]),

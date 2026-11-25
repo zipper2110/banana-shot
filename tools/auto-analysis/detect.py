@@ -202,9 +202,17 @@ def write_overlay(work, n, full, serves, net_ev=()):
         ts = np.append(np.arange(0.0, end - f["t0"] - 1e-6, 1 / 30.0), end - f["t0"])
         P = ball_3d.camera(H_at(f["t0"]))[0]
         fit = f.get("evFit", f)
-        xy = ball_3d.project(P, ball_3d.simulate(np.array(fit["p0"], float), np.array(fit["v0"], float), ts))
-        return [[round(float(f["t0"] + a), 3), round(float(x), 1), round(float(y), 1)] for a, (x, y) in zip(ts, xy)
-                if np.isfinite(x) and np.isfinite(y)]
+        X = ball_3d.simulate(np.array(fit["p0"], float), np.array(fit["v0"], float), ts)
+        h = (P @ np.concatenate([X, np.ones((len(X), 1))], 1).T).T
+        out = []
+        for a, (u, v, w) in zip(ts, h):
+            # The path stops where the fit goes behind the camera or far out of the picture. A bad fit of a short
+            # flight can pass the plane of the camera: there the projection goes to infinity and comes back from the
+            # other side, and the overlay shows lines across the full picture.
+            if w * h[0][2] <= 0 or not (-1920 < u / w < 2 * 1920 and -1080 < v / w < 2 * 1080):
+                break
+            out.append([round(float(f["t0"] + a), 3), round(float(u / w), 1), round(float(v / w), 1)])
+        return out
     flights = []
     for f in full["flights"]:
         # A flight that does not come down has no landing: its landing time is NaN, and JSON has no NaN.

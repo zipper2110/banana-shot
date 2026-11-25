@@ -139,6 +139,23 @@ class ShotViewsTest {
     }
 
     @Test
+    fun `the path of a flight stops where the fit goes far out of the picture`() {
+        // A bad fit passes the plane of the camera: its path goes to infinity and comes back from the other side.
+        val curve = listOf(
+            listOf(10.0, 875.0, 617.0), listOf(10.1, 620.0, 605.0), listOf(10.2, -37.0, -484.0),
+            listOf(10.3, -4270.0, -8532.0), listOf(10.4, 17404.0, 33123.0), listOf(10.5, 1618.0, 2000.0),
+        )
+        val flight = org.litvin.autodetect.OverlayFlight(t0 = 10.0, t1 = 10.2, good = true, curve = curve, curveObsEnd = 10.2)
+        val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080, flights = listOf(flight))) { null }
+        overlay.layers = setOf(OverlayLayer.SHOTS)
+        val area = Rectangle2D.Double(0.0, 0.0, 1920.0, 1080.0)
+        val lines = overlay.shapes(10.1, area).filterIsInstance<OverlayShape.Line>()
+
+        assertEquals(2, lines.size)
+        assertEquals(-484.0, lines.last().y2, 0.5)
+    }
+
+    @Test
     fun `the court diagram shows the end of each shot up to the video time`() {
         val shots = ShotViews.of(rally, near = 1, players)
         val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080)) { null }

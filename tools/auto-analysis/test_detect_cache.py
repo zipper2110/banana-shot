@@ -75,7 +75,7 @@ class AdoptBall(unittest.TestCase):
         np.save(f, np.stack([fr, fr, fr, fr, fr], 1))
         return f
 
-    def test_adopt_links_the_file_and_records_it(self):
+    def test_adopt_copies_the_file_and_records_it(self):
         old = self.old(self.n - 3)
         rec = detect.adopt_ball(self.work, SAMPLE, os.path.basename(old), "w.pth.tar", "dim")
         new = os.path.join(self.work, rec["file"])
@@ -90,6 +90,14 @@ class AdoptBall(unittest.TestCase):
         self.assertEqual(lab.BLOB_TAG, detect.ball_tag("w.pth.tar", "dim", self.n, self.work))   # the name of a run
         with self.assertRaises(RuntimeError):                       # a second adoption: the file is there
             detect.adopt_ball(self.work, SAMPLE, old, "w.pth.tar", "dim")
+
+    def test_a_later_write_to_the_new_name_does_not_change_the_old_file(self):
+        # A ball run with --force writes the new name again (np.save truncates the path in place).
+        old = self.old(self.n - 3)
+        before = open(old, "rb").read()
+        rec = detect.adopt_ball(self.work, SAMPLE, old, "w.pth.tar", "dim")
+        np.save(os.path.join(self.work, rec["file"]), np.zeros((1, 5), np.float32))
+        self.assertEqual(open(old, "rb").read(), before)
 
     def test_checks_stop_the_adoption(self):
         cases = [(self.n + 30, SAMPLE, "w.pth.tar"),                 # detections after the end: another video

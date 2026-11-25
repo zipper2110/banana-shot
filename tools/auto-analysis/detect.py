@@ -29,7 +29,7 @@ start with "@" are for the app:
 Adoption of an old ball file (G12, E52): the ball stage takes hours. A ball file of a run before G12 has an old name,
 so a new run makes it again. The operator can state the weights and passes of that file:
   python detect.py --adopt-ball <old file> --weights <file in the weights folder> --passes <dim or ""> --video <file> --work <folder>
-The command checks the video identity, the time line and the frame range of the file, links (or copies) it to the
+The command checks the video identity, the time line and the frame range of the file, copies it to the
 new name, and writes the adoption to stage_keys.json ("ballAdopted"). The old file stays. A later run gives a warning
 that the ball candidates come from the adopted file. There is no automatic reuse.
 Usage: python detect.py --video <file> --work <folder> [--settings <json file>] [--force]
@@ -121,7 +121,7 @@ def ball_tag(weights, passes, n, work):
 def adopt_ball(work, video, old, weights, passes):
     """E52: gives an old ball file (a run before G12) the name of the new cache key. The operator states the weights
     and the passes of the old file; the command checks what it can check. Returns the record of the adoption.
-    Raises RuntimeError when a check fails. The old file stays (a hard link, or a copy on another drive)."""
+    Raises RuntimeError when a check fails. The new name is a copy; the old file stays."""
     import re, shutil
     import numpy as np
     import platform_cfg, lab
@@ -168,14 +168,11 @@ def adopt_ball(work, video, old, weights, passes):
     new = lab.blob_file(work, 0, n)
     if os.path.exists(new):
         raise RuntimeError(f"{os.path.basename(new)} is already there: nothing to adopt.")
-    try:
-        os.link(old, new)
-        how = "link"
-    except OSError:
-        shutil.copy2(old, new)
-        how = "copy"
+    # A copy, not a hard link: np.save truncates an existing path in place, so a later ball run that writes the new
+    # name would also change the old file through a link (the lab scripts read the old file).
+    shutil.copy2(old, new)
     rec = {"file": os.path.basename(new), "from": os.path.basename(old), "weights": weights, "passes": passes,
-           "statedBy": "operator", "how": how, "videoId": vid, "seconds": n, "oldSeconds": n_old,
+           "statedBy": "operator", "videoId": vid, "seconds": n, "oldSeconds": n_old,
            "lastDetectionS": round(last, 1), "time": time.strftime("%Y-%m-%dT%H:%M:%S")}
     keys_file = os.path.join(work, "stage_keys.json")
     keys = json.load(open(keys_file)) if os.path.exists(keys_file) else {}

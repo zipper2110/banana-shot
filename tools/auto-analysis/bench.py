@@ -6,7 +6,8 @@ Two sets:
              app, with the shipped models. The heavy stages (ball, flights, pose) must be in the work folder from a
              full run (D:/bananashot-lab/data/<match>); the benchmark runs the rally and winner stages again with
              the code under test.
-Report: rallies, ends, short points, faults (where labels exist), winners with the noise (1 standard error), and the
+Report: rallies, ends, the events against labels (score_events.py, S4; before the winners), short points, faults
+(where labels exist), winners as a check with the noise (1 standard error), and the
 calibration of the winner confidence (G3). Output: <lab>/bench/<time>-<commit>/ report.md, metrics.json,
 manifest.json. The manifest has the code commit, the switches, and a hash of each model and input file. A second run
 with the same manifest must give the same numbers: the report says if an earlier run had the same manifest.
@@ -81,9 +82,6 @@ HEAVY = ["fullflights_s0.35.json", "feat_wasbf.npy", "pose.npy", "feat_dino.npy"
 
 def file_hashes(folder, names):
     out = {n: sha(os.path.join(folder, n)) for n in names if os.path.exists(os.path.join(folder, n))}
-    mid = os.path.basename(os.path.normpath(folder))
-    for f in sorted(glob.glob(os.path.join(folder, "*labels*.json")) + glob.glob(os.path.join(HERE, f"*labels*{mid}*.json"))):
-        out["labels/" + os.path.basename(f)] = sha(f)            # event labels (S4): a change gives a new manifest
     for b in sorted(glob.glob(os.path.join(folder, "wasb_0_*_k2.npy"))):        # the ball candidates of a full run
         out[os.path.basename(b)] = sha(b)
     return out
@@ -158,33 +156,57 @@ def extras(mid, rows):
     return out
 
 
-def events(mid, rows):
-    """The event measures of a match (priority 2 of the user: hits, hitter, shot count, bounces, in/out, net touches
-    against labels). The scorer is score_events.py (S4). Contract: score_events.score(mid, rows) returns None when the
-    match has no event labels, else a list of measures {"name": str, "k": int, "n": int} (a rate k of n, pooled over
-    the matches of a set) or {"name": str, "value": float, "unit": str} (shown for each match, not pooled)."""
+EVENT_SECTIONS = ("hits", "bounces", "nets", "lastShot")
+
+
+def events_all():
+    """The event measures of each match with event labels (priority 2 of the user: hits, hitter, shot count, bounces,
+    in/out, net touches against labels). The scorer is score_events.py (S4, E75). It builds the chain shots on the
+    window of each labeled clip from the flights and net files, so it does not use the rally rows: the measure does
+    not depend on the rally detection (priority 1 has its own measures). Returns {mid: score dict}, or None when
+    this code has no score_events.py."""
+    try:
+        import score_events, lab
+    except ImportError:
+        return None
+    out = {}
+    for mid in lab.MATCHES:
+        r = score_events.score(mid)
+        if any(k in r for k in EVENT_SECTIONS):
+            out[mid] = r
+    return out
+
+
+def label_hashes():
+    """The hash of each event label file: a change of the labels gives a new manifest."""
     try:
         import score_events
     except ImportError:
+        return {}
+    fs = [os.path.join(HERE, n) for n in ("bounce_labels.json", "net_labels.json")]
+    fs += glob.glob(os.path.join(score_events.HIT_LABELS_DIR, "hit_labels_*.json"))
+    return {os.path.basename(f): sha(f) for f in sorted(fs) if os.path.exists(f)}
+
+
+def events_of(ev, mids):
+    """The event part of one set: the matches of the set with labels, their pooled total and the report lines."""
+    if ev is None:
         return None
-    return score_events.score(mid, rows)
+    import score_events
+    per = [ev[m] for m in mids if m in ev]
+    tot = score_events.total(per) if per else {}
+    return {"matches": [p["match"] for p in per], "total": tot, "lines": score_events.lines(tot) if per else [],
+            "perMatch": {p["match"]: dict(p, lines=score_events.lines(p)) for p in per}}
 
 
-def pool_events(per_match):
-    """Rates pooled over the matches (sum of k and n); other values listed per match."""
-    rates, values = {}, {}
-    for mid, ms in per_match.items():
-        for m in ms or []:
-            if "n" in m:
-                r = rates.setdefault(m["name"], [0, 0])
-                r[0] += m["k"]; r[1] += m["n"]
-            else:
-                values.setdefault(m["name"], []).append((mid, m.get("value"), m.get("unit", "")))
-    return {"rates": {k: {"k": v[0], "n": v[1], "rate": v[0] / v[1] if v[1] else None, "se": se(v[0] / v[1], v[1]) if v[1] else None}
-                      for k, v in rates.items()}, "values": values, "matches": [m for m, x in per_match.items() if x]}
+LAB_DEVICE = "cpu"
 
 
 def run_lab():
+    """The lab set does not take the GPU lock (it is short), so it must not use the GPU: a CUDA context next to a
+    ball stage of another job gave that job an out-of-memory stop (6 GB card). The rally model runs on the CPU."""
+    import platform_cfg
+    platform_cfg._cache["device"] = LAB_DEVICE
     import pipeline
     pipeline.setup_lomo()
     res = {}
@@ -247,7 +269,7 @@ def run_heldout(code_dir):
     return res, skipped
 
 
-def summary(res):
+def summary(res, ev=None):
     import score
     ms = [m for m, _ in res.values()]
     n, ok, kn = (sum(m[k] for m in ms) for k in ("n", "ok", "known"))
@@ -265,8 +287,7 @@ def summary(res):
         v = [e[k] for e in ex.values() if k in e]
         if v:
             tot[k] = sum(v)
-    ev = pool_events({mid: events(mid, rows) for mid, (_, rows) in res.items()})
-    return {"total": tot, "events": ev, "perMatch": {mid: dict(m, **ex[mid]) for mid, (m, _) in res.items()},
+    return {"total": tot, "events": events_of(ev, list(res)), "perMatch": {mid: dict(m, **ex[mid]) for mid, (m, _) in res.items()},
             "calibration": calibration(wr), "lines": [score.line(m) for m, _ in res.values()]}
 
 
@@ -281,21 +302,30 @@ def report(man, sets, skipped, same):
          + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + ".",
          f"Manifest `{man['hash']}`. " + (f"An earlier run with the same manifest: {same['run']} ({'same numbers' if same['same'] else '**other numbers**'})."
                                           if same else "No earlier run with the same manifest."), ""]
+    def event_rows(ev):
+        """Priority 2 of the user: the events against labels. They come before the winner rows (a check only)."""
+        if ev is None:
+            return ["| Events | this code has no score_events.py |"]
+        if not ev["matches"]:
+            return ["| Events | no event labels for these matches |"]
+        rows = [f"| **Events** (labels of {', '.join(ev['matches'])}) | |"]
+        for ln in ev["lines"]:
+            k, _, v = ln.partition(": ")
+            rows.append(f"| Events: {k} | {v} |")
+        return rows
+
     for name, s in sets.items():
         t = s["total"]
+        if t is None:                                   # a set with event labels only (no marked points in a benchmark set)
+            ev = s["events"]
+            L += [f"## {name}: {', '.join(ev['matches'])}", "", "| Measure | Value |", "|---|---|"] + event_rows(ev)
+            L += ["", "Per match:", ""] + [f"- {m}: " + "; ".join(p["lines"]) for m, p in ev["perMatch"].items()] + [""]
+            continue
         L += [f"## {name}: {', '.join(t['matches'])}", "",
               "| Measure | Value |", "|---|---|",
               f"| Rallies: recall / precision | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, {t['marked']} marked) |",
               f"| Start / end error, median of matches | {t['startAbsMed']:.2f} s / {t['endAbsMed']:.2f} s |"]
-        # Priority 2 of the user: the events of each rally against labels come before the winner (a check only).
-        ev = s.get("events") or {}
-        if ev.get("matches"):
-            L.append(f"| **Events** (labels of {', '.join(ev['matches'])}) | |")
-            L += [f"| {k} | {pct(v['rate'])} ± {pct(v['se'])} ({v['k']} of {v['n']}) |" for k, v in ev["rates"].items()]
-            L += [f"| {k} | " + ", ".join(f"{mid} {val:.2f} {u}".rstrip() for mid, val, u in vs if val is not None) + " |"
-                  for k, vs in ev["values"].items()]
-        else:
-            L.append("| Events | no event labels for these matches |")
+        L += event_rows(s.get("events"))
         L += [f"| Winner right on matched points (check) | {pct(t['winnerMatched'])} ± {pct(t['winnerMatchedSE'])} (n {t['n']}) |",
               f"| Winner right, end to end (check) | {pct(t['endToEnd'])} ± {pct(t['endToEndSE'])} (of {t['known']} marked winners) |",
               f"| Short points added: real | {t.get('shortReal', 0)} of {t.get('shortAdded', 0)} |"]
@@ -305,6 +335,8 @@ def report(man, sets, skipped, same):
             L.append(f"| First-serve faults: candidates right / marked found | {t['faultCandidatesRight']} of {t['faultCandidates']} / "
                      f"{t['faultsFound']} of {t['faultsMarked']} |")
         L += ["", "Per match:", ""] + [f"- {x}" for x in s["lines"]]
+        for m, p in ((s.get("events") or {}).get("perMatch") or {}).items():
+            L.append(f"- {m} events: " + "; ".join(p["lines"]))
         c = s["calibration"]
         L += ["", "Calibration (matched points with a marked winner):", "", "| Confidence | n | Right |", "|---|---|---|"]
         L += [f"| {b['bin']} | {b['n']} | {pct(b['right'])} |" for b in c["bins"]]
@@ -334,11 +366,17 @@ def run(a):
             sets["Held-out"] = held
             for mid in held:
                 inputs[mid] = file_hashes(lab.mdir(mid), HELD_INPUTS)
+    ev = events_all()
+    other = [m for m in (ev or {}) if not any(m in v for v in sets.values())]
+    for mid in other:                                  # event inputs of a match outside the sets (m0913: app folder)
+        inputs[mid] = ev[mid]["files"]
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
-           "sets": {k: list(v) for k, v in sets.items()}}
+           "labels": label_hashes(), "labDevice": LAB_DEVICE, "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
     man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
-    out = {k: summary(v) for k, v in sets.items()}
+    out = {k: summary(v, ev) for k, v in sets.items()}
+    if other:
+        out["Event labels only"] = {"total": None, "events": events_of(ev, other)}
     root = os.path.join(os.path.dirname(lab.ROOT), "bench")
     same = None
     for f in sorted(glob.glob(os.path.join(root, "*", "manifest.json")), reverse=True):

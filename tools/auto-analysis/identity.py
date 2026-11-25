@@ -38,7 +38,10 @@ def signs(feats, alpha=ALPHA):
             ref = d.copy(); out.append((1, 1.0)); continue
         c = float(d @ ref) / (np.linalg.norm(d) * np.linalg.norm(ref) + 1e-9)
         s = 1 if c >= 0 else -1
-        ref = (1 - alpha) * ref + alpha * s * d
+        # E50: a weak sign moves the reference less (the same scale as in p1_near). With the full rate, one rally with
+        # a cosine near 0 after a break turned the reference in m1030, and the players were swapped from there.
+        a = alpha * min(1.0, abs(c) / 0.5)
+        ref = (1 - a) * ref + a * s * d
         out.append((s, abs(c)))
     return out
 

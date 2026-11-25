@@ -8,6 +8,8 @@ Use:
     python gpu_lock.py status
 
 `run` waits until the lock is free, holds it while the command runs, and then frees it.
+Waiting jobs get the lock in the order of their start (a ticket in the `queue` folder).
+`status` shows the holder and the queue.
 A lock of a process that does not exist now is removed (stale lock).
 Each start and end goes to `heavy.log` in the lock folder.
 Standard library only.
@@ -23,6 +25,7 @@ import time
 LOCK_DIR = os.environ.get("HEAVY_LOCK_DIR", r"D:\bananashot-lab\locks")
 LOCK = os.path.join(LOCK_DIR, "heavy.lock")
 LOG = os.path.join(LOCK_DIR, "heavy.log")
+QUEUE = os.path.join(LOCK_DIR, "queue")   # one ticket for each waiting job; the oldest live ticket goes first
 
 
 def alive(pid):
@@ -55,10 +58,44 @@ def log(line):
         f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " " + line + "\n")
 
 
+def ticket_first(mine):
+    """True when the ticket `mine` is the oldest ticket of a live process (first come, first served)."""
+    live = []
+    for name in sorted(os.listdir(QUEUE)):
+        pid = int(name.split("_")[1].split(".")[0])
+        if name == mine or alive(pid):
+            live.append(name)
+        else:
+            try:
+                os.remove(os.path.join(QUEUE, name))
+            except OSError:
+                pass
+    return bool(live) and live[0] == mine
+
+
 def acquire(who, what, poll=30):
-    os.makedirs(LOCK_DIR, exist_ok=True)
+    os.makedirs(QUEUE, exist_ok=True)
+    mine = f"{time.time():017.6f}_{os.getpid()}.json"
+    with open(os.path.join(QUEUE, mine), "w", encoding="utf-8") as f:
+        json.dump({"who": who, "what": what}, f)
+    try:
+        _acquire(who, what, poll, mine)
+    finally:
+        try:
+            os.remove(os.path.join(QUEUE, mine))
+        except OSError:
+            pass
+
+
+def _acquire(who, what, poll, mine):
     waited = False
     while True:
+        if not ticket_first(mine):
+            if not waited:
+                print(f"[gpu_lock] in the queue behind older jobs", flush=True)
+                waited = True
+            time.sleep(poll)
+            continue
         try:
             fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
@@ -105,6 +142,14 @@ def main():
             print(f"busy: {cur['who']}: {cur['what']} since {cur['start']}")
         else:
             print("free")
+        if os.path.isdir(QUEUE):
+            for name in sorted(os.listdir(QUEUE)):
+                if alive(int(name.split("_")[1].split(".")[0])):
+                    try:
+                        t = json.load(open(os.path.join(QUEUE, name), encoding="utf-8"))
+                    except (OSError, ValueError):
+                        continue
+                    print(f"  waits: {t['who']}: {t['what']}")
         return 0
     cmd = a.command[1:] if a.command[:1] == ["--"] else a.command
     if not cmd:

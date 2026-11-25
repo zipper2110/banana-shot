@@ -171,7 +171,7 @@ def events_all():
         return None
     out = {}
     for mid in lab.MATCHES:
-        r = score_events.score(mid)
+        r = score_events.detail(mid)        # the dict form; score() is the flat list form of the same measures
         if any(k in r for k in EVENT_SECTIONS):
             out[mid] = r
     return out
@@ -192,11 +192,24 @@ def events_of(ev, mids):
     """The event part of one set: the matches of the set with labels, their pooled total and the report lines."""
     if ev is None:
         return None
-    import score_events
-    per = [ev[m] for m in mids if m in ev]
-    tot = score_events.total(per) if per else {}
-    return {"matches": [p["match"] for p in per], "total": tot, "lines": score_events.lines(tot) if per else [],
-            "perMatch": {p["match"]: dict(p, lines=score_events.lines(p)) for p in per}}
+    rates, values, per = {}, {}, {}
+    for mid in mids:
+        if mid not in ev:
+            continue
+        per[mid] = ev[mid][0]
+        for m in ev[mid][0]:
+            if "n" in m:
+                r = rates.setdefault(m["name"], [0, 0])
+                r[0] += m["k"]; r[1] += m["n"]
+            else:
+                values.setdefault(m["name"], []).append([mid, m["value"], m.get("unit", "")])
+    return {"matches": list(per), "perMatch": per, "values": values,
+            "rates": {k: {"k": v[0], "n": v[1], "rate": v[0] / v[1], "se": se(v[0] / v[1], v[1])} for k, v in rates.items() if v[1]}}
+
+
+# The bounce and net labels (E17d, E16f) were made on detector candidates: a bounce or net touch that the detector
+# never proposed has no label, so their recall is optimistic (manager, 2026-11-26). The hit labels are made by hand.
+OPTIMISTIC = ("Bounces found", "Net touches found")
 
 
 LAB_DEVICE = "cpu"
@@ -309,9 +322,11 @@ def report(man, sets, skipped, same):
         if not ev["matches"]:
             return ["| Events | no event labels for these matches |"]
         rows = [f"| **Events** (labels of {', '.join(ev['matches'])}) | |"]
-        for ln in ev["lines"]:
-            k, _, v = ln.partition(": ")
-            rows.append(f"| Events: {k} | {v} |")
+        for k, v in ev["rates"].items():
+            note = " (optimistic: labels from detector candidates)" if k.startswith(OPTIMISTIC) else ""
+            rows.append(f"| {k}{note} | {pct(v['rate'])} ± {pct(v['se'])} ({v['k']} of {v['n']}) |")
+        for k, vs in ev["values"].items():
+            rows.append(f"| {k} | " + ", ".join(f"{m} {x:.3g} {u}".rstrip() for m, x, u in vs) + " |")
         return rows
 
     for name, s in sets.items():
@@ -319,7 +334,7 @@ def report(man, sets, skipped, same):
         if t is None:                                   # a set with event labels only (no marked points in a benchmark set)
             ev = s["events"]
             L += [f"## {name}: {', '.join(ev['matches'])}", "", "| Measure | Value |", "|---|---|"] + event_rows(ev)
-            L += ["", "Per match:", ""] + [f"- {m}: " + "; ".join(p["lines"]) for m, p in ev["perMatch"].items()] + [""]
+            L += [""]
             continue
         L += [f"## {name}: {', '.join(t['matches'])}", "",
               "| Measure | Value |", "|---|---|",
@@ -336,7 +351,8 @@ def report(man, sets, skipped, same):
                      f"{t['faultsFound']} of {t['faultsMarked']} |")
         L += ["", "Per match:", ""] + [f"- {x}" for x in s["lines"]]
         for m, p in ((s.get("events") or {}).get("perMatch") or {}).items():
-            L.append(f"- {m} events: " + "; ".join(p["lines"]))
+            L.append(f"- {m} events: " + "; ".join(f"{x['name']} {x['k']} of {x['n']}" if "n" in x else
+                                                    f"{x['name']} {x['value']:.3g} {x['unit']}" for x in p))
         c = s["calibration"]
         L += ["", "Calibration (matched points with a marked winner):", "", "| Confidence | n | Right |", "|---|---|---|"]
         L += [f"| {b['bin']} | {b['n']} | {pct(b['right'])} |" for b in c["bins"]]
@@ -369,7 +385,7 @@ def run(a):
     ev = events_all()
     other = [m for m in (ev or {}) if not any(m in v for v in sets.values())]
     for mid in other:                                  # event inputs of a match outside the sets (m0913: app folder)
-        inputs[mid] = ev[mid]["files"]
+        inputs[mid] = ev[mid][1]
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
            "labels": label_hashes(), "labDevice": LAB_DEVICE, "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]

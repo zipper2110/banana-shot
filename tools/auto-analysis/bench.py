@@ -163,7 +163,7 @@ def events_all():
     """The event measures of each match with event labels (priority 2 of the user: hits, hitter, shot count, bounces,
     in/out, net touches against labels). The scorer is score_events.py (S4, E75). It builds the chain shots on the
     window of each labeled clip from the flights and net files, so it does not use the rally rows: the measure does
-    not depend on the rally detection (priority 1 has its own measures). Contract: score_events.score(mid) returns
+    not depend on the rally detection (priority 1 has its own measures). Contract: score_events.measures(mid) returns
     None (no event labels or no flights) or a list of measures: a rate {"name", "k", "n"} (pooled over the matches of
     a set) or a value {"name", "value", "unit"} (shown for each match). Returns {mid: (measures, input file hashes)},
     or None when this code has no score_events.py."""
@@ -173,7 +173,7 @@ def events_all():
         return None
     out = {}
     for mid in lab.MATCHES:
-        r = score_events.score(mid)
+        r = score_events.measures(mid)      # the flat list (manager, 2026-11-26: fixed interface; score() is the dict)
         if r:
             d = score_events.load(mid)
             out[mid] = (r, d["files"] if d else {})

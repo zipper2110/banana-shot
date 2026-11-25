@@ -101,6 +101,10 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
    after the import; the review notes name the result file and the run. Done (E53).
 9. P4: the 1 fps pictures from the ball decode, for a video with no keyframe each second. Measured (E54) and
    closed: see the decisions.
+10. G15 (moved from S5): the court detection on the new lower and wider camera (the two new clips): cause, a
+    small general fix or a clear warning.
+11. G15 coverage report (moved from S5): score the S5 runs of m1001 and m1016, report m0913 without a point
+    score, and list the conditions that the app must warn about or refuse.
 
 ### S3 rally (G4, G5, G8 short points)
 

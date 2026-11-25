@@ -304,7 +304,7 @@ def write_overlay(work, n, full, serves, net_ev=()):
       serves   the serve events: time, end of the server, kind, speed
       poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
-    import court_auto, ball_full, ball_3d, ball_events
+    import court_auto, ball_full, ball_3d, ball_events, lab
     W = lambda *p: os.path.join(work, *p)
     track = ball_events.court_windows(work)
     court = []

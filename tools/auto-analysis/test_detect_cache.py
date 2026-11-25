@@ -1,6 +1,9 @@
 """Tests of the cache keys of detect.py (chain-inventory G12). Usage: python -m unittest test_detect_cache"""
-import json, os, tempfile, unittest
+import json, os, subprocess, tempfile, unittest
+import numpy as np
 import detect
+
+SAMPLE = r"D:\bananashot-lab\samples\m1020_sample.mp4"     # a real video for the length check of the adoption
 
 
 def tmp_file(data):
@@ -42,6 +45,62 @@ class DetectCache(unittest.TestCase):
         detect.stage("flights", [out], lambda: runs.append(3), key="k2")
         self.assertEqual(runs, [1, 3])
         self.assertEqual(json.load(open(detect.KEYS_FILE)), {"flights": "k2"})
+
+
+@unittest.skipUnless(os.path.exists(SAMPLE), "no sample video")
+class AdoptBall(unittest.TestCase):
+    """E52: an old ball file gets the name of the new cache key only when the checks pass."""
+
+    def setUp(self):
+        import platform_cfg
+        self.work = tempfile.mkdtemp(prefix="ab_")
+        wd = tempfile.mkdtemp(prefix="ab_w_")
+        open(os.path.join(wd, "w.pth.tar"), "wb").write(b"weights")
+        self._wd, platform_cfg.weights_dir = platform_cfg.weights_dir, lambda: wd
+        r = subprocess.run([platform_cfg.tool("ffprobe"), "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                            SAMPLE], capture_output=True, text=True)
+        dur = float(r.stdout)
+        np.save(os.path.join(self.work, "pts.npy"), np.arange(0, dur, 1 / 60))
+        open(os.path.join(self.work, "kf_times.csv"), "w").write("\n".join(str(k) for k in range(int(dur))) + "\n")
+        open(os.path.join(self.work, "court.json"), "w").write("{}")
+        self.n = int(dur) + 1
+
+    def tearDown(self):
+        import platform_cfg
+        platform_cfg.weights_dir = self._wd
+
+    def old(self, last_s, n=None):
+        f = os.path.join(self.work, f"wasb_0_{n or self.n}_s0.35_k2.npy")
+        fr = np.arange(0, last_s * 60, 2, dtype=np.float32)
+        np.save(f, np.stack([fr, fr, fr, fr, fr], 1))
+        return f
+
+    def test_adopt_links_the_file_and_records_it(self):
+        old = self.old(self.n - 3)
+        rec = detect.adopt_ball(self.work, SAMPLE, os.path.basename(old), "w.pth.tar", "dim")
+        new = os.path.join(self.work, rec["file"])
+        self.assertTrue(rec["file"].startswith(f"wasb_0_{self.n}_s0.35_w_dim_") and rec["file"].endswith("_k2.npy"))
+        self.assertEqual(open(new, "rb").read(), open(old, "rb").read())
+        self.assertTrue(os.path.exists(old))                         # the old name stays for the lab scripts
+        keys = json.load(open(os.path.join(self.work, "stage_keys.json")))
+        self.assertEqual(keys["ballAdopted"]["from"], os.path.basename(old))
+        self.assertEqual(keys["ballAdopted"]["weights"], "w.pth.tar")
+        self.assertEqual(json.load(open(os.path.join(self.work, "video.json")))["id"], detect.video_id(SAMPLE))
+        import lab
+        self.assertEqual(lab.BLOB_TAG, detect.ball_tag("w.pth.tar", "dim", self.n, self.work))   # the name of a run
+        with self.assertRaises(RuntimeError):                       # a second adoption: the file is there
+            detect.adopt_ball(self.work, SAMPLE, old, "w.pth.tar", "dim")
+
+    def test_checks_stop_the_adoption(self):
+        cases = [(self.n + 30, SAMPLE, "w.pth.tar"),                 # detections after the end: another video
+                 (self.n // 2, SAMPLE, "w.pth.tar"),                 # the old stage did not end
+                 (self.n - 3, tmp_file(b"x" * 5000), "w.pth.tar"),   # another video file
+                 (self.n - 3, SAMPLE, "other.pth.tar")]              # weights that are not there
+        for last, video, w in cases:
+            with self.assertRaises(RuntimeError):
+                detect.adopt_ball(self.work, video, self.old(last), w, "dim")
+        self.assertFalse(os.path.exists(os.path.join(self.work, "video.json")))   # no record of a wrong video
+        self.assertFalse(any("_w_dim_" in f for f in os.listdir(self.work)))
 
 
 if __name__ == "__main__":

@@ -252,6 +252,11 @@ def write_overlay(work, n, full, serves, net_ev=()):
             if fr not in best or dist[k] < best[fr][0]:
                 best[fr] = (float(dist[k]), i0 + k)
     ball = [[round(float(bt[i]), 3), round(float(d[i, 1]), 1), round(float(d[i, 2]), 1)] for _, i in (best[fr] for fr in sorted(best))]
+    # The candidates of the detector that are not the ball of a flight, for the debug view: the user can see a real
+    # ball that the track or the flight fit rejected. Rows: time, x, y, peak of the detector.
+    used = {i for _, i in best.values()}
+    ball_other = [[round(float(bt[i]), 3), round(float(d[i, 1]), 1), round(float(d[i, 2]), 1), round(float(d[i, 4]), 2)]
+                  for i in range(len(d)) if i not in used]
     ev = []
     for e in events:
         o = {"t": round(float(e["t"]), 3), "kind": e["kind"], "px": [round(float(v), 1) for v in e["px"]],
@@ -264,7 +269,7 @@ def write_overlay(work, n, full, serves, net_ev=()):
         ev.append({"t": e["t"], "kind": e["kind"], "px": e["px"], "court": None, "src": e["src"], "conf": e["conf"], "toFar": e["toFar"]})
     sv = [{"t": round(float(e[0]), 3), "near": bool(e[1]), "kind": e[2], "speedKmh": round(3.6 * float(np.linalg.norm(e[3]["v0"])), 1)}
           for e in serves]
-    json.dump({"version": 2 if "events" in full else 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "flights": flights,
+    json.dump({"version": 2 if "events" in full else 1, "width": 1920, "height": 1080, "court": court, "ball": ball, "ballOther": ball_other, "flights": flights,
                "events": ev, "serves": sv, "poses": overlay_poses(work)},
               open(W("overlay.json"), "w"), default=float)
     say("@overlay", W("overlay.json"))

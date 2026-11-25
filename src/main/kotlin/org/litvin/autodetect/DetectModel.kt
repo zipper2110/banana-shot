@@ -299,6 +299,8 @@ data class DetectOverlayData(
     val height: Int = 1080,
     val court: List<OverlayCourt> = emptyList(),
     val ball: List<List<Double>> = emptyList(),
+    /** The candidates of the ball detector that are not the ball of a flight: rows of time (s), x, y (px), peak. */
+    val ballOther: List<List<Double>> = emptyList(),
     val flights: List<OverlayFlight> = emptyList(),
     val serves: List<OverlayServe> = emptyList(),
     val poses: List<List<Double>> = emptyList(),

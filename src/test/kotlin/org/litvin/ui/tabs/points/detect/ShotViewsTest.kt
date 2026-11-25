@@ -183,6 +183,21 @@ class ShotViewsTest {
     }
 
     @Test
+    fun `the rejected ball candidates are red rings for a short time`() {
+        val other = listOf(listOf(10.0, 100.0, 200.0, 0.7), listOf(10.0, 900.0, 500.0, 0.6), listOf(10.5, 300.0, 300.0, 0.8))
+        val overlay = DetectOverlay(DetectOverlayData(width = 1920, height = 1080, ballOther = other)) { null }
+        val area = Rectangle2D.Double(0.0, 0.0, 1920.0, 1080.0)
+        fun rings(t: Double) = overlay.shapes(t, area).filterIsInstance<OverlayShape.Circle>().filter { it.stroke == Palette.RED }
+
+        overlay.layers = setOf(OverlayLayer.BALL_OTHER)
+        assertEquals(listOf(100.0, 900.0), rings(10.01).map { it.centerX })
+        assertTrue(rings(10.2).isEmpty())
+        assertEquals(listOf(300.0), rings(10.52).map { it.centerX })
+        overlay.layers = setOf(OverlayLayer.BALL)
+        assertTrue(rings(10.01).isEmpty())
+    }
+
+    @Test
     fun `the court diagram shows the ball of this time when its switch is on`() {
         // A flight from the near end (y = -10 m) to the far end (y = 10 m) in 1 s. The rows: time, pixel, place on the court.
         val curve = listOf(listOf(10.0, 900.0, 800.0, 0.0, -10.0), listOf(11.0, 900.0, 300.0, 2.0, 10.0))

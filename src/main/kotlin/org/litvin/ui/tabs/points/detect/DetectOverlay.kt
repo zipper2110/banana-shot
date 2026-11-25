@@ -35,6 +35,7 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
     var shotStarts: () -> List<ShotView> = { emptyList() }
 
     private val ballTimes = DoubleArray(data.ball.size) { data.ball[it][0] }
+    private val otherTimes = DoubleArray(data.ballOther.size) { data.ballOther[it][0] }
     private val poseTimes = DoubleArray(data.poses.size) { data.poses[it][0] }
 
     /** The ASS events for the video time [timeMs], for a video that shows in [area] (overlay pixels). */
@@ -105,6 +106,14 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
             if (t - ballTimes[last] <= BALL_FRESH_S) {
                 val row = data.ball[last]
                 shapes += OverlayShape.Circle(x(row[1]), y(row[2]), 9.0 * unit, stroke = Palette.LIME, strokeWidth = 2.0 * unit)
+            }
+        }
+        // The candidates of the detector that are not the ball of a flight: a red ring, for a short time.
+        if (OverlayLayer.BALL_OTHER in layers) {
+            var index = firstIndexFrom(otherTimes, t - OTHER_SHOWN_S)
+            while (index < otherTimes.size && otherTimes[index] <= t) {
+                val row = data.ballOther[index++]
+                if (row.size >= 3) shapes += OverlayShape.Circle(x(row[1]), y(row[2]), 6.0 * unit, stroke = Palette.RED, strokeWidth = 1.5 * unit)
             }
         }
         // The speed of a serve, for a short time after the serve.
@@ -346,6 +355,9 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
             listOf(0.0, -COURT_SERVICE, 0.0, COURT_SERVICE),
         )
 
+        /** A rejected ball candidate stays this long: 3 frames of a 60 fps video. */
+        const val OTHER_SHOWN_S = 0.05
+
         /** A bounce event is the end of a shot if their times are not farther apart than this. */
         const val BOUNCE_MATCH_MS = 60.0
 
@@ -373,6 +385,7 @@ internal class DetectOverlay(private val data: DetectOverlayData, private val pl
 internal enum class OverlayLayer(val text: String) {
     COURT("Court"),
     BALL("Ball"),
+    BALL_OTHER("Rejected ball candidates"),
     LANDINGS("Fit landing"),
     EVENTS("Bounces, net"),
     SERVES("Serve speed"),

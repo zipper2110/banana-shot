@@ -22,7 +22,7 @@ import rally_end
 import score
 from ball_full import WINDOWS
 
-CFG = {"threshold": 0.5, "shortPoints": True}        # the defaults of detect.py
+CFG = {"threshold": 0.5, "shortPoints": False}        # the defaults of detect.py
 
 
 def setup_lomo():

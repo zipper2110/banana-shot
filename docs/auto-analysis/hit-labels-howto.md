@@ -105,3 +105,9 @@ You can stop at any time; the work is saved after each Enter.
   work list, method), one row for each rally: `hits` (`t` in source video seconds, `player`, `rate`,
   `paused`), `shots`, `fault`, `unsure`, `skip`, `note`, `labelSeconds`.
 - m1116 is `testOnly`: use its labels to measure, never to train or fit.
+- Double touch (decision 2026-11-26, the user checked Igor n=9): two hits of the same player one after the
+  other can be real (two touches of the ball in the air). The labels keep both touches. In a measure:
+  the shot count counts them as one shot (merge each run of hits of the same player), and the hit times
+  keep both touches. The hitter of the merged shot is that player. Exception: a point with only two serves
+  (a double fault) is two shots. Each journal row with a hitter or shot-count measure states this rule and
+  lists the rallies with a double touch.

@@ -39,6 +39,8 @@ def p_miss(gap):
     return 0.02 if gap < 15 else 0.05 if gap < 25 else 0.2 if gap < 40 else 0.4
 
 MIN_GAP = 2.0
+SERVICE_LINE = 6.40                      # the distance of the service line from the net, m
+FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
 PROB = {}
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
@@ -159,6 +161,23 @@ def evidence(mid, seg, full, serves):
             c = [e for e in serves if max(prev_end + 1.0, a - 22.0) <= e[0] <= a - MIN_GAP and e[1] == srv]
             if c:
                 fault = {"t": c[-1][0], "kind": c[-1][2], "speed": 3.6 * float(np.linalg.norm(c[-1][3]["v0"]))}
+                if "events" in full:
+                    # The shots of the fault candidate, for the review window (the same window as the fault clip of
+                    # the app: 1 s before the serve event to 2.5 s after it). They are facts for the user only.
+                    try:
+                        fa, fb = fault["t"] - FAULT_BEFORE, min(fault["t"] + FAULT_AFTER, a)
+                        fpt = {"start": fa, "end": fb, "events": full["events"], "kinks": [],
+                               "flights": [full["flights"][i] for i in np.nonzero((fl_t0 >= fa) & (fl_t0 <= fb))[0]]}
+                        fch = sc.evidence(fpt, [e for e in nets if fa <= e["t"] <= fb], T_CUT_E2E, None, None, None, p["min_speed"])
+                        fault["chain"] = {"shots": [{k: v for k, v in s.items() if k != "late"} for s in sc.export(fch, fb, T_CUT_E2E, False)["shots"]]}
+                        # The serve must land in the service boxes (the chain tests the full court). The side of the box
+                        # is not tested: the detection does not know the side of the server.
+                        s0 = fault["chain"]["shots"][0] if fault["chain"]["shots"] else None
+                        if s0 is not None and s0["end"] in ("in", "out") and s0.get("court"):
+                            s0["margin"] = round(min(sc.SW - abs(s0["court"][0]), SERVICE_LINE - abs(s0["court"][1])), 2)
+                            s0["end"] = "in" if s0["margin"] > 0 else "out"
+                    except Exception:
+                        pass
         # shirt color: near minus far (cached: the image reads are the slow part)
         key = f"{int(a)}_{int(b)}"
         if key not in cache:

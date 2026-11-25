@@ -187,6 +187,35 @@ class DetectImportTest {
     }
 
     @Test
+    fun `a fault clip has the near player of its point and the shots of the fault candidate`() {
+        val dir = Files.createTempDirectory("detect-fault").toFile()
+        try {
+            val folder = File(dir, DetectImport.FOLDER).apply { mkdirs() }
+            val serve = ChainShot(t = 19.8, near = true, how = "first", end = "net", kmh = 120.0)
+            val point = rally(30.0, 40.0, fault = 20.0).let {
+                it.copy(p1Near = true, server = "P1", serverNear = true, fault = it.fault?.copy(speed = 120.0, chain = ShotChain(shots = listOf(serve))))
+            }
+            DetectJson.mapper.writeValue(File(folder, "result-1.json"), result(point))
+            val rows = listOf(ImportRow(0, pointId = "a", faultPointId = "f"))
+            DetectJson.mapper.writeValue(File(folder, "import-1.json"), ImportRecord("1", "result-1.json", DetectSettings(), rows))
+
+            assertEquals(mapOf("a" to 1, "f" to 1), DetectImport.nearPlayersOfRecords(dir))
+            val fault = DetectImport.detectionsOfRecords(dir).getValue("f").rally
+            assertEquals(DetectImport.FAULT_KIND, fault.kind)
+            assertEquals(19.0 to 22.5, fault.start to fault.end)
+            assertEquals(true, fault.serverNear)
+            assertEquals(120.0, fault.serveSpeedKmh)
+            assertEquals(listOf(serve), fault.chain?.shots)
+            assertEquals(null, fault.winner)
+            // A new import writes the near player into the mark of the fault clip.
+            val plan = DetectImport.plan(result(point), emptyList(), advanced = true, DetectSettings(), ids)
+            assertEquals(1, plan.points.first { it.auto?.kind == AutoKind.FAULT }.auto?.nearPlayer)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `apply writes the clips, the winners, and the record, and a second apply adds nothing`() {
         val dir = Files.createTempDirectory("detect-import").toFile()
         try {

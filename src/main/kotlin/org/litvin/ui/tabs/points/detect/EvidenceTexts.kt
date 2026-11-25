@@ -18,6 +18,18 @@ internal object EvidenceTexts {
         val nearName = near?.let { players.name(it) } ?: "the near player"
         val farName = near?.let { players.name(3 - it) } ?: "the far player"
         val lines = ArrayList<String>()
+        if (rally.kind == org.litvin.autodetect.DetectImport.FAULT_KIND) {
+            // A fault clip: the serve event before a rally, from the same server. It has no winner.
+            lines += "Found as: a first-serve fault candidate (a serve of the same server before the point)"
+            lines += when (rally.serverNear) {
+                true -> "Server: $nearName (near end)"
+                false -> "Server: $farName (far end)"
+                null -> "Server: not known"
+            } + (rally.serveSpeedKmh?.let { ", serve ${it.roundToInt()} km/h" } ?: "")
+            val shots = chain(rally, nearName, farName, shots = true).dropLast(1)
+            lines += shots.ifEmpty { listOf("No shot data for this serve.") }
+            return lines
+        }
         lines += if (rally.kind == "short") {
             "Found as: a short point, from a serve event"
         } else {

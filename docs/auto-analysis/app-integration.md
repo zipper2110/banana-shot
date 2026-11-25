@@ -92,7 +92,10 @@ These decisions replace the review row and the overlay switch of the Points tab 
     (`chain` in `result.json`, from `shot_chain.py`): one line for each shot (hitter, how the hitter is known,
     in, out, or net, and the place of the bounce), the decision of the chain, and a warning when the score model
     gives the other winner. The chain is the winner evidence of the score model (E29; `CHAIN=0` in the
-    environment gives the old rule). With the "Shots" switch on, the video has a shot panel at the top right
+    environment gives the old rule). A fault clip shows the player at the near end of its point, the
+    server, the serve speed, and the shots of the fault candidate (`fault.chain` in `result.json`: the shots from
+    1 s before the serve event to 2.5 s after it). These shots have no decision, and a fault clip has no winner.
+    The serve of a fault clip is "in" only if it lands in the service boxes (the side of the box is not tested). With the "Shots" switch on, the video has a shot panel at the top right
     (one box of a constant size: the number of the shot, the hitter, the start and end time, the outcome), and
     the timeline has two shot tracks below the bar. The upper track has the color of the hitter. The lower
     track shows the time with a ball track; its color says how the hitter is known (white: hit seen, blue: the

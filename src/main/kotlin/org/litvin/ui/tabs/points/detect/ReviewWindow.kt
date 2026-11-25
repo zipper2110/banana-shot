@@ -1237,7 +1237,7 @@ internal class ReviewWindow(
         // The outcome texts are for the selected point: from 1 s before its last shot to 3 s after the rally.
         current.outcome = { t ->
             selectedPoint()?.let { point ->
-                host.detectionOf(point.id)?.let { rally ->
+                host.detectionOf(point.id)?.takeIf { it.kind != org.litvin.autodetect.DetectImport.FAULT_KIND }?.let { rally ->
                     val from = (rally.lastShot?.t ?: rally.end) - 1.0
                     if (t >= from && t <= rally.end + 3.0) {
                         OutcomeMark(EvidenceTexts.outcomeLines(rally, host.nearPlayerOf(point.id), host.players), rally.lastShot?.t)

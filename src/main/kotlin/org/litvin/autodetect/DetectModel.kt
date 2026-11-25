@@ -92,8 +92,11 @@ data class DetectSettings(
     }
 }
 
-/** A first-serve fault candidate before a rally: the time of the serve in the video, in seconds. */
-data class DetectedFault(val t: Double = 0.0, val kind: String? = null, val speed: Double? = null)
+/**
+ * A first-serve fault candidate before a rally: the time of the serve in the video, in seconds. [chain] has the shots
+ * of the candidate (the serve and its end). It has no decision. Null in a result of an older detection.
+ */
+data class DetectedFault(val t: Double = 0.0, val kind: String? = null, val speed: Double? = null, val chain: ShotChain? = null)
 
 /**
  * One detected rally of `result.json`. The times are seconds of the video.

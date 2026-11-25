@@ -78,6 +78,9 @@ object DetectImport {
     /** The shortest clip that the Points tab accepts. */
     private const val MIN_CLIP_MS = 200
 
+    /** The kind of the detection data of a fault clip ([faultDetection]). */
+    const val FAULT_KIND = "fault"
+
     /** A fault clip starts this long before the serve and ends this long after it. */
     private const val FAULT_BEFORE_MS = 1_000
     private const val FAULT_AFTER_MS = 2_500
@@ -130,7 +133,7 @@ object DetectImport {
                         val fe = minOf(Timecode.roundTo10ms(t + FAULT_AFTER_MS), from)
                         if (fe - fs < MIN_CLIP_MS || !free(fs, fe)) return@let null
                         val id = newId()
-                        points += PointV1(id = id, startMs = fs, endMs = fe, auto = AutoMarkV1(AutoKind.FAULT))
+                        points += PointV1(id = id, startMs = fs, endMs = fe, auto = AutoMarkV1(AutoKind.FAULT, nearPlayer = nearPlayer(rally, swapped)))
                         outcomes[id] = Outcome.NONE
                         details[id] = PointDetailV1(ending = Ending.SERVE_FAULT)
                         id
@@ -209,6 +212,18 @@ object DetectImport {
     fun nearPlayer(rally: DetectedRally, swapped: Boolean): Int? = rally.p1Near?.let { p1Near -> if (p1Near != swapped) 1 else 2 }
 
     /**
+     * The detection data of the fault clip before [rally]: the server and the ends of the rally, and the shots of the
+     * fault candidate. Its kind is [FAULT_KIND]. It has no winner. Null when the rally has no fault candidate.
+     */
+    fun faultDetection(rally: DetectedRally): DetectedRally? = rally.fault?.let { fault ->
+        DetectedRally(
+            start = fault.t - FAULT_BEFORE_MS / 1000.0, end = fault.t + FAULT_AFTER_MS / 1000.0, kind = FAULT_KIND,
+            server = rally.server, serverNear = rally.serverNear, serveSpeedKmh = fault.speed, p1Near = rally.p1Near,
+            chain = fault.chain,
+        )
+    }
+
+    /**
      * The player at the near end for each clip of the imports of the project, from the import records and their
      * result files. It is for the clips of an import before the mark had this value. It does not know a later
      * "Swap players".
@@ -223,7 +238,10 @@ object DetectImport {
                 val rallies = DetectResult.read(File(folder, record.resultFile)).rallies
                 record.rows.forEach { row ->
                     val id = row.pointId ?: return@forEach
-                    rallies.getOrNull(row.rally)?.let { nearPlayer(it, record.swapped) }?.let { near[id] = it }
+                    rallies.getOrNull(row.rally)?.let { nearPlayer(it, record.swapped) }?.let { player ->
+                        near[id] = player
+                        row.faultPointId?.let { near[it] = player }    // the fault clip has the ends of its rally
+                    }
                 }
             }
         }
@@ -241,7 +259,11 @@ object DetectImport {
                 val rallies = DetectResult.read(File(folder, record.resultFile)).rallies
                 record.rows.forEach { row ->
                     val id = row.pointId ?: return@forEach
-                    rallies.getOrNull(row.rally)?.let { found[id] = PointDetection(it, record.swapped) }
+                    val rally = rallies.getOrNull(row.rally) ?: return@forEach
+                    found[id] = PointDetection(rally, record.swapped)
+                    row.faultPointId?.let { faultId ->
+                        faultDetection(rally)?.let { found[faultId] = PointDetection(it, record.swapped) }
+                    }
                 }
             }
         }

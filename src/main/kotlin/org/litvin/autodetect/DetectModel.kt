@@ -247,8 +247,13 @@ data class DetectResult(
     val settings: Map<String, Any?> = emptyMap(),
     val stageSeconds: Map<String, Double> = emptyMap(),
     val created: String? = null,
-    /** What the run could not do, for example "the court model is not plausible". English texts of the lab script. */
+    /**
+     * What the run could not do, for example "the court model is not plausible": each fallback of the run (G13).
+     * English texts of the lab script.
+     */
     val warnings: List<String> = emptyList(),
+    /** True when the run failed after the rally stage: the rallies that were ready, see [warnings] (G13). */
+    val partial: Boolean = false,
     val rallies: List<DetectedRally> = emptyList(),
 ) {
     companion object {

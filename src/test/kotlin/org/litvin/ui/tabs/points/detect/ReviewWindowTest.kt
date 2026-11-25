@@ -140,6 +140,13 @@ class ReviewWindowTest {
         }
 
     @Test
+    fun `the window shows all warnings of the detection result`() =
+        review(auto("a", 10_000, near = null), warnings = listOf("No refined court model.", "The shot chain failed on 2 rallies.")) {
+            assertTrue(text("review-warning").contains("No refined court model."))
+            assertTrue(text("review-warning").contains("The shot chain failed on 2 rallies."))
+        }
+
+    @Test
     fun `the window has no warning line when the result has no warning`() = review(auto("a", 10_000)) {
         assertNull(window.contentPane.find("review-warning"))
     }

@@ -169,8 +169,13 @@ internal object DetectTexts {
     fun result(result: DetectResult): String {
         val total = result.stageSeconds.values.sum().toLong()
         val time = if (total > 0) " · run time ${duration(total)}" else ""
-        return "Result ready · rallies: ${result.rallies.size}$time"
+        val partial = if (result.partial) " (partial, see the warnings)" else ""
+        return "Result ready$partial · rallies: ${result.rallies.size}$time"
     }
+
+    /** All warnings of a result (G13), one on each line, or null when there is none. */
+    fun warnings(warnings: List<String>): String? =
+        warnings.takeIf { it.isNotEmpty() }?.joinToString("\n") { if (warnings.size > 1) "• $it" else it }
 }
 
 /** True for an automatic clip that the user should check first: no winner, a low confidence, or a short point. */
@@ -561,8 +566,8 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
                 ?: "No result for this project yet. The run continues when you close this dialog."
         }
         if (state is DetectState.Failed && mine && state.logFile != null) status.toolTipText = state.logFile.absolutePath
-        // A warning of the result, for example a court model that is not usable. Another message has priority.
-        val warning = resultFile?.takeIf { !running }?.let { file -> runCatching { DetectResult.read(file).warnings.firstOrNull() }.getOrNull() }
+        // The warnings of the result, for example a court model that is not usable. Another message has priority.
+        val warning = resultFile?.takeIf { !running }?.let { file -> runCatching { DetectTexts.warnings(DetectResult.read(file).warnings) }.getOrNull() }
         if (warning != null && detail.text.isBlank()) say(Html.wrappedTooltip(warning, 380), Palette.YELLOW)
         // During a run of this project, the dialog shows only the progress and "Stop": the settings have no use then.
         val showRun = state is DetectState.Running && mine

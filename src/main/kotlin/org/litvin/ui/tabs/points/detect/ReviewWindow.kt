@@ -734,8 +734,9 @@ internal class ReviewWindow(
                 foreground = Palette.FG
             })
             add(sub)
-            // A warning of the detection, for example "no court found": it tells why the points have no winners.
-            host.warnings().firstOrNull()?.let { text ->
+            // The warnings of the detection, for example "no court found": they tell why the points have no winners.
+            // G13: all warnings, one on each line.
+            DetectTexts.warnings(host.warnings())?.let { text ->
                 add(JLabel(Html.wrappedTooltip(text, SIDE_WIDTH - 32)).apply {
                     name = "review-warning"
                     font = UiKit.font(12f)

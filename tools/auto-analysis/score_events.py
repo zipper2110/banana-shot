@@ -23,7 +23,8 @@ Rules:
   - m1116 is test only (lab.TEST_ONLY): measure only.
 
 Use: python score_events.py [match ...]        default: all matches with labels
-     from bench.py: score_events.score(mid) -> dict; score_events.total([...]) -> dict; score_events.lines(d)
+     from bench.py: score_events.score(mid, rows) -> None or a list of measures (the bench contract, see score())
+     details: score_events.detail(mid) -> dict; score_events.total([...]) -> dict; score_events.lines(d)
 """
 import glob, hashlib, json, os, sys
 import numpy as np
@@ -113,8 +114,12 @@ def _err(x):
 # ---------------------------------------------------------------- hits, hitter, shot count
 
 def hit_labels(mid):
-    p = os.path.join(HIT_LABELS_DIR, f"hit_labels_{mid}.json")
-    return json.load(open(p, encoding="utf-8")) if os.path.exists(p) else None
+    """The user's hit labels: HIT_LABELS_DIR, else this folder, else the match folder."""
+    for d in (HIT_LABELS_DIR, HERE, work_folder(mid)):
+        p = os.path.join(d, f"hit_labels_{mid}.json")
+        if os.path.exists(p):
+            return json.load(open(p, encoding="utf-8"))
+    return None
 
 
 def hits(mid, data, doc):
@@ -148,7 +153,7 @@ def hits(mid, data, doc):
     return {"rallies": k, "labeled": n_lab, "chain": n_pred, "matched": n_match, "recall": _pct(n_match, n_lab),
             "precision": _pct(n_match, n_pred), "timeErr": _err(dt), "timeSignedMed": float(np.median(dt)) if dt else None,
             "timeErrPaused": _err(dt_paused), "hitterRight": _pct(hitter_ok, n_match), "hitterN": n_match,
-            "shotCountRight": _pct(cnt_ok, k), "shotCountDiff": {str(x): cnt_diff.count(x) for x in sorted(set(cnt_diff))},
+            "hitterOk": hitter_ok, "shotCountOk": cnt_ok, "shotCountRight": _pct(cnt_ok, k), "shotCountDiff": {str(x): cnt_diff.count(x) for x in sorted(set(cnt_diff))},
             "doubleTouch": double, "perRally": rallies, "raw": {"dt": dt}}
 
 
@@ -198,9 +203,9 @@ def nets(mid, data, labels):
     pos = [l for l in labels if l["label"] in ("net", "cord")]
     neg = [l for l in labels if l["label"] == "no"]
     m = match(list(et), [l["t"] for l in pos], TOL_NET)
-    kind_ok = sum(ev[i]["kind"] == pos[j]["label"] for i, j in m)
+    kind_ok = int(sum(ev[i]["kind"] == pos[j]["label"] for i, j in m))
     false = sum(int(np.any(np.abs(et - l["t"]) <= TOL_NET)) for l in neg)
-    return {"labeled": len(pos), "matched": len(m), "recall": _pct(len(m), len(pos)), "kindRight": _pct(kind_ok, len(m)),
+    return {"labeled": len(pos), "matched": len(m), "recall": _pct(len(m), len(pos)), "kindOk": kind_ok, "kindRight": _pct(kind_ok, len(m)),
             "negLabels": len(neg), "falseAtNeg": false}
 
 
@@ -243,13 +248,13 @@ def last_shot(mid, data, truth):
         n += 1
     ok = sum(tab.get(y, {}).get(y, 0) for y in tab)
     seen = sum(v for y in tab for k, v in tab[y].items() if k in ("net", "out", "in"))
-    return {"points": n, "right": _pct(ok, n), "seen": seen, "rightOfSeen": _pct(ok, seen), "table": tab}
+    return {"points": n, "ok": ok, "right": _pct(ok, n), "seen": seen, "rightOfSeen": _pct(ok, seen), "table": tab}
 
 
 # ---------------------------------------------------------------- per match, total, report
 
-def score(mid, folder=None):
-    """All event measures of a match that has labels. Returns {} if the match has no flights."""
+def detail(mid, folder=None):
+    """All event measures of a match that has labels, with the details. Returns {} if the match has no flights."""
     data = load(mid, folder)
     if data is None:
         return {}
@@ -269,8 +274,48 @@ def score(mid, folder=None):
     return out
 
 
+def score(mid, rows=None, folder=None):
+    """The bench.py contract: None when the match has no event labels (or no flights), else a list of measures:
+    a rate {"name", "k", "n"} (bench.py pools k and n over the matches) or a value {"name", "value", "unit"}
+    (shown for each match). `rows` (the result rows of chain.winners) is not used: the hits are measured on the
+    window of each labeled clip, so the event measure does not depend on the rally detection (priority 1)."""
+    d = detail(mid, folder)
+    if not any(k in d for k in ("hits", "bounces", "nets", "lastShot")):
+        return None
+    out = []
+    def rate(name, k, n):
+        if n:
+            out.append({"name": name, "k": int(k), "n": int(n)})
+    def value(name, e, key, scale, unit):
+        if e:
+            out.append({"name": name, "value": float(scale * e[key]), "unit": unit})
+    h = d.get("hits")
+    if h:
+        rate("Hits found (recall)", h["matched"], h["labeled"])
+        rate("Chain hits right (precision)", h["matched"], h["chain"])
+        rate("Hitter right (matched hits)", h["hitterOk"], h["hitterN"])
+        rate("Shot count right (rallies)", h["shotCountOk"], h["rallies"])
+        value("Hit time error, median", h["timeErr"], "med", 1000, "ms")
+    b = d.get("bounces")
+    if b:
+        rate("Bounces found (recall)", b["matched"], b["labeled"])
+        rate("False bounces at hit/none labels", b["falseAtNeg"], b["negLabels"])
+        value("Bounce time error, median", b["timeErr"], "med", 1000, "ms")
+        value("Bounce place error, median", b["courtErr"], "med", 1, "m")
+        value("Bounce place error, p90", b["courtErr"], "p90", 1, "m")
+    n = d.get("nets")
+    if n:
+        rate("Net touches found (recall)", n["matched"], n["labeled"])
+        rate("Net touch kind right (net/cord)", n["kindOk"], n["matched"])
+        rate("False net touches at 'no' labels", n["falseAtNeg"], n["negLabels"])
+    s = d.get("lastShot")
+    if s:
+        rate("End of the last shot right (in/out/net)", s["ok"], s["points"])
+    return out
+
+
 def total(per):
-    """Sums of the counts over matches (a list of score() results)."""
+    """Sums of the counts over matches (a list of detail() results)."""
     t = {}
     for sec, keys in (("hits", ("rallies", "labeled", "chain", "matched", "hitterN")), ("bounces", ("labeled", "matched", "negLabels", "falseAtNeg")),
                       ("nets", ("labeled", "matched", "negLabels", "falseAtNeg")), ("lastShot", ("points", "seen"))):
@@ -300,7 +345,7 @@ def _f(x):
 
 
 def lines(d):
-    """Short report lines of one score() or total() result."""
+    """Short report lines of one detail() or total() result."""
     out = []
     h = d.get("hits")
     if h:
@@ -330,7 +375,7 @@ def main(mids):
     labels |= {m for m in lab.MATCHES if end_truth(m)}
     per = []
     for mid in mids or sorted(labels):
-        r = score(mid)
+        r = detail(mid)
         if not r:
             print(f"{mid}: no flights file")
             continue

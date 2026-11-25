@@ -78,6 +78,23 @@ object DetectImport {
     /** The shortest clip that the Points tab accepts. */
     private const val MIN_CLIP_MS = 200
 
+    /**
+     * The problem that stops the import of [result] into the project with the video [video], or null (G14): a result
+     * of a newer lab script, or of another video. A result with [DetectResult.videoId] must have the identity of
+     * [video]; an old result with no identity must have the file name of [video].
+     */
+    fun check(result: DetectResult, video: File?): String? {
+        if (result.version > DetectResult.CONTRACT_VERSION) {
+            return "The result file has version ${result.version}. This app reads version ${DetectResult.CONTRACT_VERSION} or lower: update the app."
+        }
+        if (video == null) return null
+        val other = when (val id = result.videoId) {
+            null -> result.video.isNotBlank() && File(result.video).name != video.name
+            else -> runCatching { VideoIdentity.of(video) }.getOrNull()?.let { it != id } ?: false
+        }
+        return if (other) "The result is for another video (${File(result.video).name}). Start a new detection for this video." else null
+    }
+
     /** The kind of the detection data of a fault clip ([faultDetection]). */
     const val FAULT_KIND = "fault"
 

@@ -507,6 +507,10 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
                 say("The result file does not open: ${it.message}", Palette.RED)
                 return
             }
+            DetectImport.check(result, host.video)?.let { problem ->
+                say(problem, Palette.RED)
+                return
+            }
             val range = host.trimRangeMs.takeIf { settings.trimOnly }
             val rally = DetectImport.questionRally(result, range)
             val swapped = if (rally == null) {

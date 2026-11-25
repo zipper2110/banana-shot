@@ -252,6 +252,12 @@ data class DetectResult(
     val rallies: List<DetectedRally> = emptyList(),
 ) {
     companion object {
+        /**
+         * The newest version of `result.json` that the app reads (G14). Version 2 (2026-11-26): the times are seconds of
+         * the video (G2), and the file has [videoId] and [work].
+         */
+        const val CONTRACT_VERSION = 2
+
         fun read(file: File): DetectResult = DetectJson.mapper.readValue(file, DetectResult::class.java)
     }
 }

@@ -25,6 +25,21 @@ enum class DetectStage(val code: String) {
     }
 }
 
+/**
+ * One line of the lab script for the app: a line that starts with "@" (see `detect.py`). [kind] is the first word
+ * ("@stage", "@progress", "@result", ...), [args] are the next words, and [text] is the rest of the line after [kind].
+ */
+internal data class ScriptLine(val kind: String, val args: List<String>, val text: String) {
+    companion object {
+        /** The line for the app, or null for another line (log text of the script). */
+        fun parse(line: String): ScriptLine? {
+            if (!line.startsWith("@")) return null
+            val parts = line.trim().split(" ")
+            return ScriptLine(parts[0], parts.drop(1), line.trim().removePrefix(parts[0]).trim())
+        }
+    }
+}
+
 /** What the detection does now. */
 sealed interface DetectState {
     /** No run, and no result of this session. */
@@ -172,15 +187,15 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
                 log.appendLine("# ${LocalDateTime.now()} ${builder.command().joinToString(" ")}")
                 p.inputStream.bufferedReader().forEachLine { line ->
                     log.appendLine(line)
-                    if (!line.startsWith("@")) return@forEachLine
+                    val script = ScriptLine.parse(line) ?: return@forEachLine
                     log.flush()
-                    val parts = line.trim().split(" ")
-                    when (parts[0]) {
-                        "@stage" -> if (parts.getOrNull(2) == "start") advance(DetectStage.of(parts[1]), null)
-                        "@progress" -> advance(DetectStage.of(parts[1]), parts.getOrNull(2)?.toDoubleOrNull())
-                        "@result" -> result = File(line.removePrefix("@result").trim())
-                        "@overlay" -> overlay = File(line.removePrefix("@overlay").trim())
-                        "@error" -> error = line.removePrefix("@error").trim()
+                    val args = script.args
+                    when (script.kind) {
+                        "@stage" -> if (args.getOrNull(1) == "start") advance(args.getOrNull(0)?.let(DetectStage::of), null)
+                        "@progress" -> advance(args.getOrNull(0)?.let(DetectStage::of), args.getOrNull(1)?.toDoubleOrNull())
+                        "@result" -> result = File(script.text)
+                        "@overlay" -> overlay = File(script.text)
+                        "@error" -> error = script.text
                     }
                 }
             }

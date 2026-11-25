@@ -553,7 +553,9 @@ def main():
         warn(f"The run failed after the rally stage ({type(e).__name__}: {e})." +
              ("" if has_winners else " The result has only the rally boundaries: no winners, no serve faults."))
     save_times()
-    res = {"version": 1, "video": os.path.abspath(a.video), "videoId": vid, "work": work, "videoSeconds": n, "settings": cfg,
+    # version (G14): the contract with the app (DetectResult.CONTRACT_VERSION). 2 = video seconds (G2), videoId, work,
+    # cache, partial, view.picture. Increase it when the app cannot read the file in the old way.
+    res = {"version": 2, "video": os.path.abspath(a.video), "videoId": vid, "work": work, "videoSeconds": n, "settings": cfg,
            "rallyModel": model_name, "cache": {"ballFile": os.path.basename(lab.blob_file(work, 0, n)) if ball_ok else None,
                                                "stageKeys": dict(STAGE_KEYS)},
            "stageSeconds": STAGE_S, "thisRunSeconds": round(time.time() - t_all, 1),

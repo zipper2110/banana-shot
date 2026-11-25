@@ -25,7 +25,8 @@ question, with a journal row. A gap is not covered by a plan or a note only.
   `gpu_lock.py status` shows the holder. The log is `D:\bananashot-lab\locks\heavy.log`.
 - Run a heavy job in the background. Do not wait in a loop for it.
 - **Run each heavy job and each benchmark from a code snapshot of one commit**, not from a checkout that can
-  change: `git archive <commit> tools/auto-analysis | tar -x -C D:\bananashot-lab\ws\<stream>\code\<commit>`.
+  change: `python tools/auto-analysis/bench.py snapshot <commit>` (writes `D:\bananashot-lab\ws\s1\code\<commit>`).
+  Use a commit of 30ef13a8 or newer: the older `gpu_lock.py` has no queue order.
   A running `detect.py` loads the chain modules only when each stage starts, so a merge or an edit during the
   run mixes code versions. Record the commit in the result.
 - Light jobs (scoring, small model training on existing features, plots) do not need the lock.

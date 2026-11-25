@@ -178,6 +178,10 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
   stays inside the noise (decision 2026-11-23).
 - **Shared files.** `chain.py`, `detect.py` and `shot_chain.py` are shared. Keep each change small and in
   its own commit. Tell the manager before a large change of a shared file.
+- **Interfaces between streams.** Each shared interface has one owner, and only the owner changes it, after a
+  message to the manager. The other stream adapts. Fixed now: `score_events.measures(mid)` (flat list, for
+  `bench.py`), `score(mid)` = `detail(mid)` (the dict), `total()`, `lines()`; owner S4. Cause: four crossed
+  changes of S1 and S4 on 2026-11-26.
 - **Reports.** At the end of each turn: 2 to 5 lines. What is done, the numbers, what is next, what blocks
   you. Put a question to the user on its own line.
 - **Questions to the user** go through the manager, unless only the user can do the step (marking a video).

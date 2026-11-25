@@ -87,6 +87,14 @@ Done when: items 1 to 4 are merged with tests, and the m1030 measure is in the j
 
 Done when: the end detector and the short-point rule are merged and measured on the S1 benchmark.
 
+Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
+
+4. G8 score layer: the decoder score against the app score, the decoder start, `endChangeBefore` against
+   `identity`, the double fault (app decision 16), the decoder stability (5 to 8 winners move with equal
+   evidence). The score design is a decision of the user: prepare the options with numbers first.
+5. G9 identity held out: `identity.p1_near` on Igor (m1116) when the S1 result exists; the effect of a wrong
+   color run on the winners.
+
 ### S4 truth and shots (G10, then G7 and G8 score)
 
 The user marks the labels (decision 2026-11-25). The agent makes the tool and the work lists, and does not
@@ -104,8 +112,7 @@ label by eye.
 4. While the user marks: audio hits (`hits.npy`) as a hit event for the shot chain (H32), checked on the
    existing 13 hits and the 62 bounces; one bounce rule and one winner rule (G7). Paired measure.
 5. When the labels arrive: measure the hitter and the shot count of the shot chain.
-6. Phase 2: G8 score layer (decoder score against the app score, decoder start, `endChangeBefore`, double
-   fault, stability). The score design is a decision of the user: prepare the options with numbers first.
+6. (Moved to S3 phase 2 on 2026-11-26.)
 
 Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
 the journal, and the hitter measure follows the labels.
@@ -149,4 +156,6 @@ Done when: P2 is decided, the coverage report is in the journal, and P1 has a me
 | 2026-11-25 | Branches (the user): each new stream works in its own worktree, on a branch from `auto-detect`. The manager merges into `auto-detect`, commits and pushes to `origin/auto-detect`. |
 | 2026-11-25 | Labels (the user): the user marks the new labels (hit, hitter, shot count, fault). An agent makes the tool and the work list, and does not label by eye. |
 | 2026-11-26 | Code snapshots (S1 proposal, manager): heavy jobs and benchmarks run from a snapshot of one commit (section 2). Cause: a merge into the main checkout during the Igor run would have mixed code versions. |
+| 2026-11-26 | Short points off by default (S3, E61): only 18 of 62 added short points were real; no rule reached the 70 % target. Precision of the rallies 82.1 to 87.8 %; the real aces and double faults are lost until a better rule exists. |
+| 2026-11-26 | S3 phase 2: G8 score layer (moved from S4) and G9. S4 keeps the labels, the fault measure and the hitter measure. |
 | 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |

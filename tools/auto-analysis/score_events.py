@@ -23,8 +23,9 @@ Rules:
   - m1116 is test only (lab.TEST_ONLY): measure only.
 
 Use: python score_events.py [match ...]        default: all matches with labels
-     from bench.py: score_events.score(mid, rows) -> None or a list of measures (the bench contract, see score())
-     details: score_events.detail(mid) -> dict; score_events.total([...]) -> dict; score_events.lines(d)
+     from bench.py (S1, 93faf1b1): score_events.score(mid) -> dict with the sections hits, bounces, nets, lastShot;
+     score_events.total([...]) -> dict; score_events.lines(d) -> list of str. Keep these names and the section keys
+     stable: bench.py reads them. measures(mid) gives the same as a flat list of rates {name, k, n} and values.
 """
 import glob, hashlib, json, os, sys
 import numpy as np
@@ -253,8 +254,9 @@ def last_shot(mid, data, truth):
 
 # ---------------------------------------------------------------- per match, total, report
 
-def detail(mid, folder=None):
-    """All event measures of a match that has labels, with the details. Returns {} if the match has no flights."""
+def score(mid, folder=None):
+    """All event measures of a match that has labels, with the details (bench.py reads this). Returns {} if the match
+    has no flights."""
     data = load(mid, folder)
     if data is None:
         return {}
@@ -274,12 +276,15 @@ def detail(mid, folder=None):
     return out
 
 
-def score(mid, rows=None, folder=None):
-    """The bench.py contract: None when the match has no event labels (or no flights), else a list of measures:
-    a rate {"name", "k", "n"} (bench.py pools k and n over the matches) or a value {"name", "value", "unit"}
-    (shown for each match). `rows` (the result rows of chain.winners) is not used: the hits are measured on the
-    window of each labeled clip, so the event measure does not depend on the rally detection (priority 1)."""
-    d = detail(mid, folder)
+detail = score   # the name of the E75 contract commit (0c6e79a4)
+
+
+def measures(mid, rows=None, folder=None):
+    """The measures of score() as a flat list: None when the match has no event labels (or no flights), else
+    rates {"name", "k", "n"} (k and n can be pooled over matches) and values {"name", "value", "unit"} (one match).
+    `rows` is not used: the hits are measured on the window of each labeled clip, so the event measure does not
+    depend on the rally detection (priority 1)."""
+    d = score(mid, folder)
     if not any(k in d for k in ("hits", "bounces", "nets", "lastShot")):
         return None
     out = []
@@ -315,7 +320,7 @@ def score(mid, rows=None, folder=None):
 
 
 def total(per):
-    """Sums of the counts over matches (a list of detail() results)."""
+    """Sums of the counts over matches (a list of score() results)."""
     t = {}
     for sec, keys in (("hits", ("rallies", "labeled", "chain", "matched", "hitterN")), ("bounces", ("labeled", "matched", "negLabels", "falseAtNeg")),
                       ("nets", ("labeled", "matched", "negLabels", "falseAtNeg")), ("lastShot", ("points", "seen"))):
@@ -345,7 +350,7 @@ def _f(x):
 
 
 def lines(d):
-    """Short report lines of one detail() or total() result."""
+    """Short report lines of one score() or total() result."""
     out = []
     h = d.get("hits")
     if h:
@@ -375,7 +380,7 @@ def main(mids):
     labels |= {m for m in lab.MATCHES if end_truth(m)}
     per = []
     for mid in mids or sorted(labels):
-        r = detail(mid)
+        r = score(mid)
         if not r:
             print(f"{mid}: no flights file")
             continue

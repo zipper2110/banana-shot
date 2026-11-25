@@ -285,11 +285,15 @@ class SwingPointsPanel(
         override fun setNote(pointId: String, text: String) {
             val dir = projectDir?.let(::File) ?: return
             val point = dispatcher.getCompletedPoints().firstOrNull { it.id == pointId } ?: return
-            val rally = recordDetections[pointId]?.rally
+            val detection = recordDetections[pointId]
+            val rally = detection?.rally
             runCatching {
                 org.litvin.autodetect.DetectNotes.save(
                     dir,
-                    org.litvin.autodetect.DetectNote(pointId, text, point.startMs, point.endMs, rally?.start, rally?.end),
+                    org.litvin.autodetect.DetectNote(
+                        pointId, text, point.startMs, point.endMs, rally?.start, rally?.end,
+                        resultFile = detection?.resultFile, importFile = detection?.importFile,
+                    ),
                 )
                 detectNotes = org.litvin.autodetect.DetectNotes.read(dir)
             }.onFailure { io.github.oshai.kotlinlogging.KotlinLogging.logger {}.warn(it) { "Detection note not saved" } }

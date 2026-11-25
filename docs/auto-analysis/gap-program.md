@@ -1,0 +1,146 @@
+# Gap program: cover the significant gaps of the chain inventory
+
+Started: 2026-11-25. Time box: 2 weeks (to 2026-12-09). Budget: about 5 agent-weeks.
+Base: [chain-inventory.md](chain-inventory.md) (gaps G1 to G15, P1 to P4, reviews R0 to R9).
+Manager: the session "Chain inventory audit gaps". The manager sets the goals, starts the agents,
+reviews and merges their work, and keeps this file current.
+
+This file holds the plan, the rules and the decisions of the program. The experiment results go to
+the journal [README.md](README.md), as before.
+
+## 1. Goal
+
+Cover the Critical and High gaps: G1, G2, G4, G8, G10, G12, G15, P1, P2.
+Cover the Medium gaps G3, G5, G6, G13, G14 where they share the work of a High gap.
+Phase 2 (when a stream is free): G8 score design, G9, G11, G7.
+
+"Covered" means: the gap has a fix that is merged and on by default, or a measurement that decides the
+question, with a journal row. A gap is not covered by a plan or a note only.
+
+## 2. Hard limits of the lab PC
+
+- One GPU (RTX 3060 Laptop, 6 GB) and 16 GB RAM. **Only one heavy job at a time.** A heavy job uses the
+  GPU or decodes a full video. Start each heavy job through the lock:
+  `python tools/auto-analysis/gpu_lock.py run --who <stream> --what "<text>" -- <command>`.
+  `gpu_lock.py status` shows the holder. The log is `D:\bananashot-lab\locks\heavy.log`.
+- Run a heavy job in the background. Do not wait in a loop for it.
+- Light jobs (scoring, small model training on existing features, plots) do not need the lock.
+- Disk C is almost full. Put all data on D.
+
+## 3. Streams
+
+| Stream | Owner | Gaps | Reviews |
+|---|---|---|---|
+| S1 bench | session "Chain inventory audit and impact ratings" (already active) | G1, G3 | R0 |
+| S2 plumbing | new session `s2-plumbing` | G2, G12, G13, G14, P4 | R1, R8 (part) |
+| S3 rally | new session `s3-rally` | G4, G5, G8 (short points) | R2 |
+| S4 truth | new session `s4-truth` | G10 (hit, hitter, shot count, faults) | R5, R6 |
+| S5 speed and coverage | new session `s5-speed` | P2, P1, G15, G6 | R3, R4, R9 |
+
+### S1 bench (G1, G3)
+
+1. Commit E42 (the uncommitted `chain.py` move) to `auto-detect` first. All other streams start from it.
+2. Held-out benchmark of the shipped path: `detect.py` on Igor (m1116), scored with `score.py`. Register the
+   test videos with a `testOnly` flag, so that no training script uses them.
+3. Frozen inputs: a manifest for each benchmark run (commit, model hashes, input hashes). A second run with
+   the same manifest gives the same numbers.
+4. One command gives the benchmark report: the lab LOMO set (4 matches) and the held-out set (Igor; later
+   Misha). Report rallies, ends, short points, faults, winners, and the noise.
+5. Calibration (G3): confidence bins against the accuracy on the held-out rows. A proposal for
+   `minWinnerPercent` and the "check first" limit.
+6. Service for the other streams: run the benchmark on a branch when a stream asks.
+
+Done when: the Igor number is in the journal, the benchmark is one command with a manifest, and the
+calibration table exists.
+
+### S2 plumbing (G2, G12, G13, G14, P4)
+
+1. G2: map each 1 fps row (DINO, pose) to its keyframe time in all readers (`rally_model`, `chain`,
+   identity, server vote). Measure the effect on m1030 (rally, server, identity). Fix the `kf.fps1` offset.
+   Rally times in `result.json` are video seconds.
+2. G12: cache keys. The work folder and the ball file name include the video identity and the weights and
+   code version. A setting replaces each environment override. The overlay belongs to its result.
+3. G13: each fallback (shot chain fault, fault chain fault, missing weights, missing court) is a warning in
+   `result.json`. An exception after the rally stage still writes a partial `result.json`. The app shows all
+   warnings.
+4. G14: the app checks `version` and the video. A test reads a real `detect.py` output.
+5. P4: the 1 fps pictures come from the ball decode when the video has no keyframe each second (only if
+   cheap after items 1 to 4).
+
+Done when: items 1 to 4 are merged with tests, and the m1030 measure is in the journal.
+
+### S3 rally (G4, G5, G8 short points)
+
+1. G4: a rally end detector (E21c) in the seconds around the GRU end. Use the ball flights, the audio hits
+   and the shot chain. Measure the end error and the winner evidence against the marked-end result.
+   Target: recover at least half of the gap between the detected end and the marked end (+2.4 points of
+   evidence, E28c).
+2. G8 short points: only about 43 % of the added short points are real (E21b). Target: precision of the added
+   short points 70 % or more, with a loss of not more than 10 % of the real short points. If the target is
+   not met, the default goes off, and the journal says why.
+3. G5: measure `rally_base.pt` (no ball features) on the app path. This is the fallback when the court gate
+   fails, and it is the base of a two-pass design (P1, S5).
+
+Done when: the end detector and the short-point rule are merged and measured on the S1 benchmark.
+
+### S4 truth and shots (G10, then G7 and G8 score)
+
+The user marks the labels (decision 2026-11-25). The agent makes the tool and the work lists, and does not
+label by eye.
+
+1. A labeling tool: a local HTML page (open with `file://`) that plays a rally clip and records with keys:
+   each hit (time, near or far player), the shot count, and a first-serve fault. Output: one JSON file for
+   each match, with a version and a source. The clip list comes from the marked points, not from the chain
+   output (bias).
+2. A work list for the user, in priority order: Igor first, then the 4 lab matches; a stratified sample
+   (short, middle, long rallies). Target: 150 rallies or more on 3 matches or more. Measure the user time for
+   10 rallies first and give the user an estimate before the full list.
+3. Fault labels from the 84 serve-fault clips of Igor (coordinate with S1). Measure the fault candidates
+   against them.
+4. While the user marks: audio hits (`hits.npy`) as a hit event for the shot chain (H32), checked on the
+   existing 13 hits and the 62 bounces; one bounce rule and one winner rule (G7). Paired measure.
+5. When the labels arrive: measure the hitter and the shot count of the shot chain.
+6. Phase 2: G8 score layer (decoder score against the app score, decoder start, `endChangeBefore`, double
+   fault, stability). The score design is a decision of the user: prepare the options with numbers first.
+
+Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
+the journal, and the hitter measure follows the labels.
+
+### S5 speed and coverage (P2, P1, G15, G6)
+
+1. P2: the E38 weights with one pass against the `dim` pass, on the labels of `ball_labels_e27.json` (label
+   windows only, no full runs). Decide the default.
+2. G15: `detect.py` on the marked doubles matches m1001 and m1016, on Vlad (m0913) and the two new clips.
+   Report each condition apart from the main numbers. List the conditions that the app must warn about.
+3. G6: a held-out court test (leave one video out on the 165 marks).
+4. P1: a two-pass design (rally candidates with high recall first, then the ball pass only in the windows).
+   Coordinate with S3 (G5). Target: 35 % less run time with a rally recall loss of not more than 0.5 points.
+
+Done when: P2 is decided, the coverage report is in the journal, and P1 has a measured prototype.
+
+## 4. Rules for all streams
+
+- **Branches.** Each new stream works in its own git worktree, on a branch from `auto-detect`. The manager
+  merges a finished piece into `auto-detect`. Do not merge into `master`.
+- **Lab data.** Do not replace a file in `D:\bananashot-lab\data\<match>\` or in an app work folder that
+  another stream can read. Write new outputs to `D:\bananashot-lab\ws\<stream>\`, or to new files with the
+  stream tag in the name. S1 decides when a new input becomes the default input of the benchmark.
+- **Journal ids.** To prevent collisions, each stream takes its experiment ids from its own block:
+  S1 E43 to E49, S2 E50 to E59, S3 E60 to E69, S4 E70 to E79, S5 E80 to E89.
+  Add each experiment to the journal at once, also a failure.
+- **Measure.** Report the paired result of the part first. Then the S1 benchmark result with its noise.
+  Apply a change that is right in principle and improves its target cases, also when the full-chain number
+  stays inside the noise (decision 2026-11-23).
+- **Shared files.** `chain.py`, `detect.py` and `shot_chain.py` are shared. Keep each change small and in
+  its own commit. Tell the manager before a large change of a shared file.
+- **Reports.** At the end of each turn: 2 to 5 lines. What is done, the numbers, what is next, what blocks
+  you. Put a question to the user on its own line.
+- **Questions to the user** go through the manager, unless only the user can do the step (marking a video).
+
+## 5. Decisions
+
+| Date | Decision |
+|---|---|
+| 2026-11-25 | Program set up by the manager: 5 streams, the rules of section 4, one heavy job at a time through `gpu_lock.py`. |
+| 2026-11-25 | Branches (the user): each new stream works in its own worktree, on a branch from `auto-detect`. The manager merges into `auto-detect`, commits and pushes to `origin/auto-detect`. |
+| 2026-11-25 | Labels (the user): the user marks the new labels (hit, hitter, shot count, fault). An agent makes the tool and the work list, and does not label by eye. |

@@ -33,14 +33,15 @@ _TRACK = {}
 # The 3D camera of the flights always comes from the first model (H): with the camera of the refined model, only
 # 145 of 351 bounce events of the low-camera video passed the bounce test of ball_bounce.py. The refined model then
 # gives the place on the court of each ground point (window key "ground", function ground_fix).
+COURT_TRACK = os.environ.get("COURT_TRACK") or None    # one court file for a comparison (detect.py: setting courtTrack)
 FAR_FAULT_M = float(os.environ.get("FAR_FAULT_M", "0"))      # E29: 0 = each video with a refined model uses it for the ground points (before: 0.5)
 _FAR_PTS = np.array([[-4.115, 11.885], [4.115, 11.885], [-4.115, 6.4], [4.115, 6.4]])
 
 
 def court_windows(folder, log=None):
     """The ok windows of the court model of a folder: court_track.json, with the H of court_track_refined.json
-    where the rule above selects it. The environment variable COURT_TRACK selects one file for a comparison."""
-    name = os.environ.get("COURT_TRACK")
+    where the rule above selects it. COURT_TRACK selects one file for a comparison."""
+    name = COURT_TRACK
     ws = [w for w in json.load(open(os.path.join(folder, name or "court_track.json"))) if w.get("ok", True)]
     rp = os.path.join(folder, "court_track_refined.json")
     if name or not os.path.exists(rp):
@@ -81,7 +82,7 @@ def court_H(mid, t=None):
     """Homography of the 1920-wide frame to court meters at time t. Uses the court model of each 60 s window
     (court_windows): the window of t if it is ok, else the nearest ok window in time. Falls back to court.json
     (one model at mid-match)."""
-    p = os.path.join(lab.mdir(mid), os.environ.get("COURT_TRACK", "court_track.json"))
+    p = os.path.join(lab.mdir(mid), COURT_TRACK or "court_track.json")
     if t is not None and os.path.exists(p):
         if mid not in _TRACK:
             _TRACK[mid] = court_windows(lab.mdir(mid))

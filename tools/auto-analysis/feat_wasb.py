@@ -24,7 +24,7 @@ def run(mid):
     F = np.full((n, 8), np.nan, np.float32)
     s0, s1 = start, min(n, start + dur)
     F[s0:s1] = 0
-    d = np.load(os.path.join(lab.mdir(mid), f"wasb_{start}_{dur}_s0.35_k2.npy"))
+    d = np.load(lab.blob_file(lab.mdir(mid), start, dur))
     tt = frame_times.times(mid, start)
     sec = np.clip(tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)].astype(int), 0, n - 1)
     top = np.ones(len(d), bool); top[1:] = d[1:, 0] != d[:-1, 0]          # first blob of each frame

@@ -128,11 +128,23 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
     }
 
     /**
-     * The picture number [picture] (file `kf/<picture+1>.jpg`) of the work files with the work name [workName], or
-     * null when it is not there. A picture number is not a second of the video (see [RallyView]).
+     * The picture number [picture] (file `kf/<picture+1>.jpg`) of the work folder of [result], or null when it is not
+     * there. A result with no work folder (an old result) uses the old work name: the name of [projectDir]. A picture
+     * number is not a second of the video (see [RallyView]).
      */
-    fun frameFile(workName: String, picture: Int): File? =
-        File(File(lab.workRoot, workName), "kf/%05d.jpg".format(java.util.Locale.ROOT, picture + 1)).takeIf { it.isFile }
+    fun frameFile(result: DetectResult, projectDir: File, picture: Int): File? {
+        val work = result.work?.takeIf { it.isNotBlank() }?.let(::File) ?: File(lab.workRoot, projectDir.name)
+        return File(work, "kf/%05d.jpg".format(java.util.Locale.ROOT, picture + 1)).takeIf { it.isFile }
+    }
+
+    companion object {
+        /**
+         * The name of the work folder for [video] of the project in [projectDir]: the project folder name and the
+         * short identity of the video (G12). Another video, or another project with the same folder name, gets
+         * another work folder, so no run reads the work files of another video.
+         */
+        fun workName(projectDir: File, video: File): String = "${projectDir.name}-${VideoIdentity.short(video)}"
+    }
 
     /** Stops the active run. The work files stay, so the next run continues after the last complete stage. */
     fun stop() {

@@ -1453,7 +1453,7 @@ class SwingPointsPanel(
             videoFile = file,
             adjustments = adjustments.get(),
             host = reviewHost,
-            overlayFile = org.litvin.autodetect.DetectImport.latestOverlay(File(dir)),
+            overlayFile = org.litvin.autodetect.DetectImport.overlayOfResult(File(dir)),
             selectId = selected?.takeIf { id -> dispatcher.getCompletedPoints().any { it.id == id && it.auto?.checked == false } },
             onClosed = {
                 detectReview = null

@@ -238,6 +238,10 @@ data class RallyView(
 data class DetectResult(
     val version: Int = 1,
     val video: String = "",
+    /** The identity of the video ([VideoIdentity.of]), or null in old result files. */
+    val videoId: String? = null,
+    /** The work folder of the run (the pictures of the review), or null in old result files. */
+    val work: String? = null,
     val videoSeconds: Int = 0,
     val rallyModel: String? = null,
     val settings: Map<String, Any?> = emptyMap(),

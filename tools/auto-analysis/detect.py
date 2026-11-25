@@ -16,6 +16,11 @@ Settings (JSON file, all optional):
   threshold    rally probability threshold, default 0.5 (lower = more rallies)
   shortPoints  true: add short points (ace, double fault) from serve events. Default false: only about 30 % of them
                are real points (E61)
+  ballPasses, ballWeights, chain, endModel, courtTrack: see main()
+The run reads no lab environment variable (LAB_ENV): a setting replaces each one (G12).
+Cache (G12): video.json holds the identity of the video of the work folder; a work folder of another video stops
+the run. The ball file name has the weights, the passes and a key of the code; stage_keys.json holds the key of
+the inputs of each keyed stage, and a stage runs again when its key changes.
 Output: <work>/result.json. Lines on stdout that start with "@" are for the app:
   @stage <name> start | @stage <name> done <seconds> | @stage <name> skip
   @progress <name> <0..1> | @result <file> | @overlay <file> | @warning <text> | @error <text>
@@ -25,22 +30,74 @@ import argparse, json, os, sys, time, traceback
 
 MID = "job"
 STAGE_S = {}
+STAGE_KEYS = {}           # G12: the key of the inputs of each keyed stage (stage_keys.json of the work folder)
+KEYS_FILE = None
+HERE = os.path.dirname(os.path.abspath(__file__))
+# G12: the lab switches of the chain. An app run does not read them from the environment: an inherited value made
+# a result with no record of it. The settings ballPasses, ballWeights, chain, endModel and courtTrack replace the
+# ones that the app can change; the run computes the ball file tag (BLOB_TAG); the others keep the lab default.
+LAB_ENV = ("BALL_PASSES", "BALL_WEIGHTS", "CHAIN", "END_MODEL", "COURT_TRACK", "BLOB_TAG", "BALL_TAG", "EV_TAG",
+           "FULLFLIGHTS", "FPS_ADAPT", "SERVE_FILTER", "FAR_FAULT_M", "SELECT_TRIM", "TURN", "LEN_TIME", "OUT_LINE",
+           "NET_NEAR", "CONT_GAP", "CONT_M", "CHAIN_NET_STOP")    # and each CHAIN_* switch of shot_chain.py
 
 
 def say(*a):
     print(*a, flush=True)
 
 
-def stage(name, outputs, fn, force=False):
-    """Runs fn if one of the output files is missing. Records the run time."""
-    if not force and all(os.path.exists(o) for o in outputs):
+def stage(name, outputs, fn, force=False, key=None):
+    """Runs fn if one of the output files is missing, or if key (the key of its inputs) is not the key of the last
+    run (G12). Records the run time."""
+    if not force and (key is None or STAGE_KEYS.get(name) == key) and all(os.path.exists(o) for o in outputs):
         say("@stage", name, "skip")
         return
     say("@stage", name, "start")
     t = time.time()
     fn()
     STAGE_S[name] = round(time.time() - t, 1)
+    if key is not None:
+        STAGE_KEYS[name] = key
+        json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
     say("@stage", name, "done", STAGE_S[name])
+
+
+def content_key(*parts, files=()):
+    """8 hex digits of SHA-1 over the parts and the bytes of the files (line ends of a text file do not count)."""
+    import hashlib
+    h = hashlib.sha1()
+    for p in parts:
+        h.update(repr(p).encode() + b"\0")
+    for f in files:
+        b = open(f, "rb").read() if os.path.exists(f) else b"-"
+        h.update(b.replace(b"\r\n", b"\n") + b"\0")
+    return h.hexdigest()[:8]
+
+
+def video_id(path):
+    """The identity of a video file: SHA-1 of its size (decimal text), its first MiB and its last MiB. The app names
+    the work folder with the first 8 hex digits (DetectRunner.workName)."""
+    import hashlib
+    size = os.path.getsize(path)
+    h = hashlib.sha1(str(size).encode())
+    with open(path, "rb") as f:
+        h.update(f.read(1 << 20))
+        if size > 1 << 20:
+            f.seek(max(1 << 20, size - (1 << 20)))
+            h.update(f.read(1 << 20))
+    return h.hexdigest()
+
+
+def check_video(work, video):
+    """Stops the run if the work folder has the files of another video. A work folder with no record gets one."""
+    vid, f = video_id(video), os.path.join(work, "video.json")
+    if os.path.exists(f):
+        old = json.load(open(f))
+        if old.get("id") != vid:
+            raise RuntimeError(f"The work folder {work} has the files of another video ({old.get('video')}). "
+                               "Use another work folder.")
+    else:
+        json.dump({"id": vid, "video": os.path.abspath(video), "size": os.path.getsize(video)}, open(f, "w"), indent=1)
+    return vid
 
 
 def court_problem(track_file):
@@ -182,7 +239,7 @@ def write_overlay(work, n, full, serves, net_ev=()):
     def G_at(t):                                                         # the model of the ground positions
         w = min(track, key=lambda w: abs((w["t0"] + w["t1"]) / 2 - t))
         return np.array((w.get("ground", w) if full.get("groundFix") else w)["H"])
-    d = np.load(W(f"wasb_0_{n}_s0.35_k2.npy"))
+    d = np.load(lab.blob_file(work, 0, n))
     d = d[np.argsort(d[:, 0], kind="stable")]
     tt = ball_full.clock(MID, 0)                                         # the true time of each frame (E17d)
     bt = tt[np.minimum(d[:, 0].astype(int), len(tt) - 1)]
@@ -283,16 +340,34 @@ def main():
     # ballWeights (E38): the weights file of the ball detector in the weights folder. The default is our fine-tune of
     # the WASB tennis weights (ball_train2.py): it also finds a ball that is not brighter than its background.
     # "" = the WASB tennis weights. If the file is not there, the run uses the WASB tennis weights and gives a warning.
-    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": False, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS}
+    # chain (E29): true = the shot chain gives the winner evidence; false = the old ball rule (lab: CHAIN=0).
+    # endModel (E60): true = the end for the winner evidence comes from the rally end detector (lab: END_MODEL).
+    # courtTrack (E26f): "" = the court model rule of ball_events.court_windows; a file name = that court file only.
+    cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": False, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS,
+           "chain": True, "endModel": True, "courtTrack": ""}
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
-    os.environ.setdefault("BALL_PASSES", cfg["ballPasses"] or "")      # ball_wasb reads it at import
-    if cfg["ballWeights"] and "BALL_WEIGHTS" not in os.environ:
+    warnings = []
+    gone = sorted(k for k in list(os.environ) if k.upper() in LAB_ENV or k.upper().startswith("CHAIN_"))
+    for k in gone:
+        del os.environ[k]
+    if gone:
+        warnings.append(f"The run does not use the lab environment variables {', '.join(gone)}. Use the settings file.")
+        say("@warning", warnings[-1])
+    os.environ["BALL_PASSES"] = cfg["ballPasses"] or ""              # ball_wasb reads it at import
+    weights = "wasb_tennis.pth.tar"
+    if cfg["ballWeights"]:
         import platform_cfg
         if os.path.exists(os.path.join(platform_cfg.weights_dir(), cfg["ballWeights"])):
-            os.environ["BALL_WEIGHTS"] = cfg["ballWeights"]
+            weights = os.environ["BALL_WEIGHTS"] = cfg["ballWeights"]
         else:
-            say("@warning", f"The ball weights {cfg['ballWeights']} are not there. The run uses the WASB tennis weights.")
+            warnings.append(f"The ball weights {cfg['ballWeights']} are not there. The run uses the WASB tennis weights.")
+            say("@warning", warnings[-1])
+    global KEYS_FILE
+    KEYS_FILE = os.path.join(work, "stage_keys.json")
+    if os.path.exists(KEYS_FILE) and not a.force:
+        STAGE_KEYS.update(json.load(open(KEYS_FILE)))
+    vid = check_video(work, a.video)
     times_file = os.path.join(work, "stage_times.json")
     if os.path.exists(times_file) and not a.force:
         STAGE_S.update(json.load(open(times_file)))
@@ -306,6 +381,8 @@ def main():
     lab.MATCHES[MID] = {"id": MID, "video": os.path.abspath(a.video)}
     lab.mdir = lambda m, _o=lab.mdir: work if m == MID else _o(m)
     W = lambda *p: os.path.join(work, *p)
+    import ball_events
+    ball_events.COURT_TRACK = cfg["courtTrack"] or None
 
     def save_times():
         json.dump(STAGE_S, open(times_file, "w"))
@@ -334,7 +411,7 @@ def main():
     stage("image", [W("feat_dino.npy")], image, a.force)
     save_times()
 
-    model_name, warnings = "base", []
+    model_name = "base"
     ball_ok = bool(cfg["ballPass"])
     if ball_ok:
         # ---- court
@@ -359,7 +436,6 @@ def main():
             except Exception as e:        # the first model stays
                 traceback.print_exc()
                 say("@warning", f"No refined court model: {type(e).__name__}: {e}")
-            import ball_events
             ball_events.court_windows(work, say)
         save_times()
         if problem:
@@ -372,7 +448,13 @@ def main():
         # ---- ball (the slow stage)
         import ball_wasb, ball_full, feat_wasb
         ball_full.WINDOWS[MID] = (0, n)
-        blob = W(f"wasb_0_{n}_s0.35_k2.npy")
+        # G12: the ball file name has the weights, the passes, and a key of the inputs: the detector code, the weights
+        # bytes, the court model (the crop), the decode path and n. New weights or new code give a new file.
+        passes = (cfg["ballPasses"] or "").replace(",", "-").replace("+", "-")
+        lab.BLOB_TAG = "_" + weights.split(".")[0] + ("_" + passes if passes else "") + "_" + content_key(
+            weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, "ball_wasb.py"), os.path.join(HERE, "wasb_hrnet.py"),
+                                                           os.path.join(platform_cfg.weights_dir(), weights), W("court.json")])
+        blob = lab.blob_file(work, 0, n)
 
         def ball():
             # The frame times of the video. A run before this one on a video that is not 60 fps put them in
@@ -381,7 +463,7 @@ def main():
             pts = np.load(W("pts_video.npy") if os.path.exists(W("pts_video.npy")) else W("pts.npy"))
             if np.percentile(np.diff(pts), 90) < 0.02:               # a 60 fps video, as the lab matches
                 ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 60.0)))
-                ball_wasb.run(MID, 0, n)
+                np.save(blob, ball_wasb.run(MID, 0, n, save=False))
             else:
                 # Another frame rate, or a mix of 30 and 60 fps (E23b). The ball detector learned frames that
                 # are 1/30 s apart, and the flight code counts in frames of 1/60 s. So: decode at a constant
@@ -404,7 +486,11 @@ def main():
             net_events.run_folder(work)
             feat_wasb.run(MID)
             np.save(W("feat_wasbf.npy"), np.load(W("feat_wasb.npy"))[:, [4, 5, 6]])
-        stage("flights", [W("fullflights_s0.35.json"), W("feat_wasbf.npy")], flights, a.force)
+        # G12: the flights run again when the ball file, the court files or the code of the flights change.
+        flights_key = lab.BLOB_TAG + "_" + content_key(cfg["courtTrack"], files=[W("court_track.json"), W("court_track_refined.json")] + [
+            os.path.join(HERE, f) for f in ("ball_full.py", "ball_3d.py", "ball_bounce.py", "ball_events.py", "ball_tracks.py",
+                                            "net_events.py", "net_lab.py", "feat_wasb.py", "frame_times.py", "court_refine.py")])
+        stage("flights", [W("fullflights_s0.35.json"), W("feat_wasbf.npy")], flights, a.force, flights_key)
         save_times()
 
         # ---- pose
@@ -421,6 +507,7 @@ def main():
 
     # ---- rallies (chain.py: the same chain as the lab benchmark, pipeline.py)
     import rally_model, chain
+    chain.CHAIN, chain.END_MODEL = bool(cfg["chain"]), bool(cfg["endModel"])     # G12: the settings, not the environment
     say("@stage rallies start")
     t = time.time()
     prob = rally_model.predict(MID, model_name)
@@ -455,7 +542,9 @@ def main():
             traceback.print_exc()
             say("@warning", f"No overlay data: {type(e).__name__}: {e}")
     save_times()
-    res = {"version": 1, "video": os.path.abspath(a.video), "videoSeconds": n, "settings": cfg, "rallyModel": model_name,
+    res = {"version": 1, "video": os.path.abspath(a.video), "videoId": vid, "work": work, "videoSeconds": n, "settings": cfg,
+           "rallyModel": model_name, "cache": {"ballFile": os.path.basename(lab.blob_file(work, 0, n)) if ball_ok else None,
+                                               "stageKeys": dict(STAGE_KEYS)},
            "stageSeconds": STAGE_S, "thisRunSeconds": round(time.time() - t_all, 1),
            "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "warnings": warnings, "rallies": out}
     json.dump(res, open(W("result.json"), "w"), indent=1, default=float)

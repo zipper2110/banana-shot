@@ -284,10 +284,23 @@ object DetectImport {
         }.getOrDefault(emptyList())
     }
 
-    /** The newest overlay data file of the project, or null. */
-    fun latestOverlay(projectDir: File): File? =
-        File(projectDir, FOLDER).listFiles { f -> f.isFile && f.name.startsWith("overlay-") && f.name.endsWith(".json") }
+    /**
+     * The overlay data of the result of the newest import of the project (G12: the overlay belongs to its result), or
+     * of the newest result when the project has no import. Null when that run wrote no overlay: an overlay of another
+     * run does not match the clips.
+     */
+    fun overlayOfResult(projectDir: File): File? {
+        val folder = File(projectDir, FOLDER)
+        val record = folder.listFiles { f -> f.isFile && f.name.startsWith("import-") && f.name.endsWith(".json") }
             ?.maxByOrNull { it.name }
+            ?.let { runCatching { DetectJson.mapper.readValue(it, ImportRecord::class.java) }.getOrNull() }
+        val result = record?.resultFile ?: latestResult(projectDir)?.name ?: return null
+        return overlayOf(File(folder, result))
+    }
+
+    /** The overlay file that the run of [resultFile] wrote (the same time stamp), or null. */
+    fun overlayOf(resultFile: File): File? =
+        File(resultFile.parentFile, resultFile.name.replaceFirst("result-", "overlay-")).takeIf { it.isFile && it != resultFile }
 
     /** The newest result file of the project, or null when the project has none. */
     fun latestResult(projectDir: File): File? =

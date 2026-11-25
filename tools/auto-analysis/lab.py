@@ -25,6 +25,14 @@ def check_train(mids):
         raise ValueError(f"test-only videos must not be in a training or a fit: {bad}")
     return list(mids)
 BALL_TAG = os.environ.get("BALL_TAG", "0.35")     # ball detector version of the flight files, e.g. "0.35_e15b_a"
+# G12: the tag of the ball candidates file wasb_<start>_<dur>_s0.35<BLOB_TAG>_k2.npy that the flights, the ball
+# features and the net events read. detect.py sets it to the cache key of the ball stage (weights, passes, code).
+BLOB_TAG = os.environ.get("BLOB_TAG", "")
+
+
+def blob_file(folder, start, dur):
+    """The ball candidates file of the stages after the ball stage."""
+    return os.path.join(folder, f"wasb_{int(start)}_{int(dur)}_s0.35{BLOB_TAG}_k2.npy")
 
 
 def mdir(mid):

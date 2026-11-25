@@ -25,12 +25,14 @@ class Source:
         self.sid = sid
         if sid == "m0913" or os.path.isdir(sid):             # a work folder of the app
             self.dir, self.video, start = (APP, "D:/PXL_20260913_070045619.mp4", 0) if sid == "m0913" else (sid, None, 0)
-            name = [x for x in os.listdir(self.dir) if x.startswith("wasb_") and x.endswith("_s0.35_k2.npy")][0]
+            # G12: the file of the ball stage of this run (lab.BLOB_TAG), the newest one if there are more.
+            names = [x for x in os.listdir(self.dir) if x.startswith("wasb_0_") and x.endswith(f"_s0.35{lab.BLOB_TAG}_k2.npy")]
+            name = max(names, key=lambda x: os.path.getmtime(os.path.join(self.dir, x)))
             tt = np.load(os.path.join(self.dir, "pts.npy"))
         else:
             self.dir, self.video = lab.mdir(sid), lab.MATCHES[sid]["video"]
             start, dur = WINDOWS[sid]
-            name = f"wasb_{start}_{dur}_s0.35_k2.npy"
+            name = os.path.basename(lab.blob_file(self.dir, start, dur))
             tt = np.load(os.path.join(self.dir, "pts.npy"))
             tt = tt[np.searchsorted(tt, start - 1e-4):]
         d = np.load(os.path.join(self.dir, name))

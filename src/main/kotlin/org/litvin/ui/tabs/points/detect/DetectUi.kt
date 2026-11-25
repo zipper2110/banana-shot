@@ -480,7 +480,11 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
         }
         runner.saveSettings(settings)
         say(" ")
-        if (!runner.start(dir, dir.name, video, settings, host.videoSeconds)) say("A detection is already running.", Palette.RED)
+        val workName = runCatching { DetectRunner.workName(dir, video) }.getOrElse {
+            say("The video file does not open: ${it.message}", Palette.RED)
+            return
+        }
+        if (!runner.start(dir, workName, video, settings, host.videoSeconds)) say("A detection is already running.", Palette.RED)
     }
 
     /** After a run for this project ended with a result: asks the player question and adds the points. */
@@ -508,7 +512,7 @@ internal class DetectDialog(parent: Component, private val runner: DetectRunner,
             val swapped = if (rally == null) {
                 false
             } else {
-                val picture = runner.frameFile(dir.name, rally.view?.pictureIndex() ?: (rally.start.toInt() + 1))
+                val picture = runner.frameFile(result, dir, rally.view?.pictureIndex() ?: (rally.start.toInt() + 1))
                 val near = PlayerQuestion.ask(dialog, picture, rally, host.players)
                 if (near == null) {
                     say("No points added. \"Add points\" asks again.")

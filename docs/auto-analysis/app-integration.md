@@ -83,7 +83,8 @@ These decisions replace the review row and the overlay switch of the Points tab 
 24. **End of the flow.** After "Accept all points and close", the detection flow is complete: no dots, no review
     button. The project is a normal project.
 25. **Continue later.** A close with the X, with Escape, or with "Continue later" keeps the review open. The bar of
-    the Points tab then shows "Continue review (N)".
+    the Points tab then shows "Continue review (N)". When all automatic clips are reviewed, the bar shows "Open
+    review": the user can open the window again.
 29. **The review window is a tool for the developer of the detection, for now.** Its goals: show what the
     detection found in the rally, show the winner and its reasons, let the user correct the winner, and let the
     user write a note about what the detection did wrong. For the selected point, the window shows the facts of

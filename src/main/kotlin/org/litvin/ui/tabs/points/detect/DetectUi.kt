@@ -206,7 +206,8 @@ internal class ReasonField(current: ScoreReason?, private val onSave: (ScoreReas
 
 /**
  * The row under the points list: the "Detect points" button, the state of a run (the run continues when the user
- * leaves the tab), and "Continue review (N)" while automatic clips are not reviewed (decision 25).
+ * leaves the tab), and "Continue review (N)" while automatic clips are not reviewed (decision 25). When all automatic
+ * clips are reviewed, the button is "Open review".
  * The Points tab calls [refresh] when the clips or the project change.
  */
 internal class DetectBar(private val runner: DetectRunner, private val host: DetectHost) : Stack(gap = 6) {
@@ -255,10 +256,12 @@ internal class DetectBar(private val runner: DetectRunner, private val host: Det
 
     /** Shows the state of the run and the count of the clips to review of the open project. */
     fun refresh() {
-        val open = host.autoPoints().count { it.auto?.checked == false }
-        review.text = "Continue review ($open)"
-        if (review.isVisible != (open > 0)) {
-            review.isVisible = open > 0
+        val auto = host.autoPoints()
+        val open = auto.count { it.auto?.checked == false }
+        // After the review, the button stays: the user can open the window again to look at the detection.
+        review.text = if (open > 0) "Continue review ($open)" else "Open review"
+        if (review.isVisible != auto.isNotEmpty()) {
+            review.isVisible = auto.isNotEmpty()
             revalidate()
         }
         render()

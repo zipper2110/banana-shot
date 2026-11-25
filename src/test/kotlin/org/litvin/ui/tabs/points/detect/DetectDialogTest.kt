@@ -180,7 +180,7 @@ class DetectDialogTest {
     }
 
     @Test
-    fun `the bar shows Continue review while a clip is not reviewed, and opens the review window`() = withProject { project, runner ->
+    fun `the bar opens the review window while the project has automatic clips`() = withProject { project, runner ->
         val host = Host(project).apply { points = listOf(auto("a", 1_000), auto("b", 20_000, checked = true), auto("c", 40_000)) }
         SwingUtilities.invokeAndWait {
             val bar = DetectBar(runner, host)
@@ -194,6 +194,14 @@ class DetectDialogTest {
 
             host.points = host.points.map { it.copy(auto = it.auto?.copy(checked = true)) }
             bar.refresh()
+            // After the review, the user can open the window again.
+            assertTrue(review.isVisible)
+            assertEquals("Open review", review.text)
+            review.doClick()
+            assertEquals(2, host.reviews)
+
+            host.points = emptyList()
+            bar.refresh()
             assertFalse(review.isVisible)
         }
     }
@@ -202,12 +210,14 @@ class DetectDialogTest {
     fun `the overlay puts the ball at its place in a cropped video`() {
         val data = DetectOverlayData(ball = listOf(listOf(1.0, 960.0, 540.0)))
         val plan = GeometryPlan(0.0, CropRect(0.25, 0.25, 0.5, 0.5))
-        val shapes = DetectOverlay(data) { plan }.shapes(1.02, Rectangle2D.Double(100.0, 50.0, 1280.0, 720.0))
+        // The court diagram is always there: these tests are for the other layers.
+        fun overlay() = DetectOverlay(data) { plan }.apply { layers = layers - OverlayLayer.DIAGRAM }
+        val shapes = overlay().shapes(1.02, Rectangle2D.Double(100.0, 50.0, 1280.0, 720.0))
 
         val ring = shapes.filterIsInstance<OverlayShape.Circle>().last()
         assertEquals(100.0 + 640.0, ring.centerX, 0.01)
         assertEquals(50.0 + 360.0, ring.centerY, 0.01)
-        assertTrue(DetectOverlay(data) { plan }.shapes(5.0, Rectangle2D.Double(0.0, 0.0, 1280.0, 720.0)).isEmpty())
+        assertTrue(overlay().shapes(5.0, Rectangle2D.Double(0.0, 0.0, 1280.0, 720.0)).isEmpty())
     }
 
     @Test
@@ -219,7 +229,7 @@ class DetectDialogTest {
             row[1 + 2 * point] = at.first
             row[2 + 2 * point] = at.second
         }
-        val overlay = DetectOverlay(DetectOverlayData(poses = listOf(row))) { null }
+        val overlay = DetectOverlay(DetectOverlayData(poses = listOf(row))) { null }.apply { layers = layers - OverlayLayer.DIAGRAM }
         val area = Rectangle2D.Double(0.0, 0.0, 1920.0, 1080.0)
 
         val shapes = overlay.shapes(10.1, area)
@@ -227,7 +237,7 @@ class DetectDialogTest {
         assertEquals(3, shapes.filterIsInstance<OverlayShape.Circle>().size)
         assertEquals(5, overlay.shapes(14.0, area).size)
         assertTrue(overlay.shapes(9.5, area).isEmpty())
-        overlay.layers = OverlayLayer.entries.toSet() - OverlayLayer.POSES
+        overlay.layers = OverlayLayer.entries.toSet() - OverlayLayer.POSES - OverlayLayer.DIAGRAM
         assertTrue(overlay.shapes(10.1, area).isEmpty())
     }
 

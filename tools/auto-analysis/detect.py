@@ -366,7 +366,10 @@ def main():
         blob = W(f"wasb_0_{n}_s0.35_k2.npy")
 
         def ball():
-            pts = np.load(W("pts.npy"))
+            # The frame times of the video. A run before this one on a video that is not 60 fps put them in
+            # pts_video.npy, and pts.npy is then the 60 fps time line of the detections (see below). Without this,
+            # a second run of the ball stage reads the time line, decides "60 fps", and each detection gets half of its time.
+            pts = np.load(W("pts_video.npy") if os.path.exists(W("pts_video.npy")) else W("pts.npy"))
             if np.percentile(np.diff(pts), 90) < 0.02:               # a 60 fps video, as the lab matches
                 ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 60.0)))
                 ball_wasb.run(MID, 0, n)

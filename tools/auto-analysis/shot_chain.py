@@ -63,6 +63,14 @@ NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its 
 # "shot" is ball handling, and the shot list stops there (see dead_stop).
 DEAD_STOP = os.environ.get("CHAIN_DEAD_STOP", "1") == "1"
 DEAD_GAP = 1.0       # s from the last sample of the dead shot to the next shot (lab: 95 % of the gaps between real rally shots are shorter)
+# E147 (S3, image facts m1015 1424.68, m1020 2653.95, m1030 3632.93): the ball after a net touch. Off by default.
+# "a": a net event that conflicts with the direction of the shot in the air and comes after the last sample of that shot
+#      starts its own net shot (the flight of the shot into the net was dropped, for example by continuous()).
+# "b": after a shot with a net event, the next shots whose first flight starts less than NET_ROLL_M from the net and is
+#      slower than NET_ROLL_KMH are the ball at the net (it rolls or bounces along the net), not shots.
+# "ab": both.
+NET_DEAD = os.environ.get("CHAIN_NET_DEAD", "0")
+NET_ROLL_M, NET_ROLL_KMH = 1.5, 40.0
 # Item 6 group E (found on Igor m1116): one real shot gives two shots of the two players, and one of them is weak (see drop_splits).
 SPLIT = os.environ.get("CHAIN_SPLIT", "1") == "1"
 SPLIT_DT = 0.45      # s between the starts of two shots of the two players (lab: 99 % of these times between two shots that are not weak are longer)
@@ -236,13 +244,31 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None):
                     sh["net"] = e
             elif e["dirConf"] >= 0.7 and sh["weak"]:
                 sh["near"], sh["net"] = bool(e["toFar"]), e           # the net event knows the direction better than a weak flight
+            elif "a" in NET_DEAD and e["dirConf"] >= NET_DIR and e["t"] > sh["fl"][-1]["t1"]:
+                # E147 (a): the shot in the air ended before the touch: the touch is of the next shot, whose flight was not kept
+                alone.append({"t": float(e["t"]), "near": bool(e["toFar"]), "how": "net", "fl": [], "bounces": [], "net": e,
+                              "reach": None, "weak": True, "serve": None})
             else:
                 sh.setdefault("netConflict", e)                       # the ball flies away from the net: not a touch by this shot
         elif e["dirConf"] >= NET_DIR:
             alone.append({"t": float(e["t"]), "near": bool(e["toFar"]), "how": "net", "fl": [], "bounces": [], "net": e,
                           "reach": None, "weak": True, "serve": None})      # the flight of this shot was not tracked
     shots = sorted(seen + alone, key=lambda sh: sh["t"])
+    if "b" in NET_DEAD:
+        shots = net_roll(shots)
     return dead_stop(shots) if DEAD_STOP else shots
+
+
+def net_roll(shots):
+    """E147 (b): removes the shots after a shot with a net event while their first flight starts less than NET_ROLL_M from
+    the net and is slower than NET_ROLL_KMH (the ball rolls or bounces along the net after the touch)."""
+    out, after_net = [], False
+    for sh in shots:
+        if after_net and sh["fl"] and abs(sh["fl"][0]["p0"][1]) < NET_ROLL_M and kmh(sh["fl"][0]) < NET_ROLL_KMH:
+            continue
+        out.append(sh)
+        after_net = sh["net"] is not None
+    return out
 
 
 def dead(sh):

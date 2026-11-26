@@ -63,13 +63,14 @@ NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its 
 # "shot" is ball handling, and the shot list stops there (see dead_stop).
 DEAD_STOP = os.environ.get("CHAIN_DEAD_STOP", "1") == "1"
 DEAD_GAP = 1.0       # s from the last sample of the dead shot to the next shot (lab: 95 % of the gaps between real rally shots are shorter)
-# E147 (S3, image facts m1015 1424.68, m1020 2653.95, m1030 3632.93): the ball after a net touch. Off by default.
+# E147 (S3, image facts m1015 1424.68, m1020 2653.95, m1030 3632.93): the ball after a net touch. Default "b" (manager
+# decision after E147); "0" gives the old way.
 # "a": a net event that conflicts with the direction of the shot in the air and comes after the last sample of that shot
 #      starts its own net shot (the flight of the shot into the net was dropped, for example by continuous()).
 # "b": after a shot with a net event, the next shots whose first flight starts less than NET_ROLL_M from the net and is
 #      slower than NET_ROLL_KMH are the ball at the net (it rolls or bounces along the net), not shots.
 # "ab": both.
-NET_DEAD = os.environ.get("CHAIN_NET_DEAD", "0")
+NET_DEAD = os.environ.get("CHAIN_NET_DEAD", "b")
 NET_ROLL_M, NET_ROLL_KMH = 1.5, 40.0
 # Item 6 group E (found on Igor m1116): one real shot gives two shots of the two players, and one of them is weak (see drop_splits).
 SPLIT = os.environ.get("CHAIN_SPLIT", "1") == "1"

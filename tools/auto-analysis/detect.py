@@ -125,10 +125,11 @@ IMAGE_CODE = ("feat_dino.py", "platform_cfg.py")
 DINO_MODEL = "vit_small_patch14_dinov2.lvd142m"
 # Item 16 (E117): the stages that read the files of an earlier stage get its recorded key in their key. Without it,
 # new pictures or new audio of the media stage left the old features in place. The value: the earlier stage and the
-# files of it that the stage reads (adopt_keys: the outputs must be newer than these files).
+# files of it that the stage reads (adopt_keys and auto_adopt: each output must be newer than each of these files;
+# item 16b: a media run after the stage gives newer media files).
 # court2 and flights have the bytes of court_track.json in their key, so they follow a court run.
-UPSTREAM = {"audio": ("media", ("audio.flac",)), "image": ("media", ("kf.done",)), "court": ("media", ("kf.done",)),
-            "pose": ("media", ("kf.done",))}
+UPSTREAM = {"audio": ("media", ("audio.flac",)), "image": ("media", ("kf.done", "kf_times.csv")),
+            "court": ("media", ("kf.done", "kf_times.csv")), "pose": ("media", ("kf.done", "kf_times.csv"))}
 # Item 6 (b): level 1 of the net band (net_band_mask.py: the masks of the moved pixels, a decode of the candidate
 # windows, about 40 % of a video). A hand list: ball_wasb and its imports are in the ball tag.
 NETMASK_CODE = ("net_band_mask.py",)

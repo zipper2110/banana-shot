@@ -224,5 +224,62 @@ class AdoptKeys(unittest.TestCase):
         self.assertEqual(self.run_adopt(None)["ball"]["changes"], "no git")
 
 
+class AutoAdopt(unittest.TestCase):
+    """Item 16b (E118): detect.auto_adopt keeps the files of a folder of a run before item 16 when the code is the same."""
+
+    def work(self):
+        w = tempfile.mkdtemp(prefix="aa_")
+        for f in ("audio.flac", "kf_times.csv", "kf.done", "pts.npy"):           # media files, older than the features
+            open(os.path.join(w, f), "w").write("m")
+            os.utime(os.path.join(w, f), (1e9, 1e9))
+        for f in ("feat_audio.npy", "feat_mel.npy", "feat_dino.npy", "pose.npy"):
+            np.save(os.path.join(w, f), np.zeros(2))
+        json.dump([], open(os.path.join(w, "court_track.json"), "w"))
+        detect.KEYS_FILE = os.path.join(w, "stage_keys.json")
+        detect.STAGE_KEYS.clear()
+        detect.STAGE_KEYS["media"] = detect.stage_key("media")
+        for n in ("audio", "court", "pose"):                                     # the format before item 16; no image key
+            detect.STAGE_KEYS[n] = detect.old_key(n)
+        detect.STAGE_KEYS["keysAdopted"] = {"time": "2026-11-26T14:50:12"}
+        return w
+
+    def test_an_old_folder_with_the_same_code_is_adopted(self):
+        w = self.work()
+        done = detect.auto_adopt(w)
+        self.assertEqual(sorted(done), ["audio", "court", "image", "pose"])
+        keys = json.load(open(detect.KEYS_FILE))
+        for n in done:
+            self.assertEqual(keys[n], detect.stage_key(n), n)
+            self.assertEqual(keys["keysAdopted"][n]["how"], "automatic")
+        self.assertEqual(keys["keysAdopted"]["earlier"]["time"], "2026-11-26T14:50:12")
+        runs = []
+        detect.stage("pose", [os.path.join(w, "pose.npy")], lambda: runs.append(1), key=detect.stage_key("pose"))
+        self.assertEqual(runs, [])                                               # the stage does not run
+        self.assertEqual(detect.auto_adopt(w), {})                               # a second call: nothing to do
+
+    def test_an_old_folder_with_changed_stage_code_runs_again(self):
+        w = self.work()
+        detect.STAGE_KEYS["court"] = "00000000"         # the old-format key of other court code
+        done = detect.auto_adopt(w)
+        self.assertNotIn("court", done)
+        self.assertEqual(sorted(done), ["audio", "image", "pose"])
+        runs = []
+        detect.stage("court", [os.path.join(w, "court_track.json")], lambda: runs.append(1), key=detect.stage_key("court"))
+        self.assertEqual(runs, [1])
+
+    def test_a_changed_media_key_runs_the_stages_again(self):
+        w = self.work()
+        detect.STAGE_KEYS["media"] = "00000000"
+        self.assertEqual(detect.auto_adopt(w), {})
+        self.assertFalse(os.path.exists(detect.KEYS_FILE))
+
+    def test_features_older_than_the_media_files_run_again(self):
+        w = self.work()
+        os.utime(os.path.join(w, "kf.done"), None)      # new pictures, after the image, court and pose files
+        for f in ("feat_dino.npy", "court_track.json", "pose.npy"):
+            os.utime(os.path.join(w, f), (1.5e9, 1.5e9))
+        self.assertEqual(sorted(detect.auto_adopt(w)), ["audio"])
+
+
 if __name__ == "__main__":
     unittest.main()

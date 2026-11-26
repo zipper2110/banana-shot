@@ -364,6 +364,43 @@ def adopt_keys(work, weights, passes, n, court_track="", dry=False):
         json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
     return out
 
+
+AUTO_OUTPUTS = {"audio": ("feat_audio.npy", "feat_mel.npy"), "image": ("feat_dino.npy",), "court": ("court_track.json",),
+                "pose": ("pose.npy",)}
+
+
+def auto_adopt(work):
+    """Item 16b (E118): a work folder of a run before item 16 keeps its files with no git check. A stage of UPSTREAM gets
+    the key of now, with no run, when the media key in stage_keys.json is the media key of now, its outputs are
+    newer than the media files that it reads, and its recorded key is its key before item 16 of the code of now
+    (old_key). The image stage had no key before item 16 (it ran only when feat_dino.npy was missing): with no recorded
+    key it is kept on the same media and picture test. In all other cases the stage runs as before. Writes a note
+    ("automatic") into keysAdopted. Returns {stage: note} of the adopted stages."""
+    W = lambda f: os.path.join(work, f)
+    if STAGE_KEYS.get("media") is None or STAGE_KEYS["media"] != stage_key("media"):
+        return {}
+    done = {}
+    for name, (u, ufiles) in UPSTREAM.items():
+        outputs = [W(f) for f in AUTO_OUTPUTS[name]]
+        rec, old = STAGE_KEYS.get(name), old_key(name)
+        if rec == stage_key(name) or not all(os.path.exists(o) for o in outputs):
+            continue
+        if not (rec == old if old is not None else rec is None):
+            continue
+        if min(os.path.getmtime(o) for o in outputs) < max(os.path.getmtime(W(f)) for f in ufiles if os.path.exists(W(f))):
+            continue
+        STAGE_KEYS[name] = stage_key(name)
+        done[name] = {"state": "adopted", "how": "automatic",
+                      "from": f"key {old} (before item 16)" if old is not None else "no recorded key (before item 16)"}
+    if done:
+        rec = dict(done, time=time.strftime("%Y-%m-%dT%H:%M:%S"))
+        if "keysAdopted" in STAGE_KEYS:
+            rec["earlier"] = STAGE_KEYS["keysAdopted"]
+        STAGE_KEYS["keysAdopted"] = rec
+        json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+    return done
+
+
 def court_problem(track_file):
     """A text if the court model of the video is missing or not plausible, else None. Plausible: the corners
     of the doubles court are not far outside the frame, and the near baseline is below the far baseline. The
@@ -659,6 +696,10 @@ def main():
                          cfg["courtTrack"])
         say("@adopted", json.dumps(rec))
         return
+    if not a.force:
+        done = auto_adopt(work)                      # item 16b: an old folder with the same code keeps its files
+        if done:
+            say("stage keys adopted automatically (item 16b):", ", ".join(done))
     times_file = os.path.join(work, "stage_times.json")
     if os.path.exists(times_file) and not a.force:
         STAGE_S.update(json.load(open(times_file)))

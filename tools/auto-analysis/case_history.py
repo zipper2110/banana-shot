@@ -197,7 +197,9 @@ def measure_rows(t, pt):
     def rows(x):
         fc, io, sc_ = x["faultClips"], x["inOut"], x["shotCount"]
         return [st(x["rallyStartPlay"]), st(x["rallyStartFirst"]), st(x["rallyEnd"]),
-                f"{kn(fc['right'], fc['clips'])}, wrong {fc['wrong']}, unsure {fc['unsure']}, no serve label {fc['noServe']}",
+                f"{kn(fc['right'], fc['clips'])}, wrong {fc['wrong']}"
+                + (f", double fault {fc['doubleFault']}" if "doubleFault" in fc else "")   # E171: a clip on a second-serve fault
+                + f", unsure {fc['unsure']}, no serve label {fc['noServe']}",
                 kn(x["labeledFaultsWithClip"], x["labeledFaults"]), kn(x["hiddenRowsWithFault"], x["hiddenRows"]),
                 st(x["hitTimeErr"], signed=False), st(x["bounceTimeErr"], signed=False), st(x["netTimeErr"], signed=False),
                 st(x["bouncePlaceErr"], "m", signed=False),

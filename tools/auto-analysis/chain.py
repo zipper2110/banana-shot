@@ -72,6 +72,32 @@ NET_FILES = {}
 # Key: the kind of fault; value: [count, the first case as a text].
 FAULTS = {}
 
+# G7 (c), E146: the source of "netHit" (the ball into the net at the end of the rally, a fact for the user; the winner
+# does not use it). "0" = detect.add_net_hits (net_events.winner_hint: the last net event 4.5 to 1.5 s before the
+# rally end). "A" = the net case of the shot chain only (cases net_* and late_net: the net event of the last shot).
+# "B" = the net case of the chain; when the chain has no fact of the last shot (no chain, or the cases old_*, back_*,
+# none), winner_hint. A lab switch: an app run removes each CHAIN_* variable (detect.py, G12).
+NETHIT = os.environ.get("CHAIN_NETHIT", "0")
+CHAIN_FACTS = ("net", "own", "out", "in", "stop", "late")    # case prefixes with a fact of the last shot (no winner_hint in B)
+
+
+def net_hit(ch, a, b, nets):
+    """The "netHit" of a rally a..b (NETHIT "A" or "B"), or None. ch: the result of shot_chain.evidence, or None.
+    nets: the net events of the video. The fields are the fields of detect.add_net_hits."""
+    import net_events
+    if ch is not None and (ch["case"].startswith("net_") or ch["case"] == "late_net"):
+        sh = ch["shots"][ch["last"]]
+        e = sh["net"]
+        return {"t": e["t"], "hitterNear": bool(sh["near"]), "conf": e["conf"], "dirConf": e["dirConf"],
+                "serve": bool(e["t"] - a < 3.0), "src": "chain"}
+    if NETHIT == "B" and (ch is None or not ch["case"].startswith(CHAIN_FACTS)):
+        h = net_events.winner_hint(nets, b, t_start=a)
+        if h:
+            e = h["event"]
+            return {"t": e["t"], "hitterNear": bool(e["toFar"]), "conf": e["conf"], "dirConf": e["dirConf"],
+                    "serve": bool(h["sinceStart"] is not None and h["sinceStart"] < 3.0), "src": "hint"}
+    return None
+
 
 def note_fault(kind, t, e):
     """Records a fault of the chain at video time t (s) with the exception e."""
@@ -245,6 +271,8 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         if ch is not None:
             rows[-1]["chainCase"], rows[-1]["chainNearWins"] = ch["case"], ch["nearWins"]
             rows[-1]["chain"] = chain_row
+        if NETHIT != "0":                            # G7 (c), E146
+            rows[-1]["netHit"] = net_hit(ch, a, b, nets)
         prev_end = b
     if dirty:
         json.dump(cache, open(cp, "w"))
@@ -312,6 +340,8 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
             # E28: the shot chain of the rally (shot_chain.py). E29: it is also the winner evidence of the
             # score model (CHAIN is on).
             "chain": r.get("chain")})
+        if r.get("netHit") is not None:              # G7 (c): CHAIN_NETHIT "A" or "B"
+            out[-1]["netHit"] = r["netHit"]
     return out
 
 

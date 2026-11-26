@@ -46,6 +46,17 @@ class DetectContractTest {
     }
 
     @Test
+    fun `a rally with the netHit of the shot chain reads`() {
+        val file = File(Files.createTempDirectory("result").toFile(), "result.json")
+        file.writeText("""{"version": 2, "rallies": [{"start": 10.0, "end": 20.0,
+            "netHit": {"t": 18.5, "hitterNear": true, "conf": 0.9, "dirConf": 1.0, "serve": false, "src": "chain"}}]}""")
+        val hit = DetectResult.read(file).rallies.single().netHit
+        assertNotNull(hit)                                         // G7 (c), E146: "src" is a new field of the lab script
+        assertEquals(18.5, hit.t)
+        assertEquals(true, hit.hitterNear)
+    }
+
+    @Test
     fun `the lines of the lab script for the app`() {
         assertNull(ScriptLine.parse("court model: refined (far points move 0.12 m, 3 of 4 windows)"))
         assertEquals(ScriptLine("@stage", listOf("ball", "start"), "ball start"), ScriptLine.parse("@stage ball start"))

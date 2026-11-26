@@ -48,6 +48,9 @@ LATE_BOUNCE = os.environ.get("CHAIN_LATE_BOUNCE", "1") == "1"
 # 9 m from the net: the toss area of serve_ball.is_toss.
 SERVE_TIME = os.environ.get("CHAIN_SERVE_TIME", "1") == "1"
 TOSS_DUR, TOSS_MAX, TOSS_GAP, TOSS_Y = 0.7, 1.5, 0.3, 9.0   # s, s, s (a split of the track at the contact), m
+# E123: a toss exists only at the serve, and the toss is over the court (|x| < TOSS_X m, as serve_ball.is_toss). The
+# serve is the first shot of a point, or the second when one false shot is before it (ball handling, E76 group C).
+SERVE_SHOTS, TOSS_X = 2, 5.5
 LATE_S, LATE_V = 1.5, (0.5, 2.0)    # s after the last sample of the shot; lowest and highest mean ground speed to the bounce, as a factor of the fit speed
 CONT = os.environ.get("CHAIN_CONT", "1") == "1"
 CONT_GAP, CONT_M = float(os.environ.get("CONT_GAP", "0.35")), float(os.environ.get("CONT_M", "4.0"))   # s, m: see continuous()
@@ -196,7 +199,7 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
     if SPLIT:
         shots = drop_splits(shots)
     if SERVE_TIME:
-        for sh in shots:
+        for sh in shots[:SERVE_SHOTS]:
             serve_time(sh)
     if LATE_BOUNCE and events:
         late_bounces(shots, events)
@@ -260,7 +263,7 @@ def serve_time(sh):
     s = -1.0 if sh["near"] else 1.0                     # the end of the hitter: the near player is at y < 0
     fl = sh["fl"]
     for f, g in zip(fl, fl[1:]):
-        if (f["p0"][1] * s >= TOSS_Y and TOSS_DUR <= f["t1"] - f["t0"] <= TOSS_MAX and g["p0"][1] * s >= TOSS_Y
+        if (f["p0"][1] * s >= TOSS_Y and abs(f["p0"][0]) < TOSS_X and TOSS_DUR <= f["t1"] - f["t0"] <= TOSS_MAX and g["p0"][1] * s >= TOSS_Y
                 and 0.0 <= g["t0"] - f["t1"] <= TOSS_GAP and np.linalg.norm(g["v0"]) > np.linalg.norm(f["v0"])):
             if g["t0"] > sh["t"]:
                 sh["t"] = float(g["t0"])

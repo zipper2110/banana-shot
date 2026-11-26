@@ -210,7 +210,7 @@ Status 2026-11-26 (manager):
   another stream can read. Write new outputs to `D:\bananashot-lab\ws\<stream>\`, or to new files with the
   stream tag in the name. S1 decides when a new input becomes the default input of the benchmark.
 - **Journal ids.** To prevent collisions, each stream takes its experiment ids from its own block:
-  S1 E43 to E49, S2 E50 to E59, S3 E60 to E69, S4 E70 to E79, S5 E80 to E89.
+  S1 E43 to E49, S2 E50 to E59, S3 E60 to E69, S4 E70 to E79, S5 E80 to E89. Second blocks (2026-11-26): S1 E100 to E109, S2 E110 to E119, S3 E90 to E99, S4 E120 to E129, S5 E130 to E139.
   Add each experiment to the journal at once, also a failure.
 - **Measure.** Report the paired result of the part first. Then the S1 benchmark result with its noise.
   Apply a change that is right in principle and improves its target cases, also when the full-chain number
@@ -246,3 +246,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Net-touch input of the benchmark (S1, after S5 E85): the lab set uses net events made the way `detect.py` makes them (`bench.py nets`, hash in the manifest). The old lab file stays for the old journal rows. The first run after the switch starts a new baseline. |
 | 2026-11-26 | First held-out result (S1, Igor m1116, code 995fc8c8): rally recall 98.5 %, precision 86.6 %; hits found 77 of 91, hitter right 77 of 77, shot count right in 3 of 11 rallies, last-shot end right 64 %; winners 83.9 % (a check only). |
 | 2026-11-26 | G3 (S1 proposal, manager): "check first" stays at 70 % and minWinnerPercent stays at 50. Held out, the winners under 70 % are about 55 % right (107 points in the pool). A calibration map of the shown percent is a later item (n is small). No app change. |
+| 2026-11-26 | Igor identity (S3, E69): the chain identity (colors) has 0 wrong of 194 rallies, so the E68 L weight holds held out. The score-replay rules (`near_identity`, `sides.json`) miss an end change at the set break after an even set (5-7); the players changed ends there. These rules are a check only; the chain does not use them. Keep this case for the later score-consistency hints. |

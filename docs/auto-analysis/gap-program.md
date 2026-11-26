@@ -163,6 +163,15 @@ the journal, and the hitter measure follows the labels.
 
 Done when: P2 is decided, the coverage report is in the journal, and P1 has a measured prototype.
 
+Status 2026-11-26 (manager):
+- P2 closed (E80, E83): `dim` stays the default. One pass gives 58 to 64 % ball recall on m0913, against 92 to
+  94 % with `dim`. Batching gives no gain.
+- P1 closed (E84): the cheap first pass finds the rallies as well as the full ball pass (recall 93.8 % against
+  93.5 %). But the ball pass in the windows only loses 118 events in 35 rallies. Most of them are not at a window
+  edge. With a +2 s pad, it still loses 90 events, and the time gain is about 11 %. Events come before speed,
+  so the two-pass design is not adopted.
+- Open: G15 runs from snapshot 39c93725, then G6.
+
 ## 4. Rules for all streams
 
 - **Branches.** Each new stream works in its own git worktree, on a branch from `auto-detect`. The manager

@@ -347,6 +347,14 @@ Status 2026-11-26 (manager):
    around each candidate time). Use the label windows only, under the GPU lock if it decodes video. Measure net
    touches found and false. Start now (the doubles runs are stopped, 2026-11-26).
 
+   Measured (E88, E89): reject (S < 0.08) and confirm (S >= 0.15 with no motion in a control band above the cord):
+   lab 26 to 30 of 35 touches, false 8 to 4; m0913 10 of 12, false 0 to 1. Decision (manager): adopt in principle,
+   with conditions. (a) Thresholds held out: fit on 3 lab matches, test on the 4th (each match once); the gain must
+   hold. (b) The signal is a new output with its own cache key, made in the decode loop of the ball stage; the ball
+   detections, the ball file and its key do not change, so no ball rerun. For an existing folder, a fill-in that
+   decodes only the windows of the net candidates. S5 owns the edit; S2 reviews the stage keys. (c) Order: (a), then
+   item 7 (plan), then the edit.
+
 7. (2026-11-26, approved by the user) **Plan for the ball detector.** The ball tracking is the base of all
    detection, so it must be as solid as possible. First a written plan, no training yet:
    `docs/auto-analysis/ball-detector-plan.md`. It holds: the target errors with counts (the far serve before its

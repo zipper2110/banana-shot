@@ -259,6 +259,23 @@ def net_inputs(mid):
         ([max(blobs, key=os.path.getmtime)] if blobs else [])
 
 
+def code_files(code_dir, flights=True):
+    """The code files of the lab flights key (flights=True) or of the net events key: the import closure of the
+    entry modules of detect.py (code_closure.py, S2 item 13; the flights stage: ball_full, net_events, feat_wasb),
+    read in code_dir, and lab.py. A snapshot without code_closure.py (before item 13) uses the old hand lists."""
+    if os.path.exists(os.path.join(code_dir, "code_closure.py")):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("_closure_" + hashlib.sha1(code_dir.encode()).hexdigest()[:8],
+                                                      os.path.join(code_dir, "code_closure.py"))
+        cc = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cc)
+        entries = ("ball_full", "net_events", "feat_wasb") if flights else ("net_events",)
+        fs = cc.files(*entries, folder=code_dir)
+        lab_py = os.path.join(code_dir, "lab.py")
+        return sorted(set(fs) | {lab_py}, key=os.path.basename)
+    return [os.path.join(code_dir, n) for n in (FLIGHT_CODE if flights else NET_CODE)]
+
+
 def app_nets(mids, code_dir=None):
     """{mid: path of net_events.json made the app way} for lab matches and app folders. The folder of each file also
     has the flights that the chain and the events read (fullflights_s0.35.json). Reads the match folders only: the
@@ -274,7 +291,7 @@ def app_nets(mids, code_dir=None):
         src = [f for f in src if os.path.exists(f)]
         flights = kind == "lab" and LAB_FLIGHTS == "remake"
         h = hashlib.sha256()
-        for f in [os.path.join(code_dir, n) for n in (FLIGHT_CODE if flights else NET_CODE)] + src:
+        for f in code_files(code_dir, flights) + src:
             h.update(os.path.basename(f).encode() + sha(f).encode())
         if flights:
             h.update(json.dumps({k: os.environ.get(k) for k in FLIGHT_ENV}, sort_keys=True).encode())

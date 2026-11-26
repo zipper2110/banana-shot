@@ -208,6 +208,8 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         pt = {"start": a, "end": t_end, "flights": fls, "kinks": kks, "coverage": 0.0, "audio": hits}   # audio: item 7 (shot_chain.back_time)
         if "events" in full:                         # E17d: the flights refer to the events by index
             pt["events"] = full["events"]
+        if sc.SERVE_START != "0":                    # E164: the serve events of the window for shot_chain.serve_start
+            pt["serves"] = [e for e in serves if a - 1.0 <= e[0] <= t_end + 2.5]
         q, w, old_case = sc.old_rule(pt, T_CUT_E2E, p)    # G7 step 1: the old rule is in the shot chain
         pw = 0.5 if w is None else (md.case_prob(q, p, mid) if w else 1 - md.case_prob(q, p, mid))
         ch = None
@@ -261,6 +263,11 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                             s0["end"] = "in" if s0["margin"] > 0 else "out"
                     except Exception as e:           # the fault candidate stays, with no shots
                         note_fault("fault chain", fault["t"], e)
+        if ch is not None and ch["shots"] and ch["shots"][0].get("before") and ch["shots"][0]["before"]["cord"] is None:
+            # E164 (a): the chain removed a serve before the serve in play (into the net or out): it is the fault clip
+            # (it is later than any serve event before the rally). The server is the end of that shot.
+            fault = before_fault(ch["shots"][0]["before"]["shot"], t_end)
+            srv = fault["near"] if srv is None else srv
         # shirt color: near minus far (cached: the image reads are the slow part)
         key = f"{int(a)}_{int(b)}"
         if key not in cache:
@@ -299,6 +306,15 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         r["flip"] = f
         r["color"] = None if c is None else [float(x) for x in c]      # for identity.py (E22)
     return rows
+
+
+def before_fault(sh, t_end):
+    """E164 (a): the fault candidate of a shot that shot_chain.serve_start removed (a serve before the serve in play).
+    Its chain is the removed shot (export form), so the fault clip of the app starts at its time."""
+    one = sc.export({"case": "none", "nearWins": None, "last": None, "shots": [sh], "events": None}, t_end, T_CUT_E2E, False)["shots"][0]
+    one.pop("late", None)
+    return {"t": one["t"], "kind": "chain", "speed": one.get("kmh"), "near": bool(sh["near"]), "fromChain": True,
+            "chain": {"shots": [one]}}
 
 
 def segments(prob, full, cfg, t0=0.0, t1=None):

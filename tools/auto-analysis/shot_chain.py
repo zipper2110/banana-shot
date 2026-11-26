@@ -625,6 +625,8 @@ def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     sh = shots[li]
     kind, m = shot_end(sh)
     e = "_early" if sh["t"] - pt["end"] < EARLY else ""
+    # same: the old rule used the first flight of the last shot (else its decision is about a shot before it).
+    same = bool(q is not None and sh["fl"] and abs((pt["end"] + q["t_rel"]) - sh["fl"][0]["t0"]) < 1e-6)
     # G7 step 2b: no FIRST_DT override. The kink rule of the old rule does not remove the bounce event of the chain.
     if kind == "net":
         w, case = (not sh["near"]), "net_" + ("hi" if sh["net"]["dirConf"] >= 0.7 else "lo")

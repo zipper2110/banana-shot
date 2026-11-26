@@ -20,6 +20,7 @@ A heavy stage against its own labels, under the GPU lock (item 7a; report <lab>/
 The stream name on the GPU lock tickets: --who <stream> (before the command), else the env var BENCH_WHO, else "bench".
 The net band of the lab matches (S5 item 6 (d), netBand on): env BENCH_NETBAND_DIR=<folder> reads <folder>/<match>/net_band.npz
 (for example <lab>/ws/s5/nb). The band file is then an input of the lab flights key and of the manifest. Not set: no band.
+The manifest and the report show the band state ("netBand": "off", or the folder and the hash of each band file).
 """
 import argparse, glob, hashlib, json, math, os, re, subprocess, sys, time
 import numpy as np
@@ -610,7 +611,9 @@ def report(man, sets, skipped, same):
          + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + "."
          + (f" Lab net events: {man['labNets']}." if man.get("labNets") else "")
          + (f" Lab flights: {man['labFlights']}." if man.get("labFlights") else "")
-         + (f" Net band of the lab matches: {man['netBand']}." if man.get("netBand") else "")
+         + (f" Net band of the lab matches: {man['netBand']['folder']} (files "
+            + ", ".join(f"{m} {h}" for m, h in man["netBand"]["files"].items()) + ")."
+            if isinstance(man.get("netBand"), dict) else " Net band: off." if man.get("netBand") == "off" else "")
          + (" Near player from the user's side marks: " + ", ".join(f"{m} ({v['marks']} marks, {v['changed']} points shifted)"
                                                                    for m, v in man["sides"].items()) + "." if man.get("sides") else ""),
          f"Manifest `{man['hash']}`. " + (f"An earlier run with the same manifest: {same['run']} ({'same numbers' if same['same'] else '**other numbers**'})."
@@ -843,7 +846,7 @@ def run(a):
                 inputs[mid]["net_events.json"] = "app:" + sha(nets[mid])
                 inputs[mid]["fullflights_s0.35_ev.json"] = LAB_FLIGHTS + ":" + sha(os.path.join(os.path.dirname(nets[mid]), "fullflights_s0.35.json"))
                 b = band_in(os.path.dirname(nets[mid]))
-                if b:                                  # only with BENCH_NETBAND_DIR: a run with no band keeps its hash
+                if b:                                  # only with BENCH_NETBAND_DIR (the band state: man["netBand"])
                     inputs[mid]["net_band.npz"] = "band:" + sha(b)
     skipped = {}
     if not a.no_heldout:
@@ -859,8 +862,9 @@ def run(a):
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
            "labels": label_hashes(), "sides": sides, "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)",
            "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS], "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
-    if NETBAND_DIR and nets:                           # only with the band: a run with no band keeps its hash
-        man["netBand"] = NETBAND_DIR
+    # The band state: "off", or the folder and the hash of the band file of each lab match.
+    man["netBand"] = {"folder": NETBAND_DIR, "files": {m: v["net_band.npz"][5:] for m, v in inputs.items()
+                                                       if "net_band.npz" in v}} if NETBAND_DIR and nets else "off"
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
     man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
     out = {k: summary(v, ev) for k, v in sets.items()}

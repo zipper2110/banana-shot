@@ -1,20 +1,24 @@
 """Measures of the chain on the user's event labels that case_history.py does not have yet (gap program S4, E170).
 
-case_history.py (S1) is the one tool that runs the chain on the case library and scores it on the labels. It calls
-these functions in fragment() and total() and shows their rows in its report. Owner of this module: S4.
+case_history.py (S1) is the one tool that runs the chain on the case library and scores it on the labels. It makes
+the pairs, the point windows, the fault map (label_faults.infer_faults over the fragment) and the hidden fault rows
+(bench.hidden_fault_rows), and calls these functions with them. Each rule is in one place. Owner of this module: S4.
 
-  borders(pts, crow, pairs, ev)          the rally row start and end against the user's serve contact and last event
-  fault_clips(mid, crow, ev)             the fault clips of the chain rows against label_faults.infer_faults
-  event_errors(...)                      time errors, bounce place error and in/out, shot count
-  total(frs)                             the sums over the fragments (the "measure" dicts of fragment())
-  report_rows(t)                         the rows of the totals table of report.md
+  points: [{"point": p, "row": r, "events": the labeled events of the point window (time order), "fault": {round(t, 6):
+           True / False / "unsure"}}], one for each matched point (case_history: the window from max(s0 - 25 s, the end
+           of the marked point before) to s1 + 1 s)
+  borders(points)                                    row start - serve in play, row start - first serve, row end - last event
+  shot_count(points)                                 the chain shots (len(row["chain"]["shots"])) - the user's contacts
+  fault_clips(crow, ev, fault, hidden)               the fault clips of the chain rows against the fault map
+  event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn)   time errors, bounce place and in/out
+  totals(frs)                                        {name: numbers} over the fragments (raw lists in, JSON numbers out)
 
-Windows: TOL_HIT, TOL_BOUNCE and TOL_NET of score_events.py (the bench windows), and the point window of case_history
-(the events from the point start - 25 s to the point end + 1 s). One new rule (E170): the in/out of a matched bounce
-event from its court point with the singles lines (shot_chain SW, BL; margin 0). For the first bounce after a serve:
-the service box (|y| <= SL on the receiver half) and, when the labels give the box, its side (the sign of x). The box
-is given by the user's bounce of that serve when it is in, else by the other serve of the same point (the fault and
-its second serve go to the same box; label_faults._side). Else "no side check".
+Windows: TOL_HIT, TOL_BOUNCE and TOL_NET of score_events.py (the bench windows), through the pairs of case_history.
+New rule (E170): the in/out of a matched bounce event from its court point, singles lines (shot_chain SW, BL), margin 0.
+For the first bounce after a serve: the service box (0 < |y| <= SL on the receiver half) and, when the labels give the
+box, its side (the sign of x; manager, E170). The box is given by the user's bounce of that serve when it is in, else
+by the other serve of the same point (a fault and its second serve go to the same box; label_faults._side). Else the
+bounce has "no side check" (counted apart).
 """
 import numpy as np
 
@@ -23,7 +27,6 @@ import shot_chain as sc
 import label_faults as lf
 
 TOL_HIT, TOL_BOUNCE, TOL_NET = se.TOL_HIT, se.TOL_BOUNCE, se.TOL_NET
-PRE, POST = 25.0, 1.0           # s, the point window of case_history (the fault serve before the point)
 END_PRE = 1.0                   # s, the events of the point end: from the point start - 1 s (case_history last_end)
 
 
@@ -31,38 +34,35 @@ def _r(x):
     return round(float(x), 3)
 
 
-def _play_serves(ev, fr, s0, s1):
-    """(the serve in play, the first serve of the point) of the marked point s0..s1, or (None, None). fr: infer_faults
-    results by time. The serve in play is the last serve in the point window with fault not True; the first serve is
-    the serve just before it when that one is a fault of the same end."""
-    sv = [e for e in ev if e["kind"] == "serve" and s0 - PRE <= e["t"] <= s1 + POST]
-    play = [e for e in sv if fr.get(round(e["t"], 6)) is not True]
+def _play_serves(pt):
+    """(the serve in play, the first serve of the point) of a points item, or (None, None). The serve in play is the
+    last serve of the window with fault not True; the first serve is the serve just before it when that one is a fault
+    of the same end."""
+    sv = [e for e in pt["events"] if e["kind"] == "serve"]
+    f = pt["fault"]
+    play = [e for e in sv if f.get(round(e["t"], 6)) is not True]
     if not play:
         return None, None
     p = play[-1]
     before = [e for e in sv if e["t"] < p["t"]]
-    first = before[-1] if before and fr.get(round(before[-1]["t"], 6)) is True and before[-1].get("end") == p.get("end") else p
+    first = before[-1] if before and f.get(round(before[-1]["t"], 6)) is True and before[-1].get("end") == p.get("end") else p
     return p, first
 
 
-def _fr(ev):
-    return {round(x["t"], 6): x["fault"] for x in lf.infer_faults(ev)}
-
-
-def borders(pts, crow, pairs, ev):
-    """For each matched point (pairs: (point index, row index) of lab.match_points): dPlay = row start - the serve in
-    play, dFirst = row start - the first serve of the point, dEnd = row end - the last labeled event of the point."""
-    fr = _fr(ev)
+def borders(points):
+    """dPlay = row start - the serve in play, dFirst = row start - the first serve of the point, dEnd = row end - the
+    last labeled event of the point (from the point start - END_PRE s). Lists of s, and a detail for each point."""
     out = {"dPlay": [], "dFirst": [], "dEnd": [], "detail": []}
-    for gi, j in pairs:
-        p, r = pts[gi], crow[j]
-        s0, s1 = p["startMs"] / 1000, p["endMs"] / 1000
-        play, first = _play_serves(ev, fr, s0, s1)
-        last = [e for e in ev if s0 - END_PRE <= e["t"] <= s1 + POST]
+    for pt in points:
+        p, r = pt["point"], pt["row"]
+        s0 = p["startMs"] / 1000
+        play, first = _play_serves(pt)
+        last = [e for e in pt["events"] if e["t"] >= s0 - END_PRE]
         d = {"point": p["id"], "rowStart": r["start"], "rowEnd": r["end"]}
         if play is not None:
             d["dPlay"], d["dFirst"] = _r(r["start"] - play["t"]), _r(r["start"] - first["t"])
-            out["dPlay"].append(d["dPlay"]); out["dFirst"].append(d["dFirst"])
+            out["dPlay"].append(d["dPlay"])
+            out["dFirst"].append(d["dFirst"])
         if last:
             d["dEnd"] = _r(r["end"] - last[-1]["t"])
             out["dEnd"].append(d["dEnd"])
@@ -70,43 +70,49 @@ def borders(pts, crow, pairs, ev):
     return out
 
 
+def shot_count(points):
+    """The chain shot count of the row (len(row["chain"]["shots"]); manager: not the "shots" field, the good flights)
+    against the user's contacts (serves and shots) from the serve in play to the end of the window. diff = chain - user."""
+    out = {"n": 0, "ok": 0, "off1": 0, "diff": []}
+    for pt in points:
+        play, _ = _play_serves(pt)
+        ch = pt["row"].get("chain")
+        if play is None or not isinstance(ch, dict) or ch.get("shots") is None:
+            continue
+        n = sum(1 for e in pt["events"] if e["kind"] in ("serve", "shot") and e["t"] >= play["t"])
+        d = len(ch["shots"]) - n
+        out["n"] += 1
+        out["ok"] += int(d == 0)
+        out["off1"] += int(abs(d) == 1)
+        out["diff"].append(d)
+    return out
+
+
 def _contact(f):
-    ch = f.get("chain") or {}
-    shots = ch.get("shots") or []
+    shots = (f.get("chain") or {}).get("shots") or []
     return shots[0]["t"] if shots else f["t"]
 
 
-def fault_clips(mid, crow, ev, window):
-    """The fault clips the user sees: the "fault" record of each chain row in the window. Its serve contact is paired
-    with the labeled serves within TOL_HIT (one to one). Right = a labeled first-serve fault (infer_faults True); wrong
-    = a serve with no fault; unsure; no labeled serve = false. found = the labeled first-serve faults with a fault clip.
-    hidden = the rows of the bench rule "fault, not checked" (bench.no_none) in the window, with and without a labeled
-    first-serve fault inside the row."""
-    a, b = window
-    res = lf.infer_faults(ev)
-    serves = [(x["t"], x["fault"]) for x in res]
+def fault_clips(crow, ev, fault, hidden):
+    """The fault clips the user sees: the "fault" record of each chain row of the window (crow). Its serve contact
+    (fault.chain.shots[0].t, else fault.t) is paired with the labeled serves within TOL_HIT (one to one). right = a
+    labeled first-serve fault (fault map True); wrong = a serve with no fault; unsure; noServe = no labeled serve
+    (false). found = the labeled first-serve faults with a fault clip. hidden: the rows of the window that the bench
+    hides as first-serve faults (bench.hidden_fault_rows); hiddenWithFault = those with a labeled first-serve fault
+    inside the row (from its start - TOL_HIT)."""
+    serves = [(e["t"], fault.get(round(e["t"], 6))) for e in ev if e["kind"] == "serve"]
     clips = [(r, _contact(r["fault"])) for r in crow if r.get("fault")]
-    clips = [(r, t) for r, t in clips if a - TOL_HIT <= t <= b + TOL_HIT]
     m = se.match([t for _, t in clips], [t for t, _ in serves], TOL_HIT)
     got = {i: serves[j][1] for i, j in m}
     out = {"clips": len(clips), "right": 0, "wrong": 0, "unsure": 0, "noServe": 0,
-           "labeledFaults": sum(f is True for _, f in serves), "found": 0, "detail": []}
+           "labeledFaults": sum(f is True for _, f in serves), "found": sum(1 for _, j in m if serves[j][1] is True),
+           "hiddenRows": len(hidden), "hiddenWithFault": 0, "detail": []}
     for i, (r, t) in enumerate(clips):
         f = got.get(i, "none")
         k = "right" if f is True else "wrong" if f is False else "unsure" if f == "unsure" else "noServe"
         out[k] += 1
         out["detail"].append({"t": _r(t), "row": [r["start"], r["end"]], "result": k})
-    out["found"] = sum(1 for i, j in m if serves[j][1] is True)
-    out["hiddenRows"], out["hiddenWithFault"] = 0, 0
-    try:
-        import faults_cases
-        for x in faults_cases.fault_rows(mid, crow):
-            if x["end"] <= a or x["start"] >= b:
-                continue
-            out["hiddenRows"] += 1
-            out["hiddenWithFault"] += int(any(f is True and x["start"] - TOL_HIT <= t <= x["end"] for t, f in serves))
-    except Exception as e:                                 # a match with no lab folder (no gt.json): no hidden rows
-        out["hiddenError"] = str(e)
+    out["hiddenWithFault"] = sum(any(f is True and x["start"] - TOL_HIT <= t <= x["end"] for t, f in serves) for x in hidden)
     return out
 
 
@@ -125,8 +131,7 @@ def _box_side(E, i, fr):
         return 1 if b["court"][0] > 0 else -1
     S = [j for j, e in enumerate(E) if e["kind"] == "serve"]
     a = S.index(i)
-    f = fr.get(round(E[i]["t"], 6))
-    if f is True and a + 1 < len(S) and E[S[a + 1]].get("end") == E[i].get("end"):
+    if fr.get(round(E[i]["t"], 6)) is True and a + 1 < len(S) and E[S[a + 1]].get("end") == E[i].get("end"):
         return lf._side(E, S[a + 1])                       # the second serve goes to the same box
     if a > 0 and fr.get(round(E[S[a - 1]]["t"], 6)) is True and E[S[a - 1]].get("end") == E[i].get("end"):
         return lf._side(E, S[a - 1])                       # this is the second serve: the box of the fault before
@@ -146,18 +151,17 @@ def chain_in(court, serve_end=None, side=None):
     return ok
 
 
-def event_errors(ev, shots, lh, m_hits, bev, lb, m_b, nev, ln, m_n, pts, crow, pairs, folder=None):
-    """The errors of the matched pairs that case_history makes (m_hits: (shot, label hit), m_b: (bounce event, label
-    bounce), m_n: (net event, label net)). folder: the lab folder of the match (court_H) for the place error."""
-    E = sorted(ev, key=lambda e: e["t"])
-    fr = _fr(E)
-    idx = {id(e): k for k, e in enumerate(E)}
-    out = {"hitDt": [_r(shots[i]["t"] - lh[j]["t"]) for i, j in m_hits],
-           "bounceDt": [_r(bev[i]["t"] - lb[j]["t"]) for i, j in m_b],
-           "netDt": [_r(nev[i]["t"] - ln[j]["t"]) for i, j in m_n],
-           "placeErr": [], "inOutN": 0, "inOutOk": 0, "serveBounces": 0, "sideChecked": 0, "inOutWrong": [],
-           "shotN": 0, "shotOk": 0, "shotOff1": 0, "shotDiff": []}
-    for i, j in m_b:
+def event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn):
+    """The errors of the pairs of case_history (m: (chain shot, labeled serve or shot), mb: (bounce event, labeled
+    bounce), mn: (net event, labeled net)). ev: the labeled events of the fragment (time order; lb holds the same
+    dicts). fault: the fault map. data: score_events.load (data["folder"] for court_H). Time errors are chain - label."""
+    idx = {id(e): k for k, e in enumerate(ev)}
+    out = {"hitDt": [_r(shots[i]["t"] - lh[j]["t"]) for i, j in m],
+           "bounceDt": [_r(bev[i]["t"] - lb[j]["t"]) for i, j in mb],
+           "netDt": [_r(nev[i]["t"] - ln[j]["t"]) for i, j in mn],
+           "placeErr": [], "inOutN": 0, "inOutOk": 0, "serveBounces": 0, "sideChecked": 0, "inOutWrong": []}
+    folder = (data or {}).get("folder")
+    for i, j in mb:
         e, l = bev[i], lb[j]
         if folder is not None and l.get("px") and e.get("px"):
             H = se.court_H(folder, l["t"])
@@ -168,77 +172,51 @@ def event_errors(ev, shots, lh, m_hits, bev, lb, m_b, nev, ln, m_n, pts, crow, p
         if e.get("court") is None:
             continue
         k = idx.get(id(l))
-        si = _serve_of_bounce(E, k) if k is not None else None
+        si = _serve_of_bounce(ev, k) if k is not None else None
         side = None
         if si is not None:
             out["serveBounces"] += 1
-            side = _box_side(E, si, fr)
+            side = _box_side(ev, si, fault)
             out["sideChecked"] += int(side is not None)
-        got = chain_in(e["court"], E[si].get("end") if si is not None else None, side)
+        got = chain_in(e["court"], ev[si].get("end") if si is not None else None, side)
         out["inOutN"] += 1
         ok = got == (not l.get("out"))
         out["inOutOk"] += int(ok)
         if not ok:
             out["inOutWrong"].append({"t": _r(l["t"]), "label": "out" if l.get("out") else "in", "serve": si is not None,
-                                      "court": [_r(c) for c in e["court"]]})
-    for gi, j in pairs:
-        p, r = pts[gi], crow[j]
-        s0, s1 = p["startMs"] / 1000, p["endMs"] / 1000
-        play, _ = _play_serves(E, fr, s0, s1)
-        if play is None or r.get("shots") is None:
-            continue
-        n = sum(1 for e in E if e["kind"] in ("serve", "shot") and play["t"] <= e["t"] <= s1 + POST)
-        d = int(r["shots"]) - n
-        out["shotN"] += 1; out["shotOk"] += int(d == 0); out["shotOff1"] += int(abs(d) == 1); out["shotDiff"].append(d)
+                                      "sideCheck": side is not None, "court": [_r(c) for c in e["court"]]})
     return out
 
 
-def total(frs):
-    """Sums over the fragment results: frs = [{"borders": .., "faultClips": .., "errors": ..}, ...] (missing keys are
-    skipped)."""
-    t = {"dPlay": [], "dFirst": [], "dEnd": [], "hitDt": [], "bounceDt": [], "netDt": [], "placeErr": [], "shotDiff": []}
-    cnt = ("clips", "right", "wrong", "unsure", "noServe", "labeledFaults", "found", "hiddenRows", "hiddenWithFault",
-           "inOutN", "inOutOk", "serveBounces", "sideChecked", "shotN", "shotOk", "shotOff1")
-    for k in cnt:
-        t[k] = 0
-    for f in frs:
-        for part in ("borders", "faultClips", "errors"):
-            d = f.get(part) or {}
-            for k, v in d.items():
-                if k in t and isinstance(v, list) and k != "detail":
-                    t[k] += v
-                elif k in cnt:
-                    t[k] += v
-    return t
-
-
-def _stat(x, abs_=True):
+def _st(x, signed=True):
+    """JSON numbers of a list of values: n, the signed median, the median and the p90 of |x| (None when empty)."""
     if not x:
-        return "-"
+        return {"n": 0, "med": None, "absMed": None, "p90": None}
     a = np.asarray(x, float)
-    return (f"{np.median(a):+.2f} / {np.median(np.abs(a)):.2f} / {np.percentile(np.abs(a), 90):.2f} s (n {len(a)})" if not abs_
-            else f"{np.median(np.abs(a)):.3f} / {np.percentile(np.abs(a), 90):.3f} s (n {len(a)})")
+    return {"n": int(len(a)), "med": round(float(np.median(a)), 3) if signed else None,
+            "absMed": round(float(np.median(np.abs(a))), 3), "p90": round(float(np.percentile(np.abs(a), 90)), 3)}
 
 
-def report_rows(t):
-    """[(name, text)] for the totals table of the case_history report (counts with each rate)."""
-    def kn(k, n):
-        return f"{k}/{n} ({100 * k / n:.0f} %)" if n else "-"
-    pe = t["placeErr"]
-    return [
-        ("Rally start - serve in play (med signed / |med| / p90)", _stat(t["dPlay"], False)),
-        ("Rally start - first serve of the point", _stat(t["dFirst"], False)),
-        ("Rally end - last labeled event", _stat(t["dEnd"], False)),
-        ("Fault clips right (a labeled first-serve fault)", kn(t["right"], t["clips"]) +
-         f", wrong {t['wrong']}, unsure {t['unsure']}, no labeled serve {t['noServe']}"),
-        ("Labeled first-serve faults with a fault clip", kn(t["found"], t["labeledFaults"])),
-        ("Hidden fault rows with a labeled fault serve", kn(t["hiddenWithFault"], t["hiddenRows"])),
-        ("Hit time error (|med| / p90)", _stat(t["hitDt"])),
-        ("Bounce time error (|med| / p90)", _stat(t["bounceDt"])),
-        ("Net time error (|med| / p90)", _stat(t["netDt"])),
-        ("Bounce place error (med / p90)", f"{np.median(pe):.2f} / {np.percentile(pe, 90):.2f} m (n {len(pe)})" if pe else "-"),
-        ("Bounce in/out right (matched)", kn(t["inOutOk"], t["inOutN"]) +
-         f"; serve bounces {t['serveBounces']}, side check {t['sideChecked']}, no side check {t['serveBounces'] - t['sideChecked']}"),
-        ("Shot count right (matched points)", kn(t["shotOk"], t["shotN"]) + f", off by 1: {t['shotOff1']}" +
-         (f", mean diff {np.mean(t['shotDiff']):+.2f}" if t["shotDiff"] else "")),
-    ]
+def totals(frs):
+    """{name: numbers} over the fragments. frs: the fragment dicts of case_history with the keys "borders", "shotCount",
+    "faultClips", "errors" (a missing key is skipped). Only JSON numbers (for the entry JSON)."""
+    L = {k: [] for k in ("dPlay", "dFirst", "dEnd", "diff", "hitDt", "bounceDt", "netDt", "placeErr")}
+    C = {k: 0 for k in ("n", "ok", "off1", "clips", "right", "wrong", "unsure", "noServe", "labeledFaults", "found",
+                        "hiddenRows", "hiddenWithFault", "inOutN", "inOutOk", "serveBounces", "sideChecked")}
+    for f in frs:
+        for part in ("borders", "shotCount", "faultClips", "errors"):
+            for k, v in (f.get(part) or {}).items():
+                if k in L:
+                    L[k] += v
+                elif k in C:
+                    C[k] += v
+    return {"rallyStartPlay": _st(L["dPlay"]), "rallyStartFirst": _st(L["dFirst"]), "rallyEnd": _st(L["dEnd"]),
+            "faultClips": {k: C[k] for k in ("clips", "right", "wrong", "unsure", "noServe")},
+            "labeledFaults": C["labeledFaults"], "labeledFaultsWithClip": C["found"],
+            "hiddenRows": C["hiddenRows"], "hiddenRowsWithFault": C["hiddenWithFault"],
+            "hitTimeErr": _st(L["hitDt"]), "bounceTimeErr": _st(L["bounceDt"]), "netTimeErr": _st(L["netDt"]),
+            "bouncePlaceErr": _st(L["placeErr"], signed=False),
+            "inOut": {"n": C["inOutN"], "ok": C["inOutOk"], "serveBounces": C["serveBounces"],
+                      "sideCheck": C["sideChecked"], "noSideCheck": C["serveBounces"] - C["sideChecked"]},
+            "shotCount": {"n": C["n"], "ok": C["ok"], "off1": C["off1"],
+                          "meanDiff": round(float(np.mean(L["diff"])), 3) if L["diff"] else None}}

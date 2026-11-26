@@ -527,7 +527,10 @@ def no_none(mid, rows, m):
                faultNotChecked=len(fault_nc), faultClipRows=len(fault_clip),
                faultNotCheckedShots=[rows[j].get("shots") for j in fault_nc],
                precisionWithFaults=len(real) / max(1, detected + len(fault_nc) + len(fault_clip)),
-               fault3Shots=sum((rows[j].get("shots") or 0) >= 3 for j in fault_nc),
+               # chain shots (len(row["chain"]["shots"]), the count of chain.FAULT_SHOTS and S3 E145); "shots" of a row counts
+               # the good flights in the row
+               fault3Shots=sum(len((rows[j].get("chain") or {}).get("shots") or []) > chain.FAULT_SHOTS for j in fault_nc),
+               fault3Flights=sum((rows[j].get("shots") or 0) >= 3 for j in fault_nc),
                startAbsMed=float(np.median(np.abs(ds))) if ds else None, endAbsMed=float(np.median(np.abs(de))) if de else None)
     return out
 
@@ -549,6 +552,7 @@ def summary(res, ev=None):
            "noneMarked": sum(m["noneMarked"] for m in ms), "noneDetected": sum(m["noneDetected"] for m in ms),
            "faultNotChecked": sum(m["faultNotChecked"] for m in ms), "faultClipRows": sum(m["faultClipRows"] for m in ms),
            "faultNotChecked3Shots": sum(m["fault3Shots"] for m in ms),
+           "faultNotChecked3Flights": sum(m["fault3Flights"] for m in ms),
            # the manager: rows with 3 shots or more are not proven faults; the second number hides only the short rows
            "precisionShortFaults": sum(m["matched"] for m in ms) / max(1, sum(m["detected"] + m["fault3Shots"] for m in ms)),
            "precisionWithFaults": sum(m["matched"] for m in ms) / max(1, sum(m["detected"] + m["faultNotChecked"] + m["faultClipRows"] for m in ms)),
@@ -602,16 +606,17 @@ def report(man, sets, skipped, same):
             continue
         L += [f"## {name}: {', '.join(t['matches'])}", "",
               "| Measure | Value |", "|---|---|",
-              (f"| Rallies: recall / precision (NONE points out; fault rows hidden: none / only 2 shots or less / all) | {pct(t['recall'])} / "
+              (f"| Rallies: recall / precision (NONE points out; fault rows hidden: none / only 2 chain shots or less / all) | {pct(t['recall'])} / "
                f"{pct(t['precisionWithFaults'])} / {pct(t['precisionShortFaults'])} / {pct(t['precision'])} ({t['detected']} detected, {t['marked']} marked; "
                f"{t.get('noneMarked', 0)} NONE points, {t.get('noneDetected', 0)} detected rallies on them; hidden fault rows "
-               f"{t['faultNotChecked'] + t['faultClipRows']}, {t['faultNotChecked3Shots']} of them with 3 shots or more) |"
+               f"{t['faultNotChecked'] + t['faultClipRows']}: 3 or more chain shots {t['faultNotChecked3Shots']}, "
+               f"3 or more good flights {t['faultNotChecked3Flights']}) |"
                if "precisionShortFaults" in t else
                f"| Rallies: recall / precision (NONE points out) | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, "
                f"{t['marked']} marked; {t.get('noneMarked', 0)} NONE points, {t.get('noneDetected', 0)} detected rallies on them) |")]
         if t.get("faultNotChecked") or t.get("faultClipRows"):
             L += [f"| Rows left out as first-serve faults | {t.get('faultNotChecked', 0)} not checked (lab marks start at the second "
-                  f"serve; {t.get('faultNotChecked3Shots', 0)} of them with 3 shots or more), {t.get('faultClipRows', 0)} on a marked "
+                  f"serve; {t.get('faultNotChecked3Shots', 0)} of them with 3 chain shots or more), {t.get('faultClipRows', 0)} on a marked "
                   f"fault clip; precision with them as false rallies {pct(t.get('precisionWithFaults'))} |"]
         if SHOW_WITH_NONE and "recallWithNone" in t:
             L += [f"| Rallies with the NONE points (the old way) | {pct(t['recallWithNone'])} / {pct(t['precisionWithNone'])} "

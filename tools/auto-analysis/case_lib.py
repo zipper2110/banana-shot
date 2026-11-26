@@ -277,7 +277,13 @@ def index():
     t0 = offset - videoStartInClip. courtH: image px of a 1920-wide frame -> court m (the H of the court files), from
     the court window at the middle of the span (the refined track if it is there). Returns the path."""
     rows = []
-    for f in sorted(os.listdir(FRAGS)) if os.path.exists(FRAGS) else []:
+    # the page lists the rows in this order: small first, then medium, large, match (the user labels the small level first)
+    lv = {"small": 0, "medium": 1, "large": 2, "match": 3}
+
+    def order(f):
+        p = os.path.join(FRAGS, f, "fragment.json")
+        return (lv.get(json.load(open(p)).get("level"), 9) if os.path.exists(p) else 9, f)
+    for f in sorted(os.listdir(FRAGS), key=order) if os.path.exists(FRAGS) else []:
         p = os.path.join(FRAGS, f, "fragment.json")
         if not os.path.exists(p):
             continue

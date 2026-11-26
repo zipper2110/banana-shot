@@ -17,12 +17,14 @@ Run the benchmark from a snapshot of one commit, not from the main checkout (oth
   python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py run [--tag <text>] [--no-heldout]
 A heavy stage against its own labels, under the GPU lock (item 7a; report <lab>/bench/<time>-<commit>-heavy-ball/):
   python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py heavy --stage ball [--weights held-out] [--passes dim]
+The stream name on the GPU lock tickets: --who <stream> (before the command), else the env var BENCH_WHO, else "bench".
 """
 import argparse, glob, hashlib, json, math, os, re, subprocess, sys, time
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
+WHO = os.environ.get("BENCH_WHO") or "bench"     # the stream name on the GPU lock tickets (--who overrides it)
 CONF_BINS = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0001]
 LIMITS = [50, 55, 60, 65, 70, 75, 80, 85, 90]       # candidates for minWinnerPercent and the "check first" limit
 CHECK_FIRST = 0.70                                  # the "check first" limit of the review window now
@@ -312,7 +314,7 @@ def app_nets(mids, code_dir=None):
         # them can fail.
         import gpu_lock
         env = dict(os.environ, CUDA_VISIBLE_DEVICES="-1")
-        who, what = "s1", f"bench.py: lab flights by code key, {len(remake)} CPU processes (about 25 min)"
+        who, what = WHO, f"bench.py: lab flights by code key, {len(remake)} CPU processes (about 25 min)"
         t, procs, bad = time.time(), [], []
         gpu_lock.acquire(who, what)
         try:
@@ -404,7 +406,7 @@ def detect_light(code_dir, mid, d):
     import lab, gpu_lock
     log = os.path.join(d, "bench-detect.log")
     cmd = [sys.executable, os.path.join(code_dir, "detect.py"), "--video", lab.MATCHES[mid]["video"], "--work", d]
-    who, what = "s1", f"bench.py: rally and winner stages of {mid} (heavy stages refused)"
+    who, what = WHO, f"bench.py: rally and winner stages of {mid} (heavy stages refused)"
     heavy, rc, t0 = None, -1, time.time()
     gpu_lock.acquire(who, what)                      # in this process, so that a stop of detect.py still frees the lock
     try:
@@ -727,7 +729,7 @@ def heavy_ball(a):
            "videos": {m: lab.MATCHES[m]["video"] for m in sorted({w["mid"] for w in wins})},
            "device": str(platform_cfg.device()), "decode": platform_cfg.decode()}
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
-    who, what = "s1", f"bench.py heavy ball: {len(wins)} label windows, setup {a.passes}, weights {a.weights} (about 5 min)"
+    who, what = WHO, f"bench.py heavy ball: {len(wins)} label windows, setup {a.passes}, weights {a.weights} (about 5 min)"
     rows, nets, rc = [], {}, 1
     gpu_lock.acquire(who, what)
     tl = time.time()
@@ -852,6 +854,7 @@ def run(a):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
+    ap.add_argument("--who", default=WHO, help="the stream name on the GPU lock tickets (default: env BENCH_WHO, else bench)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("snapshot")
     s.add_argument("--ref", default="HEAD")
@@ -870,6 +873,7 @@ if __name__ == "__main__":
     f = sub.add_parser("flights1")                    # internal: one lab match of app_nets in its own process
     f.add_argument("mid"); f.add_argument("dst"); f.add_argument("--code", default=HERE)
     a = ap.parse_args()
+    WHO = a.who
     sys.path.insert(0, a.code if a.cmd == "flights1" else HERE)
     if a.cmd == "snapshot":
         snapshot(a.ref)

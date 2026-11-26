@@ -200,6 +200,7 @@ def run(a):
     L = [f"# Case library history: {a.level} level, {entry['time']}", "",
          f"Code `{commit[:12]}`{' (dirty)' if dirty else ''}. Flights: {bench.LAB_FLIGHTS} (key {', '.join(sorted(set(entry['flights'].values())))}). "
          f"Fragments {t['fragments']}, with the user's labels {t['labeled']}. Run time {entry['seconds']} s. Entry `{name}`.", "",
+         *([f"Note: {a.note}", ""] if a.note else []),
          "Totals over the labeled fragments (rallies: all fragments). The user labels all events of the span, so chain events "
          "without a label are false events.", "",
          "| Measure | This run | Entry before (same level and flights) |", "|---|---|---|"]

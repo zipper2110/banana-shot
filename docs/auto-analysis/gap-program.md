@@ -229,3 +229,5 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Vlad (the user): the user marks the points and winners of m0913 in its project. Then S5 scores m0913 as the low-camera, 30 fps condition of G15. Until then, S5 reports m0913 without a point score. |
 | 2026-11-26 | P1 and P2 closed with no change (S5, E80, E83, E84): `dim` stays; the two-pass design loses events in found rallies. |
 | 2026-11-26 | Net-touch input of the benchmark (S1, after S5 E85): the lab set uses net events made the way `detect.py` makes them (`bench.py nets`, hash in the manifest). The old lab file stays for the old journal rows. The first run after the switch starts a new baseline. |
+| 2026-11-26 | First held-out result (S1, Igor m1116, code 995fc8c8): rally recall 98.5 %, precision 86.6 %; hits found 77 of 91, hitter right 77 of 77, shot count right in 3 of 11 rallies, last-shot end right 64 %; winners 83.9 % (a check only). |
+| 2026-11-26 | G3 (S1 proposal, manager): "check first" stays at 70 % and minWinnerPercent stays at 50. Held out, the winners under 70 % are about 55 % right (107 points in the pool). A calibration map of the shown percent is a later item (n is small). No app change. |

@@ -48,8 +48,8 @@ Rules:
 The fault flag: you do not have to press **X**. The scripts (`label_faults.py`, E159) find a first-serve fault from
 your marks: an out bounce or a net stop after the serve, then the second serve from the same end (the same
 service box, or a short time gap). Press **X** only if the scripts cannot see it, for example when you cannot
-mark the out bounce or the net stop. The scripts keep each **X**. If they are not sure, an agent asks you about
-that serve.
+mark the out bounce or the net stop. The scripts keep each **X**. If they are not sure, they count that serve apart
+and do not use it as truth. Nobody asks you about it.
 
 ## Help in the page
 

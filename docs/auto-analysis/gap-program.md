@@ -65,7 +65,7 @@ Event measures (priority 2), not a gap row of the inventory:
 | Event | Now (lab, frozen flights) | Open work |
 |---|---|---|
 | Serve event at a point start | far starts: 10 fixed by KEEP, 17 wait for the head flights (E172) | S4 E172 recount on S1's head flights; SERVE_PRIOR_NEAR only if needed |
-| Net touches | 26 of 35; user labels 14 of 33 | S5 item 6 (d): the netBand default |
+| Net touches | 26 to 28 of 35, false 8 to 3 of 70 with netBand on (E137, default on); user labels 14 of 33 | 5 target misses on the S5 case list |
 | Bounces | 37 of 42 | none now |
 | Ball detector | option 0, no training (plan section 4) | open again when an event loss is measured |
 | Audio hits | stopped (+4 true, +5 false) | open again with more labels |

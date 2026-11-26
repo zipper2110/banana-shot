@@ -131,6 +131,11 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
 6. (2026-11-26) Wrong shots in the shot chain (S4 E76, groups D and E): stop the shot list at a dead ball (4
    false hits after the point, 1 wrong winner, 2 wrong last hitters), then the split shots (5 false). Do it
    together with the last-shot check of item 5 (S3 owns `shot_chain.py`). Group A (late "back" shots) later.
+   Done (E90, E91; merged 2a3c8578): Igor false hits 21 to 16 with S4's E121; lab rallies the same, winners +1.
+7. (2026-11-26) Late shots (E76 group A, and 3 of the 5 group E hits): a shot found 0.4 to 0.9 s late, mostly a
+   "back" shot whose hit flight is not seen. Each one is a missed hit and a false hit. Find the cause and fix
+   the shot time (for example from the hitter's pose, the audio hit or the back-projected flight). Then the
+   10 E69 rallies where the true last shot is not in the chain. Same Igor rule.
 
 ### Rule for fixes found on Igor (manager, 2026-11-26)
 

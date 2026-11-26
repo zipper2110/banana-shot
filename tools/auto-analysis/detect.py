@@ -223,8 +223,11 @@ def adopt_keys(work, weights, passes, n, court_track=""):
     and an existing pose.npy gets the pose key, only when git shows no change of the added code files after the file
     was made. The flights get the new key when their recorded key is the key before item 13 (the old ball tag, the old
     hand list, the court files of now), the ball file is adopted or current, and git shows no change of the files of
-    the import closure after fullflights_s0.35.json was made. Else the file is stale: the next run makes it again.
-    Returns {"ball": ..., "pose": ..., "flights": ...}."""
+    the import closure after fullflights_s0.35.json was made. The media, audio, court and court2 stages had no key
+    before item 13: they get the key of now when they have no recorded key, their outputs exist, and git shows no
+    change of the files of their import closure after the newest output was made. Else the file is stale: the next
+    run makes it again. Returns {"ball": ..., "pose": ..., "media": ..., "audio": ..., "court": ..., "court2": ...,
+    "flights": ...}."""
     import shutil
     import lab
     out, tag = {}, lab.BLOB_TAG
@@ -264,6 +267,25 @@ def adopt_keys(work, weights, passes, n, court_track=""):
             out["pose"] = {"state": "adopted"}
     import code_closure
     W = lambda f: os.path.join(work, f)
+    stages = {"media": ([W("audio.flac"), W("kf_times.csv"), W("kf.done"), W("pts.npy")], code_key("media")),
+              "audio": ([W("feat_audio.npy"), W("feat_mel.npy")], code_key("audio")),
+              "court": ([W("court_track.json")], code_key("court")),
+              "court2": ([W("court_track_refined.json")], code_key("court2", files=[W("court_track.json")]))}
+    for name, (outputs, key) in stages.items():
+        if STAGE_KEYS.get(name) == key:
+            out[name] = {"state": "current"}
+        elif not all(os.path.exists(o) for o in outputs):
+            out[name] = {"state": "none"}
+        elif name in STAGE_KEYS:
+            out[name] = {"state": "stale", "changes": "the recorded key is not the key of now"}
+        else:
+            ch = git_changes([os.path.basename(f) for f in code_closure.files(*STAGE_ENTRIES[name])],
+                             max(os.path.getmtime(o) for o in outputs))
+            if ch is None or ch:
+                out[name] = {"state": "stale", "changes": ch if ch else "no git"}
+            else:
+                STAGE_KEYS[name] = key
+                out[name] = {"state": "adopted"}
     court = [W("court_track.json"), W("court_track_refined.json")]
     flights_old = old_tag + "_" + content_key(court_track, files=court + [os.path.join(HERE, f) for f in FLIGHTS_CODE_OLD])
     flights_new = new_tag + "_" + code_key("flights", court_track, files=court)

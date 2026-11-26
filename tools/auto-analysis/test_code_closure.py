@@ -105,6 +105,16 @@ class AdoptKeys(unittest.TestCase):
         self.assertEqual(keys["pose"], detect.pose_key())
         self.assertEqual(self.run_adopt([])["ball"]["state"], "current")              # a second call: nothing to do
 
+    def test_court_with_no_recorded_key_is_adopted_and_another_key_stays_stale(self):
+        self.w = self.work()
+        out = self.run_adopt([])
+        self.assertEqual((out["court"]["state"], out["court2"]["state"], out["media"]["state"]), ("adopted", "adopted", "none"))
+        keys = json.load(open(os.path.join(self.w, "stage_keys.json")))
+        self.assertEqual(keys["court"], detect.code_key("court"))
+        self.w = self.work()
+        detect.STAGE_KEYS["court"] = "00000000"                                   # a run of other code
+        self.assertEqual(self.run_adopt([])["court"]["state"], "stale")
+
     def test_flights_of_another_key_stay_stale(self):
         self.w = self.work()
         detect.STAGE_KEYS["flights"] = "_ball_e38_dim_00000000_00000000"
@@ -120,7 +130,8 @@ class AdoptKeys(unittest.TestCase):
     def test_a_change_leaves_the_files_stale(self):
         self.w = self.work()
         out = self.run_adopt(["abc1234 2026-11-26T12:00:00+04:00 burst_ball: a new crop"])
-        self.assertEqual((out["ball"]["state"], out["pose"]["state"], out["flights"]["state"]), ("stale", "stale", "stale"))
+        self.assertEqual((out["ball"]["state"], out["pose"]["state"], out["flights"]["state"], out["court"]["state"]),
+                         ("stale", "stale", "stale", "stale"))
         self.assertFalse(os.path.exists(self.new))
         self.assertNotIn("pose", json.load(open(os.path.join(self.w, "stage_keys.json"))))
         self.assertEqual(self.run_adopt(None)["ball"]["changes"], "no git")

@@ -42,6 +42,12 @@ FIRST_DUR, FIRST_GAP = 0.4, 0.6     # s: a weak first shot shorter than FIRST_DU
 PRED_SIGMA, PRED_AFTER = 1.0, 1.0   # m, s: the fit landing is a "predicted" end of a shot if its 1-sigma error and its time after the last sample are below these
 PRED_ERR = 1.2        # m: the measured error of a fit landing (E33: median 1.1 to 1.6 m against the seen bounces). A predicted landing nearer to a line is "line", not in or out
 LATE_BOUNCE = os.environ.get("CHAIN_LATE_BOUNCE", "1") == "1"
+# E121 (found on Igor, E76 group B; values from physics): the serve shot starts at the racket contact, not at the toss.
+# A toss goes up 1 m or more over the hand and falls back to the racket: 2 * sqrt(2 * 1.0 / 9.81) = 0.9 s; 0.7 s allows
+# for the samples that are lost at the start. A toss higher than 2.5 m over the hand is not normal: 1.5 s at most.
+# 9 m from the net: the toss area of serve_ball.is_toss.
+SERVE_TIME = os.environ.get("CHAIN_SERVE_TIME", "1") == "1"
+TOSS_DUR, TOSS_MAX, TOSS_GAP, TOSS_Y = 0.7, 1.5, 0.3, 9.0   # s, s, s (a split of the track at the contact), m
 LATE_S, LATE_V = 1.5, (0.5, 2.0)    # s after the last sample of the shot; lowest and highest mean ground speed to the bounce, as a factor of the fit speed
 CONT = os.environ.get("CHAIN_CONT", "1") == "1"
 CONT_GAP, CONT_M = float(os.environ.get("CONT_GAP", "0.35")), float(os.environ.get("CONT_M", "4.0"))   # s, m: see continuous()
@@ -180,6 +186,9 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
         if (a["weak"] or deep) and not a["bounces"] and a["fl"][-1]["t1"] - a["fl"][0]["t0"] < FIRST_DUR and b["fl"][0]["t0"] - a["fl"][-1]["t1"] > FIRST_GAP:
             shots.pop(0)                                      # E32: the hitter of the next shot came from this flight: now it is the first shot
             b["how"] = "first"
+    if SERVE_TIME:
+        for sh in shots:
+            serve_time(sh)
     if LATE_BOUNCE and events:
         late_bounces(shots, events)
     # net events: each one belongs to the shot that is in the air at its time
@@ -202,6 +211,20 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
             alone.append({"t": float(e["t"]), "near": bool(e["toFar"]), "how": "net", "fl": [], "bounces": [], "net": e,
                           "reach": None, "weak": True, "serve": None})      # the flight of this shot was not tracked
     return sorted(seen + alone, key=lambda sh: sh["t"])
+
+
+def serve_time(sh):
+    """E121: a shot that has a toss flight and then a faster flight from the same end: the hit is at the start of the
+    faster flight. Toss flight: it starts TOSS_Y m or more from the net on the end of the hitter and lasts TOSS_DUR to
+    TOSS_MAX s. The faster flight starts on the same end not later than TOSS_GAP s after the end of the toss flight."""
+    s = -1.0 if sh["near"] else 1.0                     # the end of the hitter: the near player is at y < 0
+    fl = sh["fl"]
+    for f, g in zip(fl, fl[1:]):
+        if (f["p0"][1] * s >= TOSS_Y and TOSS_DUR <= f["t1"] - f["t0"] <= TOSS_MAX and g["p0"][1] * s >= TOSS_Y
+                and 0.0 <= g["t0"] - f["t1"] <= TOSS_GAP and np.linalg.norm(g["v0"]) > np.linalg.norm(f["v0"])):
+            if g["t0"] > sh["t"]:
+                sh["t"] = float(g["t0"])
+            return
 
 
 def late_bounces(shots, events):

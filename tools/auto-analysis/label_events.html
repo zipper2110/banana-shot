@@ -202,9 +202,19 @@ function open(i) {
 v.addEventListener("error", () => { if (cur >= 0) $("msg").textContent = "Cannot play " + item().clip; });
 
 // ---- frame clock
-function onFrame(now, md) { lastFrame = md.mediaTime; tick(); v.requestVideoFrameCallback(onFrame); }
+// The frame clock: the media time (= clip pts) of the frame on the screen, from requestVideoFrameCallback.
+function onFrame(now, md) { v.requestVideoFrameCallback(onFrame); lastFrame = md.mediaTime; tick(); }
 if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(onFrame);
-function frameT() { return v.requestVideoFrameCallback ? lastFrame : v.currentTime; }
+// If the clock missed the last frame (a page that is not drawn gets no frame callbacks) and the video is stopped,
+// the time is the pts of the frame at currentTime on the frame grid of the clip (first pts = firstFrame - t0),
+// not currentTime itself (a seek target can be up to one frame after the pts of the frame on the screen).
+function frameT() {
+  const c = v.currentTime;
+  if (!v.requestVideoFrameCallback) return c;
+  if (!v.paused || v.seeking || Math.abs(c - lastFrame) <= 1.5 * FRAME()) return lastFrame;
+  const it = item(), p0 = it.firstFrame !== undefined ? it.firstFrame - it.t0 : 0, fps = it.fps || 60;
+  return p0 + Math.floor((c - p0) * fps + 1e-3) / fps;
+}
 function tick() {
   if (cur < 0) return;
   const t = frameT();

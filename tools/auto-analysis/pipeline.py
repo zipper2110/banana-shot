@@ -42,8 +42,12 @@ def run(mid, quiet=False, write=True):
     full = json.load(open(FLIGHT_FILES.get(mid) or os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS") or "fullflights_s0.35_ev.json")))
     prob = rally_model.predict(mid, "ball", fold=mid)
     seg, serves = chain.segments(prob, full, CFG, start, start + dur)
+    chain.FAULTS.clear()
     rows = chain.winners(mid, seg, full, serves, prob=prob)
     m = score.score(mid, rows)
+    # G13 (after E116): the faults that the chain survived. A warning on stderr; the count goes into the metrics
+    # (bench.py: metrics.json perMatch). {} = no fault.
+    m["chainFaults"] = chain.warn_faults(mid)
     if write:
         json.dump({"metrics": m, "rallies": rows}, open(os.path.join(lab.mdir(mid), "pipeline.json"), "w"), indent=1, default=float)
     if not quiet:

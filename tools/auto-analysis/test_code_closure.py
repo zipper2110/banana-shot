@@ -99,6 +99,13 @@ class AdoptKeys(unittest.TestCase):
         self.assertEqual(keys["pose"], detect.pose_key())
         self.assertEqual(self.run_adopt([])["ball"]["state"], "current")              # a second call: nothing to do
 
+    def test_an_e52_record_moves_to_the_new_name(self):
+        self.w = self.work()
+        detect.STAGE_KEYS["ballAdopted"] = {"file": os.path.basename(self.old), "from": "wasb_0_30_s0.35_k2.npy"}
+        self.run_adopt([])
+        keys = json.load(open(os.path.join(self.w, "stage_keys.json")))
+        self.assertEqual(keys["ballAdopted"]["file"], os.path.basename(self.new))
+
     def test_a_change_leaves_the_files_stale(self):
         self.w = self.work()
         out = self.run_adopt(["abc1234 2026-11-26T12:00:00+04:00 burst_ball: a new crop"])

@@ -241,6 +241,9 @@ def adopt_keys(work, weights, passes, n):
         else:
             shutil.copy2(old, new)                 # a copy, not a link (E52)
             out["ball"] = {"state": "adopted", "file": os.path.basename(new), "from": os.path.basename(old)}
+            rec = STAGE_KEYS.get("ballAdopted")
+            if rec and rec.get("file") == os.path.basename(old):
+                rec["file"] = os.path.basename(new)  # the E52 warning stays with the file under its new name
     pose = os.path.join(work, "pose.npy")
     if STAGE_KEYS.get("pose") == pose_key() and os.path.exists(pose):
         out["pose"] = {"state": "current"}

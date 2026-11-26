@@ -190,6 +190,12 @@ const items = MF ? MF.fragments : [];
 // not become marks of the current row: its times have another time base. The page keeps it apart in STORE + "-stale"
 // (for a repair by an agent) and shows "old marks, not used" in the list.
 const staleIds = new Set();
+// Mapped marks (S1 case_lib.py map): <id>.mapped.json in the label folder holds the user's own marks of the small
+// fragments, mapped at the same source time into a medium fragment. The page uses them only when the fragment has no
+// saved marks (no <id>.events.json and nothing in the browser store), and only when they fit the row (docFits). They
+// are the start marks of the draft: the user deletes or keeps them, and the first save writes the kept marks with
+// their "from" field. The page never shows marks from the detection.
+const mapped = {};
 const docFits = (doc, it) => !!doc && typeof doc.t0 === "number" && Math.abs(doc.t0 - it.t0) < 1e-4
   && ((doc.manifest && doc.manifest.row) || null) === (it.rowHash || null);
 function keepStale(id, doc, from) {
@@ -245,9 +251,11 @@ const SW = 4.115, DW = 5.485, BL = 11.885, SL = 6.40;
 function draftOf(i) {
   if (!drafts[i]) {
     const s = saved(items[i]);
+    const m = !s && mapped[items[i].id];
     drafts[i] = s ? {events: JSON.parse(JSON.stringify(s.events)), unsure: s.unsure, skip: s.skip, note: s.note,
                      activeMs: (s.labelSeconds || 0) * 1000, dirty: false}
-                  : {events: [], unsure: false, skip: false, note: "", activeMs: 0, dirty: false};
+                  : {events: m ? JSON.parse(JSON.stringify(m.events || [])) : [], unsure: false, skip: false, note: "", activeMs: 0,
+                     dirty: false, mapped: !!m};
   }
   return drafts[i];
 }
@@ -519,9 +527,20 @@ async function readFiles() {
       const doc = JSON.parse(await (await fh.getFile()).text());
       if (!docFits(doc, it)) { if (!staleIds.has(it.id)) keepStale(it.id, doc, "file"); continue; }
       if (!store[it.id] || (doc.savedAt || "") > (store[it.id].savedAt || "")) store[it.id] = doc;
+      continue;
     } catch (e) { /* no file yet */ }
+    try {
+      const fh = await dir.getFileHandle(it.id + ".mapped.json");
+      const doc = JSON.parse(await (await fh.getFile()).text());
+      if (!docFits(doc, it)) { if (!staleIds.has(it.id)) keepStale(it.id, doc, "mapped"); delete mapped[it.id]; continue; }
+      mapped[it.id] = doc;
+    } catch (e) { /* no mapped marks */ }
   }
   localStorage.setItem(STORE, JSON.stringify(store));
+  items.forEach((it, i) => {        // a draft made before the folder was read gets the mapped marks
+    const dr = drafts[i];
+    if (dr && mapped[it.id] && !saved(it) && !dr.dirty && !dr.events.length) delete drafts[i];
+  });
 }
 async function writeFile(id) {
   if (!dir) { lastWrite = "no folder"; return; }
@@ -572,7 +591,7 @@ function render() {
   items.forEach((it, i) => {
     const r = list.children[i], s = saved(it);
     r.className = (i === cur ? "cur " : "") + (s ? "done " : "");
-    r.innerHTML = `<span>${i + 1}</span><span>${it.id}</span><span>${(it.kinds || []).join(" ")}${it.control ? " (control)" : ""}</span><span>${s ? (s.skip ? "skip" : s.events.length + " marks") + (s.unsure ? " ?" : "") : (drafts[i] && drafts[i].dirty ? "unsaved" : staleIds.has(it.id) ? "old marks, not used" : "")}</span>`;
+    r.innerHTML = `<span>${i + 1}</span><span>${it.id}</span><span>${(it.kinds || []).join(" ")}${it.control ? " (control)" : ""}</span><span>${s ? (s.skip ? "skip" : s.events.length + " marks") + (s.unsure ? " ?" : "") : (drafts[i] && drafts[i].dirty ? "unsaved" : mapped[it.id] ? (mapped[it.id].events || []).length + " mapped marks" : staleIds.has(it.id) ? "old marks, not used" : "")}</span>`;
   });
   const done = items.filter(saved), secs = done.map(it => saved(it).labelSeconds || 0).filter(x => x > 0).sort((a, b) => a - b);
   const med = secs.length ? secs[Math.floor(secs.length / 2)] : 0, left = items.length - done.length;
@@ -602,7 +621,7 @@ function render() {
       : e.kind === "shot" ? `<span class="${e.end}">shot ${e.end}</span>`
       : e.kind === "bounce" ? `<span class="${e.out ? "out" : "bounce"}">${e.out ? "out" : "in"}</span> ${e.seen ? "seen" : "<b>inferred</b>"}${e.court ? ` · ${e.court[0].toFixed(1)}, ${e.court[1].toFixed(1)} m` : ""}`
       : `<span class="net">net ${e.net === "cord" ? "cord (over)" : "touch (stop)"}</span>`;
-    r.innerHTML = `<span>${k + 1}</span><span>${fmt(e.t).slice(-9)}</span><span style="color:var(--dim)">${e.kind}</span><span>${what}</span><span class="x" title="delete">×</span>`;
+    r.innerHTML = `<span>${k + 1}</span><span>${fmt(e.t).slice(-9)}</span><span style="color:var(--dim)">${e.kind}</span><span>${what}${e.from ? ` <span style="color:var(--dim)" title="your mark of the fragment ${e.from}">from ${e.from}${e.fromUnsure ? " ?" : ""}</span>` : ""}</span><span class="x" title="delete">×</span>`;
     r.onclick = ev2 => { if (ev2.target.classList.contains("x")) { dr.events.splice(k, 1); sel = -1; touch(); } else { sel = k; v.pause(); seek(ct(e.t) + 0.0005); render(); } };
     ev.appendChild(r);
   });

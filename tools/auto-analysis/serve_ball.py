@@ -47,6 +47,11 @@ def is_fast_out(f):
 
 RALLY_FILTER = os.environ.get("SERVE_FILTER", "1") == "1"      # E28e: a flight that returns a ball is not a serve event
 RETURN_S, RETURN_V = 3.0, 8.0     # s (time for two flights: one shot in a gap of the ball data is normal), m/s along the court (ball_bounce.HIT_V)
+# E126: a ball faster than RETURN_MAX km/h is a wrong 3D fit, not a return (the fastest serves are about 250 km/h;
+# is_serve uses the same limit). The limit gives back 11 of the 22 lab starts where is_return removed the serve flight:
+# the ball before was a fit at 240 to 1740 km/h, with a start up to 90 m behind the baseline (mostly the toss or the serve
+# start with a wrong depth). At the other 11 the wrong fit is slower or the ball is a real one.
+RETURN_MAX = 240.0
 
 
 def is_return(f, flights):
@@ -55,7 +60,8 @@ def is_return(f, flights):
     that time. Then f is a rally shot.
     Before a serve the ball does not come from the other side (the toss has no speed along the court)."""
     for g in flights:
-        if g is not f and f["t0"] - RETURN_S <= g["t1"] <= f["t0"] + 0.05 and g["v0"][1] * f["v0"][1] < 0                 and g["p0"][1] * f["p0"][1] < 0 and abs(g["v0"][1]) >= RETURN_V and g["n"] >= 6 and g["t1"] - g["t0"] >= 0.15 - 1e-6 and g["rms"] < 5:
+        if g is not f and f["t0"] - RETURN_S <= g["t1"] <= f["t0"] + 0.05 and g["v0"][1] * f["v0"][1] < 0                 and g["p0"][1] * f["p0"][1] < 0 and abs(g["v0"][1]) >= RETURN_V and g["n"] >= 6 and g["t1"] - g["t0"] >= 0.15 - 1e-6 and g["rms"] < 5 \
+                and 3.6 * float(np.linalg.norm(g["v0"])) < RETURN_MAX:
             return True
     return False
 

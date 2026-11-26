@@ -227,42 +227,69 @@ NET_CODE = ("net_events.py", "net_lab.py", "ball_events.py", "lab.py")
 NET_COPY = ["pts.npy", "kf_times.csv", "court.json", "court_track.json", "court_track_refined.json"]
 
 
-def app_nets(mids):
-    """{mid: path of net_events.json made the app way}. Reads the lab folders only."""
-    import lab, shutil
+def app_folder(mid):
+    """The app work folder of a match with event labels and no lab flights (m0913), else None."""
+    import lab
+    d = os.path.join(os.path.dirname(lab.ROOT.rstrip("/\\")), "app", mid)
+    return d if os.path.exists(os.path.join(d, "fullflights_s0.35.json")) else None
+
+
+def net_inputs(mid):
+    """("lab" or "app", the input files of the net events of match mid). A lab match: the frozen lab inputs. An app
+    folder (m0913): its newest ball file with no tag, its flights, frame times and court files."""
+    import lab
     from ball_full import WINDOWS
-    src = {m: [os.path.join(lab.mdir(m), f) for f in NET_COPY + ["fullflights_s0.35_ev.json",
-                                                                  "wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[m], LAB_BLOB_TAG)]]
-           for m in mids}
-    h = hashlib.sha256()
-    for f in [os.path.join(HERE, n) for n in NET_CODE] + [f for m in mids for f in src[m] if os.path.exists(f)]:
-        h.update(os.path.basename(f).encode() + sha(f).encode())
-    root = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets", h.hexdigest()[:16])
-    out = {}
-    todo = [m for m in mids if not os.path.exists(os.path.join(root, "lab_" + m, "net_events.json"))]
+    if mid in WINDOWS:
+        return "lab", [os.path.join(lab.mdir(mid), f) for f in NET_COPY + ["fullflights_s0.35_ev.json",
+                                                                         "wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[mid], LAB_BLOB_TAG)]]
+    d = app_folder(mid)
+    blobs = glob.glob(os.path.join(d, "wasb_0_*_s0.35_k2.npy"))
+    return "app", [os.path.join(d, f) for f in NET_COPY + ["pts_video.npy", "fullflights_s0.35.json"]] + \
+        ([max(blobs, key=os.path.getmtime)] if blobs else [])
+
+
+def app_nets(mids):
+    """{mid: path of net_events.json made the app way} for lab matches and app folders. Reads their folders only:
+    the work is in a cache folder for each match, <lab>/bench/nets/<key>/<lab|app>_<match>/, with a key of the
+    code and of the inputs of that match."""
+    import lab, shutil
+    code = [os.path.join(HERE, n) for n in NET_CODE]
+    out, todo = {}, []
+    for m in mids:
+        kind, src = net_inputs(m)
+        src = [f for f in src if os.path.exists(f)]
+        h = hashlib.sha256()
+        for f in code + src:
+            h.update(os.path.basename(f).encode() + sha(f).encode())
+        dst = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets", h.hexdigest()[:16], f"{kind}_{m}")  # not "<match>"
+        out[m] = os.path.join(dst, "net_events.json")
+        if not os.path.exists(out[m]):
+            todo.append((m, kind, src, dst))
     if todo:
         import net_events
         tag, mdir, cwd = lab.BLOB_TAG, lab.mdir, os.getcwd()
         try:
-            lab.BLOB_TAG = LAB_BLOB_TAG
-            os.makedirs(root, exist_ok=True)
-            os.chdir(root)              # net_lab.Source takes an existing folder with the name of the match as an app folder
-            for m in todo:
-                dst = os.path.join(root, "lab_" + m)   # not "<match>": see the line above
+            for m, kind, src, dst in todo:
                 os.makedirs(dst, exist_ok=True)
-                for f in src[m]:
-                    if os.path.exists(f):
-                        n = os.path.basename(f)
-                        shutil.copy2(f, os.path.join(dst, "fullflights_s0.35.json" if n == "fullflights_s0.35_ev.json" else n))
-                lab.mdir = lambda x, _o=mdir, m=m, dst=dst: dst if x == m else _o(x)
+                for f in src:
+                    n = os.path.basename(f)
+                    shutil.copy2(f, os.path.join(dst, "fullflights_s0.35.json" if n == "fullflights_s0.35_ev.json" else n))
                 t = time.time()
-                path, ev = net_events.run_folder(m)
+                if kind == "lab":
+                    # net_lab.Source takes an existing folder with the name of the match as an app folder: work in
+                    # the parent of dst, which has no such folder. The lab branch reads lab.mdir and lab.BLOB_TAG.
+                    lab.BLOB_TAG = LAB_BLOB_TAG
+                    os.chdir(os.path.dirname(dst))
+                    lab.mdir = lambda x, _o=mdir, m=m, dst=dst: dst if x == m else _o(x)
+                    path, ev = net_events.run_folder(m)
+                else:
+                    lab.BLOB_TAG = ""                  # the app branch: the newest ball file with no tag
+                    path, ev = net_events.run_folder(dst)
+                lab.BLOB_TAG, lab.mdir = tag, mdir
                 print(f"net events of {m} made the app way: {len(ev)} ({time.time() - t:.0f} s)", flush=True)
         finally:
             lab.BLOB_TAG, lab.mdir = tag, mdir
             os.chdir(cwd)
-    for m in mids:
-        out[m] = os.path.join(root, "lab_" + m, "net_events.json")
     return out
 
 
@@ -431,7 +458,7 @@ def run(a):
     sets, inputs, nets = {}, {}, None
     if not a.no_lab:
         from ball_full import WINDOWS
-        nets = None if a.old_nets else app_nets(list(WINDOWS))
+        nets = None if a.old_nets else app_nets(list(WINDOWS) + [m for m in lab.MATCHES if m not in WINDOWS and app_folder(m)])
         sets["Lab LOMO"] = run_lab(nets)
         for mid in sets["Lab LOMO"]:
             inputs[mid] = file_hashes(lab.mdir(mid), LAB_INPUTS)

@@ -55,6 +55,19 @@ class NetBandSwitch(unittest.TestCase):
         self.assertNotEqual(off, on_a)
         self.assertNotEqual(on_a, on_b)                # a changed band file gives a new key
 
+    def test_a_set_switch_of_the_flights_code_changes_the_key(self):
+        # SERVE_PRIOR_WIDE (ball_3d.py, in the closure of ball_full) was not in the key: a run with it read the cache
+        bench.NETBAND_DIR = ""
+        os.environ.pop("SERVE_PRIOR_WIDE", None)
+        off = self.key()
+        os.environ["SERVE_PRIOR_WIDE"] = "0"
+        try:
+            self.assertEqual(bench.env_extra(bench.HERE, True), {"SERVE_PRIOR_WIDE": "0"})
+            self.assertNotEqual(self.key(), off)
+        finally:
+            del os.environ["SERVE_PRIOR_WIDE"]
+        self.assertEqual(self.key(), off)              # not set: the key of before
+
     def test_on_with_a_missing_band_file_stops(self):
         bench.NETBAND_DIR = self.band_dir
         with self.assertRaises(FileNotFoundError):

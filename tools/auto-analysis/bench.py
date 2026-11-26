@@ -76,8 +76,7 @@ def switches():
     names = set()
     for f in glob.glob(os.path.join(HERE, "*.py")):
         names |= set(re.findall(r"environ\.get\(\"([A-Z][A-Z0-9_]+)\"", open(f, encoding="utf-8").read()))
-    names -= {"APPDATA", "LOCALAPPDATA", "USERPROFILE", "HOME", "HF_HOME", "PATH", "TEMP", "TMP", "HEAVY_LOCK_DIR",
-               "BENCH_WHO", "BENCH_NETBAND_DIR"}    # a lock ticket name and the band folder (an input when set): not switches
+    names -= NOT_SWITCHES                        # paths, a lock ticket name and the band folder (an input when set)
     import chain
     return {"env": {k: os.environ.get(k) for k in sorted(names)},
             "chain": {k: getattr(chain, k) for k in ("CHAIN", "END_MODEL", "FPS_ADAPT", "ID_ABS", "T_CUT_E2E", "SHORT_WAIT")
@@ -280,6 +279,30 @@ def band_in(dst):
     return f if os.path.exists(f) else None
 
 
+NOT_SWITCHES = {"APPDATA", "LOCALAPPDATA", "USERPROFILE", "HOME", "HF_HOME", "PATH", "TEMP", "TMP", "HEAVY_LOCK_DIR",
+                "BENCH_WHO", "BENCH_NETBAND_DIR"}
+
+
+def env_extra(code_dir, flights):
+    """{name: value} of the env switches that the code of the flights stage (the closure of ball_full and net_events,
+    or of net_events for the net events only) reads with environ.get, that are set, and that are not in FLIGHT_ENV.
+    Before this, the key had FLIGHT_ENV only: a run with SERVE_PRIOR_WIDE=0 read the cache of the default flights.
+    Empty when none is set, so the key of a run with the defaults does not change. A snapshot without code_closure.py: {}."""
+    if not os.path.exists(os.path.join(code_dir, "code_closure.py")):
+        return {}
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_closure_env_" + hashlib.sha1(code_dir.encode()).hexdigest()[:8],
+                                                  os.path.join(code_dir, "code_closure.py"))
+    cc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cc)
+    names = set()
+    for f in cc.files(*(("ball_full", "net_events") if flights else ("net_events",)), folder=code_dir):
+        with open(f, encoding="utf-8") as fh:
+            names |= set(re.findall(r"environ\.get\(\"([A-Z][A-Z0-9_]+)\"", fh.read()))
+    names -= set(FLIGHT_ENV) | NOT_SWITCHES
+    return {k: os.environ[k] for k in sorted(names) if os.environ.get(k) is not None}
+
+
 def net_key(m, code_dir):
     """(kind, input files, flights made again, cache folder) of match m in app_nets. The key is the code files and the
     inputs of the match; with NETBAND_DIR set, the net band file of a lab match is one of the inputs."""
@@ -294,6 +317,10 @@ def net_key(m, code_dir):
         h.update(os.path.basename(f).encode() + sha(f).encode())
     if flights:
         h.update(json.dumps({k: os.environ.get(k) for k in FLIGHT_ENV}, sort_keys=True).encode())
+    extra = env_extra(code_dir, flights)
+    if extra:                                          # only when set: the key of the default run stays as before
+        h.update(json.dumps(extra, sort_keys=True).encode())
+    if flights:
         root = os.path.join(os.path.dirname(lab.ROOT), "ws", "s1", "bench", "flights")
     else:
         root = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets")

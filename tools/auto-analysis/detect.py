@@ -20,7 +20,8 @@ Settings (JSON file, all optional):
 The run reads no lab environment variable (LAB_ENV): a setting replaces each one (G12).
 Cache (G12): video.json holds the identity of the video of the work folder; a work folder of another video stops
 the run. The ball file name has the weights, the passes and a key of the code; stage_keys.json holds the key of
-the inputs of each keyed stage, and a stage runs again when its key changes.
+the inputs of each keyed stage, and a stage runs again when its key changes. Item 16 (E117): the key of a stage that
+reads the files of an earlier stage (audio, image, court, pose: media) has the key of that stage.
 Output: <work>/result.json. "warnings" lists each fallback of the run (G13). An exception after the rally stage
 gives a partial result ("partial": true, the rallies that are ready, a warning) and no error. Lines on stdout that
 start with "@" are for the app:
@@ -118,6 +119,16 @@ STAGE_ENTRIES = {"media": ("prep", "frame_times"), "audio": ("feat_audio", "feat
 BALL_CODE_OLD = ("ball_wasb.py", "wasb_hrnet.py")          # the ball tag before item 13 (adopt_keys)
 BALL_CODE = BALL_CODE_OLD + ("burst_ball.py", "cuda_scale.py", "platform_cfg.py")
 POSE_CODE = ("pose_extract.py", "platform_cfg.py")         # pose_extract.py has the URLs of the pose models
+# Item 16 (E117): the image stage (feat_dino.npy, DINO features of the 1 fps pictures). A hand list, as for pose:
+# feat_dino uses lab only for the path of the work folder (test_code_closure). The model name is a part of the key.
+IMAGE_CODE = ("feat_dino.py", "platform_cfg.py")
+DINO_MODEL = "vit_small_patch14_dinov2.lvd142m"
+# Item 16 (E117): the stages that read the files of an earlier stage get its recorded key in their key. Without it,
+# new pictures or new audio of the media stage left the old features in place. The value: the earlier stage and the
+# files of it that the stage reads (adopt_keys: the outputs must be newer than these files).
+# court2 and flights have the bytes of court_track.json in their key, so they follow a court run.
+UPSTREAM = {"audio": ("media", ("audio.flac",)), "image": ("media", ("kf.done",)), "court": ("media", ("kf.done",)),
+            "pose": ("media", ("kf.done",))}
 # Item 6 (b): level 1 of the net band (net_band_mask.py: the masks of the moved pixels, a decode of the candidate
 # windows, about 40 % of a video). A hand list: ball_wasb and its imports are in the ball tag.
 NETMASK_CODE = ("net_band_mask.py",)
@@ -132,8 +143,29 @@ def code_key(name, *parts, files=()):
     return content_key(*parts, files=list(files) + code_closure.files(*STAGE_ENTRIES[name]))
 
 
+def up(name):
+    """Item 16: the parts of the key of a stage from the recorded key of the stage before it (UPSTREAM); () = none."""
+    return (UPSTREAM[name][0] + "=" + str(STAGE_KEYS.get(UPSTREAM[name][0])),) if name in UPSTREAM else ()
+
+
+def stage_key(name, files=()):
+    """The key of now of the stage name (item 16: with the key of the stage before it). files: input files (court2)."""
+    if name == "pose":
+        return content_key(*up(name), files=[os.path.join(HERE, f) for f in POSE_CODE])
+    if name == "image":
+        return content_key(DINO_MODEL, *up(name), files=[os.path.join(HERE, f) for f in IMAGE_CODE])
+    return code_key(name, *up(name), files=files)
+
+
+def old_key(name, files=()):
+    """The key of the stage name before item 16 (no key of the stage before it; the image stage had no key)."""
+    if name == "pose":
+        return content_key(files=[os.path.join(HERE, f) for f in POSE_CODE])
+    return None if name == "image" else code_key(name, files=files)
+
+
 def pose_key():
-    return content_key(files=[os.path.join(HERE, f) for f in POSE_CODE])
+    return stage_key("pose")
 
 
 def netmask_key(tag):
@@ -227,7 +259,7 @@ def git_changes(files, since):
     return None if r.returncode else [x for x in r.stdout.splitlines() if x]
 
 
-def adopt_keys(work, weights, passes, n, court_track=""):
+def adopt_keys(work, weights, passes, n, court_track="", dry=False):
     """Item 13 (decision 90f2389d): a ball file of the tag before item 13 (BALL_CODE_OLD) gets the name of the new tag,
     and an existing pose.npy gets the pose key, only when git shows no change of the added code files after the file
     was made. The flights get the new key when their recorded key is the key before item 13 (the old ball tag, the old
@@ -235,8 +267,12 @@ def adopt_keys(work, weights, passes, n, court_track=""):
     the import closure after fullflights_s0.35.json was made. The media, audio, court and court2 stages had no key
     before item 13: they get the key of now when they have no recorded key, their outputs exist, and git shows no
     change of the files of their import closure after the newest output was made. Else the file is stale: the next
-    run makes it again. Returns {"ball": ..., "pose": ..., "media": ..., "audio": ..., "court": ..., "court2": ...,
-    "flights": ...}."""
+    run makes it again. Item 16 (E117): the audio, image, court and pose keys also have the recorded media key. A key
+    of the formula before item 16 (old_key) gets the key of now when the media key is current and the outputs are
+    newer than the media files that the stage reads; the image stage (no key before) also needs no git change of
+    IMAGE_CODE. Each adopted stage notes its old key ("from"). The record of an earlier adoption stays ("earlier").
+    dry: no copy and no write (a check). Returns {"ball": ..., "pose": ..., "media": ..., "audio": ..., "image": ...,
+    "court": ..., "court2": ..., "flights": ...}."""
     import shutil
     import lab
     out, tag = {}, lab.BLOB_TAG
@@ -257,44 +293,51 @@ def adopt_keys(work, weights, passes, n, court_track=""):
         if ch is None or ch:
             out["ball"] = {"state": "stale", "file": os.path.basename(old), "changes": ch if ch else "no git"}
         else:
-            shutil.copy2(old, new)                 # a copy, not a link (E52)
+            if not dry:
+                shutil.copy2(old, new)             # a copy, not a link (E52)
             out["ball"] = {"state": "adopted", "file": os.path.basename(new), "from": os.path.basename(old)}
             rec = STAGE_KEYS.get("ballAdopted")
             if rec and rec.get("file") == os.path.basename(old):
                 rec["file"] = os.path.basename(new)  # the E52 warning stays with the file under its new name
-    pose = os.path.join(work, "pose.npy")
-    if STAGE_KEYS.get("pose") == pose_key() and os.path.exists(pose):
-        out["pose"] = {"state": "current"}
-    elif not os.path.exists(pose):
-        out["pose"] = {"state": "none"}
-    else:
-        ch = git_changes(POSE_CODE, os.path.getmtime(pose))
-        if ch is None or ch:
-            out["pose"] = {"state": "stale", "changes": ch if ch else "no git"}
-        else:
-            STAGE_KEYS["pose"] = pose_key()
-            out["pose"] = {"state": "adopted"}
     import code_closure
     W = lambda f: os.path.join(work, f)
-    stages = {"media": ([W("audio.flac"), W("kf_times.csv"), W("kf.done"), W("pts.npy")], code_key("media")),
-              "audio": ([W("feat_audio.npy"), W("feat_mel.npy")], code_key("audio")),
-              "court": ([W("court_track.json")], code_key("court")),
-              "court2": ([W("court_track_refined.json")], code_key("court2", files=[W("court_track.json")]))}
-    for name, (outputs, key) in stages.items():
+    stages = {"media": [W("audio.flac"), W("kf_times.csv"), W("kf.done"), W("pts.npy")],
+              "audio": [W("feat_audio.npy"), W("feat_mel.npy")], "image": [W("feat_dino.npy")],
+              "court": [W("court_track.json")], "court2": [W("court_track_refined.json")], "pose": [W("pose.npy")]}
+    code = {"image": list(IMAGE_CODE), "pose": list(POSE_CODE)}
+    for name, outputs in stages.items():            # in this order: media first (its key is a part of the others)
+        files = [W("court_track.json")] if name == "court2" else ()
+        key = stage_key(name, files)
         if STAGE_KEYS.get(name) == key:
             out[name] = {"state": "current"}
-        elif not all(os.path.exists(o) for o in outputs):
+            continue
+        if not all(os.path.exists(o) for o in outputs):
             out[name] = {"state": "none"}
+            continue
+        # Item 16: the media key must be current, and the outputs must be newer than the media files that they read.
+        why = None
+        if name in UPSTREAM:
+            u, ufiles = UPSTREAM[name]
+            if out.get(u, {}).get("state") not in ("current", "adopted"):
+                why = f"the {u} stage is not current"
+            elif min(os.path.getmtime(o) for o in outputs) < max(os.path.getmtime(W(f)) for f in ufiles if os.path.exists(W(f))):
+                why = f"older than the {u} files ({', '.join(ufiles)})"
+        old = old_key(name, files)
+        if why is not None:
+            out[name] = {"state": "stale", "changes": why}
+        elif name in STAGE_KEYS and STAGE_KEYS[name] == old and old is not None:
+            STAGE_KEYS[name] = key                   # item 16: the key formula grew; the code and the inputs are the same
+            out[name] = {"state": "adopted", "from": f"key {old} (before item 16)"}
         elif name in STAGE_KEYS:
             out[name] = {"state": "stale", "changes": "the recorded key is not the key of now"}
         else:
-            ch = git_changes([os.path.basename(f) for f in code_closure.files(*STAGE_ENTRIES[name])],
+            ch = git_changes(code.get(name) or [os.path.basename(f) for f in code_closure.files(*STAGE_ENTRIES[name])],
                              max(os.path.getmtime(o) for o in outputs))
             if ch is None or ch:
                 out[name] = {"state": "stale", "changes": ch if ch else "no git"}
             else:
                 STAGE_KEYS[name] = key
-                out[name] = {"state": "adopted"}
+                out[name] = {"state": "adopted", "from": "no recorded key (git: no change of the code after the file)"}
     court = [W("court_track.json"), W("court_track_refined.json")]
     flights_old = old_tag + "_" + content_key(court_track, files=court + [os.path.join(HERE, f) for f in FLIGHTS_CODE_OLD])
     flights_new = new_tag + "_" + code_key("flights", court_track, files=court)
@@ -313,8 +356,12 @@ def adopt_keys(work, weights, passes, n, court_track=""):
         else:
             STAGE_KEYS["flights"] = flights_new
             out["flights"] = {"state": "adopted"}
-    STAGE_KEYS["keysAdopted"] = dict(out, time=time.strftime("%Y-%m-%dT%H:%M:%S"))
-    json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+    rec = dict(out, time=time.strftime("%Y-%m-%dT%H:%M:%S"))
+    if "keysAdopted" in STAGE_KEYS:
+        rec["earlier"] = STAGE_KEYS["keysAdopted"]     # item 16: the record of the adoption before this one stays
+    STAGE_KEYS["keysAdopted"] = rec
+    if not dry:
+        json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
     return out
 
 def court_problem(track_file):
@@ -634,7 +681,7 @@ def main():
     # ---- media
     import prep, frame_times
     stage("media", [W("audio.flac"), W("kf_times.csv"), W("kf.done"), W("pts.npy")],
-          lambda: (prep.prep(lab.MATCHES[MID], work), frame_times.load(MID)), a.force, code_key("media"))
+          lambda: (prep.prep(lab.MATCHES[MID], work), frame_times.load(MID)), a.force, stage_key("media"))
     save_times()
     kt = lab.kf_times(work)
     n = lab.video_seconds(work)            # G2: the seconds of the video, not the count of pictures
@@ -644,15 +691,15 @@ def main():
 
     # ---- audio and image features
     import feat_audio, feat_mel
-    stage("audio", [W("feat_audio.npy"), W("feat_mel.npy")], lambda: (feat_audio.run(MID), feat_mel.run(MID)), a.force, code_key("audio"))
+    stage("audio", [W("feat_audio.npy"), W("feat_mel.npy")], lambda: (feat_audio.run(MID), feat_mel.run(MID)), a.force, stage_key("audio"))
 
     def image():
         import timm, feat_dino
-        model = platform_cfg.to_device(timm.create_model("vit_small_patch14_dinov2.lvd142m", pretrained=True, img_size=(feat_dino.H, feat_dino.W))).eval()
+        model = platform_cfg.to_device(timm.create_model(DINO_MODEL, pretrained=True, img_size=(feat_dino.H, feat_dino.W))).eval()
         feat_dino.run(MID, model)
         del model
         platform_cfg.empty_cache()
-    stage("image", [W("feat_dino.npy")], image, a.force)
+    stage("image", [W("feat_dino.npy")], image, a.force, stage_key("image"))
     save_times()
 
     model_name = "base"
@@ -669,7 +716,7 @@ def main():
             if ok and (a.force or not os.path.exists(W("court.json"))):
                 m = min(ok, key=lambda w: abs(w["t0"] - n / 2))
                 json.dump({"H": m["H"], "chamfer_px": max(1.0, m["cost"])}, open(W("court.json"), "w"))
-        stage("court", [W("court_track.json")], court, a.force, code_key("court"))
+        stage("court", [W("court_track.json")], court, a.force, stage_key("court"))
         # The check comes first: with no court model (court_track.json is not written), the steps below fail.
         problem = court_problem(W("court_track.json"))
         if not problem:
@@ -679,7 +726,7 @@ def main():
                 import court_refine
                 court_refine.run(work, log=False)
             try:
-                stage("court2", [W("court_track_refined.json")], refine, a.force, code_key("court2", files=[W("court_track.json")]))
+                stage("court2", [W("court_track_refined.json")], refine, a.force, stage_key("court2", files=[W("court_track.json")]))
             except Exception as e:        # the first model stays
                 traceback.print_exc()
                 warn(f"No refined court model ({type(e).__name__}: {e}). The ground points use the first court model.")

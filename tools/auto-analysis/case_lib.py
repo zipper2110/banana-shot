@@ -19,6 +19,7 @@ Usage:
   python case_lib.py controls --n 2 [--seed 20261126] [--matches m1015,...]   a stratified random sample of points
   python case_lib.py cut <spec.json>        cut the fragments of a spec list (see cut()); writes the manifests
   python case_lib.py list                   the fragments of the library
+  python case_lib.py index                  <lab>/ws/s1/cases/manifest.json for the event label page (S4); cut also writes it
 """
 import argparse, hashlib, json, os, shutil, subprocess, sys, time
 import numpy as np
@@ -151,6 +152,46 @@ def cut(spec):
     return man
 
 
+def index():
+    """<ROOT>/manifest.json: one row for each fragment, in the format of the event label page (S4 item 10, agreed
+    2026-11-26). Times are source times: source time = t0 + clip time (the player's currentTime), so
+    t0 = offset - videoStartInClip. courtH: image px of a 1920-wide frame -> court m (the H of the court files), from
+    the court window at the middle of the span (the refined track if it is there). Returns the path."""
+    rows = []
+    for f in sorted(os.listdir(FRAGS)) if os.path.exists(FRAGS) else []:
+        p = os.path.join(FRAGS, f, "fragment.json")
+        if not os.path.exists(p):
+            continue
+        m = json.load(open(p))
+        mid, off = m["source"]["mid"], m["offset"]
+        span = [round(off + m["labelSpan"][0], 3), round(off + m["labelSpan"][1], 3)]
+        mid_t = (m["labelSpan"][0] + m["labelSpan"][1]) / 2
+        H, cfile = None, None
+        for cf in ("court_track_refined.json", "court_track.json"):
+            fp = os.path.join(FRAGS, f, cf)
+            if os.path.exists(fp):
+                ws = [w for w in json.load(open(fp)) if str(w.get("ok", True)) != "False" and w["t0"] <= mid_t < w["t1"]]
+                if ws:
+                    H, cfile = ws[0]["H"], cf
+                    break
+        if H is None:
+            H, cfile = json.load(open(os.path.join(FRAGS, f, "court.json")))["H"], "court.json"
+        probe = json.loads(run([platform_cfg.tool("ffprobe"), "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                "stream=width,height,avg_frame_rate", "-of", "json", os.path.join(FRAGS, f, m["clip"])]))["streams"][0]
+        num, den = (float(x) for x in probe["avg_frame_rate"].split("/"))
+        rows.append({"id": m["id"], "match": mid, "testOnly": mid in lab.TEST_ONLY,
+                     "clip": f"frags/{f}/{m['clip']}", "t0": round(off - m.get("videoStartInClip", 0.0), 6),
+                     "firstFrame": off, "fps": round(num / den, 3), "size": [probe["width"], probe["height"]],
+                     "courtH": H, "courtImageWidth": 1920, "courtFile": f"frags/{f}/{cfile}",
+                     "points": [{"id": q["id"], "startMs": round(q["sourceStart"] * 1000), "endMs": round(q["sourceEnd"] * 1000),
+                                 "ending": q["outcome"]} for q in m["points"]],
+                     "span": span, "level": m["level"], "kinds": m["kinds"], "control": m["control"],
+                     "faultCheck": mid in ("m1015", "m1020", "m1021", "m1030")})
+    out = os.path.join(ROOT, "manifest.json")
+    json.dump({"version": 1, "fragments": rows}, open(out, "w"), indent=1)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -158,6 +199,7 @@ def main():
     c.add_argument("--n", type=int, default=2); c.add_argument("--seed", type=int, default=20261126); c.add_argument("--matches", default="")
     k = sub.add_parser("cut"); k.add_argument("spec")
     sub.add_parser("list")
+    sub.add_parser("index")
     a = ap.parse_args()
     if a.cmd == "controls":
         print(json.dumps(controls(a.n, a.seed, a.matches.split(",") if a.matches else None), indent=1))
@@ -166,6 +208,9 @@ def main():
             m = cut(s)
             print(f"{m['id']}: {m['source']['mid']} offset {m['offset']:.3f} s, {m['duration']:.1f} s, points {len(m['points'])}, "
                   f"label span {m['labelSpan']}, first frame same {m['cut']['firstFrameSame']} ({m['cut']['seconds']} s)", flush=True)
+        print("index:", index())
+    elif a.cmd == "index":
+        print(index())
     else:
         for f in sorted(os.listdir(FRAGS)) if os.path.exists(FRAGS) else []:
             p = os.path.join(FRAGS, f, "fragment.json")

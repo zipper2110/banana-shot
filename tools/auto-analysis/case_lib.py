@@ -30,6 +30,10 @@ FRAGS = os.path.join(ROOT, "frags")
 FORMAT = "case-fragment/1"
 SINGLES = ["m1015", "m1020", "m1021", "m1030", "m1116"]      # the singles videos with marks in the lab folders
 PAD = {"small": (8.0, 4.0)}                                  # s before the first point, s after the last point
+# The lab marks start at the second serve; the label page asks the user for the first-serve fault before it (5 to
+# 20 s earlier). On these matches the pad before is up to FAULT_PAD s, but it does not go into the previous point.
+FAULT_CHECK = ("m1015", "m1020", "m1021", "m1030")
+FAULT_PAD = 25.0
 
 
 def run(cmd):
@@ -69,15 +73,20 @@ def controls(n, seed=20261126, mids=None, exclude=()):
     return out
 
 
-def keyframe_before(video, t):
-    """The source time of the last keyframe at or before t."""
+def keyframe_before(video, t, not_before=None):
+    """The source time of the last keyframe at or before t. not_before: if that keyframe is earlier than this time
+    (the end of the previous point), the first keyframe at or after it instead."""
     out = run([platform_cfg.tool("ffprobe"), "-v", "error", "-select_streams", "v:0", "-skip_frame", "nokey",
-               "-read_intervals", f"{max(0.0, t - 15):.3f}%{t + 0.5:.3f}", "-show_entries", "frame=pts_time", "-of", "csv=p=0", video])
-    ks = [float(x) for x in out.decode().split() if x.strip() and x.strip() != "N/A"]
-    ks = [k for k in ks if k <= t + 1e-6]
-    if not ks:
+               "-read_intervals", f"{max(0.0, t - 15):.3f}%{t + 3:.3f}", "-show_entries", "frame=pts_time", "-of", "csv=p=0", video])
+    ks = sorted(float(x) for x in out.decode().split() if x.strip() and x.strip() != "N/A")
+    before = [k for k in ks if k <= t + 1e-6]
+    if not before:
         raise RuntimeError(f"no keyframe in the 15 s before {t:.2f} s of {video}")
-    return max(ks)
+    k = max(before)
+    if not_before is not None and k < not_before:
+        after = [x for x in ks if x >= not_before]
+        k = min(after) if after else k
+    return k
 
 
 def frame_md5(video, t=None):
@@ -110,8 +119,13 @@ def cut(spec):
     mid, level = spec["mid"], spec.get("level", "small")
     video = lab.MATCHES[mid]["video"]
     before, after = spec.get("pad") or PAD[level]
+    prev_end = None
+    if mid in FAULT_CHECK and not spec.get("pad"):
+        ends = [p["end"] for p in points(mid) if p["end"] <= spec["start"] + 1e-6]
+        prev_end = max(ends) if ends else 0.0
+        before = max(0.0, min(FAULT_PAD, spec["start"] - prev_end))
     t_in = max(0.0, spec["start"] - before)
-    kf = keyframe_before(video, t_in)
+    kf = keyframe_before(video, t_in, not_before=prev_end)
     t_out = spec["end"] + after
     d = os.path.join(FRAGS, spec["id"])
     if os.path.exists(os.path.join(d, "fragment.json")):
@@ -143,6 +157,8 @@ def cut(spec):
            "source": {"mid": mid, "video": video, "videoId": video_id(video)},
            "clip": "clip.mp4", "offset": round(kf, 6), "videoStartInClip": round(vstart, 6), "duration": round(vdur, 3),
            "labelSpan": [round(spec["start"] - kf, 3), round(spec["end"] - kf, 3)],
+           "pad": {"before": round(spec["start"] - kf, 3), "after": after,
+                   "rule": f"fault check: up to {FAULT_PAD:.0f} s, not into the previous point (ends {prev_end})" if prev_end is not None else "level default"},
            "points": pts, "court": ["court.json"] + court, "courtFrom": "full run (lab folder)",
            "cases": spec.get("cases", []), "stratum": spec.get("stratum"),
            "cut": {"tool": "ffmpeg -c copy from a keyframe", "firstFrameSame": same, "seconds": round(time.time() - t0, 1),

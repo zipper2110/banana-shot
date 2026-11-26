@@ -1,5 +1,5 @@
 """Tests of CHAIN_SERVE_START (E164, shot_chain.serve_start and chain.before_fault). Usage: python -m unittest test_serve_start"""
-import unittest
+import os, unittest
 import chain
 import shot_chain as sc
 
@@ -19,6 +19,13 @@ def shot(t, near, end=None, dur=0.8, how="first"):
 
 def serve(t, near, kind="toss+serve"):
     return (t, near, kind, None)
+
+
+class Default(unittest.TestCase):
+    def test_the_default_is_ab(self):
+        # manager decision after E164; the app removes each CHAIN_* variable, so it uses this default
+        if "CHAIN_SERVE_START" not in os.environ:
+            self.assertEqual(sc.SERVE_START, "ab")
 
 
 class ServeStartA(unittest.TestCase):

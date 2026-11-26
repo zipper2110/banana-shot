@@ -284,6 +284,20 @@ label by eye.
    event at a point start 59.5 to 62.9 %, rallies and events the same, winners inside the noise; Igor apart 123 to
    128 of 197 starts. Next: (b) the 43 depth errors of the fit (tell S5 before an edit of `ball_3d.py`).
 
+10. (2026-11-26, the user) **Label page v2 for the case library.** The user labels all significant events of the
+    library fragments, small level first, then medium. This replaces the 180-rally hit work list (the 11 Igor
+    rallies stay). Events for each fragment, in source time:
+    - serve: the racket contact of each serve (server near or far), and a first-serve fault flag;
+    - shot: the racket contact of each other shot (near or far);
+    - bounce: time and pixel of the ball at the ground; the court place comes from the court of the fragment (the
+      ball is at height 0 there); in or out; **seen** or **inferred** (the bounce is hidden, but the flight before and
+      after shows where and when it is; the user puts the mouse there). Inferred bounces are later training data;
+    - net: a net touch that stops the ball, or a net cord that goes over.
+    Tools for the user: frame step, slow play, sound, a zoom near the far baseline, undo, a list of the marks.
+    The page reads the fragment manifest of S1 (clip, source offset, court, the marked points) and writes one
+    label file for each fragment, with a version and the labeler. Measure the user time on the first 5 fragments
+    and give an estimate before the rest. Before item 9 (b); S1 and S4 agree on the manifest format first.
+
 Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
 the journal, and the hitter measure follows the labels.
 
@@ -373,3 +387,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Case library (the user): short fragments of the source videos, grouped by error kind, with labels and the history of their detection results; the regular check of heavy-stage changes. Design in S1 item 8. |
 | 2026-11-26 | Four control levels of the case library (the user): small (one point), medium (2 to 3 games across an end change, 7 to 10 min), large (20 to 30 min), match (full). By content, not by a fixed length. Levels are for heavy-stage changes; a chain change uses the cached full matches. |
 | 2026-11-26 | Decoder (the user): a merge of the event evidence and the score evidence into one stronger confidence is the wish, but there is no clear way now. The decoder is that merge in principle, and the tests failed: decoder on all rallies +1.3 / -1.4 points (old / new rows, E66); decoder only where the evidence is weak +1.5 / -0.8; it spreads one wrong point to its game. Thus the decoder winners go off now (S3 item 12). Later item: score-consistency checks from the evidence (hints, and later maybe a confidence), when the events are reliable. |
+| 2026-11-26 | Labels (the user): label all significant events (serve contact, each shot, each bounce with in/out and seen or inferred, each net touch) on the case library fragments, small level first, in a new label page (S4 item 10). The controls of the small level are a random stratified sample of points (no bias to easy or hard cases), next to the error cases. |

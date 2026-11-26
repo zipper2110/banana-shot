@@ -139,9 +139,9 @@ def main_events():
 
 
 # G7 (a), E155: the bounce fact is ball_bounce.events. With SERVE_LAND_EVENT=1 landing takes the court point of the
-# bounce event of the flight (bounceEv, an index into the "events" list of the flights file) when there is one. Off by
-# default until the measure (lab only: the app chain does not call landing).
-SERVE_LAND_EVENT = os.environ.get("SERVE_LAND_EVENT", "0") == "1"
+# bounce event of the flight (bounceEv, an index into the "events" list of the flights file) when there is one. On by
+# default after E155 (manager); SERVE_LAND_EVENT=0 gives the old way (lab only: the app chain does not call landing).
+SERVE_LAND_EVENT = os.environ.get("SERVE_LAND_EVENT", "1") == "1"
 
 
 def landing(f, kinks, events=None):

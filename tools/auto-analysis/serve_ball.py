@@ -138,9 +138,20 @@ def main_events():
     print(f"ALL: serve event at {100 * tot[1] / tot[0]:.0f}%, server end right {100 * tot[2] / tot[1]:.1f}%")
 
 
-def landing(f, kinks):
-    """Bounce of a serve flight: an anchored bounce, else a kink near the predicted landing time
-    (homography position), else the ballistic landing. Returns (x, y, source)."""
+# G7 (a), E155: the bounce fact is ball_bounce.events. With SERVE_LAND_EVENT=1 landing takes the court point of the
+# bounce event of the flight (bounceEv, an index into the "events" list of the flights file) when there is one. Off by
+# default until the measure (lab only: the app chain does not call landing).
+SERVE_LAND_EVENT = os.environ.get("SERVE_LAND_EVENT", "0") == "1"
+
+
+def landing(f, kinks, events=None):
+    """Bounce of a serve flight: with SERVE_LAND_EVENT and events, the bounce event of the flight; else an anchored
+    bounce, else a kink near the predicted landing time (homography position), else the ballistic landing.
+    Returns (x, y, source)."""
+    if SERVE_LAND_EVENT and events is not None and f.get("bounceEv") is not None:
+        e = events[f["bounceEv"]]
+        if e.get("kind") == "bounce" and e.get("court") is not None:
+            return e["court"][0], e["court"][1], "event"
     if f.get("bounce"):
         return f["bounce"][0], f["bounce"][1], "anchor"
     lt = f.get("landT")
@@ -167,7 +178,7 @@ def box_margin(x, y, server_near, side):
 NET_Z, OUT_M = 0.7, -0.3
 
 
-def serve_result(f, kinks, server_near, side, kind=""):
+def serve_result(f, kinks, server_near, side, kind="", events=None):
     """Result of a serve flight: "net", "out", "in" or "unknown".
     Order: a toss alone -> unknown. A bounce anchor (seen bounce) decides in or out. Else net:
     the fitted height at the net plane is below NET_Z m, or the flight stops near the net
@@ -184,13 +195,16 @@ def serve_result(f, kinks, server_near, side, kind=""):
         xs = (-1.0 if server_near else 1.0) * (1.0 if side == "deuce" else -1.0)
         xx = x * xs
         return min(xx, SW - xx) > -0.3 and min(yy, SL - yy) > -tol_y
+    x, y, src = landing(f, kinks, events)
+    if src == "event":                              # G7 (a): the bounce event decides, as a seen bounce
+        return "in" if inside(x, y) else "out"
     if f.get("bounce"):
         return "in" if inside(*f["bounce"]) else "out"
     if not np.isnan(f["netZ"]) and f["netZ"] < NET_Z:
         return "net"
     if abs(f["p1"][1]) < 2.6 and f["p1"][2] < 1.2 and not np.isnan(f["netZ"]) and f["netZ"] < 1.0:
         return "net"
-    x, y, src = landing(f, kinks)
+    x, y, src = landing(f, kinks, events)
     if np.isnan(x):
         return "unknown"
     if inside(x, y):

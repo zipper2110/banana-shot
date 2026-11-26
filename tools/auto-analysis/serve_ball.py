@@ -52,6 +52,11 @@ RETURN_S, RETURN_V = 3.0, 8.0     # s (time for two flights: one shot in a gap o
 # the ball before was a fit at 240 to 1740 km/h, with a start up to 90 m behind the baseline (mostly the toss or the serve
 # start with a wrong depth). At the other 11 the wrong fit is slower or the ball is a real one.
 RETURN_MAX = 240.0
+# E152 (a): a fit that starts more than RETURN_Y_MAX m from the net is not a real place (mostly the toss of the far
+# server with a wrong depth: start y -30 m, 34 to 60 m/s along the court; m1020 p59, p141). With RETURN_REAL_START=1
+# such a flight is not a return. Off by default until the measure.
+RETURN_REAL_START = os.environ.get("RETURN_REAL_START", "0") == "1"
+RETURN_Y_MAX = 16.0
 
 
 def is_return(f, flights):
@@ -61,7 +66,8 @@ def is_return(f, flights):
     Before a serve the ball does not come from the other side (the toss has no speed along the court)."""
     for g in flights:
         if g is not f and f["t0"] - RETURN_S <= g["t1"] <= f["t0"] + 0.05 and g["v0"][1] * f["v0"][1] < 0                 and g["p0"][1] * f["p0"][1] < 0 and abs(g["v0"][1]) >= RETURN_V and g["n"] >= 6 and g["t1"] - g["t0"] >= 0.15 - 1e-6 and g["rms"] < 5 \
-                and 3.6 * float(np.linalg.norm(g["v0"])) < RETURN_MAX:
+                and 3.6 * float(np.linalg.norm(g["v0"])) < RETURN_MAX \
+                and not (RETURN_REAL_START and abs(g["p0"][1]) > RETURN_Y_MAX):
             return True
     return False
 

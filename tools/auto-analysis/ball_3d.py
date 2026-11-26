@@ -168,17 +168,19 @@ SERVE_PRIOR_KEEP = os.environ.get("SERVE_PRIOR_KEEP", "1") == "1"
 SERVE_PRIOR_WIDE = os.environ.get("SERVE_PRIOR_WIDE", "1") == "1"
 
 
-def serve_prior(P, seg, fl):
-    """E10d. A serve that flies along the view direction has a weak depth: the free fit can put the
-    start far behind the court. If the free fit is not plausible and the view ray of the first ball
-    position passes the serve contact zone of the far end (plane y = SERVE_Y, height 1.8 to 3.3 m, |x| < 5 m),
-    fit again with the start anchored there. Keeps the new fit only if it is a plausible serve.
-    SERVE_PRIOR_WIDE (E150): also when the free fit is plausible but flies to the near end from another depth."""
-    sp = 3.6 * float(np.linalg.norm(fl["v0"]))
-    p0 = fl["p0"]
-    if abs(p0[1]) <= 16 and sp <= 240 and -0.5 <= p0[2] <= 3.6 and fl["rms"] <= 5 and not np.isnan(sp) \
-            and not (SERVE_PRIOR_WIDE and fl["v0"][1] < 0 and abs(p0[1] - SERVE_Y) > 1.5):
-        return
+# E152 (b): a flight can hold the falling toss and the serve (no kink between them: the toss falls slowly in the image).
+# Then the anchored fit of the whole flight has an image residual over 5 px (m1020 p5 5.4 px, m1030 p127 5.8 px), but
+# the part after the contact fits (2.1 and 0.9 px). With SERVE_PRIOR_SPLIT=1, when the anchored fit of the whole flight
+# fails, serve_prior tries the part after each weak kink (threshold SPLIT_KINK) above the net row, from the last kink
+# to the first, and keeps the first part that is a plausible serve. The flight then starts at that kink (f0, n).
+# SPLIT_KINK 1.0: at threshold 2 (more_kinks) the contact of m1030 p127 has no kink; at 1.0 the kink is at the serve
+# start (m1030 p127) or 0.1 s before the contact (m1020 p5). Off by default until the measure.
+SERVE_PRIOR_SPLIT = os.environ.get("SERVE_PRIOR_SPLIT", "0") == "1"
+SPLIT_KINK = 1.0
+
+
+def _anchored_serve(P, seg):
+    """The E10d anchored fit of seg with the start at the far serve contact zone, or None if it is not a plausible serve."""
     M, C = P[:, :3], -np.linalg.inv(P[:, :3]) @ P[:, 3]
     d = np.linalg.inv(M) @ np.array([seg[0, 1], seg[0, 2], 1.0])
     ts = (seg[:, 0] - seg[0, 0]) / 60.0
@@ -194,9 +196,35 @@ def serve_prior(P, seg, fl):
             continue
         s2 = 3.6 * float(np.linalg.norm(v0))
         if rms < 5 and 45 < s2 < 240 and v0[1] * yp < 0 and abs(q0[1] - yp) < 1.5 and (best is None or rms < best[2]):
-            best = (q0, v0, rms, (0.0, float(X[0]), yp, float(X[2])))
+            best = (q0, v0, rms, (0.0, float(X[0]), yp, float(X[2])), ts)
+    return best
+
+
+def serve_prior(P, seg, fl, sc=None):
+    """E10d. A serve that flies along the view direction has a weak depth: the free fit can put the
+    start far behind the court. If the free fit is not plausible and the view ray of the first ball
+    position passes the serve contact zone of the far end (plane y = SERVE_Y, height 1.8 to 3.3 m, |x| < 5 m),
+    fit again with the start anchored there. Keeps the new fit only if it is a plausible serve.
+    SERVE_PRIOR_WIDE (E150): also when the free fit is plausible but flies to the near end from another depth.
+    SERVE_PRIOR_SPLIT (E152, needs sc = Scale of the court): also the part of the flight after a weak kink."""
+    sp = 3.6 * float(np.linalg.norm(fl["v0"]))
+    p0 = fl["p0"]
+    if abs(p0[1]) <= 16 and sp <= 240 and -0.5 <= p0[2] <= 3.6 and fl["rms"] <= 5 and not np.isnan(sp)             and not (SERVE_PRIOR_WIDE and fl["v0"][1] < 0 and abs(p0[1] - SERVE_Y) > 1.5):
+        return
+    best = _anchored_serve(P, seg)
+    if best is None and SERVE_PRIOR_SPLIT and sc is not None and len(seg) >= 16:
+        net_row = float(project(P, np.array([[0.0, 0.0, 0.914]]))[0][1])
+        k2 = kinks(seg, sc, thr=SPLIT_KINK)
+        for kf in sorted((float(k[0]) for k in k2 if k[2] < net_row), reverse=True):
+            sub = seg[seg[:, 0] >= kf]
+            if len(sub) < 8 or kf <= seg[0, 0]:
+                continue
+            best = _anchored_serve(P, sub)
+            if best is not None:
+                fl.update(f0=float(sub[0, 0]), n=len(sub), split=1)
+                break
     if best:
-        fl.update(p0=best[0], v0=best[1], rms=best[2], p1=simulate(best[0], best[1], [ts[-1]])[0], prior=1, prior_at=best[3])
+        fl.update(p0=best[0], v0=best[1], rms=best[2], p1=simulate(best[0], best[1], [best[4][-1]])[0], prior=1, prior_at=best[3])
 
 
 def flights(path, kk, P, Hm=None, min_pts=8, free=None):
@@ -218,7 +246,7 @@ def flights(path, kk, P, Hm=None, min_pts=8, free=None):
         out.append({"f0": float(seg[0, 0]), "f1": float(seg[-1, 0]), "n": len(seg), "p0": p0, "v0": v0, "p1": end, "rms": rms,
                     "cut0": a, "cut1": b, "anchored": 0})
     for (a, b, seg), fl in zip(segs, out):               # E10d: serve flights with a degenerate free fit
-        serve_prior(P, seg, fl)
+        serve_prior(P, seg, fl, Scale(Hm) if Hm is not None else None)
     if free is not None:
         import copy
         free.extend(copy.deepcopy(out))
@@ -235,6 +263,9 @@ def flights(path, kk, P, Hm=None, min_pts=8, free=None):
                 anchors.append(((b - seg[0, 0]) / 60.0, g[0], g[1], 0.0))
         if not anchors:
             continue
+        if fl.get("split"):                          # E152 (b): the flight starts at its kink
+            seg = seg[seg[:, 0] >= fl["f0"]]
+            anchors = [((b - seg[0, 0]) / 60.0,) + tuple(x[1:]) for x in anchors]
         if SERVE_PRIOR_KEEP and fl.get("prior_at"):
             anchors.insert(0, fl["prior_at"])
         ts = (seg[:, 0] - seg[0, 0]) / 60.0

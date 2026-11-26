@@ -458,6 +458,22 @@ def detect_light(code_dir, mid, d):
     return rc, heavy, log
 
 
+# G13 (S2 f294b4a4): the faults that the chain survived (the old rule decided). Lab: pipeline.run puts {kind: count}
+# in the metrics ("chainFaults"). Held-out: detect.py writes chain.fault_texts() to the warnings of result.json.
+FAULT_TEXT = re.compile(r"^The (.+?) failed on (\d+) rall")
+
+
+def heldout_faults(warnings):
+    """{kind: count} of the chain faults in the warnings of result.json ({} = no fault)."""
+    return {m.group(1): int(m.group(2)) for w in warnings for m in [FAULT_TEXT.match(str(w))] if m}
+
+
+def fault_rows(per):
+    """The bold report rows of the matches with chain faults (per: perMatch of a set)."""
+    return [f"| **Chain faults (the old rule decided)** | **{mid}: " + ", ".join(f"{k} {c}" for k, c in m["chainFaults"].items())
+            + "** |" for mid, m in per.items() if m.get("chainFaults")]
+
+
 def run_heldout(code_dir):
     """detect.py from this code on each marked test-only video with a full run in its folder: the rally and winner
     stages run again, the heavy stages come from the cache."""
@@ -474,8 +490,11 @@ def run_heldout(code_dir):
             skipped[mid] = (f"detect.py wanted the heavy stage '{heavy}': the cache of this code is not in the folder "
                             f"(stopped at once; see {log})" if heavy else f"detect.py rc={rc} (see {log})")
             continue
-        rows = json.load(open(os.path.join(d, "result.json")))["rallies"]
-        res[mid] = (score.score(mid, rows), rows)
+        result = json.load(open(os.path.join(d, "result.json")))
+        rows = result["rallies"]
+        m = score.score(mid, rows)
+        m["chainFaults"] = heldout_faults(result.get("warnings") or [])
+        res[mid] = (m, rows)
     return res, skipped
 
 
@@ -649,6 +668,7 @@ def report(man, sets, skipped, same):
                if "precisionShortFaults" in t else
                f"| Rallies: recall / precision (NONE points out) | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, "
                f"{t['marked']} marked; {t.get('noneMarked', 0)} NONE points, {t.get('noneDetected', 0)} detected rallies on them) |")]
+        L += fault_rows(s.get("perMatch") or {})
         if t.get("faultNotChecked") or t.get("faultClipRows"):
             L += [f"| Rows left out as first-serve faults | {t.get('faultNotChecked', 0)} not checked (lab marks start at the second "
                   f"serve; {t.get('faultNotChecked3Shots', 0)} of them with 3 chain shots or more), {t.get('faultClipRows', 0)} on a marked "

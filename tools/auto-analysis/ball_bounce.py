@@ -34,6 +34,12 @@ HIT_N, HIT_V = 20, 8.0          # samples and m/s along the court of the flight 
 LOCAL_S = 0.35                  # s: the bounce test uses the samples of this time before and after the vertex (the ball model has no spin: a long path does not fit)
 X_MAX, Y_MAX = 12.0, 22.0         # m: a bounce event is inside this area around the court center (E32: 16 x 24 m gave false "out" decisions from balls of the next court)
 NEIGHBOR_GAP = True
+# E86: a sample far from the fitted bounce path is not this ball (another object or another track: 1000 px away at
+# m1030 5196.3 s). One such sample made the plain rms of the bounce test 163 px for a fit of 2 px on the other 37
+# samples. The bounce test fits again without the samples that are more than OUT_PX from the path, if there are not
+# more than OUT_N of them on each side. More of them: the samples do not agree with a bounce, and the test stays.
+OUT_PX, OUT_N = 30.0, 1
+BOUNCE_OUTLIER = __import__("os").environ.get("BOUNCE_OUTLIER", "1") == "1"
 END_BEFORE = 4.0      # frames of 1/60 s. E32 (before: 1): a track often ends at the bounce, and the time of a fit landing has an error of some frames
 WIDE_GAP_S, WIDE_N = 0.25, 8      # E32: a vertex in a gap longer than WIDE_GAP_S needs WIDE_N samples on each side
 # E32: the path of a ball with side spin curves sideways, and a lens bends a straight path near the picture edge.
@@ -147,6 +153,23 @@ def v_after(v_in, k, e, phi):
 
 
 def fit_bounce(P, ta, xa, tb, xb, Xa, side=0.0):
+    """fit_bounce_once, then (E86, BOUNCE_OUTLIER) once more without the samples far from the fitted path, if each side
+    has OUT_N or fewer of them and keeps 2 samples (6 in all). Same result format."""
+    out = fit_bounce_once(P, ta, xa, tb, xb, Xa, side)
+    if out is None or not BOUNCE_OUTLIER:
+        return out
+    ta, xa, tb, xb = (np.asarray(x, float) for x in (ta, xa, tb, xb))
+    pa = b3.project(P, sim(Xa, out[0], ta)[0])
+    pb = b3.project(P, sim(Xa, out[1], tb)[0])
+    ka, kb = np.hypot(*(pa - xa).T) <= OUT_PX, np.hypot(*(pb - xb).T) <= OUT_PX
+    na, nb = int((~ka).sum()), int((~kb).sum())
+    if na + nb == 0 or na > OUT_N or nb > OUT_N or ka.sum() < 2 or kb.sum() < 2 or ka.sum() + kb.sum() < 6:
+        return out
+    again = fit_bounce_once(P, ta[ka], xa[ka], tb[kb], xb[kb], Xa, side)
+    return again if again is not None and again[5] < out[5] else out
+
+
+def fit_bounce_once(P, ta, xa, tb, xb, Xa, side=0.0):
     """Is there a physical bounce at the point Xa that agrees with the samples? One fit of the path before
     (ta < 0, xa) and the path after (tb > 0, xb) with the ball on the ground at t = 0.
     Unknowns: the velocity before (3), the horizontal speed ratio k, the restitution e, the turn phi. The

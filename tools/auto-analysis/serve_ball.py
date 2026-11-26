@@ -24,11 +24,26 @@ TOSS_Z = 1.0
 SW, SL = 4.115, 6.40
 
 
+# E153 (c): a far serve moves down the image over its flight (the contact is above the far baseline row, the bounce is
+# below it). A rising far toss can have an anchored fit that passes all checks (m1021 4536.79: rows 347 to 290, a
+# 142 km/h "serve" 1.0 s before the contact). With SERVE_DOWN_IMAGE=1 a far flight (start y > 0) is not a serve or a
+# fast flight if its dRow (row of the last blob - row of the first, ball_3d) is under DOWN_MIN_PX. The net movement, not
+# each step: a kick serve can rise for some frames. A flight with no dRow (older files) is not checked. Off by default.
+SERVE_DOWN_IMAGE = os.environ.get("SERVE_DOWN_IMAGE", "0") == "1"
+DOWN_MIN_PX = 10.0
+
+
+def far_up(f):
+    """True if SERVE_DOWN_IMAGE is on and f is a far flight that does not move down the image (E153)."""
+    return SERVE_DOWN_IMAGE and f["p0"][1] > 0 and f.get("dRow") is not None and f["dRow"] < DOWN_MIN_PX
+
+
 def is_serve(f):
     p0, v0 = f["p0"], f["v0"]
     sp = 3.6 * float(np.linalg.norm(v0))
     return f["n"] >= 8 and f["rms"] < 5 and abs(p0[1]) > Y_MIN and abs(p0[1]) < 16 and p0[2] > Z_MIN and p0[2] < 3.6 \
-        and V_MIN < sp < 240 and v0[1] * p0[1] < 0 and abs(p0[0]) < 6
+        and V_MIN < sp < 240 and v0[1] * p0[1] < 0 and abs(p0[0]) < 6 \
+        and not far_up(f)
 
 
 def is_toss(f):
@@ -42,7 +57,7 @@ def is_fast_out(f):
     """A fast flight that starts on one half (5 m or more from the net) and flies to the other half."""
     p0, v0 = f["p0"], f["v0"]
     sp = 3.6 * float(np.linalg.norm(v0))
-    return f["n"] >= 8 and f["rms"] < 5 and 5.0 < abs(p0[1]) < 16 and 1.2 < p0[2] < 3.6 and 45 < sp < 240         and v0[1] * p0[1] < 0 and abs(p0[0]) < 6
+    return f["n"] >= 8 and f["rms"] < 5 and 5.0 < abs(p0[1]) < 16 and 1.2 < p0[2] < 3.6 and 45 < sp < 240         and v0[1] * p0[1] < 0 and abs(p0[0]) < 6 and not far_up(f)
 
 
 RALLY_FILTER = os.environ.get("SERVE_FILTER", "1") == "1"      # E28e: a flight that returns a ball is not a serve event
@@ -52,6 +67,11 @@ RETURN_S, RETURN_V = 3.0, 8.0     # s (time for two flights: one shot in a gap o
 # the ball before was a fit at 240 to 1740 km/h, with a start up to 90 m behind the baseline (mostly the toss or the serve
 # start with a wrong depth). At the other 11 the wrong fit is slower or the ball is a real one.
 RETURN_MAX = 240.0
+# E152 (a): a fit that starts more than RETURN_Y_MAX m from the net is not a real place (mostly the toss of the far
+# server with a wrong depth: start y -30 m, 34 to 60 m/s along the court; m1020 p59, p141). With RETURN_REAL_START=1
+# such a flight is not a return. Off by default until the measure.
+RETURN_REAL_START = os.environ.get("RETURN_REAL_START", "0") == "1"
+RETURN_Y_MAX = 16.0
 
 
 def is_return(f, flights):
@@ -61,7 +81,8 @@ def is_return(f, flights):
     Before a serve the ball does not come from the other side (the toss has no speed along the court)."""
     for g in flights:
         if g is not f and f["t0"] - RETURN_S <= g["t1"] <= f["t0"] + 0.05 and g["v0"][1] * f["v0"][1] < 0                 and g["p0"][1] * f["p0"][1] < 0 and abs(g["v0"][1]) >= RETURN_V and g["n"] >= 6 and g["t1"] - g["t0"] >= 0.15 - 1e-6 and g["rms"] < 5 \
-                and 3.6 * float(np.linalg.norm(g["v0"])) < RETURN_MAX:
+                and 3.6 * float(np.linalg.norm(g["v0"])) < RETURN_MAX \
+                and not (RETURN_REAL_START and abs(g["p0"][1]) > RETURN_Y_MAX):
             return True
     return False
 

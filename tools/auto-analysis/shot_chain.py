@@ -96,6 +96,16 @@ AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB 
 SERVE_START = os.environ.get("CHAIN_SERVE_START", "ab")
 SS_GAP = 2.0           # s: (a) the next shot of the same end is this much or more after the first shot (E164: 8 lab rows)
 SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long after the first shot (E164: 0.6 to 1.2 s)
+# E166/E167 (S3; manager approval in gap-program 288cba3b): two causes of false dead ends. Default "0" (the old way);
+# "a", "c", "ac" (only the manager changes the default).
+# "a" (time order, see time_order): an event before the contact of a shot is not an event of that shot. E167: 15 of the 27
+#     "own" ends of a first shot are the bounce event at the start of the first flight of the shot (lab: such an event is
+#     0.02 to 0.06 s before the flight start, 90 %), on the side of the hitter: the ball came down there before the contact.
+# "c" (see no_net_alone): a net event with no flight is no shot when the next shot is of the same end less than TO_NET_GAP s
+#     after the event (E166 class C: 7 false ends; a ball needs more time to go over the net and come back).
+TIME_ORDER = os.environ.get("CHAIN_TIME_ORDER", "0")
+TO_EPS = 0.05          # s: a bounce up to this after the start of the first flight is at the start (lab: 99 % of these events are earlier)
+TO_NET_GAP = 1.2       # s
 
 
 def kmh(f):
@@ -240,6 +250,8 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None, serves
         if PRE_SERVE and toss == [False, True] and (shots[0]["fl"][0]["p0"][1] * (-1.0 if shots[0]["near"] else 1.0) < TOSS_Y):
             shots.pop(0)
             shots[0]["how"] = "first"
+    if "a" in TIME_ORDER:
+        time_order(shots)
     if LATE_BOUNCE and events:
         late_bounces(shots, events)
     if BACK_TIME:
@@ -271,9 +283,54 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None, serves
     shots = sorted(seen + alone, key=lambda sh: sh["t"])
     if "b" in NET_DEAD:
         shots = net_roll(shots)
+    if "c" in TIME_ORDER:
+        shots = no_net_alone(shots)
     if serves is not None and SERVE_START != "0":
         shots = serve_start(shots, nets, serves)
+    if "a" in TIME_ORDER:
+        time_order(shots)
     return dead_stop(shots) if DEAD_STOP else shots
+
+
+def time_order(shots):
+    """E166 (a): an event before the contact of a shot is not an event of that shot. Removes from sh["bounces"]:
+    - a bounce on the side of the hitter not later than TO_EPS after the start of the first flight of the shot (the ball
+      came down there before the hit: the bounce of the ball before the serve or of the shot before, or the contact read as
+      a bounce). A bounce on the other side at the start of the first flight stays: the contact was before it, and the
+      track starts after the bounce.
+    - a bounce before the serve contact of a first shot that serve_start (b) moved to the serve event ("tToss").
+    The removed events go to sh["early"]. Called twice in build (before late_bounces, and after serve_start); a second
+    call changes only the shots that serve_start moved."""
+    for sh in shots:
+        if not sh["fl"]:
+            continue
+        s = 1.0 if sh["near"] else -1.0
+        t0 = sh["fl"][0]["t0"]
+
+        def early(e):
+            if "tToss" in sh and e["t"] < sh["t"]:
+                return True
+            return e["court"][1] * s < 0.0 and e["t"] <= t0 + TO_EPS
+        rm = [e for e in sh["bounces"] if early(e)]
+        if rm:
+            sh["bounces"] = [e for e in sh["bounces"] if all(e is not x for x in rm)]
+            sh.setdefault("early", []).extend(rm)
+
+
+def no_net_alone(shots):
+    """E166 (c): removes a net shot with no flight (how "net": the net event alone) when the next shot is of the same end and
+    starts less than TO_NET_GAP s after the net event."""
+    out = []
+    for i, sh in enumerate(shots):
+        nx = shots[i + 1] if i + 1 < len(shots) else None
+        if sh["how"] == "net" and not sh["fl"] and nx is not None and nx["near"] == sh["near"]:
+            t_nx = nx["fl"][0]["t0"] if nx["fl"] else nx["t"]
+            if t_nx - sh["net"]["t"] < TO_NET_GAP:
+                if i == 0:
+                    nx["how"] = "first"
+                continue
+        out.append(sh)
+    return out
 
 
 def serve_start(shots, nets, serves, mode=None):

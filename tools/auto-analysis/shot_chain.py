@@ -229,15 +229,22 @@ def dead(sh):
 
 
 def dead_stop(shots):
-    """Item 6 group D: the shots up to the first dead shot that has a gap of DEAD_GAP or more to the next shot. The first shot
-    does not stop the list: a second serve follows a fault. The gap keeps a real return after a dead ball that was measured
-    wrong (lab, 4 matches: these returns start 0.3 s after the last sample of the shot, median)."""
-    for i in range(1, len(shots) - 1):
-        sh = shots[i]
-        t1 = sh["fl"][-1]["t1"] if sh["fl"] else sh["t"]
-        nx = shots[i + 1]
-        if dead(sh) and (nx["fl"][0]["t0"] if nx["fl"] else nx["t"]) - t1 >= DEAD_GAP:
+    """Item 6 group D: the shots up to the first dead shot that has a gap of DEAD_GAP or more to the next shot. The stop needs
+    a returned shot before the dead shot (a shot "in" and a shot of the other player less than DEAD_GAP after it): before the
+    return, a dead ball can be a fault (a second serve follows) or ball handling before the serve. The gap keeps a real return
+    after a dead ball that was measured wrong (lab, 4 matches: these returns start 0.3 s after the last sample, median)."""
+    def t0(sh):
+        return sh["fl"][0]["t0"] if sh["fl"] else sh["t"]
+
+    def t1(sh):
+        return sh["fl"][-1]["t1"] if sh["fl"] else sh["t"]
+    returned = False
+    for i in range(len(shots) - 1):
+        sh, nx = shots[i], shots[i + 1]
+        gap = t0(nx) - t1(sh)
+        if returned and gap >= DEAD_GAP and dead(sh):
             return shots[:i + 1]
+        returned = returned or (shot_end(sh)[0] == "in" and nx["near"] != sh["near"] and gap < DEAD_GAP)
     return shots
 
 

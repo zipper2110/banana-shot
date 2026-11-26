@@ -347,6 +347,19 @@ Status 2026-11-26 (manager):
    around each candidate time). Use the label windows only, under the GPU lock if it decodes video. Measure net
    touches found and false. Start now (the doubles runs are stopped, 2026-11-26).
 
+7. (2026-11-26, approved by the user) **Plan for the ball detector.** The ball tracking is the base of all
+   detection, so it must be as solid as possible. First a written plan, no training yet:
+   `docs/auto-analysis/ball-detector-plan.md`. It holds: the target errors with counts (the far serve before its
+   bounce: 61 of 68 not in the blobs, E125, E126; the track through a net touch and the short tracks in the net band,
+   E110; shots first seen after the net, E95, E96; the 4 T shots); the cause of each one (small far ball, motion
+   blur, resolution of the input, the dim pass, occlusion); the options (for example new training data at the far
+   end, a higher input resolution or tiles at the far end, a model with more frames, a change of the link step);
+   the training data and the labels it needs (say clearly if the user must mark ball positions, and how many); the
+   GPU time on the 6 GB card; the measure (S1 `bench.py heavy` ball recall on the labeled frames, then the small
+   level of the case library, then the medium level; full videos only at a milestone); and the risks (the false
+   blobs, the bounces and nets that depend on the current track, see E110). Input from S4 (serve diagnosis) and S1
+   (tools). The manager and the user approve the plan before any training.
+
 ## 4. Rules for all streams
 
 - **Branches.** Each new stream works in its own git worktree, on a branch from `auto-detect`. The manager
@@ -402,3 +415,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Igor hit labels, rally 3 (the user): the labels stay as marked. The fast far flight at 5512.21 s, 0.25 s before the first mark (a near serve at 5512.46 s), is a detection error (a far serve cannot reach the near player in 0.25 s); it belongs to the wrong-depth fit group of S4 item 9. |
 | 2026-11-26 | NONE marks (the user): a NONE point has different causes (a point played again because its outcome was not clear, a no-point kept only for the video, a point played by mistake). The benchmark ignores them in both directions: a NONE point is not a missed rally, and a detected rally on a NONE point is not a false rally. The app detects the whole match with best effort; nothing changes there. The case library does not use NONE points. |
 | 2026-11-26 | Misha (m1113, the user): the user's project "Dima-Misha" (230 clips, 173 with a winner) is registered as the second test-only video. No stream looks at its results before the milestone batch; its first run there gives one clean held-out number. Igor stays a test video, but it is less clean: about 10 fixes were found on its errors. |
+| 2026-11-26 | Ball detector (the user): approved to open. The ball tracking is the base of the detection and must be as solid as possible. S5 writes the plan first (S5 item 7); training starts only after the user approves the plan. |

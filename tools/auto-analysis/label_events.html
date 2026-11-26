@@ -17,6 +17,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
 <meta charset="utf-8">
 <title>BananaShot event labels</title>
 <script src="manifest.js"></script>
+<script src="sides.js"></script>
 <style>
   :root { --bg:#16181c; --panel:#1f2228; --line:#2e323a; --text:#e6e6e6; --dim:#9aa0a8; --near:#4da3ff; --far:#ffa94d;
           --fault:#ff5c5c; --ok:#5fd38d; --warn:#ffd166; --bounce:#7ee0d0; --out:#ff7ab8; --net:#c9a0ff; }
@@ -63,6 +64,17 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   #list div.done { color:var(--ok); } #list div.cur { background:#33404f; color:var(--text); }
   #list div:hover { background:#2a2e35; }
   #court { display:block; margin:2px auto 0; background:#24402c; }
+  /* sides mode (label_events.html#sides) */
+  #sidesView { display:none; grid-template-columns:1fr 340px; min-height:0; }
+  body.sides main { display:none; } body.sides #sidesView { display:grid; }
+  #sstage { position:relative; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; margin:8px; }
+  #simg { display:block; max-width:100%; max-height:calc(100vh - 150px); transition:transform .12s; }
+  #sask { text-align:center; font-size:20px; padding:4px 0 8px; }
+  #sask button { font-size:18px; padding:6px 18px; margin:0 6px; }
+  #sask .chosen { outline:2px solid var(--ok); }
+  #slist div { display:grid; grid-template-columns:28px 54px 76px 1fr; padding:1px 10px; cursor:pointer; color:var(--dim); font-size:12px; font-variant-numeric:tabular-nums; }
+  #slist div.done { color:var(--ok); } #slist div.cur { background:#33404f; color:var(--text); } #slist div:hover { background:#2a2e35; }
+  #smatches div { padding:1px 10px; cursor:pointer; font-size:12.5px; } #smatches div.cur { background:#33404f; } #smatches div:hover { background:#2a2e35; }
 </style>
 </head>
 <body>
@@ -74,6 +86,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   <span id="savestate"></span>
   <button id="btnFolder" title="Choose the folder for the label files (key O)">Label folder…</button>
   <button id="btnExport" title="Download the label file of this fragment (a copy, if the folder does not work)">Download</button>
+  <button id="btnMode" title="Change between the event labels and the sides step">Sides</button>
 </header>
 <main>
   <div id="left">
@@ -128,6 +141,31 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
     <div id="list"></div>
   </aside>
 </main>
+<div id="sidesView">
+  <div style="display:flex; flex-direction:column; min-height:0">
+    <div id="sstage"><img id="simg" alt=""><div id="sflash" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); padding:4px 14px; border-radius:4px; font-size:18px; font-weight:600; opacity:0; transition:opacity .4s"></div></div>
+    <div id="sask"></div>
+  </div>
+  <aside>
+    <section><h3>This match</h3><div id="sinfo"></div></section>
+    <section>
+      <details open><summary><h3 style="display:inline">Keys</h3></summary>
+      <div id="skeys" style="font-size:12px; color:var(--dim); display:grid; grid-template-columns:auto 1fr; gap:1px 10px">
+        <kbd>1 / 2</kbd><span>the <b>near</b> player (at the bottom of the picture), then the next candidate</span>
+        <kbd>Q</kbd><span>not sure, then the next candidate</span>
+        <kbd>W</kbd><span>show the other frame (the middle of the rally, or 1 s after the point start)</span>
+        <kbd>V</kbd><span>zoom 2× at the mouse (toggle)</span>
+        <kbd>← →</kbd><span>previous / next candidate</span>
+        <kbd>[ ]</kbd><span>previous / next match</span>
+        <kbd>O</kbd><span>choose the label folder</span>
+      </div></details>
+    </section>
+    <section style="padding-bottom:2px"><h3>Matches</h3></section>
+    <div id="smatches"></div>
+    <section style="padding-bottom:2px"><h3>Candidates</h3></section>
+    <div id="slist" style="flex:1 0 150px; overflow:auto"></div>
+  </aside>
+</div>
 <script>
 "use strict";
 const TOOL_VERSION = 1, FILE_VERSION = 1, SPEEDS = [1, 0.5, 0.25, 0.1], STORE = "bananashot-event-labels-v1", PRE = 2.0;
@@ -137,9 +175,13 @@ const v = $("v");
 let cur = -1, rate = 0.5, lastFrame = 0, zoom = "", dir = null, dirOk = false, lastWrite = "", mouse = null, sel = -1;
 const drafts = {};
 let store = JSON.parse(localStorage.getItem(STORE) || "{}");    // fragment id -> saved doc
+// Sides mode (S4 item 11): label_events.html#sides. The user marks the near player of the candidate points of sides.js.
+const SIDES_MODE = location.hash === "#sides";
+if (SIDES_MODE) document.body.classList.add("sides");
 
-if (!MF) { document.body.innerHTML = "<p style='padding:20px'>manifest.js is missing. Run: python case_manifest.py</p>"; throw 0; }
-const items = MF.fragments;
+if (!MF && !SIDES_MODE) { document.body.innerHTML = "<p style='padding:20px'>manifest.js is missing. Run: python case_manifest.py</p>"; throw 0; }
+if (SIDES_MODE && !window.SIDES) { document.body.innerHTML = "<p style='padding:20px'>sides.js is missing. Run: python sides_cases.py</p>"; throw 0; }
+const items = MF ? MF.fragments : [];
 
 // ---- helpers
 const fmt = t => { const m = Math.floor(t / 60), s = t - 60 * m; return m + ":" + s.toFixed(3).padStart(6, "0"); };
@@ -386,7 +428,7 @@ async function chooseDir() {
   await ensureDir(true);
   await readFiles();
   for (const id of Object.keys(store)) await writeFile(id);
-  render();
+  if (SIDES_MODE) { await sReadFiles(); for (const m of Object.keys(sStore)) await sWriteFile(m); sRender(); } else render();
 }
 async function readFiles() {
   if (!dirOk) return;
@@ -503,7 +545,7 @@ $("btnExport").onclick = download;
 
 // ---- keys
 document.addEventListener("keydown", async e => {
-  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (SIDES_MODE || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase(), S = e.shiftKey;
   const map = {
     " ": () => { if (v.paused) { v.playbackRate = rate; v.play(); } else v.pause(); },
@@ -528,9 +570,148 @@ document.addEventListener("keydown", async e => {
 });
 function setRate(i) { rate = SPEEDS[i]; v.playbackRate = rate; render(); }
 
+// ---- sides mode (S4 item 11). One mark for each candidate point: the near player (P1 or P2 of the project) in the
+// frames of the first rally after a possible end change. The page does not know why a point is a candidate.
+// Output: sides_<match>.json in the label folder.
+const SS = window.SIDES, SSTORE = "bananashot-sides-v1", SIDES_VERSION = 1;
+let sStore = JSON.parse(localStorage.getItem(SSTORE) || "{}");      // match -> saved doc
+let mi = -1, ki = 0, sFrame = 0, sZoom = false, sSince = performance.now();
+const sm = () => SS.matches[mi];
+const sMarks = m => (sStore[m.match] && sStore[m.match].marks) || [];
+const sMarkOf = (m, it) => sMarks(m).find(x => x.point === it.point);
+function sAddActive() {
+  const now = performance.now();
+  if (mi >= 0 && !document.hidden) { const m = sm(); sDoc(m).activeMs = (sDoc(m).activeMs || 0) + now - sSince; }
+  sSince = now;
+}
+document.addEventListener("visibilitychange", () => { if (SIDES_MODE) sAddActive(); });
+function sDoc(m) {
+  if (!sStore[m.match]) sStore[m.match] = {version: SIDES_VERSION, kind: "bananashot-sides", match: m.match, project: m.project,
+    testOnly: m.testOnly, players: {P1: m.players[0], P2: m.players[1]},
+    source: {tool: "label_events.html#sides", toolVersion: TOOL_VERSION, labeler: "user",
+             method: "by eye on two still frames of the point (the middle of the rally, 1 s after the point start)"},
+    timeBase: "t = source video time in s of the frame of the middle of the point",
+    fields: {near: "P1 or P2: the player at the near end (the bottom of the picture) in this point; null = not sure"},
+    candidates: m.items.length, marks: [], activeMs: 0};
+  return sStore[m.match];
+}
+function sFileDoc(m) {
+  const d0 = sDoc(m), marks = [...d0.marks].sort((a, b) => a.startMs - b.startMs);
+  const out = {...d0, marks, complete: m.items.every(it => marks.some(x => x.point === it.point)),
+               labelSeconds: Math.round((d0.activeMs || 0) / 100) / 10, savedAt: new Date().toISOString()};
+  delete out.activeMs;
+  return out;
+}
+async function sWriteFile(match) {
+  const m = SS.matches.find(x => x.match === match);
+  if (!m || !dir) { lastWrite = dir ? lastWrite : "no folder"; return; }
+  try {
+    if (!dirOk && !(await ensureDir(true))) { lastWrite = "no permission"; return; }
+    const fh = await dir.getFileHandle(`sides_${match}.json`, {create: true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(sFileDoc(m), null, 1));
+    await w.close();
+    lastWrite = "ok " + new Date().toLocaleTimeString();
+  } catch (e) { lastWrite = "write failed: " + e.message; }
+}
+async function sReadFiles() {
+  if (!dirOk) return;
+  for (const m of SS.matches) {
+    try {
+      const fh = await dir.getFileHandle(`sides_${m.match}.json`);
+      const doc = JSON.parse(await (await fh.getFile()).text());
+      const old = sStore[m.match];
+      if (!old || (doc.savedAt || "") > (old.savedAt || "")) {
+        doc.activeMs = (doc.labelSeconds || 0) * 1000; delete doc.labelSeconds; delete doc.complete; sStore[m.match] = doc;
+      }
+    } catch (e) { /* no file yet */ }
+  }
+  localStorage.setItem(SSTORE, JSON.stringify(sStore));
+}
+function sFlash(text, color) {
+  const f = $("sflash"); f.textContent = text; f.style.background = color || "#333"; f.style.opacity = 1;
+  clearTimeout(sFlash.t); sFlash.t = setTimeout(() => f.style.opacity = 0, 700);
+}
+function sOpen(i, k) {
+  if (i < 0 || i >= SS.matches.length) return;
+  sAddActive();
+  mi = i; const m = sm();
+  ki = k !== undefined ? Math.max(0, Math.min(m.items.length - 1, k)) : Math.max(0, m.items.findIndex(it => !sMarkOf(m, it)));
+  sFrame = 0; sZoom = false; sRender();
+}
+async function sMark(near) {
+  if (mi < 0) return;
+  sAddActive();
+  const m = sm(), it = m.items[ki], doc = sDoc(m);
+  doc.marks = doc.marks.filter(x => x.point !== it.point);
+  doc.marks.push({point: it.point, pointNo: it.pointNo, startMs: it.startMs, t: it.t, near,
+                  nearName: near ? doc.players[near] : null, unsure: !near});
+  doc.savedAt = new Date().toISOString();
+  localStorage.setItem(SSTORE, JSON.stringify(sStore));
+  await sWriteFile(m.match);
+  sFlash(near ? doc.players[near] + " near" : "not sure", near ? "#2f7a4c" : "#a8801f");
+  const j = m.items.findIndex((x, k) => k > ki && !sMarkOf(m, x));
+  const j2 = j >= 0 ? j : m.items.findIndex(x => !sMarkOf(m, x));
+  if (j2 >= 0) { ki = j2; sFrame = 0; sZoom = false; sRender(); return; }
+  sRender(); sFlash("match done", "#2f7a4c");
+  const nm = SS.matches.findIndex((x, i) => i > mi && x.items.some(y => !sMarkOf(x, y)));
+  if (nm >= 0) setTimeout(() => sOpen(nm), 800);
+}
+function sSetZoom(on) {
+  sZoom = on; const img = $("simg");
+  if (!on) { img.style.transform = ""; return; }
+  const r = img.getBoundingClientRect();
+  const ox = mouse ? 100 * (mouse[0] - r.left) / r.width : 50, oy = mouse ? 100 * (mouse[1] - r.top) / r.height : 40;
+  img.style.transformOrigin = `${ox}% ${oy}%`; img.style.transform = "scale(2)";
+}
+$("sstage").addEventListener("mousemove", e => { mouse = [e.clientX, e.clientY]; });
+function sRender() {
+  if (mi < 0) return;
+  const m = sm(), it = m.items[ki], mk = sMarkOf(m, it), doc = sStore[m.match];
+  $("simg").src = it.frames[sFrame];
+  for (const k of [ki + 1, ki + 2]) if (m.items[k]) (new Image()).src = m.items[k].frames[0];
+  sSetZoom(sZoom);
+  const nDone = m.items.filter(x => sMarkOf(m, x)).length;
+  $("where").textContent = `Sides · ${m.match} (${m.project})${m.testOnly ? " (test only)" : ""} · candidate ${ki + 1} of ${m.items.length} · point ${it.pointNo} of ${m.points} · video ${fmt(it.t)} · ${sFrame ? "1 s after the point start" : "middle of the rally"}`;
+  const b = p => `<button data-p="${p}" class="${mk && mk.near === p ? "chosen" : ""}">${p === "P1" ? 1 : 2} = ${m.players[p === "P1" ? 0 : 1]}</button>`;
+  $("sask").innerHTML = `Who is <b>near</b> (at the bottom of the picture)? ${b("P1")} ${b("P2")} <button data-p="" class="${mk && !mk.near ? "chosen" : ""}">Q = not sure</button>`;
+  $("sask").querySelectorAll("button").forEach(x => x.onclick = () => sMark(x.dataset.p || null));
+  const secs = doc ? Math.round((doc.activeMs || 0) / 1000) : 0;
+  $("sinfo").innerHTML = `${m.match} · players: 1 = ${m.players[0]}, 2 = ${m.players[1]}<br>${nDone} of ${m.items.length} candidates marked · ${secs} s`;
+  $("smatches").innerHTML = SS.matches.map((x, i) => { const n = x.items.filter(y => sMarkOf(x, y)).length;
+    return `<div data-i="${i}" class="${i === mi ? "cur" : ""}"><span class="${n === x.items.length ? "ok" : ""}">${x.match} · ${x.project} · ${n} / ${x.items.length}</span></div>`; }).join("");
+  $("smatches").querySelectorAll("div").forEach(x => x.onclick = () => sOpen(+x.dataset.i));
+  $("slist").innerHTML = m.items.map((x, k) => { const q = sMarkOf(m, x);
+    return `<div data-k="${k}" class="${k === ki ? "cur " : ""}${q ? "done" : ""}"><span>${k + 1}</span><span>pt ${x.pointNo}</span><span>${fmt(x.t).split(".")[0]}</span><span>${q ? (q.near ? q.nearName + " near" : "not sure") : ""}</span></div>`; }).join("");
+  $("slist").querySelectorAll("div").forEach(x => x.onclick = () => { ki = +x.dataset.k; sFrame = 0; sRender(); });
+  const row = $("slist").children[ki]; if (row) row.scrollIntoView({block: "nearest"});
+  $("progress").textContent = SS.matches.map(x => `${x.match} ${x.items.filter(y => sMarkOf(x, y)).length}/${x.items.length}`).join(" · ");
+  $("savestate").innerHTML = dir ? (dirOk ? `<span class="ok">folder: ${dir.name}</span> <span class="${lastWrite.startsWith("ok") ? "" : "warn"}">${lastWrite}</span>` : `<span class="warn">folder: ${dir.name} (press O to allow)</span>`) : `<span class="warn">no label folder (press O)</span>`;
+}
+document.addEventListener("keydown", async e => {
+  if (!SIDES_MODE || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase(), m = mi >= 0 ? sm() : null;
+  const map = {
+    "1": () => sMark("P1"), "2": () => sMark("P2"), "q": () => sMark(null),
+    "w": () => { sFrame = 1 - sFrame; sRender(); }, "v": () => sSetZoom(!sZoom),
+    "arrowleft": () => { ki = Math.max(0, ki - 1); sFrame = 0; sRender(); },
+    "arrowright": () => { ki = Math.min(m.items.length - 1, ki + 1); sFrame = 0; sRender(); },
+    "[": () => sOpen(mi - 1), "]": () => sOpen(mi + 1), "o": chooseDir,
+  };
+  if (map[k] && (m || k === "o")) { e.preventDefault(); await map[k](); }
+});
+$("btnMode").textContent = SIDES_MODE ? "Event labels" : "Sides";
+$("btnMode").onclick = () => { location.hash = SIDES_MODE ? "" : "sides"; location.reload(); };
+
 // ---- start
 (async () => {
-  try { dir = await idb("get"); if (dir) { await ensureDir(false); await readFiles(); } } catch (e) { dir = null; }
+  try { dir = await idb("get"); if (dir) { await ensureDir(false); await readFiles(); if (SIDES_MODE) await sReadFiles(); } } catch (e) { dir = null; }
+  if (SIDES_MODE) {
+    $("btnExport").style.display = "none";
+    const first = SS.matches.findIndex(x => x.items.some(y => !sMarkOf(x, y)));
+    sOpen(first < 0 ? 0 : first);
+    return;
+  }
   let first = items.findIndex(x => !saved(x));
   open(first < 0 ? 0 : first);
 })();

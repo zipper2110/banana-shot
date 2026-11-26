@@ -108,13 +108,14 @@ def fragment(row, L, data, rows):
                    "missed": [round(ln[j]["t"], 3) for j in range(len(ln)) if j not in {q for _, q in mn}],
                    "false": [round(nev[i]["t"], 3) for i in range(len(nev)) if i not in {p for p, _ in mn}]}
     # serves and the last shot of each matched point: the labeled events from the point start - 25 s (the fault
-    # serve before it) to the point end + 1 s
+    # serve before it), but not before the end of the marked point before it, to the point end + 1 s
     sv = {"points": 0, "serverOk": 0, "faultOk": 0, "faultN": 0, "faultUnsure": 0, "lastOk": 0, "lastN": 0, "detail": []}
     fault = {round(x["t"], 6): x["fault"] for x in infer_faults(ev)}      # over all events of the fragment (the next serve)
     for gi, j in pairs:
         p, r = pts[gi], crow[j]
         s0, s1 = p["startMs"] / 1000, p["endMs"] / 1000
-        pe = [e for e in ev if s0 - 25.0 <= e["t"] <= s1 + 1.0]
+        prev = max([q["endMs"] / 1000 for q in row["points"] if q["endMs"] / 1000 <= s0] or [s0 - 25.0])
+        pe = [e for e in ev if max(s0 - 25.0, prev) <= e["t"] <= s1 + 1.0]
         serves = [e for e in pe if e["kind"] == "serve"]
         fs = [fault[round(e["t"], 6)] for e in serves]
         play = [e for e, f in zip(serves, fs) if f is not True]

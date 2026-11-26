@@ -446,6 +446,100 @@ def last_shot(shots, t_end, t_cut):
     return c[-1] if c else None
 
 
+# ---------------------------------------------------------------- the old rule (G7 step 1)
+# The landing test of the old rule (E16: winner_ball.analyse, winner_sweep.decide, match_decode.case_key), moved into the
+# chain with the same decisions (G7, manager decision 5199e697). The chain uses its decision only when the last shot has
+# no net, bounce or stop fact (cases "old_*" and "back_*"). The old rule has its own filter, run and bounce: the last run
+# of good flights in one direction, its first low kink (the kink rule) or else the fit landing of its first flight.
+OLD_MIN_N, OLD_LAND_N = 10, 20     # samples of a good flight, and of a flight with a usable fit landing, at 60 fps (0.15 s, 0.32 s)
+
+
+def set_fps(fps):
+    """E28: the sample counts of the old rule for a ball track with fps samples in each second (the same durations)."""
+    global OLD_MIN_N, OLD_LAND_N
+    OLD_MIN_N, OLD_LAND_N = max(5, int(round(10 * fps / 60.0))), max(8, int(round(20 * fps / 60.0)))
+
+
+def old_good(f, min_speed=8.0):
+    """A good flight of the old rule: OLD_MIN_N samples, fit error < 5 px, speed min_speed (and 8) to 230 km/h, start
+    inside a large box around the court."""
+    sp = kmh(f)
+    return f["n"] >= OLD_MIN_N and f["rms"] < 5 and 8 < sp < 230 and pos_ok(f) and sp >= min_speed
+
+
+def old_quantities(pt, t_cut, min_speed=8.0):
+    """The quantities of the last shot of the old rule (winner_ball.analyse with USE_EVENTS False), or None if there is no
+    good flight that starts before the end + t_cut."""
+    T = pt["end"]
+    fl = [f for f in pt["flights"] if old_good(f, min_speed) and f["t0"] < T + t_cut]
+    if not fl:
+        return None
+    run = [fl[-1]]
+    for f in fl[-2::-1]:
+        if (f["v0"][1] > 0) == (run[0]["v0"][1] > 0) and run[0]["t0"] - f["t1"] < 0.6:
+            run.insert(0, f)
+        else:
+            break
+    to_far = run[0]["v0"][1] > 0
+    s = 1.0 if to_far else -1.0
+    bounce, src = None, 0
+    for k in pt["kinks"]:                            # the kink rule: a kink where the ball is low, inside the court area
+        t = k[0]
+        if t < run[0]["t0"] + 0.1 or t > run[-1]["t1"] + 0.3:
+            continue
+        pre = [f for f in run if 0 <= t - f["t1"] < 0.2]
+        post = [f for f in run if 0 <= f["t0"] - t < 0.2]
+        low = (pre and pre[-1]["p1"][2] < 0.7) or (post and post[0]["p0"][2] < 0.6 and post[0]["v0"][2] > 0)
+        if low and abs(k[3]) < 12 and abs(k[4]) < 22:
+            bounce, src = (k[3], k[4], t), 2
+            break
+    if bounce is None and not np.isnan(run[0]["land"][0]) and run[0]["n"] >= OLD_LAND_N and run[0]["landT"] < T + 1.5:
+        bounce, src = (run[0]["land"][0], run[0]["land"][1], run[0]["landT"]), 1
+    crossed = any(f["p1"][1] * s > 0.5 for f in run) or (bounce is not None and bounce[1] * s > 0)
+    q = {"to_far": to_far, "src": src, "n_run": len(run), "n_pts": sum(f["n"] for f in run), "speed": kmh(run[0]),
+         "t_rel": run[0]["t0"] - T, "t_end_rel": run[-1]["t1"] - T, "net_z": run[0]["netZ"], "crossed": crossed,
+         "start_y": run[0]["p0"][1] * s, "start_z": run[0]["p0"][2], "end_y": run[-1]["p1"][1] * s, "end_z": run[-1]["p1"][2],
+         "bx": np.nan, "by": np.nan, "margin": np.nan, "n_flights": len(fl), "coverage": pt["coverage"], "sigma": np.nan}
+    if bounce is not None:
+        bx, by = bounce[0], bounce[1] * s
+        q.update(bx=abs(bx), by=by, margin=min(SW - abs(bx), BL - by, by), b_rel=bounce[2] - T)
+    return q
+
+
+def old_decide(q, p):
+    """The decision of the old rule (winner_sweep.decide): True = the near player wins, None = no decision.
+    p: margin (a bounce out by less than this is in), net_back and net_fwd (the net test), optional z (landing sigma)."""
+    if q is None:
+        return None
+    if -p["net_back"] < q["end_y"] < p["net_fwd"] and q["end_z"] < 1.8 and not q["src"] == 2:
+        return not q["to_far"]                         # in the net: the hitter loses
+    if q["src"] == 0:
+        return None
+    if q["src"] == 1 and p.get("z", 0) > 0 and not np.isnan(q.get("sigma", np.nan)) and abs(q["margin"] + p["margin"]) < p["z"] * q["sigma"]:
+        return None
+    is_in = q["margin"] > -p["margin"] and (np.isnan(q["net_z"]) or q["net_z"] > 0.85)
+    return q["to_far"] if is_in else not q["to_far"]
+
+
+def old_case_key(q, p):
+    """The case of a decision of the old rule (match_decode.case_key). "early" = the last shot starts more than 4 s
+    before the end (a later shot was probably missed)."""
+    early = q["t_rel"] < -4
+    if -p["net_back"] < q["end_y"] < p["net_fwd"] and q["end_z"] < 1.8 and q["src"] != 2:
+        return "net_early" if early else "net"
+    is_in = q["margin"] > -p["margin"] and (np.isnan(q["net_z"]) or q["net_z"] > 0.85)
+    if is_in:
+        return "in_seen" if q["src"] == 2 else ("in_early" if early else "in")
+    return "out_early" if early else ("out_seen" if q["src"] == 2 else "out")
+
+
+def old_rule(pt, t_cut, p):
+    """(quantities, decision, case) of the old rule for the window pt (needs "kinks" and "coverage")."""
+    q = old_quantities(pt, t_cut, p["min_speed"])
+    w = old_decide(q, p)
+    return q, w, (old_case_key(q, p) if w is not None else None)
+
+
 # ---------------------------------------------------------------- winner evidence
 
 LINE_M = 0.3          # m: a bounce nearer to a line than this is a "line" case (the position error of a bounce event, E17d-2: 90 % below 0.28 m)
@@ -462,9 +556,14 @@ TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", 
         "back": "the end of this shot was not seen", "stop": "the flight of the ball ends low near the net", "old": "no bounce or net event; the fitted flight decides", "none": "nothing is known"}
 
 
-def evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
+def evidence(pt, nets, t_cut, p=None, min_speed=8.0):
+    """The winner evidence of the window pt (_evidence). p: the parameters of the old rule (old_rule; None = no old
+    rule, for example the shots of a fault candidate). r["old"]: the quantities, the decision and the case of the old
+    rule (for the "lastShot" of the result and for CHAIN=0)."""
+    q, w_old, old_case = old_rule(pt, t_cut, p) if p is not None else (None, None, None)
     r = _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed)
     r["events"] = pt.get("events")
+    r["old"] = {"q": q, "nearWins": w_old, "case": old_case}
     return r
 
 
@@ -491,8 +590,7 @@ def predicted_end(sh, events):
 def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     """Winner evidence of a rally from its shot chain.
     pt: {"end", "flights", "events"}; nets: the net events of the window; t_cut: winner_ball.T_CUT;
-    q, w_old, old_case: the quantities, the decision and the case of the old rule (winner_ball.analyse,
-    winner_sweep.decide, match_decode.case_key) for the same window.
+    q, w_old, old_case: the quantities, the decision and the case of the old rule (old_rule) for the same window.
     Returns {"nearWins": bool or None, "case", "shots", "last": index of the last shot or None}.
     Order of the facts of the last shot: net event; bounce event (on the side of the hitter, out, in);
     else the old rule (kink or fit landing). "back_": the old rule decided from the shot before the last
@@ -623,17 +721,9 @@ def export(r, t_end, t_cut, used, p=None):
 
 
 def point_evidence(pt, nets, p, t_cut=None):
-    """evidence() for a marked point (flights file of ball_3d.py with events), with the old rule of winner_sweep."""
-    import winner_ball as wb, winner_sweep as ws, match_decode as md
-    orig, cut = wb.good, wb.T_CUT
-    wb.good = lambda f, orig=orig: orig(f) and kmh(f) >= p["min_speed"]
-    wb.T_CUT = cut if t_cut is None else t_cut
-    try:
-        q = wb.analyse(pt)
-        w = ws.decide(q, p)
-        return evidence(pt, nets, wb.T_CUT, q, w, md.case_key(q, p) if w is not None else None, p["min_speed"])
-    finally:
-        wb.good, wb.T_CUT = orig, cut
+    """evidence() for a marked point (flights file of ball_3d.py with events), with the old rule (parameters p)."""
+    import winner_ball as wb
+    return evidence(pt, nets, wb.T_CUT if t_cut is None else t_cut, p, p["min_speed"])
 
 
 EV_TAG = os.environ.get("EV_TAG", "0.35_ev")       # the flights files with events of the lab matches

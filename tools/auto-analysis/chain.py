@@ -144,7 +144,9 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
     cache = json.load(open(cp)) if os.path.exists(cp) else {}
     dirty = False
     if FPS_ADAPT:
-        wb.set_fps(track_fps(full["flights"]))
+        fps = track_fps(full["flights"])
+        wb.set_fps(fps)                              # the "shots" count of the row (winner_ball.good)
+        sc.set_fps(fps)                              # the old rule in the shot chain
     np_ = NET_FILES.get(mid) or os.path.join(out, "net_events.json")
     nets = json.load(open(np_))["events"] if os.path.exists(np_) else []
     hits = rally_end.load_hits(out)
@@ -157,18 +159,12 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         pt = {"start": a, "end": t_end, "flights": fls, "kinks": kks, "coverage": 0.0, "audio": hits}   # audio: item 7 (shot_chain.back_time)
         if "events" in full:                         # E17d: the flights refer to the events by index (winner_ball.USE_EVENTS)
             pt["events"] = full["events"]
-        orig = wb.good
-        wb.good = lambda f, orig=orig: orig(f) and 3.6 * float(np.linalg.norm(f["v0"])) >= p["min_speed"]
-        t_cut, wb.T_CUT = wb.T_CUT, T_CUT_E2E
-        q = wb.analyse(pt)
-        wb.good, wb.T_CUT = orig, t_cut
-        w = ws.decide(q, p)
+        q, w, old_case = sc.old_rule(pt, T_CUT_E2E, p)    # G7 step 1: the old rule is in the shot chain
         pw = 0.5 if w is None else (md.case_prob(q, p, mid) if w else 1 - md.case_prob(q, p, mid))
         ch = None
         if "events" in full:                         # E28: the shot chain of the rally (facts for the user; with CHAIN also the evidence)
             try:
-                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= t_end + 2.5], T_CUT_E2E, q, w,
-                                 md.case_key(q, p) if w is not None else None, p["min_speed"])
+                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= t_end + 2.5], T_CUT_E2E, p, p["min_speed"])
                 pc = sc.case_prob(ch["case"], mid)
                 chain_row = sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
             except Exception as e:                   # a fault in the chain must not stop the detection: the old rule decides
@@ -212,7 +208,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                         fa, fb = fault["t"] - FAULT_BEFORE, min(fault["t"] + FAULT_AFTER, a)
                         fpt = {"start": fa, "end": fb, "events": full["events"], "kinks": [],
                                "flights": [full["flights"][i] for i in np.nonzero((fl_t0 >= fa) & (fl_t0 <= fb))[0]]}
-                        fch = sc.evidence(fpt, [e for e in nets if fa <= e["t"] <= fb], T_CUT_E2E, None, None, None, p["min_speed"])
+                        fch = sc.evidence(fpt, [e for e in nets if fa <= e["t"] <= fb], T_CUT_E2E, None, p["min_speed"])
                         fault["chain"] = {"shots": [{k: v for k, v in s.items() if k != "late"} for s in sc.export(fch, fb, T_CUT_E2E, False)["shots"]]}
                         # The serve must land in the service boxes (the chain tests the full court). The side of the box
                         # is not tested: the detection does not know the side of the server.
@@ -240,8 +236,8 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         feats.append(np.median(cols, 0) if len(cols) >= 2 else None)
         last = None
         if q is not None:
-            # "nearWins": what the ball rule says (None = no decision); "case": the case of the rule (match_decode.case_key)
-            last = {"nearWins": w, "case": md.case_key(q, p) if w is not None else None, "t": a_end_t(q, t_end),
+            # "nearWins": what the old ball rule says (None = no decision); "case": the case of the rule (sc.old_case_key)
+            last = {"nearWins": w, "case": old_case, "t": a_end_t(q, t_end),
                     "endY": q["end_y"], "endZ": q["end_z"], "netZ": None if np.isnan(q["net_z"]) else q["net_z"],
                     "toFar": bool(q["to_far"]), "speed": q["speed"], "src": int(q["src"]),
                     "margin": None if np.isnan(q["margin"]) else q["margin"],

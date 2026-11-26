@@ -177,6 +177,12 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
     26 to 29 of 35, false 8 to 14 of 70): not applied. The real fix is a candidate from inside a flight (a kink or a
     speed loss at the net plane) with new judge rules, together with S5 item 6 (net-band signal).
 
+15. (2026-11-26) G7, duplicated rules: first a measure, no edits. A table of each copy (the 5 bounce copies, the 3
+    winner copies, the good-flight filters, w_old and old_case, netHit against the net case of the chain): file,
+    threshold, user stage, effect on the app result. The disagreements of the copies on the cached lab data, and which
+    copy is right where the user's event labels exist. Then a proposal of one owner copy for each rule. The manager
+    decides; the stream that owns a file makes its edit.
+
 ### S3 rally (G4, G5, G8 short points)
 
 1. G4: a rally end detector (E21c) in the seconds around the GRU end. Use the ball flights, the audio hits

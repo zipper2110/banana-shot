@@ -207,6 +207,23 @@ def labels(warn=print):
     return out
 
 
+PAGE = os.path.join(os.path.dirname(ROOT), "..", "s4", "events")     # the folder of the label page (case_manifest.py output)
+
+
+def page_row_hash(fid, page=PAGE):
+    """The rowHash that case_manifest.py gives the row of fid when it writes the page list into page: sha256 of the row
+    with the clip path relative to page and courtH filled, without rowHash and clipDur (S4's rule)."""
+    import hashlib as _h
+    r = next(x for x in json.load(open(os.path.join(ROOT, "manifest.json")))["fragments"] if x["id"] == fid)
+    r = {k: v for k, v in r.items() if k not in ("rowHash", "clipDur")}
+    if not os.path.isabs(r["clip"]):
+        r["clip"] = os.path.relpath(os.path.join(ROOT, r["clip"]), os.path.abspath(page)).replace("\\", "/")
+    if "courtH" not in r and r.get("match"):
+        import case_manifest
+        r["courtH"] = case_manifest.court(r["match"], r["span"][0] if r.get("span") else r["t0"])
+    return _h.sha256(json.dumps(r, sort_keys=True).encode()).hexdigest()[:16]
+
+
 MAPPED = "bananashot-event-marks-mapped"
 
 
@@ -214,7 +231,8 @@ def map_marks(fid, warn=print):
     """The user's small-level marks inside the label span of the fragment fid (a medium or large fragment), at the same
     source time (manager, gap-program.md: the user's marks are reused; never detection results). Reads only labels():
     no retired id, no stale t0, no *.bak file. Each mark is copied as it is, with "from": the small id. A small label
-    with "skip" is not used; an "unsure" one gives "fromUnsure": true. Writes labels/<fid>.mapped.json; the label page
+    with "skip" is not used; an "unsure" one gives "fromUnsure": true (the page shows "?" on the mark). "manifest.row" is the
+    rowHash of the page row of fid: the page does not load a mapped file made for another cut. Writes labels/<fid>.mapped.json; the label page
     shows these marks as the user's own until the first save of <fid>.events.json (the page then keeps the marks that
     the user did not move or delete, with their "from"). Returns the number of marks."""
     rows = {r["id"]: r for r in json.load(open(os.path.join(ROOT, "manifest.json")))["fragments"]}
@@ -237,6 +255,7 @@ def map_marks(fid, warn=print):
                         "labeler": (L.get("source") or {}).get("labeler")}
     ev.sort(key=lambda e: e["t"])
     out = {"version": 1, "kind": MAPPED, "fragment": fid, "match": r["match"], "t0": r["t0"], "span": [s0, s1],
+           "manifest": {"version": 1, "row": page_row_hash(fid)},           # the stale check of the page (S4)
            "rule": "the user's small-level marks (case_lib.labels) with t inside the span, copied at the same source time",
            "sources": src, "events": ev, "madeAt": time.strftime("%Y-%m-%dT%H:%M:%S")}
     with open(os.path.join(LABELS, fid + ".mapped.json"), "w", encoding="utf-8") as f:

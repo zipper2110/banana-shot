@@ -186,6 +186,20 @@ if (SIDES_MODE) document.body.classList.add("sides");
 if (!MF && !SIDES_MODE) { document.body.innerHTML = "<p style='padding:20px'>manifest.js is missing. Run: python case_manifest.py</p>"; throw 0; }
 if (SIDES_MODE && !window.SIDES) { document.body.innerHTML = "<p style='padding:20px'>sides.js is missing. Run: python sides_cases.py</p>"; throw 0; }
 const items = MF ? MF.fragments : [];
+// A stored doc (browser store or label file) of another cut of the fragment (another t0 or another manifest row) must
+// not become marks of the current row: its times have another time base. The page keeps it apart in STORE + "-stale"
+// (for a repair by an agent) and shows "old marks, not used" in the list.
+const staleIds = new Set();
+const docFits = (doc, it) => !!doc && typeof doc.t0 === "number" && Math.abs(doc.t0 - it.t0) < 1e-4
+  && ((doc.manifest && doc.manifest.row) || null) === (it.rowHash || null);
+function keepStale(id, doc, from) {
+  const keep = JSON.parse(localStorage.getItem(STORE + "-stale") || "{}");
+  keep[id + " " + from + " " + new Date().toISOString()] = doc;
+  localStorage.setItem(STORE + "-stale", JSON.stringify(keep));
+  staleIds.add(id);
+}
+for (const it of items) if (store[it.id] && !docFits(store[it.id], it)) { keepStale(it.id, store[it.id], "browser"); delete store[it.id]; }
+if (staleIds.size) localStorage.setItem(STORE, JSON.stringify(store));
 
 // ---- helpers
 const fmt = t => { const m = Math.floor(t / 60), s = t - 60 * m; return m + ":" + s.toFixed(3).padStart(6, "0"); };
@@ -503,6 +517,7 @@ async function readFiles() {
     try {
       const fh = await dir.getFileHandle(it.id + ".events.json");
       const doc = JSON.parse(await (await fh.getFile()).text());
+      if (!docFits(doc, it)) { if (!staleIds.has(it.id)) keepStale(it.id, doc, "file"); continue; }
       if (!store[it.id] || (doc.savedAt || "") > (store[it.id].savedAt || "")) store[it.id] = doc;
     } catch (e) { /* no file yet */ }
   }
@@ -557,7 +572,7 @@ function render() {
   items.forEach((it, i) => {
     const r = list.children[i], s = saved(it);
     r.className = (i === cur ? "cur " : "") + (s ? "done " : "");
-    r.innerHTML = `<span>${i + 1}</span><span>${it.id}</span><span>${(it.kinds || []).join(" ")}${it.control ? " (control)" : ""}</span><span>${s ? (s.skip ? "skip" : s.events.length + " marks") + (s.unsure ? " ?" : "") : (drafts[i] && drafts[i].dirty ? "unsaved" : "")}</span>`;
+    r.innerHTML = `<span>${i + 1}</span><span>${it.id}</span><span>${(it.kinds || []).join(" ")}${it.control ? " (control)" : ""}</span><span>${s ? (s.skip ? "skip" : s.events.length + " marks") + (s.unsure ? " ?" : "") : (drafts[i] && drafts[i].dirty ? "unsaved" : staleIds.has(it.id) ? "old marks, not used" : "")}</span>`;
   });
   const done = items.filter(saved), secs = done.map(it => saved(it).labelSeconds || 0).filter(x => x > 0).sort((a, b) => a - b);
   const med = secs.length ? secs[Math.floor(secs.length / 2)] : 0, left = items.length - done.length;
@@ -790,6 +805,7 @@ $("btnMode").onclick = () => { location.hash = SIDES_MODE ? "" : "sides"; locati
   }
   let first = items.findIndex(x => !saved(x));
   open(first < 0 ? 0 : first);
+  if (staleIds.size) flash("Old marks of " + [...staleIds].join(", ") + " (another cut of the clip) are not used", "#a8801f", 5000);
 })();
 </script>
 </body>

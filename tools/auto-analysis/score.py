@@ -6,10 +6,12 @@ import json, os
 import numpy as np
 import lab
 
+ENDS = {}       # {match: ends list} in place of ends.json (bench.py: the near player from the user's side marks)
+
 
 def score(mid, rows):
     gt = lab.gt_points(mid)
-    ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
+    ends = ENDS.get(mid) or json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
     pairs = lab.match_points([(r["start"], r["end"]) for r in rows], gt)
     n = ok = okb = dec = 0
     for gi, j in pairs:

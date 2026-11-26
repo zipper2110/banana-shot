@@ -428,6 +428,43 @@ def run_heldout(code_dir):
     return res, skipped
 
 
+def sides_file(mid):
+    import lab
+    return os.path.join(os.path.dirname(lab.ROOT.rstrip("/\\")), "ws", "s1", "cases", "labels", f"sides_{mid}.json")
+
+
+def sided_ends(mid):
+    """ends.json with the near player from the user's side marks (S4 item 11, the user, 2026-11-26), or None when the
+    match has no marks. At a marked point the near player is the mark. Between two marks, the near player follows the
+    changes of the rule (nearPlayer of ends.json), shifted by the difference at the last mark; before the first mark,
+    the shift of the first mark. A mark with near null or "unsure" is not used. winnerNear is then outcome == near."""
+    import lab
+    f = sides_file(mid)
+    if not os.path.exists(f):
+        return None
+    marks = {m["point"]: m["near"] for m in json.load(open(f, encoding="utf-8"))["marks"]
+             if m.get("near") in ("P1", "P2") and not m.get("unsure")}
+    ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
+    outcome = {p["id"]: p["outcome"] for p in json.load(open(os.path.join(lab.mdir(mid), "gt.json"), encoding="utf-8"))["points"]}
+    if not marks:
+        return None
+    other = {"P1": "P2", "P2": "P1"}
+    first = next(e for e in ends if e["id"] in marks)
+    flip = first.get("nearPlayer") is not None and first["nearPlayer"] != marks[first["id"]]
+    out = []
+    for e in ends:
+        if e["id"] in marks:
+            near, src = marks[e["id"]], "mark"
+            if e.get("nearPlayer") is not None:
+                flip = e["nearPlayer"] != near
+        else:
+            r = e.get("nearPlayer")
+            near, src = (other[r] if flip else r) if r else None, "rule shifted" if flip else "rule"
+        o = outcome.get(e["id"])
+        out.append(dict(e, nearPlayer=near, nearFrom=src, winnerNear=(o == near) if o in ("P1", "P2") and near else None))
+    return out
+
+
 SHOW_WITH_NONE = True       # the old numbers (NONE points counted) once more in the report (manager, 2026-11-26)
 
 
@@ -488,7 +525,9 @@ def report(man, sets, skipped, same):
          f"FPS_ADAPT={man['switches']['chain'].get('FPS_ADAPT')}. Set env: "
          + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + "."
          + (f" Lab net events: {man['labNets']}." if man.get("labNets") else "")
-         + (f" Lab flights: {man['labFlights']}." if man.get("labFlights") else ""),
+         + (f" Lab flights: {man['labFlights']}." if man.get("labFlights") else "")
+         + (" Near player from the user's side marks: " + ", ".join(f"{m} ({v['marks']} marks, {v['changed']} points shifted)"
+                                                                   for m, v in man["sides"].items()) + "." if man.get("sides") else ""),
          f"Manifest `{man['hash']}`. " + (f"An earlier run with the same manifest: {same['run']} ({'same numbers' if same['same'] else '**other numbers**'})."
                                           if same else "No earlier run with the same manifest."), ""]
     def event_rows(ev):
@@ -552,6 +591,14 @@ def run(a):
     t0 = time.time()
     commit, dirty = code_commit()
     sets, inputs, nets = {}, {}, None
+    import score
+    sides = {}                                         # the user's side marks: the near player of the winner rows
+    for mid in lab.MATCHES:
+        e = sided_ends(mid)
+        if e:
+            score.ENDS[mid] = e
+            sides[mid] = {"file": sha(sides_file(mid)), "marks": sum(x["nearFrom"] == "mark" for x in e),
+                          "changed": sum(x["nearFrom"] == "rule shifted" for x in e)}
     if not a.no_lab:
         from ball_full import WINDOWS
         nets = None if a.old_nets else app_nets(list(WINDOWS) + [m for m in lab.MATCHES if m not in WINDOWS and app_folder(m)])
@@ -573,7 +620,7 @@ def run(a):
     for mid in other:                                  # event inputs of a match outside the sets (m0913: app folder)
         inputs[mid] = ev[mid][1]
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
-           "labels": label_hashes(), "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)",
+           "labels": label_hashes(), "sides": sides, "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)",
            "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS], "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
     man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")

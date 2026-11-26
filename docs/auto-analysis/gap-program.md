@@ -148,6 +148,11 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
 9. (2026-11-26) Group T of E95: the time of a shot whose ball is first seen after the net. Use the same idea
    as `back_time()` (the outgoing line, extended back to the hitter or to the incoming line) where it is right
    in principle. Same Igor rule.
+   Done (E96, merged 2aedf89e): Igor hits 83 to 84 of 91, false 11 to 10. The other 4 T shots need better
+   tracking or fits (a tracking item).
+10. (2026-11-26) Priority 1, rally precision: Igor finds 224 rallies for 197 marked (precision 86.6 %), the lab
+    90.9 %. Make a table of the false rallies (Igor and lab) and the missed ones, with a cause for each. Then
+    fix the largest group. Same Igor rule.
 
 ### Rule for fixes found on Igor (manager, 2026-11-26)
 

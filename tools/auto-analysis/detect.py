@@ -660,11 +660,11 @@ def main():
     # chain (E29): true = the shot chain gives the winner evidence; false = the old ball rule (lab: CHAIN=0).
     # endModel (E60): true = the end for the winner evidence comes from the rally end detector (lab: END_MODEL).
     # courtTrack (E26f): "" = the court model rule of ball_events.court_windows; a file name = that court file only.
-    # netBand (item 6 (b), E88 to E133): true = the motion of the net picture rejects or confirms the net touches
-    # (net_band_mask.py, net_band.py). Off until the test on the label windows holds the E131 result.
-    # Before it goes on: bench.py (S1) must add net_band.npz to the inputs of the flights key and to the manifest.
+    # netBand (item 6, E88 to E137): true = the motion of the net picture rejects or confirms the net touches
+    # (net_band_mask.py, net_band.py). On by default (E137: lab net touches 26 to 28 of 35, false 8 to 3 of 70;
+    # rallies the same). bench.py has net_band.npz in the flights key and the manifest (661f460d, e882d2b8).
     cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": False, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS,
-           "chain": True, "endModel": True, "courtTrack": "", "netBand": False}
+           "chain": True, "endModel": True, "courtTrack": "", "netBand": True}
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
     warnings = []

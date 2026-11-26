@@ -287,7 +287,7 @@ def dedupe(ev, gap=0.8):
     return out
 
 
-def net_events(rows, Hm, flights=(), kinks=()):
+def net_events(rows, Hm, flights=(), kinks=(), band=None):
     """Net events of a time range.
     rows: blobs (t, x, y, score, peak). Hm: court homography px -> m. flights: fitted flights (optional).
     kinks: not used (the function finds the direction changes in the net plane); the parameter keeps the call general.
@@ -298,9 +298,12 @@ def net_events(rows, Hm, flights=(), kinks=()):
        "toFar": True = the hitter is at the near end,
        "conf": 0..1, confidence that the ball touched the net (0.7 or more: the ball was seen to drop at the net),
        "src": "track", "track+drop", "track+fit", "track+drop+fit" (what shows the touch),
-       "dirConf": 0..1, confidence of "toFar", "dirSrc": the votes for "toFar" (see direction())}"""
+       "dirConf": 0..1, confidence of "toFar", "dirSrc": the votes for "toFar" (see direction())}
+    band: the net band motion of the video (net_band.Band) or None. With it, the net picture rejects or confirms a
+    candidate (net_band.judge_band, E89 to E132)."""
+    import net_band
     out = []
-    for q, r in dedupe([(q, r) for q in candidates(rows, Hm, flights) for r in [judge(q)] if r]):
+    for q, r in dedupe([(q, r) for q in candidates(rows, Hm, flights) for r in [net_band.judge_band(q, judge(q), band)] if r]):
         out.append({"t": round(q["t"], 3), "kind": r["kind"], "px": [round(q["px"][0], 1), round(q["px"][1], 1)], "toFar": r["toFar"],
                     "conf": r["conf"], "src": r["src"], "dirConf": r["dirConf"], "dirSrc": r["dirSrc"]})
     return out
@@ -329,15 +332,17 @@ def winner_hint(events, t_end, t_from=HINT_FROM, t_to=HINT_TO, min_dir=HINT_DIR,
             "sinceStart": None if t_start is None else round(e["t"] - t_start, 2)}
 
 
-def run_folder(sid, step=30.0):
-    """Net events of a full video from the cached files of its folder. Writes <folder>/net_events.json."""
-    import net_lab
+def run_folder(sid, step=30.0, band_file=None):
+    """Net events of a full video from the cached files of its folder. Writes <folder>/net_events.json.
+    band_file: the net band file of the folder (net_band.py), or None (no net band rules)."""
+    import net_lab, net_band
     s = net_lab.Source(sid)
+    band = net_band.Band(band_file, s.frame_t) if band_file else None
     out, c = [], float(s.t[0])
     while c < s.t[-1]:
         rows = s.rows(c - 2, c + step + 2)                 # 2 s of overlap: a touch at the border has its approach and its "after"
         if len(rows):
-            out += [e for e in net_events(rows, s.H(c + step / 2), s.flights(c - 2, c + step + 2)) if c <= e["t"] < c + step]
+            out += [e for e in net_events(rows, s.H(c + step / 2), s.flights(c - 2, c + step + 2), band=band) if c <= e["t"] < c + step]
         c += step
     path = os.path.join(s.dir, "net_events.json")
     json.dump({"about": "E16f net events (tools/auto-analysis/net_events.py)", "events": out}, open(path, "w"), indent=1)

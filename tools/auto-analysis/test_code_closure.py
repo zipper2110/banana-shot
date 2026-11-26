@@ -280,6 +280,14 @@ class AutoAdopt(unittest.TestCase):
             os.utime(os.path.join(w, f), (1.5e9, 1.5e9))
         self.assertEqual(sorted(detect.auto_adopt(w)), ["audio"])
 
+    def test_a_new_picture_time_file_runs_the_picture_stages_again(self):
+        # Item 16b (manager): each output must be newer than each media file that the stage reads.
+        w = self.work()
+        os.utime(os.path.join(w, "kf_times.csv"), None)
+        for f in ("feat_dino.npy", "court_track.json", "pose.npy"):
+            os.utime(os.path.join(w, f), (1.5e9, 1.5e9))
+        self.assertEqual(sorted(detect.auto_adopt(w)), ["audio"])
+
 
 if __name__ == "__main__":
     unittest.main()

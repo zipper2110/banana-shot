@@ -52,6 +52,10 @@ LATE_S, LATE_V = 1.5, (0.5, 2.0)    # s after the last sample of the shot; lowes
 CONT = os.environ.get("CHAIN_CONT", "1") == "1"
 CONT_GAP, CONT_M = float(os.environ.get("CONT_GAP", "0.35")), float(os.environ.get("CONT_M", "4.0"))   # s, m: see continuous()
 NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its direction (net_events.HINT_DIR)
+# Item 6 group D (found on Igor m1116): the ball is dead after a shot into the net, out or on the side of the hitter. A later
+# "shot" is ball handling, and the shot list stops there (see dead_stop).
+DEAD_STOP = os.environ.get("CHAIN_DEAD_STOP", "1") == "1"
+DEAD_GAP = 1.0       # s from the last sample of the dead shot to the next shot (lab: 95 % of the gaps between real rally shots are shorter)
 
 
 def kmh(f):
@@ -210,7 +214,38 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
         elif e["dirConf"] >= NET_DIR:
             alone.append({"t": float(e["t"]), "near": bool(e["toFar"]), "how": "net", "fl": [], "bounces": [], "net": e,
                           "reach": None, "weak": True, "serve": None})      # the flight of this shot was not tracked
-    return sorted(seen + alone, key=lambda sh: sh["t"])
+    shots = sorted(seen + alone, key=lambda sh: sh["t"])
+    return dead_stop(shots) if DEAD_STOP else shots
+
+
+def dead(sh):
+    """True if the ball is surely dead after the shot: a net event and no bounce on the other side (a let cord goes on), a bounce
+    out by more than the bounce place error (LINE_M), or a bounce on the side of the hitter."""
+    s = 1.0 if sh["near"] else -1.0
+    if sh["net"] is not None and not any(e["court"][1] * s > NET_NEAR for e in sh["bounces"]):
+        return True
+    k, m = shot_end(sh)
+    return k == "own" or (k == "out" and m < -LINE_M)
+
+
+def dead_stop(shots):
+    """Item 6 group D: the shots up to the first dead shot that has a gap of DEAD_GAP or more to the next shot. The stop needs
+    a returned shot before the dead shot (a shot "in" and a shot of the other player less than DEAD_GAP after it): before the
+    return, a dead ball can be a fault (a second serve follows) or ball handling before the serve. The gap keeps a real return
+    after a dead ball that was measured wrong (lab, 4 matches: these returns start 0.3 s after the last sample, median)."""
+    def t0(sh):
+        return sh["fl"][0]["t0"] if sh["fl"] else sh["t"]
+
+    def t1(sh):
+        return sh["fl"][-1]["t1"] if sh["fl"] else sh["t"]
+    returned = False
+    for i in range(len(shots) - 1):
+        sh, nx = shots[i], shots[i + 1]
+        gap = t0(nx) - t1(sh)
+        if returned and gap >= DEAD_GAP and dead(sh):
+            return shots[:i + 1]
+        returned = returned or (shot_end(sh)[0] == "in" and nx["near"] != sh["near"] and gap < DEAD_GAP)
+    return shots
 
 
 def serve_time(sh):

@@ -68,6 +68,45 @@ So one cause does not cover m1021 and the m1020 night serves.
    new labels at that cause (the E38 recipe), a larger scale on a part of the picture, or a lower threshold where a
    path supports it. Each option then states its labels, its user time, and its GPU time.
 
+### Step 3 plan for the m1021 loss (E135)
+
+**(a) The event loss.** Stored data only: the full-video blob files of E38d (dim pass, held-out fold weights), the
+lab flight files (`fullflights_s0.35_ev.json`), the rally rows of `gt.json`.
+
+| Measure | m1015 | m1020 | m1021 | m1030 |
+|---|---|---|---|---|
+| Labeled events with a blob (30 px, ±3 frames): bounce, hit, net | 26 of 26 | 19 of 19 | 18 of 18 | 22 of 22 |
+| Rally rows (outcome not NONE) | 96 | 152 | 158 | 148 |
+| Median flight coverage of a rally row | 0.69 | 0.64 | 0.63 | 0.72 |
+| Median time from the last flight to the rally end | 1.24 s | 1.48 s | 1.03 s | 0.75 s |
+| Rally rows with a flight gap of more than 2 s | 3 | 6 | 6 | 4 |
+| Winner right on matched points (E38d) | 78.3 % | 87.1 % | 78.8 % | 75.8 % |
+
+- The 2 label windows of each match (3 s each) hold no labeled event. So no labeled event is in a missed flight
+  part of the labels.
+- The bounce and net labels come from candidates of the detector track (bounce: `cand`; net: batch A and B), so they
+  cannot show a detector loss. Their 100 % is not evidence.
+- On the full video, the m1021 rally rows have the same flight coverage and the same number of long flight gaps as
+  m1020. The rally end and the winners of m1021 are not worse than those of the other matches.
+- Result: the 34 % loss on the m1021 labeled frames does not show as an event loss in the stored data. The loss is
+  probably small for the events. The stored data cannot measure an event loss in the far flight parts directly;
+  that needs new labels.
+
+**(b) The options.** Both need new labels: a small far ball in front of gray (m1021, also m1030 and the other
+matches). Agents do not label by eye: the path method of E27a proposes the positions, and the user checks each one.
+
+| Option | Labels | User time | GPU time | Run time of the app | Risks (section 7) |
+|---|---|---|---|---|---|
+| 0. No training (the m1021 loss stays) | none | none | none | none | none |
+| 1. Fine-tune at the far end, E38 recipe (more weight on far small balls) | about 400 to 600 far frames, 10 to 20 windows of 3 s in 4 lab matches | about 30 to 45 min (estimate: 4 to 5 s for each frame on a tile sheet) | 4 folds × 53 min + all × 65 min (about 4.5 h); full held-out detector runs of the 4 lab matches for the event measure (about 6 h at 0.82 × real time) | none | false blobs (the far end has the most static objects); the net and bounce rules were made on the old tracks (re-measure E110); fit to 4 matches (fold weights, m0913 and Igor as tests) |
+| 2. Far-end tile: a second pass on the far half at scale 0.5 to 0.7 | the same as 1, at the tile scale | the same as 1 | the same as 1, and a tile training (scale 0.5 on the full picture without training: 5 of 53) | the ball stage gets slower (estimate: +30 to 50 %); the 6 GB card is full at batch 1 (E83) | the same as 1, and more false blobs from a second pass (E27d: `dim` +0.27 for each frame); cost and memory |
+
+**(c) Recommendation: option 0 now.** The event loss of (a) is not measurable, and the full-video chain of m1021 is
+as good as the other matches. A training costs the user 30 to 45 min, about 10 h of GPU time, and a re-measure of
+the net and bounce rules. Open it again when an event loss is measured, for example in a fragment of the medium level
+(section 6) or in a new video with a far ball in front of gray. If the user wants it then, option 1 comes first:
+it does not change the run time of the app.
+
 ## 5. Labels and user work
 
 - Now: **none**. The checks of section 2 use the stored blobs. The diagnosis of step 2 uses the existing hand

@@ -15,7 +15,9 @@ Per fragment (rules of score_events.py, E75):
   rallies   marked points in the window against the chain rows (lab.match_points: overlap 50 % of the shorter)
   hits      labeled serves + shots against the chain shots with a flight (shot_chain.build on the window), within
             TOL_HIT, one to one; hitter right = the end (near, far) of the label
-  serves    labeled serves (with fault) against the server end and the fault of the matched chain row
+  serves    labeled serves against the server end and the fault of the matched chain row. The fault of a serve is
+            label_faults.infer_faults (S4 E159; the X mark keeps the flag, the user no longer presses X); a point
+            with an "unsure" serve and no fault is not counted for the fault ("faultUnsure")
   bounces   labeled bounces against the bounce events, within TOL_BOUNCE
   nets      labeled net touches ("stop" = net, "cord") against the net events with conf >= NET_CONF, within TOL_NET
   last shot the end of the last labeled event of each point (net, out, in) against the last shot of the chain row
@@ -31,6 +33,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import lab, case_lib, score_events as se, shot_chain as sc
+from label_faults import infer_faults
 TOL_HIT, TOL_BOUNCE, TOL_NET = se.TOL_HIT, se.TOL_BOUNCE, se.TOL_NET
 HIST = os.path.join(case_lib.ROOT, "history")
 KINDS = ("hits", "bounces", "nets")
@@ -106,20 +109,27 @@ def fragment(row, L, data, rows):
                    "false": [round(nev[i]["t"], 3) for i in range(len(nev)) if i not in {p for p, _ in mn}]}
     # serves and the last shot of each matched point: the labeled events from the point start - 25 s (the fault
     # serve before it) to the point end + 1 s
-    sv = {"points": 0, "serverOk": 0, "faultOk": 0, "lastOk": 0, "lastN": 0, "detail": []}
+    sv = {"points": 0, "serverOk": 0, "faultOk": 0, "faultN": 0, "faultUnsure": 0, "lastOk": 0, "lastN": 0, "detail": []}
+    fault = {round(x["t"], 6): x["fault"] for x in infer_faults(ev)}      # over all events of the fragment (the next serve)
     for gi, j in pairs:
         p, r = pts[gi], crow[j]
         s0, s1 = p["startMs"] / 1000, p["endMs"] / 1000
         pe = [e for e in ev if s0 - 25.0 <= e["t"] <= s1 + 1.0]
         serves = [e for e in pe if e["kind"] == "serve"]
-        play = [e for e in serves if not e.get("fault")]
-        d = {"point": p["id"], "labelServe": play[-1]["end"] if play else None, "labelFault": any(e.get("fault") for e in serves),
+        fs = [fault[round(e["t"], 6)] for e in serves]
+        play = [e for e, f in zip(serves, fs) if f is not True]
+        label_fault = True if True in fs else "unsure" if "unsure" in fs else False
+        d = {"point": p["id"], "labelServe": play[-1]["end"] if play else None, "labelFault": label_fault,
              "chainServerNear": r.get("serverNear"), "chainFault": r.get("fault") is not None,
              "labelEnd": last_end([e for e in pe if e["t"] >= s0 - 1.0]), "chainEnd": chain_end(r)}
         if d["labelServe"] is not None and d["chainServerNear"] is not None:
             sv["points"] += 1
             sv["serverOk"] += int((d["labelServe"] == "near") == d["chainServerNear"])
-            sv["faultOk"] += int(d["labelFault"] == d["chainFault"])
+            if d["labelFault"] == "unsure":             # the marks do not decide it: not a fault and not "no fault"
+                sv["faultUnsure"] += 1
+            else:
+                sv["faultN"] += 1
+                sv["faultOk"] += int(d["labelFault"] == d["chainFault"])
         if d["labelEnd"] and d["chainEnd"]:
             sv["lastN"] += 1
             sv["lastOk"] += int(d["labelEnd"] == d["chainEnd"])
@@ -138,7 +148,7 @@ def total(frs):
             t[f"{k}_{q}"] = sum(f[k][q] for f in lab_)
     t["hitterOk"] = sum(f["hits"]["hitterOk"] for f in lab_)
     t["netKindOk"] = sum(f["nets"]["kindOk"] for f in lab_)
-    for q in ("points", "serverOk", "faultOk", "lastOk", "lastN"):
+    for q in ("points", "serverOk", "faultOk", "faultN", "faultUnsure", "lastOk", "lastN"):
         t["serve_" + q] = sum(f["serves"][q] for f in lab_)
     return t
 
@@ -152,7 +162,8 @@ def fmt(f):
     h, b, n, v = f["hits"], f["bounces"], f["nets"], f["serves"]
     return (s + " yes | " + f"{h['matched']}/{h['labeled']} (chain {h['chain']}, hitter {h['hitterOk']})" + " | "
             + f"{b['matched']}/{b['labeled']} (chain {b['chain']})" + " | " + f"{n['matched']}/{n['labeled']} (chain {n['chain']})" + " | "
-            + (f"{v['serverOk']}/{v['points']}, fault {v['faultOk']}/{v['points']}" if v["points"] else "-") + " | "
+            + (f"{v['serverOk']}/{v['points']}, fault {v['faultOk']}/{v['faultN']}" + (f" ({v['faultUnsure']} unsure)" if v["faultUnsure"] else "")
+               if v["points"] else "-") + " | "
             + (f"{v['lastOk']}/{v['lastN']}" if v["lastN"] else "-") + " |")
 
 
@@ -210,10 +221,15 @@ def run(a):
              ("Hitter right (matched hits)", "hitterOk", "hits_matched"),
              ("Bounces found", "bounces_matched", "bounces_labeled"), ("Chain bounces right", "bounces_matched", "bounces_chain"),
              ("Net touches found", "nets_matched", "nets_labeled"), ("Chain net touches right", "nets_matched", "nets_chain"),
-             ("Server end right (matched points)", "serve_serverOk", "serve_points"), ("Fault right (matched points)", "serve_faultOk", "serve_points"),
+             ("Server end right (matched points)", "serve_serverOk", "serve_points"), ("Fault right (matched points, unsure out)", "serve_faultOk", "serve_faultN"),
              ("End of the last shot right (in/out/net)", "serve_lastOk", "serve_lastN")]
     for name_, k, n in rowsT:
-        L.append(f"| {name_} | {pct(t[k], t[n])} | {pct(pt[k], pt[n]) if k in pt and n in pt else '-'} |")
+        if n == "serve_faultN" and n not in pt:        # an entry before infer_faults: its faults were the X marks, of all points
+            n_old = "serve_points"
+        else:
+            n_old = n
+        L.append(f"| {name_} | {pct(t[k], t[n])} | {pct(pt[k], pt[n_old]) if k in pt and n_old in pt else '-'} |")
+    L.append(f"| Points with an unsure serve fault (label_faults) | {t['serve_faultUnsure']} | {pt.get('serve_faultUnsure', '-')} |")
     L += ["", "| Fragment | Match | Kind | Rallies | Labels | Hits found | Bounces found | Net touches found | Server, fault | Last shot |",
           "|---|---|---|---|---|---|---|---|---|---|"] + [fmt(f) for f in frs]
     txt = "\n".join(L) + "\n"

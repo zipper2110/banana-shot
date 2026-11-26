@@ -15,8 +15,11 @@ Steps:
       clips.json (from S1): {row id: fragment folder} (fragment.json with offset and clip.mp4). Writes faults.js
       (window.FAULTS) into the page folder. Open label_events.html#faults in that folder.
 
-Row hash: sha256 of the row (match, start, end, next point, clip, t0). The page keeps an answer only for the same row
-hash; an answer of a changed row is "stale" (kept in the file apart, not used).
+Row hash (agreed with S1): row_hash(match, start, end, next id) = the first 16 hex characters of the sha256 of
+json.dumps({"match": match, "start": round(start, 3), "end": round(end, 3), "next": next id}, sort_keys=True)
+(Python json defaults; start and end are the bench row times in source s, not the clip span). It does not use the clip:
+a new cut of a clip keeps the answers. The page keeps an answer only for the same row hash; an answer of a changed row
+is "stale" (kept in the file apart, not used).
 """
 import hashlib, json, os, sys
 
@@ -24,6 +27,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 PRE_S, POST_S = 1.0, 1.0
 MATCHES = ("m1015", "m1020", "m1021", "m1030")
+
+
+def row_hash(match, start, end, next_id):
+    """The row hash of a fault row (see the module text). The bench uses the same function on its own rows."""
+    key = json.dumps({"match": match, "start": round(start, 3), "end": round(end, 3), "next": next_id}, sort_keys=True)
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
 def fault_rows(mid, rows):
@@ -47,6 +56,7 @@ def fault_rows(mid, rows):
         out.append({"id": f"{mid}_{r['start']:.1f}", "match": mid, "start": round(r["start"], 3), "end": round(r["end"], 3),
                     "shots": r.get("shots"), "next": {"id": nxt["id"], "startMs": nxt["startMs"], "endMs": nxt["endMs"]},
                     "prevEnd": round(max(prev), 3) if prev else None})
+        out[-1]["rowHash"] = row_hash(mid, r["start"], r["end"], nxt["id"])
     return out
 
 
@@ -85,8 +95,7 @@ def page_step(out, clips_json, page):
         # after clip time 0; fragment time = source time - offset).
         t0 = round(fm["offset"] - fm.get("videoStartInClip", 0.0), 6)
         r = dict(x, clip=clip, t0=t0, duration=fm.get("duration"))
-        r["rowHash"] = hashlib.sha256(json.dumps({k: r[k] for k in ("match", "start", "end", "next", "clip", "t0")},
-                                                 sort_keys=True).encode()).hexdigest()[:16]
+        r["rowHash"] = row_hash(x["match"], x["start"], x["end"], x["next"]["id"])
         by.setdefault(x["match"], []).append(r)
     doc = {"version": 1, "matches": [{"match": m, "testOnly": m in lab.TEST_ONLY, "rows": sorted(v, key=lambda r: r["start"])}
                                      for m, v in sorted(by.items())]}

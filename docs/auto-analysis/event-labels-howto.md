@@ -103,6 +103,6 @@ There are 27 rows in 4 matches. It takes about 5 to 10 min. The page measures yo
 
 Output (for the agents): `faults_<match>.json` has `answers` (for each row: `row`, `rowHash`, `start`, `end` in
 source s, `next` (the id of the next marked point), `nextStartMs`, `answer` F, P, N or Q, `at`), `counts`,
-`rowCount`, `complete`, `labelSeconds` and `stale`. An answer counts only for the same `rowHash` as in `faults.js`.
+`rowCount`, `complete`, `labelSeconds` and `stale`. An answer counts only for the same `rowHash` as in `faults.js`. The row hash is `faults_cases.row_hash`: sha256 of the sorted JSON of match, start and end of the bench row (rounded to 3 decimals) and the id of the next marked point; the first 16 hex characters. A new cut of a clip does not change it.
 When the row list changes, the page moves the answers of changed or removed rows to `stale`; they are not used.
 The input is `faults.js` of `faults_cases.py page`.

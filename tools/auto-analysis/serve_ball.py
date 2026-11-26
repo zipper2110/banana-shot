@@ -16,6 +16,11 @@ import lab
 import winner_ball as wb
 
 Y_MIN, Z_MIN, V_MIN = 10.0, 1.6, 45.0
+# E77 (found on Igor, value from physics and the lab matches): the first sample of a toss is at the release, and the
+# hand releases the ball from about hip height (1.0 m) up. The old limit (1.5 m) lost 40 % of the toss flights at
+# the serve starts of the lab matches (median start 1.45 to 1.72 m). Far-end toss flights from 1.0 to 1.5 m: 33 at
+# serve starts, 5 inside rallies (the band over 1.5 m: 58 and 9). Under 1.0 m the flights are mostly ball bounces.
+TOSS_Z = 1.0
 SW, SL = 4.115, 6.40
 
 
@@ -30,7 +35,7 @@ def is_toss(f):
     """Serve toss: a slow, high ball above a baseline area."""
     p0, v0 = f["p0"], f["v0"]
     sp = 3.6 * float(np.linalg.norm(v0))
-    return f["n"] >= 8 and f["rms"] < 5 and 9.0 < abs(p0[1]) < 16 and 1.5 < p0[2] < 4.0 and abs(p0[0]) < 5.5 and sp < 30
+    return f["n"] >= 8 and f["rms"] < 5 and 9.0 < abs(p0[1]) < 16 and TOSS_Z < p0[2] < 4.0 and abs(p0[0]) < 5.5 and sp < 30
 
 
 def is_fast_out(f):

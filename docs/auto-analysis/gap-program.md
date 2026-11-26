@@ -358,7 +358,8 @@ Status 2026-11-26 (manager):
 7. (2026-11-26, approved by the user) **Plan for the ball detector.** The ball tracking is the base of all
    detection, so it must be as solid as possible. First a written plan, no training yet:
    `docs/auto-analysis/ball-detector-plan.md`. It holds: the target errors with counts (the far serve before its
-   bounce: 61 of 68 not in the blobs, E125, E126; the track through a net touch and the short tracks in the net band,
+   bounce was target A, from E125, E126 and E129; E150 found it wrong: 58 of 61 far serves are in the blobs, so
+   target A leaves the plan, see the decision of 2026-11-26 in section 6; the track through a net touch and the short tracks in the net band,
    E110; shots first seen after the net, E95, E96; the 4 T shots); the cause of each one (small far ball, motion
    blur, resolution of the input, the dim pass, occlusion); the options (for example new training data at the far
    end, a higher input resolution or tiles at the far end, a model with more frames, a change of the link step);
@@ -424,3 +425,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | NONE marks (the user): a NONE point has different causes (a point played again because its outcome was not clear, a no-point kept only for the video, a point played by mistake). The benchmark ignores them in both directions: a NONE point is not a missed rally, and a detected rally on a NONE point is not a false rally. The app detects the whole match with best effort; nothing changes there. The case library does not use NONE points. |
 | 2026-11-26 | Misha (m1113, the user): the user's project "Dima-Misha" (230 clips, 173 with a winner) is registered as the second test-only video. No stream looks at its results before the milestone batch; its first run there gives one clean held-out number. Igor stays a test video, but it is less clean: about 10 fixes were found on its errors. |
 | 2026-11-26 | Ball detector (the user): approved to open. The ball tracking is the base of the detection and must be as solid as possible. S5 writes the plan first (S5 item 7); training starts only after the user approves the plan. |
+| 2026-11-26 | Far serve (S4, E150, image space): the ball detector finds the far serve. In [a-1, a+2.5] of the 61 found far starts, 55 have a down run of 5 or more blobs across the net row, 3 a run only above it, 3 no run. Of the 136 far starts with no serve event, 113 have such a run (median 10.2 px/frame); the run starts at median a+1.78 s, after the end (a+1.5) of the E126 and E129 windows. Thus E126, E129 and the S5 "no blobs" answer are wrong, and the error is after the detector (flights, serve event). Decision (manager): target A leaves the ball-detector plan; S4 finds why these runs give no serve event (image first), then changes serve_prior behind a switch. S5 revises the plan to targets B and C before it goes to the user. |

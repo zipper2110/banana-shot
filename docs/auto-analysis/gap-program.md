@@ -136,6 +136,12 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
    "back" shot whose hit flight is not seen. Each one is a missed hit and a false hit. Find the cause and fix
    the shot time (for example from the hitter's pose, the audio hit or the back-projected flight). Then the
    10 E69 rallies where the true last shot is not in the chain. Same Igor rule.
+   Done (E92, E93; merged 3917a135): the back shot time comes from the meeting point of the ball lines. Igor
+   hits found 79 to 83 of 91, false 16 to 12; lab winners +2. The 10 "later shot" rallies are a tracking gap
+   (a tracking item, not a chain rule).
+8. (2026-11-26) False shots before the serve (E76 group C: 3 false hits; ball handling). When this is fixed,
+   `serve_time()` can go back to the first shot only (E123). Then a fresh table of the Igor hit errors on the
+   current code (missed, false, shot count), so that the next fix starts from the largest group.
 
 ### Rule for fixes found on Igor (manager, 2026-11-26)
 

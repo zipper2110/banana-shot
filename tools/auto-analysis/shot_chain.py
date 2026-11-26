@@ -90,9 +90,10 @@ BOUNCE_KEEP = 0.36   # speed along the court after a bounce / before it (lab: me
 HIT_EARLY = 0.3
 AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB or more comes 0 to 0.2 s after the hit
 # E164 (S3; S4 E171 items 5, 7 and 1; manager approval after E164 step 1): the shot list of a rally starts at the serve in
-# play. Lab marks start at the second serve; a first-serve fault or a toss before it gave a false first shot. Off by
-# default ("0"); "a", "b", "ab" (see serve_start). Only rally windows of chain.py give the serve events (build serves=...).
-SERVE_START = os.environ.get("CHAIN_SERVE_START", "0")
+# play. Lab marks start at the second serve; a first-serve fault or a toss before it gave a false first shot. Default
+# "ab" (manager decision after E164); "0" gives the old way; "a", "b" (see serve_start). Only rally windows of chain.py
+# give the serve events (build serves=...).
+SERVE_START = os.environ.get("CHAIN_SERVE_START", "ab")
 SS_GAP = 2.0           # s: (a) the next shot of the same end is this much or more after the first shot (E164: 8 lab rows)
 SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long after the first shot (E164: 0.6 to 1.2 s)
 

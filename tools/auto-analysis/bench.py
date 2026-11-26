@@ -538,6 +538,23 @@ def sided_ends(mid):
 SHOW_WITH_NONE = True       # the old numbers (NONE points counted) once more in the report (manager, 2026-11-26)
 
 
+def faults_file(mid):
+    """The user's answers of the Faults step of the label page (S4 E158): faults_<match>.json in the label folder."""
+    return os.path.join(os.path.dirname(sides_file(mid)), f"faults_{mid}.json")
+
+
+def fault_answers(mid):
+    """{row hash: answer F, P, N or Q} of faults_<match>.json, or None when there is no file. The answers in "stale"
+    (changed or removed rows) are not used; an answer counts only for a row with the same row hash."""
+    f = faults_file(mid)
+    if not os.path.exists(f):
+        return None
+    d = json.load(open(f, encoding="utf-8"))
+    if d.get("kind") != "bananashot-faults" or d.get("version") != 1 or d.get("match") != mid:
+        raise RuntimeError(f"{f}: not a version 1 faults file of {mid}")
+    return {a["rowHash"]: a["answer"] for a in d.get("answers") or [] if a.get("answer") in ("F", "P", "N", "Q")}
+
+
 def no_none(mid, rows, m):
     """The rally measures without the NONE points (the user, 2026-11-26): a marked point with the outcome NONE is not a
     missed rally, and a detected rally on a NONE point (the match rule of lab.match_points) is not a false rally. The
@@ -569,15 +586,37 @@ def no_none(mid, rows, m):
         nxt = next((t for t in starts if t >= r["end"]), None)
         if nxt is not None and nxt - r["end"] <= chain.FAULT_NEXT:
             fault_nc.append(j)
-    marked, detected = len(gt) - len(none), len(rows) - len(on_none) - len(fault_nc) - len(fault_clip)
+    # The user's answers of the Faults step (S4 E158, faults_<match>.json): F = a fault clip (as faultClipRows),
+    # P = a found point with a missing mark (one more marked and matched point), N = a false rally, Q or no answer =
+    # "not checked" as before. No file: the numbers of before.
+    answers = fault_answers(mid) if "faults" not in g else None
+    fa, points_p = None, 0
+    if answers is not None:
+        import faults_cases
+        marks = [(p, x) for p, x in zip(g["points"], gt) if x[2] != "NONE"]
+        fa, keep = {"F": 0, "P": 0, "N": 0, "Q": 0, "none": 0}, []
+        for j in fault_nc:
+            r = rows[j]
+            nxt = next(p for p, x in marks if x[0] >= r["end"])     # the next marked point (faults_cases.fault_rows)
+            a = answers.get(faults_cases.row_hash(mid, r["start"], r["end"], nxt["id"]))
+            fa[a or "none"] += 1
+            if a == "F":
+                fault_clip.append(j)
+            elif a not in ("P", "N"):
+                keep.append(j)
+        points_p, fault_nc = fa["P"], keep
+    marked, detected = len(gt) - len(none) + points_p, len(rows) - len(on_none) - len(fault_nc) - len(fault_clip)
     ds = [rows[j]["start"] - gt[gi][0] for gi, j in real]
     de = [rows[j]["end"] - gt[gi][1] for gi, j in real]
     out = dict(m, **{k + "WithNone": m[k] for k in ("marked", "detected", "matched", "recall", "precision", "startAbsMed", "endAbsMed")})
-    out.update(marked=marked, detected=detected, matched=len(real), recall=len(real) / max(1, marked),
-               precision=len(real) / max(1, detected), noneMarked=len(none), noneDetected=len(on_none),
+    if fa is not None:                                 # the numbers with no answers, for the report row
+        out.update(faultAnswers=fa, markedNoAnswers=marked - points_p,
+                   detectedNoAnswers=detected - fa["P"] - fa["N"], matchedNoAnswers=len(real))
+    out.update(marked=marked, detected=detected, matched=len(real) + points_p, recall=(len(real) + points_p) / max(1, marked),
+               precision=(len(real) + points_p) / max(1, detected), noneMarked=len(none), noneDetected=len(on_none),
                faultNotChecked=len(fault_nc), faultClipRows=len(fault_clip),
                faultNotCheckedShots=[rows[j].get("shots") for j in fault_nc],
-               precisionWithFaults=len(real) / max(1, detected + len(fault_nc) + len(fault_clip)),
+               precisionWithFaults=(len(real) + points_p) / max(1, detected + len(fault_nc) + len(fault_clip)),
                # chain shots (len(row["chain"]["shots"]), the count of chain.FAULT_SHOTS and S3 E145); "shots" of a row counts
                # the good flights in the row
                fault3Shots=sum(len((rows[j].get("chain") or {}).get("shots") or []) > chain.FAULT_SHOTS for j in fault_nc),
@@ -610,6 +649,14 @@ def summary(res, ev=None):
            "markedWithNone": sum(m["markedWithNone"] for m in ms), "detectedWithNone": sum(m["detectedWithNone"] for m in ms),
            "recallWithNone": sum(m["matchedWithNone"] for m in ms) / max(1, sum(m["markedWithNone"] for m in ms)),
            "precisionWithNone": sum(m["matchedWithNone"] for m in ms) / max(1, sum(m["detectedWithNone"] for m in ms))}
+    am = [m for m in ms if "faultAnswers" in m]
+    if am:                                             # the user's fault answers (S4 E158): counts, and the numbers without them
+        def no_ans(m, k):
+            return m.get(k + "NoAnswers", m[k])
+        tot["faultAnswers"] = {k: sum(m["faultAnswers"][k] for m in am) for k in ("F", "P", "N", "Q", "none")}
+        tot["faultAnswerMatches"] = [mid for mid, (m, _) in res.items() if "faultAnswers" in m]
+        tot["recallNoAnswers"] = sum(no_ans(m, "matched") for m in ms) / max(1, sum(no_ans(m, "marked") for m in ms))
+        tot["precisionNoAnswers"] = sum(no_ans(m, "matched") for m in ms) / max(1, sum(no_ans(m, "detected") for m in ms))
     for k in ("shortAdded", "shortReal", "shortMarked", "shortMarkedFound", "faultsMarked", "faultCandidates",
               "faultCandidatesRight", "faultsFound"):
         v = [e[k] for e in ex.values() if k in e]
@@ -669,6 +716,12 @@ def report(man, sets, skipped, same):
                f"| Rallies: recall / precision (NONE points out) | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, "
                f"{t['marked']} marked; {t.get('noneMarked', 0)} NONE points, {t.get('noneDetected', 0)} detected rallies on them) |")]
         L += fault_rows(s.get("perMatch") or {})
+        if "faultAnswers" in t:
+            fa = t["faultAnswers"]
+            L += [f"| Fault rows answered by the user ({', '.join(t['faultAnswerMatches'])}) | F {fa['F']} (fault clips), P {fa['P']} "
+                  f"(points with no mark), N {fa['N']} (false rallies), Q {fa['Q']}, no answer {fa['none']}; recall / precision with "
+                  f"the answers {pct(t['recall'])} / {pct(t['precision'])}, without them {pct(t['recallNoAnswers'])} / "
+                  f"{pct(t['precisionNoAnswers'])} |"]
         if t.get("faultNotChecked") or t.get("faultClipRows"):
             L += [f"| Rows left out as first-serve faults | {t.get('faultNotChecked', 0)} not checked (lab marks start at the second "
                   f"serve; {t.get('faultNotChecked3Shots', 0)} of them with 3 chain shots or more), {t.get('faultClipRows', 0)} on a marked "
@@ -882,6 +935,9 @@ def run(a):
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
            "labels": label_hashes(), "sides": sides, "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)",
            "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS], "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
+    answer_files = {m: sha(faults_file(m)) for m in lab.MATCHES if os.path.exists(faults_file(m))}
+    if answer_files:                                   # only with answers: a run with no answer file keeps its manifest
+        man["faultAnswerFiles"] = answer_files
     # The band state: "off", or the folder and the hash of the band file of each lab match.
     man["netBand"] = {"folder": NETBAND_DIR, "files": {m: v["net_band.npz"][5:] for m, v in inputs.items()
                                                        if "net_band.npz" in v}} if NETBAND_DIR and nets else "off"

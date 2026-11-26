@@ -82,6 +82,11 @@ question, with a journal row. A gap is not covered by a plan or a note only.
 5. Calibration (G3): confidence bins against the accuracy on the held-out rows. A proposal for
    `minWinnerPercent` and the "check first" limit.
 6. Service for the other streams: run the benchmark on a branch when a stream asks.
+7. (2026-11-26) `bench.py heavy --stage <ball|court|pose> ...`: the regular check of a heavy-stage change on the
+   label windows only (the rule of section 2). (a) Ball candidate recall and false blobs on the labeled frames
+   (S5 E80 method). (b) Events on the bounce, net and hit label windows (S5 E88 decode, a decode cache on D).
+   First a null check: with the current weights, the window result must equal the full-run files on those windows
+   (E84 lost events on windows). Target: minutes. Start after the Igor reference run.
 
 Done when: the Igor number is in the journal, the benchmark is one command with a manifest, and the
 calibration table exists.

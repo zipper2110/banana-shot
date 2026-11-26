@@ -104,7 +104,12 @@ SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long aft
 # "c" (see no_net_alone): a net event with no flight is no shot when the next shot is of the same end less than TO_NET_GAP s
 #     after the event (E166 class C: 7 false ends; a ball needs more time to go over the net and come back).
 TIME_ORDER = os.environ.get("CHAIN_TIME_ORDER", "0")
-TO_EPS = 0.05          # s: a bounce up to this after the start of the first flight is at the start (lab: 99 % of these events are earlier)
+# TO_EPS (manager, after E167): the shortest real time from a contact to a bounce on the side of the hitter is longer.
+# A shot to the other side bounces there first; an overhead near the net can bounce about 0.1 s after the contact,
+# but on the other side, so the side test keeps it. A bounce on the side of the hitter after a contact comes after a
+# net touch: the ball falls from the top of the net (0.9 m) to the ground in 0.43 s or more. The bounce event at the
+# start of a flight is 0.06 s before the flight start to 0.02 s after it (lab, 4291 events).
+TO_EPS = 0.15          # s after the start of the first flight
 TO_NET_GAP = 1.2       # s
 
 

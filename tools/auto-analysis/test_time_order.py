@@ -49,6 +49,11 @@ class TimeOrder(unittest.TestCase):
         self.assertEqual(len(sh["bounces"]), 1)
         self.assertNotIn("early", sh)
 
+    def test_an_overhead_bounce_on_the_other_side_0_1_s_after_the_contact_stays(self):
+        sh = shot(10.0, True, [bounce(10.1, 1.5)])
+        sc.time_order([sh])
+        self.assertEqual(len(sh["bounces"]), 1)
+
     def test_a_bounce_of_the_hitter_later_than_the_margin_stays(self):
         # a real "own" end (the ball drops after the net touch) is after the contact
         sh = shot(10.0, True, [bounce(10.0 + sc.TO_EPS + 0.01, -0.3)])

@@ -209,6 +209,11 @@ label by eye.
    serve side is known at only about 25 % of the starts). First a diagnosis on the existing files (CPU): is
    the ball seen in the blobs but not linked into a flight, or not seen at all? Then a fix of the link step if
    that is the cause. A change of the ball model is a new item: ask the manager first.
+   Part done (E124 to E126, merged 2026-11-26): (a) the far serve before its bounce (68 of 228 starts) is not in
+   the blobs (61 of 68 have no fast blob run): not a link fault, it needs a detector change (a model item, open).
+   The return filter removed 22 serve flights; with a speed limit of 240 km/h (physics) 11 come back. Lab serve
+   event at a point start 59.5 to 62.9 %, rallies and events the same, winners inside the noise; Igor apart 123 to
+   128 of 197 starts. Next: (b) the 43 depth errors of the fit (tell S5 before an edit of `ball_3d.py`).
 
 Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
 the journal, and the hitter measure follows the labels.

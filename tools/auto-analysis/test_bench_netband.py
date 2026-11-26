@@ -68,6 +68,23 @@ class NetBandSwitch(unittest.TestCase):
             del os.environ["SERVE_PRIOR_WIDE"]
         self.assertEqual(self.key(), off)              # not set: the key of before
 
+    def test_the_default_is_the_band_of_s5_and_empty_is_off(self):
+        # netBand is the default of detect.py after E137: the bench shows the default chain
+        bench.NETBAND_DIR = None
+        self.assertEqual(os.path.normpath(bench.netband_dir()),
+                         os.path.normpath(os.path.join(os.path.dirname(lab.ROOT.rstrip("/\\")), "ws", "s5", "nb")))
+        bench.NETBAND_DIR = ""
+        self.assertIsNone(bench.band_file(MID))
+        self.assertFalse(any(os.path.basename(f) == "net_band.npz" for f in bench.net_inputs(MID)[1]))
+
+    def test_the_flights_key_has_no_chain_module(self):
+        # the closure of what flights1 runs (ball_full, net_events) and lab.py; a chain-only edit makes no new flights
+        names = {os.path.basename(f) for f in bench.code_files(bench.HERE, True)}
+        self.assertTrue({"ball_full.py", "net_events.py", "ball_3d.py", "lab.py"} <= names)
+        for chain_module in ("shot_chain.py", "winner_ball.py", "winner_sweep.py", "match_decode.py", "score_decode.py",
+                             "feat_wasb.py", "chain.py", "serve_ball.py"):
+            self.assertNotIn(chain_module, names)
+
     def test_on_with_a_missing_band_file_stops(self):
         bench.NETBAND_DIR = self.band_dir
         with self.assertRaises(FileNotFoundError):

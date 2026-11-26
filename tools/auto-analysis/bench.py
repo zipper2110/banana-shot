@@ -18,8 +18,9 @@ Run the benchmark from a snapshot of one commit, not from the main checkout (oth
 A heavy stage against its own labels, under the GPU lock (item 7a; report <lab>/bench/<time>-<commit>-heavy-ball/):
   python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py heavy --stage ball [--weights held-out] [--passes dim]
 The stream name on the GPU lock tickets: --who <stream> (before the command), else the env var BENCH_WHO, else "bench".
-The net band of the lab matches (S5 item 6 (d), netBand on): env BENCH_NETBAND_DIR=<folder> reads <folder>/<match>/net_band.npz
-(for example <lab>/ws/s5/nb). The band file is then an input of the lab flights key and of the manifest. Not set: no band.
+The net band of the lab matches (netBand, the default of detect.py after E137): the lab set reads
+<lab>/ws/s5/nb/<match>/net_band.npz; env BENCH_NETBAND_DIR=<folder> reads another folder, and BENCH_NETBAND_DIR=""
+gives netBand off (a paired test). The band file is an input of the lab flights key and of the manifest.
 The manifest and the report show the band state ("netBand": "off", or the folder and the hash of each band file).
 """
 import argparse, glob, hashlib, json, math, os, re, subprocess, sys, time
@@ -31,7 +32,16 @@ WHO = os.environ.get("BENCH_WHO") or "bench"     # the stream name on the GPU lo
 # The folder of the net band files of the lab matches (<folder>/<match>/net_band.npz, S5 item 6 (d)); "" = no band.
 # Not a switch name in the manifest: when set, the band files are inputs (key and manifest), so a run with no band
 # keeps the hash of the runs before the band.
-NETBAND_DIR = os.environ.get("BENCH_NETBAND_DIR") or ""
+NETBAND_DIR = os.environ.get("BENCH_NETBAND_DIR")    # None = the default band folder (netBand on, E137); "" = off
+
+
+def netband_dir():
+    """The band folder of the lab matches: BENCH_NETBAND_DIR when set ("" = netBand off, for a paired test), else the
+    band files of S5 (<lab>/ws/s5/nb; netBand is the default of detect.py after E137, manager aa34e3af)."""
+    if NETBAND_DIR is None:
+        import lab
+        return os.path.join(os.path.dirname(lab.ROOT.rstrip("/\\")), "ws", "s5", "nb")
+    return NETBAND_DIR
 CONF_BINS = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0001]
 LIMITS = [50, 55, 60, 65, 70, 75, 80, 85, 90]       # candidates for minWinnerPercent and the "check first" limit
 CHECK_FIRST = 0.70                                  # the "check first" limit of the review window now
@@ -261,7 +271,7 @@ def net_inputs(mid):
     if mid in WINDOWS:
         frozen = ["fullflights_s0.35_ev.json"] if LAB_FLIGHTS == "frozen" else []
         return "lab", [os.path.join(lab.mdir(mid), f) for f in NET_COPY + frozen +
-                       ["wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[mid], LAB_BLOB_TAG)]] +             ([band_file(mid)] if NETBAND_DIR else [])
+                       ["wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[mid], LAB_BLOB_TAG)]] +             ([band_file(mid)] if netband_dir() else [])
     d = app_folder(mid)
     blobs = glob.glob(os.path.join(d, "wasb_0_*_s0.35_k2.npy"))
     return "app", [os.path.join(d, f) for f in NET_COPY + ["pts_video.npy", "fullflights_s0.35.json"]] + \
@@ -269,8 +279,8 @@ def net_inputs(mid):
 
 
 def band_file(mid):
-    """The net band file of lab match mid in NETBAND_DIR, or None when no band folder is set."""
-    return os.path.join(NETBAND_DIR, mid, "net_band.npz") if NETBAND_DIR else None
+    """The net band file of lab match mid in the band folder (netband_dir), or None when netBand is off."""
+    return os.path.join(netband_dir(), mid, "net_band.npz") if netband_dir() else None
 
 
 def band_in(dst):
@@ -308,8 +318,8 @@ def net_key(m, code_dir):
     inputs of the match; with NETBAND_DIR set, the net band file of a lab match is one of the inputs."""
     import lab
     kind, src = net_inputs(m)
-    if kind == "lab" and NETBAND_DIR and not os.path.exists(band_file(m)):
-        raise FileNotFoundError(f"BENCH_NETBAND_DIR is set, but {band_file(m)} is missing")
+    if kind == "lab" and netband_dir() and not os.path.exists(band_file(m)):
+        raise FileNotFoundError(f"netBand is on, but {band_file(m)} is missing (BENCH_NETBAND_DIR=\"\" gives netBand off)")
     src = [f for f in src if os.path.exists(f)]
     flights = kind == "lab" and LAB_FLIGHTS == "remake"
     h = hashlib.sha256()
@@ -328,16 +338,18 @@ def net_key(m, code_dir):
 
 
 def code_files(code_dir, flights=True):
-    """The code files of the lab flights key (flights=True) or of the net events key: the import closure of the
-    entry modules of detect.py (code_closure.py, S2 item 13; the flights stage: ball_full, net_events, feat_wasb),
-    read in code_dir, and lab.py. A snapshot without code_closure.py (before item 13) uses the old hand lists."""
+    """The code files of the lab flights key (flights=True) or of the net events key: the import closure of what the
+    bench flights stage runs (code_closure.py, S2 item 13; flights1: ball_full.run and net_events.run_folder), read in
+    code_dir, and lab.py. Not feat_wasb (manager, gap-program "Bench flights key"): the bench does not run it (the lab
+    set reads the frozen feat_wasbf.npy), and its closure brought the chain modules (shot_chain, winner_ball, ...) into
+    the key, so each chain-only edit made new flights. A snapshot without code_closure.py (before item 13) uses the old hand lists."""
     if os.path.exists(os.path.join(code_dir, "code_closure.py")):
         import importlib.util
         spec = importlib.util.spec_from_file_location("_closure_" + hashlib.sha1(code_dir.encode()).hexdigest()[:8],
                                                       os.path.join(code_dir, "code_closure.py"))
         cc = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cc)
-        entries = ("ball_full", "net_events", "feat_wasb") if flights else ("net_events",)
+        entries = ("ball_full", "net_events") if flights else ("net_events",)
         fs = cc.files(*entries, folder=code_dir)
         lab_py = os.path.join(code_dir, "lab.py")
         return sorted(set(fs) | {lab_py}, key=os.path.basename)
@@ -980,8 +992,8 @@ def run(a):
     if answer_files:                                   # only with answers: a run with no answer file keeps its manifest
         man["faultAnswerFiles"] = answer_files
     # The band state: "off", or the folder and the hash of the band file of each lab match.
-    man["netBand"] = {"folder": NETBAND_DIR, "files": {m: v["net_band.npz"][5:] for m, v in inputs.items()
-                                                       if "net_band.npz" in v}} if NETBAND_DIR and nets else "off"
+    man["netBand"] = {"folder": netband_dir(), "files": {m: v["net_band.npz"][5:] for m, v in inputs.items()
+                                                         if "net_band.npz" in v}} if netband_dir() and nets else "off"
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
     man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
     out = {k: summary(v, ev) for k, v in sets.items()}

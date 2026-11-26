@@ -34,6 +34,7 @@ import glob, hashlib, json, os, sys
 import numpy as np
 import lab
 import shot_chain as sc
+import winner_ball as wb
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HIT_LABELS_DIR = os.environ.get("HIT_LABELS_DIR", HERE)
@@ -41,7 +42,7 @@ TOL_HIT, TOL_BOUNCE, TOL_NET = 0.30, 0.10, 0.50       # s
 NEAR_HIT = 0.05                                       # s: a bounce event this near to a labeled hit is a false bounce
 CLIP_PRE, CLIP_POST = 1.5, 0.5                        # s: the window of a labeled clip (label_clips.py PRE, POST)
 MIN_SPEED = 8.0                                       # km/h (chain.PARAMS)
-T_CUT = -1.5                                          # s: winner_ball.T_CUT for a marked end
+T_CUT = wb.T_CUT                                      # s: the cut of the winner rule for a marked end (-1.5; S3 E69: not set on Igor)
 END_OF = {"NET": "net", "LONG": "out", "WIDE": "out"}  # errorKind -> end of the last shot; WINNER, ACE -> in
 
 
@@ -237,7 +238,7 @@ def end_truth(mid):
 
 def last_shot(mid, data, truth):
     g = json.load(open(os.path.join(lab.mdir(mid), "gt.json"), encoding="utf-8"))
-    tab, n = {}, 0
+    tab, n, stop = {}, 0, 0
     for p in g["points"]:
         y = truth.get(p["id"])
         if y is None:
@@ -247,12 +248,15 @@ def last_shot(mid, data, truth):
         li = sc.last_shot(shots, b, T_CUT)
         k = sc.shot_end(shots[li])[0] if li is not None else "no shot"
         k = {"own": "net"}.get(k, k)              # a bounce on the side of the hitter: the ball did not pass the net
+        if k == "none" and sc.NET_STOP and sc.net_stop(shots[li], b + T_CUT):
+            k = "net"                             # the E74 test of the chain: the last flight stopped at the net
+            stop += 1
         tab.setdefault(y, {}).setdefault(k, 0)
         tab[y][k] += 1
         n += 1
     ok = sum(tab.get(y, {}).get(y, 0) for y in tab)
     seen = sum(v for y in tab for k, v in tab[y].items() if k in ("net", "out", "in"))
-    return {"points": n, "ok": ok, "right": _pct(ok, n), "seen": seen, "rightOfSeen": _pct(ok, seen), "table": tab}
+    return {"points": n, "ok": ok, "right": _pct(ok, n), "seen": seen, "rightOfSeen": _pct(ok, seen), "netByStop": stop, "table": tab}
 
 
 # ---------------------------------------------------------------- per match, total, report

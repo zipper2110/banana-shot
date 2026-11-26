@@ -221,7 +221,7 @@ def serve_prior(P, seg, fl, sc=None):
                 continue
             best = _anchored_serve(P, sub)
             if best is not None:
-                fl.update(f0=float(sub[0, 0]), n=len(sub), split=1)
+                fl.update(f0=float(sub[0, 0]), n=len(sub), split=1, dRow=float(sub[-1, 2] - sub[0, 2]))
                 break
     if best:
         fl.update(p0=best[0], v0=best[1], rms=best[2], p1=simulate(best[0], best[1], [best[4][-1]])[0], prior=1, prior_at=best[3])
@@ -244,7 +244,7 @@ def flights(path, kk, P, Hm=None, min_pts=8, free=None):
         p0, v0, rms = fit_flight(P, ts, seg[:, 1:3].astype(np.float64))
         end = simulate(p0, v0, [ts[-1]])[0]
         out.append({"f0": float(seg[0, 0]), "f1": float(seg[-1, 0]), "n": len(seg), "p0": p0, "v0": v0, "p1": end, "rms": rms,
-                    "cut0": a, "cut1": b, "anchored": 0})
+                    "cut0": a, "cut1": b, "anchored": 0, "dRow": float(seg[-1, 2] - seg[0, 2])})
     for (a, b, seg), fl in zip(segs, out):               # E10d: serve flights with a degenerate free fit
         serve_prior(P, seg, fl, Scale(Hm) if Hm is not None else None)
     if free is not None:
@@ -311,7 +311,8 @@ def fit_window(mid, rows, w0, w1, t_ref, debug=None):
         o = {"t0": w0 + fl["f0"] / 60, "t1": w0 + fl["f1"] / 60, "n": fl["n"], "rms": fl["rms"],
              "p0": np.asarray(fl["p0"]).tolist(), "v0": np.asarray(fl["v0"]).tolist(), "p1": np.asarray(fl["p1"]).tolist(),
              "land": [lx, ly], "landT": land_t, "netZ": nz,
-             "anchored": fl["anchored"], "bounce": fl.get("bounce"), "prior": fl.get("prior", 0)}
+             "anchored": fl["anchored"], "bounce": fl.get("bounce"), "prior": fl.get("prior", 0),
+             "dRow": fl.get("dRow")}     # E153: image row of the last blob - row of the first (px, 1920 wide; > 0 = down)
         if EVENTS:
             fe = free[i]
             e1 = evs[fe["e1"]] if fe["e1"] is not None else None

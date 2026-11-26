@@ -47,7 +47,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 LAB_ENV = ("BALL_PASSES", "BALL_WEIGHTS", "CHAIN", "END_MODEL", "COURT_TRACK", "BLOB_TAG", "BALL_TAG", "EV_TAG",
            "FULLFLIGHTS", "FPS_ADAPT", "SERVE_FILTER", "FAR_FAULT_M", "SELECT_TRIM", "TURN", "LEN_TIME", "OUT_LINE",
            "NET_NEAR", "CONT_GAP", "CONT_M", "CHAIN_NET_STOP", "SERVE_PRIOR_KEEP", "SERVE_PRIOR_WIDE",
-           "SERVE_PRIOR_SPLIT", "RETURN_REAL_START")    # and each CHAIN_* switch of shot_chain.py
+           "SERVE_PRIOR_SPLIT", "RETURN_REAL_START", "SERVE_DOWN_IMAGE")    # and each CHAIN_* switch of shot_chain.py
 
 
 def say(*a):

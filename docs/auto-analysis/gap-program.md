@@ -49,7 +49,16 @@ question, with a journal row. A gap is not covered by a plan or a note only.
 - A script that imports torch must take the lock or force the CPU (`CUDA_VISIBLE_DEVICES=""`). Any CUDA context
   takes GPU memory: a small model on the GPU next to the ball stage stopped the Igor run with "out of memory"
   (2026-11-26).
-- Disk C is almost full. Put all data on D.
+- **Full-video runs only at milestones (the user, 2026-11-26).** A run of a full match (the ball stage takes 1.5 to
+  4 h) is not a regular check. Regular checks:
+  - A change of the chain (the stages after the ball file): the cached bench (`bench.py`: the 4 lab matches and the
+    Igor light stages on the existing ball files). It takes about 1 min.
+  - A change of a heavy stage (ball detector, decode, court, pose): first only the labeled windows or short clips
+    (the ball, bounce, net and hit label windows, as in E80 and E88), not full matches.
+  - A full-video run needs the manager's approval. It is for a milestone only: a heavy-stage change that passed on
+    the samples and becomes the default, a new held-out video, or the end of the program. The manager collects
+    such runs and starts them as one batch.
+- - Disk C is almost full. Put all data on D.
 
 ## 3. Streams
 
@@ -300,3 +309,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | G3 (S1 proposal, manager): "check first" stays at 70 % and minWinnerPercent stays at 50. Held out, the winners under 70 % are about 55 % right (107 points in the pool). A calibration map of the shown percent is a later item (n is small). No app change. |
 | 2026-11-26 | Igor identity (S3, E69): the chain identity (colors) has 0 wrong of 194 rallies, so the E68 L weight holds held out. The score-replay rules (`near_identity`, `sides.json`) miss an end change at the set break after an even set (5-7); the players changed ends there. These rules are a check only; the chain does not use them. Keep this case for the later score-consistency hints. |
 | 2026-11-26 | Scope of the videos (the user): singles only. Doubles can need other methods; do not spread the effort now (the m1001 and m1016 runs stop). No new videos or new conditions (courts, camera angles, the moving-camera clips) until the chain is stable and the quality is good on the current videos. The user then gets more videos. Thus G15 ends with m0913 (E57); the work goes to the clear failures on the current videos. |
+| 2026-11-26 | Full-video runs (the user): only at milestones, not for regular checks (section 2). Cause: on 2026-11-26 about 10 h of full runs (Igor, m0913, m1001) held the GPU, and short jobs waited behind them for hours. |

@@ -163,8 +163,9 @@ SERVE_PRIOR_KEEP = os.environ.get("SERVE_PRIOR_KEEP", "1") == "1"
 # E150: a wider trigger. The free fit of a far serve can pass the plausibility test and still have the wrong depth
 # (the start 2 to 10 m from the net, or slow). With SERVE_PRIOR_WIDE=1 the anchor is also tried when the free fit
 # flies to the near end and does not start at the contact plane (|y0 - SERVE_Y| > 1.5 m). The gate and the checks
-# of the anchored fit do not change.
-SERVE_PRIOR_WIDE = os.environ.get("SERVE_PRIOR_WIDE", "0") == "1"
+# of the anchored fit do not change. On by default after E151 (far serve events at the starts 170 to 197 of 291,
+# the paired bench inside the noise). SERVE_PRIOR_WIDE=0 gives the old fit.
+SERVE_PRIOR_WIDE = os.environ.get("SERVE_PRIOR_WIDE", "1") == "1"
 
 
 def serve_prior(P, seg, fl):

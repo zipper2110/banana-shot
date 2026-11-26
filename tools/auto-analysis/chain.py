@@ -45,6 +45,9 @@ SERVICE_LINE = 6.40                      # the distance of the service line from
 # flight) not later than FAULT_NEXT s after it, is the first serve of the next rally: it is not a rally.
 FAULT_SIDE = True
 FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, 0.3          # shots; s (the time between points of the rules); m (x near 0: side not known)
+# item 10: when the serve flight does not give the side, the court x of the feet of the server (pose, court.json H)
+# gives it. The rule of tennis: the server serves from the other side after a point, from the same side after a fault.
+POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
@@ -137,6 +140,8 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
     np_ = NET_FILES.get(mid) or os.path.join(out, "net_events.json")
     nets = json.load(open(np_))["events"] if os.path.exists(np_) else []
     hits = rally_end.load_hits(out)
+    cj = os.path.join(out, "court.json")
+    Hc = np.array(json.load(open(cj))["H"], np.float64) if POSE_SIDE and os.path.exists(cj) else None
     gru = prob
     for (a, b, prob) in seg:
         # E60: the end of the winner evidence (the window of the flights and the time cut). The row keeps the GRU end b.
@@ -166,16 +171,21 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
             if CHAIN and ch is not None:
                 pw = 0.5 if ch["nearWins"] is None else (pc if ch["nearWins"] else 1 - pc)
         # server end: pose vote, then the ball serve event
-        nu, fu = [], []
+        nu, fu, nx, fx = [], [], [], []
         for s in range(max(0, int(a) - 1), min(n, int(a) + 3)):
             r, fr = near_far(pose[s])
-            if r is not None:
-                nu.append(wrist_up(r))
-            if fr is not None:
-                fu.append(wrist_up(fr))
+            for row, up, xs in ((r, nu, nx), (fr, fu, fx)):
+                if row is None:
+                    continue
+                up.append(wrist_up(row))
+                if Hc is not None and s <= int(a) + 1:     # the feet: the bottom center of the box
+                    xs.append(cv2.perspectiveTransform(np.array([[[(row[1] + row[3]) / 2, row[4]]]], np.float64), Hc)[0, 0, 0])
         nmax = np.nanmax(nu) if np.isfinite(nu).any() else -9
         fmax = np.nanmax(fu) if np.isfinite(fu).any() else -9
         srv = None if max(nmax, fmax) < 0.5 else bool(nmax > fmax)
+        xs = nx if srv else fx
+        x_srv = float(np.median(xs)) if srv is not None and xs else None
+        pose_side = None if x_srv is None or abs(x_srv) < SIDE_X else (srv, x_srv > 0)
         ev = [e for e in serves if a - 1.0 <= e[0] <= a + 2.5]
         speed = None
         if ev:
@@ -230,7 +240,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                     "margin": None if np.isnan(q["margin"]) else q["margin"],
                     "bx": None if np.isnan(q["bx"]) else q["bx"], "by": None if np.isnan(q["by"]) else q["by"], "tRel": q["t_rel"]}
         rows.append({"start": a, "end": b, "prob": prob, "pBall": pw, "serverNear": srv, "serveSpeed": speed, "fault": fault, "lastShot": last,
-                     "shots": int(sum(wb.good(f) and a <= f["t0"] <= b for f in fls))})
+                     "shots": int(sum(wb.good(f) and a <= f["t0"] <= b for f in fls)), "poseSide": pose_side})
         if ch is not None:
             rows[-1]["chainCase"], rows[-1]["chainNearWins"] = ch["case"], ch["nearWins"]
             rows[-1]["chain"] = chain_row
@@ -317,10 +327,12 @@ def fault_rallies(rows, serves):
         nxt = rows[i + 1] if i + 1 < len(rows) else None
         if (nxt is not None and r.get("chain") is not None and len(r["chain"]["shots"]) <= FAULT_SHOTS
                 and nxt["start"] - r["end"] <= FAULT_NEXT):
-            s1, s2 = serve_side(serves, r["start"]), serve_side(serves, nxt["start"])
+            s1 = serve_side(serves, r["start"]) or (r.get("poseSide") if POSE_SIDE else None)
+            s2 = serve_side(serves, nxt["start"]) or (nxt.get("poseSide") if POSE_SIDE else None)
             if s1 is not None and s1 == s2:
-                if nxt.get("fault") is None:
-                    e = [x for x in serves if r["start"] - 1.0 <= x[0] <= r["start"] + 2.5 and x[2] != "toss"][0]
+                e = [x for x in serves if r["start"] - 1.0 <= x[0] <= r["start"] + 2.5 and x[2] != "toss"]
+                if nxt.get("fault") is None and e:
+                    e = e[0]
                     nxt["fault"] = {"t": e[0], "kind": e[2], "speed": 3.6 * float(np.linalg.norm(e[3]["v0"])), "fromRally": True}
                 i += 1
                 continue

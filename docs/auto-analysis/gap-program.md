@@ -87,6 +87,23 @@ question, with a journal row. A gap is not covered by a plan or a note only.
    (S5 E80 method). (b) Events on the bounce, net and hit label windows (S5 E88 decode, a decode cache on D).
    First a null check: with the current weights, the window result must equal the full-run files on those windows
    (E84 lost events on windows). Target: minutes. Start after the Igor reference run.
+8. (2026-11-26, the user) **Case library**: short video fragments cut from the source videos, each with a known
+   error kind, its labels and the history of its detection results. It replaces the window decode of item 7(b) and
+   also runs the full `detect.py` chain on a fragment. Design (manager):
+   - A fragment is one marked point (or a few) with a pad before and after (warm-up of the tracker and of the rally
+     GRU). Cut with stream copy from a keyframe (`-c copy`, no new encode: a new encode changes the pixels and the
+     detector output). Record the offset to the source time; the labels of the source move into the fragment time.
+   - The court comes from the full video (an input of the fragment), unless the case is a court case.
+   - Each fragment enters the library only after a null check: the current code on the fragment gives the same
+     events as the full run in the same time span. A fragment that fails the check is not used (or the pad grows).
+   - Kinds: one folder or tag for each error kind (for example far serve not seen, depth error of the serve fit,
+     net touch seen only in the net, missed short point, false rally, late shot, dead ball, fault as a rally) and
+     a **control** group of fragments that are right now (a guard against regressions). About a third controls.
+   - History: each run adds one row for each fragment (commit, each event against the labels, solved or not).
+   - Limits: the cases come from the lab matches and Igor, so a fix that only solves the library cases is tuned to
+     them. The milestone full runs and a clean held-out video stay the final measure.
+   S1 builds the tool and the format; each stream gives the case list of its own error kinds (from its journal
+   rows). Start with about 30 to 40 fragments (target: under 20 min of video, under 30 min for all stages).
 
 Done when: the Igor number is in the journal, the benchmark is one command with a manifest, and the
 calibration table exists.
@@ -315,3 +332,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Igor identity (S3, E69): the chain identity (colors) has 0 wrong of 194 rallies, so the E68 L weight holds held out. The score-replay rules (`near_identity`, `sides.json`) miss an end change at the set break after an even set (5-7); the players changed ends there. These rules are a check only; the chain does not use them. Keep this case for the later score-consistency hints. |
 | 2026-11-26 | Scope of the videos (the user): singles only. Doubles can need other methods; do not spread the effort now (the m1001 and m1016 runs stop). No new videos or new conditions (courts, camera angles, the moving-camera clips) until the chain is stable and the quality is good on the current videos. The user then gets more videos. Thus G15 ends with m0913 (E57); the work goes to the clear failures on the current videos. |
 | 2026-11-26 | Full-video runs (the user): only at milestones, not for regular checks (section 2). Cause: on 2026-11-26 about 10 h of full runs (Igor, m0913, m1001) held the GPU, and short jobs waited behind them for hours. |
+| 2026-11-26 | Case library (the user): short fragments of the source videos, grouped by error kind, with labels and the history of their detection results; the regular check of heavy-stage changes. Design in S1 item 8. |

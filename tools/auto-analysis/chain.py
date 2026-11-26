@@ -53,8 +53,9 @@ POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 # item 10: a rally with no shot in its chain and no server end from the pose has no evidence of a serve: it is not a point.
 NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
 # E161 (S3, rally miss table E160): segments of the GRU with a gap of less than JOIN_GAP s are one rally. The old
-# value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 1.5 (the old way).
-JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "1.5"))
+# value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 2.5 (manager
+# decision after E161); 1.5 gives the old way.
+JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "2.5"))
 # item 12 (user decision): the winner of each rally comes from its own evidence; the score decoder does not change a
 # winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.
 DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"

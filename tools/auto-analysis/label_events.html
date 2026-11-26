@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<!--
+Event labels of the user on the case library fragments (gap program S4 item 10; S1 item 8). A local page: open it
+with file:// in Chrome or Edge. The page reads manifest.js (made by case_manifest.py from the fragment manifest of
+S1) from its own folder and plays the fragment clips.
+For each fragment the user marks all significant events: each serve contact (near or far, first-serve fault flag),
+each other shot contact (near or far), each bounce (time, ball pixel at the ground, in or out, seen or inferred),
+each net touch (the ball stops) or net cord (the ball goes over).
+Output: one JSON file for each fragment, <fragment id>.events.json, in a folder that the user chooses once (File
+System Access API). A copy of all labels stays in the local storage of the browser.
+Time base: t = source video time in s = t0 of the fragment + clip time of the frame on the screen.
+Pixel base: px = ball position in the pixels of a 1920-wide frame (the frame of courtH). Court: courtH applied to
+px (the ball is on the ground at a bounce), court m: x across, y along (far end > 0).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BananaShot event labels</title>
+<script src="manifest.js"></script>
+<style>
+  :root { --bg:#16181c; --panel:#1f2228; --line:#2e323a; --text:#e6e6e6; --dim:#9aa0a8; --near:#4da3ff; --far:#ffa94d;
+          --fault:#ff5c5c; --ok:#5fd38d; --warn:#ffd166; --bounce:#7ee0d0; --out:#ff7ab8; --net:#c9a0ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.35 system-ui, sans-serif; height:100vh;
+         display:grid; grid-template-rows:auto 1fr; overflow:hidden; }
+  header { display:flex; gap:16px; align-items:center; padding:6px 12px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header b { font-size:15px; }
+  header .sp { flex:1; }
+  button { background:#2b3038; color:var(--text); border:1px solid var(--line); border-radius:4px; padding:4px 10px; cursor:pointer; font:inherit; }
+  button:hover { background:#353b45; }
+  main { display:grid; grid-template-columns:1fr 340px; min-height:0; }
+  #left { display:flex; flex-direction:column; min-height:0; padding:8px; gap:6px; }
+  #stage { position:relative; flex:1; min-height:0; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; cursor:crosshair; }
+  #wrap { position:relative; max-width:100%; max-height:100%; transition:transform .12s; }
+  video { display:block; max-width:100%; max-height:calc(100vh - 140px); }
+  #ov { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  #msg { position:absolute; inset:auto 0 45% 0; text-align:center; font-size:20px; color:var(--warn); pointer-events:none; }
+  #flash { position:absolute; top:10px; left:50%; transform:translateX(-50%); padding:4px 14px; border-radius:4px; font-size:18px;
+           font-weight:600; opacity:0; transition:opacity .4s; pointer-events:none; z-index:2; }
+  #timeline { position:relative; height:38px; background:var(--panel); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  #timeline .pt { position:absolute; top:0; bottom:0; background:rgba(255,255,255,.07); border-left:1px solid #666; border-right:1px solid #666; }
+  #timeline .span { position:absolute; top:0; height:3px; background:var(--ok); opacity:.6; }
+  #timeline .mk { position:absolute; width:3px; margin-left:-1px; border-radius:1px; }
+  #timeline .mk span { position:absolute; top:-1px; left:5px; font-size:10px; white-space:nowrap; }
+  #timeline .head { position:absolute; top:0; bottom:0; width:2px; background:#fff; margin-left:-1px; }
+  #bar { display:flex; gap:14px; align-items:center; color:var(--dim); font-variant-numeric:tabular-nums; }
+  #bar .big { color:var(--text); font-size:16px; }
+  aside { background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
+  aside summary { cursor:pointer; }
+  aside section { padding:8px 10px; border-bottom:1px solid var(--line); flex-shrink:0; }
+  aside h3 { margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--dim); font-weight:600; }
+  #events div { display:grid; grid-template-columns:22px 62px 78px 1fr 16px; gap:4px; align-items:center; padding:1px 0; cursor:pointer; font-variant-numeric:tabular-nums; font-size:12.5px; }
+  #events div:hover { background:#2a2e35; }
+  #events .x { color:var(--dim); text-align:center; }
+  #events .x:hover { color:var(--fault); }
+  #events div.sel { background:#33404f; }
+  .near { color:var(--near); } .far { color:var(--far); } .fault { color:var(--fault); } .ok { color:var(--ok); } .warn { color:var(--warn); }
+  .bounce { color:var(--bounce); } .out { color:var(--out); } .net { color:var(--net); }
+  #keys { font-size:12px; color:var(--dim); display:grid; grid-template-columns:auto 1fr; gap:1px 10px; }
+  #keys kbd { color:var(--text); font:12px ui-monospace, monospace; background:#2b3038; border:1px solid var(--line); border-radius:3px; padding:0 4px; justify-self:start; white-space:nowrap; }
+  #list { flex:1 0 150px; overflow:auto; font-size:12px; font-variant-numeric:tabular-nums; }
+  #list div { display:grid; grid-template-columns:28px 92px 1fr 70px; padding:1px 10px; cursor:pointer; color:var(--dim); }
+  #list div.done { color:var(--ok); } #list div.cur { background:#33404f; color:var(--text); }
+  #list div:hover { background:#2a2e35; }
+  #court { display:block; margin:2px auto 0; background:#24402c; }
+</style>
+</head>
+<body>
+<header>
+  <b>Event labels</b>
+  <span id="where"></span>
+  <span class="sp"></span>
+  <span id="progress"></span>
+  <span id="savestate"></span>
+  <button id="btnFolder" title="Choose the folder for the label files (key O)">Label folder…</button>
+  <button id="btnExport" title="Download the label file of this fragment (a copy, if the folder does not work)">Download</button>
+</header>
+<main>
+  <div id="left">
+    <div id="stage"><div id="wrap"><video id="v" preload="auto"></video><svg id="ov"></svg></div><div id="msg"></div><div id="flash"></div></div>
+    <div id="timeline"></div>
+    <div id="bar">
+      <span>speed <span class="big" id="speed">½×</span></span>
+      <span>sound <span id="sound">on</span></span>
+      <span>clip <span id="tclip">0.000</span> s</span>
+      <span>video <span id="tvid">0:00.000</span></span>
+      <span>mouse <span id="tmouse">–</span></span>
+      <span class="sp"></span>
+    </div>
+  </div>
+  <aside>
+    <section>
+      <h3>This fragment</h3>
+      <div id="info"></div>
+      <div id="counts" style="margin-top:4px"></div>
+      <div id="flags"></div>
+    </section>
+    <section style="min-height:140px; max-height:34vh; overflow:auto"><h3>Marks (click: go to the frame)</h3><div id="events"></div></section>
+    <section><h3>Bounces on the court (top view, far end up)</h3><svg id="court" width="150" height="250"></svg></section>
+    <section>
+      <details id="keybox" open><summary><h3 style="display:inline">Keys (H: show or hide)</h3></summary>
+      <div id="keys">
+        <kbd>Shift+N / Shift+F</kbd><span><b>serve</b> contact, <span class="near">near</span> / <span class="far">far</span> server</span>
+        <kbd>X</kbd><span>the last serve is a first-serve <span class="fault">fault</span> (toggle)</span>
+        <kbd>N / F</kbd><span><b>shot</b> contact, <span class="near">near</span> / <span class="far">far</span> player</span>
+        <kbd>B</kbd><span><span class="bounce">bounce in</span>, seen: the mouse on the ball at the ground</span>
+        <kbd>Shift+B</kbd><span><span class="out">bounce out</span>, seen</span>
+        <kbd>I / Shift+I</kbd><span>bounce in / out, <b>inferred</b> (hidden): the mouse where the ball meets the ground</span>
+        <kbd>T</kbd><span><span class="net">net touch</span>: the ball stops at the net</span>
+        <kbd>Shift+T</kbd><span><span class="net">net cord</span>: the ball touches the net and goes over</span>
+        <kbd>Z</kbd><span>undo the last mark</span>
+        <kbd>Enter</kbd><span>save, go to the next fragment</span>
+        <kbd>Space</kbd><span>play / pause</span>
+        <kbd>← →</kbd><span>one frame back / forward (Shift: 10)</span>
+        <kbd>1 2 3 4</kbd><span>speed 1× ½× ¼× ⅒×</span>
+        <kbd>R</kbd><span>replay from 2 s before the label span</span>
+        <kbd>V</kbd><span>zoom 2× at the mouse (toggle)</span>
+        <kbd>G</kbd><span>zoom 3× at the far baseline (toggle)</span>
+        <kbd>U</kbd><span>sound on / off</span>
+        <kbd>Q</kbd><span>not sure (toggle)</span>
+        <kbd>K</kbd><span>skip: not a usable fragment (toggle)</span>
+        <kbd>M</kbd><span>note</span>
+        <kbd>[ ]</kbd><span>previous / next fragment, no save</span>
+        <kbd>O</kbd><span>choose the label folder</span>
+      </div></details>
+    </section>
+    <section style="padding-bottom:2px"><h3>Fragments</h3></section>
+    <div id="list"></div>
+  </aside>
+</main>
+<script>
+"use strict";
+const TOOL_VERSION = 1, FILE_VERSION = 1, SPEEDS = [1, 0.5, 0.25, 0.1], STORE = "bananashot-event-labels-v1", PRE = 2.0;
+const MF = window.CASES;
+const $ = id => document.getElementById(id);
+const v = $("v");
+let cur = -1, rate = 0.5, lastFrame = 0, zoom = "", dir = null, dirOk = false, lastWrite = "", mouse = null, sel = -1;
+const drafts = {};
+let store = JSON.parse(localStorage.getItem(STORE) || "{}");    // fragment id -> saved doc
+
+if (!MF) { document.body.innerHTML = "<p style='padding:20px'>manifest.js is missing. Run: python case_manifest.py</p>"; throw 0; }
+const items = MF.fragments;
+
+// ---- helpers
+const fmt = t => { const m = Math.floor(t / 60), s = t - 60 * m; return m + ":" + s.toFixed(3).padStart(6, "0"); };
+const item = () => items[cur];
+const FRAME = () => 1 / (item().fps || 60);
+const vt = clipT => item().t0 + clipT;                         // source time of a clip time
+const ct = srcT => srcT - item().t0;                           // clip time of a source time
+const span = it => it.span || [it.t0, it.t0 + (it.dur || 1e9)];
+const saved = it => store[it.id];
+const KIND_KEY = {serve: "S", shot: "", bounce: "B", net: "T"};
+
+function flash(text, color) {
+  const f = $("flash"); f.textContent = text; f.style.background = color || "#333"; f.style.opacity = 1;
+  clearTimeout(flash.t); flash.t = setTimeout(() => f.style.opacity = 0, 700);
+}
+
+// court: H (3x3, 1920-wide frame px -> court m) and its inverse
+function apply(H, x, y) { const w = H[2][0] * x + H[2][1] * y + H[2][2]; return [(H[0][0] * x + H[0][1] * y + H[0][2]) / w, (H[1][0] * x + H[1][1] * y + H[1][2]) / w]; }
+function inv3(m) {
+  const [a, b, c] = m[0], [d, e, f] = m[1], [g, h, i] = m[2], A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
+  const det = a * A + b * B + c * C;
+  return [[A / det, -(b * i - c * h) / det, (b * f - c * e) / det], [B / det, (a * i - c * g) / det, -(a * f - c * d) / det], [C / det, -(a * h - b * g) / det, (a * e - b * d) / det]];
+}
+const toCourt = (it, px) => it.courtH ? apply(it.courtH, px[0], px[1]) : null;
+const toImage = (it, xy) => it.courtH ? apply(inv3(it.courtH), xy[0], xy[1]) : null;
+const SW = 4.115, DW = 5.485, BL = 11.885, SL = 6.40;
+
+// ---- drafts
+function draftOf(i) {
+  if (!drafts[i]) {
+    const s = saved(items[i]);
+    drafts[i] = s ? {events: JSON.parse(JSON.stringify(s.events)), unsure: s.unsure, skip: s.skip, note: s.note,
+                     activeMs: (s.labelSeconds || 0) * 1000, dirty: false}
+                  : {events: [], unsure: false, skip: false, note: "", activeMs: 0, dirty: false};
+  }
+  return drafts[i];
+}
+const d = () => draftOf(cur);
+function touch() { d().dirty = true; render(); }
+
+// ---- active time (only while the page is visible)
+let activeSince = performance.now();
+function addActive() { const now = performance.now(); if (cur >= 0 && !document.hidden) d().activeMs += now - activeSince; activeSince = now; }
+document.addEventListener("visibilitychange", () => { addActive(); });
+
+// ---- fragment loading
+function open(i) {
+  if (i < 0 || i >= items.length) return;
+  addActive();
+  cur = i; sel = -1;
+  const it = item();
+  $("msg").textContent = "";
+  v.pause(); setZoom("");
+  v.src = it.clip;
+  v.playbackRate = rate;
+  v.addEventListener("loadedmetadata", () => { v.currentTime = 0; v.playbackRate = rate; v.play().catch(() => {}); }, {once: true});
+  render();
+  const row = $("list").children[i]; if (row) row.scrollIntoView({block: "nearest"});
+}
+v.addEventListener("error", () => { if (cur >= 0) $("msg").textContent = "Cannot play " + item().clip; });
+
+// ---- frame clock
+function onFrame(now, md) { lastFrame = md.mediaTime; tick(); v.requestVideoFrameCallback(onFrame); }
+if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(onFrame);
+function frameT() { return v.requestVideoFrameCallback ? lastFrame : v.currentTime; }
+function tick() {
+  if (cur < 0) return;
+  const t = frameT();
+  $("tclip").textContent = t.toFixed(3);
+  $("tvid").textContent = fmt(vt(t));
+  const dur = v.duration || 1;
+  const h = $("timeline").querySelector(".head"); if (h) h.style.left = (100 * t / dur) + "%";
+  overlay();
+}
+(function loop() { if (!v.paused) tick(); requestAnimationFrame(loop); })();
+// A step starts from the last step target while that seek is not shown yet (fast key presses), else from the frame on the screen.
+let stepTo = null;
+function step(n) { v.pause(); const base = (v.seeking && stepTo !== null) ? stepTo : frameT();
+  stepTo = Math.max(0, Math.min(v.duration || 1e9, base + n * FRAME())); v.currentTime = stepTo + 0.0005; }
+function seek(t) { v.currentTime = Math.max(0, t); }
+
+// ---- mouse -> pixel of the 1920-wide frame (the zoom is a CSS transform: the client rect includes it)
+function pxAt(cx, cy) {
+  const r = v.getBoundingClientRect(), it = item();
+  if (!r.width || cx < r.left || cx > r.right || cy < r.top || cy > r.bottom) return null;
+  const W = v.videoWidth || (it.size || [1920, 1080])[0], s = (it.courtImageWidth || 1920) / W;
+  return [+((cx - r.left) / r.width * W * s).toFixed(1), +((cy - r.top) / r.height * (v.videoHeight || 1080) * s).toFixed(1)];
+}
+$("stage").addEventListener("mousemove", e => {
+  mouse = [e.clientX, e.clientY];
+  if (cur < 0) return;
+  const p = pxAt(e.clientX, e.clientY), c = p && toCourt(item(), p);
+  $("tmouse").textContent = p ? `${p[0].toFixed(0)}, ${p[1].toFixed(0)} px` + (c ? ` · court ${c[0].toFixed(2)}, ${c[1].toFixed(2)} m` : "") : "–";
+});
+$("stage").addEventListener("mouseleave", () => { mouse = null; });
+
+// ---- zoom: V = 2x at the mouse, G = 3x at the far baseline
+function setZoom(kind) {
+  zoom = kind;
+  const w = $("wrap");
+  if (!kind) { w.style.transform = ""; return; }
+  const r = v.getBoundingClientRect(), it = item();
+  let ox = 50, oy = 35;
+  if (kind === "v" && mouse) { ox = 100 * (mouse[0] - r.left) / r.width; oy = 100 * (mouse[1] - r.top) / r.height; }
+  if (kind === "g") {
+    const p = toImage(it, [0, BL]);
+    if (!p) { flash("no court for this fragment", "#555"); zoom = ""; return; }
+    const W = it.courtImageWidth || 1920, Hh = W * (v.videoHeight || 1080) / (v.videoWidth || 1920);
+    ox = 100 * p[0] / W; oy = 100 * p[1] / Hh;
+  }
+  w.style.transformOrigin = `${ox}% ${oy}%`;
+  w.style.transform = `scale(${kind === "g" ? 3 : 2})`;
+}
+
+// ---- marks
+function add(ev) {
+  if (cur < 0) return;
+  ev.t = +vt(frameT()).toFixed(4);
+  ev.rate = v.paused ? 0 : v.playbackRate;
+  const dr = d();
+  dr.events.push(ev);
+  dr.events.sort((a, b) => a.t - b.t);
+  dr.lastAdded = ev;
+  touch();
+}
+function contact(kind, end) {
+  const ev = {kind, end};
+  if (kind === "serve") ev.fault = false;
+  add(ev);
+  flash((kind === "serve" ? "SERVE " : "SHOT ") + end.toUpperCase(), end === "near" ? "#1f5fa8" : "#a8601f");
+}
+function bounce(out, seen) {
+  if (!mouse) { flash("put the mouse on the ball first", "#a8801f"); return; }
+  const p = pxAt(mouse[0], mouse[1]);
+  if (!p) { flash("the mouse is not on the picture", "#a8801f"); return; }
+  const c = toCourt(item(), p);
+  add({kind: "bounce", out, seen, px: p, court: c ? [+c[0].toFixed(3), +c[1].toFixed(3)] : null});
+  flash((seen ? "" : "INFERRED ") + (out ? "BOUNCE OUT" : "BOUNCE IN"), out ? "#a8306f" : "#2f7a70");
+}
+function net(cord) {
+  const p = mouse ? pxAt(mouse[0], mouse[1]) : null;
+  add({kind: "net", net: cord ? "cord" : "stop", px: p});
+  flash(cord ? "NET CORD" : "NET TOUCH", "#6a4fa8");
+}
+function undo() {
+  const ev = d().events;
+  if (!ev.length) return;
+  let k = ev.indexOf(d().lastAdded);
+  if (k < 0) k = ev.length - 1;
+  ev.splice(k, 1); d().lastAdded = null;
+  flash("undo", "#555"); touch();
+}
+function toggleFault() {
+  const ev = d().events, t = vt(frameT());
+  const s = ev.filter(e => e.kind === "serve" && e.t <= t + 0.5).pop() || ev.filter(e => e.kind === "serve").pop();
+  if (!s) { flash("no serve to flag", "#555"); return; }
+  s.fault = !s.fault;
+  flash(s.fault ? "FIRST-SERVE FAULT" : "serve: no fault", s.fault ? "#a82f2f" : "#555");
+  touch();
+}
+
+// ---- checks (warnings only; Enter again saves)
+function checks(dr) {
+  const w = [], c = dr.events.filter(e => e.kind === "serve" || e.kind === "shot");
+  for (let k = 1; k < c.length; k++) {
+    if (c[k].end === c[k - 1].end && !(c[k].kind === "serve" && c[k - 1].kind === "serve"))
+      w.push(`two contacts of the ${c[k].end} end at ${fmt(c[k - 1].t)} and ${fmt(c[k].t)}`);
+    if (c[k].kind === "serve" && c[k - 1].kind === "serve" && !c[k - 1].fault && c[k].end === c[k - 1].end)
+      w.push(`two serves at ${fmt(c[k - 1].t)} and ${fmt(c[k].t)}, the first has no fault flag (a let? press M)`);
+  }
+  if (c.length && c[0].kind !== "serve") w.push("the first contact is not a serve");
+  for (const e of dr.events) if (e.kind === "bounce" && !e.court && item().courtH) w.push(`bounce at ${fmt(e.t)} has no court place`);
+  return w;
+}
+
+// ---- save
+function fragDoc(it, dr) {
+  addActive();
+  return {version: FILE_VERSION, kind: "bananashot-event-labels", fragment: it.id, match: it.match, testOnly: !!it.testOnly,
+          level: it.level, kinds: it.kinds || [], control: !!it.control, clip: it.clip, t0: it.t0, span: span(it),
+          manifest: {version: MF.version, created: MF.created || null, row: it.rowHash || null},
+          source: {tool: "label_events.html", toolVersion: TOOL_VERSION, labeler: "user",
+                   method: "by eye and ear on the fragment clip (frame steps, slow play, zoom)"},
+          timeBase: "t = source video time in s = t0 + clip time of the frame on the screen at the key press",
+          pixelBase: "px = ball pixel in a 1920-wide frame; court = courtH(px) in m (x across, y along, far end > 0), valid for a ball on the ground",
+          fields: {kind: "serve | shot | bounce | net", end: "near or far end of the court (serve, shot)",
+                   fault: "serve: a first-serve fault", out: "bounce: out of the court for that shot", seen: "bounce: true = seen, false = inferred (hidden)",
+                   net: "stop (the ball stays) or cord (the ball goes over)", rate: "playback speed at the key press (0 = paused)"},
+          events: dr.events.map(e => { const o = {...e}; return o; }),
+          unsure: dr.unsure, skip: dr.skip, note: dr.note || "",
+          labelSeconds: Math.round(dr.activeMs / 100) / 10, savedAt: new Date().toISOString()};
+}
+async function save(next) {
+  if (cur < 0) return;
+  const it = item(), dr = d();
+  const w = dr.skip ? [] : checks(dr), sig = JSON.stringify(dr.events);
+  if (w.length && dr.warned !== sig) { dr.warned = sig; flash("check the warnings (Enter again saves)", "#a8801f"); render(); return; }
+  store[it.id] = fragDoc(it, dr);
+  dr.dirty = false; dr.activeMs = store[it.id].labelSeconds * 1000;
+  localStorage.setItem(STORE, JSON.stringify(store));
+  await writeFile(it.id);
+  flash("saved " + dr.events.length + " marks", "#2f7a4c");
+  if (next) {
+    let j = items.findIndex((x, k) => k > cur && !saved(x));
+    if (j < 0) j = items.findIndex(x => !saved(x));
+    if (j >= 0) open(j); else { render(); flash("all fragments are done", "#2f7a4c"); }
+  } else render();
+}
+
+// ---- files (File System Access API); the folder handle stays in IndexedDB
+function idb(op, val) {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("bananashot-event-labels", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => {
+      const tx = r.result.transaction("kv", op === "get" ? "readonly" : "readwrite"), s = tx.objectStore("kv");
+      const q = op === "get" ? s.get("dir") : s.put(val, "dir");
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function ensureDir(ask) {
+  if (!dir) return false;
+  let p = await dir.queryPermission({mode: "readwrite"});
+  if (p !== "granted" && ask) p = await dir.requestPermission({mode: "readwrite"});
+  dirOk = p === "granted";
+  return dirOk;
+}
+async function chooseDir() {
+  if (!window.showDirectoryPicker) { alert("This browser cannot write files. Use Chrome or Edge, or the Download button."); return; }
+  try { dir = await window.showDirectoryPicker({id: "bananashot-event-labels", mode: "readwrite"}); } catch (e) { return; }
+  await idb("put", dir);
+  await ensureDir(true);
+  await readFiles();
+  for (const id of Object.keys(store)) await writeFile(id);
+  render();
+}
+async function readFiles() {
+  if (!dirOk) return;
+  for (const it of items) {
+    try {
+      const fh = await dir.getFileHandle(it.id + ".events.json");
+      const doc = JSON.parse(await (await fh.getFile()).text());
+      if (!store[it.id] || (doc.savedAt || "") > (store[it.id].savedAt || "")) store[it.id] = doc;
+    } catch (e) { /* no file yet */ }
+  }
+  localStorage.setItem(STORE, JSON.stringify(store));
+}
+async function writeFile(id) {
+  if (!dir) { lastWrite = "no folder"; return; }
+  try {
+    if (!dirOk && !(await ensureDir(true))) { lastWrite = "no permission"; return; }
+    const fh = await dir.getFileHandle(id + ".events.json", {create: true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(store[id], null, 1));
+    await w.close();
+    lastWrite = "ok " + new Date().toLocaleTimeString();
+  } catch (e) { lastWrite = "write failed: " + e.message; }
+}
+function download() {
+  if (cur < 0) return;
+  const it = item(), doc = fragDoc(it, d());
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 1)], {type: "application/json"}));
+  a.download = it.id + ".events.json"; a.click();
+}
+
+// ---- drawing
+const colorOf = e => e.kind === "serve" || e.kind === "shot" ? `var(--${e.end})` : e.kind === "bounce" ? (e.out ? "var(--out)" : "var(--bounce)") : "var(--net)";
+const labelOf = e => e.kind === "serve" ? "S" + (e.fault ? "✗" : "") : e.kind === "shot" ? "·" : e.kind === "bounce" ? (e.seen ? "B" : "b") : (e.net === "cord" ? "C" : "T");
+function overlay() {
+  const ov = $("ov");
+  if (cur < 0 || !v.videoWidth) { ov.innerHTML = ""; return; }
+  const W = item().courtImageWidth || 1920, H = W * v.videoHeight / v.videoWidth, t = vt(frameT());
+  ov.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  ov.innerHTML = d().events.filter(e => e.px && Math.abs(e.t - t) < 0.25).map(e =>
+    `<circle cx="${e.px[0]}" cy="${e.px[1]}" r="${zoom ? 6 : 10}" fill="none" stroke="${colorOf(e)}" stroke-width="${zoom ? 1.5 : 2.5}"` +
+    (e.seen === false ? ` stroke-dasharray="4 3"` : "") + `/>`).join("");
+}
+function courtMap(dr) {
+  const s = 9, W = 150, H = 250, cx = W / 2, cy = H / 2, X = x => cx + x * s, Y = y => cy - y * s;
+  const ln = (x1, y1, x2, y2, c = "#ddd") => `<line x1="${X(x1)}" y1="${Y(y1)}" x2="${X(x2)}" y2="${Y(y2)}" stroke="${c}" stroke-width="1"/>`;
+  let g = ln(-SW, -BL, -SW, BL) + ln(SW, -BL, SW, BL) + ln(-DW, -BL, -DW, BL, "#888") + ln(DW, -BL, DW, BL, "#888") +
+          ln(-DW, BL, DW, BL) + ln(-DW, -BL, DW, -BL) + ln(-SW, SL, SW, SL) + ln(-SW, -SL, SW, -SL) + ln(0, -SL, 0, SL) +
+          ln(-DW - 0.9, 0, DW + 0.9, 0, "#fff");
+  dr.events.forEach((e, k) => {
+    if (e.kind !== "bounce" || !e.court) return;
+    g += `<circle cx="${X(e.court[0])}" cy="${Y(e.court[1])}" r="${k === sel ? 4.5 : 3}" fill="${e.seen ? colorOf(e) : "none"}" stroke="${colorOf(e)}" stroke-width="1.5"/>`;
+  });
+  $("court").innerHTML = g;
+}
+function render() {
+  const list = $("list");
+  if (!list.children.length) items.forEach((it, i) => { const r = document.createElement("div"); r.onclick = () => open(i); list.appendChild(r); });
+  items.forEach((it, i) => {
+    const r = list.children[i], s = saved(it);
+    r.className = (i === cur ? "cur " : "") + (s ? "done " : "");
+    r.innerHTML = `<span>${i + 1}</span><span>${it.id}</span><span>${(it.kinds || []).join(" ")}${it.control ? " (control)" : ""}</span><span>${s ? (s.skip ? "skip" : s.events.length + " marks") + (s.unsure ? " ?" : "") : (drafts[i] && drafts[i].dirty ? "unsaved" : "")}</span>`;
+  });
+  const done = items.filter(saved), secs = done.map(it => saved(it).labelSeconds || 0).filter(x => x > 0).sort((a, b) => a - b);
+  const med = secs.length ? secs[Math.floor(secs.length / 2)] : 0, left = items.length - done.length;
+  $("progress").textContent = `${done.length} / ${items.length} done` + (med ? ` · median ${Math.round(med)} s per fragment · about ${Math.round(left * med / 60)} min left` : "");
+  $("savestate").innerHTML = dir ? (dirOk ? `<span class="ok">folder: ${dir.name}</span> <span class="${lastWrite.startsWith("ok") ? "" : "warn"}">${lastWrite}</span>` : `<span class="warn">folder: ${dir.name} (press O or Enter to allow)</span>`) : `<span class="warn">no label folder (press O)</span>`;
+  $("speed").textContent = (rate === 0.1 ? "⅒" : rate === 0.25 ? "¼" : rate === 0.5 ? "½" : "1") + "×";
+  $("sound").textContent = v.muted ? "off" : "on";
+  if (cur < 0) return;
+  const it = item(), dr = d();
+  $("where").textContent = `#${cur + 1} of ${items.length} · ${it.id}${it.testOnly ? " (test only)" : ""} · ${it.level || ""}`;
+  const sp = span(it);
+  $("info").innerHTML = `${it.match} · label span ${fmt(sp[0])} to ${fmt(sp[1])} (${(sp[1] - sp[0]).toFixed(1)} s)` +
+    (it.points || []).map(p => `<br>marked point ${fmt(p.startMs / 1000)} to ${fmt(p.endMs / 1000)}${p.ending ? " · " + p.ending.toLowerCase().replace("_", " ") : ""}`).join("") +
+    (it.courtH ? "" : `<br><span class="warn">no court: bounces have no court place</span>`) +
+    (dr.dirty ? ` · <span class="warn">unsaved</span>` : saved(it) ? ` · <span class="ok">saved</span>` : "");
+  const n = k => dr.events.filter(e => e.kind === k).length;
+  $("counts").innerHTML = `serves <b>${n("serve")}</b> · shots <b>${n("shot")}</b> · bounces <b>${n("bounce")}</b> · net <b>${n("net")}</b>`;
+  const w = dr.skip ? [] : checks(dr);
+  $("flags").innerHTML = w.map(x => `<div class="warn">⚠ ${x}</div>`).join("") + (dr.unsure ? `<span class="warn">not sure</span> ` : "") +
+    (dr.skip ? `<span class="fault">skip</span> ` : "") + (dr.note ? `note: ${dr.note.replace(/</g, "&lt;")}` : "");
+  const ev = $("events"); ev.innerHTML = "";
+  dr.events.forEach((e, k) => {
+    const r = document.createElement("div");
+    if (k === sel) r.className = "sel";
+    const what = e.kind === "serve" ? `<span class="${e.end}">serve ${e.end}</span>${e.fault ? ' <span class="fault">fault</span>' : ""}`
+      : e.kind === "shot" ? `<span class="${e.end}">shot ${e.end}</span>`
+      : e.kind === "bounce" ? `<span class="${e.out ? "out" : "bounce"}">${e.out ? "out" : "in"}</span> ${e.seen ? "seen" : "<b>inferred</b>"}${e.court ? ` · ${e.court[0].toFixed(1)}, ${e.court[1].toFixed(1)} m` : ""}`
+      : `<span class="net">net ${e.net === "cord" ? "cord (over)" : "touch (stop)"}</span>`;
+    r.innerHTML = `<span>${k + 1}</span><span>${fmt(e.t).slice(-9)}</span><span style="color:var(--dim)">${e.kind}</span><span>${what}</span><span class="x" title="delete">×</span>`;
+    r.onclick = ev2 => { if (ev2.target.classList.contains("x")) { dr.events.splice(k, 1); sel = -1; touch(); } else { sel = k; v.pause(); seek(ct(e.t) + 0.0005); render(); } };
+    ev.appendChild(r);
+  });
+  courtMap(dr);
+  const tl = $("timeline"), dur = (v.duration && isFinite(v.duration)) ? v.duration : (sp[1] - it.t0);
+  const pct = t => (100 * t / dur) + "%";
+  const rows = {serve: 3, shot: 3, bounce: 14, net: 24};
+  tl.innerHTML = (it.points || []).map(p => `<div class="pt" style="left:${pct(ct(p.startMs / 1000))};width:${pct((p.endMs - p.startMs) / 1000)}"></div>`).join("") +
+    `<div class="span" style="left:${pct(ct(sp[0]))};width:${pct(sp[1] - sp[0])}"></div>` +
+    dr.events.map(e => `<div class="mk" style="left:${pct(ct(e.t))};top:${rows[e.kind]}px;height:10px;background:${colorOf(e)}"><span style="color:${colorOf(e)}">${labelOf(e)}</span></div>`).join("") +
+    `<div class="head"></div>`;
+  tick();
+}
+v.addEventListener("durationchange", render);
+v.addEventListener("loadedmetadata", () => overlay());
+$("timeline").addEventListener("click", e => {
+  if (cur < 0 || !v.duration) return;
+  const r = $("timeline").getBoundingClientRect();
+  seek((e.clientX - r.left) / r.width * v.duration);
+});
+$("btnFolder").onclick = chooseDir;
+$("btnExport").onclick = download;
+
+// ---- keys
+document.addEventListener("keydown", async e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase(), S = e.shiftKey;
+  const map = {
+    " ": () => { if (v.paused) { v.playbackRate = rate; v.play(); } else v.pause(); },
+    "n": () => contact(S ? "serve" : "shot", "near"), "f": () => contact(S ? "serve" : "shot", "far"),
+    "x": toggleFault,
+    "b": () => bounce(S, true), "i": () => bounce(S, false),
+    "t": () => net(S),
+    "z": undo, "backspace": undo,
+    "enter": () => save(true),
+    "arrowleft": () => step(S ? -10 : -1), "arrowright": () => step(S ? 10 : 1),
+    ",": () => step(-1), ".": () => step(1),
+    "1": () => setRate(0), "2": () => setRate(1), "3": () => setRate(2), "4": () => setRate(3),
+    "r": () => { seek(Math.max(0, ct(span(item())[0]) - PRE)); v.playbackRate = rate; v.play(); },
+    "v": () => setZoom(zoom === "v" ? "" : "v"), "g": () => setZoom(zoom === "g" ? "" : "g"),
+    "u": () => { v.muted = !v.muted; render(); },
+    "q": () => { d().unsure = !d().unsure; touch(); }, "k": () => { d().skip = !d().skip; flash(d().skip ? "skip" : "no skip", "#555"); touch(); },
+    "m": () => { const t = prompt("Note for this fragment", d().note || ""); if (t !== null) { d().note = t.trim(); touch(); } },
+    "[": () => open(cur - 1), "]": () => open(cur + 1), "pageup": () => open(cur - 1), "pagedown": () => open(cur + 1),
+    "o": chooseDir, "h": () => { $("keybox").open = !$("keybox").open; },
+  };
+  if (map[k]) { e.preventDefault(); if (cur >= 0 || k === "o" || k === "h") await map[k](); overlay(); }
+});
+function setRate(i) { rate = SPEEDS[i]; v.playbackRate = rate; render(); }
+
+// ---- start
+(async () => {
+  try { dir = await idb("get"); if (dir) { await ensureDir(false); await readFiles(); } } catch (e) { dir = null; }
+  let first = items.findIndex(x => !saved(x));
+  open(first < 0 ? 0 : first);
+})();
+</script>
+</body>
+</html>

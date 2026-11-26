@@ -231,6 +231,9 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
     decoder does not change a winner (a switch, default off; the decoder code stays). Then S1 measures the lab and
     Igor (rallies, events, winners as a check) against the current default. If a result or the app contract needs
     a decoder output (for example a score state), keep it, but it must not change a winner. Journal id from E140 to E149.
+    Done (E142, merged 2026-11-26): `CHAIN_DECODER`, default off. Lab, 527 matched points: decided rows 84.1 to 85.6 %
+    right; points with no winner 5 to 21 (the app asks the user there); with no winner counted as wrong 83.3 to 82.2 %.
+    Igor apart: decided rows 83.6 to 83.9 %. Rows and events the same. G14 tests pass.
 
 ### Rule for fixes found on Igor (manager, 2026-11-26)
 

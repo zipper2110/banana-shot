@@ -179,6 +179,13 @@ Status 2026-11-26 (manager):
    try one fix that is right in principle and measure it with `score_events` (events first, then rallies, then
    winners). S5 owns the bounce and net-touch detection code for this item. Ask the manager before an edit of
    `shot_chain.py` or `rally_end.py` (S3), `score_events.py` (S4) or `bench.py` (S1).
+   Done (E85 to E87, merged db0c5f82): the bounce test fits again without a far sample (bounces 37 to 38 of
+   42, rallies and winners the same). Not done, single cases: a minimum speed for the weak hit rule (1 case),
+   and two events at one kink for a half-volley (1 case, S3 chain). Open them only when more cases exist.
+6. (2026-11-26) Net touches that only the net shows (E87: 3 to 4 of the 11 misses; the ball track does not
+   change). Make a prototype of a signal from the picture of the net band (motion of the net in a short window
+   around each candidate time). Use the label windows only, under the GPU lock if it decodes video. Measure net
+   touches found and false. Start after the G15 runs and S2's coverage report.
 
 ## 4. Rules for all streams
 

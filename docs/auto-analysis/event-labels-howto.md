@@ -79,3 +79,30 @@ long break). In this step you say who plays at the near end (the bottom of the p
 
 There are 12 to 23 points in each match (5 matches). It takes about 2 to 3 min for each match. The page measures
 your time. The page writes `sides_<match>.json` in the same label folder (the folder of the **O** key).
+
+## Faults step: rows before a marked point (E158)
+
+The lab marks start at the second serve. Thus the bench does not know the truth of some detected rows: a row that
+has no mark and ends 25 s or less before the next marked point. The row can be a first-serve fault, a real point
+that has no mark, or a false rally. In this step you say which.
+
+1. Open the same page, then click the button **Faults** (top right). The page plays a short clip: from 1 s before
+   the row to 1 s after the start of the next marked point.
+2. The time line under the video shows the detected row (yellow, top) and the next marked point (green, bottom).
+3. Press one key. The page then shows the next row.
+   - **F**: a first-serve fault. The next marked point starts with the second serve.
+   - **P**: a real point (a rally) that has no mark.
+   - **N**: not a fault and not a point (for example no serve, a warm-up, or a ball back to the server).
+   - **Q**: not sure.
+4. **Space**: play / stop. **R**: play again from the start. **← →**: 1 s back / forward (Shift: 5 s).
+   **1 2 3 4**: speed. **V**: zoom 2× at the mouse. **U**: sound on / off.
+5. **[ ]**: previous / next row. **PgUp PgDn**: previous / next match. Click a row in the list to change its answer.
+
+There are 27 rows in 4 matches. It takes about 5 to 10 min. The page measures your time. The page writes
+`faults_<match>.json` in the same label folder (the folder of the **O** key).
+
+Output (for the agents): `faults_<match>.json` has `answers` (for each row: `row`, `rowHash`, `start`, `end` in
+source s, `next` (the id of the next marked point), `nextStartMs`, `answer` F, P, N or Q, `at`), `counts`,
+`rowCount`, `complete`, `labelSeconds` and `stale`. An answer counts only for the same `rowHash` as in `faults.js`.
+When the row list changes, the page moves the answers of changed or removed rows to `stale`; they are not used.
+The input is `faults.js` of `faults_cases.py page`.

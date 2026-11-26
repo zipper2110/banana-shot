@@ -10,7 +10,7 @@ Steps (E21 and later):
      decoder (match_decode.py) over all rallies, from 0-0 with the server not known.
 The rows have the format of the rallies in result.json (detect.py).
 """
-import json, os
+import json, os, sys
 import numpy as np
 import cv2
 import lab
@@ -87,6 +87,27 @@ def fault_texts():
             for k, (c, first) in FAULTS.items()]
 
 
+def warn_faults(where):
+    """Prints one warning for each kind of recorded fault (count and first error) on stderr, also in a quiet run.
+    Returns {kind: count} ({} = no fault). E116: a NameError in shot_chain._evidence was caught on 79 rows with no
+    message; the bench showed only the missing chain cases."""
+    for text in fault_texts():
+        print(f"WARNING ({where}): {text}", file=sys.stderr, flush=True)
+    return {k: c for k, (c, _) in FAULTS.items()}
+
+
+def rally_chain(pt, nets, t_end, p, mid, old):
+    """The shot chain of one rally: (evidence, case probability, row for the result). A fault in the chain must not
+    stop the detection: it is recorded (note_fault) and the result is (None, None, None); the old rule decides."""
+    try:
+        ch = sc.evidence(pt, nets, T_CUT_E2E, p, p["min_speed"], old=old)      # old: one computation of the old rule
+        pc = sc.case_prob(ch["case"], mid)
+        return ch, pc, sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
+    except Exception as e:
+        note_fault("shot chain", pt["start"], e)
+        return None, None, None
+
+
 def rallies(prob, serves, hi=0.5, lo=0.35, short=True, t0=0.0, t1=None):
     """Rally segments (start, end, mean probability) from the GRU probabilities, inside t0 to t1 (s). A test (E21)
     moved the start to a ball serve event near it: the start error got larger (0.42 -> 0.6 s), so the start stays
@@ -160,14 +181,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         pw = 0.5 if w is None else (md.case_prob(q, p, mid) if w else 1 - md.case_prob(q, p, mid))
         ch = None
         if "events" in full:                         # E28: the shot chain of the rally (facts for the user; with CHAIN also the evidence)
-            try:
-                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= t_end + 2.5], T_CUT_E2E, p, p["min_speed"],
-                                 old=(q, w, old_case))       # one computation of the old rule
-                pc = sc.case_prob(ch["case"], mid)
-                chain_row = sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
-            except Exception as e:                   # a fault in the chain must not stop the detection: the old rule decides
-                note_fault("shot chain", a, e)
-                ch = None
+            ch, pc, chain_row = rally_chain(pt, [e for e in nets if a - 1.0 <= e["t"] <= t_end + 2.5], t_end, p, mid, (q, w, old_case))
             if CHAIN and ch is not None:
                 pw = 0.5 if ch["nearWins"] is None else (pc if ch["nearWins"] else 1 - pc)
         # server end: pose vote, then the ball serve event

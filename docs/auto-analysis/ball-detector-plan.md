@@ -42,8 +42,9 @@ The only measured detector loss is on the labeled frames (E80, E38). S1 split th
 - Background: a background saturation (bgS) below 60 misses 59 % (47 of 80); 120 or more misses 0. m1030 shows the
   same at a lower level (bgS below 60: 24 %, 5 of 21).
 - m1015 is different: its 6 misses are long blur (length 50 px or more, median 120 px).
-So the main detector loss is a small, slow ball at the far end in front of a gray background (low saturation). The
-`dim` pass darkens such a background with the ball, so it does not help there.
+So the main detector loss is a small, slow ball at the far end in front of a gray background (low saturation). A
+possible cause (not tested): at scale 0.35 the few pixels of a small ball mix with the gray background, so they lose
+saturation, and the `dim` pass darkens them with the background.
 
 ## 4. Proposal
 

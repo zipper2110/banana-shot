@@ -128,6 +128,16 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
 4. G8 score layer: done (E63, E64). The user decided: no change of the app score (decision 2026-11-26).
 5. G9 identity held out: `identity.p1_near` on Igor (m1116) when the S1 result exists; the effect of a wrong
    color run on the winners.
+6. (2026-11-26) Wrong shots in the shot chain (S4 E76, groups D and E): stop the shot list at a dead ball (4
+   false hits after the point, 1 wrong winner, 2 wrong last hitters), then the split shots (5 false). Do it
+   together with the last-shot check of item 5 (S3 owns `shot_chain.py`). Group A (late "back" shots) later.
+
+### Rule for fixes found on Igor (manager, 2026-11-26)
+
+Igor (m1116) is test only. Its hit and fault labels show the causes, but a threshold value must not come from
+the Igor numbers. A fix must be right in principle, and its values come from physics or from the lab matches.
+Measure each fix paired on the lab matches (rallies, bounces, nets, winners) and report Igor apart. Each
+journal row of such a fix says that it was found on Igor, so that Igor is less clean for that part.
 
 ### S4 truth and shots (G10, then G7 and G8 score)
 
@@ -147,6 +157,11 @@ label by eye.
    existing 13 hits and the 62 bounces; one bounce rule and one winner rule (G7). Paired measure.
 5. When the labels arrive: measure the hitter and the shot count of the shot chain.
 6. (Moved to S3 phase 2 on 2026-11-26.)
+7. (2026-11-26) Serve detection (E73: 21 of the 39 missed faults have no serve event; a serve event at only
+   58 % of the Igor starts; E76 group B: the serve shot starts at the toss). Causes: the toss starts at 1.2
+   to 1.5 m and `is_toss` needs more than 1.5 m; the fast serve flight is not tracked. Fix the serve event
+   first, then the serve shot time. Follow the rule for fixes found on Igor. Ask the manager before an edit
+   of `shot_chain.py` (S3).
 
 Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
 the journal, and the hitter measure follows the labels.

@@ -32,21 +32,26 @@ Scripts of the checks: `D:\bananashot-lab\ws\s5\plan\b_image.py`, `c_image.py` (
 
 ## 3. What the detector really misses
 
-The only measured detector loss is on the labeled frames (E80, E38):
-- m1021: 66 % recall held out. E38: the ball in front of the wall is found (92 %), the ball on the court is not
-  (57 %). A second ball lies on the court in this match (E27a).
-- The other videos: 4 to 8 % of the labeled frames are missed.
-The cause of these misses is not known per frame. The E27b analysis (luma, background, ball size) was made before
-the E38 weights and the `dim` pass.
+The only measured detector loss is on the labeled frames (E80, E38). S1 split the misses of the bench run
+`20261126-143623-709bbfad-heavy-ball-7a-heldout-dim` (`lab_label_hits.json`; dim, held-out fold weights):
+- m1021 misses 53 of 155 labels (34 %); the other lab matches miss 3 to 10 %. The m1021 misses are whole flight
+  parts (2 windows: frames 61 to 86, and 1 to 14 and 44 to 62), not single frames. All are seen balls.
+- 49 of the 53 are at the far end (the far end misses 35 %). In the net band (|y| < 2 m): 0 of 9 missed.
+- Small and slow, not blurred: all 53 misses have a ball length below 20 px (41 % of those are missed; 0 of 26 at
+  20 px or more). Median missed against found: area 8 px against 98.5 px, length 5 px against 12 px.
+- Background: a background saturation (bgS) below 60 misses 59 % (47 of 80); 120 or more misses 0. m1030 shows the
+  same at a lower level (bgS below 60: 24 %, 5 of 21).
+- m1015 is different: its 6 misses are long blur (length 50 px or more, median 120 px).
+So the main detector loss is a small, slow ball at the far end in front of a gray background (low saturation). The
+`dim` pass darkens such a background with the ball, so it does not help there.
 
 ## 4. Proposal
 
 1. **No training now.** The three target errors are in the steps after the detector, and their owners fix them
    there (S4: serve, S5: net band, S3: hit time).
-2. **Diagnosis of the missed labeled frames** (CPU and a few GPU minutes on the label windows): for each labeled
-   frame with no blob of peak 0.5 or more within the hit radius, the heat map peak at the label, the ball size, the
-   ball and background luma, the motion, the place (wall, court, net, player), and the frame before and after. Then
-   a table of the causes with their counts, as in E27b. No user work: the labels exist.
+2. **Finish the diagnosis of section 3** (a few GPU minutes on the label windows): the heat map peak at each missed
+   label (is there a weak peak below 0.5?), and how often a far ball in front of a gray background occurs in the
+   rallies of each video (is this loss large for the events?). No user work: the labels exist.
 3. **Only if the diagnosis shows a large and clear cause**, a new plan with options, for example: a fine-tune with
    new labels at that cause (the E38 recipe), a larger scale on a part of the picture, or a lower threshold where a
    path supports it. Each option then states its labels, its user time, and its GPU time.

@@ -68,6 +68,10 @@ class LabelMeasure(unittest.TestCase):
         r = lm.fault_clips(rows, EV, fmap(EV), [{"start": 99.0, "end": 101.0}])
         self.assertEqual((r["clips"], r["right"], r["noServe"], r["labeledFaults"], r["found"]), (2, 1, 1, 1, 1))
         self.assertEqual((r["hiddenRows"], r["hiddenWithFault"]), (1, 1))
+        # a clip on the second serve of a double fault: doubleFault, not wrong
+        ev2 = [sv(100.0), net(100.5), sv(106.0), b(106.8, 2.0, -8.0, out=True), sv(125.0)]
+        r2 = lm.fault_clips([{"start": 105.0, "end": 108.0, "fault": {"t": 106.05}}], ev2, fmap(ev2), [])
+        self.assertEqual((r2["doubleFault"], r2["wrong"]), (1, 0))
         t = lm.totals([{"faultClips": r, "borders": {"dPlay": [0.5, -1.5], "detail": []}}, {}])
         self.assertEqual((t["faultClips"]["clips"], t["faultClips"]["right"], t["rallyStartPlay"]["n"]), (2, 1, 2))
         self.assertEqual(t["rallyStartPlay"]["med"], -0.5)

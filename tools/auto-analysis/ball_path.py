@@ -4,7 +4,8 @@ The detector keeps a heat-map component as a blob when its peak is above 0.5 (ba
 labels of m1015, m1020 and m1030 have a weak peak just below 0.5 (median 0.45). This module adds "weak blobs":
 components above LOW whose peak stays below 0.5. A weak blob is kept only on a moving path of strong blobs:
 a strong blob a in the GAP frames before it and a strong blob b in the GAP frames after it, with a speed of VMIN px
-or more for each frame, and the weak blob near the line from a to b at its frame. The strong blobs do not change
+or more for each frame, and the weak blob near the line from a to b at its frame. A weak blob only fills a gap of
+the path: no strong blob of its frame is near the path, and each frame gets at most one weak blob. The strong blobs do not change
 (the weak components have no pixel above 0.5). A kept weak blob is a normal row (frame, x, y, score, peak) with a
 peak below 0.5.
 
@@ -17,7 +18,7 @@ STRONG = 0.5          # the threshold of ball_wasb.blobs
 TOP = 3               # weak blobs for each heat map
 SAME_R = 12.0         # px of the 1920 frame: a weak blob this near a strong blob of its frame is the same ball
 GAP_S = 1 / 6.0       # s: a strong blob at most this far before and after the weak blob (10 frames at 60 fps)
-VMIN, VMAX = 1.0, 60.0    # px for each 60 fps frame: the speed of the path (not a static object; not a jump)
+VMIN, VMAX = 2.0, 60.0    # px for each 60 fps frame: the speed of the path (not a static object; not a jump)
 R0, R1 = 10.0, 0.2    # the weak blob is within R0 + R1 * speed * (frames to the nearer strong blob) px of the line
 
 
@@ -63,21 +64,24 @@ class Weak:
 
 
 def path_keep(strong, weak, fps=60.0):
-    """The weak rows that a moving path of strong rows supports (see the module text)."""
+    """The weak rows that fill a gap of a moving path of strong rows (see the module text). For each weak blob: the
+    pair of strong blobs (a before, b after) with the smallest error. The weak blob fills a gap only when no strong
+    blob of its frame is near the point of the path (else the path has its blob there). At most one weak blob for
+    each frame: the one with the smallest error for its radius."""
     if not len(weak) or not len(strong):
         return weak[:0]
     f60 = 60.0 / fps                                     # frames of the run -> 60 fps frames (speeds in px / 60 fps frame)
     gap = max(1, int(round(GAP_S * fps)))
     s = strong[np.argsort(strong[:, 0], kind="stable")]
     fr = s[:, 0].astype(np.int64)
-    out = []
+    best = {}                                            # frame -> (error / radius, weak row)
     for w in weak:
         k = int(w[0])
         lo, mid0, mid1, hi = np.searchsorted(fr, [k - gap, k, k + 1, k + gap + 1])
-        A, B = s[lo:mid0], s[mid1:hi]
+        A, B, S = s[lo:mid0], s[mid1:hi], s[mid0:mid1]
         if not len(A) or not len(B):
             continue
-        if (np.hypot(s[mid0:mid1, 1] - w[1], s[mid0:mid1, 2] - w[2]) < SAME_R).any():
+        if (np.hypot(S[:, 1] - w[1], S[:, 2] - w[2]) < SAME_R).any():
             continue                                     # the same ball as a strong blob of the frame
         da = (k - A[:, 0])[:, None]                      # frames from a to the weak blob
         db = (B[:, 0] - k)[None, :]
@@ -86,8 +90,14 @@ def path_keep(strong, weak, fps=60.0):
         vy = (B[None, :, 2] - A[:, None, 2]) / n
         sp = np.hypot(vx, vy) / f60
         px, py = A[:, None, 1] + vx * da, A[:, None, 2] + vy * da
-        err = np.hypot(px - w[1], py - w[2])
-        ok = (sp >= VMIN) & (sp <= VMAX) & (err <= R0 + R1 * sp * np.minimum(da, db) * f60)
-        if ok.any():
-            out.append(w)
-    return np.array(out, np.float32).reshape(-1, 5)
+        rad = R0 + R1 * sp * np.minimum(da, db) * f60
+        q = np.hypot(px - w[1], py - w[2]) / rad
+        q[(sp < VMIN) | (sp > VMAX)] = np.inf
+        j = np.unravel_index(np.argmin(q), q.shape)
+        if not q[j] <= 1.0:
+            continue
+        if len(S) and (np.hypot(S[:, 1] - px[j], S[:, 2] - py[j]) <= rad[j]).any():
+            continue                                     # the path has a strong blob in this frame: no gap
+        if k not in best or q[j] < best[k][0]:
+            best[k] = (float(q[j]), w)
+    return np.array([best[k][1] for k in sorted(best)], np.float32).reshape(-1, 5)

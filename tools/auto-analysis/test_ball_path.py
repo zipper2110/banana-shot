@@ -32,6 +32,15 @@ class TestBallPath(unittest.TestCase):
         s = path(range(0, 20))
         self.assertEqual(len(bp.path_keep(s, np.array([(9, 536 + 4, 354, 1, 0.4)], np.float32))), 0)  # same as the strong blob
 
+    def test_only_gaps_and_one_for_each_frame(self):
+        s = path(range(0, 20), skip=(9,))
+        extra = np.array([(9, 536.0 + 30, 354.0, 3.0, 0.9)], np.float32)      # a strong blob of frame 9, 30 px off the path
+        w = np.array([(9, 536 + 2, 354, 1, 0.4), (9, 536 + 6, 354, 1, 0.4)], np.float32)
+        self.assertEqual(bp.path_keep(s, w).tolist(), w[:1].tolist())       # one blob for the frame: the nearer one
+        s2 = np.concatenate([s, np.array([(9, 536.0 - 9, 354.0 - 5, 3.0, 0.9)], np.float32)])
+        self.assertEqual(len(bp.path_keep(s2, w)), 0)                       # a strong blob 10.3 px from the path: no gap
+        self.assertEqual(len(bp.path_keep(np.concatenate([s, extra]), w)), 1)
+
     def test_gap_limit(self):
         s = path(range(0, 40), skip=range(5, 30))
         self.assertEqual(len(bp.path_keep(s, np.array([(17, 500 + 68, 300 + 102, 1, 0.4)], np.float32))), 0)

@@ -16,12 +16,14 @@ Rule (no training):
      In -> the hitter wins. Out or net -> the other player wins.
 Also: a gradient-boosting classifier on the same quantities, leave one
 match out.
+G7 step 2a: steps 1 to 3 are shot_chain.old_quantities (one copy, in the shot chain).
 Usage: python winner_ball.py [scale]
 """
 import json, os, sys
 import numpy as np
 from sklearn.ensemble import HistGradientBoostingClassifier
 import lab
+import shot_chain as sc
 
 SW, BL, MARGIN = 4.115, 11.885, 0.3
 SINGLES = ["m1015", "m1020", "m1021", "m1030"]
@@ -42,72 +44,7 @@ def good(f):
     return f["n"] >= MIN_N and f["rms"] < 5 and 8 < sp < 230 and abs(f["p0"][1]) < 25 and abs(f["p0"][0]) < 12
 
 
-USE_EVENTS = False       # E17d: True = the bounce of the last shot is a bounce event of ball_bounce.py (the point needs "events")
-OWN_SIDE = 3.0           # m from the net (E17d)
-
-
-def own_side(f, events):
-    """E17d: the flight ends at a bounce event on the side of its hitter, more than OWN_SIDE m from the net.
-    Such a flight is ball handling (a player bounces the ball), not a shot. A shot into the net comes down near the net."""
-    if not events or f.get("bounceEv") is None:
-        return False
-    return events[f["bounceEv"]]["court"][1] * (1.0 if f["v0"][1] > 0 else -1.0) < -OWN_SIDE
-
-
-REJECT_EARLY = False     # E17d: True = no decision from a fit landing that is before the last detection of its flight (measured: fewer decisions, same accuracy)
 T_CUT = -1.5      # use only flights that start before the marked end + T_CUT (s). E16c: later flights are ball handling after the point
-
-
-def analyse(pt):
-    """Returns a dict of quantities of the last shot, or None if there is no usable flight."""
-    T = pt["end"]
-    events = pt.get("events") if USE_EVENTS else None
-    fl = [f for f in pt["flights"] if good(f) and f["t0"] < T + T_CUT and not own_side(f, events)]
-    if not fl:
-        return None
-    run = [fl[-1]]
-    for f in fl[-2::-1]:
-        if (f["v0"][1] > 0) == (run[0]["v0"][1] > 0) and run[0]["t0"] - f["t1"] < 0.6:
-            run.insert(0, f)
-        else:
-            break
-    to_far = run[0]["v0"][1] > 0
-    s = 1.0 if to_far else -1.0
-    bounce, src, sigma = None, 0, np.nan
-    # E17d (USE_EVENTS): the bounce is a bounce event (the vertex of the path, on the ground, and the physical
-    # bounce test of ball_bounce.py). No bounce event: the landing of the fit, as before.
-    for f in run if events else []:
-        if f.get("bounceEv") is not None:           # this flight ends at a bounce event
-            e = events[f["bounceEv"]]
-            bounce, src, sigma = (e["court"][0], e["court"][1], e["t"]), 2, e["conf"]
-            break
-    for k in [] if events else pt["kinks"]:
-        t = k[0]
-        if t < run[0]["t0"] + 0.1 or t > run[-1]["t1"] + 0.3:
-            continue
-        pre = [f for f in run if 0 <= t - f["t1"] < 0.2]
-        post = [f for f in run if 0 <= f["t0"] - t < 0.2]
-        low = (pre and pre[-1]["p1"][2] < 0.7) or (post and post[0]["p0"][2] < 0.6 and post[0]["v0"][2] > 0)
-        if low and abs(k[3]) < 12 and abs(k[4]) < 22:
-            bounce, src = (k[3], k[4], t), 2
-            break
-    if bounce is None and not np.isnan(run[0]["land"][0]) and run[0]["n"] >= LAND_N:
-        ok = run[0]["landT"] < T + 1.5
-        if events and REJECT_EARLY:                  # a landing before the last detection of the flight is not possible
-            ok = ok and run[0]["landT"] > run[0]["t1"] - 1 / 60
-        if ok:
-            bounce, src = (run[0]["land"][0], run[0]["land"][1], run[0]["landT"]), 1
-    net_z = run[0]["netZ"]
-    crossed = any(f["p1"][1] * s > 0.5 for f in run) or (bounce is not None and bounce[1] * s > 0)
-    q = {"to_far": to_far, "src": src, "n_run": len(run), "n_pts": sum(f["n"] for f in run), "speed": 3.6 * float(np.linalg.norm(run[0]["v0"])),
-         "t_rel": run[0]["t0"] - T, "t_end_rel": run[-1]["t1"] - T, "net_z": net_z, "crossed": crossed,
-         "start_y": run[0]["p0"][1] * s, "start_z": run[0]["p0"][2], "end_y": run[-1]["p1"][1] * s, "end_z": run[-1]["p1"][2],
-         "bx": np.nan, "by": np.nan, "margin": np.nan, "n_flights": len(fl), "coverage": pt["coverage"],
-         "sigma": float(sigma) if bounce is not None and sigma is not None else np.nan}
-    if bounce is not None:
-        bx, by = bounce[0], bounce[1] * s
-        q.update(bx=abs(bx), by=by, margin=min(SW - abs(bx), BL - by, by), b_rel=bounce[2] - T)
-    return q
 
 
 def rule(q):
@@ -137,7 +74,7 @@ def main(scale=lab.BALL_TAG):
         for pt, e in zip(pts, ends):
             if e["winnerNear"] is None:
                 continue
-            q = analyse(pt)
+            q = sc.old_quantities(pt, T_CUT)
             w = rule(q)
             n += 1
             if w is not None:

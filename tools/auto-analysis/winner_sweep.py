@@ -8,12 +8,14 @@ Changes to the rule of winner_ball.py, from the wrong cases of m1015:
     (m1015 suggests that MARGIN 0.3 is too large.)
   - MIN_SPEED: flights slower than this are not shots (ball pick-ups).
 For each test match the parameters come from a grid search on the other 3.
+G7 step 2a: the rule is shot_chain.old_quantities and shot_chain.old_decide (one copy, in the shot chain).
 Usage: python winner_sweep.py
 """
 import itertools, json, os
 import numpy as np
 import lab
 import winner_ball as wb
+import shot_chain as sc
 
 GRID = {"margin": [-0.3, -0.15, 0.0, 0.15, 0.3], "net_fwd": [0.0, 1.0, 2.0], "net_back": [1.0, 2.5, 4.0], "min_speed": [8, 20, 30]}
 
@@ -27,24 +29,10 @@ def load():
     return data
 
 
-def decide(q, p):
-    if q is None:
-        return None
-    if -p["net_back"] < q["end_y"] < p["net_fwd"] and q["end_z"] < 1.8 and not q["src"] == 2:
-        return not q["to_far"]                         # in the net: the hitter loses
-    if q["src"] == 0:
-        return None
-    # E17d: an extrapolated landing has a 1-sigma error. Nearer to the line than z * sigma: no decision.
-    if q["src"] == 1 and p.get("z", 0) > 0 and not np.isnan(q.get("sigma", np.nan)) and abs(q["margin"] + p["margin"]) < p["z"] * q["sigma"]:
-        return None
-    is_in = q["margin"] > -p["margin"] and (np.isnan(q["net_z"]) or q["net_z"] > 0.85)
-    return q["to_far"] if is_in else not q["to_far"]
-
-
 def score(items, p):
     hit = dec = 0
     for q, y in items:
-        w = decide(q, p)
+        w = sc.old_decide(q, p)
         if w is not None:
             dec += 1; hit += int(w == y)
     return hit, dec, len(items)
@@ -59,10 +47,7 @@ def main():
     combos = [dict(zip(keys, v)) for v in itertools.product(*GRID.values())]
     qs = {}
     for ms in GRID["min_speed"]:
-        orig = wb.good
-        wb.good = lambda f, ms=ms, orig=orig: orig(f) and 3.6 * float(np.linalg.norm(f["v0"])) >= ms
-        qs[ms] = {m: [(wb.analyse(pt), y) for pt, y in v] for m, v in data.items()}
-        wb.good = orig
+        qs[ms] = {m: [(sc.old_quantities(pt, wb.T_CUT, ms), y) for pt, y in v] for m, v in data.items()}
     tot = [0, 0, 0]
     for test in wb.SINGLES:
         best = max(combos, key=lambda p: sum((lambda h, d, n: h + 0.5 * (n - d))(*score(qs[p["min_speed"]][m], p)) for m in wb.SINGLES if m != test))

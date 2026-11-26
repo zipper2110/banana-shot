@@ -24,7 +24,7 @@ import numpy as np
 SW, BL, SL = 4.115, 11.885, 6.40      # m: half width of the singles court, baseline, service line
 MIN_DUR = 0.15        # s: shortest flight that is used (10 samples at 60 fps, as winner_ball.good; 6 samples at 30 fps)
 MIN_N = 6             # samples
-SAME_GAP = 0.6        # s: a flight in the same direction after a shorter gap is the same shot (as winner_ball.analyse)
+SAME_GAP = 0.6        # s: a flight in the same direction after a shorter gap is the same shot (as old_quantities)
 NEW_GAP = 1.5         # s: after a longer gap it is a new shot (a tennis ball is in the air for less than this between two hits)
 BACK_M = 3.0          # m: or a new shot if the flight starts this far behind the last known place of the ball
 HIT_V = 8.0           # m/s along the court: a flight back that is faster than this is a hit (ball_bounce.HIT_V)
@@ -87,7 +87,7 @@ def usable(f, min_speed=8.0):
 
 
 def pos_ok(f):
-    """The 3D start position is inside a large box around the court (winner_ball.good)."""
+    """The 3D start position is inside a large box around the court (also old_good)."""
     return abs(f["p0"][1]) < 25 and abs(f["p0"][0]) < 12
 
 
@@ -468,7 +468,7 @@ def old_good(f, min_speed=8.0):
 
 
 def old_quantities(pt, t_cut, min_speed=8.0):
-    """The quantities of the last shot of the old rule (winner_ball.analyse with USE_EVENTS False), or None if there is no
+    """The quantities of the last shot of the old rule (before G7: winner_ball.analyse), or None if there is no
     good flight that starts before the end + t_cut."""
     T = pt["end"]
     fl = [f for f in pt["flights"] if old_good(f, min_speed) and f["t0"] < T + t_cut]
@@ -507,7 +507,7 @@ def old_quantities(pt, t_cut, min_speed=8.0):
 
 
 def old_decide(q, p):
-    """The decision of the old rule (winner_sweep.decide): True = the near player wins, None = no decision.
+    """The decision of the old rule (before G7: winner_sweep.decide): True = the near player wins, None = no decision.
     p: margin (a bounce out by less than this is in), net_back and net_fwd (the net test), optional z (landing sigma)."""
     if q is None:
         return None
@@ -522,7 +522,7 @@ def old_decide(q, p):
 
 
 def old_case_key(q, p):
-    """The case of a decision of the old rule (match_decode.case_key). "early" = the last shot starts more than 4 s
+    """The case of a decision of the old rule (before G7: match_decode.case_key). "early" = the last shot starts more than 4 s
     before the end (a later shot was probably missed)."""
     early = q["t_rel"] < -4
     if -p["net_back"] < q["end_y"] < p["net_fwd"] and q["end_z"] < 1.8 and q["src"] != 2:
@@ -544,7 +544,7 @@ def old_rule(pt, t_cut, p):
 
 LINE_M = 0.3          # m: a bounce nearer to a line than this is a "line" case (the position error of a bounce event, E17d-2: 90 % below 0.28 m)
 FIRST_DT = 0.15       # s: a low kink of the old rule this much before the bounce event is the first ground contact
-EARLY = -4.0          # s: the last shot starts more than this before the end: a later shot was probably not tracked (match_decode.case_key)
+EARLY = -4.0          # s: the last shot starts more than this before the end: a later shot was probably not tracked (old_case_key)
 # The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
 # E38d: fitted with the detections of the fine-tuned ball weights (each match with weights that did not see it).

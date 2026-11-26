@@ -15,7 +15,6 @@ import numpy as np
 import cv2
 import lab
 import winner_ball as wb
-import winner_sweep as ws
 import match_decode as md
 import shot_chain as sc
 import rally_end
@@ -157,7 +156,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         fls = [full["flights"][i] for i in np.nonzero((fl_t0 >= a - 1.0) & (fl_t0 <= t_end + 2.5))[0]]
         kks = [full["kinks"][i] for i in np.nonzero((kk_t >= a - 1.0) & (kk_t <= t_end + 2.5))[0]]
         pt = {"start": a, "end": t_end, "flights": fls, "kinks": kks, "coverage": 0.0, "audio": hits}   # audio: item 7 (shot_chain.back_time)
-        if "events" in full:                         # E17d: the flights refer to the events by index (winner_ball.USE_EVENTS)
+        if "events" in full:                         # E17d: the flights refer to the events by index
             pt["events"] = full["events"]
         q, w, old_case = sc.old_rule(pt, T_CUT_E2E, p)    # G7 step 1: the old rule is in the shot chain
         pw = 0.5 if w is None else (md.case_prob(q, p, mid) if w else 1 - md.case_prob(q, p, mid))

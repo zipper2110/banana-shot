@@ -62,6 +62,12 @@ DEAD_GAP = 1.0       # s from the last sample of the dead shot to the next shot 
 # Item 6 group E (found on Igor m1116): one real shot gives two shots of the two players, and one of them is weak (see drop_splits).
 SPLIT = os.environ.get("CHAIN_SPLIT", "1") == "1"
 SPLIT_DT = 0.45      # s between the starts of two shots of the two players (lab: 99 % of these times between two shots that are not weak are longer)
+# Item 7 (E76 group A, found on Igor m1116): the time of a "back" shot (its hit flight is not seen) is the meeting point of
+# the incoming and the outgoing ball (see back_time).
+BACK_TIME = os.environ.get("CHAIN_BACK_TIME", "1") == "1"
+BOUNCE_KEEP = 0.36   # speed along the court after a bounce / before it (lab: median of 1303 bounces, 25 to 75 %: 0.23 to 0.50)
+HIT_EARLY = 0.1      # s: the hit is not earlier than this before the last sample of the incoming ball (the time error of a fit)
+AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB or more comes 0 to 0.2 s after the hit
 
 
 def kmh(f):
@@ -104,11 +110,12 @@ def continuous(cur, f, b0):
     return float(np.hypot(f["p0"][0] - ref[0], f["p0"][1] - ref[1])) <= reach
 
 
-def build(flights, events, nets=(), min_speed=8.0, weak=True):
+def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None):
     """The shot chain. flights: the flights of the rally window, in time order. events: the event list
     that "ev0", "ev1" and "bounceEv" of the flights refer to (None = a flights file with no events).
     nets: net events of the same time range. weak: also use flights with a start position outside the
     court box (their direction is used, their positions are not).
+    audio: the audio hit candidates (hits.npy: time, dB, ...) or None (for back_time).
     Returns a list of shots: {"t", "near", "how", "fl", "bounces", "net", "weak", "serve"}."""
     shots, cur = [], None
     for f in flights:
@@ -203,6 +210,8 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
             serve_time(sh)
     if LATE_BOUNCE and events:
         late_bounces(shots, events)
+    if BACK_TIME:
+        back_time(shots, events, audio)
     # net events: each one belongs to the shot that is in the air at its time
     seen, alone = list(shots), []
     for e in nets:
@@ -268,6 +277,48 @@ def serve_time(sh):
             if g["t0"] > sh["t"]:
                 sh["t"] = float(g["t0"])
             return
+
+
+def meet_time(prev, sh, events):
+    """The time at which the ball line of the shot sh, extended back, meets the incoming ball line of the shot prev (the other
+    player), along the court (y). Incoming line: the last flight of prev; from its bounce (seen, else the fit landing of a flight
+    that did not bounce yet) with BOUNCE_KEEP of its speed. None if the lines do not meet between the last sample of the incoming
+    ball (- HIT_EARLY) and the first sample of sh."""
+    fi = [f for f in prev["fl"] if pos_ok(f)]
+    if not fi or not sh["fl"] or not pos_ok(sh["fl"][0]):
+        return None
+    fi, fo = fi[-1], sh["fl"][0]
+    ti, yi, vi = fi["t0"], fi["p0"][1], fi["v0"][1]
+    post = events is not None and fi.get("ev0") is not None and events[fi["ev0"]]["kind"] == "bounce"
+    bl = [e for e in prev["bounces"] if e["t"] > fi["t1"] - 0.05]
+    if bl:
+        e = min(bl, key=lambda e: e["t"])
+        ti, yi, vi = e["t"], e["court"][1], vi * BOUNCE_KEEP
+    elif not post and fi.get("landT") is not None and fi.get("land") is not None and fi["landT"] > fi["t1"] - 0.05:
+        ti, yi, vi = fi["landT"], fi["land"][1], vi * BOUNCE_KEEP
+    vo = fo["v0"][1]
+    if vi * vo >= 0:
+        return None
+    t = (fo["p0"][1] - yi + vi * ti - vo * fo["t0"]) / (vi - vo)
+    return t if fi["t1"] - HIT_EARLY <= t <= fo["t0"] else None
+
+
+def back_time(shots, events, audio=None):
+    """Item 7: a "back" shot starts at its first seen flight, often 0.2 to 0.9 s after the hit. Its time becomes the meet_time
+    with the shot before (lab, 4 matches: the error at seen hit events has a median of 0.06 s; an audio candidate follows the
+    new time for 77 % of the back shots, the old time for 40 %, a random time for 40 %). With audio: the old time stays if an
+    audio candidate follows it and none follows the new time."""
+    au = None if audio is None or not len(audio) else np.asarray(audio)[np.asarray(audio)[:, 1] >= AUDIO_DB, 0]
+
+    def heard(t):
+        return au is not None and bool(((au >= t + AUDIO_WIN[0]) & (au <= t + AUDIO_WIN[1])).any())
+    for prev, sh in zip(shots, shots[1:]):
+        if sh["how"] != "back" or prev["near"] == sh["near"]:
+            continue
+        t = meet_time(prev, sh, events)
+        if t is None or (heard(sh["t"]) and not heard(t)):
+            continue
+        sh["t"] = float(t)
 
 
 def drop_splits(shots):
@@ -435,7 +486,7 @@ def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     Order of the facts of the last shot: net event; bounce event (on the side of the hitter, out, in);
     else the old rule (kink or fit landing). "back_": the old rule decided from the shot before the last
     shot of the chain (it did not use the last flight)."""
-    shots = build(pt["flights"], pt.get("events"), nets, min_speed)
+    shots = build(pt["flights"], pt.get("events"), nets, min_speed, audio=pt.get("audio"))
     li = last_shot(shots, pt["end"], t_cut)
     old = (lambda pre: (w_old, pre + old_case) if w_old is not None else (None, "none"))
     if li is None:

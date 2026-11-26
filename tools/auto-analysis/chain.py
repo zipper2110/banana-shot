@@ -143,7 +143,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         t_end = rally_end.end(mid, a, b, full, nets, gru, hits, T_CUT_E2E) if END_MODEL else b
         fls = [full["flights"][i] for i in np.nonzero((fl_t0 >= a - 1.0) & (fl_t0 <= t_end + 2.5))[0]]
         kks = [full["kinks"][i] for i in np.nonzero((kk_t >= a - 1.0) & (kk_t <= t_end + 2.5))[0]]
-        pt = {"start": a, "end": t_end, "flights": fls, "kinks": kks, "coverage": 0.0}
+        pt = {"start": a, "end": t_end, "flights": fls, "kinks": kks, "coverage": 0.0, "audio": hits}   # audio: item 7 (shot_chain.back_time)
         if "events" in full:                         # E17d: the flights refer to the events by index (winner_ball.USE_EVENTS)
             pt["events"] = full["events"]
         orig = wb.good

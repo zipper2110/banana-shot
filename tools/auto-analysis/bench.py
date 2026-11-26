@@ -69,7 +69,8 @@ def switches():
     names = set()
     for f in glob.glob(os.path.join(HERE, "*.py")):
         names |= set(re.findall(r"environ\.get\(\"([A-Z][A-Z0-9_]+)\"", open(f, encoding="utf-8").read()))
-    names -= {"APPDATA", "LOCALAPPDATA", "USERPROFILE", "HOME", "HF_HOME", "PATH", "TEMP", "TMP", "HEAVY_LOCK_DIR"}
+    names -= {"APPDATA", "LOCALAPPDATA", "USERPROFILE", "HOME", "HF_HOME", "PATH", "TEMP", "TMP", "HEAVY_LOCK_DIR",
+               "BENCH_WHO"}                         # a lock ticket name, not a switch: not in the manifest hash
     import chain
     return {"env": {k: os.environ.get(k) for k in sorted(names)},
             "chain": {k: getattr(chain, k) for k in ("CHAIN", "END_MODEL", "FPS_ADAPT", "ID_ABS", "T_CUT_E2E", "SHORT_WAIT")

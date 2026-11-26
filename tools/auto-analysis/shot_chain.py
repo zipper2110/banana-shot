@@ -70,7 +70,10 @@ SPLIT_DT = 0.45      # s between the starts of two shots of the two players (lab
 # the incoming and the outgoing ball (see back_time).
 BACK_TIME = os.environ.get("CHAIN_BACK_TIME", "1") == "1"
 BOUNCE_KEEP = 0.36   # speed along the court after a bounce / before it (lab: median of 1303 bounces, 25 to 75 %: 0.23 to 0.50)
-HIT_EARLY = 0.1      # s: the hit is not earlier than this before the last sample of the incoming ball (the time error of a fit)
+# s: a meeting time up to this before the last sample of the incoming ball is that sample (item 9: at seen hits the hit is
+# 0.04 s after that sample, median; lab back shots 0.1 to 0.3 s before it: an audio candidate after the sample for 81 %, after the
+# old time for 40 %; more than 0.3 s before: no support). An earlier meeting time is not used.
+HIT_EARLY = 0.3
 AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB or more comes 0 to 0.2 s after the hit
 
 
@@ -291,7 +294,7 @@ def meet_time(prev, sh, events):
     """The time at which the ball line of the shot sh, extended back, meets the incoming ball line of the shot prev (the other
     player), along the court (y). Incoming line: the last flight of prev; from its bounce (seen, else the fit landing of a flight
     that did not bounce yet) with BOUNCE_KEEP of its speed. None if the lines do not meet between the last sample of the incoming
-    ball (- HIT_EARLY) and the first sample of sh."""
+    ball (- HIT_EARLY) and the first sample of sh. A time before the last incoming sample is that sample (item 9)."""
     fi = [f for f in prev["fl"] if pos_ok(f)]
     if not fi or not sh["fl"] or not pos_ok(sh["fl"][0]):
         return None
@@ -308,7 +311,7 @@ def meet_time(prev, sh, events):
     if vi * vo >= 0:
         return None
     t = (fo["p0"][1] - yi + vi * ti - vo * fo["t0"]) / (vi - vo)
-    return t if fi["t1"] - HIT_EARLY <= t <= fo["t0"] else None
+    return min(max(t, fi["t1"]), fo["t0"]) if fi["t1"] - HIT_EARLY <= t <= fo["t0"] else None   # item 9: the hit is not before the last incoming sample
 
 
 def back_time(shots, events, audio=None):

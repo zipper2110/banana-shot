@@ -14,7 +14,9 @@ the pairs, the point windows, the fault map (label_faults.infer_faults over the 
   totals(frs)                                        {name: numbers} over the fragments (raw lists in, JSON numbers out)
 
 Windows: TOL_HIT, TOL_BOUNCE and TOL_NET of score_events.py (the bench windows), through the pairs of case_history.
-New rule (E170): the in/out of a matched bounce event from its court point, singles lines (shot_chain SW, BL), margin 0.
+New rule (E170): the in/out of a matched bounce event from its court point, singles lines (shot_chain SW, BL), margin 0,
+on the half of the court across the net from the hitter (the last labeled serve or shot before the bounce; a bounce on
+the half of the hitter is out, as "own" in shot_chain.shot_end).
 For the first bounce after a serve: the service box (0 < |y| <= SL on the receiver half) and, when the labels give the
 box, its side (the sign of x; manager, E170). The box is given by the user's bounce of that serve when it is in, else
 by the other serve of the same point (a fault and its second serve go to the same box; label_faults._side). Else the
@@ -138,14 +140,14 @@ def _box_side(E, i, fr):
     return None
 
 
-def chain_in(court, serve_end=None, side=None):
-    """The in/out of a chain bounce from its court point (x across, y along, far end > 0). serve_end: the end of the
-    server when the bounce is the first bounce of a serve (then the service box; side = the box side, or None)."""
+def chain_in(court, hitter=None, serve=False, side=None):
+    """The in/out of a chain bounce from its court point (x across, y along, far end > 0). hitter: the end (near, far)
+    of the last labeled contact before the bounce; the ball must land on the other half (None: no half check). serve:
+    the first bounce of a serve (then the service box; side = the box side, or None)."""
     x, y = float(court[0]), float(court[1])
-    if serve_end is None:
-        return abs(x) <= sc.SW and abs(y) <= sc.BL
-    recv = -1 if serve_end == "far" else 1                 # a far serve lands on the near half (y < 0)
-    ok = abs(x) <= sc.SW and 0 < y * recv <= sc.SL
+    recv = -1 if hitter == "far" else 1 if hitter == "near" else 0       # a far shot lands on the near half (y < 0)
+    yy = y * recv if recv else abs(y)
+    ok = abs(x) <= sc.SW and 0 < yy <= (sc.SL if serve else sc.BL)
     if ok and side is not None:
         ok = (1 if x > 0 else -1) == side
     return ok
@@ -178,7 +180,8 @@ def event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn):
             out["serveBounces"] += 1
             side = _box_side(ev, si, fault)
             out["sideChecked"] += int(side is not None)
-        got = chain_in(e["court"], ev[si].get("end") if si is not None else None, side)
+        hit = [q for q in ev[:k] if q["kind"] in ("serve", "shot")] if k is not None else []
+        got = chain_in(e["court"], hit[-1].get("end") if hit else None, si is not None, side)
         out["inOutN"] += 1
         ok = got == (not l.get("out"))
         out["inOutOk"] += int(ok)

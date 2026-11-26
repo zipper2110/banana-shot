@@ -40,12 +40,13 @@ class LabelMeasure(unittest.TestCase):
         self.assertEqual((c["n"], c["ok"], c["off1"], c["diff"]), (1, 0, 1, [1]))
 
     def test_chain_in(self):
-        self.assertTrue(lm.chain_in([2.0, 9.0]))
-        self.assertFalse(lm.chain_in([4.5, 9.0]))
-        self.assertTrue(lm.chain_in([2.0, -4.0], "far"))                  # a far serve in the near half, in the box
-        self.assertFalse(lm.chain_in([2.0, -7.0], "far"))                 # behind the service line
-        self.assertFalse(lm.chain_in([2.0, -4.0], "far", side=-1))        # the wrong box
-        self.assertTrue(lm.chain_in([-2.0, -4.0], "far", side=-1))
+        self.assertTrue(lm.chain_in([2.0, 9.0], "near"))
+        self.assertFalse(lm.chain_in([4.5, 9.0], "near"))
+        self.assertFalse(lm.chain_in([2.0, 3.0], "far"))                  # a far shot on the far half ("own")
+        self.assertTrue(lm.chain_in([2.0, -4.0], "far", True))            # a far serve in the near half, in the box
+        self.assertFalse(lm.chain_in([2.0, -7.0], "far", True))           # behind the service line
+        self.assertFalse(lm.chain_in([2.0, -4.0], "far", True, -1))       # the wrong box
+        self.assertTrue(lm.chain_in([-2.0, -4.0], "far", True, -1))
 
     def test_box_side(self):
         ev = [sv(100.0), b(100.8, 2.5, -7.5, out=True), sv(106.0), b(106.8, 2.0, -4.0)]

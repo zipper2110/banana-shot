@@ -543,7 +543,6 @@ def old_rule(pt, t_cut, p):
 # ---------------------------------------------------------------- winner evidence
 
 LINE_M = 0.3          # m: a bounce nearer to a line than this is a "line" case (the position error of a bounce event, E17d-2: 90 % below 0.28 m)
-FIRST_DT = 0.15       # s: a low kink of the old rule this much before the bounce event is the first ground contact
 EARLY = -4.0          # s: the last shot starts more than this before the end: a later shot was probably not tracked (old_case_key)
 # The cases, and the probability that the decision of the case is right (all 4 marked matches, T_CUT -1.5, events of E32;
 # fit_cases() measures them; use_lomo_cases() gives each lab match the table of the other 3 matches).
@@ -611,8 +610,7 @@ def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     kind, m = shot_end(sh)
     e = "_early" if sh["t"] - pt["end"] < EARLY else ""
     same = bool(q is not None and sh["fl"] and abs((pt["end"] + q["t_rel"]) - sh["fl"][0]["t0"]) < 1e-6)
-    if kind in ("own", "out", "in") and same and q["src"] == 2 and pt["end"] + q["b_rel"] < first_bounce(sh)[2] - FIRST_DT:
-        kind = "none"         # the old rule has an earlier ground contact (a low kink): the bounce event is not the first bounce
+    # G7 step 2b: no FIRST_DT override. The kink rule of the old rule does not remove the bounce event of the chain.
     if kind == "net":
         w, case = (not sh["near"]), "net_" + ("hi" if sh["net"]["dirConf"] >= 0.7 else "lo")
     elif kind == "own":

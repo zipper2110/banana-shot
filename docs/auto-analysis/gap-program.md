@@ -227,6 +227,10 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
 11. (2026-11-26) The missed rallies of the rally GRU (E99: 19 points). First a diagnosis on the CPU: what do
     these points have in common (length, serve, ball features, place in the match)? A new training of the GRU
     is a model change: ask the manager first, with the plan and the GPU time.
+12. (2026-11-26, decision of the user) The winners of the chain come from the evidence of each rally; the score
+    decoder does not change a winner (a switch, default off; the decoder code stays). Then S1 measures the lab and
+    Igor (rallies, events, winners as a check) against the current default. If a result or the app contract needs
+    a decoder output (for example a score state), keep it, but it must not change a winner. Journal id from E140 to E149.
 
 ### Rule for fixes found on Igor (manager, 2026-11-26)
 
@@ -365,3 +369,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Full-video runs (the user): only at milestones, not for regular checks (section 2). Cause: on 2026-11-26 about 10 h of full runs (Igor, m0913, m1001) held the GPU, and short jobs waited behind them for hours. |
 | 2026-11-26 | Case library (the user): short fragments of the source videos, grouped by error kind, with labels and the history of their detection results; the regular check of heavy-stage changes. Design in S1 item 8. |
 | 2026-11-26 | Four control levels of the case library (the user): small (one point), medium (2 to 3 games across an end change, 7 to 10 min), large (20 to 30 min), match (full). By content, not by a fixed length. Levels are for heavy-stage changes; a chain change uses the cached full matches. |
+| 2026-11-26 | Decoder (the user): a merge of the event evidence and the score evidence into one stronger confidence is the wish, but there is no clear way now. The decoder is that merge in principle, and the tests failed: decoder on all rallies +1.3 / -1.4 points (old / new rows, E66); decoder only where the evidence is weak +1.5 / -0.8; it spreads one wrong point to its game. Thus the decoder winners go off now (S3 item 12). Later item: score-consistency checks from the evidence (hints, and later maybe a confidence), when the events are reliable. |

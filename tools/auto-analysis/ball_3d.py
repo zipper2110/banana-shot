@@ -156,6 +156,10 @@ def more_kinks(path, kk, P, sc, bad=5.0, rounds=2):
 
 
 SERVE_Y = 11.7        # m from the net: contact point of a serve (a little inside the baseline)
+# E127: the second pass of flights() (the bounce anchor at the end of a segment) also keeps the serve start anchor
+# of serve_prior. Before, the fit with only the bounce anchor put the start of 11 far serves of the lab starts back at
+# 18 to 32 m from the net (no serve event). SERVE_PRIOR_KEEP=0 gives the old fit.
+SERVE_PRIOR_KEEP = os.environ.get("SERVE_PRIOR_KEEP", "1") == "1"
 
 
 def serve_prior(P, seg, fl):
@@ -182,9 +186,9 @@ def serve_prior(P, seg, fl):
             continue
         s2 = 3.6 * float(np.linalg.norm(v0))
         if rms < 5 and 45 < s2 < 240 and v0[1] * yp < 0 and abs(q0[1] - yp) < 1.5 and (best is None or rms < best[2]):
-            best = (q0, v0, rms)
+            best = (q0, v0, rms, (0.0, float(X[0]), yp, float(X[2])))
     if best:
-        fl.update(p0=best[0], v0=best[1], rms=best[2], p1=simulate(best[0], best[1], [ts[-1]])[0], prior=1)
+        fl.update(p0=best[0], v0=best[1], rms=best[2], p1=simulate(best[0], best[1], [ts[-1]])[0], prior=1, prior_at=best[3])
 
 
 def flights(path, kk, P, Hm=None, min_pts=8, free=None):
@@ -223,6 +227,8 @@ def flights(path, kk, P, Hm=None, min_pts=8, free=None):
                 anchors.append(((b - seg[0, 0]) / 60.0, g[0], g[1], 0.0))
         if not anchors:
             continue
+        if SERVE_PRIOR_KEEP and fl.get("prior_at"):
+            anchors.insert(0, fl["prior_at"])
         ts = (seg[:, 0] - seg[0, 0]) / 60.0
         p0, v0, rms = fit_flight(P, ts, seg[:, 1:3].astype(np.float64), anchors)
         if rms < fl["rms"] * 1.5 + 1.0:

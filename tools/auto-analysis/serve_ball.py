@@ -28,8 +28,9 @@ SW, SL = 4.115, 6.40
 # below it). A rising far toss can have an anchored fit that passes all checks (m1021 4536.79: rows 347 to 290, a
 # 142 km/h "serve" 1.0 s before the contact). With SERVE_DOWN_IMAGE=1 a far flight (start y > 0) is not a serve or a
 # fast flight if its dRow (row of the last blob - row of the first, ball_3d) is under DOWN_MIN_PX. The net movement, not
-# each step: a kick serve can rise for some frames. A flight with no dRow (older files) is not checked. Off by default.
-SERVE_DOWN_IMAGE = os.environ.get("SERVE_DOWN_IMAGE", "0") == "1"
+# each step: a kick serve can rise for some frames. A flight with no dRow (older files) is not checked. On by default
+# after E154 (manager); SERVE_DOWN_IMAGE=0 gives the old way.
+SERVE_DOWN_IMAGE = os.environ.get("SERVE_DOWN_IMAGE", "1") == "1"
 DOWN_MIN_PX = 10.0
 
 

@@ -18,6 +18,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
 <title>BananaShot event labels</title>
 <script src="manifest.js"></script>
 <script src="sides.js"></script>
+<script src="faults.js"></script>
 <style>
   :root { --bg:#16181c; --panel:#1f2228; --line:#2e323a; --text:#e6e6e6; --dim:#9aa0a8; --near:#4da3ff; --far:#ffa94d;
           --fault:#ff5c5c; --ok:#5fd38d; --warn:#ffd166; --bounce:#7ee0d0; --out:#ff7ab8; --net:#c9a0ff; }
@@ -78,6 +79,25 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   #slist div { display:grid; grid-template-columns:28px 54px 76px 1fr; padding:1px 10px; cursor:pointer; color:var(--dim); font-size:12px; font-variant-numeric:tabular-nums; }
   #slist div.done { color:var(--ok); } #slist div.cur { background:#33404f; color:var(--text); } #slist div:hover { background:#2a2e35; }
   #smatches div { padding:1px 10px; cursor:pointer; font-size:12.5px; } #smatches div.cur { background:#33404f; } #smatches div:hover { background:#2a2e35; }
+  /* faults mode (label_events.html#faults) */
+  #faultsView { display:none; grid-template-columns:minmax(0, 1fr) 340px; min-height:0; }
+  body.faults main { display:none; } body.faults #faultsView { display:grid; }
+  #fleft { display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden; padding:8px; gap:6px; }
+  #fstage { position:relative; flex:1; min-height:0; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; }
+  #fv { display:block; max-width:100%; max-height:calc(100vh - 210px); transition:transform .12s; }
+  #ftl { position:relative; overflow:hidden; height:46px; background:var(--panel); border:1px solid var(--line); border-radius:4px; cursor:pointer; flex:none; }
+  #ftl .row { position:absolute; top:0; height:22px; background:rgba(255,209,102,.30); border-left:2px solid var(--warn); border-right:2px solid var(--warn); box-sizing:border-box; }
+  #ftl .pt { position:absolute; top:23px; bottom:0; background:rgba(95,211,141,.22); border-left:2px solid var(--ok); box-sizing:border-box; }
+  #ftl .lab { position:absolute; font-size:11px; white-space:nowrap; padding:4px 0 0 4px; pointer-events:none; }
+  #ftl .head { position:absolute; top:0; bottom:0; width:2px; background:#fff; margin-left:-1px; pointer-events:none; }
+  #ftime { font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums; flex:none; }
+  #fkeys kbd { color:var(--text); font:12px ui-monospace, monospace; background:#2b3038; border:1px solid var(--line); border-radius:3px; padding:0 4px; justify-self:start; white-space:nowrap; }
+  #fask { text-align:center; font-size:16px; padding:2px 0 4px; flex:none; }
+  #fask button { font-size:15px; padding:5px 12px; margin:0 3px; }
+  #fask .chosen { outline:2px solid var(--ok); }
+  #flist div { display:grid; grid-template-columns:28px 64px 56px 1fr; padding:1px 10px; cursor:pointer; color:var(--dim); font-size:12px; font-variant-numeric:tabular-nums; }
+  #flist div.done { color:var(--ok); } #flist div.cur { background:#33404f; color:var(--text); } #flist div:hover { background:#2a2e35; }
+  #fmatches div { padding:1px 10px; cursor:pointer; font-size:12.5px; } #fmatches div.cur { background:#33404f; } #fmatches div:hover { background:#2a2e35; }
 </style>
 </head>
 <body>
@@ -91,6 +111,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   <button id="btnFolder" title="Choose the folder for the label files (key O)">Label folder…</button>
   <button id="btnExport" title="Download the label file of this fragment (a copy, if the folder does not work)">Download</button>
   <button id="btnMode" title="Change between the event labels and the sides step">Sides</button>
+  <button id="btnFaults" title="Change between the event labels and the faults step">Faults</button>
 </header>
 <main>
   <div id="left">
@@ -170,6 +191,39 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
     <div id="slist" style="flex:1 0 150px; overflow:auto"></div>
   </aside>
 </div>
+<div id="faultsView">
+  <div id="fleft">
+    <div id="fstage"><video id="fv" preload="auto"></video><div id="fflash" style="position:absolute; top:10px; left:50%; transform:translateX(-50%); padding:4px 14px; border-radius:4px; font-size:18px; font-weight:600; opacity:0; transition:opacity .4s; pointer-events:none"></div></div>
+    <div id="ftl"></div>
+    <div id="ftime"></div>
+    <div id="fask"></div>
+  </div>
+  <aside>
+    <section><h3>This row</h3><div id="finfo"></div></section>
+    <section>
+      <details open><summary><h3 style="display:inline">Keys</h3></summary>
+      <div id="fkeys" style="font-size:12px; color:var(--dim); display:grid; grid-template-columns:auto 1fr; gap:1px 10px">
+        <kbd>F</kbd><span>a <b>first-serve fault</b>: the next marked point starts with the second serve</span>
+        <kbd>P</kbd><span>a <b>real point</b> (a rally) that has no mark</span>
+        <kbd>N</kbd><span><b>no</b>: not a fault and not a point (no serve, a warm-up, a ball back to the server)</span>
+        <kbd>Q</kbd><span>not sure</span>
+        <kbd>Space</kbd><span>play / stop</span>
+        <kbd>R</kbd><span>play again from 1 s before the row start</span>
+        <kbd>&larr; &rarr;</kbd><span>back / forward 1 s (Shift: 5 s)</span>
+        <kbd>1 2 3 4</kbd><span>speed 1&times;, &frac12;&times;, &frac14;&times;, 0.1&times;</span>
+        <kbd>V</kbd><span>zoom 2&times; at the mouse (toggle)</span>
+        <kbd>U</kbd><span>sound on / off</span>
+        <kbd>[ ]</kbd><span>previous / next row</span>
+        <kbd>PgUp PgDn</kbd><span>previous / next match</span>
+        <kbd>O</kbd><span>choose the label folder</span>
+      </div></details>
+    </section>
+    <section style="padding-bottom:2px"><h3>Matches</h3></section>
+    <div id="fmatches"></div>
+    <section style="padding-bottom:2px"><h3>Rows</h3></section>
+    <div id="flist" style="flex:1 0 150px; overflow:auto"></div>
+  </aside>
+</div>
 <script>
 "use strict";
 const TOOL_VERSION = 1, FILE_VERSION = 1, SPEEDS = [1, 0.5, 0.25, 0.1], STORE = "bananashot-event-labels-v1", PRE = 2.0;
@@ -182,9 +236,13 @@ let store = JSON.parse(localStorage.getItem(STORE) || "{}");    // fragment id -
 // Sides mode (S4 item 11): label_events.html#sides. The user marks the near player of the candidate points of sides.js.
 const SIDES_MODE = location.hash === "#sides";
 if (SIDES_MODE) document.body.classList.add("sides");
+// Faults mode (S4, E158): label_events.html#faults. The user answers for each hidden fault row of the bench (faults.js).
+const FAULTS_MODE = location.hash === "#faults";
+if (FAULTS_MODE) document.body.classList.add("faults");
 
-if (!MF && !SIDES_MODE) { document.body.innerHTML = "<p style='padding:20px'>manifest.js is missing. Run: python case_manifest.py</p>"; throw 0; }
+if (!MF && !SIDES_MODE && !FAULTS_MODE) { document.body.innerHTML = "<p style='padding:20px'>manifest.js is missing. Run: python case_manifest.py</p>"; throw 0; }
 if (SIDES_MODE && !window.SIDES) { document.body.innerHTML = "<p style='padding:20px'>sides.js is missing. Run: python sides_cases.py</p>"; throw 0; }
+if (FAULTS_MODE && !window.FAULTS) { document.body.innerHTML = "<p style='padding:20px'>faults.js is missing. Run: python faults_cases.py page</p>"; throw 0; }
 const items = MF ? MF.fragments : [];
 // A stored doc (browser store or label file) of another cut of the fragment (another t0 or another manifest row) must
 // not become marks of the current row: its times have another time base. The page keeps it apart in STORE + "-stale"
@@ -517,7 +575,8 @@ async function chooseDir() {
   await ensureDir(true);
   await readFiles();
   for (const it of items) if (store[it.id]) await writeFile(it.id);     // only the fragments of the manifest
-  if (SIDES_MODE) { await sReadFiles(); for (const m of Object.keys(sStore)) await sWriteFile(m); sRender(); } else render();
+  if (SIDES_MODE) { await sReadFiles(); for (const m of Object.keys(sStore)) await sWriteFile(m); sRender(); }
+  else if (FAULTS_MODE) { await fReadFiles(); for (const m of Object.keys(fStore)) await fWriteFile(m); fRender(); } else render();
 }
 async function readFiles() {
   if (!dirOk) return;
@@ -647,13 +706,14 @@ $("nofolder").onclick = async () => {
   if (!dir) return chooseDir();
   if (!(await ensureDir(true))) return;
   await readFiles(); for (const it of items) if (store[it.id]) await writeFile(it.id);     // only the fragments of the manifest
-  if (SIDES_MODE) { await sReadFiles(); for (const m of Object.keys(sStore)) await sWriteFile(m); sRender(); } else render();
+  if (SIDES_MODE) { await sReadFiles(); for (const m of Object.keys(sStore)) await sWriteFile(m); sRender(); }
+  else if (FAULTS_MODE) { await fReadFiles(); for (const m of Object.keys(fStore)) await fWriteFile(m); fRender(); } else render();
 };
 $("btnExport").onclick = download;
 
 // ---- keys
 document.addEventListener("keydown", async e => {
-  if (SIDES_MODE || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (SIDES_MODE || FAULTS_MODE || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase(), S = e.shiftKey;
   const map = {
     " ": () => { if (v.paused) { v.playbackRate = rate; v.play(); } else v.pause(); },
@@ -812,10 +872,233 @@ document.addEventListener("keydown", async e => {
 });
 $("btnMode").textContent = SIDES_MODE ? "Event labels" : "Sides";
 $("btnMode").onclick = () => { location.hash = SIDES_MODE ? "" : "sides"; location.reload(); };
+if (FAULTS_MODE) $("btnMode").textContent = "Sides";
+
+// ---- faults mode (S4, E158). One answer for each hidden fault row of the bench (bench.no_none): a detected rally that
+// matches no marked point, overlaps none, and ends chain.FAULT_NEXT s or less before the next marked point. The lab
+// marks start at the second serve, so the bench does not know if the row is a fault, a point with no mark, or a false
+// rally. Output: faults_<match>.json in the label folder. The page keeps an answer only for the same row hash: an
+// answer of a changed row goes to "stale" (kept in the file, not used).
+const FS = window.FAULTS, FSTORE = "bananashot-faults-v1", FAULTS_VERSION = 1;
+const FMEAN = {F: "first-serve fault", P: "real point with no mark", N: "no: not a fault, not a point", Q: "not sure"};
+const FCOLOR = {F: "#2f7a4c", P: "#2b5fa8", N: "#8a3a3a", Q: "#a8801f"};
+const fv = $("fv");
+let fStore = JSON.parse(localStorage.getItem(FSTORE) || "{}");      // match -> saved doc
+let fmi = -1, fri = 0, fRate = 1, fZoom = false, fSince = performance.now(), fStaleN = 0;
+const fm = () => FS.matches[fmi];
+const fRow = () => fm().rows[fri];
+const fAnswers = m => (fStore[m.match] && fStore[m.match].answers) || [];
+const fMarkOf = (m, r) => fAnswers(m).find(a => a.row === r.id && a.rowHash === r.rowHash);
+const fct = (r, src) => src - r.t0;                             // clip time of a source time
+function fAddActive() {
+  const now = performance.now();
+  if (fmi >= 0 && !document.hidden) { const d0 = fDoc(fm()); d0.activeMs = (d0.activeMs || 0) + now - fSince; }
+  fSince = now;
+}
+document.addEventListener("visibilitychange", () => { if (FAULTS_MODE) fAddActive(); });
+function fDoc(m) {
+  if (!fStore[m.match]) fStore[m.match] = {version: FAULTS_VERSION, kind: "bananashot-faults", match: m.match, testOnly: m.testOnly,
+    source: {tool: "label_events.html#faults", toolVersion: TOOL_VERSION, labeler: "user",
+             method: "by eye on the video from 1 s before the row start to 1 s after the start of the next marked point"},
+    timeBase: "start, end: source video time in s; nextStartMs: source video time in ms",
+    fields: {answer: "F = a first-serve fault (the row is a fault clip); P = a real point (a rally) with no mark; " +
+                     "N = not a fault and not a point (a false rally); Q = not sure",
+             rowHash: "the row hash of faults.js; an answer counts only for the same row hash",
+             stale: "answers of rows that changed or are gone; not used"},
+    answers: [], stale: [], activeMs: 0};
+  return fStore[m.match];
+}
+function fFileDoc(m) {
+  const d0 = fDoc(m), answers = [...d0.answers].sort((a, b) => a.start - b.start), counts = {F: 0, P: 0, N: 0, Q: 0};
+  answers.forEach(a => counts[a.answer]++);
+  const out = {...d0, rowCount: m.rows.length, answers, counts, complete: m.rows.every(r => fMarkOf(m, r)),
+               labelSeconds: Math.round((d0.activeMs || 0) / 100) / 10, savedAt: new Date().toISOString()};
+  delete out.activeMs;
+  return out;
+}
+async function fWriteFile(match) {
+  const m = FS.matches.find(x => x.match === match);
+  if (!m || !dir) { lastWrite = dir ? lastWrite : "no folder"; return; }
+  try {
+    if (!dirOk && !(await ensureDir(true))) { lastWrite = "no permission"; return; }
+    const fh = await dir.getFileHandle(`faults_${match}.json`, {create: true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(fFileDoc(m), null, 1));
+    await w.close();
+    lastWrite = "ok " + new Date().toLocaleTimeString();
+  } catch (e) { lastWrite = "write failed: " + e.message; }
+}
+async function fReadFiles() {
+  if (!dirOk) return;
+  for (const m of FS.matches) {
+    try {
+      const fh = await dir.getFileHandle(`faults_${m.match}.json`);
+      const doc = JSON.parse(await (await fh.getFile()).text());
+      const old = fStore[m.match];
+      if (!old || (doc.savedAt || "") > (old.savedAt || "")) {
+        doc.activeMs = (doc.labelSeconds || 0) * 1000;
+        for (const k of ["labelSeconds", "complete", "counts", "rowCount"]) delete doc[k];
+        doc.stale = doc.stale || [];
+        fStore[m.match] = doc;
+      }
+    } catch (e) { /* no file yet */ }
+  }
+  await fCheckStale();
+}
+// An answer of a row that is gone or has another row hash (another bench row, another clip) goes to "stale".
+async function fCheckStale() {
+  const moved = [];
+  for (const m of FS.matches) {
+    const d0 = fStore[m.match]; if (!d0) continue;
+    const ok = a => m.rows.some(r => r.id === a.row && r.rowHash === a.rowHash);
+    const old = d0.answers.filter(a => !ok(a));
+    if (!old.length) continue;
+    d0.stale = (d0.stale || []).concat(old.map(a => ({...a, staleAt: new Date().toISOString()})));
+    d0.answers = d0.answers.filter(ok);
+    fStaleN += old.length; moved.push(m.match);
+  }
+  localStorage.setItem(FSTORE, JSON.stringify(fStore));
+  for (const x of moved) await fWriteFile(x);
+}
+function fFlash(text, color, ms) {
+  const f = $("fflash"); f.textContent = text; f.style.background = color || "#333"; f.style.opacity = 1;
+  clearTimeout(fFlash.t); fFlash.t = setTimeout(() => f.style.opacity = 0, ms || 700);
+}
+function fSeekStart() {
+  const r = fRow(), c = Math.max(0, fct(r, r.start - 1.0));
+  if (fv.readyState >= 1) fv.currentTime = c;
+  else fv.addEventListener("loadedmetadata", () => { fv.currentTime = c; }, {once: true});
+}
+function fOpen(i, k) {
+  if (i < 0 || i >= FS.matches.length) return;
+  fAddActive();
+  fmi = i; const m = fm();
+  fri = k !== undefined ? Math.max(0, Math.min(m.rows.length - 1, k)) : Math.max(0, m.rows.findIndex(r => !fMarkOf(m, r)));
+  fLoad();
+}
+function fLoad() {
+  const r = fRow();
+  if (fv.dataset.src !== r.clip) { fv.dataset.src = r.clip; fv.src = r.clip; }
+  fSeekStart();
+  fv.playbackRate = fRate; fv.play().catch(() => {});
+  fSetZoom(false); fRender();
+}
+function fGo(d) {
+  const m = fm(), k = fri + d;
+  if (k >= 0 && k < m.rows.length) { fri = k; fLoad(); return; }
+  const j = fmi + Math.sign(d);
+  if (j >= 0 && j < FS.matches.length) fOpen(j, d > 0 ? 0 : FS.matches[j].rows.length - 1);
+}
+async function fMark(a) {
+  if (fmi < 0) return;
+  fAddActive();
+  const m = fm(), r = fRow(), doc = fDoc(m);
+  doc.answers = doc.answers.filter(x => x.row !== r.id);
+  doc.answers.push({row: r.id, rowHash: r.rowHash, start: r.start, end: r.end, next: r.next.id, nextStartMs: r.next.startMs,
+                    answer: a, at: new Date().toISOString()});
+  doc.savedAt = new Date().toISOString();
+  localStorage.setItem(FSTORE, JSON.stringify(fStore));
+  await fWriteFile(m.match);
+  if (folderReady()) fFlash(a + " = " + FMEAN[a], FCOLOR[a]);
+  else { fFlash("NOT WRITTEN TO A FILE: no label folder. Press O", "#b3261e", 1500); warnNoFolder(); }
+  const j = m.rows.findIndex((x, k) => k > fri && !fMarkOf(m, x));
+  const j2 = j >= 0 ? j : m.rows.findIndex(x => !fMarkOf(m, x));
+  if (j2 >= 0) { fri = j2; fLoad(); return; }
+  fv.pause(); fRender(); fFlash("match done", "#2f7a4c");
+  const nm = FS.matches.findIndex((x, i) => i > fmi && x.rows.some(y => !fMarkOf(x, y)));
+  if (nm >= 0) setTimeout(() => fOpen(nm), 800);
+}
+function fSetZoom(on) {
+  fZoom = on;
+  if (!on) { fv.style.transform = ""; return; }
+  const b = fv.getBoundingClientRect();
+  const ox = mouse ? 100 * (mouse[0] - b.left) / b.width : 50, oy = mouse ? 100 * (mouse[1] - b.top) / b.height : 40;
+  fv.style.transformOrigin = `${ox}% ${oy}%`; fv.style.transform = "scale(2)";
+}
+$("fstage").addEventListener("mousemove", e => { mouse = [e.clientX, e.clientY]; });
+const fDur = r => (fv.duration && isFinite(fv.duration)) ? fv.duration : (r.duration || (r.next.startMs / 1000 + 1.0 - r.t0));
+function fRender() {
+  if (fmi < 0) return;
+  updateBanner();
+  const m = fm(), r = fRow(), mk = fMarkOf(m, r), doc = fStore[m.match];
+  const nDone = m.rows.filter(x => fMarkOf(m, x)).length;
+  $("where").textContent = `Faults · ${m.match}${m.testOnly ? " (test only)" : ""} · row ${fri + 1} of ${m.rows.length} · ${fmt(r.start)}`;
+  const b = a => `<button data-a="${a}" class="${mk && mk.answer === a ? "chosen" : ""}" style="border-color:${FCOLOR[a]}">${a} = ${FMEAN[a]}</button>`;
+  $("fask").innerHTML = `What is the <b>yellow row</b>? ${b("F")} ${b("P")} ${b("N")} ${b("Q")}`;
+  $("fask").querySelectorAll("button").forEach(x => x.onclick = () => fMark(x.dataset.a));
+  const gap = r.next.startMs / 1000 - r.end, secs = doc ? Math.round((doc.activeMs || 0) / 1000) : 0;
+  $("finfo").innerHTML = `${m.match}${m.testOnly ? " (test only)" : ""}<br>` +
+    `<span style="color:var(--warn)">detected row</span> ${fmt(r.start)} to ${fmt(r.end)} (${(r.end - r.start).toFixed(1)} s${r.shots != null ? ", " + r.shots + " shots" : ""})<br>` +
+    `<span style="color:var(--ok)">next marked point</span> ${r.next.id} at ${fmt(r.next.startMs / 1000)} (${gap.toFixed(1)} s after the row end)<br>` +
+    (r.prevEnd != null ? `previous marked point ends at ${fmt(r.prevEnd)}<br>` : "") +
+    `answer: ${mk ? `<b style="color:${FCOLOR[mk.answer]}">${mk.answer} = ${FMEAN[mk.answer]}</b>` : "none"}<br>` +
+    `${nDone} of ${m.rows.length} rows answered · ${secs} s · speed ${fRate === 0.1 ? "0.1" : fRate === 0.25 ? "¼" : fRate === 0.5 ? "½" : "1"}× · sound ${fv.muted ? "off" : "on"}` +
+    (doc && doc.stale && doc.stale.length ? `<br><span class="warn">${doc.stale.length} old answers of changed rows: not used</span>` : "");
+  $("fmatches").innerHTML = FS.matches.map((x, i) => { const n = x.rows.filter(y => fMarkOf(x, y)).length;
+    return `<div data-i="${i}" class="${i === fmi ? "cur" : ""}"><span class="${n === x.rows.length ? "ok" : ""}">${x.match}${x.testOnly ? " (test only)" : ""} · ${n} / ${x.rows.length}</span></div>`; }).join("");
+  $("fmatches").querySelectorAll("div").forEach(x => x.onclick = () => fOpen(+x.dataset.i));
+  $("flist").innerHTML = m.rows.map((x, k) => { const q = fMarkOf(m, x);
+    return `<div data-k="${k}" class="${k === fri ? "cur " : ""}${q ? "done" : ""}"><span>${k + 1}</span><span>${fmt(x.start).split(".")[0]}</span><span>${(x.end - x.start).toFixed(1)} s</span><span>${q ? q.answer + " = " + FMEAN[q.answer] : ""}</span></div>`; }).join("");
+  $("flist").querySelectorAll("div").forEach(x => x.onclick = () => { fri = +x.dataset.k; fLoad(); });
+  const row = $("flist").children[fri]; if (row) row.scrollIntoView({block: "nearest"});
+  $("progress").textContent = FS.matches.map(x => `${x.match} ${x.rows.filter(y => fMarkOf(x, y)).length}/${x.rows.length}`).join(" · ");
+  $("savestate").innerHTML = dir ? (dirOk ? `<span class="ok">folder: ${dir.name}</span> <span class="${lastWrite.startsWith("ok") ? "" : "warn"}">${lastWrite}</span>` : `<span class="warn">folder: ${dir.name} (press O to allow)</span>`) : `<span class="warn">no label folder (press O)</span>`;
+  const dur = fDur(r), pct = c => (100 * Math.max(0, c) / dur) + "%";
+  const ps = fct(r, r.next.startMs / 1000), pe = Math.min(dur, fct(r, r.next.endMs / 1000));
+  $("ftl").innerHTML = `<div class="row" style="left:${pct(fct(r, r.start))};width:${pct(r.end - r.start)}"></div>` +
+    `<div class="lab" style="left:${pct(fct(r, r.start))};top:0;color:var(--warn)">detected row</div>` +
+    `<div class="pt" style="left:${pct(ps)};width:${pct(pe - ps)}"></div>` +
+    `<div class="lab" style="left:${pct(ps)};top:23px;color:var(--ok)">next marked point ${r.next.id}</div>` +
+    `<div class="head"></div>`;
+}
+function fTick() {
+  if (fmi >= 0) {
+    const r = fRow(), h = $("ftl").querySelector(".head");
+    if (h) h.style.left = (100 * fv.currentTime / fDur(r)) + "%";
+    $("ftime").textContent = `video ${fmt(r.t0 + fv.currentTime)} · ${fv.paused ? "stopped" : "playing"}`;
+  }
+  requestAnimationFrame(fTick);
+}
+if (FAULTS_MODE) {
+  fv.addEventListener("durationchange", () => fRender());
+  $("ftl").addEventListener("click", e => {
+    if (fmi < 0) return;
+    const b = $("ftl").getBoundingClientRect();
+    fv.currentTime = (e.clientX - b.left) / b.width * fDur(fRow());
+  });
+  requestAnimationFrame(fTick);
+}
+document.addEventListener("keydown", async e => {
+  if (!FAULTS_MODE || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase(), S = e.shiftKey, m = fmi >= 0 ? fm() : null;
+  const step = dt => { fv.currentTime = Math.max(0, Math.min(fDur(fRow()) - 0.05, fv.currentTime + dt)); };
+  const rate = i => { fRate = SPEEDS[i]; fv.playbackRate = fRate; fRender(); };
+  const map = {
+    "f": () => fMark("F"), "p": () => fMark("P"), "n": () => fMark("N"), "q": () => fMark("Q"),
+    " ": () => { if (fv.paused) { fv.playbackRate = fRate; fv.play(); } else fv.pause(); },
+    "r": () => { fSeekStart(); fv.playbackRate = fRate; fv.play(); },
+    "arrowleft": () => step(S ? -5 : -1), "arrowright": () => step(S ? 5 : 1),
+    "1": () => rate(0), "2": () => rate(1), "3": () => rate(2), "4": () => rate(3),
+    "v": () => fSetZoom(!fZoom), "u": () => { fv.muted = !fv.muted; fRender(); },
+    "[": () => fGo(-1), "]": () => fGo(1), "pageup": () => fOpen(fmi - 1), "pagedown": () => fOpen(fmi + 1),
+    "o": chooseDir,
+  };
+  if (map[k] && (m || k === "o")) { e.preventDefault(); await map[k](); }
+});
+$("btnFaults").textContent = FAULTS_MODE ? "Event labels" : "Faults";
+$("btnFaults").onclick = () => { location.hash = FAULTS_MODE ? "" : "faults"; location.reload(); };
 
 // ---- start
 (async () => {
-  try { dir = await idb("get"); if (dir) { await ensureDir(false); await readFiles(); if (SIDES_MODE) await sReadFiles(); } } catch (e) { dir = null; }
+  try { dir = await idb("get"); if (dir) { await ensureDir(false); await readFiles(); if (SIDES_MODE) await sReadFiles(); if (FAULTS_MODE) await fReadFiles(); } } catch (e) { dir = null; }
+  if (FAULTS_MODE) {
+    $("btnExport").style.display = "none";
+    await fCheckStale();
+    const first = FS.matches.findIndex(x => x.rows.some(r => !fMarkOf(x, r)));
+    fOpen(first < 0 ? 0 : first);
+    if (fStaleN) fFlash(fStaleN + " old answers of changed rows are kept apart and not used", "#a8801f", 5000);
+    return;
+  }
   if (SIDES_MODE) {
     $("btnExport").style.display = "none";
     const first = SS.matches.findIndex(x => x.items.some(y => !sMarkOf(x, y)));

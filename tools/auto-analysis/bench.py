@@ -9,7 +9,7 @@ Two sets:
 Report: rallies, ends, the events against labels (score_events.py, S4; before the winners), short points, faults
 (where labels exist), winners as a check with the noise (1 standard error), and the
 calibration of the winner confidence (G3). Output: <lab>/bench/<time>-<commit>/ report.md, metrics.json,
-manifest.json. The manifest has the code commit, the switches, and a hash of each model and input file. A second run
+manifest.json, rows.json (the chain rows of each match). The manifest has the code commit, the switches, and a hash of each model and input file. A second run
 with the same manifest must give the same numbers: the report says if an earlier run had the same manifest.
 
 Run the benchmark from a snapshot of one commit, not from the main checkout (other streams merge into it):
@@ -219,12 +219,20 @@ OPTIMISTIC = ("Bounces found", "Net touches found")
 
 # E85 (S5): the lab file net_events.json came from the old ball blobs and the old flights. The lab set makes the net
 # events again with the code under test from the frozen lab inputs, as detect.py makes them: the E38 "dim" blobs
-# (tag _e27) and the E38 flights (fullflights_s0.35_ev.json). CPU only, about 1 to 1.5 min per match, no decode.
-# The output is cached by a key of the code and the inputs. The fits (shot_chain, rally_end) keep the old file: the
-# shipped models were fit on it.
+# (tag _e27). Item 6b (manager, 2026-11-26): the lab set also makes its flights again (ball_full.run) from these blobs
+# when the key of the flights code changes: the files of the G12 flights key of detect.py, and the switches that
+# these files read. Thus a change of the bounce or flight code reaches the lab bounce rows. CPU only, about 15 to
+# 25 min for each match, the 4 matches in parallel; the output is cached under the key in <lab>/ws/s1/bench/flights.
+# "--frozen-flights": the E38 flights (fullflights_s0.35_ev.json), and only the net events are made again (about
+# 1 min for each match; cache <lab>/bench/nets). The fits (shot_chain, rally_end) keep the old files: the shipped
+# models were fit on them.
 LAB_BLOB_TAG = "_e27"
 NET_CODE = ("net_events.py", "net_lab.py", "ball_events.py", "lab.py")
+FLIGHT_CODE = ("ball_full.py", "ball_3d.py", "ball_bounce.py", "ball_events.py", "ball_tracks.py", "net_events.py",
+               "net_lab.py", "feat_wasb.py", "frame_times.py", "court_refine.py", "lab.py")
+FLIGHT_ENV = ("COURT_TRACK", "FAR_FAULT_M", "SELECT_TRIM", "TURN", "LEN_TIME", "BALL_TAG", "BLOB_TAG", "BOUNCE_SAME_TRACK")
 NET_COPY = ["pts.npy", "kf_times.csv", "court.json", "court_track.json", "court_track_refined.json"]
+LAB_FLIGHTS = "remake"                              # or "frozen" (--frozen-flights)
 
 
 def app_folder(mid):
@@ -240,40 +248,78 @@ def net_inputs(mid):
     import lab
     from ball_full import WINDOWS
     if mid in WINDOWS:
-        return "lab", [os.path.join(lab.mdir(mid), f) for f in NET_COPY + ["fullflights_s0.35_ev.json",
-                                                                         "wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[mid], LAB_BLOB_TAG)]]
+        frozen = ["fullflights_s0.35_ev.json"] if LAB_FLIGHTS == "frozen" else []
+        return "lab", [os.path.join(lab.mdir(mid), f) for f in NET_COPY + frozen +
+                       ["wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[mid], LAB_BLOB_TAG)]]
     d = app_folder(mid)
     blobs = glob.glob(os.path.join(d, "wasb_0_*_s0.35_k2.npy"))
     return "app", [os.path.join(d, f) for f in NET_COPY + ["pts_video.npy", "fullflights_s0.35.json"]] + \
         ([max(blobs, key=os.path.getmtime)] if blobs else [])
 
 
-def app_nets(mids):
-    """{mid: path of net_events.json made the app way} for lab matches and app folders. Reads their folders only:
-    the work is in a cache folder for each match, <lab>/bench/nets/<key>/<lab|app>_<match>/, with a key of the
-    code and of the inputs of that match."""
+def app_nets(mids, code_dir=None):
+    """{mid: path of net_events.json made the app way} for lab matches and app folders. The folder of each file also
+    has the flights that the chain and the events read (fullflights_s0.35.json). Reads the match folders only: the
+    work is in a cache folder for each match, with a key of the code and of the inputs of that match. A lab match
+    with LAB_FLIGHTS "remake": the flights too (key FLIGHT_CODE, cache <lab>/ws/s1/bench/flights/<key>/), else only
+    the net events (<lab>/bench/nets/<key>/). code_dir: the code of the flights and the net events (default: this
+    code; another snapshot for the null check)."""
     import lab, shutil
-    code = [os.path.join(HERE, n) for n in NET_CODE]
-    out, todo = {}, []
+    code_dir = code_dir or HERE
+    out, todo, remake = {}, [], []
     for m in mids:
         kind, src = net_inputs(m)
         src = [f for f in src if os.path.exists(f)]
+        flights = kind == "lab" and LAB_FLIGHTS == "remake"
         h = hashlib.sha256()
-        for f in code + src:
+        for f in [os.path.join(code_dir, n) for n in (FLIGHT_CODE if flights else NET_CODE)] + src:
             h.update(os.path.basename(f).encode() + sha(f).encode())
-        dst = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets", h.hexdigest()[:16], f"{kind}_{m}")  # not "<match>"
+        if flights:
+            h.update(json.dumps({k: os.environ.get(k) for k in FLIGHT_ENV}, sort_keys=True).encode())
+            root = os.path.join(os.path.dirname(lab.ROOT), "ws", "s1", "bench", "flights")
+        else:
+            root = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets")
+        dst = os.path.join(root, h.hexdigest()[:16], f"{kind}_{m}")      # not "<match>": see the net_lab note below
         out[m] = os.path.join(dst, "net_events.json")
         if not os.path.exists(out[m]):
-            todo.append((m, kind, src, dst))
+            os.makedirs(dst, exist_ok=True)
+            for f in src:
+                n = os.path.basename(f)
+                shutil.copy2(f, os.path.join(dst, "fullflights_s0.35.json" if n == "fullflights_s0.35_ev.json" else n))
+            (remake if flights else todo).append((m, kind, dst))
+    if remake:
+        # One CPU process for each match: ball_full.run takes about 15 to 25 min for each lab match. The processes
+        # use all cores and much memory, so they run under the GPU lock (manager, 2026-11-26): a GPU job next to
+        # them can fail.
+        import gpu_lock
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="-1")
+        who, what = "s1", f"bench.py: lab flights by code key, {len(remake)} CPU processes (about 25 min)"
+        t, procs, bad = time.time(), [], []
+        gpu_lock.acquire(who, what)
+        try:
+            for m, kind, dst in remake:
+                log = open(os.path.join(dst, "make.log"), "w")
+                p = subprocess.Popen([sys.executable, os.path.abspath(__file__), "flights1", m, dst, "--code", code_dir],
+                                     stdout=log, stderr=subprocess.STDOUT, env=env)
+                procs.append((m, dst, log, p))
+            for m, dst, log, p in procs:
+                if p.wait() != 0 or not os.path.exists(os.path.join(dst, "net_events.json")):
+                    bad.append(f"{m} (see {os.path.join(dst, 'make.log')})")
+                log.close()
+        finally:
+            for m, dst, log, p in procs:              # a stop of this process also stops the children
+                if p.poll() is None:
+                    p.kill()
+            gpu_lock.release(who, what, 1 if bad else 0, t)
+        if bad:
+            raise RuntimeError("the lab flights failed: " + ", ".join(bad))
+        print(f"lab flights and net events made by the code key: {', '.join(m for m, _, _ in remake)} "
+              f"({time.time() - t:.0f} s)", flush=True)
     if todo:
         import net_events
         tag, mdir, cwd = lab.BLOB_TAG, lab.mdir, os.getcwd()
         try:
-            for m, kind, src, dst in todo:
-                os.makedirs(dst, exist_ok=True)
-                for f in src:
-                    n = os.path.basename(f)
-                    shutil.copy2(f, os.path.join(dst, "fullflights_s0.35.json" if n == "fullflights_s0.35_ev.json" else n))
+            for m, kind, dst in todo:
                 t = time.time()
                 if kind == "lab":
                     # net_lab.Source takes an existing folder with the name of the match as an app folder: work in
@@ -293,6 +339,20 @@ def app_nets(mids):
     return out
 
 
+def flights1(mid, dst):
+    """One lab match of app_nets in its own process: the flights (ball_full.run) and the net events from the copies of
+    the frozen lab inputs in dst. The modules come from sys.path (the code of the key)."""
+    import lab, ball_full, net_events
+    lab.BLOB_TAG = LAB_BLOB_TAG
+    os.chdir(os.path.dirname(dst))                    # net_lab.Source: no folder with the bare match name here
+    mdir = lab.mdir
+    lab.mdir = lambda x: dst if x == mid else mdir(x)
+    t = time.time()
+    ball_full.run(mid)
+    path, ev = net_events.run_folder(mid)
+    print(f"{mid}: flights and {len(ev)} net events in {time.time() - t:.0f} s (code {os.path.dirname(ball_full.__file__)})", flush=True)
+
+
 LAB_DEVICE = "cpu"
 
 
@@ -305,6 +365,8 @@ def run_lab(nets=None):
     import pipeline, chain
     chain.NET_FILES.clear()
     chain.NET_FILES.update(nets or {})
+    pipeline.FLIGHT_FILES.clear()                    # the flights in the folder of each net file (app_nets)
+    pipeline.FLIGHT_FILES.update({m: os.path.join(os.path.dirname(f), "fullflights_s0.35.json") for m, f in (nets or {}).items()})
     pipeline.setup_lomo()
     res = {}
     for mid in pipeline.WINDOWS:
@@ -397,7 +459,8 @@ def report(man, sets, skipped, same):
          f"Switches: CHAIN={man['switches']['chain'].get('CHAIN')}, END_MODEL={man['switches']['chain'].get('END_MODEL')}, "
          f"FPS_ADAPT={man['switches']['chain'].get('FPS_ADAPT')}. Set env: "
          + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + "."
-         + (f" Lab net events: {man['labNets']}." if man.get("labNets") else ""),
+         + (f" Lab net events: {man['labNets']}." if man.get("labNets") else "")
+         + (f" Lab flights: {man['labFlights']}." if man.get("labFlights") else ""),
          f"Manifest `{man['hash']}`. " + (f"An earlier run with the same manifest: {same['run']} ({'same numbers' if same['same'] else '**other numbers**'})."
                                           if same else "No earlier run with the same manifest."), ""]
     def event_rows(ev):
@@ -462,8 +525,9 @@ def run(a):
         sets["Lab LOMO"] = run_lab(nets)
         for mid in sets["Lab LOMO"]:
             inputs[mid] = file_hashes(lab.mdir(mid), LAB_INPUTS)
-            if nets:                                   # the chain and the events read this file, not the lab file
+            if nets:                                   # the chain and the events read these files, not the lab files
                 inputs[mid]["net_events.json"] = "app:" + sha(nets[mid])
+                inputs[mid]["fullflights_s0.35_ev.json"] = LAB_FLIGHTS + ":" + sha(os.path.join(os.path.dirname(nets[mid]), "fullflights_s0.35.json"))
     skipped = {}
     if not a.no_heldout:
         held, skipped = run_heldout(HERE)
@@ -476,7 +540,8 @@ def run(a):
     for mid in other:                                  # event inputs of a match outside the sets (m0913: app folder)
         inputs[mid] = ev[mid][1]
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
-           "labels": label_hashes(), "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)", "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
+           "labels": label_hashes(), "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)",
+           "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS], "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
     man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
     out = {k: summary(v, ev) for k, v in sets.items()}
@@ -494,6 +559,9 @@ def run(a):
     os.makedirs(d)
     json.dump(man, open(os.path.join(d, "manifest.json"), "w"), indent=1, default=str)
     json.dump(out, open(os.path.join(d, "metrics.json"), "w"), indent=1, default=float)
+    # The chain rows of each match (start, end, p1Near, winner, ...), for the other streams (S4 item 11).
+    json.dump({k: {mid: rows for mid, (_, rows) in v.items()} for k, v in sets.items()},
+              open(os.path.join(d, "rows.json"), "w"), default=float)
     txt = report(man, out, skipped, same)
     open(os.path.join(d, "report.md"), "w", encoding="utf-8").write(txt)
     print(txt)
@@ -510,6 +578,15 @@ if __name__ == "__main__":
     r.add_argument("--no-heldout", action="store_true")
     r.add_argument("--no-lab", action="store_true")
     r.add_argument("--old-nets", action="store_true", help="the lab set reads the old lab net_events.json (before E85)")
+    r.add_argument("--frozen-flights", action="store_true", help="the lab set reads the E38 flights; only the net events are made again")
+    f = sub.add_parser("flights1")                    # internal: one lab match of app_nets in its own process
+    f.add_argument("mid"); f.add_argument("dst"); f.add_argument("--code", default=HERE)
     a = ap.parse_args()
-    sys.path.insert(0, HERE)
-    snapshot(a.ref) if a.cmd == "snapshot" else run(a)
+    sys.path.insert(0, a.code if a.cmd == "flights1" else HERE)
+    if a.cmd == "snapshot":
+        snapshot(a.ref)
+    elif a.cmd == "flights1":
+        flights1(a.mid, a.dst)
+    else:
+        LAB_FLIGHTS = "frozen" if a.frozen_flights else "remake"
+        run(a)

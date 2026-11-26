@@ -27,7 +27,7 @@ SLIDE = 0.3                                     # s: the mean over this time, it
 NEAR_M = 1.25                                   # m: the bins near the touch x
 R_MIN, C_MIN, A_MAX = 0.15, 0.25, 0.02          # reject below R_MIN; confirm at C_MIN or more with SA at A_MAX or less (E131)
 NET_CONF = 0.4                                  # the confidence from which a net event counts (shot_chain.NET_CONF)
-VERSION = 1
+VERSION = 1                                     # the file format number only; the cache key is the code of the import closure
 
 
 def cord_z(x):

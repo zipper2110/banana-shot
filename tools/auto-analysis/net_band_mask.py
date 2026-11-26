@@ -10,6 +10,7 @@ change of level 2 needs no new decode. The cache key of this file is the ball ta
   ball_wasb.frames = w.wrap(ball_wasb.frames)    each picture also goes to w.feed
   w.save(path)                                    after the ball stage
   fill_in(...)                                    an old folder: decode only the windows around the net candidates
+                                                  (candidates of the ball file only, flights=(): no cycle with the flights key)
 
 File (npz): frame and prev (the frame index of the picture and of the picture 1/30 s before, on the time line of the
 blobs), off and size (bytes of each mask in data), data, box (rows a..b, columns c..d of the crop), crop, scale, thr.
@@ -22,7 +23,7 @@ THR = 3.0                         # gray steps (0..255) at scale 0.35 (E131)
 REGION_X = 7.0                    # m from the center of the net
 REGION_Z = (-0.3, 1.0)            # m: from below the net base to above the cord
 NET_POST_X, NET_POST_Z, NET_MID_Z = 6.40, 1.07, 0.914
-VERSION = 1
+VERSION = 1                       # the file format number only; the cache key is the code of the import closure
 
 
 def cord_z(x):

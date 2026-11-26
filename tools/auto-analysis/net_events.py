@@ -184,6 +184,10 @@ def candidates(rows, Hm, flights=()):
 
 SPEED_MIN = 2.5        # m/s in the net plane: a slower ball is not a shot
 PASS_Y, PASS_Z = 2.0, 1.45   # m: uncertainty of the flight fit in depth; a net height at the net plane that is clearly above the cord
+# E180 (S5, after E139): the near-hitter mirror of the far "passed" rule. A reliable fit of a near hitter that goes
+# through the net plane higher than PASS_Z and ends more than PASS_Y beyond the net passed the net: it is not a touch,
+# also when the ball is seen in the band after it (another ball or a player). Off by default until the bench result.
+PASS_NEAR = __import__("os").environ.get("NET_PASSED_NEAR", "0") == "1"
 
 
 def direction(q):
@@ -240,6 +244,8 @@ def judge(q):
         return None
     if to_far:
         # near hitter: the approach must stay below the cord, and the ball must be seen at the net after the touch
+        if PASS_NEAR and q["fit_ok"] and q["fit_end_y"] > PASS_Y and q.get("fit_netz") is not None and q["fit_netz"] > PASS_Z:
+            return None
         if q["over_max"] > TOL_TOP + 0.10 and "below" in dsrc:
             return None
         if stay:

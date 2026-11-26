@@ -98,24 +98,32 @@ def _contact(f):
 def fault_clips(crow, ev, fault, hidden):
     """The fault clips the user sees: the "fault" record of each chain row of the window (crow). Its serve contact
     (fault.chain.shots[0].t, else fault.t) is paired with the labeled serves within TOL_HIT (one to one). right = a
-    labeled first-serve fault (fault map True); wrong = a serve with no fault; unsure; noServe = no labeled serve
-    (false). found = the labeled first-serve faults with a fault clip. hidden: the rows of the window that the bench
+    labeled first-serve fault (fault map True); doubleFault = a second-serve fault (no first-serve fault, but the next
+    event is an out bounce or a net stop: a real fault clip of a double fault; E171); wrong = another serve with no
+    fault; unsure; noServe = no labeled serve (false). found = the labeled first-serve faults with a fault clip. hidden: the rows of the window that the bench
     hides as first-serve faults (bench.hidden_fault_rows); hiddenWithFault = those with a labeled first-serve fault
     inside the row (from its start - TOL_HIT)."""
     serves = [(e["t"], fault.get(round(e["t"], 6))) for e in ev if e["kind"] == "serve"]
+    dbl = {round(e["t"], 6) for k, e in enumerate(ev) if e["kind"] == "serve" and _out_or_stop(lf._after_serve(ev, k)[1])}
     clips = [(r, _contact(r["fault"])) for r in crow if r.get("fault")]
     m = se.match([t for _, t in clips], [t for t, _ in serves], TOL_HIT)
     got = {i: serves[j][1] for i, j in m}
-    out = {"clips": len(clips), "right": 0, "wrong": 0, "unsure": 0, "noServe": 0,
+    out = {"clips": len(clips), "right": 0, "doubleFault": 0, "wrong": 0, "unsure": 0, "noServe": 0,
            "labeledFaults": sum(f is True for _, f in serves), "found": sum(1 for _, j in m if serves[j][1] is True),
            "hiddenRows": len(hidden), "hiddenWithFault": 0, "detail": []}
     for i, (r, t) in enumerate(clips):
         f = got.get(i, "none")
-        k = "right" if f is True else "wrong" if f is False else "unsure" if f == "unsure" else "noServe"
+        st = next((serves[j][0] for ii, j in m if ii == i), None)
+        k = ("right" if f is True else ("doubleFault" if round(st, 6) in dbl else "wrong") if f is False
+             else "unsure" if f == "unsure" else "noServe")
         out[k] += 1
         out["detail"].append({"t": _r(t), "row": [r["start"], r["end"]], "result": k})
     out["hiddenWithFault"] = sum(any(f is True and x["start"] - TOL_HIT <= t <= x["end"] for t, f in serves) for x in hidden)
     return out
+
+
+def _out_or_stop(n):
+    return bool(n) and ((n["kind"] == "bounce" and n.get("out")) or (n["kind"] == "net" and n.get("net") == "stop"))
 
 
 def _serve_of_bounce(E, k):
@@ -204,7 +212,7 @@ def totals(frs):
     """{name: numbers} over the fragments. frs: the fragment dicts of case_history with the keys "borders", "shotCount",
     "faultClips", "errors" (a missing key is skipped). Only JSON numbers (for the entry JSON)."""
     L = {k: [] for k in ("dPlay", "dFirst", "dEnd", "diff", "hitDt", "bounceDt", "netDt", "placeErr")}
-    C = {k: 0 for k in ("n", "ok", "off1", "clips", "right", "wrong", "unsure", "noServe", "labeledFaults", "found",
+    C = {k: 0 for k in ("n", "ok", "off1", "clips", "right", "doubleFault", "wrong", "unsure", "noServe", "labeledFaults", "found",
                         "hiddenRows", "hiddenWithFault", "inOutN", "inOutOk", "serveBounces", "sideChecked")}
     for f in frs:
         for part in ("borders", "shotCount", "faultClips", "errors"):
@@ -214,7 +222,7 @@ def totals(frs):
                 elif k in C:
                     C[k] += v
     return {"rallyStartPlay": _st(L["dPlay"]), "rallyStartFirst": _st(L["dFirst"]), "rallyEnd": _st(L["dEnd"]),
-            "faultClips": {k: C[k] for k in ("clips", "right", "wrong", "unsure", "noServe")},
+            "faultClips": {k: C[k] for k in ("clips", "right", "doubleFault", "wrong", "unsure", "noServe")},
             "labeledFaults": C["labeledFaults"], "labeledFaultsWithClip": C["found"],
             "hiddenRows": C["hiddenRows"], "hiddenRowsWithFault": C["hiddenWithFault"],
             "hitTimeErr": _st(L["hitDt"]), "bounceTimeErr": _st(L["bounceDt"]), "netTimeErr": _st(L["netDt"]),

@@ -304,7 +304,7 @@ def write_overlay(work, n, full, serves, net_ev=()):
       serves   the serve events: time, end of the server, kind, speed
       poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
-    import court_auto, ball_full, ball_3d, ball_events
+    import court_auto, ball_full, ball_3d, ball_events, lab
     W = lambda *p: os.path.join(work, *p)
     track = ball_events.court_windows(work)
     court = []
@@ -530,6 +530,15 @@ def main():
                 traceback.print_exc()
                 warn(f"No refined court model ({type(e).__name__}: {e}). The ground points use the first court model.")
             ball_events.court_windows(work, say)
+            track = json.load(open(W("court_track.json")))
+            if any(w.get("onePicture") for w in track):
+                # E55 (G15): the camera moves; court_track found the court only on single pictures.
+                import court_auto
+                Hs = [np.array(w["H"]) for w in track if w["ok"]]
+                move = max([court_auto.model_dist(a, b) for a, b in zip(Hs, Hs[1:])] or [0.0])
+                warn(f"The camera moves during the video (the court lines move up to {move:.0f} px from one minute to "
+                     "the next). The court model is less exact, and so are the ball positions, the serve faults and the "
+                     "winners. A fixed camera gives better results.")
         save_times()
         if problem:
             # The ball stages need a correct court model. Without it, the result has only the rally boundaries.

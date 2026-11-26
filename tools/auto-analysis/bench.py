@@ -159,23 +159,25 @@ def extras(mid, rows):
 EVENT_SECTIONS = ("hits", "bounces", "nets", "lastShot")
 
 
-def events_all():
+def events_all(nets=None):
     """The event measures of each match with event labels (priority 2 of the user: hits, hitter, shot count, bounces,
     in/out, net touches against labels). The scorer is score_events.py (S4, E75). It builds the chain shots on the
     window of each labeled clip from the flights and net files, so it does not use the rally rows: the measure does
     not depend on the rally detection (priority 1 has its own measures). Contract: score_events.measures(mid) returns
     None (no event labels or no flights) or a list of measures: a rate {"name", "k", "n"} (pooled over the matches of
     a set) or a value {"name", "value", "unit"} (shown for each match). Returns {mid: (measures, input file hashes)},
-    or None when this code has no score_events.py."""
+    or None when this code has no score_events.py. nets: {mid: net_events.json made the app way} (app_nets): the
+    measure of these matches reads the folder of that file (it has a copy of the flights too)."""
     try:
         import score_events, lab
     except ImportError:
         return None
     out = {}
     for mid in lab.MATCHES:
-        r = score_events.measures(mid)      # the flat list (manager, 2026-11-26: fixed interface; score() is the dict)
+        folder = os.path.dirname(nets[mid]) if nets and mid in nets else None
+        r = score_events.measures(mid, folder=folder)   # the flat list (manager, 2026-11-26: fixed interface)
         if r:
-            d = score_events.load(mid)
+            d = score_events.load(mid, folder)
             out[mid] = (r, d["files"] if d else {})
     return out
 
@@ -215,15 +217,67 @@ def events_of(ev, mids):
 OPTIMISTIC = ("Bounces found", "Net touches found")
 
 
+# E85 (S5): the lab file net_events.json came from the old ball blobs and the old flights. The lab set makes the net
+# events again with the code under test from the frozen lab inputs, as detect.py makes them: the E38 "dim" blobs
+# (tag _e27) and the E38 flights (fullflights_s0.35_ev.json). CPU only, about 1 to 1.5 min per match, no decode.
+# The output is cached by a key of the code and the inputs. The fits (shot_chain, rally_end) keep the old file: the
+# shipped models were fit on it.
+LAB_BLOB_TAG = "_e27"
+NET_CODE = ("net_events.py", "net_lab.py", "ball_events.py", "lab.py")
+NET_COPY = ["pts.npy", "kf_times.csv", "court.json", "court_track.json", "court_track_refined.json"]
+
+
+def app_nets(mids):
+    """{mid: path of net_events.json made the app way}. Reads the lab folders only."""
+    import lab, shutil
+    from ball_full import WINDOWS
+    src = {m: [os.path.join(lab.mdir(m), f) for f in NET_COPY + ["fullflights_s0.35_ev.json",
+                                                                  "wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[m], LAB_BLOB_TAG)]]
+           for m in mids}
+    h = hashlib.sha256()
+    for f in [os.path.join(HERE, n) for n in NET_CODE] + [f for m in mids for f in src[m] if os.path.exists(f)]:
+        h.update(os.path.basename(f).encode() + sha(f).encode())
+    root = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets", h.hexdigest()[:16])
+    out = {}
+    todo = [m for m in mids if not os.path.exists(os.path.join(root, "lab_" + m, "net_events.json"))]
+    if todo:
+        import net_events
+        tag, mdir, cwd = lab.BLOB_TAG, lab.mdir, os.getcwd()
+        try:
+            lab.BLOB_TAG = LAB_BLOB_TAG
+            os.makedirs(root, exist_ok=True)
+            os.chdir(root)              # net_lab.Source takes an existing folder with the name of the match as an app folder
+            for m in todo:
+                dst = os.path.join(root, "lab_" + m)   # not "<match>": see the line above
+                os.makedirs(dst, exist_ok=True)
+                for f in src[m]:
+                    if os.path.exists(f):
+                        n = os.path.basename(f)
+                        shutil.copy2(f, os.path.join(dst, "fullflights_s0.35.json" if n == "fullflights_s0.35_ev.json" else n))
+                lab.mdir = lambda x, _o=mdir, m=m, dst=dst: dst if x == m else _o(x)
+                t = time.time()
+                path, ev = net_events.run_folder(m)
+                print(f"net events of {m} made the app way: {len(ev)} ({time.time() - t:.0f} s)", flush=True)
+        finally:
+            lab.BLOB_TAG, lab.mdir = tag, mdir
+            os.chdir(cwd)
+    for m in mids:
+        out[m] = os.path.join(root, "lab_" + m, "net_events.json")
+    return out
+
+
 LAB_DEVICE = "cpu"
 
 
-def run_lab():
+def run_lab(nets=None):
     """The lab set does not take the GPU lock (it is short), so it must not use the GPU: a CUDA context next to a
-    ball stage of another job gave that job an out-of-memory stop (6 GB card). The rally model runs on the CPU."""
+    ball stage of another job gave that job an out-of-memory stop (6 GB card). The rally model runs on the CPU.
+    nets: {mid: net events file} for the chain (app_nets); None = the old lab file."""
     import platform_cfg
     platform_cfg._cache["device"] = LAB_DEVICE
-    import pipeline
+    import pipeline, chain
+    chain.NET_FILES.clear()
+    chain.NET_FILES.update(nets or {})
     pipeline.setup_lomo()
     res = {}
     for mid in pipeline.WINDOWS:
@@ -315,7 +369,8 @@ def report(man, sets, skipped, same):
     L = [f"# Benchmark {man['time']}", "", f"Code: `{man['commit'][:12]}`{' (dirty)' if man['dirty'] else ''}. "
          f"Switches: CHAIN={man['switches']['chain'].get('CHAIN')}, END_MODEL={man['switches']['chain'].get('END_MODEL')}, "
          f"FPS_ADAPT={man['switches']['chain'].get('FPS_ADAPT')}. Set env: "
-         + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + ".",
+         + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + "."
+         + (f" Lab net events: {man['labNets']}." if man.get("labNets") else ""),
          f"Manifest `{man['hash']}`. " + (f"An earlier run with the same manifest: {same['run']} ({'same numbers' if same['same'] else '**other numbers**'})."
                                           if same else "No earlier run with the same manifest."), ""]
     def event_rows(ev):
@@ -373,11 +428,15 @@ def run(a):
     import lab
     t0 = time.time()
     commit, dirty = code_commit()
-    sets, inputs = {}, {}
+    sets, inputs, nets = {}, {}, None
     if not a.no_lab:
-        sets["Lab LOMO"] = run_lab()
+        from ball_full import WINDOWS
+        nets = None if a.old_nets else app_nets(list(WINDOWS))
+        sets["Lab LOMO"] = run_lab(nets)
         for mid in sets["Lab LOMO"]:
             inputs[mid] = file_hashes(lab.mdir(mid), LAB_INPUTS)
+            if nets:                                   # the chain and the events read this file, not the lab file
+                inputs[mid]["net_events.json"] = "app:" + sha(nets[mid])
     skipped = {}
     if not a.no_heldout:
         held, skipped = run_heldout(HERE)
@@ -385,12 +444,12 @@ def run(a):
             sets["Held-out"] = held
             for mid in held:
                 inputs[mid] = file_hashes(lab.mdir(mid), HELD_INPUTS)
-    ev = events_all()
-    other = [m for m in (ev or {}) if not any(m in v for v in sets.values())]
+    ev = events_all(nets)
+    other =[m for m in (ev or {}) if not any(m in v for v in sets.values())]
     for mid in other:                                  # event inputs of a match outside the sets (m0913: app folder)
         inputs[mid] = ev[mid][1]
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
-           "labels": label_hashes(), "labDevice": LAB_DEVICE, "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
+           "labels": label_hashes(), "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)", "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
     man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
     out = {k: summary(v, ev) for k, v in sets.items()}
@@ -423,6 +482,7 @@ if __name__ == "__main__":
     r.add_argument("--tag", default="")
     r.add_argument("--no-heldout", action="store_true")
     r.add_argument("--no-lab", action="store_true")
+    r.add_argument("--old-nets", action="store_true", help="the lab set reads the old lab net_events.json (before E85)")
     a = ap.parse_args()
     sys.path.insert(0, HERE)
     snapshot(a.ref) if a.cmd == "snapshot" else run(a)

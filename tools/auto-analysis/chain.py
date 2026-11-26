@@ -49,6 +49,9 @@ END_MODEL = os.environ.get("END_MODEL", "1") == "1"   # E60: the end for the win
 # The shirt colors of each rally (the image reads are the slow part). "_t2": the pictures of the true seconds (G2);
 # the colors of color_cache.json came from the picture row of the second number. An absolute path is also valid.
 COLOR_CACHE = "color_cache_t2.json"
+# The net events file of a match, if it is not <match folder>/net_events.json. bench.py (S1, E85) puts here the net
+# events that the code under test makes from the frozen lab inputs, as detect.py makes them.
+NET_FILES = {}
 # G13: the faults that the chain survives with a fallback. detect.py puts them in the warnings of result.json.
 # Key: the kind of fault; value: [count, the first case as a text].
 FAULTS = {}
@@ -125,7 +128,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
     dirty = False
     if FPS_ADAPT:
         wb.set_fps(track_fps(full["flights"]))
-    np_ = os.path.join(out, "net_events.json")
+    np_ = NET_FILES.get(mid) or os.path.join(out, "net_events.json")
     nets = json.load(open(np_))["events"] if os.path.exists(np_) else []
     hits = rally_end.load_hits(out)
     gru = prob

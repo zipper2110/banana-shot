@@ -108,6 +108,19 @@ question, with a journal row. A gap is not covered by a plan or a note only.
      them. The milestone full runs and a clean held-out video stay the final measure.
    S1 builds the tool and the format; each stream gives the case list of its own error kinds (from its journal
    rows). Start with about 30 to 40 fragments (target: under 20 min of video, under 30 min for all stages).
+   **Four levels (the user, 2026-11-26).** A level is defined by its content; the length follows. Lab facts (4
+   matches): a point every 26 to 32 s, a game 3.2 min (median; p90 6.2), an end change every 6.5 min (median; max 16).
+   | Level | Content | Length | Set | Checks | Run when |
+   |---|---|---|---|---|---|
+   | small | 1 marked point with a pad | 30 to 60 s | 30 to 40 fragments by error kind + controls | events in the rally (hits, hitter, bounces, nets, serve, last shot) | each heavy-stage change |
+   | medium | 2 to 3 games across one end change (a changeover pause in it) | 7 to 10 min | 1 for each singles video (lab 4, Igor, m0913) | rally finding between points (pauses, ball pick-up, changeover), fault and second serve, server change, end change, identity | a heavy-stage change before its merge |
+   | large | a block of 5 to 9 games | 20 to 30 min | 1 for each singles video | identity and side over time, the statistics of a long part, drift | milestone batch |
+   | match | the full match | 48 to 150 min | all marked singles videos | the full app path from start to end | end of the program, release |
+   The cost of a level is in the ball stage only. A change after the ball stage runs all levels from the cached files;
+   the cached match level (`bench.py`, about 1 to 20 min) is then the right check, not the fragments. The levels are
+   for heavy-stage changes. Small and medium fragments take the whole-match context (feature statistics, identity,
+   sides) from the full run; a large fragment also runs once without it, to measure how much a part of a match
+   differs from the whole. Build order: small, then medium, then large.
 
 Done when: the Igor number is in the journal, the benchmark is one command with a manifest, and the
 calibration table exists.
@@ -337,3 +350,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Scope of the videos (the user): singles only. Doubles can need other methods; do not spread the effort now (the m1001 and m1016 runs stop). No new videos or new conditions (courts, camera angles, the moving-camera clips) until the chain is stable and the quality is good on the current videos. The user then gets more videos. Thus G15 ends with m0913 (E57); the work goes to the clear failures on the current videos. |
 | 2026-11-26 | Full-video runs (the user): only at milestones, not for regular checks (section 2). Cause: on 2026-11-26 about 10 h of full runs (Igor, m0913, m1001) held the GPU, and short jobs waited behind them for hours. |
 | 2026-11-26 | Case library (the user): short fragments of the source videos, grouped by error kind, with labels and the history of their detection results; the regular check of heavy-stage changes. Design in S1 item 8. |
+| 2026-11-26 | Four control levels of the case library (the user): small (one point), medium (2 to 3 games across an end change, 7 to 10 min), large (20 to 30 min), match (full). By content, not by a fixed length. Levels are for heavy-stage changes; a chain change uses the cached full matches. |

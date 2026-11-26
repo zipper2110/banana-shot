@@ -173,6 +173,13 @@ label by eye.
    error of the rally start). Find the cause, then a fix that starts the rally at the second serve. Measure the
    rally start error and the rally precision on the lab matches; report Igor apart. Ask the manager before an
    edit of `rally_end.py` or `shot_chain.py` (S3).
+   Done (E122, merged 8b932ef9): the cause was a fault serve detected as a short rally of its own. The tennis
+   rule (after a fault the same side serves again) removes it. Lab precision 90.0 to 90.9 %, recall 93.8 to
+   93.6 %. The serve side is known at only about 25 % of the starts.
+9. (2026-11-26) The serve flight in the ball track (E77: no serve event at 107 of 277 lab starts; E122: the
+   serve side is known at only about 25 % of the starts). First a diagnosis on the existing files (CPU): is
+   the ball seen in the blobs but not linked into a flight, or not seen at all? Then a fix of the link step if
+   that is the cause. A change of the ball model is a new item: ask the manager first.
 
 Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
 the journal, and the hitter measure follows the labels.

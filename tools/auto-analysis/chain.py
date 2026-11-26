@@ -39,6 +39,12 @@ def p_miss(gap):
 
 MIN_GAP = 2.0
 SERVICE_LINE = 6.40                      # the distance of the service line from the net, m
+# E122 (found on Igor, rule of tennis; S4 item 8): a detected rally that is a first-serve fault. After a fault the
+# same player serves again from the same side of the court; after a point the server changes the side. A rally with
+# FAULT_SHOTS chain shots or less, then the next rally from the same server end and the same side (x of the serve
+# flight) not later than FAULT_NEXT s after it, is the first serve of the next rally: it is not a rally.
+FAULT_SIDE = True
+FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, 0.3          # shots; s (the time between points of the rules); m (x near 0: side not known)
 FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
@@ -261,6 +267,8 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
     detector (E60)."""
     import identity
     rows = evidence(mid, seg, full, serves, p, prob)
+    if FAULT_SIDE:
+        rows = fault_rallies(rows, serves)
     st0 = {(0, 0, 0, 0, -1, srv, True, 0): 0.5 for srv in (1, 2)}
     near1 = identity.p1_near([r["color"] for r in rows])
     if ID_ABS:
@@ -288,6 +296,36 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
             # E28: the shot chain of the rally (shot_chain.py). E29: it is also the winner evidence of the
             # score model (CHAIN is on).
             "chain": r.get("chain")})
+    return out
+
+
+def serve_side(serves, a):
+    """(server near?, x side of the serve flight start > 0?) of the first serve event (not a toss alone) of a rally
+    that starts at a, or None."""
+    ev = [e for e in serves if a - 1.0 <= e[0] <= a + 2.5 and e[2] != "toss"]
+    if not ev or abs(ev[0][3]["p0"][0]) < SIDE_X:
+        return None
+    return ev[0][1], ev[0][3]["p0"][0] > 0
+
+
+def fault_rallies(rows, serves):
+    """E122: removes each rally that is a first-serve fault before the next rally (see FAULT_SIDE). The next rally
+    gets its serve event as the fault candidate when it has none."""
+    out, i = [], 0
+    while i < len(rows):
+        r = rows[i]
+        nxt = rows[i + 1] if i + 1 < len(rows) else None
+        if (nxt is not None and r.get("chain") is not None and len(r["chain"]["shots"]) <= FAULT_SHOTS
+                and nxt["start"] - r["end"] <= FAULT_NEXT):
+            s1, s2 = serve_side(serves, r["start"]), serve_side(serves, nxt["start"])
+            if s1 is not None and s1 == s2:
+                if nxt.get("fault") is None:
+                    e = [x for x in serves if r["start"] - 1.0 <= x[0] <= r["start"] + 2.5 and x[2] != "toss"][0]
+                    nxt["fault"] = {"t": e[0], "kind": e[2], "speed": 3.6 * float(np.linalg.norm(e[3]["v0"])), "fromRally": True}
+                i += 1
+                continue
+        out.append(r)
+        i += 1
     return out
 
 

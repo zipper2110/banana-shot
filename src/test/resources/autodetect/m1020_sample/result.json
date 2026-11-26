@@ -1,0 +1,1007 @@
+{
+ "version": 2,
+ "video": "D:\\bananashot-lab\\samples\\m1020_sample.mp4",
+ "videoId": "a79b8e915698f37ea71d7a051f619e31d6b285f1",
+ "work": "D:\\bananashot-lab\\ws\\s2\\fixture_c524c1b9",
+ "videoSeconds": 181,
+ "settings": {
+  "ballPass": true,
+  "threshold": 0.5,
+  "shortPoints": false,
+  "ballPasses": "dim",
+  "ballWeights": "ball_e38.pth",
+  "chain": true,
+  "endModel": true,
+  "courtTrack": ""
+ },
+ "rallyModel": "ball",
+ "cache": {
+  "ballFile": "wasb_0_181_s0.35_ball_e38_dim_f564c240_k2.npy",
+  "stageKeys": {
+   "flights": "_ball_e38_dim_f564c240_34a9521e"
+  }
+ },
+ "stageSeconds": {
+  "media": 7.1,
+  "audio": 0.9,
+  "image": 17.7,
+  "court": 62.2,
+  "court2": 10.9,
+  "ball": 237.1,
+  "flights": 38.8,
+  "pose": 33.9,
+  "rallies": 0.5,
+  "winners": 0.0
+ },
+ "thisRunSeconds": 45.9,
+ "created": "2026-11-26T08:07:23",
+ "partial": false,
+ "warnings": [],
+ "rallies": [
+  {
+   "start": 4.0,
+   "end": 15.0,
+   "kind": "rally",
+   "prob": 0.9083735346794128,
+   "pNotPoint": 0.03,
+   "p1Near": true,
+   "pNearWins": 0.8925053674774039,
+   "pBall": 0.9,
+   "winner": "P1",
+   "confidence": 0.8925053674774039,
+   "server": "P1",
+   "serverNear": true,
+   "serveSpeedKmh": 116.54448834178356,
+   "fault": null,
+   "shots": 7,
+   "lastShot": {
+    "nearWins": true,
+    "case": "out_early",
+    "t": 10.564344,
+    "endY": 14.155239810023332,
+    "endZ": 0.48507681483620807,
+    "netZ": 2.953337444109678,
+    "toFar": false,
+    "speed": 69.2296346483903,
+    "src": 2,
+    "margin": -1.035742303832194,
+    "bx": 2.6119938327101484,
+    "by": 12.920742303832194,
+    "tRel": -4.435656
+   },
+   "endChangeBefore": null,
+   "chain": {
+    "case": "out_early",
+    "nearWins": true,
+    "p": 0.9,
+    "used": true,
+    "last": 3,
+    "text": "Far player hit the ball at 10.5 s. The ball bounced out at 11.9 s (1.3 m outside). Near player wins the point.",
+    "shots": [
+     {
+      "t": 5.272,
+      "near": true,
+      "how": "first",
+      "end": "in",
+      "kmh": 117,
+      "tLast": 6.498,
+      "tEnd": 5.992,
+      "court": [
+       1.63,
+       5.31
+      ],
+      "margin": 2.49,
+      "sigma": 0.18,
+      "after": 0.51
+     },
+     {
+      "t": 7.115,
+      "near": false,
+      "how": "back",
+      "end": "in",
+      "kmh": 54,
+      "tLast": 8.265,
+      "tEnd": 7.536,
+      "court": [
+       1.91,
+       -3.45
+      ],
+      "margin": 2.21,
+      "sigma": 0.05,
+      "after": 0.73
+     },
+     {
+      "t": 8.27,
+      "near": true,
+      "how": "hit",
+      "end": "in",
+      "kmh": 63,
+      "tLast": 10.498,
+      "tEnd": 9.784,
+      "court": [
+       -1.16,
+       7.87
+      ],
+      "margin": 2.96,
+      "sigma": 0.13,
+      "after": 0.71
+     },
+     {
+      "t": 10.526,
+      "near": false,
+      "how": "hit",
+      "end": "out",
+      "kmh": 69,
+      "tLast": 18.213,
+      "tEnd": 11.921,
+      "court": [
+       2.57,
+       -13.18
+      ],
+      "margin": -1.29,
+      "sigma": 0.04,
+      "after": 6.29
+     }
+    ]
+   },
+   "view": {
+    "second": 4,
+    "picture": 4,
+    "near": [
+     805.1,
+     648.2,
+     910.9,
+     1043.7
+    ],
+    "far": [
+     1119.3,
+     436.2,
+     1169.0,
+     524.6
+    ]
+   }
+  },
+  {
+   "start": 25.0,
+   "end": 54.0,
+   "kind": "rally",
+   "prob": 0.9653037190437317,
+   "pNotPoint": 0.006,
+   "p1Near": true,
+   "pNearWins": 0.07312504720209717,
+   "pBall": 0.19999999999999996,
+   "winner": "P2",
+   "confidence": 0.9268749527979028,
+   "server": "P1",
+   "serverNear": true,
+   "serveSpeedKmh": 128.38957430794204,
+   "fault": null,
+   "shots": 27,
+   "lastShot": {
+    "nearWins": false,
+    "case": "out_seen",
+    "t": 50.841389,
+    "endY": -4.087309831193312,
+    "endZ": 0.6458207160549728,
+    "netZ": null,
+    "toFar": true,
+    "speed": 46.86253268797461,
+    "src": 2,
+    "margin": -0.9752513477211049,
+    "bx": 1.2775372268567742,
+    "by": -0.9752513477211049,
+    "tRel": -3.1586110000000005
+   },
+   "endChangeBefore": false,
+   "chain": {
+    "case": "net_lo",
+    "nearWins": false,
+    "p": 0.8,
+    "used": true,
+    "last": 12,
+    "text": "Near player sent the ball back (the hit was not seen) at 50.8 s. The ball touched the net at 51.8 s and stayed on the side of the hitter. Far player wins the point.",
+    "shots": [
+     {
+      "t": 26.0,
+      "near": true,
+      "how": "first",
+      "end": "in",
+      "kmh": 128,
+      "tLast": 26.562,
+      "tEnd": 26.589,
+      "court": [
+       -2.33,
+       5.21
+      ],
+      "margin": 1.79,
+      "sigma": 0.13,
+      "after": 0.0
+     },
+     {
+      "t": 27.212,
+      "near": false,
+      "how": "back",
+      "end": "none",
+      "kmh": 76,
+      "tLast": 29.295
+     },
+     {
+      "t": 29.561,
+      "near": true,
+      "how": "back",
+      "end": "in",
+      "kmh": 76,
+      "tLast": 31.344,
+      "tEnd": 30.623,
+      "court": [
+       3.53,
+       8.92
+      ],
+      "margin": 0.59,
+      "sigma": 0.08,
+      "after": 0.72
+     },
+     {
+      "t": 31.594,
+      "near": false,
+      "how": "back",
+      "end": "in",
+      "kmh": 52,
+      "tLast": 35.044,
+      "tEnd": 33.789,
+      "court": [
+       -2.29,
+       -6.34
+      ],
+      "margin": 1.82,
+      "sigma": 0.08,
+      "after": 1.25
+     },
+     {
+      "t": 35.077,
+      "near": true,
+      "how": "hit",
+      "end": "in",
+      "kmh": 51,
+      "tLast": 37.144,
+      "tEnd": 36.297,
+      "court": [
+       -1.0,
+       4.18
+      ],
+      "margin": 3.11,
+      "sigma": 0.07,
+      "after": 0.85
+     },
+     {
+      "t": 37.182,
+      "near": false,
+      "how": "hit",
+      "end": "in",
+      "kmh": 66,
+      "tLast": 39.26,
+      "tEnd": 38.558,
+      "court": [
+       1.88,
+       -10.59
+      ],
+      "margin": 1.29,
+      "sigma": 0.06,
+      "after": 0.7
+     },
+     {
+      "t": 39.643,
+      "near": true,
+      "how": "back",
+      "end": "in",
+      "kmh": 67,
+      "tLast": 41.06,
+      "tEnd": 40.295,
+      "court": [
+       -0.77,
+       2.94
+      ],
+      "margin": 3.35,
+      "sigma": 0.1,
+      "after": 0.76
+     },
+     {
+      "t": 41.111,
+      "near": false,
+      "how": "hit",
+      "end": "in",
+      "kmh": 57,
+      "tLast": 43.159,
+      "tEnd": 42.689,
+      "court": [
+       -1.02,
+       -9.76
+      ],
+      "margin": 2.12,
+      "sigma": 0.03,
+      "after": 0.47
+     },
+     {
+      "t": 43.842,
+      "near": true,
+      "how": "back",
+      "end": "in",
+      "kmh": 74,
+      "tLast": 44.759,
+      "tEnd": 44.789,
+      "court": [
+       1.46,
+       9.44
+      ],
+      "margin": 2.45,
+      "sigma": 0.1,
+      "after": 0.0
+     },
+     {
+      "t": 45.159,
+      "near": false,
+      "how": "back",
+      "end": "in",
+      "kmh": 62,
+      "tLast": 47.309,
+      "tEnd": 46.685,
+      "court": [
+       -1.06,
+       -11.57
+      ],
+      "margin": 0.31,
+      "sigma": 0.13,
+      "after": 0.62
+     },
+     {
+      "t": 47.459,
+      "near": true,
+      "how": "back",
+      "end": "in",
+      "kmh": 84,
+      "tLast": 48.892,
+      "tEnd": 48.412,
+      "court": [
+       -1.51,
+       5.63
+      ],
+      "margin": 2.6,
+      "sigma": 0.07,
+      "after": 0.48
+     },
+     {
+      "t": 49.013,
+      "near": false,
+      "how": "hit",
+      "end": "in",
+      "kmh": 76,
+      "tLast": 50.691,
+      "tEnd": 50.233,
+      "court": [
+       3.14,
+       -9.3
+      ],
+      "margin": 0.98,
+      "sigma": 0.03,
+      "after": 0.46
+     },
+     {
+      "t": 50.841,
+      "near": true,
+      "how": "back",
+      "end": "net",
+      "kmh": 47,
+      "tLast": 51.591,
+      "tEnd": 51.812,
+      "netConf": 0.8
+     },
+     {
+      "t": 51.908,
+      "near": false,
+      "how": "back",
+      "end": "own",
+      "kmh": 25,
+      "tLast": 52.858,
+      "tEnd": 52.236,
+      "court": [
+       1.07,
+       -0.49
+      ],
+      "margin": 0.0,
+      "sigma": 0.08,
+      "after": 0.62,
+      "late": true
+     },
+     {
+      "t": 53.874,
+      "near": true,
+      "how": "back",
+      "end": "none",
+      "kmh": 189,
+      "tLast": 55.041,
+      "late": true
+     }
+    ]
+   },
+   "view": {
+    "second": 54,
+    "picture": 54,
+    "near": [
+     1215.8,
+     646.3,
+     1418.3,
+     946.2
+    ],
+    "far": [
+     916.1,
+     441.5,
+     960.4,
+     551.0
+    ]
+   },
+   "netHit": {
+    "t": 51.812,
+    "hitterNear": true,
+    "conf": 0.8,
+    "dirConf": 0.33,
+    "serve": false
+   }
+  },
+  {
+   "start": 78.0,
+   "end": 88.0,
+   "kind": "rally",
+   "prob": 0.9086618423461914,
+   "pNotPoint": 0.03,
+   "p1Near": true,
+   "pNearWins": 0.9694349082764785,
+   "pBall": 0.97,
+   "winner": "P1",
+   "confidence": 0.9694349082764785,
+   "server": "P1",
+   "serverNear": true,
+   "serveSpeedKmh": 107.15195970218089,
+   "fault": {
+    "t": 71.904756,
+    "kind": "fast",
+    "speed": 89.67731923378349,
+    "chain": {
+     "shots": [
+      {
+       "t": 71.305,
+       "near": true,
+       "how": "first",
+       "end": "net",
+       "kmh": 25,
+       "tLast": 73.688,
+       "tEnd": 73.69,
+       "netConf": 0.85
+      }
+     ]
+    }
+   },
+   "shots": 9,
+   "lastShot": {
+    "nearWins": true,
+    "case": "out_seen",
+    "t": 85.302667,
+    "endY": -4.156778892362225,
+    "endZ": 0.006094701765844174,
+    "netZ": null,
+    "toFar": false,
+    "speed": 28.55376603436577,
+    "src": 2,
+    "margin": -2.67589299444305,
+    "bx": 4.896468303557519,
+    "by": -2.67589299444305,
+    "tRel": -2.6973330000000004
+   },
+   "endChangeBefore": false,
+   "chain": {
+    "case": "net_hi",
+    "nearWins": true,
+    "p": 0.97,
+    "used": true,
+    "last": 3,
+    "text": "Far player sent the ball back (the hit was not seen) at 84.8 s. The ball touched the net at 86.3 s and stayed on the side of the hitter. Near player wins the point.",
+    "shots": [
+     {
+      "t": 80.237,
+      "near": true,
+      "how": "first",
+      "end": "in",
+      "kmh": 107,
+      "tLast": 81.37,
+      "tEnd": 80.743,
+      "court": [
+       2.25,
+       3.29
+      ],
+      "margin": 1.87,
+      "sigma": 0.07,
+      "after": 0.63
+     },
+     {
+      "t": 81.363,
+      "near": false,
+      "how": "hit",
+      "end": "in",
+      "kmh": 54,
+      "tLast": 82.986,
+      "tEnd": 82.63,
+      "court": [
+       -0.63,
+       -3.42
+      ],
+      "margin": 3.49,
+      "sigma": 0.07,
+      "after": 0.36
+     },
+     {
+      "t": 83.328,
+      "near": true,
+      "how": "hit",
+      "end": "in",
+      "kmh": 71,
+      "tLast": 84.186,
+      "tEnd": 84.223,
+      "court": [
+       -2.6,
+       7.83
+      ],
+      "margin": 1.51,
+      "sigma": 0.07,
+      "after": 0.0
+     },
+     {
+      "t": 84.803,
+      "near": false,
+      "how": "back",
+      "end": "net",
+      "kmh": 29,
+      "tLast": 86.552,
+      "tEnd": 86.257,
+      "netConf": 0.5,
+      "weak": true
+     }
+    ]
+   },
+   "view": {
+    "second": 79,
+    "picture": 79,
+    "near": [
+     838.7,
+     654.6,
+     950.2,
+     1039.5
+    ],
+    "far": [
+     1118.4,
+     438.7,
+     1166.4,
+     524.5
+    ]
+   },
+   "netHit": {
+    "t": 86.257,
+    "hitterNear": false,
+    "conf": 0.5,
+    "dirConf": 1.0,
+    "serve": false
+   }
+  },
+  {
+   "start": 111.0,
+   "end": 117.0,
+   "kind": "rally",
+   "prob": 0.7650057077407837,
+   "pNotPoint": 0.15,
+   "p1Near": true,
+   "pNearWins": 0.8670426029493844,
+   "pBall": 0.88,
+   "winner": "P1",
+   "confidence": 0.8670426029493844,
+   "server": "P1",
+   "serverNear": true,
+   "serveSpeedKmh": 120.55303956937975,
+   "fault": {
+    "t": 105.282878,
+    "kind": "toss+serve",
+    "speed": 90.4715807074153,
+    "chain": {
+     "shots": [
+      {
+       "t": 106.583,
+       "near": true,
+       "how": "first",
+       "end": "net",
+       "kmh": 90,
+       "tLast": 106.783,
+       "tEnd": 106.786,
+       "netConf": 0.9
+      }
+     ]
+    }
+   },
+   "shots": 3,
+   "lastShot": {
+    "nearWins": true,
+    "case": "in_seen",
+    "t": 113.548256,
+    "endY": 8.062862019041411,
+    "endZ": 1.6089325707212285,
+    "netZ": 1.8564118151736038,
+    "toFar": true,
+    "speed": 120.55303956937975,
+    "src": 2,
+    "margin": 3.5074243210172025,
+    "bx": 0.40438501789961967,
+    "by": 8.377575678982797,
+    "tRel": -3.451744000000005
+   },
+   "endChangeBefore": false,
+   "chain": {
+    "case": "in",
+    "nearWins": true,
+    "p": 0.88,
+    "used": true,
+    "last": 1,
+    "text": "Near player hit the ball at 113.5 s. The ball bounced in at 114.2 s (3.7 m inside). The ball was tracked for 0.6 s after the bounce, and no return was seen. Near player wins the point.",
+    "shots": [
+     {
+      "t": 110.46,
+      "near": false,
+      "how": "first",
+      "end": "none",
+      "kmh": 78,
+      "tLast": 110.949,
+      "weak": true
+     },
+     {
+      "t": 113.522,
+      "near": true,
+      "how": "hit",
+      "end": "in",
+      "kmh": 121,
+      "tLast": 114.865,
+      "tEnd": 114.24,
+      "court": [
+       -0.42,
+       7.72
+      ],
+      "margin": 3.7,
+      "sigma": 0.1,
+      "after": 0.62
+     }
+    ]
+   },
+   "view": {
+    "second": 112,
+    "picture": 113,
+    "near": [
+     1299.8,
+     608.0,
+     1408.9,
+     1041.9
+    ],
+    "far": [
+     803.1,
+     443.3,
+     855.5,
+     534.0
+    ]
+   }
+  },
+  {
+   "start": 142.0,
+   "end": 150.0,
+   "kind": "rally",
+   "prob": 0.8867673873901367,
+   "pNotPoint": 0.03,
+   "p1Near": true,
+   "pNearWins": 0.010174706097392816,
+   "pBall": 0.030000000000000027,
+   "winner": "P2",
+   "confidence": 0.9898252939026072,
+   "server": "P1",
+   "serverNear": true,
+   "serveSpeedKmh": 94.85261040424221,
+   "fault": {
+    "t": 137.161233,
+    "kind": "serve",
+    "speed": 98.66599776585491,
+    "chain": {
+     "shots": [
+      {
+       "t": 137.131,
+       "near": true,
+       "how": "first",
+       "end": "out",
+       "kmh": 99,
+       "tLast": 139.927,
+       "tEnd": 137.544,
+       "court": [
+        0.45,
+        6.58
+       ],
+       "margin": -0.18,
+       "sigma": 0.17,
+       "after": 2.38
+      }
+     ]
+    }
+   },
+   "shots": 5,
+   "lastShot": {
+    "nearWins": false,
+    "case": "net",
+    "t": 146.3098,
+    "endY": -3.718433695899939,
+    "endZ": 1.2819011499655297,
+    "netZ": null,
+    "toFar": true,
+    "speed": 60.02560505892831,
+    "src": 1,
+    "margin": -0.40047181775741886,
+    "bx": 0.750992222616365,
+    "by": -0.40047181775741886,
+    "tRel": -3.6902000000000044
+   },
+   "endChangeBefore": false,
+   "chain": {
+    "case": "net_hi",
+    "nearWins": false,
+    "p": 0.97,
+    "used": true,
+    "last": 2,
+    "text": "Near player hit the ball at 146.2 s. The ball touched the net at 146.8 s and stayed on the side of the hitter. Far player wins the point.",
+    "shots": [
+     {
+      "t": 143.259,
+      "near": true,
+      "how": "first",
+      "end": "in",
+      "kmh": 95,
+      "tLast": 144.493,
+      "tEnd": 144.0,
+      "court": [
+       1.84,
+       5.52
+      ],
+      "margin": 2.27,
+      "sigma": 0.09,
+      "after": 0.49
+     },
+     {
+      "t": 144.53,
+      "near": false,
+      "how": "hit",
+      "end": "in",
+      "kmh": 84,
+      "tLast": 146.176,
+      "tEnd": 145.633,
+      "court": [
+       -2.92,
+       -6.59
+      ],
+      "margin": 1.2,
+      "sigma": 0.04,
+      "after": 0.54
+     },
+     {
+      "t": 146.176,
+      "near": true,
+      "how": "hit",
+      "end": "net",
+      "kmh": 60,
+      "tLast": 146.843,
+      "tEnd": 146.848,
+      "netConf": 0.9
+     }
+    ]
+   },
+   "view": {
+    "second": 143,
+    "picture": 143,
+    "near": [
+     860.7,
+     643.6,
+     1063.4,
+     998.1
+    ],
+    "far": [
+     1130.6,
+     435.2,
+     1178.2,
+     525.3
+    ]
+   },
+   "netHit": {
+    "t": 146.848,
+    "hitterNear": true,
+    "conf": 0.9,
+    "dirConf": 1.0,
+    "serve": false
+   }
+  },
+  {
+   "start": 162.0,
+   "end": 179.0,
+   "kind": "rally",
+   "prob": 0.954761266708374,
+   "pNotPoint": 0.006,
+   "p1Near": true,
+   "pNearWins": 0.8300000011577026,
+   "pBall": 0.83,
+   "winner": "P1",
+   "confidence": 0.8300000011577026,
+   "server": "P1",
+   "serverNear": true,
+   "serveSpeedKmh": null,
+   "fault": null,
+   "shots": 15,
+   "lastShot": {
+    "nearWins": true,
+    "case": "out_seen",
+    "t": 175.838522,
+    "endY": 5.055347745827916,
+    "endZ": -0.0645786753706074,
+    "netZ": 2.4345399301562014,
+    "toFar": false,
+    "speed": 63.481324893041254,
+    "src": 2,
+    "margin": -0.32281992865186737,
+    "bx": 4.437819928651868,
+    "by": 6.480451961576319,
+    "tRel": -3.1614779999999882
+   },
+   "endChangeBefore": false,
+   "chain": {
+    "case": "out_line",
+    "nearWins": true,
+    "p": 0.83,
+    "used": true,
+    "last": 7,
+    "text": "Far player hit the ball at 175.7 s. The ball bounced out at 177.2 s (0.3 m outside). Near player wins the point.",
+    "shots": [
+     {
+      "t": 163.89,
+      "near": true,
+      "how": "first",
+      "end": "in",
+      "kmh": 120,
+      "tLast": 164.14,
+      "tEnd": 164.192,
+      "court": [
+       -2.1,
+       4.79
+      ],
+      "margin": 2.01,
+      "sigma": 0.12,
+      "after": 0.0
+     },
+     {
+      "t": 164.64,
+      "near": false,
+      "how": "back",
+      "end": "in",
+      "kmh": 72,
+      "tLast": 167.223,
+      "tEnd": 166.262,
+      "court": [
+       -2.99,
+       -6.88
+      ],
+      "margin": 1.13,
+      "sigma": 0.04,
+      "after": 0.96
+     },
+     {
+      "t": 167.223,
+      "near": true,
+      "how": "hit",
+      "end": "none",
+      "kmh": 64,
+      "tLast": 168.006
+     },
+     {
+      "t": 168.773,
+      "near": false,
+      "how": "back",
+      "end": "in",
+      "kmh": 40,
+      "tLast": 171.056,
+      "tEnd": 170.128,
+      "court": [
+       -2.3,
+       -7.1
+      ],
+      "margin": 1.82,
+      "sigma": 0.05,
+      "after": 0.93
+     },
+     {
+      "t": 171.239,
+      "near": true,
+      "how": "back",
+      "end": "in",
+      "kmh": 88,
+      "tLast": 172.422,
+      "tEnd": 171.959,
+      "court": [
+       -3.12,
+       5.99
+      ],
+      "margin": 1.0,
+      "sigma": 0.08,
+      "after": 0.46
+     },
+     {
+      "t": 172.549,
+      "near": false,
+      "how": "hit",
+      "end": "in",
+      "kmh": 77,
+      "tLast": 174.089,
+      "tEnd": 173.551,
+      "court": [
+       1.77,
+       -5.45
+      ],
+      "margin": 2.35,
+      "sigma": 0.17,
+      "after": 0.54
+     },
+     {
+      "t": 174.305,
+      "near": true,
+      "how": "back",
+      "end": "in",
+      "kmh": 82,
+      "tLast": 175.489,
+      "tEnd": 175.029,
+      "court": [
+       -2.88,
+       6.24
+      ],
+      "margin": 1.23,
+      "sigma": 0.39,
+      "after": 0.46
+     },
+     {
+      "t": 175.692,
+      "near": false,
+      "how": "hit",
+      "end": "out",
+      "kmh": 63,
+      "tLast": 178.038,
+      "tEnd": 177.207,
+      "court": [
+       4.4,
+       -6.68
+      ],
+      "margin": -0.28,
+      "sigma": 0.04,
+      "after": 0.83
+     }
+    ]
+   },
+   "view": {
+    "second": 177,
+    "picture": 177,
+    "near": [
+     1676.8,
+     664.8,
+     1831.9,
+     968.5
+    ],
+    "far": [
+     818.1,
+     435.0,
+     863.9,
+     529.3
+    ]
+   }
+  }
+ ]
+}

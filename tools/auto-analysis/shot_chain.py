@@ -564,11 +564,15 @@ TEXT = {"net": "the ball touched the net and stayed on the side of the hitter", 
         "back": "the end of this shot was not seen", "stop": "the flight of the ball ends low near the net", "old": "no bounce or net event; the fitted flight decides", "none": "nothing is known"}
 
 
-def evidence(pt, nets, t_cut, p=None, min_speed=8.0):
+def evidence(pt, nets, t_cut, p=None, min_speed=8.0, old=None):
     """The winner evidence of the window pt (_evidence). p: the parameters of the old rule (old_rule; None = no old
-    rule, for example the shots of a fault candidate). r["old"]: the quantities, the decision and the case of the old
+    rule, for example the shots of a fault candidate). old: the result (q, w, case) of old_rule(pt, t_cut, p) if the
+    caller has it already (one computation). r["old"]: the quantities, the decision and the case of the old
     rule (for the "lastShot" of the result and for CHAIN=0)."""
-    q, w_old, old_case = old_rule(pt, t_cut, p) if p is not None else (None, None, None)
+    if old is not None:
+        q, w_old, old_case = old
+    else:
+        q, w_old, old_case = old_rule(pt, t_cut, p) if p is not None else (None, None, None)
     r = _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed)
     r["events"] = pt.get("events")
     r["old"] = {"q": q, "nearWins": w_old, "case": old_case}

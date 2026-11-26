@@ -161,7 +161,8 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         ch = None
         if "events" in full:                         # E28: the shot chain of the rally (facts for the user; with CHAIN also the evidence)
             try:
-                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= t_end + 2.5], T_CUT_E2E, p, p["min_speed"])
+                ch = sc.evidence(pt, [e for e in nets if a - 1.0 <= e["t"] <= t_end + 2.5], T_CUT_E2E, p, p["min_speed"],
+                                 old=(q, w, old_case))       # one computation of the old rule
                 pc = sc.case_prob(ch["case"], mid)
                 chain_row = sc.export(ch, t_end, T_CUT_E2E, CHAIN, pc)
             except Exception as e:                   # a fault in the chain must not stop the detection: the old rule decides

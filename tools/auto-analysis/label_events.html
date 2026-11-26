@@ -1046,9 +1046,9 @@ function fRender() {
   const dur = fDur(r), pct = c => (100 * Math.max(0, c) / dur) + "%";
   const ps = fct(r, r.next.startMs / 1000), pe = Math.min(dur, fct(r, r.next.endMs / 1000));
   $("ftl").innerHTML = `<div class="row" style="left:${pct(fct(r, r.start))};width:${pct(r.end - r.start)}"></div>` +
-    `<div class="lab" style="left:${pct(fct(r, r.start))};top:0;color:var(--warn)">detected row</div>` +
+    `<div class="lab" style="${fct(r, r.start) / dur > 0.6 ? "right:4px" : "left:" + pct(fct(r, r.start))};top:0;color:var(--warn)">detected row</div>` +
     `<div class="pt" style="left:${pct(ps)};width:${pct(pe - ps)}"></div>` +
-    `<div class="lab" style="left:${pct(ps)};top:23px;color:var(--ok)">next marked point ${r.next.id}</div>` +
+    `<div class="lab" style="${ps / dur > 0.6 ? "right:4px" : "left:" + pct(ps)};top:23px;color:var(--ok)">next marked point ${r.next.id}</div>` +
     `<div class="head"></div>`;
 }
 function fTick() {

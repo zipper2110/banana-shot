@@ -89,6 +89,12 @@ BOUNCE_KEEP = 0.36   # speed along the court after a bounce / before it (lab: me
 # old time for 40 %; more than 0.3 s before: no support). An earlier meeting time is not used.
 HIT_EARLY = 0.3
 AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB or more comes 0 to 0.2 s after the hit
+# E164 (S3; S4 E171 items 5, 7 and 1; manager approval after E164 step 1): the shot list of a rally starts at the serve in
+# play. Lab marks start at the second serve; a first-serve fault or a toss before it gave a false first shot. Off by
+# default ("0"); "a", "b", "ab" (see serve_start). Only rally windows of chain.py give the serve events (build serves=...).
+SERVE_START = os.environ.get("CHAIN_SERVE_START", "0")
+SS_GAP = 2.0           # s: (a) the next shot of the same end is this much or more after the first shot (E164: 8 lab rows)
+SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long after the first shot (E164: 0.6 to 1.2 s)
 
 
 def kmh(f):
@@ -132,12 +138,13 @@ def continuous(cur, f, b0):
     return float(np.hypot(f["p0"][0] - ref[0], f["p0"][1] - ref[1])) <= reach
 
 
-def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None):
+def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None, serves=None):
     """The shot chain. flights: the flights of the rally window, in time order. events: the event list
     that "ev0", "ev1" and "bounceEv" of the flights refer to (None = a flights file with no events).
     nets: net events of the same time range. weak: also use flights with a start position outside the
     court box (their direction is used, their positions are not).
     audio: the audio hit candidates (hits.npy: time, dB, ...) or None (for back_time).
+    serves: the serve events of a rally window (serve_ball.serve_events) for serve_start, or None (no serve_start).
     Returns a list of shots: {"t", "near", "how", "fl", "bounces", "net", "weak", "serve"}."""
     shots, cur = [], None
     for f in flights:
@@ -263,7 +270,43 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None):
     shots = sorted(seen + alone, key=lambda sh: sh["t"])
     if "b" in NET_DEAD:
         shots = net_roll(shots)
+    if serves is not None and SERVE_START != "0":
+        shots = serve_start(shots, nets, serves)
     return dead_stop(shots) if DEAD_STOP else shots
+
+
+def serve_start(shots, nets, serves, mode=None):
+    """E164: the shot list starts at the serve in play. serves: the serve events of the window (t, near, kind, ...) of
+    serve_ball.serve_events. mode: SERVE_START when None.
+    "b" (item 7): the first shot has a flight and a serve event (not a toss alone) of the same end SS_SERVE s after it,
+        and no shot starts before that event: the shot started at the toss. Its time becomes the serve event (the serve
+        contact); "tToss" keeps the old time.
+    "a" (items 5 and 1): after "b". The first shot ends in the net or out, or has a cord event (net_events kind "cord":
+        a let), and the next shot is of the same end SS_GAP s or more later (no shot of the other end between): the first
+        shot is a serve before the serve in play. It goes out of the list. The next shot gets how "first" and
+        "before" = {"shot": the removed shot, "cord": the cord event or None}; chain.py makes a fault clip at the removed
+        shot (no clip with a cord event: a let is no fault). The form for any end of the first shot is not used: it also
+        removed serves in play (E164 step 1: 35 lab rows, 4 of them serves in play)."""
+    mode = SERVE_START if mode is None else mode
+    if not shots:
+        return shots
+    s0 = shots[0]
+    if "b" in mode and s0["fl"]:
+        t_next = shots[1]["t"] if len(shots) > 1 else float("inf")
+        e = [x for x in serves if bool(x[1]) == s0["near"] and x[2] != "toss" and SS_SERVE[0] <= x[0] - s0["t"] <= SS_SERVE[1]
+             and x[0] < t_next - 0.1]
+        if e:
+            s0["tToss"], s0["t"] = s0["t"], float(e[0][0])
+    if "a" in mode and len(shots) >= 2:
+        s1 = shots[1]
+        t0, t1 = (s0["fl"][0]["t0"], s0["fl"][-1]["t1"]) if s0["fl"] else (s0["t"], s0["t"])
+        cord = [e for e in nets if e["kind"] == "cord" and e["conf"] >= NET_CONF and t0 - 0.05 <= e["t"] <= t1 + NET_AFTER
+                and e["t"] < s1["t"]]
+        if s1["near"] == s0["near"] and s1["t"] - s0["t"] >= SS_GAP and (shot_end(s0)[0] in ("net", "out") or cord):
+            s1["how"] = "first"
+            s1["before"] = {"shot": s0, "cord": cord[0] if cord else None}
+            shots = shots[1:]
+    return shots
 
 
 def _roll(sh):
@@ -662,7 +705,7 @@ def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     Order of the facts of the last shot: net event; bounce event (on the side of the hitter, out, in);
     else the old rule (kink or fit landing). "back_": the old rule decided from the shot before the last
     shot of the chain (it did not use the last flight)."""
-    shots = build(pt["flights"], pt.get("events"), nets, min_speed, audio=pt.get("audio"))
+    shots = build(pt["flights"], pt.get("events"), nets, min_speed, audio=pt.get("audio"), serves=pt.get("serves"))
     li = last_shot(shots, pt["end"], t_cut)
     old = (lambda pre: (w_old, pre + old_case) if w_old is not None else (None, "none"))
     if li is None:

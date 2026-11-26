@@ -162,6 +162,12 @@ label by eye.
    to 1.5 m and `is_toss` needs more than 1.5 m; the fast serve flight is not tracked. Fix the serve event
    first, then the serve shot time. Follow the rule for fixes found on Igor. Ask the manager before an edit
    of `shot_chain.py` (S3).
+   Done (E77, E121; merged cb4f9fd5): the toss starts from 1.0 m; the serve shot starts at the contact. Open: the
+   serve flight is often not in the ball track (107 of 277 lab starts): a ball-tracker item for later.
+8. (2026-11-26) A rally that starts at a first-serve fault (E73: 9 of the 39 missed Igor faults; a priority 1
+   error of the rally start). Find the cause, then a fix that starts the rally at the second serve. Measure the
+   rally start error and the rally precision on the lab matches; report Igor apart. Ask the manager before an
+   edit of `rally_end.py` or `shot_chain.py` (S3).
 
 Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
 the journal, and the hitter measure follows the labels.

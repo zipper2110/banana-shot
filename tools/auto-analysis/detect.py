@@ -624,7 +624,10 @@ def main():
             import court_track
             tr = court_track.run(MID)
             ok = [w for w in (tr or []) if w["ok"]]
-            if ok:
+            # court.json is an input of the ball tag (the crop of the ball stage). A new court key (a code change)
+            # must not force a ball run (item 13): an existing court.json stays; --force makes it again. court_track
+            # starts from it, so each court run starts from the same court.
+            if ok and (a.force or not os.path.exists(W("court.json"))):
                 m = min(ok, key=lambda w: abs(w["t0"] - n / 2))
                 json.dump({"H": m["H"], "chamfer_px": max(1.0, m["cost"])}, open(W("court.json"), "w"))
         stage("court", [W("court_track.json")], court, a.force, code_key("court"))

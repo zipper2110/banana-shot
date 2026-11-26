@@ -34,6 +34,9 @@ import lab, platform_cfg
 
 ROOT = os.path.join(os.path.dirname(lab.ROOT.rstrip("/\\")), "ws", "s1", "cases")
 FRAGS = os.path.join(ROOT, "frags")
+# The fault clips of the label page (S4 E158, the Faults step): not event cases, so they are not in FRAGS, index() and
+# the history. clips.json: {row id: fragment folder}.
+FAULT_CLIPS = os.path.join(ROOT, "faults")
 LABELS = os.path.join(ROOT, "labels")
 PUBLISHED = os.path.join(ROOT, "published.json")
 FORMAT = "case-fragment/1"
@@ -123,8 +126,8 @@ def shift_track(src, dst, offset, dur):
     return True
 
 
-def cut(spec):
-    """One fragment. spec: {id, level, kinds: [..], control: bool, mid, start, end (source s of the labeled span),
+def cut(spec, frags=FRAGS):
+    """One fragment in the folder frags (default FRAGS; the fault clips: FAULT_CLIPS). spec: {id, level, kinds: [..], control: bool, mid, start, end (source s of the labeled span),
     cases: [{stream, journal, case, solved}], pad: [before, after] (optional)}. Returns the manifest."""
     mid, level = spec["mid"], spec.get("level", "small")
     video = lab.MATCHES[mid]["video"]
@@ -139,7 +142,7 @@ def cut(spec):
     t_in = max(0.0, spec["start"] - before)
     kf = keyframe_before(video, t_in, not_before=prev_end)
     t_out = spec["end"] + after
-    d = os.path.join(FRAGS, spec["id"])
+    d = os.path.join(frags, spec["id"])
     if spec["id"] in published() or os.path.exists(os.path.join(LABELS, spec["id"] + ".events.json")) or os.path.exists(d):
         raise RuntimeError(f"the id {spec['id']} is in use (published, labeled, or a folder): give the new cut a new id")
     os.makedirs(d, exist_ok=True)
@@ -331,6 +334,7 @@ def main():
     c = sub.add_parser("controls")
     c.add_argument("--n", type=int, default=2); c.add_argument("--seed", type=int, default=20261126); c.add_argument("--matches", default="")
     k = sub.add_parser("cut"); k.add_argument("spec")
+    k.add_argument("--faults", action="store_true", help="fault clips (S4 E158): into FAULT_CLIPS, no index, clips.json {row: folder}")
     sub.add_parser("list")
     sub.add_parser("index")
     r = sub.add_parser("retire"); r.add_argument("id"); r.add_argument("--reason", required=True)
@@ -340,11 +344,17 @@ def main():
     if a.cmd == "controls":
         print(json.dumps(controls(a.n, a.seed, a.matches.split(",") if a.matches else None), indent=1))
     elif a.cmd == "cut":
+        folder = FAULT_CLIPS if a.faults else FRAGS
+        out = os.path.join(FAULT_CLIPS, "clips.json")
+        clips = json.load(open(out)) if a.faults and os.path.exists(out) else {}
         for s in json.load(open(a.spec)):
-            m = cut(s)
+            m = cut(s, folder)
             print(f"{m['id']}: {m['source']['mid']} offset {m['offset']:.3f} s, {m['duration']:.1f} s, points {len(m['points'])}, "
                   f"label span {m['labelSpan']}, first frame same {m['cut']['firstFrameSame']} ({m['cut']['seconds']} s)", flush=True)
-        print("index:", index())
+            if a.faults:
+                clips[s["row"]] = os.path.normpath(os.path.join(folder, s["id"]))
+                json.dump(clips, open(out, "w"), indent=1)
+        print("clips:", out) if a.faults else print("index:", index())
     elif a.cmd == "index":
         print(index())
     elif a.cmd == "map":

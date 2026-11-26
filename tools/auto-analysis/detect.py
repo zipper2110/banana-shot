@@ -571,6 +571,7 @@ def main():
     # courtTrack (E26f): "" = the court model rule of ball_events.court_windows; a file name = that court file only.
     # netBand (item 6 (b), E88 to E133): true = the motion of the net picture rejects or confirms the net touches
     # (net_band_mask.py, net_band.py). Off until the test on the label windows holds the E131 result.
+    # Before it goes on: bench.py (S1) must add net_band.npz to the inputs of the flights key and to the manifest.
     cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": False, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS,
            "chain": True, "endModel": True, "courtTrack": "", "netBand": False}
     if a.settings:

@@ -60,7 +60,7 @@ SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)
 CHAIN = os.environ.get("CHAIN", "1") == "1"      # E28, E29: the winner evidence comes from the shot chain (shot_chain.py) when the flights file has "events"; CHAIN=0 gives the old rule
-FPS_ADAPT = os.environ.get("FPS_ADAPT", "1") == "1"   # E28: the sample counts of the winner rule follow the frame rate of the ball track (winner_ball.set_fps)
+FPS_ADAPT = os.environ.get("FPS_ADAPT", "1") == "1"   # E28: the sample count of a usable fit landing of the old rule follows the frame rate of the ball track (shot_chain.set_fps)
 END_MODEL = os.environ.get("END_MODEL", "1") == "1"   # E60: the end for the winner evidence comes from the rally end detector (rally_end.py); END_MODEL=0 gives the GRU end
 # The shirt colors of each rally (the image reads are the slow part). "_t2": the pictures of the true seconds (G2);
 # the colors of color_cache.json came from the picture row of the second number. An absolute path is also valid.
@@ -143,9 +143,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
     cache = json.load(open(cp)) if os.path.exists(cp) else {}
     dirty = False
     if FPS_ADAPT:
-        fps = track_fps(full["flights"])
-        wb.set_fps(fps)                              # the "shots" count of the row (winner_ball.good)
-        sc.set_fps(fps)                              # the old rule in the shot chain
+        sc.set_fps(track_fps(full["flights"]))      # the old rule in the shot chain
     np_ = NET_FILES.get(mid) or os.path.join(out, "net_events.json")
     nets = json.load(open(np_))["events"] if os.path.exists(np_) else []
     hits = rally_end.load_hits(out)
@@ -242,7 +240,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                     "margin": None if np.isnan(q["margin"]) else q["margin"],
                     "bx": None if np.isnan(q["bx"]) else q["bx"], "by": None if np.isnan(q["by"]) else q["by"], "tRel": q["t_rel"]}
         rows.append({"start": a, "end": b, "prob": prob, "pBall": pw, "serverNear": srv, "serveSpeed": speed, "fault": fault, "lastShot": last,
-                     "shots": int(sum(wb.good(f) and a <= f["t0"] <= b for f in fls)), "poseSide": pose_side})
+                     "shots": int(sum(sc.usable(f, p["min_speed"]) and sc.pos_ok(f) and a <= f["t0"] <= b for f in fls)), "poseSide": pose_side})
         if ch is not None:
             rows[-1]["chainCase"], rows[-1]["chainNearWins"] = ch["case"], ch["nearWins"]
             rows[-1]["chain"] = chain_row

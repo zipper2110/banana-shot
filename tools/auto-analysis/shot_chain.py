@@ -22,7 +22,7 @@ import json, os, sys
 import numpy as np
 
 SW, BL, SL = 4.115, 11.885, 6.40      # m: half width of the singles court, baseline, service line
-MIN_DUR = 0.15        # s: shortest flight that is used (10 samples at 60 fps, as winner_ball.good; 6 samples at 30 fps)
+MIN_DUR = 0.15        # s: shortest flight that is used (10 samples at 60 fps; 6 samples at 30 fps)
 MIN_N = 6             # samples
 SAME_GAP = 0.6        # s: a flight in the same direction after a shorter gap is the same shot (as old_quantities)
 NEW_GAP = 1.5         # s: after a longer gap it is a new shot (a tennis ball is in the air for less than this between two hits)
@@ -82,7 +82,8 @@ def kmh(f):
 
 
 def usable(f, min_speed=8.0):
-    """The fit of the flight is reliable for the direction along the court."""
+    """The fit of the flight is reliable for the direction along the court. G7 (d): usable() and pos_ok() are the one
+    filter of a good flight (also the old rule, the "shots" count of chain.py and the overlay of detect.py)."""
     return f["t1"] - f["t0"] >= MIN_DUR - 1e-6 and f["n"] >= MIN_N and f["rms"] < 5 and min_speed < kmh(f) < 230
 
 
@@ -451,23 +452,21 @@ def last_shot(shots, t_end, t_cut):
 # chain with the same decisions (G7, manager decision 5199e697). The chain uses its decision only when the last shot has
 # no net, bounce or stop fact (cases "old_*" and "back_*"). The old rule has its own filter, run and bounce: the last run
 # of good flights in one direction, its first low kink (the kink rule) or else the fit landing of its first flight.
-OLD_MIN_N, OLD_LAND_N = 10, 20     # samples of a good flight, and of a flight with a usable fit landing, at 60 fps (0.15 s, 0.32 s)
+OLD_LAND_N = 20                    # samples of a flight with a usable fit landing, at 60 fps (0.32 s)
 # G7 step 3: the seen bounce of the old rule. "event" = the bounce event at the end of a flight of the run (ball_bounce, the
 # one bounce fact of the chain); "kink" = the kink rule (a low kink in the court area, before G7 step 3).
 OLD_BOUNCE = os.environ.get("CHAIN_OLD_BOUNCE", "event")
 
 
 def set_fps(fps):
-    """E28: the sample counts of the old rule for a ball track with fps samples in each second (the same durations)."""
-    global OLD_MIN_N, OLD_LAND_N
-    OLD_MIN_N, OLD_LAND_N = max(5, int(round(10 * fps / 60.0))), max(8, int(round(20 * fps / 60.0)))
+    """E28: the sample count of a usable fit landing for a ball track with fps samples in each second (the same time)."""
+    global OLD_LAND_N
+    OLD_LAND_N = max(8, int(round(20 * fps / 60.0)))
 
 
 def old_good(f, min_speed=8.0):
-    """A good flight of the old rule: OLD_MIN_N samples, fit error < 5 px, speed min_speed (and 8) to 230 km/h, start
-    inside a large box around the court."""
-    sp = kmh(f)
-    return f["n"] >= OLD_MIN_N and f["rms"] < 5 and 8 < sp < 230 and pos_ok(f) and sp >= min_speed
+    """A good flight of the old rule: the one filter (G7 d), usable() and pos_ok()."""
+    return usable(f, min_speed) and pos_ok(f)
 
 
 def old_quantities(pt, t_cut, min_speed=8.0):

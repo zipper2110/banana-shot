@@ -29,19 +29,9 @@ SW, BL, MARGIN = 4.115, 11.885, 0.3
 SINGLES = ["m1015", "m1020", "m1021", "m1030"]
 
 
-MIN_N, LAND_N = 10, 20   # samples of a good flight, and of a flight with a usable fit landing. Values for 60 fps (0.15 s, 0.32 s).
-                         # E28: for a video with another frame rate use set_fps() (pipeline.FPS_ADAPT).
-
-
-def set_fps(fps):
-    """The sample counts for a ball track with fps samples in each second: the same flight durations as at 60 fps."""
-    global MIN_N, LAND_N
-    MIN_N, LAND_N = max(5, int(round(10 * fps / 60.0))), max(8, int(round(20 * fps / 60.0)))
-
-
 def good(f):
-    sp = 3.6 * float(np.linalg.norm(f["v0"]))
-    return f["n"] >= MIN_N and f["rms"] < 5 and 8 < sp < 230 and abs(f["p0"][1]) < 25 and abs(f["p0"][0]) < 12
+    """A good flight: the one filter of the shot chain (G7 d: shot_chain.usable and pos_ok)."""
+    return sc.usable(f) and sc.pos_ok(f)
 
 
 T_CUT = -1.5      # use only flights that start before the marked end + T_CUT (s). E16c: later flights are ball handling after the point

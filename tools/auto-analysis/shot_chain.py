@@ -51,6 +51,10 @@ TOSS_DUR, TOSS_MAX, TOSS_GAP, TOSS_Y = 0.7, 1.5, 0.3, 9.0   # s, s, s (a split o
 # E123: a toss exists only at the serve, and the toss is over the court (|x| < TOSS_X m, as serve_ball.is_toss). The
 # serve is the first shot of a point, or the second when one false shot is before it (ball handling, E76 group C).
 SERVE_SHOTS, TOSS_X = 2, 5.5
+# Item 8 (E76 group C, found on Igor m1116): a toss exists only at the serve (E123). When the second shot has the toss, the
+# first shot is ball handling before the serve, and it is removed. A first shot that starts at the serve place (TOSS_Y m or
+# more from the net on the end of its hitter) stays: it can be a fault, and the second serve follows.
+PRE_SERVE = os.environ.get("CHAIN_PRE_SERVE", "1") == "1"
 LATE_S, LATE_V = 1.5, (0.5, 2.0)    # s after the last sample of the shot; lowest and highest mean ground speed to the bounce, as a factor of the fit speed
 CONT = os.environ.get("CHAIN_CONT", "1") == "1"
 CONT_GAP, CONT_M = float(os.environ.get("CONT_GAP", "0.35")), float(os.environ.get("CONT_M", "4.0"))   # s, m: see continuous()
@@ -206,8 +210,10 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None):
     if SPLIT:
         shots = drop_splits(shots)
     if SERVE_TIME:
-        for sh in shots[:SERVE_SHOTS]:
-            serve_time(sh)
+        toss = [serve_time(sh) for sh in shots[:SERVE_SHOTS]]
+        if PRE_SERVE and toss == [False, True] and (shots[0]["fl"][0]["p0"][1] * (-1.0 if shots[0]["near"] else 1.0) < TOSS_Y):
+            shots.pop(0)
+            shots[0]["how"] = "first"
     if LATE_BOUNCE and events:
         late_bounces(shots, events)
     if BACK_TIME:
@@ -268,7 +274,8 @@ def dead_stop(shots):
 def serve_time(sh):
     """E121: a shot that has a toss flight and then a faster flight from the same end: the hit is at the start of the
     faster flight. Toss flight: it starts TOSS_Y m or more from the net on the end of the hitter and lasts TOSS_DUR to
-    TOSS_MAX s. The faster flight starts on the same end not later than TOSS_GAP s after the end of the toss flight."""
+    TOSS_MAX s. The faster flight starts on the same end not later than TOSS_GAP s after the end of the toss flight.
+    Returns True if the shot has a toss."""
     s = -1.0 if sh["near"] else 1.0                     # the end of the hitter: the near player is at y < 0
     fl = sh["fl"]
     for f, g in zip(fl, fl[1:]):
@@ -276,7 +283,8 @@ def serve_time(sh):
                 and 0.0 <= g["t0"] - f["t1"] <= TOSS_GAP and np.linalg.norm(g["v0"]) > np.linalg.norm(f["v0"])):
             if g["t0"] > sh["t"]:
                 sh["t"] = float(g["t0"])
-            return
+            return True
+    return False
 
 
 def meet_time(prev, sh, events):

@@ -184,6 +184,29 @@ def published():
     return json.load(open(PUBLISHED)) if os.path.exists(PUBLISHED) else {}
 
 
+def labels(warn=print):
+    """{id: the user's event labels} of the fragments in the current index. The one reader of the label files: it skips
+    a retired or unknown id (s005), a file with another name (for example *.bak), and a label whose t0 is not the t0 of
+    its fragment (marks made with another cut)."""
+    rows = {r["id"]: r for r in json.load(open(os.path.join(ROOT, "manifest.json")))["fragments"]}
+    pub = published()
+    out = {}
+    for f in sorted(os.listdir(LABELS)) if os.path.exists(LABELS) else []:
+        if not f.endswith(".events.json"):
+            continue
+        fid = f[:-len(".events.json")]
+        if fid not in rows:
+            if fid not in pub or not pub[fid].get("retired"):
+                warn(f"labels: {f} has no fragment in the index; skipped")
+            continue
+        L = json.load(open(os.path.join(LABELS, f), encoding="utf-8"))
+        if abs(L.get("t0", -1) - rows[fid]["t0"]) > 1e-4:
+            warn(f"labels: {f} has t0 {L.get('t0')}, the fragment {rows[fid]['t0']}; skipped")
+            continue
+        out[fid] = L
+    return out
+
+
 def retire(fid, reason):
     """Takes a fragment out of the page index. Its folder and its id stay; the id is never used again."""
     p = os.path.join(FRAGS, fid, "fragment.json")

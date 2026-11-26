@@ -496,10 +496,10 @@ function toggleFault() {
 function checks(dr) {
   const w = [], c = dr.events.filter(e => e.kind === "serve" || e.kind === "shot");
   for (let k = 1; k < c.length; k++) {
-    if (c[k].end === c[k - 1].end && !(c[k].kind === "serve" && c[k - 1].kind === "serve"))
+    // A serve starts a new point (or is the second serve): the contact before it can be of the same end. The fault
+    // flag (X) is optional (E159): label_faults.py infers it from the marks, so the page does not ask for it.
+    if (c[k].end === c[k - 1].end && c[k].kind !== "serve")
       w.push(`two contacts of the ${c[k].end} end at ${fmt(c[k - 1].t)} and ${fmt(c[k].t)}`);
-    if (c[k].kind === "serve" && c[k - 1].kind === "serve" && !c[k - 1].fault && c[k].end === c[k - 1].end)
-      w.push(`two serves at ${fmt(c[k - 1].t)} and ${fmt(c[k].t)}, the first has no fault flag (a let? press M)`);
   }
   if (c.length && c[0].kind !== "serve") w.push("the first contact is not a serve");
   for (const e of dr.events) if (e.kind === "bounce" && !e.court && item().courtH) w.push(`bounce at ${fmt(e.t)} has no court place`);

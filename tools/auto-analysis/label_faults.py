@@ -28,6 +28,8 @@ The limits are measured on the user's labels s001 to s008 (E159), not guessed:
 """
 import json
 
+# The limits are measured on 8 fragments (E159; in-sample, a margin of 2 s between the two groups).
+# Measure again when more fragments are labeled.
 SECOND_MAX = 12.6       # s, the longest serve-to-second-serve gap of the labels (E159)
 NEW_MIN = 14.6          # s, the shortest serve-to-next-point gap after a second-serve fault (E159)
 BOX_MIN_X = 0.3         # m, a bounce nearer to the center line than this does not tell the side (label px accuracy)

@@ -2,7 +2,7 @@
 
 The reference of "who is near" (ends.json nearPlayer) comes from the end-change rule, and players do not always follow
 it. The user marks the near player at the start and after each possible end change. This script finds the candidate
-points of each singles video with point marks and takes two frames of each candidate from the source video:
+points of each singles video with point marks (no NONE point) and takes two frames of each candidate from the source video:
   - the first point of the match;
   - each point where the rule (ends.json nearPlayer) changes;
   - each point where the chain identity (p1Near of the chain rows, by the largest time overlap) changes;
@@ -59,21 +59,23 @@ def candidates(mid, rows_dir):
     ends = {e["id"]: e for e in json.load(open(os.path.join(lab.mdir(mid), "ends.json")))}
     rule = [ends.get(p["id"], {}).get("nearPlayer") for p in pts]
     chain = chain_near(pts, chain_rows(rows_dir, mid))
-    src = {0: {"start"}}
-    for i in range(1, len(pts)):
-        if rule[i] != rule[i - 1]:
-            src.setdefault(i, set()).add("rule")
+    # NONE points are out (the user, 2026-11-26): a change is between two real points, and no candidate is a NONE point
+    real = [i for i, p in enumerate(pts) if p.get("outcome") != "NONE"]
+    src = {real[0]: {"start"}}
+    for a, b in zip(real[:-1], real[1:]):
+        if rule[b] != rule[a]:
+            src.setdefault(b, set()).add("rule")
     last = None
-    for i, c in enumerate(chain):
-        if c is None:
+    for i in real:
+        if chain[i] is None:
             continue
-        if last is not None and c != last:
+        if last is not None and chain[i] != last:
             src.setdefault(i, set()).add("chain")
-        last = c
+        last = chain[i]
     for t in EXTRA.get(mid, []):
-        i = min(range(len(pts)), key=lambda k: abs(pts[k]["startMs"] / 1000 - t))
+        i = min(real, key=lambda k: abs(pts[k]["startMs"] / 1000 - t))
         src.setdefault(i, set()).add("extra")
-    rest = [i for i in range(len(pts)) if i not in src]
+    rest = [i for i in real if i not in src]
     for i in random.Random(mid).sample(rest, min(N_CONTROL, len(rest))):
         src.setdefault(i, set()).add("control")
     return pts, rule, chain, src

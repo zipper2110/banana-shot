@@ -46,6 +46,17 @@ So the main detector loss is a small, slow ball at the far end in front of a gra
 possible cause (not tested): at scale 0.35 the few pixels of a small ball mix with the gray background, so they lose
 saturation, and the `dim` pass darkens them with the background.
 
+**Step 2 result (E133b, E133c).** The `dim` hypothesis is not supported: the normal pass gives the higher peak in
+51 of the 53 m1021 misses.
+
+| Missed set | Count | Cause | Fix in reach |
+|---|---|---|---|
+| m1021 labels | 53 | The model hardly sees a small far ball in front of gray: weak peak 0.1 to 0.5: 34, no heat (below 0.1): 19; median peak 0.10. Another object in the same frame has a median peak of 0.60. | Not a threshold. A fine-tune at the far end (or a far-end tile at a larger scale, which also needs training: scale 0.5 on the full picture finds 5 of 53). User approval first. |
+| m1015, m1020, m1030 labels | 19 | Near the threshold: all weak, median peak 0.45. | A lower threshold where a path supports it (no training). |
+| m1020 night far serves (S4 E150), with m1021 1 and m1030 3 | 23 | Mostly not a detector loss: the far serve comes 2.5 to 4.2 s after the point start label, after the windows of S4 (a + 1.5 s for the serve event, a + 2.5 s for the run). 15: a down run of 5 or more blobs crosses the net row, with no up crossing before it; in 11 of them the return (up) follows 0.7 to 1.1 s later. 4: only the held-out heat map has the down crossing (3), or the blob file has only the return (1). 4: no crossing found. | Not a detector change. Of the 15, 9 have a serve event in a - 1 .. a + 4 s and 6 have none: the serve event step (S4). |
+
+So one cause does not cover m1021 and the m1020 night serves.
+
 ## 4. Proposal
 
 1. **No training now.** The three target errors are in the steps after the detector, and their owners fix them

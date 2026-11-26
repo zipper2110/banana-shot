@@ -142,6 +142,12 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
 8. (2026-11-26) False shots before the serve (E76 group C: 3 false hits; ball handling). When this is fixed,
    `serve_time()` can go back to the first shot only (E123). Then a fresh table of the Igor hit errors on the
    current code (missed, false, shot count), so that the next fix starts from the largest group.
+   Done (E94, E95; merged c3d319b1): Igor false hits 12 to 11, shot count right 5 to 6 of 11. Fresh table: 19
+   errors; the largest group is T (time error over 0.3 s, 5 shots, 10 errors, mostly a ball first seen after
+   the net).
+9. (2026-11-26) Group T of E95: the time of a shot whose ball is first seen after the net. Use the same idea
+   as `back_time()` (the outgoing line, extended back to the hitter or to the incoming line) where it is right
+   in principle. Same Igor rule.
 
 ### Rule for fixes found on Igor (manager, 2026-11-26)
 

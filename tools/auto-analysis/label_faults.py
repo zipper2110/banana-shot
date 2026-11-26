@@ -1,7 +1,8 @@
 """The first-serve fault flag of the user's event labels, inferred from the marks (gap program S4, E159).
 
 The user decision (gap-program.md, 2026-11-26): the user no longer presses X. The scripts infer the flag. This is the
-one place of the rule; S1 imports infer_faults (history, bench).
+one place of the rule; S1 imports infer_faults (history, bench). The user is never asked about a fault flag
+(gap-program.md, 2026-11-27): the measures count the unsure serves apart and do not use them as truth.
 
 Rule, for each serve (events sorted by t):
   1. A serve with the X mark ("fault": true) keeps it.
@@ -18,8 +19,8 @@ Rule, for each serve (events sorted by t):
         fault; between = unsure.
      The box and the gap must agree: the other box with a gap of SECOND_MAX s or less is unsure.
   5. A second serve is not a first-serve fault: when the serve before (same end) is a fault by this rule and this serve
-     is its next serve, the result is False (an out or a net stop is a double fault). A let candidate stays unsure (the
-     user list), and a result True becomes unsure (three serves in a row: a let replay?).
+     is its next serve, the result is False (an out or a net stop is a double fault). A let candidate stays unsure, and a
+     result True becomes unsure (three serves in a row: a let replay?).
 
 The limits are measured on the user's labels s001 to s008 (E159), not guessed:
   serve to second serve after an X: 5.45 to 12.60 s (8 serves);

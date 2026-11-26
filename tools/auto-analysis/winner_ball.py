@@ -1,4 +1,4 @@
-"""E16: point winner from the ball flights (flights_s<scale>.json of ball_3d.py).
+"""E16: point winner from the ball flights (G7 step 3: flights_s<shot_chain.EV_TAG>.json, the flights with events).
 
 Rule (no training):
   1. Good flights: n >= 10, fit error < 5 px, speed 8 to 230 km/h, start
@@ -17,7 +17,7 @@ Rule (no training):
 Also: a gradient-boosting classifier on the same quantities, leave one
 match out.
 G7 step 2a: steps 1 to 3 are shot_chain.old_quantities (one copy, in the shot chain).
-Usage: python winner_ball.py [scale]
+Usage: python winner_ball.py
 """
 import json, os, sys
 import numpy as np
@@ -52,13 +52,10 @@ def rule(q):
 KEYS = ["to_far", "src", "n_run", "n_pts", "speed", "t_rel", "t_end_rel", "net_z", "crossed", "start_y", "start_z", "end_y", "end_z", "bx", "by", "margin", "n_flights", "coverage"]
 
 
-def main(scale=lab.BALL_TAG):
+def main():
     X, y, g, r = [], [], [], []
     for mid in SINGLES:
-        p = os.path.join(lab.mdir(mid), f"flights_s{scale}.json")
-        if not os.path.exists(p):
-            continue
-        pts = json.load(open(p))
+        pts = sc.lab_points(mid)                 # G7 step 3: the flights with events (the seen bounce of the old rule)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         n = hit = dec = 0
         for pt, e in zip(pts, ends):
@@ -88,4 +85,4 @@ def main(scale=lab.BALL_TAG):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:2])
+    main()

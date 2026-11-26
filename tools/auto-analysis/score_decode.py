@@ -68,7 +68,7 @@ def main():
     T = {"raw": [0, 0], "dec": [0, 0]}
     for mid in wb.SINGLES:
         p = params[mid]
-        pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{lab.BALL_TAG}.json")))
+        pts = sc.lab_points(mid)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         sides = json.load(open(os.path.join(lab.mdir(mid), "sides.json")))
         games, cur, key = [], [], None

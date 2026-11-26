@@ -23,7 +23,7 @@ GRID = {"margin": [-0.3, -0.15, 0.0, 0.15, 0.3], "net_fwd": [0.0, 1.0, 2.0], "ne
 def load():
     data = {}
     for mid in wb.SINGLES:
-        pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{lab.BALL_TAG}.json")))
+        pts = sc.lab_points(mid)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         data[mid] = [(pt, e["winnerNear"]) for pt, e in zip(pts, ends) if e["winnerNear"] is not None]
     return data

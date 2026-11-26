@@ -486,6 +486,9 @@ def old_quantities(pt, t_cut, min_speed=8.0):
     to_far = run[0]["v0"][1] > 0
     s = 1.0 if to_far else -1.0
     bounce, src = None, 0
+    if OLD_BOUNCE == "event" and "events" not in pt:
+        raise ValueError("old rule (G7 step 3): the window has no \"events\"; read a flights file with events "
+                         "(fullflights_s0.35.json of ball_full.py, or lab_points: flights_s%s.json)" % EV_TAG)
     events = pt.get("events")
     for f in run if OLD_BOUNCE == "event" and events else []:
         if f.get("bounceEv") is not None:            # this flight ends at a bounce event
@@ -622,7 +625,6 @@ def _evidence(pt, nets, t_cut, q, w_old, old_case, min_speed=8.0):
     sh = shots[li]
     kind, m = shot_end(sh)
     e = "_early" if sh["t"] - pt["end"] < EARLY else ""
-    same = bool(q is not None and sh["fl"] and abs((pt["end"] + q["t_rel"]) - sh["fl"][0]["t0"]) < 1e-6)
     # G7 step 2b: no FIRST_DT override. The kink rule of the old rule does not remove the bounce event of the chain.
     if kind == "net":
         w, case = (not sh["near"]), "net_" + ("hi" if sh["net"]["dirConf"] >= 0.7 else "lo")
@@ -740,10 +742,17 @@ def point_evidence(pt, nets, p, t_cut=None):
 EV_TAG = os.environ.get("EV_TAG", "0.35_ev")       # the flights files with events of the lab matches
 
 
+def lab_points(mid):
+    """The points of a lab match with their flights and events (flights_s<EV_TAG>.json, the same order as ends.json).
+    G7 step 3: each script that uses the old rule reads this file (the bounce events are the one bounce fact)."""
+    import lab
+    return json.load(open(os.path.join(lab.mdir(mid), f"flights_s{EV_TAG}.json")))
+
+
 def marked(mid):
     """The marked points of a lab match: list of (point, winnerNear, net events of its window)."""
     import lab
-    pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{EV_TAG}.json")))
+    pts = lab_points(mid)
     ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
     ne = json.load(open(os.path.join(lab.mdir(mid), "net_events.json")))["events"]
     return [(pt, e["winnerNear"], [x for x in ne if pt["start"] - 1.0 <= x["t"] <= pt["end"] + 2.5])

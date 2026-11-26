@@ -45,7 +45,7 @@ def fit_cases(mids):
     cnt = {k: [0.0, 0.0] for k in CASE_P}
     for mid in lab.check_train(mids):
         p = PARAMS[mid]
-        pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{lab.BALL_TAG}.json")))
+        pts = sc.lab_points(mid)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         for pt, e in zip(pts, ends):
             q, w, case = sc.old_rule(pt, wb.T_CUT, p)
@@ -196,7 +196,7 @@ def main(use_server=True, use_id=False, collect=None, quiet=False):
     tot = {"ball": 0.0, "dec": 0.0, "n": 0}
     for mid in wb.SINGLES:
         p = PARAMS[mid]
-        pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{lab.BALL_TAG}.json")))
+        pts = sc.lab_points(mid)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         sides = json.load(open(os.path.join(lab.mdir(mid), "sides.json")))
         pw = []

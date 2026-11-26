@@ -34,11 +34,12 @@ HIT_N, HIT_V = 20, 8.0          # samples and m/s along the court of the flight 
 LOCAL_S = 0.35                  # s: the bounce test uses the samples of this time before and after the vertex (the ball model has no spin: a long path does not fit)
 X_MAX, Y_MAX = 12.0, 22.0         # m: a bounce event is inside this area around the court center (E32: 16 x 24 m gave false "out" decisions from balls of the next court)
 NEIGHBOR_GAP = True
-# E85: one ball path is one track. The samples before a vertex come only from the track of the last sample before it,
-# and the samples after it only from the track of the first sample after it. Before E85 the samples between two kinks
-# could include the first samples of another track (another object, 1000 px away): one such sample made the plain rms
-# of the bounce test fail a clear bounce (m1030 at 5196.3 s: 2 px without it, 163 px with it).
-SAME_TRACK = __import__("os").environ.get("BOUNCE_SAME_TRACK", "1") == "1"
+# E86: a sample far from the fitted bounce path is not this ball (another object or another track: 1000 px away at
+# m1030 5196.3 s). One such sample made the plain rms of the bounce test 163 px for a fit of 2 px on the other 37
+# samples. The bounce test fits again without the samples that are more than OUT_PX from the path, if there are not
+# more than OUT_N of them on each side. More of them: the samples do not agree with a bounce, and the test stays.
+OUT_PX, OUT_N = 30.0, 1
+BOUNCE_OUTLIER = __import__("os").environ.get("BOUNCE_OUTLIER", "1") == "1"
 END_BEFORE = 4.0      # frames of 1/60 s. E32 (before: 1): a track often ends at the bounce, and the time of a fit landing has an error of some frames
 WIDE_GAP_S, WIDE_N = 0.25, 8      # E32: a vertex in a gap longer than WIDE_GAP_S needs WIDE_N samples on each side
 # E32: the path of a ball with side spin curves sideways, and a lens bends a straight path near the picture edge.
@@ -152,6 +153,23 @@ def v_after(v_in, k, e, phi):
 
 
 def fit_bounce(P, ta, xa, tb, xb, Xa, side=0.0):
+    """fit_bounce_once, then (E86, BOUNCE_OUTLIER) once more without the samples far from the fitted path, if each side
+    has OUT_N or fewer of them and keeps 2 samples (6 in all). Same result format."""
+    out = fit_bounce_once(P, ta, xa, tb, xb, Xa, side)
+    if out is None or not BOUNCE_OUTLIER:
+        return out
+    ta, xa, tb, xb = (np.asarray(x, float) for x in (ta, xa, tb, xb))
+    pa = b3.project(P, sim(Xa, out[0], ta)[0])
+    pb = b3.project(P, sim(Xa, out[1], tb)[0])
+    ka, kb = np.hypot(*(pa - xa).T) <= OUT_PX, np.hypot(*(pb - xb).T) <= OUT_PX
+    na, nb = int((~ka).sum()), int((~kb).sum())
+    if na + nb == 0 or na > OUT_N or nb > OUT_N or ka.sum() < 2 or kb.sum() < 2 or ka.sum() + kb.sum() < 6:
+        return out
+    again = fit_bounce_once(P, ta[ka], xa[ka], tb[kb], xb[kb], Xa, side)
+    return again if again is not None and again[5] < out[5] else out
+
+
+def fit_bounce_once(P, ta, xa, tb, xb, Xa, side=0.0):
     """Is there a physical bounce at the point Xa that agrees with the samples? One fit of the path before
     (ta < 0, xa) and the path after (tb > 0, xb) with the ball on the ground at t = 0.
     Unknowns: the velocity before (3), the horizontal speed ratio k, the restitution e, the turn phi. The
@@ -213,18 +231,6 @@ def landing_sigma(P, ts, xy, p0, v0, rms):
     return float(np.sqrt(max(0.0, np.linalg.eigvalsh(c[:2, :2])[-1]))), float(np.sqrt(max(0.0, c[2, 2])))
 
 
-def _same_track(ia, ib, tid):
-    """E85 (SAME_TRACK): keep the samples of ia (before) on the track of its last sample and of ib (after) on the track
-    of its first sample."""
-    if not SAME_TRACK:
-        return ia, ib
-    if len(ia):
-        ia = ia[tid[ia] == tid[ia[-1]]]
-    if len(ib):
-        ib = ib[tid[ib] == tid[ib[0]]]
-    return ia, ib
-
-
 def events(path, kk, fls, P, Hm, debug=None):
     """path: rows frame, x, y, peak, track id. kk: kinks (ball_events.kinks). fls: the free fits of
     ball_3d.flights (with cut0, cut1). Changes fls in place (anchored fits, land, bounce, e0, e1) and
@@ -248,7 +254,6 @@ def events(path, kk, fls, P, Hm, debug=None):
             ib = np.nonzero((f > fk) & (f < hi_f - 0.5))[0][:4]
             ia = ia[f[ia] >= f[ia[-1]] - 4 * step - 1e-6] if len(ia) else ia
             ib = ib[f[ib] <= f[ib[0]] + 4 * step + 1e-6] if len(ib) else ib
-        ia, ib = _same_track(ia, ib, tid)
         im = np.nonzero(np.abs(f - fk) < 1e-6)[0]
         e = {"f": fk, "px": [float(k[1]), float(k[2])], "src": "kink", "gap": gap, "sig_px": 3.0, "long_gap": False}
         if gap and len(ia) and len(ib) and f[ib[0]] - f[ia[-1]] > MAX_GAP_S * 60:
@@ -286,7 +291,6 @@ def events(path, kk, fls, P, Hm, debug=None):
             ea = eb = fe
         sa = np.nonzero((f > max(lo_f + 0.5, ea - LOCAL_S * 60)) & (f < fe - 0.5))[0]
         sb = np.nonzero((f > fe + 0.5) & (f < min(hi_f - 0.5, eb + LOCAL_S * 60)))[0]
-        sa, sb = _same_track(sa, sb, tid)
         g = ground(Hm, P, e["px"])
         fa, fb = by_cut1.get(kf[j]), by_cut0.get(kf[j])
         e["nA"], e["nB"] = len(sa), len(sb)

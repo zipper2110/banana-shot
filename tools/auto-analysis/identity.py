@@ -26,9 +26,12 @@ ALPHA = 0.3            # update rate of the running reference
 P_RIGHT = 0.85         # probability that the sign of one rally is right
 
 
-def signs(feats, alpha=ALPHA):
+def signs(feats, alpha=None):
     """Sign of each rally against a running reference of the color difference, and its strength
-    (cosine to the reference). None for a rally with no color."""
+    (cosine to the reference). None for a rally with no color. alpha None = ALPHA at the time of the call (E68: a
+    default of alpha=ALPHA kept the value at import, so a change of identity.ALPHA had no effect)."""
+    if alpha is None:
+        alpha = ALPHA
     out, ref = [], None
     for d in feats:
         if d is None:

@@ -22,7 +22,7 @@ import zlib, tempfile
 import numpy as np
 import cv2
 
-THR = 3.0                         # gray steps (0..255) at scale 0.35 (E131)
+THR = 4.0                         # gray steps (0..255), scale 0.35, the pictures of the ball stage (E134)
 REGION_X = 7.0                    # m from the center of the net
 REGION_Z = (-0.3, 1.0)            # m: from below the net base to above the cord
 NET_POST_X, NET_POST_Z, NET_MID_Z = 6.40, 1.07, 0.914

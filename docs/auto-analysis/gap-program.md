@@ -153,6 +153,12 @@ Phase 2 (from 2026-11-26; items 1 to 3 are merged: E60, E61, E62):
 10. (2026-11-26) Priority 1, rally precision: Igor finds 224 rallies for 197 marked (precision 86.6 %), the lab
     90.9 %. Make a table of the false rallies (Igor and lab) and the missed ones, with a cause for each. Then
     fix the largest group. Same Igor rule.
+    Done (E97, E97b, E98, E99; merged 9ef456c4): lab precision 90.9 to 93.0 %, recall 93.6 to 93.5 % (95.1 %
+    without the 12 NONE marks); Igor precision 86.6 to 89.0 %. Of the 27 missed lab points (not NONE), 19 have
+    the rally GRU below 0.35 for the whole point: the cause is the rally model.
+11. (2026-11-26) The missed rallies of the rally GRU (E99: 19 points). First a diagnosis on the CPU: what do
+    these points have in common (length, serve, ball features, place in the match)? A new training of the GRU
+    is a model change: ask the manager first, with the plan and the GPU time.
 
 ### Rule for fixes found on Igor (manager, 2026-11-26)
 
@@ -245,7 +251,7 @@ Status 2026-11-26 (manager):
   another stream can read. Write new outputs to `D:\bananashot-lab\ws\<stream>\`, or to new files with the
   stream tag in the name. S1 decides when a new input becomes the default input of the benchmark.
 - **Journal ids.** To prevent collisions, each stream takes its experiment ids from its own block:
-  S1 E43 to E49, S2 E50 to E59, S3 E60 to E69, S4 E70 to E79, S5 E80 to E89. Second blocks (2026-11-26): S1 E100 to E109, S2 E110 to E119, S3 E90 to E99, S4 E120 to E129, S5 E130 to E139.
+  S1 E43 to E49, S2 E50 to E59, S3 E60 to E69, S4 E70 to E79, S5 E80 to E89. Second blocks (2026-11-26): S1 E100 to E109, S2 E110 to E119, S3 E90 to E99, S4 E120 to E129, S5 E130 to E139. Third block: S3 E140 to E149.
   Add each experiment to the journal at once, also a failure.
 - **Measure.** Report the paired result of the part first. Then the S1 benchmark result with its noise.
   Apply a change that is right in principle and improves its target cases, also when the full-chain number

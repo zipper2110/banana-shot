@@ -108,6 +108,12 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
     small general fix or a clear warning.
 11. G15 coverage report (moved from S5): score the S5 runs of m1001 and m1016, report m0913 without a point
     score, and list the conditions that the app must warn about or refuse.
+    Changed (the user, 2026-11-26): singles only. The m0913 part is done (E57). The doubles part (m1001, m1016)
+    is stopped.
+12. (2026-11-26) The net-touch loss on m0913 (E57: recall 83 to 58 % of 12 labels, false touches 1 to 4; the new
+    run has 239 net events against 156). Find the cause of each lost and each new false touch: the new ball file
+    (`dim`, E38 weights) or the net code. Then one fix that is right in principle, measured on the lab net labels
+    first and m0913 apart. Ask the manager before an edit of `net_events.py` (S5) or `shot_chain.py` (S3).
 
 ### S3 rally (G4, G5, G8 short points)
 
@@ -227,7 +233,7 @@ Status 2026-11-26 (manager):
   edge. With a +2 s pad, it still loses 90 events, and the time gain is about 11 %. Events come before speed,
   so the two-pass design is not adopted.
 - G6 done earlier (E82): held out 0.70 px against 0.67 px in sample. The first court on the lower camera is S2 (E55).
-- Open: G15 runs from snapshot 39c93725.
+- G15 (the user, 2026-11-26): singles only. m0913 is done (S2 E57). The doubles runs (m1001, m1016) are stopped.
 
 5. (2026-11-26) Bounce and net-touch errors (user priority 2, events). Take each miss and each false event of
    the E75 measure (bounces 37 of 42, net touches 28 of 35) and the user's hit labels. Give each one a cause:
@@ -241,7 +247,7 @@ Status 2026-11-26 (manager):
 6. (2026-11-26) Net touches that only the net shows (E87: 3 to 4 of the 11 misses; the ball track does not
    change). Make a prototype of a signal from the picture of the net band (motion of the net in a short window
    around each candidate time). Use the label windows only, under the GPU lock if it decodes video. Measure net
-   touches found and false. Start after the G15 runs and S2's coverage report.
+   touches found and false. Start now (the doubles runs are stopped, 2026-11-26).
 
 ## 4. Rules for all streams
 
@@ -288,3 +294,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | First held-out result (S1, Igor m1116, code 995fc8c8): rally recall 98.5 %, precision 86.6 %; hits found 77 of 91, hitter right 77 of 77, shot count right in 3 of 11 rallies, last-shot end right 64 %; winners 83.9 % (a check only). |
 | 2026-11-26 | G3 (S1 proposal, manager): "check first" stays at 70 % and minWinnerPercent stays at 50. Held out, the winners under 70 % are about 55 % right (107 points in the pool). A calibration map of the shown percent is a later item (n is small). No app change. |
 | 2026-11-26 | Igor identity (S3, E69): the chain identity (colors) has 0 wrong of 194 rallies, so the E68 L weight holds held out. The score-replay rules (`near_identity`, `sides.json`) miss an end change at the set break after an even set (5-7); the players changed ends there. These rules are a check only; the chain does not use them. Keep this case for the later score-consistency hints. |
+| 2026-11-26 | Scope of the videos (the user): singles only. Doubles can need other methods; do not spread the effort now (the m1001 and m1016 runs stop). No new videos or new conditions (courts, camera angles, the moving-camera clips) until the chain is stable and the quality is good on the current videos. The user then gets more videos. Thus G15 ends with m0913 (E57); the work goes to the clear failures on the current videos. |

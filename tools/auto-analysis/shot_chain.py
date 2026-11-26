@@ -67,11 +67,16 @@ DEAD_GAP = 1.0       # s from the last sample of the dead shot to the next shot 
 # decision after E147); "0" gives the old way.
 # "a": a net event that conflicts with the direction of the shot in the air and comes after the last sample of that shot
 #      starts its own net shot (the flight of the shot into the net was dropped, for example by continuous()).
+#      E149 fixes: not when the next shot is of the hitter of the event and is not the ball at the net (then the touch
+#      belongs to that shot: m1020 3291.82); the time of the net shot is the last hit event after the shot in the air
+#      and before the touch, else the touch minus NET_FLY_S (the time cut uses the hit time: m1015 1424.68).
 # "b": after a shot with a net event, the next shots whose first flight starts less than NET_ROLL_M from the net and is
 #      slower than NET_ROLL_KMH are the ball at the net (it rolls or bounces along the net), not shots.
 # "ab": both.
 NET_DEAD = os.environ.get("CHAIN_NET_DEAD", "b")
 NET_ROLL_M, NET_ROLL_KMH = 1.5, 40.0
+NET_FLY_S, NET_HIT_BACK = 0.5, 1.5    # s: flight time to the net with no hit event; how far back a hit event can be
+NET_NEXT_S = 0.5                      # s: the next shot owns a touch only if it starts not later than this after the touch
 # Item 6 group E (found on Igor m1116): one real shot gives two shots of the two players, and one of them is weak (see drop_splits).
 SPLIT = os.environ.get("CHAIN_SPLIT", "1") == "1"
 SPLIT_DT = 0.45      # s between the starts of two shots of the two players (lab: 99 % of these times between two shots that are not weak are longer)
@@ -245,10 +250,11 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None):
                     sh["net"] = e
             elif e["dirConf"] >= 0.7 and sh["weak"]:
                 sh["near"], sh["net"] = bool(e["toFar"]), e           # the net event knows the direction better than a weak flight
-            elif "a" in NET_DEAD and e["dirConf"] >= NET_DIR and e["t"] > sh["fl"][-1]["t1"]:
-                # E147 (a): the shot in the air ended before the touch: the touch is of the next shot, whose flight was not kept
-                alone.append({"t": float(e["t"]), "near": bool(e["toFar"]), "how": "net", "fl": [], "bounces": [], "net": e,
-                              "reach": None, "weak": True, "serve": None})
+            elif ("a" in NET_DEAD and e["dirConf"] >= NET_DIR and e["t"] > sh["fl"][-1]["t1"]
+                  and not _next_owner(seen, c[-1], e)):
+                # E147 (a): the shot in the air ended before the touch: the touch is of a shot whose flight was not kept
+                alone.append({"t": _net_hit_time(events, e, sh["fl"][-1]["t1"]), "near": bool(e["toFar"]), "how": "net",
+                              "fl": [], "bounces": [], "net": e, "reach": None, "weak": True, "serve": None})
             else:
                 sh.setdefault("netConflict", e)                       # the ball flies away from the net: not a touch by this shot
         elif e["dirConf"] >= NET_DIR:
@@ -260,12 +266,31 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None):
     return dead_stop(shots) if DEAD_STOP else shots
 
 
+def _roll(sh):
+    """E147 (b): the first flight of the shot starts less than NET_ROLL_M from the net and is slower than NET_ROLL_KMH."""
+    return bool(sh["fl"]) and abs(sh["fl"][0]["p0"][1]) < NET_ROLL_M and kmh(sh["fl"][0]) < NET_ROLL_KMH
+
+
+def _next_owner(seen, i, e):
+    """E149: the shot after seen[i] is of the hitter of the net event e, starts not later than NET_NEXT_S after the touch,
+    and is not the ball at the net: the touch is of it."""
+    return (i + 1 < len(seen) and seen[i + 1]["near"] == bool(e["toFar"]) and seen[i + 1]["t"] <= e["t"] + NET_NEXT_S
+            and not _roll(seen[i + 1]))
+
+
+def _net_hit_time(events, e, t_prev):
+    """E149: the time of a net shot with no flight: the last hit event after t_prev (the last sample of the shot before)
+    and before the touch, not more than NET_HIT_BACK s before it; else the touch minus NET_FLY_S."""
+    h = [x["t"] for x in (events or []) if x.get("kind") == "hit" and t_prev < x["t"] < e["t"] and e["t"] - x["t"] <= NET_HIT_BACK]
+    return float(h[-1]) if h else float(e["t"]) - NET_FLY_S
+
+
 def net_roll(shots):
     """E147 (b): removes the shots after a shot with a net event while their first flight starts less than NET_ROLL_M from
     the net and is slower than NET_ROLL_KMH (the ball rolls or bounces along the net after the touch)."""
     out, after_net = [], False
     for sh in shots:
-        if after_net and sh["fl"] and abs(sh["fl"][0]["p0"][1]) < NET_ROLL_M and kmh(sh["fl"][0]) < NET_ROLL_KMH:
+        if after_net and _roll(sh):
             continue
         out.append(sh)
         after_net = sh["net"] is not None

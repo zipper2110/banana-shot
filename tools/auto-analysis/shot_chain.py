@@ -56,6 +56,9 @@ NET_CONF, NET_DIR = 0.4, 0.3      # lowest confidence of a net event and of its 
 # "shot" is ball handling, and the shot list stops there (see dead_stop).
 DEAD_STOP = os.environ.get("CHAIN_DEAD_STOP", "1") == "1"
 DEAD_GAP = 1.0       # s from the last sample of the dead shot to the next shot (lab: 95 % of the gaps between real rally shots are shorter)
+# Item 6 group E (found on Igor m1116): one real shot gives two shots of the two players, and one of them is weak (see drop_splits).
+SPLIT = os.environ.get("CHAIN_SPLIT", "1") == "1"
+SPLIT_DT = 0.45      # s between the starts of two shots of the two players (lab: 99 % of these times between two shots that are not weak are longer)
 
 
 def kmh(f):
@@ -190,6 +193,8 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True):
         if (a["weak"] or deep) and not a["bounces"] and a["fl"][-1]["t1"] - a["fl"][0]["t0"] < FIRST_DUR and b["fl"][0]["t0"] - a["fl"][-1]["t1"] > FIRST_GAP:
             shots.pop(0)                                      # E32: the hitter of the next shot came from this flight: now it is the first shot
             b["how"] = "first"
+    if SPLIT:
+        shots = drop_splits(shots)
     if SERVE_TIME:
         for sh in shots:
             serve_time(sh)
@@ -260,6 +265,30 @@ def serve_time(sh):
             if g["t0"] > sh["t"]:
                 sh["t"] = float(g["t0"])
             return
+
+
+def drop_splits(shots):
+    """Item 6 group E: two shots of the two players that start less than SPLIT_DT apart, of which one is weak (its start is
+    outside the court box), are one shot: the weak one is a broken fit of the other one. The weak shot is removed. A bounce of a
+    later weak shot on the other side of the kept shot goes to the kept shot."""
+    out = []
+    for sh in shots:
+        pv = out[-1] if out else None
+        if (pv is not None and pv["near"] != sh["near"] and pv["weak"] != sh["weak"] and pv["fl"] and sh["fl"]
+                and sh["fl"][0]["t0"] - pv["fl"][0]["t0"] < SPLIT_DT):
+            if sh["weak"]:
+                s = 1.0 if pv["near"] else -1.0
+                for e in sh["bounces"]:
+                    if e["court"][1] * s > 0 and all(e is not x for x in pv["bounces"]):
+                        pv["bounces"].append(e)
+                        pv["reach"] = e["court"][1] * s if pv["reach"] is None else max(pv["reach"], e["court"][1] * s)
+                continue
+            if pv["how"] == "first":
+                sh["how"] = "first"
+            out[-1] = sh
+            continue
+        out.append(sh)
+    return out
 
 
 def late_bounces(shots, events):

@@ -23,9 +23,12 @@ Rules:
   - m1116 is test only (lab.TEST_ONLY): measure only.
 
 Use: python score_events.py [match ...]        default: all matches with labels
-     from bench.py (S1, 93faf1b1): score_events.score(mid) -> dict with the sections hits, bounces, nets, lastShot;
-     score_events.total([...]) -> dict; score_events.lines(d) -> list of str. Keep these names and the section keys
-     stable: bench.py reads them. measures(mid) gives the same as a flat list of rates {name, k, n} and values.
+     score_events.score(mid) -> dict with the sections hits, bounces, nets, lastShot; total([...]) -> dict;
+     lines(d) -> list of str. measures(mid) gives the same as a flat list of rates {name, k, n} and values.
+     Fixed interface (manager and S1, 2026-11-26; send a message to the manager before a change):
+       bench.py calls measures(mid) and load(mid)["files"]; it pools k and n by the name, and its "optimistic" note
+       finds the names that start with "Bounces found" and "Net touches found". score(mid) = detail(mid) = the
+       section dict; total() and lines() take that dict (the CLI).
 """
 import glob, hashlib, json, os, sys
 import numpy as np

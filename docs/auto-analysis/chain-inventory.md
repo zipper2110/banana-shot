@@ -374,6 +374,17 @@ Reference: `PXL_e38`, 96 min, 7 355 s in total (1.28 × real time). Ball stage 6
 
 P1 and P2 overlap. Do not add their gains.
 
+- Update (E80, E83): P2 is closed with no change. With the E38 weights and one pass, the ball recall on m0913
+  is 58 to 64 % against 92 to 94 % with `dim`; on the lab windows 86.2 % against 87.9 %. `dim` stays. Batching
+  of the model calls gives no gain (the GPU is full at batch 1).
+- Update (E84): P1 is closed with no change. A sparse first pass (6 frames of each second, 24 % of the ball
+  cost) gives rally bounds as good as the ball pass (recall 93.8 % against 93.5 %, precision 83.8 % against
+  82.3 %). But the ball pass only in its windows loses rallies (recall 91.0 %, the serve faults before a
+  rally) and bounces and hits in rallies that the full run finds
+  (51 % of the time in windows: 118 events in 35 rallies; 63 %: 90 events in 23 rallies). Only 19 % of these
+  events are at a window edge; most are in short points where the first pass gives almost no rally signal.
+  Estimate on `PXL_e38`: 20 % less time at 51 % windows, 11 % at 63 %; the target was 35 % with no event loss.
+
 ## 7. Plan for the part reviews (next step)
 
 Each review takes one part, verifies it on its own level, and uses the finding ids above. Order: R0

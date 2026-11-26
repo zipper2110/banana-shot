@@ -52,6 +52,9 @@ FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, 0.3          # shots; s (the time bet
 POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 # item 10: a rally with no shot in its chain and no server end from the pose has no evidence of a serve: it is not a point.
 NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
+# E161 (S3, rally miss table E160): segments of the GRU with a gap of less than JOIN_GAP s are one rally. The old
+# value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 1.5 (the old way).
+JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "1.5"))
 # item 12 (user decision): the winner of each rally comes from its own evidence; the score decoder does not change a
 # winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.
 DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"
@@ -123,7 +126,7 @@ def rallies(prob, serves, hi=0.5, lo=0.35, short=True, t0=0.0, t1=None):
     The decoder gets P_NULL_SHORT for it (about half of these are real points)."""
     t1 = len(prob) if t1 is None else t1
     out = []
-    for a, b in lab.segment(prob, smooth=1, hi=hi, lo=lo, min_len=2.0):
+    for a, b in lab.segment(prob, smooth=1, hi=hi, lo=lo, min_len=2.0, join_gap=JOIN_GAP):
         if a >= t0 and b <= t1:
             out.append((float(a), float(b), float(prob[int(a):int(b) + 1].mean())))
     if SHORT_WAIT is None or not short:
@@ -292,7 +295,7 @@ def segments(prob, full, cfg, t0=0.0, t1=None):
     if full is None:
         t1 = len(prob) if t1 is None else t1
         return [(float(a), float(b), float(prob[int(a):int(b) + 1].mean()))
-                for a, b in lab.segment(prob, smooth=1, hi=hi, lo=lo, min_len=2.0) if a >= t0 and b <= t1], []
+                for a, b in lab.segment(prob, smooth=1, hi=hi, lo=lo, min_len=2.0, join_gap=JOIN_GAP) if a >= t0 and b <= t1], []
     serves = serve_events(full["flights"], t0, len(prob) if t1 is None else t1)
     # E61: short points are off by default. Only 18 of 62 added short points were real on the 4 lab matches, and no
     # rule on the serve facts reached 70 % with a small loss of the real ones.

@@ -376,7 +376,7 @@ Status 2026-11-26 (manager):
   another stream can read. Write new outputs to `D:\bananashot-lab\ws\<stream>\`, or to new files with the
   stream tag in the name. S1 decides when a new input becomes the default input of the benchmark.
 - **Journal ids.** To prevent collisions, each stream takes its experiment ids from its own block:
-  S1 E43 to E49, S2 E50 to E59, S3 E60 to E69, S4 E70 to E79, S5 E80 to E89. Second blocks (2026-11-26): S1 E100 to E109, S2 E110 to E119, S3 E90 to E99, S4 E120 to E129, S5 E130 to E139. Third block: S3 E140 to E149.
+  S1 E43 to E49, S2 E50 to E59, S3 E60 to E69, S4 E70 to E79, S5 E80 to E89. Second blocks (2026-11-26): S1 E100 to E109, S2 E110 to E119, S3 E90 to E99, S4 E120 to E129, S5 E130 to E139. Third block: S3 E140 to E149, S4 E150 to E159.
   Add each experiment to the journal at once, also a failure.
 - **Measure.** Report the paired result of the part first. Then the S1 benchmark result with its noise.
   Apply a change that is right in principle and improves its target cases, also when the full-chain number

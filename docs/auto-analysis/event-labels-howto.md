@@ -1,0 +1,59 @@
+# How to mark the events of the case library fragments
+
+Gap program, stream S4, item 10. Page: `label_events.html`. Fragments: the case library of S1 (item 8).
+
+## Start
+
+1. Open `D:\bananashot-lab\ws\s4\events\label_events.html` in Chrome or Edge (double-click the file).
+2. Press **O** and select the folder `D:\bananashot-lab\ws\s1\cases\labels`. Allow the page to edit files.
+   You do this one time. The page then writes one file for each fragment: `<fragment>.events.json`.
+3. The first fragment plays at ½× speed. Press **Space** to stop it.
+
+The page measures your time on each fragment. Please do the first 5 fragments, then stop. The manager uses
+your time on them to estimate the time for the rest.
+
+## What you mark
+
+Mark all the events in the clip. Each mark is at the frame on the screen when you press the key. Stop the
+video, and use **← →** to find the correct frame (**Shift+← →**: 10 frames).
+
+| Event | Key | Where |
+|---|---|---|
+| Serve, near or far player | **Shift+N** or **Shift+F** | the frame where the racket touches the ball |
+| The serve is a first-serve fault | **X** after the serve mark | the page puts the flag on the last serve |
+| Each other shot, near or far player | **N** or **F** | the frame where the racket touches the ball |
+| Bounce, in | **B** | the first frame where the ball touches the ground. Put the mouse on the ball, then press the key |
+| Bounce, out | **Shift+B** | as for B |
+| Hidden bounce, in or out | **I** or **Shift+I** | you cannot see the bounce, but the flight before and after it shows where it is. Put the mouse at that place, at the frame where it is |
+| Net touch: the ball stops at the net | **T** | the frame of the touch |
+| Net cord: the ball touches the net and goes over | **Shift+T** | the frame of the touch |
+
+Rules:
+
+- A ball toss with no hit is not a serve. A let serve: do not mark it. Press **M** and write "let".
+- Mark each bounce of the ball in the clip, also the second bounce at the end of the rally, if you can see it.
+- Out: the ball lands outside the lines for that shot. For a serve, the correct service box is the line.
+- A double fault: two serves, each with the fault flag (**X**) on the first one.
+- The clip has some seconds before and after the marked point. Mark the events there too, if you see them.
+  Lab matches: the marked point starts at the second serve. A first-serve fault before it is in the clip
+  only if it is close to the start.
+- If you are not sure of a mark, press **Q**. If the fragment cannot be used, press **K** (skip).
+
+## Help in the page
+
+- **1 2 3 4**: speed 1×, ½×, ¼×, ⅒×. **R**: play again from 2 s before the marked point. **U**: sound on or off.
+- **V**: zoom 2× at the mouse. **G**: zoom 3× at the far baseline. Press the same key again to go back.
+- **Z**: undo the last mark. The list "Marks" shows all marks. Click a mark to go to its frame, click × to delete it.
+- The small court shows each bounce from above (far end up). Use it to check a bounce place.
+- A circle on the video shows each mark near the current frame.
+- **Enter**: save and go to the next fragment. The page shows a warning if two contacts of the same player
+  come one after the other, or if the first contact is not a serve. Check it, then press Enter again to save.
+- **[ ]**: previous or next fragment, with no save.
+- If the folder does not work, the button **Download** gives the file of the current fragment.
+
+## Output (for the agents)
+
+One file for each fragment, `<id>.events.json`. Events in source time `t` (s). Bounces have `px` (the ball pixel
+in a 1920-wide frame) and `court` (m, x across, y along, far end > 0, from the court of the fragment at height 0),
+`out`, and `seen` (false = inferred). The file also has the tool version, the labeler, the fragment id, the hash of
+its manifest row, and `labelSeconds` (the active time).

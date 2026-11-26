@@ -33,6 +33,43 @@ match. Thus:
 "Covered" means: the gap has a fix that is merged and on by default, or a measurement that decides the
 question, with a journal row. A gap is not covered by a plan or a note only.
 
+### Coverage of the gaps (manager, 2026-11-27 01:30)
+
+Status words: **covered** (a fix on by default, or a measure that decides the question); **measured** (a number
+exists, a fix is open); **open** (no decision yet). The milestone batch (Igor, Misha) gives the final held-out check
+of all rows.
+
+| Gap | Rating | Status | Evidence | Open |
+|---|---|---|---|---|
+| G1 shipped path | Critical | covered | `bench.py` with a manifest (E44), Igor held out (E45, E47), case library 4 levels (item 8) | Misha, the first clean held-out number (milestone batch) |
+| G2 time base | High | covered | E50 (1 fps rows at the keyframe time), m1030 measure E66 | none |
+| G4 rally end | High | covered | end detector E60, on by default | the rally misses: 27, of which 23 have the rally GRU silent (S3 E162, the GRU with the ball channel) |
+| G8 short points | High | covered | E61 (rule measured against the 70 % target) | none |
+| G8 score layer | High | covered | E63, E64, E142: the decoder does not change a winner (the user) | none |
+| G10 truth | High | measured | label page v2, 16 of 60 fragments labeled, faults from the marks (E159); E170, E171: shot count 14 of 27, in/out 52 of 54, fault clips 5 right of 12 | more labels (the user); S3 ranked fixes of the shot count (8 E171 proposals); the Faults step |
+| G12 stale results | High | covered | E51, import-closure keys (item 13), upstream keys (item 16), safe adoption (item 16b) | none |
+| G15 conditions | High | covered (singles) | m0913 (E57), lower camera court (item 10, E55); doubles stopped (the user) | Misha as a new singles video (milestone batch) |
+| P1 two-pass | High | covered | E84: not adopted (events lost) | none |
+| P2 dim pass | High | covered | E80, E83: `dim` stays | none |
+| G3 calibration | Medium | covered | bench calibration table; "check first" 70 %, minWinnerPercent 50 (decision 2026-11-26) | none |
+| G5 rally_base | Medium | covered | E62 | none |
+| G6 court | Medium | covered | E82: held out 0.70 px | none |
+| G13 silent failures | Medium | covered | item 3: warnings in `result.json`, partial result | none |
+| G14 contract | Medium | covered | version check, fixture test (item 7) | none |
+| G9 identity | Medium | covered | E65, E68 (lab held out), E69 (Igor); sides step for the reference (item 11) | the user's sides step |
+| G11 corrections | Medium | covered | E53 | none |
+| G7 duplicated rules | Low | covered | E115 measure; owner copies (a) to (d): CHAIN_NETHIT B, SERVE_LAND_EVENT and others on | none |
+
+Event measures (priority 2), not a gap row of the inventory:
+
+| Event | Now (lab, frozen flights) | Open work |
+|---|---|---|
+| Serve event at a point start | far starts: 10 fixed by KEEP, 17 wait for the head flights (E172) | S4 E172 recount on S1's head flights; SERVE_PRIOR_NEAR only if needed |
+| Net touches | 26 of 35; user labels 14 of 33 | S5 item 6 (d): the netBand default |
+| Bounces | 37 of 42 | none now |
+| Ball detector | option 0, no training (plan section 4) | open again when an event loss is measured |
+| Audio hits | stopped (+4 true, +5 false) | open again with more labels |
+
 ## 2. Hard limits of the lab PC
 
 - One GPU (RTX 3060 Laptop, 6 GB) and 16 GB RAM. **Only one heavy job at a time.** A heavy job uses the

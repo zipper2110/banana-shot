@@ -158,6 +158,10 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
     score, and list the conditions that the app must warn about or refuse.
     Changed (the user, 2026-11-26): singles only. The m0913 part is done (E57). The doubles part (m1001, m1016)
     is stopped.
+13. (2026-11-26) A G12 key gap (found by S1): `feat_wasb.py` imports `serve_ball`, and the flights stage writes
+    `feat_wasb.npy` (a rally-model input), but `serve_ball.py` is not in the flights key. After a serve_ball change
+    (E77, E126) the app keeps a stale `feat_wasb.npy`. Fix: the key from the import closure of each stage, or a test
+    that fails when a stage imports a module that is not in its key. After item 12.
 12. (2026-11-26) The net-touch loss on m0913 (E57: recall 83 to 58 % of 12 labels, false touches 1 to 4; the new
     run has 239 net events against 156). Find the cause of each lost and each new false touch: the new ball file
     (`dim`, E38 weights) or the net code. Then one fix that is right in principle, measured on the lab net labels

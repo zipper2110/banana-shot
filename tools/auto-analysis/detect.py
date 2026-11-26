@@ -400,7 +400,9 @@ def add_net_hits(out, net):
     """Adds "netHit" to each rally that ends with a ball into the net: time, end of the hitter, confidence of
     the touch and of the hitter, and "serve" (the net ball came less than 3 s after the rally start).
     The score model does not use it (E16g: the full chain became worse). It is a fact for the user."""
-    import net_events
+    import net_events, chain
+    if chain.NETHIT != "0":                  # G7 (c), E146: the chain made netHit (chain.net_hit)
+        return
     for r in out:
         h = net_events.winner_hint(net, r["end"], t_start=r["start"])
         if h:

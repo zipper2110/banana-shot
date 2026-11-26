@@ -74,7 +74,11 @@ def load(mid, folder=None):
     files = {os.path.basename(fp): _sha(fp)}
     if os.path.exists(np_):
         files["net_events.json"] = _sha(np_)
-    return {"folder": d, "full": full, "nets": nets, "t0": np.array([f["t0"] for f in full["flights"]]), "files": files}
+    hp = os.path.join(d, "hits.npy")                   # audio hit candidates (shot_chain.back_time, item 7)
+    audio = np.load(hp) if os.path.exists(hp) else None
+    if audio is not None:
+        files["hits.npy"] = _sha(hp)
+    return {"folder": d, "full": full, "nets": nets, "t0": np.array([f["t0"] for f in full["flights"]]), "files": files, "audio": audio}
 
 
 def chain_shots(data, a, b):
@@ -82,7 +86,7 @@ def chain_shots(data, a, b):
     sel = np.nonzero((data["t0"] >= a - 1.0) & (data["t0"] <= b + 2.5))[0]
     fls = [data["full"]["flights"][i] for i in sel]
     nets = [e for e in data["nets"] if a - 1.0 <= e["t"] <= b + 2.5]
-    return sc.build(fls, data["full"].get("events"), nets, MIN_SPEED)
+    return sc.build(fls, data["full"].get("events"), nets, MIN_SPEED, audio=data.get("audio"))
 
 
 def match(pred, true, tol):

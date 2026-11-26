@@ -12,7 +12,11 @@ POSE_NO_EFFECT = {"lab": "the path of the work folder"}
 IMAGE_NO_EFFECT = {"lab": "the path of the work folder (feat_dino reads the kf pictures with glob)"}    # item 16
 # Level 1 of the net band (detect.NETMASK_CODE, item 6 (b)): the modules of its closure that are not in the hand list.
 # fill_in imports ball_wasb: the ball tag (detect.BALL_CODE) is a part of the level-1 key and covers it and its imports.
-MASK_NO_EFFECT = {"lab": "paths, the video path and the match table (as for the ball tag)"}
+# Item 17 (E119): the ball stage in parts makes the level-1 file with net_band_join.join_parts (not in the key). The
+# test of identical arrays (one pass against parts) is test_ball_parts.MaskParts, so each change of the join is checked.
+MASK_PARTS = ("net_band_join",)
+MASK_NO_EFFECT = {"lab": "paths, the video path and the match table (as for the ball tag)",
+                  "net_band_join": "the join gives the same arrays as the one pass (test_ball_parts.MaskParts)"}
 
 
 def module_folder(sources):
@@ -49,7 +53,7 @@ class CodeClosure(unittest.TestCase):
 
     def test_netmask_key_covers_its_closure(self):
         keyed = names(detect.NETMASK_CODE) | names(detect.BALL_CODE)
-        self.assertEqual(set(code_closure.modules(*names(detect.NETMASK_CODE))) - keyed, set(MASK_NO_EFFECT))
+        self.assertEqual(set(code_closure.modules(*names(detect.NETMASK_CODE), *MASK_PARTS)) - keyed, set(MASK_NO_EFFECT))
 
     def test_pose_key_covers_its_closure(self):
         keyed = names(detect.POSE_CODE)

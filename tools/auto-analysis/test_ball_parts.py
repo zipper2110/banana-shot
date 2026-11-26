@@ -15,17 +15,21 @@ def fake_run(pts, stride, calls=None):
     """As ball_wasb.run with the ffmpeg seek of E119: the decode starts at the first frame at or after ss (in the time
     of the stream), ends before ss + dur, and gives groups of 3 * stride frames (a short last group is dropped).
     Rows: local frame, and values of the absolute frame (a wrong start gives other values)."""
-    def run(ss, dur, f0=0):
+    def run(ss, dur, f0=0, f1=None):
         if calls is not None:
             calls.append(f0)
-        if stride == 1:
-            idx = fps_filter(pts, ss, dur, detect.part_fps(f0))
-        else:
-            idx = np.nonzero((pts >= ss - 1e-9) & (pts < ss + dur))[0]
+        idx = decoded(pts, stride, ss, dur, f0)
         need = 3 * stride
         idx = idx[:len(idx) // need * need]
         return [(k, float(a) * 2, float(a) % 7, 0.9, 0.5) for k, a in enumerate(idx) if a % 5 != 0]
     return run
+
+
+def decoded(pts, stride, ss, dur, f0):
+    """The source frames of the pictures of a decode window (60 fps: the frames; 30 fps: the fps filter)."""
+    if stride == 1:
+        return fps_filter(pts, ss, dur, detect.part_fps(f0))
+    return np.nonzero((pts >= ss - 1e-9) & (pts < ss + dur))[0]
 
 
 def fps_filter(src, ss, dur, spec):
@@ -71,12 +75,19 @@ class BallParts(unittest.TestCase):
         pts = fake_video(60, 20)
         self.assertEqual(detect.ball_plan(20, 60, pts), [(0, None, 0.0, 20)])
 
+    def test_the_one_pass_keeps_the_filter_of_before(self):
+        # The one pass and the first part start at 0 s with "fps=30", as before item 17 (no start_time, the same
+        # frames; the ball tag stays). Only a part after a seek gets the grid fix.
+        self.assertEqual(detect.part_fps(0), 30)
+        self.assertEqual(detect.ball_plan(100, 30, part_s=30)[0][:3], (0, 90 * 10, 0.0))
+        self.assertIn("start_time=", str(detect.part_fps(900)))
+
     def test_a_stopped_run_continues_after_the_last_part(self):
         pts, n = fake_video(60, 100), 100
         plan = detect.ball_plan(n, 60, pts, part_s=30)
         calls, run = [], fake_run(pts, 2)
 
-        def stop_in_part_3(ss, dur, f0):
+        def stop_in_part_3(ss, dur, f0, f1):
             if len(calls) == 2:
                 raise KeyboardInterrupt                             # the user stops the run during part 3
             calls.append(f0)
@@ -103,6 +114,53 @@ class BallParts(unittest.TestCase):
         calls = []
         detect.ball_parts(self.blob, plan, fake_run(pts, 2, calls))
         self.assertEqual(calls, [p[0] for p in plan])               # part 1 runs: the temp file is not a part
+
+
+class MaskParts(unittest.TestCase):
+    """With the net band on: a mask file for each part (MaskWriter, as detect.py ball_run), then
+    net_band_join.join_parts. The joined file has the same arrays as the file of the one pass."""
+
+    def masks(self, fps, pts, n, part_s):
+        import net_band_mask as nbm, net_band_join
+        from test_net_band import HM
+        stride, crop = (2 if fps == 60 else 1), (0, 0, 672, 378)    # the crop of test_net_band
+        k = 1 if fps == 60 else 2                                   # the frame index of the masks (60 fps line)
+
+        def picture(a):                                             # the picture of source frame a
+            return (np.random.default_rng(int(a)).random((378, 672, 3)) * 255).astype(np.uint8)
+
+        def write(f0, ss, dur, path):
+            w = nbm.MaskWriter(np.array(HM), crop, 0.35, stride, (lambda i: (f0 + i) * k))
+            for a in decoded(pts, stride, ss, dur, f0):
+                w.feed(picture(a))
+            return w.save(path)
+        d = tempfile.mkdtemp(prefix="mp_")
+        one = np.load(write(0, 0, n, os.path.join(d, "one.npz")))
+        plan = detect.ball_plan(n, fps, pts, part_s=part_s)
+        self.assertGreater(len(plan), 2)
+        parts = [(write(f0, ss, dur, os.path.join(d, f"p{f0}.npz")), f0 * k, None if f1 is None else f1 * k)
+                 for f0, f1, ss, dur in plan]
+        joined = np.load(net_band_join.join_parts(parts, os.path.join(d, "joined.npz")))
+        self.assertGreater(len(one["frame"]), 0)
+        self.assertEqual(sorted(one.files), sorted(joined.files))
+        for name in one.files:
+            self.assertTrue(np.array_equal(one[name], joined[name]), name)
+            self.assertEqual(one[name].dtype, joined[name].dtype, name)
+
+    def test_60_fps_joined_masks_are_the_one_pass_masks(self):
+        self.masks(60, fake_video(60, 4, jitter=0.002), 4, part_s=1)
+
+    def test_30_fps_joined_masks_are_the_one_pass_masks(self):
+        self.masks(30, fake_video(60, 4, jitter=0.004), 4, part_s=1)
+
+    def test_parts_of_another_crop_are_not_joined(self):
+        import net_band_mask as nbm, net_band_join
+        from test_net_band import HM
+        d = tempfile.mkdtemp(prefix="mp_")
+        a = nbm.MaskWriter(np.array(HM), (0, 0, 672, 378), 0.35, 2).save(os.path.join(d, "a.npz"))
+        b = nbm.MaskWriter(np.array(HM), (2, 0, 672, 378), 0.35, 2).save(os.path.join(d, "b.npz"))
+        with self.assertRaises(ValueError):
+            net_band_join.join_parts([(a, 0, 10), (b, 10, None)], os.path.join(d, "j.npz"))
 
 
 if __name__ == "__main__":

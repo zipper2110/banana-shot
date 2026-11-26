@@ -21,6 +21,9 @@ Per fragment (rules of score_events.py, E75):
   bounces   labeled bounces against the bounce events, within TOL_BOUNCE
   nets      labeled net touches ("stop" = net, "cord") against the net events with conf >= NET_CONF, within TOL_NET
   last shot the end of the last labeled event of each point (net, out, in) against the last shot of the chain row
+  label_measure.py (S4, E170; it gets the windows, pairs, fault map and hidden rows of this file): rally borders,
+            shot count, fault clips, event time and place errors, bounce in/out (out["borders"], "shotCount",
+            "faultClips", "errors"; totals in total()["measure"])
 A fragment with no labels gets the chain counts only.
 
 Output: <lab>/ws/s1/cases/history/<time>-<commit8>.json (all details), one line in history.jsonl, and
@@ -34,6 +37,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import lab, case_lib, score_events as se, shot_chain as sc
 from label_faults import infer_faults
+import label_measure as lm
 TOL_HIT, TOL_BOUNCE, TOL_NET = se.TOL_HIT, se.TOL_BOUNCE, se.TOL_NET
 HIST = os.path.join(case_lib.ROOT, "history")
 KINDS = ("hits", "bounces", "nets")
@@ -73,7 +77,8 @@ def chain_end(r):
     return "net" if "net" in parts else "out" if "out" in parts else "in" if "in" in parts else None
 
 
-def fragment(row, L, data, rows):
+def fragment(row, L, data, rows, hidden=()):
+    """hidden: the rows of the match that the bench hides as first-serve faults (bench.hidden_fault_rows)."""
     a, b = window(row, L)
     shots = [s for s in se.chain_shots(data, a, b) if a - TOL_HIT <= s["t"] <= b + TOL_HIT and s["fl"]]
     bev = [e for e in (data["full"].get("events") or []) if e["kind"] == "bounce" and a - TOL_BOUNCE <= e["t"] <= b + TOL_BOUNCE]
@@ -111,11 +116,13 @@ def fragment(row, L, data, rows):
     # serve before it), but not before the end of the marked point before it, to the point end + 1 s
     sv = {"points": 0, "serverOk": 0, "faultOk": 0, "faultN": 0, "faultUnsure": 0, "lastOk": 0, "lastN": 0, "detail": []}
     fault = {round(x["t"], 6): x["fault"] for x in infer_faults(ev)}      # over all events of the fragment (the next serve)
+    points = []                                        # the point windows for label_measure
     for gi, j in pairs:
         p, r = pts[gi], crow[j]
         s0, s1 = p["startMs"] / 1000, p["endMs"] / 1000
         prev = max([q["endMs"] / 1000 for q in row["points"] if q["endMs"] / 1000 <= s0] or [s0 - 25.0])
         pe = [e for e in ev if max(s0 - 25.0, prev) <= e["t"] <= s1 + 1.0]
+        points.append({"point": p, "row": r, "events": pe, "fault": fault})
         serves = [e for e in pe if e["kind"] == "serve"]
         fs = [fault[round(e["t"], 6)] for e in serves]
         play = [e for e, f in zip(serves, fs) if f is not True]
@@ -136,6 +143,10 @@ def fragment(row, L, data, rows):
             sv["lastOk"] += int(d["labelEnd"] == d["chainEnd"])
         sv["detail"].append(d)
     out["serves"] = sv
+    out["borders"] = lm.borders(points)
+    out["shotCount"] = lm.shot_count(points)
+    out["faultClips"] = lm.fault_clips(crow, ev, fault, [r for r in hidden if r["end"] > a and r["start"] < b])
+    out["errors"] = lm.event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn)
     return out
 
 
@@ -151,6 +162,7 @@ def total(frs):
     t["netKindOk"] = sum(f["nets"]["kindOk"] for f in lab_)
     for q in ("points", "serverOk", "faultOk", "faultN", "faultUnsure", "lastOk", "lastN"):
         t["serve_" + q] = sum(f["serves"][q] for f in lab_)
+    t["measure"] = lm.totals(lab_)                    # label_measure (S4, E170)
     return t
 
 
@@ -159,13 +171,45 @@ def fmt(f):
     s = f"| {f['id']} | {f['match']} | {'control' if f['control'] else ','.join(f['kinds'])} | {r['matched']}/{r['marked']} ({r['detected']} rows) |"
     if not f["labeled"]:
         c = f["chain"]
-        return s + f" no labels | chain {c['hits']} | chain {c['bounces']} | chain {c['nets']} | - | - |"
+        return s + f" no labels | chain {c['hits']} | chain {c['bounces']} | chain {c['nets']} | - | - | - |"
     h, b, n, v = f["hits"], f["bounces"], f["nets"], f["serves"]
     return (s + " yes | " + f"{h['matched']}/{h['labeled']} (chain {h['chain']}, hitter {h['hitterOk']})" + " | "
             + f"{b['matched']}/{b['labeled']} (chain {b['chain']})" + " | " + f"{n['matched']}/{n['labeled']} (chain {n['chain']})" + " | "
             + (f"{v['serverOk']}/{v['points']}, fault {v['faultOk']}/{v['faultN']}" + (f" ({v['faultUnsure']} unsure)" if v["faultUnsure"] else "")
                if v["points"] else "-") + " | "
-            + (f"{v['lastOk']}/{v['lastN']}" if v["lastN"] else "-") + " |")
+            + (f"{v['lastOk']}/{v['lastN']}" if v["lastN"] else "-") + " | "
+            + (f"{fc['right']}/{fc['clips']}" if (fc := f.get("faultClips")) and fc["clips"] else "-") + " |")
+
+
+def measure_rows(t, pt):
+    """The report rows of label_measure.totals (S4, E170): this run and the entry before ("-" when it has no measure)."""
+    if not t:
+        return []
+
+    def st(d, unit="s", signed=True):
+        if not d or not d.get("n"):
+            return "-"
+        return (f"{d['med']:+.2f} / " if signed and d.get("med") is not None else "") + f"{d['absMed']:.2f} / {d['p90']:.2f} {unit} (n {d['n']})"
+
+    def kn(k, n):
+        return f"{k}/{n}" if n else "-"
+
+    def rows(x):
+        fc, io, sc_ = x["faultClips"], x["inOut"], x["shotCount"]
+        return [st(x["rallyStartPlay"]), st(x["rallyStartFirst"]), st(x["rallyEnd"]),
+                f"{kn(fc['right'], fc['clips'])}, wrong {fc['wrong']}, unsure {fc['unsure']}, no serve label {fc['noServe']}",
+                kn(x["labeledFaultsWithClip"], x["labeledFaults"]), kn(x["hiddenRowsWithFault"], x["hiddenRows"]),
+                st(x["hitTimeErr"], signed=False), st(x["bounceTimeErr"], signed=False), st(x["netTimeErr"], signed=False),
+                st(x["bouncePlaceErr"], "m", signed=False),
+                f"{kn(io['ok'], io['n'])} (serve bounces {io['serveBounces']}: side checked {io['sideCheck']}, not {io['noSideCheck']})",
+                f"{kn(sc_['ok'], sc_['n'])}, off by 1 {sc_['off1']}, mean diff {sc_['meanDiff'] if sc_['meanDiff'] is not None else '-'}"]
+    names = ["Rally start - serve in play (signed med / |med| / p90)", "Rally start - first serve of the point",
+             "Rally end - last labeled event", "Fault clips right (labeled first-serve fault)",
+             "Labeled first-serve faults with a chain fault clip", "Hidden fault rows with a labeled fault serve",
+             "Hit time error (|med| / p90)", "Bounce time error", "Net time error", "Bounce place error",
+             "Bounce in/out right (matched bounces)", "Shot count right (matched points; chain shots - labels)"]
+    old = rows(pt) if pt else ["-"] * len(names)
+    return [f"| {n} | {v} | {o} |" for n, v, o in zip(names, rows(t), old)]
 
 
 def run(a):
@@ -178,14 +222,16 @@ def run(a):
     res = bench.run_lab(nets)                        # the rally rows of the chain (CPU, LOMO)
     man = json.load(open(os.path.join(case_lib.ROOT, "manifest.json")))["fragments"]
     labels = case_lib.labels()
-    data, frs = {}, []
+    data, hidden, frs = {}, {}, []
     for row in man:
         if row["level"] != a.level or row["match"] not in WINDOWS:
             continue
         mid = row["match"]
         if mid not in data:
             data[mid] = se.load(mid, os.path.dirname(nets[mid]))
-        frs.append(fragment(row, labels.get(row["id"]), data[mid], res[mid][1]))
+            nc, fc = bench.hidden_fault_rows(mid, res[mid][1])
+            hidden[mid] = [res[mid][1][k] for k in nc + fc]
+        frs.append(fragment(row, labels.get(row["id"]), data[mid], res[mid][1], hidden[mid]))
     entry = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "commit": commit, "dirty": dirty, "level": a.level, "note": a.note,
              "flights": {m: os.path.basename(os.path.dirname(os.path.dirname(nets[m]))) for m in nets},
              "labFlights": bench.LAB_FLIGHTS,
@@ -231,8 +277,9 @@ def run(a):
             n_old = n
         L.append(f"| {name_} | {pct(t[k], t[n])} | {pct(pt[k], pt[n_old]) if k in pt and n_old in pt else '-'} |")
     L.append(f"| Points with an unsure serve fault (label_faults) | {t['serve_faultUnsure']} | {pt.get('serve_faultUnsure', '-')} |")
-    L += ["", "| Fragment | Match | Kind | Rallies | Labels | Hits found | Bounces found | Net touches found | Server, fault | Last shot |",
-          "|---|---|---|---|---|---|---|---|---|---|"] + [fmt(f) for f in frs]
+    L += measure_rows(t.get("measure"), pt.get("measure"))
+    L += ["", "| Fragment | Match | Kind | Rallies | Labels | Hits found | Bounces found | Net touches found | Server, fault | Last shot | Fault clips |",
+          "|---|---|---|---|---|---|---|---|---|---|---|"] + [fmt(f) for f in frs]
     txt = "\n".join(L) + "\n"
     open(os.path.join(HIST, "report.md"), "w", encoding="utf-8").write(txt)
     print(txt)

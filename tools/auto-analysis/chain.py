@@ -6,7 +6,8 @@ Steps (E21 and later):
   1. segments(): the rally GRU probabilities -> rally segments, and short points from the ball serve events (E21b);
   2. winners(): for each rally the winner evidence (shot chain E28, old ball rule E16), the server end (pose vote
      E12, ball serve event E9), the end change (shirt color flip, E11), the first-serve fault candidate (E10);
-     then the score decoder (match_decode.py) over all rallies, from 0-0 with the server not known.
+     the winner of each rally comes from its own evidence (pBall); with CHAIN_DECODER=1 the old way: the score
+     decoder (match_decode.py) over all rallies, from 0-0 with the server not known.
 The rows have the format of the rallies in result.json (detect.py).
 """
 import json, os
@@ -52,6 +53,9 @@ FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, 0.3          # shots; s (the time bet
 POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 # item 10: a rally with no shot in its chain and no server end from the pose has no evidence of a serve: it is not a point.
 NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
+# item 12 (user decision): the winner of each rally comes from its own evidence; the score decoder does not change a
+# winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.
+DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"
 FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
@@ -273,7 +277,7 @@ def segments(prob, full, cfg, t0=0.0, t1=None):
 
 
 def winners(mid, seg, full, serves, p=PARAMS, prob=None):
-    """Step 2. The result rows of the rallies in seg: evidence, then the score decoder from 0-0 with the server
+    """Step 2. The result rows of the rallies in seg: evidence; the winner = the evidence (pBall), or with CHAIN_DECODER=1 the score decoder from 0-0 with the server
     not known. Player 1 is the player at the near end in the first rally. The player at the near end comes from
     the shirt colors (identity.py, E22): the decoder gets it as evidence for each rally (E22b). The decoder's own
     state is not usable for the names: right for 30 to 66 %. prob: the GRU probabilities for the rally end
@@ -295,7 +299,10 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
     for i, r in enumerate(rows):
         r["pNull"] = P_NULL_SHORT if r["prob"] < 0 else p_null(r["prob"], r["shots"])
         r["pMiss"] = p_miss(r["start"] - rows[i - 1]["end"]) if i else 0.02
-    post = md.decode([r["pBall"] for r in rows], ps, st0, [], [r["pMiss"] for r in rows], [r["pNull"] for r in rows])
+    if DECODER:
+        post = md.decode([r["pBall"] for r in rows], ps, st0, [], [r["pMiss"] for r in rows], [r["pNull"] for r in rows])
+    else:
+        post = [r["pBall"] for r in rows]       # pNearWins = the evidence of the rally; no decoder
     out = []
     for i, (r, pp, p1_near) in enumerate(zip(rows, post, near1)):
         near_wins = None if abs(pp - 0.5) < 0.02 else bool(pp > 0.5)

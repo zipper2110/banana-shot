@@ -428,8 +428,32 @@ def run_heldout(code_dir):
     return res, skipped
 
 
+SHOW_WITH_NONE = True       # the old numbers (NONE points counted) once more in the report (manager, 2026-11-26)
+
+
+def no_none(mid, rows, m):
+    """The rally measures without the NONE points (the user, 2026-11-26): a marked point with the outcome NONE is not a
+    missed rally, and a detected rally on a NONE point (the match rule of lab.match_points) is not a false rally. The
+    numbers with the NONE points stay in m as "<key>WithNone". Returns a new dict."""
+    import lab
+    gt = lab.gt_points(mid)
+    pairs = lab.match_points([(r["start"], r["end"]) for r in rows], gt)
+    none = {gi for gi, g in enumerate(gt) if g[2] == "NONE"}
+    real = [(gi, j) for gi, j in pairs if gi not in none]
+    on_none = {j for gi, j in pairs if gi in none}
+    marked, detected = len(gt) - len(none), len(rows) - len(on_none)
+    ds = [rows[j]["start"] - gt[gi][0] for gi, j in real]
+    de = [rows[j]["end"] - gt[gi][1] for gi, j in real]
+    out = dict(m, **{k + "WithNone": m[k] for k in ("marked", "detected", "matched", "recall", "precision", "startAbsMed", "endAbsMed")})
+    out.update(marked=marked, detected=detected, matched=len(real), recall=len(real) / max(1, marked),
+               precision=len(real) / max(1, detected), noneMarked=len(none), noneDetected=len(on_none),
+               startAbsMed=float(np.median(np.abs(ds))) if ds else None, endAbsMed=float(np.median(np.abs(de))) if de else None)
+    return out
+
+
 def summary(res, ev=None):
     import score
+    res = {mid: (no_none(mid, rows, m), rows) for mid, (m, rows) in res.items()}
     ms = [m for m, _ in res.values()]
     n, ok, kn = (sum(m[k] for m in ms) for k in ("n", "ok", "known"))
     wr = [x for _, rows in res.values() for x in winner_rows(rows)]
@@ -439,8 +463,12 @@ def summary(res, ev=None):
            "precision": sum(m["matched"] for m in ms) / max(1, sum(m["detected"] for m in ms)),
            "winnerMatched": ok / max(1, n), "winnerMatchedSE": se(ok / max(1, n), n),
            "endToEnd": ok / max(1, kn), "endToEndSE": se(ok / max(1, kn), kn), "n": n, "known": kn,
-           "startAbsMed": float(np.median([m["startAbsMed"] for m in ms])) if ms else None,
-           "endAbsMed": float(np.median([m["endAbsMed"] for m in ms])) if ms else None}
+           "startAbsMed": float(np.median([m["startAbsMed"] for m in ms if m["startAbsMed"] is not None] or [np.nan])),
+           "endAbsMed": float(np.median([m["endAbsMed"] for m in ms if m["endAbsMed"] is not None] or [np.nan])),
+           "noneMarked": sum(m["noneMarked"] for m in ms), "noneDetected": sum(m["noneDetected"] for m in ms),
+           "markedWithNone": sum(m["markedWithNone"] for m in ms), "detectedWithNone": sum(m["detectedWithNone"] for m in ms),
+           "recallWithNone": sum(m["matchedWithNone"] for m in ms) / max(1, sum(m["markedWithNone"] for m in ms)),
+           "precisionWithNone": sum(m["matchedWithNone"] for m in ms) / max(1, sum(m["detectedWithNone"] for m in ms))}
     for k in ("shortAdded", "shortReal", "shortMarked", "shortMarkedFound", "faultsMarked", "faultCandidates",
               "faultCandidatesRight", "faultsFound"):
         v = [e[k] for e in ex.values() if k in e]
@@ -486,7 +514,12 @@ def report(man, sets, skipped, same):
             continue
         L += [f"## {name}: {', '.join(t['matches'])}", "",
               "| Measure | Value |", "|---|---|",
-              f"| Rallies: recall / precision | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, {t['marked']} marked) |",
+              f"| Rallies: recall / precision (NONE points out) | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, "
+              f"{t['marked']} marked; {t.get('noneMarked', 0)} NONE points, {t.get('noneDetected', 0)} detected rallies on them) |"]
+        if SHOW_WITH_NONE and "recallWithNone" in t:
+            L += [f"| Rallies with the NONE points (the old way) | {pct(t['recallWithNone'])} / {pct(t['precisionWithNone'])} "
+                  f"({t['detectedWithNone']} detected, {t['markedWithNone']} marked) |"]
+        L += [
               f"| Start / end error, median of matches | {t['startAbsMed']:.2f} s / {t['endAbsMed']:.2f} s |"]
         L += event_rows(s.get("events"))
         L += [f"| Winner right on matched points (check) | {pct(t['winnerMatched'])} ± {pct(t['winnerMatchedSE'])} (n {t['n']}) |",

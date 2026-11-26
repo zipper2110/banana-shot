@@ -59,7 +59,8 @@ def controls(n, seed=20261126, mids=None, exclude=()):
     rng = np.random.RandomState(seed)
     strata = []
     for m in (mids or SINGLES):
-        ps = [p for p in points(m) if not any(m == em and abs(p["start"] - es) < 1.0 for em, es in exclude)]
+        ps = [p for p in points(m) if p["outcome"] != "NONE"            # the user: NONE points are out of the bench
+              and not any(m == em and abs(p["start"] - es) < 1.0 for em, es in exclude)]
         ln = np.array([p["end"] - p["start"] for p in ps])
         cut = np.quantile(ln, [1 / 3, 2 / 3])
         for k, name in enumerate(("short", "middle", "long")):
@@ -118,6 +119,8 @@ def cut(spec):
     cases: [{stream, journal, case, solved}], pad: [before, after] (optional)}. Returns the manifest."""
     mid, level = spec["mid"], spec.get("level", "small")
     video = lab.MATCHES[mid]["video"]
+    if level == "small" and any(p["outcome"] == "NONE" and p["end"] > spec["start"] and p["start"] < spec["end"] for p in points(mid)):
+        raise RuntimeError(f"{spec['id']}: the span has a NONE point; NONE points are not cases or controls (the user, 2026-11-26)")
     before, after = spec.get("pad") or PAD[level]
     prev_end = None
     if mid in FAULT_CHECK and not spec.get("pad"):

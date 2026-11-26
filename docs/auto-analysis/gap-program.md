@@ -170,7 +170,15 @@ Status 2026-11-26 (manager):
   93.5 %). But the ball pass in the windows only loses 118 events in 35 rallies. Most of them are not at a window
   edge. With a +2 s pad, it still loses 90 events, and the time gain is about 11 %. Events come before speed,
   so the two-pass design is not adopted.
-- Open: G15 runs from snapshot 39c93725, then G6.
+- G6 done earlier (E82): held out 0.70 px against 0.67 px in sample. The first court on the lower camera is S2 (E55).
+- Open: G15 runs from snapshot 39c93725.
+
+5. (2026-11-26) Bounce and net-touch errors (user priority 2, events). Take each miss and each false event of
+   the E75 measure (bounces 37 of 42, net touches 28 of 35) and the user's hit labels. Give each one a cause:
+   a gap in the ball track, a 3D height or place error, a court error, a time offset, or a threshold. Then
+   try one fix that is right in principle and measure it with `score_events` (events first, then rallies, then
+   winners). S5 owns the bounce and net-touch detection code for this item. Ask the manager before an edit of
+   `shot_chain.py` or `rally_end.py` (S3), `score_events.py` (S4) or `bench.py` (S1).
 
 ## 4. Rules for all streams
 

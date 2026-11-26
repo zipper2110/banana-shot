@@ -76,6 +76,8 @@ def load(mid, folder=None):
         files["net_events.json"] = _sha(np_)
     hp = os.path.join(d, "hits.npy")                   # audio hit candidates (shot_chain.back_time, item 7)
     audio = np.load(hp) if os.path.exists(hp) else None
+    if audio is not None:
+        files["hits.npy"] = _sha(hp)
     return {"folder": d, "full": full, "nets": nets, "t0": np.array([f["t0"] for f in full["flights"]]), "files": files, "audio": audio}
 
 

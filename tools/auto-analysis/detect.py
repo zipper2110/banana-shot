@@ -108,13 +108,20 @@ def check_video(work, video):
     return vid
 
 
+# The entry modules of the flights stage: its key has their import closure (code_closure.files).
+FLIGHTS_ENTRIES = ("ball_full", "net_events", "feat_wasb")
+# The code files of the ball tag (a hand list). The import closure of ball_wasb has more modules: see
+# test_code_closure (BALL_NOT_KEYED, decision pending: S2 item 13).
+BALL_CODE = ("ball_wasb.py", "wasb_hrnet.py")
+
+
 def ball_tag(weights, passes, n, work):
     """The tag of the ball file name (lab.BLOB_TAG): the weights, the passes, and a key of the inputs: the detector
     code, the weights bytes, the court model (the crop), the decode path and n. New weights or new code give a new
     file (G12)."""
     import platform_cfg
     return "_" + weights.split(".")[0] + ("_" + passes if passes else "") + "_" + content_key(
-        weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, "ball_wasb.py"), os.path.join(HERE, "wasb_hrnet.py"),
+        weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, f) for f in BALL_CODE] + [
                                                        os.path.join(platform_cfg.weights_dir(), weights), os.path.join(work, "court.json")])
 
 
@@ -591,9 +598,10 @@ def main():
             feat_wasb.run(MID)
             np.save(W("feat_wasbf.npy"), np.load(W("feat_wasb.npy"))[:, [4, 5, 6]])
         # G12: the flights run again when the ball file, the court files or the code of the flights change.
-        flights_key = lab.BLOB_TAG + "_" + content_key(cfg["courtTrack"], files=[W("court_track.json"), W("court_track_refined.json")] + [
-            os.path.join(HERE, f) for f in ("ball_full.py", "ball_3d.py", "ball_bounce.py", "ball_events.py", "ball_tracks.py",
-                                            "net_events.py", "net_lab.py", "feat_wasb.py", "frame_times.py", "court_refine.py")])
+        # Item 13: the code part is the import closure of the stage (code_closure), not a hand list.
+        import code_closure
+        flights_key = lab.BLOB_TAG + "_" + content_key(cfg["courtTrack"], files=[W("court_track.json"), W("court_track_refined.json")]
+                                                       + code_closure.files(*FLIGHTS_ENTRIES))
         stage("flights", [W("fullflights_s0.35.json"), W("feat_wasbf.npy")], flights, a.force, flights_key)
         save_times()
 

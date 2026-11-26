@@ -32,24 +32,80 @@ Scripts of the checks: `D:\bananashot-lab\ws\s5\plan\b_image.py`, `c_image.py` (
 
 ## 3. What the detector really misses
 
-The only measured detector loss is on the labeled frames (E80, E38):
-- m1021: 66 % recall held out. E38: the ball in front of the wall is found (92 %), the ball on the court is not
-  (57 %). A second ball lies on the court in this match (E27a).
-- The other videos: 4 to 8 % of the labeled frames are missed.
-The cause of these misses is not known per frame. The E27b analysis (luma, background, ball size) was made before
-the E38 weights and the `dim` pass.
+The only measured detector loss is on the labeled frames (E80, E38). S1 split the misses of the bench run
+`20261126-143623-709bbfad-heavy-ball-7a-heldout-dim` (`lab_label_hits.json`; dim, held-out fold weights):
+- m1021 misses 53 of 155 labels (34 %); the other lab matches miss 3 to 10 %. The m1021 misses are whole flight
+  parts (2 windows: frames 61 to 86, and 1 to 14 and 44 to 62), not single frames. All are seen balls.
+- 49 of the 53 are at the far end (the far end misses 35 %). In the net band (|y| < 2 m): 0 of 9 missed.
+- Small and slow, not blurred: all 53 misses have a ball length below 20 px (41 % of those are missed; 0 of 26 at
+  20 px or more). Median missed against found: area 8 px against 98.5 px, length 5 px against 12 px.
+- Background: a background saturation (bgS) below 60 misses 59 % (47 of 80); 120 or more misses 0. m1030 shows the
+  same at a lower level (bgS below 60: 24 %, 5 of 21).
+- m1015 is different: its 6 misses are long blur (length 50 px or more, median 120 px).
+So the main detector loss is a small, slow ball at the far end in front of a gray background (low saturation). A
+possible cause (not tested): at scale 0.35 the few pixels of a small ball mix with the gray background, so they lose
+saturation, and the `dim` pass darkens them with the background.
+
+**Step 2 result (E133b, E133c).** The `dim` hypothesis is not supported: the normal pass gives the higher peak in
+51 of the 53 m1021 misses.
+
+| Missed set | Count | Cause | Fix in reach |
+|---|---|---|---|
+| m1021 labels | 53 | The model hardly sees a small far ball in front of gray: weak peak 0.1 to 0.5: 34, no heat (below 0.1): 19; median peak 0.10. Another object in the same frame has a median peak of 0.60. | Not a threshold. A fine-tune at the far end (or a far-end tile at a larger scale, which also needs training: scale 0.5 on the full picture finds 5 of 53). User approval first. |
+| m1015, m1020, m1030 labels | 19 | Near the threshold: all weak, median peak 0.45. | A lower threshold where a path supports it (no training). Tested (E136, E136b): 11 to 16 of the 19 found, but the false blobs go up by half or more (lab 0.50 to 0.77 or 0.99 for each frame). Not applied. |
+| m1020 night far serves (S4 E150), with m1021 1 and m1030 3 | 23 | Mostly not a detector loss: the far serve comes 2.5 to 4.2 s after the point start label, after the windows of S4 (a + 1.5 s for the serve event, a + 2.5 s for the run). 15: a down run of 5 or more blobs crosses the net row, with no up crossing before it; in 11 of them the return (up) follows 0.7 to 1.1 s later. 4: only the held-out heat map has the down crossing (3), or the blob file has only the return (1). 4: no crossing found. S4 E151 (the run rule of `serve_img.py`, a - 1 .. a + 4.5 s) finds a down run in the blob file in 20 of 23 (also m1020 p5, p7, p56, p141, m1030 p127); 3 have none (m1020 p1, p134, m1030 p28). | Not a detector change. Of the 15, 9 have a serve event in a - 1 .. a + 4 s and 6 have none (S4 E151: no far serve event in a - 1 .. a + 4.5 s for 13 of 23): the serve event step (S4). |
+
+So one cause does not cover m1021 and the m1020 night serves.
 
 ## 4. Proposal
 
 1. **No training now.** The three target errors are in the steps after the detector, and their owners fix them
    there (S4: serve, S5: net band, S3: hit time).
-2. **Diagnosis of the missed labeled frames** (CPU and a few GPU minutes on the label windows): for each labeled
-   frame with no blob of peak 0.5 or more within the hit radius, the heat map peak at the label, the ball size, the
-   ball and background luma, the motion, the place (wall, court, net, player), and the frame before and after. Then
-   a table of the causes with their counts, as in E27b. No user work: the labels exist.
+2. **Finish the diagnosis of section 3** (a few GPU minutes on the label windows): the heat map peak at each missed
+   label (is there a weak peak below 0.5?), and how often a far ball in front of a gray background occurs in the
+   rallies of each video (is this loss large for the events?). No user work: the labels exist.
 3. **Only if the diagnosis shows a large and clear cause**, a new plan with options, for example: a fine-tune with
    new labels at that cause (the E38 recipe), a larger scale on a part of the picture, or a lower threshold where a
    path supports it. Each option then states its labels, its user time, and its GPU time.
+
+### Step 3 plan for the m1021 loss (E135)
+
+**(a) The event loss.** Stored data only: the full-video blob files of E38d (dim pass, held-out fold weights), the
+lab flight files (`fullflights_s0.35_ev.json`), the rally rows of `gt.json`.
+
+| Measure | m1015 | m1020 | m1021 | m1030 |
+|---|---|---|---|---|
+| Labeled events with a blob (30 px, ±3 frames): bounce, hit, net | 26 of 26 | 19 of 19 | 18 of 18 | 22 of 22 |
+| Rally rows (outcome not NONE) | 96 | 152 | 158 | 148 |
+| Median flight coverage of a rally row | 0.69 | 0.64 | 0.63 | 0.72 |
+| Median time from the last flight to the rally end | 1.24 s | 1.48 s | 1.03 s | 0.75 s |
+| Rally rows with a flight gap of more than 2 s | 3 | 6 | 6 | 4 |
+| Winner right on matched points (E38d) | 78.3 % | 87.1 % | 78.8 % | 75.8 % |
+
+- The 2 label windows of each match (3 s each) hold no labeled event. So no labeled event is in a missed flight
+  part of the labels.
+- The bounce and net labels come from candidates of the detector track (bounce: `cand`; net: batch A and B), so they
+  cannot show a detector loss. Their 100 % is not evidence.
+- On the full video, the m1021 rally rows have the same flight coverage and the same number of long flight gaps as
+  m1020. The rally end and the winners of m1021 are not worse than those of the other matches.
+- Result: the 34 % loss on the m1021 labeled frames does not show as an event loss in the stored data. The loss is
+  probably small for the events. The stored data cannot measure an event loss in the far flight parts directly;
+  that needs new labels.
+
+**(b) The options.** Both need new labels: a small far ball in front of gray (m1021, also m1030 and the other
+matches). Agents do not label by eye: the path method of E27a proposes the positions, and the user checks each one.
+
+| Option | Labels | User time | GPU time | Run time of the app | Risks (section 7) |
+|---|---|---|---|---|---|
+| 0. No training (the m1021 loss stays) | none | none | none | none | none |
+| 1. Fine-tune at the far end, E38 recipe (more weight on far small balls) | about 400 to 600 far frames, 10 to 20 windows of 3 s in 4 lab matches | about 30 to 45 min (estimate: 4 to 5 s for each frame on a tile sheet) | 4 folds × 53 min + all × 65 min (about 4.5 h); full held-out detector runs of the 4 lab matches for the event measure (about 6 h at 0.82 × real time) | none | false blobs (the far end has the most static objects); the net and bounce rules were made on the old tracks (re-measure E110); fit to 4 matches (fold weights, m0913 and Igor as tests) |
+| 2. Far-end tile: a second pass on the far half at scale 0.5 to 0.7 | the same as 1, at the tile scale | the same as 1 | the same as 1, and a tile training (scale 0.5 on the full picture without training: 5 of 53) | the ball stage gets slower (estimate: +30 to 50 %); the 6 GB card is full at batch 1 (E83) | the same as 1, and more false blobs from a second pass (E27d: `dim` +0.27 for each frame); cost and memory |
+
+**(c) Recommendation: option 0 now.** The event loss of (a) is not measurable, and the full-video chain of m1021 is
+as good as the other matches. A training costs the user 30 to 45 min, about 10 h of GPU time, and a re-measure of
+the net and bounce rules. Open it again when an event loss is measured, for example in a fragment of the medium level
+(section 6) or in a new video with a far ball in front of gray. If the user wants it then, option 1 comes first:
+it does not change the run time of the app.
 
 ## 5. Labels and user work
 

@@ -9,6 +9,9 @@ import detect
 # (decision 90f2389d). A new module in a closure makes the test fail: put it into the hand list, or here with a reason.
 BALL_NO_EFFECT = {"lab": "paths, the video path and the match table; the time base enters the tag through n"}
 POSE_NO_EFFECT = {"lab": "the path of the work folder"}
+# Level 1 of the net band (detect.NETMASK_CODE, item 6 (b)): the modules of its closure that are not in the hand list.
+# fill_in imports ball_wasb: the ball tag (detect.BALL_CODE) is a part of the level-1 key and covers it and its imports.
+MASK_NO_EFFECT = {"lab": "paths, the video path and the match table (as for the ball tag)"}
 
 
 def module_folder(sources):
@@ -42,6 +45,10 @@ class CodeClosure(unittest.TestCase):
     def test_ball_tag_covers_its_closure(self):
         keyed = names(detect.BALL_CODE)
         self.assertEqual(set(code_closure.modules(*keyed)) - keyed, set(BALL_NO_EFFECT))
+
+    def test_netmask_key_covers_its_closure(self):
+        keyed = names(detect.NETMASK_CODE) | names(detect.BALL_CODE)
+        self.assertEqual(set(code_closure.modules(*names(detect.NETMASK_CODE))) - keyed, set(MASK_NO_EFFECT))
 
     def test_pose_key_covers_its_closure(self):
         keyed = names(detect.POSE_CODE)

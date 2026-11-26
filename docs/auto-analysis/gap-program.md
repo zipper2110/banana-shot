@@ -298,6 +298,16 @@ label by eye.
     label file for each fragment, with a version and the labeler. Measure the user time on the first 5 fragments
     and give an estimate before the rest. Before item 9 (b); S1 and S4 agree on the manifest format first.
 
+11. (2026-11-26, the user) **Sides step in the label page.** The reference of "who is near" is not checked by a
+    person: `ends.json` comes from the end-change rule, and players do not always follow it (m1021 points 99 and
+    100 after a long break; Igor at a set break). The user marks the near player once at the start and once after
+    each possible end change. Candidates for each singles video with point marks (4 lab, Igor): each point where
+    the rule (`ends.json` nearPlayer) or the chain identity (`p1Near` of the current bench rows) changes, plus about
+    5 random points as controls. The page shows one frame from the middle of the first rally after the change (with
+    the player names of the project); the user presses 1 or 2. Output: `sides_<match>.json` (times, near player,
+    labeler, version). Then the benchmark takes the near player from these marks (the rule only between marks).
+    Target: 2 to 3 min for each match. A reference is never corrected from the detector.
+
 Done when: the tool and the work list are with the user, the fault measure and the audio-hit measure are in
 the journal, and the hitter measure follows the labels.
 
@@ -388,3 +398,4 @@ Status 2026-11-26 (manager):
 | 2026-11-26 | Four control levels of the case library (the user): small (one point), medium (2 to 3 games across an end change, 7 to 10 min), large (20 to 30 min), match (full). By content, not by a fixed length. Levels are for heavy-stage changes; a chain change uses the cached full matches. |
 | 2026-11-26 | Decoder (the user): a merge of the event evidence and the score evidence into one stronger confidence is the wish, but there is no clear way now. The decoder is that merge in principle, and the tests failed: decoder on all rallies +1.3 / -1.4 points (old / new rows, E66); decoder only where the evidence is weak +1.5 / -0.8; it spreads one wrong point to its game. Thus the decoder winners go off now (S3 item 12). Later item: score-consistency checks from the evidence (hints, and later maybe a confidence), when the events are reliable. |
 | 2026-11-26 | Labels (the user): label all significant events (serve contact, each shot, each bounce with in/out and seen or inferred, each net touch) on the case library fragments, small level first, in a new label page (S4 item 10). The controls of the small level are a random stratified sample of points (no bias to easy or hard cases), next to the error cases. |
+| 2026-11-26 | Identity reference (the user): the user marks the near player at the start and after each possible end change (S4 item 11, sides step). The reference of the near player then comes from a person, not from the end-change rule; a disagreement of the detector and the rule is never solved with the detector. |

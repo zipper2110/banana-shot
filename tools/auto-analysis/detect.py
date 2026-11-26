@@ -45,6 +45,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # a result with no record of it. The settings ballPasses, ballWeights, chain, endModel and courtTrack replace the
 # ones that the app can change; the run computes the ball file tag (BLOB_TAG); the others keep the lab default.
 LAB_ENV = ("BALL_PASSES", "BALL_WEIGHTS", "CHAIN", "END_MODEL", "COURT_TRACK", "BLOB_TAG", "BALL_TAG", "EV_TAG",
+           "BALL_PATH_LOW",
            "FULLFLIGHTS", "FPS_ADAPT", "SERVE_FILTER", "FAR_FAULT_M", "SELECT_TRIM", "TURN", "LEN_TIME", "OUT_LINE",
            "NET_NEAR", "CONT_GAP", "CONT_M", "CHAIN_NET_STOP", "SERVE_PRIOR_KEEP", "SERVE_PRIOR_WIDE")    # and each CHAIN_* switch of shot_chain.py
 

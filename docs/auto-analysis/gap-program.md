@@ -82,6 +82,10 @@ question, with a journal row. A gap is not covered by a plan or a note only.
 5. Calibration (G3): confidence bins against the accuracy on the held-out rows. A proposal for
    `minWinnerPercent` and the "check first" limit.
 6. Service for the other streams: run the benchmark on a branch when a stream asks.
+6b. (2026-11-26) The lab set of the bench uses the frozen E38 flights: a change of the bounce or flight code does
+   not reach the lab bounce rows (S1). Fix before item 7: the lab flights are made again from the frozen ball files
+   when the G12 key of the flights code changes, cached under that key (CPU). Null check: the old key gives the
+   frozen flights. A run of the flights stage from cached ball files is not a full-video run.
 7. (2026-11-26) `bench.py heavy --stage <ball|court|pose> ...`: the regular check of a heavy-stage change on the
    label windows only (the rule of section 2). (a) Ball candidate recall and false blobs on the labeled frames
    (S5 E80 method). (b) Events on the bounce, net and hit label windows (S5 E88 decode, a decode cache on D).

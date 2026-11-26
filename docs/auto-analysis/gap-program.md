@@ -166,6 +166,11 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
     run has 239 net events against 156). Find the cause of each lost and each new false touch: the new ball file
     (`dim`, E38 weights) or the net code. Then one fix that is right in principle, measured on the lab net labels
     first and m0913 apart. Ask the manager before an edit of `net_events.py` (S5) or `shot_chain.py` (S3).
+    Done, no fix (E110, E111; merged 2026-11-26): the cause is the new ball detections (`dim`). With them the track
+    goes on through the touch (the ball is seen to fall), so no candidate is at the touch; new short tracks in the net
+    band give false touches. A flight end as an extra candidate gains about one touch for each new false touch (lab
+    26 to 29 of 35, false 8 to 14 of 70): not applied. The real fix is a candidate from inside a flight (a kink or a
+    speed loss at the net plane) with new judge rules, together with S5 item 6 (net-band signal).
 
 ### S3 rally (G4, G5, G8 short points)
 

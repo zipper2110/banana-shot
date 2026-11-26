@@ -270,6 +270,19 @@ async function checkRow(it) {
   render();
   return false;
 }
+// The clip file can change on the disk after the page read manifest.js (a new cut with the same id). The loaded clip
+// must have the duration of the row (clipDur, from case_manifest.py), and the label span must be inside the clip.
+// Else the page blocks the marks: the times would come from the old t0.
+function checkClip(it) {
+  const D = v.duration, sp = span(it);
+  if (!isFinite(D)) return true;
+  const bad = (it.clipDur && Math.abs(D - it.clipDur) > 0.25) || sp[0] < it.t0 - 1 || sp[1] > it.t0 + D + 1;
+  if (!bad) return true;
+  staleRow = true;
+  $("msg").textContent = `The fragment changed (the clip is ${D.toFixed(1)} s, the list says ${it.clipDur ? it.clipDur.toFixed(1) + " s" : "another span"}). Reload the page (F5).`;
+  render();
+  return false;
+}
 function open(i) {
   if (i < 0 || i >= items.length) return;
   addActive();
@@ -280,7 +293,7 @@ function open(i) {
   v.pause(); setZoom("");
   v.src = it.clip;
   v.playbackRate = rate;
-  v.addEventListener("loadedmetadata", () => { v.currentTime = 0; v.playbackRate = rate; v.play().catch(() => {}); }, {once: true});
+  v.addEventListener("loadedmetadata", () => { checkClip(it); v.currentTime = 0; v.playbackRate = rate; v.play().catch(() => {}); }, {once: true});
   render();
   const row = $("list").children[i]; if (row) row.scrollIntoView({block: "nearest"});
 }
@@ -417,7 +430,7 @@ function checks(dr) {
 function fragDoc(it, dr) {
   addActive();
   return {version: FILE_VERSION, kind: "bananashot-event-labels", fragment: it.id, match: it.match, testOnly: !!it.testOnly,
-          level: it.level, kinds: it.kinds || [], control: !!it.control, clip: it.clip, t0: it.t0, span: span(it),
+          level: it.level, kinds: it.kinds || [], control: !!it.control, clip: it.clip, clipDuration: isFinite(v.duration) ? +v.duration.toFixed(3) : null, t0: it.t0, span: span(it),
           manifest: {version: MF.version, created: MF.created || null, row: it.rowHash || null},
           source: {tool: "label_events.html", toolVersion: TOOL_VERSION, labeler: "user",
                    method: "by eye and ear on the fragment clip (frame steps, slow play, zoom)"},

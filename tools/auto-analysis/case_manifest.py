@@ -15,13 +15,15 @@ The fragment manifest (S1 item 8, the case library) is one JSON file: {"version"
   points    the marked points in the span: [{id, startMs, endMs, ending}], source ms
   span      [a, b] source s: the part to label
   level, kinds, control
+  clipDur   added here: the duration (s) of the clip file (ffprobe). The page compares it with the loaded clip: a
+            clip that changed after the page was opened blocks the marks. Not in rowHash.
 
 Usage:
   python case_manifest.py <manifest.json> <page folder>     the manifest of S1; the clip paths become relative to the page folder
   python case_manifest.py --test <page folder>             a test manifest: 2 rally clips of the hit label work
                                                            (one lab match, one Igor clip), for a function test
 """
-import hashlib, json, os, shutil, sys
+import hashlib, json, os, shutil, subprocess, sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -33,11 +35,23 @@ def court(mid, t):
     return np.asarray(ball_events.court_H(mid, t), np.float64).tolist()
 
 
+def clip_dur(path):
+    try:
+        o = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path],
+                           capture_output=True, text=True, check=True).stdout.strip()
+        return round(float(o), 3)
+    except Exception:
+        return None
+
+
 def finish(man, out):
     for r in man["fragments"]:
         if "courtH" not in r and r.get("match"):
             r["courtH"] = court(r["match"], r["span"][0] if r.get("span") else r["t0"])
-        row = {k: v for k, v in r.items() if k != "rowHash"}
+        row = {k: v for k, v in r.items() if k not in ("rowHash", "clipDur")}
+        cd = clip_dur(os.path.join(out, r["clip"]))
+        if cd:
+            r["clipDur"] = cd
         r["rowHash"] = hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest()[:16]
     os.makedirs(out, exist_ok=True)
     with open(os.path.join(out, "manifest.js"), "w", encoding="utf-8") as f:

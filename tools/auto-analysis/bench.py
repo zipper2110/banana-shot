@@ -492,17 +492,41 @@ def no_none(mid, rows, m):
     missed rally, and a detected rally on a NONE point (the match rule of lab.match_points) is not a false rally. The
     numbers with the NONE points stay in m as "<key>WithNone". Returns a new dict."""
     import lab
+    import chain
     gt = lab.gt_points(mid)
     pairs = lab.match_points([(r["start"], r["end"]) for r in rows], gt)
     none = {gi for gi, g in enumerate(gt) if g[2] == "NONE"}
     real = [(gi, j) for gi, j in pairs if gi not in none]
     on_none = {j for gi, j in pairs if gi in none}
-    marked, detected = len(gt) - len(none), len(rows) - len(on_none)
+    # First-serve faults (the user, gap-program e912f7e2: a point starts at the first serve; the detection writes a
+    # first-serve fault as a fault clip). Lab marks (no "faults" in gt.json) start at the second serve: a row that
+    # matches no marked point, overlaps none, and ends FAULT_NEXT s or less before the next marked point (not NONE)
+    # is "fault, not checked", not a false rally. Where gt.json has fault clips (Igor), a row of this kind on a marked
+    # fault clip (+-1 s) is a fault ("faultClipRows"); the other rows stay false rallies.
+    g = json.load(open(os.path.join(lab.mdir(mid), "gt.json"), encoding="utf-8"))
+    clips = [(f["startMs"] / 1000 - 1.0, f["endMs"] / 1000 + 1.0) for f in g.get("faults", [])]
+    used = {j for _, j in pairs}
+    starts = sorted(x[0] for x in gt if x[2] != "NONE")
+    fault_nc, fault_clip = [], []
+    for j, r in enumerate(rows):
+        if j in used or any(r["end"] > x[0] and r["start"] < x[1] for x in gt):
+            continue
+        if "faults" in g:
+            if any(r["end"] > a and r["start"] < b for a, b in clips):
+                fault_clip.append(j)
+            continue
+        nxt = next((t for t in starts if t >= r["end"]), None)
+        if nxt is not None and nxt - r["end"] <= chain.FAULT_NEXT:
+            fault_nc.append(j)
+    marked, detected = len(gt) - len(none), len(rows) - len(on_none) - len(fault_nc) - len(fault_clip)
     ds = [rows[j]["start"] - gt[gi][0] for gi, j in real]
     de = [rows[j]["end"] - gt[gi][1] for gi, j in real]
     out = dict(m, **{k + "WithNone": m[k] for k in ("marked", "detected", "matched", "recall", "precision", "startAbsMed", "endAbsMed")})
     out.update(marked=marked, detected=detected, matched=len(real), recall=len(real) / max(1, marked),
                precision=len(real) / max(1, detected), noneMarked=len(none), noneDetected=len(on_none),
+               faultNotChecked=len(fault_nc), faultClipRows=len(fault_clip),
+               faultNotCheckedShots=[rows[j].get("shots") for j in fault_nc],
+               precisionWithFaults=len(real) / max(1, detected + len(fault_nc) + len(fault_clip)),
                startAbsMed=float(np.median(np.abs(ds))) if ds else None, endAbsMed=float(np.median(np.abs(de))) if de else None)
     return out
 
@@ -522,6 +546,9 @@ def summary(res, ev=None):
            "startAbsMed": float(np.median([m["startAbsMed"] for m in ms if m["startAbsMed"] is not None] or [np.nan])),
            "endAbsMed": float(np.median([m["endAbsMed"] for m in ms if m["endAbsMed"] is not None] or [np.nan])),
            "noneMarked": sum(m["noneMarked"] for m in ms), "noneDetected": sum(m["noneDetected"] for m in ms),
+           "faultNotChecked": sum(m["faultNotChecked"] for m in ms), "faultClipRows": sum(m["faultClipRows"] for m in ms),
+           "faultNotChecked3Shots": sum(sum((x or 0) >= 3 for x in m["faultNotCheckedShots"]) for m in ms),
+           "precisionWithFaults": sum(m["matched"] for m in ms) / max(1, sum(m["detected"] + m["faultNotChecked"] + m["faultClipRows"] for m in ms)),
            "markedWithNone": sum(m["markedWithNone"] for m in ms), "detectedWithNone": sum(m["detectedWithNone"] for m in ms),
            "recallWithNone": sum(m["matchedWithNone"] for m in ms) / max(1, sum(m["markedWithNone"] for m in ms)),
            "precisionWithNone": sum(m["matchedWithNone"] for m in ms) / max(1, sum(m["detectedWithNone"] for m in ms))}
@@ -574,6 +601,10 @@ def report(man, sets, skipped, same):
               "| Measure | Value |", "|---|---|",
               f"| Rallies: recall / precision (NONE points out) | {pct(t['recall'])} / {pct(t['precision'])} ({t['detected']} detected, "
               f"{t['marked']} marked; {t.get('noneMarked', 0)} NONE points, {t.get('noneDetected', 0)} detected rallies on them) |"]
+        if t.get("faultNotChecked") or t.get("faultClipRows"):
+            L += [f"| Rows left out as first-serve faults | {t.get('faultNotChecked', 0)} not checked (lab marks start at the second "
+                  f"serve; {t.get('faultNotChecked3Shots', 0)} of them with 3 shots or more), {t.get('faultClipRows', 0)} on a marked "
+                  f"fault clip; precision with them as false rallies {pct(t.get('precisionWithFaults'))} |"]
         if SHOW_WITH_NONE and "recallWithNone" in t:
             L += [f"| Rallies with the NONE points (the old way) | {pct(t['recallWithNone'])} / {pct(t['precisionWithNone'])} "
                   f"({t['detectedWithNone']} detected, {t['markedWithNone']} marked) |"]

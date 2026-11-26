@@ -113,10 +113,13 @@ def check_video(work, video):
 # fails when their closure gets a module that is not in the list or on its "no effect" list.
 FLIGHTS_ENTRIES = ("ball_full", "net_events", "feat_wasb")
 STAGE_ENTRIES = {"media": ("prep", "frame_times"), "audio": ("feat_audio", "feat_mel"), "court": ("court_track",),
-                 "court2": ("court_refine",), "flights": FLIGHTS_ENTRIES}
+                 "court2": ("court_refine",), "flights": FLIGHTS_ENTRIES, "netband": ("net_band",)}
 BALL_CODE_OLD = ("ball_wasb.py", "wasb_hrnet.py")          # the ball tag before item 13 (adopt_keys)
 BALL_CODE = BALL_CODE_OLD + ("burst_ball.py", "cuda_scale.py", "platform_cfg.py")
 POSE_CODE = ("pose_extract.py", "platform_cfg.py")         # pose_extract.py has the URLs of the pose models
+# Item 6 (b): level 1 of the net band (net_band_mask.py: the masks of the moved pixels, a decode of the candidate
+# windows, about 40 % of a video). A hand list: ball_wasb and its imports are in the ball tag.
+NETMASK_CODE = ("net_band_mask.py",)
 # The code files of the flights key before item 13 (a hand list; adopt_keys)
 FLIGHTS_CODE_OLD = ("ball_full.py", "ball_3d.py", "ball_bounce.py", "ball_events.py", "ball_tracks.py", "net_events.py",
                     "net_lab.py", "feat_wasb.py", "frame_times.py", "court_refine.py")
@@ -130,6 +133,11 @@ def code_key(name, *parts, files=()):
 
 def pose_key():
     return content_key(files=[os.path.join(HERE, f) for f in POSE_CODE])
+
+
+def netmask_key(tag):
+    """The key of net_band_mask.npz: the ball tag (the pictures and the time line of the ball stage) and NETMASK_CODE."""
+    return tag + "_" + content_key(files=[os.path.join(HERE, f) for f in NETMASK_CODE])
 
 
 def ball_tag(weights, passes, n, work, code=BALL_CODE):
@@ -561,8 +569,10 @@ def main():
     # chain (E29): true = the shot chain gives the winner evidence; false = the old ball rule (lab: CHAIN=0).
     # endModel (E60): true = the end for the winner evidence comes from the rally end detector (lab: END_MODEL).
     # courtTrack (E26f): "" = the court model rule of ball_events.court_windows; a file name = that court file only.
+    # netBand (item 6 (b), E88 to E133): true = the motion of the net picture rejects or confirms the net touches
+    # (net_band_mask.py, net_band.py). Off until the test on the label windows holds the E131 result.
     cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": False, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS,
-           "chain": True, "endModel": True, "courtTrack": ""}
+           "chain": True, "endModel": True, "courtTrack": "", "netBand": False}
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
     warnings = []
@@ -695,15 +705,36 @@ def main():
             warn(f"The ball candidates come from the older file {adopted['from']}: the operator stated the weights "
                  f"{adopted['weights']} and the passes \"{adopted['passes']}\" ({adopted['time']}). This run did not make them.")
 
+        net_on = bool(cfg["netBand"])
+        mask_file = W("net_band_mask.npz")
+        made = []
+        frames0 = ball_wasb.frames
+
+        def mask_writer(step, index):
+            """Item 6 (b): the ball stage also gives its pictures to the level-1 writer of the net band."""
+            import net_band_mask
+            crop = ball_wasb.crop_box(MID, 0.35, bool(ball_wasb.PASSES))[:4]
+            Hm = json.load(open(W("court.json")))["H"]
+            w = net_band_mask.MaskWriter(Hm, crop, 0.35, step, index, tmp_dir=work)
+            ball_wasb.frames = w.wrap(frames0)
+            return w
+
         def ball():
             if STAGE_KEYS.pop("ballAdopted", None):    # the stage makes the file itself: the adoption is no longer true
                 json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+            try:
+                ball_run()
+            finally:
+                ball_wasb.frames = frames0
+
+        def ball_run():
             # The frame times of the video. A run before this one on a video that is not 60 fps put them in
             # pts_video.npy, and pts.npy is then the 60 fps time line of the detections (see below). Without this,
             # a second run of the ball stage reads the time line, decides "60 fps", and each detection gets half of its time.
             pts = np.load(W("pts_video.npy") if os.path.exists(W("pts_video.npy")) else W("pts.npy"))
             if np.percentile(np.diff(pts), 90) < 0.02:               # a 60 fps video, as the lab matches
                 ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 60.0)))
+                mw = mask_writer(2, lambda i: i) if net_on else None
                 np.save(blob, ball_wasb.run(MID, 0, n, save=False))
             else:
                 # Another frame rate, or a mix of 30 and 60 fps (E23b). The ball detector learned frames that
@@ -712,23 +743,69 @@ def main():
                 # 60 fps time line. pts.npy becomes that time line (the times of the video: pts_video.npy).
                 ball_wasb.FPS = 30
                 ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 30.0)))
+                mw = mask_writer(1, lambda i: 2 * i) if net_on else None
                 d = ball_wasb.run(MID, 0, n, stride=1, save=False)
                 d[:, 0] *= 2
                 np.save(W("pts_video.npy"), pts)
                 np.save(W("pts.npy"), np.arange(n * 60) / 60.0)
                 np.save(blob, d)
+            if mw is not None:                                       # the masks of all pictures: no fill-in decode
+                mw.save(mask_file)
+                STAGE_KEYS["netmask"] = netmask_key(lab.BLOB_TAG)
+                json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+                made.append("netmask")
             platform_cfg.empty_cache()
         stage("ball", [blob], ball, a.force)
         save_times()
 
+        if net_on:
+            # ---- net band (item 6 (b)). Level 1: the masks of the moved pixels near the net. A folder with a ball file
+            # and no current mask file decodes only the windows around the net candidates of the ball file (not of the
+            # flights: the flights key has the net band key). A candidate outside these windows gets no net band rule.
+            def netmask():
+                import net_band_mask, net_events
+                d = np.load(blob)
+                d = d[np.argsort(d[:, 0], kind="stable")]
+                pts = np.load(W("pts.npy"))
+                t = pts[np.minimum(d[:, 0].astype(int), len(pts) - 1)]
+                rows = np.column_stack([t, d[:, 1:5]])
+                track = ball_events.court_windows(work)
+
+                def H(c):
+                    w = min(track, key=lambda w: 0 if w["t0"] <= c < w["t1"] else min(abs(c - w["t0"]), abs(c - w["t1"])))
+                    return np.array(w["H"], np.float64)
+                times, c, step = [], float(t[0]) if len(t) else 0.0, 30.0
+                while len(t) and c < t[-1]:                          # the chunks of net_events.run_folder
+                    i0, i1 = np.searchsorted(t, c - 2), np.searchsorted(t, c + step + 2)
+                    if i1 > i0:
+                        times += [q["t"] for q in net_events.candidates(rows[i0:i1], H(c + step / 2)) if c <= q["t"] < c + step]
+                    c += step
+                say("@netmask candidates", len(times))
+                net_band_mask.fill_in(MID, pts, times, json.load(open(W("court.json")))["H"], mask_file,
+                                      fps30=os.path.exists(W("pts_video.npy")),
+                                      progress=lambda j, m: say("@progress netmask %.3f" % (j / max(1, m))))
+                platform_cfg.empty_cache()
+            if "netmask" not in made:
+                stage("netmask", [mask_file], netmask, a.force, netmask_key(lab.BLOB_TAG))
+                save_times()
+
+            # Level 2: the bins of the net and the ball mask (cheap: no decode).
+            def netband():
+                import net_band
+                net_band.build(mask_file, np.load(blob), json.load(open(W("court.json")))["H"], W("net_band.npz"))
+            stage("netband", [W("net_band.npz")], netband, a.force, STAGE_KEYS["netmask"] + "_" + code_key("netband"))
+            save_times()
+
         def flights():
             ball_full.run(MID)
             import net_events
-            net_events.run_folder(work)
+            net_events.run_folder(work, band_file=W("net_band.npz") if net_on else None)
             feat_wasb.run(MID)
             np.save(W("feat_wasbf.npy"), np.load(W("feat_wasb.npy"))[:, [4, 5, 6]])
         # G12: the flights run again when the ball file, the court files or the code of the flights (import closure) change.
         flights_key = lab.BLOB_TAG + "_" + code_key("flights", cfg["courtTrack"], files=[W("court_track.json"), W("court_track_refined.json")])
+        if net_on:
+            flights_key += "_nb" + STAGE_KEYS["netband"]
         stage("flights", [W("fullflights_s0.35.json"), W("feat_wasbf.npy")], flights, a.force, flights_key)
         save_times()
 

@@ -18,6 +18,8 @@ Run the benchmark from a snapshot of one commit, not from the main checkout (oth
 A heavy stage against its own labels, under the GPU lock (item 7a; report <lab>/bench/<time>-<commit>-heavy-ball/):
   python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py heavy --stage ball [--weights held-out] [--passes dim]
 The stream name on the GPU lock tickets: --who <stream> (before the command), else the env var BENCH_WHO, else "bench".
+The net band of the lab matches (S5 item 6 (d), netBand on): env BENCH_NETBAND_DIR=<folder> reads <folder>/<match>/net_band.npz
+(for example <lab>/ws/s5/nb). The band file is then an input of the lab flights key and of the manifest. Not set: no band.
 """
 import argparse, glob, hashlib, json, math, os, re, subprocess, sys, time
 import numpy as np
@@ -25,6 +27,10 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 WHO = os.environ.get("BENCH_WHO") or "bench"     # the stream name on the GPU lock tickets (--who overrides it)
+# The folder of the net band files of the lab matches (<folder>/<match>/net_band.npz, S5 item 6 (d)); "" = no band.
+# Not a switch name in the manifest: when set, the band files are inputs (key and manifest), so a run with no band
+# keeps the hash of the runs before the band.
+NETBAND_DIR = os.environ.get("BENCH_NETBAND_DIR") or ""
 CONF_BINS = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0001]
 LIMITS = [50, 55, 60, 65, 70, 75, 80, 85, 90]       # candidates for minWinnerPercent and the "check first" limit
 CHECK_FIRST = 0.70                                  # the "check first" limit of the review window now
@@ -70,7 +76,7 @@ def switches():
     for f in glob.glob(os.path.join(HERE, "*.py")):
         names |= set(re.findall(r"environ\.get\(\"([A-Z][A-Z0-9_]+)\"", open(f, encoding="utf-8").read()))
     names -= {"APPDATA", "LOCALAPPDATA", "USERPROFILE", "HOME", "HF_HOME", "PATH", "TEMP", "TMP", "HEAVY_LOCK_DIR",
-               "BENCH_WHO"}                         # a lock ticket name, not a switch: not in the manifest hash
+               "BENCH_WHO", "BENCH_NETBAND_DIR"}    # a lock ticket name and the band folder (an input when set): not switches
     import chain
     return {"env": {k: os.environ.get(k) for k in sorted(names)},
             "chain": {k: getattr(chain, k) for k in ("CHAIN", "END_MODEL", "FPS_ADAPT", "ID_ABS", "T_CUT_E2E", "SHORT_WAIT")
@@ -255,11 +261,42 @@ def net_inputs(mid):
     if mid in WINDOWS:
         frozen = ["fullflights_s0.35_ev.json"] if LAB_FLIGHTS == "frozen" else []
         return "lab", [os.path.join(lab.mdir(mid), f) for f in NET_COPY + frozen +
-                       ["wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[mid], LAB_BLOB_TAG)]]
+                       ["wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[mid], LAB_BLOB_TAG)]] +             ([band_file(mid)] if NETBAND_DIR else [])
     d = app_folder(mid)
     blobs = glob.glob(os.path.join(d, "wasb_0_*_s0.35_k2.npy"))
     return "app", [os.path.join(d, f) for f in NET_COPY + ["pts_video.npy", "fullflights_s0.35.json"]] + \
         ([max(blobs, key=os.path.getmtime)] if blobs else [])
+
+
+def band_file(mid):
+    """The net band file of lab match mid in NETBAND_DIR, or None when no band folder is set."""
+    return os.path.join(NETBAND_DIR, mid, "net_band.npz") if NETBAND_DIR else None
+
+
+def band_in(dst):
+    """The net band file in the cache folder dst of app_nets, or None. It is there only when NETBAND_DIR was set."""
+    f = os.path.join(dst, "net_band.npz")
+    return f if os.path.exists(f) else None
+
+
+def net_key(m, code_dir):
+    """(kind, input files, flights made again, cache folder) of match m in app_nets. The key is the code files and the
+    inputs of the match; with NETBAND_DIR set, the net band file of a lab match is one of the inputs."""
+    import lab
+    kind, src = net_inputs(m)
+    if kind == "lab" and NETBAND_DIR and not os.path.exists(band_file(m)):
+        raise FileNotFoundError(f"BENCH_NETBAND_DIR is set, but {band_file(m)} is missing")
+    src = [f for f in src if os.path.exists(f)]
+    flights = kind == "lab" and LAB_FLIGHTS == "remake"
+    h = hashlib.sha256()
+    for f in code_files(code_dir, flights) + src:
+        h.update(os.path.basename(f).encode() + sha(f).encode())
+    if flights:
+        h.update(json.dumps({k: os.environ.get(k) for k in FLIGHT_ENV}, sort_keys=True).encode())
+        root = os.path.join(os.path.dirname(lab.ROOT), "ws", "s1", "bench", "flights")
+    else:
+        root = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets")
+    return kind, src, flights, os.path.join(root, h.hexdigest()[:16], f"{kind}_{m}")   # not "<match>": see net_lab below
 
 
 def code_files(code_dir, flights=True):
@@ -290,18 +327,7 @@ def app_nets(mids, code_dir=None):
     code_dir = code_dir or HERE
     out, todo, remake = {}, [], []
     for m in mids:
-        kind, src = net_inputs(m)
-        src = [f for f in src if os.path.exists(f)]
-        flights = kind == "lab" and LAB_FLIGHTS == "remake"
-        h = hashlib.sha256()
-        for f in code_files(code_dir, flights) + src:
-            h.update(os.path.basename(f).encode() + sha(f).encode())
-        if flights:
-            h.update(json.dumps({k: os.environ.get(k) for k in FLIGHT_ENV}, sort_keys=True).encode())
-            root = os.path.join(os.path.dirname(lab.ROOT), "ws", "s1", "bench", "flights")
-        else:
-            root = os.path.join(os.path.dirname(lab.ROOT), "bench", "nets")
-        dst = os.path.join(root, h.hexdigest()[:16], f"{kind}_{m}")      # not "<match>": see the net_lab note below
+        kind, src, flights, dst = net_key(m, code_dir)
         out[m] = os.path.join(dst, "net_events.json")
         if not os.path.exists(out[m]):
             os.makedirs(dst, exist_ok=True)
@@ -349,7 +375,8 @@ def app_nets(mids, code_dir=None):
                     lab.BLOB_TAG = LAB_BLOB_TAG
                     os.chdir(os.path.dirname(dst))
                     lab.mdir = lambda x, _o=mdir, m=m, dst=dst: dst if x == m else _o(x)
-                    path, ev = net_events.run_folder(m)
+                    b = band_in(dst)                   # with no band: the call of the runs before the band
+                    path, ev = net_events.run_folder(m, band_file=b) if b else net_events.run_folder(m)
                 else:
                     lab.BLOB_TAG = ""                  # the app branch: the newest ball file with no tag
                     path, ev = net_events.run_folder(dst)
@@ -371,7 +398,8 @@ def flights1(mid, dst):
     lab.mdir = lambda x: dst if x == mid else mdir(x)
     t = time.time()
     ball_full.run(mid)
-    path, ev = net_events.run_folder(mid)
+    b = band_in(dst)                                  # with no band: the call of the runs before the band
+    path, ev = net_events.run_folder(mid, band_file=b) if b else net_events.run_folder(mid)
     print(f"{mid}: flights and {len(ev)} net events in {time.time() - t:.0f} s (code {os.path.dirname(ball_full.__file__)})", flush=True)
 
 
@@ -582,6 +610,7 @@ def report(man, sets, skipped, same):
          + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + "."
          + (f" Lab net events: {man['labNets']}." if man.get("labNets") else "")
          + (f" Lab flights: {man['labFlights']}." if man.get("labFlights") else "")
+         + (f" Net band of the lab matches: {man['netBand']}." if man.get("netBand") else "")
          + (" Near player from the user's side marks: " + ", ".join(f"{m} ({v['marks']} marks, {v['changed']} points shifted)"
                                                                    for m, v in man["sides"].items()) + "." if man.get("sides") else ""),
          f"Manifest `{man['hash']}`. " + (f"An earlier run with the same manifest: {same['run']} ({'same numbers' if same['same'] else '**other numbers**'})."
@@ -813,6 +842,9 @@ def run(a):
             if nets:                                   # the chain and the events read these files, not the lab files
                 inputs[mid]["net_events.json"] = "app:" + sha(nets[mid])
                 inputs[mid]["fullflights_s0.35_ev.json"] = LAB_FLIGHTS + ":" + sha(os.path.join(os.path.dirname(nets[mid]), "fullflights_s0.35.json"))
+                b = band_in(os.path.dirname(nets[mid]))
+                if b:                                  # only with BENCH_NETBAND_DIR: a run with no band keeps its hash
+                    inputs[mid]["net_band.npz"] = "band:" + sha(b)
     skipped = {}
     if not a.no_heldout:
         held, skipped = run_heldout(HERE)
@@ -827,6 +859,8 @@ def run(a):
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
            "labels": label_hashes(), "sides": sides, "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)",
            "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS], "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
+    if NETBAND_DIR and nets:                           # only with the band: a run with no band keeps its hash
+        man["netBand"] = NETBAND_DIR
     man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
     man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
     out = {k: summary(v, ev) for k, v in sets.items()}

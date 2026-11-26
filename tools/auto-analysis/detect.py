@@ -45,7 +45,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # a result with no record of it. The settings ballPasses, ballWeights, chain, endModel and courtTrack replace the
 # ones that the app can change; the run computes the ball file tag (BLOB_TAG); the others keep the lab default.
 LAB_ENV = ("BALL_PASSES", "BALL_WEIGHTS", "CHAIN", "END_MODEL", "COURT_TRACK", "BLOB_TAG", "BALL_TAG", "EV_TAG",
-           "BALL_PATH_LOW",
            "FULLFLIGHTS", "FPS_ADAPT", "SERVE_FILTER", "FAR_FAULT_M", "SELECT_TRIM", "TURN", "LEN_TIME", "OUT_LINE",
            "NET_NEAR", "CONT_GAP", "CONT_M", "CHAIN_NET_STOP", "SERVE_PRIOR_KEEP", "SERVE_PRIOR_WIDE")    # and each CHAIN_* switch of shot_chain.py
 
@@ -141,14 +140,11 @@ def netmask_key(tag):
     return tag + "_" + content_key(files=[os.path.join(HERE, f) for f in NETMASK_CODE])
 
 
-def ball_tag(weights, passes, n, work, code=BALL_CODE, weak=None):
+def ball_tag(weights, passes, n, work, code=BALL_CODE):
     """The tag of the ball file name (lab.BLOB_TAG): the weights, the passes, and a key of the inputs: the detector
     code, the weights bytes, the court model (the crop), the decode path and n. New weights or new code give a new
-    file (G12). weak (E136, the setting ballPathLow): the low threshold of ball_path.py; the tag then also has this
-    value and ball_path.py. None: the tag of before."""
+    file (G12)."""
     import platform_cfg
-    if weak:
-        code, passes = tuple(code) + ("ball_path.py",), (passes + "-" if passes else "") + "pl%g" % weak
     return "_" + weights.split(".")[0] + ("_" + passes if passes else "") + "_" + content_key(
         weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, f) for f in code] + [
                                                        os.path.join(platform_cfg.weights_dir(), weights), os.path.join(work, "court.json")])
@@ -575,10 +571,8 @@ def main():
     # courtTrack (E26f): "" = the court model rule of ball_events.court_windows; a file name = that court file only.
     # netBand (item 6 (b), E88 to E133): true = the motion of the net picture rejects or confirms the net touches
     # (net_band_mask.py, net_band.py). Off until the test on the label windows holds the E131 result.
-    # ballPathLow (E136, ball_path.py): a number below 0.5 = the ball stage also keeps weak blobs (peak from this value
-    # to 0.5) on a moving path of strong blobs. null = off (the blob file of before).
     cfg = {"ballPass": True, "threshold": 0.5, "shortPoints": False, "ballPasses": "dim", "ballWeights": BALL_WEIGHTS,
-           "chain": True, "endModel": True, "courtTrack": "", "netBand": False, "ballPathLow": None}
+           "chain": True, "endModel": True, "courtTrack": "", "netBand": False}
     if a.settings:
         cfg.update(json.load(open(a.settings, encoding="utf-8")))
     warnings = []
@@ -704,11 +698,7 @@ def main():
         ball_full.WINDOWS[MID] = (0, n)
         # G12: the ball file name has the weights, the passes, and a key of the inputs (ball_tag).
         passes = (cfg["ballPasses"] or "").replace(",", "-").replace("+", "-")
-        weak = cfg["ballPathLow"] or None
-        if weak:
-            import ball_path
-        ball_wasb.WEAK = ball_path.Weak(weak) if weak else None     # the setting, not the variable BALL_PATH_LOW
-        lab.BLOB_TAG = ball_tag(weights, passes, n, work, weak=weak)
+        lab.BLOB_TAG = ball_tag(weights, passes, n, work)
         blob = lab.blob_file(work, 0, n)
         adopted = STAGE_KEYS.get("ballAdopted")
         if adopted and adopted.get("file") == os.path.basename(blob) and os.path.exists(blob) and not a.force:

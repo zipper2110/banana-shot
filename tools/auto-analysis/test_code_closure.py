@@ -7,13 +7,11 @@ import detect
 # The modules in the import closure of the ball stage and of the pose stage that are not in their hand lists
 # (detect.BALL_CODE, detect.POSE_CODE), each with the reason why a change of it does not change the output
 # (decision 90f2389d). A new module in a closure makes the test fail: put it into the hand list, or here with a reason.
-BALL_NO_EFFECT = {"lab": "paths, the video path and the match table; the time base enters the tag through n",
-                  "ball_path": "used only with the setting ballPathLow (E136); ball_tag then adds its value and ball_path.py"}
+BALL_NO_EFFECT = {"lab": "paths, the video path and the match table; the time base enters the tag through n"}
 POSE_NO_EFFECT = {"lab": "the path of the work folder"}
 # Level 1 of the net band (detect.NETMASK_CODE, item 6 (b)): the modules of its closure that are not in the hand list.
 # fill_in imports ball_wasb: the ball tag (detect.BALL_CODE) is a part of the level-1 key and covers it and its imports.
-MASK_NO_EFFECT = {"lab": "paths, the video path and the match table (as for the ball tag)",
-                  "ball_path": "through ball_wasb: in the ball tag when it is on (as for the ball tag)"}
+MASK_NO_EFFECT = {"lab": "paths, the video path and the match table (as for the ball tag)"}
 
 
 def module_folder(sources):
@@ -51,16 +49,6 @@ class CodeClosure(unittest.TestCase):
     def test_netmask_key_covers_its_closure(self):
         keyed = names(detect.NETMASK_CODE) | names(detect.BALL_CODE)
         self.assertEqual(set(code_closure.modules(*names(detect.NETMASK_CODE))) - keyed, set(MASK_NO_EFFECT))
-
-    def test_ball_tag_has_the_path_setting(self):
-        import platform_cfg  # noqa: F401
-        w = tempfile.mkdtemp(prefix="cc_")
-        json.dump({"H": [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}, open(os.path.join(w, "court.json"), "w"))
-        off = detect.ball_tag(detect.BALL_WEIGHTS, "dim", 100, w)
-        self.assertEqual(off, detect.ball_tag(detect.BALL_WEIGHTS, "dim", 100, w, weak=None))
-        on = detect.ball_tag(detect.BALL_WEIGHTS, "dim", 100, w, weak=0.2)
-        self.assertIn("_dim-pl0.2_", on)
-        self.assertNotEqual(on.split("_")[-1], off.split("_")[-1])
 
     def test_pose_key_covers_its_closure(self):
         keyed = names(detect.POSE_CODE)

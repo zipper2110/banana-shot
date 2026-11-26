@@ -53,11 +53,6 @@ DIM_LO, DIM_S0 = 0.3, 0.45       # dim(): factor for a pixel with no color; satu
 MERGE_R = 6.0                    # px of the 1920 frame: two blobs of different passes are one ball
 if PASSES:
     TAG += "_e27"
-# E136 (ball_path.py): weak blobs below 0.5 where a path of strong blobs supports them. None = off (the old blob file).
-WEAK = None
-if os.environ.get("BALL_PATH_LOW"):
-    import ball_path
-    WEAK = ball_path.Weak(float(os.environ["BALL_PATH_LOW"]))
 
 
 def lab_tag(mid):
@@ -175,8 +170,6 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
             for k, h in zip(t, h3):
                 for (bx, by, s, pk) in blobs(h):
                     rows.append((base + k, (bx + x0) / scale, (by + y0) / scale, s, pk))
-                if WEAK:
-                    WEAK.add(base + k, [((bx + x0) / scale, (by + y0) / scale, s, pk) for (bx, by, s, pk) in WEAK.blobs(h)])
 
     def flush_passes(x, base):
         """E27: the passes of BALL_PASSES. x: the pictures of a group, n, 3, h, w with values 0..1."""
@@ -184,7 +177,7 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
         if not trip:
             return
         pics = [x] + ([dim(x)] if "dim" in PASSES else [])
-        found, weak = {}, {}                                     # frame of the group -> one blob list for each pass
+        found = {}                                               # frame of the group -> one blob list for each pass
         for k in ([1.0, 2.0] if "low" in PASSES else [1.0]):     # k = 2: half of the scale
             for p in pics:
                 if k > 1:
@@ -199,14 +192,9 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
                     for i, hi in zip(t, h3):
                         found.setdefault(i, []).append([((bx * k + x0) / scale, (by * k + y0) / scale, s * k * k, pk, k)
                                                         for (bx, by, s, pk) in blobs(hi)])
-                        if WEAK:
-                            weak.setdefault(i, []).append([((bx * k + x0) / scale, (by * k + y0) / scale, s * k * k, pk, k)
-                                                           for (bx, by, s, pk) in WEAK.blobs(hi)])
         for i in sorted(found):
             for (bx, by, s, pk) in merge_passes(found[i])[:6]:
                 rows.append((base + i, bx, by, s, pk))
-        for i in sorted(weak):
-            WEAK.add(base + i, merge_passes(weak[i]))
 
     for f in frames(mid, start, dur, scale):
         group.append(f)
@@ -217,8 +205,6 @@ def run(mid, start, dur, scale=0.35, stride=2, save=True, net=None, quiet=False)
             if PROGRESS and base % 3600 == 0:
                 PROGRESS(base)
     arr = np.array(rows, np.float32).reshape(-1, 5)
-    if WEAK:
-        arr = WEAK.finish(arr, FPS or 60.0)
     el = time.time() - t0
     if not quiet:
       print(f"{mid} {start}+{dur}s scale {scale} stride {stride} crop {cw}x{ch}: frames {base}, "

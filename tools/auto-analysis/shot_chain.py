@@ -452,6 +452,9 @@ def last_shot(shots, t_end, t_cut):
 # no net, bounce or stop fact (cases "old_*" and "back_*"). The old rule has its own filter, run and bounce: the last run
 # of good flights in one direction, its first low kink (the kink rule) or else the fit landing of its first flight.
 OLD_MIN_N, OLD_LAND_N = 10, 20     # samples of a good flight, and of a flight with a usable fit landing, at 60 fps (0.15 s, 0.32 s)
+# G7 step 3: the seen bounce of the old rule. "event" = the bounce event at the end of a flight of the run (ball_bounce, the
+# one bounce fact of the chain); "kink" = the kink rule (a low kink in the court area, before G7 step 3).
+OLD_BOUNCE = os.environ.get("CHAIN_OLD_BOUNCE", "event")
 
 
 def set_fps(fps):
@@ -469,7 +472,8 @@ def old_good(f, min_speed=8.0):
 
 def old_quantities(pt, t_cut, min_speed=8.0):
     """The quantities of the last shot of the old rule (before G7: winner_ball.analyse), or None if there is no
-    good flight that starts before the end + t_cut."""
+    good flight that starts before the end + t_cut. The seen bounce: OLD_BOUNCE; else the fit landing of the first
+    flight of the run."""
     T = pt["end"]
     fl = [f for f in pt["flights"] if old_good(f, min_speed) and f["t0"] < T + t_cut]
     if not fl:
@@ -483,7 +487,13 @@ def old_quantities(pt, t_cut, min_speed=8.0):
     to_far = run[0]["v0"][1] > 0
     s = 1.0 if to_far else -1.0
     bounce, src = None, 0
-    for k in pt["kinks"]:                            # the kink rule: a kink where the ball is low, inside the court area
+    events = pt.get("events")
+    for f in run if OLD_BOUNCE == "event" and events else []:
+        if f.get("bounceEv") is not None:            # this flight ends at a bounce event
+            e = events[f["bounceEv"]]
+            bounce, src = (e["court"][0], e["court"][1], e["t"]), 2
+            break
+    for k in pt["kinks"] if OLD_BOUNCE == "kink" else []:   # the kink rule: a kink where the ball is low, inside the court area
         t = k[0]
         if t < run[0]["t0"] + 0.1 or t > run[-1]["t1"] + 0.3:
             continue

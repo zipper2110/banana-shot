@@ -50,6 +50,10 @@ class FaultAnswers(unittest.TestCase):
         self.assertEqual((out["faultNotChecked"], out["faultClipRows"]), (3, 0))
         self.assertNotIn("faultAnswers", out)
 
+    def test_hidden_fault_rows_are_the_rows_before_a_next_point(self):
+        # the one place of the rule (no_none and case_history): rows 1 to 3 end 25 s or less before the next point
+        self.assertEqual(bench.hidden_fault_rows(MID, self.rows), ([1, 2, 3], []))
+
     def test_f_is_a_fault_clip_p_a_found_point_n_a_false_rally(self):
         self.write([self.answer(1, "pB", "F"), self.answer(2, "pC", "P"), self.answer(3, "pC", "N")])
         out = bench.no_none(MID, self.rows, dict(M))

@@ -555,22 +555,19 @@ def fault_answers(mid):
     return {a["rowHash"]: a["answer"] for a in d.get("answers") or [] if a.get("answer") in ("F", "P", "N", "Q")}
 
 
-def no_none(mid, rows, m):
-    """The rally measures without the NONE points (the user, 2026-11-26): a marked point with the outcome NONE is not a
-    missed rally, and a detected rally on a NONE point (the match rule of lab.match_points) is not a false rally. The
-    numbers with the NONE points stay in m as "<key>WithNone". Returns a new dict."""
+def hidden_fault_rows(mid, rows, pairs=None):
+    """The rows that the bench hides as first-serve faults (the user, gap-program e912f7e2: a point starts at the first
+    serve; the detection writes a first-serve fault as a fault clip): (not checked, on a fault clip), lists of row
+    indices. Lab marks (no "faults" in gt.json) start at the second serve: a row that matches no marked point, overlaps
+    none, and ends chain.FAULT_NEXT s or less before the next marked point (not NONE) is "fault, not checked", not a
+    false rally. Where gt.json has fault clips (Igor), a row of this kind on a marked fault clip (+-1 s) is a fault;
+    the other rows stay false rallies. The user's answers of the Faults step are not in it (no_none applies them).
+    pairs: lab.match_points of rows and the marks (made when None). The one place of the rule (no_none, case_history)."""
     import lab
     import chain
     gt = lab.gt_points(mid)
-    pairs = lab.match_points([(r["start"], r["end"]) for r in rows], gt)
-    none = {gi for gi, g in enumerate(gt) if g[2] == "NONE"}
-    real = [(gi, j) for gi, j in pairs if gi not in none]
-    on_none = {j for gi, j in pairs if gi in none}
-    # First-serve faults (the user, gap-program e912f7e2: a point starts at the first serve; the detection writes a
-    # first-serve fault as a fault clip). Lab marks (no "faults" in gt.json) start at the second serve: a row that
-    # matches no marked point, overlaps none, and ends FAULT_NEXT s or less before the next marked point (not NONE)
-    # is "fault, not checked", not a false rally. Where gt.json has fault clips (Igor), a row of this kind on a marked
-    # fault clip (+-1 s) is a fault ("faultClipRows"); the other rows stay false rallies.
+    if pairs is None:
+        pairs = lab.match_points([(r["start"], r["end"]) for r in rows], gt)
     g = json.load(open(os.path.join(lab.mdir(mid), "gt.json"), encoding="utf-8"))
     clips = [(f["startMs"] / 1000 - 1.0, f["endMs"] / 1000 + 1.0) for f in g.get("faults", [])]
     used = {j for _, j in pairs}
@@ -586,6 +583,23 @@ def no_none(mid, rows, m):
         nxt = next((t for t in starts if t >= r["end"]), None)
         if nxt is not None and nxt - r["end"] <= chain.FAULT_NEXT:
             fault_nc.append(j)
+    return fault_nc, fault_clip
+
+
+def no_none(mid, rows, m):
+    """The rally measures without the NONE points (the user, 2026-11-26): a marked point with the outcome NONE is not a
+    missed rally, and a detected rally on a NONE point (the match rule of lab.match_points) is not a false rally. The
+    numbers with the NONE points stay in m as "<key>WithNone". Returns a new dict."""
+    import lab
+    import chain
+    gt = lab.gt_points(mid)
+    pairs = lab.match_points([(r["start"], r["end"]) for r in rows], gt)
+    none = {gi for gi, g in enumerate(gt) if g[2] == "NONE"}
+    real = [(gi, j) for gi, j in pairs if gi not in none]
+    on_none = {j for gi, j in pairs if gi in none}
+    # First-serve faults: the rows that the bench hides (hidden_fault_rows, the one place of the rule).
+    g = json.load(open(os.path.join(lab.mdir(mid), "gt.json"), encoding="utf-8"))
+    fault_nc, fault_clip = hidden_fault_rows(mid, rows, pairs)
     # The user's answers of the Faults step (S4 E158, faults_<match>.json): F = a fault clip (as faultClipRows),
     # P = a found point with a missing mark (one more marked and matched point), N = a false rally, Q or no answer =
     # "not checked" as before. No file: the numbers of before.

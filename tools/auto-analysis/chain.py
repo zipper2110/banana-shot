@@ -76,8 +76,9 @@ FAULTS = {}
 # does not use it). "0" = detect.add_net_hits (net_events.winner_hint: the last net event 4.5 to 1.5 s before the
 # rally end). "A" = the net case of the shot chain only (cases net_* and late_net: the net event of the last shot).
 # "B" = the net case of the chain; when the chain has no fact of the last shot (no chain, or the cases old_*, back_*,
-# none), winner_hint. A lab switch: an app run removes each CHAIN_* variable (detect.py, G12).
-NETHIT = os.environ.get("CHAIN_NETHIT", "0")
+# none), winner_hint. Default "B" (manager decision after E146). A lab switch: an app run removes each CHAIN_*
+# variable (detect.py, G12), thus the app uses the default.
+NETHIT = os.environ.get("CHAIN_NETHIT", "B")
 CHAIN_FACTS = ("net", "own", "out", "in", "stop", "late")    # case prefixes with a fact of the last shot (no winner_hint in B)
 
 

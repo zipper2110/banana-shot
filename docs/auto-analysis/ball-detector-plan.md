@@ -1,9 +1,13 @@
 # Plan for the ball detector (gap program item 7)
 
-Status: for approval by the manager and the user (2026-11-26). This is a plan only. No training starts before the approval.
+Status: revised 2026-11-26 after the image-space checks (E150 of S4, and the checks of section 2). For approval by
+the manager and the user. This is a plan only. No training starts before the approval.
 
-The ball track is the base of all events: hits, bounces, net touches, serves, and the winner. This plan says
-where the detector loses the ball now, why, what we can do, what each option costs, and how we measure it.
+The ball track is the base of all events: hits, bounces, net touches, serves, and the winner. The first step of
+this plan was to find the errors where the detector loses the ball. The check in image space (the stored blobs, not
+the 3D fits) shows that in each of the three target errors the ball is in the blobs. The errors come later in the
+chain. So this plan proposes **no detector training now**, and a diagnosis of the frames that the detector really
+misses.
 
 ## 1. The detector now
 
@@ -11,108 +15,63 @@ where the detector loses the ball now, why, what we can do, what each option cos
   lab match). Input: 3 frames, the court region of the 1920 x 1080 frame at scale 0.35 (about 670 x 380 px).
 - Two passes for each frame (`dim`, E27): the normal picture and a picture where white and gray become dark. The
   second pass finds a ball in front of a bright wall or sky. It doubles the time of the ball stage.
-- Recall on the hand-labeled frames (E80, `ball_labels_e27.json`, 2842 frames): m0913 92 %, lab 88 % (held out).
-  m1021 is the weak lab match (66 %: a second ball on the court, a bright wall). False blobs: about 0.2 to 0.5 for
-  each frame.
-- Cost: the ball stage is the largest stage (m0913, a 96 min video: ball 4214 s of 6739 s for all stages, G15). Training one weight file:
-  about 1 h on the 6 GB card (E38: 3 epochs, about 1 s for each step).
+- Recall on the hand-labeled frames (E80, `ball_labels_e27.json`, 2842 frames): m0913 92 %, lab 88 % (held out:
+  m1015 96 %, m1020 94 %, m1030 96 %, m1021 66 %). False blobs: about 0.2 to 0.5 for each frame.
+- Cost: the ball stage is the largest stage (m0913, a 96 min video: ball 4214 s of 6739 s for all stages, G15).
+  Training one weight file: about 1 h on the 6 GB card (E38: 3 epochs, about 1 s for each step).
 
-## 2. Target errors
+## 2. The target errors, in image space
 
-| # | Error | Count now | Journal | Effect |
+| Target | Error in the events | Image space (the stored blobs, peak 0.5 or more) | Where the error is | Owner |
 |---|---|---|---|---|
-| A | The far serve before its bounce is not in the blobs | 63 lab serve starts have a track only after the bounce; 46 of them have no blob within 20 px of the serve path | E125, E126, S4 check | no serve event; the server and the fault are not known (E73: 21 of 39 missed faults have no serve event) |
-| B | The track goes on through a net touch, and short tracks stay in the net band | m0913: net touches 10 to 7 of 12, false 1 to 4 of 18; lab 28 to 26 of 35 | E110, E85 | lost and false net touches; a false net touch can change a winner |
-| C | A shot is first seen after the net, or the ball is lost after the bounce before the shot | Igor: 5 shots with a time error of more than 0.3 s, 3 missed hits after a bounce | E95, E96 | a late or early hit time; a missed hit |
+| A, far serve | 63 lab serve starts have no serve event (E125) | 58 of 61 have a run of blobs down the picture to the bounce; of all 136 far starts with no serve event, 113 have one. The run starts at a median of 1.78 s after the point start, after the end of the old check window (E150) | the flights and the serve event (a wrong depth of the 3D fit; `serve_prior` returns early) | S4 |
+| B, net band | m0913 net touches 10 to 7 of 12, false 1 to 4 of 18; lab 28 to 26 of 35 (E110, E85) | At the 3 lost touches, the blobs follow the ball down to the net base and up again (for example 1130.07 s: z 0.83 to 0.0 to 0.86 m). At the 3 false touches, the blobs in the net band move a median of 8 px and 26 px in each frame (at 264.33 s 119 px: more than one object), and none stand still: a real ball (for example a player who bounces the ball near the net at 3589.57 s), not a false blob | the net rules (made on tracks with a gap at the touch) | S5 item 6: the net band motion confirms or rejects a touch (E89 to E132: lab 26 to 31 of 35 held out, false 8 to 4) |
+| C, near shots | Igor: 5 shots with a hit time error of more than 0.3 s, 3 missed hits after a bounce (E95) | For all 91 Igor hit labels, a flight starts soon after the hit: median 0.16 s for a near hit, 0.07 s for a far hit; only 2 of 91 after more than 0.3 s. In the 8 E95 cases the first flight sample is 0.03 to 0.26 s after the hit (one case 1.25 s), and 86 to 99 % of the frames between have a blob (two cases 40 % and 50 %) | the hit time and the shot rules of the chain | S3 (E96: `meet_time`) |
 
-## 3. Causes
+Scripts of the checks: `D:\bananashot-lab\ws\s5\plan\b_image.py`, `c_image.py` (read only, CPU); E150 of S4.
 
-- **A, far serve.** The far ball is small and fast (S4, from the court model of each lab match): 3.6 px at the
-  contact and 5.4 px at the net in the 1920 frame, so 1.3 to 1.9 px at scale 0.35. It moves about 29 px in each
-  frame (10 px at scale 0.35; 20 px between the frames of one model input at stride 2), so it is a streak. At the
-  contact (y about 337 px, above the far baseline) the background is a dark wall or fence, so the `dim` pass does
-  not help (the same 46 cases with and without it). E126: no fast blob run before the bounce in 61 of 68 cases, so
-  the link step is not the cause. The stored blobs have a peak of 0.5 or more; a weaker peak is not known yet.
-  Main cause: the input resolution at the far end, with the motion blur and the large step between the frames.
-  The contact is in the frame in all 63 cases, above the server's head (the racket or the arm can cover it).
-- **B, net band.** This is not a detector fault. The better detector (`dim`) sees the ball fall at the net, so the
-  track has no gap at the touch, and the net rules (made on tracks with a gap) find no candidate. Some new short
-  tracks in the net band are false blobs (net mesh, posts, a ball that lies at the net). The fix is mostly in the net
-  code: E89 (the motion of the net band confirms or rejects a touch: lab net touches 26 to 30 of 35, false 8 to 4).
-- **C, near shots.** Not diagnosed per frame yet. Likely causes: a near ball just after the hit is large and very
-  blurred, or the player or the racket covers it; a ball after a bounce near the player is lost in the same way.
-  The `low` pass (half scale, E27d) was made for a large near ball (+4 points recall, more cost).
+## 3. What the detector really misses
 
-## 4. Options
+The only measured detector loss is on the labeled frames (E80, E38):
+- m1021: 66 % recall held out. E38: the ball in front of the wall is found (92 %), the ball on the court is not
+  (57 %). A second ball lies on the court in this match (E27a).
+- The other videos: 4 to 8 % of the labeled frames are missed.
+The cause of these misses is not known per frame. The E27b analysis (luma, background, ball size) was made before
+the E38 weights and the `dim` pass.
 
-| Option | What | Cost | Expected gain | Needs labels |
-|---|---|---|---|---|
-| 1. Check the weak peaks | run the model with a low threshold on the 63 serve windows (about 3,800 frames) and read the peaks near the serve path; if the ball is there, accept a run of weak blobs only when it fits a serve path (3D) | GPU a few minutes; 1 day of work | part of A, if weak peaks exist | the A labels (to measure) |
-| 2. Far tile pass | one more pass on a crop of the far end (from above the far baseline to the net) at scale 0.7 to 1.0, so the far ball is 2.5 to 3.5 px (now 1.3 px), with stride 1 (consecutive frames, a smaller step) | ball stage +30 to 60 % (to measure); no training | A, and far balls in rallies | the A labels |
-| 3. Far tile only at serve times | option 2, but only in the 1.5 s before the first flight of each rally (a second ball step after the rally step) | ball stage +1 to 2 %; a change of the stage order | A only | the A labels |
-| 4. Link step | accept a fast run of 3 to 4 samples at the far end when it fits a serve path | CPU, small | 4 of 63 | no |
-| 5. Fine-tune with new labels | the E38 recipe, with new labeled frames: far serves (A), near shots (C), and net band frames with no ball (B, hard negatives) | labels (section 5); GPU about 6 h (4 fold runs and 1 run with all, about 1 h each) + 1 h measure | A, C, fewer false blobs in the net band | yes |
-| 6. Model with more frames | a new model input (5 or more frames) for a weak, fast ball | days of GPU; a new design; high risk | uncertain | yes, many |
+## 4. Proposal
 
-Proposal: options 1 and 4 first (cheap), then option 2 or 3 (no training), then option 5 if the gain is too small.
-Option 6 is not in this plan.
+1. **No training now.** The three target errors are in the steps after the detector, and their owners fix them
+   there (S4: serve, S5: net band, S3: hit time).
+2. **Diagnosis of the missed labeled frames** (CPU and a few GPU minutes on the label windows): for each labeled
+   frame with no blob of peak 0.5 or more within the hit radius, the heat map peak at the label, the ball size, the
+   ball and background luma, the motion, the place (wall, court, net, player), and the frame before and after. Then
+   a table of the causes with their counts, as in E27b. No user work: the labels exist.
+3. **Only if the diagnosis shows a large and clear cause**, a new plan with options, for example: a fine-tune with
+   new labels at that cause (the E38 recipe), a larger scale on a part of the picture, or a lower threshold where a
+   path supports it. Each option then states its labels, its user time, and its GPU time.
 
-## 5. Labels and training data
+## 5. Labels and user work
 
-The A labels are needed for each option, also only to measure. **The user must check ball positions.**
-
-- How: the method of E27a. A script proposes the ball position in each frame from the image difference (4K frame)
-  and from a path fit between the serve toss and the first sample after the bounce. The check is a sheet of small
-  tiles (20 tiles for each sheet): the user (or Claude first, then the user on a sample) accepts, moves, or
-  rejects each position. Frames where the script has no proposal need a click.
-- How many: A: 63 lab serves x about 14 frames (about 28 frames from the contact to the bounce at 60 fps, every
-  second frame) = about 900 frames.
-  C: about 30 lab shots x 10 frames = about 300 frames (the shots are found first by a script, as in E95). B: net band
-  frames with no ball come from the current labels and need no user work.
-- User time: about 40 sheets for A and 15 for C, about 30 s each = **about 30 min**, plus clicks where the script
-  has no proposal (estimate: 20 % of the frames, 5 s each = **about 20 min**). If Claude checks first and the user
-  checks a 10 % sample, the user time is about 10 min. Bias risk: proposals from the image difference miss balls
-  that the difference does not show (E27a). A tool for the check does not exist yet (S1: no click tool for ball
-  positions). S4 can add a "ball here" key to `label_events.html` (a small change) for the clicks; a tile sheet
-  for the check is part of step 1.
-- Held out: m0913 and Igor (m1116) stay test only. The lab matches use one fold weight file for each match.
+- Now: **none**. The checks of section 2 use the stored blobs. The diagnosis of step 2 uses the existing hand
+  labels (`ball_labels_e27.json`).
+- Later, only if step 3 starts: new labels at the cause that the diagnosis finds. Agents do not label by eye
+  (the user's decision, 2026-11-25), so the user checks each position. The count and the time come with that plan.
 
 ## 6. Measure
 
-1. `bench.py heavy --stage ball` (S1, item 7(a); not built yet): ball recall and false blobs on the labeled frames,
-   with the fold weights. The E27 labels must not lose recall (each video), and the A and C labels must gain.
-   Time: about 1 min for the lab windows, about 15 min for the m0913 windows.
-2. The small level of the case library (S1 item 8): the event cases of A, B, C and the controls (one marked point
-   with a pad, old code against new code on the same fragment). About 40 s of ball stage for each 30 s fragment.
+1. `bench.py heavy --stage ball` (S1, item 7(a)): ball recall and false blobs on the labeled frames, with the fold
+   weights; each video must keep or improve its recall.
+2. The small level of the case library (S1 item 8): the event cases and the controls, old code against new code on
+   the same fragment.
 3. The medium level (2 to 3 games for each singles video) before a merge.
-4. Full videos only at a milestone (all lab matches, m0913, Igor), with the manager's approval.
+4. Full videos only at a milestone, with the manager's approval.
 
-Order of the measure for the events: serve events (A), net touches (B), hit times (C); then rallies, then winners.
+## 7. Risks of a detector change (for step 3)
 
-## 7. Risks
-
-- **False blobs.** More recall gives more false blobs (E27d: `dim` +0.27 false blobs for each frame). False blobs
-  make false tracks, bounces, and net touches. Each option reports the false blobs for each frame and the false
-  events on the "no" labels.
+- **False blobs.** More recall gives more false blobs (E27d: `dim` +0.27 for each frame); they make false tracks,
+  bounces, and net touches.
 - **Rules made on the old tracks.** The net and bounce rules depend on the gaps of the current track (E110: a better
-  detector lost net touches). After a detector change, re-measure the net touches and the bounces at once, and fix
-  the rules (E89) before a merge.
-- **Label bias.** The labels come from proposals; a ball that the proposal method does not see is not labeled
-  (E27a). The user check of a sample measures this.
-- **Fit to the lab matches.** Few videos (4 lab matches, m0913, Igor). Use the fold weights, keep m0913 and Igor as
-  tests, and treat a gain on only one video as noise.
-- **Cost.** The ball stage is already the largest stage. Option 2 can add 30 to 60 %; option 3 is cheap but changes
-  the stage order.
-- **GPU memory.** The 6 GB card is full at batch 1 (E83). A larger crop (option 2) or a larger model can run out of
-  memory; measure on the label windows first.
-
-## 8. Steps and time
-
-| Step | Work | GPU | User |
-|---|---|---|---|
-| 1 | A labels: proposal script, check tool (S4 key), Claude check | decode only (label windows) | about 10 to 50 min |
-| 2 | Options 1 and 4 | a few minutes | none |
-| 3 | Option 2 or 3 on the label windows | about 30 min | none |
-| 4 | C labels and option 5, if needed | about 7 h | about 15 min |
-| 5 | Net and bounce rules on the new tracks (E89), case library small and medium | about 1 h | none |
-| 6 | Milestone full run | about 6 h | approval |
+  detector lost net touches). After a detector change, re-measure the events at once.
+- **Fit to the lab matches.** Few videos. Use the fold weights, keep m0913 and Igor as tests.
+- **Cost and memory.** The ball stage is the largest stage; the 6 GB card is full at batch 1 (E83).

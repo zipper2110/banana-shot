@@ -12,6 +12,12 @@ clip.mp4 (a keyframe). All times in the manifest are fragment times. A reader of
 media stage) gets t_frag + videoStartInClip (the audio can start a few ms before the video). The cut is checked: the
 first decoded frame of the clip must equal the source frame at offset.
 
+Fixed ids (manager, 2026-11-26): an id is fixed once a fragment is in a published index (the label page reads it).
+`published.json` records each id that index() wrote, with its t0. A cut refuses an id that is published, has a
+label file (labels/<id>.events.json), or has a folder: a new cut gets a new id (for example s005b). A fragment that
+must leave the page is retired (fragment.json "retired"); index() leaves it out, and its id stays published. Cause:
+s005 was cut again under the same id while the page was open; the page kept the old row (old t0) with the new clip.
+
 Levels (the user, gap-program 8a): small (1 point with a pad, 30 to 60 s), medium (2 to 3 games across one end
 change, 7 to 10 min), large (5 to 9 games, 20 to 30 min), match (the full video). A fragment can hold many points.
 
@@ -20,6 +26,7 @@ Usage:
   python case_lib.py cut <spec.json>        cut the fragments of a spec list (see cut()); writes the manifests
   python case_lib.py list                   the fragments of the library
   python case_lib.py index                  <lab>/ws/s1/cases/manifest.json for the event label page (S4); cut also writes it
+  python case_lib.py retire <id> --reason <text>   take a fragment out of the page; its id stays used
 """
 import argparse, hashlib, json, os, shutil, subprocess, sys, time
 import numpy as np
@@ -27,6 +34,8 @@ import lab, platform_cfg
 
 ROOT = os.path.join(os.path.dirname(lab.ROOT.rstrip("/\\")), "ws", "s1", "cases")
 FRAGS = os.path.join(ROOT, "frags")
+LABELS = os.path.join(ROOT, "labels")
+PUBLISHED = os.path.join(ROOT, "published.json")
 FORMAT = "case-fragment/1"
 SINGLES = ["m1015", "m1020", "m1021", "m1030", "m1116"]      # the singles videos with marks in the lab folders
 PAD = {"small": (8.0, 4.0)}                                  # s before the first point, s after the last point
@@ -131,8 +140,8 @@ def cut(spec):
     kf = keyframe_before(video, t_in, not_before=prev_end)
     t_out = spec["end"] + after
     d = os.path.join(FRAGS, spec["id"])
-    if os.path.exists(os.path.join(d, "fragment.json")):
-        raise RuntimeError(f"{spec['id']} is already in the library")
+    if spec["id"] in published() or os.path.exists(os.path.join(LABELS, spec["id"] + ".events.json")) or os.path.exists(d):
+        raise RuntimeError(f"the id {spec['id']} is in use (published, labeled, or a folder): give the new cut a new id")
     os.makedirs(d, exist_ok=True)
     clip = os.path.join(d, "clip.mp4")
     t0 = time.time()
@@ -171,6 +180,18 @@ def cut(spec):
     return man
 
 
+def published():
+    return json.load(open(PUBLISHED)) if os.path.exists(PUBLISHED) else {}
+
+
+def retire(fid, reason):
+    """Takes a fragment out of the page index. Its folder and its id stay; the id is never used again."""
+    p = os.path.join(FRAGS, fid, "fragment.json")
+    m = json.load(open(p))
+    m["retired"] = {"reason": reason, "time": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    json.dump(m, open(p, "w"), indent=1)
+
+
 def index():
     """<ROOT>/manifest.json: one row for each fragment, in the format of the event label page (S4 item 10, agreed
     2026-11-26). Times are source times: source time = t0 + clip time (the player's currentTime), so
@@ -182,6 +203,8 @@ def index():
         if not os.path.exists(p):
             continue
         m = json.load(open(p))
+        if m.get("retired"):
+            continue
         mid, off = m["source"]["mid"], m["offset"]
         span = [round(off + m["labelSpan"][0], 3), round(off + m["labelSpan"][1], 3)]
         mid_t = (m["labelSpan"][0] + m["labelSpan"][1]) / 2
@@ -206,8 +229,14 @@ def index():
                                  "ending": q["outcome"]} for q in m["points"]],
                      "span": span, "level": m["level"], "kinds": m["kinds"], "control": m["control"],
                      "faultCheck": mid in ("m1015", "m1020", "m1021", "m1030")})
+    pub = published()
+    for r in rows:
+        if r["id"] in pub and abs(pub[r["id"]]["t0"] - r["t0"]) > 1e-6:
+            raise RuntimeError(f"{r['id']} was published with t0 {pub[r['id']]['t0']}, now {r['t0']}: a changed fragment needs a new id")
+        pub.setdefault(r["id"], {"t0": r["t0"], "match": r["match"], "span": r["span"], "time": time.strftime("%Y-%m-%dT%H:%M:%S")})
     out = os.path.join(ROOT, "manifest.json")
     json.dump({"version": 1, "fragments": rows}, open(out, "w"), indent=1)
+    json.dump(pub, open(PUBLISHED, "w"), indent=1)
     return out
 
 
@@ -219,6 +248,7 @@ def main():
     k = sub.add_parser("cut"); k.add_argument("spec")
     sub.add_parser("list")
     sub.add_parser("index")
+    r = sub.add_parser("retire"); r.add_argument("id"); r.add_argument("--reason", required=True)
     a = ap.parse_args()
     if a.cmd == "controls":
         print(json.dumps(controls(a.n, a.seed, a.matches.split(",") if a.matches else None), indent=1))
@@ -229,6 +259,9 @@ def main():
                   f"label span {m['labelSpan']}, first frame same {m['cut']['firstFrameSame']} ({m['cut']['seconds']} s)", flush=True)
         print("index:", index())
     elif a.cmd == "index":
+        print(index())
+    elif a.cmd == "retire":
+        retire(a.id, a.reason)
         print(index())
     else:
         for f in sorted(os.listdir(FRAGS)) if os.path.exists(FRAGS) else []:

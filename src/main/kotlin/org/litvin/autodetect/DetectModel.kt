@@ -122,7 +122,11 @@ data class DetectedRally(
     val shots: Int? = null,
     val p1Near: Boolean? = null,
     val view: RallyView? = null,
-    /** The probability that the player at the near end wins: from the ball only, and after the score model. */
+    /**
+     * The probability that the player at the near end wins. [pBall]: the evidence of the rally (the ball rule, the
+     * shot chain, the net). [pNearWins]: the winner that the result uses; it is [pBall], or the posterior of the score
+     * decoder in a result of the lab setting CHAIN_DECODER=1 or of a run before E142.
+     */
     val pBall: Double? = null,
     val pNearWins: Double? = null,
     /** True when the server is at the near end. Null when the detection does not know the server. */
@@ -132,7 +136,7 @@ data class DetectedRally(
     val lastShot: LastShot? = null,
     /** The ball into the net that ends the rally, when the detection saw one. The shot chain uses the net events. */
     val netHit: NetHit? = null,
-    /** The shots of the rally and the winner evidence from them (shot_chain.py). The score model starts from this evidence. */
+    /** The shots of the rally and the winner evidence from them (shot_chain.py). [pBall] starts from this evidence. */
     val chain: ShotChain? = null,
 )
 

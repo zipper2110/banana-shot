@@ -108,13 +108,37 @@ def check_video(work, video):
     return vid
 
 
-def ball_tag(weights, passes, n, work):
+# Item 13 (decision 90f2389d). The stages media, audio, court, court2 and flights: the key has the import closure of
+# the entry modules (code_closure.files). The ball and pose stages (1 h and more): a hand list, and test_code_closure
+# fails when their closure gets a module that is not in the list or on its "no effect" list.
+FLIGHTS_ENTRIES = ("ball_full", "net_events", "feat_wasb")
+STAGE_ENTRIES = {"media": ("prep", "frame_times"), "audio": ("feat_audio", "feat_mel"), "court": ("court_track",),
+                 "court2": ("court_refine",), "flights": FLIGHTS_ENTRIES}
+BALL_CODE_OLD = ("ball_wasb.py", "wasb_hrnet.py")          # the ball tag before item 13 (adopt_keys)
+BALL_CODE = BALL_CODE_OLD + ("burst_ball.py", "cuda_scale.py", "platform_cfg.py")
+POSE_CODE = ("pose_extract.py", "platform_cfg.py")         # pose_extract.py has the URLs of the pose models
+# The code files of the flights key before item 13 (a hand list; adopt_keys)
+FLIGHTS_CODE_OLD = ("ball_full.py", "ball_3d.py", "ball_bounce.py", "ball_events.py", "ball_tracks.py", "net_events.py",
+                    "net_lab.py", "feat_wasb.py", "frame_times.py", "court_refine.py")
+
+
+def code_key(name, *parts, files=()):
+    """The key of a stage with an import-closure key: the parts, the input files, and the code of STAGE_ENTRIES[name]."""
+    import code_closure
+    return content_key(*parts, files=list(files) + code_closure.files(*STAGE_ENTRIES[name]))
+
+
+def pose_key():
+    return content_key(files=[os.path.join(HERE, f) for f in POSE_CODE])
+
+
+def ball_tag(weights, passes, n, work, code=BALL_CODE):
     """The tag of the ball file name (lab.BLOB_TAG): the weights, the passes, and a key of the inputs: the detector
     code, the weights bytes, the court model (the crop), the decode path and n. New weights or new code give a new
     file (G12)."""
     import platform_cfg
     return "_" + weights.split(".")[0] + ("_" + passes if passes else "") + "_" + content_key(
-        weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, "ball_wasb.py"), os.path.join(HERE, "wasb_hrnet.py"),
+        weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, f) for f in code] + [
                                                        os.path.join(platform_cfg.weights_dir(), weights), os.path.join(work, "court.json")])
 
 
@@ -180,6 +204,109 @@ def adopt_ball(work, video, old, weights, passes):
     json.dump(keys, open(keys_file, "w"), indent=1)
     return rec
 
+
+
+def git_changes(files, since):
+    """The commits of this folder after the time since (s, a file time) that change one of the files, as text lines;
+    None when git does not answer."""
+    import subprocess
+    try:
+        r = subprocess.run(["git", "log", "--format=%h %cI %s", "--since=" + time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(since)),
+                            "--"] + [os.path.join(HERE, f) for f in files], cwd=HERE, capture_output=True, text=True)
+    except OSError:
+        return None
+    return None if r.returncode else [x for x in r.stdout.splitlines() if x]
+
+
+def adopt_keys(work, weights, passes, n, court_track=""):
+    """Item 13 (decision 90f2389d): a ball file of the tag before item 13 (BALL_CODE_OLD) gets the name of the new tag,
+    and an existing pose.npy gets the pose key, only when git shows no change of the added code files after the file
+    was made. The flights get the new key when their recorded key is the key before item 13 (the old ball tag, the old
+    hand list, the court files of now), the ball file is adopted or current, and git shows no change of the files of
+    the import closure after fullflights_s0.35.json was made. The media, audio, court and court2 stages had no key
+    before item 13: they get the key of now when they have no recorded key, their outputs exist, and git shows no
+    change of the files of their import closure after the newest output was made. Else the file is stale: the next
+    run makes it again. Returns {"ball": ..., "pose": ..., "media": ..., "audio": ..., "court": ..., "court2": ...,
+    "flights": ...}."""
+    import shutil
+    import lab
+    out, tag = {}, lab.BLOB_TAG
+    try:
+        old_tag = lab.BLOB_TAG = ball_tag(weights, passes, n, work, BALL_CODE_OLD)
+        old = lab.blob_file(work, 0, n)
+        new_tag = lab.BLOB_TAG = ball_tag(weights, passes, n, work)
+        new = lab.blob_file(work, 0, n)
+    finally:
+        lab.BLOB_TAG = tag
+    added = [f for f in BALL_CODE if f not in BALL_CODE_OLD]
+    if os.path.exists(new):
+        out["ball"] = {"state": "current", "file": os.path.basename(new)}
+    elif not os.path.exists(old):
+        out["ball"] = {"state": "none", "file": os.path.basename(old)}
+    else:
+        ch = git_changes(added, os.path.getmtime(old))
+        if ch is None or ch:
+            out["ball"] = {"state": "stale", "file": os.path.basename(old), "changes": ch if ch else "no git"}
+        else:
+            shutil.copy2(old, new)                 # a copy, not a link (E52)
+            out["ball"] = {"state": "adopted", "file": os.path.basename(new), "from": os.path.basename(old)}
+            rec = STAGE_KEYS.get("ballAdopted")
+            if rec and rec.get("file") == os.path.basename(old):
+                rec["file"] = os.path.basename(new)  # the E52 warning stays with the file under its new name
+    pose = os.path.join(work, "pose.npy")
+    if STAGE_KEYS.get("pose") == pose_key() and os.path.exists(pose):
+        out["pose"] = {"state": "current"}
+    elif not os.path.exists(pose):
+        out["pose"] = {"state": "none"}
+    else:
+        ch = git_changes(POSE_CODE, os.path.getmtime(pose))
+        if ch is None or ch:
+            out["pose"] = {"state": "stale", "changes": ch if ch else "no git"}
+        else:
+            STAGE_KEYS["pose"] = pose_key()
+            out["pose"] = {"state": "adopted"}
+    import code_closure
+    W = lambda f: os.path.join(work, f)
+    stages = {"media": ([W("audio.flac"), W("kf_times.csv"), W("kf.done"), W("pts.npy")], code_key("media")),
+              "audio": ([W("feat_audio.npy"), W("feat_mel.npy")], code_key("audio")),
+              "court": ([W("court_track.json")], code_key("court")),
+              "court2": ([W("court_track_refined.json")], code_key("court2", files=[W("court_track.json")]))}
+    for name, (outputs, key) in stages.items():
+        if STAGE_KEYS.get(name) == key:
+            out[name] = {"state": "current"}
+        elif not all(os.path.exists(o) for o in outputs):
+            out[name] = {"state": "none"}
+        elif name in STAGE_KEYS:
+            out[name] = {"state": "stale", "changes": "the recorded key is not the key of now"}
+        else:
+            ch = git_changes([os.path.basename(f) for f in code_closure.files(*STAGE_ENTRIES[name])],
+                             max(os.path.getmtime(o) for o in outputs))
+            if ch is None or ch:
+                out[name] = {"state": "stale", "changes": ch if ch else "no git"}
+            else:
+                STAGE_KEYS[name] = key
+                out[name] = {"state": "adopted"}
+    court = [W("court_track.json"), W("court_track_refined.json")]
+    flights_old = old_tag + "_" + content_key(court_track, files=court + [os.path.join(HERE, f) for f in FLIGHTS_CODE_OLD])
+    flights_new = new_tag + "_" + code_key("flights", court_track, files=court)
+    full = W("fullflights_s0.35.json")
+    if STAGE_KEYS.get("flights") == flights_new:
+        out["flights"] = {"state": "current"}
+    elif not os.path.exists(full) or STAGE_KEYS.get("flights") != flights_old:
+        out["flights"] = {"state": "none" if not os.path.exists(full) else "stale",
+                          "changes": None if not os.path.exists(full) else "the recorded key is not the key before item 13"}
+    elif out["ball"]["state"] not in ("adopted", "current"):
+        out["flights"] = {"state": "stale", "changes": "the ball file is not adopted"}
+    else:
+        ch = git_changes([os.path.basename(f) for f in code_closure.files(*FLIGHTS_ENTRIES)], os.path.getmtime(full))
+        if ch is None or ch:
+            out["flights"] = {"state": "stale", "changes": ch if ch else "no git"}
+        else:
+            STAGE_KEYS["flights"] = flights_new
+            out["flights"] = {"state": "adopted"}
+    STAGE_KEYS["keysAdopted"] = dict(out, time=time.strftime("%Y-%m-%dT%H:%M:%S"))
+    json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+    return out
 
 def court_problem(track_file):
     """A text if the court model of the video is missing or not plausible, else None. Plausible: the corners
@@ -416,6 +543,7 @@ def main():
     ap.add_argument("--adopt-ball", default="", help="an old ball file to adopt (E52); needs --weights and --passes")
     ap.add_argument("--weights", default=None, help="with --adopt-ball: the weights of the old file")
     ap.add_argument("--passes", default=None, help='with --adopt-ball: the passes of the old file ("dim" or "")')
+    ap.add_argument("--adopt-keys", action="store_true", help="item 13: adopt the ball and pose files under the new keys (git check)")
     a = ap.parse_args()
     work = os.path.abspath(a.work)
     if a.adopt_ball:
@@ -461,6 +589,12 @@ def main():
     if os.path.exists(KEYS_FILE) and not a.force:
         STAGE_KEYS.update(json.load(open(KEYS_FILE)))
     vid = check_video(work, a.video)
+    if a.adopt_keys:
+        import lab
+        rec = adopt_keys(work, weights, (cfg["ballPasses"] or "").replace(",", "-").replace("+", "-"), lab.video_seconds(work),
+                         cfg["courtTrack"])
+        say("@adopted", json.dumps(rec))
+        return
     times_file = os.path.join(work, "stage_times.json")
     if os.path.exists(times_file) and not a.force:
         STAGE_S.update(json.load(open(times_file)))
@@ -483,7 +617,7 @@ def main():
     # ---- media
     import prep, frame_times
     stage("media", [W("audio.flac"), W("kf_times.csv"), W("kf.done"), W("pts.npy")],
-          lambda: (prep.prep(lab.MATCHES[MID], work), frame_times.load(MID)), a.force)
+          lambda: (prep.prep(lab.MATCHES[MID], work), frame_times.load(MID)), a.force, code_key("media"))
     save_times()
     kt = lab.kf_times(work)
     n = lab.video_seconds(work)            # G2: the seconds of the video, not the count of pictures
@@ -493,7 +627,7 @@ def main():
 
     # ---- audio and image features
     import feat_audio, feat_mel
-    stage("audio", [W("feat_audio.npy"), W("feat_mel.npy")], lambda: (feat_audio.run(MID), feat_mel.run(MID)), a.force)
+    stage("audio", [W("feat_audio.npy"), W("feat_mel.npy")], lambda: (feat_audio.run(MID), feat_mel.run(MID)), a.force, code_key("audio"))
 
     def image():
         import timm, feat_dino
@@ -512,10 +646,13 @@ def main():
             import court_track
             tr = court_track.run(MID)
             ok = [w for w in (tr or []) if w["ok"]]
-            if ok:
+            # court.json is an input of the ball tag (the crop of the ball stage). A new court key (a code change)
+            # must not force a ball run (item 13): an existing court.json stays; --force makes it again. court_track
+            # starts from it, so each court run starts from the same court.
+            if ok and (a.force or not os.path.exists(W("court.json"))):
                 m = min(ok, key=lambda w: abs(w["t0"] - n / 2))
                 json.dump({"H": m["H"], "chamfer_px": max(1.0, m["cost"])}, open(W("court.json"), "w"))
-        stage("court", [W("court_track.json")], court, a.force)
+        stage("court", [W("court_track.json")], court, a.force, code_key("court"))
         # The check comes first: with no court model (court_track.json is not written), the steps below fail.
         problem = court_problem(W("court_track.json"))
         if not problem:
@@ -525,7 +662,7 @@ def main():
                 import court_refine
                 court_refine.run(work, log=False)
             try:
-                stage("court2", [W("court_track_refined.json")], refine, a.force)
+                stage("court2", [W("court_track_refined.json")], refine, a.force, code_key("court2", files=[W("court_track.json")]))
             except Exception as e:        # the first model stays
                 traceback.print_exc()
                 warn(f"No refined court model ({type(e).__name__}: {e}). The ground points use the first court model.")
@@ -590,10 +727,8 @@ def main():
             net_events.run_folder(work)
             feat_wasb.run(MID)
             np.save(W("feat_wasbf.npy"), np.load(W("feat_wasb.npy"))[:, [4, 5, 6]])
-        # G12: the flights run again when the ball file, the court files or the code of the flights change.
-        flights_key = lab.BLOB_TAG + "_" + content_key(cfg["courtTrack"], files=[W("court_track.json"), W("court_track_refined.json")] + [
-            os.path.join(HERE, f) for f in ("ball_full.py", "ball_3d.py", "ball_bounce.py", "ball_events.py", "ball_tracks.py",
-                                            "net_events.py", "net_lab.py", "feat_wasb.py", "frame_times.py", "court_refine.py")])
+        # G12: the flights run again when the ball file, the court files or the code of the flights (import closure) change.
+        flights_key = lab.BLOB_TAG + "_" + code_key("flights", cfg["courtTrack"], files=[W("court_track.json"), W("court_track_refined.json")])
         stage("flights", [W("fullflights_s0.35.json"), W("feat_wasbf.npy")], flights, a.force, flights_key)
         save_times()
 
@@ -605,7 +740,7 @@ def main():
             det = YOLOX(platform_cfg.pose_model(pose_extract.DET), model_input_size=(640, 640), backend="onnxruntime", device=dev)
             ps = RTMPose(platform_cfg.pose_model(pose_extract.POSE), model_input_size=(192, 256), backend="onnxruntime", device=dev)
             pose_extract.run(MID, det, ps)
-        stage("pose", [W("pose.npy")], pose, a.force)
+        stage("pose", [W("pose.npy")], pose, a.force, pose_key())
         save_times()
         model_name = "ball"
 

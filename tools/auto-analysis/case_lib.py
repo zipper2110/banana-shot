@@ -38,7 +38,7 @@ LABELS = os.path.join(ROOT, "labels")
 PUBLISHED = os.path.join(ROOT, "published.json")
 FORMAT = "case-fragment/1"
 SINGLES = ["m1015", "m1020", "m1021", "m1030", "m1116"]      # the singles videos with marks in the lab folders
-PAD = {"small": (8.0, 4.0)}                                  # s before the first point, s after the last point
+PAD = {"small": (8.0, 4.0), "medium": (60.0, 60.0)}         # s before the first point, s after the last point (medium: the GRU context)
 # The lab marks start at the second serve; the label page asks the user for the first-serve fault before it (5 to
 # 20 s earlier). On these matches the pad before is up to FAULT_PAD s, but it does not go into the previous point.
 FAULT_CHECK = ("m1015", "m1020", "m1021", "m1030")
@@ -128,7 +128,7 @@ def cut(spec):
     cases: [{stream, journal, case, solved}], pad: [before, after] (optional)}. Returns the manifest."""
     mid, level = spec["mid"], spec.get("level", "small")
     video = lab.MATCHES[mid]["video"]
-    if level == "small" and any(p["outcome"] == "NONE" and p["end"] > spec["start"] and p["start"] < spec["end"] for p in points(mid)):
+    if level in ("small", "medium") and any(p["outcome"] == "NONE" and p["end"] > spec["start"] and p["start"] < spec["end"] for p in points(mid)):
         raise RuntimeError(f"{spec['id']}: the span has a NONE point; NONE points are not cases or controls (the user, 2026-11-26)")
     before, after = spec.get("pad") or PAD[level]
     prev_end = None
@@ -207,6 +207,43 @@ def labels(warn=print):
     return out
 
 
+MAPPED = "bananashot-event-marks-mapped"
+
+
+def map_marks(fid, warn=print):
+    """The user's small-level marks inside the label span of the fragment fid (a medium or large fragment), at the same
+    source time (manager, gap-program.md: the user's marks are reused; never detection results). Reads only labels():
+    no retired id, no stale t0, no *.bak file. Each mark is copied as it is, with "from": the small id. A small label
+    with "skip" is not used; an "unsure" one gives "fromUnsure": true. Writes labels/<fid>.mapped.json; the label page
+    shows these marks as the user's own until the first save of <fid>.events.json (the page then keeps the marks that
+    the user did not move or delete, with their "from"). Returns the number of marks."""
+    rows = {r["id"]: r for r in json.load(open(os.path.join(ROOT, "manifest.json")))["fragments"]}
+    r = rows[fid]
+    if r["level"] == "small":
+        raise RuntimeError(f"{fid} is a small fragment: no marks are mapped into it")
+    s0, s1 = r["span"]
+    ev, src = [], {}
+    for sid, L in labels(warn).items():
+        if sid == fid or rows[sid]["match"] != r["match"] or rows[sid]["level"] != "small":
+            continue
+        if L.get("skip"):
+            warn(f"map {fid}: {sid} is marked skip; not used")
+            continue
+        got = [dict(e, **{"from": sid}, **({"fromUnsure": True} if L.get("unsure") else {}))
+               for e in L.get("events", []) if s0 - 1e-6 <= e["t"] <= s1 + 1e-6]
+        if got:
+            ev += got
+            src[sid] = {"savedAt": L.get("savedAt"), "row": (L.get("manifest") or {}).get("row"), "marks": len(got),
+                        "labeler": (L.get("source") or {}).get("labeler")}
+    ev.sort(key=lambda e: e["t"])
+    out = {"version": 1, "kind": MAPPED, "fragment": fid, "match": r["match"], "t0": r["t0"], "span": [s0, s1],
+           "rule": "the user's small-level marks (case_lib.labels) with t inside the span, copied at the same source time",
+           "sources": src, "events": ev, "madeAt": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    with open(os.path.join(LABELS, fid + ".mapped.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    return len(ev)
+
+
 def retire(fid, reason):
     """Takes a fragment out of the page index. Its folder and its id stay; the id is never used again."""
     p = os.path.join(FRAGS, fid, "fragment.json")
@@ -272,6 +309,8 @@ def main():
     sub.add_parser("list")
     sub.add_parser("index")
     r = sub.add_parser("retire"); r.add_argument("id"); r.add_argument("--reason", required=True)
+    mp = sub.add_parser("map", help="the user's small marks into the medium and large fragments (labels/<id>.mapped.json)")
+    mp.add_argument("ids", nargs="*")
     a = ap.parse_args()
     if a.cmd == "controls":
         print(json.dumps(controls(a.n, a.seed, a.matches.split(",") if a.matches else None), indent=1))
@@ -283,6 +322,10 @@ def main():
         print("index:", index())
     elif a.cmd == "index":
         print(index())
+    elif a.cmd == "map":
+        rows = json.load(open(os.path.join(ROOT, "manifest.json")))["fragments"]
+        for fid in a.ids or [r["id"] for r in rows if r["level"] != "small"]:
+            print(f"{fid}: {map_marks(fid)} marks mapped")
     elif a.cmd == "retire":
         retire(a.id, a.reason)
         print(index())

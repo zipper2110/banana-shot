@@ -162,6 +162,11 @@ Phase 2 (from 2026-11-26; items 1 to 4 are merged: E50, E51):
     `feat_wasb.npy` (a rally-model input), but `serve_ball.py` is not in the flights key. After a serve_ball change
     (E77, E126) the app keeps a stale `feat_wasb.npy`. Fix: the key from the import closure of each stage, or a test
     that fails when a stage imports a module that is not in its key. After item 12.
+    Decision (manager, 2026-11-26): flights, court, court2, audio and media get import-closure keys (cheap reruns).
+    Ball and pose keep a hand list (ball: + burst_ball, cuda_scale, platform_cfg; not lab) and a test that fails when
+    the closure grows (each new import: into the key, or onto a "no effect" list with a reason). Existing ball and
+    pose files are adopted under the new key (E52) only when git shows no change of the added modules after the file
+    was made; else they are listed as stale. Cause: no 1 h ball rerun for a change of lab.py or other non-detector code.
 12. (2026-11-26) The net-touch loss on m0913 (E57: recall 83 to 58 % of 12 labels, false touches 1 to 4; the new
     run has 239 net events against 156). Find the cause of each lost and each new false touch: the new ball file
     (`dim`, E38 weights) or the net code. Then one fix that is right in principle, measured on the lab net labels

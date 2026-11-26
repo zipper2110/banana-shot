@@ -160,16 +160,23 @@ SERVE_Y = 11.7        # m from the net: contact point of a serve (a little insid
 # of serve_prior. Before, the fit with only the bounce anchor put the start of 11 far serves of the lab starts back at
 # 18 to 32 m from the net (no serve event). SERVE_PRIOR_KEEP=0 gives the old fit.
 SERVE_PRIOR_KEEP = os.environ.get("SERVE_PRIOR_KEEP", "1") == "1"
+# E150: a wider trigger. The free fit of a far serve can pass the plausibility test and still have the wrong depth
+# (the start 2 to 10 m from the net, or slow). With SERVE_PRIOR_WIDE=1 the anchor is also tried when the free fit
+# flies to the near end and does not start at the contact plane (|y0 - SERVE_Y| > 1.5 m). The gate and the checks
+# of the anchored fit do not change.
+SERVE_PRIOR_WIDE = os.environ.get("SERVE_PRIOR_WIDE", "0") == "1"
 
 
 def serve_prior(P, seg, fl):
     """E10d. A serve that flies along the view direction has a weak depth: the free fit can put the
     start far behind the court. If the free fit is not plausible and the view ray of the first ball
     position passes the serve contact zone of the far end (plane y = SERVE_Y, height 1.8 to 3.3 m, |x| < 5 m),
-    fit again with the start anchored there. Keeps the new fit only if it is a plausible serve."""
+    fit again with the start anchored there. Keeps the new fit only if it is a plausible serve.
+    SERVE_PRIOR_WIDE (E150): also when the free fit is plausible but flies to the near end from another depth."""
     sp = 3.6 * float(np.linalg.norm(fl["v0"]))
     p0 = fl["p0"]
-    if abs(p0[1]) <= 16 and sp <= 240 and -0.5 <= p0[2] <= 3.6 and fl["rms"] <= 5 and not np.isnan(sp):
+    if abs(p0[1]) <= 16 and sp <= 240 and -0.5 <= p0[2] <= 3.6 and fl["rms"] <= 5 and not np.isnan(sp) \
+            and not (SERVE_PRIOR_WIDE and fl["v0"][1] < 0 and abs(p0[1] - SERVE_Y) > 1.5):
         return
     M, C = P[:, :3], -np.linalg.inv(P[:, :3]) @ P[:, 3]
     d = np.linalg.inv(M) @ np.array([seg[0, 1], seg[0, 2], 1.0])

@@ -9,6 +9,7 @@ import detect
 # (decision 90f2389d). A new module in a closure makes the test fail: put it into the hand list, or here with a reason.
 BALL_NO_EFFECT = {"lab": "paths, the video path and the match table; the time base enters the tag through n"}
 POSE_NO_EFFECT = {"lab": "the path of the work folder"}
+IMAGE_NO_EFFECT = {"lab": "the path of the work folder (feat_dino reads the kf pictures with glob)"}    # item 16
 # Level 1 of the net band (detect.NETMASK_CODE, item 6 (b)): the modules of its closure that are not in the hand list.
 # fill_in imports ball_wasb: the ball tag (detect.BALL_CODE) is a part of the level-1 key and covers it and its imports.
 MASK_NO_EFFECT = {"lab": "paths, the video path and the match table (as for the ball tag)"}
@@ -54,6 +55,36 @@ class CodeClosure(unittest.TestCase):
         keyed = names(detect.POSE_CODE)
         self.assertEqual(set(code_closure.modules(*keyed)) - keyed, set(POSE_NO_EFFECT))
 
+    def test_image_key_covers_its_closure(self):
+        keyed = names(detect.IMAGE_CODE)
+        self.assertEqual(set(code_closure.modules(*keyed)) - keyed, set(IMAGE_NO_EFFECT))
+
+    def test_the_media_key_is_a_part_of_the_later_keys(self):
+        # Item 16 (E117): new pictures or new audio of the media stage run audio, image, court and pose again.
+        saved = dict(detect.STAGE_KEYS)
+        try:
+            detect.STAGE_KEYS["media"] = "11111111"
+            k1 = {n: detect.stage_key(n) for n in ("audio", "image", "court", "pose", "court2")}
+            detect.STAGE_KEYS["media"] = "22222222"
+            k2 = {n: detect.stage_key(n) for n in k1}
+        finally:
+            detect.STAGE_KEYS.clear()
+            detect.STAGE_KEYS.update(saved)
+        self.assertEqual([n for n in k1 if k1[n] != k2[n]], ["audio", "image", "court", "pose"])
+        self.assertEqual(k1["court2"], k2["court2"])      # court2 follows the bytes of court_track.json
+
+    def test_a_new_media_key_runs_the_image_stage_again(self):
+        w = tempfile.mkdtemp(prefix="up_")
+        out = os.path.join(w, "feat_dino.npy")
+        open(out, "w").write("x")
+        detect.KEYS_FILE = os.path.join(w, "stage_keys.json")
+        detect.STAGE_KEYS.clear()
+        runs = []
+        for media in ("k1", "k1", "k2"):
+            detect.STAGE_KEYS["media"] = media
+            detect.stage("image", [out], lambda: runs.append(media), key=detect.stage_key("image"))
+        self.assertEqual(runs, ["k1", "k2"])
+
     def test_key_changes_with_an_imported_module(self):
         d = module_folder({"a": "import b\n", "b": "v = 1\n"})
         k1 = detect.content_key(files=code_closure.files("a", folder=d))
@@ -82,8 +113,12 @@ class AdoptKeys(unittest.TestCase):
         lab.BLOB_TAG = detect.ball_tag("ball_e38.pth", "dim", self.N, w)
         self.new = lab.blob_file(w, 0, self.N)
         lab.BLOB_TAG = tag
+        for f in ("audio.flac", "kf_times.csv", "kf.done", "pts.npy"):          # item 16: media files, older than the others
+            open(os.path.join(w, f), "w").write("m")
+            os.utime(os.path.join(w, f), (1e9, 1e9))
         np.save(self.old, np.array([[0, 1, 2, 3, 0.5], [60, 4, 5, 6, 0.6]]))
         np.save(os.path.join(w, "pose.npy"), np.zeros((2, 57)))
+        np.save(os.path.join(w, "feat_dino.npy"), np.zeros((2, 4)))
         for f in ("court_track.json", "court_track_refined.json", "fullflights_s0.35.json"):
             json.dump([], open(os.path.join(w, f), "w"))
         court = [os.path.join(w, "court_track.json"), os.path.join(w, "court_track_refined.json")]
@@ -92,13 +127,14 @@ class AdoptKeys(unittest.TestCase):
         detect.KEYS_FILE = os.path.join(w, "stage_keys.json")
         detect.STAGE_KEYS.clear()
         detect.STAGE_KEYS["flights"] = self.flights_old
+        detect.STAGE_KEYS["media"] = detect.stage_key("media")
         return w
 
-    def run_adopt(self, changes):
+    def run_adopt(self, changes, dry=False):
         real = detect.git_changes
         detect.git_changes = lambda files, since: changes
         try:
-            return detect.adopt_keys(self.w, "ball_e38.pth", "dim", self.N)
+            return detect.adopt_keys(self.w, "ball_e38.pth", "dim", self.N, dry=dry)
         finally:
             detect.git_changes = real
 
@@ -115,9 +151,11 @@ class AdoptKeys(unittest.TestCase):
     def test_court_with_no_recorded_key_is_adopted_and_another_key_stays_stale(self):
         self.w = self.work()
         out = self.run_adopt([])
-        self.assertEqual((out["court"]["state"], out["court2"]["state"], out["media"]["state"]), ("adopted", "adopted", "none"))
+        self.assertEqual((out["court"]["state"], out["court2"]["state"], out["media"]["state"], out["image"]["state"]),
+                         ("adopted", "adopted", "current", "adopted"))
         keys = json.load(open(os.path.join(self.w, "stage_keys.json")))
-        self.assertEqual(keys["court"], detect.code_key("court"))
+        self.assertEqual(keys["court"], detect.stage_key("court"))
+        self.assertEqual(keys["image"], detect.stage_key("image"))
         self.w = self.work()
         detect.STAGE_KEYS["court"] = "00000000"                                   # a run of other code
         self.assertEqual(self.run_adopt([])["court"]["state"], "stale")
@@ -133,6 +171,48 @@ class AdoptKeys(unittest.TestCase):
         self.run_adopt([])
         keys = json.load(open(os.path.join(self.w, "stage_keys.json")))
         self.assertEqual(keys["ballAdopted"]["file"], os.path.basename(self.new))
+
+    def test_keys_before_item_16_are_adopted_with_a_note(self):
+        self.w = self.work()
+        for n in ("audio", "court", "pose"):
+            detect.STAGE_KEYS[n] = detect.old_key(n)
+        for f in ("feat_audio.npy", "feat_mel.npy"):
+            np.save(os.path.join(self.w, f), np.zeros(2))
+        detect.STAGE_KEYS["keysAdopted"] = {"pose": {"state": "current"}, "time": "2026-11-26T14:50:12"}
+        out = self.run_adopt(["abc1234 a change"])                 # git is not asked for a key of the old formula
+        keys = json.load(open(os.path.join(self.w, "stage_keys.json")))
+        for n in ("audio", "court", "pose"):
+            self.assertEqual(out[n]["state"], "adopted", n)
+            self.assertIn("before item 16", out[n]["from"])
+            self.assertEqual(keys[n], detect.stage_key(n))
+        self.assertEqual(keys["keysAdopted"]["earlier"]["time"], "2026-11-26T14:50:12")     # the E113 record stays
+        self.assertEqual(self.run_adopt([])["pose"]["state"], "current")
+
+    def test_new_pictures_leave_the_later_stages_stale(self):
+        self.w = self.work()
+        detect.STAGE_KEYS["pose"] = detect.old_key("pose")
+        os.utime(os.path.join(self.w, "kf.done"), None)               # the pictures are newer than pose.npy and feat_dino.npy
+        os.utime(os.path.join(self.w, "pose.npy"), (2e9 - 10, 1.5e9))
+        os.utime(os.path.join(self.w, "feat_dino.npy"), (2e9 - 10, 1.5e9))
+        out = self.run_adopt([])
+        self.assertEqual((out["pose"]["state"], out["image"]["state"]), ("stale", "stale"))
+        self.assertIn("older than the media files", out["pose"]["changes"])
+
+    def test_a_media_key_of_other_code_leaves_the_later_stages_stale(self):
+        self.w = self.work()
+        detect.STAGE_KEYS["media"] = "00000000"
+        detect.STAGE_KEYS["pose"] = detect.old_key("pose")
+        out = self.run_adopt([])
+        self.assertEqual((out["media"]["state"], out["pose"]["state"], out["court"]["state"], out["image"]["state"]),
+                         ("stale", "stale", "stale", "stale"))
+        self.assertEqual(out["pose"]["changes"], "the media stage is not current")
+
+    def test_dry_writes_and_copies_nothing(self):
+        self.w = self.work()
+        out = self.run_adopt([], dry=True)
+        self.assertEqual(out["ball"]["state"], "adopted")
+        self.assertFalse(os.path.exists(self.new))
+        self.assertFalse(os.path.exists(os.path.join(self.w, "stage_keys.json")))
 
     def test_a_change_leaves_the_files_stale(self):
         self.w = self.work()

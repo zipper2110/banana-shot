@@ -4,7 +4,10 @@ The pictures are the pictures of the ball stage (ball_wasb.frames: the court cro
 picture: gray, a 3 x 3 blur, and the pixels that changed by more than THR gray steps against the picture 1/30 s
 before, in a fixed region around the net (x within REGION_X m, z from REGION_Z[0] m to the cord + REGION_Z[1] m).
 Each mask is packed and compressed. Level 2 (net_band.py: the bins, the ball mask, the signal) reads this file, so a
-change of level 2 needs no new decode. The cache key of this file is the ball tag and the code of this module.
+change of level 2 needs no new decode. The cache key of this file is the ball tag and the content of this module only
+(a hand list, as for the ball stage): this module imports no module of the folder at the top, and camera() and
+project() are copies of ball_3d.camera() and ball_3d.project() (test_net_band.py checks that they stay equal), because
+ball_3d imports the fit modules and lab, which change often. fill_in imports ball_wasb; the ball tag covers it.
 
   w = MaskWriter(Hm, crop, scale, step)          before the ball stage (crop = ball_wasb.crop_box(...)[:4])
   ball_wasb.frames = w.wrap(ball_wasb.frames)    each picture also goes to w.feed
@@ -30,13 +33,43 @@ def cord_z(x):
     return NET_MID_Z + (NET_POST_Z - NET_MID_Z) * np.minimum(np.abs(x), NET_POST_X) / NET_POST_X
 
 
+def camera(Hm, w=1920, h=1080):
+    """A copy of ball_3d.camera: P (3 x 4, court m -> px of the 1920 frame), f (px), the camera center (m)."""
+    Gm = np.linalg.inv(Hm)
+    T = np.array([[1, 0, w / 2], [0, 1, h / 2], [0, 0, 1.0]])
+    A = np.linalg.inv(T) @ Gm
+    h1, h2, h3 = A[:, 0], A[:, 1], A[:, 2]
+    a = np.array([h1[0] * h2[0] + h1[1] * h2[1], h1[0] ** 2 + h1[1] ** 2 - h2[0] ** 2 - h2[1] ** 2])
+    b = np.array([-h1[2] * h2[2], h2[2] ** 2 - h1[2] ** 2])
+    u = float(a @ b / (a @ a))
+    f = 1.0 / np.sqrt(u) if u > 0 else float("nan")
+    Ki = np.diag([1 / f, 1 / f, 1.0])
+    lam = 2.0 / (np.linalg.norm(Ki @ h1) + np.linalg.norm(Ki @ h2))
+    r1, r2, t = lam * Ki @ h1, lam * Ki @ h2, lam * Ki @ h3
+    if t[2] < 0:
+        r1, r2, t = -r1, -r2, -t
+    U, _, Vt = np.linalg.svd(np.stack([r1, r2, np.cross(r1, r2)], 1))
+    R = U @ Vt
+    C = -R.T @ t
+    if C[2] < 0:
+        R[:, 2] = -R[:, 2]
+        C = -R.T @ t
+    P = T @ np.diag([f, f, 1.0]) @ np.concatenate([R, t[:, None]], 1)
+    return P, f, C
+
+
+def project(P, X):
+    """A copy of ball_3d.project: court m (n x 3) -> px of the 1920 frame (n x 2)."""
+    x = (P @ np.concatenate([X, np.ones((len(X), 1))], 1).T).T
+    return x[:, :2] / x[:, 2:3]
+
+
 def region_box(Hm, crop, scale):
     """The box (a, b, c, d: rows a..b, columns c..d of the crop) of the net region, or None."""
-    import ball_3d
-    P = ball_3d.camera(np.asarray(Hm, float))[0]
+    P = camera(np.asarray(Hm, float))[0]
     xs = np.linspace(-REGION_X, REGION_X, 15)
-    pts = np.concatenate([ball_3d.project(P, np.column_stack([xs, 0 * xs, np.full(len(xs), REGION_Z[0])])),
-                          ball_3d.project(P, np.column_stack([xs, 0 * xs, cord_z(xs) + REGION_Z[1]]))])
+    pts = np.concatenate([project(P, np.column_stack([xs, 0 * xs, np.full(len(xs), REGION_Z[0])])),
+                          project(P, np.column_stack([xs, 0 * xs, cord_z(xs) + REGION_Z[1]]))])
     x0, y0, cw, ch = crop
     q = pts * scale - [x0, y0]
     a, b = int(max(0, np.floor(q[:, 1].min()))), int(min(ch, np.ceil(q[:, 1].max()) + 1))

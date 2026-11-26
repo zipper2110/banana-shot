@@ -36,14 +36,14 @@ def cord_z(x):
 
 def polys(P, lo=None, hi=None):
     """Image polygons (px of the 1920 frame) of the bins. lo, hi: m above the cord; None: the net band."""
-    import ball_3d
+    from net_band_mask import project
     out = []
     for x0, x1 in zip(BIN_EDGES[:-1], BIN_EDGES[1:]):
         if lo is None:
             q = [[x0, 0, Z_LO], [x1, 0, Z_LO], [x1, 0, cord_z(x1) + Z_HI], [x0, 0, cord_z(x0) + Z_HI]]
         else:
             q = [[x0, 0, cord_z(x0) + lo], [x1, 0, cord_z(x1) + lo], [x1, 0, cord_z(x1) + hi], [x0, 0, cord_z(x0) + hi]]
-        out.append(ball_3d.project(P, np.array(q, float)))
+        out.append(project(P, np.array(q, float)))
     return out
 
 
@@ -51,8 +51,8 @@ class Geometry:
     """The bins in the box of the level-1 masks: a label image (bin id 0..2*nb-1, -1 = none)."""
 
     def __init__(self, Hm, crop, scale, box):
-        import ball_3d
-        P = ball_3d.camera(np.asarray(Hm, float))[0]
+        from net_band_mask import camera
+        P = camera(np.asarray(Hm, float))[0]
         x0, y0 = crop[:2]
         a, b, c, d = box
         self.scale, self.x0, self.y0, self.a, self.c = scale, x0, y0, a, c

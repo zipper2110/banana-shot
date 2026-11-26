@@ -26,7 +26,7 @@ video, and use **← →** to find the correct frame (**Shift+← →**: 10 fram
 | Event | Key | Where |
 |---|---|---|
 | Serve, near or far player | **Shift+N** or **Shift+F** | the frame where the racket touches the ball |
-| The serve is a first-serve fault | **X** after the serve mark | the page puts the flag on the last serve |
+| The serve is a first-serve fault (optional: only if the scripts cannot see it) | **X** after the serve mark | see "The fault flag" below |
 | Each other shot, near or far player | **N** or **F** | the frame where the racket touches the ball |
 | Bounce, in | **B** | the first frame where the ball touches the ground. Put the mouse on the ball, then press the key |
 | Bounce, out | **Shift+B** | as for B |
@@ -39,11 +39,17 @@ Rules:
 - A ball toss with no hit is not a serve. A let serve: do not mark it. Press **M** and write "let".
 - Mark each bounce of the ball in the clip, also the second bounce at the end of the rally, if you can see it.
 - Out: the ball lands outside the lines for that shot. For a serve, the correct service box is the line.
-- A double fault: two serves, each with the fault flag (**X**) on the first one.
+- A double fault: two serves. Mark the out bounce or the net stop of each serve.
 - The clip has some seconds before and after the marked point. Mark the events there too, if you see them.
   Lab matches: the marked point starts at the second serve. A first-serve fault before it is in the clip
   only if it is close to the start.
 - If you are not sure of a mark, press **Q**. If the fragment cannot be used, press **K** (skip).
+
+The fault flag: you do not have to press **X**. The scripts (`label_faults.py`, E159) find a first-serve fault from
+your marks: an out bounce or a net stop after the serve, then the second serve from the same end (the same
+service box, or a short time gap). Press **X** only if the scripts cannot see it, for example when you cannot
+mark the out bounce or the net stop. The scripts keep each **X**. If they are not sure, an agent asks you about
+that serve.
 
 ## Help in the page
 

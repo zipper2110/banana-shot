@@ -10,6 +10,7 @@ Gap program, stream S4, item 10. Page: `label_events.html`. Fragments: the case 
    If the header shows a red banner "NO LABEL FOLDER" (or "needs permission"), the marks are not in files:
    click the banner or press **O**. The page then writes all the fragments that you saved before.
    If the page says "the fragment list changed", reload the page (F5). It does not save until then.
+   If the list shows "old marks, not used" for a fragment, its clip was cut again. Mark it again from zero.
 3. The first fragment plays at ½× speed. Press **Space** to stop it.
 
 The page measures your time on each fragment. Please do the first 5 fragments, then stop. The manager uses

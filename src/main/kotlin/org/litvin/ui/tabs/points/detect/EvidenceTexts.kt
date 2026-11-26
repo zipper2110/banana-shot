@@ -52,7 +52,11 @@ internal object EvidenceTexts {
         return lines
     }
 
-    /** The texts of the winner decision: the last shot, the ball rule, and the score model. */
+    /**
+     * The texts of the winner decision: the last shot, the ball rule, the shot chain, and the winner of the rally.
+     * The winner (pNearWins) is the evidence of the rally (pBall). Only the score decoder (lab CHAIN_DECODER=1, and the
+     * results before E142) gives another value; then pNearWins is not pBall, and the texts name the decoder.
+     */
     fun outcomeLines(rally: DetectedRally, near: Int?, players: ScorePlayers): List<String> {
         val nearName = near?.let { players.name(it) } ?: "the near player"
         val farName = near?.let { players.name(3 - it) } ?: "the far player"
@@ -94,9 +98,9 @@ internal object EvidenceTexts {
         } else {
             "Shot chain: ${if (nearWins) nearName else farName} wins" + (chain.p?.let { ", ${percent(it)}" } ?: "") + (chain.case?.let { " ($it)" } ?: "")
         }
-        val model = rally.pNearWins
-        if (nearWins != null && model != null && abs(model - 0.5) >= 0.02 && (model > 0.5) != nearWins) {
-            lines += "Warning: the score model and the shot chain give different winners."
+        val winner = rally.pNearWins
+        if (nearWins != null && winner != null && abs(winner - 0.5) >= 0.02 && (winner > 0.5) != nearWins) {
+            lines += "Warning: the winner of the rally and the shot chain are different."
         }
         return lines
     }
@@ -108,9 +112,9 @@ internal object EvidenceTexts {
         val lines = ArrayList<String>()
         lines += "Net: $hitter hit the ball into the net at ${time(hit.t)}" + (if (hit.serve) " (serve)" else "") +
             (hit.conf?.let { ", touch ${percent(it)}" } ?: "") + (hit.dirConf?.let { ", hitter ${percent(it)}" } ?: "")
-        val model = rally.pNearWins
-        if (model != null && abs(model - 0.5) >= 0.02 && (model > 0.5) == hit.hitterNear) {
-            lines += "Warning: the score model gives the point to the player who hit the net."
+        val winner = rally.pNearWins
+        if (winner != null && abs(winner - 0.5) >= 0.02 && (winner > 0.5) == hit.hitterNear) {
+            lines += "Warning: the winner of the rally is the player who hit the net."
         }
         return lines
     }
@@ -145,12 +149,18 @@ internal object EvidenceTexts {
 
     private fun winner(rally: DetectedRally, nearName: String, farName: String): List<String> {
         fun side(pNear: Double) = if (pNear >= 0.5) "${percent(pNear)} $nearName" else "${percent(1 - pNear)} $farName"
-        val ball = rally.pBall
-        val model = rally.pNearWins ?: return emptyList()
+        val evidence = rally.pBall
+        val winner = rally.pNearWins ?: return emptyList()
         val lines = ArrayList<String>()
-        lines += "Ball: " + (if (ball == null || abs(ball - 0.5) < 0.005) "no evidence" else side(ball)) + " → score model: " + side(model)
-        if (ball != null && abs(ball - 0.5) >= 0.005 && (ball > 0.5) != (model > 0.5)) {
-            lines += "Warning: the score model changed the winner of the ball rule."
+        fun text(p: Double?) = if (p == null || abs(p - 0.5) < 0.005) "no evidence" else side(p)
+        if (evidence == null || abs(evidence - winner) < 1e-9) {
+            lines += "Rally evidence: " + text(winner)
+            return lines
+        }
+        // Only the score decoder makes pNearWins other than pBall (lab CHAIN_DECODER=1, results before E142).
+        lines += "Rally evidence: " + text(evidence) + " → score decoder: " + side(winner)
+        if (abs(evidence - 0.5) >= 0.005 && (evidence > 0.5) != (winner > 0.5)) {
+            lines += "Warning: the score decoder changed the winner of the rally evidence."
         }
         return lines
     }

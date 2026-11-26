@@ -602,8 +602,8 @@ def report(man, sets, skipped, same):
             continue
         L += [f"## {name}: {', '.join(t['matches'])}", "",
               "| Measure | Value |", "|---|---|",
-              (f"| Rallies: recall / precision (NONE points out; fault rows hidden: all / only 2 shots or less) | {pct(t['recall'])} / "
-               f"{pct(t['precision'])} / {pct(t['precisionShortFaults'])} ({t['detected']} detected, {t['marked']} marked; "
+              (f"| Rallies: recall / precision (NONE points out; fault rows hidden: none / only 2 shots or less / all) | {pct(t['recall'])} / "
+               f"{pct(t['precisionWithFaults'])} / {pct(t['precisionShortFaults'])} / {pct(t['precision'])} ({t['detected']} detected, {t['marked']} marked; "
                f"{t.get('noneMarked', 0)} NONE points, {t.get('noneDetected', 0)} detected rallies on them; hidden fault rows "
                f"{t['faultNotChecked'] + t['faultClipRows']}, {t['faultNotChecked3Shots']} of them with 3 shots or more) |"
                if "precisionShortFaults" in t else

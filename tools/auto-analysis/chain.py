@@ -20,6 +20,7 @@ import shot_chain as sc
 import rally_end
 from serve_ball import serve_events
 from server_end import near_far, wrist_up
+from ball_events import court_H
 from near_identity import torso_color, flips
 
 # The parameters of the old ball rule (E16c) for a video with no marks: the value of 3 of the 4 lab matches.
@@ -45,8 +46,9 @@ SERVICE_LINE = 6.40                      # the distance of the service line from
 # flight) not later than FAULT_NEXT s after it, is the first serve of the next rally: it is not a rally.
 FAULT_SIDE = True
 FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, 0.3          # shots; s (the time between points of the rules); m (x near 0: side not known)
-# item 10: when the serve flight does not give the side, the court x of the feet of the server (pose, court.json H)
-# gives it. The rule of tennis: the server serves from the other side after a point, from the same side after a fault.
+# item 10: when the serve flight does not give the side, the court x of the feet of the server (pose, the H of the
+# court window at the rally start: ball_events.court_H; one court.json H is off when the camera moves) gives it.
+# The rule of tennis: the server serves from the other side after a point, from the same side after a fault.
 POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
@@ -140,8 +142,6 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
     np_ = NET_FILES.get(mid) or os.path.join(out, "net_events.json")
     nets = json.load(open(np_))["events"] if os.path.exists(np_) else []
     hits = rally_end.load_hits(out)
-    cj = os.path.join(out, "court.json")
-    Hc = np.array(json.load(open(cj))["H"], np.float64) if POSE_SIDE and os.path.exists(cj) else None
     gru = prob
     for (a, b, prob) in seg:
         # E60: the end of the winner evidence (the window of the flights and the time cut). The row keeps the GRU end b.
@@ -172,6 +172,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                 pw = 0.5 if ch["nearWins"] is None else (pc if ch["nearWins"] else 1 - pc)
         # server end: pose vote, then the ball serve event
         nu, fu, nx, fx = [], [], [], []
+        Hc = court_H(mid, a) if POSE_SIDE and os.path.exists(os.path.join(out, "court.json")) else None
         for s in range(max(0, int(a) - 1), min(n, int(a) + 3)):
             r, fr = near_far(pose[s])
             for row, up, xs in ((r, nu, nx), (fr, fu, fx)):

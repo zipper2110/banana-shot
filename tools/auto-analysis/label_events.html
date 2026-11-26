@@ -29,8 +29,8 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   header .sp { flex:1; }
   button { background:#2b3038; color:var(--text); border:1px solid var(--line); border-radius:4px; padding:4px 10px; cursor:pointer; font:inherit; }
   button:hover { background:#353b45; }
-  main { display:grid; grid-template-columns:1fr 340px; min-height:0; }
-  #left { display:flex; flex-direction:column; min-height:0; padding:8px; gap:6px; }
+  main { display:grid; grid-template-columns:minmax(0, 1fr) 340px; min-height:0; }
+  #left { display:flex; flex-direction:column; min-height:0; min-width:0; overflow:hidden; padding:8px; gap:6px; }
   #stage { position:relative; flex:1; min-height:0; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; cursor:crosshair; }
   #wrap { position:relative; max-width:100%; max-height:100%; transition:transform .12s; }
   video { display:block; max-width:100%; max-height:calc(100vh - 140px); }
@@ -38,7 +38,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   #msg { position:absolute; inset:auto 0 45% 0; text-align:center; font-size:20px; color:var(--warn); pointer-events:none; }
   #flash { position:absolute; top:10px; left:50%; transform:translateX(-50%); padding:4px 14px; border-radius:4px; font-size:18px;
            font-weight:600; opacity:0; transition:opacity .4s; pointer-events:none; z-index:2; }
-  #timeline { position:relative; height:38px; background:var(--panel); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  #timeline { position:relative; overflow:hidden; height:38px; background:var(--panel); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   #timeline .pt { position:absolute; top:0; bottom:0; background:rgba(255,255,255,.07); border-left:1px solid #666; border-right:1px solid #666; }
   #timeline .span { position:absolute; top:0; height:3px; background:var(--ok); opacity:.6; }
   #timeline .mk { position:absolute; width:3px; margin-left:-1px; border-radius:1px; }
@@ -46,7 +46,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   #timeline .head { position:absolute; top:0; bottom:0; width:2px; background:#fff; margin-left:-1px; }
   #bar { display:flex; gap:14px; align-items:center; color:var(--dim); font-variant-numeric:tabular-nums; }
   #bar .big { color:var(--text); font-size:16px; }
-  aside { background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
+  aside { position:relative; z-index:3; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
   aside summary { cursor:pointer; }
   aside section { padding:8px 10px; border-bottom:1px solid var(--line); flex-shrink:0; }
   aside h3 { margin:0 0 4px; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--dim); font-weight:600; }
@@ -64,8 +64,11 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   #list div.done { color:var(--ok); } #list div.cur { background:#33404f; color:var(--text); }
   #list div:hover { background:#2a2e35; }
   #court { display:block; margin:2px auto 0; background:#24402c; }
+  #nofolder { display:none; background:#b3261e; color:#fff; font-weight:700; font-size:15px; padding:4px 12px; border-radius:4px; cursor:pointer; }
+  #nofolder.blink { animation:blink .5s 8 alternate; }
+  @keyframes blink { from { background:#b3261e; } to { background:#ff8a80; color:#000; } }
   /* sides mode (label_events.html#sides) */
-  #sidesView { display:none; grid-template-columns:1fr 340px; min-height:0; }
+  #sidesView { display:none; grid-template-columns:minmax(0, 1fr) 340px; min-height:0; }
   body.sides main { display:none; } body.sides #sidesView { display:grid; }
   #sstage { position:relative; overflow:hidden; background:#000; display:flex; align-items:center; justify-content:center; margin:8px; }
   #simg { display:block; max-width:100%; max-height:calc(100vh - 150px); transition:transform .12s; }
@@ -83,6 +86,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   <span id="where"></span>
   <span class="sp"></span>
   <span id="progress"></span>
+  <span id="nofolder" title="The marks are written to files only in a label folder"></span>
   <span id="savestate"></span>
   <button id="btnFolder" title="Choose the folder for the label files (key O)">Label folder…</button>
   <button id="btnExport" title="Download the label file of this fragment (a copy, if the folder does not work)">Download</button>
@@ -193,9 +197,23 @@ const span = it => it.span || [it.t0, it.t0 + (it.dur || 1e9)];
 const saved = it => store[it.id];
 const KIND_KEY = {serve: "S", shot: "", bounce: "B", net: "T"};
 
-function flash(text, color) {
+function flash(text, color, ms) {
   const f = $("flash"); f.textContent = text; f.style.background = color || "#333"; f.style.opacity = 1;
-  clearTimeout(flash.t); flash.t = setTimeout(() => f.style.opacity = 0, 700);
+  clearTimeout(flash.t); flash.t = setTimeout(() => f.style.opacity = 0, ms || 700);
+}
+// The label folder: with no folder (or no permission), the marks stay only in the browser. A red banner says so, it
+// blinks at the first mark, and a save shows that no file is written.
+const folderReady = () => !!dir && dirOk;
+function updateBanner() {
+  const b = $("nofolder");
+  if (folderReady()) { b.style.display = "none"; b.classList.remove("blink"); return; }
+  b.style.display = "inline-block";
+  b.textContent = dir ? `Folder "${dir.name}" needs permission: click here (or press O)` : "NO LABEL FOLDER: the marks are not in files. Click here (or press O)";
+}
+function warnNoFolder() {
+  if (folderReady() || warnNoFolder.done) return;
+  warnNoFolder.done = true;
+  const b = $("nofolder"); b.classList.remove("blink"); void b.offsetWidth; b.classList.add("blink");
 }
 
 // court: H (3x3, 1920-wide frame px -> court m) and its inverse
@@ -228,12 +246,37 @@ function addActive() { const now = performance.now(); if (cur >= 0 && !document.
 document.addEventListener("visibilitychange", () => { addActive(); });
 
 // ---- fragment loading
+// The manifest can change on the disk while the page is open (a new cut of a clip with a new t0). The page reads
+// manifest.js again at the open of a fragment and before each save. If the row of the open fragment changed
+// (rowHash), the page does not save: the marks would get the old t0. The user must reload the page.
+let staleRow = false;
+function reloadManifest() {
+  return new Promise(res => {
+    const old = window.CASES, sc = document.createElement("script");
+    const done = nw => { window.CASES = old; sc.remove(); res(nw); };
+    sc.src = "manifest.js?t=" + Date.now();
+    sc.onload = () => done(window.CASES !== old ? window.CASES : null); sc.onerror = () => done(null);
+    document.head.appendChild(sc);
+  });
+}
+async function checkRow(it) {
+  const nw = await reloadManifest();
+  if (!nw) return true;                                   // not readable: keep the row of the page
+  const row = nw.fragments.find(x => x.id === it.id);
+  if (row && row.rowHash === it.rowHash) return true;
+  staleRow = true;
+  $("msg").textContent = row ? "The fragment list changed (manifest.js). Reload the page (F5) before you mark."
+                               : "This fragment is not in the fragment list any more. Reload the page (F5).";
+  render();
+  return false;
+}
 function open(i) {
   if (i < 0 || i >= items.length) return;
   addActive();
   cur = i; sel = -1;
   const it = item();
   $("msg").textContent = "";
+  if (staleRow) $("msg").textContent = "The fragment list changed (manifest.js). Reload the page (F5)."; else checkRow(it);
   v.pause(); setZoom("");
   v.src = it.clip;
   v.playbackRate = rate;
@@ -308,7 +351,8 @@ function setZoom(kind) {
 
 // ---- marks
 function add(ev) {
-  if (cur < 0) return;
+  if (cur < 0) return false;
+  if (staleRow) { flash("the fragment list changed: reload the page (F5)", "#b3261e", 3000); return false; }
   ev.t = +vt(frameT()).toFixed(4);
   ev.rate = v.paused ? 0 : v.playbackRate;
   const dr = d();
@@ -316,11 +360,13 @@ function add(ev) {
   dr.events.sort((a, b) => a.t - b.t);
   dr.lastAdded = ev;
   touch();
+  warnNoFolder();
+  return true;
 }
 function contact(kind, end) {
   const ev = {kind, end};
   if (kind === "serve") ev.fault = false;
-  add(ev);
+  if (!add(ev)) return;
   flash((kind === "serve" ? "SERVE " : "SHOT ") + end.toUpperCase(), end === "near" ? "#1f5fa8" : "#a8601f");
 }
 function bounce(out, seen) {
@@ -328,12 +374,12 @@ function bounce(out, seen) {
   const p = pxAt(mouse[0], mouse[1]);
   if (!p) { flash("the mouse is not on the picture", "#a8801f"); return; }
   const c = toCourt(item(), p);
-  add({kind: "bounce", out, seen, px: p, court: c ? [+c[0].toFixed(3), +c[1].toFixed(3)] : null});
+  if (!add({kind: "bounce", out, seen, px: p, court: c ? [+c[0].toFixed(3), +c[1].toFixed(3)] : null})) return;
   flash((seen ? "" : "INFERRED ") + (out ? "BOUNCE OUT" : "BOUNCE IN"), out ? "#a8306f" : "#2f7a70");
 }
 function net(cord) {
   const p = mouse ? pxAt(mouse[0], mouse[1]) : null;
-  add({kind: "net", net: cord ? "cord" : "stop", px: p});
+  if (!add({kind: "net", net: cord ? "cord" : "stop", px: p})) return;
   flash(cord ? "NET CORD" : "NET TOUCH", "#6a4fa8");
 }
 function undo() {
@@ -389,11 +435,19 @@ async function save(next) {
   const it = item(), dr = d();
   const w = dr.skip ? [] : checks(dr), sig = JSON.stringify(dr.events);
   if (w.length && dr.warned !== sig) { dr.warned = sig; flash("check the warnings (Enter again saves)", "#a8801f"); render(); return; }
+  if (staleRow || !(await checkRow(it))) {
+    const keep = JSON.parse(localStorage.getItem(STORE + "-stale") || "{}");      // a copy of the marks, for a repair by an agent
+    keep[it.id + " " + new Date().toISOString()] = fragDoc(it, dr);
+    localStorage.setItem(STORE + "-stale", JSON.stringify(keep));
+    flash("NOT SAVED: the fragment list changed. Reload the page (F5)", "#b3261e", 5000);
+    return;
+  }
   store[it.id] = fragDoc(it, dr);
   dr.dirty = false; dr.activeMs = store[it.id].labelSeconds * 1000;
   localStorage.setItem(STORE, JSON.stringify(store));
   await writeFile(it.id);
-  flash("saved " + dr.events.length + " marks", "#2f7a4c");
+  if (folderReady()) flash("saved " + dr.events.length + " marks", "#2f7a4c");
+  else { flash("NOT WRITTEN TO A FILE: no label folder. Press O", "#b3261e", 3000); warnNoFolder.done = false; warnNoFolder(); }
   if (next) {
     let j = items.findIndex((x, k) => k > cur && !saved(x));
     if (j < 0) j = items.findIndex(x => !saved(x));
@@ -427,7 +481,7 @@ async function chooseDir() {
   await idb("put", dir);
   await ensureDir(true);
   await readFiles();
-  for (const id of Object.keys(store)) await writeFile(id);
+  for (const it of items) if (store[it.id]) await writeFile(it.id);     // only the fragments of the manifest
   if (SIDES_MODE) { await sReadFiles(); for (const m of Object.keys(sStore)) await sWriteFile(m); sRender(); } else render();
 }
 async function readFiles() {
@@ -496,6 +550,7 @@ function render() {
   const med = secs.length ? secs[Math.floor(secs.length / 2)] : 0, left = items.length - done.length;
   $("progress").textContent = `${done.length} / ${items.length} done` + (med ? ` · median ${Math.round(med)} s per fragment · about ${Math.round(left * med / 60)} min left` : "");
   $("savestate").innerHTML = dir ? (dirOk ? `<span class="ok">folder: ${dir.name}</span> <span class="${lastWrite.startsWith("ok") ? "" : "warn"}">${lastWrite}</span>` : `<span class="warn">folder: ${dir.name} (press O or Enter to allow)</span>`) : `<span class="warn">no label folder (press O)</span>`;
+  updateBanner();
   $("speed").textContent = (rate === 0.1 ? "⅒" : rate === 0.25 ? "¼" : rate === 0.5 ? "½" : "1") + "×";
   $("sound").textContent = v.muted ? "off" : "on";
   if (cur < 0) return;
@@ -529,7 +584,7 @@ function render() {
   const rows = {serve: 3, shot: 3, bounce: 14, net: 24};
   tl.innerHTML = (it.points || []).map(p => `<div class="pt" style="left:${pct(ct(p.startMs / 1000))};width:${pct((p.endMs - p.startMs) / 1000)}"></div>`).join("") +
     `<div class="span" style="left:${pct(ct(sp[0]))};width:${pct(sp[1] - sp[0])}"></div>` +
-    dr.events.map(e => `<div class="mk" style="left:${pct(ct(e.t))};top:${rows[e.kind]}px;height:10px;background:${colorOf(e)}"><span style="color:${colorOf(e)}">${labelOf(e)}</span></div>`).join("") +
+    dr.events.map(e => `<div class="mk" style="left:${pct(ct(e.t))};top:${rows[e.kind]}px;height:10px;background:${colorOf(e)}"><span style="color:${colorOf(e)};${ct(e.t) > 0.95 * dur ? "left:auto;right:5px" : ""}">${labelOf(e)}</span></div>`).join("") +
     `<div class="head"></div>`;
   tick();
 }
@@ -541,6 +596,12 @@ $("timeline").addEventListener("click", e => {
   seek((e.clientX - r.left) / r.width * v.duration);
 });
 $("btnFolder").onclick = chooseDir;
+$("nofolder").onclick = async () => {
+  if (!dir) return chooseDir();
+  if (!(await ensureDir(true))) return;
+  await readFiles(); for (const it of items) if (store[it.id]) await writeFile(it.id);     // only the fragments of the manifest
+  if (SIDES_MODE) { await sReadFiles(); for (const m of Object.keys(sStore)) await sWriteFile(m); sRender(); } else render();
+};
 $("btnExport").onclick = download;
 
 // ---- keys
@@ -649,7 +710,8 @@ async function sMark(near) {
   doc.savedAt = new Date().toISOString();
   localStorage.setItem(SSTORE, JSON.stringify(sStore));
   await sWriteFile(m.match);
-  sFlash(near ? doc.players[near] + " near" : "not sure", near ? "#2f7a4c" : "#a8801f");
+  if (folderReady()) sFlash(near ? doc.players[near] + " near" : "not sure", near ? "#2f7a4c" : "#a8801f");
+  else { sFlash("NOT WRITTEN TO A FILE: no label folder. Press O", "#b3261e"); warnNoFolder(); }
   const j = m.items.findIndex((x, k) => k > ki && !sMarkOf(m, x));
   const j2 = j >= 0 ? j : m.items.findIndex(x => !sMarkOf(m, x));
   if (j2 >= 0) { ki = j2; sFrame = 0; sZoom = false; sRender(); return; }
@@ -667,6 +729,7 @@ function sSetZoom(on) {
 $("sstage").addEventListener("mousemove", e => { mouse = [e.clientX, e.clientY]; });
 function sRender() {
   if (mi < 0) return;
+  updateBanner();
   const m = sm(), it = m.items[ki], mk = sMarkOf(m, it), doc = sStore[m.match];
   $("simg").src = it.frames[sFrame];
   for (const k of [ki + 1, ki + 2]) if (m.items[k]) (new Image()).src = m.items[k].frames[0];

@@ -7,6 +7,9 @@ Gap program, stream S4, item 10. Page: `label_events.html`. Fragments: the case 
 1. Open `D:\bananashot-lab\ws\s4\events\label_events.html` in Chrome or Edge (double-click the file).
 2. Press **O** and select the folder `D:\bananashot-lab\ws\s1\cases\labels`. Allow the page to edit files.
    You do this one time. The page then writes one file for each fragment: `<fragment>.events.json`.
+   If the header shows a red banner "NO LABEL FOLDER" (or "needs permission"), the marks are not in files:
+   click the banner or press **O**. The page then writes all the fragments that you saved before.
+   If the page says "the fragment list changed", reload the page (F5). It does not save until then.
 3. The first fragment plays at ½× speed. Press **Space** to stop it.
 
 The page measures your time on each fragment. Please do the first 5 fragments, then stop. The manager uses

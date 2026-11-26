@@ -432,6 +432,7 @@ def write_overlay(work, n, full, serves, net_ev=()):
       poses    the body poses of the persons on the 1 fps keyframes (overlay_poses)"""
     import numpy as np
     import court_auto, ball_full, ball_3d, ball_events, lab
+    import shot_chain as sc    # G7 (d): "used" = the one filter of the shot chain (usable and pos_ok)
     W = lambda *p: os.path.join(work, *p)
     track = ball_events.court_windows(work)
     court = []
@@ -489,6 +490,8 @@ def write_overlay(work, n, full, serves, net_ev=()):
         flights.append({"t0": round(f["t0"], 3), "t1": round(f["t1"], 3), "landT": None if land_t is None else round(float(land_t), 3),
                         "land": None if land is None else [round(float(land[0]), 1), round(float(land[1]), 1)],
                         "speedKmh": round(3.6 * float(np.linalg.norm(f["v0"])), 1), "good": bool(f["n"] >= 8 and f["rms"] < 5),
+                        # "good": the app draws the flight. "used": the decision can use the flight (G7 d; the app does not read it yet)
+                        "used": bool(sc.usable(f) and sc.pos_ok(f)),
                         "toFar": bool(f["v0"][1] > 0), "start": [round(float(v), 2) for v in f["p0"]],
                         "landM": None if land is None else [round(float(v), 2) for v in land_m],
                         "netZ": round(float(f["netZ"]), 2) if f.get("netZ") is not None and np.isfinite(f["netZ"]) else None})

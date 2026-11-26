@@ -17,7 +17,7 @@ import json, os
 import numpy as np
 import lab
 import winner_ball as wb
-import winner_sweep as ws
+import shot_chain as sc
 from score_decode import P_DEC
 from serve_ball import serve_events
 
@@ -29,26 +29,15 @@ EPS_NULL = 0.0      # a marked point that is not a point (let, outcome NONE): th
 CALIBRATED = True
 
 
-def case_key(q, p):
-    """Case type of a rule decision. "early" = the last tracked shot starts more than 4 s before
-    the marked end (a later shot was probably missed)."""
-    early = q["t_rel"] < -4
-    if -p["net_back"] < q["end_y"] < p["net_fwd"] and q["end_z"] < 1.8 and q["src"] != 2:
-        return "net_early" if early else "net"
-    is_in = q["margin"] > -p["margin"] and (np.isnan(q["net_z"]) or q["net_z"] > 0.85)
-    if is_in:
-        return "in_seen" if q["src"] == 2 else ("in_early" if early else "in")
-    return "out_early" if early else ("out_seen" if q["src"] == 2 else "out")
-
-
-# Probability that the rule decision is right, by case type (measured on the 4 singles matches, E16c, T_CUT -1.5)
+# Probability that the rule decision is right, by case type (shot_chain.old_case_key; measured on the 4 singles matches,
+# E16c, T_CUT -1.5)
 CASE_P = {"net_early": 0.77, "net": 0.95, "in_seen": 0.72, "in_early": 0.65, "in": 0.57, "out_early": 0.55, "out_seen": 0.90, "out": 0.88}
 CASES_BY_MATCH = None      # E16e: {match: table} with tables measured on the other matches (fit_cases)
 
 
 def case_prob(q, p, mid=None):
     t = CASES_BY_MATCH[mid] if (CASES_BY_MATCH and mid in CASES_BY_MATCH) else CASE_P
-    return t[case_key(q, p)]
+    return t[sc.old_case_key(q, p)]
 
 
 def fit_cases(mids):
@@ -56,18 +45,14 @@ def fit_cases(mids):
     cnt = {k: [0.0, 0.0] for k in CASE_P}
     for mid in lab.check_train(mids):
         p = PARAMS[mid]
-        orig = wb.good
-        wb.good = lambda f, orig=orig: orig(f) and 3.6 * float(np.linalg.norm(f["v0"])) >= p["min_speed"]
-        pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{lab.BALL_TAG}.json")))
+        pts = sc.lab_points(mid)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         for pt, e in zip(pts, ends):
-            q = wb.analyse(pt)
-            w = ws.decide(q, p)
+            q, w, case = sc.old_rule(pt, wb.T_CUT, p)
             if w is None or e["winnerNear"] is None:
                 continue
-            c = cnt[case_key(q, p)]
+            c = cnt[case]
             c[0] += 1; c[1] += w == e["winnerNear"]
-        wb.good = orig
     return {k: float(np.clip((c[1] + 2 * P_DEC) / (c[0] + 2), 0.5, 0.97)) for k, c in cnt.items()}
 
 
@@ -211,18 +196,14 @@ def main(use_server=True, use_id=False, collect=None, quiet=False):
     tot = {"ball": 0.0, "dec": 0.0, "n": 0}
     for mid in wb.SINGLES:
         p = PARAMS[mid]
-        orig = wb.good
-        wb.good = lambda f, orig=orig: orig(f) and 3.6 * float(np.linalg.norm(f["v0"])) >= p["min_speed"]
-        pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{lab.BALL_TAG}.json")))
+        pts = sc.lab_points(mid)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         sides = json.load(open(os.path.join(lab.mdir(mid), "sides.json")))
         pw = []
         for pt in pts:
-            q = wb.analyse(pt)
-            w = ws.decide(q, p)
+            q, w, _ = sc.old_rule(pt, wb.T_CUT, p)
             c = case_prob(q, p, mid) if (CALIBRATED and w is not None) else P_DEC
             pw.append(0.5 if w is None else (c if w else 1 - c))
-        wb.good = orig
         ps = []
         for pt, e, sd in zip(pts, ends, sides):
             if use_server == "true_end":

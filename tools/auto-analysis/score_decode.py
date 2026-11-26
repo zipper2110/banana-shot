@@ -17,6 +17,7 @@ import numpy as np
 import lab
 import winner_ball as wb
 import winner_sweep as ws
+import shot_chain as sc
 
 P_DEC = 0.74
 
@@ -67,9 +68,7 @@ def main():
     T = {"raw": [0, 0], "dec": [0, 0]}
     for mid in wb.SINGLES:
         p = params[mid]
-        orig = wb.good
-        wb.good = lambda f, orig=orig: orig(f) and 3.6 * float(np.linalg.norm(f["v0"])) >= p["min_speed"]
-        pts = json.load(open(os.path.join(lab.mdir(mid), f"flights_s{lab.BALL_TAG}.json")))
+        pts = sc.lab_points(mid)
         ends = json.load(open(os.path.join(lab.mdir(mid), "ends.json")))
         sides = json.load(open(os.path.join(lab.mdir(mid), "sides.json")))
         games, cur, key = [], [], None
@@ -92,7 +91,7 @@ def main():
                 skipped += len(g); continue
             p1 = []
             for i in g:
-                w = ws.decide(wb.analyse(pts[i]), p)
+                w = sc.old_decide(sc.old_quantities(pts[i], wb.T_CUT, p["min_speed"]), p)
                 if w is None:
                     p1.append(0.5)
                 else:
@@ -103,7 +102,6 @@ def main():
                 n += 1
                 raw_ok += (pr > 0.5) == t if pr != 0.5 else 0.5
                 dec_ok += (pp > 0.5) == t if abs(pp - 0.5) > 1e-9 else 0.5
-        wb.good = orig
         T["raw"][0] += raw_ok; T["dec"][0] += dec_ok; T["raw"][1] += n; T["dec"][1] += n
         print(f"{mid}: points in full games {n} (skipped {skipped}), ball rule {100 * raw_ok / n:.1f}%, with the score grammar {100 * dec_ok / n:.1f}%")
     print(f"ALL: ball rule {100 * T['raw'][0] / T['raw'][1]:.1f}%, with the score grammar {100 * T['dec'][0] / T['dec'][1]:.1f}%")

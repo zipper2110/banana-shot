@@ -37,6 +37,15 @@ class DetectContractTest {
     }
 
     @Test
+    fun `an overlay with a field that the app does not know reads`() {
+        val file = File(Files.createTempDirectory("overlay").toFile(), "overlay.json")
+        file.writeText("""{"version": 1, "flights": [{"t0": 1.0, "t1": 1.5, "good": true, "used": false, "newField": [1, 2]}]}""")
+        val overlay = DetectOverlayData.read(file)
+        assertEquals(1, overlay.flights.size)
+        assertEquals(true, overlay.flights.single().good)        // G7 (d): "used" is a new field; "good" stays
+    }
+
+    @Test
     fun `the lines of the lab script for the app`() {
         assertNull(ScriptLine.parse("court model: refined (far points move 0.12 m, 3 of 4 windows)"))
         assertEquals(ScriptLine("@stage", listOf("ball", "start"), "ball start"), ScriptLine.parse("@stage ball start"))

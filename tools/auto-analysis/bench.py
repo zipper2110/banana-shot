@@ -15,6 +15,8 @@ with the same manifest must give the same numbers: the report says if an earlier
 Run the benchmark from a snapshot of one commit, not from the main checkout (other streams merge into it):
   python bench.py snapshot [--ref <commit or branch>]   exports the code to <lab>/ws/s1/code/<sha>/
   python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py run [--tag <text>] [--no-heldout]
+A heavy stage against its own labels, under the GPU lock (item 7a; report <lab>/bench/<time>-<commit>-heavy-ball/):
+  python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py heavy --stage ball [--weights held-out] [--passes dim]
 """
 import argparse, glob, hashlib, json, math, os, re, subprocess, sys, time
 import numpy as np
@@ -586,6 +588,145 @@ def report(man, sets, skipped, same):
     return "\n".join(L) + "\n"
 
 
+# ---- heavy stages (item 7a): the ball detector against the hand labels of the ball (E27a) ----------------------------
+BALL_LABELS = os.path.join(HERE, "ball_labels_e27.json")
+BALL_FOLD = {"m1021": "e38_f1.pth", "m1020": "e38_f2.pth", "m1015": "e38_f3.pth", "m1030": "e38_f4.pth"}   # E38 folds
+BALL_SHIPPED = "ball_e38.pth"
+BALL_SETUPS = {"dim": ["dim"], "one": ["one"], "crop": []}   # dim: detect.py now; one: one pass, full crop; crop: old crop
+M0913W = {"video": r"D:\PXL_20260913_1_Vlad.mp4", "folder": r"D:\bananashot-lab\e27\work"}   # the E27 work copy of m0913
+
+
+def ball_score(win, blobs):
+    """E27a rule (D:/bananashot-lab/e27/ev.py): one dict for each labeled frame that is not unsure or dead. A ball label
+    (s "v" seen, "h" hidden) is found when a blob is within max(10, 0.6 * blur length) px; each other blob of the frame is
+    a false blob. blobs: rows (label frame, x, y, score, peak)."""
+    by = {}
+    for b in blobs:
+        by.setdefault(int(b[0]), []).append(b)
+    out = []
+    for lb in win["frames"]:
+        if lb["s"] == "u" or lb.get("dead"):
+            continue
+        bs = by.get(lb["k"], [])
+        if lb["s"] in "vh":
+            e = [float(np.hypot(b[1] - lb["x"], b[2] - lb["y"])) for b in bs]
+            ok = [x for x in e if x <= max(10.0, 0.6 * lb.get("len", 0))]
+            out.append({"ball": True, "hit": bool(ok), "fp": len(e) - len(ok), "err": min(ok) if ok else None,
+                        "wasbLabel": lb.get("src", "").startswith("wasb")})
+        else:
+            out.append({"ball": False, "hit": False, "fp": len(bs), "err": None, "wasbLabel": False})
+    return out
+
+
+def ball_groups(rows):
+    """Pooled measures for each group of windows. The frames of a window are not independent: the standard error is
+    too small."""
+    groups = [("m0913 noted", lambda r: r["mid"] == "m0913w" and r["set"] == "noted"),
+              ("m0913 other", lambda r: r["mid"] == "m0913w" and r["set"] == "other")]
+    groups += [(m, (lambda m: lambda r: r["mid"] == m)(m)) for m in BALL_FOLD] + [("lab all", lambda r: r["set"] == "lab")]
+    out = {}
+    for name, g in groups:
+        sel = [r for r in rows if g(r)]
+        if not sel:
+            continue
+        n, vis, hit, fp = (sum(r[k] for r in sel) for k in ("n", "vis", "hit", "fp"))
+        err = np.array([e for r in sel for e in r["errs"]])
+        out[name] = {"windows": len(sel), "frames": n, "ballFrames": vis, "found": hit, "recall": hit / max(1, vis),
+                     "recallSe": se(hit / max(1, vis), vis), "falsePerFrame": fp / max(1, n),
+                     "errMed": float(np.median(err)) if len(err) else None,
+                     "errP90": float(np.percentile(err, 90)) if len(err) else None,
+                     "weights": sorted({r["weights"] for r in sel}), "inTraining": any(r["inTraining"] for r in sel),
+                     "sec": round(sum(r["sec"] for r in sel), 1)}
+    return out
+
+
+def heavy_ball(a):
+    """bench.py heavy --stage ball: ball_wasb.run (the code of detect.py) on each window of the ball hand labels, under the
+    GPU lock. Weights "held-out": each lab match with the E38 fold that did not train on it, m0913 with ball_e38.pth (no
+    training saw m0913); else one weights file for all windows. The lab windows run at stride 2 (60 fps), m0913 at
+    30 fps and stride 1, as detect.py runs a 30 fps video."""
+    import torch  # noqa: F401  (before ONNX Runtime: the rule of the lab)
+    import lab, platform_cfg, gpu_lock
+    t0 = time.time()
+    commit, dirty = code_commit()
+    lab.MATCHES["m0913w"] = {"id": "m0913w", "video": M0913W["video"]}
+    mdir = lab.mdir
+    lab.mdir = lambda m: M0913W["folder"] if m == "m0913w" else mdir(m)
+    import ball_wasb
+    wins = json.load(open(a.labels, encoding="utf-8"))["windows"]
+    wdir = os.path.join(os.path.dirname(platform_cfg.weights_dir()), "weights")
+
+    def weights_of(mid):
+        if a.weights != "held-out":
+            return a.weights
+        return BALL_FOLD.get(mid, BALL_SHIPPED)
+    used = sorted({weights_of(w["mid"]) for w in wins})
+    man = {"stage": "ball", "commit": commit, "dirty": dirty, "setup": a.passes, "weightsRule": a.weights,
+           "weights": {f: sha(os.path.join(wdir, f)) for f in used}, "labels": sha(a.labels),
+           "videos": {m: lab.MATCHES[m]["video"] for m in sorted({w["mid"] for w in wins})},
+           "device": str(platform_cfg.device()), "decode": platform_cfg.decode()}
+    man["hash"] = hashlib.sha256(json.dumps(man, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    who, what = "s1", f"bench.py heavy ball: {len(wins)} label windows, setup {a.passes}, weights {a.weights} (about 5 min)"
+    rows, nets, rc = [], {}, 1
+    gpu_lock.acquire(who, what)
+    tl = time.time()
+    try:
+        for w in wins:
+            wt = weights_of(w["mid"])
+            if wt not in nets:
+                ball_wasb.WEIGHTS = wt
+                nets[wt] = ball_wasb.load_model()
+            ball_wasb.PASSES = list(BALL_SETUPS[a.passes])
+            ball_wasb.FPS = 30 if w["mid"] == "m0913w" else None
+            t = time.time()
+            try:
+                b = ball_wasb.run(w["mid"], w["start"], w["dur"], stride=w["step"], save=False, net=nets[wt], quiet=True)
+            finally:
+                ball_wasb.PASSES, ball_wasb.FPS = [], None
+            if w["step"] == 2:                       # blob frames of 1/60 s -> label frames of 1/30 s
+                b = b[b[:, 0] % 2 == 0].copy()
+                b[:, 0] /= 2
+            sc = ball_score(w, b)
+            vis = [r for r in sc if r["ball"]]
+            rows.append({"mid": w["mid"], "start": w["start"], "dur": w["dur"], "set": w["set"], "weights": wt,
+                         "inTraining": w["mid"] in BALL_FOLD and wt != BALL_FOLD[w["mid"]],
+                         "n": len(sc), "vis": len(vis), "hit": sum(r["hit"] for r in vis), "fp": sum(r["fp"] for r in sc),
+                         "errs": [r["err"] for r in vis if r["hit"] and not r["wasbLabel"]],
+                         "hits": [int(r["hit"]) for r in vis], "sec": round(time.time() - t, 2)})
+            print(f"{w['mid']} {w['start']}+{w['dur']}s {wt}: found {rows[-1]['hit']} of {rows[-1]['vis']}, "
+                  f"false {rows[-1]['fp']} in {rows[-1]['n']} frames ({rows[-1]['sec']} s)", flush=True)
+        rc = 0
+    finally:
+        gpu_lock.release(who, what, rc, tl)
+    out = ball_groups(rows)
+    root = os.path.join(os.path.dirname(lab.ROOT), "bench")
+    d = os.path.join(root, time.strftime("%Y%m%d-%H%M%S") + "-" + commit[:8] + "-heavy-ball" + (f"-{a.tag}" if a.tag else ""))
+    os.makedirs(d)
+    man["time"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    json.dump(man, open(os.path.join(d, "manifest.json"), "w"), indent=1, default=str)
+    json.dump(out, open(os.path.join(d, "metrics.json"), "w"), indent=1, default=float)
+    with open(os.path.join(d, "rows.jsonl"), "w") as f:
+        for r in rows:
+            f.write(json.dumps(r, default=float) + "\n")
+    L = [f"# Heavy stage: ball, {man['time']}", "",
+         f"Code: `{commit[:12]}`{' (dirty)' if dirty else ''}. Setup: {a.passes}. Weights: {a.weights} "
+         f"({', '.join(used)}). Labels: `{os.path.basename(a.labels)}` (E27a). Manifest `{man['hash']}`.", "",
+         "Ball found (recall) = labeled ball frames (seen or hidden) with a blob near the label; false blobs = the other "
+         "blobs, for each labeled frame. Position error: labels that do not come from a WASB blob. The frames of a window "
+         "are not independent: the ± is too small.", "",
+         "| Group | Windows | Ball found (recall) | False blobs per frame | Position error, median / p90 | Weights |",
+         "|---|---|---|---|---|---|"]
+    for k, v in out.items():
+        e = f"{v['errMed']:.1f} / {v['errP90']:.1f} px" if v["errMed"] is not None else "-"
+        L.append(f"| {k} | {v['windows']} | {pct(v['recall'])} ± {100 * v['recallSe']:.1f} % ({v['found']} of {v['ballFrames']}) | "
+                 f"{v['falsePerFrame']:.2f} | {e} | {', '.join(v['weights'])}{' (in training)' if v['inTraining'] else ''} |")
+    L += ["", f"Time: {time.time() - tl:.0f} s under the lock, model and decode {sum(r['sec'] for r in rows):.0f} s."]
+    txt = "\n".join(L) + "\n"
+    open(os.path.join(d, "report.md"), "w", encoding="utf-8").write(txt)
+    print(txt)
+    print(f"written: {d} ({time.time() - t0:.0f} s)")
+
+
 def run(a):
     import lab
     t0 = time.time()
@@ -659,6 +800,12 @@ if __name__ == "__main__":
     r.add_argument("--no-lab", action="store_true")
     r.add_argument("--old-nets", action="store_true", help="the lab set reads the old lab net_events.json (before E85)")
     r.add_argument("--frozen-flights", action="store_true", help="the lab set reads the E38 flights; only the net events are made again")
+    h = sub.add_parser("heavy", help="a heavy stage against its labels, under the GPU lock (item 7a: ball)")
+    h.add_argument("--stage", choices=["ball"], required=True)
+    h.add_argument("--weights", default="held-out", help="held-out (E38 folds; m0913: ball_e38.pth) or a weights file for all windows")
+    h.add_argument("--passes", choices=list(BALL_SETUPS), default="dim", help="dim: the setup of detect.py now")
+    h.add_argument("--labels", default=BALL_LABELS)
+    h.add_argument("--tag", default="")
     f = sub.add_parser("flights1")                    # internal: one lab match of app_nets in its own process
     f.add_argument("mid"); f.add_argument("dst"); f.add_argument("--code", default=HERE)
     a = ap.parse_args()
@@ -667,6 +814,8 @@ if __name__ == "__main__":
         snapshot(a.ref)
     elif a.cmd == "flights1":
         flights1(a.mid, a.dst)
+    elif a.cmd == "heavy":
+        heavy_ball(a)
     else:
         LAB_FLIGHTS = "frozen" if a.frozen_flights else "remake"
         run(a)

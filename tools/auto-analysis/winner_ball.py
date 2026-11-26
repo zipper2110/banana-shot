@@ -1,16 +1,14 @@
 """E16: point winner from the ball flights (G7 step 3: flights_s<shot_chain.EV_TAG>.json, the flights with events).
 
 Rule (no training):
-  1. Good flights: n >= 10, fit error < 5 px, speed 8 to 230 km/h, start
-     inside a large box around the court.
+  1. Good flights: the one filter of the shot chain (G7 d: shot_chain.usable and pos_ok: duration >= 0.15 s,
+     fit error < 5 px, speed 8 to 230 km/h, start inside a large box around the court).
   2. The last shot = the last run of good flights with the same direction
      (sign of the velocity along the court), that starts before the point
      end + 1 s. Hitter end: near if the ball flies to the far side.
-  3. First bounce of the last shot: a kink where the flight before it ends
-     near the ground (or the flight after it starts near the ground), with
-     no change of direction. Its court position comes from the homography
-     of the kink pixel (exact for a ball on the ground). If there is no
-     such kink: the ballistic landing point of the first flight.
+  3. First bounce of the last shot: the bounce event at the end of a flight of the run (G7 step 3;
+     CHAIN_OLD_BOUNCE=kink gives the kink rule of E16). If there is none: the ballistic landing point of the
+     first flight.
   4. In = inside the singles court on the far side of the net from the
      hitter (margin MARGIN) and above the net at the net plane.
      In -> the hitter wins. Out or net -> the other player wins.

@@ -37,8 +37,9 @@ def setup_lomo():
 def run(mid, quiet=False, write=True):
     """Runs the chain on lab match mid and scores it. Returns (metrics, rows). write: also <match>/pipeline.json."""
     start, dur = WINDOWS[mid]
-    # E17d: another flights file for a comparison. E28: the chain needs the file with events.
-    full = json.load(open(FLIGHT_FILES.get(mid) or os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS") or ("fullflights_s0.35_ev.json" if chain.CHAIN else "fullflights_s0.35.json"))))
+    # E17d: another flights file for a comparison. E28: the chain needs the file with events. G7 step 3: the old rule
+    # (CHAIN=0) also needs the events (its seen bounce is the bounce event).
+    full = json.load(open(FLIGHT_FILES.get(mid) or os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS") or "fullflights_s0.35_ev.json")))
     prob = rally_model.predict(mid, "ball", fold=mid)
     seg, serves = chain.segments(prob, full, CFG, start, start + dur)
     rows = chain.winners(mid, seg, full, serves, prob=prob)

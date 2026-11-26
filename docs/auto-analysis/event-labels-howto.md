@@ -57,3 +57,19 @@ One file for each fragment, `<id>.events.json`. Events in source time `t` (s). B
 in a 1920-wide frame) and `court` (m, x across, y along, far end > 0, from the court of the fragment at height 0),
 `out`, and `seen` (false = inferred). The file also has the tool version, the labeler, the fragment id, the hash of
 its manifest row, and `labelSeconds` (the active time).
+
+## Sides step: who is near (item 11)
+
+The app finds "who is near" from the end-change rule. Players do not always follow the rule (for example after a
+long break). In this step you say who plays at the near end (the bottom of the picture) at some points of each match.
+
+1. Open the same page, then click the button **Sides** (top right). The page shows one still frame of a point.
+2. Press **1** or **2** for the player who is near. The buttons show the player names of the project.
+   If you cannot see it, press **Q** (not sure). The page then shows the next point.
+3. If the frame does not show it clearly, press **W** for a second frame (1 s after the point start).
+   **V**: zoom 2× at the mouse.
+4. At the end of a match, the page goes to the next match. **[ ]**: previous / next match. **← →**: previous /
+   next point. Click a point in the list to change its mark.
+
+There are 12 to 23 points in each match (5 matches). It takes about 2 to 3 min for each match. The page measures
+your time. The page writes `sides_<match>.json` in the same label folder (the folder of the **O** key).

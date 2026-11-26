@@ -117,6 +117,9 @@ STAGE_ENTRIES = {"media": ("prep", "frame_times"), "audio": ("feat_audio", "feat
 BALL_CODE_OLD = ("ball_wasb.py", "wasb_hrnet.py")          # the ball tag before item 13 (adopt_keys)
 BALL_CODE = BALL_CODE_OLD + ("burst_ball.py", "cuda_scale.py", "platform_cfg.py")
 POSE_CODE = ("pose_extract.py", "platform_cfg.py")         # pose_extract.py has the URLs of the pose models
+# The code files of the flights key before item 13 (a hand list; adopt_keys)
+FLIGHTS_CODE_OLD = ("ball_full.py", "ball_3d.py", "ball_bounce.py", "ball_events.py", "ball_tracks.py", "net_events.py",
+                    "net_lab.py", "feat_wasb.py", "frame_times.py", "court_refine.py")
 
 
 def code_key(name, *parts, files=()):
@@ -215,17 +218,20 @@ def git_changes(files, since):
     return None if r.returncode else [x for x in r.stdout.splitlines() if x]
 
 
-def adopt_keys(work, weights, passes, n):
+def adopt_keys(work, weights, passes, n, court_track=""):
     """Item 13 (decision 90f2389d): a ball file of the tag before item 13 (BALL_CODE_OLD) gets the name of the new tag,
     and an existing pose.npy gets the pose key, only when git shows no change of the added code files after the file
-    was made. Else the file is stale: the next run makes it again. Returns {"ball": ..., "pose": ...}."""
+    was made. The flights get the new key when their recorded key is the key before item 13 (the old ball tag, the old
+    hand list, the court files of now), the ball file is adopted or current, and git shows no change of the files of
+    the import closure after fullflights_s0.35.json was made. Else the file is stale: the next run makes it again.
+    Returns {"ball": ..., "pose": ..., "flights": ...}."""
     import shutil
     import lab
     out, tag = {}, lab.BLOB_TAG
     try:
-        lab.BLOB_TAG = ball_tag(weights, passes, n, work, BALL_CODE_OLD)
+        old_tag = lab.BLOB_TAG = ball_tag(weights, passes, n, work, BALL_CODE_OLD)
         old = lab.blob_file(work, 0, n)
-        lab.BLOB_TAG = ball_tag(weights, passes, n, work)
+        new_tag = lab.BLOB_TAG = ball_tag(weights, passes, n, work)
         new = lab.blob_file(work, 0, n)
     finally:
         lab.BLOB_TAG = tag
@@ -256,6 +262,26 @@ def adopt_keys(work, weights, passes, n):
         else:
             STAGE_KEYS["pose"] = pose_key()
             out["pose"] = {"state": "adopted"}
+    import code_closure
+    W = lambda f: os.path.join(work, f)
+    court = [W("court_track.json"), W("court_track_refined.json")]
+    flights_old = old_tag + "_" + content_key(court_track, files=court + [os.path.join(HERE, f) for f in FLIGHTS_CODE_OLD])
+    flights_new = new_tag + "_" + code_key("flights", court_track, files=court)
+    full = W("fullflights_s0.35.json")
+    if STAGE_KEYS.get("flights") == flights_new:
+        out["flights"] = {"state": "current"}
+    elif not os.path.exists(full) or STAGE_KEYS.get("flights") != flights_old:
+        out["flights"] = {"state": "none" if not os.path.exists(full) else "stale",
+                          "changes": None if not os.path.exists(full) else "the recorded key is not the key before item 13"}
+    elif out["ball"]["state"] not in ("adopted", "current"):
+        out["flights"] = {"state": "stale", "changes": "the ball file is not adopted"}
+    else:
+        ch = git_changes([os.path.basename(f) for f in code_closure.files(*FLIGHTS_ENTRIES)], os.path.getmtime(full))
+        if ch is None or ch:
+            out["flights"] = {"state": "stale", "changes": ch if ch else "no git"}
+        else:
+            STAGE_KEYS["flights"] = flights_new
+            out["flights"] = {"state": "adopted"}
     STAGE_KEYS["keysAdopted"] = dict(out, time=time.strftime("%Y-%m-%dT%H:%M:%S"))
     json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
     return out
@@ -543,7 +569,8 @@ def main():
     vid = check_video(work, a.video)
     if a.adopt_keys:
         import lab
-        rec = adopt_keys(work, weights, (cfg["ballPasses"] or "").replace(",", "-").replace("+", "-"), lab.video_seconds(work))
+        rec = adopt_keys(work, weights, (cfg["ballPasses"] or "").replace(",", "-").replace("+", "-"), lab.video_seconds(work),
+                         cfg["courtTrack"])
         say("@adopted", json.dumps(rec))
         return
     times_file = os.path.join(work, "stage_times.json")

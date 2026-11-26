@@ -77,8 +77,14 @@ class AdoptKeys(unittest.TestCase):
         lab.BLOB_TAG = tag
         np.save(self.old, np.array([[0, 1, 2, 3, 0.5], [60, 4, 5, 6, 0.6]]))
         np.save(os.path.join(w, "pose.npy"), np.zeros((2, 57)))
+        for f in ("court_track.json", "court_track_refined.json", "fullflights_s0.35.json"):
+            json.dump([], open(os.path.join(w, f), "w"))
+        court = [os.path.join(w, "court_track.json"), os.path.join(w, "court_track_refined.json")]
+        self.flights_old = os.path.basename(self.old).split("_s0.35")[1][:-7] + "_" + detect.content_key(
+            "", files=court + [os.path.join(detect.HERE, f) for f in detect.FLIGHTS_CODE_OLD])
         detect.KEYS_FILE = os.path.join(w, "stage_keys.json")
         detect.STAGE_KEYS.clear()
+        detect.STAGE_KEYS["flights"] = self.flights_old
         return w
 
     def run_adopt(self, changes):
@@ -93,11 +99,16 @@ class AdoptKeys(unittest.TestCase):
         self.w = self.work()
         self.assertNotEqual(self.old, self.new)
         out = self.run_adopt([])
-        self.assertEqual((out["ball"]["state"], out["pose"]["state"]), ("adopted", "adopted"))
+        self.assertEqual((out["ball"]["state"], out["pose"]["state"], out["flights"]["state"]), ("adopted", "adopted", "adopted"))
         self.assertTrue(np.array_equal(np.load(self.new), np.load(self.old)))        # a copy; the old file stays
         keys = json.load(open(os.path.join(self.w, "stage_keys.json")))
         self.assertEqual(keys["pose"], detect.pose_key())
         self.assertEqual(self.run_adopt([])["ball"]["state"], "current")              # a second call: nothing to do
+
+    def test_flights_of_another_key_stay_stale(self):
+        self.w = self.work()
+        detect.STAGE_KEYS["flights"] = "_ball_e38_dim_00000000_00000000"
+        self.assertEqual(self.run_adopt([])["flights"]["state"], "stale")
 
     def test_an_e52_record_moves_to_the_new_name(self):
         self.w = self.work()
@@ -109,7 +120,7 @@ class AdoptKeys(unittest.TestCase):
     def test_a_change_leaves_the_files_stale(self):
         self.w = self.work()
         out = self.run_adopt(["abc1234 2026-11-26T12:00:00+04:00 burst_ball: a new crop"])
-        self.assertEqual((out["ball"]["state"], out["pose"]["state"]), ("stale", "stale"))
+        self.assertEqual((out["ball"]["state"], out["pose"]["state"], out["flights"]["state"]), ("stale", "stale", "stale"))
         self.assertFalse(os.path.exists(self.new))
         self.assertNotIn("pose", json.load(open(os.path.join(self.w, "stage_keys.json"))))
         self.assertEqual(self.run_adopt(None)["ball"]["changes"], "no git")

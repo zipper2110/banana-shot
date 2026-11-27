@@ -23,9 +23,10 @@ class FaultPlayOn(unittest.TestCase):
     def rows(self, ends):
         return chain.fault_rallies([row(100.0, 106.0, ends), row(111.0, 120.0, ("in", "in", "out"))], self.serves)
 
-    def test_off_by_default(self):
+    def test_on_by_default(self):
+        # manager decision after E213; CHAIN_FAULT_PLAY_ON=0 gives the old way
         if "CHAIN_FAULT_PLAY_ON" not in os.environ:
-            self.assertFalse(self.old)
+            self.assertTrue(self.old)
 
     def test_off_keeps_a_row_of_three_shots(self):
         chain.FAULT_PLAY_ON = False

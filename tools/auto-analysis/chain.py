@@ -49,8 +49,8 @@ FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, sc.SIDE_X   # shots; s (the time betw
 # shots. CHAIN_FAULT_PLAY_ON=1: FAULT_SIDE also takes a row with more shots when its first chain shot (the serve) ends
 # "out" or "net" (FAULT_PLAY_ENDS); the same server and side as the next rally are still needed. Built on the 8 F rows
 # of the head lab; on the 433 lab rows with a next rally 25 s or less after them it takes 2 F rows and no point.
-# Default "0" (off).
-FAULT_PLAY_ON = os.environ.get("CHAIN_FAULT_PLAY_ON", "0") == "1"
+# Default "1" (on: manager decision after E213); "0" gives the old way.
+FAULT_PLAY_ON = os.environ.get("CHAIN_FAULT_PLAY_ON", "1") != "0"
 FAULT_PLAY_ENDS = ("out", "net")
 # item 10: when the serve flight does not give the side, the court x of the feet of the server (pose, the H of the
 # court window at the rally start: ball_events.court_H; one court.json H is off when the camera moves) gives it.

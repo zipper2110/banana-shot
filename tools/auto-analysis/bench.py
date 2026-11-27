@@ -395,6 +395,8 @@ def app_nets(mids, code_dir=None):
         t, procs, bad = time.time(), [], []
         gpu_lock.acquire(who, what)
         try:
+            # another job in the queue (a stream with the same code) can have made a key while this one waited
+            remake = [x for x in remake if not os.path.exists(os.path.join(x[2], "net_events.json"))]
             for m, kind, dst in remake:
                 log = open(os.path.join(dst, "make.log"), "w")
                 p = subprocess.Popen([sys.executable, os.path.abspath(__file__), "flights1", m, dst, "--code", code_dir],

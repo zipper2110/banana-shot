@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 22:37",
+ "updated": "2026-11-27 22:39",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -802,7 +802,7 @@
    ],
    "owner": "S4",
    "journal": [],
-   "status": "planned",
+   "status": "queued",
    "expected": {
     "outcome": "Why 7 of 24 labeled fault serves have no serve event, as a cause table with image facts; then fix proposals.",
     "impact": 5,
@@ -826,7 +826,7 @@
    ],
    "owner": "S5",
    "journal": [],
-   "status": "planned",
+   "status": "queued",
    "expected": {
     "outcome": "The cause of the slow court stage, from the stored logs, and a fix proposal.",
     "impact": 3,
@@ -850,7 +850,7 @@
    ],
    "owner": "S3",
    "journal": [],
-   "status": "planned",
+   "status": "queued",
    "expected": {
     "outcome": "The missed and false rows of m1030 by cause, on the new reference.",
     "impact": 3,
@@ -953,6 +953,29 @@
    "doneWhen": [
     "Label status (dashboard): medium level 4 of 4 done (now 0), 0 old marks to redo.",
     "S1 measures the medium level once with case_history (one journal row)."
+   ]
+  },
+  {
+   "id": "A35",
+   "kind": "run",
+   "title": "M2 measures again on the reference d1cb16c7 (with the label window)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S1",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "A fresh M2 base: the hits, shot count, in/out and fault clip values are from older code (E170, E173).",
+    "impact": 2,
+    "text": "All later M2 rows compare against it."
+   },
+   "estimate": {
+    "netMin": 30
+   },
+   "doneWhen": [
+    "A journal row (S1) with the 4 label measures on d1cb16c7 and the label window: hits found, shot count right, in/out right, fault clips; each as 'n of N', on all small fragments saved at the run time (the row names the count and the fragment ids).",
+    "For each measure, the change against the dashboard value (E170, E173), and the cause of each change larger than 2.",
+    "The M2 measures on the dashboard show the new values with the E number."
    ]
   },
   {

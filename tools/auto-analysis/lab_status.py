@@ -75,7 +75,7 @@ def read():
 def latest():
     """{"actions": {id: merged entry}, "workers": {who: last now/idle entry}}. Fields of later entries of an action
     replace the fields of earlier ones; "started" and "finished" come from the first running and the done entry."""
-    acts, workers, history = {}, {}, {}
+    acts, workers, history, sessions = {}, {}, {}, {}
     for e in read():
         who = norm_who(e.get("who"))
         if e.get("kind") == "action":
@@ -96,13 +96,63 @@ def latest():
                 a.pop("finished", None)
         elif e.get("kind") in ("now", "idle"):
             workers[who] = e
+        elif e.get("kind") == "session":         # written by the session hooks (lab_dash.py /api/hook)
+            sessions[who] = e
+            continue
         else:
             continue
         history.setdefault(who, []).append(dict(e, who=who))
-    return {"actions": acts, "workers": workers, "history": {k: v[-6:] for k, v in history.items()}}
+    return {"actions": acts, "workers": workers, "sessions": sessions, "history": {k: v[-6:] for k, v in history.items()}}
+
+
+# ---------------------------------------------------------------- session hooks (the user, 2026-11-27)
+# Claude Code runs `lab_status.py hook` (async) at UserPromptSubmit and PreToolUse (working) and at Stop (idle), with
+# the hook JSON on stdin. The session id names the worker (sessions.json in the status folder), else the worktree
+# folder (.claude/worktrees/s<N>-...). Other sessions do nothing. Only a change of state is written to the log.
+# The hook never fails: an error only ends it.
+HOOK_STATES = {"UserPromptSubmit": "working", "PreToolUse": "working", "Stop": "idle"}
+
+
+def session_who(body):
+    sid = body.get("session_id") or ""
+    try:
+        with open(os.path.join(DIR, "sessions.json"), encoding="utf-8") as f:
+            known = json.load(f)
+    except (OSError, ValueError):
+        known = {}
+    if sid in known:
+        return known[sid]
+    m = re.search(r"worktrees[\\/]s([1-5])-", body.get("cwd") or "")
+    return f"S{m.group(1)}" if m else None
+
+
+def hook(body):
+    state = HOOK_STATES.get(body.get("hook_event_name") or "")
+    who = session_who(body)
+    sid = re.sub(r"[^\w-]", "", body.get("session_id") or "")[:64]
+    if not (state and who and sid):
+        return None
+    mark = os.path.join(DIR, "sessions", sid)
+    try:
+        with open(mark, encoding="utf-8") as f:
+            if f.read().strip() == state:
+                return None              # no change
+    except OSError:
+        pass
+    os.makedirs(os.path.dirname(mark), exist_ok=True)
+    with open(mark, "w", encoding="utf-8") as f:
+        f.write(state)
+    return write({"kind": "session", "who": who, "state": state, "event": body.get("hook_event_name"),
+                  "session": sid[:8]})
 
 
 def main():
+    if sys.argv[1:] == ["hook"]:
+        try:
+            hook(json.loads(sys.stdin.read() or "{}"))
+        except Exception:  # noqa: BLE001 (a hook must never disturb the session)
+            pass
+        return 0
     if len(sys.argv) == 1:
         print(__doc__)
         return 0

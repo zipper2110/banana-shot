@@ -112,6 +112,11 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
 .worker .now.old { color: var(--mute); }
 .worker .now.old .r { color: var(--warn); }
 .worker .now b { white-space: nowrap; }
+.wsum { width: 100%; margin-bottom: 12px; font-size: 12px; } .wsum tr[data-w] { cursor: pointer; } .wsum tr[data-w]:hover td { background: var(--soft); }
+.wsum td, .wsum th { padding: 4px 6px; vertical-align: top; } .wsum .nowc { max-width: 280px; } .wsum .tot td { font-weight: 600; border-top: 1px solid var(--line); }
+.wsum .st-working { color: var(--accent); } .wsum .st-waiting { color: var(--warn); } .wsum .st-idle, .wsum .st-finished { color: var(--mute); }
+.wsum .oldc { color: var(--warn); } .worker.flash { outline: 2px solid var(--accent); }
+.worker h3 { margin-bottom: 6px; } .ses { font-weight: 600; } .ses.working { color: var(--accent); } .ses.idle { color: var(--mute); font-weight: 400; }
 .worker .now.st-working b { color: var(--accent); } .worker .now.st-waiting b { color: var(--warn); }
 .worker .now.st-idle b, .worker .now.st-finished b { color: var(--mute); }
 .wgroup.ask { border-left-color: var(--bad) !important; } .wgroup.done { border-left-color: var(--ok) !important; opacity: .8; }
@@ -357,10 +362,31 @@ function agoText(m) { return m < 1 ? "now" : m < 60 ? m + " min ago" : m < 1440 
 
 function renderWorkers() {
   const wdef = Object.fromEntries((S.plan.workers || []).map(w => [w.id, w]));
-  let h = `<div class="workers">`;
+  // Overview first (the user): one row per worker, no actions; a click opens the worker card below
+  const STATE0 = {working: "Working", waiting: "Waiting", idle: "Idle", finished: "Finished"};
+  const cnt = (w, f) => w.actions.filter(f).length;
+  const isProg = a => a.status === "running", isHold = a => a.status === "waiting", isPend = a => a.status === "queued" || a.status === "planned";
+  let tot = {net: 0, prog: 0, hold: 0, pend: 0};
+  let h = `<table class="wsum"><tr><th>Worker</th><th>Session</th><th>Now</th><th class="num">Updated</th><th class="num">In progress</th><th class="num">On hold</th><th class="num">Pending</th><th class="num">Net time</th></tr>`;
+  for (const w of S.workers) {
+    const c = w.current, ses = w.session, age = ago(w.lastUpdate);
+    const p = cnt(w, isProg), o = cnt(w, isHold), q = cnt(w, isPend);
+    tot.net += w.netMin || 0; tot.prog += p; tot.hold += o; tot.pend += q;
+    h += `<tr data-w="${w.id}"><td><b>${esc(w.name)}</b></td>
+      <td>${ses ? `<span class="ses ${ses.state}">${ses.state === "working" ? "● active" : "○ idle"}</span>` : `<span class="mute">–</span>`}</td>
+      <td class="nowc">${c ? `<b class="st-${c.state}">${STATE0[c.state] || c.state}</b> ${esc(c.text || "")}` : `<span class="mute">no report</span>`}</td>
+      <td class="num ${age !== null && age > 60 ? "oldc" : ""}">${age === null ? "–" : agoText(age)}</td>
+      <td class="num">${p || ""}</td><td class="num">${o ? `<span class="s-waiting">${o}</span>` : ""}</td><td class="num">${q || ""}</td>
+      <td class="num">${w.netMin ? dur(w.netMin) : "–"}</td></tr>`;
+  }
+  h += `<tr class="tot"><td>All</td><td></td><td></td><td></td><td class="num">${tot.prog}</td><td class="num">${tot.hold}</td><td class="num">${tot.pend}</td><td class="num">${dur(tot.net)}</td></tr></table>`;
+  h += `<div class="workers">`;
   for (const w of S.workers) {
     const noEta = wdef[w.id] && wdef[w.id].noEta;
-    h += `<div class="worker"><h3><span>${esc(w.name)}</span><span class="small mute">${w.netMin ? dur(w.netMin) + " net" : "idle"}</span></h3><div class="focus">${esc(w.focus || "")}</div>`;
+    // Header: the name (the work area of the stream as a tooltip), the live session state from the hooks, the net time
+    const ses = w.session;
+    const sesTag = ses ? `<span class="ses ${ses.state}" title="Claude session ${ses.state} since ${hm(ses.t)} (hook)">${ses.state === "working" ? "● session active" : "○ session idle"}</span>` : "";
+    h += `<div class="worker" id="w-${w.id}"><h3><span title="${esc(w.focus || "")}">${esc(w.name)}</span><span class="small mute">${sesTag}${w.netMin ? " " + dur(w.netMin) + " net" : ""}</span></h3>`;
     // The worker line: the newest live entry of the worker (lab_status.py), with its state and age
     const cur = w.current, age = ago(w.lastUpdate);
     const STATE = {working: "Working", waiting: "Waiting", idle: "Idle", finished: "Finished"};
@@ -393,6 +419,8 @@ function renderWorkers() {
   }
   h += `</div>`;
   $("#sWork .body").innerHTML = h;
+  document.querySelectorAll(".wsum tr[data-w]").forEach(r => r.onclick = () => {
+    const el = $("#w-" + r.dataset.w); el.scrollIntoView({behavior: "smooth", block: "start"}); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1200); });
   // ETA and net time of the workers go into the action rows too
   const byId = actById();
   for (const w of S.workers) for (const a of w.actions) if (byId[a.id]) { byId[a.id]._eta = !(wdef[w.id] || {}).noEta && a.eta; byId[a.id]._net = a.netMin; }

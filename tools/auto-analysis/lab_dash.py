@@ -464,6 +464,8 @@ def state():
         w["current"] = current_line(hist[-1]) if hist else None
         w["history"] = [dict(current_line(e), t=e["t"]) for e in reversed(hist[:-1])][:4]
         w["lastUpdate"] = hist[-1]["t"] if hist else None
+        ses = live.get("sessions", {}).get(w["id"])
+        w["session"] = {"state": ses.get("state"), "t": ses.get("t")} if ses else None
         # actions of others that wait for this worker (the user or the manager): they must act
         w["waitsForMe"] = [{"id": a["id"], "title": a["title"], "owner": a.get("owner"),
                             "waitingFor": a.get("waitingFor")}
@@ -520,6 +522,38 @@ def live_state():
     return s
 
 
+# ---------------------------------------------------------------- HTTP (the routes reload with the code)
+def route_get(h, path):
+    if path == "/":
+        with open(PAGE, "rb") as f:
+            return h._send(200, f.read(), "text/html; charset=utf-8")
+    if path == "/api/state":
+        return h._send(200, json.dumps(live_state(), default=str))
+    if path == "/api/plan":
+        with open(PLAN, "rb") as f:
+            return h._send(200, f.read())
+    if path == "/log":
+        with open(gpu_lock.LOG, encoding="utf-8") as f:
+            return h._send(200, "".join(f.readlines()[-300:]), "text/plain; charset=utf-8")
+    if path.startswith("/doc/"):
+        name = path[5:]
+        if DOC_OK.match(name) and os.path.isfile(os.path.join(DOCS, name)):
+            with open(os.path.join(DOCS, name), "rb") as f:
+                return h._send(200, f.read(), "text/plain; charset=utf-8")
+    return h._send(404, "not found", "text/plain")
+
+
+def route_post(h, path, body):
+    if path == "/api/pause":
+        mode = body.get("mode")
+        if mode not in ("queue", "all"):
+            return h._send(400, json.dumps({"error": "mode must be queue or all"}))
+        return h._send(200, json.dumps({"result": gpu_lock.pause(mode, "user (dashboard)")}))
+    if path == "/api/unpause":
+        return h._send(200, json.dumps({"result": gpu_lock.unpause("user (dashboard)")}))
+    return h._send(404, json.dumps({"error": "not found"}))
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json; charset=utf-8"):
         data = body if isinstance(body, bytes) else body.encode("utf-8")
@@ -534,25 +568,8 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        path = self.path.split("?")[0]
         try:
-            if path == "/":
-                with open(PAGE, "rb") as f:
-                    return self._send(200, f.read(), "text/html; charset=utf-8")
-            if path == "/api/state":
-                return self._send(200, json.dumps(live_state(), default=str))
-            if path == "/api/plan":
-                with open(PLAN, "rb") as f:
-                    return self._send(200, f.read())
-            if path == "/log":
-                with open(gpu_lock.LOG, encoding="utf-8") as f:
-                    return self._send(200, "".join(f.readlines()[-300:]), "text/plain; charset=utf-8")
-            if path.startswith("/doc/"):
-                name = path[5:]
-                if DOC_OK.match(name) and os.path.isfile(os.path.join(DOCS, name)):
-                    with open(os.path.join(DOCS, name), "rb") as f:
-                        return self._send(200, f.read(), "text/plain; charset=utf-8")
-            return self._send(404, "not found", "text/plain")
+            return core()[0].route_get(self, self.path.split("?")[0])
         except Exception as e:  # noqa: BLE001 (the page shows it)
             return self._send(500, json.dumps({"error": f"{type(e).__name__}: {e}"}))
 
@@ -565,14 +582,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             body = {}
         try:
-            if self.path == "/api/pause":
-                mode = body.get("mode")
-                if mode not in ("queue", "all"):
-                    return self._send(400, json.dumps({"error": "mode must be queue or all"}))
-                return self._send(200, json.dumps({"result": core()[0].gpu_lock.pause(mode, "user (dashboard)")}))
-            if self.path == "/api/unpause":
-                return self._send(200, json.dumps({"result": core()[0].gpu_lock.unpause("user (dashboard)")}))
-            return self._send(404, json.dumps({"error": "not found"}))
+            return core()[0].route_post(self, self.path.split("?")[0], body if isinstance(body, dict) else {})
         except Exception as e:  # noqa: BLE001
             return self._send(500, json.dumps({"error": f"{type(e).__name__}: {e}"}))
 

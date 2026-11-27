@@ -95,10 +95,92 @@ class CodeClosure(unittest.TestCase):
         self.assertEqual(runs, ["k1", "k2"])
 
     def test_key_changes_with_an_imported_module(self):
-        d = module_folder({"a": "import b\n", "b": "v = 1\n"})
+        d = module_folder({"a": "import b\nx = b.v\n", "b": "v = 1\n"})
         k1 = detect.content_key(files=code_closure.files("a", folder=d))
         open(os.path.join(d, "b.py"), "w").write("v = 2\n")
         self.assertNotEqual(detect.content_key(files=code_closure.files("a", folder=d)), k1)
+
+
+def key(entries, folder):
+    return detect.content_key(files=code_closure.files(*entries, folder=folder))
+
+
+class Reach(unittest.TestCase):
+    """A39 (E202): the key has the modules that the run can use, not each module that an import line names."""
+
+    def test_an_unused_module_is_not_in_the_key(self):
+        d = module_folder({"a": "import b\ndef f():\n    return b.g()\n",
+                           "b": "import c\nK = 3\ndef g():\n    return K\ndef h():\n    return c.v\n", "c": "v = 1\n"})
+        self.assertEqual(code_closure.reach("a", folder=d), ["a", "b"])
+        self.assertEqual(code_closure.modules("a", folder=d), ["a", "b", "c"])
+        k = key(["a"], d)
+        open(os.path.join(d, "c.py"), "w").write("v = 2\n")
+        self.assertEqual(key(["a"], d), k)                          # c only runs its pure definitions
+        open(os.path.join(d, "b.py"), "w").write("import c\nK = 3\ndef g():\n    return K + c.v\n")
+        self.assertEqual(code_closure.reach("a", folder=d), ["a", "b", "c"])
+
+    def test_each_way_to_use_a_module_reaches_it(self):
+        cases = {"from c import v\n": "a name of a from-import",
+                 "def f():\n    from c import *\n": "import *",
+                 "import c\nM = c\n": "the module as a value",
+                 "import c\ndef f():\n    return getattr(c, 'v')\n": "the module as an argument",
+                 "def f():\n    import importlib\n    return importlib.import_module('c')\n": "import_module",
+                 "import b\nb.g()\n": "a top-level call into b (b calls c)"}
+        for text, why in cases.items():
+            d = module_folder({"a": text, "b": "import c\ndef g():\n    return c.v\n", "c": "v = 1\n"})
+            self.assertIn("c", code_closure.reach("a", folder=d), why)
+
+    def test_a_module_that_runs_code_at_import_is_in_the_key(self):
+        cases = {"import os\nos.environ['X'] = '1'\n": "a store into an item",
+                 "import d\nd.FPS = 30\n": "a store into an attribute of a module",
+                 "def g():\n    return 1\nV = g()\n": "a call of a local function",
+                 "import d\n@d.register\ndef g():\n    pass\n": "a decorator of a local module",
+                 "try:\n    import numpy\nexcept ImportError:\n    pass\n": "a statement with a block",
+                 "print('x')\n": "a call"}
+        for text, why in cases.items():
+            d = module_folder({"a": "import c\n", "c": text, "d": "FPS = 0\ndef register(f):\n    return f\n"})
+            self.assertIn("c", code_closure.reach("a", folder=d), why)
+        d = module_folder({"a": "import c\n", "c": '"""doc"""\nimport numpy as np\nK = np.array([1, 2]).astype(float)\n'
+                           'class A:\n    X = 1\n    def f(self):\n        return K\nif __name__ == "__main__":\n    print(K)\n'})
+        self.assertEqual(code_closure.reach("a", folder=d), ["a"])              # pure definitions only
+
+    def test_a_name_of_a_function_global_reaches_the_function(self):
+        d = module_folder({"a": "import b\ndef f():\n    return b.CACHE\n",
+                           "b": "import c\ndef load():\n    global CACHE\n    CACHE = c.v\n", "c": "v = 1\n"})
+        self.assertIn("c", code_closure.reach("a", folder=d))
+
+    def test_the_flights_key_has_no_court_detector(self):
+        # The cause of A39: E186 (a court_auto speed-up with the same results) made each flights cache stale.
+        for entries in (detect.FLIGHTS_ENTRIES, ("ball_full", "net_events"), ("net_events",), ("feat_wasb",)):
+            self.assertNotIn("court_auto", code_closure.reach(*entries), entries)
+        mods = code_closure.reach(*detect.FLIGHTS_ENTRIES)
+        for m in ("ball_full", "net_events", "feat_wasb", "serve_ball", "court_refine", "ball_events", "frame_times", "lab"):
+            self.assertIn(m, mods)
+        self.assertIn("court_auto", code_closure.reach("court_track"))
+        self.assertIn("court_auto", code_closure.reach("court_refine"))
+
+    def test_a_court_change_that_the_flights_use_gives_a_new_key(self):
+        import shutil
+        d = tempfile.mkdtemp(prefix="cc_")
+        for m in code_closure.modules(*detect.FLIGHTS_ENTRIES):
+            shutil.copy(os.path.join(code_closure.HERE, m + ".py"), d)
+        k = key(detect.FLIGHTS_ENTRIES, d)
+        src = open(os.path.join(d, "court_auto.py"), encoding="utf-8").read()
+        assert src.count("def valid_H(H, w=1920, h=1080):\n") == 1 and src.count("def to_img(H, pts):\n") == 1
+        open(os.path.join(d, "court_auto.py"), "w", encoding="utf-8").write(
+            src.replace("def valid_H(H, w=1920, h=1080):\n", "def valid_H(H, w=1920, h=1000):\n"))
+        self.assertEqual(key(detect.FLIGHTS_ENTRIES, d), k)           # the detect search: not used by the flights
+        ref = open(os.path.join(d, "court_refine.py"), encoding="utf-8").read()
+        old = 'xy = np.asarray(xy, np.float64).reshape(1, -1, 2)\n'
+        assert ref.count(old) == 1
+        open(os.path.join(d, "court_refine.py"), "w", encoding="utf-8").write(
+            ref.replace(old, old + "    xy = court_auto.to_img(np.eye(3), xy[0])[None]\n"))
+        k2 = key(detect.FLIGHTS_ENTRIES, d)
+        self.assertNotEqual(k2, k)                                     # court_refine.py changed, and court_auto is in
+        self.assertIn("court_auto", code_closure.reach(*detect.FLIGHTS_ENTRIES, folder=d))
+        open(os.path.join(d, "court_auto.py"), "w", encoding="utf-8").write(src.replace(
+            "def to_img(H, pts):\n", "def to_img(H, pts):\n    pts = np.asarray(pts) * 1.0\n"))
+        self.assertNotEqual(key(detect.FLIGHTS_ENTRIES, d), k2)        # a change of a used court function: a new key
 
 
 class GitChanges(unittest.TestCase):

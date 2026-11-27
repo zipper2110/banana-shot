@@ -111,7 +111,7 @@ def check_video(work, video):
 
 
 # Item 13 (decision 90f2389d). The stages media, audio, court, court2 and flights: the key has the import closure of
-# the entry modules (code_closure.files). The ball and pose stages (1 h and more): a hand list, and test_code_closure
+# the entry modules (code_closure.files; A39: only the modules that the run can use, code_closure.reach). The ball and pose stages (1 h and more): a hand list, and test_code_closure
 # fails when their closure gets a module that is not in the list or on its "no effect" list.
 FLIGHTS_ENTRIES = ("ball_full", "net_events", "feat_wasb")
 STAGE_ENTRIES = {"media": ("prep", "frame_times"), "audio": ("feat_audio", "feat_mel"), "court": ("court_track",),

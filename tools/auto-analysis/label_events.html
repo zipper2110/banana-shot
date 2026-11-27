@@ -283,7 +283,7 @@ const span = it => it.span || [it.t0, it.t0 + (it.dur || 1e9)];
 // Marks before it (from before A33) stay in the file and show as "not used". A row with no labelWindow: the whole clip.
 const win = it => it.labelWindow || [it.t0, Infinity];
 const winStart = it => Math.max(0, win(it)[0] - it.t0);         // clip time of the window start
-const inWin = (it, e) => e.t >= win(it)[0] - 1e-3 && e.t <= win(it)[1] + 1e-3;
+const inWin = (it, e) => e.t >= win(it)[0] && e.t <= win(it)[1];     // the rule of case_history.fragment
 const saved = it => store[it.id];
 const KIND_KEY = {serve: "S", shot: "", bounce: "B", net: "T"};
 
@@ -460,7 +460,7 @@ function add(ev) {
   if (cur < 0) return false;
   if (staleRow) { flash("the fragment list changed: reload the page (F5)", "#b3261e", 3000); return false; }
   const tt = vt(frameT());
-  if (tt < win(item())[0] - 1e-3) { flash(`before the label window (it starts at ${fmt(win(item())[0])}): no mark`, "#a8801f", 1800); return false; }
+  if (+tt.toFixed(4) < win(item())[0]) { flash(`before the label window (it starts at ${fmt(win(item())[0])}): no mark`, "#a8801f", 1800); return false; }
   ev.t = +tt.toFixed(4);
   ev.rate = v.paused ? 0 : v.playbackRate;
   const dr = d();

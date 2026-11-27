@@ -137,6 +137,8 @@ code { font: 12px Consolas, monospace; background: var(--soft); padding: 1px 4px
 a { color: var(--accent); }
 details.more > summary { cursor: pointer; color: var(--mute); font-size: 12px; margin-top: 6px; }
 .legend { font-size: 11px; color: var(--mute); }
+.warn { color: var(--warn); }
+.dw { margin-top: 2px; } .dw ul { margin: 1px 0 0; padding-left: 18px; } .dw li { margin: 0; }
 </style>
 </head>
 <body>
@@ -278,6 +280,13 @@ function renderLock() {
   $("#sLock .body").innerHTML = h;
 }
 
+// The results that can be checked objectively (the user, 2026-11-27). An open action without them gets a warning.
+function doneWhen(a, mute) {
+  const dw = a.doneWhen || [], open = !["done", "dropped"].includes(a.status);
+  if (!dw.length) return open ? `<div class="small warn">no "done when": the target result is not defined</div>` : "";
+  return `<div class="small dw${mute ? " mute" : ""}"><b>Done when:</b><ul>${dw.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+}
+
 function actionRow(a, compact) {
   const e = a.expected || {}, r = a.real;
   const cls = r ? (r.impact === 0 ? "zero" : r.impact < (e.impact ?? 0) ? "lower" : "") : "";
@@ -285,6 +294,7 @@ function actionRow(a, compact) {
     <td><span class="chip k-${a.kind}">${a.kind}</span></td>
     <td><b>${esc(a.title)}</b> ${a.journal && a.journal.length ? `<span class="small mute">${a.journal.join(", ")}</span>` : ""}
       <div class="small">${esc(e.outcome || "")}</div>
+      ${doneWhen(a)}
       ${r ? `<div class="small"><b>Result:</b> ${esc(r.outcome)}</div>` : ""}
       ${a.waitingFor ? `<div class="small s-waiting">waits for ${esc(a.waitingFor)}</div>` : ""}
       ${!compact && a.issues && a.issues.length ? `<div class="small mute">issues: ${a.issues.join(", ")}</div>` : ""}</td>
@@ -398,6 +408,7 @@ function renderWorkers() {
         <div class="small"><span class="s-${a.status}">${a.status}</span>${a.status === "waiting" ? ` <span class="s-waiting">· waits for <b>${esc(WHO(a.waitingOn))}</b>: ${esc(a.waitingFor || "")}</span>` : ""}${a.unplanned ? ` <span class="mute">(not in the plan)</span>` : ""}
         <span class="r">${a.status === "done" || a.status === "dropped" ? (a.real && a.real.impact != null ? "impact " + a.real.impact + " · " : "") + hm(a.finished) : (a.netMin ? dur(a.netMin) : "?") + (!noEta && a.eta ? " · ~" + hm(a.eta) : "")}</span></div>
         ${a.note && a.status !== "done" ? `<div class="small mute">${esc(a.note)}</div>` : ""}
+        ${a.status !== "done" && a.status !== "dropped" ? doneWhen(a, true) : ""}
         ${a.status === "done" && a.real && a.real.outcome ? `<div class="small mute">${esc(a.real.outcome)}</div>` : ""}
         ${(a.jobs || []).length && a.status !== "done" ? `<div class="small mute">jobs: ${a.jobs.map(j => esc(j.what) + (j.estMin ? " (" + dur(j.estMin) + ")" : "")).join("; ")}</div>` : ""}</li>`;
     const askLi = a => `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="mute small">${esc(a.owner || "")}</span> ${esc(a.title)}<div class="small s-waiting">needs: ${esc(a.waitingFor || "")}</div></li>`;

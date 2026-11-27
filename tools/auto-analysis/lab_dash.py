@@ -373,7 +373,7 @@ def workers_pass(plan, lock, labels, eta_of):
                          "netMin": est, "eta": iso(end), "waitingFor": a.get("waitingFor"),
                          "waitingOn": waiting_on(a) if a["status"] == "waiting" else None,
                          "jobs": a.get("jobs", []), "note": a.get("note"), "unplanned": a.get("unplanned"),
-                         "live": a.get("live")})
+                         "live": a.get("live"), "doneWhen": a.get("doneWhen") or []})
             if end:
                 cursor = end
         gpu = [q for q in lock["queue"] if q["who"] and q["who"].lower() == w["id"].lower()]
@@ -413,6 +413,8 @@ def apply_live(plan, live):
         if a is None:
             a = {"id": aid, "title": e.get("title") or aid, "kind": "work", "owner": e.get("who"),
                  "status": e.get("status"), "unplanned": True}
+        if e.get("doneWhen"):
+            a["doneWhen"] = [e["doneWhen"]] if isinstance(e["doneWhen"], str) else e["doneWhen"]
             plan.setdefault("actions", []).append(a)
             acts[aid] = a
         elif plan_t and t and t < plan_t and a.get("status") in ("done", "dropped"):

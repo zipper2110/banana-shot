@@ -1,7 +1,7 @@
 {
  "version": 1,
- "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 16:22",
+ "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
+ "updated": "2026-11-27 22:14",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -706,7 +706,11 @@
    },
    "estimate": {
     "fromLabels": "small"
-   }
+   },
+   "doneWhen": [
+    "Label status (dashboard): small level 56 of 56 done or skipped (now 18), 0 old marks to redo.",
+    "S1 measures the M2 rows again on all small labels (one case_history run), and the hits found count is over 131 labeled hits (now 131 on 16 fragments)."
+   ]
   },
   {
    "id": "A22",
@@ -726,7 +730,12 @@
    },
    "estimate": {
     "netMin": 5
-   }
+   },
+   "doneWhen": [
+    "s006.events.json: the in-bounce at 75:58.987 (source 4558.987 s, 0.1 s after the out bounce) is gone.",
+    "s008.events.json: no events from 24:55.0 to 24:58.5 (source 1495.0 to 1498.5 s: the serve with the net cord, the bounce, the shot, the bounce); the fragment note (key M) is 'let'.",
+    "Both files saved after 2026-11-27 16:30 (file time)."
+   ]
   },
   {
    "id": "A23",
@@ -748,7 +757,11 @@
    },
    "estimate": {
     "netMin": 8
-   }
+   },
+   "doneWhen": [
+    "Label status (dashboard), Faults step: 27 of 27 rows answered (now 0).",
+    "S4 writes the true precision of the fault clips and the count of hidden real points from the answers into the journal (one row)."
+   ]
   },
   {
    "id": "A24",
@@ -766,7 +779,11 @@
    },
    "estimate": {
     "netMin": 12
-   }
+   },
+   "doneWhen": [
+    "Label status (dashboard), Sides step: 5 of 5 matches done (now 0).",
+    "The near player of each of the 5 matches is in the sides file, so G9 has a person-made reference."
+   ]
   },
   {
    "id": "A25",
@@ -788,7 +805,11 @@
    },
    "estimate": {
     "netMin": 150
-   }
+   },
+   "doneWhen": [
+    "A journal row (S4 block) with a cause table of all 7 labeled fault serves with no serve event: each serve has one cause, with an image fact (frame and px), 0 without a cause.",
+    "At least one fix proposal, with the count of the 7 serves that it gets back and the expected effect on fault clips (now 4 of 11)."
+   ]
   },
   {
    "id": "A26",
@@ -808,7 +829,11 @@
    },
    "estimate": {
     "netMin": 90
-   }
+   },
+   "doneWhen": [
+    "A journal row (S5 block) that splits the 2835 s of the Misha court stage into its steps, from the stored logs; the steps cover 90 % or more of the time.",
+    "The cause named, and a fix proposal with the expected court stage time on Misha (target: under 600 s, the other matches take about 267 s)."
+   ]
   },
   {
    "id": "A27",
@@ -831,6 +856,10 @@
    },
    "after": [
     "A20"
+   ],
+   "doneWhen": [
+    "A journal row (S3 block): all missed and false rows of m1030 on the reference d1cb16c7 in one table, each with one cause, 0 without a cause, and the count for each cause.",
+    "For the largest cause: a fix proposal with the expected rows that it gets back."
    ]
   },
   {
@@ -854,6 +883,10 @@
    },
    "after": [
     "A21"
+   ],
+   "doneWhen": [
+    "A journal row (S4 block): all points with a wrong shot count on all labeled small fragments (on d1cb16c7) in one table, each with one cause, 0 without a cause, and the count for each cause.",
+    "For the largest cause: a fix proposal with the expected change of 'shot count right' (now 9 of 17 points)."
    ]
   },
   {
@@ -884,7 +917,11 @@
      "estMin": 40
     }
    ],
-   "notBefore": "2026-12-06 09:00"
+   "notBefore": "2026-12-06 09:00",
+   "doneWhen": [
+    "Bench reports on the final head for Misha m1113 (all stages) and Igor m1116 (changed stages) in D:\\bananashot-lab\\bench.",
+    "A journal row (S1) with recall, precision, winner and end to end against the M1 numbers; the M3 measures on the dashboard have these values."
+   ]
   },
   {
    "id": "A30",
@@ -907,6 +944,10 @@
    },
    "after": [
     "A21"
+   ],
+   "doneWhen": [
+    "Label status (dashboard): medium level 4 of 4 done (now 0), 0 old marks to redo.",
+    "S1 measures the medium level once with case_history (one journal row)."
    ]
   },
   {

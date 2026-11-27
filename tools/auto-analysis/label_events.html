@@ -63,11 +63,13 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   #events div.sel { background:#33404f; }
   .near { color:var(--near); } .far { color:var(--far); } .fault { color:var(--fault); } .ok { color:var(--ok); } .warn { color:var(--warn); }
   .bounce { color:var(--bounce); } .out { color:var(--out); } .net { color:var(--net); }
-  #keys { font-size:12px; color:var(--dim); display:grid; grid-template-columns:auto 1fr; gap:1px 10px; }
-  #keys kbd { color:var(--text); font:12px ui-monospace, monospace; background:#2b3038; border:1px solid var(--line); border-radius:3px; padding:0 4px; justify-self:start; white-space:nowrap; }
+  .keys { font-size:12px; color:var(--dim); display:grid; grid-template-columns:auto 1fr; gap:1px 10px; }
+  .keys kbd { color:var(--text); font:12px ui-monospace, monospace; background:#2b3038; border:1px solid var(--line); border-radius:3px; padding:0 4px; justify-self:start; white-space:nowrap; }
   #list { flex:1 0 150px; overflow:auto; font-size:12px; font-variant-numeric:tabular-nums; }
   #list div { display:grid; grid-template-columns:28px 92px 1fr 70px; padding:1px 10px; cursor:pointer; color:var(--dim); }
   #list div.done { color:var(--ok); } #list div.cur { background:#33404f; color:var(--text); }
+  .keybox summary { cursor:pointer; } .keybox summary h3 { display:inline; }
+  #list div.unsaved { color:var(--warn); background:rgba(255,209,102,.16); } #list div.unsaved.cur { background:rgba(255,209,102,.30); }
   #list div:hover { background:#2a2e35; }
   #court { display:block; margin:2px auto 0; background:#24402c; }
   #nofolder { display:none; background:#b3261e; color:#fff; font-weight:700; font-size:15px; padding:4px 12px; border-radius:4px; cursor:pointer; }
@@ -111,6 +113,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   <span id="where"></span>
   <span class="sp"></span>
   <span id="progress"></span>
+  <span id="unsaved" class="warn" title="Fragments with changes that are not in a label file (yellow in the list)"></span>
   <span id="nofolder" title="The marks are written to files only in a label folder"></span>
   <span id="savestate"></span>
   <button id="btnFolder" title="Choose the folder for the label files (key O)">Label folder…</button>
@@ -142,8 +145,8 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
     <section style="min-height:140px; max-height:34vh; overflow:auto"><h3>Marks (click: go to the frame)</h3><div id="events"></div></section>
     <section><h3>Bounces on the court (top view, far end up)</h3><svg id="court" width="150" height="250"></svg></section>
     <section>
-      <details id="keybox" open><summary><h3 style="display:inline">Keys (H: show or hide)</h3></summary>
-      <div id="keys">
+      <details id="keybox" class="keybox"><summary><h3>Main keys</h3></summary>
+      <div class="keys">
         <kbd>Shift+N / Shift+F</kbd><span><b>serve</b> contact, <span class="near">near</span> / <span class="far">far</span> server</span>
         <kbd>X</kbd><span>the last serve is a first-serve <span class="fault">fault</span> (toggle)</span>
         <kbd>N / F</kbd><span><b>shot</b> contact, <span class="near">near</span> / <span class="far">far</span> player</span>
@@ -154,8 +157,12 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
         <kbd>Shift+T</kbd><span><span class="net">net cord</span>: the ball touches the net and goes over</span>
         <kbd>Z</kbd><span>undo the last mark</span>
         <kbd>Enter</kbd><span>save, go to the next fragment</span>
+        <kbd>Ctrl+S</kbd><span>save, stay on this fragment</span>
         <kbd>Space</kbd><span>play / pause</span>
         <kbd>← →</kbd><span>one frame back / forward (Shift: 10)</span>
+      </div></details>
+      <details id="keybox2" class="keybox"><summary><h3>More keys</h3></summary>
+      <div class="keys">
         <kbd>1 2 3 4</kbd><span>speed 1× ½× ¼× ⅒×</span>
         <kbd>R</kbd><span>play again from the start of the label window</span>
         <kbd>V</kbd><span>zoom 2× at the mouse (toggle)</span>
@@ -166,6 +173,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
         <kbd>M</kbd><span>note</span>
         <kbd>[ ]</kbd><span>previous / next fragment, no save</span>
         <kbd>O</kbd><span>choose the label folder</span>
+        <kbd>H</kbd><span>open or close both key lists</span>
       </div></details>
     </section>
     <section style="padding-bottom:2px"><h3>Fragments</h3></section>
@@ -331,6 +339,8 @@ function draftOf(i) {
 }
 const d = () => draftOf(cur);
 function touch() { d().dirty = true; render(); }
+// a reload or close loses the unsaved changes: the browser asks first
+addEventListener("beforeunload", e => { if (Object.values(drafts).some(x => x && x.dirty)) { e.preventDefault(); e.returnValue = ""; } });
 
 // ---- active time (only while the page is visible)
 let activeSince = performance.now();
@@ -544,7 +554,7 @@ async function save(next) {
   if (cur < 0) return;
   const it = item(), dr = d();
   const w = dr.skip ? [] : checks(dr), sig = JSON.stringify(dr.events);
-  if (w.length && dr.warned !== sig) { dr.warned = sig; flash("check the warnings (Enter again saves)", "#a8801f"); render(); return; }
+  if (w.length && dr.warned !== sig) { dr.warned = sig; flash("check the warnings (the same key again saves)", "#a8801f"); render(); return; }
   if (staleRow || !(await checkRow(it))) {
     const keep = JSON.parse(localStorage.getItem(STORE + "-stale") || "{}");      // a copy of the marks, for a repair by an agent
     keep[it.id + " " + new Date().toISOString()] = fragDoc(it, dr);
@@ -666,9 +676,12 @@ function render() {
   if (!list.children.length) items.forEach((it, i) => { const r = document.createElement("div"); r.onclick = () => open(i); list.appendChild(r); });
   items.forEach((it, i) => {
     const r = list.children[i], s = saved(it);
-    r.className = (i === cur ? "cur " : "") + (s ? "done " : "");
-    r.innerHTML = `<span>${i + 1}</span><span>${it.id}</span><span>${(it.kinds || []).join(" ")}${it.control ? " (control)" : ""}</span><span>${s ? (s.skip ? "skip" : s.events.length + " marks") + (s.unsure ? " ?" : "") : (drafts[i] && drafts[i].dirty ? "unsaved" : mapped[it.id] ? (mapped[it.id].events || []).length + " mapped marks" : staleIds.has(it.id) ? "old marks, not used" : "")}</span>`;
+    const dirty = !!(drafts[i] && drafts[i].dirty);
+    r.className = (i === cur ? "cur " : "") + (s ? "done " : "") + (dirty ? "unsaved" : "");
+    r.innerHTML = `<span>${i + 1}</span><span>${it.id}</span><span>${(it.kinds || []).join(" ")}${it.control ? " (control)" : ""}</span><span>${dirty ? "unsaved" : s ? (s.skip ? "skip" : s.events.length + " marks") + (s.unsure ? " ?" : "") : ( mapped[it.id] ? (mapped[it.id].events || []).length + " mapped marks" : staleIds.has(it.id) ? "old marks, not used" : "")}</span>`;
   });
+  const nDirty = items.filter((it, i) => drafts[i] && drafts[i].dirty).length;
+  $("unsaved").textContent = nDirty ? `· ${nDirty} unsaved` : "";
   const done = items.filter(saved), secs = done.map(it => saved(it).labelSeconds || 0).filter(x => x > 0).sort((a, b) => a - b);
   const med = secs.length ? secs[Math.floor(secs.length / 2)] : 0, left = items.length - done.length;
   $("progress").textContent = `${done.length} / ${items.length} done` + (med ? ` · median ${Math.round(med)} s per fragment · about ${Math.round(left * med / 60)} min left` : "");
@@ -734,7 +747,10 @@ $("btnExport").onclick = download;
 
 // ---- keys
 document.addEventListener("keydown", async e => {
-  if (SIDES_MODE || FAULTS_MODE || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (SIDES_MODE || FAULTS_MODE || e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+  // Ctrl+S: save and stay on this fragment (not the browser "save page")
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "s") { e.preventDefault(); if (cur >= 0) await save(false); overlay(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase(), S = e.shiftKey;
   const map = {
     " ": () => { if (v.paused) { v.playbackRate = rate; v.play(); } else v.pause(); },
@@ -753,7 +769,7 @@ document.addEventListener("keydown", async e => {
     "q": () => { d().unsure = !d().unsure; touch(); }, "k": () => { d().skip = !d().skip; flash(d().skip ? "skip" : "no skip", "#555"); touch(); },
     "m": () => { const t = prompt("Note for this fragment", d().note || ""); if (t !== null) { d().note = t.trim(); touch(); } },
     "[": () => open(cur - 1), "]": () => open(cur + 1), "pageup": () => open(cur - 1), "pagedown": () => open(cur + 1),
-    "o": chooseDir, "h": () => { $("keybox").open = !$("keybox").open; },
+    "o": chooseDir, "h": () => { const o = !($("keybox").open && $("keybox2").open); $("keybox").open = $("keybox2").open = o; },
   };
   if (map[k]) { e.preventDefault(); if (cur >= 0 || k === "o" || k === "h") await map[k](); overlay(); }
 });

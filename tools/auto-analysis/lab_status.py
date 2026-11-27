@@ -9,6 +9,7 @@ Use (one call at each change; it takes well under a second):
     python lab_status.py action A31 --who S3 --status running [--note "bench of E193, variant e"]
     python lab_status.py action A31 --who S3 --status waiting --on queue --waiting-for "the unpause"
     python lab_status.py action A31 --who S3 --status done --real 3 --outcome "fault clips 7 to 9 of 12; ..."
+    python lab_status.py action X12 --who S3 --status running --title "..." --done-when "a journal row with ..."
     python lab_status.py now --who S3 --text "writes the journal row of E193"     (what the worker does now)
     python lab_status.py idle --who S3                                             (the worker has no work)
     python lab_status.py show [--who S3]
@@ -22,7 +23,8 @@ The status model (the dashboard groups the actions of a worker by it):
     done      Finished (--real and --outcome). dropped: stopped for good (--note says why).
 Each action entry is a full state: its note and waiting fields replace the earlier ones (they do not carry over).
 The worker line on the dashboard is the newest of: a now or idle entry, or an action entry of that worker.
-An action id that is not in the plan is shown as an unplanned action of that worker (give --title).
+An action id that is not in the plan is shown as an unplanned action of that worker. Give --title and --done-when:
+the result that can be checked objectively (a count, a file, a journal row), with the place to check it.
 Standard library only.
 """
 import argparse
@@ -169,6 +171,7 @@ def main():
     a.add_argument("--real", type=int, choices=range(0, 11))
     a.add_argument("--outcome")
     a.add_argument("--net-min", type=float, help="the net minutes still needed")
+    a.add_argument("--done-when", help="unplanned action: the result that can be checked objectively")
     n = sub.add_parser("now")
     n.add_argument("--who", required=True)
     n.add_argument("--text", required=True)
@@ -187,7 +190,7 @@ def main():
         e = write({"kind": "action", "action": x.action, "who": x.who, "status": x.status, "note": x.note,
                    "waitingFor": x.waiting_for,
                    "waitingOn": norm_who(x.on) if x.on else None, "title": x.title, "real": x.real, "outcome": x.outcome,
-                   "netMin": x.net_min})
+                   "netMin": x.net_min, "doneWhen": x.done_when})
         print(f"ok {e['t']} {x.who} {x.action} {x.status}")
     elif x.cmd == "now":
         e = write({"kind": "now", "who": x.who, "text": x.text})

@@ -7,6 +7,11 @@ skips the sorted hypotheses that valid_H rejects. The results must not change:
   - the pre-check accepts each hypothesis that valid_H accepts;
   - detect on 3 synthetic frames (a clear court, a court with clutter lines, no court) against the values of the
     old code (GOLDEN: made with the code before E186, commit 4dd32409).
+E187 (S5, A26): the rule switches of court_track (default off) that make the stage faster and can change results:
+  - the default values give the old results (test_detect_same with the explicit defaults);
+  - smaller rules (fewer hypotheses, a smaller sorted search, fewer refined candidates, fewer coarse points) reach
+    detect and give a valid model;
+  - COURT_SKIP_AFTER: fit_window does not call detect after a window of that kind, and calls it when the switch is off.
 Run: python -m unittest test_court_fast
 """
 import os, sys, unittest
@@ -15,6 +20,7 @@ import cv2
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import court_auto as ca
+import court_track as ct
 
 W, H = 1920, 1080
 
@@ -116,6 +122,49 @@ class FastCourt(unittest.TestCase):
             else:
                 self.assertTrue(np.array_equal(np.asarray(Hd), np.asarray(Hg)), k)
                 self.assertEqual(sd, sg, k)
+
+
+    def test_defaults_explicit(self):
+        """The E187 parameters at their default values give the old results."""
+        Hg, sg, okg, ng = GOLDEN["clear"]
+        Hd, sd, info = ca.detect(self.frames["clear"], 10, 14, 8, top=30000, coarse_n=24)
+        self.assertTrue(np.array_equal(np.asarray(Hd), np.asarray(Hg)))
+        self.assertEqual(sd, sg)
+        self.assertIs(ca.coarse_points(24), ca.COARSE)
+        self.assertEqual(len(ca.coarse_points(12)), 12 * len(ca.SEGS))
+        self.assertEqual(ct.rules(), ((10, 14), 30000, 8, 24, ()))
+        self.assertEqual(ct.rules("8,10", "5000", "4", "12", "fail"), ((8, 10), 5000, 4, 12, ("lost", "weak")))
+
+    def test_small_rules_clear(self):
+        """Each smaller rule reaches detect: fewer hypotheses give a smaller n_hyp, and each rule still gives a valid
+        ok model on the clear frame. (The 2 px check is for the real windows of E187: on this synthetic frame the
+        default model fits the lines with cost 0.63 but is not the drawn court, and n_refine=4 picks another model.)"""
+        ng = GOLDEN["clear"][3]
+        for kw in (dict(n_h=8, n_s=10), dict(top=5000), dict(n_refine=4), dict(coarse_n=12)):
+            Hd, sd, info = ca.detect(self.frames["clear"], **kw)
+            self.assertTrue(info.get("ok") and ca.valid_H(np.asarray(Hd)), kw)
+            self.assertEqual(info["n_hyp"], ng, kw)          # the clear frame has fewer lines than 8 and 10
+        hor, side, _ = self.lines(self.frames["clutter"], 6, 8)       # 10 side lines at the default; the pseudo lines refill hor
+        self.assertLess(len(ca.hypotheses(hor, side, W, H)[0]), len(ca.hypotheses(*self.lines(self.frames["clutter"])[:2], W, H)[0]))
+
+    def test_skip_after(self):
+        """COURT_SKIP_AFTER: no detect after a window of that kind; detect when the switch is off."""
+        calls = []
+        img = self.frames["none"]
+        old = ct.window_frame, ca.detect, ct.SKIP_AFTER
+        start = np.array([(500, 600), (1400, 600), (300, 900), (1600, 900)], np.float32)
+        try:
+            ct.window_frame = lambda *a, **k: img
+            ca.detect = lambda *a, **k: (calls.append(1), (None, ct.CAP, {"ok": False}))[1]
+            for skip, prev, n in (((), "lost", 1), (("lost",), "lost", 0), (("lost",), "weak", 1),
+                                  (("lost", "weak"), "weak", 0), (("lost", "weak"), None, 1)):
+                calls.clear()
+                ct.SKIP_AFTER = skip
+                out = ct.fit_window("x", 0, 100, start, 0.5, prev_how=prev)
+                self.assertEqual(len(calls), n, (skip, prev))
+                self.assertEqual(out[4], "lost", (skip, prev))
+        finally:
+            ct.window_frame, ca.detect, ct.SKIP_AFTER = old
 
 
 if __name__ == "__main__":

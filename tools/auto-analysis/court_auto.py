@@ -433,22 +433,24 @@ def model_dist(H1, H2, w=1920, h=1080):
     return float(np.linalg.norm(a[ok] - b[ok], axis=1).mean())
 
 
-def detect(img, n_h=10, n_s=14, n_refine=8, prior=None):
+def detect(img, n_h=10, n_s=14, n_refine=8, prior=None, top=30000, coarse_n=24):
     """Find the court in one BGR frame. Two passes (E23b):
     1. with the rule for a low camera (hidden()). The result counts only if it is a low-camera model and
        it passes the confidence limits. In the lab matches (camera 3.1 to 3.7 m high) this pass gave
        wrong low-camera models in 11 of 24 frames, but none of them passed the limits;
     2. the search with the rule off, as before E23b.
-    Returns as detect_pass(). E186: the two passes share the work that does not depend on the rule (prepare())."""
+    Returns as detect_pass(). E186: the two passes share the work that does not depend on the rule (prepare()).
+    E187: top (the sorted hypotheses that the candidate search reads) and coarse_n (the points of each model line in
+    the coarse score) for the rules of court_track (the defaults give the results of before)."""
     global LOW_RULE
     prep = prepare(img, n_h, n_s)
     if not (LOW_SKIP and prior is not None and not hidden(prior, SAMPLES, img.shape[1], img.shape[0]).any()):
-        H, score, info = detect_pass(img, n_h, n_s, n_refine, prior, prep)
+        H, score, info = detect_pass(img, n_h, n_s, n_refine, prior, prep, top, coarse_n)
         if H is not None and info["ok"] and hidden(H, SAMPLES, img.shape[1], img.shape[0]).any():
             return H, score, dict(info, low=True)
     LOW_RULE = False
     try:
-        return detect_pass(img, n_h, n_s, n_refine, prior, prep)
+        return detect_pass(img, n_h, n_s, n_refine, prior, prep, top, coarse_n)
     finally:
         LOW_RULE = True
 
@@ -524,7 +526,17 @@ def prepare(img, n_h=10, n_s=14):
     return out
 
 
-def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None, prep=None):
+_COARSE = {24: COARSE}
+
+
+def coarse_points(n):
+    """The model points of the coarse score: n points on each model line (24 = COARSE)."""
+    if n not in _COARSE:
+        _COARSE[n] = np.concatenate([np.linspace(a, b, n) for a, b in SEGS]).astype(np.float32)
+    return _COARSE[n]
+
+
+def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None, prep=None, top=30000, coarse_n=24):
     """Find the court in one BGR frame. Returns (H, score, info).
     H: 3x3 image px -> court meters, or None.
     score: chamfer cost in px of the polished model (see polish(); lower is
@@ -548,7 +560,8 @@ def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None, prep=None):
     if not LOW_RULE and "score_off" in prep:
         score = prep["score_off"]
     else:
-        M = np.c_[COARSE, np.ones(len(COARSE))]
+        CO = coarse_points(coarse_n)
+        M = np.c_[CO, np.ones(len(CO))]
         score = np.full(len(Hs), np.inf)
         score_off = np.full(len(Hs), np.inf) if LOW_RULE else None
         for k in range(0, len(Hs), 20000):
@@ -560,20 +573,20 @@ def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None, prep=None):
             vis = (x >= 0) & (x < ww - 1) & (y >= 0) & (y < hh - 1) & np.isfinite(x)
             d0 = dt[np.clip(np.nan_to_num(y), 0, hh - 1).astype(int), np.clip(np.nan_to_num(x), 0, ww - 1).astype(int)]
             nv = vis.sum(1)
-            bad = (nv < 0.4 * len(COARSE)) | ~front | ~okh[k:k + 20000]
+            bad = (nv < 0.4 * len(CO)) | ~front | ~okh[k:k + 20000]
             for out, rule in ((score, LOW_RULE), (score_off, False)):
                 if out is None:
                     continue
-                hid = hidden(Hs[k:k + 20000], COARSE, ww, hh) if rule else np.zeros(d0.shape, bool)
+                hid = hidden(Hs[k:k + 20000], CO, ww, hh) if rule else np.zeros(d0.shape, bool)
                 d = np.where(vis, np.minimum(d0, np.where(hid, HID_CAP, CAP)), 0)
-                sc = d.sum(1) / np.maximum(nv, 1) + OUT_W * (1 - nv / len(COARSE))
+                sc = d.sum(1) / np.maximum(nv, 1) + OUT_W * (1 - nv / len(CO))
                 sc[bad] = np.inf
                 out[k:k + 20000] = sc
         if score_off is not None:
             prep["score_off"] = score_off
     order = np.argsort(score)
     # keep the best distinct, valid hypotheses
-    top = order[:30000]
+    top = order[:top]
     fin = top[np.isfinite(score[top])]
     pre = np.zeros(len(Hs), bool)
     pre[fin] = valid_pre(Hs[fin], ww, hh)                 # E186: the batch pre-check; valid_H decides as before

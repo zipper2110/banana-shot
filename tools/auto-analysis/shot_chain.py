@@ -105,6 +105,45 @@ SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long aft
 # Part "c" of E166 (a net event with no flight is no shot before a same-end shot) is removed after E168: it took any next
 # shot of the same end, not a serve event, and it removed a real net stop (label s002, m1020 2653.92).
 TIME_ORDER = os.environ.get("CHAIN_TIME_ORDER", "a")
+# A31 (S3, manager item "serve against the service box", gap-program section 5): the first bounce of a serve shot is judged
+# against the service box, not the full court (serve_margin). "0" (default) = the full court, as before. "e" = the serve
+# shots are the shots at a serve event (serve_ball.serve_events, not a toss alone; the same end, SB_AT s), the shot that
+# serve_start (b) moved to a serve event, and the serve in play after a removed serve (serve_start (a)); only before the
+# first shot of the other end. "ef" = also the first shot of the row with no serve event.
+SERVE_BOX = os.environ.get("CHAIN_SERVE_BOX", "0")
+SB_AT = 0.3            # s: the serve event is this near to the start of the first flight or to the time of the shot
+SIDE_X = 0.3           # m: a serve flight that starts nearer to the middle has no known side (chain.serve_side)
+
+
+def serve_margin(x, y, x0=None):
+    """The margin of a serve bounce to the service box (m, positive = inside). x across, y along the serve (m after the
+    net). Depth (service line SL) and the singles side lines always; the side of the box only when x0 (the x of the start
+    of the serve flight) is SIDE_X or more from the middle: the serve goes cross-court, so the bounce has the other sign."""
+    m = min(SW - abs(x), SL - y)
+    if x0 is not None and abs(x0) >= SIDE_X:
+        m = min(m, -x if x0 > 0 else x)
+    return m
+
+
+def mark_serves(shots, serves, mode=None):
+    """A31: sets sh["serve"] = {"x0": x of the serve flight start, "ev": True if a serve event} on each serve shot (see
+    SERVE_BOX). Only the shots before the first shot of the other end can be serves."""
+    mode = SERVE_BOX if mode is None else mode
+    if mode == "0":
+        return
+    for i, sh in enumerate(shots):
+        if any(p["near"] != sh["near"] for p in shots[:i]):
+            break
+        if not sh["fl"] or sh.get("serve"):
+            continue
+        t0 = sh["fl"][0]["t0"]
+        e = [x for x in (serves or ()) if bool(x[1]) == sh["near"] and x[2] != "toss"
+             and min(abs(x[0] - t0), abs(x[0] - sh["t"])) <= SB_AT]
+        if e:
+            fl = e[0][3] if e[0][3] is not None else sh["fl"][0]       # the flight of the serve event, else of the shot
+            sh["serve"] = {"x0": float(fl["p0"][0]), "ev": True}
+        elif "tToss" in sh or sh.get("before") or ("f" in mode and i == 0):
+            sh["serve"] = {"x0": float(sh["fl"][0]["p0"][0]), "ev": False}
 # TO_EPS (manager, after E167): the shortest real time from a contact to a bounce on the side of the hitter is longer.
 # A shot to the other side bounces there first; an overhead near the net can bounce about 0.1 s after the contact,
 # but on the other side, so the side test keeps it. A bounce on the side of the hitter after a contact comes after a
@@ -290,6 +329,8 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None, serves
         shots = net_roll(shots)
     if serves is not None and SERVE_START != "0":
         shots = serve_start(shots, nets, serves)
+    if serves is not None:
+        mark_serves(shots, serves)                 # A31 (after serve_start: the serve in play of (a))
     if "a" in TIME_ORDER:
         time_order(shots)
     return dead_stop(shots) if DEAD_STOP else shots
@@ -342,6 +383,7 @@ def serve_start(shots, nets, serves, mode=None):
              and x[0] < t_next - 0.1]
         if e:
             s0["tToss"], s0["t"] = s0["t"], float(e[0][0])
+    mark_serves(shots, serves)                     # A31: (a) tests the end of a serve against the service box
     if "a" in mode and len(shots) >= 2:
         s1 = shots[1]
         t0, t1 = (s0["fl"][0]["t0"], s0["fl"][-1]["t1"]) if s0["fl"] else (s0["t"], s0["t"])
@@ -552,7 +594,10 @@ def shot_end(sh, tol=0.0):
         return "none", None           # behind the baseline of the hitter: not a bounce of a shot that flies to the net
     if y < NET_NEAR:
         return "own", min(y, 0.0)     # E32: also a bounce right behind the net: the ball touched the net and dropped
-    m = min(SW - abs(x), BL - y)
+    if SERVE_BOX != "0" and sh.get("serve"):
+        m = serve_margin(x, y, sh["serve"]["x0"])   # A31: a serve must land in the service box
+    else:
+        m = min(SW - abs(x), BL - y)
     return ("in" if m > -tol else "out"), m
 
 
@@ -868,6 +913,8 @@ def export(r, t_end, t_cut, used, p=None):
                 d["predicted"] = pe
         if sh["weak"]:
             d["weak"] = True              # the 3D start of the flight is not plausible: only the direction is used
+        if SERVE_BOX != "0" and sh.get("serve"):
+            d["serve"] = {"x0": round(sh["serve"]["x0"], 2), "ev": sh["serve"]["ev"]}   # A31: judged against the box
         if (sh["fl"][0]["t0"] if sh["fl"] else sh["t"]) >= t_end + t_cut:
             d["late"] = True              # after the time cut: ball handling after the point, not used
         out.append(d)

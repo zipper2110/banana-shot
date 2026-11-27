@@ -39,13 +39,12 @@ def p_miss(gap):
     return 0.02 if gap < 15 else 0.05 if gap < 25 else 0.2 if gap < 40 else 0.4
 
 MIN_GAP = 2.0
-SERVICE_LINE = 6.40                      # the distance of the service line from the net, m
 # E122 (found on Igor, rule of tennis; S4 item 8): a detected rally that is a first-serve fault. After a fault the
 # same player serves again from the same side of the court; after a point the server changes the side. A rally with
 # FAULT_SHOTS chain shots or less, then the next rally from the same server end and the same side (x of the serve
 # flight) not later than FAULT_NEXT s after it, is the first serve of the next rally: it is not a rally.
 FAULT_SIDE = True
-FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, 0.3          # shots; s (the time between points of the rules); m (x near 0: side not known)
+FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, sc.SIDE_X   # shots; s (the time between points of the rules); m (x near 0: side not known)
 # item 10: when the serve flight does not give the side, the court x of the feet of the server (pose, the H of the
 # court window at the rally start: ball_events.court_H; one court.json H is off when the camera moves) gives it.
 # The rule of tennis: the server serves from the other side after a point, from the same side after a fault.
@@ -255,11 +254,12 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                                "flights": [full["flights"][i] for i in np.nonzero((fl_t0 >= fa) & (fl_t0 <= fb))[0]]}
                         fch = sc.evidence(fpt, [e for e in nets if fa <= e["t"] <= fb], T_CUT_E2E, None, p["min_speed"])
                         fault["chain"] = {"shots": [{k: v for k, v in s.items() if k != "late"} for s in sc.export(fch, fb, T_CUT_E2E, False)["shots"]]}
-                        # The serve must land in the service boxes (the chain tests the full court). The side of the box
-                        # is not tested: the detection does not know the side of the server.
+                        # The serve must land in the service boxes (the chain tests the full court; sc.serve_margin). The
+                        # side of the box: only with CHAIN_SERVE_BOX (A31), from the start of the serve flight.
                         s0 = fault["chain"]["shots"][0] if fault["chain"]["shots"] else None
                         if s0 is not None and s0["end"] in ("in", "out") and s0.get("court"):
-                            s0["margin"] = round(min(sc.SW - abs(s0["court"][0]), SERVICE_LINE - abs(s0["court"][1])), 2)
+                            x0 = float(c[-1][3]["p0"][0]) if sc.SERVE_BOX != "0" else None
+                            s0["margin"] = round(sc.serve_margin(s0["court"][0], abs(s0["court"][1]), x0), 2)
                             s0["end"] = "in" if s0["margin"] > 0 else "out"
                     except Exception as e:           # the fault candidate stays, with no shots
                         note_fault("fault chain", fault["t"], e)

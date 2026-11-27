@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 13:10",
+ "updated": "2026-11-27 13:25",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -932,6 +932,49 @@
      "estMin": 5
     }
    ]
+  },
+  {
+   "id": "A32",
+   "kind": "fix",
+   "title": "Label window of a fragment: in the manifest and in the measures",
+   "milestone": "M2",
+   "issues": [
+    "M2-I6"
+   ],
+   "owner": "S1",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "No label work and no false events from the previous point at the clip start (39 fragments).",
+    "impact": 3,
+    "text": "Less labeling time; cleaner event precision."
+   },
+   "estimate": {
+    "netMin": 60
+   }
+  },
+  {
+   "id": "A33",
+   "kind": "fix",
+   "title": "Label page starts at the label window; the part before is dimmed",
+   "milestone": "M2",
+   "issues": [
+    "M2-I6"
+   ],
+   "owner": "S4",
+   "journal": [],
+   "status": "planned",
+   "after": [
+    "A32"
+   ],
+   "expected": {
+    "outcome": "The user sees and marks only the point and its first-serve fault.",
+    "impact": 3,
+    "text": "Faster labeling of the rest of the small level."
+   },
+   "estimate": {
+    "netMin": 45
+   }
   }
  ],
  "links": [

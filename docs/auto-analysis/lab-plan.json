@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 13:05",
+ "updated": "2026-11-27 13:10",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -913,16 +913,18 @@
     "M2-I1"
    ],
    "owner": "S3",
-   "journal": [],
-   "status": "queued",
-   "waitingFor": "the unpause of the lab queue (for the bench only)",
+   "journal": [
+    "E193"
+   ],
+   "status": "waiting",
+   "waitingFor": "the unpause of the lab queue (code and tests ready: 48fd6026; bench about 10 min CPU)",
    "expected": {
     "outcome": "Deep and wrong-box serves become out: more fault clips, right double-fault second serves, right serve in/out on the labels.",
     "impact": 3,
     "text": "Right in principle; few cases in the labels (about 4 to 6), so the totals can stay inside the noise."
    },
    "estimate": {
-    "netMin": 150
+    "netMin": 20
    },
    "jobs": [
     {

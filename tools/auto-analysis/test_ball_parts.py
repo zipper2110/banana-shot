@@ -28,17 +28,16 @@ def fake_run(pts, stride, calls=None):
 def decoded(pts, stride, ss, dur, f0):
     """The source frames of the pictures of a decode window (60 fps: the frames; 30 fps: the fps filter)."""
     if stride == 1:
-        return fps_filter(pts, ss, dur, detect.part_fps(f0))
+        return fps_filter(pts, ss, dur)
     return np.nonzero((pts >= ss - 1e-9) & (pts < ss + dur))[0]
 
 
-def fps_filter(src, ss, dur, spec):
-    """As "ffmpeg -ss ss -t dur ... -vf fps=<spec>" (spec: 30, or "30:start_time=t"): the source frames at or after
-    ss; the time of the decode starts at ss; the grid of 1/30 s starts at start_time; each output frame k is the last
-    source frame that rounds to k or before it. Returns the source frame of each output frame."""
-    st = float(str(spec).split("start_time=")[1]) if "start_time=" in str(spec) else 0.0
+def fps_filter(src, ss, dur):
+    """As "ffmpeg -ss ss -t dur ... -vf fps=30": the source frames at or after ss; the time of the decode starts at
+    ss; each output frame k is the last source frame that rounds to k or before it. Returns the source frame of each
+    output frame."""
     keep = np.nonzero((src >= ss - 1e-9) & (src < ss + dur))[0]
-    slot = np.round((src[keep] - ss - st) * 30).astype(int)
+    slot = np.round((src[keep] - ss) * 30).astype(int)
     out = []
     for k in range(max(0, slot[0]), slot[-1] + 1):
         j = np.searchsorted(slot, k, side="right") - 1
@@ -66,21 +65,21 @@ class BallParts(unittest.TestCase):
         plan, _ = self.check(60, pts, 100, part_s=30)
         self.assertEqual([p[0] % 6 for p in plan], [0] * len(plan))  # each part starts on a group bound
 
-    def test_30_fps_parts_give_the_one_pass_rows(self):
-        # A 60 fps phone video with frame times that are not exact, decoded by the fps filter at 30 fps (E119: with
-        # the grid of the seek, half a step off the grid of the one pass, the filter takes other frames).
-        self.check(30, fake_video(60, 100, jitter=0.004), 100, part_s=30)
+    def test_30_fps_is_one_part_as_before(self):
+        # Manager, option A (E119): the path with the fps filter is one part, with the call of before item 17
+        # (run(MID, 0, n): the int 0 gives "-ss 0", as before). The rows are the rows of the one pass.
+        pts, n = fake_video(60, 100, jitter=0.004), 100
+        plan = detect.ball_plan(n, 30, pts, part_s=30)
+        self.assertEqual(plan, [(0, None, 0, n)])
+        self.assertIsInstance(plan[0][2], int)
+        d, _ = detect.ball_parts(self.blob, plan, fake_run(pts, 1))
+        self.assertTrue(np.array_equal(d, np.array(fake_run(pts, 1)(0, n), np.float32).reshape(-1, 5)))
 
     def test_a_short_video_is_one_part_as_before(self):
         pts = fake_video(60, 20)
-        self.assertEqual(detect.ball_plan(20, 60, pts), [(0, None, 0.0, 20)])
-
-    def test_the_one_pass_keeps_the_filter_of_before(self):
-        # The one pass and the first part start at 0 s with "fps=30", as before item 17 (no start_time, the same
-        # frames; the ball tag stays). Only a part after a seek gets the grid fix.
-        self.assertEqual(detect.part_fps(0), 30)
-        self.assertEqual(detect.ball_plan(100, 30, part_s=30)[0][:3], (0, 90 * 10, 0.0))
-        self.assertIn("start_time=", str(detect.part_fps(900)))
+        plan = detect.ball_plan(20, 60, pts)
+        self.assertEqual(plan, [(0, None, 0, 20)])
+        self.assertIsInstance(plan[0][2], int)                      # "-ss 0", as before item 17
 
     def test_a_stopped_run_continues_after_the_last_part(self):
         pts, n = fake_video(60, 100), 100
@@ -137,7 +136,7 @@ class MaskParts(unittest.TestCase):
         d = tempfile.mkdtemp(prefix="mp_")
         one = np.load(write(0, 0, n, os.path.join(d, "one.npz")))
         plan = detect.ball_plan(n, fps, pts, part_s=part_s)
-        self.assertGreater(len(plan), 2)
+        self.assertGreater(len(plan), 2 if fps == 60 else 0)        # 30 fps: one part (option A)
         parts = [(write(f0, ss, dur, os.path.join(d, f"p{f0}.npz")), f0 * k, None if f1 is None else f1 * k)
                  for f0, f1, ss, dur in plan]
         joined = np.load(net_band_join.join_parts(parts, os.path.join(d, "joined.npz")))
@@ -150,7 +149,7 @@ class MaskParts(unittest.TestCase):
     def test_60_fps_joined_masks_are_the_one_pass_masks(self):
         self.masks(60, fake_video(60, 4, jitter=0.002), 4, part_s=1)
 
-    def test_30_fps_joined_masks_are_the_one_pass_masks(self):
+    def test_30_fps_one_part_masks_are_the_one_pass_masks(self):
         self.masks(30, fake_video(60, 4, jitter=0.004), 4, part_s=1)
 
     def test_the_join_of_many_records_is_fast(self):

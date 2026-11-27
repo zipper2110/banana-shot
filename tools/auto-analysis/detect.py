@@ -410,36 +410,24 @@ PART_S = 600.0                  # s of video in each part
 
 
 def ball_plan(n, fps, pts=None, part_s=PART_S):
-    """The parts of the ball pass: [(f0, f1, ss, dur)]. f0, f1: the frames of the ball file (of the decode: 60 fps
-    frames of the video, or 30 fps frames of the fps filter); f1 None = to the end. ss, dur: the decode window (s)
-    of ball_wasb.run. The first part starts at 0 s, and the last part ends at n s, as the one pass. Measured (E119,
-    frame checksums): 60 fps: ffmpeg -ss is in the time of the stream (pts, not pts - pts[0]); a seek to the middle
-    of the frames f0 - 1 and f0 starts at f0. 30 fps: a seek to f0 / 30 s starts at the fps-filter frame f0 + 1; a
-    seek half a step before it (f0 / 30 - 1 / 60) starts at f0 (with the fps filter of part_fps)."""
-    if fps == 60:
-        total, step = len(pts), int(part_s * 60) // 6 * 6
-        at = lambda f: 0.0 if f == 0 else (float(pts[f - 1]) + float(pts[f])) / 2
-        end = lambda f: float(pts[f])
-    else:
-        total, step = int(n * 30), int(part_s * 30) // 3 * 3
-        at = lambda f: 0.0 if f == 0 else f / 30.0 - 1 / 60.0
-        end = lambda f: f / 30.0
+    """The parts of the ball pass: [(f0, f1, ss, dur)]. f0, f1: the frames of the ball file (60 fps frames of the
+    video); f1 None = to the end. ss, dur: the decode window (s) of ball_wasb.run. The first part starts at 0 s, and
+    the last part ends at n s, as the one pass. Measured (E119, frame checksums): ffmpeg -ss is in the time of the
+    stream (pts, not pts - pts[0]); a seek to the middle of the frames f0 - 1 and f0 starts at f0. A video that is not
+    60 fps (the fps filter of ball_wasb.FPS) is one part, as before item 17 (manager, option A): after a seek the
+    filter starts at a frame that depends on the frame times near the seek, and with start_time it adds a frame at
+    the end of the video (E119). So only the path with no fps filter continues after a stop."""
+    if fps != 60:
+        return [(0, None, 0, n)]                              # the call of before item 17: run(MID, 0, n)
+    total, step = len(pts), int(part_s * 60) // 6 * 6
     out, f0 = [], 0
     while True:
         f1 = f0 + step if f0 + step < total else None
-        ss = at(f0)
-        out.append((f0, f1, ss, n - ss if f1 is None else end(f1) - ss + 1.0))
+        ss = 0 if f0 == 0 else (float(pts[f0 - 1]) + float(pts[f0])) / 2
+        out.append((f0, f1, ss, n - ss if f1 is None else float(pts[f1]) - ss + 1.0))
         if f1 is None:
             return out
         f0 = f1
-
-
-def part_fps(f0):
-    """The fps filter of a 30 fps part (ball_wasb.FPS). After the seek, the time of the decode starts at ss, and the
-    filter puts its grid of 1/30 s on that time: half a step off the grid of the one pass (ss = f0 / 30 - 1 / 60). On
-    a video with frame times that are not exact, the filter then takes other frames. start_time = 1/60 s puts the
-    grid back on the grid of the one pass (E119, frame checksums: 0 of 3600 frames differ; without it, 1888)."""
-    return 30 if f0 == 0 else "30:start_time=%.9f" % (1 / 60)
 
 
 def part_file(blob, f0, f1):
@@ -927,8 +915,6 @@ def main():
 
             def part(ss, dur, f0, f1, stride):
                 off[0] = f0
-                if stride == 1:                                      # 30 fps: the grid of the one pass
-                    ball_wasb.FPS = part_fps(f0)
                 # The masks: the frame index of picture i of the part (60 fps: f0 + i; 30 fps: each second frame).
                 mw = mask_writer(stride, (lambda i: f0 + i) if stride == 2 else (lambda i: 2 * (f0 + i))) if net_on else None
                 try:
@@ -952,7 +938,6 @@ def main():
                 ball_wasb.FPS = 30
                 ball_wasb.PROGRESS = prog
                 d, files = ball_parts(blob, plan, lambda ss, dur, f0, f1: part(ss, dur, f0, f1, 1), extra)
-                ball_wasb.FPS = 30                                   # as after the one pass
                 d[:, 0] *= 2
                 np.save(W("pts_video.npy"), pts)
                 np.save(W("pts.npy"), np.arange(n * 60) / 60.0)

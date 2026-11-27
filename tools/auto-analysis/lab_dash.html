@@ -4,16 +4,27 @@
 <meta charset="utf-8">
 <title>Lab dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try { const t = localStorage.getItem("labDashTheme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
 <style>
 :root {
   --bg: #f6f7f9; --card: #fff; --ink: #1d2330; --mute: #687083; --line: #e2e5ea;
   --accent: #2f6fde; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030; --soft: #eef2f8;
   --research: #6b4fbb; --experiment: #0f7c8c; --fix: #1f8a4c; --run: #8a5a1f; --labeling: #b0417a;
 }
+/* Theme: html[data-theme] = "light" or "dark" from the switch; no attribute = the system setting. */
+:root[data-theme="dark"] { color-scheme: dark; --bg: #14171c; --card: #1c2027; --ink: #e6e8ec; --mute: #9aa2b1; --line: #2c323c; --soft: #232a35;
+  --accent: #6c9cf0; --research: #a58ef0; --experiment: #4fb8c6; --fix: #57c287; --run: #d6a45f; --labeling: #e07bb0; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #14171c; --card: #1c2027; --ink: #e6e8ec; --mute: #9aa2b1; --line: #2c323c; --soft: #232a35;
+  :root:not([data-theme]) { color-scheme: dark; --bg: #14171c; --card: #1c2027; --ink: #e6e8ec; --mute: #9aa2b1; --line: #2c323c; --soft: #232a35;
     --accent: #6c9cf0; --research: #a58ef0; --experiment: #4fb8c6; --fix: #57c287; --run: #d6a45f; --labeling: #e07bb0; }
 }
+:root[data-theme="light"] { color-scheme: light; }
+header .ctl { flex-wrap: wrap; }
+main > *, .two > * { min-width: 0; }
+section { overflow-x: auto; }
+.theme { flex-shrink: 0; display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.theme button { border: 0; border-radius: 0; padding: 5px 9px; background: transparent; font-size: 12px; }
+.theme button.on { background: var(--accent); color: #fff; }
 * { box-sizing: border-box; }
 body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
 header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line);
@@ -105,6 +116,9 @@ details.more > summary { cursor: pointer; color: var(--mute); font-size: 12px; m
   <h1>Lab dashboard</h1>
   <div class="meta" id="meta">loading…</div>
   <div class="ctl">
+    <div class="theme" id="theme" title="Color theme">
+      <button data-t="auto">Auto</button><button data-t="light">Light</button><button data-t="dark">Dark</button>
+    </div>
     <button id="bPauseQ" title="The running job ends; no new job starts">Pause queue</button>
     <button id="bPauseAll" class="danger" title="Stop the running job now and start no new job">Pause all now</button>
     <button id="bUnpause" class="go">Unpause</button>
@@ -127,6 +141,15 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let S = null, selMs = null, kindF = "all", statusF = "all";
 const openSet = new Set();
+
+function setTheme(t) {            // "auto" follows the system setting; the choice is kept in this browser
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("labDashTheme", t); } catch (e) { /* private mode: not kept */ }
+  document.querySelectorAll("#theme button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+}
+document.querySelectorAll("#theme button").forEach(b => b.onclick = () => setTheme(b.dataset.t));
+setTheme((() => { try { return localStorage.getItem("labDashTheme") || "auto"; } catch (e) { return "auto"; } })());
 
 function hm(t) {                // "2026-11-27 13:05:00" -> "13:05" today, else "Nov 28 13:05"
   if (!t) return "–";

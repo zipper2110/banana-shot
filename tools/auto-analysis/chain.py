@@ -80,6 +80,10 @@ SA_BEFORE, SA_AFTER, SA_WIN, SA_FLOOR, SA_FLIGHTS, SA_CHANGES, SA_PAUSE = 5.0, 8
 # winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.
 DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"
 FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
+# A47 (S4 E220, proposal FS): CHAIN_FAULT_SERVES=1: the chain of a fault candidate gets the serve events of its window
+# (fault_pt), as the rally chain, so shot_chain.serve_start can move its first shot to the serve event. Before, the
+# fault chain had no serve events (the contact of the fault clip of s014 70:26.567 was 0.45 s early). Default "0" (off).
+FAULT_SERVES = os.environ.get("CHAIN_FAULT_SERVES", "0") == "1"
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)
@@ -271,8 +275,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                     # the app: 1 s before the serve event to 2.5 s after it). They are facts for the user only.
                     try:
                         fa, fb = fault["t"] - FAULT_BEFORE, min(fault["t"] + FAULT_AFTER, a)
-                        fpt = {"start": fa, "end": fb, "events": full["events"], "kinks": [],
-                               "flights": [full["flights"][i] for i in np.nonzero((fl_t0 >= fa) & (fl_t0 <= fb))[0]]}
+                        fpt = fault_pt(fa, fb, full, fl_t0, serves)
                         fch = sc.evidence(fpt, [e for e in nets if fa <= e["t"] <= fb], T_CUT_E2E, None, p["min_speed"])
                         fault["chain"] = {"shots": [{k: v for k, v in s.items() if k != "late"} for s in sc.export(fch, fb, T_CUT_E2E, False)["shots"]]}
                         # The serve must land in the service boxes (the chain tests the full court; sc.serve_margin). The
@@ -327,6 +330,16 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
         r["flip"] = f
         r["color"] = None if c is None else [float(x) for x in c]      # for identity.py (E22)
     return rows
+
+
+def fault_pt(fa, fb, full, fl_t0, serves):
+    """The window of the shots of a fault candidate (fa to fb). A47 (FAULT_SERVES): it also gets the serve events of
+    its window, as the rally chain (1 s before to 2.5 s after), so shot_chain.serve_start acts on the fault chain."""
+    fpt = {"start": fa, "end": fb, "events": full["events"], "kinks": [],
+           "flights": [full["flights"][i] for i in np.nonzero((fl_t0 >= fa) & (fl_t0 <= fb))[0]]}
+    if FAULT_SERVES and sc.SERVE_START != "0":
+        fpt["serves"] = [e for e in serves if fa - 1.0 <= e[0] <= fb + 2.5]
+    return fpt
 
 
 def before_fault(sh, t_end):

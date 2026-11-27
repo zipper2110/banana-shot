@@ -1185,6 +1185,28 @@
    }
   },
   {
+   "id": "A50",
+   "kind": "experiment",
+   "title": "Fault rows before a point that FAULT_SIDE does not take (E210 cause F, 8 rows)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "Fewer fault rows (17 on the lab with play drop) with no lost point.",
+    "impact": 2,
+    "text": "F is the largest fault-row cause left after A48."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S3): the F rows on the head with CHAIN_PLAY_DROP on, with the facts that set them apart from real short points; the rule chosen from these facts and how many rows it was built on.",
+    "The rule behind a switch (default off), in its own small commit, with a unit test; lab chain-only and Igor (E106 keys) off and on: fault rows down, 0 lost points, recall and precision by the spread rule; the row says if it can go on."
+   ]
+  },
+  {
    "id": "A41",
    "kind": "fix",
    "title": "Shot count measure: no late shots that the chain does not use; no points cut by the label window",

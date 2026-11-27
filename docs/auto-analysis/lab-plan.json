@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:54",
+ "updated": "2026-11-28 00:59",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -118,28 +118,28 @@
    "measures": [
     {
      "name": "Hits found (row chain, 24 fragments)",
-     "value": "121 of 190 = 64 %, E175 (E107: 120 of 190; 130 with the fault-clip serves)",
+     "value": "124 of 190 = 65 % (137 with the fault-clip serves), E108 head 0a1728b5",
      "target": "75 % or more",
      "met": false,
-     "progress": 0.85
+     "progress": 0.87
     },
     {
      "name": "Shot count right",
-     "value": "24 of 36 points = 67 %, E177 (4 points past the label window not comparable; E107: 20 of 40)",
+     "value": "26 of 39 points = 67 %, E108 (A41 measure)",
      "target": "70 % or more",
      "met": false,
      "progress": 0.95
     },
     {
      "name": "In/out right",
-     "value": "114 of 116 = 98 %, E107",
+     "value": "114 of 116 = 98 %, E108",
      "target": "95 % or more",
      "met": true,
      "progress": 1.0
     },
     {
      "name": "Fault clips (labeled faults found)",
-     "value": "11 of 23 = 48 %, E221 (SERVE_V40 and CHAIN_FAULT_SERVES on; E178: 10 of 23)",
+     "value": "11 of 23 = 48 %, E108",
      "target": "70 % or more",
      "met": false,
      "progress": 0.68
@@ -1220,8 +1220,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S1",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E108"
+   ],
    "expected": {
     "outcome": "One M2 base for the morning: all 4 label measures on one code.",
     "impact": 1,
@@ -1233,7 +1235,12 @@
    "doneWhen": [
     "A journal row (S1): hits found, shot count right (A41 measure), in/out right and fault clips on the 24 E107 fragments (and any new saved fragments, named) on the auto-detect head with CHAIN_FAULT_PLAY_ON on; each as n of N, with the code and the switch values.",
     "For each measure, the change against the last value on the dashboard, with the action that explains it; send the values to the manager."
-   ]
+   ],
+   "finished": "2026-11-28 00:59",
+   "real": {
+    "impact": 1,
+    "outcome": "E108 (deaac80c): head 0a1728b5, all switches at the defaults, 24 fragments. Hits 124 of 190 (+3: A46 +3, A42 +2, A50 -1), shot count 26 of 39, in/out 114 of 116, fault clips 11 of 23. Both checks pass."
+   }
   },
   {
    "id": "A52",

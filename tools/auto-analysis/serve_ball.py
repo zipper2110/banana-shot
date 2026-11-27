@@ -78,8 +78,9 @@ RETURN_Y_MAX = 16.0
 # -112 m (18 to 100 m behind the near baseline) at 200 to 221 km/h. With RETURN_FIT=1 a candidate that starts more than
 # RETURN_Y_MAX m from the net and is RETURN_FIT_KMH km/h or faster is not a return (a margin of 20 km/h below the E174
 # facts; lab check: no removed flight inside a marked point comes back). Narrower than RETURN_REAL_START (E174: that one
-# added 38 to 75 serve events inside the points). Off by default until the measure.
-RETURN_FIT = os.environ.get("RETURN_FIT", "0") == "1"
+# added 38 to 75 serve events inside the points). On by default after the A42 checks (E178: 4 of the 5 cause-2 serves back,
+# fault clips 8 to 10 of 23, serve events inside the points 58 to 58, lab bench no change); RETURN_FIT=0 gives the old way.
+RETURN_FIT = os.environ.get("RETURN_FIT", "1") == "1"
 RETURN_FIT_KMH = 180.0
 
 

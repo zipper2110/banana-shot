@@ -25,10 +25,10 @@ class ReturnFit(unittest.TestCase):
     def tearDown(self):
         sb.RETURN_FIT = self.old
 
-    def test_the_default_is_off(self):
+    def test_the_default_is_on(self):
         import os
         if "RETURN_FIT" not in os.environ:
-            self.assertFalse(sb.RETURN_FIT)
+            self.assertTrue(sb.RETURN_FIT)
 
     def test_off_the_wrong_fit_removes_the_serve(self):
         sb.RETURN_FIT = False

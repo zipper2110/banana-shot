@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 12:55",
+ "updated": "2026-11-27 13:05",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -104,7 +104,8 @@
      "status": "solved",
      "detail": "Measured, no change (E80, E83, E84)."
     }
-   ]
+   ],
+   "goalShort": "Cover the Critical and High gaps; one clean held-out number."
   },
   {
    "id": "M2",
@@ -117,23 +118,38 @@
    "measures": [
     {
      "name": "Hits found (row chain, 16 fragments)",
-     "value": "77 of 131 (85 with the fault-clip serves), E173"
+     "value": "77 of 131 (85 with the fault-clip serves), E173",
+     "target": "75 % or more",
+     "met": false,
+     "progress": 0.78
     },
     {
      "name": "Shot count right",
-     "value": "9 of 17 points, E170"
+     "value": "9 of 17 points, E170",
+     "target": "70 % or more",
+     "met": false,
+     "progress": 0.76
     },
     {
      "name": "In/out right",
-     "value": "52 of 54, E170"
+     "value": "52 of 54, E170",
+     "target": "95 % or more",
+     "met": true,
+     "progress": 1.0
     },
     {
      "name": "Fault clips (labeled faults found)",
-     "value": "4 of 11, E170"
+     "value": "4 of 11, E170",
+     "target": "70 % or more",
+     "met": false,
+     "progress": 0.52
     },
     {
      "name": "Lab rallies recall / precision",
-     "value": "94.6 % / 93.2 % (186e4244)"
+     "value": "94.6 % / 93.2 % (186e4244)",
+     "target": "94.6 % or more (no loss)",
+     "met": true,
+     "progress": 1.0
     }
    ],
    "issues": [
@@ -191,7 +207,8 @@
      "status": "open",
      "detail": "A serve that lands behind the service line or in the wrong box is 'in' for the shot chain. Seen in E76 (Igor double fault, wrong winner), E170 (2 of 54 in/out errors), E171 (e), E190 (s007 1891.1). Only the fault candidate tests the service line (E39)."
     }
-   ]
+   ],
+   "goalShort": "Events right on the labeled fragments; rallies do not go down."
   },
   {
    "id": "M3",
@@ -207,7 +224,8 @@
      "status": "open",
      "detail": "4 medium fragments (69 points, about 5 h of user time). The medium level is the check of the heavy-stage changes."
     }
-   ]
+   ],
+   "goalShort": "Final held-out batch and event measures; program report."
   },
   {
    "id": "M4",
@@ -216,7 +234,8 @@
    "period": "after the program",
    "goal": "Open again when a medium fragment or a new video shows an event loss from the far ball (E135 option 1: far-end fine-tune, about 30 to 45 min of user checks, 4.5 h training, 6 h held-out runs). The user approves any training.",
    "goalStatus": "proposed",
-   "issues": []
+   "issues": [],
+   "goalShort": "Far-end ball detector, only if an event loss shows."
   },
   {
    "id": "M5",
@@ -225,7 +244,8 @@
    "period": "after the program",
    "goal": "Hints from the score (the serve side does not match the score; the server changes inside a game) that show the user where a point is probably missing or false. Only when the events are reliable (the user, 2026-11-26).",
    "goalStatus": "idea",
-   "issues": []
+   "issues": [],
+   "goalShort": "Hints from the score where a point is missing or false."
   }
  ],
  "actions": [

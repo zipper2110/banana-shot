@@ -93,6 +93,50 @@ class AdoptReach(unittest.TestCase):
         self.assertEqual(out["flights"]["state"], "stale")
         self.assertIn("netband part", out["flights"]["why"])
 
+    def parts_folder(self, code):
+        """A folder of code with its netband key adopted by E203 (as Igor and the E200 folder)."""
+        w = work_folder(code)
+        keys = json.load(open(os.path.join(w, "stage_keys.json")))
+        now_nb = MASK + "_" + detect.content_key(files=code_closure.files(*detect.STAGE_ENTRIES["netband"], folder=self.now))
+        keys["keysAdoptedA39"] = {"netband": {"from": keys["netband"], "proof": "x"}}
+        keys["netband"] = now_nb
+        json.dump(keys, open(os.path.join(w, "stage_keys.json"), "w"))
+        return w, now_nb
+
+    def test_a45_a_serve_ball_change_keeps_the_ball_flights_and_the_net_events(self):
+        serve = code_copy(("serve_ball", None, "\n# a chain rule change\n"))
+        w, nb = self.parts_folder(serve)
+        out = adopt_reach.plan_parts(w, [("now", self.now), ("serve", serve)], now_code=self.now)
+        self.assertEqual((out["run"], out["proof"]), (["wasbf"], "serve"))
+        self.assertIn("serve_ball.py changed", out["why"])
+        court = [os.path.join(w, f) for f in ("court_track.json", "court_track_refined.json")]
+        now = detect.flight_keys(TAG, "", court, nb, folder=self.now)
+        self.assertEqual(out["parts"], {"flights": now["flights"], "netevents": now["netevents"]})
+        self.assertTrue(adopt_reach.apply_parts(w, out))
+        saved = dict(detect.STAGE_KEYS)
+        try:
+            detect.STAGE_KEYS.clear()
+            detect.STAGE_KEYS.update(json.load(open(os.path.join(w, "stage_keys.json"))))
+            for _, _, outs in detect.FLIGHT_PARTS:
+                for o in outs:
+                    open(os.path.join(w, o), "w").write("x")
+            self.assertEqual(detect.flight_parts_to_run(w, now), ["wasbf"])        # detect.py runs only feat_wasb
+        finally:
+            detect.STAGE_KEYS.clear()
+            detect.STAGE_KEYS.update(saved)
+        self.assertTrue(os.path.exists(os.path.join(w, "stage_keys.a45.json")))
+
+    def test_a45_a_ball_full_change_keeps_no_part(self):
+        w, _ = self.parts_folder(self.used)
+        out = adopt_reach.plan_parts(w, [("used", self.used)], now_code=self.now)
+        self.assertEqual((out["run"], out["parts"]), (["flights", "netevents", "wasbf"], {}))
+        self.assertIn("ball_full.py changed", out["why"])
+        self.assertFalse(adopt_reach.apply_parts(w, out))
+
+    def test_a45_an_unused_court_change_keeps_all_parts(self):
+        w, _ = self.parts_folder(self.court)
+        self.assertEqual(adopt_reach.plan_parts(w, [("court", self.court)], now_code=self.now)["run"], [])
+
     def test_the_split_of_a_flights_key(self):
         nb = MASK + "_564913c2"
         self.assertEqual(adopt_reach.split_flights(TAG + "_7f3cb9f8_nb" + nb, nb), (TAG, "7f3cb9f8", nb))

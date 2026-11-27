@@ -125,10 +125,10 @@
     },
     {
      "name": "Shot count right",
-     "value": "20 of 40 points = 50 %, E107",
+     "value": "24 of 36 points = 67 %, E177 (4 points past the label window not comparable; E107: 20 of 40)",
      "target": "70 % or more",
      "met": false,
-     "progress": 0.71
+     "progress": 0.95
     },
     {
      "name": "In/out right",
@@ -1059,8 +1059,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S4",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E177"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "The shot count measure counts what the app shows: E176 B (6 points) and C (3 points) are measure errors, not chain errors.",
     "impact": 2,
@@ -1073,7 +1075,12 @@
     "label_measure.py: the shots that shot_chain marks as not used (after the time cut) do not count, and a point that goes on after the end of the label window is left out of the shot count (it counts as 'not comparable'), with unit tests for both rules.",
     "A journal row (S4): shot count right on the 24 E107 fragments before and after each rule (n of N, with the N change), and a check that the other 3 label measures do not change.",
     "The dashboard M2 value 'Shot count right' gets the new number with the E number (send it to the manager)."
-   ]
+   ],
+   "finished": "2026-11-27 23:53",
+   "real": {
+    "impact": 2,
+    "outcome": "E177 (a2e06fe5): label_measure SC_LATE and SC_WINDOW with 2 unit tests; case_history passes the label window. On the E176 code: 20/40, late only 25/40, window only 19/36, both 24/36; the other 3 label measures are the same. All 3 checks pass."
+   }
   },
   {
    "id": "A29",

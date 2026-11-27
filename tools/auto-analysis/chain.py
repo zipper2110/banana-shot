@@ -45,6 +45,13 @@ MIN_GAP = 2.0
 # flight) not later than FAULT_NEXT s after it, is the first serve of the next rally: it is not a rally.
 FAULT_SIDE = True
 FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, sc.SIDE_X   # shots; s (the time between points of the rules); m (x near 0: side not known)
+# A50 (E213, E210 cause F): after a fault serve the players can hit on, so the fault row has more than FAULT_SHOTS
+# shots. CHAIN_FAULT_PLAY_ON=1: FAULT_SIDE also takes a row with more shots when its first chain shot (the serve) ends
+# "out" or "net" (FAULT_PLAY_ENDS); the same server and side as the next rally are still needed. Built on the 8 F rows
+# of the head lab; on the 433 lab rows with a next rally 25 s or less after them it takes 2 F rows and no point.
+# Default "0" (off).
+FAULT_PLAY_ON = os.environ.get("CHAIN_FAULT_PLAY_ON", "0") == "1"
+FAULT_PLAY_ENDS = ("out", "net")
 # item 10: when the serve flight does not give the side, the court x of the feet of the server (pose, the H of the
 # court window at the rally start: ball_events.court_H; one court.json H is off when the camera moves) gives it.
 # The rule of tennis: the server serves from the other side after a point, from the same side after a fault.
@@ -525,6 +532,14 @@ def serve_anchor_segs(rows, serves, flights, prob, hi=0.5):
     return out
 
 
+def fault_shots_ok(shots):
+    """The shot test of a fault rally (FAULT_SIDE): FAULT_SHOTS shots or less; with FAULT_PLAY_ON (A50) also more shots
+    when the first shot (the serve) ends out or in the net."""
+    if len(shots) <= FAULT_SHOTS:
+        return True
+    return FAULT_PLAY_ON and shots[0].get("end") in FAULT_PLAY_ENDS
+
+
 def fault_rallies(rows, serves):
     """E122: removes each rally that is a first-serve fault before the next rally (see FAULT_SIDE). The next rally
     gets its serve event as the fault candidate when it has none."""
@@ -532,7 +547,7 @@ def fault_rallies(rows, serves):
     while i < len(rows):
         r = rows[i]
         nxt = rows[i + 1] if i + 1 < len(rows) else None
-        if (nxt is not None and r.get("chain") is not None and len(r["chain"]["shots"]) <= FAULT_SHOTS
+        if (nxt is not None and r.get("chain") is not None and fault_shots_ok(r["chain"]["shots"])
                 and nxt["start"] - r["end"] <= FAULT_NEXT):
             s1 = serve_side(serves, r["start"]) or (r.get("poseSide") if POSE_SIDE else None)
             s2 = serve_side(serves, nxt["start"]) or (nxt.get("poseSide") if POSE_SIDE else None)

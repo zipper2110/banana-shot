@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:01",
+ "updated": "2026-11-28 00:02",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1141,6 +1141,30 @@
     "impact": 2,
     "outcome": "E178 (ac3e8f98, 26a2f1cc): RETURN_FIT gate (over 16 m from the net and 180 km/h or more) with 4 tests. Labels off/on: cause-2 serves back 0/4 of 5, fault clips 8/10 of 23, serve events inside the points 58/58, rows 559/559. Lab off/on the same (95.7 / 95.2 %, 22 fault rows), against the E202 head bench inside the spread. Both checks pass; the gate can go on."
    }
+  },
+  {
+   "id": "A44",
+   "kind": "research",
+   "title": "Fault clip miss table: each labeled fault with no fault clip on the head with RETURN_FIT",
+   "milestone": "M2",
+   "issues": [
+    "M2-I9"
+   ],
+   "owner": "S4",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "The largest remaining cause of the 13 labeled faults with no fault clip, with a fix proposal.",
+    "impact": 3,
+    "text": "Fault clips are the weakest M2 measure (10 of 23, target 70 %)."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S4): all labeled first-serve faults of the 24 E107 fragments with no fault clip on the head with RETURN_FIT on, in one table, each with one cause (the step of the chain where the clip is lost) and an image or chain fact, 0 without a cause, with the count per cause.",
+    "For the largest cause: a fix proposal with the expected fault clips n of 23 and the expected serve events inside the points, and a first chain-only test on the cached flights."
+   ]
   },
   {
    "id": "A29",

@@ -922,7 +922,7 @@
     "netMin": 90
    },
    "doneWhen": [
-    "Seeds 1 and 2 trained for the other 3 fold models and the production model (8 small trainings, GPU under the lock); the models and their train logs in D:\bananashot-lab\\ws\\s3.",
+    "Seeds 1 and 2 trained for the other 3 fold models and the production model (8 small trainings, GPU under the lock); the models and their train logs in D:\\bananashot-lab\\ws\\s3.",
     "The 3-seed mean behind a new switch (default off), in its own small commit, with a unit test of the mean.",
     "A journal row (S3) with the chain-only results on cached flights (no new detection): on each of the 4 lab matches recall and precision against E106 d1cb16c7 (lab 95.1 % / 95.1 %), and on Igor m1116 against E106 (95.9 % / 98.4 %), by the spread rule; the row says if the switch can go on."
    ]

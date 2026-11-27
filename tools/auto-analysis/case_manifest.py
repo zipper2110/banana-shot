@@ -48,7 +48,7 @@ def finish(man, out):
     for r in man["fragments"]:
         if "courtH" not in r and r.get("match"):
             r["courtH"] = court(r["match"], r["span"][0] if r.get("span") else r["t0"])
-        row = {k: v for k, v in r.items() if k not in ("rowHash", "clipDur")}
+        row = {k: v for k, v in r.items() if k not in ("rowHash", "clipDur", "labelWindow")}
         cd = clip_dur(os.path.join(out, r["clip"]))
         if cd:
             r["clipDur"] = cd

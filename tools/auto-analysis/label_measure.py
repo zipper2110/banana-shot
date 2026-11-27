@@ -95,17 +95,20 @@ def _contact(f):
     return shots[0]["t"] if shots else f["t"]
 
 
-def fault_clips(crow, ev, fault, hidden):
+def fault_clips(crow, ev, fault, hidden, window=None):
     """The fault clips the user sees: the "fault" record of each chain row of the window (crow). Its serve contact
     (fault.chain.shots[0].t, else fault.t) is paired with the labeled serves within TOL_HIT (one to one). right = a
     labeled first-serve fault (fault map True); doubleFault = a second-serve fault (no first-serve fault, but the next
     event is an out bounce or a net stop: a real fault clip of a double fault; E171); wrong = another serve with no
     fault; unsure; noServe = no labeled serve (false). found = the labeled first-serve faults with a fault clip. hidden: the rows of the window that the bench
     hides as first-serve faults (bench.hidden_fault_rows); hiddenWithFault = those with a labeled first-serve fault
-    inside the row (from its start - TOL_HIT)."""
+    inside the row (from its start - TOL_HIT). window: (a, b) source s, the label window of the fragment (A32): a clip
+    whose serve contact is outside it is not counted (the user does not label there)."""
     serves = [(e["t"], fault.get(round(e["t"], 6))) for e in ev if e["kind"] == "serve"]
     dbl = {round(e["t"], 6) for k, e in enumerate(ev) if e["kind"] == "serve" and _out_or_stop(lf._after_serve(ev, k)[1])}
     clips = [(r, _contact(r["fault"])) for r in crow if r.get("fault")]
+    if window is not None:
+        clips = [(r, t) for r, t in clips if window[0] - TOL_HIT <= t <= window[1] + TOL_HIT]
     m = se.match([t for _, t in clips], [t for t, _ in serves], TOL_HIT)
     got = {i: serves[j][1] for i, j in m}
     out = {"clips": len(clips), "right": 0, "doubleFault": 0, "wrong": 0, "unsure": 0, "noServe": 0,

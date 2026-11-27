@@ -18,6 +18,14 @@ label file (labels/<id>.events.json), or has a folder: a new cut gets a new id (
 must leave the page is retired (fragment.json "retired"); index() leaves it out, and its id stays published. Cause:
 s005 was cut again under the same id while the page was open; the page kept the old row (old t0) with the new clip.
 
+Label window (A32, the user, 2026-11-27): the part of a fragment that the user labels and that the measures use.
+start = the later of (the end of the marked point before the label span + LW_AFTER_PREV s), (the span start -
+LW_BEFORE_SPAN s) and the clip start; end = the clip end. The clip start of a small fragment can show a part of the
+point before it (the 60 s pad of E100; a fault-check pad that starts just after the marked end): that part is not
+labeled and not measured. The clip files stay as they are (the pad is the GRU context of a later fragment run).
+fragment.json "labelWindow": [a, b] fragment s (as labelSpan); manifest.json row "labelWindow": [a, b] source s (as
+"span"; the page: source time = t0 + clip time).
+
 Levels (the user, gap-program 8a): small (1 point with a pad, 30 to 60 s), medium (2 to 3 games across one end
 change, 7 to 10 min), large (5 to 9 games, 20 to 30 min), match (the full video). A fragment can hold many points.
 
@@ -26,6 +34,7 @@ Usage:
   python case_lib.py cut <spec.json>        cut the fragments of a spec list (see cut()); writes the manifests
   python case_lib.py list                   the fragments of the library
   python case_lib.py index                  <lab>/ws/s1/cases/manifest.json for the event label page (S4); cut also writes it
+  python case_lib.py windows                write labelWindow into each fragment.json (A32); no index
   python case_lib.py retire <id> --reason <text>   take a fragment out of the page; its id stays used
 """
 import argparse, hashlib, json, os, shutil, subprocess, sys, time
@@ -46,6 +55,7 @@ PAD = {"small": (8.0, 4.0), "medium": (60.0, 60.0)}         # s before the first
 # 20 s earlier). On these matches the pad before is up to FAULT_PAD s, but it does not go into the previous point.
 FAULT_CHECK = ("m1015", "m1020", "m1021", "m1030")
 FAULT_PAD = 25.0
+LW_AFTER_PREV, LW_BEFORE_SPAN = 3.0, 25.0                  # s, the label window (A32): after the point before; before the span
 
 
 def run(cmd):
@@ -179,8 +189,46 @@ def cut(spec, frags=FRAGS):
            "cut": {"tool": "ffmpeg -c copy from a keyframe", "firstFrameSame": same, "seconds": round(time.time() - t0, 1),
                    "time": time.strftime("%Y-%m-%dT%H:%M:%S")},
            "context": None, "history": []}
+    if frags == FRAGS:
+        man["labelWindow"] = label_window(man)["fragment"]
     json.dump(man, open(os.path.join(d, "fragment.json"), "w"), indent=1)
     return man
+
+
+def prev_end(mid, t):
+    """The end (source s) of the last marked point of mid that ends at or before t, or None."""
+    ends = [p["end"] for p in points(mid) if p["end"] <= t + 1e-6]
+    return max(ends) if ends else None
+
+
+def label_window(m):
+    """The label window (A32) of a fragment manifest m (fragment.json): {"fragment": [a, b] fragment s, "source":
+    [a, b] source s, "prevEnd": source s or None}. The one rule; see the module doc."""
+    off = m["offset"]
+    s0 = off + m["labelSpan"][0]
+    pe = prev_end(m["source"]["mid"], s0)
+    a = max(off, s0 - LW_BEFORE_SPAN, pe + LW_AFTER_PREV if pe is not None else off)
+    b = off + m["duration"]
+    return {"fragment": [round(a - off, 3), round(b - off, 3)], "source": [round(a, 3), round(b, 3)], "prevEnd": pe}
+
+
+def window_of(fid):
+    """The label window of the fragment fid in source s, [a, b] (from its fragment.json)."""
+    return label_window(json.load(open(os.path.join(FRAGS, fid, "fragment.json"))))["source"]
+
+
+def write_windows():
+    """labelWindow into each fragment.json of FRAGS (fragment s). Returns {id: [a, b]}."""
+    out = {}
+    for f in sorted(os.listdir(FRAGS)) if os.path.exists(FRAGS) else []:
+        p = os.path.join(FRAGS, f, "fragment.json")
+        if not os.path.exists(p):
+            continue
+        m = json.load(open(p))
+        m["labelWindow"] = label_window(m)["fragment"]
+        json.dump(m, open(p, "w"), indent=1)
+        out[m["id"]] = m["labelWindow"]
+    return out
 
 
 def published():
@@ -215,10 +263,11 @@ PAGE = os.path.join(os.path.dirname(ROOT), "..", "s4", "events")     # the folde
 
 def page_row_hash(fid, page=PAGE):
     """The rowHash that case_manifest.py gives the row of fid when it writes the page list into page: sha256 of the row
-    with the clip path relative to page and courtH filled, without rowHash and clipDur (S4's rule)."""
+    with the clip path relative to page and courtH filled, without rowHash, clipDur and labelWindow (S4's rule; the window is a measure rule, not a
+    property of the cut: a window change must not make the saved label files stale)."""
     import hashlib as _h
     r = next(x for x in json.load(open(os.path.join(ROOT, "manifest.json")))["fragments"] if x["id"] == fid)
-    r = {k: v for k, v in r.items() if k not in ("rowHash", "clipDur")}
+    r = {k: v for k, v in r.items() if k not in ("rowHash", "clipDur", "labelWindow")}
     if not os.path.isabs(r["clip"]):
         r["clip"] = os.path.relpath(os.path.join(ROOT, r["clip"]), os.path.abspath(page)).replace("\\", "/")
     if "courtH" not in r and r.get("match"):
@@ -315,7 +364,8 @@ def index():
                      "courtH": H, "courtImageWidth": 1920, "courtFile": f"frags/{f}/{cfile}",
                      "points": [{"id": q["id"], "startMs": round(q["sourceStart"] * 1000), "endMs": round(q["sourceEnd"] * 1000),
                                  "ending": q["outcome"]} for q in m["points"]],
-                     "span": span, "level": m["level"], "kinds": m["kinds"], "control": m["control"],
+                     "span": span, "labelWindow": label_window(m)["source"],
+                     "level": m["level"], "kinds": m["kinds"], "control": m["control"],
                      "faultCheck": mid in ("m1015", "m1020", "m1021", "m1030")})
     pub = published()
     for r in rows:
@@ -337,6 +387,7 @@ def main():
     k.add_argument("--faults", action="store_true", help="fault clips (S4 E158): into FAULT_CLIPS, no index, clips.json {row: folder}")
     sub.add_parser("list")
     sub.add_parser("index")
+    sub.add_parser("windows")
     r = sub.add_parser("retire"); r.add_argument("id"); r.add_argument("--reason", required=True)
     mp = sub.add_parser("map", help="the user's small marks into the medium and large fragments (labels/<id>.mapped.json)")
     mp.add_argument("ids", nargs="*")
@@ -357,6 +408,9 @@ def main():
         print("clips:", out) if a.faults else print("index:", index())
     elif a.cmd == "index":
         print(index())
+    elif a.cmd == "windows":
+        for k, v in write_windows().items():
+            print(k, v)
     elif a.cmd == "map":
         rows = json.load(open(os.path.join(ROOT, "manifest.json")))["fragments"]
         for fid in a.ids or [r["id"] for r in rows if r["level"] != "small"]:

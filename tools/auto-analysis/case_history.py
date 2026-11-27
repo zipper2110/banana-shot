@@ -7,9 +7,11 @@ the rally rows come from pipeline.run with the models that did not see the match
 the rows and the events inside its window. A fragment run of detect.py on the clip needs the context input (whole
 match statistics; open), so the history measures the full-match chain on the fragment spans.
 
-Window of a fragment: the label span, widened to the first and the last labeled event (the page asks for the
-first-serve fault in the pad before the point). The user labels all events of the span from zero, so an event of
-the chain in the window with no label near it counts as a false event.
+Window of a fragment: its label window (A32, case_lib.label_window: from the end of the point before + 3 s, but
+not more than 25 s before the label span, to the clip end). Only the labeled events and the chain events inside the
+window count; a mark before it stays in the label file and is not used. The user labels all events of the window
+from zero, so an event of the chain in the window with no label near it counts as a false event. Before A32: the
+label span, widened to the first and the last labeled event.
 
 Per fragment (rules of score_events.py, E75):
   rallies   marked points in the window against the chain rows (lab.match_points: overlap 50 % of the shorter)
@@ -49,11 +51,9 @@ HIST = os.path.join(case_lib.ROOT, "history")
 KINDS = ("hits", "bounces", "nets")
 
 
-def window(row, L):
-    a, b = row["span"]
-    if L and L.get("events"):
-        ts = [e["t"] for e in L["events"]]
-        a, b = min(a, min(ts)), max(b, max(ts))
+def window(row, L=None):
+    """The label window of the fragment (A32), source s. L is not used (the window does not follow the marks)."""
+    a, b = case_lib.window_of(row["id"])
     return a, b
 
 
@@ -140,7 +140,8 @@ def fragment(row, L, data, rows, hidden=()):
            "rallies": {"marked": len(pts), "detected": len(crow), "matched": len(pairs)}}
     if L is None:
         return out
-    ev = sorted(L["events"], key=lambda e: e["t"])
+    ev = sorted([e for e in L["events"] if a <= e["t"] <= b], key=lambda e: e["t"])     # A32: marks before the window are not used
+    out["marksOutside"] = len(L["events"]) - len(ev)
     lh = [e for e in ev if e["kind"] in ("serve", "shot")]
     m = se.match([s["t"] for s in shots], [e["t"] for e in lh], TOL_HIT)
     hitter = sum(("near" if shots[i]["near"] else "far") == lh[j].get("end") for i, j in m)
@@ -168,7 +169,7 @@ def fragment(row, L, data, rows, hidden=()):
     # serves and the last shot of each matched point: the labeled events from the point start - 25 s (the fault
     # serve before it), but not before the end of the marked point before it, to the point end + 1 s
     sv = {"points": 0, "serverOk": 0, "faultOk": 0, "faultN": 0, "faultUnsure": 0, "lastOk": 0, "lastN": 0, "detail": []}
-    fault = {round(x["t"], 6): x["fault"] for x in infer_faults(ev)}      # over all events of the fragment (the next serve)
+    fault = {round(x["t"], 6): x["fault"] for x in infer_faults(ev)}      # over the events of the label window (the next serve)
     points = []                                        # the point windows for label_measure
     for gi, j in pairs:
         p, r = pts[gi], crow[j]
@@ -198,7 +199,7 @@ def fragment(row, L, data, rows, hidden=()):
     out["serves"] = sv
     out["borders"] = lm.borders(points)
     out["shotCount"] = lm.shot_count(points)
-    out["faultClips"] = lm.fault_clips(crow, ev, fault, [r for r in hidden if r["end"] > a and r["start"] < b])
+    out["faultClips"] = lm.fault_clips(crow, ev, fault, [r for r in hidden if r["end"] > a and r["start"] < b], (a, b))
     out["errors"] = lm.event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn)
     gaps = dead_gaps(points_all(row, pts, ev), ev)
     for k in KINDS:

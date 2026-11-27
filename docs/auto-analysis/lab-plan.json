@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:32",
+ "updated": "2026-11-28 00:36",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1154,6 +1154,28 @@
     "impact": 2,
     "outcome": "E211 (c17b09bd, 90925508): CHAIN_SERVE_ANCHOR with the pause filter (SS_QUIET 3 s, from the facts of 13 E210 rows) and tests. Lab off/on: matched 530/534 (96.4 %), fault rows 22/22, precision 95.15/95.19 %, end to end 454/458. Igor: recall 97.9/98.5 %, precision 95.5/94.6 % (2 new rows with no point), end to end 82.6/83.1 %. Inside the spread. Both checks pass."
    }
+  },
+  {
+   "id": "A48",
+   "kind": "experiment",
+   "title": "False rows from ball play between points (E210 cause D, 9 rows; Igor kind 9)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "Fewer false and fault rows from warm-up or ball play between points, with no lost point.",
+    "impact": 2,
+    "text": "D is the second cause of E210 (9 rows over the 4 lab matches); the 2 new Igor rows of A46 look alike."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S3): the D rows of the 4 lab matches and the 2 Igor kind-9 rows on the head (e95d8a47), with the facts that set them apart from real points (serve event, side, shots, pause, GRU); the rule chosen from these facts, and how many rows it was built on.",
+    "The rule behind a switch (default off), in its own small commit, with a unit test; lab chain-only and Igor (E106 keys) off and on: false and fault rows down, 0 lost points, recall and precision by the spread rule. The row says if it can go on."
+   ]
   },
   {
    "id": "A41",

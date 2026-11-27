@@ -88,6 +88,15 @@ def is_return(f, flights):
     return False
 
 
+# A36 (E174, TJ): a toss and the serve flight after it make one event "toss+serve" (or "toss+fast"). With SERVE_JOIN_CONTACT=1
+# the event gets the time of the serve flight (the contact), not of the toss start. The toss starts 1.05 to 1.18 s before
+# the contact (E174: 7 labeled fault serves), so the event was outside the 1.0 s of the label measures, and the fault clip
+# of the chain started too early. A later flight of the same end joins the event within 1.5 s of that time.
+# On by default after the A36 checks (E175: lab rallies 95.1 % / 95.1 %, no change; fault clips 6 to 7 of 23); SERVE_JOIN_CONTACT=0
+# gives the old way.
+SERVE_JOIN_CONTACT = os.environ.get("SERVE_JOIN_CONTACT", "1") == "1"
+
+
 def serve_events(flights, t0, t1, rally_filter=None):
     """Serve events in [t0, t1]: list of (time, server near?, kind, flight). A toss and the fast
     flight after it (same end, within 1.5 s) make one event.
@@ -108,7 +117,7 @@ def serve_events(flights, t0, t1, rally_filter=None):
             continue
         if ev and ev[-1][1] == near and f["t0"] - ev[-1][0] < 1.5:
             if kind != "toss" and ev[-1][2] in ("toss", "nearToss"):
-                ev[-1] = (ev[-1][0], near, "toss+" + kind, f)
+                ev[-1] = (f["t0"] if SERVE_JOIN_CONTACT else ev[-1][0], near, "toss+" + kind, f)
             continue
         ev.append((f["t0"], near, kind, f))
     # E10 check by eye (m1015): a toss alone at the near end was never a serve (the player walks

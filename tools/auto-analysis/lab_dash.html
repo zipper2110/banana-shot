@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lab dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+  --bg: #f6f7f9; --card: #fff; --ink: #1d2330; --mute: #687083; --line: #e2e5ea;
+  --accent: #2f6fde; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030; --soft: #eef2f8;
+  --research: #6b4fbb; --experiment: #0f7c8c; --fix: #1f8a4c; --run: #8a5a1f; --labeling: #b0417a;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14171c; --card: #1c2027; --ink: #e6e8ec; --mute: #9aa2b1; --line: #2c323c; --soft: #232a35;
+    --accent: #6c9cf0; --research: #a58ef0; --experiment: #4fb8c6; --fix: #57c287; --run: #d6a45f; --labeling: #e07bb0; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line);
+  display: flex; gap: 16px; align-items: center; padding: 10px 20px; flex-wrap: wrap; }
+header h1 { font-size: 17px; margin: 0; }
+header .meta { color: var(--mute); font-size: 12px; }
+header .ctl { margin-left: auto; display: flex; gap: 8px; }
+button { font: inherit; border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 6px;
+  padding: 5px 11px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.danger { border-color: var(--bad); color: var(--bad); }
+button.go { border-color: var(--ok); color: var(--ok); }
+button:disabled { opacity: .45; cursor: default; }
+main { max-width: 1280px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+section > h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
+section > h2 small { color: var(--mute); font-weight: normal; font-size: 12px; }
+.banner { border-radius: 8px; padding: 10px 14px; font-weight: 600; }
+.banner.pause { background: color-mix(in srgb, var(--warn) 18%, transparent); border: 1px solid var(--warn); }
+.banner.err { background: color-mix(in srgb, var(--bad) 15%, transparent); border: 1px solid var(--bad); }
+.banner .sub { font-weight: normal; font-size: 13px; color: var(--mute); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--mute); font-weight: 600; font-size: 12px; }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mute { color: var(--mute); }
+.small { font-size: 12px; }
+.bar { height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.bar.over > i { background: var(--warn); }
+.holder { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; }
+.holder .what { font-weight: 600; }
+.chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line);
+  white-space: nowrap; margin-right: 3px; }
+.k-research { color: var(--research); border-color: var(--research); }
+.k-experiment { color: var(--experiment); border-color: var(--experiment); }
+.k-fix { color: var(--fix); border-color: var(--fix); }
+.k-run { color: var(--run); border-color: var(--run); }
+.k-labeling { color: var(--labeling); border-color: var(--labeling); }
+.s-done { color: var(--ok); } .s-running { color: var(--accent); font-weight: 600; } .s-waiting { color: var(--warn); }
+.s-queued, .s-planned { color: var(--mute); } .s-dropped { color: var(--mute); text-decoration: line-through; }
+.mtrack { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.mchip { flex: 1 0 160px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.mchip.done { border-left: 4px solid var(--ok); }
+.mchip.current { border-left: 4px solid var(--accent); background: var(--soft); }
+.mchip.next { border-left: 4px solid var(--warn); }
+.mchip.later { border-left: 4px solid var(--line); }
+.mchip.sel { outline: 2px solid var(--accent); }
+.mchip b { display: block; font-size: 13px; }
+.mchip span { font-size: 11px; color: var(--mute); }
+.goal { padding: 10px 12px; background: var(--soft); border-radius: 8px; margin: 10px 0; }
+.badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--warn) 20%, transparent); }
+.measures { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin: 10px 0; }
+.measure { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.measure .n { font-size: 11px; color: var(--mute); }
+.measure .v { font-weight: 600; }
+.issue { border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
+.issue > summary { padding: 8px 12px; cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; }
+.issue > summary::-webkit-details-marker { display: none; }
+.issue > summary .id { color: var(--mute); font-size: 12px; min-width: 52px; }
+.issue .body { padding: 0 12px 10px; }
+.imp { display: inline-flex; gap: 2px; vertical-align: middle; }
+.imp i { width: 5px; height: 10px; background: var(--soft); border-radius: 1px; }
+.imp.e i.on { background: var(--mute); } .imp.r i.on { background: var(--ok); }
+.imp.r.lower i.on { background: var(--warn); } .imp.r.zero i.on { background: var(--bad); }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.filters button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.workers { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+.worker { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.worker h3 { margin: 0; font-size: 14px; display: flex; justify-content: space-between; }
+.worker .focus { font-size: 11px; color: var(--mute); margin-bottom: 6px; }
+.worker ul { margin: 0; padding-left: 0; list-style: none; }
+.worker li { padding: 4px 0; border-top: 1px dashed var(--line); font-size: 13px; }
+.worker li .r { float: right; color: var(--mute); font-size: 12px; }
+.lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.lcard { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.lcard .big { font-size: 20px; font-weight: 700; }
+code { font: 12px Consolas, monospace; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+a { color: var(--accent); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+details.more > summary { cursor: pointer; color: var(--mute); font-size: 12px; margin-top: 6px; }
+.legend { font-size: 11px; color: var(--mute); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lab dashboard</h1>
+  <div class="meta" id="meta">loading…</div>
+  <div class="ctl">
+    <button id="bPauseQ" title="The running job ends; no new job starts">Pause queue</button>
+    <button id="bPauseAll" class="danger" title="Stop the running job now and start no new job">Pause all now</button>
+    <button id="bUnpause" class="go">Unpause</button>
+  </div>
+</header>
+<main>
+  <div id="banner"></div>
+  <section id="sLock"><h2>GPU lock and job queue</h2><div class="body"></div></section>
+  <section id="sMs"><h2>Milestones <small id="progName"></small></h2><div class="body"></div></section>
+  <section id="sActs"><h2>Actions <small>research, experiments, fixes, runs, labeling</small></h2><div class="body"></div></section>
+  <section id="sWork"><h2>Workers <small>open actions in order; finish = now + net time (waits for the GPU or for a decision are not included)</small></h2><div class="body"></div></section>
+  <div class="two">
+    <section id="sLab"><h2>Labeling</h2><div class="body"></div></section>
+    <section id="sLinks"><h2>Links</h2><div class="body"></div></section>
+  </div>
+</main>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let S = null, selMs = null, kindF = "all", statusF = "all";
+const openSet = new Set();
+
+function hm(t) {                // "2026-11-27 13:05:00" -> "13:05" today, else "Nov 28 13:05"
+  if (!t) return "–";
+  const d = new Date(t.replace(" ", "T"));
+  const now = new Date(S.now.replace(" ", "T"));
+  const time = d.toTimeString().slice(0, 5);
+  if (d.toDateString() === now.toDateString()) return time;
+  return d.toLocaleDateString("en-GB", {day: "numeric", month: "short"}) + " " + time;
+}
+function dur(min) {
+  if (min == null) return "?";
+  if (min < 1) return "<1 min";
+  if (min < 90) return Math.round(min) + " min";
+  return (min / 60).toFixed(min < 600 ? 1 : 0) + " h";
+}
+function imp(v, cls) {
+  if (v == null) return '<span class="mute small">–</span>';
+  let h = `<span class="imp ${cls}" title="${v} of 10">`;
+  for (let i = 1; i <= 10; i++) h += `<i class="${i <= v ? "on" : ""}"></i>`;
+  return h + `</span> <span class="small">${v}</span>`;
+}
+const actById = () => Object.fromEntries((S.plan.actions || []).map(a => [a.id, a]));
+const actLinks = ids => (ids || []).map(i => `<a href="#act-${i}" class="small">${i}</a>`).join(" ");
+
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json", "X-Lab-Dash": "1"},
+    body: JSON.stringify(body || {})});
+  const j = await r.json();
+  alert(j.result || j.error || "done");
+  load();
+}
+$("#bPauseQ").onclick = () => confirm("Pause the queue?\nThe running job ends normally. No new GPU-lock job starts until Unpause.") && post("/api/pause", {mode: "queue"});
+$("#bPauseAll").onclick = () => {
+  const h = S && S.lock.holder;
+  const msg = "Pause ALL now?\n" + (h ? `This STOPS the running job at once:\n  ${h.who}: ${h.what}\nIts work since its start is lost; its owner must start it again.\n` : "No job runs now.\n") + "No new GPU-lock job starts until Unpause.";
+  confirm(msg) && post("/api/pause", {mode: "all"});
+};
+$("#bUnpause").onclick = () => confirm("Unpause? The waiting jobs start in their queue order.") && post("/api/unpause");
+
+function renderBanner() {
+  const p = S.lock.pause;
+  let h = "";
+  if (S.plan.error) h += `<div class="banner err">${esc(S.plan.error)}</div>`;
+  if (p) {
+    const k = S.lock.killedByPause;
+    h += `<div class="banner pause">PAUSED (${p.mode === "all" ? "all: the running job was stopped" : "queue: the running job ends, no new job starts"}) since ${hm(p.since)} by ${esc(p.by)}
+      <div class="sub">${p.text ? esc(p.text) + ". " : ""}${p.external ? "This pause is a ticket made by hand, not from this page. Unpause removes it. " : ""}${k ? `Stopped job: ${esc(k.who)}: ${esc(k.what)} (its owner starts it again). ` : ""}${p.error ? "Error: " + esc(p.error) : ""}${!S.lock.pauseLive ? " Warning: the pause ticket is not live, so jobs can start." : ""}</div></div>`;
+  }
+  $("#banner").innerHTML = h;
+  $("#bPauseQ").disabled = !!p && p.mode === "queue";
+  $("#bPauseAll").disabled = !!p && p.mode === "all" && !S.lock.holder;
+  $("#bUnpause").disabled = !p;
+}
+
+function renderLock() {
+  const L = S.lock;
+  let h = "";
+  if (L.holder) {
+    const x = L.holder, pc = x.progress != null ? Math.round(x.progress * 100) : null;
+    h += `<div class="holder"><div><div class="mute small">Running now · ${esc(x.who)} · pid ${x.pid}</div>
+      <div class="what">${esc(x.what)}</div>
+      <div class="small mute">started ${hm(x.start)} · ${dur(x.elapsedMin)} so far · estimate ${x.estMin ? dur(x.estMin) + " (" + x.estFrom + ")" : "unknown"} ${x.actions.length ? "· action " + actLinks(x.actions) : ""} ${x.journal.length ? "· " + x.journal.join(", ") : ""}</div></div>
+      <div style="text-align:right"><div class="small mute">expected end</div><div style="font-size:18px;font-weight:700">${x.eta ? hm(x.eta) : "?"}</div></div>
+      <div class="bar ${x.over ? "over" : ""}" style="grid-column:1/3"><i style="width:${pc ?? 0}%"></i></div>
+      ${x.over ? '<div class="small" style="color:var(--warn)">over the estimate</div>' : ""}</div>`;
+  } else {
+    h += `<div class="holder"><div class="mute">The lock is free. No job runs.</div></div>`;
+  }
+  if (L.queue.length) {
+    h += `<table><tr><th>#</th><th>Who</th><th>Job</th><th>Action</th><th class="num">Estimate</th><th class="num">Exp. start</th><th class="num">Exp. end</th><th class="num">Waits since</th></tr>`;
+    L.queue.forEach((q, i) => {
+      h += `<tr><td>${i + 1}</td><td>${esc(q.who)}</td><td>${esc(q.what)}</td><td>${actLinks(q.actions) || '<span class="mute small">–</span>'}</td>
+        <td class="num">${q.estMin ? dur(q.estMin) : "?"}<div class="small mute">${q.estFrom || ""}</div></td>
+        <td class="num">${q.blocked ? '<span class="s-waiting">paused</span>' : hm(q.expStart)}</td><td class="num">${q.blocked ? "–" : hm(q.expEnd)}</td><td class="num">${hm(q.waitingSince)}</td></tr>`;
+    });
+    h += `</table>`;
+  } else h += `<div class="mute small">The queue is empty.</div>`;
+  const key = "recentjobs";
+  h += `<details class="more" data-key="${key}" ${openSet.has(key) ? "open" : ""}><summary>Recent jobs (${L.recent.length})</summary><table>
+    <tr><th>Who</th><th>Job</th><th>Action</th><th class="num">Start</th><th class="num">Run time</th><th class="num">Result</th></tr>`;
+  for (const r of L.recent) h += `<tr><td>${esc(r.who)}</td><td>${esc(r.what)}</td><td>${actLinks(r.actions)}</td><td class="num">${hm(r.start)}</td><td class="num">${dur(r.min)}</td>
+    <td class="num">${r.killed ? '<span style="color:var(--bad)">stopped by pause</span>' : r.rc === 0 ? '<span class="s-done">ok</span>' : `<span style="color:var(--bad)">rc ${r.rc}</span>`}</td></tr>`;
+  h += `</table></details>`;
+  $("#sLock .body").innerHTML = h;
+}
+
+function actionRow(a, compact) {
+  const e = a.expected || {}, r = a.real;
+  const cls = r ? (r.impact === 0 ? "zero" : r.impact < (e.impact ?? 0) ? "lower" : "") : "";
+  return `<tr id="act-${a.id}"><td class="small mute">${a.id}</td>
+    <td><span class="chip k-${a.kind}">${a.kind}</span></td>
+    <td><b>${esc(a.title)}</b> ${a.journal && a.journal.length ? `<span class="small mute">${a.journal.join(", ")}</span>` : ""}
+      <div class="small">${esc(e.outcome || "")}</div>
+      ${r ? `<div class="small"><b>Result:</b> ${esc(r.outcome)}</div>` : ""}
+      ${a.waitingFor ? `<div class="small s-waiting">waits for ${esc(a.waitingFor)}</div>` : ""}
+      ${!compact && a.issues && a.issues.length ? `<div class="small mute">issues: ${a.issues.join(", ")}</div>` : ""}</td>
+    <td class="small">${esc(a.owner)}</td>
+    <td class="small s-${a.status}">${a.status}</td>
+    <td class="num small">${a.finished ? hm(a.finished) : a._eta ? "~" + hm(a._eta) : "–"}<div class="mute">${a._net ? dur(a._net) + " net" : ""}</div></td>
+    <td class="small" title="${esc(e.text || "")}">${imp(e.impact, "e")}${e.backfilled ? '<div class="mute" title="set after the result">after the fact</div>' : ""}</td>
+    <td class="small">${r ? imp(r.impact, "r " + cls) : '<span class="mute">–</span>'}</td></tr>`;
+}
+const actHead = `<tr><th></th><th>Kind</th><th>Action and outcome</th><th>Owner</th><th>Status</th><th class="num">Done / ETA</th><th>Expected impact</th><th>Real impact</th></tr>`;
+
+function renderMs() {
+  const ms = S.plan.milestones || [], acts = S.plan.actions || [];
+  const P = S.plan.program || {};
+  $("#progName").textContent = P.name ? `${P.name}, ${P.start} to ${P.end}` : "";
+  if (!selMs) selMs = (ms.find(m => m.status === "current") || ms[0] || {}).id;
+  let h = `<div class="mtrack">`;
+  for (const m of ms) {
+    const n = acts.filter(a => a.milestone === m.id);
+    h += `<div class="mchip ${m.status} ${m.id === selMs ? "sel" : ""}" data-ms="${m.id}"><b>${m.id} · ${esc(m.title)}</b>
+      <span>${m.status} · ${esc(m.period || "")} · ${n.filter(a => a.status === "done").length}/${n.length} actions done</span></div>`;
+  }
+  h += `</div>`;
+  const m = ms.find(x => x.id === selMs);
+  if (m) {
+    h += `<div class="goal"><b>Goal</b> ${m.goalStatus && m.goalStatus !== "approved" ? `<span class="badge">${esc(m.goalStatus)}</span>` : ""}<div>${esc(m.goal)}</div>
+      ${m.result ? `<div style="margin-top:6px"><b>Result</b><div>${esc(m.result)}</div></div>` : ""}</div>`;
+    if (m.measures && m.measures.length) {
+      h += `<div class="measures">` + m.measures.map(x => `<div class="measure"><div class="n">${esc(x.name)}</div><div class="v">${esc(x.value)}</div></div>`).join("") + `</div>`;
+    }
+    if (m.issues && m.issues.length) {
+      h += `<div class="small mute" style="margin-top:6px">Issues that block the goal (click for the actions):</div>`;
+      for (const is of m.issues) {
+        const ia = acts.filter(a => (a.issues || []).includes(is.id));
+        const key = "iss-" + is.id;
+        const open = ia.filter(a => a.status !== "done").length;
+        h += `<details class="issue" data-key="${key}" ${openSet.has(key) ? "open" : ""}><summary><span class="id">${is.id}</span><b>${esc(is.title)}</b>
+          <span class="small s-${is.status === "solved" ? "done" : "waiting"}">${is.status}</span>
+          <span class="small mute" style="margin-left:auto">${ia.length} actions${open ? `, ${open} open` : ""}</span></summary>
+          <div class="body"><div class="small">${esc(is.detail)}</div>
+          ${ia.length ? `<table>${actHead}${ia.map(a => actionRow(a, true)).join("")}</table>` : '<div class="small mute">No action yet.</div>'}</div></details>`;
+      }
+    }
+  }
+  $("#sMs .body").innerHTML = h;
+  document.querySelectorAll(".mchip").forEach(el => el.onclick = () => { selMs = el.dataset.ms; renderMs(); });
+}
+
+function renderActs() {
+  const acts = (S.plan.actions || []).slice();
+  const kinds = ["all", ...new Set(acts.map(a => a.kind))];
+  const sts = ["all", "open", "done"];
+  let h = `<div class="filters">` + kinds.map(k => `<button data-k="${k}" class="${kindF === k ? "on" : ""}">${k}</button>`).join("") +
+    `<span style="width:12px"></span>` + sts.map(k => `<button data-s="${k}" class="${statusF === k ? "on" : ""}">${k}</button>`).join("") + `</div>`;
+  const order = {running: 0, waiting: 1, queued: 2, planned: 3, done: 4, dropped: 5};
+  const f = acts.filter(a => (kindF === "all" || a.kind === kindF) && (statusF === "all" || (statusF === "done" ? a.status === "done" : a.status !== "done")))
+    .sort((a, b) => order[a.status] - order[b.status] || (b.finished || "").localeCompare(a.finished || ""));
+  const done = acts.filter(a => a.real);
+  const avgE = done.length ? (done.reduce((s, a) => s + (a.expected?.impact ?? 0), 0) / done.length).toFixed(1) : "–";
+  const avgR = done.length ? (done.reduce((s, a) => s + a.real.impact, 0) / done.length).toFixed(1) : "–";
+  h += `<div class="small mute">${done.length} finished actions: mean expected impact ${avgE}, mean real impact ${avgR}; ${done.filter(a => a.real.impact === 0).length} with no gain (closed with a finding).</div>`;
+  h += `<table>${actHead}${f.map(a => actionRow(a, false)).join("")}</table>
+    <div class="legend">${esc((S.plan.about || "").split("Impact scale")[1] ? "Impact scale" + S.plan.about.split("Impact scale")[1] : "")}</div>`;
+  $("#sActs .body").innerHTML = h;
+  document.querySelectorAll("#sActs [data-k]").forEach(b => b.onclick = () => { kindF = b.dataset.k; renderActs(); });
+  document.querySelectorAll("#sActs [data-s]").forEach(b => b.onclick = () => { statusF = b.dataset.s; renderActs(); });
+}
+
+function renderWorkers() {
+  const wdef = Object.fromEntries((S.plan.workers || []).map(w => [w.id, w]));
+  let h = `<div class="workers">`;
+  for (const w of S.workers) {
+    const noEta = wdef[w.id] && wdef[w.id].noEta;
+    h += `<div class="worker"><h3><span>${esc(w.name)}</span><span class="small mute">${w.netMin ? dur(w.netMin) + " net" : "idle"}</span></h3><div class="focus">${esc(w.focus || "")}</div><ul>`;
+    for (const g of w.gpu) h += `<li><span class="chip k-run">${g.running ? "GPU now" : "GPU queue"}</span>${esc(g.what)}<span class="r">${g.running ? "ends " + hm(g.eta) : g.expEnd ? "ends " + hm(g.expEnd) : ""}</span></li>`;
+    for (const a of w.actions) {
+      h += `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="chip k-${a.kind}">${a.kind}</span> ${esc(a.title)}
+        <div class="small"><span class="s-${a.status}">${a.status}</span>${a.waitingFor ? ` <span class="s-waiting">(waits for ${esc(a.waitingFor)})</span>` : ""}
+        <span class="r">${a.netMin ? dur(a.netMin) : "?"}${!noEta && a.eta ? " · ~" + hm(a.eta) : ""}</span></div>
+        ${(a.jobs || []).length ? `<div class="small mute">jobs: ${a.jobs.map(j => esc(j.what) + (j.estMin ? " (" + dur(j.estMin) + ")" : "")).join("; ")}</div>` : ""}</li>`;
+    }
+    if (!w.actions.length && !w.gpu.length) h += `<li class="mute">No open action.</li>`;
+    h += `</ul></div>`;
+  }
+  h += `</div>`;
+  $("#sWork .body").innerHTML = h;
+  // ETA and net time of the workers go into the action rows too
+  const byId = actById();
+  for (const w of S.workers) for (const a of w.actions) if (byId[a.id]) { byId[a.id]._eta = !(wdef[w.id] || {}).noEta && a.eta; byId[a.id]._net = a.netMin; }
+}
+
+function renderLabels() {
+  const L = S.labels;
+  if (L.error) { $("#sLab .body").innerHTML = `<div class="banner err">${esc(L.error)}</div>`; return; }
+  let h = `<div class="lgrid">`;
+  for (const [lvl, c] of Object.entries(L.levels || {})) {
+    const pc = Math.round(100 * c.done / c.total);
+    h += `<div class="lcard"><div class="small mute">${lvl} level</div><div class="big">${c.done} / ${c.total}</div>
+      <div class="bar"><i style="width:${pc}%;background:var(--ok)"></i></div>
+      <div class="small">${c.pending.length} pending, about ${dur(c.leftMin)} of labeling${c.stale ? ` · ${c.stale} old marks to redo` : ""}${c.skipped ? ` · ${c.skipped} skipped` : ""}${c.mapped ? ` · ${c.mapped} start from mapped marks` : ""}</div>
+      <div class="small mute">next: ${c.pending.slice(0, 6).join(", ")}${c.pending.length > 6 ? " …" : ""}</div></div>`;
+  }
+  const F = L.faults || {}, Sd = L.sides || {};
+  h += `<div class="lcard"><div class="small mute">Faults step</div><div class="big">${F.answered ?? "?"} / ${F.rows ?? "?"}</div><div class="small">rows answered · about ${F.estMin} min</div></div>`;
+  h += `<div class="lcard"><div class="small mute">Sides step</div><div class="big">${Sd.done ?? "?"} / ${Sd.matches ?? "?"}</div><div class="small">matches done · about ${Sd.estMin} min</div></div>`;
+  h += `</div><div class="small" style="margin-top:10px">Measured: ${L.labeledMin} min of labeling so far, median ${L.minPerSmall ?? "?"} min for a small fragment.</div>
+    <div style="margin-top:8px">Label page (open in Chrome or Edge; paste the path into the address bar):<br>
+    <code id="lp">${esc(L.page)}</code> <button id="cp" class="small">Copy</button></div>
+    <div class="small mute">Label folder (key O): <code>${esc(L.folder)}</code> · <a href="/doc/event-labels-howto.md" target="_blank">how to label</a></div>`;
+  if ((L.recent || []).length) h += `<div class="small mute" style="margin-top:6px">Last saved: ${L.recent.map(r => `${r.id} (${r.events} marks${r.state !== "done" ? ", " + r.state : ""})`).join(", ")}</div>`;
+  $("#sLab .body").innerHTML = h;
+  $("#cp").onclick = () => navigator.clipboard.writeText("file:///" + L.page.replace(/\\/g, "/")).then(() => $("#cp").textContent = "Copied");
+}
+
+function renderLinks() {
+  const links = S.plan.links || [];
+  $("#sLinks .body").innerHTML = `<ul>` + links.map(l => `<li><a target="_blank" href="${l.doc ? "/doc/" + encodeURIComponent(l.doc) : esc(l.path || l.url)}">${esc(l.title)}</a></li>`).join("") + `</ul>
+    <div class="small mute">The plan updates when the manager records a decision (lab-plan.json, last change ${hm(S.plan._mtime)}).</div>`;
+}
+
+function rememberOpen() {
+  document.querySelectorAll("details[data-key]").forEach(d => d.open ? openSet.add(d.dataset.key) : openSet.delete(d.dataset.key));
+}
+
+async function load() {
+  try {
+    const r = await fetch("/api/state", {cache: "no-store"});
+    S = await r.json();
+    if (S.error) throw new Error(S.error);
+  } catch (e) {
+    $("#meta").textContent = "server not reached: " + e.message;
+    return;
+  }
+  rememberOpen();
+  $("#meta").textContent = `lab PC time ${S.now.slice(11, 16)} · refresh every 15 s · plan ${S.plan.updated || ""}`;
+  renderBanner(); renderLock(); renderWorkers(); renderMs(); renderActs(); renderLabels(); renderLinks();
+}
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>

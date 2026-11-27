@@ -4,20 +4,49 @@
     {
       "name": "site",
       "runtimeExecutable": "C:\\w\\banana-shot\\analytics-worker\\node_modules\\.bin\\wrangler.cmd",
-      "runtimeArgs": ["dev", "--config", "site/wrangler.toml", "--port", "8790", "--local"],
+      "runtimeArgs": [
+        "dev",
+        "--config",
+        "site/wrangler.toml",
+        "--port",
+        "8790",
+        "--local"
+      ],
       "port": 8790
     },
     {
       "name": "site-static",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["site/tools/serve-static.py", "8792"],
+      "runtimeArgs": [
+        "site/tools/serve-static.py",
+        "8792"
+      ],
       "port": 8792
     },
     {
       "name": "cockpit",
       "runtimeExecutable": "C:\\w\\banana-shot\\cockpit-worker\\node_modules\\.bin\\wrangler.cmd",
-      "runtimeArgs": ["dev", "--config", "cockpit-worker/wrangler.toml", "--port", "8791", "--local", "--persist-to", "cockpit-worker/.wrangler/state"],
+      "runtimeArgs": [
+        "dev",
+        "--config",
+        "cockpit-worker/wrangler.toml",
+        "--port",
+        "8791",
+        "--local",
+        "--persist-to",
+        "cockpit-worker/.wrangler/state"
+      ],
       "port": 8791
+    },
+    {
+      "name": "lab-dash",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "tools/auto-analysis/lab_dash.py",
+        "--port",
+        "8793"
+      ],
+      "port": 8793
     }
   ]
 }

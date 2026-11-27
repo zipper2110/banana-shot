@@ -1,0 +1,906 @@
+{
+ "version": 1,
+ "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
+ "updated": "2026-11-27 12:40",
+ "program": {
+  "name": "Gap program",
+  "start": "2026-11-25",
+  "end": "2026-12-09",
+  "doc": "gap-program.md"
+ },
+ "workers": [
+  {
+   "id": "S1",
+   "name": "S1 bench",
+   "focus": "bench.py, references, case history (G1, G3)"
+  },
+  {
+   "id": "S2",
+   "name": "S2 plumbing",
+   "focus": "detect.py, keys, decode, app path (G2, G12, G13, G14)"
+  },
+  {
+   "id": "S3",
+   "name": "S3 rally",
+   "focus": "rally GRU, shot chain, fault rows (G4, G5, G8)"
+  },
+  {
+   "id": "S4",
+   "name": "S4 truth",
+   "focus": "label tools, event measures, serve events (G10)"
+  },
+  {
+   "id": "S5",
+   "name": "S5 speed and coverage",
+   "focus": "net band, bounces, ball detector, speed (P1, P2, G6, G15)"
+  },
+  {
+   "id": "user",
+   "name": "User",
+   "focus": "labels, decisions, large-run approvals",
+   "noEta": true
+  },
+  {
+   "id": "manager",
+   "name": "Manager",
+   "focus": "plan, reviews, merges, this file"
+  }
+ ],
+ "milestones": [
+  {
+   "id": "M1",
+   "title": "Gaps covered and a first clean held-out number",
+   "status": "done",
+   "period": "2026-11-25 to 2026-11-27",
+   "goal": "Cover the Critical and High gaps of the chain inventory (G1, G2, G4, G8, G10, G12, G15, P1, P2) and get one clean held-out number on a video that no stream has seen (Misha m1113).",
+   "goalStatus": "approved",
+   "result": "All gaps covered except G10 (measured: 16 of 59 fragments labeled). Held out on 897fd28d and on the head 186e4244 (the same numbers): Misha rallies recall 94.2 %, precision 92.6 %, winners 84.6 % (check); Igor 96.4 / 97.9 %, winners 85.1 %. Lab reference 186e4244: recall 94.6 %, precision 93.2 % (97.8 % with the fault rows hidden), winners 85.3 %.",
+   "measures": [
+    {
+     "name": "Misha rallies recall / precision",
+     "value": "94.2 % / 92.6 %"
+    },
+    {
+     "name": "Igor rallies recall / precision",
+     "value": "96.4 % / 97.9 %"
+    },
+    {
+     "name": "Held-out winners on matched points (check)",
+     "value": "84.9 % (n 350)"
+    },
+    {
+     "name": "Held-out marked faults found",
+     "value": "72 of 121"
+    }
+   ],
+   "issues": [
+    {
+     "id": "M1-G1",
+     "title": "G1 shipped path not measured",
+     "status": "solved",
+     "detail": "bench.py with a manifest, Igor and Misha held out, case library with 4 levels."
+    },
+    {
+     "id": "M1-G4",
+     "title": "G4 rally end",
+     "status": "solved",
+     "detail": "End detector E60, on by default."
+    },
+    {
+     "id": "M1-G10",
+     "title": "G10 truth for the events",
+     "status": "moved",
+     "detail": "Label page v2 and label_measure.py exist; the label count is too small. Moved to M2 (issue M2-I6)."
+    },
+    {
+     "id": "M1-G12",
+     "title": "G12 stale results",
+     "status": "solved",
+     "detail": "Import-closure keys, upstream keys, safe adoption (items 13, 16, 16b)."
+    },
+    {
+     "id": "M1-P",
+     "title": "P1, P2 speed passes",
+     "status": "solved",
+     "detail": "Measured, no change (E80, E83, E84)."
+    }
+   ]
+  },
+  {
+   "id": "M2",
+   "title": "Right events on the labeled fragments",
+   "status": "current",
+   "period": "2026-11-27 to 2026-12-05",
+   "goal": "Priority 2 (the user, 2026-11-26) measured by the events: on the labeled small level, hits found 75 % or more of the labeled hits (now 77 of 131, 59 %), shot count right in 70 % of the points (now 9 of 17), in/out right 95 % or more (now 52 of 54), first-serve faults found as fault clips 70 % or more (now 4 of 11). Rallies (priority 1) do not go down: lab recall 94.6 % or more, held-out Igor 96.4 % or more.",
+   "goalStatus": "proposed (manager draft; the user confirms the targets)",
+   "result": null,
+   "measures": [
+    {
+     "name": "Hits found (row chain, 16 fragments)",
+     "value": "77 of 131 (85 with the fault-clip serves), E173"
+    },
+    {
+     "name": "Shot count right",
+     "value": "9 of 17 points, E170"
+    },
+    {
+     "name": "In/out right",
+     "value": "52 of 54, E170"
+    },
+    {
+     "name": "Fault clips (labeled faults found)",
+     "value": "4 of 11, E170"
+    },
+    {
+     "name": "Lab rallies recall / precision",
+     "value": "94.6 % / 93.2 % (186e4244)"
+    }
+   ],
+   "issues": [
+    {
+     "id": "M2-I1",
+     "title": "Points with no row (double faults, short points)",
+     "status": "open",
+     "detail": "9 labeled points have no rally row, and 5 second serves of a double fault are outside the rows (E173). The rally GRU is below the threshold in 6 of 7 (E169). A double fault has no rally, so the GRU is the wrong detector; the serve-event rule finds 1 of 36 (E190), limited by M2-I3."
+    },
+    {
+     "id": "M2-I2",
+     "title": "First-serve faults not found as fault clips",
+     "status": "open",
+     "detail": "13 missed hits are first-serve faults, 6 of them have a fault clip (E173). Fault clips find 4 of 11 labeled faults (E170); held out 72 of 121 marked faults. The true precision of the fault clips waits for the Faults step (27 rows)."
+    },
+    {
+     "id": "M2-I3",
+     "title": "Serve event recall",
+     "status": "open",
+     "detail": "17 of 24 labeled fault serves have a serve event (E190). The far serve events at a + 2.5 s: about 198 of 291 lab far starts (E154). This limits M2-I1 and M2-I2."
+    },
+    {
+     "id": "M2-I4",
+     "title": "False events after the point",
+     "status": "measured",
+     "detail": "case_history now reports them apart (E139 a). Bounces after the point on the fragments 94 to 69 with BOUNCE_GROUND_UP (E183). They can change the last shot and the winner (m1021 6623)."
+    },
+    {
+     "id": "M2-I5",
+     "title": "Shot count and missed hits inside the rows",
+     "status": "open",
+     "detail": "Inside the rows: time error over 0.3 s 8, unusable flight 5, chain rule 5, track gap 4, no shot 3, hitter 2 (E173). The shot chain is not the main gap."
+    },
+    {
+     "id": "M2-I6",
+     "title": "Too few labels for the event measures",
+     "status": "open",
+     "detail": "16 of 59 fragments labeled (small level first, then 4 medium). The Faults step (27 rows) and the Sides step (5 matches) are not done. Counts are small, so most results are 'inside the noise'."
+    },
+    {
+     "id": "M2-I7",
+     "title": "Court stage slow on Misha",
+     "status": "open",
+     "detail": "Court 2835 s on Misha against 267 s on Igor (E103). A speed item for the app."
+    },
+    {
+     "id": "M2-I8",
+     "title": "m1030 is the weakest lab match",
+     "status": "open",
+     "detail": "m1030 rallies recall 89.9 % against 94.6 % for the lab (186e4244)."
+    }
+   ]
+  },
+  {
+   "id": "M3",
+   "title": "Program end check",
+   "status": "next",
+   "period": "2026-12-06 to 2026-12-09",
+   "goal": "One final held-out batch on the final head (Igor and Misha, full videos, about 5 h GPU, the user approves), the event measures on the small and medium levels, and a program report: what is covered, what is open, the numbers against the M1 numbers.",
+   "goalStatus": "proposed",
+   "issues": [
+    {
+     "id": "M3-I1",
+     "title": "Medium level not labeled",
+     "status": "open",
+     "detail": "4 medium fragments (69 points, about 5 h of user time). The medium level is the check of the heavy-stage changes."
+    }
+   ]
+  },
+  {
+   "id": "M4",
+   "title": "Ball detector far end (only if an event loss shows)",
+   "status": "later",
+   "period": "after the program",
+   "goal": "Open again when a medium fragment or a new video shows an event loss from the far ball (E135 option 1: far-end fine-tune, about 30 to 45 min of user checks, 4.5 h training, 6 h held-out runs). The user approves any training.",
+   "goalStatus": "proposed",
+   "issues": []
+  },
+  {
+   "id": "M5",
+   "title": "Score-consistency hints",
+   "status": "later",
+   "period": "after the program",
+   "goal": "Hints from the score (the serve side does not match the score; the server changes inside a game) that show the user where a point is probably missing or false. Only when the events are reliable (the user, 2026-11-26).",
+   "goalStatus": "idea",
+   "issues": []
+  }
+ ],
+ "actions": [
+  {
+   "id": "A01",
+   "kind": "fix",
+   "title": "netBand on by default",
+   "milestone": "M1",
+   "issues": [
+    "M2-I4"
+   ],
+   "owner": "S5",
+   "journal": [
+    "E137"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 01:30",
+   "expected": {
+    "outcome": "More net touches found, fewer false ones, rallies the same.",
+    "impact": 4,
+    "text": "A clear gain on the net-touch measure.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 4,
+    "outcome": "Net touches 26 to 28 of 35, false 8 to 3 of 70; held out 30 of 35, false 5; rallies the same; winners inside the noise."
+   }
+  },
+  {
+   "id": "A02",
+   "kind": "fix",
+   "title": "Serve start rule CHAIN_SERVE_START ab",
+   "milestone": "M2",
+   "issues": [
+    "M2-I2",
+    "M2-I3"
+   ],
+   "owner": "S3",
+   "journal": [
+    "E164"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 02:40",
+   "expected": {
+    "outcome": "A first shot that is a fault becomes a fault clip; the serve shot moves to the serve contact.",
+    "impact": 3,
+    "text": "Better fault clips and serve times.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 2,
+    "outcome": "11 lab rows change (9 right, 1 wrong); label fault clips 6 of 11 to 7 of 12; 21 of 26 serve shots nearer the serve time. Rallies and winners the same."
+   }
+  },
+  {
+   "id": "A03",
+   "kind": "experiment",
+   "title": "Dead ball stop rule",
+   "milestone": "M2",
+   "issues": [
+    "M2-I4"
+   ],
+   "owner": "S3",
+   "journal": [
+    "E165"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 02:50",
+   "expected": {
+    "outcome": "Fewer false shots after a dead ball.",
+    "impact": 3,
+    "text": "Fewer false last shots.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 0,
+    "outcome": "Closed, no switch: each time gap gives more right-to-wrong than wrong-to-right (19/17/13 against 2/1/1)."
+   }
+  },
+  {
+   "id": "A04",
+   "kind": "experiment",
+   "title": "Rally GRU with a ball channel",
+   "milestone": "M2",
+   "issues": [
+    "M2-I1"
+   ],
+   "owner": "S3",
+   "journal": [
+    "E162"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 01:40",
+   "expected": {
+    "outcome": "The GRU finds short points with ball evidence.",
+    "impact": 4,
+    "text": "Fewer silent points.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 0,
+    "outcome": "No win: 3 seeds against 3, no measure above the base spread."
+   }
+  },
+  {
+   "id": "A05",
+   "kind": "research",
+   "title": "Causes of the missed labeled hits",
+   "milestone": "M2",
+   "issues": [
+    "M2-I1",
+    "M2-I2",
+    "M2-I5"
+   ],
+   "owner": "S4",
+   "journal": [
+    "E173"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 04:16",
+   "expected": {
+    "outcome": "A cause table of the missed hits.",
+    "impact": 5,
+    "text": "Points the work at the largest cause.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 6,
+    "outcome": "27 of 54 misses are outside the rows (faults 13, double faults 5, no row 9). The shot chain is not the main gap: the work moved to rows and serves."
+   }
+  },
+  {
+   "id": "A06",
+   "kind": "research",
+   "title": "Labeled points with no row; double-fault row from serve events",
+   "milestone": "M2",
+   "issues": [
+    "M2-I1"
+   ],
+   "owner": "S3",
+   "journal": [
+    "E169",
+    "E190"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 04:27",
+   "expected": {
+    "outcome": "A rule for double-fault rows.",
+    "impact": 4,
+    "text": "Finds double faults that have no rally.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 2,
+    "outcome": "No rule: the serve-event rule finds 1 of 36 with 4 false. The limit is the serve event recall (M2-I3). A useful finding, no gain."
+   }
+  },
+  {
+   "id": "A07",
+   "kind": "experiment",
+   "title": "SERVE_PRIOR_NEAR (near anchor for far serves)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I3"
+   ],
+   "owner": "S4",
+   "journal": [
+    "E172b"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 04:09",
+   "expected": {
+    "outcome": "More far serve events.",
+    "impact": 4,
+    "text": "Serve event recall up.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 0,
+    "outcome": "Fails: far serve events 210 to 190, false near events 47 to 75, rallies 537 to 534. Code removed."
+   }
+  },
+  {
+   "id": "A08",
+   "kind": "fix",
+   "title": "CHAIN_TIME_ORDER a (an event before the contact is not of that shot)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I4",
+    "M2-I5"
+   ],
+   "owner": "S3",
+   "journal": [
+    "E166",
+    "E168"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 04:57",
+   "expected": {
+    "outcome": "Right shot ends on the first shots.",
+    "impact": 2,
+    "text": "Right facts, inside the noise on totals.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 2,
+    "outcome": "27 shot ends change, right where checked; rallies and events the same; 1 winner lost that was right by luck."
+   }
+  },
+  {
+   "id": "A09",
+   "kind": "research",
+   "title": "Rally GRU input from the app's own flights",
+   "milestone": "M2",
+   "issues": [
+    "M2-I1"
+   ],
+   "owner": "S1",
+   "journal": [
+    "E101"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 04:51",
+   "expected": {
+    "outcome": "Know if the bench shows the app path for the GRU input.",
+    "impact": 3,
+    "text": "A measure gap.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 4,
+    "outcome": "The bench read a frozen file; on the app path recall 95.3 to 94.6 %. The bench now follows the flights (new reference)."
+   }
+  },
+  {
+   "id": "A10",
+   "kind": "fix",
+   "title": "Rally GRU trained on the head input",
+   "milestone": "M2",
+   "issues": [
+    "M2-I1"
+   ],
+   "owner": "S3",
+   "journal": [
+    "E191",
+    "E192"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 12:17",
+   "expected": {
+    "outcome": "Take back the E101 loss on the app path.",
+    "impact": 3,
+    "text": "Recall and fault rows on the app path.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 3,
+    "outcome": "Fold models: recall 94.6 to 95.1 %, precision with faults 93.2 to 95.1 %, fault rows 26 to 21 (inside the seed spread, right in principle). Held-out check after it: pending (A20)."
+   }
+  },
+  {
+   "id": "A11",
+   "kind": "fix",
+   "title": "Bounce ground test BOUNCE_GROUND_UP 0.51",
+   "milestone": "M2",
+   "issues": [
+    "M2-I4"
+   ],
+   "owner": "S5",
+   "journal": [
+    "E183",
+    "E184"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 12:14",
+   "expected": {
+    "outcome": "Fewer false bounces, no right bounce lost.",
+    "impact": 4,
+    "text": "A clear gain on false bounces.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 4,
+    "outcome": "Fragments false bounces 117 to 81 (in play 39 to 26), 1 right bounce lost; lab rallies 94.6 to 94.8 %."
+   }
+  },
+  {
+   "id": "A12",
+   "kind": "fix",
+   "title": "Near 'passed' net rule NET_PASSED_NEAR",
+   "milestone": "M2",
+   "issues": [
+    "M2-I4"
+   ],
+   "owner": "S5",
+   "journal": [
+    "E180"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 12:14",
+   "expected": {
+    "outcome": "Fewer false net touches at the near end.",
+    "impact": 1,
+    "text": "Small, right in principle.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 1,
+    "outcome": "Fragments false nets 5 to 4, no right touch lost; lab the same."
+   }
+  },
+  {
+   "id": "A13",
+   "kind": "experiment",
+   "title": "5-sample bounce rule",
+   "milestone": "M2",
+   "issues": [
+    "M2-I4"
+   ],
+   "owner": "S5",
+   "journal": [
+    "E181",
+    "E182"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 03:31",
+   "expected": {
+    "outcome": "Fewer false bounces.",
+    "impact": 3,
+    "text": "False bounces down.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 0,
+    "outcome": "Not applied: 12 false removed but only 4 in play, and 2 real bounces lost. The ground test (A11) replaced it."
+   }
+  },
+  {
+   "id": "A14",
+   "kind": "fix",
+   "title": "Resume of a stopped ball stage (item 17)",
+   "milestone": "M1",
+   "issues": [],
+   "owner": "S2",
+   "journal": [
+    "E119"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 11:06",
+   "expected": {
+    "outcome": "A stop loses one 600 s part, not up to 3 h.",
+    "impact": 3,
+    "text": "App robustness, no accuracy change.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 3,
+    "outcome": "Identical ball file and masks on 60 fps; 30 fps stays one part (no resume there)."
+   }
+  },
+  {
+   "id": "A15",
+   "kind": "fix",
+   "title": "10-bit video decode and a hard error on an empty ball decode",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S2",
+   "journal": [
+    "E200",
+    "E201"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 12:23",
+   "expected": {
+    "outcome": "The user's 10-bit HEVC video runs; a failed decode stops the run with a clear error.",
+    "impact": 5,
+    "text": "Unblocks a user video class.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 5,
+    "outcome": "Merged; 8-bit output byte-identical (no key change). The user's rerun is not done yet."
+   }
+  },
+  {
+   "id": "A16",
+   "kind": "run",
+   "title": "Milestone batch: Igor and Misha held out",
+   "milestone": "M1",
+   "issues": [],
+   "owner": "S1",
+   "journal": [
+    "E103"
+   ],
+   "status": "done",
+   "finished": "2026-11-27 09:39",
+   "expected": {
+    "outcome": "One clean held-out number.",
+    "impact": 9,
+    "text": "Decides M1.",
+    "backfilled": true
+   },
+   "real": {
+    "impact": 9,
+    "outcome": "Misha 94.2 / 92.6 %, winners 84.6 %; the gap to the lab is under 1 point (E103)."
+   }
+  },
+  {
+   "id": "A20",
+   "kind": "run",
+   "title": "New reference on the head: lab flights remake and Igor flights stage (E192 and the new defaults)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I1",
+    "M2-I4"
+   ],
+   "owner": "S1",
+   "journal": [],
+   "status": "waiting",
+   "waitingFor": "the user's OK (a large run after 11:00)",
+   "expected": {
+    "outcome": "The reference that all later M2 rows compare against; shows the effect of A10, A11, A12 together on lab and Igor.",
+    "impact": 2,
+    "text": "A measure, not a gain; without it the next rows have no base."
+   },
+   "estimate": {
+    "netMin": 55
+   },
+   "jobs": [
+    {
+     "what": "lab flights remake + Igor flights stage (CPU, under the lock)",
+     "estMin": 55
+    }
+   ]
+  },
+  {
+   "id": "A21",
+   "kind": "labeling",
+   "title": "Label the rest of the small level (s034, s045 next)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I6"
+   ],
+   "owner": "user",
+   "journal": [],
+   "status": "running",
+   "expected": {
+    "outcome": "Enough hits and points for real counts (about 40 fragments).",
+    "impact": 7,
+    "text": "The base of every M2 measure; now most results are 'inside the noise'."
+   },
+   "estimate": {
+    "fromLabels": "small"
+   }
+  },
+  {
+   "id": "A22",
+   "kind": "labeling",
+   "title": "Label fixes: s006 row 8 delete; s008 rows 23 to 27 delete, then M 'let'",
+   "milestone": "M2",
+   "issues": [
+    "M2-I6"
+   ],
+   "owner": "user",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "Two fragments become clean truth.",
+    "impact": 1,
+    "text": "Small."
+   },
+   "estimate": {
+    "netMin": 5
+   }
+  },
+  {
+   "id": "A23",
+   "kind": "labeling",
+   "title": "Faults step (27 rows before a marked point)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I2"
+   ],
+   "owner": "user",
+   "journal": [
+    "E158"
+   ],
+   "status": "queued",
+   "expected": {
+    "outcome": "The true precision of the fault clips and the hidden real points.",
+    "impact": 4,
+    "text": "Turns 27 unknown rows into truth."
+   },
+   "estimate": {
+    "netMin": 8
+   }
+  },
+  {
+   "id": "A24",
+   "kind": "labeling",
+   "title": "Sides step (who is near, 5 matches)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "user",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "A person-made reference for the near player (G9).",
+    "impact": 2,
+    "text": "Identity reference."
+   },
+   "estimate": {
+    "netMin": 12
+   }
+  },
+  {
+   "id": "A25",
+   "kind": "research",
+   "title": "Fault serves with no serve event: cause table (image first)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I3",
+    "M2-I1",
+    "M2-I2"
+   ],
+   "owner": "S4",
+   "journal": [],
+   "status": "planned",
+   "expected": {
+    "outcome": "Why 7 of 24 labeled fault serves have no serve event, as a cause table with image facts; then fix proposals.",
+    "impact": 5,
+    "text": "Serve event recall limits double faults and fault clips (E190)."
+   },
+   "estimate": {
+    "netMin": 150
+   }
+  },
+  {
+   "id": "A26",
+   "kind": "research",
+   "title": "Court stage time on Misha (2835 s against 267 s)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I7"
+   ],
+   "owner": "S5",
+   "journal": [],
+   "status": "planned",
+   "expected": {
+    "outcome": "The cause of the slow court stage, from the stored logs, and a fix proposal.",
+    "impact": 3,
+    "text": "Up to 40 min less for some user videos."
+   },
+   "estimate": {
+    "netMin": 90
+   }
+  },
+  {
+   "id": "A27",
+   "kind": "research",
+   "title": "m1030 rally miss table",
+   "milestone": "M2",
+   "issues": [
+    "M2-I8"
+   ],
+   "owner": "S3",
+   "journal": [],
+   "status": "planned",
+   "expected": {
+    "outcome": "The missed and false rows of m1030 by cause, on the new reference.",
+    "impact": 3,
+    "text": "The weakest match; a cause can be common to user videos."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "after": [
+    "A20"
+   ]
+  },
+  {
+   "id": "A28",
+   "kind": "research",
+   "title": "Shot count errors inside the rows: cause table on the new labels",
+   "milestone": "M2",
+   "issues": [
+    "M2-I5"
+   ],
+   "owner": "S4",
+   "journal": [],
+   "status": "planned",
+   "expected": {
+    "outcome": "Causes of the wrong shot counts with more labeled points.",
+    "impact": 3,
+    "text": "Shot count right is a main event measure."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "after": [
+    "A21"
+   ]
+  },
+  {
+   "id": "A29",
+   "kind": "run",
+   "title": "Program end batch: Igor and Misha full runs on the final head",
+   "milestone": "M3",
+   "issues": [],
+   "owner": "S1",
+   "journal": [],
+   "status": "planned",
+   "waitingFor": "the user's OK",
+   "expected": {
+    "outcome": "The final held-out numbers against M1.",
+    "impact": 9,
+    "text": "Decides M3."
+   },
+   "estimate": {
+    "netMin": 300
+   },
+   "jobs": [
+    {
+     "what": "Misha m1113 all stages",
+     "estMin": 270
+    },
+    {
+     "what": "Igor m1116 changed stages",
+     "estMin": 40
+    }
+   ],
+   "notBefore": "2026-12-06 09:00"
+  },
+  {
+   "id": "A30",
+   "kind": "labeling",
+   "title": "Label the medium level (4 fragments, 69 points)",
+   "milestone": "M3",
+   "issues": [
+    "M3-I1"
+   ],
+   "owner": "user",
+   "journal": [],
+   "status": "planned",
+   "expected": {
+    "outcome": "The check of heavy-stage changes on longer play.",
+    "impact": 6,
+    "text": "Needed for M3 and M4."
+   },
+   "estimate": {
+    "fromLabels": "medium"
+   },
+   "after": [
+    "A21"
+   ]
+  }
+ ],
+ "links": [
+  {
+   "title": "Gap program (plan, rules, decisions)",
+   "doc": "gap-program.md"
+  },
+  {
+   "title": "Journal (all experiments)",
+   "doc": "README.md"
+  },
+  {
+   "title": "Chain inventory (the audit)",
+   "doc": "chain-inventory.md"
+  },
+  {
+   "title": "How to label the events",
+   "doc": "event-labels-howto.md"
+  },
+  {
+   "title": "GPU lock log",
+   "path": "/log"
+  },
+  {
+   "title": "This plan (raw JSON)",
+   "path": "/api/plan"
+  }
+ ]
+}

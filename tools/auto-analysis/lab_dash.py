@@ -1,0 +1,455 @@
+"""Lab dashboard (the user, 2026-11-27): a local page that shows the lab state with no chat.
+
+    python tools/auto-analysis/lab_dash.py [--port 8793]
+
+Then open http://localhost:8793/ . The server listens on 127.0.0.1 only.
+
+Sources (read at each request, so the page is live):
+- the GPU lock: heavy.lock, the queue tickets, heavy.log, pause.json (gpu_lock.py);
+- the plan: docs/auto-analysis/lab-plan.json (milestones, issues, actions; the manager keeps it current);
+- the labels: the fragment manifest of the label page and the label files.
+
+Actions (POST, with the header X-Lab-Dash: 1, so another web page cannot send them):
+/api/pause {"mode": "queue" | "all"} and /api/unpause, through gpu_lock.pause / gpu_lock.unpause.
+Standard library only.
+"""
+import argparse
+import glob
+import json
+import os
+import re
+import statistics
+import sys
+import time
+from datetime import datetime, timedelta
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import gpu_lock  # noqa: E402
+
+REPO = os.path.dirname(os.path.dirname(HERE))
+DOCS = os.path.join(REPO, "docs", "auto-analysis")
+PLAN = os.path.join(DOCS, "lab-plan.json")
+PAGE = os.path.join(HERE, "lab_dash.html")
+LABEL_PAGE = r"D:\bananashot-lab\ws\s4\events\label_events.html"
+MANIFEST = r"D:\bananashot-lab\ws\s4\events\manifest.js"
+FAULTS = r"D:\bananashot-lab\ws\s4\events\faults.js"
+SIDES = r"D:\bananashot-lab\ws\s4\events\sides.js"
+LABELS = r"D:\bananashot-lab\ws\s1\cases\labels"
+MEDIUM_MIN = 75          # user time for one medium fragment (decision 2026-11-26: about 5 h for the 4)
+FMT = "%Y-%m-%d %H:%M:%S"
+LOG_RE = re.compile(r"^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) (START|END  |END|KILLED by pause|PAUSE|UNPAUSE|STALE removed)\s*(.*)$")
+
+
+def now():
+    return datetime.now()
+
+
+def iso(t):
+    return t.strftime(FMT) if t else None
+
+
+def js_object(path, name):
+    """The JSON value of `window.<name> = {...};` in a page data file."""
+    with open(path, encoding="utf-8") as f:
+        s = f.read()
+    s = s[s.index("=", s.index(f"window.{name}")) + 1:].strip()
+    return json.loads(s.rstrip().rstrip(";"))
+
+
+# ---------------------------------------------------------------- GPU lock
+
+def log_jobs(limit=4000):
+    """Finished jobs of heavy.log: [{who, what, start, end, sec, rc, killed}], oldest first. The time is START to
+    END of the same who and what (the 'Ns' of an END line includes the wait, so it is not used)."""
+    try:
+        with open(gpu_lock.LOG, encoding="utf-8") as f:
+            lines = f.readlines()[-limit:]
+    except OSError:
+        return [], []
+    open_jobs, done, events = {}, [], []
+    for line in lines:
+        m = LOG_RE.match(line.rstrip("\n"))
+        if not m:
+            continue
+        t = datetime.strptime(m.group(1), FMT)
+        kind, rest = m.group(2).strip(), m.group(3)
+        if kind == "START":
+            open_jobs[rest] = t
+        elif kind == "END":
+            mm = re.match(r"(.*) rc=(-?\d+) \d+s$", rest)
+            key = mm.group(1) if mm else rest
+            t0 = open_jobs.pop(key, None)
+            done.append({"job": key, "start": t0, "end": t, "sec": (t - t0).total_seconds() if t0 else None,
+                         "rc": int(mm.group(2)) if mm else None, "killed": False})
+        elif kind == "KILLED by pause":
+            key = re.sub(r" \(pid \d+\)$", "", rest)
+            t0 = open_jobs.pop(key, None)
+            done.append({"job": key, "start": t0, "end": t, "sec": (t - t0).total_seconds() if t0 else None,
+                         "rc": None, "killed": True})
+        else:
+            events.append({"t": iso(t), "kind": kind, "text": rest})
+    for d in done:
+        who, _, what = d.pop("job").partition(": ")
+        d["who"], d["what"] = who, what
+    return done, events
+
+
+def text_estimate(what):
+    """Minutes from the job text: 'about 25 min', 'about 2 to 5 min', 'about 4.5 h', 'under 1 min'."""
+    s = what.lower()
+    m = re.search(r"(?:about|under|max)\s+(\d+(?:\.\d+)?)(?:\s*(?:to|-)\s*(\d+(?:\.\d+)?))?\s*(min|h)\b", s)
+    if not m:
+        return None
+    a = float(m.group(1))
+    b = float(m.group(2)) if m.group(2) else a
+    v = (a + b) / 2
+    return v * 60 if m.group(3) == "h" else v
+
+
+def history_estimate(who, what, done):
+    """Median minutes of the earlier runs of the same job text (rc 0, not killed)."""
+    xs = [d["sec"] / 60 for d in done if d["what"] == what and d["sec"] and d["rc"] == 0 and not d["killed"]]
+    return statistics.median(xs) if xs else None
+
+
+def estimate(who, what, done):
+    h = history_estimate(who, what, done)
+    if h is not None:
+        return h, "history"
+    t = text_estimate(what)
+    if t is not None:
+        return t, "job text"
+    return None, None
+
+
+def journal_ids(text):
+    return sorted(set(re.findall(r"\bE\d{2,3}[a-z]?\b", text)))
+
+
+def lock_state(plan):
+    done, events = log_jobs()
+    action_of = {}
+    for a in plan.get("actions", []):
+        for j in a.get("journal", []):
+            action_of.setdefault(j, a["id"])
+
+    def link(what):
+        ids = journal_ids(what)
+        acts = sorted({action_of[i] for i in ids if i in action_of})
+        return ids, acts
+
+    t = now()
+    pz = gpu_lock.read_pause()
+    live = []
+    for n in gpu_lock.pause_tickets():
+        if gpu_lock.alive(int(n[len(gpu_lock.PAUSE_PREFIX):].split(".")[0])):
+            try:
+                with open(os.path.join(gpu_lock.QUEUE, n), encoding="utf-8") as f:
+                    live.append(json.load(f))
+            except (OSError, ValueError):
+                live.append({})
+    pause_live = bool(live)
+    if pz is None and live:            # a pause ticket made without pause.json (by hand): a queue pause
+        since = datetime.fromtimestamp(os.path.getmtime(os.path.join(gpu_lock.QUEUE, gpu_lock.pause_tickets()[0])))
+        pz = {"mode": "queue", "since": iso(since), "by": live[0].get("who", "?"), "text": live[0].get("what"),
+              "external": True}
+    if pz and not pause_live and not pz.get("external"):          # the hold process died (a reboot): make the pause real again
+        try:
+            gpu_lock.pause(pz.get("mode", "queue"), pz.get("by", "user"))
+            pause_live = True
+        except Exception as e:   # noqa: BLE001 (show the problem on the page)
+            pz["error"] = str(e)
+
+    holder = None
+    cur = gpu_lock.read_lock()
+    cursor = t
+    if cur and gpu_lock.alive(int(cur.get("pid", 0))):
+        start = datetime.strptime(cur["start"], FMT)
+        est, src = estimate(cur["who"], cur["what"], done)
+        el = (t - start).total_seconds() / 60
+        end = start + timedelta(minutes=est) if est else None
+        ids, acts = link(cur["what"])
+        holder = {"who": cur["who"], "what": cur["what"], "pid": cur.get("pid"), "start": cur["start"],
+                  "elapsedMin": round(el, 1), "estMin": round(est, 1) if est else None, "estFrom": src,
+                  "progress": min(el / est, 0.99) if est else None, "over": bool(est and el > est),
+                  "eta": iso(end), "journal": ids, "actions": acts}
+        cursor = max(end, t) if end else None
+
+    queue = []
+    if os.path.isdir(gpu_lock.QUEUE):
+        for name in sorted(os.listdir(gpu_lock.QUEUE)):
+            if name.startswith(gpu_lock.PAUSE_PREFIX):
+                continue
+            try:
+                pid = int(name.split("_")[1].split(".")[0])
+            except (IndexError, ValueError):
+                continue
+            if not gpu_lock.alive(pid):
+                continue
+            try:
+                with open(os.path.join(gpu_lock.QUEUE, name), encoding="utf-8") as f:
+                    tk = json.load(f)
+            except (OSError, ValueError):
+                continue
+            est, src = estimate(tk.get("who", ""), tk.get("what", ""), done)
+            since = datetime.fromtimestamp(float(name.split("_")[0]))
+            ids, acts = link(tk.get("what", ""))
+            row = {"who": tk.get("who"), "what": tk.get("what"), "waitingSince": iso(since),
+                   "estMin": round(est, 1) if est else None, "estFrom": src, "journal": ids, "actions": acts,
+                   "expStart": None, "expEnd": None}
+            if pz:
+                row["blocked"] = "paused"
+            elif cursor is not None:
+                row["expStart"] = iso(cursor)
+                cursor = cursor + timedelta(minutes=est) if est else None
+                row["expEnd"] = iso(cursor)
+            queue.append(row)
+
+    recent = []
+    for d in reversed(done[-40:]):
+        ids, acts = link(d["what"])
+        recent.append({"who": d["who"], "what": d["what"], "start": iso(d["start"]), "end": iso(d["end"]),
+                       "min": round(d["sec"] / 60, 1) if d["sec"] is not None else None, "rc": d["rc"],
+                       "killed": d["killed"], "journal": ids, "actions": acts})
+    killed_last = None
+    if pz:
+        ks = [r for r in recent if r["killed"] and r["end"] and r["end"] >= pz.get("since", "")]
+        killed_last = ks[0] if ks else None
+    return {"pause": pz, "pauseLive": pause_live, "holder": holder, "queue": queue, "recent": recent,
+            "events": events[-10:], "killedByPause": killed_last}
+
+
+# ---------------------------------------------------------------- labels
+
+def label_state():
+    out = {"page": LABEL_PAGE, "folder": LABELS}
+    try:
+        frags = js_object(MANIFEST, "CASES")["fragments"]
+    except (OSError, ValueError) as e:
+        out["error"] = f"manifest: {e}"
+        return out
+    by_level = {}
+    secs, rows = [], []
+    for fr in frags:
+        lvl = fr.get("level", "?")
+        c = by_level.setdefault(lvl, {"total": 0, "done": 0, "skipped": 0, "stale": 0, "mapped": 0, "pending": []})
+        c["total"] += 1
+        p = os.path.join(LABELS, f"{fr['id']}.events.json")
+        state = "pending"
+        if os.path.isfile(p):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    j = json.load(f)
+                if (j.get("manifest") or {}).get("row") != fr.get("rowHash"):
+                    state = "stale"
+                elif j.get("skip"):
+                    state = "skipped"
+                else:
+                    state = "done"
+                    if j.get("labelSeconds") and lvl == "small":
+                        secs.append(float(j["labelSeconds"]))
+                rows.append({"id": fr["id"], "state": state, "events": len(j.get("events") or []),
+                             "sec": j.get("labelSeconds"), "saved": j.get("savedAt")})
+            except (OSError, ValueError):
+                state = "pending"
+        if state == "done":
+            c["done"] += 1
+        elif state == "skipped":
+            c["skipped"] += 1
+        else:
+            if state == "stale":
+                c["stale"] += 1
+            if os.path.isfile(os.path.join(LABELS, f"{fr['id']}.mapped.json")):
+                c["mapped"] += 1
+            c["pending"].append(fr["id"])
+    med = statistics.median(secs) / 60 if secs else None
+    left = 0.0
+    for lvl, c in by_level.items():
+        c["leftMin"] = round(len(c["pending"]) * (MEDIUM_MIN if lvl == "medium" else (med or 5)))
+        left += c["leftMin"]
+    out.update({"levels": by_level, "minPerSmall": round(med, 1) if med else None, "minPerMedium": MEDIUM_MIN,
+                "leftMin": round(left), "labeledMin": round(sum(secs) / 60), "recent": sorted(
+                    rows, key=lambda r: r.get("saved") or "", reverse=True)[:6]})
+    # the Faults step and the Sides step
+    try:
+        fm = js_object(FAULTS, "FAULTS")["matches"]
+        total = sum(len(m["rows"]) for m in fm)
+        answered = 0
+        for m in fm:
+            fp = os.path.join(LABELS, f"faults_{m['match']}.json")
+            if os.path.isfile(fp):
+                with open(fp, encoding="utf-8") as f:
+                    a = json.load(f)
+                hashes = {r["rowHash"] for r in m["rows"]}
+                answered += sum(1 for x in a.get("answers", []) if x.get("rowHash") in hashes)
+        out["faults"] = {"rows": total, "answered": answered, "estMin": 8}
+    except (OSError, ValueError, KeyError) as e:
+        out["faults"] = {"error": str(e)}
+    try:
+        sm = js_object(SIDES, "SIDES")["matches"]
+        done_m = sum(1 for m in sm if os.path.isfile(os.path.join(LABELS, f"sides_{m['match']}.json")))
+        out["sides"] = {"matches": len(sm), "done": done_m, "estMin": 12}
+    except (OSError, ValueError, KeyError) as e:
+        out["sides"] = {"error": str(e)}
+    return out
+
+
+# ---------------------------------------------------------------- plan and workers
+
+def load_plan():
+    try:
+        with open(PLAN, encoding="utf-8") as f:
+            plan = json.load(f)
+        plan["_mtime"] = iso(datetime.fromtimestamp(os.path.getmtime(PLAN)))
+        return plan
+    except (OSError, ValueError) as e:
+        return {"error": f"lab-plan.json: {e}", "milestones": [], "actions": [], "workers": []}
+
+
+def parse_time(s):
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt)
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
+def workers_state(plan, lock, labels):
+    """For each worker: its open actions in order, with the net time and a finish estimate (the actions one after
+    the other from now; 'after' waits for the finish of another action, 'notBefore' for a date). A GPU job can also
+    wait in the lock queue: the estimate does not include that wait."""
+    out = []
+    eta_of = {}
+    for _ in range(2):                 # pass 2 uses the finish times of the other workers ('after')
+        out = workers_pass(plan, lock, labels, eta_of)
+    return out
+
+
+def workers_pass(plan, lock, labels, eta_of):
+    t = now()
+    acts = plan.get("actions", [])
+    out = []
+    for w in plan.get("workers", []):
+        mine = [a for a in acts if a.get("owner") == w["id"] and a.get("status") in
+                ("running", "queued", "waiting", "planned")]
+        order = {"running": 0, "waiting": 1, "queued": 2, "planned": 3}
+        mine.sort(key=lambda a: order[a["status"]])
+        cursor, net_total, rows = t, 0.0, []
+        for a in mine:
+            est = (a.get("estimate") or {}).get("netMin")
+            lvl = (a.get("estimate") or {}).get("fromLabels")
+            if lvl:
+                est = ((labels.get("levels") or {}).get(lvl if isinstance(lvl, str) else "small") or {}).get("leftMin", est)
+            begin = cursor
+            nb = parse_time(a.get("notBefore"))
+            if nb and nb > begin:
+                begin = nb
+            for dep in a.get("after", []):
+                d = eta_of.get(dep)
+                if d and d > begin:
+                    begin = d
+            if a["status"] == "running" and a.get("started") and est:
+                end = max(parse_time(a["started"]) + timedelta(minutes=est), t)
+            else:
+                end = begin + timedelta(minutes=est) if est else None
+            if end:
+                eta_of[a["id"]] = end
+            if est:
+                net_total += est
+            rows.append({"id": a["id"], "title": a["title"], "kind": a["kind"], "status": a["status"],
+                         "netMin": est, "eta": iso(end), "waitingFor": a.get("waitingFor"),
+                         "jobs": a.get("jobs", [])})
+            if end:
+                cursor = end
+        gpu = [q for q in lock["queue"] if q["who"] and q["who"].lower() == w["id"].lower()]
+        if lock["holder"] and lock["holder"]["who"].lower() == w["id"].lower():
+            gpu.insert(0, dict(lock["holder"], running=True))
+        out.append({"id": w["id"], "name": w["name"], "focus": w.get("focus"), "actions": rows,
+                    "netMin": round(net_total), "gpu": gpu})
+    return out
+
+
+def state():
+    plan = load_plan()
+    lock = lock_state(plan)
+    labels = label_state()
+    return {"now": iso(now()), "lock": lock, "labels": labels, "plan": plan,
+            "workers": workers_state(plan, lock, labels)}
+
+
+# ---------------------------------------------------------------- server
+
+DOC_OK = re.compile(r"^[A-Za-z0-9_.-]+\.(md|json)$")
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _send(self, code, body, ctype="application/json; charset=utf-8"):
+        data = body if isinstance(body, bytes) else body.encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def log_message(self, fmt, *args):   # quiet
+        pass
+
+    def do_GET(self):
+        path = self.path.split("?")[0]
+        try:
+            if path == "/":
+                with open(PAGE, "rb") as f:
+                    return self._send(200, f.read(), "text/html; charset=utf-8")
+            if path == "/api/state":
+                return self._send(200, json.dumps(state(), default=str))
+            if path == "/api/plan":
+                with open(PLAN, "rb") as f:
+                    return self._send(200, f.read())
+            if path == "/log":
+                with open(gpu_lock.LOG, encoding="utf-8") as f:
+                    return self._send(200, "".join(f.readlines()[-300:]), "text/plain; charset=utf-8")
+            if path.startswith("/doc/"):
+                name = path[5:]
+                if DOC_OK.match(name) and os.path.isfile(os.path.join(DOCS, name)):
+                    with open(os.path.join(DOCS, name), "rb") as f:
+                        return self._send(200, f.read(), "text/plain; charset=utf-8")
+            return self._send(404, "not found", "text/plain")
+        except Exception as e:  # noqa: BLE001 (the page shows it)
+            return self._send(500, json.dumps({"error": f"{type(e).__name__}: {e}"}))
+
+    def do_POST(self):
+        if self.headers.get("X-Lab-Dash") != "1":
+            return self._send(403, json.dumps({"error": "missing X-Lab-Dash header"}))
+        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            body = json.loads(self.rfile.read(n) or b"{}")
+        except ValueError:
+            body = {}
+        try:
+            if self.path == "/api/pause":
+                mode = body.get("mode")
+                if mode not in ("queue", "all"):
+                    return self._send(400, json.dumps({"error": "mode must be queue or all"}))
+                return self._send(200, json.dumps({"result": gpu_lock.pause(mode, "user (dashboard)")}))
+            if self.path == "/api/unpause":
+                return self._send(200, json.dumps({"result": gpu_lock.unpause("user (dashboard)")}))
+            return self._send(404, json.dumps({"error": "not found"}))
+        except Exception as e:  # noqa: BLE001
+            return self._send(500, json.dumps({"error": f"{type(e).__name__}: {e}"}))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--port", type=int, default=8793)
+    a = ap.parse_args()
+    srv = ThreadingHTTPServer(("127.0.0.1", a.port), Handler)
+    print(f"lab dashboard: http://localhost:{a.port}/", flush=True)
+    srv.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

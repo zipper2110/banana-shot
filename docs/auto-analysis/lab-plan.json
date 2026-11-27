@@ -1299,6 +1299,30 @@
    }
   },
   {
+   "id": "A49",
+   "kind": "research",
+   "title": "Measured bounce place error by the distance from the camera (labeled bounces against chain bounces)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I9"
+   ],
+   "owner": "S4",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "A measured place error (x and y, by court depth) that a serve box rule and the depth gates can use.",
+    "impact": 2,
+    "text": "E193, E194 and E174: the bounce depth on the far half is the weak fact; the serve box rule stays off until the place error is measured (M2-I9)."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S4): all seen labeled bounces of the 24 E107 fragments that match a chain bounce on the head, with the error in x and y (m) by court depth band (for example near half, far half, far baseline band), n, median and 90th percentile of each band, and 0 bounces left out without a reason.",
+    "A table of the in/out margin that each band needs (from the 90th percentile), and the count of labeled serve bounces that a serve box rule with these margins would judge right and wrong."
+   ]
+  },
+  {
    "id": "A29",
    "kind": "run",
    "title": "Program end batch: Igor and Misha full runs on the final head",

@@ -56,6 +56,12 @@ FAULT_PLAY_ENDS = ("out", "net")
 # court window at the rally start: ball_events.court_H; one court.json H is off when the camera moves) gives it.
 # The rule of tennis: the server serves from the other side after a point, from the same side after a fault.
 POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
+# A55 (E216, S4 E223): the side of a rally for FAULT_SIDE. CHAIN_SERVE_POSE_SIDE=1: the server end of the first serve
+# event (not a toss alone) of the rally start window, else serverNear; the x side from the court x of the feet of that
+# player at the serve time (serve_pose_side), then from the serve flight x. With no side from these, the old rule
+# (serve_side, then poseSide). E223: the pose feet x gave the right side for 48 of 48 labeled serves; the side of now
+# is known for 35 and right for 32. Default "0" (off); "1" gives the new rule.
+SERVE_POSE_SIDE = os.environ.get("CHAIN_SERVE_POSE_SIDE", "0") == "1"
 # item 10: a rally with no shot in its chain and no server end from the pose has no evidence of a serve: it is not a point.
 NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
 # A48 (E212, E210 cause D: ball play between points). CHAIN_PLAY_DROP=1: a rally with no fact of a point is removed:
@@ -333,6 +339,9 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                     "bx": None if np.isnan(q["bx"]) else q["bx"], "by": None if np.isnan(q["by"]) else q["by"], "tRel": q["t_rel"]}
         rows.append({"start": a, "end": b, "prob": prob, "pBall": pw, "serverNear": srv, "serveSpeed": speed, "fault": fault, "lastShot": last,
                      "shots": int(sum(sc.usable(f, p["min_speed"]) and sc.pos_ok(f) and a <= f["t0"] <= b for f in fls)), "poseSide": pose_side})
+        if SERVE_POSE_SIDE:                          # A55
+            has_court = os.path.exists(os.path.join(out, "court.json"))
+            rows[-1]["sideServe"] = serve_pose_side(mid, pose if has_court else None, serves, a, srv)
         if ch is not None:
             rows[-1]["chainCase"], rows[-1]["chainNearWins"] = ch["case"], ch["nearWins"]
             rows[-1]["chain"] = chain_row
@@ -449,6 +458,47 @@ def serve_side(serves, a):
     return ev[0][1], ev[0][3]["p0"][0] > 0
 
 
+def pose_feet_x(mid, pose, t, near):
+    """A55: the court x (m) of the feet of the near (or far) player (server_end.near_far, the bottom center of the
+    box, ball_events.court_H at t) in the seconds int(t) - 1 and int(t), the median; None with no pose there."""
+    H = court_H(mid, t)
+    xs = []
+    for s in (int(t) - 1, int(t)):
+        if not 0 <= s < len(pose):
+            continue
+        r, fr = near_far(pose[s])
+        row = r if near else fr
+        if row is None:
+            continue
+        xs.append(float(cv2.perspectiveTransform(np.array([[[(row[1] + row[3]) / 2, row[4]]]], np.float64), H)[0, 0, 0]))
+    return float(np.median(xs)) if xs else None
+
+
+def serve_pose_side(mid, pose, serves, a, server_near):
+    """A55 (see SERVE_POSE_SIDE): (server near?, x side > 0?) of a rally that starts at a, or None. The server end: the
+    first serve event (not a toss alone) from a - 1 to a + 2.5 s, else server_near. The x side: the pose feet x of
+    that player at the time of that serve event (else at a), then the x of the serve flight start; known when
+    |x| >= SIDE_X. pose: the poses of each second, or None (no court H)."""
+    ev = [e for e in serves if a - 1.0 <= e[0] <= a + 2.5 and e[2] != "toss"]
+    near = bool(ev[0][1]) if ev else server_near
+    if near is None:
+        return None
+    x = None if pose is None else pose_feet_x(mid, pose, float(ev[0][0]) if ev else a, near)
+    if x is not None and abs(x) >= SIDE_X:
+        return near, x > 0
+    if ev and abs(ev[0][3]["p0"][0]) >= SIDE_X:
+        return near, ev[0][3]["p0"][0] > 0
+    return None
+
+
+def row_side(r, serves):
+    """The side of rally r for FAULT_SIDE: with SERVE_POSE_SIDE its "sideServe" (A55) when it is known, else the old
+    rule: the serve flight (serve_side), then the pose side at the rally start (POSE_SIDE)."""
+    if SERVE_POSE_SIDE and r.get("sideServe") is not None:
+        return tuple(r["sideServe"])
+    return serve_side(serves, r["start"]) or (r.get("poseSide") if POSE_SIDE else None)
+
+
 def second_serve_segs(rows, serves, flights, prob, hi=0.5):
     """A38 (see SECOND_SERVE): the new rally segments (start, end, GRU max) of the second-serve points after a short
     rally that the GRU did not find. rows: the rallies with their chain; serves: serve_events; prob: the GRU of each
@@ -549,8 +599,7 @@ def fault_rallies(rows, serves):
         nxt = rows[i + 1] if i + 1 < len(rows) else None
         if (nxt is not None and r.get("chain") is not None and fault_shots_ok(r["chain"]["shots"])
                 and nxt["start"] - r["end"] <= FAULT_NEXT):
-            s1 = serve_side(serves, r["start"]) or (r.get("poseSide") if POSE_SIDE else None)
-            s2 = serve_side(serves, nxt["start"]) or (nxt.get("poseSide") if POSE_SIDE else None)
+            s1, s2 = row_side(r, serves), row_side(nxt, serves)
             if s1 is not None and s1 == s2:
                 e = [x for x in serves if r["start"] - 1.0 <= x[0] <= r["start"] + 2.5 and x[2] != "toss"]
                 if nxt.get("fault") is None and e:

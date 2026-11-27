@@ -21,9 +21,9 @@ class ServeV40(unittest.TestCase):
     def tearDown(self):
         sb.SERVE_V40 = self.old
 
-    def test_the_default_is_off(self):
+    def test_the_default_is_on(self):
         if "SERVE_V40" not in os.environ:
-            self.assertFalse(sb.SERVE_V40)
+            self.assertTrue(sb.SERVE_V40)
 
     def test_off_a_44_kmh_serve_is_not_a_serve(self):
         sb.SERVE_V40 = False

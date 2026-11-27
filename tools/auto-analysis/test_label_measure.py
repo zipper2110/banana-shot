@@ -39,6 +39,31 @@ class LabelMeasure(unittest.TestCase):
         c = lm.shot_count(pts)                       # the chain shots (4), not the "shots" field (9), against 3 contacts
         self.assertEqual((c["n"], c["ok"], c["off1"], c["diff"]), (1, 0, 1, [1]))
 
+    def test_shot_count_late_shots_do_not_count(self):
+        late = dict(ROW, chain={"shots": [{}, {}, {}, {"late": True}]})    # A41: the 4th shot is after the time cut
+        pts = [{"point": PT, "row": late, "events": EV, "fault": fmap(EV)}]
+        self.assertEqual(lm.shot_count(pts)["diff"], [0])
+        old = lm.SC_LATE
+        try:
+            lm.SC_LATE = False
+            self.assertEqual(lm.shot_count(pts)["diff"], [1])
+        finally:
+            lm.SC_LATE = old
+
+    def test_shot_count_point_after_the_window_end_is_not_comparable(self):
+        pts = [{"point": PT, "row": ROW, "events": EV, "fault": fmap(EV)}]
+        c = lm.shot_count(pts, (95.0, 111.5))           # A41: the point ends at 112, after the window end 111.5
+        self.assertEqual((c["n"], c["notComparable"], c["diff"]), (0, 1, []))
+        c = lm.shot_count(pts, (95.0, 112.0))           # the point ends at the window end: compared
+        self.assertEqual((c["n"], c["notComparable"], c["diff"]), (1, 0, [1]))
+        self.assertEqual(lm.totals([{"shotCount": lm.shot_count(pts, (95.0, 111.5))}])["shotCount"]["notComparable"], 1)
+        old = lm.SC_WINDOW
+        try:
+            lm.SC_WINDOW = False
+            self.assertEqual(lm.shot_count(pts, (95.0, 111.5))["n"], 1)
+        finally:
+            lm.SC_WINDOW = old
+
     def test_chain_in(self):
         self.assertTrue(lm.chain_in([2.0, 9.0], "near"))
         self.assertFalse(lm.chain_in([4.5, 9.0], "near"))

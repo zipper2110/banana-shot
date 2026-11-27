@@ -73,8 +73,8 @@ SS_SHOTS, SS_NEXT, SS_QUIET, SS_BEFORE, SS_AFTER, SS_GAP = 1, 13.0, 3, 1.5, 1.0,
 # or more court end changes (the sign of the court y of the flight start). The new rally: SS_BEFORE s before t to
 # SS_AFTER s after the last of these flights. Filter (E211, from the facts of the 13 new rows of E210: 7 fault rows,
 # 6 points): the new rally must end SA_PAUSE (= SS_QUIET) s or more before the next rally starts. The 7 fault rows all
-# ran on into the next rally (1.7 s or less); a point ends with a pause. Default "0" (off).
-SERVE_ANCHOR = os.environ.get("CHAIN_SERVE_ANCHOR", "0") == "1"
+# ran on into the next rally (1.7 s or less); a point ends with a pause. Default "1" (on: manager decision after E211); "0" gives the old way.
+SERVE_ANCHOR = os.environ.get("CHAIN_SERVE_ANCHOR", "1") != "0"
 SA_BEFORE, SA_AFTER, SA_WIN, SA_FLOOR, SA_FLIGHTS, SA_CHANGES, SA_PAUSE = 5.0, 8.0, 6, 0.3, 3, 1, float(SS_QUIET)
 # item 12 (user decision): the winner of each rally comes from its own evidence; the score decoder does not change a
 # winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.

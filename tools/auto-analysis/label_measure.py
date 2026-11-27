@@ -8,7 +8,7 @@ the pairs, the point windows, the fault map (label_faults.infer_faults over the 
            True / False / "unsure"}}], one for each matched point (case_history: the window from max(s0 - 25 s, the end
            of the marked point before) to s1 + 1 s)
   borders(points)                                    row start - serve in play, row start - first serve, row end - last event
-  shot_count(points)                                 the chain shots (len(row["chain"]["shots"])) - the user's contacts
+  shot_count(points, window)                         the chain shots (len(row["chain"]["shots"]), not "late") - the user's contacts
   fault_clips(crow, ev, fault, hidden)               the fault clips of the chain rows against the fault map
   event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn)   time errors, bounce place and in/out
   totals(frs)                                        {name: numbers} over the fragments (raw lists in, JSON numbers out)
@@ -30,6 +30,11 @@ import label_faults as lf
 
 TOL_HIT, TOL_BOUNCE, TOL_NET = se.TOL_HIT, se.TOL_BOUNCE, se.TOL_NET
 END_PRE = 1.0                   # s, the events of the point end: from the point start - 1 s (case_history last_end)
+# A41 (manager, after E176): two rules of the shot count. SC_LATE: a chain shot with "late" (shot_chain: after the time
+# cut, ball handling after the point, not used) does not count. SC_WINDOW: a point that goes on after the end of the label
+# window (the clip end) is "not comparable": the user could not label its last contacts. It is left out of n.
+SC_LATE = True
+SC_WINDOW = True
 
 
 def _r(x):
@@ -72,17 +77,22 @@ def borders(points):
     return out
 
 
-def shot_count(points):
+def shot_count(points, window=None):
     """The chain shot count of the row (len(row["chain"]["shots"]); manager: not the "shots" field, the good flights)
-    against the user's contacts (serves and shots) from the serve in play to the end of the window. diff = chain - user."""
-    out = {"n": 0, "ok": 0, "off1": 0, "diff": []}
+    against the user's contacts (serves and shots) from the serve in play to the end of the window. diff = chain - user.
+    SC_LATE: the "late" chain shots do not count. window: (a, b) source s, the label window of the fragment (A32); with
+    SC_WINDOW a point whose end (endMs) is after b is not compared ("notComparable", not in n)."""
+    out = {"n": 0, "ok": 0, "off1": 0, "notComparable": 0, "diff": []}
     for pt in points:
         play, _ = _play_serves(pt)
         ch = pt["row"].get("chain")
         if play is None or not isinstance(ch, dict) or ch.get("shots") is None:
             continue
+        if SC_WINDOW and window is not None and pt["point"]["endMs"] / 1000 > window[1]:
+            out["notComparable"] += 1
+            continue
         n = sum(1 for e in pt["events"] if e["kind"] in ("serve", "shot") and e["t"] >= play["t"])
-        d = len(ch["shots"]) - n
+        d = sum(1 for s in ch["shots"] if not (SC_LATE and s.get("late"))) - n
         out["n"] += 1
         out["ok"] += int(d == 0)
         out["off1"] += int(abs(d) == 1)
@@ -215,7 +225,7 @@ def totals(frs):
     """{name: numbers} over the fragments. frs: the fragment dicts of case_history with the keys "borders", "shotCount",
     "faultClips", "errors" (a missing key is skipped). Only JSON numbers (for the entry JSON)."""
     L = {k: [] for k in ("dPlay", "dFirst", "dEnd", "diff", "hitDt", "bounceDt", "netDt", "placeErr")}
-    C = {k: 0 for k in ("n", "ok", "off1", "clips", "right", "doubleFault", "wrong", "unsure", "noServe", "labeledFaults", "found",
+    C = {k: 0 for k in ("n", "ok", "off1", "notComparable", "clips", "right", "doubleFault", "wrong", "unsure", "noServe", "labeledFaults", "found",
                         "hiddenRows", "hiddenWithFault", "inOutN", "inOutOk", "serveBounces", "sideChecked")}
     for f in frs:
         for part in ("borders", "shotCount", "faultClips", "errors"):
@@ -232,5 +242,5 @@ def totals(frs):
             "bouncePlaceErr": _st(L["placeErr"], signed=False),
             "inOut": {"n": C["inOutN"], "ok": C["inOutOk"], "serveBounces": C["serveBounces"],
                       "sideCheck": C["sideChecked"], "noSideCheck": C["serveBounces"] - C["sideChecked"]},
-            "shotCount": {"n": C["n"], "ok": C["ok"], "off1": C["off1"],
+            "shotCount": {"n": C["n"], "ok": C["ok"], "off1": C["off1"], "notComparable": C["notComparable"],
                           "meanDiff": round(float(np.mean(L["diff"])), 3) if L["diff"] else None}}

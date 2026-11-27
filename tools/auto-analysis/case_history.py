@@ -199,7 +199,7 @@ def fragment(row, L, data, rows, hidden=()):
         sv["detail"].append(d)
     out["serves"] = sv
     out["borders"] = lm.borders(points)
-    out["shotCount"] = lm.shot_count(points)
+    out["shotCount"] = lm.shot_count(points, (a, b))     # A41: the label window (a point after its end: not comparable)
     out["faultClips"] = lm.fault_clips(crow, ev, fault, [r for r in hidden if r["end"] > a and r["start"] < b], (a, b))
     out["errors"] = lm.event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn)
     gaps = dead_gaps(points_all(row, pts, ev), ev)

@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 23:53",
+ "updated": "2026-11-27 23:54",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1081,6 +1081,30 @@
     "impact": 2,
     "outcome": "E177 (a2e06fe5): label_measure SC_LATE and SC_WINDOW with 2 unit tests; case_history passes the label window. On the E176 code: 20/40, late only 25/40, window only 19/36, both 24/36; the other 3 label measures are the same. All 3 checks pass."
    }
+  },
+  {
+   "id": "A42",
+   "kind": "experiment",
+   "title": "Rally filter: a wrong far toss fit must not count as a return before the serve (E174 cause 2)",
+   "milestone": "M2",
+   "issues": [
+    "M2-I9"
+   ],
+   "owner": "S4",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "Some of the 5 fault serves that the rally filter removes come back (fault clips over 7 of 23), with no new serve events inside the points.",
+    "impact": 2,
+    "text": "E174: is_return takes a far toss fit with an impossible start depth (y -30 to -112 m, 200 to 221 km/h) as a ball from the other side."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "doneWhen": [
+    "A gate in serve_ball.is_return for a return candidate with an impossible fit (the limits from the E174 facts, written in the code comment), behind a switch (default off), in its own small commit, with a unit test.",
+    "A journal row (S4): on the 24 E107 fragments off and on: how many of the 5 cause-2 serves come back, fault clips n of 23, serve events inside the points (58 or less), rows; and a lab bench chain-only run on the cached flights against the head reference of A40 (S3): rally recall, precision and winners by the spread rule. The row says if the gate can go on."
+   ]
   },
   {
    "id": "A29",

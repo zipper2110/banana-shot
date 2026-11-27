@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 22:39",
+ "updated": "2026-11-27 22:43",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -117,32 +117,32 @@
    "result": null,
    "measures": [
     {
-     "name": "Hits found (row chain, 16 fragments)",
-     "value": "77 of 131 (85 with the fault-clip serves), E173",
+     "name": "Hits found (row chain, 24 fragments)",
+     "value": "120 of 190 = 63 % (130 with the fault-clip serves), E107",
      "target": "75 % or more",
      "met": false,
-     "progress": 0.78
+     "progress": 0.84
     },
     {
      "name": "Shot count right",
-     "value": "9 of 17 points, E170",
+     "value": "20 of 40 points = 50 %, E107",
      "target": "70 % or more",
      "met": false,
-     "progress": 0.76
+     "progress": 0.71
     },
     {
      "name": "In/out right",
-     "value": "52 of 54, E170",
+     "value": "114 of 116 = 98 %, E107",
      "target": "95 % or more",
      "met": true,
      "progress": 1.0
     },
     {
      "name": "Fault clips (labeled faults found)",
-     "value": "4 of 11, E170",
+     "value": "6 of 23 = 26 %, E107",
      "target": "70 % or more",
      "met": false,
-     "progress": 0.52
+     "progress": 0.37
     },
     {
      "name": "Lab rallies recall / precision",
@@ -962,8 +962,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S1",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E107"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "A fresh M2 base: the hits, shot count, in/out and fault clip values are from older code (E170, E173).",
     "impact": 2,
@@ -976,7 +978,12 @@
     "A journal row (S1) with the 4 label measures on d1cb16c7 and the label window: hits found, shot count right, in/out right, fault clips; each as 'n of N', on all small fragments saved at the run time (the row names the count and the fragment ids).",
     "For each measure, the change against the dashboard value (E170, E173), and the cause of each change larger than 2.",
     "The M2 measures on the dashboard show the new values with the E number."
-   ]
+   ],
+   "finished": "2026-11-27 22:42",
+   "real": {
+    "impact": 2,
+    "outcome": "E107 (fc64dd35): 24 small fragments on d1cb16c7 with the label window. Hits 120 of 190, shot count 20 of 40, in/out 114 of 116, fault clips 6 of 23. On the same fragments each change is 2 or less (causes named: A22 fix, s007, s012, s006, s016); the larger changes come from the 8 new fragments. All 3 checks pass; the dashboard M2 values are E107."
+   }
   },
   {
    "id": "A31",

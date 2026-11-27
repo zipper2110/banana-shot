@@ -293,24 +293,38 @@ NOT_SWITCHES = {"APPDATA", "LOCALAPPDATA", "USERPROFILE", "HOME", "HF_HOME", "PA
                 "BENCH_WHO", "BENCH_NETBAND_DIR"}
 
 
+def closure(code_dir):
+    """The module code_closure.py of code_dir (its own copy for each folder), or None (a snapshot before item 13)."""
+    if not os.path.exists(os.path.join(code_dir, "code_closure.py")):
+        return None
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_closure_" + hashlib.sha1(code_dir.encode()).hexdigest()[:8],
+                                                  os.path.join(code_dir, "code_closure.py"))
+    cc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cc)
+    return cc
+
+
+def env_switches(code_dir, entries, skip=()):
+    """{name: value} of the set env switches that the closure of the entry modules reads with environ.get, without
+    NOT_SWITCHES and skip. A snapshot without code_closure.py: {}."""
+    cc = closure(code_dir)
+    if cc is None:
+        return {}
+    names = set()
+    for f in cc.files(*entries, folder=code_dir):
+        with open(f, encoding="utf-8") as fh:
+            names |= set(re.findall(r"environ\.get\(\"([A-Z][A-Z0-9_]+)\"", fh.read()))
+    names -= set(skip) | NOT_SWITCHES
+    return {k: os.environ[k] for k in sorted(names) if os.environ.get(k) is not None}
+
+
 def env_extra(code_dir, flights):
     """{name: value} of the env switches that the code of the flights stage (the closure of ball_full and net_events,
     or of net_events for the net events only) reads with environ.get, that are set, and that are not in FLIGHT_ENV.
     Before this, the key had FLIGHT_ENV only: a run with SERVE_PRIOR_WIDE=0 read the cache of the default flights.
     Empty when none is set, so the key of a run with the defaults does not change. A snapshot without code_closure.py: {}."""
-    if not os.path.exists(os.path.join(code_dir, "code_closure.py")):
-        return {}
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("_closure_env_" + hashlib.sha1(code_dir.encode()).hexdigest()[:8],
-                                                  os.path.join(code_dir, "code_closure.py"))
-    cc = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(cc)
-    names = set()
-    for f in cc.files(*(("ball_full", "net_events") if flights else ("net_events",)), folder=code_dir):
-        with open(f, encoding="utf-8") as fh:
-            names |= set(re.findall(r"environ\.get\(\"([A-Z][A-Z0-9_]+)\"", fh.read()))
-    names -= set(FLIGHT_ENV) | NOT_SWITCHES
-    return {k: os.environ[k] for k in sorted(names) if os.environ.get(k) is not None}
+    return env_switches(code_dir, ("ball_full", "net_events") if flights else ("net_events",), FLIGHT_ENV)
 
 
 def net_key(m, code_dir):
@@ -340,15 +354,11 @@ def net_key(m, code_dir):
 def code_files(code_dir, flights=True):
     """The code files of the lab flights key (flights=True) or of the net events key: the import closure of what the
     bench flights stage runs (code_closure.py, S2 item 13; flights1: ball_full.run and net_events.run_folder), read in
-    code_dir, and lab.py. Not feat_wasb (manager, gap-program "Bench flights key"): the bench does not run it (the lab
-    set reads the frozen feat_wasbf.npy), and its closure brought the chain modules (shot_chain, winner_ball, ...) into
+    code_dir, and lab.py. Not feat_wasb (manager, gap-program "Bench flights key"): it is a step of its own with its
+    own key (wasbf_key, E101), and its closure brought the chain modules (shot_chain, winner_ball, ...) into
     the key, so each chain-only edit made new flights. A snapshot without code_closure.py (before item 13) uses the old hand lists."""
-    if os.path.exists(os.path.join(code_dir, "code_closure.py")):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("_closure_" + hashlib.sha1(code_dir.encode()).hexdigest()[:8],
-                                                      os.path.join(code_dir, "code_closure.py"))
-        cc = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(cc)
+    cc = closure(code_dir)
+    if cc is not None:
         entries = ("ball_full", "net_events") if flights else ("net_events",)
         fs = cc.files(*entries, folder=code_dir)
         lab_py = os.path.join(code_dir, "lab.py")
@@ -443,16 +453,104 @@ def flights1(mid, dst):
     print(f"{mid}: flights and {len(ev)} net events in {time.time() - t:.0f} s (code {os.path.dirname(ball_full.__file__)})", flush=True)
 
 
+WASBF_CODE = ("feat_wasb.py", "serve_ball.py", "frame_times.py", "ball_full.py", "lab.py")   # before code_closure.py
+
+
+def wasbf_key(m, flights_dir, code_dir):
+    """(input files, cache folder) of the GRU ball input (feat_wasbf.npy) of lab match m from the flights in
+    flights_dir (an app_nets folder). The key: the closure of feat_wasb and lab.py, the inputs (the flights, the
+    ball file, the frame times) and the set env switches of that closure."""
+    import lab
+    from ball_full import WINDOWS
+    src = [os.path.join(flights_dir, f) for f in ("fullflights_s0.35.json", "pts.npy",
+                                                  "wasb_%d_%d_s0.35%s_k2.npy" % (*WINDOWS[m], LAB_BLOB_TAG))]
+    cc = closure(code_dir)
+    code = sorted(set(cc.files("feat_wasb", folder=code_dir)) | {os.path.join(code_dir, "lab.py")}, key=os.path.basename) \
+        if cc is not None else [os.path.join(code_dir, n) for n in WASBF_CODE]
+    h = hashlib.sha256()
+    for f in code + src:
+        h.update(os.path.basename(f).encode() + sha(f).encode())
+    extra = env_switches(code_dir, ("feat_wasb",))
+    if extra:
+        h.update(json.dumps(extra, sort_keys=True).encode())
+    root = os.path.join(os.path.dirname(lab.ROOT), "ws", "s1", "bench", "wasbf")
+    return src, os.path.join(root, h.hexdigest()[:16], f"lab_{m}")
+
+
+def lab_wasbf(nets, code_dir=None):
+    """{mid: folder with feat_wasbf.npy} for the lab matches of nets: feat_wasb.run (the step of detect.py) on the
+    flights of each app_nets folder, as the app makes the GRU input from its own flights (E101; manager: the default
+    when the flights are made again). CPU, under 1 s for each match. The rows of the file are the length of the
+    frozen lab file: the old n_seconds gave some matches more or fewer rows, all outside the window (NaN)."""
+    import lab, shutil
+    import numpy as np
+    from ball_full import WINDOWS
+    code_dir = code_dir or HERE
+    out = {}
+    for m in [m for m in (nets or {}) if m in WINDOWS]:
+        src, dst = wasbf_key(m, os.path.dirname(nets[m]), code_dir)
+        f = os.path.join(dst, "feat_wasbf.npy")
+        if not os.path.exists(f):
+            os.makedirs(dst, exist_ok=True)
+            for x in src:
+                shutil.copy2(x, os.path.join(dst, os.path.basename(x)))
+            import feat_wasb
+            tag, mdir = lab.BLOB_TAG, lab.mdir
+            lab.BLOB_TAG = LAB_BLOB_TAG
+            lab.mdir = lambda x, _o=mdir, m=m, dst=dst: dst if x == m else _o(x)
+            try:
+                feat_wasb.run(m)
+            finally:
+                lab.BLOB_TAG, lab.mdir = tag, mdir
+            F = np.load(os.path.join(dst, "feat_wasb.npy"))[:, [4, 5, 6]]
+            n = len(np.load(os.path.join(lab.mdir(m), "feat_wasbf.npy")))
+            if len(F) < n:
+                F = np.vstack([F, np.full((n - len(F), 3), np.nan, F.dtype)])
+            elif len(F) > n:
+                assert np.isnan(F[n:]).all(), (m, n, len(F))
+                F = F[:n]
+            np.save(os.path.join(dst, "feat_wasbf_tmp.npy"), F)
+            os.replace(os.path.join(dst, "feat_wasbf_tmp.npy"), f)     # a stopped run leaves no half file
+        out[m] = dst
+    return out
+
+
 LAB_DEVICE = "cpu"
 
 
-def run_lab(nets=None):
+def run_lab(nets=None, wasbf="auto"):
     """The lab set does not take the GPU lock (it is short), so it must not use the GPU: a CUDA context next to a
     ball stage of another job gave that job an out-of-memory stop (6 GB card). The rally model runs on the CPU.
-    nets: {mid: net events file} for the chain (app_nets); None = the old lab file."""
+    nets: {mid: net events file} for the chain (app_nets); None = the old lab file.
+    wasbf: {mid: folder of feat_wasbf.npy} for the rally GRU; "auto" = lab_wasbf(nets) when the flights are made
+    again (E101), else the frozen lab file; None = the frozen lab file."""
     import platform_cfg
     platform_cfg._cache["device"] = LAB_DEVICE
-    import pipeline, chain
+    import pipeline, chain, rally_model, lab
+    if wasbf == "auto":
+        wasbf = lab_wasbf(nets) if nets and LAB_FLIGHTS == "remake" else None
+    load = rally_model.load
+    if wasbf:
+        def load_wasbf(mid, feats, pca, _load=load):
+            """train_eval.load with feat_wasbf.npy from the folder of the code key; the other inputs of the lab folder."""
+            parts = _load(mid, feats, pca)
+            if mid in wasbf and "wasbf" in feats:
+                mdir = lab.mdir
+                lab.mdir = lambda x: wasbf[x] if x == mid else mdir(x)
+                try:
+                    new = dict(_load(mid, ["wasbf"], pca))["wasbf"]
+                finally:
+                    lab.mdir = mdir
+                parts = [(n, new if n == "wasbf" else f) for n, f in parts]
+            return parts
+        rally_model.load = load_wasbf
+    try:
+        return _run_lab(nets, pipeline, chain)
+    finally:
+        rally_model.load = load
+
+
+def _run_lab(nets, pipeline, chain):
     chain.NET_FILES.clear()
     chain.NET_FILES.update(nets or {})
     pipeline.FLIGHT_FILES.clear()                    # the flights in the folder of each net file (app_nets)
@@ -730,6 +828,7 @@ def report(man, sets, skipped, same):
          + (", ".join(f"{k}={v}" for k, v in man['switches']['env'].items() if v is not None) or "none") + "."
          + (f" Lab net events: {man['labNets']}." if man.get("labNets") else "")
          + (f" Lab flights: {man['labFlights']}." if man.get("labFlights") else "")
+         + (f" Rally GRU ball input: {man['labWasbf']}." if man.get("labWasbf") else "")
          + (f" Net band of the lab matches: {man['netBand']['folder']} (files "
             + ", ".join(f"{m} {h}" for m, h in man["netBand"]["files"].items()) + ")."
             if isinstance(man.get("netBand"), dict) else " Net band: off." if man.get("netBand") == "off" else "")
@@ -965,9 +1064,12 @@ def run(a):
     if not a.no_lab:
         from ball_full import WINDOWS
         nets = None if a.old_nets else app_nets(list(WINDOWS) + [m for m in lab.MATCHES if m not in WINDOWS and app_folder(m)])
-        sets["Lab LOMO"] = run_lab(nets)
+        wasbf = lab_wasbf(nets) if nets and LAB_FLIGHTS == "remake" else None
+        sets["Lab LOMO"] = run_lab(nets, wasbf)
         for mid in sets["Lab LOMO"]:
             inputs[mid] = file_hashes(lab.mdir(mid), LAB_INPUTS)
+            if wasbf and mid in wasbf:                 # the rally GRU reads this file, not the frozen lab file (E101)
+                inputs[mid]["feat_wasbf.npy"] = "code key:" + sha(os.path.join(wasbf[mid], "feat_wasbf.npy"))
             if nets:                                   # the chain and the events read these files, not the lab files
                 inputs[mid]["net_events.json"] = "app:" + sha(nets[mid])
                 inputs[mid]["fullflights_s0.35_ev.json"] = LAB_FLIGHTS + ":" + sha(os.path.join(os.path.dirname(nets[mid]), "fullflights_s0.35.json"))
@@ -987,7 +1089,9 @@ def run(a):
         inputs[mid] = ev[mid][1]
     man = {"commit": commit, "dirty": dirty, "switches": switches(), "models": model_hashes(), "inputs": inputs,
            "labels": label_hashes(), "sides": sides, "labDevice": LAB_DEVICE, "labNets": "old lab file" if nets is None else "app way (E85)",
-           "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS], "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
+           "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS],
+           "labWasbf": "made from the lab flights by the code key (E101)" if nets and LAB_FLIGHTS == "remake" else "frozen lab file",
+           "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
     answer_files = {m: sha(faults_file(m)) for m in lab.MATCHES if os.path.exists(faults_file(m))}
     if answer_files:                                   # only with answers: a run with no answer file keeps its manifest
         man["faultAnswerFiles"] = answer_files

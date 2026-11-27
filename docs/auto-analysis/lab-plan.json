@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:00",
+ "updated": "2026-11-28 00:01",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1058,6 +1058,28 @@
     "impact": 1,
     "outcome": "E199 (4efc16d8, 9d5450d6): c1 = CHAIN_SERVE_START letter c with tests. Labels (E176 measure code): shot count right 20 to 21 of 41; fault clips the same. Lab off/on: 95.7 % / 95.2 %, 22 fault rows, 443 winners in both. The off run is the new head reference da42753d. Both checks pass; c1 can go on."
    }
+  },
+  {
+   "id": "A43",
+   "kind": "research",
+   "title": "Rally miss table of the other 3 lab matches on the head reference da42753d",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "The next largest rally error cause over all lab matches, with a fix proposal.",
+    "impact": 3,
+    "text": "A27 covered m1030 only; the lab precision and recall gaps (about 4.3 % / 4.8 %) are spread over 4 matches."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "doneWhen": [
+    "A journal row (S3): all missed, false and fault rows of m1015, m1020 and m1021 on da42753d (with c on) in one table, each with one cause, 0 without a cause, the count per cause, and the m1030 counts of the same causes on the same head.",
+    "For the largest cause over the 4 matches: a fix proposal with the expected rows that it gets back and a first chain-only test on the cached flights."
+   ]
   },
   {
    "id": "A41",

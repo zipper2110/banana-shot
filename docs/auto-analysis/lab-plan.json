@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:14",
+ "updated": "2026-11-28 00:15",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1211,8 +1211,10 @@
     "M2-I9"
    ],
    "owner": "S4",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E220"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "The largest remaining cause of the 13 labeled faults with no fault clip, with a fix proposal.",
     "impact": 3,
@@ -1224,6 +1226,33 @@
    "doneWhen": [
     "A journal row (S4): all labeled first-serve faults of the 24 E107 fragments with no fault clip on the head with RETURN_FIT on, in one table, each with one cause (the step of the chain where the clip is lost) and an image or chain fact, 0 without a cause, with the count per cause.",
     "For the largest cause: a fix proposal with the expected fault clips n of 23 and the expected serve events inside the points, and a first chain-only test on the cached flights."
+   ],
+   "finished": "2026-11-28 00:15",
+   "real": {
+    "impact": 2,
+    "outcome": "E220 (b97f9746): 13 of 23 labeled first faults with no clip, one cause each, 0 without: no serve event 5, no row for the point after the fault 4, fault_rallies removes the next row 2, event too near the row 1, clip contact off 1. Fix test: FS (the fault chain gets the serve events) + V40: 11 of 23, serve events inside the points 59 (+1), no lab change. Both checks pass."
+   }
+  },
+  {
+   "id": "A47",
+   "kind": "fix",
+   "title": "FS (the fault chain gets the serve events; chain.py, S3) and V40 (serve_ball.is_serve, S4)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S4",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "Fault clips 10 to 11 of 23 (s011), serve events inside the points +1, no lab change.",
+    "impact": 1,
+    "text": "E220 cause 1 (no serve event, 5)."
+   },
+   "estimate": {
+    "netMin": 60
+   },
+   "doneWhen": [
+    "V40 in serve_ball.is_serve (S4) and FS in chain.evidence (S3, after A46), each behind a switch (default off), each in its own small commit with a unit test.",
+    "A journal row (S4) with both on: fault clips 11 of 23 or more, serve events inside the points 59 or less, and a lab chain-only run against the head reference: rows, recall, precision and winners the same within the spread. The row says if both can go on."
    ]
   },
   {

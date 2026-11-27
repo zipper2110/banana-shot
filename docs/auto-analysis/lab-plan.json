@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:59",
+ "updated": "2026-11-28 01:07",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1249,8 +1249,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E214"
+   ],
    "expected": {
     "outcome": "The causes that are left after A36 to A50, ranked, with the next fix proposal.",
     "impact": 2,
@@ -1262,6 +1264,33 @@
    "doneWhen": [
     "A journal row (S3): all missed, false and fault rows of the 4 lab matches and Igor on the head with CHAIN_FAULT_PLAY_ON on, each with one cause, 0 without a cause, the count per cause, ranked.",
     "For the largest cause that a chain rule can fix: a fix proposal with the expected rows; for a cause that needs a better GRU or new labels, a short plan of what that needs."
+   ],
+   "finished": "2026-11-28 01:07",
+   "real": {
+    "impact": 2,
+    "outcome": "E214: head 0a1728b5: lab 535 of 554, fault rows 15, precision with faults 96.57 %. 51 rows (lab 38, Igor 13), one cause each: F1 serve side unknown 9, A1 silent GRU with a serve event 8, B+Br 12, D 5, C1 4, others 13. No chain fix passes with 0 lost points. Plans: serve side measure (15 rows), the rally GRU with serve events as input (16 missed points; GPU, needs the user's OK), fault-serve labels (18 rows). Both checks pass."
+   }
+  },
+  {
+   "id": "A53",
+   "kind": "research",
+   "title": "Serve side (deuce or ad): measure the chain's serve side against the labeled serve bounces",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S4",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "How often the chain knows the serve side and how often it is right; a better side source (serve flight, bounce, pose) if one is better.",
+    "impact": 2,
+    "text": "E214: 15 rally rows (F1 9, C1 4, F2 2) depend on an unknown or wrong serve side."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S4): for every labeled serve with a labeled serve bounce on the 24 E107 fragments, the true side (from the bounce court x) against the chain side on the head 0a1728b5: known n of N, right n of known, by near and far server.",
+    "For each side source that is available without new detection (the serve flight x, the serve bounce, the server position from the pose, if the pose is cached), the same counts; and a proposal for the side rule with the expected change on the 15 E214 rows (S3 tests it in the chain)."
    ]
   },
   {

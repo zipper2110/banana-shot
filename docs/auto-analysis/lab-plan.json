@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:15",
+ "updated": "2026-11-28 00:20",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1008,8 +1008,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S2",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E204"
+   ],
    "expected": {
     "outcome": "A chain-rule change in serve_ball.py reruns only the cheap GRU input step in an app folder, not ball_full and net_events.",
     "impact": 2,
@@ -1022,7 +1024,12 @@
     "A journal row (S2) with the cost of each part of the app flights stage (ball_full, net_events, feat_wasb) on one stored match log, and the key split that you choose; the outputs of each part keep their own key, and a change that reaches a part still reruns it and the parts after it.",
     "Unit tests: a serve_ball.py change reruns only feat_wasb; a ball_full.py change reruns all three; test_code_closure and the adopt tests pass.",
     "A dry run on the app folders (Igor, Misha, the E200 folder) that lists which parts would run on the head; no real run in other streams' folders."
-   ]
+   ],
+   "finished": "2026-11-28 00:20",
+   "real": {
+    "impact": 3,
+    "outcome": "E204 (52ece01e): the app flights stage has three keyed parts (flights = ball_full 1340 s on Igor, netevents 56 s, wasbf 0.2 s); test_flight_parts: a serve_ball.py change runs only feat_wasb. Dry run: with adopt_reach --parts, Igor and the E200 folder run only feat_wasb; Misha runs all three (ball_bounce.py changed). All 3 checks pass."
+   }
   },
   {
    "id": "A28",

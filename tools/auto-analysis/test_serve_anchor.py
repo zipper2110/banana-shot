@@ -29,9 +29,10 @@ class ServeAnchor(unittest.TestCase):
         return chain.serve_anchor_segs(rows or self.rows, serves or [ev(100.0)], fl or self.fl,
                                        self.prob if prob is None else prob)
 
-    def test_off_by_default(self):
+    def test_on_by_default(self):
+        # manager decision after E211; CHAIN_SERVE_ANCHOR=0 gives the old way
         if "CHAIN_SERVE_ANCHOR" not in os.environ:
-            self.assertFalse(chain.SERVE_ANCHOR)
+            self.assertTrue(chain.SERVE_ANCHOR)
 
     def test_a_serve_with_play_gives_a_new_rally(self):
         got = self.segs()

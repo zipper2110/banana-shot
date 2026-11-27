@@ -87,6 +87,27 @@ class ShortDecode(unittest.TestCase):
         log.close()
         self.assertIs(m.subprocess, subprocess)
 
+    def test_close_puts_the_module_back_after_an_exception(self):
+        # The shim changes the subprocess module of the decode modules for the ball stage only (manager note).
+        import subprocess, types
+        m = types.SimpleNamespace(subprocess=subprocess)
+        log = detect.FfmpegLog([m])
+        try:
+            raise KeyboardInterrupt                                    # a stop during the ball stage
+        except KeyboardInterrupt:
+            pass
+        finally:
+            log.close()
+        self.assertIs(m.subprocess, subprocess)
+        log = detect.FfmpegLog([m])
+
+        def broken():
+            raise OSError("the temp file is gone")
+        log.text = broken
+        with self.assertRaises(OSError):
+            log.close()
+        self.assertIs(m.subprocess, subprocess)                         # also when the copy of the text fails
+
     def test_a_short_decode_stops_with_the_ffmpeg_message(self):
         text = "[rawvideo] non monotonically increasing dts\n[hwdownload @ 0] Invalid output format nv12 for hwframe download.\n"
         with self.assertRaises(RuntimeError) as e:

@@ -278,9 +278,13 @@ class FfmpegLog:
         return t
 
     def close(self):
-        self.text()
-        for m in self.mods:
-            m.subprocess = self.sp
+        """Copies the rest of the text to stderr and puts the subprocess module of each module back (always, also when
+        the copy fails)."""
+        try:
+            self.text()
+        finally:
+            for m in self.mods:
+                m.subprocess = self.sp
 
 
 def check_decode(count, expected, text, ss, dur):

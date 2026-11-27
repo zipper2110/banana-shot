@@ -15,11 +15,13 @@ Standard library only.
 """
 import argparse
 import glob
+import importlib
 import json
 import os
 import re
 import statistics
 import sys
+import threading
 import time
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -27,6 +29,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import gpu_lock  # noqa: E402
+import lab_status  # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(HERE))
 DOCS = os.path.join(REPO, "docs", "auto-analysis")
@@ -361,7 +364,8 @@ def workers_pass(plan, lock, labels, eta_of):
                 net_total += est
             rows.append({"id": a["id"], "title": a["title"], "kind": a["kind"], "status": a["status"],
                          "netMin": est, "eta": iso(end), "waitingFor": a.get("waitingFor"),
-                         "jobs": a.get("jobs", [])})
+                         "jobs": a.get("jobs", []), "note": a.get("note"), "unplanned": a.get("unplanned"),
+                         "live": a.get("live")})
             if end:
                 cursor = end
         gpu = [q for q in lock["queue"] if q["who"] and q["who"].lower() == w["id"].lower()]
@@ -372,17 +376,103 @@ def workers_pass(plan, lock, labels, eta_of):
     return out
 
 
+LIVE_FIELDS = ("status", "waitingFor", "note", "started", "finished", "outcome")
+
+
+def apply_live(plan, live):
+    """Puts the live status of the streams (lab_status.py) over the plan actions. A live entry that is newer than
+    the plan file wins. An action id that is not in the plan becomes an unplanned action of its worker."""
+    plan_t = parse_time(plan.get("_mtime", "").replace("T", " ")[:19])
+    acts = {a["id"]: a for a in plan.get("actions", [])}
+    for aid, e in live["actions"].items():
+        t = parse_time(e.get("t"))
+        a = acts.get(aid)
+        if a is None:
+            a = {"id": aid, "title": e.get("title") or aid, "kind": "work", "owner": e.get("who"),
+                 "status": e.get("status"), "unplanned": True}
+            plan.setdefault("actions", []).append(a)
+            acts[aid] = a
+        elif plan_t and t and t < plan_t and a.get("status") in ("done", "dropped"):
+            continue                       # the manager closed it in the plan after the last live entry
+        for k in LIVE_FIELDS:
+            if k in e:
+                a[k] = e[k]
+        if e.get("status") != "waiting":
+            a.pop("waitingFor", None)
+        if e.get("netMin") is not None:
+            a["estimate"] = {"netMin": e["netMin"]}
+        if e.get("real") is not None:
+            a["real"] = dict(a.get("real") or {}, impact=e["real"], outcome=e.get("outcome"))
+        a["live"] = {"t": e.get("t"), "status": e.get("status"), "note": e.get("note")}
+
+
 def state():
     plan = load_plan()
+    live = lab_status.latest()
+    apply_live(plan, live)
     lock = lock_state(plan)
     labels = label_state()
-    return {"now": iso(now()), "lock": lock, "labels": labels, "plan": plan,
-            "workers": workers_state(plan, lock, labels)}
+    workers = workers_state(plan, lock, labels)
+    last = {}
+    for e in live["actions"].values():
+        w = e.get("who")
+        if w and e.get("t", "") > last.get(w, ""):
+            last[w] = e["t"]
+    for w in workers:
+        cur = live["workers"].get(w["id"])
+        w["current"] = ({"text": cur.get("text") if cur.get("kind") == "now" else None,
+                         "idle": cur.get("kind") == "idle", "t": cur.get("t")} if cur else None)
+        times = [x for x in (last.get(w["id"]), cur and cur.get("t")) if x]
+        w["lastUpdate"] = max(times) if times else None
+    return {"now": iso(now()), "lock": lock, "labels": labels, "plan": plan, "workers": workers}
 
 
 # ---------------------------------------------------------------- server
 
 DOC_OK = re.compile(r"^[A-Za-z0-9_.-]+\.(md|json)$")
+
+
+# ---------------------------------------------------------------- live code reload
+# The user (2026-11-27): the page must show all updates with no manual refresh. So the server loads changed code of
+# this file, lab_status.py and gpu_lock.py at the next request (no restart), and the page reloads itself when
+# lab_dash.html changes (pageVersion). The HTTP handler itself stays as it was at the start.
+_CODE = [os.path.join(HERE, n) for n in ("gpu_lock.py", "lab_status.py", "lab_dash.py")]
+_core = {"mod": None, "stamp": None, "error": None}
+_core_lock = threading.Lock()
+
+
+def code_stamp():
+    return tuple(os.path.getmtime(f) if os.path.isfile(f) else 0 for f in _CODE)
+
+
+def core():
+    """The module with the newest code. A file with an error keeps the last good code; state() names the error."""
+    with _core_lock:
+        stamp = code_stamp()
+        if _core["mod"] is None or stamp != _core["stamp"]:
+            try:
+                importlib.reload(gpu_lock)
+                importlib.reload(lab_status)
+                if _core["mod"] is None:
+                    import lab_dash as mod   # this file as a module (not __main__), so a reload is possible
+                else:
+                    mod = importlib.reload(_core["mod"])
+                _core["mod"], _core["error"] = mod, None
+            except Exception as e:  # noqa: BLE001 (the page shows it)
+                _core["error"] = f"code reload failed: {type(e).__name__}: {e}"
+                if _core["mod"] is None:
+                    _core["mod"] = sys.modules[__name__]
+            _core["stamp"] = stamp
+        return _core["mod"], _core["error"]
+
+
+def live_state():
+    mod, err = core()
+    s = mod.state()
+    s["pageVersion"] = str(os.path.getmtime(PAGE))
+    if err:
+        s["codeError"] = err
+    return s
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -405,7 +495,7 @@ class Handler(BaseHTTPRequestHandler):
                 with open(PAGE, "rb") as f:
                     return self._send(200, f.read(), "text/html; charset=utf-8")
             if path == "/api/state":
-                return self._send(200, json.dumps(state(), default=str))
+                return self._send(200, json.dumps(live_state(), default=str))
             if path == "/api/plan":
                 with open(PLAN, "rb") as f:
                     return self._send(200, f.read())
@@ -434,9 +524,9 @@ class Handler(BaseHTTPRequestHandler):
                 mode = body.get("mode")
                 if mode not in ("queue", "all"):
                     return self._send(400, json.dumps({"error": "mode must be queue or all"}))
-                return self._send(200, json.dumps({"result": gpu_lock.pause(mode, "user (dashboard)")}))
+                return self._send(200, json.dumps({"result": core()[0].gpu_lock.pause(mode, "user (dashboard)")}))
             if self.path == "/api/unpause":
-                return self._send(200, json.dumps({"result": gpu_lock.unpause("user (dashboard)")}))
+                return self._send(200, json.dumps({"result": core()[0].gpu_lock.unpause("user (dashboard)")}))
             return self._send(404, json.dumps({"error": "not found"}))
         except Exception as e:  # noqa: BLE001
             return self._send(500, json.dumps({"error": f"{type(e).__name__}: {e}"}))

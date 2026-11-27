@@ -107,6 +107,10 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
 .worker { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .worker h3 { margin: 0; font-size: 14px; display: flex; justify-content: space-between; }
 .worker .focus { font-size: 11px; color: var(--mute); margin-bottom: 6px; }
+.worker .now { font-size: 12px; margin: 0 0 8px; padding: 4px 8px; border-radius: 6px; background: var(--soft); display: flex; gap: 8px; }
+.worker .now .r { margin-left: auto; color: var(--mute); white-space: nowrap; }
+.worker .now.old { color: var(--mute); }
+.worker .now.old .r { color: var(--warn); }
 .worker ul { margin: 0; padding-left: 0; list-style: none; }
 .worker li { padding: 4px 0; border-top: 1px dashed var(--line); font-size: 13px; }
 .worker li .r { float: right; color: var(--mute); font-size: 12px; }
@@ -338,16 +342,28 @@ function renderActs() {
   document.querySelectorAll("#sActs [data-s]").forEach(b => b.onclick = () => { statusF = b.dataset.s; renderActs(); });
 }
 
+// Minutes from the time t (lab PC time) to S.now, or null
+function ago(t) {
+  if (!t || !S.now) return null;
+  return Math.max(0, Math.round((new Date(S.now.replace(" ", "T")) - new Date(t.replace(" ", "T"))) / 60000));
+}
+function agoText(m) { return m < 1 ? "now" : m < 60 ? m + " min ago" : m < 1440 ? Math.floor(m / 60) + " h " + (m % 60) + " min ago" : Math.floor(m / 1440) + " d ago"; }
+
 function renderWorkers() {
   const wdef = Object.fromEntries((S.plan.workers || []).map(w => [w.id, w]));
   let h = `<div class="workers">`;
   for (const w of S.workers) {
     const noEta = wdef[w.id] && wdef[w.id].noEta;
     h += `<div class="worker"><h3><span>${esc(w.name)}</span><span class="small mute">${w.netMin ? dur(w.netMin) + " net" : "idle"}</span></h3><div class="focus">${esc(w.focus || "")}</div>`;
+    // The live line of the stream (lab_status.py): what it does now, and the age of its last update
+    const cur = w.current, age = ago(w.lastUpdate);
+    if (cur || w.lastUpdate) h += `<div class="now ${age !== null && age > 60 ? "old" : ""}">${cur && cur.idle ? "Idle" : cur && cur.text ? "Now: " + esc(cur.text) : ""}<span class="r">${age === null ? "" : "updated " + agoText(age)}</span></div>`;
+    else if (/^S\d$/.test(w.id)) h += `<div class="now old">No live status yet<span class="r"></span></div>`;
     const gpuLi = g => `<li><span class="chip k-run">${g.running ? "GPU now" : "GPU queue"}</span>${esc(g.what)}<span class="r">${g.running ? "ends " + hm(g.eta) : g.expEnd ? "ends " + hm(g.expEnd) : ""}</span></li>`;
     const actLi = a => `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="chip k-${a.kind}">${a.kind}</span> ${esc(a.title)}
-        <div class="small"><span class="s-${a.status}">${a.status}</span>${a.waitingFor ? ` <span class="s-waiting">(waits for ${esc(a.waitingFor)})</span>` : ""}
+        <div class="small"><span class="s-${a.status}">${a.status}</span>${a.waitingFor ? ` <span class="s-waiting">(waits for ${esc(a.waitingFor)})</span>` : ""}${a.unplanned ? ` <span class="mute">(not in the plan)</span>` : ""}
         <span class="r">${a.netMin ? dur(a.netMin) : "?"}${!noEta && a.eta ? " · ~" + hm(a.eta) : ""}</span></div>
+        ${a.note ? `<div class="small mute">${esc(a.note)}</div>` : ""}
         ${(a.jobs || []).length ? `<div class="small mute">jobs: ${a.jobs.map(j => esc(j.what) + (j.estMin ? " (" + dur(j.estMin) + ")" : "")).join("; ")}</div>` : ""}</li>`;
     // Three groups (the user): in progress, on hold (waits for a decision, an unpause or another action), pending
     const paused = !!S.lock.pause;
@@ -402,21 +418,29 @@ function rememberOpen() {
   document.querySelectorAll("details[data-key]").forEach(d => d.open ? openSet.add(d.dataset.key) : openSet.delete(d.dataset.key));
 }
 
+let pageVersion = null;
+const savedScroll = sessionStorage.getItem("labDashScroll");
 async function load() {
   try {
     const r = await fetch("/api/state", {cache: "no-store"});
     S = await r.json();
     if (S.error) throw new Error(S.error);
+    // New page code on the server: load it (the user: no manual refresh). Scroll and theme stay.
+    if (pageVersion && S.pageVersion && S.pageVersion !== pageVersion) { sessionStorage.setItem("labDashScroll", scrollY); location.reload(); return; }
+    pageVersion = pageVersion || S.pageVersion;
   } catch (e) {
     $("#meta").textContent = "server not reached: " + e.message;
     return;
   }
   rememberOpen();
-  $("#meta").textContent = `lab PC time ${S.now.slice(11, 16)} · refresh every 15 s · plan ${S.plan.updated || ""}`;
+  $("#meta").textContent = `lab PC time ${S.now.slice(11, 16)} · refresh every 5 s · plan ${S.plan.updated || ""}`;
   renderBanner(); renderLock(); renderWorkers(); renderMs(); renderActs(); renderLabels(); renderLinks();
+  if (S.codeError) $("#meta").textContent += " · " + S.codeError;
+  if (savedScroll !== null && !load.done) { scrollTo(0, +savedScroll); sessionStorage.removeItem("labDashScroll"); }
+  load.done = true;
 }
 load();
-setInterval(load, 15000);
+setInterval(load, 5000);
 </script>
 </body>
 </html>

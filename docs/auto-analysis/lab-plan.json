@@ -139,10 +139,10 @@
     },
     {
      "name": "Fault clips (labeled faults found)",
-     "value": "7 of 23 = 30 %, E175 (E107: 6 of 23)",
+     "value": "10 of 23 = 43 %, E178 with RETURN_FIT (head without it: 8 of 23)",
      "target": "70 % or more",
      "met": false,
-     "progress": 0.43
+     "progress": 0.62
     },
     {
      "name": "Lab rallies recall / precision",
@@ -1120,8 +1120,10 @@
     "M2-I9"
    ],
    "owner": "S4",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E178"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "Some of the 5 fault serves that the rally filter removes come back (fault clips over 7 of 23), with no new serve events inside the points.",
     "impact": 2,
@@ -1133,7 +1135,12 @@
    "doneWhen": [
     "A gate in serve_ball.is_return for a return candidate with an impossible fit (the limits from the E174 facts, written in the code comment), behind a switch (default off), in its own small commit, with a unit test.",
     "A journal row (S4): on the 24 E107 fragments off and on: how many of the 5 cause-2 serves come back, fault clips n of 23, serve events inside the points (58 or less), rows; and a lab bench chain-only run on the cached flights against the head reference of A40 (S3): rally recall, precision and winners by the spread rule. The row says if the gate can go on."
-   ]
+   ],
+   "finished": "2026-11-28 00:01",
+   "real": {
+    "impact": 2,
+    "outcome": "E178 (ac3e8f98, 26a2f1cc): RETURN_FIT gate (over 16 m from the net and 180 km/h or more) with 4 tests. Labels off/on: cause-2 serves back 0/4 of 5, fault clips 8/10 of 23, serve events inside the points 58/58, rows 559/559. Lab off/on the same (95.7 / 95.2 %, 22 fault rows), against the E202 head bench inside the spread. Both checks pass; the gate can go on."
+   }
   },
   {
    "id": "A29",

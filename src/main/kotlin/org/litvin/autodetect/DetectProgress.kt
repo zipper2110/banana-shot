@@ -58,9 +58,11 @@ data class DetectProgress(val step: Int, val steps: Int, val stepPart: Double?, 
             val elapsed = ((nowMs - state.stageStartedAtMs) / 1000.0).coerceAtLeast(0.0)
             val video = state.videoSeconds?.takeIf { it > 0 }
             val reported = state.progress
+            // The part of the stage that this run did (E119: a stopped run did the parts before progressAtStart).
+            val doneNow = reported?.let { it - (state.progressAtStart ?: 0.0) }
 
             // The seconds for one unit of weight: the length of the video, corrected by the measured speed.
-            val measured = reported?.takeIf { it >= MIN_MEASURED_PART }?.let { elapsed / (weight(current) * it) }
+            val measured = doneNow?.takeIf { it >= MIN_MEASURED_PART }?.let { elapsed / (weight(current) * it) }
             val speed = when {
                 measured != null && video != null -> measured.coerceIn(video / MAX_SPEED_FACTOR, video * MAX_SPEED_FACTOR)
                 measured != null -> measured
@@ -70,7 +72,7 @@ data class DetectProgress(val step: Int, val steps: Int, val stepPart: Double?, 
                 ?: video?.let { (elapsed / (weight(current) * it)).coerceIn(0.0, MAX_TIMED_PART) }
             val left = speed?.let { s ->
                 val stepLeft = if (measured != null) {
-                    elapsed / reported!! * (1 - reported)
+                    elapsed / doneNow!! * (1 - reported!!)
                 } else {
                     weight(current) * s * (1 - (stepPart ?: 0.0))
                 }

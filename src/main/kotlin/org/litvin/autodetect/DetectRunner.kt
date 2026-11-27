@@ -50,7 +50,8 @@ sealed interface DetectState {
      * stage that is done (0 to 1), or null when the stage does not tell it. [startedAtMs] is the wall clock time of
      * the start, and [stageStartedAtMs] is that of the start of [stage]. [videoSeconds] is the length of the video
      * when the caller knows it, and [ballPass] is the setting of the run: [DetectProgress] uses them for the time
-     * estimate.
+     * estimate. [progressAtStart] is the part of [stage] that was done before this run (the ball parts of a stopped run,
+     * E119): the measured speed counts only the part after it.
      */
     data class Running(
         val projectDir: File,
@@ -60,6 +61,7 @@ sealed interface DetectState {
         val stageStartedAtMs: Long = startedAtMs,
         val videoSeconds: Double? = null,
         val ballPass: Boolean = true,
+        val progressAtStart: Double? = null,
     ) : DetectState
 
     /** The run ended. [resultFile] is the copy of the result in the project folder. */
@@ -192,7 +194,8 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
                     val args = script.args
                     when (script.kind) {
                         "@stage" -> if (args.getOrNull(1) == "start") advance(args.getOrNull(0)?.let(DetectStage::of), null)
-                        "@progress" -> advance(args.getOrNull(0)?.let(DetectStage::of), args.getOrNull(1)?.toDoubleOrNull())
+                        // "@progress <stage> <part> start": the part that an earlier run did (E119)
+                        "@progress" -> advance(args.getOrNull(0)?.let(DetectStage::of), args.getOrNull(1)?.toDoubleOrNull(), args.getOrNull(2) == "start")
                         "@result" -> result = File(script.text)
                         "@overlay" -> overlay = File(script.text)
                         "@error" -> error = script.text
@@ -228,14 +231,20 @@ class DetectRunner(val lab: DetectLab, private val appDataRoot: File) {
         )
     }
 
-    private fun advance(stage: DetectStage?, progress: Double?) {
+    private fun advance(stage: DetectStage?, progress: Double?, start: Boolean = false) {
         val running = state as? DetectState.Running ?: return
         val next = stage ?: running.stage
+        val now = System.currentTimeMillis()
         publish(
             running.copy(
                 stage = next,
                 progress = progress?.coerceIn(0.0, 1.0),
-                stageStartedAtMs = if (next != running.stage) System.currentTimeMillis() else running.stageStartedAtMs,
+                stageStartedAtMs = if (next != running.stage || start) now else running.stageStartedAtMs,
+                progressAtStart = when {
+                    start -> progress?.coerceIn(0.0, 1.0)
+                    next != running.stage -> null
+                    else -> running.progressAtStart
+                },
             ),
         )
     }

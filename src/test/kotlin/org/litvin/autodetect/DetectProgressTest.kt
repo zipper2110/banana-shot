@@ -38,6 +38,21 @@ class DetectProgressTest {
     }
 
     @Test
+    fun `a resumed stage measures its speed only on the part that this run did`() {
+        // E119: a stopped run did 0.6 of the ball stage. This run did 0.6 to 0.8 in 400 s: 0.2 more takes 400 s.
+        val resumed = of(running(DetectStage.BALL, 0.8, 400).copy(progressAtStart = 0.6))
+
+        assertEquals(0.8, resumed.stepPart)
+        assertEquals(400.0 + 0.141 * 6_000 * (400.0 / (0.345 * 0.2)) / 6_000, resumed.leftSeconds!!.toDouble(), 2.0)
+        assertEquals((0.167 + 0.345 * 0.8) / 0.653, resumed.totalPart, 0.001)
+
+        // At once after the start, the bar shows the parts that are done, and the estimate is the reference time.
+        val start = of(running(DetectStage.BALL, 0.6, 1).copy(progressAtStart = 0.6))
+        assertEquals(0.6, start.stepPart)
+        assertEquals((0.345 * 0.4 + 0.141) * 6_000, start.leftSeconds!!.toDouble(), 2.0)
+    }
+
+    @Test
     fun `a stage with no progress reports gets its part from the time`() {
         // The pose stage: the reference is 0.127 x 6,000 s = 762 s.
         val progress = of(running(DetectStage.POSE, null, 381))

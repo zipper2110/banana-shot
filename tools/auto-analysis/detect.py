@@ -402,6 +402,80 @@ def auto_adopt(work):
     return done
 
 
+# Item 17 (E119): the ball pass in parts, so that a stopped run continues after the last complete part. ball_wasb.run
+# gives the model groups of 3 * stride frames, and each group is independent: a part that starts on a group bound
+# gives the same rows as the one pass (no overlap; measured in E119). With the net band on, each part also writes
+# the masks of its pictures (mask_part), and a join gives the mask file of the one pass.
+PART_S = 600.0                  # s of video in each part
+
+
+def ball_plan(n, fps, pts=None, part_s=PART_S):
+    """The parts of the ball pass: [(f0, f1, ss, dur)]. f0, f1: the frames of the ball file (60 fps frames of the
+    video); f1 None = to the end. ss, dur: the decode window (s) of ball_wasb.run. The first part starts at 0 s, and
+    the last part ends at n s, as the one pass. Measured (E119, frame checksums): ffmpeg -ss is in the time of the
+    stream (pts, not pts - pts[0]); a seek to the middle of the frames f0 - 1 and f0 starts at f0. A video that is not
+    60 fps (the fps filter of ball_wasb.FPS) is one part, as before item 17 (manager, option A): after a seek the
+    filter starts at a frame that depends on the frame times near the seek, and with start_time it adds a frame at
+    the end of the video (E119). So only the path with no fps filter continues after a stop."""
+    if fps != 60:
+        return [(0, None, 0, n)]                              # the call of before item 17: run(MID, 0, n)
+    total, step = len(pts), int(part_s * 60) // 6 * 6
+    out, f0 = [], 0
+    while True:
+        f1 = f0 + step if f0 + step < total else None
+        ss = 0 if f0 == 0 else (float(pts[f0 - 1]) + float(pts[f0])) / 2
+        out.append((f0, f1, ss, n - ss if f1 is None else float(pts[f1]) - ss + 1.0))
+        if f1 is None:
+            return out
+        f0 = f1
+
+
+def part_file(blob, f0, f1):
+    """The file of a part: the name of the ball file (with its tag) and the frame range."""
+    return f"{blob[:-4]}.part{f0}-{'end' if f1 is None else f1}.npy"
+
+
+def mask_part(blob, f0, f1):
+    """The net band masks of a part (net_band_mask.MaskWriter.save): the name of the ball part and ".mask.npz"."""
+    return part_file(blob, f0, f1)[:-4] + ".mask.npz"
+
+
+def clean_parts(blob):
+    """Deletes the part files (ball and masks) of other ball tags and the temp files of a stopped write (they are
+    never used)."""
+    import glob
+    for f in glob.glob(os.path.join(os.path.dirname(blob), "wasb_*.part*")):
+        if ".tmp." in os.path.basename(f) or not os.path.basename(f).startswith(os.path.basename(blob)[:-4] + ".part"):
+            os.remove(f)
+
+
+def ball_parts(blob, plan, run_part, extra=lambda f0, f1: []):
+    """Runs the parts of plan that have no part file, and joins all parts. run_part(ss, dur, f0, f1) gives the rows
+    of the decode window, frame 0 = its first frame. The rows at or after f1 - f0 are dropped (they belong to the next
+    part). A part is written to a temp name and then renamed, so a stop during the write leaves no part file.
+    extra(f0, f1): the other files of a part (the masks), which run_part writes; a part without them runs again.
+    Returns (the joined rows, the part files)."""
+    import numpy as np
+    files = []
+    for f0, f1, ss, dur in plan:
+        p = part_file(blob, f0, f1)
+        if not part_done(blob, f0, f1, extra):
+            d = np.array(run_part(ss, dur, f0, f1), np.float32).reshape(-1, 5)
+            if f1 is not None:
+                d = d[d[:, 0] < f1 - f0]
+            d[:, 0] += f0
+            tmp = p[:-4] + ".tmp.npy"
+            np.save(tmp, d)
+            os.replace(tmp, p)
+        files.append(p)
+    return np.concatenate([np.load(p) for p in files]), files
+
+
+def part_done(blob, f0, f1, extra=lambda f0, f1: []):
+    """A part is done when its ball part file and its other files exist."""
+    return all(os.path.exists(f) for f in [part_file(blob, f0, f1)] + list(extra(f0, f1)))
+
+
 def court_problem(track_file):
     """A text if the court model of the video is missing or not plausible, else None. Plausible: the corners
     of the doubles court are not far outside the frame, and the near baseline is below the far baseline. The
@@ -828,25 +902,55 @@ def main():
             # pts_video.npy, and pts.npy is then the 60 fps time line of the detections (see below). Without this,
             # a second run of the ball stage reads the time line, decides "60 fps", and each detection gets half of its time.
             pts = np.load(W("pts_video.npy") if os.path.exists(W("pts_video.npy")) else W("pts.npy"))
-            if np.percentile(np.diff(pts), 90) < 0.02:               # a 60 fps video, as the lab matches
-                ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 60.0)))
-                mw = mask_writer(2, lambda i: i) if net_on else None
-                np.save(blob, ball_wasb.run(MID, 0, n, save=False))
+            fps = 60 if np.percentile(np.diff(pts), 90) < 0.02 else 30
+            # Item 17: the parts. With the net band on, each part also writes the masks of its pictures.
+            plan = ball_plan(n, fps, pts, part_s=PART_S)
+            extra = (lambda f0, f1: [mask_part(blob, f0, f1)]) if net_on else (lambda f0, f1: [])
+            clean_parts(blob)
+            total = (len(pts) if fps == 60 else n * 30.0)
+            done = sum((total if f1 is None else f1) - f0 for f0, f1, _, _ in plan if part_done(blob, f0, f1, extra))
+            say("@progress ball %.3f start" % min(1.0, done / total))   # the app counts the parts that are done
+            off = [0]
+            prog = lambda fr: say("@progress ball %.3f" % min(1.0, (off[0] + fr) / total))
+
+            def part(ss, dur, f0, f1, stride):
+                off[0] = f0
+                # The masks: the frame index of picture i of the part (60 fps: f0 + i; 30 fps: each second frame).
+                mw = mask_writer(stride, (lambda i: f0 + i) if stride == 2 else (lambda i: 2 * (f0 + i))) if net_on else None
+                try:
+                    rows = ball_wasb.run(MID, ss, dur, stride=stride, save=False)
+                finally:
+                    ball_wasb.frames = frames0
+                if mw is not None:                                   # before the ball part: its rename marks the part done
+                    m = mask_part(blob, f0, f1)
+                    mw.save(m[:-4] + ".tmp.npz")
+                    os.replace(m[:-4] + ".tmp.npz", m)
+                return rows
+            if fps == 60:                                            # a 60 fps video, as the lab matches
+                ball_wasb.PROGRESS = prog
+                d, files = ball_parts(blob, plan, lambda ss, dur, f0, f1: part(ss, dur, f0, f1, 2), extra)
+                np.save(blob, d)
             else:
                 # Another frame rate, or a mix of 30 and 60 fps (E23b). The ball detector learned frames that
                 # are 1/30 s apart, and the flight code counts in frames of 1/60 s. So: decode at a constant
                 # 30 fps, use each frame (stride 1), and put the detections on each second frame of a
                 # 60 fps time line. pts.npy becomes that time line (the times of the video: pts_video.npy).
                 ball_wasb.FPS = 30
-                ball_wasb.PROGRESS = lambda fr: say("@progress ball %.3f" % min(1.0, fr / (n * 30.0)))
-                mw = mask_writer(1, lambda i: 2 * i) if net_on else None
-                d = ball_wasb.run(MID, 0, n, stride=1, save=False)
+                ball_wasb.PROGRESS = prog
+                d, files = ball_parts(blob, plan, lambda ss, dur, f0, f1: part(ss, dur, f0, f1, 1), extra)
                 d[:, 0] *= 2
                 np.save(W("pts_video.npy"), pts)
                 np.save(W("pts.npy"), np.arange(n * 60) / 60.0)
                 np.save(blob, d)
-            if mw is not None:                                       # the masks of all pictures: no fill-in decode
-                mw.save(mask_file)
+            if net_on:                                               # the masks of all pictures: no fill-in decode
+                import net_band_join
+                k = 1 if fps == 60 else 2                            # the frame index of the masks: blobs (60 fps line)
+                net_band_join.join_parts([(mask_part(blob, f0, f1), f0 * k, None if f1 is None else f1 * k)
+                                         for f0, f1, _, _ in plan], mask_file)
+            import glob                                              # the ball file is complete: no part is needed
+            for f in glob.glob(glob.escape(blob[:-4]) + ".part*"):   # (also the masks of a run with the net band on)
+                os.remove(f)
+            if net_on:
                 STAGE_KEYS["netmask"] = netmask_key(lab.BLOB_TAG)
                 json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
                 made.append("netmask")

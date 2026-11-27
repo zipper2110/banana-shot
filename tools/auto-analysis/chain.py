@@ -55,8 +55,8 @@ NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
 # no serve event (not a toss alone) from 1 s before its start to its end, no server end (serverNear None: no pose
 # vote and no serve event), and no chain shot with an end of a ball in play (PLAY_ENDS: a bounce in or out, the net,
 # the own side). Built on the head lab rows (E212): 9 rows of cause D and the 142 points with no serve event at the
-# start; it removes 6 of the 9 and no point. Default "0" (off).
-PLAY_DROP = os.environ.get("CHAIN_PLAY_DROP", "0") == "1"
+# start; it removes 6 of the 9 and no point. Default "1" (on: manager decision after E212); "0" gives the old way.
+PLAY_DROP = os.environ.get("CHAIN_PLAY_DROP", "1") != "0"
 PLAY_ENDS = ("in", "out", "net", "own")
 # E161 (S3, rally miss table E160): segments of the GRU with a gap of less than JOIN_GAP s are one rally. The old
 # value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 2.5 (manager

@@ -14,9 +14,10 @@ def row(ends=("none", "none"), server=None, prob=0.6, a=100.0, b=106.0):
 
 
 class PlayDrop(unittest.TestCase):
-    def test_off_by_default(self):
+    def test_on_by_default(self):
+        # manager decision after E212; CHAIN_PLAY_DROP=0 gives the old way
         if "CHAIN_PLAY_DROP" not in os.environ:
-            self.assertFalse(chain.PLAY_DROP)
+            self.assertTrue(chain.PLAY_DROP)
 
     def test_no_serve_no_server_no_end_is_play(self):
         self.assertTrue(chain.play_between(row(), []))

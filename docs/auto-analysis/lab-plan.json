@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 01:19",
+ "updated": "2026-11-28 01:27",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1307,11 +1307,13 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "status": "queued",
+   "status": "done",
    "after": [
     "A54"
    ],
-   "journal": [],
+   "journal": [
+    "E216"
+   ],
    "expected": {
     "outcome": "FAULT_SIDE knows the side more often and is right: on the lab 2 more fault rows taken and 2 C1 points back.",
     "impact": 2,
@@ -1323,7 +1325,12 @@
    "doneWhen": [
     "The side rule (pose feet x first, then the serve flight x; the server end from the serve event) behind a switch (default off), in its own small commit, with a unit test; it works with no pose (falls back).",
     "A journal row (S3): lab chain-only and Igor (E106 keys) off/on: the 15 E214 side rows, the FAULT_SIDE decisions that change on all other rows, fault rows, points lost (0), recall and precision by the spread rule. The row says if it can go on."
-   ]
+   ],
+   "finished": "2026-11-28 01:27",
+   "real": {
+    "impact": 2,
+    "outcome": "E216 (045b9da5, 90a2b734): CHAIN_SERVE_POSE_SIDE. Null check good. Lab on: recall 96.93 % (96.57), precision with faults 97.11 % (96.57), fault rows 12 (15), 0 points lost; 5 of 140 FAULT_SIDE decisions change (m1021 2716, 5873 and m1020 58-64 taken; C1 m1030 1487.05, 4119.53 back). Igor: recall 98.46 -> 99.49 %, precision with faults 95.05 -> 95.57 %, fault clip rows 5 -> 4, 0 points lost. All gains by the spread rule. Decision: on by default (S3 commit)."
+   }
   },
   {
    "id": "A53",

@@ -1,4 +1,4 @@
-"""Tests of CHAIN_TIME_ORDER (E166 a and c: shot_chain.time_order and no_net_alone). Usage: python -m unittest test_time_order"""
+"""Tests of CHAIN_TIME_ORDER (E166 a: shot_chain.time_order). Usage: python -m unittest test_time_order"""
 import os, unittest
 import shot_chain as sc
 
@@ -21,10 +21,14 @@ def net_alone(t, near):
 
 
 class Default(unittest.TestCase):
-    def test_the_default_is_off(self):
-        # a new switch is off by default; only the manager changes a default
+    def test_the_default_is_a(self):
+        # manager decision after E168; the app removes each CHAIN_* variable, so it uses this default
         if "CHAIN_TIME_ORDER" not in os.environ:
-            self.assertEqual(sc.TIME_ORDER, "0")
+            self.assertEqual(sc.TIME_ORDER, "a")
+
+    def test_part_c_is_removed(self):
+        # E168: part c removed a real net stop (label s002)
+        self.assertFalse(hasattr(sc, "no_net_alone"))
 
 
 class TimeOrder(unittest.TestCase):
@@ -74,52 +78,21 @@ class TimeOrder(unittest.TestCase):
         self.assertEqual(sh["bounces"], [])
 
 
-class NoNetAlone(unittest.TestCase):
-    def test_a_net_alone_shot_before_a_same_end_shot_goes(self):
-        shots = [net_alone(10.0, True), shot(11.0, True, how="gap"), shot(12.2, False, how="hit")]
-        out = sc.no_net_alone(shots)
-        self.assertEqual([s["t"] for s in out], [11.0, 12.2])
-        self.assertEqual(out[0]["how"], "first")
-
-    def test_the_gap_is_from_the_net_event(self):
-        for dt, n in ((sc.TO_NET_GAP - 0.05, 1), (sc.TO_NET_GAP + 0.05, 2)):
-            shots = [net_alone(10.0, True), shot(10.0 + dt, True, how="gap")]
-            self.assertEqual(len(sc.no_net_alone(shots)), n, dt)
-
-    def test_the_other_end_next_keeps_it(self):
-        shots = [net_alone(10.0, True), shot(10.5, False, how="hit")]
-        self.assertEqual(len(sc.no_net_alone(shots)), 2)
-
-    def test_a_net_shot_with_a_flight_stays(self):
-        a = shot(9.5, True, how="first")
-        a["net"] = {"t": 10.0, "kind": "net", "conf": 0.8, "dirConf": 0.8, "toFar": True}
-        a["how"] = "net"
-        self.assertEqual(len(sc.no_net_alone([a, shot(10.5, True, how="gap")])), 2)
-
-    def test_a_later_net_alone_shot_goes_and_the_how_of_the_next_stays(self):
-        shots = [shot(8.0, False, how="first"), net_alone(10.0, True), shot(10.8, True, how="gap")]
-        out = sc.no_net_alone(shots)
-        self.assertEqual([s["how"] for s in out], ["first", "gap"])
-
-
 class BuildGate(unittest.TestCase):
     def _run(self, mode):
-        old = sc.TIME_ORDER, sc.time_order, sc.no_net_alone
+        old = sc.TIME_ORDER, sc.time_order
         calls = []
         try:
             sc.TIME_ORDER = mode
             sc.time_order = lambda shots: calls.append("a")
-            sc.no_net_alone = lambda shots: calls.append("c") or shots
             sc.build([], None, [], serves=None)
         finally:
-            sc.TIME_ORDER, sc.time_order, sc.no_net_alone = old
+            sc.TIME_ORDER, sc.time_order = old
         return calls
 
     def test_the_switch_values(self):
         self.assertEqual(self._run("0"), [])
         self.assertEqual(self._run("a"), ["a", "a"])
-        self.assertEqual(self._run("c"), ["c"])
-        self.assertEqual(self._run("ac"), ["a", "c", "a"])
 
 
 if __name__ == "__main__":

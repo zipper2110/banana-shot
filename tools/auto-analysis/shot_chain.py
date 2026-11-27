@@ -96,21 +96,21 @@ AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB 
 SERVE_START = os.environ.get("CHAIN_SERVE_START", "ab")
 SS_GAP = 2.0           # s: (a) the next shot of the same end is this much or more after the first shot (E164: 8 lab rows)
 SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long after the first shot (E164: 0.6 to 1.2 s)
-# E166/E167 (S3; manager approval in gap-program 288cba3b): two causes of false dead ends. Default "0" (the old way);
-# "a", "c", "ac" (only the manager changes the default).
+# E166/E167 (S3; manager approval in gap-program 288cba3b): a cause of false dead ends. Default "a" (manager decision after
+# E168: the shot ends are right facts); "0" gives the old way.
 # "a" (time order, see time_order): an event before the contact of a shot is not an event of that shot. E167: 15 of the 27
 #     "own" ends of a first shot are the bounce event at the start of the first flight of the shot (lab: such an event is
 #     0.02 to 0.06 s before the flight start, 90 %), on the side of the hitter: the ball came down there before the contact.
-# "c" (see no_net_alone): a net event with no flight is no shot when the next shot is of the same end less than TO_NET_GAP s
-#     after the event (E166 class C: 7 false ends; a ball needs more time to go over the net and come back).
-TIME_ORDER = os.environ.get("CHAIN_TIME_ORDER", "0")
+#     E168: 19 first shots "own" to "none" on the lab; 1 winner lost was right from a wrong fact (m1030 1817).
+# Part "c" of E166 (a net event with no flight is no shot before a same-end shot) is removed after E168: it took any next
+# shot of the same end, not a serve event, and it removed a real net stop (label s002, m1020 2653.92).
+TIME_ORDER = os.environ.get("CHAIN_TIME_ORDER", "a")
 # TO_EPS (manager, after E167): the shortest real time from a contact to a bounce on the side of the hitter is longer.
 # A shot to the other side bounces there first; an overhead near the net can bounce about 0.1 s after the contact,
 # but on the other side, so the side test keeps it. A bounce on the side of the hitter after a contact comes after a
 # net touch: the ball falls from the top of the net (0.9 m) to the ground in 0.43 s or more. The bounce event at the
 # start of a flight is 0.06 s before the flight start to 0.02 s after it (lab, 4291 events).
 TO_EPS = 0.15          # s after the start of the first flight
-TO_NET_GAP = 1.2       # s
 
 
 def kmh(f):
@@ -288,8 +288,6 @@ def build(flights, events, nets=(), min_speed=8.0, weak=True, audio=None, serves
     shots = sorted(seen + alone, key=lambda sh: sh["t"])
     if "b" in NET_DEAD:
         shots = net_roll(shots)
-    if "c" in TIME_ORDER:
-        shots = no_net_alone(shots)
     if serves is not None and SERVE_START != "0":
         shots = serve_start(shots, nets, serves)
     if "a" in TIME_ORDER:
@@ -320,22 +318,6 @@ def time_order(shots):
         if rm:
             sh["bounces"] = [e for e in sh["bounces"] if all(e is not x for x in rm)]
             sh.setdefault("early", []).extend(rm)
-
-
-def no_net_alone(shots):
-    """E166 (c): removes a net shot with no flight (how "net": the net event alone) when the next shot is of the same end and
-    starts less than TO_NET_GAP s after the net event."""
-    out = []
-    for i, sh in enumerate(shots):
-        nx = shots[i + 1] if i + 1 < len(shots) else None
-        if sh["how"] == "net" and not sh["fl"] and nx is not None and nx["near"] == sh["near"]:
-            t_nx = nx["fl"][0]["t0"] if nx["fl"] else nx["t"]
-            if t_nx - sh["net"]["t"] < TO_NET_GAP:
-                if i == 0:
-                    nx["how"] = "first"
-                continue
-        out.append(sh)
-    return out
 
 
 def serve_start(shots, nets, serves, mode=None):

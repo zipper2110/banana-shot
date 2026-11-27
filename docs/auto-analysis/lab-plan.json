@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 23:35",
+ "updated": "2026-11-27 23:51",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -935,7 +935,7 @@
     "The 3-seed mean behind a new switch (default off), in its own small commit, with a unit test of the mean.",
     "A journal row (S3) with the chain-only results on cached flights (no new detection): on each of the 4 lab matches recall and precision against E106 d1cb16c7 (lab 95.1 % / 95.1 %), and on Igor m1116 against E106 (95.9 % / 98.4 %), by the spread rule; the row says if the switch can go on."
    ],
-   "finished": "2026-11-28 00:05",
+   "finished": "2026-11-27 23:20",
    "real": {
     "impact": 3,
     "outcome": "E196 (a1a0f63f, 916c9b65, 731dafd2): 10 seed models (2 min lock); rally_model.SEEDS with SeedMean tests; null check = E106. Chain only, SEEDS 1 / 3: lab recall 95.1 / 95.5 %, precision 95.1 / 95.0 %, winners 434 / 442; Igor recall 95.9 / 97.4 %, precision 98.4 / 97.9 %. Only the winner gain is over the spread; no loss over it. All 3 checks pass; the switch can go on."
@@ -964,7 +964,7 @@
     "A journal row (S3) with the count of B cases (a fault row, then a missed second-serve point of the same server) on all 4 lab matches and Igor, on the SEEDS 3 head, and the GRU and chain facts that cause them (0 cases without a cause).",
     "A fix tested chain-only on cached flights (no new detection): the B cases back on the lab, and lab and Igor recall and precision against the SEEDS 3 reference by the spread rule; the row says if the fix can go on (behind a switch, default off, with a unit test)."
    ],
-   "finished": "2026-11-28 00:50",
+   "finished": "2026-11-27 23:45",
    "real": {
     "impact": 1,
     "outcome": "E198 (c5119e48, ae370375, 01c22c34): 5 B cases on the SEEDS 3 reference (m1021 1, m1030 3, Igor 1), one cause each (the GRU stays under 0.5 on the second-serve point). CHAIN_SECOND_SERVE: 2 back (m1030 3015.85, Igor 4509.53), their fault rows gone, 0 false, 0 lost; lab 95.5 to 95.7 % / 95.0 to 95.2 %, Igor recall 97.4 to 97.9 %; inside the spread. Both checks pass. E195 note: its lab window facts after 4675 s were wrong; the chain runs were right."
@@ -1002,8 +1002,10 @@
     "M2-I5"
    ],
    "owner": "S4",
-   "journal": [],
-   "status": "planned",
+   "journal": [
+    "E176"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "Causes of the wrong shot counts with more labeled points.",
     "impact": 3,
@@ -1018,6 +1020,59 @@
    "doneWhen": [
     "A journal row (S4 block): all points with a wrong shot count on the E107 fragments (d1cb16c7) in one table, each with one cause, 0 without a cause, and the count for each cause.",
     "For the largest cause: a fix proposal with the expected change of 'shot count right' (E107: 20 of 40 points)."
+   ],
+   "finished": "2026-11-27 23:08",
+   "real": {
+    "impact": 3,
+    "outcome": "E176 (5eb39d65): the 20 wrong shot counts on E107, one cause each, 0 without: A a false first shot before the serve in play 7, B shots after the point end 6, D a missed contact 4, C the point goes on after the label window 3. Fix c1 for A (shot_chain.serve_start): 20 to 21 of 40, no lab loss; a count rule for B: 27 of 40 with c1. Both checks pass."
+   }
+  },
+  {
+   "id": "A40",
+   "kind": "fix",
+   "title": "c1: shots before the first shot at a serve event go out (shot_chain.serve_start)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "journal": [],
+   "status": "planned",
+   "after": [
+    "A39"
+   ],
+   "expected": {
+    "outcome": "Shot count right +1 (E176: 20 to 21 of 40) with no lab loss.",
+    "impact": 1,
+    "text": "Cause A of E176 (7 points); the other 5 need the serve event (E174 causes)."
+   },
+   "estimate": {
+    "netMin": 60
+   },
+   "doneWhen": [
+    "c1 in shot_chain.serve_start behind a new CHAIN_SERVE_START letter (default off), in its own small commit, with a unit test.",
+    "A journal row (S3): the label measures on the 24 E107 fragments off and on (shot count right 21 of 40 or more with the head's other rules), and a lab bench chain-only run on the cached flights (after A39): rally recall and precision and winners not lower than the head beyond the spread; the row says if c1 can go on."
+   ]
+  },
+  {
+   "id": "A41",
+   "kind": "fix",
+   "title": "Shot count measure: no late shots that the chain does not use; no points cut by the label window",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S4",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "The shot count measure counts what the app shows: E176 B (6 points) and C (3 points) are measure errors, not chain errors.",
+    "impact": 2,
+    "text": "E176: +5 with the late-shot rule (25 of 40)."
+   },
+   "estimate": {
+    "netMin": 60
+   },
+   "doneWhen": [
+    "label_measure.py: the shots that shot_chain marks as not used (after the time cut) do not count, and a point that goes on after the end of the label window is left out of the shot count (it counts as 'not comparable'), with unit tests for both rules.",
+    "A journal row (S4): shot count right on the 24 E107 fragments before and after each rule (n of N, with the N change), and a check that the other 3 label measures do not change.",
+    "The dashboard M2 value 'Shot count right' gets the new number with the E number (send it to the manager)."
    ]
   },
   {

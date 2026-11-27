@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:45",
+ "updated": "2026-11-28 00:54",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1191,8 +1191,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E213"
+   ],
    "expected": {
     "outcome": "Fewer fault rows (17 on the lab with play drop) with no lost point.",
     "impact": 2,
@@ -1204,6 +1206,55 @@
    "doneWhen": [
     "A journal row (S3): the F rows on the head with CHAIN_PLAY_DROP on, with the facts that set them apart from real short points; the rule chosen from these facts and how many rows it was built on.",
     "The rule behind a switch (default off), in its own small commit, with a unit test; lab chain-only and Igor (E106 keys) off and on: fault rows down, 0 lost points, recall and precision by the spread rule; the row says if it can go on."
+   ],
+   "finished": "2026-11-28 00:54",
+   "real": {
+    "impact": 1,
+    "outcome": "E213 (3cd16bc8, 3576a532): CHAIN_FAULT_PLAY_ON (FAULT_SIDE takes a row with more than 2 shots when its serve ends out or net; same server and side; no threshold) with tests; checked on 433 lab rows: 2 F rows, 0 points. Lab: fault rows 17 to 15, precision with faults 96.22 to 96.57 %, 0 lost. Igor: fault rows 6 to 5, precision with faults 94.6 to 95.1 %, 0 lost. Both checks pass; it can go on."
+   }
+  },
+  {
+   "id": "A51",
+   "kind": "run",
+   "title": "M2 label measures on the head with all the rules of the night",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S1",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "One M2 base for the morning: all 4 label measures on one code.",
+    "impact": 1,
+    "text": "Tonight's values come from different codes (E107, E175, E177, E178, E221)."
+   },
+   "estimate": {
+    "netMin": 20
+   },
+   "doneWhen": [
+    "A journal row (S1): hits found, shot count right (A41 measure), in/out right and fault clips on the 24 E107 fragments (and any new saved fragments, named) on the auto-detect head with CHAIN_FAULT_PLAY_ON on; each as n of N, with the code and the switch values.",
+    "For each measure, the change against the last value on the dashboard, with the action that explains it; send the values to the manager."
+   ]
+  },
+  {
+   "id": "A52",
+   "kind": "research",
+   "title": "Rally error table again on the head with all the rules of the night (all 4 lab matches and Igor)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "The causes that are left after A36 to A50, ranked, with the next fix proposal.",
+    "impact": 2,
+    "text": "E195 and E210 were made on older heads."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "doneWhen": [
+    "A journal row (S3): all missed, false and fault rows of the 4 lab matches and Igor on the head with CHAIN_FAULT_PLAY_ON on, each with one cause, 0 without a cause, the count per cause, ranked.",
+    "For the largest cause that a chain rule can fix: a fix proposal with the expected rows; for a cause that needs a better GRU or new labels, a short plan of what that needs."
    ]
   },
   {

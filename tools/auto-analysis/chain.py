@@ -61,10 +61,10 @@ JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "2.5"))
 # the serve flight, both sides known: the rule of FAULT_SIDE), starts a new rally when no rally starts and the GRU
 # stays below the threshold in the SS_QUIET s after the serve. The new rally: SS_BEFORE s before the serve to SS_AFTER
 # s after the last flight of the flights that follow the serve (gaps of SS_GAP s or less). FAULT_SIDE then makes the
-# first rally the fault candidate of the new rally. Default "0" (off). SS_SHOTS 1, not FAULT_SHOTS 2: on the lab a
+# first rally the fault candidate of the new rally. Default "1" (on: manager decision after E198); "0" gives the old way. SS_SHOTS 1, not FAULT_SHOTS 2: on the lab a
 # real 2-shot point (m1030 4834) was followed by a serve-like flight of the same server and side, and FAULT_SIDE then
 # removed the real point (E198).
-SECOND_SERVE = os.environ.get("CHAIN_SECOND_SERVE", "0") == "1"
+SECOND_SERVE = os.environ.get("CHAIN_SECOND_SERVE", "1") != "0"
 SS_SHOTS, SS_NEXT, SS_QUIET, SS_BEFORE, SS_AFTER, SS_GAP = 1, 13.0, 3, 1.5, 1.0, 2.5
 # item 12 (user decision): the winner of each rally comes from its own evidence; the score decoder does not change a
 # winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.

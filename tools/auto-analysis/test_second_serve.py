@@ -27,8 +27,8 @@ class SecondServe(unittest.TestCase):
     def segs(self, serves, rows=None, prob=None):
         return chain.second_serve_segs(rows or self.rows, serves, self.fl, self.prob if prob is None else prob)
 
-    def test_off_by_default(self):
-        self.assertFalse(chain.SECOND_SERVE)
+    def test_on_by_default(self):
+        self.assertTrue(chain.SECOND_SERVE)          # manager decision after E198; CHAIN_SECOND_SERVE=0 gives the old way
 
     def test_same_server_and_side_gives_a_new_rally(self):
         got = self.segs([ev(101.0, True, 2.0), ev(111.0, True, 2.5)])

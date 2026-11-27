@@ -117,5 +117,40 @@ class BuildGate(unittest.TestCase):
             sc.SERVE_START, sc.serve_start = old, orig
 
 
+class ServeStartC(unittest.TestCase):
+    """A40 (S4 E176 rule c1): letter "c"."""
+    def test_c_is_off_by_default(self):
+        if "CHAIN_SERVE_START" not in os.environ:
+            self.assertNotIn("c", sc.SERVE_START)
+
+    def test_shots_before_a_later_serve_go_out(self):
+        shots = [shot(10.0, True), shot(11.5, True, how="gap"), shot(12.5, False)]
+        out = sc.serve_start(shots, [], [serve(11.5, True)], "c")
+        self.assertEqual([s["t"] for s in out], [11.5, 12.5])
+        self.assertEqual(out[0]["how"], "first")
+
+    def test_an_earlier_shot_at_a_serve_keeps_the_list(self):
+        shots = [shot(10.0, True), shot(11.5, True, how="gap")]
+        self.assertEqual(len(sc.serve_start(shots, [], [serve(10.0, True), serve(11.5, True)], "c")), 2)
+
+    def test_a_serve_more_than_sl_max_later_keeps_the_list(self):
+        shots = [shot(10.0, True), shot(10.0 + sc.SL_MAX + 0.2, True, how="gap")]
+        self.assertEqual(len(sc.serve_start(shots, [], [serve(10.0 + sc.SL_MAX + 0.2, True)], "c")), 2)
+
+    def test_a_return_soon_after_a_serve_keeps_the_list(self):
+        # c1: shot k less than SL_MIN s after shot k - 1 is not the serve in play (a return got a serve event)
+        shots = [shot(10.0, True), shot(10.0 + sc.SL_MIN - 0.2, False)]
+        self.assertEqual(len(sc.serve_start(shots, [], [serve(10.0 + sc.SL_MIN - 0.2, False)], "c")), 2)
+
+    def test_a_toss_or_the_other_end_is_no_serve(self):
+        shots = [shot(10.0, True), shot(11.5, True, how="gap")]
+        self.assertEqual(len(sc.serve_start(shots, [], [serve(11.5, True, "toss")], "c")), 2)
+        self.assertEqual(len(sc.serve_start(shots, [], [serve(11.5, False)], "c")), 2)
+
+    def test_without_c_nothing_changes(self):
+        shots = [shot(10.0, True), shot(11.5, True, how="gap")]
+        self.assertEqual(len(sc.serve_start(shots, [], [serve(11.5, True)], "ab")), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

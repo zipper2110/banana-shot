@@ -93,7 +93,9 @@ AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB 
 # play. Lab marks start at the second serve; a first-serve fault or a toss before it gave a false first shot. Default
 # "ab" (manager decision after E164); "0" gives the old way; "a", "b" (see serve_start). Only rally windows of chain.py
 # give the serve events (build serves=...).
+# A40 (S4 E176 rule c1): the letter "c" ("abc"; off by default) drops false first shots before a later serve in play.
 SERVE_START = os.environ.get("CHAIN_SERVE_START", "ab")
+SL_MAX, SL_MIN = 3.0, 1.0  # s: (c) the serve in play is not more than SL_MAX after the first shot, SL_MIN or more after the shot before it
 SS_GAP = 2.0           # s: (a) the next shot of the same end is this much or more after the first shot (E164: 8 lab rows)
 SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long after the first shot (E164: 0.6 to 1.2 s)
 # E166/E167 (S3; manager approval in gap-program 288cba3b): a cause of false dead ends. Default "a" (manager decision after
@@ -407,7 +409,8 @@ def serve_start(shots, nets, serves, mode=None):
         shot is a serve before the serve in play. It goes out of the list. The next shot gets how "first" and
         "before" = {"shot": the removed shot, "cord": the cord event or None}; chain.py makes a fault clip at the removed
         shot (no clip with a cord event: a let is no fault). The form for any end of the first shot is not used: it also
-        removed serves in play (E164 step 1: 35 lab rows, 4 of them serves in play)."""
+        removed serves in play (E164 step 1: 35 lab rows, 4 of them serves in play).
+    "c" (A40, S4 E176 rule c1): after "a". See serve_late."""
     mode = SERVE_START if mode is None else mode
     if not shots:
         return shots
@@ -428,6 +431,32 @@ def serve_start(shots, nets, serves, mode=None):
             s1["how"] = "first"
             s1["before"] = {"shot": s0, "cord": cord[0] if cord else None}
             shots = shots[1:]
+    if "c" in mode:
+        shots = serve_late(shots, serves)
+    return shots
+
+
+def at_serve(sh, serves):
+    """A40: a serve event (not a toss alone) of the end of shot sh not more than SB_AT s from the shot time or from the
+    start of its first flight."""
+    t0 = sh["fl"][0]["t0"] if sh["fl"] else sh["t"]
+    return any(bool(x[1]) == sh["near"] and x[2] != "toss" and min(abs(x[0] - t0), abs(x[0] - sh["t"])) <= SB_AT
+               for x in serves)
+
+
+def serve_late(shots, serves):
+    """A40 (S4 E176 rule c1; cause A of E176: a wrong fit, a ball off the court or the ball bounce of the server 1.0 to
+    2.6 s before the serve): the first shot k >= 1 at a serve event (at_serve), not more than SL_MAX s after the first
+    shot and SL_MIN s or more after shot k - 1 (not a return after a serve), when no shot before k is at a serve event:
+    the shots before k go out of the list (they are before the serve in play); shot k gets how "first"."""
+    for k in range(1, len(shots)):
+        if shots[k]["t"] - shots[0]["t"] > SL_MAX:
+            break
+        if at_serve(shots[k], serves) and shots[k]["t"] - shots[k - 1]["t"] >= SL_MIN:
+            if any(at_serve(s, serves) for s in shots[:k]):
+                break
+            shots[k]["how"] = "first"
+            return shots[k:]
     return shots
 
 

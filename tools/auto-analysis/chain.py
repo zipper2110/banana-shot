@@ -55,6 +55,15 @@ NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
 # value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 2.5 (manager
 # decision after E161); 1.5 gives the old way.
 JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "2.5"))
+# A38 (E198, cause B of E195): after a first-serve fault the GRU can fire on the fault serve and stay silent on the
+# second-serve point. CHAIN_SECOND_SERVE=1: after a rally of FAULT_SHOTS chain shots or less, the first serve event
+# ("serve" or "toss+serve") not later than SS_NEXT s after its end, from the same server end and the same side (x of
+# the serve flight, both sides known: the rule of FAULT_SIDE), starts a new rally when no rally starts and the GRU
+# stays below the threshold in the SS_QUIET s after the serve. The new rally: SS_BEFORE s before the serve to SS_AFTER
+# s after the last flight of the flights that follow the serve (gaps of SS_GAP s or less). FAULT_SIDE then makes the
+# first rally the fault candidate of the new rally. Default "0" (off).
+SECOND_SERVE = os.environ.get("CHAIN_SECOND_SERVE", "0") == "1"
+SS_NEXT, SS_QUIET, SS_BEFORE, SS_AFTER, SS_GAP = 13.0, 3, 1.5, 1.0, 2.5
 # item 12 (user decision): the winner of each rally comes from its own evidence; the score decoder does not change a
 # winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.
 DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"
@@ -341,6 +350,10 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
     detector (E60)."""
     import identity
     rows = evidence(mid, seg, full, serves, p, prob)
+    if SECOND_SERVE and prob is not None:
+        add = second_serve_segs(rows, serves, full["flights"], prob)
+        if add:                                      # the evidence of all rallies again, with the new ones (A38)
+            rows = evidence(mid, sorted(list(seg) + add, key=lambda s: s[0]), full, serves, p, prob)
     if FAULT_SIDE:
         rows = fault_rallies(rows, serves)
     if NO_SERVE_DROP:
@@ -387,6 +400,41 @@ def serve_side(serves, a):
     if not ev or abs(ev[0][3]["p0"][0]) < SIDE_X:
         return None
     return ev[0][1], ev[0][3]["p0"][0] > 0
+
+
+def second_serve_segs(rows, serves, flights, prob, hi=0.5):
+    """A38 (see SECOND_SERVE): the new rally segments (start, end, GRU max) of the second-serve points after a short
+    rally that the GRU did not find. rows: the rallies with their chain; serves: serve_events; prob: the GRU of each
+    second."""
+    fl = sorted((f for f in flights if f.get("t0") is not None), key=lambda f: f["t0"])
+    t0s = [f["t0"] for f in fl]
+    out = []
+    for i, r in enumerate(rows):
+        if r.get("chain") is None or len(r["chain"]["shots"]) > FAULT_SHOTS:
+            continue
+        s1 = serve_side(serves, r["start"])
+        if s1 is None:
+            continue
+        ev = [e for e in serves if 0 < e[0] - r["end"] <= SS_NEXT and e[2] in ("serve", "toss+serve") and bool(e[1]) == s1[0]]
+        if not ev:
+            continue
+        t, x = float(ev[0][0]), float(ev[0][3]["p0"][0])
+        if abs(x) < SIDE_X or (x > 0) != s1[1]:
+            continue
+        nxt = rows[i + 1]["start"] if i + 1 < len(rows) else float("inf")
+        if nxt < t + SS_QUIET or float(np.max(prob[int(t):int(t) + SS_QUIET + 1])) >= hi:
+            continue
+        k = int(np.searchsorted(t0s, t - 0.3))
+        if k >= len(fl):
+            continue
+        j = k
+        while j + 1 < len(fl) and fl[j + 1]["t0"] - fl[j]["t0"] <= SS_GAP:
+            j += 1
+        a = max(t - SS_BEFORE, r["end"] + 0.5)
+        b = min(max(float(fl[j]["t1"]), t) + SS_AFTER, nxt - 0.5)
+        if b > a:
+            out.append((a, b, round(float(np.max(prob[int(a):int(b) + 1])), 3)))
+    return out
 
 
 def fault_rallies(rows, serves):

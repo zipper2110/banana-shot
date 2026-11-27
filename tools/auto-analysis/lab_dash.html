@@ -4,194 +4,163 @@
 <meta charset="utf-8">
 <title>Lab dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>try { const q = new URLSearchParams(location.search).get("theme"); if (q) localStorage.setItem("labDashTheme", q); const t = localStorage.getItem("labDashTheme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
+<script>try { const t = localStorage.getItem("labDashTheme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
 <style>
-/* Light theme. */
 :root {
-  --bg: #f3f4f6; --card: #fff; --raised: #f7f8fa; --ink: #1b1f27; --ink-2: #4b5261; --mute: #7a8190; --line: #e3e6eb;
-  --accent: #2f6fde; --on-accent: #fff; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030;
+  --bg: #f6f7f9; --card: #fff; --ink: #1d2330; --mute: #687083; --line: #e2e5ea;
+  --accent: #2f6fde; --on-accent: #fff; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030; --soft: #eef2f8;
   --research: #6b4fbb; --experiment: #0f7c8c; --fix: #1f8a4c; --run: #8a5a1f; --labeling: #b0417a;
 }
-/* Theme: html[data-theme] = "light" or "dark" from the switch; no attribute = the system setting.
-   Dark = the Mid theme of the app (Palette.kt with the background seed MID_BACKGROUND #2E2E2E: BG, CARD, RAISED,
-   LINE, FG, FG_2, FG_3; the lime accent DEFAULT_ACCENT with ON_LIME ink; the status colors YELLOW, RED, GREEN, BLUE). */
-:root[data-theme="dark"] { color-scheme: dark; --bg: #2e2e2e; --card: #3a3a3a; --raised: #404040; --ink: #e8e8e8; --ink-2: #b8b5b5; --mute: #8f8f8f; --line: #4a4a4a; --accent: #c8ec46; --on-accent: #142000; --ok: #4caf50; --warn: #f2d64b; --bad: #ff7351; --research: #b9a6f5; --experiment: #6fb5ff; --fix: #4caf50; --run: #f2d64b; --labeling: #ff9bc8; }
+/* Theme: html[data-theme] = "light" or "dark" from the switch; no attribute = the system setting. */
+/* Dark = the Mid theme of the app (Palette.kt with the background seed MID_BACKGROUND #2E2E2E: BG, CARD, RAISED,
+   LINE, FG, FG_2; the lime accent DEFAULT_ACCENT with ON_LIME ink; the status colors YELLOW, RED, BLUE, GREEN). */
+:root[data-theme="dark"] { color-scheme: dark; --bg: #2e2e2e; --card: #3a3a3a; --ink: #e8e8e8; --mute: #b8b5b5; --line: #464646; --soft: #404040; --accent: #c8ec46; --on-accent: #142000; --ok: #4caf50; --warn: #f2d64b; --bad: #ff7351; --research: #b9a6f5; --experiment: #6fb5ff; --fix: #4caf50; --run: #f2d64b; --labeling: #ff9bc8; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) { color-scheme: dark; --bg: #2e2e2e; --card: #3a3a3a; --raised: #404040; --ink: #e8e8e8; --ink-2: #b8b5b5; --mute: #8f8f8f; --line: #4a4a4a; --accent: #c8ec46; --on-accent: #142000; --ok: #4caf50; --warn: #f2d64b; --bad: #ff7351; --research: #b9a6f5; --experiment: #6fb5ff; --fix: #4caf50; --run: #f2d64b; --labeling: #ff9bc8; }
+  :root:not([data-theme]) { color-scheme: dark; --bg: #2e2e2e; --card: #3a3a3a; --ink: #e8e8e8; --mute: #b8b5b5; --line: #464646; --soft: #404040; --accent: #c8ec46; --on-accent: #142000; --ok: #4caf50; --warn: #f2d64b; --bad: #ff7351; --research: #b9a6f5; --experiment: #6fb5ff; --fix: #4caf50; --run: #f2d64b; --labeling: #ff9bc8; }
 }
 :root[data-theme="light"] { color-scheme: light; }
-
+header .ctl { flex-wrap: wrap; }
+main > * { min-width: 0; }
+section { overflow-x: auto; }
+.theme { flex-shrink: 0; display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.theme button { border: 0; border-radius: 0; padding: 5px 9px; background: transparent; font-size: 12px; }
+.theme button.on { background: var(--accent); color: var(--on-accent); }
 * { box-sizing: border-box; }
-body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--raised); color: var(--ink); border-radius: 6px;
-  padding: 4px 11px; cursor: pointer; }
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line);
+  display: flex; gap: 16px; align-items: center; padding: 10px 20px; flex-wrap: wrap; }
+header h1 { font-size: 17px; margin: 0; }
+header .meta { color: var(--mute); font-size: 12px; }
+header .ctl { margin-left: auto; display: flex; gap: 8px; }
+button { font: inherit; border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 6px;
+  padding: 5px 11px; cursor: pointer; }
 button:hover { border-color: var(--accent); }
 button.danger { border-color: var(--bad); color: var(--bad); }
 button.go { border-color: var(--ok); color: var(--ok); }
-button:disabled { opacity: .4; cursor: default; }
-code { font: 12px Consolas, monospace; background: var(--raised); padding: 1px 5px; border-radius: 4px; }
-
-/* Text levels: page title, zone title, item title, body, label (small caps), meta. */
-.label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
-.meta { font-size: 12px; color: var(--mute); }
-.dim { color: var(--ink-2); }
-.num { font-variant-numeric: tabular-nums; }
-
-header { display: flex; align-items: center; gap: 16px; padding: 14px 28px; }
-header h1 { font-size: 20px; margin: 0; font-weight: 700; }
-header .right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-.theme { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-.theme button { border: 0; border-radius: 0; padding: 3px 10px; background: transparent; font-size: 12px; }
-.theme button.on { background: var(--accent); color: var(--on-accent); }
-
-main { max-width: 1800px; margin: 0 auto; padding: 0 28px 48px; display: grid; gap: 24px; }
-
-/* Zone 1: the status strip. */
-.strip { display: grid; grid-template-columns: 2fr 1fr 1.4fr 1.2fr 1.2fr; gap: 14px; }
-.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
-.tile .big { font-size: 24px; font-weight: 700; line-height: 1.2; margin: 4px 0 2px; }
-.tile .line { font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile.lock .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.tile.lock .btns { margin-left: auto; display: flex; gap: 6px; }
-.tile.paused { border-color: var(--warn); }
-.tile.busy { border-color: var(--accent); }
-.state-paused { color: var(--warn); } .state-busy { color: var(--accent); } .state-free { color: var(--ok); }
-
-/* Zones 2 and 3: two columns. */
-.cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 24px; align-items: start; }
-.col { display: grid; gap: 24px; min-width: 0; }
-@media (max-width: 1200px) { .cols { grid-template-columns: minmax(0, 1fr); } .strip { grid-template-columns: 1fr 1fr; } .tile.lock { grid-column: 1 / -1; } }
-.zone { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; overflow-x: auto; }
-.zone > h2 { font-size: 16px; margin: 0 0 14px; display: flex; align-items: baseline; gap: 10px; }
-.zone > h2 .meta { font-weight: normal; }
-.sub { margin-top: 18px; }
-.sub > .label { display: block; margin-bottom: 6px; }
-
-/* Bars. */
-.bar { height: 6px; background: var(--raised); border-radius: 3px; overflow: hidden; }
-.bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
-.bar.ok > i { background: var(--ok); } .bar.warn > i { background: var(--warn); }
-
-/* Lists: one line per item, details on click. */
-.list { border-top: 1px solid var(--line); }
-.item { border-bottom: 1px solid var(--line); }
-.item > .head { display: grid; align-items: center; gap: 10px; padding: 8px 4px; cursor: pointer; }
-.item > .head:hover { background: var(--raised); }
-.item .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.item .more { display: none; padding: 2px 4px 12px 4px; font-size: 13px; color: var(--ink-2); }
-.item.open .more { display: block; }
-.item .more p { margin: 4px 0; }
-.item .more b { color: var(--ink); font-weight: 600; }
-.act > .head { grid-template-columns: 36px 84px minmax(0, 1fr) 52px 70px 96px; }
-.job > .head { grid-template-columns: 22px minmax(0, 1fr) 70px 110px; cursor: default; }
-.job > .head:hover { background: none; }
-.iss > .head { grid-template-columns: 52px minmax(0, 1fr) 70px 90px; }
-.id { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
-.right { text-align: right; }
-
-.kind { font-size: 11px; font-weight: 600; letter-spacing: .03em; }
-.kind::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: currentColor; vertical-align: 0; }
-.k-research { color: var(--research); } .k-experiment { color: var(--experiment); } .k-fix { color: var(--fix); }
-.k-run { color: var(--run); } .k-labeling { color: var(--labeling); }
-
-.pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; border: 1px solid currentColor; white-space: nowrap; }
-.s-done { color: var(--ok); } .s-running { color: var(--accent); } .s-waiting { color: var(--warn); }
-.s-queued, .s-planned, .s-later, .s-next { color: var(--mute); } .s-open { color: var(--warn); } .s-measured { color: var(--ink-2); }
-.s-solved { color: var(--ok); } .s-moved { color: var(--mute); } .s-current { color: var(--accent); }
-
-/* Impact: a 0-10 track; the fill is the real impact, the tick the expected one. */
-.imp { position: relative; height: 8px; background: var(--raised); border-radius: 4px; width: 60px; display: inline-block; vertical-align: middle; }
-.imp > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--ok); }
-.imp > i.lower { background: var(--warn); } .imp > i.zero { background: var(--bad); }
-.imp > i.exp { background: color-mix(in srgb, var(--mute) 55%, transparent); }
-.imp > b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); border-radius: 1px; }
-.impn { font-size: 11px; color: var(--mute); margin-left: 4px; }
-
-/* Milestones. */
-.mtrack { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(130px, 1fr); gap: 8px; }
-.mchip { border-radius: 8px; padding: 8px 10px; cursor: pointer; border: 1px solid var(--line); border-top-width: 3px; min-width: 0; }
-.mchip:hover { background: var(--raised); }
-.mchip.done { border-top-color: var(--ok); } .mchip.current { border-top-color: var(--accent); } .mchip.next { border-top-color: var(--warn); }
-.mchip.sel { background: var(--raised); border-color: var(--accent); border-top-color: var(--accent); }
-.mchip .t { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.goal { font-size: 15px; font-weight: 600; margin: 16px 0 4px; }
-.measures { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.measure { background: var(--raised); border-radius: 8px; padding: 10px 12px; }
-.measure .v { font-size: 18px; font-weight: 700; margin: 2px 0 6px; }
-.measure .tg { font-size: 12px; color: var(--mute); margin-top: 4px; }
-
-/* Workers. */
-.wk { display: grid; grid-template-columns: 110px minmax(0, 1fr) 64px; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line); align-items: baseline; }
-.wk .n { font-weight: 600; }
-.wk .now { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wk .next { font-size: 12px; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* Labels. */
-.lrow { display: grid; grid-template-columns: 90px minmax(0, 1fr) 70px 80px; gap: 12px; align-items: center; padding: 7px 0; }
-.lrow .c { font-weight: 700; }
-
-.filters { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
-.filters button { font-size: 12px; padding: 2px 10px; border-radius: 12px; }
+button:disabled { opacity: .45; cursor: default; }
+main { max-width: 1900px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
+.col { display: grid; gap: 16px; min-width: 0; }
+@media (max-width: 1150px) { main { grid-template-columns: minmax(0, 1fr); } }
+.lockhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.lockhead h2 { margin: 0; font-size: 15px; }
+.lockctl { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.status { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 10px; border: 1px solid var(--line); }
+.status.free { color: var(--mute); } .status.busy { color: var(--accent); border-color: var(--accent); }
+.status.paused { color: var(--warn); border-color: var(--warn); }
+#banner .banner { margin-bottom: 10px; }
+section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+section > h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
+section > h2 small { color: var(--mute); font-weight: normal; font-size: 12px; }
+.banner { border-radius: 8px; padding: 10px 14px; font-weight: 600; }
+.banner.pause { background: color-mix(in srgb, var(--warn) 18%, transparent); border: 1px solid var(--warn); }
+.banner.err { background: color-mix(in srgb, var(--bad) 15%, transparent); border: 1px solid var(--bad); }
+.banner .sub { font-weight: normal; font-size: 13px; color: var(--mute); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--mute); font-weight: 600; font-size: 12px; }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mute { color: var(--mute); }
+.small { font-size: 12px; }
+.bar { height: 8px; background: var(--soft); border-radius: 4px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.bar.over > i { background: var(--warn); }
+.holder { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; }
+.holder .what { font-weight: 600; }
+.chip { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--line);
+  white-space: nowrap; margin-right: 3px; }
+.k-research { color: var(--research); border-color: var(--research); }
+.k-experiment { color: var(--experiment); border-color: var(--experiment); }
+.k-fix { color: var(--fix); border-color: var(--fix); }
+.k-run { color: var(--run); border-color: var(--run); }
+.k-labeling { color: var(--labeling); border-color: var(--labeling); }
+.s-done { color: var(--ok); } .s-running { color: var(--accent); font-weight: 600; } .s-waiting { color: var(--warn); }
+.s-queued, .s-planned { color: var(--mute); } .s-dropped { color: var(--mute); text-decoration: line-through; }
+.mtrack { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.mchip { flex: 1 0 160px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+.mchip.done { border-left: 4px solid var(--ok); }
+.mchip.current { border-left: 4px solid var(--accent); background: var(--soft); }
+.mchip.next { border-left: 4px solid var(--warn); }
+.mchip.later { border-left: 4px solid var(--line); }
+.mchip.sel { outline: 2px solid var(--accent); }
+.mchip b { display: block; font-size: 13px; }
+.mchip span { font-size: 11px; color: var(--mute); }
+.goal { padding: 10px 12px; background: var(--soft); border-radius: 8px; margin: 10px 0; }
+.badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--warn) 20%, transparent); }
+.measures { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin: 10px 0; }
+.measure { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.measure .n { font-size: 11px; color: var(--mute); }
+.measure .v { font-weight: 600; }
+.issue { border: 1px solid var(--line); border-radius: 8px; margin: 8px 0; }
+.issue > summary { padding: 8px 12px; cursor: pointer; list-style: none; display: flex; gap: 8px; align-items: baseline; }
+.issue > summary::-webkit-details-marker { display: none; }
+.issue > summary .id { color: var(--mute); font-size: 12px; min-width: 52px; }
+.issue .body { padding: 0 12px 10px; }
+.imp { display: inline-flex; gap: 2px; vertical-align: middle; }
+.imp i { width: 5px; height: 10px; background: var(--soft); border-radius: 1px; }
+.imp.e i.on { background: var(--mute); } .imp.r i.on { background: var(--ok); }
+.imp.r.lower i.on { background: var(--warn); } .imp.r.zero i.on { background: var(--bad); }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .filters button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.err { border: 1px solid var(--bad); color: var(--bad); border-radius: 8px; padding: 8px 12px; }
-.legend { font-size: 12px; color: var(--mute); margin-top: 12px; }
-ul.links { margin: 0; padding-left: 18px; } ul.links li { margin: 3px 0; }
+.workers { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+.worker { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.worker h3 { margin: 0; font-size: 14px; display: flex; justify-content: space-between; }
+.worker .focus { font-size: 11px; color: var(--mute); margin-bottom: 6px; }
+.worker ul { margin: 0; padding-left: 0; list-style: none; }
+.worker li { padding: 4px 0; border-top: 1px dashed var(--line); font-size: 13px; }
+.worker li .r { float: right; color: var(--mute); font-size: 12px; }
+.lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.lcard { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+.lcard .big { font-size: 20px; font-weight: 700; }
+code { font: 12px Consolas, monospace; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+a { color: var(--accent); }
+details.more > summary { cursor: pointer; color: var(--mute); font-size: 12px; margin-top: 6px; }
+.legend { font-size: 11px; color: var(--mute); }
 </style>
 </head>
 <body>
 <header>
   <h1>Lab dashboard</h1>
-  <span class="meta" id="meta">loading…</span>
-  <div class="right">
-    <span class="meta" id="progName"></span>
+  <div class="meta" id="meta">loading…</div>
+  <div class="ctl">
     <div class="theme" id="theme" title="Color theme">
       <button data-t="auto">Auto</button><button data-t="light">Light</button><button data-t="dark">Dark</button>
     </div>
   </div>
 </header>
 <main>
-  <div id="errors"></div>
-  <div class="strip" id="strip">
-    <div class="tile lock" id="tLock">
-      <div class="row"><span class="label">GPU lock</span>
-        <div class="btns">
+  <div class="col">
+    <section id="sLock">
+      <div class="lockhead">
+        <h2>GPU lock and job queue</h2>
+        <span id="lockStatus" class="status"></span>
+        <div class="lockctl">
           <button id="bPauseQ" title="The running job ends; no new job starts">Pause queue</button>
           <button id="bPauseAll" class="danger" title="Stop the running job now and start no new job">Pause all now</button>
           <button id="bUnpause" class="go">Unpause</button>
         </div>
       </div>
-      <div class="big" id="lockBig"></div>
-      <div class="line" id="lockLine"></div>
-      <div class="line meta" id="lockLine2"></div>
-    </div>
-    <div class="tile" id="tQueue"></div>
-    <div class="tile" id="tMs"></div>
-    <div class="tile" id="tLab"></div>
-    <div class="tile" id="tActs"></div>
+      <div id="banner"></div>
+      <div class="body"></div>
+    </section>
+    <section id="sWork"><h2>Workers <small>open actions in order; finish = now + net time (waits for the GPU or for a decision are not included)</small></h2><div class="body"></div></section>
+    <section id="sLab"><h2>Labeling</h2><div class="body"></div></section>
+    <section id="sLinks"><h2>Links</h2><div class="body"></div></section>
   </div>
-  <div class="cols">
-    <div class="col">
-      <section class="zone" id="zJobs"><h2>GPU jobs</h2><div class="body"></div></section>
-      <section class="zone" id="zWork"><h2>Workers <span class="meta">now and next; net time</span></h2><div class="body"></div></section>
-      <section class="zone" id="zLab"><h2>Labeling</h2><div class="body"></div></section>
-      <section class="zone" id="zLinks"><h2>Links</h2><div class="body"></div></section>
-    </div>
-    <div class="col">
-      <section class="zone" id="zMs"><h2>Milestone</h2><div class="body"></div></section>
-      <section class="zone" id="zActs"><h2>Actions</h2><div class="body"></div></section>
-    </div>
+  <div class="col">
+    <section id="sMs"><h2>Milestones <small id="progName"></small></h2><div class="body"></div></section>
+    <section id="sActs"><h2>Actions <small>research, experiments, fixes, runs, labeling</small></h2><div class="body"></div></section>
   </div>
 </main>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let S = null, selMs = null, kindF = "all";
-const openSet = new Set();          // the open list items (kept across the refresh)
+let S = null, selMs = null, kindF = "all", statusF = "all";
+const openSet = new Set();
 
-function setTheme(t) {              // "auto" follows the system setting; the choice is kept in this browser
+function setTheme(t) {            // "auto" follows the system setting; the choice is kept in this browser
   if (t === "auto") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.setAttribute("data-theme", t);
   try { localStorage.setItem("labDashTheme", t); } catch (e) { /* private mode: not kept */ }
@@ -200,9 +169,10 @@ function setTheme(t) {              // "auto" follows the system setting; the ch
 document.querySelectorAll("#theme button").forEach(b => b.onclick = () => setTheme(b.dataset.t));
 setTheme((() => { try { return localStorage.getItem("labDashTheme") || "auto"; } catch (e) { return "auto"; } })());
 
-function hm(t) {                    // "2026-11-27 13:05:00" -> "13:05" today, else "28 Nov 13:05"
+function hm(t) {                // "2026-11-27 13:05:00" -> "13:05" today, else "Nov 28 13:05"
   if (!t) return "–";
-  const d = new Date(t.replace(" ", "T")), now = new Date(S.now.replace(" ", "T"));
+  const d = new Date(t.replace(" ", "T"));
+  const now = new Date(S.now.replace(" ", "T"));
   const time = d.toTimeString().slice(0, 5);
   if (d.toDateString() === now.toDateString()) return time;
   return d.toLocaleDateString("en-GB", {day: "numeric", month: "short"}) + " " + time;
@@ -213,20 +183,18 @@ function dur(min) {
   if (min < 90) return Math.round(min) + " min";
   return (min / 60).toFixed(min < 600 ? 1 : 0) + " h";
 }
-function impBar(e, r) {             // e expected, r real (0-10)
-  const ev = e?.impact, rv = r?.impact;
-  if (ev == null && rv == null) return '<span class="meta">–</span>';
-  const cls = rv == null ? "exp" : rv === 0 ? "zero" : rv < (ev ?? 0) ? "lower" : "";
-  const fill = rv ?? ev;
-  return `<span class="imp" title="expected ${ev ?? "–"}${e?.backfilled ? " (set after the result)" : ""}, real ${rv ?? "not yet"}">` +
-    `<i class="${cls}" style="width:${fill * 10}%"></i>${ev != null && rv != null ? `<b style="left:calc(${ev * 10}% - 1px)"></b>` : ""}</span>` +
-    `<span class="impn">${rv != null ? `${rv}<span title="expected"> / ${ev ?? "–"}</span>` : `exp ${ev}`}</span>`;
+function imp(v, cls) {
+  if (v == null) return '<span class="mute small">–</span>';
+  let h = `<span class="imp ${cls}" title="${v} of 10">`;
+  for (let i = 1; i <= 10; i++) h += `<i class="${i <= v ? "on" : ""}"></i>`;
+  return h + `</span> <span class="small">${v}</span>`;
 }
-const pill = (s, text) => `<span class="pill s-${s}">${esc(text || s)}</span>`;
-const actLinks = ids => (ids || []).map(i => `<a href="#a-${i}" data-open="a-${i}">${i}</a>`).join(" ");
+const actById = () => Object.fromEntries((S.plan.actions || []).map(a => [a.id, a]));
+const actLinks = ids => (ids || []).map(i => `<a href="#act-${i}" class="small">${i}</a>`).join(" ");
 
 async function post(path, body) {
-  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json", "X-Lab-Dash": "1"}, body: JSON.stringify(body || {})});
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json", "X-Lab-Dash": "1"},
+    body: JSON.stringify(body || {})});
   const j = await r.json();
   alert(j.result || j.error || "done");
   load();
@@ -234,228 +202,204 @@ async function post(path, body) {
 $("#bPauseQ").onclick = () => confirm("Pause the queue?\nThe running job ends normally. No new GPU-lock job starts until Unpause.") && post("/api/pause", {mode: "queue"});
 $("#bPauseAll").onclick = () => {
   const h = S && S.lock.holder;
-  confirm("Pause ALL now?\n" + (h ? `This STOPS the running job at once:\n  ${h.who}: ${h.what}\nIts work since its start is lost; its owner must start it again.\n` : "No job runs now.\n") +
-    "No new GPU-lock job starts until Unpause.") && post("/api/pause", {mode: "all"});
+  const msg = "Pause ALL now?\n" + (h ? `This STOPS the running job at once:\n  ${h.who}: ${h.what}\nIts work since its start is lost; its owner must start it again.\n` : "No job runs now.\n") + "No new GPU-lock job starts until Unpause.";
+  confirm(msg) && post("/api/pause", {mode: "all"});
 };
 $("#bUnpause").onclick = () => confirm("Unpause? The waiting jobs start in their queue order.") && post("/api/unpause");
 
-// ------------------------------------------------------------------ zone 1: status strip
-function renderStrip() {
-  const L = S.lock, p = L.pause, h = L.holder;
-  const t = $("#tLock");
-  t.className = "tile lock " + (p ? "paused" : h ? "busy" : "");
-  $("#lockBig").innerHTML = p ? `<span class="state-paused">Paused</span> <span class="meta">${p.mode === "all" ? "all jobs" : "queue"} since ${hm(p.since)}</span>`
-    : h ? `<span class="state-busy">Running</span> <span class="meta">${esc(h.who)}, ends ${h.eta ? hm(h.eta) : "?"}</span>`
-    : `<span class="state-free">Free</span>`;
-  $("#lockLine").textContent = h ? h.what : p ? (p.text || `by ${p.by}`) : "No job runs.";
-  $("#lockLine2").textContent = p ? (p.external ? "A pause ticket made by hand. Unpause removes it." : `by ${p.by}`) +
-    (L.killedByPause ? ` · stopped: ${L.killedByPause.who}: ${L.killedByPause.what}` : "") + (!L.pauseLive ? " · WARNING: the ticket is not live" : "")
-    : h ? `started ${hm(h.start)} · ${dur(h.elapsedMin)} so far` : "";
-  $("#bPauseQ").disabled = !!p && p.mode === "queue";
-  $("#bPauseAll").disabled = !!p && p.mode === "all" && !h;
-  $("#bUnpause").disabled = !p;
-
-  const last = L.queue.length ? L.queue[L.queue.length - 1] : null;
-  $("#tQueue").innerHTML = `<span class="label">Queue</span><div class="big num">${L.queue.length}</div>
-    <div class="line">${L.queue.length ? (p ? "waiting for the unpause" : `all done ~${hm(last.expEnd)}`) : "no job waits"}</div>`;
-
-  const ms = (S.plan.milestones || []).find(m => m.status === "current");
-  if (ms) {
-    const acts = (S.plan.actions || []).filter(a => a.milestone === ms.id);
-    const end = (ms.period || "").split(" to ")[1];
-    const days = end ? Math.ceil((new Date(end + "T23:59") - new Date(S.now.replace(" ", "T"))) / 864e5) : null;
-    const openIss = (ms.issues || []).filter(i => !["solved", "moved"].includes(i.status)).length;
-    $("#tMs").innerHTML = `<span class="label">Milestone ${ms.id}</span><div class="big" style="font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ms.title)}</div>
-      <div class="line">${openIss} open issues · ${acts.filter(a => a.status === "done").length}/${acts.length} actions done${days != null ? ` · ${days} days left` : ""}</div>`;
+function renderBanner() {
+  const p = S.lock.pause;
+  let h = "";
+  if (S.plan.error) h += `<div class="banner err">${esc(S.plan.error)}</div>`;
+  if (p) {
+    const k = S.lock.killedByPause;
+    h += `<div class="banner pause">PAUSED (${p.mode === "all" ? "all: the running job was stopped" : "queue: the running job ends, no new job starts"}) since ${hm(p.since)} by ${esc(p.by)}
+      <div class="sub">${p.text ? esc(p.text) + ". " : ""}${p.external ? "This pause is a ticket made by hand, not from this page. Unpause removes it. " : ""}${k ? `Stopped job: ${esc(k.who)}: ${esc(k.what)} (its owner starts it again). ` : ""}${p.error ? "Error: " + esc(p.error) : ""}${!S.lock.pauseLive ? " Warning: the pause ticket is not live, so jobs can start." : ""}</div></div>`;
   }
-  const lv = (S.labels.levels || {}).small, md = (S.labels.levels || {}).medium;
-  $("#tLab").innerHTML = lv ? `<span class="label">Labels</span><div class="big num">${lv.done}<span class="meta" style="font-size:14px"> / ${lv.total} small</span></div>
-    <div class="bar ok"><i style="width:${100 * lv.done / lv.total}%"></i></div>
-    <div class="line" style="margin-top:4px">medium ${md ? md.done + "/" + md.total : "–"} · ~${dur(S.labels.leftMin)} left</div>` : `<span class="label">Labels</span><div class="err">${esc(S.labels.error || "?")}</div>`;
-
-  const acts = S.plan.actions || [], done = acts.filter(a => a.real);
-  const avg = k => done.length ? (done.reduce((s, a) => s + (k === "e" ? (a.expected?.impact ?? 0) : a.real.impact), 0) / done.length).toFixed(1) : "–";
-  $("#tActs").innerHTML = `<span class="label">Actions</span><div class="big num">${acts.filter(a => a.status !== "done").length}<span class="meta" style="font-size:14px"> open · ${done.length} done</span></div>
-    <div class="line">impact real ${avg("r")} vs expected ${avg("e")}</div>
-    <div class="line meta">${done.filter(a => a.real.impact === 0).length} closed with no gain</div>`;
+  $("#banner").innerHTML = h;
+  const st = $("#lockStatus");
+  st.className = "status " + (p ? "paused" : S.lock.holder ? "busy" : "free");
+  st.textContent = p ? `PAUSED (${p.mode})` : S.lock.holder ? `running: ${S.lock.holder.who}` : "free";
+  $("#bPauseQ").disabled = !!p && p.mode === "queue";
+  $("#bPauseAll").disabled = !!p && p.mode === "all" && !S.lock.holder;
+  $("#bUnpause").disabled = !p;
 }
 
-// ------------------------------------------------------------------ left column
-function renderJobs() {
+function renderLock() {
   const L = S.lock;
   let h = "";
   if (L.holder) {
-    const x = L.holder, pc = x.progress != null ? Math.round(x.progress * 100) : 0;
-    h += `<div class="sub" style="margin-top:0"><span class="label">Running</span>
-      <div style="font-weight:600">${esc(x.what)}</div>
-      <div class="meta">${esc(x.who)} · started ${hm(x.start)} · estimate ${x.estMin ? dur(x.estMin) + " (" + x.estFrom + ")" : "unknown"} ${x.actions.length ? "· " + actLinks(x.actions) : ""}</div>
-      <div class="bar ${x.over ? "warn" : ""}" style="margin:8px 0 2px"><i style="width:${pc}%"></i></div>
-      <div class="meta">${pc}% · expected end ${x.eta ? hm(x.eta) : "?"}${x.over ? " · over the estimate" : ""}</div></div>`;
+    const x = L.holder, pc = x.progress != null ? Math.round(x.progress * 100) : null;
+    h += `<div class="holder"><div><div class="mute small">Running now · ${esc(x.who)} · pid ${x.pid}</div>
+      <div class="what">${esc(x.what)}</div>
+      <div class="small mute">started ${hm(x.start)} · ${dur(x.elapsedMin)} so far · estimate ${x.estMin ? dur(x.estMin) + " (" + x.estFrom + ")" : "unknown"} ${x.actions.length ? "· action " + actLinks(x.actions) : ""} ${x.journal.length ? "· " + x.journal.join(", ") : ""}</div></div>
+      <div style="text-align:right"><div class="small mute">expected end</div><div style="font-size:18px;font-weight:700">${x.eta ? hm(x.eta) : "?"}</div></div>
+      <div class="bar ${x.over ? "over" : ""}" style="grid-column:1/3"><i style="width:${pc ?? 0}%"></i></div>
+      ${x.over ? '<div class="small" style="color:var(--warn)">over the estimate</div>' : ""}</div>`;
+  } else {
+    h += `<div class="holder"><div class="mute">The lock is free. No job runs.</div></div>`;
   }
-  h += `<div class="sub" ${L.holder ? "" : 'style="margin-top:0"'}><span class="label">Waiting (${L.queue.length})</span>`;
   if (L.queue.length) {
-    h += `<div class="list">` + L.queue.map((q, i) => `<div class="item job"><div class="head">
-      <span class="id">${i + 1}</span>
-      <span class="title" title="${esc(q.what)}"><b>${esc(q.who)}</b> <span class="dim">${esc(q.what)}</span> ${actLinks(q.actions)}</span>
-      <span class="right meta">${q.estMin ? dur(q.estMin) : "?"}</span>
-      <span class="right meta">${q.blocked ? '<span class="s-waiting">paused</span>' : `${hm(q.expStart)}–${hm(q.expEnd)}`}</span></div></div>`).join("") + `</div>`;
-  } else h += `<div class="meta">No job waits.</div>`;
-  h += `</div>`;
-  const key = "recent", open = openSet.has(key);
-  h += `<div class="sub"><span class="label">Recent <a href="#" data-toggle="${key}" style="text-transform:none;letter-spacing:0;font-weight:normal">${open ? "hide" : `show ${L.recent.length}`}</a></span>`;
-  const rows = open ? L.recent : L.recent.slice(0, 3);
-  h += `<div class="list">` + rows.map(r => `<div class="item job"><div class="head">
-    <span class="id">${r.killed ? "✕" : r.rc === 0 ? "✓" : "!"}</span>
-    <span class="title" title="${esc(r.what)}"><b>${esc(r.who)}</b> <span class="dim">${esc(r.what)}</span> ${actLinks(r.actions)}</span>
-    <span class="right meta">${dur(r.min)}</span>
-    <span class="right meta">${r.killed ? '<span style="color:var(--bad)">stopped</span>' : r.rc === 0 ? hm(r.end) : `<span style="color:var(--bad)">rc ${r.rc}</span>`}</span></div></div>`).join("") + `</div></div>`;
-  $("#zJobs .body").innerHTML = h;
+    h += `<table><tr><th>#</th><th>Who</th><th>Job</th><th>Action</th><th class="num">Estimate</th><th class="num">Exp. start</th><th class="num">Exp. end</th><th class="num">Waits since</th></tr>`;
+    L.queue.forEach((q, i) => {
+      h += `<tr><td>${i + 1}</td><td>${esc(q.who)}</td><td>${esc(q.what)}</td><td>${actLinks(q.actions) || '<span class="mute small">–</span>'}</td>
+        <td class="num">${q.estMin ? dur(q.estMin) : "?"}<div class="small mute">${q.estFrom || ""}</div></td>
+        <td class="num">${q.blocked ? '<span class="s-waiting">paused</span>' : hm(q.expStart)}</td><td class="num">${q.blocked ? "–" : hm(q.expEnd)}</td><td class="num">${hm(q.waitingSince)}</td></tr>`;
+    });
+    h += `</table>`;
+  } else h += `<div class="mute small">The queue is empty.</div>`;
+  const key = "recentjobs";
+  h += `<details class="more" data-key="${key}" ${openSet.has(key) ? "open" : ""}><summary>Recent jobs (${L.recent.length})</summary><table>
+    <tr><th>Who</th><th>Job</th><th>Action</th><th class="num">Start</th><th class="num">Run time</th><th class="num">Result</th></tr>`;
+  for (const r of L.recent) h += `<tr><td>${esc(r.who)}</td><td>${esc(r.what)}</td><td>${actLinks(r.actions)}</td><td class="num">${hm(r.start)}</td><td class="num">${dur(r.min)}</td>
+    <td class="num">${r.killed ? '<span style="color:var(--bad)">stopped by pause</span>' : r.rc === 0 ? '<span class="s-done">ok</span>' : `<span style="color:var(--bad)">rc ${r.rc}</span>`}</td></tr>`;
+  h += `</table></details>`;
+  $("#sLock .body").innerHTML = h;
 }
 
-function renderWorkers() {
-  const wdef = Object.fromEntries((S.plan.workers || []).map(w => [w.id, w]));
-  const byId = Object.fromEntries((S.plan.actions || []).map(a => [a.id, a]));
-  let h = `<div class="list">`;
-  for (const w of S.workers) {
-    const noEta = (wdef[w.id] || {}).noEta;
-    for (const a of w.actions) if (byId[a.id]) { byId[a.id]._eta = !noEta && a.eta; byId[a.id]._net = a.netMin; }
-    const [first, ...rest] = w.actions;
-    const g = w.gpu[0];
-    h += `<div class="wk"><span class="n">${esc(w.name)}</span><div>`;
-    if (g) h += `<div class="now"><span class="kind k-run">${g.running ? "GPU now" : "GPU queue"}</span> ${esc(g.what)}</div>`;
-    if (first) h += `<div class="now">${pill(first.status)} <a href="#a-${first.id}" data-open="a-${first.id}">${first.id}</a> ${esc(first.title)}</div>
-      <div class="next">${first.waitingFor ? `waits for ${esc(first.waitingFor)}` : first.eta && !noEta ? `~${hm(first.eta)}` : ""}${rest.length ? ` · then ${rest.map(a => a.id).join(", ")}` : ""}</div>`;
-    if (!first && !g) h += `<span class="meta">idle</span>`;
-    h += `</div><span class="right meta num">${w.netMin ? dur(w.netMin) : ""}</span></div>`;
-  }
-  $("#zWork .body").innerHTML = h + `</div>`;
+function actionRow(a, compact) {
+  const e = a.expected || {}, r = a.real;
+  const cls = r ? (r.impact === 0 ? "zero" : r.impact < (e.impact ?? 0) ? "lower" : "") : "";
+  return `<tr id="act-${a.id}"><td class="small mute">${a.id}</td>
+    <td><span class="chip k-${a.kind}">${a.kind}</span></td>
+    <td><b>${esc(a.title)}</b> ${a.journal && a.journal.length ? `<span class="small mute">${a.journal.join(", ")}</span>` : ""}
+      <div class="small">${esc(e.outcome || "")}</div>
+      ${r ? `<div class="small"><b>Result:</b> ${esc(r.outcome)}</div>` : ""}
+      ${a.waitingFor ? `<div class="small s-waiting">waits for ${esc(a.waitingFor)}</div>` : ""}
+      ${!compact && a.issues && a.issues.length ? `<div class="small mute">issues: ${a.issues.join(", ")}</div>` : ""}</td>
+    <td class="small">${esc(a.owner)}</td>
+    <td class="small s-${a.status}">${a.status}</td>
+    <td class="num small">${a.finished ? hm(a.finished) : a._eta ? "~" + hm(a._eta) : "–"}<div class="mute">${a._net ? dur(a._net) + " net" : ""}</div></td>
+    <td class="small" title="${esc(e.text || "")}">${imp(e.impact, "e")}${e.backfilled ? '<div class="mute" title="set after the result">after the fact</div>' : ""}</td>
+    <td class="small">${r ? imp(r.impact, "r " + cls) : '<span class="mute">–</span>'}</td></tr>`;
 }
-
-function renderLabels() {
-  const L = S.labels;
-  if (L.error) { $("#zLab .body").innerHTML = `<div class="err">${esc(L.error)}</div>`; return; }
-  const row = (name, done, total, left, note) => `<div class="lrow"><span>${name}</span>
-    <div class="bar ok"><i style="width:${total ? 100 * done / total : 0}%"></i></div>
-    <span class="right c num">${done} / ${total}</span><span class="right meta">${left}</span></div>${note ? `<div class="meta" style="margin:-4px 0 4px 102px">${note}</div>` : ""}`;
-  let h = "";
-  for (const [lvl, c] of Object.entries(L.levels || {}))
-    h += row(lvl, c.done, c.total, "~" + dur(c.leftMin), `next ${c.pending.slice(0, 5).join(", ")}${c.pending.length > 5 ? " …" : ""}${c.stale ? ` · ${c.stale} to redo` : ""}`);
-  const F = L.faults || {}, Sd = L.sides || {};
-  h += row("Faults step", F.answered ?? 0, F.rows ?? 0, "~" + F.estMin + " min");
-  h += row("Sides step", Sd.done ?? 0, Sd.matches ?? 0, "~" + Sd.estMin + " min");
-  h += `<div class="sub"><span class="label">Label page</span>
-    <div><code>${esc(L.page)}</code> <button id="cp">Copy</button></div>
-    <div class="meta" style="margin-top:4px">Paste into Chrome or Edge. Folder (key O): <code>${esc(L.folder)}</code> · <a href="/doc/event-labels-howto.md" target="_blank">how to label</a></div>
-    <div class="meta" style="margin-top:4px">${L.labeledMin} min labeled so far, median ${L.minPerSmall ?? "?"} min for a small fragment.</div></div>`;
-  $("#zLab .body").innerHTML = h;
-  $("#cp").onclick = () => navigator.clipboard.writeText("file:///" + L.page.replace(/\\/g, "/")).then(() => $("#cp").textContent = "Copied");
-}
-
-function renderLinks() {
-  $("#zLinks .body").innerHTML = `<ul class="links">` + (S.plan.links || []).map(l =>
-    `<li><a target="_blank" href="${l.doc ? "/doc/" + encodeURIComponent(l.doc) : esc(l.path || l.url)}">${esc(l.title)}</a></li>`).join("") +
-    `</ul><div class="meta" style="margin-top:8px">The plan file changed last at ${hm(S.plan._mtime)}.</div>`;
-}
-
-// ------------------------------------------------------------------ right column
-function actItem(a) {
-  const e = a.expected || {}, r = a.real, key = "a-" + a.id;
-  const when = a.finished ? hm(a.finished) : a._eta ? "~" + hm(a._eta) : a._net ? dur(a._net) : "";
-  return `<div class="item act ${openSet.has(key) ? "open" : ""}" id="${key}" data-key="${key}"><div class="head">
-    <span class="id">${a.id}</span><span class="kind k-${a.kind}">${a.kind}</span>
-    <span class="title" title="${esc(a.title)}">${esc(a.title)}</span>
-    <span class="meta">${esc(a.owner)}</span>
-    <span>${a.status === "done" ? `<span class="meta num">${when}</span>` : pill(a.status)}</span>
-    <span>${impBar(e, r)}</span></div>
-    <div class="more">
-      ${a.waitingFor ? `<p class="s-waiting">Waits for ${esc(a.waitingFor)}.</p>` : ""}
-      <p><b>Expected:</b> ${esc(e.outcome || "–")}</p>
-      <p><b>Expected impact ${e.impact ?? "–"}:</b> ${esc(e.text || "")}${e.backfilled ? ' <span class="meta">(set after the result)</span>' : ""}</p>
-      ${r ? `<p><b>Result, impact ${r.impact}:</b> ${esc(r.outcome)}</p>` : ""}
-      <p class="meta">${[a.journal?.length ? "journal " + a.journal.join(", ") : "", a.issues?.length ? "issues " + a.issues.join(", ") : "",
-        a._net ? "net " + dur(a._net) : "", a._eta && a.status !== "done" ? "finish ~" + hm(a._eta) : "", a.status !== "done" ? "" : "done " + hm(a.finished),
-        (a.jobs || []).length ? "jobs: " + a.jobs.map(j => esc(j.what)).join("; ") : ""].filter(Boolean).join(" · ")}</p>
-    </div></div>`;
-}
+const actHead = `<tr><th></th><th>Kind</th><th>Action and outcome</th><th>Owner</th><th>Status</th><th class="num">Done / ETA</th><th>Expected impact</th><th>Real impact</th></tr>`;
 
 function renderMs() {
   const ms = S.plan.milestones || [], acts = S.plan.actions || [];
   const P = S.plan.program || {};
-  $("#progName").textContent = P.name ? `${P.name} · ${P.start} to ${P.end}` : "";
+  $("#progName").textContent = P.name ? `${P.name}, ${P.start} to ${P.end}` : "";
   if (!selMs) selMs = (ms.find(m => m.status === "current") || ms[0] || {}).id;
-  let h = `<div class="mtrack">` + ms.map(m => {
+  let h = `<div class="mtrack">`;
+  for (const m of ms) {
     const n = acts.filter(a => a.milestone === m.id);
-    return `<div class="mchip ${m.status} ${m.id === selMs ? "sel" : ""}" data-ms="${m.id}">
-      <div class="label">${m.id} · ${m.status}</div><div class="t" title="${esc(m.title)}">${esc(m.title)}</div>
-      <div class="meta">${n.length ? `${n.filter(a => a.status === "done").length}/${n.length} actions` : esc(m.period || "")}</div></div>`;
-  }).join("") + `</div>`;
+    h += `<div class="mchip ${m.status} ${m.id === selMs ? "sel" : ""}" data-ms="${m.id}"><b>${m.id} · ${esc(m.title)}</b>
+      <span>${m.status} · ${esc(m.period || "")} · ${n.filter(a => a.status === "done").length}/${n.length} actions done</span></div>`;
+  }
+  h += `</div>`;
   const m = ms.find(x => x.id === selMs);
   if (m) {
-    h += `<div class="goal">${esc(m.goalShort || m.goal)} ${m.goalStatus && m.goalStatus !== "approved" ? `<span class="pill s-waiting" title="${esc(m.goalStatus)}">${m.goalStatus.startsWith("proposed") ? "draft" : esc(m.goalStatus)}</span>` : ""}</div>
-      <div class="meta">${esc(m.period || "")}</div>
-      <div class="item ${openSet.has("goal-" + m.id) ? "open" : ""}" data-key="goal-${m.id}" style="border:0"><a href="#" class="meta" data-toggle="goal-${m.id}">${openSet.has("goal-" + m.id) ? "hide" : "full goal"}${m.result ? " and result" : ""}</a>
-        <div class="more"><p>${esc(m.goal)}</p>${m.result ? `<p><b>Result:</b> ${esc(m.result)}</p>` : ""}</div></div>`;
+    h += `<div class="goal"><b>Goal</b> ${m.goalStatus && m.goalStatus !== "approved" ? `<span class="badge">${esc(m.goalStatus)}</span>` : ""}<div>${esc(m.goal)}</div>
+      ${m.result ? `<div style="margin-top:6px"><b>Result</b><div>${esc(m.result)}</div></div>` : ""}</div>`;
     if (m.measures && m.measures.length) {
-      h += `<div class="sub"><span class="label">Measures</span><div class="measures">` + m.measures.map(x => `<div class="measure">
-        <div class="meta">${esc(x.name)}</div><div class="v">${esc(x.value.split(/,| \(/)[0])}</div>${x.value.split(/,| \(/).length > 1 ? `<div class="meta" style="margin:-4px 0 6px">${esc(x.value.slice(x.value.split(/,| \(/)[0].length).replace(/^,\s*/, "").replace(/^\s*\((.*)\)$/, "$1"))}</div>` : ""}
-        ${x.progress != null ? `<div class="bar ${x.met ? "ok" : "warn"}"><i style="width:${x.progress * 100}%"></i></div>` : ""}
-        ${x.target ? `<div class="tg">target ${esc(x.target)} ${x.met ? '<span class="s-done">· met</span>' : ""}</div>` : ""}</div>`).join("") + `</div></div>`;
+      h += `<div class="measures">` + m.measures.map(x => `<div class="measure"><div class="n">${esc(x.name)}</div><div class="v">${esc(x.value)}</div></div>`).join("") + `</div>`;
     }
     if (m.issues && m.issues.length) {
-      h += `<div class="sub"><span class="label">Issues that block the goal</span><div class="list">`;
+      h += `<div class="small mute" style="margin-top:6px">Issues that block the goal (click for the actions):</div>`;
       for (const is of m.issues) {
-        const ia = acts.filter(a => (a.issues || []).includes(is.id)), key = "i-" + is.id;
+        const ia = acts.filter(a => (a.issues || []).includes(is.id));
+        const key = "iss-" + is.id;
         const open = ia.filter(a => a.status !== "done").length;
-        h += `<div class="item iss ${openSet.has(key) ? "open" : ""}" data-key="${key}"><div class="head">
-          <span class="id">${is.id.replace(/^M\d-/, "")}</span><span class="title" title="${esc(is.title)}"><b>${esc(is.title)}</b></span>
-          <span>${pill(is.status)}</span><span class="right meta">${ia.length ? `${open} open / ${ia.length}` : "no action"}</span></div>
-          <div class="more"><p>${esc(is.detail)}</p>${ia.length ? `<div class="list">${ia.map(actItem).join("")}</div>` : ""}</div></div>`;
+        h += `<details class="issue" data-key="${key}" ${openSet.has(key) ? "open" : ""}><summary><span class="id">${is.id}</span><b>${esc(is.title)}</b>
+          <span class="small s-${is.status === "solved" ? "done" : "waiting"}">${is.status}</span>
+          <span class="small mute" style="margin-left:auto">${ia.length} actions${open ? `, ${open} open` : ""}</span></summary>
+          <div class="body"><div class="small">${esc(is.detail)}</div>
+          ${ia.length ? `<table>${actHead}${ia.map(a => actionRow(a, true)).join("")}</table>` : '<div class="small mute">No action yet.</div>'}</div></details>`;
       }
-      h += `</div></div>`;
     }
   }
-  $("#zMs .body").innerHTML = h;
+  $("#sMs .body").innerHTML = h;
   document.querySelectorAll(".mchip").forEach(el => el.onclick = () => { selMs = el.dataset.ms; renderMs(); });
 }
 
 function renderActs() {
-  const acts = S.plan.actions || [];
+  const acts = (S.plan.actions || []).slice();
   const kinds = ["all", ...new Set(acts.map(a => a.kind))];
-  const f = acts.filter(a => kindF === "all" || a.kind === kindF);
-  const order = {running: 0, waiting: 1, queued: 2, planned: 3};
-  const open = f.filter(a => a.status !== "done").sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
-  const done = f.filter(a => a.status === "done").sort((a, b) => (b.finished || "").localeCompare(a.finished || ""));
-  let h = `<div class="filters">` + kinds.map(k => `<button data-k="${k}" class="${kindF === k ? "on" : ""}">${k}</button>`).join("") + `</div>`;
-  h += `<div class="sub" style="margin-top:4px"><span class="label">Open (${open.length})</span><div class="list">${open.map(actItem).join("") || '<div class="meta">none</div>'}</div></div>`;
-  h += `<div class="sub"><span class="label">Done (${done.length})</span><div class="list">${done.map(actItem).join("") || '<div class="meta">none</div>'}</div></div>`;
-  h += `<div class="legend">Click a row for its details. Impact bar: the fill is the real impact (0 to 10; amber when lower than expected, red at 0), the tick is the expected impact; gray = expected only.</div>`;
-  $("#zActs .body").innerHTML = h;
-  document.querySelectorAll("#zActs [data-k]").forEach(b => b.onclick = () => { kindF = b.dataset.k; renderActs(); });
+  const sts = ["all", "open", "done"];
+  let h = `<div class="filters">` + kinds.map(k => `<button data-k="${k}" class="${kindF === k ? "on" : ""}">${k}</button>`).join("") +
+    `<span style="width:12px"></span>` + sts.map(k => `<button data-s="${k}" class="${statusF === k ? "on" : ""}">${k}</button>`).join("") + `</div>`;
+  const order = {running: 0, waiting: 1, queued: 2, planned: 3, done: 4, dropped: 5};
+  const f = acts.filter(a => (kindF === "all" || a.kind === kindF) && (statusF === "all" || (statusF === "done" ? a.status === "done" : a.status !== "done")))
+    .sort((a, b) => order[a.status] - order[b.status] || (b.finished || "").localeCompare(a.finished || ""));
+  const done = acts.filter(a => a.real);
+  const avgE = done.length ? (done.reduce((s, a) => s + (a.expected?.impact ?? 0), 0) / done.length).toFixed(1) : "–";
+  const avgR = done.length ? (done.reduce((s, a) => s + a.real.impact, 0) / done.length).toFixed(1) : "–";
+  h += `<div class="small mute">${done.length} finished actions: mean expected impact ${avgE}, mean real impact ${avgR}; ${done.filter(a => a.real.impact === 0).length} with no gain (closed with a finding).</div>`;
+  h += `<table>${actHead}${f.map(a => actionRow(a, false)).join("")}</table>
+    <div class="legend">${esc((S.plan.about || "").split("Impact scale")[1] ? "Impact scale" + S.plan.about.split("Impact scale")[1] : "")}</div>`;
+  $("#sActs .body").innerHTML = h;
+  document.querySelectorAll("#sActs [data-k]").forEach(b => b.onclick = () => { kindF = b.dataset.k; renderActs(); });
+  document.querySelectorAll("#sActs [data-s]").forEach(b => b.onclick = () => { statusF = b.dataset.s; renderActs(); });
 }
 
-// ------------------------------------------------------------------ events and refresh
-document.addEventListener("click", ev => {
-  const tg = ev.target.closest("[data-toggle]");
-  if (tg) { ev.preventDefault(); const k = tg.dataset.toggle; openSet.has(k) ? openSet.delete(k) : openSet.add(k); render(); return; }
-  const op = ev.target.closest("[data-open]");
-  if (op) { openSet.add(op.dataset.open); render(); setTimeout(() => { const el = document.getElementById(op.dataset.open); el && el.scrollIntoView({block: "center"}); }, 0); ev.preventDefault(); return; }
-  if (ev.target.closest("a, button")) return;
-  const head = ev.target.closest(".item > .head");
-  if (head) { const it = head.parentElement, k = it.dataset.key; if (!k) return; it.classList.toggle("open"); it.classList.contains("open") ? openSet.add(k) : openSet.delete(k); }
-});
-
-function render() {
-  $("#errors").innerHTML = S.plan.error ? `<div class="err">${esc(S.plan.error)}</div>` : "";
-  $("#meta").textContent = `lab PC ${S.now.slice(11, 16)} · plan ${S.plan.updated || ""}`;
-  renderWorkers(); renderStrip(); renderJobs(); renderLabels(); renderLinks(); renderMs(); renderActs();
+function renderWorkers() {
+  const wdef = Object.fromEntries((S.plan.workers || []).map(w => [w.id, w]));
+  let h = `<div class="workers">`;
+  for (const w of S.workers) {
+    const noEta = wdef[w.id] && wdef[w.id].noEta;
+    h += `<div class="worker"><h3><span>${esc(w.name)}</span><span class="small mute">${w.netMin ? dur(w.netMin) + " net" : "idle"}</span></h3><div class="focus">${esc(w.focus || "")}</div><ul>`;
+    for (const g of w.gpu) h += `<li><span class="chip k-run">${g.running ? "GPU now" : "GPU queue"}</span>${esc(g.what)}<span class="r">${g.running ? "ends " + hm(g.eta) : g.expEnd ? "ends " + hm(g.expEnd) : ""}</span></li>`;
+    for (const a of w.actions) {
+      h += `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="chip k-${a.kind}">${a.kind}</span> ${esc(a.title)}
+        <div class="small"><span class="s-${a.status}">${a.status}</span>${a.waitingFor ? ` <span class="s-waiting">(waits for ${esc(a.waitingFor)})</span>` : ""}
+        <span class="r">${a.netMin ? dur(a.netMin) : "?"}${!noEta && a.eta ? " · ~" + hm(a.eta) : ""}</span></div>
+        ${(a.jobs || []).length ? `<div class="small mute">jobs: ${a.jobs.map(j => esc(j.what) + (j.estMin ? " (" + dur(j.estMin) + ")" : "")).join("; ")}</div>` : ""}</li>`;
+    }
+    if (!w.actions.length && !w.gpu.length) h += `<li class="mute">No open action.</li>`;
+    h += `</ul></div>`;
+  }
+  h += `</div>`;
+  $("#sWork .body").innerHTML = h;
+  // ETA and net time of the workers go into the action rows too
+  const byId = actById();
+  for (const w of S.workers) for (const a of w.actions) if (byId[a.id]) { byId[a.id]._eta = !(wdef[w.id] || {}).noEta && a.eta; byId[a.id]._net = a.netMin; }
 }
+
+function renderLabels() {
+  const L = S.labels;
+  if (L.error) { $("#sLab .body").innerHTML = `<div class="banner err">${esc(L.error)}</div>`; return; }
+  let h = `<div class="lgrid">`;
+  for (const [lvl, c] of Object.entries(L.levels || {})) {
+    const pc = Math.round(100 * c.done / c.total);
+    h += `<div class="lcard"><div class="small mute">${lvl} level</div><div class="big">${c.done} / ${c.total}</div>
+      <div class="bar"><i style="width:${pc}%;background:var(--ok)"></i></div>
+      <div class="small">${c.pending.length} pending, about ${dur(c.leftMin)} of labeling${c.stale ? ` · ${c.stale} old marks to redo` : ""}${c.skipped ? ` · ${c.skipped} skipped` : ""}${c.mapped ? ` · ${c.mapped} start from mapped marks` : ""}</div>
+      <div class="small mute">next: ${c.pending.slice(0, 6).join(", ")}${c.pending.length > 6 ? " …" : ""}</div></div>`;
+  }
+  const F = L.faults || {}, Sd = L.sides || {};
+  h += `<div class="lcard"><div class="small mute">Faults step</div><div class="big">${F.answered ?? "?"} / ${F.rows ?? "?"}</div><div class="small">rows answered · about ${F.estMin} min</div></div>`;
+  h += `<div class="lcard"><div class="small mute">Sides step</div><div class="big">${Sd.done ?? "?"} / ${Sd.matches ?? "?"}</div><div class="small">matches done · about ${Sd.estMin} min</div></div>`;
+  h += `</div><div class="small" style="margin-top:10px">Measured: ${L.labeledMin} min of labeling so far, median ${L.minPerSmall ?? "?"} min for a small fragment.</div>
+    <div style="margin-top:8px">Label page (open in Chrome or Edge; paste the path into the address bar):<br>
+    <code id="lp">${esc(L.page)}</code> <button id="cp" class="small">Copy</button></div>
+    <div class="small mute">Label folder (key O): <code>${esc(L.folder)}</code> · <a href="/doc/event-labels-howto.md" target="_blank">how to label</a></div>`;
+  if ((L.recent || []).length) h += `<div class="small mute" style="margin-top:6px">Last saved: ${L.recent.map(r => `${r.id} (${r.events} marks${r.state !== "done" ? ", " + r.state : ""})`).join(", ")}</div>`;
+  $("#sLab .body").innerHTML = h;
+  $("#cp").onclick = () => navigator.clipboard.writeText("file:///" + L.page.replace(/\\/g, "/")).then(() => $("#cp").textContent = "Copied");
+}
+
+function renderLinks() {
+  const links = S.plan.links || [];
+  $("#sLinks .body").innerHTML = `<ul>` + links.map(l => `<li><a target="_blank" href="${l.doc ? "/doc/" + encodeURIComponent(l.doc) : esc(l.path || l.url)}">${esc(l.title)}</a></li>`).join("") + `</ul>
+    <div class="small mute">The plan updates when the manager records a decision (lab-plan.json, last change ${hm(S.plan._mtime)}).</div>`;
+}
+
+function rememberOpen() {
+  document.querySelectorAll("details[data-key]").forEach(d => d.open ? openSet.add(d.dataset.key) : openSet.delete(d.dataset.key));
+}
+
 async function load() {
   try {
     const r = await fetch("/api/state", {cache: "no-store"});
     S = await r.json();
     if (S.error) throw new Error(S.error);
-  } catch (e) { $("#meta").textContent = "server not reached: " + e.message; return; }
-  render();
+  } catch (e) {
+    $("#meta").textContent = "server not reached: " + e.message;
+    return;
+  }
+  rememberOpen();
+  $("#meta").textContent = `lab PC time ${S.now.slice(11, 16)} · refresh every 15 s · plan ${S.plan.updated || ""}`;
+  renderBanner(); renderLock(); renderWorkers(); renderMs(); renderActs(); renderLabels(); renderLinks();
 }
 load();
 setInterval(load, 15000);

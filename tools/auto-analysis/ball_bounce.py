@@ -56,6 +56,12 @@ V_MAX = 60.0                    # m/s (216 km/h). E35: a bounce fit with a highe
 # after the vertex goes back (the "sure hit" rule), or the samples after the vertex do not fit one bounce.
 LAND_AGREE = __import__("os").environ.get("LAND_AGREE", "1") == "1"
 LAND_F, LAND_M, LAND_BACK_S = 4.0, 1.5, 0.5     # frames of 1/60 s, m on the court, and the longest time from the end of the flight to the vertex
+# E183/E184 (S5): the ground test. A bounce vertex needs the ball on the ground: the free fit of the flight that ends
+# at the vertex (the flight before the second pass) must not be more than GROUND_UP m above the ground there
+# (z of the ball center - R_BALL). A fit below the ground is a fit error, not evidence against a bounce (E183: the
+# two-side test lost right bounces with z below the ground). 0.51 m = the maximum of the 38 matched lab bounce
+# labels (bounce_labels.json); a vertex with no incoming fit is not tested. 0 = off (the default).
+GROUND_UP = float(__import__("os").environ.get("BOUNCE_GROUND_UP", "0") or 0)
 RMS_BASE, RMS_BALL = 2.0, 0.6   # the bounce fit is accepted if rms < RMS_BASE px + RMS_BALL * radius of the ball image (px)
 
 
@@ -321,6 +327,11 @@ def events(path, kk, fls, P, Hm, debug=None):
                         e["kind"], e["court"], e["by_landing"] = "bounce", [float(g[0]), float(g[1])], True
                         e["conf"] = float(max(0.03, e["sig_px"] * ground_jac(Hm, e["px"])))
                         break
+        if GROUND_UP > 0 and e["kind"] == "bounce" and fa is not None:
+            e["z_in"] = float(sim(np.asarray(fa["p0"], float), np.asarray(fa["v0"], float), [(fe - fa["f0"]) / 60.0])[0][0][2]) - R_BALL
+            if e["z_in"] > GROUND_UP:                                # the ball is in the air at the vertex: not a bounce
+                e["kind"], e["court"], e["conf"], e["not_ground"] = "other", None, None, True
+                e.pop("by_landing", None)
         if e["kind"] == "other" and fa and fb and fa["v0"][1] * fb["v0"][1] < 0:
             e["kind"] = "hit"                                           # the ball changes its direction along the court
     # 3. flights: anchored at the bounce; an end event for a flight with no event at its end

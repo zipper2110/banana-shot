@@ -191,22 +191,91 @@ def apply(work, out):
     return True
 
 
+def plan_parts(work, versions, now_code=HERE):
+    """A45 (E204): the part keys of the flights stage (detect.FLIGHT_PARTS) for a folder with one flights key of
+    before A45 that is not the key of now. Proof: a code version V made the recorded one key (the formula before
+    A39 or the A39 formula), and the A45 key files of a part (code_closure.reach of its entry module) have the same
+    bytes in V and now. A part is adopted only if each part before it is adopted; the net events part also needs
+    the netband part of the one key: the recorded netband key, or the key that E203 adopted from it.
+    Returns {"parts": {part: key of now}, "run": [parts], "proof": V or None, "why": text}."""
+    keys = json.load(open(os.path.join(work, "stage_keys.json")))
+    names = [p for p, _, _ in detect.FLIGHT_PARTS]
+    fl, mask = keys.get("flights"), keys.get("netmask")
+    out = {"parts": {}, "run": names, "proof": None, "why": ""}
+    if "netevents" in keys or not fl or not mask:
+        out["why"] = "no one flights key of before A45 (or no netmask key)"
+        return out
+    tag = mask[:-9]
+    if not fl.startswith(tag + "_") or len(fl) < len(tag) + 9:
+        out["why"] = "the flights key does not have the ball tag of the netmask key"
+        return out
+    h, rest = fl[len(tag) + 1:len(tag) + 9], fl[len(tag) + 9:]
+    nb_rec = rest[3:] if rest.startswith("_nb") else None
+    nb_now = keys.get("netband")
+    adopted_nb = keys.get("keysAdoptedA39", {}).get("netband", {}).get("from")
+    nb_ok = nb_rec is None or nb_rec == nb_now or (adopted_nb == nb_rec and nb_now is not None)
+    if nb_now is not None and nb_now != mask + "_" + detect.content_key(
+            files=code_closure.files(*detect.STAGE_ENTRIES["netband"], folder=now_code)):
+        nb_ok = False                                   # the net band runs again: so do the net events
+    court = [os.path.join(work, f) for f in ("court_track.json", "court_track_refined.json")]
+    for c in court_track(work):
+        for name, folder in versions:
+            v = code_parts(folder)
+            if not v["flights"] or not any(detect.content_key(c, files=court + fs) == h for fs in v["flights"]):
+                continue
+            out["proof"], same = name, []
+            for p, entry, _ in detect.FLIGHT_PARTS:
+                diff = changed(code_closure.files(entry, folder=folder), code_closure.files(entry, folder=now_code))
+                if diff or (p == "netevents" and not nb_ok):
+                    out["why"] = f"made by {name}; {p}: " + (", ".join(diff) + " changed" if diff else "another netband key")
+                    break
+                same.append(p)
+            now = detect.flight_keys(tag, c, court, nb_now, folder=now_code)
+            out["parts"] = {p: now[p] for p in same}
+            out["run"] = [p for p in names if p not in same]
+            return out
+    out["why"] = "no code version of the history made the recorded key"
+    return out
+
+
+def apply_parts(work, out):
+    """Writes the adopted part keys into stage_keys.json (a copy of the old file: stage_keys.a45.json)."""
+    if not out["parts"]:
+        return False
+    p = os.path.join(work, "stage_keys.json")
+    back = os.path.join(work, "stage_keys.a45.json")
+    if not os.path.exists(back):
+        shutil.copy2(p, back)
+    keys = json.load(open(p))
+    keys["flightsSplit"] = {"from": keys.get("flights"), "proof": out["proof"], "adopted": sorted(out["parts"]),
+                            "time": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    keys.update(out["parts"])
+    json.dump(keys, open(p, "w"), indent=1)
+    return True
+
+
 def main(args):
     dry = "--dry" in args
+    parts = "--parts" in args
     n = 200
     if "--versions" in args:
         n = int(args[args.index("--versions") + 1])
         args = args[:args.index("--versions")] + args[args.index("--versions") + 2:]
-    works = [a for a in args if a != "--dry"]
+    works = [a for a in args if a not in ("--dry", "--parts")]
     tmp = tempfile.mkdtemp(prefix="ar_")
     try:
         versions = git_versions(tmp, n)
         print(len(versions), "code versions:", versions[0][0] if versions else "-", "to", versions[-1][0] if versions else "-")
-        plans = {w: plan(w, versions) for w in works}
+        plans = {w: (plan_parts if parts else plan)(w, versions) for w in works}
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     for w, out in plans.items():
         print(w)
+        if parts:
+            print("  ", json.dumps(out))
+            if not dry and apply_parts(w, out):
+                print("   written")
+            continue
         for s in STAGES:
             print("  ", s, json.dumps(out[s]))
         if not dry and apply(w, out):

@@ -147,6 +147,78 @@ def code_key(name, *parts, files=()):
     return content_key(*parts, files=list(files) + code_closure.files(*STAGE_ENTRIES[name]))
 
 
+# A45 (S2, E204): the flights stage in three parts, each with its own key. Before, one key had the code of all three
+# (FLIGHTS_ENTRIES), so a serve_ball.py change (only feat_wasb uses it) also made the ball flights again (about 1340 s
+# of 1399 s on m1116). Each key has the key of the part before it, so a part runs again with each part after it.
+# The netband key is a part of the net events key (ball_full does not read the net band).
+FLIGHT_PARTS = (("flights", "ball_full", ("fullflights_s0.35.json",)), ("netevents", "net_events", ("net_events.json",)),
+                ("wasbf", "feat_wasb", ("feat_wasb.npy", "feat_wasbf.npy")))
+
+
+def flight_keys(tag, court_track, court_files, netband=None, folder=HERE):
+    """{part: key} of the three parts of the flights stage (A45). folder: the code (a test can give a copy)."""
+    import code_closure
+    k1 = tag + "_" + content_key(court_track, files=list(court_files) + code_closure.files("ball_full", folder=folder))
+    k2 = content_key(k1, netband or "", files=code_closure.files("net_events", folder=folder))
+    k3 = content_key(k2, files=code_closure.files("feat_wasb", folder=folder))
+    return {"flights": k1, "netevents": k2, "wasbf": k3}
+
+
+def one_flights_key(tag, court_track, court_files, netband=None, folder=HERE):
+    """The one key of the flights stage before A45 (A39 formula: the code of ball_full, net_events and feat_wasb)."""
+    import code_closure
+    k = tag + "_" + content_key(court_track, files=list(court_files) + code_closure.files(*FLIGHTS_ENTRIES, folder=folder))
+    return k + "_nb" + netband if netband else k
+
+
+def flight_parts_to_run(work, keys, force=False):
+    """The parts that run (A45): from the first part with a new key or a missing output, that part and each after it."""
+    names = [p for p, _, _ in FLIGHT_PARTS]
+    for i, (n, _, outs) in enumerate(FLIGHT_PARTS):
+        if force or STAGE_KEYS.get(n) != keys[n] or not all(os.path.exists(os.path.join(work, o)) for o in outs):
+            return names[i:]
+    return []
+
+
+def adopt_flight_parts(work, tag, court_track, court_files, netband=None, folder=HERE):
+    """A45: a folder with the one flights key of before A45 that is the key of now gets the three part keys (the same
+    code and inputs, so no part runs). True if it adopted."""
+    if "netevents" in STAGE_KEYS or not STAGE_KEYS.get("flights"):
+        return False
+    if STAGE_KEYS["flights"] != one_flights_key(tag, court_track, court_files, netband, folder):
+        return False
+    if not all(os.path.exists(os.path.join(work, o)) for _, _, outs in FLIGHT_PARTS for o in outs):
+        return False
+    old = STAGE_KEYS["flights"]
+    STAGE_KEYS.update(flight_keys(tag, court_track, court_files, netband, folder))
+    STAGE_KEYS["flightsSplit"] = {"from": old, "time": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    if KEYS_FILE:
+        json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+    return True
+
+
+def run_flight_parts(work, keys, fns, force=False):
+    """Runs the parts of flight_parts_to_run with fns[part] and records the key of each part after it. The app sees one
+    stage "flights" (DetectStage.FLIGHTS); the run time of each part is only in run.log (the app adds the values of
+    stageSeconds, so a part time there would count twice)."""
+    todo = flight_parts_to_run(work, keys, force)
+    if not todo:
+        say("@stage", "flights", "skip")
+        return todo
+    say("@stage", "flights", "start")
+    t = time.time()
+    for n in todo:
+        t1 = time.time()
+        fns[n]()
+        STAGE_KEYS[n] = keys[n]
+        if KEYS_FILE:
+            json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+        say(f"flights part {n} done {time.time() - t1:.1f} s")
+    STAGE_S["flights"] = round(time.time() - t, 1)
+    say("@stage", "flights", "done", STAGE_S["flights"])
+    return todo
+
+
 def up(name):
     """Item 16: the parts of the key of a stage from the recorded key of the stage before it (UPSTREAM); () = none."""
     return (UPSTREAM[name][0] + "=" + str(STAGE_KEYS.get(UPSTREAM[name][0])),) if name in UPSTREAM else ()
@@ -1153,16 +1225,19 @@ def main():
             stage("netband", [W("net_band.npz")], netband, a.force, STAGE_KEYS["netmask"] + "_" + code_key("netband"))
             save_times()
 
-        def flights():
-            ball_full.run(MID)
-            run_net_events(work, blob, W("net_band.npz") if net_on else None, warn)
+        def wasbf():
             feat_wasb.run(MID)
             np.save(W("feat_wasbf.npy"), np.load(W("feat_wasb.npy"))[:, [4, 5, 6]])
-        # G12: the flights run again when the ball file, the court files or the code of the flights (import closure) change.
-        flights_key = lab.BLOB_TAG + "_" + code_key("flights", cfg["courtTrack"], files=[W("court_track.json"), W("court_track_refined.json")])
-        if net_on:
-            flights_key += "_nb" + STAGE_KEYS["netband"]
-        stage("flights", [W("fullflights_s0.35.json"), W("feat_wasbf.npy")], flights, a.force, flights_key)
+        # G12: the flights run again when the ball file, the court files or the code of the flights change.
+        # A45: in three parts, each with its own key (flight_keys); a part runs with each part after it.
+        court_files = [W("court_track.json"), W("court_track_refined.json")]
+        nb_key = STAGE_KEYS["netband"] if net_on else None
+        if adopt_flight_parts(work, lab.BLOB_TAG, cfg["courtTrack"], court_files, nb_key):
+            say("flights: the one flights key of before A45 is the key of now; the 3 part keys are recorded")
+        run_flight_parts(work, flight_keys(lab.BLOB_TAG, cfg["courtTrack"], court_files, nb_key),
+                         {"flights": lambda: ball_full.run(MID),
+                          "netevents": lambda: run_net_events(work, blob, W("net_band.npz") if net_on else None, warn),
+                          "wasbf": wasbf}, a.force)
         save_times()
 
         # ---- pose

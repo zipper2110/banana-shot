@@ -89,8 +89,9 @@ DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"
 FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
 # A47 (S4 E220, proposal FS): CHAIN_FAULT_SERVES=1: the chain of a fault candidate gets the serve events of its window
 # (fault_pt), as the rally chain, so shot_chain.serve_start can move its first shot to the serve event. Before, the
-# fault chain had no serve events (the contact of the fault clip of s014 70:26.567 was 0.45 s early). Default "0" (off).
-FAULT_SERVES = os.environ.get("CHAIN_FAULT_SERVES", "0") == "1"
+# fault chain had no serve events (the contact of the fault clip of s014 70:26.567 was 0.45 s early). Default "1" (on: manager decision after S4 E221);
+# "0" gives the old way.
+FAULT_SERVES = os.environ.get("CHAIN_FAULT_SERVES", "1") != "0"
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)

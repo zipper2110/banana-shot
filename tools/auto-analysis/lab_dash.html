@@ -8,15 +8,15 @@
 <style>
 :root {
   --bg: #f6f7f9; --card: #fff; --ink: #1d2330; --mute: #687083; --line: #e2e5ea;
-  --accent: #2f6fde; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030; --soft: #eef2f8;
+  --accent: #2f6fde; --on-accent: #fff; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030; --soft: #eef2f8;
   --research: #6b4fbb; --experiment: #0f7c8c; --fix: #1f8a4c; --run: #8a5a1f; --labeling: #b0417a;
 }
 /* Theme: html[data-theme] = "light" or "dark" from the switch; no attribute = the system setting. */
-:root[data-theme="dark"] { color-scheme: dark; --bg: #14171c; --card: #1c2027; --ink: #e6e8ec; --mute: #9aa2b1; --line: #2c323c; --soft: #232a35;
-  --accent: #6c9cf0; --research: #a58ef0; --experiment: #4fb8c6; --fix: #57c287; --run: #d6a45f; --labeling: #e07bb0; }
+/* Dark = the Mid theme of the app (Palette.kt with the background seed MID_BACKGROUND #2E2E2E: BG, CARD, RAISED,
+   LINE, FG, FG_2; the lime accent DEFAULT_ACCENT with ON_LIME ink; the status colors YELLOW, RED, BLUE, GREEN). */
+:root[data-theme="dark"] { color-scheme: dark; --bg: #2e2e2e; --card: #3a3a3a; --ink: #e8e8e8; --mute: #b8b5b5; --line: #464646; --soft: #404040; --accent: #c8ec46; --on-accent: #142000; --ok: #4caf50; --warn: #f2d64b; --bad: #ff7351; --research: #b9a6f5; --experiment: #6fb5ff; --fix: #4caf50; --run: #f2d64b; --labeling: #ff9bc8; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) { color-scheme: dark; --bg: #14171c; --card: #1c2027; --ink: #e6e8ec; --mute: #9aa2b1; --line: #2c323c; --soft: #232a35;
-    --accent: #6c9cf0; --research: #a58ef0; --experiment: #4fb8c6; --fix: #57c287; --run: #d6a45f; --labeling: #e07bb0; }
+  :root:not([data-theme]) { color-scheme: dark; --bg: #2e2e2e; --card: #3a3a3a; --ink: #e8e8e8; --mute: #b8b5b5; --line: #464646; --soft: #404040; --accent: #c8ec46; --on-accent: #142000; --ok: #4caf50; --warn: #f2d64b; --bad: #ff7351; --research: #b9a6f5; --experiment: #6fb5ff; --fix: #4caf50; --run: #f2d64b; --labeling: #ff9bc8; }
 }
 :root[data-theme="light"] { color-scheme: light; }
 header .ctl { flex-wrap: wrap; }
@@ -24,7 +24,7 @@ main > * { min-width: 0; }
 section { overflow-x: auto; }
 .theme { flex-shrink: 0; display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .theme button { border: 0; border-radius: 0; padding: 5px 9px; background: transparent; font-size: 12px; }
-.theme button.on { background: var(--accent); color: #fff; }
+.theme button.on { background: var(--accent); color: var(--on-accent); }
 * { box-sizing: border-box; }
 body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
 header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line);
@@ -102,7 +102,7 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
 .imp.e i.on { background: var(--mute); } .imp.r i.on { background: var(--ok); }
 .imp.r.lower i.on { background: var(--warn); } .imp.r.zero i.on { background: var(--bad); }
 .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-.filters button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.filters button.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .workers { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
 .worker { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .worker h3 { margin: 0; font-size: 14px; display: flex; justify-content: space-between; }

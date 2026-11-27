@@ -51,6 +51,13 @@ FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, sc.SIDE_X   # shots; s (the time betw
 POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 # item 10: a rally with no shot in its chain and no server end from the pose has no evidence of a serve: it is not a point.
 NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
+# A48 (E212, E210 cause D: ball play between points). CHAIN_PLAY_DROP=1: a rally with no fact of a point is removed:
+# no serve event (not a toss alone) from 1 s before its start to its end, no server end (serverNear None: no pose
+# vote and no serve event), and no chain shot with an end of a ball in play (PLAY_ENDS: a bounce in or out, the net,
+# the own side). Built on the head lab rows (E212): 9 rows of cause D and the 142 points with no serve event at the
+# start; it removes 6 of the 9 and no point. Default "0" (off).
+PLAY_DROP = os.environ.get("CHAIN_PLAY_DROP", "0") == "1"
+PLAY_ENDS = ("in", "out", "net", "own")
 # E161 (S3, rally miss table E160): segments of the GRU with a gap of less than JOIN_GAP s are one rally. The old
 # value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 2.5 (manager
 # decision after E161); 1.5 gives the old way.
@@ -388,6 +395,8 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
         rows = fault_rallies(rows, serves)
     if NO_SERVE_DROP:
         rows = [r for r in rows if not (r["prob"] >= 0 and r.get("chain") is not None and not r["chain"]["shots"] and r["serverNear"] is None)]
+    if PLAY_DROP:
+        rows = [r for r in rows if not play_between(r, serves)]
     st0 = {(0, 0, 0, 0, -1, srv, True, 0): 0.5 for srv in (1, 2)}
     near1 = identity.p1_near([r["color"] for r in rows])
     if ID_ABS:
@@ -465,6 +474,15 @@ def second_serve_segs(rows, serves, flights, prob, hi=0.5):
         if b > a:
             out.append((a, b, round(float(np.max(prob[int(a):int(b) + 1])), 3)))
     return out
+
+
+def play_between(r, serves):
+    """A48 (see PLAY_DROP): True when the rally r (a row of evidence) has no fact of a point: ball play between points."""
+    if r["prob"] < 0 or r.get("chain") is None or r["serverNear"] is not None:
+        return False
+    if any(r["start"] - 1.0 <= e[0] <= r["end"] and e[2] != "toss" for e in serves or ()):
+        return False
+    return not any(s.get("end") in PLAY_ENDS for s in r["chain"]["shots"])
 
 
 def serve_anchor_segs(rows, serves, flights, prob, hi=0.5):

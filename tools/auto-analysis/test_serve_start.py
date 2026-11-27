@@ -22,10 +22,10 @@ def serve(t, near, kind="toss+serve"):
 
 
 class Default(unittest.TestCase):
-    def test_the_default_is_ab(self):
-        # manager decision after E164; the app removes each CHAIN_* variable, so it uses this default
+    def test_the_default_is_abc(self):
+        # manager decisions after E164 ("ab") and E199 ("c"); the app removes each CHAIN_* variable, so it uses this default
         if "CHAIN_SERVE_START" not in os.environ:
-            self.assertEqual(sc.SERVE_START, "ab")
+            self.assertEqual(sc.SERVE_START, "abc")
 
 
 class ServeStartA(unittest.TestCase):
@@ -119,9 +119,9 @@ class BuildGate(unittest.TestCase):
 
 class ServeStartC(unittest.TestCase):
     """A40 (S4 E176 rule c1): letter "c"."""
-    def test_c_is_off_by_default(self):
+    def test_c_is_on_by_default(self):
         if "CHAIN_SERVE_START" not in os.environ:
-            self.assertNotIn("c", sc.SERVE_START)
+            self.assertIn("c", sc.SERVE_START)
 
     def test_shots_before_a_later_serve_go_out(self):
         shots = [shot(10.0, True), shot(11.5, True, how="gap"), shot(12.5, False)]

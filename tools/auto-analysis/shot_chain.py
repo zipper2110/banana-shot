@@ -93,8 +93,9 @@ AUDIO_DB, AUDIO_WIN = 9.0, (-0.02, 0.2)   # E71: an audio hit candidate of 9 dB 
 # play. Lab marks start at the second serve; a first-serve fault or a toss before it gave a false first shot. Default
 # "ab" (manager decision after E164); "0" gives the old way; "a", "b" (see serve_start). Only rally windows of chain.py
 # give the serve events (build serves=...).
-# A40 (S4 E176 rule c1): the letter "c" ("abc"; off by default) drops false first shots before a later serve in play.
-SERVE_START = os.environ.get("CHAIN_SERVE_START", "ab")
+# A40 (S4 E176 rule c1): the letter "c" drops false first shots before a later serve in play. Default "abc" (manager
+# decision after E199); "ab" gives the way before.
+SERVE_START = os.environ.get("CHAIN_SERVE_START", "abc")
 SL_MAX, SL_MIN = 3.0, 1.0  # s: (c) the serve in play is not more than SL_MAX after the first shot, SL_MIN or more after the shot before it
 SS_GAP = 2.0           # s: (a) the next shot of the same end is this much or more after the first shot (E164: 8 lab rows)
 SS_SERVE = (0.5, 1.3)  # s: (b) the serve event of the same end is this long after the first shot (E164: 0.6 to 1.2 s)

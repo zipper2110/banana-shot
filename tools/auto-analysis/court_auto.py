@@ -68,6 +68,9 @@ def to_img(H, pts):
     return cv2.perspectiveTransform(np.asarray(pts, np.float32)[None], np.linalg.inv(H))[0]
 
 
+_QUAD1, _COURT41, _R1 = np.c_[QUAD, np.ones(4)], np.c_[COURT4, np.ones(4)], [1, 2, 3, 0]   # E186: constants of valid_H
+
+
 def valid_H(H, w=1920, h=1080):
     """True if the full court quad is a sane, not folded image of the court:
     convex, near side below the far side, left side left of the right side,
@@ -76,7 +79,7 @@ def valid_H(H, w=1920, h=1080):
         Hi = np.linalg.inv(H)
     except np.linalg.LinAlgError:
         return False
-    q = np.c_[QUAD, np.ones(4)] @ Hi.T
+    q = _QUAD1 @ Hi.T                                  # E186: the same values with less overhead (no np.c_, np.roll)
     if not ((q[:, 2] > 1e-9).all() or (q[:, 2] < -1e-9).all()):
         return False                                  # the court crosses the horizon
     p = q[:, :2] / q[:, 2:]
@@ -85,13 +88,13 @@ def valid_H(H, w=1920, h=1080):
         return False
     if not (nr[0] - nl[0]) > (fr[0] - fl[0]):
         return False
-    e = np.roll(p, -1, 0) - p
-    z = e[:, 0] * np.roll(e, -1, 0)[:, 1] - e[:, 1] * np.roll(e, -1, 0)[:, 0]
+    e = p[_R1] - p
+    z = e[:, 0] * e[_R1][:, 1] - e[:, 1] * e[_R1][:, 0]
     if not ((z > 0).all() or (z < 0).all()):
         return False                                   # folded ("bow-tie") or not convex
     fw = fr[0] - fl[0]
     depth = (nl[1] + nr[1]) / 2 - (fl[1] + fr[1]) / 2          # image height of the court at its center
-    area = 0.5 * abs(np.dot(p[:, 0], np.roll(p[:, 1], -1)) - np.dot(p[:, 1], np.roll(p[:, 0], -1)))
+    area = 0.5 * abs(np.dot(p[:, 0], p[_R1, 1]) - np.dot(p[:, 1], p[_R1, 0]))
     # the camera is behind the near baseline: the far baseline is (nearly) in the frame
     far_in = -0.15 * w < fl[0] and fr[0] < 1.15 * w
     if not (area > 0.12 * w * h and 0.08 * w < fw < 1.2 * w and depth > 0.2 * h and far_in
@@ -100,7 +103,7 @@ def valid_H(H, w=1920, h=1080):
     # the 4 service-line corners are inside the frame in all lab matches, and
     # most of the model is visible: this rejects models that hide almost all
     # of their lines outside the frame and fit only the net tape
-    s = np.c_[COURT4, np.ones(4)] @ Hi.T
+    s = _COURT41 @ Hi.T
     s = s[:, :2] / s[:, 2:]
     if not ((s[:, 0] >= 0) & (s[:, 0] < w) & (s[:, 1] >= 0) & (s[:, 1] < h)).all():
         return False
@@ -108,7 +111,52 @@ def valid_H(H, w=1920, h=1080):
     # not run off to "infinity" (a nearly flat model)
     if (s[0, 1] + s[1, 1]) / 2 - (s[2, 1] + s[3, 1]) / 2 < 0.08 * h or not (-3 * w < nl[0] and nr[0] < 4 * w):
         return False
-    return visible(H, w, h) >= 0.6 * len(SAMPLES)
+    pts = cv2.perspectiveTransform(SAMPLES[None], Hi)[0]          # visible(H, w, h), with the inverse of above
+    return int(((pts[:, 0] >= 0) & (pts[:, 0] < w - 1) & (pts[:, 1] >= 0) & (pts[:, 1] < h - 1)).sum()) >= 0.6 * len(SAMPLES)
+
+
+def _gt(a, b):
+    """a > b with a small slack (a superset of a > b for float noise of a different evaluation order)."""
+    return a > b - 1e-6 * (np.abs(a) + np.abs(b)) - 1e-9
+
+
+def valid_pre(Hs, w=1920, h=1080):
+    """E186: valid_H for a batch, as a pre-check. True for each H that valid_H can accept (the same tests with a small
+    slack, without the visible() count); False: valid_H rejects it. The caller still calls valid_H for each True, so
+    the result does not change. Hs: (N, 3, 3)."""
+    Hs = np.asarray(Hs, float).reshape(-1, 3, 3)
+    out = np.ones(len(Hs), bool)
+    if not len(Hs):
+        return out
+    with np.errstate(all="ignore"):
+        det = np.linalg.det(Hs)
+        good = np.isfinite(det) & (np.abs(det) > 1e-300)
+        try:
+            Hi = np.linalg.inv(np.where(good[:, None, None], Hs, np.eye(3)))
+        except np.linalg.LinAlgError:
+            return out
+        q = np.c_[QUAD, np.ones(4)][None] @ Hi.transpose(0, 2, 1)
+        z = q[..., 2]
+        ok = _gt(z, 1e-9).all(1) | _gt(-z, 1e-9).all(1)
+        pp = q[..., :2] / q[..., 2:]
+        nl, nr, fr, fl = pp[:, 0], pp[:, 1], pp[:, 2], pp[:, 3]
+        ok &= _gt(nr[:, 0], nl[:, 0]) & _gt(fr[:, 0], fl[:, 0]) & _gt(nl[:, 1], fl[:, 1] + 20) & _gt(nr[:, 1], fr[:, 1] + 20)
+        ok &= _gt(nr[:, 0] - nl[:, 0], fr[:, 0] - fl[:, 0])
+        e = np.roll(pp, -1, 1) - pp
+        e2 = np.roll(e, -1, 1)
+        zz = e[..., 0] * e2[..., 1] - e[..., 1] * e2[..., 0]
+        ok &= _gt(zz, 0).all(1) | _gt(-zz, 0).all(1)
+        fw = fr[:, 0] - fl[:, 0]
+        depth = (nl[:, 1] + nr[:, 1]) / 2 - (fl[:, 1] + fr[:, 1]) / 2
+        area = 0.5 * np.abs((pp[..., 0] * np.roll(pp[..., 1], -1, 1)).sum(1) - (pp[..., 1] * np.roll(pp[..., 0], -1, 1)).sum(1))
+        lo, hi = np.minimum(fl[:, 1], fr[:, 1]), np.maximum(nl[:, 1], nr[:, 1])
+        ok &= (_gt(area, 0.12 * w * h) & _gt(fw, 0.08 * w) & _gt(1.2 * w, fw) & _gt(depth, 0.2 * h) & _gt(fl[:, 0], -0.15 * w)
+               & _gt(1.15 * w, fr[:, 0]) & _gt(lo, -0.1 * h) & _gt(0.8 * h, lo) & _gt(hi, 0.35 * h))
+        sq = np.c_[COURT4, np.ones(4)][None] @ Hi.transpose(0, 2, 1)
+        sp = sq[..., :2] / sq[..., 2:]
+        ok &= (_gt(sp[..., 0], 0) & _gt(w, sp[..., 0]) & _gt(sp[..., 1], 0) & _gt(h, sp[..., 1])).all(1)
+        ok &= _gt((sp[:, 0, 1] + sp[:, 1, 1]) / 2 - (sp[:, 2, 1] + sp[:, 3, 1]) / 2, 0.08 * h) & _gt(nl[:, 0], -3 * w) & _gt(4 * w, nr[:, 0])
+    return np.where(good, ok, True)
 
 
 # ---------------------------------------------------------------- lines
@@ -239,6 +287,8 @@ def hidden(Hs, samples=SAMPLES, w=1920, h=1080):
     Such a point is on the far half, and the ray from the camera to it goes through the net plane below
     the net tape. The detection mask removes the net mesh, so a court line there is mostly not in the mask.
     From a low camera (2 m) the full far half is behind the net. The rule is only for that case."""
+    if not LOW_RULE:                                  # E186: the rule is off, so no point is hidden (as before)
+        return np.zeros((np.asarray(Hs).reshape(-1, 3, 3).shape[0], len(samples)), bool)
     _, C = camera(Hs, w, h)
     cy, hc = C[:, 1:2], np.abs(C[:, 2:3])
     y = np.asarray(samples)[None, :, 1]
@@ -348,14 +398,18 @@ def unexplained(H, hor):
     return bad / tot if tot else 0.0
 
 
-def polish(img, H, band=14):
+def tophat(img):
+    g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return cv2.morphologyEx(g, cv2.MORPH_TOPHAT, cv2.getStructuringElement(cv2.MORPH_RECT, (17, 17)))
+
+
+def polish(img, H, band=14, th=None):
     """Last small refinement. It uses all bright thin pixels (gray top-hat,
     no texture filter) but only in a band around the model lines, so that
     no clutter can pull the model. This also uses the line parts behind the
-    net mesh, which the detection mask removes."""
-    g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    th = cv2.morphologyEx(g, cv2.MORPH_TOPHAT, cv2.getStructuringElement(cv2.MORPH_RECT, (17, 17)))
-    near = np.zeros(g.shape, np.uint8)
+    net mesh, which the detection mask removes. th: tophat(img) (E186: detect gives it once for all its polish calls)."""
+    th = tophat(img) if th is None else th
+    near = np.zeros(th.shape, np.uint8)
     for a, b in SEGS:
         pp = to_img(H, [a, b]).round().astype(int)
         if np.abs(pp).max() < 1e5:
@@ -382,32 +436,21 @@ def detect(img, n_h=10, n_s=14, n_refine=8, prior=None):
        it passes the confidence limits. In the lab matches (camera 3.1 to 3.7 m high) this pass gave
        wrong low-camera models in 11 of 24 frames, but none of them passed the limits;
     2. the search with the rule off, as before E23b.
-    Returns as detect_pass()."""
+    Returns as detect_pass(). E186: the two passes share the work that does not depend on the rule (prepare())."""
     global LOW_RULE
-    H, score, info = detect_pass(img, n_h, n_s, n_refine, prior)
+    prep = prepare(img, n_h, n_s)
+    H, score, info = detect_pass(img, n_h, n_s, n_refine, prior, prep)
     if H is not None and info["ok"] and hidden(H, SAMPLES, img.shape[1], img.shape[0]).any():
         return H, score, dict(info, low=True)
     LOW_RULE = False
     try:
-        return detect_pass(img, n_h, n_s, n_refine, prior)
+        return detect_pass(img, n_h, n_s, n_refine, prior, prep)
     finally:
         LOW_RULE = True
 
 
-def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None):
-    """Find the court in one BGR frame. Returns (H, score, info).
-    H: 3x3 image px -> court meters, or None.
-    score: chamfer cost in px of the polished model (see polish(); lower is
-    better; a clear court gives under 0.5 px, a wrong model mostly over 1.3 px).
-    info: line counts, clutter, margin (score px) to the best different
-    model, and ok = True if the confidence limits pass (OK_RULES,
-    OK_RULES, OK_CLUTTER). A caller must not use H when ok is False.
-    prior: optional H; hypotheses near it get a small bonus (for a tracker)."""
-    t_start = time.time()
-    hh, ww = img.shape[:2]
-    mask = line_mask(img)
-    dt = cv2.distanceTransform((~mask).astype(np.uint8), cv2.DIST_L2, 3)
-    lines = find_lines(mask)
+def lines_hs(lines, n_h, n_s, ww, hh):
+    """(hor, side, hor_all) of detect_pass: the horizontal and the side lines, with the pseudo lines, in image order."""
     ang = [abs(np.degrees(np.arctan2(d[1], d[0]))) % 180 for _, d, _, _ in lines]
     hor = [l for l, a in zip(lines, ang) if a < 20 or a > 160]
     side = [l for l, a in zip(lines, ang) if 20 <= a <= 160]
@@ -434,51 +477,107 @@ def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None):
         (p, d) = l[0], l[1]
         return p[0] + (yref - p[1]) * d[0] / d[1]
     side.sort(key=x_at)
+    return hor, side, hor_all
+
+
+_D60 = np.array([[(COLS[ci], ROWS[ri]), (COLS[cj], ROWS[ri]), (COLS[ci], ROWS[rj]), (COLS[cj], ROWS[rj])]
+                 for ri in range(4) for rj in range(ri + 1, 4) for ci in range(5) for cj in range(ci + 1, 5)], float)
+
+
+def hypotheses(hor, side, ww, hh):
+    """All hypotheses (src image points, dst court points), (N, 4, 2) each, in the order of the old loops: 2
+    horizontal lines i < j, 2 side lines a < b, then the 60 choices of 2 court rows and 2 court columns. E186: numpy;
+    each intersection once."""
+    nh, ns = len(hor), len(side)
+    X, good = np.zeros((nh, ns, 2)), np.zeros((nh, ns), bool)
+    for r in range(nh):
+        for c in range(ns):
+            q = intersect(hor[r][:2], side[c][:2])
+            if q is not None and not (abs(q[0]) > 6 * ww or abs(q[1]) > 6 * hh):
+                X[r, c], good[r, c] = q, True
+    ph = np.array([(i, j) for i in range(nh) for j in range(i + 1, nh)], int).reshape(-1, 2)
+    ps = np.array([(a, b) for a in range(ns) for b in range(a + 1, ns)], int).reshape(-1, 2)
+    I, J = np.repeat(ph[:, 0], len(ps)), np.repeat(ph[:, 1], len(ps))
+    A, B = np.tile(ps[:, 0], len(ph)), np.tile(ps[:, 1], len(ph))
+    keep = good[I, A] & good[I, B] & good[J, A] & good[J, B]
+    I, J, A, B = I[keep], J[keep], A[keep], B[keep]
+    P = np.stack([X[I, A], X[I, B], X[J, A], X[J, B]], 1)
+    return np.repeat(P, len(_D60), 0), np.tile(_D60, (len(P), 1, 1))
+
+
+def prepare(img, n_h=10, n_s=14):
+    """The part of detect_pass that does not depend on LOW_RULE: the line mask, its distance map, the lines and the
+    hypotheses with their homographies."""
+    hh, ww = img.shape[:2]
+    mask = line_mask(img)
+    dt = cv2.distanceTransform((~mask).astype(np.uint8), cv2.DIST_L2, 3)
+    hor, side, hor_all = lines_hs(find_lines(mask), n_h, n_s, ww, hh)
+    out = {"mask": mask, "dt": dt, "hor": hor, "side": side, "hor_all": hor_all, "th": None}
+    if len(hor) >= 2 and len(side) >= 2:
+        src, dst = hypotheses(hor, side, ww, hh)
+        Hs, okh = homog_batch(src, dst)
+        out.update(Hs=Hs, okh=okh, Hi=np.linalg.inv(np.where(okh[:, None, None], Hs, np.eye(3))))
+    return out
+
+
+def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None, prep=None):
+    """Find the court in one BGR frame. Returns (H, score, info).
+    H: 3x3 image px -> court meters, or None.
+    score: chamfer cost in px of the polished model (see polish(); lower is
+    better; a clear court gives under 0.5 px, a wrong model mostly over 1.3 px).
+    info: line counts, clutter, margin (score px) to the best different
+    model, and ok = True if the confidence limits pass (OK_RULES,
+    OK_RULES, OK_CLUTTER). A caller must not use H when ok is False.
+    prior: optional H; hypotheses near it get a small bonus (for a tracker).
+    prep: prepare(img, n_h, n_s) (detect gives it to both passes); None: made here."""
+    t_start = time.time()
+    hh, ww = img.shape[:2]
+    prep = prepare(img, n_h, n_s) if prep is None else prep
+    mask, dt, hor, side, hor_all = prep["mask"], prep["dt"], prep["hor"], prep["side"], prep["hor_all"]
     info = {"n_hor": len(hor), "n_side": len(side)}
     if len(hor) < 2 or len(side) < 2:
         return None, CAP, dict(info, ok=False, why="too few lines")
 
-    # all hypotheses: 4 image points -> 4 court points
-    src, dst = [], []
-    for i in range(len(hor)):
-        for j in range(i + 1, len(hor)):
-            for a in range(len(side)):
-                for b in range(a + 1, len(side)):
-                    P = [intersect(hor[r][:2], side[s][:2]) for r in (i, j) for s in (a, b)]
-                    if any(p is None or abs(p[0]) > 6 * ww or abs(p[1]) > 6 * hh for p in P):
-                        continue
-                    for ri in range(4):
-                        for rj in range(ri + 1, 4):
-                            for ci in range(5):
-                                for cj in range(ci + 1, 5):
-                                    src.append(P)
-                                    dst.append([(COLS[ci], ROWS[ri]), (COLS[cj], ROWS[ri]), (COLS[ci], ROWS[rj]), (COLS[cj], ROWS[rj])])
-    src, dst = np.array(src, float), np.array(dst, float)
-    Hs, okh = homog_batch(src, dst)
-    # coarse score: model points -> image, nearest pixel lookup in the distance map
-    Hi = np.linalg.inv(np.where(okh[:, None, None], Hs, np.eye(3)))
-    M = np.c_[COARSE, np.ones(len(COARSE))]
-    score = np.full(len(Hs), np.inf)
-    for k in range(0, len(Hs), 20000):
-        q = np.einsum("pj,nij->npi", M, Hi[k:k + 20000])
-        z = q[..., 2]
-        with np.errstate(divide="ignore", invalid="ignore"):
-            x, y = q[..., 0] / z, q[..., 1] / z
-        front = (z > 0).all(1) | (z < 0).all(1)
-        vis = (x >= 0) & (x < ww - 1) & (y >= 0) & (y < hh - 1) & np.isfinite(x)
-        d = dt[np.clip(np.nan_to_num(y), 0, hh - 1).astype(int), np.clip(np.nan_to_num(x), 0, ww - 1).astype(int)]
-        d = np.where(vis, np.minimum(d, np.where(hidden(Hs[k:k + 20000], COARSE, ww, hh), HID_CAP, CAP)), 0)
-        nv = vis.sum(1)
-        s = d.sum(1) / np.maximum(nv, 1) + OUT_W * (1 - nv / len(COARSE))
-        s[(nv < 0.4 * len(COARSE)) | ~front | ~okh[k:k + 20000]] = np.inf
-        score[k:k + 20000] = s
+    Hs, okh, Hi = prep["Hs"], prep["okh"], prep["Hi"]                     # all hypotheses (prepare)
+    # coarse score: model points -> image, nearest pixel lookup in the distance map. E186: the first pass (rule on)
+    # also makes the score with the rule off (the same operations as the second pass) and gives it to that pass.
+    if not LOW_RULE and "score_off" in prep:
+        score = prep["score_off"]
+    else:
+        M = np.c_[COARSE, np.ones(len(COARSE))]
+        score = np.full(len(Hs), np.inf)
+        score_off = np.full(len(Hs), np.inf) if LOW_RULE else None
+        for k in range(0, len(Hs), 20000):
+            q = np.einsum("pj,nij->npi", M, Hi[k:k + 20000])
+            z = q[..., 2]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                x, y = q[..., 0] / z, q[..., 1] / z
+            front = (z > 0).all(1) | (z < 0).all(1)
+            vis = (x >= 0) & (x < ww - 1) & (y >= 0) & (y < hh - 1) & np.isfinite(x)
+            d0 = dt[np.clip(np.nan_to_num(y), 0, hh - 1).astype(int), np.clip(np.nan_to_num(x), 0, ww - 1).astype(int)]
+            nv = vis.sum(1)
+            bad = (nv < 0.4 * len(COARSE)) | ~front | ~okh[k:k + 20000]
+            for out, rule in ((score, LOW_RULE), (score_off, False)):
+                if out is None:
+                    continue
+                hid = hidden(Hs[k:k + 20000], COARSE, ww, hh) if rule else np.zeros(d0.shape, bool)
+                d = np.where(vis, np.minimum(d0, np.where(hid, HID_CAP, CAP)), 0)
+                sc = d.sum(1) / np.maximum(nv, 1) + OUT_W * (1 - nv / len(COARSE))
+                sc[bad] = np.inf
+                out[k:k + 20000] = sc
+        if score_off is not None:
+            prep["score_off"] = score_off
     order = np.argsort(score)
     # keep the best distinct, valid hypotheses
+    top = order[:30000]
+    fin = top[np.isfinite(score[top])]
+    pre = np.zeros(len(Hs), bool)
+    pre[fin] = valid_pre(Hs[fin], ww, hh)                 # E186: the batch pre-check; valid_H decides as before
     cands = []
-    for k in order[:30000]:
+    for k in top:
         if not np.isfinite(score[k]):
             break
-        if not valid_H(Hs[k], ww, hh):
+        if not pre[k] or not valid_H(Hs[k], ww, hh):
             continue
         if any(model_dist(Hs[k], c) < 15 for _, c in cands):
             continue
@@ -490,10 +589,12 @@ def detect_pass(img, n_h=10, n_s=14, n_refine=8, prior=None):
         return None, CAP, dict(info, ok=False, why="no valid hypothesis")
     cands.sort(key=lambda r: r[0])
     res = []
+    if prep["th"] is None:
+        prep["th"] = tophat(img)
     for _, Hc in cands[:n_refine]:
         c0 = to_img(Hc, COURT4)
         c, _ = refine(make_cost(dt, c0), c0, iters=1500)
-        Hr, v = polish(img, cv2.getPerspectiveTransform(c.astype(np.float32), COURT4))
+        Hr, v = polish(img, cv2.getPerspectiveTransform(c.astype(np.float32), COURT4), th=prep["th"])
         cl = clutter(Hr, mask)
         un = unexplained(Hr, hor_all)
         # model points outside the frame are unknown, not free: a model that

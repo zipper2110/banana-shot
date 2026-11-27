@@ -47,7 +47,7 @@ class SecondServe(unittest.TestCase):
         self.assertEqual(self.segs([ev(101.0, True, 2.0), ev(111.0, True, 0.1)]), [])
 
     def test_long_rally_late_serve_or_a_toss_gives_nothing(self):
-        self.assertEqual(self.segs([ev(101.0, True, 2.0), ev(111.0, True, 2.5)], rows=[row(100, 106, 3), row(160, 170, 5)]), [])
+        self.assertEqual(self.segs([ev(101.0, True, 2.0), ev(111.0, True, 2.5)], rows=[row(100, 106, 2), row(160, 170, 5)]), [])
         self.assertEqual(self.segs([ev(101.0, True, 2.0), ev(106.0 + chain.SS_NEXT + 0.5, True, 2.5)]), [])
         self.assertEqual(self.segs([ev(101.0, True, 2.0), ev(111.0, True, 2.5, "toss")]), [])
 

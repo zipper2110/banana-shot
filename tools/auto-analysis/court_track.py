@@ -22,7 +22,7 @@ Output: <match>/court_track.json: list of {t0, t1, H, cost, ok, corners},
 and <labRoot>/court/<match>_track.jpg (8 frames with the model in red).
 Usage: python court_track.py [match id ...]
 """
-import json, os, sys, time
+import json, os, sys, time, collections
 import numpy as np
 import cv2
 from scipy.optimize import minimize
@@ -108,6 +108,15 @@ def refine(cost, start):
     return r.x.reshape(4, 2), r.fun
 
 
+# E186 (A26): the time of each step of the stage (s), for the stage log; reset by run()
+STEP_T = collections.Counter()
+
+
+def _t(name, t0):
+    STEP_T[name] += time.perf_counter() - t0
+    return time.perf_counter()
+
+
 TRUST, LOOSE = 1.0, 3.0      # check cost (court_auto.polish px): trusted, and still acceptable if nothing is better
 
 
@@ -122,7 +131,9 @@ def fit_window(mid, t0, n, start, ref_cost, one=False):
     """Returns (points, track cost, check cost, ok, how). ok = False: no
     trusted fit. how: "track", "detect", "weak" (a faint court: only the
     tracker found a model and no better model exists) or "lost"."""
+    tt = time.perf_counter()
     img = window_frame(mid, t0, n, one)
+    tt = _t("frame", tt)
     # A low camera (E23b) sees much of the hall above the court. There the threshold of track_mask is
     # too high for the court lines (120 on the test video; 35 to 96 in the lab matches), so use the
     # mask of the detector.
@@ -130,10 +141,12 @@ def fit_window(mid, t0, n, start, ref_cost, one=False):
     mask = court_auto.line_mask(img) if low else track_mask(img)
     fine = make_cost(mask, start)
     best = None
+    tt = _t("mask", tt)
     if fine(start.ravel()) < ref_cost * 1.15 + 0.2:           # no change: only a small refinement
         c, v = refine(fine, start)
         if valid(c):
             best = (c, v)
+    tt = _t("track", tt)
     if best is None:
         # the camera moved: wide search first (cap 45 px), then the fine cost
         wide = make_cost(mask, start, cap=45.0)
@@ -145,12 +158,15 @@ def fit_window(mid, t0, n, start, ref_cost, one=False):
                 best = (c2, v2)
             if best is not None and best[1] < ref_cost * 1.3 + 0.5:
                 break
+        tt = _t("wide search", tt)
     if best is not None:
         c, chk = check(img, best[0])
+        tt = _t("check", tt)
         if chk < TRUST:
             return c, best[1], chk, True, "track"
     # not trusted: find the court again, with no start
     H, score, info = court_auto.detect(img, prior=to_H(start))
+    tt = _t("detect", tt)
     if H is not None and info["ok"]:
         c = court_auto.to_img(H, COURT4)
         return c, fine(c.ravel()), score, True, "detect"
@@ -178,6 +194,7 @@ def montage(mid, track, n, k=8, one=False):
 
 def run(mid):
     t_start = time.time()
+    STEP_T.clear()
     out = lab.mdir(mid)
     n = lab.n_seconds(mid)
     has_gt = os.path.exists(os.path.join(out, "gt.json"))
@@ -211,7 +228,9 @@ def run(mid):
     for order in (range(mid_w, nwin), range(mid_w - 1, -1, -1)):
         c, ref = c0.copy(), ref0
         for w in order:
+            tw = time.perf_counter()
             c2, v, chk, ok, how = fit_window(mid, w * STEP, n, c, ref, one)
+            STEP_T["windows " + how] += time.perf_counter() - tw
             if ok:
                 c, ref = c2, min(max(v, 1.0), 5.0)
             res[w] = (c2.copy(), chk, ok, how)
@@ -236,6 +255,9 @@ def run(mid):
           "| weak at s", [w * STEP for w in range(nwin) if hows[w] == "weak"][:20],
           "| cost median %.2f max %.2f" % (np.median([t["cost"] for t in track]), max(t["cost"] for t in track)),
           "| jumps (s, px)", jumps[:12], "| %.0f s" % (time.time() - t_start), flush=True)
+    kinds = collections.Counter(hows)
+    print(mid, "court steps (s):", ", ".join(f"{k} {v:.0f}" for k, v in sorted(STEP_T.items()) if not k.startswith("windows")),
+          "| by window kind (n, s):", ", ".join(f"{k} {kinds[k]} {STEP_T['windows ' + k]:.0f}" for k in sorted(kinds)), flush=True)
     return track
 
 

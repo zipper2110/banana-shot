@@ -812,8 +812,8 @@
     "netMin": 150
    },
    "doneWhen": [
-    "A journal row (S4 block) with a cause table of all 7 labeled fault serves with no serve event: each serve has one cause, with an image fact (frame and px), 0 without a cause.",
-    "At least one fix proposal, with the count of the 7 serves that it gets back and the expected effect on fault clips (now 4 of 11)."
+    "A journal row (S4 block) with a cause table of all labeled fault serves with no serve event on the 24 fragments of E107 (d1cb16c7; the row names the count, 7 on the first 16): each serve has one cause, with an image fact (frame and px), 0 without a cause.",
+    "At least one fix proposal, with the count of these serves that it gets back and the expected effect on fault clips (E107: 6 of 23)."
    ]
   },
   {
@@ -890,8 +890,8 @@
     "A21"
    ],
    "doneWhen": [
-    "A journal row (S4 block): all points with a wrong shot count on all labeled small fragments (on d1cb16c7) in one table, each with one cause, 0 without a cause, and the count for each cause.",
-    "For the largest cause: a fix proposal with the expected change of 'shot count right' (now 9 of 17 points)."
+    "A journal row (S4 block): all points with a wrong shot count on the E107 fragments (d1cb16c7) in one table, each with one cause, 0 without a cause, and the count for each cause.",
+    "For the largest cause: a fix proposal with the expected change of 'shot count right' (E107: 20 of 40 points)."
    ]
   },
   {

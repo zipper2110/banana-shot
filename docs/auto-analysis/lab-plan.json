@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:36",
+ "updated": "2026-11-28 00:39",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -139,14 +139,14 @@
     },
     {
      "name": "Fault clips (labeled faults found)",
-     "value": "10 of 23 = 43 %, E178 with RETURN_FIT (head without it: 8 of 23)",
+     "value": "11 of 23 = 48 %, E221 (SERVE_V40 and CHAIN_FAULT_SERVES on; E178: 10 of 23)",
      "target": "70 % or more",
      "met": false,
-     "progress": 0.62
+     "progress": 0.68
     },
     {
      "name": "Lab rallies recall / precision",
-     "value": "96.4 % / 95.2 % (E211 with CHAIN_SERVE_ANCHOR; head reference da42753d 95.7 % / 95.2 %); Igor 98.5 % / 94.6 % (E106 keys)",
+     "value": "96.6 % / 95.2 % (E221 head a85c4ad1 with CHAIN_SERVE_ANCHOR); Igor 98.5 % / 94.6 % (E211, E106 keys)",
      "target": "94.6 % or more (no loss)",
      "met": true,
      "progress": 1.0
@@ -1276,8 +1276,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S4",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E221"
+   ],
    "expected": {
     "outcome": "Fault clips 10 to 11 of 23 (s011), serve events inside the points +1, no lab change.",
     "impact": 1,
@@ -1289,7 +1291,12 @@
    "doneWhen": [
     "V40 in serve_ball.is_serve (S4) and FS in chain.evidence (S3, after A46), each behind a switch (default off), each in its own small commit with a unit test.",
     "A journal row (S4) with both on: fault clips 11 of 23 or more, serve events inside the points 59 or less, and a lab chain-only run against the head reference: rows, recall, precision and winners the same within the spread. The row says if both can go on."
-   ]
+   ],
+   "finished": "2026-11-28 00:39",
+   "real": {
+    "impact": 1,
+    "outcome": "E221 (0f8bffb4 V40, ba5f6e55 FS, 307479c1): both off/on on a85c4ad1 with the serve anchor: fault clips 10/11 of 23, serve events inside the points 58/59, rows 564/564; lab 96.6 % / 95.2 %, winners 85.8 % in both. Both checks pass; both go on."
+   }
   },
   {
    "id": "A29",

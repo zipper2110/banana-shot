@@ -26,7 +26,7 @@ FILES = [
      "{rtmlib}/rtmpose-m_simcc-body7_pt-body7_420e-256x192-e48f03d0_20230504.onnx",
      "RTMPose-m (ONNX) from the OpenMMLab download server, through rtmlib, Apache-2.0"),
     (DINO, "{lab}/" + DINO, "DINOv2 ViT-S/14 (timm/vit_small_patch14_dinov2.lvd142m) from the Hugging Face hub, Apache-2.0"),
-    ("data/models/rally_ball_t2.pt", "{data}/models/rally_ball_t2.pt", "own rally model (rally_model.py, trained on the 4 marked singles matches)"),
+    ("data/models/rally_ball_t2_h.pt", "{data}/models/rally_ball_t2_h.pt", "own rally model (rally_model.py, trained on the 4 marked singles matches, head input E192)"),
     ("data/models/rally_base_t2.pt", "{data}/models/rally_base_t2.pt", "own rally model, no ball features (rally_model.py)"),
 ]
 

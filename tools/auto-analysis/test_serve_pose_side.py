@@ -33,9 +33,10 @@ class ServePoseSide(unittest.TestCase):
     def side(self, serves, a=100.0, server=None, pose=True):
         return chain.serve_pose_side("m", self.pose if pose else None, serves, a, server)
 
-    def test_off_by_default(self):
+    def test_on_by_default(self):
+        # manager decision after E216; CHAIN_SERVE_POSE_SIDE=0 gives the old way
         if "CHAIN_SERVE_POSE_SIDE" not in os.environ:
-            self.assertFalse(self.old[0])
+            self.assertTrue(self.old[0])
 
     def test_the_pose_feet_first(self):
         self.feet = {100: (None, -1.5), 101: (None, -1.0)}        # the far server at x < 0; the serve flight says x > 0

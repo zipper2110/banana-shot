@@ -60,8 +60,9 @@ POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 # event (not a toss alone) of the rally start window, else serverNear; the x side from the court x of the feet of that
 # player at the serve time (serve_pose_side), then from the serve flight x. With no side from these, the old rule
 # (serve_side, then poseSide). E223: the pose feet x gave the right side for 48 of 48 labeled serves; the side of now
-# is known for 35 and right for 32. Default "0" (off); "1" gives the new rule.
-SERVE_POSE_SIDE = os.environ.get("CHAIN_SERVE_POSE_SIDE", "0") == "1"
+# is known for 35 and right for 32. E216 (lab): fault rows 15 to 12, 2 points back, no point lost. Default "1" (on:
+# manager decision after E216); "0" gives the old way.
+SERVE_POSE_SIDE = os.environ.get("CHAIN_SERVE_POSE_SIDE", "1") != "0"
 # item 10: a rally with no shot in its chain and no server end from the pose has no evidence of a serve: it is not a point.
 NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
 # A48 (E212, E210 cause D: ball play between points). CHAIN_PLAY_DROP=1: a rally with no fact of a point is removed:

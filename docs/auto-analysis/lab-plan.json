@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 22:14",
+ "updated": "2026-11-27 22:37",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -722,7 +722,7 @@
    ],
    "owner": "user",
    "journal": [],
-   "status": "queued",
+   "status": "done",
    "expected": {
     "outcome": "Two fragments become clean truth.",
     "impact": 1,
@@ -735,7 +735,12 @@
     "s006.events.json: the in-bounce at 75:58.987 (source 4558.987 s, 0.1 s after the out bounce) is gone.",
     "s008.events.json: no events from 24:55.0 to 24:58.5 (source 1495.0 to 1498.5 s: the serve with the net cord, the bounce, the shot, the bounce); the fragment note (key M) is 'let'.",
     "Both files saved after 2026-11-27 16:30 (file time)."
-   ]
+   ],
+   "finished": "2026-11-27 22:38",
+   "real": {
+    "impact": 1,
+    "outcome": "s006: the extra in-bounce at 4558.99 s removed (saved 22:15). s008: the 5 marks of the let at 1495.1 to 1498.4 s removed (saved 22:36); the note names the let (written by the manager at the user's request, 22:37). All 3 checks pass."
+   }
   },
   {
    "id": "A23",

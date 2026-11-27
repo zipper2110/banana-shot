@@ -73,6 +73,14 @@ RETURN_MAX = 240.0
 # such a flight is not a return. Off by default until the measure.
 RETURN_REAL_START = os.environ.get("RETURN_REAL_START", "0") == "1"
 RETURN_Y_MAX = 16.0
+# A42 (E174 cause 2): a return candidate with an impossible fit is not a ball from the other side. E174: at 4 of the 5
+# labeled fault serves that the rally filter removed, the "return" was a far toss fit with a wrong depth: start y -30 to
+# -112 m (18 to 100 m behind the near baseline) at 200 to 221 km/h. With RETURN_FIT=1 a candidate that starts more than
+# RETURN_Y_MAX m from the net and is RETURN_FIT_KMH km/h or faster is not a return (a margin of 20 km/h below the E174
+# facts; lab check: no removed flight inside a marked point comes back). Narrower than RETURN_REAL_START (E174: that one
+# added 38 to 75 serve events inside the points). Off by default until the measure.
+RETURN_FIT = os.environ.get("RETURN_FIT", "0") == "1"
+RETURN_FIT_KMH = 180.0
 
 
 def is_return(f, flights):
@@ -83,7 +91,8 @@ def is_return(f, flights):
     for g in flights:
         if g is not f and f["t0"] - RETURN_S <= g["t1"] <= f["t0"] + 0.05 and g["v0"][1] * f["v0"][1] < 0                 and g["p0"][1] * f["p0"][1] < 0 and abs(g["v0"][1]) >= RETURN_V and g["n"] >= 6 and g["t1"] - g["t0"] >= 0.15 - 1e-6 and g["rms"] < 5 \
                 and 3.6 * float(np.linalg.norm(g["v0"])) < RETURN_MAX \
-                and not (RETURN_REAL_START and abs(g["p0"][1]) > RETURN_Y_MAX):
+                and not (RETURN_REAL_START and abs(g["p0"][1]) > RETURN_Y_MAX) \
+                and not (RETURN_FIT and abs(g["p0"][1]) > RETURN_Y_MAX and 3.6 * float(np.linalg.norm(g["v0"])) >= RETURN_FIT_KMH):
             return True
     return False
 

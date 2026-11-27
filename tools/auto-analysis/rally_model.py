@@ -34,8 +34,8 @@ TIME_BASE = "_t2"
 # the app reads no lab variable (G12).
 HEAD_INPUT = True
 # A37 (E196): the rally GRU as the mean of SEEDS models. Seed 0 = the files of path() with no seed; seed k > 0 = the
-# same name with "_s<k>". 1 = one model (off, the default). Not from the environment (G12).
-SEEDS = 1
+# same name with "_s<k>". 1 = one model. Not from the environment (G12). On: 3 (manager decision c32f996f after E196).
+SEEDS = 3
 SEED_DIR = None             # the folder of the seed files k > 0; None = the models folder (the bench sets a lab folder)
 
 

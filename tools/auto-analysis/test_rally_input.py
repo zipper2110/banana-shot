@@ -65,6 +65,14 @@ class LoadWasbf(unittest.TestCase):
 
 
 class RallyKey(unittest.TestCase):
+    """One model file (SEEDS 1); the seed files: SeedMean."""
+    def setUp(self):
+        self.seeds = rm.SEEDS
+        rm.SEEDS = 1
+
+    def tearDown(self):
+        rm.SEEDS = self.seeds
+
     def test_the_key_follows_the_model_file(self):
         d = tempfile.mkdtemp(prefix="rk_")
         old = rm.path
@@ -97,8 +105,12 @@ class SeedMean(unittest.TestCase):
     def tearDown(self):
         rm.SEEDS, rm.SEED_DIR, rm.predict_one, rm.path = self.old
 
-    def test_the_default_is_one_model(self):
-        self.assertEqual(rm.SEEDS, 1)
+    def test_the_default_is_3_seeds(self):
+        self.assertEqual(rm.SEEDS, 3)
+        self.assertEqual(rm.model_files("ball", "m1015"), [rm.path("ball", "m1015", k) for k in range(3)])
+
+    def test_one_seed_reads_one_file(self):
+        rm.SEEDS = 1
         self.assertEqual(rm.model_files("ball", "m1015"), [rm.path("ball", "m1015")])
 
     def test_seed_file_names(self):
@@ -116,6 +128,7 @@ class SeedMean(unittest.TestCase):
             got.append(seed)
             return np.array([0.1, 0.9, 0.5], np.float32) * (seed + 1)
         rm.predict_one = one
+        rm.SEEDS = 1
         np.testing.assert_allclose(rm.predict("m1020", "ball", "m1020"), [0.1, 0.9, 0.5])
         self.assertEqual(got, [0])
         got.clear()
@@ -130,6 +143,7 @@ class SeedMean(unittest.TestCase):
             rm.path = lambda name, fold=None, seed=0: os.path.join(d, f"rally_{name}_s{seed}.pt")
             for k in range(3):
                 open(rm.path("ball", None, k), "wb").write(b"model %d" % k)
+            rm.SEEDS = 1
             one = detect.rally_key("ball")
             rm.SEEDS = 3
             three = detect.rally_key("ball")

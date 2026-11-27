@@ -169,6 +169,15 @@ def pose_key():
     return stage_key("pose")
 
 
+def rally_key(model_name):
+    """G12 (E192): the key of the rallies stage: the name and the bytes of the rally model file. The stage always
+    runs; the key records in stage_keys.json and result.json which model made the rallies (a new model file gives a
+    new key)."""
+    import rally_model
+    f = rally_model.path(model_name)
+    return content_key(os.path.basename(f), files=[f])
+
+
 def netmask_key(tag):
     """The key of net_band_mask.npz: the ball tag (the pictures and the time line of the ball stage) and NETMASK_CODE."""
     return tag + "_" + content_key(files=[os.path.join(HERE, f) for f in NETMASK_CODE])
@@ -1027,6 +1036,8 @@ def main():
     say("@stage rallies start")
     t = time.time()
     prob = rally_model.predict(MID, model_name)
+    STAGE_KEYS["rallies"] = rally_key(model_name)
+    json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
     np.save(W(f"rally_prob_{model_name}.npy"), prob.astype(np.float32))
     full = json.load(open(W("fullflights_s0.35.json"))) if ball_ok else None
     seg, serves = chain.segments(prob, full, cfg)

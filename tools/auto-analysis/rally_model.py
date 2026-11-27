@@ -8,6 +8,9 @@ predict() gives the per-second rally probability of a match that was not in the 
 It also trains the fold models of the lab benchmark (pipeline.py): the same method, with one match left out:
   <labRoot>/models/rally_<name>_t2_x<match>.pt
 Train the full model and the fold models together, so that the benchmark measures the shipped method.
+"_h" = head input (E192): a model with the ball features (wasbf) is trained on the feat_wasbf.npy that feat_wasb
+makes from the lab flights of the code key (bench.lab_wasbf), as the app makes it from its own flights. The files
+of the frozen lab input (E20 to E191) keep their names without "_h"; HEAD_INPUT = False uses them again.
 
 Models:  ball  = audio, mel, dino, wasbf   (E20, needs the ball pass)
          base  = audio, mel, dino          (E6b, no ball pass)
@@ -26,11 +29,20 @@ MODELS = {"ball": ["audio", "mel", "dino", "wasbf"], "base": ["audio", "mel", "d
 TRAIN = ["m1015", "m1020", "m1021", "m1030"]
 PCA_DIMS, EPOCHS, WIN = 32, 40, 240
 TIME_BASE = "_t2"
+# E192 (manager decision after E191): the "ball" models are trained on the head GRU input, the input that the app
+# makes. False = the old files (frozen lab input), for the bench and the app. Do not change it from the environment:
+# the app reads no lab variable (G12).
+HEAD_INPUT = True
+
+
+def input_tag(name):
+    """"_h" for a model with the ball features when HEAD_INPUT, else ""."""
+    return "_h" if HEAD_INPUT and "wasbf" in MODELS.get(name, ()) else ""
 
 
 def path(name, fold=None):
     """The model file. fold = the match that the model did not see (a fold model of the benchmark), or None."""
-    base = f"rally_{name}{TIME_BASE}"
+    base = f"rally_{name}{TIME_BASE}{input_tag(name)}"
     return os.path.join(lab.ROOT, "models", f"{base}.pt" if fold is None else f"{base}_x{fold}.pt")
 
 
@@ -48,11 +60,36 @@ def stack(parts, prep):
     return np.concatenate(cols, 1)
 
 
-def train(name, fold=None):
-    """Trains on TRAIN, or on TRAIN without the match fold."""
+def head_wasbf(mids):
+    """{mid: folder of feat_wasbf.npy} of the head input (E192): feat_wasb on the lab flights of the code key, the
+    same folders as the bench lab set (bench.app_nets, bench.lab_wasbf). Missing flights are made again (heavy)."""
+    import bench
+    assert bench.LAB_FLIGHTS == "remake", bench.LAB_FLIGHTS
+    return bench.lab_wasbf(bench.app_nets(mids))
+
+
+def load_wasbf(mid, feats, pca, folder):
+    """load() with feat_wasbf.npy from folder; the other feature parts from the lab folder of mid."""
+    parts = load(mid, feats, pca)
+    if folder is None or "wasbf" not in feats:
+        return parts
+    mdir = lab.mdir
+    lab.mdir = lambda x: folder if x == mid else mdir(x)
+    try:
+        new = dict(load(mid, ["wasbf"], pca))["wasbf"]
+    finally:
+        lab.mdir = mdir
+    return [(n, new if n == "wasbf" else f) for n, f in parts]
+
+
+def train(name, fold=None, wasbf=None):
+    """Trains on TRAIN, or on TRAIN without the match fold. wasbf: {mid: folder of feat_wasbf.npy}; None = the head
+    input (head_wasbf) for a model with "_h", else the lab files."""
     feats = MODELS[name]
     TRAIN = lab.check_train([m for m in globals()["TRAIN"] if m != fold])
-    raw = {m: load(m, feats, PCA_DIMS) for m in TRAIN}
+    if wasbf is None and input_tag(name):
+        wasbf = head_wasbf(globals()["TRAIN"])        # with the held-out match, for its test below
+    raw = {m: load_wasbf(m, feats, PCA_DIMS, (wasbf or {}).get(m)) for m in TRAIN}
     y = {m: lab.labels(m) for m in TRAIN}
     mask = {m: lab.span_mask(m) for m in TRAIN}
     prep = []
@@ -82,22 +119,23 @@ def train(name, fold=None):
         loss = (nn.functional.binary_cross_entropy_with_logits(net(xb), yb, reduction="none") * mb).sum() / mb.sum().clamp(min=1)
         opt.zero_grad(); loss.backward(); opt.step(); sched.step()
     os.makedirs(os.path.dirname(path(name)), exist_ok=True)
-    torch.save({"feats": feats, "prep": prep, "dim": X[TRAIN[0]].shape[1], "net": net.state_dict(), "train": TRAIN}, path(name, fold))
+    torch.save({"feats": feats, "prep": prep, "dim": X[TRAIN[0]].shape[1], "net": net.state_dict(), "train": TRAIN,
+                "wasbf": {m: (wasbf or {}).get(m) for m in TRAIN}}, path(name, fold))
     net.eval()
     for m in TRAIN:                                    # a check on the training matches (not a test)
         with torch.no_grad():
             p = torch.sigmoid(net(torch.tensor(X[m][None]).cuda()))[0].cpu().numpy()
         print(name, m, "(training match)", lab.fmt(lab.point_metrics(lab.segment(p, smooth=1, hi=0.5, lo=0.35, min_len=2.0), m)), flush=True)
     if fold is not None:                               # the held-out match: a test
-        p = predict(fold, name, fold)
+        p = predict(fold, name, fold, wasbf.get(fold) if wasbf else None)
         print(name, fold, "(held out)", lab.fmt(lab.point_metrics(lab.segment(p, smooth=1, hi=0.5, lo=0.35, min_len=2.0), fold)), flush=True)
 
 
-def predict(mid, name, fold=None):
+def predict(mid, name, fold=None, wasbf=None):
     """Per-second rally probability of match mid (its feat_<name>.npy files must exist). fold: use the fold
-    model that did not see that match."""
+    model that did not see that match. wasbf: a folder of feat_wasbf.npy (None = the folder of mid)."""
     ck = torch.load(path(name, fold), map_location="cpu", weights_only=False)     # our own file
-    X = stack(load(mid, ck["feats"], PCA_DIMS), ck["prep"])
+    X = stack(load_wasbf(mid, ck["feats"], PCA_DIMS, wasbf), ck["prep"])
     dev = platform_cfg.small_device()
     net = Net(ck["dim"]).to(dev)
     net.load_state_dict(ck["net"])

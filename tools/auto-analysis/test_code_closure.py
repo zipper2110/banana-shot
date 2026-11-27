@@ -51,6 +51,11 @@ class CodeClosure(unittest.TestCase):
         keyed = names(detect.BALL_CODE)
         self.assertEqual(set(code_closure.modules(*keyed)) - keyed, set(BALL_NO_EFFECT))
 
+    def test_10_bit_ball_tag_covers_its_closure(self):
+        # E200: the tag of a video with more than 8 bits also has decode10.py; its imports must be in the tag too.
+        keyed = names(detect.BALL_CODE) | names(detect.BALL_CODE_10BIT)
+        self.assertEqual(set(code_closure.modules(*keyed)) - keyed, set(BALL_NO_EFFECT))
+
     def test_netmask_key_covers_its_closure(self):
         keyed = names(detect.NETMASK_CODE) | names(detect.BALL_CODE)
         self.assertEqual(set(code_closure.modules(*names(detect.NETMASK_CODE), *MASK_PARTS)) - keyed, set(MASK_NO_EFFECT))

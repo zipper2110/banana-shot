@@ -118,6 +118,9 @@ STAGE_ENTRIES = {"media": ("prep", "frame_times"), "audio": ("feat_audio", "feat
                  "court2": ("court_refine",), "flights": FLIGHTS_ENTRIES, "netband": ("net_band",)}
 BALL_CODE_OLD = ("ball_wasb.py", "wasb_hrnet.py")          # the ball tag before item 13 (adopt_keys)
 BALL_CODE = BALL_CODE_OLD + ("burst_ball.py", "cuda_scale.py", "platform_cfg.py")
+# E200: a video with more than 8 bits also has decode10.py in its ball tag (ball_tag). decode10.frames is a copy of
+# ball_wasb.frames with the 10-bit fix: put the fix into ball_wasb.py at its next change that changes the tag anyway.
+BALL_CODE_10BIT = ("decode10.py",)
 POSE_CODE = ("pose_extract.py", "platform_cfg.py")         # pose_extract.py has the URLs of the pose models
 # Item 16 (E117): the image stage (feat_dino.npy, DINO features of the 1 fps pictures). A hand list, as for pose:
 # feat_dino uses lab only for the path of the work folder (test_code_closure). The model name is a part of the key.
@@ -183,14 +186,126 @@ def netmask_key(tag):
     return tag + "_" + content_key(files=[os.path.join(HERE, f) for f in NETMASK_CODE])
 
 
-def ball_tag(weights, passes, n, work, code=BALL_CODE):
+def ball_tag(weights, passes, n, work, code=BALL_CODE, bits=None):
     """The tag of the ball file name (lab.BLOB_TAG): the weights, the passes, and a key of the inputs: the detector
     code, the weights bytes, the court model (the crop), the decode path and n. New weights or new code give a new
-    file (G12)."""
+    file (G12). bits: the bits of the video (None: VIDEO of this run). E200: a video with more than 8 bits also has
+    "<bits>bit" and decode10.py in the key; the tag of an 8-bit video is the tag of before."""
     import platform_cfg
+    bits = VIDEO["bits"] if bits is None else bits
+    extra, code = ((f"{bits}bit",), tuple(code) + BALL_CODE_10BIT) if bits > 8 else ((), tuple(code))
     return "_" + weights.split(".")[0] + ("_" + passes if passes else "") + "_" + content_key(
-        weights, passes, n, platform_cfg.decode(), files=[os.path.join(HERE, f) for f in code] + [
+        weights, passes, n, platform_cfg.decode(), *extra, files=[os.path.join(HERE, f) for f in code] + [
                                                        os.path.join(platform_cfg.weights_dir(), weights), os.path.join(work, "court.json")])
+
+
+# ---- E200 (G15): the format of the video. The ball decode of a video with more than 8 bits is decode10.frames.
+VIDEO = {"bits": 8, "pixFmt": None, "transfer": None}       # the video of this run (main sets it)
+HDR = {"arib-std-b67": "HLG", "smpte2084": "PQ"}           # the color transfers of HDR video
+
+
+def bits_of(pix_fmt, raw=None):
+    """The bits of a sample: ffprobe bits_per_raw_sample, else the number in the pixel format (yuv420p10le: 10,
+    p010le: 10), else 8."""
+    import re
+    if str(raw).isdigit() and int(raw) > 0:
+        return int(raw)
+    m = re.search(r"p(\d+)(le|be)?$", pix_fmt or "") or re.search(r"(\d+)(le|be)$", pix_fmt or "")
+    return int(m.group(1)) if m and int(m.group(1)) > 8 else 8
+
+
+def video_format(path):
+    """{"bits", "pixFmt", "transfer"} of the first video stream (ffprobe)."""
+    import subprocess, platform_cfg
+    r = subprocess.run([platform_cfg.tool("ffprobe"), "-v", "error", "-select_streams", "v:0", "-show_entries",
+                        "stream=pix_fmt,bits_per_raw_sample,color_transfer", "-of", "json", path],
+                       capture_output=True, text=True)
+    st = (json.loads(r.stdout or "{}").get("streams") or [{}])[0]
+    return {"bits": bits_of(st.get("pix_fmt"), st.get("bits_per_raw_sample")), "pixFmt": st.get("pix_fmt"),
+            "transfer": st.get("color_transfer")}
+
+
+def ball_decoder(bits):
+    """The module of the ball decode: None for 8 bits (ball_wasb.frames, the code of before; decode10 is not
+    imported), else decode10."""
+    if bits <= 8:
+        return None
+    import decode10
+    return decode10
+
+
+class FfmpegLog:
+    """G13 (E201): the stderr of the processes that the modules start with subprocess.Popen (no stderr given) goes
+    to temp files, so that a short decode can quote the ffmpeg message. text() also copies it to stderr (run.log), as
+    before. Only a module attribute changes for this run: the code of the modules and the ball tag stay."""
+
+    def __init__(self, modules):
+        import subprocess as sp
+        self.sp, self.mods, self.files, self.procs = sp, list(modules), [], []
+        log = self
+
+        class Shim:
+            def __getattr__(self, k):
+                return getattr(sp, k)
+
+            def Popen(self, *a, **kw):
+                if kw.get("stderr") is None:
+                    import tempfile
+                    kw["stderr"] = tempfile.TemporaryFile()
+                    log.files.append(kw["stderr"])
+                p = sp.Popen(*a, **kw)
+                log.procs.append(p)
+                return p
+        for m in self.mods:
+            m.subprocess = Shim()
+
+    def text(self):
+        for p in self.procs:
+            try:
+                p.wait(timeout=10)
+            except Exception:
+                pass
+        out = []
+        for f in self.files:
+            f.seek(0)
+            out.append(f.read().decode("utf-8", "replace"))
+            f.close()
+        self.files, self.procs = [], []
+        t = "".join(out)
+        if t:
+            sys.stderr.write(t)
+            sys.stderr.flush()
+        return t
+
+    def close(self):
+        self.text()
+        for m in self.mods:
+            m.subprocess = self.sp
+
+
+def check_decode(count, expected, text, ss, dur):
+    """G13 (E201): a ball decode that gives no pictures, or far fewer than its window has, stops the run before a
+    ball file is written. The error quotes the ffmpeg message (the lines with "error" or "invalid" first)."""
+    if count >= 0.9 * expected - 3:
+        return
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    key = [ln for ln in lines if "error" in ln.lower() or "invalid" in ln.lower()]
+    quote = " | ".join((key or lines)[:3]) or "no message"
+    raise RuntimeError(f"The ball decode gave {count} pictures of about {expected:.0f} ({ss:.0f} s to "
+                       f"{ss + dur:.0f} s of the video), so no ball file is written. ffmpeg: {quote}")
+
+
+def run_net_events(work, blob, band_file, warn):
+    """The net events of the folder (net_events.run_folder). G13 (E201): a ball file with no rows (no ball
+    candidate in the video) gives an empty net_events.json and a warning; run_folder needs at least one row."""
+    import numpy as np
+    if len(np.load(blob)) == 0:
+        warn("The ball stage found no ball candidate in the video: no net events.")
+        with open(os.path.join(work, "net_events.json"), "w") as f:
+            json.dump({"about": "E16f net events (tools/auto-analysis/net_events.py)", "events": []}, f, indent=1)
+        return
+    import net_events
+    net_events.run_folder(work, band_file=band_file)
 
 
 def adopt_ball(work, video, old, weights, passes):
@@ -774,6 +889,7 @@ def main():
     if os.path.exists(KEYS_FILE) and not a.force:
         STAGE_KEYS.update(json.load(open(KEYS_FILE)))
     vid = check_video(work, a.video)
+    VIDEO.update(video_format(a.video))                # E200: before each ball tag of this run
     if a.adopt_keys:
         import lab
         rec = adopt_keys(work, weights, (cfg["ballPasses"] or "").replace(",", "-").replace("+", "-"), lab.video_seconds(work),
@@ -794,6 +910,11 @@ def main():
     import torch                                    # before ONNX Runtime (CUDA libraries)
     import lab
     say(platform_cfg.summary())
+    if VIDEO["bits"] > 8:                          # E200: the switch is in run.log and in result.json (videoFormat)
+        say(f"video: {VIDEO['bits']}-bit ({VIDEO['pixFmt']}), 10-bit decode (decode10.py)")
+    if VIDEO["transfer"] in HDR:
+        warn(f"The video is HDR ({HDR[VIDEO['transfer']]}). The colors are not converted to SDR, and the ball "
+             f"detector learned SDR video: it can find fewer balls.")
     lab.MATCHES[MID] = {"id": MID, "video": os.path.abspath(a.video)}
     lab.mdir = lambda m, _o=lab.mdir: work if m == MID else _o(m)
     W = lambda *p: os.path.join(work, *p)
@@ -810,6 +931,9 @@ def main():
     save_times()
     kt = lab.kf_times(work)
     n = lab.video_seconds(work)            # G2: the seconds of the video, not the count of pictures
+    if n >= 10 and len(kt) < 0.5 * n:      # G13 (E201): a decode that failed gave no pictures (see the ffmpeg message)
+        raise RuntimeError(f"The media stage made {len(kt)} pictures for a video of {n} s (one for each second). "
+                           f"See the ffmpeg message in run.log.")
     step = float(np.median(np.diff(kt))) if n > 2 else 0.0
     if not 0.9 < step < 1.1:
         raise RuntimeError(f"The video has a keyframe each {step:.2f} s. The lab models need a keyframe each second.")
@@ -887,7 +1011,16 @@ def main():
         net_on = bool(cfg["netBand"])
         mask_file = W("net_band_mask.npz")
         made = []
-        frames0 = ball_wasb.frames
+        dec = ball_decoder(VIDEO["bits"])
+        if dec is not None:                          # E200: the 10-bit decode (also for the netmask fill-in)
+            ball_wasb.frames = dec.frames
+        base = ball_wasb.frames
+        seen = [0]
+
+        def frames0(*args, **kw):                    # G13 (E201): count the pictures of each part
+            for fr in base(*args, **kw):
+                seen[0] += 1
+                yield fr
 
         def mask_writer(step, index):
             """Item 6 (b): the ball stage also gives its pictures to the level-1 writer of the net band."""
@@ -901,12 +1034,15 @@ def main():
         def ball():
             if STAGE_KEYS.pop("ballAdopted", None):    # the stage makes the file itself: the adoption is no longer true
                 json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
+            import cuda_scale
+            flog = FfmpegLog([ball_wasb, cuda_scale] + ([dec] if dec is not None else []))
             try:
-                ball_run()
+                ball_run(flog)
             finally:
-                ball_wasb.frames = frames0
+                flog.close()
+                ball_wasb.frames = base
 
-        def ball_run():
+        def ball_run(flog):
             # The frame times of the video. A run before this one on a video that is not 60 fps put them in
             # pts_video.npy, and pts.npy is then the 60 fps time line of the detections (see below). Without this,
             # a second run of the ball stage reads the time line, decides "60 fps", and each detection gets half of its time.
@@ -924,12 +1060,18 @@ def main():
 
             def part(ss, dur, f0, f1, stride):
                 off[0] = f0
+                ball_wasb.frames, seen[0] = frames0, 0
+                flog.text()
                 # The masks: the frame index of picture i of the part (60 fps: f0 + i; 30 fps: each second frame).
                 mw = mask_writer(stride, (lambda i: f0 + i) if stride == 2 else (lambda i: 2 * (f0 + i))) if net_on else None
                 try:
                     rows = ball_wasb.run(MID, ss, dur, stride=stride, save=False)
                 finally:
                     ball_wasb.frames = frames0
+                # G13 (E201): the pictures that the window has (60 fps: the frame times; else 30 for each second)
+                want = (np.count_nonzero((pts >= ss - 1e-6) & (pts < ss + dur)) if fps == 60
+                        else (min(ss + dur, float(pts[-1])) - ss) * 30)
+                check_decode(seen[0], want, flog.text(), ss, dur)
                 if mw is not None:                                   # before the ball part: its rename marks the part done
                     m = mask_part(blob, f0, f1)
                     mw.save(m[:-4] + ".tmp.npz")
@@ -1007,8 +1149,7 @@ def main():
 
         def flights():
             ball_full.run(MID)
-            import net_events
-            net_events.run_folder(work, band_file=W("net_band.npz") if net_on else None)
+            run_net_events(work, blob, W("net_band.npz") if net_on else None, warn)
             feat_wasb.run(MID)
             np.save(W("feat_wasbf.npy"), np.load(W("feat_wasb.npy"))[:, [4, 5, 6]])
         # G12: the flights run again when the ball file, the court files or the code of the flights (import closure) change.
@@ -1082,7 +1223,9 @@ def main():
            "rallyModel": model_name, "cache": {"ballFile": os.path.basename(lab.blob_file(work, 0, n)) if ball_ok else None,
                                                "stageKeys": dict(STAGE_KEYS)},
            "stageSeconds": STAGE_S, "thisRunSeconds": round(time.time() - t_all, 1),
-           "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "partial": partial, "warnings": warnings, "rallies": out}
+           "created": time.strftime("%Y-%m-%dT%H:%M:%S"), "partial": partial, "warnings": warnings,
+           "videoFormat": dict(VIDEO, ballDecode="10-bit decode (decode10.py)" if VIDEO["bits"] > 8 else "ball_wasb"),
+           "rallies": out}
     json.dump(res, open(W("result.json"), "w"), indent=1, default=float)
     say("@result", W("result.json"))
 

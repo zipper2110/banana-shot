@@ -22,7 +22,8 @@ def grab(mid, t, n_frames=70):
     w, h = 1920, 1080
     cmd = ["ffmpeg", "-v", "error", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda", "-ss", f"{max(0, t - 0.6):.3f}",
            "-i", lab.MATCHES[mid]["video"], "-frames:v", str(n_frames),
-           "-vf", f"scale_cuda={w}:{h},hwdownload,format=nv12,format=bgr24", "-f", "rawvideo", "-"]
+           # E200: scale_cuda converts a 10-bit video (p010) to nv12 on the GPU; hwdownload cannot convert it.
+           "-vf", f"scale_cuda={w}:{h}:format=nv12,hwdownload,format=nv12,format=bgr24", "-f", "rawvideo", "-"]
     buf = subprocess.run(cmd, stdout=subprocess.PIPE).stdout
     return np.frombuffer(buf, np.uint8).reshape(-1, h, w, 3)
 

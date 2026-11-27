@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 15:03",
+ "updated": "2026-11-27 16:22",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -146,7 +146,7 @@
     },
     {
      "name": "Lab rallies recall / precision",
-     "value": "94.6 % / 93.2 % (186e4244)",
+     "value": "95.1 % / 95.1 % (d1cb16c7, E106); Igor 95.9 % / 98.4 %",
      "target": "94.6 % or more (no loss)",
      "met": true,
      "progress": 1.0
@@ -663,9 +663,10 @@
     "M2-I4"
    ],
    "owner": "S1",
-   "journal": [],
-   "status": "waiting",
-   "waitingFor": "the user's OK (a large run after 11:00)",
+   "journal": [
+    "E106"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "The reference that all later M2 rows compare against; shows the effect of A10, A11, A12 together on lab and Igor.",
     "impact": 2,
@@ -680,7 +681,12 @@
      "estMin": 55
     }
    ],
-   "waitingOn": "user"
+   "started": "2026-11-27 15:54",
+   "finished": "2026-11-27 16:21",
+   "real": {
+    "impact": 3,
+    "outcome": "New reference d1cb16c7 (27 min). Lab: recall 94.6 to 95.1 %, precision 93.2 to 95.1 % (fault rows 26 to 21), winner 85.3 to 84.6 %, end to end 80.7 to 80.5 %. Igor m1116: recall 96.4 to 95.9 %, precision 97.9 to 98.4 %, end to end 82.1 to 81.5 % (inside the spread)."
+   }
   },
   {
    "id": "A21",

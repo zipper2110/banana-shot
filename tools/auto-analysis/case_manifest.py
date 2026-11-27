@@ -14,6 +14,8 @@ The fragment manifest (S1 item 8, the case library) is one JSON file: {"version"
             row has "match", the script takes the court of the full video at the span start (ball_events.court_H).
   points    the marked points in the span: [{id, startMs, endMs, ending}], source ms
   span      [a, b] source s: the part to label
+  labelWindow [a, b] source s: the part that the user labels and that the measures use (A32, case_lib.label_window);
+            a row with no field: the whole clip. Not in rowHash (a measure rule, not a property of the cut).
   level, kinds, control
   clipDur   added here: the duration (s) of the clip file (ffprobe). The page compares it with the loaded clip: a
             clip that changed after the page was opened blocks the marks. Not in rowHash.

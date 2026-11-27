@@ -8,7 +8,8 @@ the rows and the events inside its window. A fragment run of detect.py on the cl
 match statistics; open), so the history measures the full-match chain on the fragment spans.
 
 Window of a fragment: its label window (A32, case_lib.label_window: from the end of the point before + 3 s, but
-not more than 25 s before the label span, to the clip end). Only the labeled events and the chain events inside the
+not more than 25 s before the label span, or from the user's first mark when the user labeled earlier points of the
+clip; to the clip end). Only the labeled events and the chain events inside the
 window count; a mark before it stays in the label file and is not used. The user labels all events of the window
 from zero, so an event of the chain in the window with no label near it counts as a false event. Before A32: the
 label span, widened to the first and the last labeled event.
@@ -52,8 +53,8 @@ KINDS = ("hits", "bounces", "nets")
 
 
 def window(row, L=None):
-    """The label window of the fragment (A32), source s. L is not used (the window does not follow the marks)."""
-    a, b = case_lib.window_of(row["id"])
+    """The label window of the fragment (A32), source s; L = its labels (the first mark can move the start)."""
+    a, b = case_lib.window_of(row["id"], L)
     return a, b
 
 

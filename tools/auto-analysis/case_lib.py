@@ -19,10 +19,13 @@ must leave the page is retired (fragment.json "retired"); index() leaves it out,
 s005 was cut again under the same id while the page was open; the page kept the old row (old t0) with the new clip.
 
 Label window (A32, the user, 2026-11-27): the part of a fragment that the user labels and that the measures use.
-start = the later of (the end of the marked point before the label span + LW_AFTER_PREV s), (the span start -
+Rule start = the later of (the end of the marked point before the label span + LW_AFTER_PREV s), (the span start -
 LW_BEFORE_SPAN s) and the clip start; end = the clip end. The clip start of a small fragment can show a part of the
 point before it (the 60 s pad of E100; a fault-check pad that starts just after the marked end): that part is not
 labeled and not measured. The clip files stay as they are (the pad is the GRU context of a later fragment run).
+Labeled points before the rule start (the manager, gap-program 392f9c1a): when the user's marks start before the rule
+start, the window starts at the first mark. A leftover (a marked point that starts before the clip start) stays out:
+the marks up to its end + LW_AFTER_PREV s do not move the start. An unlabeled fragment keeps the rule start.
 fragment.json "labelWindow": [a, b] fragment s (as labelSpan); manifest.json row "labelWindow": [a, b] source s (as
 "span"; the page: source time = t0 + clip time).
 
@@ -37,7 +40,7 @@ Usage:
   python case_lib.py windows                write labelWindow into each fragment.json (A32); no index
   python case_lib.py retire <id> --reason <text>   take a fragment out of the page; its id stays used
 """
-import argparse, hashlib, json, os, shutil, subprocess, sys, time
+import argparse, hashlib, json, math, os, shutil, subprocess, sys, time
 import numpy as np
 import lab, platform_cfg
 
@@ -201,31 +204,44 @@ def prev_end(mid, t):
     return max(ends) if ends else None
 
 
-def label_window(m):
-    """The label window (A32) of a fragment manifest m (fragment.json): {"fragment": [a, b] fragment s, "source":
-    [a, b] source s, "prevEnd": source s or None}. The one rule; see the module doc."""
+def label_window(m, L=None):
+    """The label window (A32) of a fragment manifest m (fragment.json) and its user labels L (labels(); None = not
+    labeled): {"fragment": [a, b] fragment s, "source": [a, b] source s, "prevEnd": source s or None, "ruleStart":
+    source s, "firstMark": source s or None (set when the marks move the start)}. The one rule; see the module doc.
+    a is rounded down and b up (ms), so a mark at the start stays inside."""
     off = m["offset"]
     s0 = off + m["labelSpan"][0]
-    pe = prev_end(m["source"]["mid"], s0)
-    a = max(off, s0 - LW_BEFORE_SPAN, pe + LW_AFTER_PREV if pe is not None else off)
+    mid = m["source"]["mid"]
+    pe = prev_end(mid, s0)
+    rule = max(off, s0 - LW_BEFORE_SPAN, pe + LW_AFTER_PREV if pe is not None else off)
+    a, first = rule, None
+    if L and L.get("events"):
+        left = [p["end"] for p in points(mid) if p["start"] < off < p["end"]]      # a leftover point at the clip start
+        lo = max(left) + LW_AFTER_PREV if left else float("-inf")
+        ts = sorted(e["t"] for e in L["events"] if e["t"] >= lo)
+        if ts and ts[0] < rule:
+            a = first = ts[0]
     b = off + m["duration"]
-    return {"fragment": [round(a - off, 3), round(b - off, 3)], "source": [round(a, 3), round(b, 3)], "prevEnd": pe}
+    fl, ce = (lambda x: math.floor(x * 1000 + 1e-6) / 1000), (lambda x: math.ceil(x * 1000 - 1e-6) / 1000)
+    return {"fragment": [fl(a - off), ce(b - off)], "source": [fl(a), ce(b)], "prevEnd": pe, "ruleStart": round(rule, 3),
+            "firstMark": first}
 
 
-def window_of(fid):
-    """The label window of the fragment fid in source s, [a, b] (from its fragment.json)."""
-    return label_window(json.load(open(os.path.join(FRAGS, fid, "fragment.json"))))["source"]
+def window_of(fid, L=None):
+    """The label window of the fragment fid in source s, [a, b] (from its fragment.json and its labels L)."""
+    return label_window(json.load(open(os.path.join(FRAGS, fid, "fragment.json"))), L)["source"]
 
 
 def write_windows():
     """labelWindow into each fragment.json of FRAGS (fragment s). Returns {id: [a, b]}."""
     out = {}
+    labs = labels(warn=lambda *a: None) if os.path.exists(os.path.join(ROOT, "manifest.json")) else {}
     for f in sorted(os.listdir(FRAGS)) if os.path.exists(FRAGS) else []:
         p = os.path.join(FRAGS, f, "fragment.json")
         if not os.path.exists(p):
             continue
         m = json.load(open(p))
-        m["labelWindow"] = label_window(m)["fragment"]
+        m["labelWindow"] = label_window(m, labs.get(m["id"]))["fragment"]
         json.dump(m, open(p, "w"), indent=1)
         out[m["id"]] = m["labelWindow"]
     return out
@@ -335,6 +351,7 @@ def index():
     def order(f):
         p = os.path.join(FRAGS, f, "fragment.json")
         return (lv.get(json.load(open(p)).get("level"), 9) if os.path.exists(p) else 9, f)
+    labs = labels(warn=lambda *a: None) if os.path.exists(os.path.join(ROOT, "manifest.json")) else {}     # A32 window
     for f in sorted(os.listdir(FRAGS), key=order) if os.path.exists(FRAGS) else []:
         p = os.path.join(FRAGS, f, "fragment.json")
         if not os.path.exists(p):
@@ -364,7 +381,7 @@ def index():
                      "courtH": H, "courtImageWidth": 1920, "courtFile": f"frags/{f}/{cfile}",
                      "points": [{"id": q["id"], "startMs": round(q["sourceStart"] * 1000), "endMs": round(q["sourceEnd"] * 1000),
                                  "ending": q["outcome"]} for q in m["points"]],
-                     "span": span, "labelWindow": label_window(m)["source"],
+                     "span": span, "labelWindow": label_window(m, labs.get(m["id"]))["source"],
                      "level": m["level"], "kinds": m["kinds"], "control": m["control"],
                      "faultCheck": mid in ("m1015", "m1020", "m1021", "m1030")})
     pub = published()

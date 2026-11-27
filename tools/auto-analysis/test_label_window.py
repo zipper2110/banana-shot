@@ -39,6 +39,33 @@ class LabelWindow(unittest.TestCase):
         self.assertIsNone(case_lib.label_window(frag(70.0, (100.0, 105.0)))["prevEnd"])
 
 
+    def test_earlier_labeled_points_move_the_start_to_the_first_mark(self):
+        self.pts = [{"start": 75.0, "end": 85.0}, {"start": 88.0, "end": 90.0}, {"start": 100.0, "end": 105.0}]
+        L = {"events": [{"t": 75.5, "kind": "serve"}, {"t": 76.2, "kind": "bounce"}, {"t": 100.2, "kind": "serve"}]}
+        w = case_lib.label_window(frag(70.0, (100.0, 105.0)), L)
+        self.assertEqual(w["source"][0], 75.5)
+        self.assertEqual(w["ruleStart"], 93.0)
+        self.assertEqual(w["firstMark"], 75.5)
+
+    def test_an_unlabeled_fragment_keeps_the_rule_start(self):
+        self.pts = [{"start": 75.0, "end": 85.0}, {"start": 100.0, "end": 105.0}]
+        self.assertEqual(case_lib.label_window(frag(70.0, (100.0, 105.0)), None)["source"][0], 88.0)
+        self.assertEqual(case_lib.label_window(frag(70.0, (100.0, 105.0)), {"events": []})["source"][0], 88.0)
+
+    def test_the_marks_of_a_leftover_point_do_not_move_the_start(self):
+        self.pts = [{"start": 60.0, "end": 72.0}, {"start": 80.0, "end": 86.0}, {"start": 100.0, "end": 105.0}]
+        L = {"events": [{"t": 70.5, "kind": "shot"}, {"t": 71.8, "kind": "bounce"}, {"t": 80.3, "kind": "serve"}]}
+        self.assertEqual(case_lib.label_window(frag(70.0, (100.0, 105.0)), L)["source"][0], 80.3)
+        L = {"events": [{"t": 70.5, "kind": "shot"}, {"t": 100.2, "kind": "serve"}]}
+        self.assertEqual(case_lib.label_window(frag(70.0, (100.0, 105.0)), L)["source"][0], 89.0)   # the rule start
+
+    def test_a_mark_at_the_start_stays_inside(self):
+        self.pts = [{"start": 80.0, "end": 86.0}, {"start": 100.0, "end": 105.0}]
+        L = {"events": [{"t": 80.12349, "kind": "serve"}]}
+        a = case_lib.label_window(frag(70.0, (100.0, 105.0)), L)["source"][0]
+        self.assertLessEqual(a, 80.12349)
+
+
 class FaultClipsWindow(unittest.TestCase):
     def test_a_clip_outside_the_window_is_not_counted(self):
         rows = [{"start": 50.0, "end": 52.0, "fault": {"t": 50.5}}, {"start": 99.0, "end": 101.0, "fault": {"t": 100.0}}]

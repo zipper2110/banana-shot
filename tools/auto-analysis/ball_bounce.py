@@ -60,8 +60,9 @@ LAND_F, LAND_M, LAND_BACK_S = 4.0, 1.5, 0.5     # frames of 1/60 s, m on the cou
 # at the vertex (the flight before the second pass) must not be more than GROUND_UP m above the ground there
 # (z of the ball center - R_BALL). A fit below the ground is a fit error, not evidence against a bounce (E183: the
 # two-side test lost right bounces with z below the ground). 0.51 m = the maximum of the 38 matched lab bounce
-# labels (bounce_labels.json); a vertex with no incoming fit is not tested. 0 = off (the default).
-GROUND_UP = float(__import__("os").environ.get("BOUNCE_GROUND_UP", "0") or 0)
+# labels (bounce_labels.json); a vertex with no incoming fit is not tested. On by default (0.51, manager after E184:
+# fragments false bounces 117 to 81, 1 right lost; lab false 2 to 1 of 37). "0" gives the old way.
+GROUND_UP = float(__import__("os").environ.get("BOUNCE_GROUND_UP", "0.51") or 0)
 RMS_BASE, RMS_BALL = 2.0, 0.6   # the bounce fit is accepted if rms < RMS_BASE px + RMS_BALL * radius of the ball image (px)
 
 

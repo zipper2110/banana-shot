@@ -186,8 +186,9 @@ SPEED_MIN = 2.5        # m/s in the net plane: a slower ball is not a shot
 PASS_Y, PASS_Z = 2.0, 1.45   # m: uncertainty of the flight fit in depth; a net height at the net plane that is clearly above the cord
 # E180 (S5, after E139): the near-hitter mirror of the far "passed" rule. A reliable fit of a near hitter that goes
 # through the net plane higher than PASS_Z and ends more than PASS_Y beyond the net passed the net: it is not a touch,
-# also when the ball is seen in the band after it (another ball or a player). Off by default until the bench result.
-PASS_NEAR = __import__("os").environ.get("NET_PASSED_NEAR", "0") == "1"
+# also when the ball is seen in the band after it (another ball or a player). On by default (manager after the E180
+# bench in E184: fragments false touches 5 to 4, no right touch lost; lab the same with netBand on). "0" gives the old way.
+PASS_NEAR = __import__("os").environ.get("NET_PASSED_NEAR", "1") == "1"
 
 
 def direction(q):

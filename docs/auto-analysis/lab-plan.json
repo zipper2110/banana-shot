@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 22:58",
+ "updated": "2026-11-27 23:05",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -918,8 +918,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E196"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "Fewer silent real points: on m1030 +2 matched and -3 false or fault rows; the lab and Igor no worse.",
     "impact": 3,
@@ -932,6 +934,33 @@
     "Seeds 1 and 2 trained for the other 3 fold models and the production model (8 small trainings, GPU under the lock); the models and their train logs in D:\\bananashot-lab\\ws\\s3.",
     "The 3-seed mean behind a new switch (default off), in its own small commit, with a unit test of the mean.",
     "A journal row (S3) with the chain-only results on cached flights (no new detection): on each of the 4 lab matches recall and precision against E106 d1cb16c7 (lab 95.1 % / 95.1 %), and on Igor m1116 against E106 (95.9 % / 98.4 %), by the spread rule; the row says if the switch can go on."
+   ],
+   "finished": "2026-11-28 00:05",
+   "real": {
+    "impact": 3,
+    "outcome": "E196 (a1a0f63f, 916c9b65, 731dafd2): 10 seed models (2 min lock); rally_model.SEEDS with SeedMean tests; null check = E106. Chain only, SEEDS 1 / 3: lab recall 95.1 / 95.5 %, precision 95.1 / 95.0 %, winners 434 / 442; Igor recall 95.9 / 97.4 %, precision 98.4 / 97.9 %. Only the winner gain is over the spread; no loss over it. All 3 checks pass; the switch can go on."
+   }
+  },
+  {
+   "id": "A38",
+   "kind": "experiment",
+   "title": "Cause B: the rally GRU fires on the first-serve fault and not on the second-serve point",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "Second-serve points after a fault found; their fault rows gone.",
+    "impact": 2,
+    "text": "6 of the 22 m1030 rows (E195); the count on the other matches is not known yet."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S3) with the count of B cases (a fault row, then a missed second-serve point of the same server) on all 4 lab matches and Igor, on the SEEDS 3 head, and the GRU and chain facts that cause them (0 cases without a cause).",
+    "A fix tested chain-only on cached flights (no new detection): the B cases back on the lab, and lab and Igor recall and precision against the SEEDS 3 reference by the spread rule; the row says if the fix can go on (behind a switch, default off, with a unit test)."
    ]
   },
   {

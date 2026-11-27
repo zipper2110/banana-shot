@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:39",
+ "updated": "2026-11-28 00:41",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1307,8 +1307,10 @@
     "M2-I9"
    ],
    "owner": "S4",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E222"
+   ],
    "expected": {
     "outcome": "A measured place error (x and y, by court depth) that a serve box rule and the depth gates can use.",
     "impact": 2,
@@ -1320,7 +1322,12 @@
    "doneWhen": [
     "A journal row (S4): all seen labeled bounces of the 24 E107 fragments that match a chain bounce on the head, with the error in x and y (m) by court depth band (for example near half, far half, far baseline band), n, median and 90th percentile of each band, and 0 bounces left out without a reason.",
     "A table of the in/out margin that each band needs (from the 90th percentile), and the count of labeled serve bounces that a serve box rule with these margins would judge right and wrong."
-   ]
+   ],
+   "finished": "2026-11-28 00:41",
+   "real": {
+    "impact": 2,
+    "outcome": "E222 (5b2bfe54): 150 seen labeled bounces, 108 matched, every other one with a reason. y error p90: near 0.12 to 0.16 m, far front 0.47, far back 0.30, far baseline 0.52 m; x p90 0.04 to 0.08 m. Serve box on 42 labeled serve bounces: margin 0 judges 41 right, the p90 margins 39. Only 9 far serve bounces are labeled: a far margin cannot be tested yet. Both checks pass."
+   }
   },
   {
    "id": "A29",

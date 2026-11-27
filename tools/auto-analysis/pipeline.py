@@ -40,7 +40,7 @@ def run(mid, quiet=False, write=True):
     # E17d: another flights file for a comparison. E28: the chain needs the file with events. G7 step 3: the old rule
     # (CHAIN=0) also needs the events (its seen bounce is the bounce event).
     full = json.load(open(FLIGHT_FILES.get(mid) or os.path.join(lab.mdir(mid), os.environ.get("FULLFLIGHTS") or "fullflights_s0.35_ev.json")))
-    prob = rally_model.predict(mid, "ball", fold=mid)
+    prob = rally_model.predict(mid, rally_model.ball_name(), fold=mid, flights=full["flights"])
     seg, serves = chain.segments(prob, full, CFG, start, start + dur)
     chain.FAULTS.clear()
     rows = chain.winners(mid, seg, full, serves, prob=prob)

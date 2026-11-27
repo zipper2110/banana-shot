@@ -12,8 +12,9 @@ Train the full model and the fold models together, so that the benchmark measure
 makes from the lab flights of the code key (bench.lab_wasbf), as the app makes it from its own flights. The files
 of the frozen lab input (E20 to E191) keep their names without "_h"; HEAD_INPUT = False uses them again.
 
-Models:  ball  = audio, mel, dino, wasbf   (E20, needs the ball pass)
-         base  = audio, mel, dino          (E6b, no ball pass)
+Models:  ball    = audio, mel, dino, wasbf          (E20, needs the ball pass)
+         ballsv  = audio, mel, dino, wasbf, serve   (A54 E215: also the serve events of the flights; SERVE_INPUT)
+         base    = audio, mel, dino                 (E6b, no ball pass)
 Usage: python rally_model.py train [--folds-only] [--seed=K] [ball|base ...]   (K > 0: the seed files of A37)
 """
 import os, sys
@@ -25,7 +26,8 @@ import platform_cfg
 from seq_eval import Net
 from train_eval import load
 
-MODELS = {"ball": ["audio", "mel", "dino", "wasbf"], "base": ["audio", "mel", "dino"]}
+MODELS = {"ball": ["audio", "mel", "dino", "wasbf"], "ballsv": ["audio", "mel", "dino", "wasbf", "serve"],
+          "base": ["audio", "mel", "dino"]}
 TRAIN = ["m1015", "m1020", "m1021", "m1030"]
 PCA_DIMS, EPOCHS, WIN = 32, 40, 240
 TIME_BASE = "_t2"
@@ -37,6 +39,30 @@ HEAD_INPUT = True
 # same name with "_s<k>". 1 = one model. Not from the environment (G12). On: 3 (manager decision c32f996f after E196).
 SEEDS = 3
 SEED_DIR = None             # the folder of the seed files k > 0; None = the models folder (the bench sets a lab folder)
+MODEL_DIR = None            # the folder of the seed-0 files; None = the models folder (a lab run sets a lab folder)
+# A54 (E215, the RALLY_SERVE_INPUT switch of the plan): the model with the ball pass is "ballsv" (also the serve events
+# of the flights, serve_feat) in place of "ball". Off = the old model and the old rally key. Not from the environment
+# (G12).
+SERVE_INPUT = False
+FLIGHTS_FILE = "fullflights_s0.35.json"
+
+
+def ball_name():
+    """The name of the rally model with the ball pass: "ballsv" when SERVE_INPUT, else "ball"."""
+    return "ballsv" if SERVE_INPUT else "ball"
+
+
+def serve_feat(flights, n):
+    """A54: the serve events of the flights (chain.serve_events of the full video) as n x 3 per-second columns:
+    0 = a serve of the near player ("serve", "fast" or "toss+..."), 1 = the same of the far player, 2 = a toss alone.
+    The value is 1 at the second of the event time, else 0."""
+    from serve_ball import serve_events
+    f = np.zeros((n, 3), np.float32)
+    for t, near, kind, _ in serve_events(flights or [], 0.0, float(n)):
+        s = int(t)
+        if 0 <= s < n:
+            f[s, 2 if kind == "toss" else 0 if near else 1] = 1.0
+    return f
 
 
 def input_tag(name):
@@ -49,8 +75,8 @@ def path(name, fold=None, seed=0):
     seed = the training seed (A37); 0 = the file with no seed in its name."""
     base = f"rally_{name}{TIME_BASE}{input_tag(name)}" + ("" if fold is None else f"_x{fold}")
     if seed == 0:
-        return os.path.join(lab.ROOT, "models", f"{base}.pt")
-    return os.path.join(SEED_DIR or os.path.join(lab.ROOT, "models"), f"{base}_s{seed}.pt")
+        return os.path.join(MODEL_DIR or os.path.join(lab.ROOT, "models"), f"{base}.pt")
+    return os.path.join(SEED_DIR or MODEL_DIR or os.path.join(lab.ROOT, "models"), f"{base}_s{seed}.pt")
 
 
 def model_files(name, fold=None):
@@ -94,6 +120,19 @@ def load_wasbf(mid, feats, pca, folder):
     return [(n, new if n == "wasbf" else f) for n, f in parts]
 
 
+def load_parts(mid, feats, pca, folder, flights=None):
+    """load_wasbf() and, for "serve" (the last part, A54), serve_feat() of flights. flights: the "flights" list;
+    None = the flights file in folder (the input of feat_wasbf.npy), or in the folder of mid."""
+    if "serve" not in feats:
+        return load_wasbf(mid, feats, pca, folder)
+    assert feats[-1] == "serve", feats
+    parts = load_wasbf(mid, feats[:-1], pca, folder)
+    if flights is None:
+        import json
+        flights = json.load(open(os.path.join(folder or lab.mdir(mid), FLIGHTS_FILE)))["flights"]
+    return parts + [("serve", serve_feat(flights, lab.n_seconds(mid)))]
+
+
 def train(name, fold=None, wasbf=None, seed=0):
     """Trains on TRAIN, or on TRAIN without the match fold. wasbf: {mid: folder of feat_wasbf.npy}; None = the head
     input (head_wasbf) for a model with "_h", else the lab files. seed: the random seed and the file (A37)."""
@@ -101,7 +140,7 @@ def train(name, fold=None, wasbf=None, seed=0):
     TRAIN = lab.check_train([m for m in globals()["TRAIN"] if m != fold])
     if wasbf is None and input_tag(name):
         wasbf = head_wasbf(globals()["TRAIN"])        # with the held-out match, for its test below
-    raw = {m: load_wasbf(m, feats, PCA_DIMS, (wasbf or {}).get(m)) for m in TRAIN}
+    raw = {m: load_parts(m, feats, PCA_DIMS, (wasbf or {}).get(m)) for m in TRAIN}
     y = {m: lab.labels(m) for m in TRAIN}
     mask = {m: lab.span_mask(m) for m in TRAIN}
     prep = []
@@ -148,19 +187,19 @@ def mean_prob(probs):
     return np.mean(np.stack(probs), axis=0).astype(np.float32)
 
 
-def predict(mid, name, fold=None, wasbf=None):
+def predict(mid, name, fold=None, wasbf=None, flights=None):
     """Per-second rally probability of match mid (its feat_<name>.npy files must exist). fold: use the fold
     model that did not see that match. wasbf: a folder of feat_wasbf.npy (None = the folder of mid).
-    SEEDS > 1: the mean of the seed models (A37)."""
+    flights: the flights list for the "serve" part (load_parts). SEEDS > 1: the mean of the seed models (A37)."""
     if SEEDS <= 1:
-        return predict_one(mid, name, fold, wasbf)
-    return mean_prob([predict_one(mid, name, fold, wasbf, k) for k in range(SEEDS)])
+        return predict_one(mid, name, fold, wasbf, flights=flights)
+    return mean_prob([predict_one(mid, name, fold, wasbf, k, flights) for k in range(SEEDS)])
 
 
-def predict_one(mid, name, fold=None, wasbf=None, seed=0):
+def predict_one(mid, name, fold=None, wasbf=None, seed=0, flights=None):
     """The probability of one model file (path with seed)."""
     ck = torch.load(path(name, fold, seed), map_location="cpu", weights_only=False)     # our own file
-    X = stack(load_wasbf(mid, ck["feats"], PCA_DIMS, wasbf), ck["prep"])
+    X = stack(load_parts(mid, ck["feats"], PCA_DIMS, wasbf, flights), ck["prep"])
     dev = platform_cfg.small_device()
     net = Net(ck["dim"]).to(dev)
     net.load_state_dict(ck["net"])

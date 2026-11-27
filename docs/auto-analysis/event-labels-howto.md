@@ -43,6 +43,8 @@ Rules:
 - The page starts at the label window, not at the start of the clip. The label window starts 3 s after the end of the
   previous point, but not earlier than 25 s before the marked point. Mark all events in the label window, also
   the events after the marked point, if you see them.
+  If you labeled the fragment before, and your first mark is earlier, the label window starts at your first mark.
+  Thus your complete earlier points stay in use.
 - The part of the clip before the label window shows the previous point. The time line shows it dark, and the page
   shows "before the label window: no marks here". Do not mark events there. A key press there adds no mark.
   Marks from an earlier save that are there stay in the file. The page shows them as "not used".

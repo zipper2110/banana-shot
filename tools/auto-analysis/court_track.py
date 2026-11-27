@@ -117,6 +117,23 @@ def _t(name, t0):
     return time.perf_counter()
 
 
+# E187 (S5, A26): rules that make the court stage faster and can change results; the defaults give the results of
+# before. COURT_HYP_N "n_h,n_s": the horizontal and side lines of the detector hypotheses (10,14); COURT_TOP: the
+# sorted hypotheses that the candidate search reads (30000); COURT_REFINE_N: the candidates that get the refinement
+# (8); COURT_COARSE_N: the points of each model line in the coarse score (24); COURT_SKIP_AFTER: no detect in a
+# window when the window before it in the chain got this kind: "" (off), "lost", or "fail" (lost or weak).
+def rules(hyp_n=None, top=None, refine_n=None, coarse_n=None, skip_after=None):
+    """The E187 switches from their text values (None or "" = the default): (HYP_N, TOP, REFINE_N, COARSE_N,
+    SKIP_AFTER)."""
+    return (tuple(int(v) for v in (hyp_n or "10,14").split(",")), int(top or 30000), int(refine_n or 8),
+            int(coarse_n or 24), {"": (), "lost": ("lost",), "fail": ("lost", "weak")}[skip_after or ""])
+
+
+# environ.get with the literal names: bench.py finds the switches of the code key with this form
+HYP_N, TOP, REFINE_N, COARSE_N, SKIP_AFTER = rules(os.environ.get("COURT_HYP_N"), os.environ.get("COURT_TOP"),
+                                                   os.environ.get("COURT_REFINE_N"), os.environ.get("COURT_COARSE_N"),
+                                                   os.environ.get("COURT_SKIP_AFTER"))
+
 TRUST, LOOSE = 1.0, 3.0      # check cost (court_auto.polish px): trusted, and still acceptable if nothing is better
 
 
@@ -127,10 +144,11 @@ def check(img, c):
     return (c2, v) if valid(c2) else (c, v)
 
 
-def fit_window(mid, t0, n, start, ref_cost, one=False):
+def fit_window(mid, t0, n, start, ref_cost, one=False, prev_how=None):
     """Returns (points, track cost, check cost, ok, how). ok = False: no
     trusted fit. how: "track", "detect", "weak" (a faint court: only the
-    tracker found a model and no better model exists) or "lost"."""
+    tracker found a model and no better model exists) or "lost". prev_how: the kind of the window before it in the
+    chain (for SKIP_AFTER)."""
     tt = time.perf_counter()
     img = window_frame(mid, t0, n, one)
     tt = _t("frame", tt)
@@ -165,7 +183,10 @@ def fit_window(mid, t0, n, start, ref_cost, one=False):
         if chk < TRUST:
             return c, best[1], chk, True, "track"
     # not trusted: find the court again, with no start
-    H, score, info = court_auto.detect(img, prior=to_H(start))
+    if prev_how in SKIP_AFTER:                                  # E187: no detect after a failed window (off by default)
+        H, score, info = None, CAP, {"ok": False, "why": "skip after " + prev_how}
+    else:
+        H, score, info = court_auto.detect(img, HYP_N[0], HYP_N[1], REFINE_N, prior=to_H(start), top=TOP, coarse_n=COARSE_N)
     tt = _t("detect", tt)
     if H is not None and info["ok"]:
         c = court_auto.to_img(H, COURT4)
@@ -226,10 +247,11 @@ def run(mid):
     nwin = (n + STEP - 1) // STEP
     res = {}
     for order in (range(mid_w, nwin), range(mid_w - 1, -1, -1)):
-        c, ref = c0.copy(), ref0
+        c, ref, prev = c0.copy(), ref0, None
         for w in order:
             tw = time.perf_counter()
-            c2, v, chk, ok, how = fit_window(mid, w * STEP, n, c, ref, one)
+            c2, v, chk, ok, how = fit_window(mid, w * STEP, n, c, ref, one, prev)
+            prev = how
             STEP_T["windows " + how] += time.perf_counter() - tw
             if ok:
                 c, ref = c2, min(max(v, 1.0), 5.0)

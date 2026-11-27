@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 14:57",
+ "updated": "2026-11-27 15:03",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -948,8 +948,10 @@
    ],
    "owner": "S3",
    "id": "A34",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E194"
+   ],
+   "status": "done",
    "title": "Serve against the box with margins: depth out only beyond the place error, side only when |x0| >= 1.0 m, only the first bounce after the contact",
    "expected": {
     "outcome": "The right part of E193 (the deep and wrong-box serves) with no in-play serve called out.",
@@ -958,6 +960,11 @@
    },
    "estimate": {
     "netMin": 30
+   },
+   "finished": "2026-11-27 15:03",
+   "real": {
+    "impact": 0,
+    "outcome": "Switch kept off: with \"em\" 17 serve ends go out, 9 surely wrong (deep far-half bounces, misses smaller than 0.5 m, 1 box side). Weak fact: the bounce depth on the far half. Closed with a finding."
    }
   },
   {

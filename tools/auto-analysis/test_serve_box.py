@@ -151,5 +151,63 @@ class Build(unittest.TestCase):
         self.assertEqual(sc.shot_end(a)[0], "in")
 
 
+
+class Margins(unittest.TestCase):
+    """A34: "m" = out only beyond the place error, the box side only with a clear start, the first bounce only."""
+
+    def serve(self, x, y, x0=2.0, sigma=0.0, fl2=None):
+        b = bounce(10.6, x, y)
+        b["conf"] = sigma
+        sh = shot(10.0, True, [b], x0=x0)
+        if fl2 is not None:                      # a second flight of the shot that starts at fl2
+            f = dict(sh["fl"][0], t0=fl2, t1=fl2 + 0.5)
+            sh["fl"][0]["t1"] = fl2
+            sh["fl"].append(f)
+        sh["serve"] = {"x0": x0, "ev": True}
+        return sh
+
+    def test_out_only_beyond_the_place_error(self):
+        sh = self.serve(-1.0, sc.SL + 0.2)                      # no sigma: LINE_M (0.3 m)
+        with Switch("e"):
+            self.assertEqual(sc.shot_end(sh)[0], "out")
+        with Switch("em"):
+            self.assertEqual(sc.shot_end(sh)[0], "in")
+        sh = self.serve(-1.0, sc.SL + 0.2, sigma=0.1)            # the sigma of the bounce
+        with Switch("em"):
+            self.assertEqual(sc.shot_end(sh), ("out", sc.SL - (sc.SL + 0.2)))
+
+    def test_the_box_side_needs_a_clear_start(self):
+        sh = self.serve(1.0, 5.0, x0=0.8)                        # the wrong box, but the start is 0.8 m from the middle
+        with Switch("e"):
+            self.assertEqual(sc.shot_end(sh)[0], "out")
+        with Switch("em"):
+            self.assertEqual(sc.shot_end(sh)[0], "in")
+        sh = self.serve(1.0, 5.0, x0=1.2)
+        with Switch("em"):
+            self.assertEqual(sc.shot_end(sh)[0], "out")
+
+    def test_only_the_first_bounce_after_the_contact(self):
+        sh = self.serve(-1.0, 9.0, fl2=10.4)                     # a flight starts before the bounce: a bounce not seen
+        with Switch("e"):
+            self.assertEqual(sc.shot_end(sh)[0], "out")
+        with Switch("em"):
+            self.assertEqual(sc.shot_end(sh)[0], "in")            # the full court
+        sh = self.serve(-1.0, 9.0, fl2=10.62)                    # the flight starts at the bounce
+        with Switch("em"):
+            self.assertEqual(sc.shot_end(sh)[0], "out")
+
+    def test_without_m_no_tolerance(self):
+        with Switch("e"):
+            self.assertEqual(sc.serve_tol(0.2), 0.0)
+            self.assertEqual(sc.serve_end(0.0, 0.2), "out")      # the old test of chain.py: margin > 0
+            self.assertEqual(sc.serve_side_x(), sc.SIDE_X)
+        with Switch("0"):
+            self.assertEqual(sc.serve_end(0.01, None), "in")
+            self.assertEqual(sc.serve_end(0.0, None), "out")
+        with Switch("em"):
+            self.assertEqual(sc.serve_tol(None), sc.LINE_M)
+            self.assertEqual(sc.serve_side_x(), sc.SB_SIDE_M)
+
+
 if __name__ == "__main__":
     unittest.main()

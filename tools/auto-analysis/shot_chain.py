@@ -110,19 +110,54 @@ TIME_ORDER = os.environ.get("CHAIN_TIME_ORDER", "a")
 # shots are the shots at a serve event (serve_ball.serve_events, not a toss alone; the same end, SB_AT s), the shot that
 # serve_start (b) moved to a serve event, and the serve in play after a removed serve (serve_start (a)); only before the
 # first shot of the other end. "ef" = also the first shot of the row with no serve event.
+# A34 (E194, after E193: 16 serves in play read "out"): the letter "m" ("em", "efm") adds three conditions: out only
+# beyond the place error of the bounce (serve_tol), the box side only when the serve flight starts SB_SIDE_M or more from
+# the middle, and the box test only for the first bounce after the serve contact (serve_first_bounce).
 SERVE_BOX = os.environ.get("CHAIN_SERVE_BOX", "0")
 SB_AT = 0.3            # s: the serve event is this near to the start of the first flight or to the time of the shot
 SIDE_X = 0.3           # m: a serve flight that starts nearer to the middle has no known side (chain.serve_side)
+SB_SIDE_M = 1.0        # m: "m": the box side only from a serve flight start this far from the middle (E193: 6 of 7 wrong sides had 0.35 to 0.90 m)
+SB_GAP = 0.05          # s: "m": a flight of the serve shot that starts this much after the contact and before the bounce
 
 
-def serve_margin(x, y, x0=None):
+def serve_side_x():
+    """The smallest distance of the serve flight start from the middle for the box side test (m)."""
+    return SB_SIDE_M if "m" in SERVE_BOX else SIDE_X
+
+
+def serve_margin(x, y, x0=None, side_x=None):
     """The margin of a serve bounce to the service box (m, positive = inside). x across, y along the serve (m after the
     net). Depth (service line SL) and the singles side lines always; the side of the box only when x0 (the x of the start
-    of the serve flight) is SIDE_X or more from the middle: the serve goes cross-court, so the bounce has the other sign."""
+    of the serve flight) is side_x (default serve_side_x()) or more from the middle: the serve goes cross-court, so the
+    bounce has the other sign."""
+    side_x = serve_side_x() if side_x is None else side_x
     m = min(SW - abs(x), SL - y)
-    if x0 is not None and abs(x0) >= SIDE_X:
+    if x0 is not None and abs(x0) >= side_x:
         m = min(m, -x if x0 > 0 else x)
     return m
+
+
+def serve_tol(sigma):
+    """A34: the place error of a serve bounce (m): with "m", the sigma of the bounce event when it has one, else LINE_M;
+    without "m", 0 (the margin alone decides)."""
+    if "m" not in SERVE_BOX:
+        return 0.0
+    return float(sigma) if sigma else LINE_M
+
+
+def serve_end(m, sigma, tol=0.0):
+    """The end of a serve bounce with the margin m to the box: "in" or "out" (out only beyond the place error)."""
+    return "in" if m > -max(tol, serve_tol(sigma)) else "out"
+
+
+def serve_first_bounce(sh, tb):
+    """A34: True if the bounce at time tb can be the first bounce after the serve contact: no flight of the shot starts
+    between the contact (the start of the first flight) and the bounce. A flight start between them is a bounce or a
+    kink that the events did not see (E193: "first bounces" 1.5 to 4.4 m behind the service line). Without "m": True."""
+    if "m" not in SERVE_BOX or not sh["fl"]:
+        return True
+    tc = sh["fl"][0]["t0"]
+    return not any(tc + SB_GAP < f["t0"] < tb - SB_GAP for f in sh["fl"][1:])
 
 
 def mark_serves(shots, serves, mode=None):
@@ -594,10 +629,10 @@ def shot_end(sh, tol=0.0):
         return "none", None           # behind the baseline of the hitter: not a bounce of a shot that flies to the net
     if y < NET_NEAR:
         return "own", min(y, 0.0)     # E32: also a bounce right behind the net: the ball touched the net and dropped
-    if SERVE_BOX != "0" and sh.get("serve"):
+    if SERVE_BOX != "0" and sh.get("serve") and serve_first_bounce(sh, b[2]):
         m = serve_margin(x, y, sh["serve"]["x0"])   # A31: a serve must land in the service box
-    else:
-        m = min(SW - abs(x), BL - y)
+        return serve_end(m, b[3], tol), m
+    m = min(SW - abs(x), BL - y)
     return ("in" if m > -tol else "out"), m
 
 

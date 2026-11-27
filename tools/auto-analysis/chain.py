@@ -260,7 +260,7 @@ def evidence(mid, seg, full, serves, p=PARAMS, prob=None):
                         if s0 is not None and s0["end"] in ("in", "out") and s0.get("court"):
                             x0 = float(c[-1][3]["p0"][0]) if sc.SERVE_BOX != "0" else None
                             s0["margin"] = round(sc.serve_margin(s0["court"][0], abs(s0["court"][1]), x0), 2)
-                            s0["end"] = "in" if s0["margin"] > 0 else "out"
+                            s0["end"] = sc.serve_end(s0["margin"], s0.get("sigma"))   # A34 "m": out only beyond the place error
                     except Exception as e:           # the fault candidate stays, with no shots
                         note_fault("fault chain", fault["t"], e)
         if ch is not None and ch["shots"] and ch["shots"][0].get("before") and ch["shots"][0]["before"]["cord"] is None:

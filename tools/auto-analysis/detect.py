@@ -175,10 +175,12 @@ def pose_key():
 def rally_key(model_name):
     """G12 (E192): the key of the rallies stage: the name and the bytes of the rally model file. The stage always
     runs; the key records in stage_keys.json and result.json which model made the rallies (a new model file gives a
-    new key)."""
+    new key). A37: with rally_model.SEEDS > 1, all the seed files and the seed count; SEEDS 1 gives the old key."""
     import rally_model
     f = rally_model.path(model_name)
-    return content_key(os.path.basename(f), files=[f])
+    if rally_model.SEEDS <= 1:
+        return content_key(os.path.basename(f), files=[f])
+    return content_key(os.path.basename(f) + f"+seeds{rally_model.SEEDS}", files=rally_model.model_files(model_name))
 
 
 def netmask_key(tag):

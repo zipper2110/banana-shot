@@ -14,7 +14,7 @@ of the frozen lab input (E20 to E191) keep their names without "_h"; HEAD_INPUT 
 
 Models:  ball  = audio, mel, dino, wasbf   (E20, needs the ball pass)
          base  = audio, mel, dino          (E6b, no ball pass)
-Usage: python rally_model.py train [--folds-only] [ball|base ...]
+Usage: python rally_model.py train [--folds-only] [--seed=K] [ball|base ...]   (K > 0: the seed files of A37)
 """
 import os, sys
 import numpy as np
@@ -33,6 +33,10 @@ TIME_BASE = "_t2"
 # makes. False = the old files (frozen lab input), for the bench and the app. Do not change it from the environment:
 # the app reads no lab variable (G12).
 HEAD_INPUT = True
+# A37 (E196): the rally GRU as the mean of SEEDS models. Seed 0 = the files of path() with no seed; seed k > 0 = the
+# same name with "_s<k>". 1 = one model (off, the default). Not from the environment (G12).
+SEEDS = 1
+SEED_DIR = None             # the folder of the seed files k > 0; None = the models folder (the bench sets a lab folder)
 
 
 def input_tag(name):
@@ -40,10 +44,18 @@ def input_tag(name):
     return "_h" if HEAD_INPUT and "wasbf" in MODELS.get(name, ()) else ""
 
 
-def path(name, fold=None):
-    """The model file. fold = the match that the model did not see (a fold model of the benchmark), or None."""
-    base = f"rally_{name}{TIME_BASE}{input_tag(name)}"
-    return os.path.join(lab.ROOT, "models", f"{base}.pt" if fold is None else f"{base}_x{fold}.pt")
+def path(name, fold=None, seed=0):
+    """The model file. fold = the match that the model did not see (a fold model of the benchmark), or None.
+    seed = the training seed (A37); 0 = the file with no seed in its name."""
+    base = f"rally_{name}{TIME_BASE}{input_tag(name)}" + ("" if fold is None else f"_x{fold}")
+    if seed == 0:
+        return os.path.join(lab.ROOT, "models", f"{base}.pt")
+    return os.path.join(SEED_DIR or os.path.join(lab.ROOT, "models"), f"{base}_s{seed}.pt")
+
+
+def model_files(name, fold=None):
+    """The model files that predict() reads: one file, or SEEDS files (A37)."""
+    return [path(name, fold)] + [path(name, fold, k) for k in range(1, SEEDS)]
 
 
 def stack(parts, prep):
@@ -82,9 +94,9 @@ def load_wasbf(mid, feats, pca, folder):
     return [(n, new if n == "wasbf" else f) for n, f in parts]
 
 
-def train(name, fold=None, wasbf=None):
+def train(name, fold=None, wasbf=None, seed=0):
     """Trains on TRAIN, or on TRAIN without the match fold. wasbf: {mid: folder of feat_wasbf.npy}; None = the head
-    input (head_wasbf) for a model with "_h", else the lab files."""
+    input (head_wasbf) for a model with "_h", else the lab files. seed: the random seed and the file (A37)."""
     feats = MODELS[name]
     TRAIN = lab.check_train([m for m in globals()["TRAIN"] if m != fold])
     if wasbf is None and input_tag(name):
@@ -102,7 +114,7 @@ def train(name, fold=None, wasbf=None):
             pr["sd"] = (np.concatenate([pca.transform(fs[m]) for m in TRAIN]).std(0) + 1e-6).astype(np.float32)
         prep.append(pr)
     X = {m: stack(raw[m], prep) for m in TRAIN}
-    torch.manual_seed(0); np.random.seed(0)
+    torch.manual_seed(seed); np.random.seed(seed)
     net = Net(X[TRAIN[0]].shape[1]).cuda()
     opt = torch.optim.AdamW(net.parameters(), lr=2e-3, weight_decay=1e-2)
     steps = EPOCHS * 40
@@ -118,23 +130,36 @@ def train(name, fold=None, wasbf=None):
         mb = torch.tensor(np.stack(mb)).float().cuda()
         loss = (nn.functional.binary_cross_entropy_with_logits(net(xb), yb, reduction="none") * mb).sum() / mb.sum().clamp(min=1)
         opt.zero_grad(); loss.backward(); opt.step(); sched.step()
-    os.makedirs(os.path.dirname(path(name)), exist_ok=True)
+    os.makedirs(os.path.dirname(path(name, fold, seed)), exist_ok=True)
     torch.save({"feats": feats, "prep": prep, "dim": X[TRAIN[0]].shape[1], "net": net.state_dict(), "train": TRAIN,
-                "wasbf": {m: (wasbf or {}).get(m) for m in TRAIN}}, path(name, fold))
+                "wasbf": {m: (wasbf or {}).get(m) for m in TRAIN}, "seed": seed}, path(name, fold, seed))
     net.eval()
     for m in TRAIN:                                    # a check on the training matches (not a test)
         with torch.no_grad():
             p = torch.sigmoid(net(torch.tensor(X[m][None]).cuda()))[0].cpu().numpy()
         print(name, m, "(training match)", lab.fmt(lab.point_metrics(lab.segment(p, smooth=1, hi=0.5, lo=0.35, min_len=2.0), m)), flush=True)
     if fold is not None:                               # the held-out match: a test
-        p = predict(fold, name, fold, wasbf.get(fold) if wasbf else None)
+        p = predict_one(fold, name, fold, wasbf.get(fold) if wasbf else None, seed)
         print(name, fold, "(held out)", lab.fmt(lab.point_metrics(lab.segment(p, smooth=1, hi=0.5, lo=0.35, min_len=2.0), fold)), flush=True)
+
+
+def mean_prob(probs):
+    """A37: the per-second mean of the probabilities of the seed models."""
+    return np.mean(np.stack(probs), axis=0).astype(np.float32)
 
 
 def predict(mid, name, fold=None, wasbf=None):
     """Per-second rally probability of match mid (its feat_<name>.npy files must exist). fold: use the fold
-    model that did not see that match. wasbf: a folder of feat_wasbf.npy (None = the folder of mid)."""
-    ck = torch.load(path(name, fold), map_location="cpu", weights_only=False)     # our own file
+    model that did not see that match. wasbf: a folder of feat_wasbf.npy (None = the folder of mid).
+    SEEDS > 1: the mean of the seed models (A37)."""
+    if SEEDS <= 1:
+        return predict_one(mid, name, fold, wasbf)
+    return mean_prob([predict_one(mid, name, fold, wasbf, k) for k in range(SEEDS)])
+
+
+def predict_one(mid, name, fold=None, wasbf=None, seed=0):
+    """The probability of one model file (path with seed)."""
+    ck = torch.load(path(name, fold, seed), map_location="cpu", weights_only=False)     # our own file
     X = stack(load_wasbf(mid, ck["feats"], PCA_DIMS, wasbf), ck["prep"])
     dev = platform_cfg.small_device()
     net = Net(ck["dim"]).to(dev)
@@ -147,8 +172,9 @@ def predict(mid, name, fold=None, wasbf=None):
 if __name__ == "__main__":
     if sys.argv[1] == "train":
         folds_only = "--folds-only" in sys.argv
+        seed = next((int(a.split("=")[1]) for a in sys.argv if a.startswith("--seed=")), 0)
         for n in ([a for a in sys.argv[2:] if not a.startswith("--")] or list(MODELS)):
             if not folds_only:
-                train(n)
+                train(n, seed=seed)
             for m in TRAIN:
-                train(n, m)
+                train(n, m, seed=seed)

@@ -89,5 +89,58 @@ class RallyKey(unittest.TestCase):
             rm.HEAD_INPUT = old
 
 
+class SeedMean(unittest.TestCase):
+    """A37: the rally GRU as the mean of SEEDS models (default 1 = off)."""
+    def setUp(self):
+        self.old = rm.SEEDS, rm.SEED_DIR, rm.predict_one, rm.path
+
+    def tearDown(self):
+        rm.SEEDS, rm.SEED_DIR, rm.predict_one, rm.path = self.old
+
+    def test_the_default_is_one_model(self):
+        self.assertEqual(rm.SEEDS, 1)
+        self.assertEqual(rm.model_files("ball", "m1015"), [rm.path("ball", "m1015")])
+
+    def test_seed_file_names(self):
+        self.assertEqual(rm.path("ball", "m1015", 0), rm.path("ball", "m1015"))
+        self.assertEqual(os.path.basename(rm.path("ball", "m1015", 2)), "rally_ball_t2_h_xm1015_s2.pt")
+        self.assertEqual(os.path.basename(rm.path("ball", None, 1)), "rally_ball_t2_h_s1.pt")
+        rm.SEED_DIR = os.path.join("x", "seeds")
+        self.assertEqual(os.path.dirname(rm.path("ball", None, 1)), rm.SEED_DIR)
+        self.assertNotEqual(os.path.dirname(rm.path("ball")), rm.SEED_DIR)      # seed 0 stays in the models folder
+
+    def test_the_mean_of_the_seeds(self):
+        got = []
+
+        def one(mid, name, fold=None, wasbf=None, seed=0):
+            got.append(seed)
+            return np.array([0.1, 0.9, 0.5], np.float32) * (seed + 1)
+        rm.predict_one = one
+        np.testing.assert_allclose(rm.predict("m1020", "ball", "m1020"), [0.1, 0.9, 0.5])
+        self.assertEqual(got, [0])
+        got.clear()
+        rm.SEEDS = 3
+        np.testing.assert_allclose(rm.predict("m1020", "ball", "m1020"), [0.2, 1.8, 1.0], rtol=1e-6)
+        self.assertEqual(got, [0, 1, 2])
+        np.testing.assert_allclose(rm.mean_prob([np.zeros(2), np.ones(2)]), [0.5, 0.5])
+
+    def test_the_rally_key_with_seeds(self):
+        d = tempfile.mkdtemp(prefix="rs_")
+        try:
+            rm.path = lambda name, fold=None, seed=0: os.path.join(d, f"rally_{name}_s{seed}.pt")
+            for k in range(3):
+                open(rm.path("ball", None, k), "wb").write(b"model %d" % k)
+            one = detect.rally_key("ball")
+            rm.SEEDS = 3
+            three = detect.rally_key("ball")
+            self.assertNotEqual(one, three)
+            open(rm.path("ball", None, 2), "wb").write(b"model two again")
+            self.assertNotEqual(detect.rally_key("ball"), three)
+            rm.SEEDS = 1
+            self.assertEqual(detect.rally_key("ball"), one)
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

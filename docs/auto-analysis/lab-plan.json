@@ -942,6 +942,28 @@
    }
   },
   {
+   "id": "A38",
+   "kind": "experiment",
+   "title": "Cause B: the rally GRU fires on the first-serve fault and not on the second-serve point",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "Second-serve points after a fault found; their fault rows gone.",
+    "impact": 2,
+    "text": "6 of the 22 m1030 rows (E195); the count on the other matches is not known yet."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S3) with the count of B cases (a fault row, then a missed second-serve point of the same server) on all 4 lab matches and Igor, on the SEEDS 3 head, and the GRU and chain facts that cause them (0 cases without a cause).",
+    "A fix tested chain-only on cached flights (no new detection): the B cases back on the lab, and lab and Igor recall and precision against the SEEDS 3 reference by the spread rule; the row says if the fix can go on (behind a switch, default off, with a unit test)."
+   ]
+  },
+  {
    "id": "A28",
    "kind": "research",
    "title": "Shot count errors inside the rows: cause table on the new labels",

@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:41",
+ "updated": "2026-11-28 00:45",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -146,7 +146,7 @@
     },
     {
      "name": "Lab rallies recall / precision",
-     "value": "96.6 % / 95.2 % (E221 head a85c4ad1 with CHAIN_SERVE_ANCHOR); Igor 98.5 % / 94.6 % (E211, E106 keys)",
+     "value": "96.6 % / 96.2 % with faults (E212, CHAIN_PLAY_DROP; head e95d8a47 96.6 % / 95.2 %); Igor 98.5 % / 94.6 % (E211, E106 keys)",
      "target": "94.6 % or more (no loss)",
      "met": true,
      "progress": 1.0
@@ -1162,8 +1162,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E212"
+   ],
    "expected": {
     "outcome": "Fewer false and fault rows from warm-up or ball play between points, with no lost point.",
     "impact": 2,
@@ -1175,7 +1177,12 @@
    "doneWhen": [
     "A journal row (S3): the D rows of the 4 lab matches and the 2 Igor kind-9 rows on the head (e95d8a47), with the facts that set them apart from real points (serve event, side, shots, pause, GRU); the rule chosen from these facts, and how many rows it was built on.",
     "The rule behind a switch (default off), in its own small commit, with a unit test; lab chain-only and Igor (E106 keys) off and on: false and fault rows down, 0 lost points, recall and precision by the spread rule. The row says if it can go on."
-   ]
+   ],
+   "finished": "2026-11-28 00:45",
+   "real": {
+    "impact": 2,
+    "outcome": "E212 (1968e2df, 5c30fd77): CHAIN_PLAY_DROP (no serve event, no server, no shot with a ball-in-play end; no threshold; built on 151 lab rows) with tests. Lab off/on: 6 rows removed (5 fault, 1 false), 0 points lost, fault rows 22 to 17, precision with faults 95.20 to 96.22 %. Igor: no change. The 2 Igor kind-9 rows have a serve and a server: not this rule. Both checks pass; it can go on."
+   }
   },
   {
    "id": "A41",

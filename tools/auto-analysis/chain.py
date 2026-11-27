@@ -66,6 +66,16 @@ JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "2.5"))
 # removed the real point (E198).
 SECOND_SERVE = os.environ.get("CHAIN_SECOND_SERVE", "1") != "0"
 SS_SHOTS, SS_NEXT, SS_QUIET, SS_BEFORE, SS_AFTER, SS_GAP = 1, 13.0, 3, 1.5, 1.0, 2.5
+# A46 (cause A of E210: the GRU is silent on a point). CHAIN_SERVE_ANCHOR=1: a serve event ("serve" or "toss+serve") at
+# t starts a new rally when no rally is near it (no rally starts less than SA_BEFORE s after t, and no rally ends less
+# than SA_AFTER s before t), the GRU max is below the threshold in [t, t + SS_QUIET] s and SA_FLOOR or more in
+# [t, t + SA_WIN] s, and the flights from t - 0.3 s (gaps of SS_GAP s or less) are SA_FLIGHTS or more with SA_CHANGES
+# or more court end changes (the sign of the court y of the flight start). The new rally: SS_BEFORE s before t to
+# SS_AFTER s after the last of these flights. Filter (E211, from the facts of the 13 new rows of E210: 7 fault rows,
+# 6 points): the new rally must end SA_PAUSE (= SS_QUIET) s or more before the next rally starts. The 7 fault rows all
+# ran on into the next rally (1.7 s or less); a point ends with a pause. Default "0" (off).
+SERVE_ANCHOR = os.environ.get("CHAIN_SERVE_ANCHOR", "0") == "1"
+SA_BEFORE, SA_AFTER, SA_WIN, SA_FLOOR, SA_FLIGHTS, SA_CHANGES, SA_PAUSE = 5.0, 8.0, 6, 0.3, 3, 1, float(SS_QUIET)
 # item 12 (user decision): the winner of each rally comes from its own evidence; the score decoder does not change a
 # winner. CHAIN_DECODER=1 gives the old way (pNearWins = the decoder posterior). The decoder code stays.
 DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"
@@ -352,6 +362,11 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
     detector (E60)."""
     import identity
     rows = evidence(mid, seg, full, serves, p, prob)
+    if SERVE_ANCHOR and prob is not None:
+        add = serve_anchor_segs(rows, serves, full["flights"], prob)
+        if add:                                      # the evidence of all rallies again, with the new ones (A46)
+            seg = sorted(list(seg) + add, key=lambda s: s[0])
+            rows = evidence(mid, seg, full, serves, p, prob)
     if SECOND_SERVE and prob is not None:
         add = second_serve_segs(rows, serves, full["flights"], prob)
         if add:                                      # the evidence of all rallies again, with the new ones (A38)
@@ -436,6 +451,45 @@ def second_serve_segs(rows, serves, flights, prob, hi=0.5):
         b = min(max(float(fl[j]["t1"]), t) + SS_AFTER, nxt - 0.5)
         if b > a:
             out.append((a, b, round(float(np.max(prob[int(a):int(b) + 1])), 3)))
+    return out
+
+
+def serve_anchor_segs(rows, serves, flights, prob, hi=0.5):
+    """A46 (see SERVE_ANCHOR): the new rally segments (start, end, GRU max) at the serve events with no rally near
+    them. rows: the rallies (start, end); serves: serve_events; prob: the GRU of each second."""
+    fl = sorted((f for f in flights if f.get("t0") is not None and f.get("p0") is not None), key=lambda f: f["t0"])
+    t0s = [f["t0"] for f in fl]
+    starts = sorted(r["start"] for r in rows)
+    out, last = [], -float("inf")
+
+    def gmax(a, b):
+        w = prob[max(int(a), 0):int(b) + 1]
+        return float(np.max(w)) if len(w) else 0.0
+    for e in serves or []:
+        if e[2] not in ("serve", "toss+serve"):
+            continue
+        t = float(e[0])
+        if t < last or any(r["start"] - SA_BEFORE <= t <= r["end"] + SA_AFTER for r in rows):
+            continue
+        if gmax(t, t + SS_QUIET) >= hi or gmax(t, t + SA_WIN) < SA_FLOOR:
+            continue
+        k = int(np.searchsorted(t0s, t - 0.3))
+        if k >= len(fl):
+            continue
+        j = k
+        while j + 1 < len(fl) and fl[j + 1]["t0"] - fl[j]["t0"] <= SS_GAP:
+            j += 1
+        g = fl[k:j + 1]
+        ch = sum(1 for i in range(1, len(g)) if np.sign(g[i]["p0"][1]) != np.sign(g[i - 1]["p0"][1]))
+        if len(g) < SA_FLIGHTS or ch < SA_CHANGES:
+            continue
+        b = max(float(g[-1]["t1"]), t) + SS_AFTER
+        nxt = next((s for s in starts if s > t), float("inf"))
+        if nxt - b < SA_PAUSE:                       # the filter: the play runs on into the next rally
+            continue
+        a = t - SS_BEFORE
+        out.append((a, b, round(gmax(a, b), 3)))
+        last = b
     return out
 
 

@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 00:02",
+ "updated": "2026-11-28 00:14",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -977,8 +977,11 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S2",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E202",
+    "E203"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "The head after the S5 court speed-up (3fd5c412) uses the cached flights again, so the lab and Igor checks need no new detection.",
     "impact": 3,
@@ -991,6 +994,34 @@
     "A journal row (S2) that names the cause (which files of the flights closure changed between 7d71d687 and the head) and the chosen rule: for example, the court_auto functions that the flights code uses are a part of the key and the detect search is not, or an adopt step with a proof. The rule must still give a new key when a result can change.",
     "test_code_closure and a new unit test pass; the test fails when a court change that the flights use is made without a new key.",
     "A lab bench chain-only run on the head with the cached flights (no new detection): the same numbers as E197 (95.5 % / 95.0 %, 23 fault rows) with SECOND_SERVE as in the head; the row names the bench entry."
+   ],
+   "finished": "2026-11-28 00:11",
+   "real": {
+    "impact": 3,
+    "outcome": "E202, E203 (b4116936, 1d56d9b7, 16783235): code keys by reach; the lab caches adopted with a proof, the head bench = E197; adopt_reach.py with a dry run and 5 tests adopted the netband keys of Igor and the E200 folder. Stale by a real change (serve_ball.py E175): the flights of Igor, Misha and the E200 folder; the A29 batch makes them again. All 3 checks pass."
+   }
+  },
+  {
+   "id": "A45",
+   "kind": "fix",
+   "title": "App flights stage: a change of the GRU input code (feat_wasb, serve_ball) must not make the ball flights again",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S2",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "A chain-rule change in serve_ball.py reruns only the cheap GRU input step in an app folder, not ball_full and net_events.",
+    "impact": 2,
+    "text": "The app flights key is the closure of ball_full, net_events and feat_wasb together; only feat_wasb reaches serve_ball.py (E203: Igor and Misha flights stale after E175). The lab bench already keys them apart."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "A journal row (S2) with the cost of each part of the app flights stage (ball_full, net_events, feat_wasb) on one stored match log, and the key split that you choose; the outputs of each part keep their own key, and a change that reaches a part still reruns it and the parts after it.",
+    "Unit tests: a serve_ball.py change reruns only feat_wasb; a ball_full.py change reruns all three; test_code_closure and the adopt tests pass.",
+    "A dry run on the app folders (Igor, Misha, the E200 folder) that lists which parts would run on the head; no real run in other streams' folders."
    ]
   },
   {
@@ -1066,8 +1097,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E210"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "The next largest rally error cause over all lab matches, with a fix proposal.",
     "impact": 3,
@@ -1079,6 +1112,33 @@
    "doneWhen": [
     "A journal row (S3): all missed, false and fault rows of m1015, m1020 and m1021 on da42753d (with c on) in one table, each with one cause, 0 without a cause, the count per cause, and the m1030 counts of the same causes on the same head.",
     "For the largest cause over the 4 matches: a fix proposal with the expected rows that it gets back and a first chain-only test on the cached flights."
+   ],
+   "finished": "2026-11-28 00:14",
+   "real": {
+    "impact": 3,
+    "outcome": "E210 (db065e2a): 51 lab rows of m1015, m1020, m1021 on da42753d with c (24 missed, 5 false, 22 fault), one cause each, 0 without; over the 4 matches A (silent GRU) 14, D 9, F 8, B 6, Br 6, C1 3, E 3, C2 1, C1r 1. Proposal: a serve-anchored rally; first test: recall 95.7 to 96.8 %, but fault rows 22 to 29, precision 95.2 to 94.0 %: not on as it is. Both checks pass."
+   }
+  },
+  {
+   "id": "A46",
+   "kind": "experiment",
+   "title": "Serve-anchored rally for a silent GRU, with a filter for the new fault rows",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "Most of the 6 A points and the C2 point back, without the 7 new fault rows.",
+    "impact": 2,
+    "text": "E210: the rule alone gives recall 95.7 to 96.8 % but fault rows 22 to 29."
+   },
+   "estimate": {
+    "netMin": 120
+   },
+   "doneWhen": [
+    "The rule and a filter for its new rows (from the facts of the 7 new fault rows of E210) behind a switch (default off), in its own small commit, with a unit test.",
+    "A journal row (S3): lab chain-only on the cached flights against da42753d with c on: matched and recall, fault rows (not more than 22 + 2), precision with faults (not lower than 95.2 % beyond the spread), end to end; and Igor on its E106 keys by the spread rule. The row says if the switch can go on."
    ]
   },
   {

@@ -23,9 +23,10 @@ class FaultServes(unittest.TestCase):
     def pt(self):
         return chain.fault_pt(99.3, 102.8, self.full, self.fl_t0, self.serves)
 
-    def test_off_by_default(self):
+    def test_on_by_default(self):
+        # manager decision after S4 E221; CHAIN_FAULT_SERVES=0 gives the old way
         if "CHAIN_FAULT_SERVES" not in os.environ:
-            self.assertFalse(self.old[0])
+            self.assertTrue(self.old[0])
 
     def test_off_gives_no_serve_events_as_before(self):
         chain.FAULT_SERVES = False

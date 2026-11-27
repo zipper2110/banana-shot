@@ -51,6 +51,13 @@ FAULT_SHOTS, FAULT_NEXT, SIDE_X = 2, 25.0, sc.SIDE_X   # shots; s (the time betw
 POSE_SIDE = os.environ.get("CHAIN_POSE_SIDE", "1") != "0"
 # item 10: a rally with no shot in its chain and no server end from the pose has no evidence of a serve: it is not a point.
 NO_SERVE_DROP = os.environ.get("CHAIN_NO_SERVE_DROP", "1") != "0"
+# A48 (E212, E210 cause D: ball play between points). CHAIN_PLAY_DROP=1: a rally with no fact of a point is removed:
+# no serve event (not a toss alone) from 1 s before its start to its end, no server end (serverNear None: no pose
+# vote and no serve event), and no chain shot with an end of a ball in play (PLAY_ENDS: a bounce in or out, the net,
+# the own side). Built on the head lab rows (E212): 9 rows of cause D and the 142 points with no serve event at the
+# start; it removes 6 of the 9 and no point. Default "0" (off).
+PLAY_DROP = os.environ.get("CHAIN_PLAY_DROP", "0") == "1"
+PLAY_ENDS = ("in", "out", "net", "own")
 # E161 (S3, rally miss table E160): segments of the GRU with a gap of less than JOIN_GAP s are one rally. The old
 # value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 2.5 (manager
 # decision after E161); 1.5 gives the old way.
@@ -82,8 +89,9 @@ DECODER = os.environ.get("CHAIN_DECODER", "0") == "1"
 FAULT_BEFORE, FAULT_AFTER = 1.0, 2.5    # the window of the shots of a fault candidate around its serve event (the fault clip of the app), s
 # A47 (S4 E220, proposal FS): CHAIN_FAULT_SERVES=1: the chain of a fault candidate gets the serve events of its window
 # (fault_pt), as the rally chain, so shot_chain.serve_start can move its first shot to the serve event. Before, the
-# fault chain had no serve events (the contact of the fault clip of s014 70:26.567 was 0.45 s early). Default "0" (off).
-FAULT_SERVES = os.environ.get("CHAIN_FAULT_SERVES", "0") == "1"
+# fault chain had no serve events (the contact of the fault clip of s014 70:26.567 was 0.45 s early). Default "1" (on: manager decision after S4 E221);
+# "0" gives the old way.
+FAULT_SERVES = os.environ.get("CHAIN_FAULT_SERVES", "1") != "0"
 SHORT_WAIT, P_NULL_SHORT = 12.0, 0.5
 T_CUT_E2E = -2.5      # time cut of the winner rule for a detected end (E21b): the end is less exact than a mark (-1.5 there)
 ID_ABS = 0.97         # E22b: probability that the color identity of a rally is right (None = use the local flips, E21)
@@ -388,6 +396,8 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
         rows = fault_rallies(rows, serves)
     if NO_SERVE_DROP:
         rows = [r for r in rows if not (r["prob"] >= 0 and r.get("chain") is not None and not r["chain"]["shots"] and r["serverNear"] is None)]
+    if PLAY_DROP:
+        rows = [r for r in rows if not play_between(r, serves)]
     st0 = {(0, 0, 0, 0, -1, srv, True, 0): 0.5 for srv in (1, 2)}
     near1 = identity.p1_near([r["color"] for r in rows])
     if ID_ABS:
@@ -465,6 +475,15 @@ def second_serve_segs(rows, serves, flights, prob, hi=0.5):
         if b > a:
             out.append((a, b, round(float(np.max(prob[int(a):int(b) + 1])), 3)))
     return out
+
+
+def play_between(r, serves):
+    """A48 (see PLAY_DROP): True when the rally r (a row of evidence) has no fact of a point: ball play between points."""
+    if r["prob"] < 0 or r.get("chain") is None or r["serverNear"] is not None:
+        return False
+    if any(r["start"] - 1.0 <= e[0] <= r["end"] and e[2] != "toss" for e in serves or ()):
+        return False
+    return not any(s.get("end") in PLAY_ENDS for s in r["chain"]["shots"])
 
 
 def serve_anchor_segs(rows, serves, flights, prob, hi=0.5):

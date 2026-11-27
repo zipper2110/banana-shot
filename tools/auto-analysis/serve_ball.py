@@ -16,6 +16,12 @@ import lab
 import winner_ball as wb
 
 Y_MIN, Z_MIN, V_MIN = 10.0, 1.6, 45.0
+# A47 (E220 cause 1, s011 m1030 1676.71): a slow serve fit (44 km/h) of a labeled fault serve had no serve event. With
+# SERVE_V40=1 is_serve takes a serve from V_SLOW km/h (not V_MIN). E220 test, with the serve events in the fault chain (FS,
+# S3): fault clips 10 to 11 of 23, serve events inside the marked points 58 to 59, no lab change. Off by default until
+# the combined check with FS. is_fast_out keeps 45 km/h.
+SERVE_V40 = os.environ.get("SERVE_V40", "0") == "1"
+V_SLOW = 40.0
 # E77 (found on Igor, value from physics and the lab matches): the first sample of a toss is at the release, and the
 # hand releases the ball from about hip height (1.0 m) up. The old limit (1.5 m) lost 40 % of the toss flights at
 # the serve starts of the lab matches (median start 1.45 to 1.72 m). Far-end toss flights from 1.0 to 1.5 m: 33 at
@@ -43,7 +49,7 @@ def is_serve(f):
     p0, v0 = f["p0"], f["v0"]
     sp = 3.6 * float(np.linalg.norm(v0))
     return f["n"] >= 8 and f["rms"] < 5 and abs(p0[1]) > Y_MIN and abs(p0[1]) < 16 and p0[2] > Z_MIN and p0[2] < 3.6 \
-        and V_MIN < sp < 240 and v0[1] * p0[1] < 0 and abs(p0[0]) < 6 \
+        and (V_SLOW if SERVE_V40 else V_MIN) < sp < 240 and v0[1] * p0[1] < 0 and abs(p0[0]) < 6 \
         and not far_up(f)
 
 

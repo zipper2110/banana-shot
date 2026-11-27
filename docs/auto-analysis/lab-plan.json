@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 22:53",
+ "updated": "2026-11-27 22:58",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -118,10 +118,10 @@
    "measures": [
     {
      "name": "Hits found (row chain, 24 fragments)",
-     "value": "120 of 190 = 63 % (130 with the fault-clip serves), E107",
+     "value": "121 of 190 = 64 %, E175 (E107: 120 of 190; 130 with the fault-clip serves)",
      "target": "75 % or more",
      "met": false,
-     "progress": 0.84
+     "progress": 0.85
     },
     {
      "name": "Shot count right",
@@ -139,10 +139,10 @@
     },
     {
      "name": "Fault clips (labeled faults found)",
-     "value": "6 of 23 = 26 %, E107",
+     "value": "7 of 23 = 30 %, E175 (E107: 6 of 23)",
      "target": "70 % or more",
      "met": false,
-     "progress": 0.37
+     "progress": 0.43
     },
     {
      "name": "Lab rallies recall / precision",
@@ -830,8 +830,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S4",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E175"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "7 of the 20 fault serves with no serve event come back; fault clips 6 to 7 of 23; no new serve events inside the points.",
     "impact": 2,
@@ -844,7 +846,12 @@
     "The TJ change is in the code behind a switch (default on only after the checks), in its own small commit, with a unit test of the event time of a joined toss+serve event.",
     "A journal row (S4) with the E107 label measures on the 24 fragments: the serve events of the 7 cause-1 serves found, fault clips 7 of 23 or more, serve events inside the marked points 58 or less, rally rows 556 (no change).",
     "A lab bench check on d1cb16c7 (CPU, chain only, the A20 flights): rally recall and precision not lower than E106 (95.1 % / 95.1 %) beyond the noise; the row names the numbers."
-   ]
+   ],
+   "finished": "2026-11-27 23:50",
+   "real": {
+    "impact": 2,
+    "outcome": "E175 (2a865bb0, 30a00758, e0292087): SERVE_JOIN_CONTACT in serve_ball.py with 5 unit tests, now on by default. E107 labels: the 7 cause-1 serves 0 to 7, fault clips 6 to 7 of 23, serve events in the points 58 to 58, rows 556 to 556, hits 120 to 121. Lab bench rallies 95.1 % / 95.1 % off and on. All 3 checks pass."
+   }
   },
   {
    "id": "A26",

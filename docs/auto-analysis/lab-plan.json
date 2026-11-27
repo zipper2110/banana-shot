@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 13:35",
+ "updated": "2026-11-27 13:29",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -679,7 +679,8 @@
      "what": "lab flights remake + Igor flights stage (CPU, under the lock)",
      "estMin": 55
     }
-   ]
+   ],
+   "waitingOn": "user"
   },
   {
    "id": "A21",
@@ -931,7 +932,8 @@
      "what": "paired bench on the head flights (CPU, chain only)",
      "estMin": 5
     }
-   ]
+   ],
+   "waitingOn": "user"
   },
   {
    "id": "A32",
@@ -943,7 +945,7 @@
    ],
    "owner": "S1",
    "journal": [],
-   "status": "running",
+   "status": "done",
    "expected": {
     "outcome": "No label work and no false events from the previous point at the clip start (39 fragments).",
     "impact": 3,
@@ -952,7 +954,12 @@
    "estimate": {
     "netMin": 60
    },
-   "started": "2026-11-27 13:25"
+   "started": "2026-11-27 13:25",
+   "finished": "2026-11-27 13:27",
+   "real": {
+    "impact": 8,
+    "outcome": "label window in case_lib (first-mark rule), case_history and fault_clips; index() written; 16 label files keep their rowHash; chain-bounce base 249 (32 %)"
+   }
   },
   {
    "id": "A33",
@@ -964,7 +971,7 @@
    ],
    "owner": "S4",
    "journal": [],
-   "status": "running",
+   "status": "done",
    "after": [
     "A32"
    ],
@@ -976,7 +983,12 @@
    "estimate": {
     "netMin": 45
    },
-   "started": "2026-11-27 13:26"
+   "started": "2026-11-27 13:24",
+   "finished": "2026-11-27 13:26",
+   "real": {
+    "impact": 8,
+    "outcome": "page in ws\\s4\\events with labelWindow in all 60 rows; 16 saved files keep their hash, 0 not-used marks; s001 and s007 start at the window"
+   }
   }
  ],
  "links": [

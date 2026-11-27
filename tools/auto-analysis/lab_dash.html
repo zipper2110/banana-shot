@@ -111,13 +111,18 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
 .worker .now .r { margin-left: auto; color: var(--mute); white-space: nowrap; }
 .worker .now.old { color: var(--mute); }
 .worker .now.old .r { color: var(--warn); }
+.worker .now b { white-space: nowrap; }
+.worker .now.st-working b { color: var(--accent); } .worker .now.st-waiting b { color: var(--warn); }
+.worker .now.st-idle b, .worker .now.st-finished b { color: var(--mute); }
+.wgroup.ask { border-left-color: var(--bad) !important; } .wgroup.done { border-left-color: var(--ok) !important; opacity: .8; }
+.whist { margin-top: 6px; } .whist summary { cursor: pointer; }
 .worker ul { margin: 0; padding-left: 0; list-style: none; }
 .worker li { padding: 4px 0; border-top: 1px dashed var(--line); font-size: 13px; }
 .worker li .r { float: right; color: var(--mute); font-size: 12px; }
 .wgroup { margin-top: 8px; padding-left: 8px; border-left: 3px solid var(--line); }
 .wgroup.prog { border-left-color: var(--accent); } .wgroup.hold { border-left-color: var(--warn); } .wgroup.pend { border-left-color: var(--mute); }
 .wg-h { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--mute); margin-bottom: 2px; }
-.wgroup.prog .wg-h { color: var(--accent); } .wgroup.hold .wg-h { color: var(--warn); }
+.wgroup.prog .wg-h { color: var(--accent); } .wgroup.ask .wg-h { color: var(--bad); } .wgroup.done .wg-h { color: var(--ok); } .wgroup.hold .wg-h { color: var(--warn); }
 .wg-h span { font-weight: normal; }
 .wgroup li:first-child { border-top: 0; }
 .lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
@@ -154,7 +159,8 @@ details.more > summary { cursor: pointer; color: var(--mute); font-size: 12px; m
       <div id="banner"></div>
       <div class="body"></div>
     </section>
-    <section id="sWork"><h2>Workers <small>open actions in order; finish = now + net time (waits for the GPU or for a decision are not included)</small></h2><div class="body"></div></section>
+    <section id="sWork"><h2>Workers <small>live from the streams; finish = now + net time (waits are not included)</small></h2>
+      <div class="legend small mute" style="margin:-4px 0 10px"><b>In progress</b>: the worker works on it now. <b>On hold</b>: it cannot go on; "waits for" names who must act. <b>Pending</b>: not started. <b>Waits for you</b>: actions of others that need your step. <b>Done recently</b>: finished in the last 3 h. The top line of a card is the newest report of the worker.</div><div class="body"></div></section>
     <section id="sLab"><h2>Labeling</h2><div class="body"></div></section>
     <section id="sLinks"><h2>Links</h2><div class="body"></div></section>
   </div>
@@ -355,27 +361,34 @@ function renderWorkers() {
   for (const w of S.workers) {
     const noEta = wdef[w.id] && wdef[w.id].noEta;
     h += `<div class="worker"><h3><span>${esc(w.name)}</span><span class="small mute">${w.netMin ? dur(w.netMin) + " net" : "idle"}</span></h3><div class="focus">${esc(w.focus || "")}</div>`;
-    // The live line of the stream (lab_status.py): what it does now, and the age of its last update
+    // The worker line: the newest live entry of the worker (lab_status.py), with its state and age
     const cur = w.current, age = ago(w.lastUpdate);
-    if (cur || w.lastUpdate) h += `<div class="now ${age !== null && age > 60 ? "old" : ""}">${cur && cur.idle ? "Idle" : cur && cur.text ? "Now: " + esc(cur.text) : ""}<span class="r">${age === null ? "" : "updated " + agoText(age)}</span></div>`;
-    else if (/^S\d$/.test(w.id)) h += `<div class="now old">No live status yet<span class="r"></span></div>`;
+    const STATE = {working: "Working", waiting: "Waiting", idle: "Idle", finished: "Finished"};
+    if (cur) h += `<div class="now st-${cur.state} ${age !== null && age > 60 ? "old" : ""}"><b>${STATE[cur.state] || cur.state}</b><span>${esc(cur.text || "")}</span><span class="r">${age === null ? "" : agoText(age)}</span></div>`;
+    else if (/^S\d$/.test(w.id)) h += `<div class="now old"><b>No live status yet</b><span class="r"></span></div>`;
     const gpuLi = g => `<li><span class="chip k-run">${g.running ? "GPU now" : "GPU queue"}</span>${esc(g.what)}<span class="r">${g.running ? "ends " + hm(g.eta) : g.expEnd ? "ends " + hm(g.expEnd) : ""}</span></li>`;
+    const WHO = id => id === "user" ? "you (the user)" : id === "queue" ? "the lab queue" : id || "?";
     const actLi = a => `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="chip k-${a.kind}">${a.kind}</span> ${esc(a.title)}
-        <div class="small"><span class="s-${a.status}">${a.status}</span>${a.waitingFor ? ` <span class="s-waiting">(waits for ${esc(a.waitingFor)})</span>` : ""}${a.unplanned ? ` <span class="mute">(not in the plan)</span>` : ""}
-        <span class="r">${a.netMin ? dur(a.netMin) : "?"}${!noEta && a.eta ? " · ~" + hm(a.eta) : ""}</span></div>
-        ${a.note ? `<div class="small mute">${esc(a.note)}</div>` : ""}
-        ${(a.jobs || []).length ? `<div class="small mute">jobs: ${a.jobs.map(j => esc(j.what) + (j.estMin ? " (" + dur(j.estMin) + ")" : "")).join("; ")}</div>` : ""}</li>`;
-    // Three groups (the user): in progress, on hold (waits for a decision, an unpause or another action), pending
+        <div class="small"><span class="s-${a.status}">${a.status}</span>${a.status === "waiting" ? ` <span class="s-waiting">· waits for <b>${esc(WHO(a.waitingOn))}</b>: ${esc(a.waitingFor || "")}</span>` : ""}${a.unplanned ? ` <span class="mute">(not in the plan)</span>` : ""}
+        <span class="r">${a.status === "done" || a.status === "dropped" ? (a.real && a.real.impact != null ? "impact " + a.real.impact + " · " : "") + hm(a.finished) : (a.netMin ? dur(a.netMin) : "?") + (!noEta && a.eta ? " · ~" + hm(a.eta) : "")}</span></div>
+        ${a.note && a.status !== "done" ? `<div class="small mute">${esc(a.note)}</div>` : ""}
+        ${a.status === "done" && a.real && a.real.outcome ? `<div class="small mute">${esc(a.real.outcome)}</div>` : ""}
+        ${(a.jobs || []).length && a.status !== "done" ? `<div class="small mute">jobs: ${a.jobs.map(j => esc(j.what) + (j.estMin ? " (" + dur(j.estMin) + ")" : "")).join("; ")}</div>` : ""}</li>`;
+    const askLi = a => `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="mute small">${esc(a.owner || "")}</span> ${esc(a.title)}<div class="small s-waiting">needs: ${esc(a.waitingFor || "")}</div></li>`;
+    // Groups (the user): waits for you (user and manager cards), in progress, on hold, pending, done recently
     const paused = !!S.lock.pause;
     const groups = [
+      ["ask", w.id === "user" ? "Waits for you" : "Waits for the manager", (w.waitsForMe || []).map(askLi)],
       ["prog", "In progress", w.gpu.filter(g => g.running).map(gpuLi).concat(w.actions.filter(a => a.status === "running").map(actLi))],
       ["hold", "On hold", w.gpu.filter(g => !g.running && paused).map(gpuLi).concat(w.actions.filter(a => a.status === "waiting").map(actLi))],
       ["pend", "Pending", w.gpu.filter(g => !g.running && !paused).map(gpuLi).concat(w.actions.filter(a => a.status === "queued" || a.status === "planned").map(actLi))],
+      ["done", "Done recently", w.actions.filter(a => a.status === "done" || a.status === "dropped").map(actLi)],
     ];
     for (const [cls, name, items] of groups) {
       if (items.length) h += `<div class="wgroup ${cls}"><div class="wg-h">${name} <span>${items.length}</span></div><ul>${items.join("")}</ul></div>`;
     }
-    if (!groups.some(g => g[2].length)) h += `<div class="mute small">No open action.</div>`;
+    if ((w.history || []).length) h += `<details class="whist" data-key="hist-${w.id}"${openSet.has("hist-" + w.id) ? " open" : ""}><summary class="small mute">Last changes</summary>${w.history.map(e => `<div class="small"><span class="mute">${hm(e.t)}</span> ${STATE[e.state] || e.state}: ${esc(e.text || "")}</div>`).join("")}</details>`;
+    if (!groups.some(g => g[2].length && g[0] !== "done")) h += `<div class="mute small">No open action.</div>`;
     h += `</div>`;
   }
   h += `</div>`;

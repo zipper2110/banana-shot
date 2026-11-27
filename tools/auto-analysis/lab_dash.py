@@ -336,9 +336,11 @@ def workers_pass(plan, lock, labels, eta_of):
     acts = plan.get("actions", [])
     out = []
     for w in plan.get("workers", []):
-        mine = [a for a in acts if a.get("owner") == w["id"] and a.get("status") in
-                ("running", "queued", "waiting", "planned")]
-        order = {"running": 0, "waiting": 1, "queued": 2, "planned": 3}
+        recent = t - timedelta(hours=DONE_HOURS)
+        mine = [a for a in acts if a.get("owner") == w["id"] and (a.get("status") in
+                ("running", "queued", "waiting", "planned") or (a.get("status") in ("done", "dropped")
+                and (parse_time(a.get("finished")) or datetime.min) >= recent))]
+        order = {"running": 0, "waiting": 1, "queued": 2, "planned": 3, "done": 4, "dropped": 4}
         mine.sort(key=lambda a: order[a["status"]])
         cursor, net_total, rows = t, 0.0, []
         for a in mine:
@@ -346,6 +348,11 @@ def workers_pass(plan, lock, labels, eta_of):
             lvl = (a.get("estimate") or {}).get("fromLabels")
             if lvl:
                 est = ((labels.get("levels") or {}).get(lvl if isinstance(lvl, str) else "small") or {}).get("leftMin", est)
+            if a["status"] in ("done", "dropped"):
+                rows.append({"id": a["id"], "title": a["title"], "kind": a["kind"], "status": a["status"],
+                             "finished": a.get("finished"), "real": a.get("real"), "note": a.get("note"),
+                             "unplanned": a.get("unplanned")})
+                continue
             begin = cursor
             nb = parse_time(a.get("notBefore"))
             if nb and nb > begin:
@@ -364,6 +371,7 @@ def workers_pass(plan, lock, labels, eta_of):
                 net_total += est
             rows.append({"id": a["id"], "title": a["title"], "kind": a["kind"], "status": a["status"],
                          "netMin": est, "eta": iso(end), "waitingFor": a.get("waitingFor"),
+                         "waitingOn": waiting_on(a) if a["status"] == "waiting" else None,
                          "jobs": a.get("jobs", []), "note": a.get("note"), "unplanned": a.get("unplanned"),
                          "live": a.get("live")})
             if end:
@@ -376,7 +384,22 @@ def workers_pass(plan, lock, labels, eta_of):
     return out
 
 
-LIVE_FIELDS = ("status", "waitingFor", "note", "started", "finished", "outcome")
+LIVE_FIELDS = ("status", "waitingFor", "waitingOn", "note", "started", "finished", "outcome")
+DONE_HOURS = 3        # a finished action stays on its worker card for this time ("Done recently")
+
+
+def waiting_on(a):
+    """Who must act for a waiting action: the live field, else a guess from the text (plan entries)."""
+    if a.get("waitingOn"):
+        return a["waitingOn"]
+    txt = (a.get("waitingFor") or "").lower()
+    # the unpause is a step of the user (only the user pauses and unpauses the lab queue)
+    for key, who in (("manager", "manager"), ("user", "user"), ("unpause", "user"), ("queue", "queue"),
+                     ("gpu", "queue")):
+        if key in txt:
+            return who
+    m = re.search(r"\bs([1-5])\b", txt)
+    return f"S{m.group(1)}" if m else None
 
 
 def apply_live(plan, live):
@@ -399,11 +422,34 @@ def apply_live(plan, live):
                 a[k] = e[k]
         if e.get("status") != "waiting":
             a.pop("waitingFor", None)
+            a.pop("waitingOn", None)
+        if e.get("status") not in ("done", "dropped"):
+            a.pop("finished", None)
+        if "note" not in e:
+            a.pop("note", None)
         if e.get("netMin") is not None:
             a["estimate"] = {"netMin": e["netMin"]}
         if e.get("real") is not None:
             a["real"] = dict(a.get("real") or {}, impact=e["real"], outcome=e.get("outcome"))
         a["live"] = {"t": e.get("t"), "status": e.get("status"), "note": e.get("note")}
+
+
+def current_line(e):
+    """The worker line from one log entry: {"state": working|waiting|idle|finished, "text"}."""
+    if e.get("kind") == "idle":
+        return {"state": "idle", "text": "no work", "t": e.get("t")}
+    if e.get("kind") == "now":
+        return {"state": "working", "text": e.get("text"), "t": e.get("t")}
+    st, aid = e.get("status"), e.get("action")
+    if st == "running":
+        return {"state": "working", "text": f"{aid}" + (f": {e['note']}" if e.get("note") else ""), "t": e.get("t")}
+    if st == "waiting":
+        return {"state": "waiting", "text": f"{aid} waits for {e.get('waitingOn') or '?'}: {e.get('waitingFor')}",
+                "t": e.get("t")}
+    if st in ("done", "dropped"):
+        return {"state": "finished", "text": f"{aid} {st}" + (f": {e['outcome']}" if e.get("outcome") else ""),
+                "t": e.get("t")}
+    return {"state": "idle", "text": f"{aid} {st}", "t": e.get("t")}
 
 
 def state():
@@ -413,17 +459,16 @@ def state():
     lock = lock_state(plan)
     labels = label_state()
     workers = workers_state(plan, lock, labels)
-    last = {}
-    for e in live["actions"].values():
-        w = e.get("who")
-        if w and e.get("t", "") > last.get(w, ""):
-            last[w] = e["t"]
     for w in workers:
-        cur = live["workers"].get(w["id"])
-        w["current"] = ({"text": cur.get("text") if cur.get("kind") == "now" else None,
-                         "idle": cur.get("kind") == "idle", "t": cur.get("t")} if cur else None)
-        times = [x for x in (last.get(w["id"]), cur and cur.get("t")) if x]
-        w["lastUpdate"] = max(times) if times else None
+        hist = live.get("history", {}).get(w["id"], [])
+        w["current"] = current_line(hist[-1]) if hist else None
+        w["history"] = [dict(current_line(e), t=e["t"]) for e in reversed(hist[:-1])][:4]
+        w["lastUpdate"] = hist[-1]["t"] if hist else None
+        # actions of others that wait for this worker (the user or the manager): they must act
+        w["waitsForMe"] = [{"id": a["id"], "title": a["title"], "owner": a.get("owner"),
+                            "waitingFor": a.get("waitingFor")}
+                           for a in plan.get("actions", []) if a.get("status") == "waiting"
+                           and a.get("owner") != w["id"] and waiting_on(a) == w["id"]]
     return {"now": iso(now()), "lock": lock, "labels": labels, "plan": plan, "workers": workers}
 
 

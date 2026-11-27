@@ -20,7 +20,7 @@
 }
 :root[data-theme="light"] { color-scheme: light; }
 header .ctl { flex-wrap: wrap; }
-main > *, .two > * { min-width: 0; }
+main > * { min-width: 0; }
 section { overflow-x: auto; }
 .theme { flex-shrink: 0; display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .theme button { border: 0; border-radius: 0; padding: 5px 9px; background: transparent; font-size: 12px; }
@@ -38,7 +38,17 @@ button:hover { border-color: var(--accent); }
 button.danger { border-color: var(--bad); color: var(--bad); }
 button.go { border-color: var(--ok); color: var(--ok); }
 button:disabled { opacity: .45; cursor: default; }
-main { max-width: 1280px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px; }
+main { max-width: 1900px; margin: 0 auto; padding: 16px 20px 40px; display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
+.col { display: grid; gap: 16px; min-width: 0; }
+@media (max-width: 1150px) { main { grid-template-columns: minmax(0, 1fr); } }
+.lockhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.lockhead h2 { margin: 0; font-size: 15px; }
+.lockctl { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.status { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 10px; border: 1px solid var(--line); }
+.status.free { color: var(--mute); } .status.busy { color: var(--accent); border-color: var(--accent); }
+.status.paused { color: var(--warn); border-color: var(--warn); }
+#banner .banner { margin-bottom: 10px; }
 section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
 section > h2 { font-size: 15px; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
 section > h2 small { color: var(--mute); font-weight: normal; font-size: 12px; }
@@ -105,8 +115,6 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
 .lcard .big { font-size: 20px; font-weight: 700; }
 code { font: 12px Consolas, monospace; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
 a { color: var(--accent); }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
 details.more > summary { cursor: pointer; color: var(--mute); font-size: 12px; margin-top: 6px; }
 .legend { font-size: 11px; color: var(--mute); }
 </style>
@@ -119,20 +127,30 @@ details.more > summary { cursor: pointer; color: var(--mute); font-size: 12px; m
     <div class="theme" id="theme" title="Color theme">
       <button data-t="auto">Auto</button><button data-t="light">Light</button><button data-t="dark">Dark</button>
     </div>
-    <button id="bPauseQ" title="The running job ends; no new job starts">Pause queue</button>
-    <button id="bPauseAll" class="danger" title="Stop the running job now and start no new job">Pause all now</button>
-    <button id="bUnpause" class="go">Unpause</button>
   </div>
 </header>
 <main>
-  <div id="banner"></div>
-  <section id="sLock"><h2>GPU lock and job queue</h2><div class="body"></div></section>
-  <section id="sMs"><h2>Milestones <small id="progName"></small></h2><div class="body"></div></section>
-  <section id="sActs"><h2>Actions <small>research, experiments, fixes, runs, labeling</small></h2><div class="body"></div></section>
-  <section id="sWork"><h2>Workers <small>open actions in order; finish = now + net time (waits for the GPU or for a decision are not included)</small></h2><div class="body"></div></section>
-  <div class="two">
+  <div class="col">
+    <section id="sLock">
+      <div class="lockhead">
+        <h2>GPU lock and job queue</h2>
+        <span id="lockStatus" class="status"></span>
+        <div class="lockctl">
+          <button id="bPauseQ" title="The running job ends; no new job starts">Pause queue</button>
+          <button id="bPauseAll" class="danger" title="Stop the running job now and start no new job">Pause all now</button>
+          <button id="bUnpause" class="go">Unpause</button>
+        </div>
+      </div>
+      <div id="banner"></div>
+      <div class="body"></div>
+    </section>
+    <section id="sWork"><h2>Workers <small>open actions in order; finish = now + net time (waits for the GPU or for a decision are not included)</small></h2><div class="body"></div></section>
     <section id="sLab"><h2>Labeling</h2><div class="body"></div></section>
     <section id="sLinks"><h2>Links</h2><div class="body"></div></section>
+  </div>
+  <div class="col">
+    <section id="sMs"><h2>Milestones <small id="progName"></small></h2><div class="body"></div></section>
+    <section id="sActs"><h2>Actions <small>research, experiments, fixes, runs, labeling</small></h2><div class="body"></div></section>
   </div>
 </main>
 <script>
@@ -199,6 +217,9 @@ function renderBanner() {
       <div class="sub">${p.text ? esc(p.text) + ". " : ""}${p.external ? "This pause is a ticket made by hand, not from this page. Unpause removes it. " : ""}${k ? `Stopped job: ${esc(k.who)}: ${esc(k.what)} (its owner starts it again). ` : ""}${p.error ? "Error: " + esc(p.error) : ""}${!S.lock.pauseLive ? " Warning: the pause ticket is not live, so jobs can start." : ""}</div></div>`;
   }
   $("#banner").innerHTML = h;
+  const st = $("#lockStatus");
+  st.className = "status " + (p ? "paused" : S.lock.holder ? "busy" : "free");
+  st.textContent = p ? `PAUSED (${p.mode})` : S.lock.holder ? `running: ${S.lock.holder.who}` : "free";
   $("#bPauseQ").disabled = !!p && p.mode === "queue";
   $("#bPauseAll").disabled = !!p && p.mode === "all" && !S.lock.holder;
   $("#bUnpause").disabled = !p;

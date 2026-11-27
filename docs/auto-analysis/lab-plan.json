@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 01:12",
+ "updated": "2026-11-28 01:19",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1278,8 +1278,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E215"
+   ],
    "expected": {
     "outcome": "Some of the 16 missed A1/A2/B points come back without new rows with no point.",
     "impact": 3,
@@ -1291,7 +1293,12 @@
    "doneWhen": [
     "feat_serve and the ballsv model behind RALLY_SERVE_INPUT (default off), in their own commit, with a unit test; the files only in ws\\s3\\e215 (nothing in data\\).",
     "A journal row E215 (S3): the null check (off = the E214 rows), lab chain-only LOMO off/on (matched, recall, precision, fault rows, precision with faults, winners, end to end), the count of the 16 missed points back and of new rows with no point, Igor on its E106 keys off/on, and the spread rule; the row says if the switch can go on."
-   ]
+   ],
+   "finished": "2026-11-28 01:19",
+   "real": {
+    "impact": 0,
+    "outcome": "E215 (765b26e1, 4f5bc752): rally GRU with the serve events as an input (rally_model.SERVE_INPUT, off). Null check with the switch off: all 4 matches the same as E214. Lab on: recall 94.58 % (96.57), precision with faults 95.10 % (96.57), fault rows 24 (15); 4 missed points back, 15 points lost. Igor inside the spread, no gain. Outside the spread rule: the switch stays off. Note: rally_end.rows still uses \"ball\"."
+   }
   },
   {
    "id": "A55",

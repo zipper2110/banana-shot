@@ -13,8 +13,14 @@ the chain in the window with no label near it counts as a false event.
 
 Per fragment (rules of score_events.py, E75):
   rallies   marked points in the window against the chain rows (lab.match_points: overlap 50 % of the shorter)
-  hits      labeled serves + shots against the chain shots with a flight (shot_chain.build on the window), within
-            TOL_HIT, one to one; hitter right = the end (near, far) of the label
+  hits      labeled serves + shots against the shots of the chain rows as the app shows them (row["chain"]["shots"],
+            "late" too), within TOL_HIT, one to one, over all rows whose chain window (start - 1 s to end + 2.5 s,
+            chain.py) meets the fragment window (S4 E173). hitter right = the end (near, far) of the label. A label
+            that no row window covers is "outside the rows"; a labeled serve there with a shot of a row fault clip
+            within TOL_HIT is "by a fault clip" (the app shows the clip), counted apart. Before this: the window
+            chain (shot_chain.build on the window, flights only); hitsWindow keeps its count
+  after the point: a chain event with no label between the last labeled event of a marked point and the next
+            labeled event is counted apart from the false events (S5 E139): "afterPoint" of hits, bounces, nets
   serves    labeled serves against the server end and the fault of the matched chain row. The fault of a serve is
             label_faults.infer_faults (S4 E159; the X mark keeps the flag, the user no longer presses X); a point
             with an "unsure" serve and no fault is not counted for the fault ("faultUnsure")
@@ -77,10 +83,50 @@ def chain_end(r):
     return "net" if "net" in parts else "out" if "out" in parts else "in" if "in" in parts else None
 
 
+ROW_PRE, ROW_POST = 1.0, 2.5                           # the flight window of a chain row (chain.py): start - 1 s, end + 2.5 s
+
+
+def row_shots(rows, a, b):
+    """The shots of the chain rows whose chain window meets a..b, in the window (TOL_HIT); each with its row."""
+    out = []
+    for r in rows:
+        ch = r.get("chain")
+        if r["start"] - ROW_PRE <= b and r["end"] + ROW_POST >= a and isinstance(ch, dict):
+            out += [dict(s, row=(r["start"], r["end"])) for s in ch.get("shots") or [] if a - TOL_HIT <= s["t"] <= b + TOL_HIT]
+    return sorted(out, key=lambda s: s["t"])
+
+
+def covered(rows, t):
+    return any(r["start"] - ROW_PRE <= t <= r["end"] + ROW_POST for r in rows)
+
+
+def fault_clip_serve(rows, t):
+    """A row fault clip has a shot within TOL_HIT of t (the clip that the app shows for a first-serve fault)."""
+    return any(abs(q["t"] - t) <= TOL_HIT for r in rows if r.get("fault")
+               for q in ((r["fault"].get("chain") or {}).get("shots") or []))
+
+
+def dead_gaps(points, ev):
+    """The times (t0, t1) after each marked point: from its last labeled event to the next labeled event (open ends)."""
+    out = []
+    for p in points:
+        pe = [e["t"] for e in p["events"]]
+        if not pe:
+            continue
+        t0 = max(pe)
+        nxt = [e["t"] for e in ev if e["t"] > t0]
+        out.append((t0, min(nxt) if nxt else float("inf")))
+    return out
+
+
+def after_point(times, gaps):
+    return sum(any(t0 < t < t1 for t0, t1 in gaps) for t in times)
+
+
 def fragment(row, L, data, rows, hidden=()):
     """hidden: the rows of the match that the bench hides as first-serve faults (bench.hidden_fault_rows)."""
     a, b = window(row, L)
-    shots = [s for s in se.chain_shots(data, a, b) if a - TOL_HIT <= s["t"] <= b + TOL_HIT and s["fl"]]
+    shots = row_shots(rows, a, b)                      # the row chain (S4 E173), not the window chain
     bev = [e for e in (data["full"].get("events") or []) if e["kind"] == "bounce" and a - TOL_BOUNCE <= e["t"] <= b + TOL_BOUNCE]
     nev = [e for e in data["nets"] if e["kind"] in ("net", "cord") and e["conf"] >= sc.NET_CONF and a - TOL_NET <= e["t"] <= b + TOL_NET]
     crow = [r for r in rows if r["end"] > a and r["start"] < b]
@@ -98,14 +144,21 @@ def fragment(row, L, data, rows, hidden=()):
     lh = [e for e in ev if e["kind"] in ("serve", "shot")]
     m = se.match([s["t"] for s in shots], [e["t"] for e in lh], TOL_HIT)
     hitter = sum(("near" if shots[i]["near"] else "far") == lh[j].get("end") for i, j in m)
+    wshots = [s for s in se.chain_shots(data, a, b) if a - TOL_HIT <= s["t"] <= b + TOL_HIT and s["fl"]]
+    wm = se.match([s["t"] for s in wshots], [e["t"] for e in lh], TOL_HIT)
     lb = [e for e in ev if e["kind"] == "bounce"]
     mb = se.match([e["t"] for e in bev], [e["t"] for e in lb], TOL_BOUNCE)
     ln = [e for e in ev if e["kind"] == "net"]
     mn = se.match([e["t"] for e in nev], [e["t"] for e in ln], TOL_NET)
     kind_ok = sum(nev[i]["kind"] == ("cord" if ln[j].get("net") == "cord" else "net") for i, j in mn)
+    missed = [j for j in range(len(lh)) if j not in {q for _, q in m}]
+    outside = [j for j in missed if not covered(rows, lh[j]["t"])]
+    by_clip = [j for j in outside if lh[j]["kind"] == "serve" and fault_clip_serve(rows, lh[j]["t"])]
     out["hits"] = {"labeled": len(lh), "chain": len(shots), "matched": len(m), "hitterOk": int(hitter),
-                   "missed": [round(lh[j]["t"], 3) for j in range(len(lh)) if j not in {q for _, q in m}],
+                   "outsideRows": len(outside), "byFaultClip": len(by_clip),
+                   "missed": [round(lh[j]["t"], 3) for j in missed],
                    "false": [round(shots[i]["t"], 3) for i in range(len(shots)) if i not in {p for p, _ in m}]}
+    out["hitsWindow"] = {"chain": len(wshots), "matched": len(wm)}     # the measure before E173 (the window chain)
     out["bounces"] = {"labeled": len(lb), "chain": len(bev), "matched": len(mb),
                       "missed": [round(lb[j]["t"], 3) for j in range(len(lb)) if j not in {q for _, q in mb}],
                       "false": [round(bev[i]["t"], 3) for i in range(len(bev)) if i not in {p for p, _ in mb}]}
@@ -147,6 +200,19 @@ def fragment(row, L, data, rows, hidden=()):
     out["shotCount"] = lm.shot_count(points)
     out["faultClips"] = lm.fault_clips(crow, ev, fault, [r for r in hidden if r["end"] > a and r["start"] < b])
     out["errors"] = lm.event_errors(ev, fault, data, shots, lh, m, bev, lb, mb, nev, ln, mn)
+    gaps = dead_gaps(points_all(row, pts, ev), ev)
+    for k in KINDS:
+        out[k]["afterPoint"] = after_point(out[k]["false"], gaps)
+    return out
+
+
+def points_all(row, pts, ev):
+    """All marked points of the window with their labeled events (the rule of the serve window), paired or not."""
+    out = []
+    for p in pts:
+        s0, s1 = p["startMs"] / 1000, p["endMs"] / 1000
+        prev = max([q["endMs"] / 1000 for q in row["points"] if q["endMs"] / 1000 <= s0] or [s0 - 25.0])
+        out.append({"events": [e for e in ev if max(s0 - 25.0, prev) <= e["t"] <= s1 + 1.0]})
     return out
 
 
@@ -159,6 +225,13 @@ def total(frs):
         for q in ("labeled", "chain", "matched"):
             t[f"{k}_{q}"] = sum(f[k][q] for f in lab_)
     t["hitterOk"] = sum(f["hits"]["hitterOk"] for f in lab_)
+    for k in KINDS:
+        t[k + "_afterPoint"] = sum(f[k].get("afterPoint", 0) for f in lab_)
+    for q in ("outsideRows", "byFaultClip"):
+        t["hits_" + q] = sum(f["hits"].get(q, 0) for f in lab_)
+    t["hitsMethod"] = "row"                            # E173: the row chain (before: the window chain)
+    t["hitsWindow_matched"] = sum(f["hitsWindow"]["matched"] for f in lab_)
+    t["hitsWindow_chain"] = sum(f["hitsWindow"]["chain"] for f in lab_)
     t["netKindOk"] = sum(f["nets"]["kindOk"] for f in lab_)
     for q in ("points", "serverOk", "faultOk", "faultN", "faultUnsure", "lastOk", "lastN"):
         t["serve_" + q] = sum(f["serves"][q] for f in lab_)
@@ -272,7 +345,25 @@ def run(a):
              ("Net touches found", "nets_matched", "nets_labeled"), ("Chain net touches right", "nets_matched", "nets_chain"),
              ("Server end right (matched points)", "serve_serverOk", "serve_points"), ("Fault right (matched points, unsure out)", "serve_faultOk", "serve_faultN"),
              ("End of the last shot right (in/out/net)", "serve_lastOk", "serve_lastN")]
+    if pt and pt.get("hitsMethod") != "row":         # the entry before has the window chain: both, this one time
+        L.append(f"| Hits found by the window chain (the measure of the entry before) | {pct(t['hitsWindow_matched'], t['hits_labeled'])} "
+                 f"| {pct(pt['hits_matched'], pt['hits_labeled']) if 'hits_matched' in pt else '-'} |")
     for name_, k, n in rowsT:
+        if k == "hits_matched" and n == "hits_labeled":
+            L.append(f"| Hits found by the row chain (S4 E173) | {pct(t[k], t[n])} | "
+                     + (f"{pct(pt[k], pt[n])}" if pt.get("hitsMethod") == "row" else "-") + " |")
+            L.append(f"| Hits found, with the serves of fault clips | {pct(t[k] + t['hits_byFaultClip'], t[n])} | "
+                     + (f"{pct(pt[k] + pt['hits_byFaultClip'], pt[n])}" if pt.get("hitsMethod") == "row" else "-") + " |")
+            L.append(f"| Labeled hits outside the rows (of them serves of fault clips) | {t['hits_outsideRows']} ({t['hits_byFaultClip']}) | "
+                     + (f"{pt['hits_outsideRows']} ({pt['hits_byFaultClip']})" if pt.get("hitsMethod") == "row" else "-") + " |")
+            continue
+        if n.endswith("_chain"):                      # the chain precision, then without the events after the point
+            kk = n[:-len("_chain")]
+            old = pt.get(kk + "_afterPoint")
+            L.append(f"| {name_} | {pct(t[k], t[n])} | {pct(pt[k], pt[n]) if k in pt and n in pt and (kk != 'hits' or pt.get('hitsMethod') == 'row') else '-'} |")
+            L.append(f"| {name_}, events after the point out ({t[kk + '_afterPoint']} events) | {pct(t[k], t[n] - t[kk + '_afterPoint'])} | "
+                     + (f"{pct(pt[k], pt[n] - old)}" if old is not None and (kk != "hits" or pt.get("hitsMethod") == "row") else "-") + " |")
+            continue
         if n == "serve_faultN" and n not in pt:        # an entry before infer_faults: its faults were the X marks, of all points
             n_old = "serve_points"
         else:

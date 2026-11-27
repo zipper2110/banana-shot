@@ -1250,18 +1250,19 @@ def main():
             pose_extract.run(MID, det, ps)
         stage("pose", [W("pose.npy")], pose, a.force, pose_key())
         save_times()
-        model_name = "ball"
+        import rally_model
+        model_name = rally_model.ball_name()            # A54: "ballsv" with SERVE_INPUT
 
     # ---- rallies (chain.py: the same chain as the lab benchmark, pipeline.py)
     import rally_model, chain
     chain.CHAIN, chain.END_MODEL = bool(cfg["chain"]), bool(cfg["endModel"])     # G12: the settings, not the environment
     say("@stage rallies start")
     t = time.time()
-    prob = rally_model.predict(MID, model_name)
+    full = json.load(open(W("fullflights_s0.35.json"))) if ball_ok else None
+    prob = rally_model.predict(MID, model_name, flights=None if full is None else full["flights"])
     STAGE_KEYS["rallies"] = rally_key(model_name)
     json.dump(STAGE_KEYS, open(KEYS_FILE, "w"), indent=1)
     np.save(W(f"rally_prob_{model_name}.npy"), prob.astype(np.float32))
-    full = json.load(open(W("fullflights_s0.35.json"))) if ball_ok else None
     seg, serves = chain.segments(prob, full, cfg)
     STAGE_S["rallies"] = round(time.time() - t, 1)
     say("@stage rallies done", STAGE_S["rallies"])

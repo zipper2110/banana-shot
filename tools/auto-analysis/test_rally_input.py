@@ -124,7 +124,7 @@ class SeedMean(unittest.TestCase):
     def test_the_mean_of_the_seeds(self):
         got = []
 
-        def one(mid, name, fold=None, wasbf=None, seed=0):
+        def one(mid, name, fold=None, wasbf=None, seed=0, flights=None):
             got.append(seed)
             return np.array([0.1, 0.9, 0.5], np.float32) * (seed + 1)
         rm.predict_one = one

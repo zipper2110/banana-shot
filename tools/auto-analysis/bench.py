@@ -14,7 +14,7 @@ with the same manifest must give the same numbers: the report says if an earlier
 
 Run the benchmark from a snapshot of one commit, not from the main checkout (other streams merge into it):
   python bench.py snapshot [--ref <commit or branch>]   exports the code to <lab>/ws/s1/code/<sha>/
-  python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py run [--tag <text>] [--no-heldout]
+  python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py run [--tag <text>] [--no-heldout] [--milestone]
 A heavy stage against its own labels, under the GPU lock (item 7a; report <lab>/bench/<time>-<commit>-heavy-ball/):
   python <lab>/ws/s1/code/<sha>/tools/auto-analysis/bench.py heavy --stage ball [--weights held-out] [--passes dim]
 The stream name on the GPU lock tickets: --who <stream> (before the command), else the env var BENCH_WHO, else "bench".
@@ -180,7 +180,7 @@ def extras(mid, rows):
 EVENT_SECTIONS = ("hits", "bounces", "nets", "lastShot")
 
 
-def events_all(nets=None):
+def events_all(nets=None, skip=()):
     """The event measures of each match with event labels (priority 2 of the user: hits, hitter, shot count, bounces,
     in/out, net touches against labels). The scorer is score_events.py (S4, E75). It builds the chain shots on the
     window of each labeled clip from the flights and net files, so it does not use the rally rows: the measure does
@@ -195,6 +195,8 @@ def events_all(nets=None):
         return None
     out = {}
     for mid in lab.MATCHES:
+        if mid in skip:                                # a milestone video outside a milestone run
+            continue
         folder = os.path.dirname(nets[mid]) if nets and mid in nets else None
         r = score_events.measures(mid, folder=folder)   # the flat list (manager, 2026-11-26: fixed interface)
         if r:
@@ -613,12 +615,23 @@ def fault_rows(per):
             + "** |" for mid, m in per.items() if m.get("chainFaults")]
 
 
-def run_heldout(code_dir):
+# Milestone videos (manager, 2026-11-27): a clean held-out video is measured only at a milestone, by S1. The default
+# held-out set leaves them out, so a stream bench never shows their numbers; --milestone adds them.
+MILESTONE_ONLY = ("m1113",)
+
+
+def heldout_mids(milestone=False):
+    """The held-out matches of a run: lab.TEST, without MILESTONE_ONLY unless milestone."""
+    import lab
+    return [m for m in lab.TEST if milestone or m not in MILESTONE_ONLY]
+
+
+def run_heldout(code_dir, milestone=False):
     """detect.py from this code on each marked test-only video with a full run in its folder: the rally and winner
-    stages run again, the heavy stages come from the cache."""
+    stages run again, the heavy stages come from the cache. milestone: the MILESTONE_ONLY videos too."""
     import lab, score
     res, skipped = {}, {}
-    for mid in lab.TEST:
+    for mid in heldout_mids(milestone):
         d = lab.mdir(mid)
         miss = [f for f in HEAVY + ["ends.json", "gt.json"] if not os.path.exists(os.path.join(d, f))]
         if miss or not glob.glob(os.path.join(d, "wasb_0_*_k2.npy")):
@@ -831,6 +844,8 @@ def report(man, sets, skipped, same):
          + (f" Lab net events: {man['labNets']}." if man.get("labNets") else "")
          + (f" Lab flights: {man['labFlights']}." if man.get("labFlights") else "")
          + (f" Rally GRU ball input: {man['labWasbf']}." if man.get("labWasbf") else "")
+         + (f" **Milestone run: the held-out set has the milestone video(s) {', '.join(man['milestone'])}** (S1 only)."
+            if man.get("milestone") else "")
          + (f" Net band of the lab matches: {man['netBand']['folder']} (files "
             + ", ".join(f"{m} {h}" for m, h in man["netBand"]["files"].items()) + ")."
             if isinstance(man.get("netBand"), dict) else " Net band: off." if man.get("netBand") == "off" else "")
@@ -1080,12 +1095,12 @@ def run(a):
                     inputs[mid]["net_band.npz"] = "band:" + sha(b)
     skipped = {}
     if not a.no_heldout:
-        held, skipped = run_heldout(HERE)
+        held, skipped = run_heldout(HERE, a.milestone)
         if held:
             sets["Held-out"] = held
             for mid in held:
                 inputs[mid] = file_hashes(lab.mdir(mid), HELD_INPUTS)
-    ev = events_all(nets)
+    ev = events_all(nets, skip=() if a.milestone else MILESTONE_ONLY)
     other =[m for m in (ev or {}) if not any(m in v for v in sets.values())]
     for mid in other:                                  # event inputs of a match outside the sets (m0913: app folder)
         inputs[mid] = ev[mid][1]
@@ -1094,6 +1109,8 @@ def run(a):
            "labFlights": "old lab file" if nets is None else {"remake": "made again by the code key (item 6b)", "frozen": "E38 file"}[LAB_FLIGHTS],
            "labWasbf": "made from the lab flights by the code key (E101)" if nets and LAB_FLIGHTS == "remake" else "frozen lab file",
            "sets": {k: list(v) for k, v in sets.items()}, "eventsOnly": other}
+    if a.milestone:                                    # only then: a default run keeps the manifest of before
+        man["milestone"] = [m for m in MILESTONE_ONLY if m in sets.get("Held-out", {})]
     answer_files = {m: sha(faults_file(m)) for m in lab.MATCHES if os.path.exists(faults_file(m))}
     if answer_files:                                   # only with answers: a run with no answer file keeps its manifest
         man["faultAnswerFiles"] = answer_files
@@ -1135,6 +1152,8 @@ if __name__ == "__main__":
     r = sub.add_parser("run")
     r.add_argument("--tag", default="")
     r.add_argument("--no-heldout", action="store_true")
+    r.add_argument("--milestone", action="store_true",
+                   help="the held-out set also has the milestone videos (MILESTONE_ONLY: Misha m1113); S1 at a milestone only")
     r.add_argument("--no-lab", action="store_true")
     r.add_argument("--old-nets", action="store_true", help="the lab set reads the old lab net_events.json (before E85)")
     r.add_argument("--frozen-flights", action="store_true", help="the lab set reads the E38 flights; only the net events are made again")

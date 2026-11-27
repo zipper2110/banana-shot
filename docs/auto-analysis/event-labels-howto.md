@@ -40,9 +40,16 @@ Rules:
 - Mark each bounce of the ball in the clip, also the second bounce at the end of the rally, if you can see it.
 - Out: the ball lands outside the lines for that shot. For a serve, the correct service box is the line.
 - A double fault: two serves. Mark the out bounce or the net stop of each serve.
-- The clip has some seconds before and after the marked point. Mark the events there too, if you see them.
-  Lab matches: the marked point starts at the second serve. A first-serve fault before it is in the clip
-  only if it is close to the start.
+- The page starts at the label window, not at the start of the clip. The label window starts 3 s after the end of the
+  previous point, but not earlier than 25 s before the marked point. Mark all events in the label window, also
+  the events after the marked point, if you see them.
+  If you labeled the fragment before, and your first mark is earlier, the label window starts at your first mark.
+  Thus your complete earlier points stay in use.
+- The part of the clip before the label window shows the previous point. The time line shows it dark, and the page
+  shows "before the label window: no marks here". Do not mark events there. A key press there adds no mark.
+  Marks from an earlier save that are there stay in the file. The page shows them as "not used".
+- Lab matches: the marked point starts at the second serve. A first-serve fault before it is inside the label window.
+  Mark it.
 - If you are not sure of a mark, press **Q**. If the fragment cannot be used, press **K** (skip).
 
 The fault flag: you do not have to press **X**. The scripts (`label_faults.py`, E159) find a first-serve fault from
@@ -53,7 +60,7 @@ and do not use it as truth. Nobody asks you about it.
 
 ## Help in the page
 
-- **1 2 3 4**: speed 1×, ½×, ¼×, ⅒×. **R**: play again from 2 s before the marked point. **U**: sound on or off.
+- **1 2 3 4**: speed 1×, ½×, ¼×, ⅒×. **R**: play again from the start of the label window. **U**: sound on or off.
 - **V**: zoom 2× at the mouse. **G**: zoom 3× at the far baseline. Press the same key again to go back.
 - **Z**: undo the last mark. The list "Marks" shows all marks. Click a mark to go to its frame, click × to delete it.
 - The small court shows each bounce from above (far end up). Use it to check a bounce place.

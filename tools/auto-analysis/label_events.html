@@ -45,6 +45,11 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
   #timeline .mk { position:absolute; width:3px; margin-left:-1px; border-radius:1px; }
   #timeline .mk span { position:absolute; top:-1px; left:5px; font-size:10px; white-space:nowrap; }
   #timeline .head { position:absolute; top:0; bottom:0; width:2px; background:#fff; margin-left:-1px; }
+  #timeline .pre { position:absolute; top:0; bottom:0; left:0; background:rgba(0,0,0,.6); border-right:2px solid var(--warn); }
+  #timeline .pre span { position:absolute; bottom:1px; left:4px; font-size:10px; color:var(--dim); white-space:nowrap; }
+  #timeline .mk.unused { opacity:.35; }
+  #events div.unused { opacity:.45; }
+  #prewin { display:none; color:var(--warn); }
   #bar { display:flex; gap:14px; align-items:center; color:var(--dim); font-variant-numeric:tabular-nums; }
   #bar .big { color:var(--text); font-size:16px; }
   aside { position:relative; z-index:3; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow-y:auto; }
@@ -123,6 +128,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
       <span>clip <span id="tclip">0.000</span> s</span>
       <span>video <span id="tvid">0:00.000</span></span>
       <span>mouse <span id="tmouse">–</span></span>
+      <span id="prewin">before the label window: no marks here</span>
       <span class="sp"></span>
     </div>
   </div>
@@ -151,7 +157,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
         <kbd>Space</kbd><span>play / pause</span>
         <kbd>← →</kbd><span>one frame back / forward (Shift: 10)</span>
         <kbd>1 2 3 4</kbd><span>speed 1× ½× ¼× ⅒×</span>
-        <kbd>R</kbd><span>replay from 2 s before the label span</span>
+        <kbd>R</kbd><span>play again from the start of the label window</span>
         <kbd>V</kbd><span>zoom 2× at the mouse (toggle)</span>
         <kbd>G</kbd><span>zoom 3× at the far baseline (toggle)</span>
         <kbd>U</kbd><span>sound on / off</span>
@@ -226,7 +232,7 @@ px (the ball is on the ground at a bounce), court m: x across, y along (far end 
 </div>
 <script>
 "use strict";
-const TOOL_VERSION = 1, FILE_VERSION = 1, SPEEDS = [1, 0.5, 0.25, 0.1], STORE = "bananashot-event-labels-v1", PRE = 2.0;
+const TOOL_VERSION = 1, FILE_VERSION = 1, SPEEDS = [1, 0.5, 0.25, 0.1], STORE = "bananashot-event-labels-v1";
 const MF = window.CASES;
 const $ = id => document.getElementById(id);
 const v = $("v");
@@ -272,6 +278,12 @@ const FRAME = () => 1 / (item().fps || 60);
 const vt = clipT => item().t0 + clipT;                         // source time of a clip time
 const ct = srcT => srcT - item().t0;                           // clip time of a source time
 const span = it => it.span || [it.t0, it.t0 + (it.dur || 1e9)];
+// A33 (S1 A32): the label window of a fragment (labelWindow = [start, end] in source s, from the manifest). The clip part
+// before it shows the previous point: the page starts at the window, dims the part before it, and adds no marks there.
+// Marks before it (from before A33) stay in the file and show as "not used". A row with no labelWindow: the whole clip.
+const win = it => it.labelWindow || [it.t0, Infinity];
+const winStart = it => Math.max(0, win(it)[0] - it.t0);         // clip time of the window start
+const inWin = (it, e) => e.t >= win(it)[0] && e.t <= win(it)[1];     // the rule of case_history.fragment
 const saved = it => store[it.id];
 const KIND_KEY = {serve: "S", shot: "", bounce: "B", net: "T"};
 
@@ -373,7 +385,7 @@ function open(i) {
   v.pause(); setZoom("");
   v.src = it.clip;
   v.playbackRate = rate;
-  v.addEventListener("loadedmetadata", () => { checkClip(it); v.currentTime = 0; v.playbackRate = rate; v.play().catch(() => {}); }, {once: true});
+  v.addEventListener("loadedmetadata", () => { checkClip(it); v.currentTime = winStart(it); v.playbackRate = rate; v.play().catch(() => {}); }, {once: true});
   render();
   const row = $("list").children[i]; if (row) row.scrollIntoView({block: "nearest"});
 }
@@ -400,6 +412,7 @@ function tick() {
   $("tvid").textContent = fmt(vt(t));
   const dur = v.duration || 1;
   const h = $("timeline").querySelector(".head"); if (h) h.style.left = (100 * t / dur) + "%";
+  $("prewin").style.display = t < winStart(item()) - 1e-3 ? "inline" : "none";
   overlay();
 }
 (function loop() { if (!v.paused) tick(); requestAnimationFrame(loop); })();
@@ -446,7 +459,9 @@ function setZoom(kind) {
 function add(ev) {
   if (cur < 0) return false;
   if (staleRow) { flash("the fragment list changed: reload the page (F5)", "#b3261e", 3000); return false; }
-  ev.t = +vt(frameT()).toFixed(4);
+  const tt = vt(frameT());
+  if (+tt.toFixed(4) < win(item())[0]) { flash(`before the label window (it starts at ${fmt(win(item())[0])}): no mark`, "#a8801f", 1800); return false; }
+  ev.t = +tt.toFixed(4);
   ev.rate = v.paused ? 0 : v.playbackRate;
   const dr = d();
   dr.events.push(ev);
@@ -494,7 +509,8 @@ function toggleFault() {
 
 // ---- checks (warnings only; Enter again saves)
 function checks(dr) {
-  const w = [], c = dr.events.filter(e => e.kind === "serve" || e.kind === "shot");
+  const evs = dr.events.filter(e => inWin(item(), e));              // A33: the marks before the label window are not used
+  const w = [], c = evs.filter(e => e.kind === "serve" || e.kind === "shot");
   for (let k = 1; k < c.length; k++) {
     // A serve starts a new point (or is the second serve): the contact before it can be of the same end. The fault
     // flag (X) is optional (E159): label_faults.py infers it from the marks, so the page does not ask for it.
@@ -502,7 +518,7 @@ function checks(dr) {
       w.push(`two contacts of the ${c[k].end} end at ${fmt(c[k - 1].t)} and ${fmt(c[k].t)}`);
   }
   if (c.length && c[0].kind !== "serve") w.push("the first contact is not a serve");
-  for (const e of dr.events) if (e.kind === "bounce" && !e.court && item().courtH) w.push(`bounce at ${fmt(e.t)} has no court place`);
+  for (const e of evs) if (e.kind === "bounce" && !e.court && item().courtH) w.push(`bounce at ${fmt(e.t)} has no court place`);
   return w;
 }
 
@@ -511,6 +527,7 @@ function fragDoc(it, dr) {
   addActive();
   return {version: FILE_VERSION, kind: "bananashot-event-labels", fragment: it.id, match: it.match, testOnly: !!it.testOnly,
           level: it.level, kinds: it.kinds || [], control: !!it.control, clip: it.clip, clipDuration: isFinite(v.duration) ? +v.duration.toFixed(3) : null, t0: it.t0, span: span(it),
+          ...(it.labelWindow ? {labelWindow: it.labelWindow} : {}),       // A33: optional; older files have no field
           manifest: {version: MF.version, created: MF.created || null, row: it.rowHash || null},
           source: {tool: "label_events.html", toolVersion: TOOL_VERSION, labeler: "user",
                    method: "by eye and ear on the fragment clip (frame steps, slow play, zoom)"},
@@ -664,10 +681,11 @@ function render() {
   $("where").textContent = `#${cur + 1} of ${items.length} · ${it.id}${it.testOnly ? " (test only)" : ""} · ${it.level || ""}`;
   const sp = span(it);
   $("info").innerHTML = `${it.match} · label span ${fmt(sp[0])} to ${fmt(sp[1])} (${(sp[1] - sp[0]).toFixed(1)} s)` +
+    (it.labelWindow ? `<br>label window from ${fmt(win(it)[0])} (the part before it: no marks)` : "") +
     (it.points || []).map(p => `<br>marked point ${fmt(p.startMs / 1000)} to ${fmt(p.endMs / 1000)}${p.ending ? " · " + p.ending.toLowerCase().replace("_", " ") : ""}`).join("") +
     (it.courtH ? "" : `<br><span class="warn">no court: bounces have no court place</span>`) +
     (dr.dirty ? ` · <span class="warn">unsaved</span>` : saved(it) ? ` · <span class="ok">saved</span>` : "");
-  const n = k => dr.events.filter(e => e.kind === k).length;
+  const n = k => dr.events.filter(e => e.kind === k && inWin(it, e)).length;
   $("counts").innerHTML = `serves <b>${n("serve")}</b> · shots <b>${n("shot")}</b> · bounces <b>${n("bounce")}</b> · net <b>${n("net")}</b>`;
   const w = dr.skip ? [] : checks(dr);
   $("flags").innerHTML = w.map(x => `<div class="warn">⚠ ${x}</div>`).join("") + (dr.unsure ? `<span class="warn">not sure</span> ` : "") +
@@ -675,12 +693,13 @@ function render() {
   const ev = $("events"); ev.innerHTML = "";
   dr.events.forEach((e, k) => {
     const r = document.createElement("div");
-    if (k === sel) r.className = "sel";
+    const unused = !inWin(it, e);
+    r.className = (k === sel ? "sel " : "") + (unused ? "unused" : "");
     const what = e.kind === "serve" ? `<span class="${e.end}">serve ${e.end}</span>${e.fault ? ' <span class="fault">fault</span>' : ""}`
       : e.kind === "shot" ? `<span class="${e.end}">shot ${e.end}</span>`
       : e.kind === "bounce" ? `<span class="${e.out ? "out" : "bounce"}">${e.out ? "out" : "in"}</span> ${e.seen ? "seen" : "<b>inferred</b>"}${e.court ? ` · ${e.court[0].toFixed(1)}, ${e.court[1].toFixed(1)} m` : ""}`
       : `<span class="net">net ${e.net === "cord" ? "cord (over)" : "touch (stop)"}</span>`;
-    r.innerHTML = `<span>${k + 1}</span><span>${fmt(e.t).slice(-9)}</span><span style="color:var(--dim)">${e.kind}</span><span>${what}${e.from ? ` <span style="color:var(--dim)" title="your mark of the fragment ${e.from}">from ${e.from}${e.fromUnsure ? " ?" : ""}</span>` : ""}</span><span class="x" title="delete">×</span>`;
+    r.innerHTML = `<span>${k + 1}</span><span>${fmt(e.t).slice(-9)}</span><span style="color:var(--dim)">${e.kind}</span><span>${what}${e.from ? ` <span style="color:var(--dim)" title="your mark of the fragment ${e.from}">from ${e.from}${e.fromUnsure ? " ?" : ""}</span>` : ""}${unused ? ` <span style="color:var(--dim)" title="before the label window">not used</span>` : ""}</span><span class="x" title="delete">×</span>`;
     r.onclick = ev2 => { if (ev2.target.classList.contains("x")) { dr.events.splice(k, 1); sel = -1; touch(); } else { sel = k; v.pause(); seek(ct(e.t) + 0.0005); render(); } };
     ev.appendChild(r);
   });
@@ -688,9 +707,11 @@ function render() {
   const tl = $("timeline"), dur = (v.duration && isFinite(v.duration)) ? v.duration : (sp[1] - it.t0);
   const pct = t => (100 * t / dur) + "%";
   const rows = {serve: 3, shot: 3, bounce: 14, net: 24};
+  const w0 = winStart(it);
   tl.innerHTML = (it.points || []).map(p => `<div class="pt" style="left:${pct(ct(p.startMs / 1000))};width:${pct((p.endMs - p.startMs) / 1000)}"></div>`).join("") +
+    (w0 > 0 ? `<div class="pre" style="width:${pct(w0)}" title="before the label window: no marks"><span>no marks</span></div>` : "") +
     `<div class="span" style="left:${pct(ct(sp[0]))};width:${pct(sp[1] - sp[0])}"></div>` +
-    dr.events.map(e => `<div class="mk" style="left:${pct(ct(e.t))};top:${rows[e.kind]}px;height:10px;background:${colorOf(e)}"><span style="color:${colorOf(e)};${ct(e.t) > 0.95 * dur ? "left:auto;right:5px" : ""}">${labelOf(e)}</span></div>`).join("") +
+    dr.events.map(e => `<div class="mk${inWin(it, e) ? "" : " unused"}" style="left:${pct(ct(e.t))};top:${rows[e.kind]}px;height:10px;background:${colorOf(e)}"><span style="color:${colorOf(e)};${ct(e.t) > 0.95 * dur ? "left:auto;right:5px" : ""}">${labelOf(e)}</span></div>`).join("") +
     `<div class="head"></div>`;
   tick();
 }
@@ -726,7 +747,7 @@ document.addEventListener("keydown", async e => {
     "arrowleft": () => step(S ? -10 : -1), "arrowright": () => step(S ? 10 : 1),
     ",": () => step(-1), ".": () => step(1),
     "1": () => setRate(0), "2": () => setRate(1), "3": () => setRate(2), "4": () => setRate(3),
-    "r": () => { seek(Math.max(0, ct(span(item())[0]) - PRE)); v.playbackRate = rate; v.play(); },
+    "r": () => { seek(winStart(item())); v.playbackRate = rate; v.play(); },
     "v": () => setZoom(zoom === "v" ? "" : "v"), "g": () => setZoom(zoom === "g" ? "" : "g"),
     "u": () => { v.muted = !v.muted; render(); },
     "q": () => { d().unsure = !d().unsure; touch(); }, "k": () => { d().skip = !d().skip; flash(d().skip ? "skip" : "no skip", "#555"); touch(); },

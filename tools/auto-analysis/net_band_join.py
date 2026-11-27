@@ -18,7 +18,9 @@ def join_parts(parts, path):
     the part that owns it, else the record of the last part before it (the end of a decode window can give other
     pictures, as the fps filter has no next frame there). Writes path with the records in frame order, as
     MaskWriter.save after the one pass, and returns path."""
-    zs = [np.load(f) for f, _, _ in parts]
+    zs = [dict(np.load(f)) for f, _, _ in parts]       # read each array once (an NpzFile unzips it at each index)
+    for z in zs:
+        z["off"], z["size"], z["prev"] = z["off"].tolist(), z["size"].tolist(), z["prev"].tolist()
     for k in SAME:
         if any(not np.array_equal(z[k], zs[0][k]) for z in zs):
             raise ValueError(f"net band mask parts: {k} is not the same in each part")
@@ -33,9 +35,9 @@ def join_parts(parts, path):
         if fr == last:
             continue
         last, z = fr, zs[p]
-        o, s = int(z["off"][j]), int(z["size"][j])
+        o, s = z["off"][j], z["size"][j]
         frame.append(fr)
-        prev.append(int(z["prev"][j]))
+        prev.append(z["prev"][j])
         size.append(s)
         data.append(z["data"][o:o + s])
     size = np.array(size, np.int64)

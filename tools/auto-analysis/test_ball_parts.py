@@ -153,6 +153,26 @@ class MaskParts(unittest.TestCase):
     def test_30_fps_joined_masks_are_the_one_pass_masks(self):
         self.masks(30, fake_video(60, 4, jitter=0.004), 4, part_s=1)
 
+    def test_the_join_of_many_records_is_fast(self):
+        # S5 review: an NpzFile unzips the full array at each index, and the join was quadratic (8000 records 42 s;
+        # a 1 h match at 60 fps has about 216000 records). 20000 synthetic records in 4 parts: a few seconds at most.
+        import time, net_band_join
+        d, rng, parts = tempfile.mkdtemp(prefix="mp_"), np.random.default_rng(0), []
+        for p in range(4):
+            fr = np.arange(p * 5000 + 2, (p + 1) * 5000 + 2, dtype=np.int32)   # 2 frames past the end
+            size = rng.integers(1, 40, len(fr)).astype(np.int64)
+            off = np.concatenate([[0], np.cumsum(size)[:-1]]).astype(np.int64)
+            data = rng.integers(0, 255, int(size.sum())).astype(np.uint8)
+            f = os.path.join(d, f"p{p}.npz")
+            np.savez(f, frame=fr, prev=fr - 2, off=off, size=size, data=data, box=np.array((1, 2, 3, 4)),
+                     crop=np.array((0, 0, 672, 378)), scale=0.35, thr=4.0, version=1)
+            parts.append((f, p * 5000, None if p == 3 else (p + 1) * 5000))
+        t = time.time()
+        z = np.load(net_band_join.join_parts(parts, os.path.join(d, "j.npz")))
+        self.assertLess(time.time() - t, 5.0)
+        self.assertEqual(list(z["frame"]), list(range(2, 20002)))
+        self.assertTrue(np.array_equal(z["off"][1:], np.cumsum(z["size"])[:-1]))
+
     def test_parts_of_another_crop_are_not_joined(self):
         import net_band_mask as nbm, net_band_join
         from test_net_band import HM

@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-27 22:43",
+ "updated": "2026-11-27 22:52",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -801,8 +801,10 @@
     "M2-I2"
    ],
    "owner": "S4",
-   "journal": [],
-   "status": "queued",
+   "journal": [
+    "E174"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "Why 7 of 24 labeled fault serves have no serve event, as a cause table with image facts; then fix proposals.",
     "impact": 5,
@@ -814,6 +816,34 @@
    "doneWhen": [
     "A journal row (S4 block) with a cause table of all labeled fault serves with no serve event on the 24 fragments of E107 (d1cb16c7; the row names the count, 7 on the first 16): each serve has one cause, with an image fact (frame and px), 0 without a cause.",
     "At least one fix proposal, with the count of these serves that it gets back and the expected effect on fault clips (E107: 6 of 23)."
+   ],
+   "finished": "2026-11-27 23:10",
+   "real": {
+    "impact": 3,
+    "outcome": "E174 (7c51466f): 20 of 32 labeled fault serves on E107 have no serve event; one cause each with frame and px, 0 without a cause: toss-start time 7, rally filter 5, depth error 5, no detection 2, fit too slow 1. Fix TJ: 7 back, fault clips 6 to 7 of 23, no new serve events in the points. Both checks pass."
+   }
+  },
+  {
+   "id": "A36",
+   "kind": "fix",
+   "title": "TJ: a joined toss+serve event gets the time of the serve flight (the contact)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S4",
+   "journal": [],
+   "status": "queued",
+   "expected": {
+    "outcome": "7 of the 20 fault serves with no serve event come back; fault clips 6 to 7 of 23; no new serve events inside the points.",
+    "impact": 2,
+    "text": "Small, but right in principle: the event time is the contact, not the toss start."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "doneWhen": [
+    "The TJ change is in the code behind a switch (default on only after the checks), in its own small commit, with a unit test of the event time of a joined toss+serve event.",
+    "A journal row (S4) with the E107 label measures on the 24 fragments: the serve events of the 7 cause-1 serves found, fault clips 7 of 23 or more, serve events inside the marked points 58 or less, rally rows 556 (no change).",
+    "A lab bench check on d1cb16c7 (CPU, chain only, the A20 flights): rally recall and precision not lower than E106 (95.1 % / 95.1 %) beyond the noise; the row names the numbers."
    ]
   },
   {

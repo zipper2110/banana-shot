@@ -33,6 +33,9 @@ UNEXPL_W = 4.0                            # score px if no near-half horizontal 
 OUT_W = 0.25 * CAP                        # score px if all model points are outside the frame
 HID_CAP = 1.0                             # largest cost px of a model point that the camera sees through the net (E23b)
 LOW_RULE = True                           # False: the rule is off (the second pass of detect())
+# E186 (b, S5): the first pass of detect() (the low-camera rule) counts only for a low-camera model. With a prior
+# (the tracker model of court_track) that is not a low camera, skip that pass. Off by default ("1" = on).
+LOW_SKIP = os.environ.get("COURT_LOW_SKIP", "0") == "1"
 NET_H = 0.95                              # net height m for that rule (0.914 at the center, 1.07 at the posts)
 # limits of a trusted detection: (cost, margin) pairs, and the clutter limit.
 # A clear court: cost under 1 px. A dusk or faint court: cost up to 2 px, but
@@ -439,9 +442,10 @@ def detect(img, n_h=10, n_s=14, n_refine=8, prior=None):
     Returns as detect_pass(). E186: the two passes share the work that does not depend on the rule (prepare())."""
     global LOW_RULE
     prep = prepare(img, n_h, n_s)
-    H, score, info = detect_pass(img, n_h, n_s, n_refine, prior, prep)
-    if H is not None and info["ok"] and hidden(H, SAMPLES, img.shape[1], img.shape[0]).any():
-        return H, score, dict(info, low=True)
+    if not (LOW_SKIP and prior is not None and not hidden(prior, SAMPLES, img.shape[1], img.shape[0]).any()):
+        H, score, info = detect_pass(img, n_h, n_s, n_refine, prior, prep)
+        if H is not None and info["ok"] and hidden(H, SAMPLES, img.shape[1], img.shape[0]).any():
+            return H, score, dict(info, low=True)
     LOW_RULE = False
     try:
         return detect_pass(img, n_h, n_s, n_refine, prior, prep)

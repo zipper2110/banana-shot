@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 01:08",
+ "updated": "2026-11-28 01:12",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1294,14 +1294,41 @@
    ]
   },
   {
+   "id": "A55",
+   "kind": "experiment",
+   "title": "Serve side from the pose feet x in the chain (E223)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "status": "queued",
+   "after": [
+    "A54"
+   ],
+   "journal": [],
+   "expected": {
+    "outcome": "FAULT_SIDE knows the side more often and is right: on the lab 2 more fault rows taken and 2 C1 points back.",
+    "impact": 2,
+    "text": "E223: the pose feet x gives the side for 48 of 48 labeled serves, all right; the chain side now 35 known, 32 right."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "doneWhen": [
+    "The side rule (pose feet x first, then the serve flight x; the server end from the serve event) behind a switch (default off), in its own small commit, with a unit test; it works with no pose (falls back).",
+    "A journal row (S3): lab chain-only and Igor (E106 keys) off/on: the 15 E214 side rows, the FAULT_SIDE decisions that change on all other rows, fault rows, points lost (0), recall and precision by the spread rule. The row says if it can go on."
+   ]
+  },
+  {
    "id": "A53",
    "kind": "research",
    "title": "Serve side (deuce or ad): measure the chain's serve side against the labeled serve bounces",
    "milestone": "M2",
    "issues": [],
    "owner": "S4",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E223"
+   ],
    "expected": {
     "outcome": "How often the chain knows the serve side and how often it is right; a better side source (serve flight, bounce, pose) if one is better.",
     "impact": 2,
@@ -1313,7 +1340,12 @@
    "doneWhen": [
     "A journal row (S4): for every labeled serve with a labeled serve bounce on the 24 E107 fragments, the true side (from the bounce court x) against the chain side on the head 0a1728b5: known n of N, right n of known, by near and far server.",
     "For each side source that is available without new detection (the serve flight x, the serve bounce, the server position from the pose, if the pose is cached), the same counts; and a proposal for the side rule with the expected change on the 15 E214 rows (S3 tests it in the chain)."
-   ]
+   ],
+   "finished": "2026-11-28 01:12",
+   "real": {
+    "impact": 3,
+    "outcome": "E223 (2d34880e): 48 labeled serves with a box side. Chain side now: known 35, right 32 of 35. Sources (known, right): serve event x 26, 23; fastest flight x 36, 29; chain bounce 42, 40; pose feet x 48, 48. Proposal: the side from the pose feet x first, the serve flight x when the pose gives none; expected on the 10 lab E214 rows: 2 more fault rows taken, 2 C1 points back. Both checks pass."
+   }
   },
   {
    "id": "A41",

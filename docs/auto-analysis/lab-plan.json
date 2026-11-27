@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number).",
- "updated": "2026-11-27 13:25",
+ "updated": "2026-11-27 13:35",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -943,7 +943,7 @@
    ],
    "owner": "S1",
    "journal": [],
-   "status": "queued",
+   "status": "running",
    "expected": {
     "outcome": "No label work and no false events from the previous point at the clip start (39 fragments).",
     "impact": 3,
@@ -951,7 +951,8 @@
    },
    "estimate": {
     "netMin": 60
-   }
+   },
+   "started": "2026-11-27 13:25"
   },
   {
    "id": "A33",
@@ -963,7 +964,7 @@
    ],
    "owner": "S4",
    "journal": [],
-   "status": "planned",
+   "status": "running",
    "after": [
     "A32"
    ],
@@ -974,7 +975,8 @@
    },
    "estimate": {
     "netMin": 45
-   }
+   },
+   "started": "2026-11-27 13:26"
   }
  ],
  "links": [

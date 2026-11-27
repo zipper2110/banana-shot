@@ -110,6 +110,12 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
 .worker ul { margin: 0; padding-left: 0; list-style: none; }
 .worker li { padding: 4px 0; border-top: 1px dashed var(--line); font-size: 13px; }
 .worker li .r { float: right; color: var(--mute); font-size: 12px; }
+.wgroup { margin-top: 8px; padding-left: 8px; border-left: 3px solid var(--line); }
+.wgroup.prog { border-left-color: var(--accent); } .wgroup.hold { border-left-color: var(--warn); } .wgroup.pend { border-left-color: var(--mute); }
+.wg-h { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--mute); margin-bottom: 2px; }
+.wgroup.prog .wg-h { color: var(--accent); } .wgroup.hold .wg-h { color: var(--warn); }
+.wg-h span { font-weight: normal; }
+.wgroup li:first-child { border-top: 0; }
 .lgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .lcard { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
 .lcard .big { font-size: 20px; font-weight: 700; }
@@ -337,16 +343,24 @@ function renderWorkers() {
   let h = `<div class="workers">`;
   for (const w of S.workers) {
     const noEta = wdef[w.id] && wdef[w.id].noEta;
-    h += `<div class="worker"><h3><span>${esc(w.name)}</span><span class="small mute">${w.netMin ? dur(w.netMin) + " net" : "idle"}</span></h3><div class="focus">${esc(w.focus || "")}</div><ul>`;
-    for (const g of w.gpu) h += `<li><span class="chip k-run">${g.running ? "GPU now" : "GPU queue"}</span>${esc(g.what)}<span class="r">${g.running ? "ends " + hm(g.eta) : g.expEnd ? "ends " + hm(g.expEnd) : ""}</span></li>`;
-    for (const a of w.actions) {
-      h += `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="chip k-${a.kind}">${a.kind}</span> ${esc(a.title)}
+    h += `<div class="worker"><h3><span>${esc(w.name)}</span><span class="small mute">${w.netMin ? dur(w.netMin) + " net" : "idle"}</span></h3><div class="focus">${esc(w.focus || "")}</div>`;
+    const gpuLi = g => `<li><span class="chip k-run">${g.running ? "GPU now" : "GPU queue"}</span>${esc(g.what)}<span class="r">${g.running ? "ends " + hm(g.eta) : g.expEnd ? "ends " + hm(g.expEnd) : ""}</span></li>`;
+    const actLi = a => `<li><a href="#act-${a.id}" class="small">${a.id}</a> <span class="chip k-${a.kind}">${a.kind}</span> ${esc(a.title)}
         <div class="small"><span class="s-${a.status}">${a.status}</span>${a.waitingFor ? ` <span class="s-waiting">(waits for ${esc(a.waitingFor)})</span>` : ""}
         <span class="r">${a.netMin ? dur(a.netMin) : "?"}${!noEta && a.eta ? " · ~" + hm(a.eta) : ""}</span></div>
         ${(a.jobs || []).length ? `<div class="small mute">jobs: ${a.jobs.map(j => esc(j.what) + (j.estMin ? " (" + dur(j.estMin) + ")" : "")).join("; ")}</div>` : ""}</li>`;
+    // Three groups (the user): in progress, on hold (waits for a decision, an unpause or another action), pending
+    const paused = !!S.lock.pause;
+    const groups = [
+      ["prog", "In progress", w.gpu.filter(g => g.running).map(gpuLi).concat(w.actions.filter(a => a.status === "running").map(actLi))],
+      ["hold", "On hold", w.gpu.filter(g => !g.running && paused).map(gpuLi).concat(w.actions.filter(a => a.status === "waiting").map(actLi))],
+      ["pend", "Pending", w.gpu.filter(g => !g.running && !paused).map(gpuLi).concat(w.actions.filter(a => a.status === "queued" || a.status === "planned").map(actLi))],
+    ];
+    for (const [cls, name, items] of groups) {
+      if (items.length) h += `<div class="wgroup ${cls}"><div class="wg-h">${name} <span>${items.length}</span></div><ul>${items.join("")}</ul></div>`;
     }
-    if (!w.actions.length && !w.gpu.length) h += `<li class="mute">No open action.</li>`;
-    h += `</ul></div>`;
+    if (!groups.some(g => g[2].length)) h += `<div class="mute small">No open action.</div>`;
+    h += `</div>`;
   }
   h += `</div>`;
   $("#sWork .body").innerHTML = h;

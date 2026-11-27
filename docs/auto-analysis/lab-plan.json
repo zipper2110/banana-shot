@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 01:07",
+ "updated": "2026-11-28 01:08",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1270,6 +1270,28 @@
     "impact": 2,
     "outcome": "E214: head 0a1728b5: lab 535 of 554, fault rows 15, precision with faults 96.57 %. 51 rows (lab 38, Igor 13), one cause each: F1 serve side unknown 9, A1 silent GRU with a serve event 8, B+Br 12, D 5, C1 4, others 13. No chain fix passes with 0 lost points. Plans: serve side measure (15 rows), the rally GRU with serve events as input (16 missed points; GPU, needs the user's OK), fault-serve labels (18 rows). Both checks pass."
    }
+  },
+  {
+   "id": "A54",
+   "kind": "experiment",
+   "title": "Rally GRU with the serve events as an input (model ballsv, RALLY_SERVE_INPUT off)",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S3",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "Some of the 16 missed A1/A2/B points come back without new rows with no point.",
+    "impact": 3,
+    "text": "E214: 15 of the 16 missed points have a GRU max under 0.5, and 11 have a serve event at the start."
+   },
+   "estimate": {
+    "netMin": 60
+   },
+   "doneWhen": [
+    "feat_serve and the ballsv model behind RALLY_SERVE_INPUT (default off), in their own commit, with a unit test; the files only in ws\\s3\\e215 (nothing in data\\).",
+    "A journal row E215 (S3): the null check (off = the E214 rows), lab chain-only LOMO off/on (matched, recall, precision, fault rows, precision with faults, winners, end to end), the count of the 16 missed points back and of new rows with no point, Igor on its E106 keys off/on, and the spread rule; the row says if the switch can go on."
+   ]
   },
   {
    "id": "A53",

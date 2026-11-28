@@ -76,6 +76,16 @@ class PointsScoringServeTest {
         }
 
     @Test
+    fun `the server mark of a deleted clip goes to the next clip`() =
+        withScoring(ScoreV1(serverMarks = mapOf("F" to Outcome.P2))) { dir, scoring, _, _, _ ->
+            assertEquals(2, scoring.serverOf("Z"))
+            scoring.moveServerMarkFrom("F")
+            assertEquals(mapOf("Z" to Outcome.P2), ScoreIO.readForProjectDir(dir.path).serverMarks)
+            scoring.setPoints(listOf(zero))
+            assertEquals(2, scoring.serverOf("Z"))
+        }
+
+    @Test
     fun `basic mode shows Point start`() = withScoring(ScoreV1()) { _, scoring, _, _, serves ->
         scoring.moveTo(13_000)
         assertNull(serves.last())

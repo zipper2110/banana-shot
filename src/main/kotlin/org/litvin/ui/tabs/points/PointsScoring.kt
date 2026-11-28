@@ -704,6 +704,23 @@ internal class PointsScoring(
     /** S in the review window: the other side serves the clip with [pointId], as [switchServer] does. */
     fun switchServerOf(pointId: String) = switchServerAt(points.indexOfFirst { it.id == pointId })
 
+    /**
+     * Before the clip with [pointId] is deleted: its server mark goes to the next clip, with the server that the
+     * score gives that clip now. Thus the score keeps its servers when the user declines the clip with the server
+     * mark of the import.
+     */
+    fun moveServerMarkFrom(pointId: String) {
+        if (pointId !in score.serverMarks) return
+        val index = points.indexOfFirst { it.id == pointId }
+        val next = points.getOrNull(index + 1)
+        val server = timeline?.serverOfPoint?.getOrNull(index + 1)
+        change { current ->
+            val without = current.serverMarks - pointId
+            if (next == null || server == null || next.id in without) current.copy(serverMarks = without)
+            else current.copy(serverMarks = without + (next.id to if (server == 1) Outcome.P1 else Outcome.P2))
+        }
+    }
+
     /** The server (1 or 2) of the clip with [pointId] in the score, or null when the score has no server mark. */
     fun serverOf(pointId: String): Int? = timeline?.serverOfPoint?.getOrNull(points.indexOfFirst { it.id == pointId })
 

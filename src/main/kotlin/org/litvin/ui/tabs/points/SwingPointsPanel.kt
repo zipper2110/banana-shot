@@ -273,6 +273,8 @@ class SwingPointsPanel(
                     )
                 }.onFailure { io.github.oshai.kotlinlogging.KotlinLogging.logger {}.warn(it) { "Declined point not recorded" } }
             }
+            scoring.setPoints(dispatcher.getCompletedPoints())
+            scoring.moveServerMarkFrom(pointId)
             deletePoint(pointId)
         }
 

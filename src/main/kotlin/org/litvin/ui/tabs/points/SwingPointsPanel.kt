@@ -256,6 +256,36 @@ class SwingPointsPanel(
             if (dispatcher.deletePoint(pointId)) analytics.record(AnalyticsEvent.PointDeleted)
         }
 
+        override fun declinePoint(pointId: String) {
+            val point = dispatcher.getCompletedPoints().firstOrNull { it.id == pointId } ?: return
+            val mark = point.auto
+            val dir = projectDir?.let(::File)
+            if (mark != null && dir != null) {
+                val detection = recordDetections[pointId]
+                val rally = detection?.rally
+                runCatching {
+                    org.litvin.autodetect.DetectDeclined.add(
+                        dir,
+                        org.litvin.autodetect.DeclinedPoint(
+                            pointId, point.startMs, point.endMs, mark.kind.name, mark.winnerPercent, mark.nearPlayer,
+                            rally?.start, rally?.end, rally?.prob, detection?.resultFile, detection?.importFile,
+                        ),
+                    )
+                }.onFailure { io.github.oshai.kotlinlogging.KotlinLogging.logger {}.warn(it) { "Declined point not recorded" } }
+            }
+            deletePoint(pointId)
+        }
+
+        override fun restorePoint(point: PointV1, winner: org.litvin.scoring.Outcome): Boolean {
+            if (!dispatcher.restorePoint(point)) return false
+            projectDir?.let(::File)?.let { dir ->
+                runCatching { org.litvin.autodetect.DetectDeclined.remove(dir, point.id) }
+            }
+            scoring.setPoints(dispatcher.getCompletedPoints())
+            if (scoring.winnerOf(point.id) != winner) scoring.setWinner(point.id, winner)
+            return true
+        }
+
         override fun addPoint(startMs: Long, endMs: Long): String? {
             val before = dispatcher.getCompletedPoints().map { it.id }.toSet()
             dispatcher.clearPending()

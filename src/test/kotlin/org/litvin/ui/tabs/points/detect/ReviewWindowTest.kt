@@ -39,6 +39,18 @@ class ReviewWindowTest {
         }
         val detected = mutableMapOf<String, Int>()
         override fun detectedServerOf(pointId: String) = detected[pointId]
+        val declined = mutableListOf<String>()
+        override fun declinePoint(pointId: String) {
+            declined += pointId
+            deletePoint(pointId)
+        }
+        override fun restorePoint(point: PointV1, winner: Outcome): Boolean {
+            if (list.any { it.id == point.id || (point.startMs < it.endMs && it.startMs < point.endMs) }) return false
+            list = list + point
+            winners[point.id] = winner
+            declined -= point.id
+            return true
+        }
         override val players = ScorePlayers("Anna", "Bea")
         override fun warnings() = warningList
         override fun points() = list.sortedBy { it.startMs }
@@ -341,6 +353,27 @@ class ReviewWindowTest {
         key("DOWN")
         key("UP")
         assertEquals("Serves: Anna · the detection saw Bea", text("review-server"))
+    }
+
+    @Test
+    fun `Delete declines an automatic point with no question, and Ctrl+Z puts it back`() = review(auto("a", 10_000), auto("b", 30_000)) {
+        key("Q")
+        val a = host.list.first { it.id == "a" }
+        key("DELETE")
+
+        assertEquals(listOf("b"), host.list.map { it.id })
+        assertEquals(listOf("a"), host.declined)
+        assertEquals("Point 1 is deleted. Ctrl+Z puts it back.", text("review-message"))
+
+        key("ctrl Z")
+        assertEquals(a, host.list.first { it.id == "a" })
+        assertEquals(Outcome.P1, host.winners["a"])
+        assertTrue(host.declined.isEmpty())
+        assertEquals("The point is back.", text("review-message"))
+        assertTrue(text("review-point-title").startsWith("Point 1 "))
+
+        key("ctrl Z")
+        assertEquals("No deleted point to put back.", text("review-message"))
     }
 
     @Test

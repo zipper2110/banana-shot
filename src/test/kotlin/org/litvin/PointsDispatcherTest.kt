@@ -176,4 +176,22 @@ class PointsDispatcherTest {
         val other = d.getCompletedPoints().last().id
         assertEquals(false, d.updatePoint(other, 3000, 3000, null))
     }
+
+    @Test
+    fun restorePointPutsBackADeletedPointWithItsIdAndMark() {
+        val d = newDispatcher()
+        val mark = org.litvin.points.AutoMarkV1(checked = false, nearPlayer = 2)
+        d.setPoints(listOf(org.litvin.points.PointV1(id = "a", startMs = 1000, endMs = 5000, auto = mark), org.litvin.points.PointV1(id = "b", startMs = 8000, endMs = 9000)))
+        val a = d.getCompletedPoints().first()
+        var changes = 0
+        d.onPointsChanged = { changes++ }
+
+        assertTrue(d.deletePoint("a"))
+        assertTrue(d.restorePoint(a))
+        assertEquals(listOf("a", "b"), d.getCompletedPoints().map { it.id })
+        assertEquals(mark, d.getCompletedPoints().first().auto)
+        assertEquals(2, changes)
+        assertEquals(false, d.restorePoint(a), "the id is used")
+        assertEquals(false, d.restorePoint(a.copy(id = "c", startMs = 8500, endMs = 9500)), "over another point")
+    }
 }

@@ -241,6 +241,18 @@ class PointsDispatcher {
         return false
     }
 
+    /**
+     * Puts back a deleted point with its id and its mark (Undo in the review window). Returns false when a point has
+     * its id, or when it is over another point.
+     */
+    fun restorePoint(point: PointV1): Boolean {
+        if (points.any { it.id == point.id } || overlapsExisting(point.startMs, point.endMs)) return false
+        points.add(point)
+        sortPoints()
+        onPointsChanged?.invoke()
+        return true
+    }
+
     fun clearAll() {
         points.clear()
         pendingStartMs = null

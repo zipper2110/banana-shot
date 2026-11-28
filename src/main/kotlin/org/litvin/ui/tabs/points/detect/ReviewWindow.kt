@@ -84,6 +84,12 @@ internal interface ReviewHost {
 
     fun deletePoint(pointId: String)
 
+    /** Deletes an automatic clip that the user declined (a false rally), and records it for the lab. */
+    fun declinePoint(pointId: String) = deletePoint(pointId)
+
+    /** Puts back a deleted clip with its id, its mark and [winner] (Undo). False when the project does not accept it. */
+    fun restorePoint(point: PointV1, winner: Outcome): Boolean = false
+
     /** Adds a clip. Returns its id, or null when the project does not accept the clip. */
     fun addPoint(startMs: Long, endMs: Long): String?
 
@@ -406,6 +412,9 @@ internal class ReviewWindow(
     /** True after "Accept all points and close" found games that do not agree with the server ([ReviewGameCheck]). */
     private var checkShown = false
 
+    /** The deleted points with their winners, the last at the end: Ctrl+Z puts them back. */
+    private val deleted = ArrayDeque<Pair<PointV1, Outcome>>()
+
     /** The keys of the check items that the user closed with "No point is missing here". */
     private val checkClosed = HashSet<String>()
     private var checkItems: List<ReviewGameCheck.Item> = emptyList()
@@ -570,7 +579,13 @@ internal class ReviewWindow(
         ),
     )
     private val acceptButton = button("Accept, next", Material2AL.CHECK, "review-accept", "T", UiButton.Kind.LIME_OUTLINE) { acceptAndNext() }
-    private val deleteButton = button("Delete", Material2AL.DELETE_OUTLINE, "review-delete", "Delete", UiButton.Kind.DANGER) { deleteSelected() }
+    private val deleteButton = button(
+        "Delete",
+        Material2AL.DELETE_OUTLINE,
+        "review-delete",
+        "Deletes the point (Delete). An automatic point goes with no question: Ctrl+Z puts it back.",
+        UiButton.Kind.DANGER,
+    ) { deleteSelected() }
     private val addButton = button("Add point", Material2AL.ADD, "review-add", "Adds a point of 5 s at the playhead (N)") { addAtPlayhead() }
     private val gapButton = button(
         "Next long gap",
@@ -907,6 +922,7 @@ internal class ReviewWindow(
         bind("G") { nextLongGap() }
         bind("S") { switchServer() }
         bind("DELETE") { deleteSelected() }
+        bind("ctrl Z") { undoDelete() }
         bind("ESCAPE") { close() }
     }
 
@@ -1223,25 +1239,49 @@ internal class ReviewWindow(
         if (next != null) select(next.id, play = true) else say("All points are reviewed.")
     }
 
+    /**
+     * Delete: an automatic point goes with no question, and the project records it as declined. Ctrl+Z puts it back.
+     * A point that the user added needs a confirmation.
+     */
     private fun deleteSelected() {
         val point = selectedPoint() ?: return
         player.pause()
-        val name = Timecode.format(point.startMs.toLong()) + " - " + Timecode.format(point.endMs.toLong())
-        val confirmed = MessageDialog.confirm(
-            this,
-            "Delete the point?",
-            "Point $name",
-            confirmLabel = "Delete",
-            destructive = true,
-            confirmKeys = true,
-        )
-        if (!confirmed) return
+        if (point.auto == null) {
+            val name = Timecode.format(point.startMs.toLong()) + " - " + Timecode.format(point.endMs.toLong())
+            val confirmed = MessageDialog.confirm(
+                this,
+                "Delete the point?",
+                "Point $name",
+                confirmLabel = "Delete",
+                destructive = true,
+                confirmKeys = true,
+            )
+            if (!confirmed) return
+        }
         val index = points.indexOf(point)
         val next = points.getOrNull(index + 1) ?: points.getOrNull(index - 1)
-        host.deletePoint(point.id)
+        val winner = host.winnerOf(point.id)
+        if (point.auto != null) host.declinePoint(point.id) else host.deletePoint(point.id)
+        deleted.addLast(point to winner)
         selectedId = next?.id
         reload()
         next?.let { select(it.id, play = false) }
+        say("Point ${index + 1} is deleted. Ctrl+Z puts it back.")
+    }
+
+    /** Ctrl+Z: puts back the last deleted point, and selects it. */
+    internal fun undoDelete() {
+        val (point, winner) = deleted.removeLastOrNull() ?: run {
+            say("No deleted point to put back.")
+            return
+        }
+        if (!host.restorePoint(point, winner)) {
+            say("The point cannot come back: another point is at its time.")
+            return
+        }
+        reload()
+        select(point.id, play = false)
+        say("The point is back.")
     }
 
     private fun addAtPlayhead() {

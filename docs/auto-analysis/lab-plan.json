@@ -1801,6 +1801,50 @@
     "impact": 8,
     "outcome": "page in ws\\s4\\events with labelWindow in all 60 rows; 16 saved files keep their hash, 0 not-used marks; s001 and s007 start at the window"
    }
+  },
+  {
+   "id": "A56",
+   "kind": "measure",
+   "title": "MVP measures 3, 5, 6 on the head: bounds share, server right, double faults found",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S1",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "The first values of M2 measures 3, 5 and 6 on the head, so that the work goes to the largest gap.",
+    "impact": 5,
+    "text": "The user's MVP targets (2026-11-28): start within 1 s and end within 2 s for 90 %; server 95 %; double faults 70 %."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "doneWhen": [
+    "A bench or case_history measure (in S1's files, with a unit test) that gives for the matched points: the share with the start within 1 s and the end within 2 s of the mark; the share with the right server player; and the share of the marked double faults that have a point row.",
+    "A journal row (S1) with these 3 values on the auto-detect head for the 4 lab matches (chain-only, cached flights, no new detection) and on Igor (E106 keys), with the miss count of each and the 5 worst bound errors; the M2 measures 3, 5 and 6 on the dashboard have these values."
+   ]
+  },
+  {
+   "id": "A57",
+   "kind": "research",
+   "title": "Review UI audit: can the user make a detected match fully correct in the app?",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S2",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "A list of the review steps that the app supports now and the steps that are missing or hard, for M2 measure 7.",
+    "impact": 5,
+    "text": "The user (2026-11-28): the review flow must support bounds, outcome, server, decline and add a missing point, with clues for missed points."
+   },
+   "estimate": {
+    "netMin": 90
+   },
+   "doneWhen": [
+    "A table in docs/auto-analysis (read only on the code; no code change) with one row for each step: check and correct the rally bounds, the outcome, the server player; decline a false rally; add a missing point; the clues for missed points (the game check by the server change, the time gaps). Each row: supported now (yes / partly / no), how (the screen and the action, with the file and line), and the gap.",
+    "A short proposal of the smallest UI changes that close the gaps, with the order; the game check UX as one or two options. No implementation before the user's OK."
+   ]
   }
  ],
  "links": [

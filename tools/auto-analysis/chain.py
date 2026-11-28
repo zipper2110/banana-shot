@@ -76,6 +76,13 @@ PLAY_ENDS = ("in", "out", "net", "own")
 # value 1.5 s (lab.segment) split 2 marked points into two rows (m1015 2190, m1030 5028: gap 2 s). Default 2.5 (manager
 # decision after E161); 1.5 gives the old way.
 JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "2.5"))
+# A59 (E218, MVP measure 3): the GRU start of a rally is 1 to 2.5 s off the marked start at 52 of the 68 lab start
+# misses; the marks start about 1.3 s before the serve event. CHAIN_START_CLAMP=1: the start of a result row is clipped
+# to [s - START_C - START_W, s - START_C + START_W], s = the first serve event (not a toss alone) from start - 1 to
+# start + 4 s (start_clamp); a row with no such event keeps its start. Only the shown start changes (after the
+# decoder). Default "0" (off); "1" gives the new rule.
+START_CLAMP = os.environ.get("CHAIN_START_CLAMP", "0") == "1"
+START_C, START_W, START_BEFORE, START_AFTER = 1.3, 1.0, 1.0, 4.0
 # A38 (E198, cause B of E195): after a first-serve fault the GRU can fire on the fault serve and stay silent on the
 # second-serve point. CHAIN_SECOND_SERVE=1: after a rally of SS_SHOTS chain shot (the serve alone), the first serve event
 # ("serve" or "toss+serve") not later than SS_NEXT s after its end, from the same server end and the same side (x of
@@ -434,7 +441,8 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
     for i, (r, pp, p1_near) in enumerate(zip(rows, post, near1)):
         near_wins = None if abs(pp - 0.5) < 0.02 else bool(pp > 0.5)
         out.append({
-            "start": r["start"], "end": r["end"], "kind": "short" if r["prob"] < 0 else "rally",
+            "start": start_clamp(r["start"], r["end"], serves) if START_CLAMP else r["start"], "end": r["end"],
+            "kind": "short" if r["prob"] < 0 else "rally",
             "prob": None if r["prob"] < 0 else r["prob"], "pNotPoint": r["pNull"],
             "p1Near": p1_near, "pNearWins": pp, "pBall": r["pBall"],
             "winner": None if near_wins is None else ("P1" if near_wins == p1_near else "P2"),
@@ -457,6 +465,16 @@ def serve_side(serves, a):
     if not ev or abs(ev[0][3]["p0"][0]) < SIDE_X:
         return None
     return ev[0][1], ev[0][3]["p0"][0] > 0
+
+
+def start_clamp(a, b, serves):
+    """A59 (see START_CLAMP): the start of a row from a to b, clipped to the band around the first serve event (not a
+    toss alone) from a - START_BEFORE to a + START_AFTER; not later than b - 1 s. a when there is no such event."""
+    ev = [e for e in serves if a - START_BEFORE <= e[0] <= a + START_AFTER and e[2] != "toss"]
+    if not ev:
+        return a
+    s = float(ev[0][0])
+    return min(max(a, s - START_C - START_W), s - START_C + START_W, max(a, b - 1.0))
 
 
 def pose_feet_x(mid, pose, t, near):

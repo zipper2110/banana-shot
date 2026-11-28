@@ -1947,7 +1947,7 @@
    "finished": "2026-11-28 14:28",
    "real": {
     "impact": 7,
-    "outcome": "E207: 287444e9 gaps and G; d477399c server (S) and one import server mark; ea29513e game check option A; 152d4765 decline with Undo and declined.json; 549fa7f6 Add point fills the gap; 3f6c6fb6 the server mark moves on decline. 83 scoped tests pass with the Palette guard. Snapshot D:\bananashot-lab\\ws\\s2\u000760\\shots\review-gaps-server-check.png. Not tried on a real match; the side panel is tight at about 740 px window height."
+    "outcome": "E207: 287444e9 gaps and G; d477399c server (S) and one import server mark; ea29513e game check option A; 152d4765 decline with Undo and declined.json; 549fa7f6 Add point fills the gap; 3f6c6fb6 the server mark moves on decline. 83 scoped tests pass with the Palette guard. Snapshot D:\\bananashot-lab\\ws\\s2\\a60\\shots\\review-gaps-server-check.png. Not tried on a real match; the side panel is tight at about 740 px window height."
    }
   }
  ],

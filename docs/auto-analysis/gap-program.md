@@ -30,6 +30,40 @@ match. Thus:
 - An analysis of wrong winners gives the wrong event of each one (wrong hitter, missed shot, missed or false
   bounce, wrong in/out, missed net touch).
 
+### Business value (the user, 2026-11-28)
+
+The user finds it hard to set the goals as event numbers. The goals come from the value for the user. The
+numbers of the MVP are a manager proposal that looks achievable; the user then gives the app a test drive.
+
+Value box 1: a points list that is fast to make correct.
+
+- The user runs the auto-detection on a real match, then reviews and edits the result until the match is
+  correct. There is value only when this review is much faster than marking the match by hand.
+- Thus box 1 is mostly the right list of rallies, with few missed rallies and few false rallies.
+- First-serve faults do not have to be found. Second-serve faults (double faults) must be found.
+- Needs of box 1:
+  1. Points detection at a good level: few false rallies and few missed rallies.
+  2. Rally bounds mostly right for the real points.
+  3. The outcome mostly right.
+  4. A UI that supports the full review flow until the match is correct:
+     - review of the detected points: check and correct the rally bounds, the outcome and the server
+       player; decline a false rally;
+     - find and add the missing points. The user must see where to look, else the user must go through
+       the full match. Clues:
+       - The game check ("checksum"): the server changes at each game end. After the user verified the
+         winners, a game whose server change does not agree with the game end by the score has a
+         missed point. The app can show such games after the review. The main question is the UX.
+       - Time gaps: a gap between two points of a game that is much longer than the other gaps can
+         contain a missed rally.
+
+Value box 2: shot-based facts.
+
+- The average serve speed and shot speed.
+- The ball hitting patterns.
+- A court diagram overlay with the shot placement.
+- Box 2 iterates until all the main error sources are covered and about 95 % is right for normal
+  rallies and shots.
+
 "Covered" means: the gap has a fix that is merged and on by default, or a measurement that decides the
 question, with a journal row. A gap is not covered by a plan or a note only.
 
@@ -602,3 +636,4 @@ Status 2026-11-26 (manager):
 | 2026-11-28 | A26 (the user): OK for the full timed court replay of Misha m1113 (S5; CPU; read only, output in the S5 lab folder; about 35 to 45 min). Two passes: the defaults (switches off) and COURT_HYP_N=10,10. COURT_HYP_N goes on only if the corners stay within the E187 limit on all windows and the stage time goes down. | S5 |
 | 2026-11-28 | Master merge (the user): auto-detect does not go into master until the user says so. The reason: the results are still far from what users need in their own scenarios. The manager does not ask about a master merge or its vetoes (SEEDS=3 model files, CHAIN_SERVE_ANCHOR Igor rows) until then. | all |
 | 2026-11-28 | M2 target (the user): held-out Igor rally precision with the fault rows 96.0 % or more (now 95.57 %, E216). The 4 event targets (hits 75 %, shot count 70 %, in/out 95 %, fault clips 70 %) are still the manager draft. | all |
+| 2026-11-28 | Business value (the user; section 1 "Business value"): box 1 = a points list that is much faster to review and correct than to mark by hand (rallies, bounds, outcome, server, double faults; first-serve faults not needed; a review UI with clues for missed points); box 2 = shot facts (speeds, patterns, placement) at about 95 %. The M2 event targets wait: the manager proposes MVP numbers for box 1, and the user gives the app a test drive. | all |

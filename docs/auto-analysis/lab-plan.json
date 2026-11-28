@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 14:11",
+ "updated": "2026-11-28 14:28",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -160,10 +160,10 @@
     },
     {
      "name": "7 Review UI flow",
-     "value": "E206 audit: 3 of 7 steps yes (bounds, winner, decline), 2 partly (server, add point), 2 no (game check, time gaps)",
+     "value": "all 7 steps in the review window (A60, E207); not yet tried on a real match",
      "target": "all review steps and the clues for missed points in the app",
      "met": false,
-     "progress": 0.5
+     "progress": 0.9
     },
     {
      "name": "8 The user's test drive",
@@ -1925,8 +1925,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S2",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E207"
+   ],
    "expected": {
     "outcome": "M2 measure 7: the review window supports the full flow, with clues for missed points.",
     "impact": 7,
@@ -1941,7 +1943,12 @@
     "Step 3 (option A): 'Accept all points and close' first runs the game check (the server of the score against the detected server, game by game); when games do not agree, a panel lists them; each item goes to the game and plays its longest gap; 'No point is missing here' closes an item. Unit tests of the check on a synthetic match with one missed point and one with none.",
     "Step 4: Delete of an automatic point has no dialog and has Undo (Ctrl+Z); the project records the declined automatic points (time and detection data). Step 5: 'Add point' in a marked gap uses the gap minus a margin.",
     "Each step in its own commit; all colors in Palette (the guard test passes); the related unit tests pass (scoped runs); a screenshot of the review window with the gaps, the server and the check panel (off-screen snapshot or the dev app); a journal row (S2) with the list of commits. The user then gives it a test drive (M2 measure 8)."
-   ]
+   ],
+   "finished": "2026-11-28 14:28",
+   "real": {
+    "impact": 7,
+    "outcome": "E207: 287444e9 gaps and G; d477399c server (S) and one import server mark; ea29513e game check option A; 152d4765 decline with Undo and declined.json; 549fa7f6 Add point fills the gap; 3f6c6fb6 the server mark moves on decline. 83 scoped tests pass with the Palette guard. Snapshot D:\bananashot-lab\\ws\\s2\u000760\\shots\review-gaps-server-check.png. Not tried on a real match; the side panel is tight at about 740 px window height."
+   }
   }
  ],
  "links": [

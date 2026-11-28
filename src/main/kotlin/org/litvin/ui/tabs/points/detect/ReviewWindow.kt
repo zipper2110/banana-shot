@@ -108,6 +108,9 @@ internal interface ReviewHost {
     fun overlayLayers(): Set<String> = emptySet()
 
     fun setOverlayLayers(layers: Set<String>) {}
+
+    /** The ids of the clips that end a game in the score. A gap after a game end is a changeover ([ReviewGaps]). */
+    fun gameEnds(): Set<String> = emptySet()
 }
 
 /** Which automatic points "Swap players" changes. */
@@ -383,6 +386,9 @@ internal class ReviewWindow(
 ) : JFrame("Review the detected points") {
     private var points: List<PointV1> = emptyList()
     private var selectedId: String? = null
+
+    /** The ids of the points with a long gap before them ([ReviewGaps]). */
+    private var longGaps: Set<String> = emptySet()
     private var closed = false
 
     /** The playback pauses at this time: the end of the point that plays. Null plays on. */
@@ -534,6 +540,12 @@ internal class ReviewWindow(
     private val acceptButton = button("Accept, next", Material2AL.CHECK, "review-accept", "T", UiButton.Kind.LIME_OUTLINE) { acceptAndNext() }
     private val deleteButton = button("Delete", Material2AL.DELETE_OUTLINE, "review-delete", "Delete", UiButton.Kind.DANGER) { deleteSelected() }
     private val addButton = button("Add point", Material2AL.ADD, "review-add", "Adds a point of 5 s at the playhead (N)") { addAtPlayhead() }
+    private val gapButton = button(
+        "Next long gap",
+        Material2MZ.SKIP_NEXT,
+        "review-next-gap",
+        "Plays the next long gap between two points: a point can be missing there (G)",
+    ) { nextLongGap() }
     private val swapButton = button(
         "Swap players",
         Material2MZ.SWAP_HORIZ,
@@ -784,7 +796,7 @@ internal class ReviewWindow(
                 }, BorderLayout.CENTER)
             })
             add(pair(acceptButton, deleteButton))
-            add(addButton)
+            add(pair(addButton, gapButton))
             add(message)
         }
         val footer = Stack(pad = Insets(12, 16, 14, 16), gap = 8).apply {
@@ -847,6 +859,7 @@ internal class ReviewWindow(
         bind("E") { setWinner(Outcome.P2) }
         bind("T") { acceptAndNext() }
         bind("N") { addAtPlayhead() }
+        bind("G") { nextLongGap() }
         bind("DELETE") { deleteSelected() }
         bind("ESCAPE") { close() }
     }
@@ -873,7 +886,9 @@ internal class ReviewWindow(
         }
         listSync = true
         try {
-            val rows = points.mapIndexed { index, point -> Row(index + 1, point, host.winnerOf(point.id)) }
+            val gaps = ReviewGaps.gaps(points)
+            longGaps = ReviewGaps.longGaps(points, host.gameEnds())
+            val rows = points.mapIndexed { index, point -> Row(index + 1, point, host.winnerOf(point.id), gaps[index], point.id in longGaps) }
             if (model.size != rows.size) {
                 model.clear()
                 rows.forEach(model::addElement)
@@ -950,6 +965,9 @@ internal class ReviewWindow(
         deleteButton.isEnabled = point != null
         swapButton.isEnabled = auto.isNotEmpty()
         acceptAllButton.isEnabled = points.isNotEmpty()
+        gapButton.isEnabled = longGaps.isNotEmpty()
+        gapButton.toolTipText = "Plays the next long gap between two points: a point can be missing there (G). " +
+            "Long gaps: ${longGaps.size}"
         refreshPlayButton()
     }
 
@@ -1172,6 +1190,29 @@ internal class ReviewWindow(
         say("New point: drag its edges on the bar.")
     }
 
+    /**
+     * G: plays the next long gap after the playhead (after the last gap, the first gap). The point before the gap is
+     * selected, and the playback pauses at the start of the point after the gap.
+     */
+    internal fun nextLongGap() {
+        val marked = points.withIndex().filter { it.value.id in longGaps && it.index > 0 }
+        if (marked.isEmpty()) {
+            say("No long gap between the points.")
+            return
+        }
+        val now = player.currentTimeMs()
+        val next = marked.firstOrNull { points[it.index - 1].endMs > now + END_NEAR_MS } ?: marked.first()
+        val before = points[next.index - 1]
+        select(before.id, play = false)
+        player.seek(before.endMs.toLong())
+        showTime(before.endMs.toLong())
+        stopAtMs = next.value.startMs.toLong()
+        player.play()
+        refreshPlayButton()
+        val number = marked.indexOf(next) + 1
+        say("Long gap $number of ${marked.size}: ${ReviewGaps.text((next.value.startMs - before.endMs).toLong())} before point ${next.index + 1}. N adds a point.")
+    }
+
     private fun acceptAll() {
         host.markChecked(points.filter { it.auto != null }.map { it.id })
         close()
@@ -1322,7 +1363,8 @@ internal class ReviewWindow(
 
     // ---- List ----------------------------------------------------------------------------------------
 
-    private data class Row(val number: Int, val point: PointV1, val winner: Outcome)
+    /** [gapMs]: the gap to the point before it (null for the first point). [longGap]: the gap has a mark. */
+    private data class Row(val number: Int, val point: PointV1, val winner: Outcome, val gapMs: Long? = null, val longGap: Boolean = false)
 
     /** The color of a player as a round icon. */
     private class PlayerDot(private val color: Color) : javax.swing.Icon {
@@ -1385,6 +1427,16 @@ internal class ReviewWindow(
                 }
                 g2.color = Palette.FG_3
                 g2.drawString(who, 186, baseline)
+                // The gap to the point before it. A long gap has a mark: a line at the top of the row, between the points.
+                current.gapMs?.let { gap ->
+                    val text = ReviewGaps.text(gap)
+                    g2.font = UiKit.font(11.5f, if (current.longGap) UiKit.Weight.SEMIBOLD else UiKit.Weight.REGULAR)
+                    g2.color = if (current.longGap) Palette.YELLOW else Palette.FG_3
+                    g2.drawString(text, width - GAP_RIGHT - g2.fontMetrics.stringWidth(text), baseline)
+                    if (current.longGap) {
+                        g2.fillRect(4, 0, width - 4, 2)
+                    }
+                }
                 // The state: a dot for a clip to review, a check mark for a reviewed automatic clip.
                 val mark = point.auto
                 val x = width - 26
@@ -1424,6 +1476,9 @@ internal class ReviewWindow(
         /** The evidence text shows this many rows. The other rows need a scroll. */
         const val EVIDENCE_ROWS = 8
         const val ROW_HEIGHT = 32
+
+        /** The gap text of a row ends this far from the right edge, before the state mark. */
+        const val GAP_RIGHT = 40
         const val CLOCK_WIDTH = 110
         const val STEP_MS = 1_000L
         const val LONG_STEP_MS = 5_000L

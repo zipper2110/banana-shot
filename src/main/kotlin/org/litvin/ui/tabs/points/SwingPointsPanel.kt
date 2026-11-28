@@ -272,6 +272,8 @@ class SwingPointsPanel(
 
         override fun detectionOf(pointId: String) = recordDetections[pointId]?.rally
 
+        override fun gameEnds() = scoring.gameEndIds()
+
         override fun overlayLayers() = detect?.loadOverlayLayers() ?: emptySet()
 
         override fun setOverlayLayers(layers: Set<String>) {

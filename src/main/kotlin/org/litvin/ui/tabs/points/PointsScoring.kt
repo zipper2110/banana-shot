@@ -901,6 +901,18 @@ internal class PointsScoring(
     /** The winner of the clip with [pointId] in the score file. */
     fun winnerOf(pointId: String): Outcome = score.outcomeOf(pointId)
 
+    /** The ids of the clips after which the score has one game more (or a new set). */
+    fun gameEndIds(): Set<String> {
+        val states = timeline ?: return emptySet()
+        val ids = LinkedHashSet<String>()
+        states.statesAfterPoint.forEachIndexed { index, after ->
+            val before = states.stateBefore(index)
+            val games = { s: ScoringEngine.MatchState -> s.gamesP1 + s.gamesP2 + 100 * (s.setsP1 + s.setsP2) }
+            if (games(after) != games(before)) points.getOrNull(index)?.let { ids += it.id }
+        }
+        return ids
+    }
+
     /** Gives the clip with [pointId] the winner [outcome] with no ending kind, as Q, W, and E do (the review window). */
     fun setWinner(pointId: String, outcome: Outcome) {
         val point = points.firstOrNull { it.id == pointId } ?: return

@@ -30,6 +30,8 @@ class ReviewWindowTest {
     private class Host(var list: List<PointV1>) : ReviewHost {
         val winners = mutableMapOf<String, Outcome>()
         var warningList = emptyList<String>()
+        var ends = emptySet<String>()
+        override fun gameEnds() = ends
         override val players = ScorePlayers("Anna", "Bea")
         override fun warnings() = warningList
         override fun points() = list.sortedBy { it.startMs }
@@ -258,6 +260,32 @@ class ReviewWindowTest {
         player.timeMs = 12_000
         key("N")
         assertEquals("No room for a new point at the playhead.", text("review-message"))
+    }
+
+    @Test
+    fun `G plays the next long gap and stops at the point after it`() {
+        // Points of 10 s with gaps of 20 s, and one gap of 60 s before point 6.
+        val starts = listOf(10_000, 40_000, 70_000, 100_000, 130_000, 200_000, 230_000, 260_000, 290_000)
+        review(*starts.mapIndexed { index, start -> auto("p$index", start) }.toTypedArray()) {
+            player.timeMs = 0
+            key("G")
+            assertEquals(140_000L, player.timeMs)
+            assertTrue(player.playing)
+            assertEquals("Long gap 1 of 1: +60 s before point 6. N adds a point.", text("review-message"))
+            assertTrue((window.contentPane.find("review-next-gap") as JButton).isEnabled)
+
+            // After the last long gap, G goes to the first one again.
+            player.timeMs = 250_000
+            key("G")
+            assertEquals(140_000L, player.timeMs)
+        }
+    }
+
+    @Test
+    fun `with no long gap, G says so and the button is off`() = review(auto("a", 10_000), auto("b", 30_000), auto("c", 50_000)) {
+        assertFalse((window.contentPane.find("review-next-gap") as JButton).isEnabled)
+        key("G")
+        assertEquals("No long gap between the points.", text("review-message"))
     }
 
     @Test

@@ -37,6 +37,8 @@ class ReviewWindowTest {
         override fun switchServer(pointId: String) {
             servers[pointId] = if (servers[pointId] == 1) 2 else 1
         }
+        val detected = mutableMapOf<String, Int>()
+        override fun detectedServerOf(pointId: String) = detected[pointId]
         override val players = ScorePlayers("Anna", "Bea")
         override fun warnings() = warningList
         override fun points() = list.sortedBy { it.startMs }
@@ -301,6 +303,44 @@ class ReviewWindowTest {
         assertFalse((window.contentPane.find("review-next-gap") as JButton).isEnabled)
         key("G")
         assertEquals("No long gap between the points.", text("review-message"))
+    }
+
+    @Test
+    fun `Accept all first runs the game check, and Go plays the longest gap before the place`() =
+        review(auto("a", 10_000), auto("b", 30_000), auto("c", 50_000), auto("d", 70_000), auto("e", 100_000), auto("f", 120_000)) {
+            // Three games: a b, c d, e f. In game 3 the detection saw the other server.
+            host.ends = setOf("b", "d")
+            host.servers.putAll(mapOf("a" to 1, "b" to 1, "c" to 2, "d" to 2, "e" to 1, "f" to 1))
+            host.detected.putAll(mapOf("a" to 1, "b" to 1, "c" to 2, "d" to 2, "e" to 2, "f" to 2))
+            snapshot(window, "review-gaps-server-check-0")
+
+            click("review-accept-all")
+            assertEquals(0, closedCalls)
+            assertTrue(window.contentPane.find("review-check")!!.isVisible)
+            assertEquals("1 place where the server does not agree", text("review-check-title"))
+            assertEquals("Game 3: 2 points", text("review-check-item-1"))
+            assertEquals("Accept all and close anyway", (window.contentPane.find("review-accept-all") as JButton).text)
+
+            // The gap before e (20 s) is the longest gap from the start of game 2 to e.
+            click("review-check-go-1")
+            assertEquals(80_000L, player.timeMs)
+            assertTrue(player.playing)
+            snapshot(window, "review-gaps-server-check")
+
+            click("review-check-close-1")
+            assertEquals("All games agree with the detected server.", text("review-check-title"))
+            click("review-accept-all")
+            assertEquals(1, closedCalls)
+            assertTrue(host.open().isEmpty())
+        }
+
+    @Test
+    fun `the server line names the detected server when it does not agree`() = review(auto("a", 10_000), auto("b", 30_000)) {
+        host.servers["a"] = 1
+        host.detected["a"] = 2
+        key("DOWN")
+        key("UP")
+        assertEquals("Serves: Anna · the detection saw Bea", text("review-server"))
     }
 
     @Test

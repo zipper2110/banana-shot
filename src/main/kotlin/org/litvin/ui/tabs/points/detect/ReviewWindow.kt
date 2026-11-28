@@ -117,6 +117,13 @@ internal interface ReviewHost {
 
     /** The other player serves the clip, as S in the Points tab. The next points of the game follow. */
     fun switchServer(pointId: String) {}
+
+    /**
+     * The server (1 or 2) that the detection saw in the clip: the player at the server end. Null when it is not
+     * known. "Swap players" changes the player at the near end, and thus also this server.
+     */
+    fun detectedServerOf(pointId: String): Int? =
+        detectionOf(pointId)?.serverNear?.let { serverNear -> nearPlayerOf(pointId)?.let { if (serverNear) it else 3 - it } }
 }
 
 /** Which automatic points "Swap players" changes. */
@@ -395,6 +402,13 @@ internal class ReviewWindow(
 
     /** The ids of the points with a long gap before them ([ReviewGaps]). */
     private var longGaps: Set<String> = emptySet()
+
+    /** True after "Accept all points and close" found games that do not agree with the server ([ReviewGameCheck]). */
+    private var checkShown = false
+
+    /** The keys of the check items that the user closed with "No point is missing here". */
+    private val checkClosed = HashSet<String>()
+    private var checkItems: List<ReviewGameCheck.Item> = emptyList()
     private var closed = false
 
     /** The playback pauses at this time: the end of the point that plays. Null plays on. */
@@ -627,6 +641,13 @@ internal class ReviewWindow(
         button("Accept all points and close", Material2AL.DONE_ALL, "review-accept-all", "Completes the review", UiButton.Kind.LIME) { acceptAll() }
     private val laterButton = button("Continue later", null, "review-later", "Closes the window. The review stays open. (Esc)") { close() }
 
+    /** The panel of the game check: the games that do not agree with the detected server. */
+    private val checkPanel = Stack(gap = 6).apply {
+        name = "review-check"
+        isOpaque = false
+        isVisible = false
+    }
+
     init {
         name = "detect-review"
         defaultCloseOperation = WindowConstants.DO_NOTHING_ON_CLOSE
@@ -826,6 +847,7 @@ internal class ReviewWindow(
             isOpaque = true
             background = Palette.OVERLAY
             border = BorderFactory.createMatteBorder(1, 0, 0, 0, Palette.LINE)
+            add(checkPanel)
             add(acceptAllButton)
             add(laterButton)
         }
@@ -924,6 +946,7 @@ internal class ReviewWindow(
         } finally {
             listSync = false
         }
+        if (checkShown) refreshCheck()
         refresh()
     }
 
@@ -989,6 +1012,13 @@ internal class ReviewWindow(
             else -> "Serves: not known (S sets the server)"
         }
         serverLabel.icon = server?.let { PlayerDot(host.players.color(it)) }
+        val detectedServer = point?.let { host.detectedServerOf(it.id) }
+        if (server != null && detectedServer != null && detectedServer != server) {
+            serverLabel.text += " · the detection saw ${host.players.name(detectedServer)}"
+            serverLabel.foreground = Palette.YELLOW
+        } else {
+            serverLabel.foreground = Palette.FG
+        }
         serverButton.isEnabled = point != null && point.endMs > point.startMs
         val canScore = point != null && point.auto?.kind != AutoKind.FAULT && point.endMs > point.startMs
         winner.isEnabled = canScore
@@ -1242,20 +1272,96 @@ internal class ReviewWindow(
         }
         val now = player.currentTimeMs()
         val next = marked.firstOrNull { points[it.index - 1].endMs > now + END_NEAR_MS } ?: marked.first()
-        val before = points[next.index - 1]
+        playGapBefore(next.index)
+        val number = marked.indexOf(next) + 1
+        val gap = (next.value.startMs - points[next.index - 1].endMs).toLong()
+        say("Long gap $number of ${marked.size}: ${ReviewGaps.text(gap)} before point ${next.index + 1}. N adds a point.")
+    }
+
+    /**
+     * Selects the point before the point at [index], and plays the gap between them. The playback pauses at the start
+     * of the point at [index]. For the first point, it plays the point.
+     */
+    private fun playGapBefore(index: Int) {
+        val after = points.getOrNull(index) ?: return
+        val before = points.getOrNull(index - 1)
+        if (before == null) {
+            select(after.id, play = true)
+            return
+        }
         select(before.id, play = false)
         player.seek(before.endMs.toLong())
         showTime(before.endMs.toLong())
-        stopAtMs = next.value.startMs.toLong()
+        stopAtMs = after.startMs.toLong()
         player.play()
         refreshPlayButton()
-        val number = marked.indexOf(next) + 1
-        say("Long gap $number of ${marked.size}: ${ReviewGaps.text((next.value.startMs - before.endMs).toLong())} before point ${next.index + 1}. N adds a point.")
     }
 
-    private fun acceptAll() {
+    /**
+     * "Accept all points and close" (option A of the audit): first the game check. When games do not agree with the
+     * detected server, the check panel lists them, and the window stays open. A second click closes the window.
+     */
+    internal fun acceptAll() {
+        if (!checkShown) {
+            refreshCheck()
+            if (checkItems.isNotEmpty()) {
+                checkShown = true
+                refreshCheck()
+                player.pause()
+                say("")
+                return
+            }
+        }
         host.markChecked(points.filter { it.auto != null }.map { it.id })
         close()
+    }
+
+    /** Runs the game check again, and shows its open items in the check panel. */
+    private fun refreshCheck() {
+        val ends = host.gameEnds()
+        checkItems = ReviewGameCheck.items(points, ends, host::serverOf, host::detectedServerOf).filter { it.key !in checkClosed }
+        if (!checkShown) return
+        checkPanel.removeAll()
+        val title = when (checkItems.size) {
+            0 -> "All games agree with the detected server."
+            1 -> "1 place where the server does not agree"
+            else -> "${checkItems.size} places where the server does not agree"
+        }
+        checkPanel.add(JLabel(title).apply {
+            name = "review-check-title"
+            font = UiKit.font(13f, UiKit.Weight.SEMIBOLD)
+            foreground = if (checkItems.isEmpty()) Palette.GREEN else Palette.YELLOW
+            // The list of the points needs the height: the explanation is a tooltip.
+            toolTipText = Html.wrappedTooltip(CHECK_HINT, SIDE_WIDTH)
+        })
+        checkItems.forEachIndexed { index, item ->
+            val games = if (item.firstGame == item.lastGame) "Game ${item.firstGame}" else "Games ${item.firstGame} to ${item.lastGame}"
+            val count = if (item.disagree == 1) "1 point" else "${item.disagree} points"
+            checkPanel.add(JPanel(BorderLayout(6, 0)).apply {
+                isOpaque = false
+                add(JLabel("$games: $count").apply {
+                    name = "review-check-item-${index + 1}"
+                    font = UiKit.font(12f)
+                    foreground = Palette.FG
+                    toolTipText = "From point ${item.firstDisagree + 1}, the server of the score does not agree with the detected server"
+                }, BorderLayout.CENTER)
+                add(JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
+                    isOpaque = false
+                    add(button("Go", Material2MZ.PLAY_ARROW, "review-check-go-${index + 1}", "Plays the longest gap before point ${item.firstDisagree + 1}") {
+                        playGapBefore(item.gapIndex)
+                        say("A point can be missing here. N adds a point at the playhead.")
+                    })
+                    add(button("No point is missing here", null, "review-check-close-${index + 1}", "Closes this item") {
+                        checkClosed += item.key
+                        refreshCheck()
+                    })
+                }, BorderLayout.EAST)
+            })
+        }
+        checkPanel.isVisible = true
+        acceptAllButton.text = if (checkItems.isEmpty()) "Accept all points and close" else "Accept all and close anyway"
+        checkPanel.revalidate()
+        checkPanel.repaint()
     }
 
     // ---- Overlay -------------------------------------------------------------------------------------
@@ -1516,6 +1622,9 @@ internal class ReviewWindow(
         /** The evidence text shows this many rows. The other rows need a scroll. */
         const val EVIDENCE_ROWS = 8
         const val ROW_HEIGHT = 32
+
+        const val CHECK_HINT = "A missed point or a false point moves the game ends of the score. Then the server of " +
+            "the score does not agree with the detected server. Go plays the longest gap before the place."
 
         /** The gap text of a row ends this far from the right edge, before the state mark. */
         const val GAP_RIGHT = 40

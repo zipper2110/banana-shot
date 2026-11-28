@@ -18,6 +18,7 @@ import winner_ball as wb
 import match_decode as md
 import shot_chain as sc
 import rally_end
+import server_rule
 from serve_ball import serve_events
 from server_end import near_far, wrist_up
 from ball_events import court_H
@@ -447,6 +448,8 @@ def winners(mid, seg, full, serves, p=PARAMS, prob=None):
             "chain": r.get("chain")})
         if r.get("netHit") is not None:              # G7 (c): CHAIN_NETHIT "A" or "B"
             out[-1]["netHit"] = r["netHit"]
+    if server_rule.FILL:
+        server_rule.apply(mid, out)
     return out
 
 

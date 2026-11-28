@@ -311,6 +311,42 @@ class ReviewWindowTest {
     }
 
     @Test
+    fun `Add point in a marked gap fills the gap minus a margin`() {
+        val starts = listOf(10_000, 40_000, 70_000, 100_000, 130_000, 200_000, 230_000, 260_000, 290_000)
+        review(*starts.mapIndexed { index, start -> auto("p$index", start) }.toTypedArray()) {
+            key("G")
+            player.timeMs = 150_000
+            key("N")
+
+            val added = host.list.first { it.id == "new" }
+            assertEquals(141_000 to 199_000, added.startMs to added.endMs)
+            assertEquals("New point in the gap: move its edges in on the bar.", text("review-message"))
+        }
+    }
+
+    @Test
+    fun `the review window with the gaps, the server and the check panel`() {
+        // A match of 3 games: a long gap in game 2 (a missed point), and then the servers do not agree.
+        val starts = listOf(10_000, 40_000, 70_000, 100_000, 130_000, 160_000, 190_000, 270_000, 300_000, 330_000, 360_000, 390_000)
+        val ids = starts.indices.map { "p$it" }
+        review(*starts.mapIndexed { index, start -> auto(ids[index], start, checked = index < 3, near = 1 + index % 2) }.toTypedArray()) {
+            host.ends = setOf("p3")
+            ids.forEachIndexed { index, id ->
+                host.servers[id] = if (index < 4) 1 else 2
+                host.detected[id] = if (index in 4..6) 2 else 1
+                host.winners[id] = if (index % 3 == 0) Outcome.P2 else Outcome.P1
+            }
+            // The window opens at p3, the first point to review. p7 is after the long gap.
+            repeat(4) { key("DOWN") }
+            click("review-accept-all")
+            assertEquals("1 place where the server does not agree", text("review-check-title"))
+            assertEquals("Game 2: 5 points", text("review-check-item-1"))
+            assertEquals("Serves: Bea · the detection saw Anna", text("review-server"))
+            snapshot(window, "review-gaps-server-check", height = 900)
+        }
+    }
+
+    @Test
     fun `with no long gap, G says so and the button is off`() = review(auto("a", 10_000), auto("b", 30_000), auto("c", 50_000)) {
         assertFalse((window.contentPane.find("review-next-gap") as JButton).isEnabled)
         key("G")
@@ -324,7 +360,6 @@ class ReviewWindowTest {
             host.ends = setOf("b", "d")
             host.servers.putAll(mapOf("a" to 1, "b" to 1, "c" to 2, "d" to 2, "e" to 1, "f" to 1))
             host.detected.putAll(mapOf("a" to 1, "b" to 1, "c" to 2, "d" to 2, "e" to 2, "f" to 2))
-            snapshot(window, "review-gaps-server-check-0")
 
             click("review-accept-all")
             assertEquals(0, closedCalls)
@@ -337,7 +372,6 @@ class ReviewWindowTest {
             click("review-check-go-1")
             assertEquals(80_000L, player.timeMs)
             assertTrue(player.playing)
-            snapshot(window, "review-gaps-server-check")
 
             click("review-check-close-1")
             assertEquals("All games agree with the detected server.", text("review-check-title"))
@@ -454,9 +488,9 @@ class ReviewWindowTest {
     }
 
     /** Writes a picture of [window] when the property `detect.snapshot` names a folder. For a check by eye. */
-    private fun snapshot(window: ReviewWindow, name: String) {
+    private fun snapshot(window: ReviewWindow, name: String, height: Int = 780) {
         val folder = System.getProperty("detect.snapshot") ?: System.getenv("DETECT_SNAPSHOT") ?: return
-        window.setSize(1300, 780)
+        window.setSize(1300, height)
         window.addNotify()
         window.validate()
         val pane = window.contentPane

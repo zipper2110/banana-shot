@@ -412,6 +412,9 @@ internal class ReviewWindow(
     /** True after "Accept all points and close" found games that do not agree with the server ([ReviewGameCheck]). */
     private var checkShown = false
 
+    /** The id of the point after the gap that G or Go played last. "Add point" in this gap fills the gap. */
+    private var playedGapBefore: String? = null
+
     /** The deleted points with their winners, the last at the end: Ctrl+Z puts them back. */
     private val deleted = ArrayDeque<Pair<PointV1, Outcome>>()
 
@@ -586,7 +589,12 @@ internal class ReviewWindow(
         "Deletes the point (Delete). An automatic point goes with no question: Ctrl+Z puts it back.",
         UiButton.Kind.DANGER,
     ) { deleteSelected() }
-    private val addButton = button("Add point", Material2AL.ADD, "review-add", "Adds a point of 5 s at the playhead (N)") { addAtPlayhead() }
+    private val addButton = button(
+        "Add point",
+        Material2AL.ADD,
+        "review-add",
+        "Adds a point at the playhead (N): in a long gap, the full gap; in other places, 5 s",
+    ) { addAtPlayhead() }
     private val gapButton = button(
         "Next long gap",
         Material2MZ.SKIP_NEXT,
@@ -1284,20 +1292,38 @@ internal class ReviewWindow(
         say("The point is back.")
     }
 
-    private fun addAtPlayhead() {
+    /**
+     * N: adds a point at the playhead. In a marked gap (a long gap, or the gap that G or Go played), the point fills
+     * the gap minus [GAP_MARGIN_MS] at each end, so the user only moves the two edges in. In other places it is a
+     * point of [NEW_POINT_MS] from the playhead, up to the next point.
+     */
+    internal fun addAtPlayhead() {
         val now = player.currentTimeMs()
         val inside = points.any { now >= it.startMs && now < it.endMs }
-        val next = points.firstOrNull { it.startMs > now }?.startMs?.toLong()
+        val nextIndex = points.indexOfFirst { it.startMs > now }
+        val next = points.getOrNull(nextIndex)
+        val before = points.getOrNull(if (nextIndex < 0) points.lastIndex else nextIndex - 1)?.takeIf { it.endMs <= now }
+        val marked = next != null && before != null && (next.id in longGaps || next.id == playedGapBefore)
         val total = player.totalDurationMs().takeIf { it > 0 } ?: Long.MAX_VALUE
-        val end = minOf(now + NEW_POINT_MS, next ?: Long.MAX_VALUE, total)
-        val id = if (inside || end - now < MIN_NEW_POINT_MS) null else host.addPoint(now, end)
+        var start = now
+        var end = minOf(now + NEW_POINT_MS, next?.startMs?.toLong() ?: Long.MAX_VALUE, total)
+        if (marked) {
+            val gapStart = before!!.endMs + GAP_MARGIN_MS
+            val gapEnd = next!!.startMs - GAP_MARGIN_MS
+            if (gapEnd - gapStart >= MIN_NEW_POINT_MS) {
+                start = gapStart
+                end = gapEnd
+            }
+        }
+        val id = if (inside || end - start < MIN_NEW_POINT_MS) null else host.addPoint(start, end)
         if (id == null) {
             say("No room for a new point at the playhead.")
             return
         }
+        playedGapBefore = null
         reload()
         select(id, play = false)
-        say("New point: drag its edges on the bar.")
+        say(if (marked && start != now) "New point in the gap: move its edges in on the bar." else "New point: drag its edges on the bar.")
     }
 
     /**
@@ -1314,6 +1340,7 @@ internal class ReviewWindow(
         val next = marked.firstOrNull { points[it.index - 1].endMs > now + END_NEAR_MS } ?: marked.first()
         playGapBefore(next.index)
         val number = marked.indexOf(next) + 1
+        playedGapBefore = next.value.id
         val gap = (next.value.startMs - points[next.index - 1].endMs).toLong()
         say("Long gap $number of ${marked.size}: ${ReviewGaps.text(gap)} before point ${next.index + 1}. N adds a point.")
     }
@@ -1389,6 +1416,7 @@ internal class ReviewWindow(
                     isOpaque = false
                     add(button("Go", Material2MZ.PLAY_ARROW, "review-check-go-${index + 1}", "Plays the longest gap before point ${item.firstDisagree + 1}") {
                         playGapBefore(item.gapIndex)
+                        playedGapBefore = points.getOrNull(item.gapIndex)?.id
                         say("A point can be missing here. N adds a point at the playhead.")
                     })
                     add(button("No point is missing here", null, "review-check-close-${index + 1}", "Closes this item") {
@@ -1676,6 +1704,9 @@ internal class ReviewWindow(
         const val WINDOW_PAD_MS = 8_000L
         const val NEW_POINT_MS = 5_000L
         const val MIN_NEW_POINT_MS = 500L
+
+        /** A new point in a marked gap starts this long after the point before it, and ends this long before the next. */
+        const val GAP_MARGIN_MS = 1_000L
         const val END_NEAR_MS = 250L
         const val OVERLAY_TICK_MS = 33
     }

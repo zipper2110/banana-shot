@@ -9,9 +9,10 @@ def ev(t, kind="serve", near=False):
 
 
 class StartClamp(unittest.TestCase):
-    def test_off_by_default(self):
+    def test_on_by_default(self):
+        # manager decision after E218; CHAIN_START_CLAMP=0 gives the old way
         if "CHAIN_START_CLAMP" not in os.environ:
-            self.assertFalse(chain.START_CLAMP)
+            self.assertTrue(chain.START_CLAMP)
 
     def test_band(self):
         # serve at 105.0: the band is 103.7 - 1.0 to 103.7 + 1.0

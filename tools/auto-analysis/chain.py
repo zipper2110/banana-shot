@@ -80,8 +80,9 @@ JOIN_GAP = float(os.environ.get("CHAIN_JOIN_GAP", "2.5"))
 # misses; the marks start about 1.3 s before the serve event. CHAIN_START_CLAMP=1: the start of a result row is clipped
 # to [s - START_C - START_W, s - START_C + START_W], s = the first serve event (not a toss alone) from start - 1 to
 # start + 4 s (start_clamp); a row with no such event keeps its start. Only the shown start changes (after the
-# decoder). Default "0" (off); "1" gives the new rule.
-START_CLAMP = os.environ.get("CHAIN_START_CLAMP", "0") == "1"
+# decoder). E218: measure 3 lab 83.6 to 85.7 %, Igor 87.6 to 88.1 %; the other measures the same. Default "1" (on:
+# manager decision after E218); "0" gives the old way.
+START_CLAMP = os.environ.get("CHAIN_START_CLAMP", "1") != "0"
 START_C, START_W, START_BEFORE, START_AFTER = 1.3, 1.0, 1.0, 4.0
 # A38 (E198, cause B of E195): after a first-serve fault the GRU can fire on the fault serve and stay silent on the
 # second-serve point. CHAIN_SECOND_SERVE=1: after a rally of SS_SHOTS chain shot (the serve alone), the first serve event

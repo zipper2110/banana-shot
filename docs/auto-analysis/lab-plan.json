@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 01:27",
+ "updated": "2026-11-28 12:18",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -863,7 +863,7 @@
    ],
    "owner": "S5",
    "journal": [],
-   "status": "queued",
+   "status": "running",
    "expected": {
     "outcome": "The cause of the slow court stage, from the stored logs, and a fix proposal.",
     "impact": 3,

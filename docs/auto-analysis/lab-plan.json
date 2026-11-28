@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 12:18",
+ "updated": "2026-11-28 12:24",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -112,8 +112,8 @@
    "title": "Right events on the labeled fragments",
    "status": "current",
    "period": "2026-11-27 to 2026-12-05",
-   "goal": "Priority 2 (the user, 2026-11-26) measured by the events: on the labeled small level, hits found 75 % or more of the labeled hits (now 77 of 131, 59 %), shot count right in 70 % of the points (now 9 of 17), in/out right 95 % or more (now 52 of 54), first-serve faults found as fault clips 70 % or more (now 4 of 11). Rallies (priority 1) do not go down: lab recall 94.6 % or more, held-out Igor 96.4 % or more.",
-   "goalStatus": "proposed (manager draft; the user confirms the targets)",
+   "goal": "Priority 2 (the user, 2026-11-26) measured by the events: on the labeled small level, hits found 75 % or more of the labeled hits (now 77 of 131, 59 %), shot count right in 70 % of the points (now 9 of 17), in/out right 95 % or more (now 52 of 54), first-serve faults found as fault clips 70 % or more (now 4 of 11). Rallies (priority 1) do not go down: lab recall 94.6 % or more, held-out Igor 96.4 % or more. Held-out Igor rally precision with the fault rows 96.0 % or more (the user, 2026-11-28).",
+   "goalStatus": "Igor precision line confirmed by the user (2026-11-28); the 4 event targets are still the manager draft",
    "result": null,
    "measures": [
     {
@@ -150,6 +150,13 @@
      "target": "94.6 % or more (no loss)",
      "met": true,
      "progress": 1.0
+    },
+    {
+     "name": "Igor rally precision with the fault rows",
+     "value": "95.57 % (E216, E106 keys; recall 99.49 %)",
+     "target": "96.0 % or more",
+     "met": false,
+     "progress": 0.996
     }
    ],
    "issues": [

@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 14:28",
+ "updated": "2026-11-28 15:45",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -1949,6 +1949,29 @@
     "impact": 7,
     "outcome": "E207: 287444e9 gaps and G; d477399c server (S) and one import server mark; ea29513e game check option A; 152d4765 decline with Undo and declined.json; 549fa7f6 Add point fills the gap; 3f6c6fb6 the server mark moves on decline. 83 scoped tests pass with the Palette guard. Snapshot D:\\bananashot-lab\\ws\\s2\\a60\\shots\\review-gaps-server-check.png. Not tried on a real match; the side panel is tight at about 740 px window height."
    }
+  },
+  {
+   "id": "A61",
+   "kind": "fix",
+   "title": "Review window: User and Expert tabs; overlay missing for a project in a custom projects folder",
+   "milestone": "M2",
+   "issues": [],
+   "owner": "S2",
+   "status": "queued",
+   "journal": [],
+   "expected": {
+    "outcome": "The User tab has only what helps the user's review decisions (the one we ship); the Expert tab is the full detection view for the user as the developer. The overlay shows for each project with an imported detection, in any projects folder.",
+    "impact": 6,
+    "text": "The user (2026-11-28): two tabs on the review window, User and Expert; the User tab has no comment field. Bug: on the user's machine the review of 20251019_121702 (in a custom projects folder) shows no overlay switch and no overlay settings button; sample projects show them."
+   },
+   "estimate": {
+    "netMin": 300
+   },
+   "doneWhen": [
+    "Bug: the cause found and fixed, with a unit test: a project in a custom projects folder (not AppData\\BananaShot\\projects) with an imported detection shows the overlay row in the review. The journal row names the cause (file and line).",
+    "Two tabs, User and Expert, on the review window; the window keeps the last tab. The Expert tab has everything of today (evidence text, detection note, confidence, overlay switch and settings, etc.). The User tab has only what helps a review decision: the video, the bounds bar, the points list with the gaps, the winner, the server, near end and swap players, Accept, Delete, Add point, Next long gap, the game check. No detection note (comment field), no evidence text, no overlay. A table in the journal row lists each control and its tab, with a reason for each control that is not in the User tab.",
+    "Scoped unit tests pass with the Palette guard; a snapshot of each tab; each part in its own commit."
+   ]
   }
  ],
  "links": [

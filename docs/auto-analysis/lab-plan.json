@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 12:24",
+ "updated": "2026-11-28 13:09",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -869,8 +869,13 @@
     "M2-I7"
    ],
    "owner": "S5",
-   "journal": [],
-   "status": "running",
+   "journal": [
+    "E185",
+    "E186",
+    "E187",
+    "E188"
+   ],
+   "status": "done",
    "expected": {
     "outcome": "The cause of the slow court stage, from the stored logs, and a fix proposal.",
     "impact": 3,
@@ -882,7 +887,12 @@
    "doneWhen": [
     "A journal row (S5 block) that splits the 2835 s of the Misha court stage into its steps, from the stored logs; the steps cover 90 % or more of the time.",
     "The cause named, and a fix proposal with the expected court stage time on Misha (target: under 600 s, the other matches take about 267 s)."
-   ]
+   ],
+   "finished": "2026-11-28 13:09",
+   "real": {
+    "impact": 3,
+    "outcome": "E188 (c942f041): full timed Misha court replay. The fast code (E186) gives the same windows in 1534 s (2835 s before); steps: detect 1254 s (82 %), wide search 143, frame 59, check 56, track 18, mask 4 (100 % cover). COURT_HYP_N=10,10 stays off: 1376 s, but 2 ok windows move 16 to 18 px. Check 1: the old 2835 s cannot be split from the stored logs (E185); the replay splits the same stage of the fast code. Check 2: the cause is named; the 600 s target is not reached (1534 s). More speed needs a faster detect with the same results: not planned now (value box 1 first)."
+   }
   },
   {
    "id": "A27",

@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 13:46",
+ "updated": "2026-11-28 13:50",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -160,10 +160,10 @@
     },
     {
      "name": "7 Review UI flow",
-     "value": "not checked",
+     "value": "E206 audit: 3 of 7 steps yes (bounds, winner, decline), 2 partly (server, add point), 2 no (game check, time gaps)",
      "target": "all review steps and the clues for missed points in the app",
      "met": false,
-     "progress": 0.0
+     "progress": 0.5
     },
     {
      "name": "8 The user's test drive",
@@ -1831,8 +1831,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S2",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E206"
+   ],
    "expected": {
     "outcome": "A list of the review steps that the app supports now and the steps that are missing or hard, for M2 measure 7.",
     "impact": 5,
@@ -1844,7 +1846,12 @@
    "doneWhen": [
     "A table in docs/auto-analysis (read only on the code; no code change) with one row for each step: check and correct the rally bounds, the outcome, the server player; decline a false rally; add a missing point; the clues for missed points (the game check by the server change, the time gaps). Each row: supported now (yes / partly / no), how (the screen and the action, with the file and line), and the gap.",
     "A short proposal of the smallest UI changes that close the gaps, with the order; the game check UX as one or two options. No implementation before the user's OK."
-   ]
+   ],
+   "finished": "2026-11-28 13:50",
+   "real": {
+    "impact": 5,
+    "outcome": "E206 (403e17f0), review-ui-audit.md: bounds yes; winner yes (ending kind only in the Points tab); decline yes (a dialog, no record); server partly (text only, no control; the import writes no server mark, so the score has no server); add point partly (N at the playhead, no clue); game check no; time gaps no. Proposal in order: 1 gaps in the list and Next long gap; 2 server in the review and one server mark at the import; 3 game check (option A: a check step at Accept all; option B: game rows in the list); 4 decline with Undo and a record; 5 Add point fills the gap. Waits for the user's OK."
+   }
   }
  ],
  "links": [

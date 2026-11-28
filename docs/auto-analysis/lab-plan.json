@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 13:58",
+ "updated": "2026-11-28 14:02",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -146,10 +146,10 @@
     },
     {
      "name": "5 Server right",
-     "value": "lab 91.4 % (491/537; 28 no server, 18 wrong), Igor 87.6 % (170/194; 20 no server, 4 wrong) (E217)",
+     "value": "lab 98.0 %, Igor 97.9 % with CHAIN_SERVER_FILL (E224, head before the start clamp); before 91.4 / 87.6 % (E217)",
      "target": "95 % (90 % at least)",
      "met": false,
-     "progress": 0.92
+     "progress": 1.0
     },
     {
      "name": "6 Double faults found as points",
@@ -1867,8 +1867,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S4",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E224"
+   ],
    "expected": {
     "outcome": "M2 measure 5 to 95 %: most rows with no server get the right server.",
     "impact": 5,
@@ -1880,7 +1882,12 @@
    "doneWhen": [
     "A journal row (S4) with a cause table of the rows with no server and the rows with a wrong server (lab and Igor, E217 rows): for each row, the evidence that is missing (no serve event, no pose vote, other).",
     "If a rule can give the server: the rule behind a switch (default off), in its own small commit, with a unit test, in S4's files or by an agreed change; lab chain-only and Igor (E106 keys) off/on with measure 5 (mvp_measure.py), points lost and precision with faults by the spread rule. The row says if it can go on."
-   ]
+   ],
+   "finished": "2026-11-28 14:02",
+   "real": {
+    "impact": 5,
+    "outcome": "E224 (43eccb9d, a9077b03, 48017e02): all rows with no server (lab 28, Igor 20) have no pose vote and no serve event; wrong rows: lab 12 wrong ends (the event wins over the vote), 6 identity; Igor 4 wrong ends. server_rule (CHAIN_SERVER_FILL): the vote wins, then the server of the same-player neighbors, then the larger wrist_up. Measure 5: lab 91.4 -> 98.0 %, Igor 87.6 -> 97.9 %; 0 points lost; precision with faults the same; null check 0 rows. Measured before CHAIN_START_CLAMP: S4 checks it again on the head, then turns it on."
+   }
   },
   {
    "id": "A59",

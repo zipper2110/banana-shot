@@ -699,8 +699,15 @@ internal class PointsScoring(
      * S or the serve button: the other side serves the selected point. Without a known server, side 1 serves.
      * When the change gives a new winner to an ace or a double fault, the user confirms it first (B-68).
      */
-    private fun switchServer() {
-        val index = selectedIndex()
+    private fun switchServer() = switchServerAt(selectedIndex())
+
+    /** S in the review window: the other side serves the clip with [pointId], as [switchServer] does. */
+    fun switchServerOf(pointId: String) = switchServerAt(points.indexOfFirst { it.id == pointId })
+
+    /** The server (1 or 2) of the clip with [pointId] in the score, or null when the score has no server mark. */
+    fun serverOf(pointId: String): Int? = timeline?.serverOfPoint?.getOrNull(points.indexOfFirst { it.id == pointId })
+
+    private fun switchServerAt(index: Int) {
         val point = points.getOrNull(index) ?: return
         if (!PointEndings.canScore(point, score)) return
         val next = if (timeline?.serverOfPoint?.getOrNull(index) == 1) Outcome.P2 else Outcome.P1

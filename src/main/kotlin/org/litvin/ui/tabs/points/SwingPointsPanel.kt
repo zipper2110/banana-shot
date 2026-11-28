@@ -274,6 +274,13 @@ class SwingPointsPanel(
 
         override fun gameEnds() = scoring.gameEndIds()
 
+        override fun serverOf(pointId: String) = scoring.serverOf(pointId)
+
+        override fun switchServer(pointId: String) {
+            scoring.setPoints(dispatcher.getCompletedPoints())
+            scoring.switchServerOf(pointId)
+        }
+
         override fun overlayLayers() = detect?.loadOverlayLayers() ?: emptySet()
 
         override fun setOverlayLayers(layers: Set<String>) {

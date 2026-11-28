@@ -111,6 +111,12 @@ internal interface ReviewHost {
 
     /** The ids of the clips that end a game in the score. A gap after a game end is a changeover ([ReviewGaps]). */
     fun gameEnds(): Set<String> = emptySet()
+
+    /** The server (1 or 2) of the clip in the score, or null when the score has no server. */
+    fun serverOf(pointId: String): Int? = null
+
+    /** The other player serves the clip, as S in the Points tab. The next points of the game follow. */
+    fun switchServer(pointId: String) {}
 }
 
 /** Which automatic points "Swap players" changes. */
@@ -529,6 +535,18 @@ internal class ReviewWindow(
         toolTipText = "The player that the detection saw at the near end in this point. " +
             "If the name is wrong, the detection has the players wrong: click \"Swap players\"."
     }
+    private val serverLabel = JLabel(" ").apply {
+        name = "review-server"
+        font = UiKit.font(12.5f)
+        foreground = Palette.FG
+        toolTipText = "The server of this point in the score. S gives the serve to the other player."
+    }
+    private val serverButton = button(
+        "Switch server",
+        Material2MZ.SWAP_VERT,
+        "review-switch-server",
+        "The other player serves this point. The next points of the game follow. (S)",
+    ) { switchServer() }
     private val winner = SegmentedChoice(
         "review-winner",
         listOf(
@@ -777,6 +795,11 @@ internal class ReviewWindow(
                 add(nearLabel, BorderLayout.CENTER)
                 add(swapButton, BorderLayout.EAST)
             })
+            add(JPanel(BorderLayout(8, 0)).apply {
+                isOpaque = false
+                add(serverLabel, BorderLayout.CENTER)
+                add(serverButton, BorderLayout.EAST)
+            })
             add(winner)
             add(evidenceBox)
             add(JLabel("Detection note").apply {
@@ -860,6 +883,7 @@ internal class ReviewWindow(
         bind("T") { acceptAndNext() }
         bind("N") { addAtPlayhead() }
         bind("G") { nextLongGap() }
+        bind("S") { switchServer() }
         bind("DELETE") { deleteSelected() }
         bind("ESCAPE") { close() }
     }
@@ -958,6 +982,14 @@ internal class ReviewWindow(
             else -> " "
         }
         nearLabel.icon = near?.let { PlayerDot(host.players.color(it)) }
+        val server = point?.let { host.serverOf(it.id) }
+        serverLabel.text = when {
+            point == null -> " "
+            server != null -> "Serves: ${host.players.name(server)}"
+            else -> "Serves: not known (S sets the server)"
+        }
+        serverLabel.icon = server?.let { PlayerDot(host.players.color(it)) }
+        serverButton.isEnabled = point != null && point.endMs > point.startMs
         val canScore = point != null && point.auto?.kind != AutoKind.FAULT && point.endMs > point.startMs
         winner.isEnabled = canScore
         winner.selected = point?.takeIf { canScore }?.let { host.winnerOf(it.id) }
@@ -1133,6 +1165,14 @@ internal class ReviewWindow(
         host.swapWinners(ids)
         reload()
         say(if (ids.size == 1) "Swapped the players of 1 point." else "Swapped the players of ${ids.size} points.")
+    }
+
+    /** S: the other player serves the selected point. */
+    private fun switchServer() {
+        val point = selectedPoint() ?: return
+        if (!serverButton.isEnabled) return
+        host.switchServer(point.id)
+        reload()
     }
 
     private fun setWinner(outcome: Outcome) {

@@ -32,6 +32,11 @@ class ReviewWindowTest {
         var warningList = emptyList<String>()
         var ends = emptySet<String>()
         override fun gameEnds() = ends
+        val servers = mutableMapOf<String, Int>()
+        override fun serverOf(pointId: String) = servers[pointId]
+        override fun switchServer(pointId: String) {
+            servers[pointId] = if (servers[pointId] == 1) 2 else 1
+        }
         override val players = ScorePlayers("Anna", "Bea")
         override fun warnings() = warningList
         override fun points() = list.sortedBy { it.startMs }
@@ -279,6 +284,16 @@ class ReviewWindowTest {
             key("G")
             assertEquals(140_000L, player.timeMs)
         }
+    }
+
+    @Test
+    fun `the window shows the server of the score, and S gives the serve to the other player`() = review(auto("a", 10_000), auto("b", 30_000)) {
+        assertEquals("Serves: not known (S sets the server)", text("review-server"))
+        key("S")
+        assertEquals("Serves: Anna", text("review-server"))
+        click("review-switch-server")
+        assertEquals("Serves: Bea", text("review-server"))
+        assertEquals(mapOf("a" to 2), host.servers)
     }
 
     @Test

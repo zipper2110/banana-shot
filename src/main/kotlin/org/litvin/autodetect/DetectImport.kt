@@ -10,6 +10,8 @@ import org.litvin.scoring.Outcome
 import org.litvin.scoring.PointDetailV1
 import org.litvin.scoring.PointDetails
 import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.ScoreV1
+import org.litvin.scoring.ScoringEngine
 import org.litvin.shared.util.Timecode
 import java.io.File
 import java.time.LocalDateTime
@@ -47,6 +49,8 @@ data class ImportPlan(
     val outcomes: Map<String, Outcome>,
     val details: Map<String, PointDetailV1>,
     val rows: List<ImportRow>,
+    /** The server (1 or 2) that the detection saw in each new rally clip, when it knows the server. */
+    val detectedServers: Map<String, Int> = emptyMap(),
 ) {
     /** The count of the clips that give a point or a rally (not the fault clips). */
     val rallyCount: Int get() = rows.count { it.pointId != null }
@@ -140,6 +144,7 @@ object DetectImport {
         val outcomes = LinkedHashMap<String, Outcome>()
         val details = LinkedHashMap<String, PointDetailV1>()
         val rows = ArrayList<ImportRow>()
+        val servers = LinkedHashMap<String, Int>()
         var lastEnd = 0
 
         fun free(start: Int, end: Int) = existing.none { start < it.endMs && it.startMs < end }
@@ -181,13 +186,48 @@ object DetectImport {
                         auto = AutoMarkV1(kind, percent.takeIf { winner != Outcome.NONE }, nearPlayer = nearPlayer(rally, swapped)),
                     )
                     outcomes[id] = winner
+                    serverPlayer(rally, swapped)?.let { servers[id] = it }
                     rows += ImportRow(index, pointId = id, faultPointId = faultId)
                     lastEnd = end
                 }
             }
         }
-        return ImportPlan(points, outcomes, details, rows.sortedBy { it.rally })
+        return ImportPlan(points, outcomes, details, rows.sortedBy { it.rally }, servers)
     }
+
+    /**
+     * The server marks that the import writes (A60 step 2): one mark, on the first clip with a detected server. The
+     * score then gives a server to each clip, with the change of the server at each game end. The mark has the player
+     * for which the most clips of [detected] get the detected server, so one wrong detected server does not give a
+     * wrong mark. With no detected server, or when [score] has a server mark on one of [points] already, no mark.
+     */
+    fun serverMarks(points: List<PointV1>, score: ScoreV1, detected: Map<String, Int>): Map<String, Outcome> {
+        if (score.serverMarks.keys.any { id -> points.any { it.id == id } }) return emptyMap()
+        val first = points.firstOrNull { it.id in detected } ?: return emptyMap()
+        val rules = score.rules.normalized()
+        val choices = listOf(Outcome.P1, Outcome.P2).map { server ->
+            val marks = score.serverMarks + (first.id to server)
+            val servers = ScoringEngine.timeline(points, score.outcomes, rules, score.manualMarks(), marks).serverOfPoint
+            val agree = points.indices.count { index -> detected[points[index].id]?.let { it == servers.getOrNull(index) } == true }
+            server to agree
+        }
+        // On a tie, the detected server of the first clip.
+        val firstServer = if (detected[first.id] == 1) Outcome.P1 else Outcome.P2
+        val best = choices.maxWith(compareBy<Pair<Outcome, Int>> { it.second }.thenBy { if (it.first == firstServer) 1 else 0 })
+        return mapOf(first.id to best.first)
+    }
+
+    /**
+     * The player of the project (1 or 2) that serves in [rally]: from the server at the near end and the player at
+     * the near end, or else from the detected server. Null when the detection does not know the server.
+     */
+    fun serverPlayer(rally: DetectedRally, swapped: Boolean): Int? =
+        rally.serverNear?.let { serverNear -> nearPlayer(rally, swapped)?.let { near -> if (serverNear) near else 3 - near } }
+            ?: when (rally.server) {
+                "P1" -> if (swapped) 2 else 1
+                "P2" -> if (swapped) 1 else 2
+                else -> null
+            }
 
     /**
      * Adds the clips of [resultFile] to the project in [projectDir], and writes the record of the import. The caller
@@ -208,7 +248,8 @@ object DetectImport {
         if (plan.points.isEmpty()) return plan
         val points = (edl.points + plan.points).sortedWith(compareBy({ it.startMs }, { it.endMs }))
         EdlIO.writeForProjectDir(dir, edl.copy(points = points))
-        val updated = score.copy(outcomes = score.outcomes + plan.outcomes, details = score.details + plan.details)
+        val scored = score.copy(outcomes = score.outcomes + plan.outcomes, details = score.details + plan.details)
+        val updated = scored.copy(serverMarks = scored.serverMarks + serverMarks(points, scored, plan.detectedServers))
         ScoreIO.writeForProjectDir(dir, PointDetails.resolve(points, updated))
         val stamp = LocalDateTime.now().format(STAMP)
         val record = ImportRecord(

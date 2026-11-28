@@ -7,6 +7,8 @@ import org.litvin.points.PointV1
 import org.litvin.scoring.Ending
 import org.litvin.scoring.Outcome
 import org.litvin.scoring.ScoreIO
+import org.litvin.scoring.ScoreV1
+import org.litvin.scoring.ScoringEngine
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
@@ -227,6 +229,68 @@ class DetectImportTest {
             // A new import writes the near player into the mark of the fault clip.
             val plan = DetectImport.plan(result(point), emptyList(), advanced = true, DetectSettings(), ids)
             assertEquals(1, plan.points.first { it.auto?.kind == AutoKind.FAULT }.auto?.nearPlayer)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    /** 8 points: player 1 wins the 4 points of game 1, player 2 wins the 4 points of game 2. */
+    private val twoGames = (0 until 8).map { PointV1(id = "p$it", startMs = it * 30_000, endMs = it * 30_000 + 10_000) }
+    private val twoGamesScore = ScoreV1(outcomes = twoGames.associate { it.id to if (it.startMs < 120_000) Outcome.P1 else Outcome.P2 })
+
+    private fun serversOf(score: ScoreV1) =
+        ScoringEngine.timeline(twoGames, score.outcomes, score.rules.normalized(), score.manualMarks(), score.serverMarks).serverOfPoint
+
+    @Test
+    fun `the import marks the server of the first clip with a detected server, and the score gives the next servers`() {
+        val detected = mapOf("p1" to 1, "p2" to 1, "p3" to 1, "p4" to 2, "p5" to 2, "p6" to 2, "p7" to 2)
+
+        val marks = DetectImport.serverMarks(twoGames, twoGamesScore, detected)
+
+        assertEquals(mapOf("p1" to Outcome.P1), marks)
+        assertEquals(listOf(1, 1, 1, 1, 2, 2, 2, 2), serversOf(twoGamesScore.copy(serverMarks = marks)))
+    }
+
+    @Test
+    fun `a wrong detected server on the first clip does not give a wrong mark`() {
+        val detected = mapOf("p0" to 2, "p1" to 1, "p2" to 1, "p3" to 1, "p4" to 2, "p5" to 2, "p6" to 2, "p7" to 2)
+
+        assertEquals(mapOf("p0" to Outcome.P1), DetectImport.serverMarks(twoGames, twoGamesScore, detected))
+    }
+
+    @Test
+    fun `the import writes no server mark when the score has one, or when the detection has no server`() {
+        val marked = twoGamesScore.copy(serverMarks = mapOf("p4" to Outcome.P1))
+        assertEquals(emptyMap(), DetectImport.serverMarks(twoGames, marked, mapOf("p0" to 1)))
+        assertEquals(emptyMap(), DetectImport.serverMarks(twoGames, twoGamesScore, emptyMap()))
+    }
+
+    @Test
+    fun `the server of a rally is the player of the project at the server end`() {
+        val near = rally(10.0, 20.0).copy(p1Near = true, serverNear = true)
+        val far = rally(10.0, 20.0).copy(p1Near = true, serverNear = false)
+        val noEnd = rally(10.0, 20.0).copy(server = "P1")
+
+        assertEquals(listOf(1, 2, 1), listOf(near, far, noEnd).map { DetectImport.serverPlayer(it, swapped = false) })
+        assertEquals(listOf(2, 1, 2), listOf(near, far, noEnd).map { DetectImport.serverPlayer(it, swapped = true) })
+        assertNull(DetectImport.serverPlayer(rally(10.0, 20.0), swapped = false))
+    }
+
+    @Test
+    fun `apply writes one server mark, so the score has servers after the import`() {
+        val dir = Files.createTempDirectory("detect-import").toFile()
+        try {
+            val file = File(File(dir, DetectImport.FOLDER).apply { mkdirs() }, "result-1.json")
+            DetectJson.mapper.writeValue(file, result(
+                rally(10.0, 20.0).copy(p1Near = true, serverNear = false),
+                rally(30.0, 40.0).copy(p1Near = true, serverNear = false),
+            ))
+
+            DetectImport.apply(dir, file, DetectSettings())
+
+            val points = EdlIO.readForProjectDir(dir.absolutePath).points
+            val score = ScoreIO.readForProjectDir(dir.absolutePath)
+            assertEquals(mapOf(points[0].id to Outcome.P2), score.serverMarks)
         } finally {
             dir.deleteRecursively()
         }

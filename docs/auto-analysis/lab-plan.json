@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 13:51",
+ "updated": "2026-11-28 13:58",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -132,10 +132,10 @@
     },
     {
      "name": "3 Bounds right",
-     "value": "lab 83.6 % (449/537), Igor 87.6 % (170/194) (E217)",
+     "value": "lab 85.7 % (460/537), Igor 88.1 % (171/194) with CHAIN_START_CLAMP (E218); before 83.6 / 87.6 % (E217)",
      "target": "start within 1 s and end within 2 s for 90 % of found points",
      "met": false,
-     "progress": 0.93
+     "progress": 0.95
     },
     {
      "name": "4 Outcome right",
@@ -1889,8 +1889,10 @@
    "milestone": "M2",
    "issues": [],
    "owner": "S3",
-   "status": "queued",
-   "journal": [],
+   "status": "done",
+   "journal": [
+    "E218"
+   ],
    "expected": {
     "outcome": "M2 measure 3 to 90 %: the causes of the start misses and a fix proposal.",
     "impact": 4,
@@ -1902,7 +1904,12 @@
    "doneWhen": [
     "A journal row (S3) with a cause table of the lab and Igor start misses (E217 rows), with a count for each cause; one cause is 'the row starts at a first-serve fault before the marked second serve', counted apart, so the user can decide if it is a miss.",
     "A fix proposal for the largest cause with the expected measure 3; a rule only behind a switch (default off) with a unit test, and lab and Igor off/on by the spread rule."
-   ]
+   ],
+   "finished": "2026-11-28 13:58",
+   "real": {
+    "impact": 2,
+    "outcome": "E218 (ea998f09, b055f49f): start misses lab 68 / Igor 13: F (starts at a first-serve fault) 5/1; E1 GRU edge 1 to 2.5 s early 30/7; L1 late 22/1; E2 6/1; L2 5/2; M long mark 0/1 (Igor 8374.09, a 110 s mark). CHAIN_START_CLAMP (start in [serve - 2.3, serve - 0.3] s): measure 3 lab 83.6 -> 85.7 %, Igor 87.6 -> 88.1 %; no other measure changes. Decision: on by default. The rest of E1/L1 needs a start finer than 1 s."
+   }
   }
  ],
  "links": [

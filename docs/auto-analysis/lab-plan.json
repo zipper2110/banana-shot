@@ -1886,7 +1886,7 @@
    "finished": "2026-11-28 14:02",
    "real": {
     "impact": 5,
-    "outcome": "E224 (43eccb9d, a9077b03, 48017e02): all rows with no server (lab 28, Igor 20) have no pose vote and no serve event; wrong rows: lab 12 wrong ends (the event wins over the vote), 6 identity; Igor 4 wrong ends. server_rule (CHAIN_SERVER_FILL): the vote wins, then the server of the same-player neighbors, then the larger wrist_up. Measure 5: lab 91.4 -> 98.0 %, Igor 87.6 -> 97.9 %; 0 points lost; precision with faults the same; null check 0 rows. Measured before CHAIN_START_CLAMP: S4 checks it again on the head, then turns it on."
+    "outcome": "E224 (43eccb9d, a9077b03, 48017e02): all rows with no server (lab 28, Igor 20) have no pose vote and no serve event; wrong rows: lab 12 wrong ends (the event wins over the vote), 6 identity; Igor 4 wrong ends. server_rule (CHAIN_SERVER_FILL): the vote wins, then the server of the same-player neighbors, then the larger wrist_up. Measure 5: lab 91.4 -> 98.0 %, Igor 87.6 -> 97.9 %; 0 points lost; precision with faults the same; null check 0 rows. Checked again with CHAIN_START_CLAMP on (the same rows); on by default (5175955f)."
    }
   },
   {

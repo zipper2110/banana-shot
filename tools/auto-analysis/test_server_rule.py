@@ -10,9 +10,9 @@ def row(t, server=None, near=None, p1_near=True):
 
 
 class ServerRule(unittest.TestCase):
-    def test_the_default_is_off(self):
+    def test_the_default_is_on(self):
         if "CHAIN_SERVER_FILL" not in os.environ:
-            self.assertFalse(sr.FILL)
+            self.assertTrue(sr.FILL)
 
     def test_a_strong_vote_wins_over_the_serve_event_end(self):
         # E224 m1020 363: the event says far, the near vote is 0.74

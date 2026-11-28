@@ -1,6 +1,7 @@
 """A58 (S4, E224): the server of the result rows that have no server or the server end of a serve event against the
 pose vote. A step after chain.winners (it changes only "server" and "serverNear" of the rows; no row is added or
-removed). CHAIN_SERVER_FILL=1 turns it on (default off).
+removed). Default "1" (on: manager decision after E224; the check with CHAIN_START_CLAMP on gave the same values);
+"0" gives the old way (CHAIN_SERVER_FILL).
 
 In chain.evidence the server end is the pose vote (the max wrist_up of the near and the far player in the seconds
 int(a) - 1 to int(a) + 2 of the rally start a, a vote when it is VOTE_MIN or more), then the end of the first serve
@@ -18,7 +19,7 @@ The steps (the server player: "P1" when the server end is the end of P1 in that 
 import os
 import numpy as np
 
-FILL = os.environ.get("CHAIN_SERVER_FILL", "0") == "1"
+FILL = os.environ.get("CHAIN_SERVER_FILL", "1") != "0"
 VOTE_MIN = 0.5
 
 

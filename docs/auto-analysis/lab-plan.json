@@ -1,7 +1,7 @@
 {
  "version": 1,
  "about": "The plan of the lab for the dashboard (tools/auto-analysis/lab_dash.py). The manager keeps it current with each decision. The decisions stay in gap-program.md, the results in README.md (journal). Impact scale 0 to 10: 0 = no effect; 1-2 = inside the noise or a small fact; 3-4 = a clear gain on one measure; 5-6 = a clear gain on a main measure, or it unblocks a stream; 7-8 = a large gain on a main measure, or it unblocks a milestone; 9-10 = it decides a milestone. 'expectedBackfilled' = the expected impact was written after the result (the actions before the dashboard had no number). Each open action has 'doneWhen': the results that can be checked objectively (a count, a file, a journal row, a label status), with the place to check them (the user, 2026-11-27).",
- "updated": "2026-11-28 13:09",
+ "updated": "2026-11-28 13:45",
  "program": {
   "name": "Gap program",
   "start": "2026-11-25",
@@ -109,54 +109,68 @@
   },
   {
    "id": "M2",
-   "title": "Right events on the labeled fragments",
+   "title": "MVP value box 1: a points list that is fast to review and correct",
    "status": "current",
    "period": "2026-11-27 to 2026-12-05",
-   "goal": "Priority 2 (the user, 2026-11-26) measured by the events: on the labeled small level, hits found 75 % or more of the labeled hits (now 77 of 131, 59 %), shot count right in 70 % of the points (now 9 of 17), in/out right 95 % or more (now 52 of 54), first-serve faults found as fault clips 70 % or more (now 4 of 11). Rallies (priority 1) do not go down: lab recall 94.6 % or more, held-out Igor 96.4 % or more. Held-out Igor rally precision with the fault rows 96.0 % or more (the user, 2026-11-28).",
-   "goalStatus": "Igor precision line confirmed by the user (2026-11-28); the 4 event targets are still the manager draft",
+   "goal": "Value box 1 (the user, 2026-11-28, gap-program section 1 \"Business value\"): the review and correction of the auto-detection must be much faster than marking by hand. Targets on each held-out match (Igor, Misha): 1 points found 95 % or more (double faults count as points); 2 false rallies 4 % or less (precision with the fault rows 96 % or more; a first-serve fault shown as a point is false); 3 bounds: start within 1 s and end within 2 s for 90 % of the found real points; 4 outcome right 90 % (85 % is accepted when it is the only open measure); 5 server right 95 % (90 % at least); 6 double faults found as points 70 % (push it, but it does not block the milestone); 7 the review UI supports the full flow (bounds, outcome, server, decline, add a missing point, clues for missed points: the game check and time gaps); 8 the user's test drive: review and correction take half the time of marking by hand, or less. First-serve faults do not have to be found.",
+   "goalStatus": "targets agreed with the user (2026-11-28); 1, 2, 7 and 8 as proposed, 3 to 6 as the user set them",
    "result": null,
    "measures": [
     {
-     "name": "Hits found (row chain, 24 fragments)",
-     "value": "124 of 190 = 65 % (137 with the fault-clip serves), E108 head 0a1728b5",
-     "target": "75 % or more",
+     "name": "1 Points found (held out)",
+     "value": "Igor 99.49 % (E216, E106 keys); Misha 94.2 % (E103, old code); lab 96.93 %",
+     "target": "95 % or more on each held-out match",
      "met": false,
-     "progress": 0.87
+     "progress": 0.99
     },
     {
-     "name": "Shot count right",
-     "value": "26 of 39 points = 67 %, E108 (A41 measure)",
-     "target": "70 % or more",
+     "name": "2 False rallies (held out)",
+     "value": "precision with faults: Igor 95.57 % (E216); Misha 91.0 % (E103, old code); lab 97.11 %",
+     "target": "4 % or less false (96 % or more)",
      "met": false,
      "progress": 0.95
     },
     {
-     "name": "In/out right",
-     "value": "114 of 116 = 98 %, E108",
-     "target": "95 % or more",
-     "met": true,
-     "progress": 1.0
-    },
-    {
-     "name": "Fault clips (labeled faults found)",
-     "value": "11 of 23 = 48 %, E108",
-     "target": "70 % or more",
+     "name": "3 Bounds right",
+     "value": "not measured as a share; Misha median error start 0.31 s, end 0.60 s (E103)",
+     "target": "start within 1 s and end within 2 s for 90 % of found points",
      "met": false,
-     "progress": 0.68
+     "progress": 0.0
     },
     {
-     "name": "Lab rallies recall / precision",
-     "value": "96.6 % / 96.2 % with faults (E212, CHAIN_PLAY_DROP; head e95d8a47 96.6 % / 95.2 %); Igor 98.5 % / 94.6 % (E211, E106 keys)",
-     "target": "94.6 % or more (no loss)",
-     "met": true,
-     "progress": 1.0
-    },
-    {
-     "name": "Igor rally precision with the fault rows",
-     "value": "95.57 % (E216, E106 keys; recall 99.49 %)",
-     "target": "96.0 % or more",
+     "name": "4 Outcome right",
+     "value": "Igor 84.2 % (E197), Misha 84.6 % (E103), lab 85.7 % (E216)",
+     "target": "90 % (85 % accepted if the only open measure)",
      "met": false,
-     "progress": 0.996
+     "progress": 0.94
+    },
+    {
+     "name": "5 Server right",
+     "value": "not measured on the head; Igor pose server end 100 % (E69)",
+     "target": "95 % (90 % at least)",
+     "met": false,
+     "progress": 0.0
+    },
+    {
+     "name": "6 Double faults found as points",
+     "value": "not measured on the head",
+     "target": "70 % (does not block)",
+     "met": false,
+     "progress": 0.0
+    },
+    {
+     "name": "7 Review UI flow",
+     "value": "not checked",
+     "target": "all review steps and the clues for missed points in the app",
+     "met": false,
+     "progress": 0.0
+    },
+    {
+     "name": "8 The user's test drive",
+     "value": "not done",
+     "target": "review and correction take half the time of manual marking or less",
+     "met": false,
+     "progress": 0.0
     }
    ],
    "issues": [
@@ -215,7 +229,7 @@
      "detail": "A serve that lands behind the service line or in the wrong box is 'in' for the shot chain. Seen in E76 (Igor double fault, wrong winner), E170 (2 of 54 in/out errors), E171 (e), E190 (s007 1891.1). Only the fault candidate tests the service line (E39)."
     }
    ],
-   "goalShort": "Events right on the labeled fragments; rallies do not go down."
+   "goalShort": "Few missed and false points, right bounds, outcome and server; a review UI; the user's test drive."
   },
   {
    "id": "M3",
@@ -252,7 +266,55 @@
    "goal": "Hints from the score (the serve side does not match the score; the server changes inside a game) that show the user where a point is probably missing or false. Only when the events are reliable (the user, 2026-11-26).",
    "goalStatus": "idea",
    "issues": [],
-   "goalShort": "Hints from the score where a point is missing or false."
+   "goalShort": "Hints from the score where a point is missing or false. Now a part of M2 measure 7 (the clues for missed points in the review UI)."
+  },
+  {
+   "id": "M6",
+   "title": "Value box 2: shot facts (speeds, patterns, placement)",
+   "status": "later",
+   "period": "after M2",
+   "goalShort": "About 95 % right for normal rallies and shots; iterate over the main error sources.",
+   "goal": "Value box 2 (the user, 2026-11-28): the average serve and shot speed, the ball hitting patterns, a court diagram overlay with the shot placement. Iterate until all the main error sources are covered and about 95 % is right for normal rallies and shots. The event measures of the old M2 (labeled fragments) are the base.",
+   "goalStatus": "agreed (the user)",
+   "result": null,
+   "measures": [
+    {
+     "name": "Hits found (row chain, 24 fragments)",
+     "value": "124 of 190 = 65 % (137 with the fault-clip serves), E108 head 0a1728b5",
+     "target": "75 % or more",
+     "met": false,
+     "progress": 0.87
+    },
+    {
+     "name": "Shot count right",
+     "value": "26 of 39 points = 67 %, E108 (A41 measure)",
+     "target": "70 % or more",
+     "met": false,
+     "progress": 0.95
+    },
+    {
+     "name": "In/out right",
+     "value": "114 of 116 = 98 %, E108",
+     "target": "95 % or more",
+     "met": true,
+     "progress": 1.0
+    },
+    {
+     "name": "Fault clips (labeled faults found)",
+     "value": "11 of 23 = 48 %, E108",
+     "target": "70 % or more",
+     "met": false,
+     "progress": 0.68
+    },
+    {
+     "name": "Lab rallies recall / precision",
+     "value": "96.6 % / 96.2 % with faults (E212, CHAIN_PLAY_DROP; head e95d8a47 96.6 % / 95.2 %); Igor 98.5 % / 94.6 % (E211, E106 keys)",
+     "target": "94.6 % or more (no loss)",
+     "met": true,
+     "progress": 1.0
+    }
+   ],
+   "issues": []
   }
  ],
  "actions": [
